@@ -6,8 +6,7 @@
 
 ## What It Does
 
-DisputeDesk is a Shopify public embedded app that helps merchants handle
-chargebacks by:
+DisputeDesk helps merchants handle Shopify Payments chargebacks by:
 
 - Syncing disputes from Shopify Payments
 - Generating structured evidence packs (JSON + PDF)
@@ -19,10 +18,29 @@ chargebacks by:
 programmatically submit dispute responses to card networks. Merchants
 finalize submission in Shopify Admin.
 
+## Surfaces
+
+DisputeDesk ships as two web surfaces from one codebase:
+
+| Surface | URL | Auth | Description |
+|---------|-----|------|-------------|
+| Marketing | `/` | Public | Landing page, hero, CTAs |
+| Portal Auth | `/auth/*` | Public | Sign in, sign up, password reset |
+| Portal App | `/portal/*` | Supabase Auth | SaaS web: disputes, packs, settings |
+| Embedded App | `/app/*` | Shopify session | Inside Shopify Admin (Polaris) |
+| API | `/api/*` | Mixed | Backend routes |
+
+- **Embedded app** is the primary surface for merchants who install from Shopify.
+- **Portal** serves team members without Shopify Admin access, multi-store
+  operators, and merchants who prefer a standalone web experience.
+
 ## Tech Stack
 
-- **Frontend:** React 18 + Polaris + App Bridge React (embedded in Shopify Admin)
+- **Frontend (Embedded):** React 18 + Polaris + App Bridge React
+- **Frontend (Portal/Marketing):** React 18 + Tailwind CSS
 - **Backend:** Next.js 15 App Router (Node runtime)
+- **Auth (Portal):** Supabase Auth (email/password, magic link)
+- **Auth (Embedded):** Shopify OAuth (offline + online sessions)
 - **Database:** Supabase Postgres (server-only access, RLS enabled)
 - **Storage:** Supabase Storage (private buckets for PDFs + uploads)
 - **PDF:** @react-pdf/renderer
@@ -47,7 +65,7 @@ cd DisputeDesk
 npm install
 
 # 2. Configure environment
-cp .env.example .env
+cp .env.example .env.local
 # Fill in all values (see .env.example for descriptions)
 
 # 3. Run Supabase migrations
@@ -70,9 +88,10 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `SHOPIFY_API_SECRET` | App secret for webhook verification + OAuth |
 | `SHOPIFY_API_VERSION` | Pinned GraphQL API version (default: `2026-01`) |
 | `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Public anon key (used for portal auth only) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only key (never expose to client) |
 | `TOKEN_ENCRYPTION_KEY_V1` | AES-256-GCM key for token encryption (64 hex chars) |
-| `CRON_SECRET` | Shared secret for cron → worker auth |
+| `CRON_SECRET` | Shared secret for cron → worker endpoint auth |
 
 ### Shopify Scopes
 
@@ -96,7 +115,8 @@ This is a Shopify Admin permission, not an OAuth scope.
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for the full system
-design, auth model, async job architecture, and data flow.
+design, two-surface architecture, auth models, async job architecture,
+and data flow.
 
 ## Development
 
@@ -115,5 +135,5 @@ Tests include:
 GitHub Actions runs on push/PR to main:
 1. Typecheck + lint + build
 2. Vitest (contract + unit)
-3. Forbidden copy grep (no "submit response" language in UI)
+3. Forbidden copy grep (no "submit response" language in UI or translations)
 4. `npm audit`

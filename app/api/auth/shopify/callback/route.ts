@@ -10,8 +10,7 @@ const APP_URL = process.env.SHOPIFY_APP_URL!;
  * GET /api/auth/shopify/callback
  *
  * Handles both offline and online OAuth callbacks.
- * - Offline phase: stores shop-wide token, then redirects for online token.
- * - Online phase: stores user-scoped token, then redirects to app.
+ * Supports portal-initiated OAuth (source=portal) — links portal user to shop.
  */
 export async function GET(req: NextRequest) {
   const params = Object.fromEntries(req.nextUrl.searchParams.entries());
@@ -24,7 +23,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Verify HMAC
   if (!verifyHmac(params)) {
     return NextResponse.json(
       { error: "HMAC verification failed" },
@@ -32,7 +30,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Verify state nonce
   const cookieStore = await cookies();
   const savedState = cookieStore.get("shopify_oauth_state")?.value;
   if (!savedState || savedState !== state) {
@@ -43,11 +40,11 @@ export async function GET(req: NextRequest) {
   }
 
   const phase = cookieStore.get("shopify_oauth_phase")?.value ?? "offline";
+  const source = cookieStore.get("shopify_oauth_source")?.value ?? "embedded";
+  const returnTo = cookieStore.get("shopify_oauth_return_to")?.value ?? "";
 
-  // Exchange code for token
   const tokenResult = await exchangeCodeForToken(shop, code);
 
-  // Ensure shop exists in DB
   const db = getServiceClient();
   const { data: existingShop } = await db
     .from("shops")
@@ -82,7 +79,6 @@ export async function GET(req: NextRequest) {
   }
 
   if (phase === "offline") {
-    // Store offline (shop-wide) session
     await storeSession({
       shopInternalId,
       shopDomain: shop,
@@ -93,10 +89,21 @@ export async function GET(req: NextRequest) {
       expiresAt: null,
     });
 
-    // Clean up cookies and redirect for online token
     cookieStore.delete("shopify_oauth_state");
     cookieStore.delete("shopify_oauth_phase");
 
+    if (source === "portal") {
+      // Portal flow: skip online phase, link user to shop, redirect to portal
+      await linkPortalUserToShop(req, db, shopInternalId);
+
+      cookieStore.delete("shopify_oauth_source");
+      cookieStore.delete("shopify_oauth_return_to");
+
+      const destination = returnTo || "/portal/select-store";
+      return NextResponse.redirect(new URL(destination, req.url));
+    }
+
+    // Embedded flow: proceed to online token phase
     const onlineAuthUrl = `${APP_URL}/api/auth/shopify?shop=${shop}&phase=online`;
     return NextResponse.redirect(onlineAuthUrl);
   }
@@ -117,11 +124,13 @@ export async function GET(req: NextRequest) {
     expiresAt,
   });
 
-  // Clean up cookies
+  // Clean up all OAuth cookies
   cookieStore.delete("shopify_oauth_state");
   cookieStore.delete("shopify_oauth_phase");
+  cookieStore.delete("shopify_oauth_source");
+  cookieStore.delete("shopify_oauth_return_to");
 
-  // Set shop cookie for session middleware
+  // Set shop cookies for embedded session middleware
   cookieStore.set("shopify_shop", shop, {
     httpOnly: true,
     secure: true,
@@ -138,7 +147,49 @@ export async function GET(req: NextRequest) {
     path: "/",
   });
 
-  // Redirect to embedded app
   const embeddedUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`;
   return NextResponse.redirect(embeddedUrl);
+}
+
+/**
+ * Link the current portal user (from Supabase Auth cookie) to the shop.
+ * Creates a portal_user_shops row if one doesn't already exist.
+ */
+async function linkPortalUserToShop(
+  req: NextRequest,
+  db: ReturnType<typeof getServiceClient>,
+  shopId: string
+) {
+  const { createServerClient } = await import("@supabase/ssr");
+
+  const supabase = createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll() {
+          // Read-only in this context — session cookies are already set
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return;
+
+  // Upsert: create link if not exists
+  await db.from("portal_user_shops").upsert(
+    {
+      user_id: user.id,
+      shop_id: shopId,
+      role: "admin",
+    },
+    { onConflict: "user_id,shop_id" }
+  );
 }

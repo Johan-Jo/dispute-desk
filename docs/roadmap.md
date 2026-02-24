@@ -6,6 +6,7 @@
 
 | Epic | Name | Status | Week | Doc |
 |------|------|--------|------|-----|
+| P0 | External Portal + Marketing | Pending | 0-1 | [EPIC-P0](epics/EPIC-P0-portal-marketing.md) |
 | 0 | Foundations | DONE | 1 | [EPIC-0](epics/EPIC-0-foundations.md) |
 | 1 | Dispute Sync | Pending | 1-2 | [EPIC-1](epics/EPIC-1-dispute-sync.md) |
 | 2 | Evidence Pack Builder | Pending | 2-3 | [EPIC-2](epics/EPIC-2-evidence-pack-builder.md) |
@@ -14,22 +15,39 @@
 | 5 | Save Evidence to Shopify | Pending | 4 | [EPIC-5](epics/EPIC-5-save-to-shopify.md) |
 | 6 | Billing & Plan Limits | Pending | 5 | [EPIC-6](epics/EPIC-6-billing.md) |
 | 7 | Hardening | Pending | 5-6 | [EPIC-7](epics/EPIC-7-hardening.md) |
+| 8 | Internal Admin Panel | Pending | 6-7 | [EPIC-8](epics/EPIC-8-admin-panel.md) |
+| 9 | Multi-Language (i18n) | Pending | 7-8 | [EPIC-9](epics/EPIC-9-i18n.md) |
 
 ## Dependency Chain
 
 ```mermaid
 flowchart LR
-  E0[EPIC0Foundations] --> E1[EPIC1DisputeSync]
-  E1 --> E2[EPIC2PackBuilder]
-  E2 --> E3[EPIC3PdfStorage]
-  E2 --> E4[EPIC4Governance]
-  E2 --> E5[EPIC5SaveToShopify]
-  E4 --> E6[EPIC6Billing]
-  E0 --> E7[EPIC7Hardening]
+  E0[EPIC0 Foundations] --> E1[EPIC1 DisputeSync]
+  E0 --> EP0[EPIC-P0 Portal+Marketing]
+  EP0 -.->|portal mirrors| E1
+  EP0 -.->|portal mirrors| E2
+  E1 --> E2[EPIC2 PackBuilder]
+  E2 --> E3[EPIC3 PdfStorage]
+  E2 --> E4[EPIC4 Governance]
+  E2 --> E5[EPIC5 SaveToShopify]
+  E4 --> E6[EPIC6 Billing]
+  E0 --> E7[EPIC7 Hardening]
   E1 --> E7
   E2 --> E7
   E3 --> E7
   E4 --> E7
   E5 --> E7
   E6 --> E7
+  E0 --> E8[EPIC8 AdminPanel]
+  E6 --> E8
+  E7 --> E8
+  E0 --> E9[EPIC9 i18n]
+  E7 --> E9
 ```
+
+## Notes
+
+- **EPIC P0 runs in parallel** with EPICs 1–7. It shares EPIC 0 foundations
+  (Supabase, Shopify OAuth) but builds the portal/marketing surface independently.
+- Portal placeholder pages will be wired to real data as each epic completes.
+- Embedded app inside Shopify Admin remains the primary surface.

@@ -41,7 +41,6 @@ export default function PackDetailPage() {
     }
   }, [packId]);
 
-  // Poll job status when a job is active
   useEffect(() => {
     if (!activeJobId) return;
 
@@ -107,9 +106,7 @@ export default function PackDetailPage() {
       )}
 
       {error && (
-        <div style={{ color: "red", margin: "1rem 0" }}>
-          Error: {error}
-        </div>
+        <div style={{ color: "red", margin: "1rem 0" }}>Error: {error}</div>
       )}
 
       {isJobRunning && jobStatus && (

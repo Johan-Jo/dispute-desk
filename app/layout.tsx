@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Providers } from "./providers";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DisputeDesk",
@@ -13,13 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <meta name="shopify-api-key" content={process.env.SHOPIFY_API_KEY} />
-        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" />
-      </head>
-      <body>
-        <Providers>{children}</Providers>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

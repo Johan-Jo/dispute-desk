@@ -1,0 +1,85 @@
+import { redirect } from "next/navigation";
+import { Store, Check } from "lucide-react";
+import { requirePortalUser } from "@/lib/supabase/portal";
+import { getLinkedShops, setActiveShopId } from "@/lib/portal/activeShop";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+interface Props {
+  searchParams: Promise<{ shop_id?: string }>;
+}
+
+export default async function SelectStorePage({ searchParams }: Props) {
+  const user = await requirePortalUser();
+  const shops = await getLinkedShops(user.id);
+  const params = await searchParams;
+
+  if (params.shop_id) {
+    const valid = shops.some((s) => s.shop_id === params.shop_id);
+    if (valid) {
+      await setActiveShopId(params.shop_id);
+      redirect("/portal/dashboard");
+    }
+  }
+
+  if (shops.length === 0) {
+    return (
+      <div className="max-w-md mx-auto py-12 text-center">
+        <div className="w-16 h-16 bg-[#F7F8FA] rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <Store className="w-8 h-8 text-[#667085]" />
+        </div>
+        <h2 className="text-2xl font-bold text-[#0B1220] mb-2">No stores connected</h2>
+        <p className="text-sm text-[#667085] mb-6">
+          Connect your Shopify store to start managing disputes.
+        </p>
+        <a href="/portal/connect-shopify">
+          <Button variant="primary" size="lg">Connect Shopify store</Button>
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto py-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-[#0B1220] mb-2">Select a store</h2>
+        <p className="text-sm text-[#667085]">Choose which store you want to work with</p>
+      </div>
+
+      <div className="space-y-3 mb-6">
+        {shops.map((s) => {
+          const domain =
+            (s.shops as unknown as { shop_domain: string })?.shop_domain ??
+            s.shop_id;
+          return (
+            <a
+              key={s.shop_id}
+              href={`/portal/select-store?shop_id=${s.shop_id}`}
+              className="w-full block p-4 border border-[#E5E7EB] rounded-lg hover:border-[#4F46E5] hover:bg-[#F7F8FA] transition-colors bg-white"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#F7F8FA] rounded-lg flex items-center justify-center">
+                    <Store className="w-6 h-6 text-[#667085]" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-[#0B1220] mb-1">{domain}</h4>
+                    <p className="text-sm text-[#667085]">{s.role}</p>
+                  </div>
+                </div>
+                <Badge variant="success">
+                  <Check className="w-3 h-3 mr-1" />
+                  Connected
+                </Badge>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+
+      <a href="/portal/connect-shopify">
+        <Button variant="secondary" className="w-full">Connect another store</Button>
+      </a>
+    </div>
+  );
+}

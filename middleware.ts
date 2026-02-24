@@ -1,59 +1,106 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 /**
- * Session validation middleware.
+ * Multi-surface middleware.
  *
- * Protects /api/* routes (except auth, webhooks, health, jobs/worker)
- * by verifying a Shopify session cookie is present.
- *
- * Actual token validation happens in the route handlers via loadSession().
- * This middleware is a fast-path guard to reject clearly unauthenticated requests.
+ * - (marketing) + (auth): public, no auth required.
+ * - (portal): requires Supabase Auth session.
+ * - (embedded): requires Shopify session cookie.
+ * - /api/*: mixed auth (public for auth/webhooks/health, Shopify session for rest).
  */
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public routes — skip auth check
+  // --- Public routes: marketing, auth, static assets ---
   if (
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/webhooks") ||
-    pathname === "/api/health" ||
-    pathname === "/api/jobs/worker"
+    pathname === "/" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }
 
-  // Protected API routes — require shop cookie
+  // --- API routes ---
   if (pathname.startsWith("/api/")) {
+    if (
+      pathname.startsWith("/api/auth") ||
+      pathname.startsWith("/api/webhooks") ||
+      pathname === "/api/health" ||
+      pathname === "/api/jobs/worker"
+    ) {
+      return NextResponse.next();
+    }
+
     const shopDomain = req.cookies.get("shopify_shop")?.value;
     const shopId = req.cookies.get("shopify_shop_id")?.value;
 
     if (!shopDomain || !shopId) {
       return NextResponse.json(
         {
-          error: "Unauthorized. Install or re-open the app from Shopify Admin.",
+          error:
+            "Unauthorized. Install or re-open the app from Shopify Admin.",
           code: "SESSION_REQUIRED",
         },
         { status: 401 }
       );
     }
 
-    // Pass shop context via headers for route handlers
     const res = NextResponse.next();
     res.headers.set("x-shop-domain", shopDomain);
     res.headers.set("x-shop-id", shopId);
     return res;
   }
 
-  // App pages — if no shop cookie, redirect to Shopify OAuth
-  const shopDomain = req.cookies.get("shopify_shop")?.value;
-  if (!shopDomain && pathname !== "/" && !pathname.startsWith("/_next")) {
-    // For embedded apps, Shopify sends ?shop= on first load
-    const shopParam = req.nextUrl.searchParams.get("shop");
-    if (shopParam) {
-      return NextResponse.redirect(
-        new URL(`/api/auth/shopify?shop=${shopParam}`, req.url)
-      );
+  // --- Portal routes: require Supabase Auth ---
+  if (pathname.startsWith("/portal")) {
+    const res = NextResponse.next();
+
+    const supabase = createServerClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return req.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            for (const { name, value, options } of cookiesToSet) {
+              req.cookies.set(name, value);
+              res.cookies.set(name, value, options);
+            }
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const signInUrl = new URL("/auth/sign-in", req.url);
+      signInUrl.searchParams.set("continue", pathname);
+      return NextResponse.redirect(signInUrl);
     }
+
+    return res;
+  }
+
+  // --- Embedded app routes (/app/*): require Shopify session ---
+  if (pathname.startsWith("/app")) {
+    const shopDomain = req.cookies.get("shopify_shop")?.value;
+    if (!shopDomain) {
+      const shopParam = req.nextUrl.searchParams.get("shop");
+      if (shopParam) {
+        return NextResponse.redirect(
+          new URL(`/api/auth/shopify?shop=${shopParam}`, req.url)
+        );
+      }
+    }
+
+    return NextResponse.next();
   }
 
   return NextResponse.next();
@@ -62,6 +109,9 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/api/:path*",
+    "/portal/:path*",
+    "/app/:path*",
+    "/auth/:path*",
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
