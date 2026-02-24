@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { claimJobs, markJobSucceeded, markJobFailed } from "@/lib/jobs/claimJobs";
 import { handleBuildPack } from "@/lib/jobs/handlers/buildPackJob";
 import { handleRenderPdf } from "@/lib/jobs/handlers/renderPdfJob";
+import { handleSyncDisputes } from "@/lib/jobs/handlers/syncDisputesJob";
+import { handleSaveToShopify } from "@/lib/jobs/handlers/saveToShopifyJob";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -31,6 +33,12 @@ export async function POST(req: NextRequest) {
           break;
         case "render_pdf":
           await handleRenderPdf(job);
+          break;
+        case "sync_disputes":
+          await handleSyncDisputes(job);
+          break;
+        case "save_to_shopify":
+          await handleSaveToShopify(job);
           break;
         default:
           throw new Error(`Unknown job type: ${job.jobType}`);

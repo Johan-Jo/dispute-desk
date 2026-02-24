@@ -3,17 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const SAMPLE_DISPUTES = [
-  { id: "DP-2401", order: "#1042", amount: "$145.00", reason: "Not received", status: "needs_response", deadline: "Mar 02", customer: "john@example.com" },
-  { id: "DP-2402", order: "#1039", amount: "$89.50", reason: "Fraudulent", status: "under_review", deadline: "Mar 05", customer: "jane@example.com" },
+  { id: "DP-2401", order: "#1042", amount: "$145.00", reason: "Not received", status: "saved_to_shopify", deadline: "Mar 02", customer: "john@example.com" },
+  { id: "DP-2402", order: "#1039", amount: "$89.50", reason: "Fraudulent", status: "needs_review", deadline: "Mar 05", customer: "jane@example.com" },
   { id: "DP-2403", order: "#1035", amount: "$234.00", reason: "Not as described", status: "won", deadline: "—", customer: "bob@example.com" },
-  { id: "DP-2404", order: "#1028", amount: "$67.00", reason: "Duplicate", status: "needs_response", deadline: "Mar 08", customer: "alice@example.com" },
-  { id: "DP-2405", order: "#1025", amount: "$312.00", reason: "Not received", status: "lost", deadline: "—", customer: "sarah@example.com" },
+  { id: "DP-2404", order: "#1028", amount: "$67.00", reason: "Duplicate", status: "blocked", deadline: "Mar 08", customer: "alice@example.com" },
+  { id: "DP-2405", order: "#1025", amount: "$312.00", reason: "Not received", status: "building", deadline: "Mar 10", customer: "sarah@example.com" },
 ];
 
 function statusBadge(status: string) {
   const map: Record<string, { variant: "success" | "warning" | "danger" | "info" | "default"; label: string }> = {
-    needs_response: { variant: "warning", label: "Needs Response" },
-    under_review: { variant: "info", label: "Under Review" },
+    saved_to_shopify: { variant: "success", label: "Saved to Shopify" },
+    needs_review: { variant: "warning", label: "Needs Review" },
+    building: { variant: "info", label: "Building..." },
+    blocked: { variant: "danger", label: "Blocked" },
+    ready: { variant: "primary" as "info", label: "Ready to Save" },
     won: { variant: "success", label: "Won" },
     lost: { variant: "danger", label: "Lost" },
   };

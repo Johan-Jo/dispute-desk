@@ -1,5 +1,7 @@
 import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
+import { evaluateCompleteness } from "../../automation/completeness";
+import { evaluateAndMaybeAutoSave } from "../../automation/pipeline";
 import type { ClaimedJob } from "../claimJobs";
 
 /**
@@ -29,21 +31,44 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
   });
 
   try {
+    // Fetch dispute reason for completeness evaluation
+    const { data: pack } = await db
+      .from("evidence_packs")
+      .select("dispute_id")
+      .eq("id", packId)
+      .single();
+    const { data: dispute } = pack?.dispute_id
+      ? await db
+          .from("disputes")
+          .select("reason")
+          .eq("id", pack.dispute_id)
+          .single()
+      : { data: null };
+
     // TODO: wire in actual source collectors (orderSource, fulfillmentSource, etc.)
-    // For now, mark as ready with placeholder pack_json
+    // For now, produce a placeholder pack_json with collected field keys
+    const collectedFields = new Set<string>(["order_confirmation"]);
     const packJson = {
       version: 1,
       generatedAt: new Date().toISOString(),
       sections: [],
+      order_confirmation: { placeholder: true },
     };
+
+    const completeness = evaluateCompleteness(
+      dispute?.reason ?? null,
+      collectedFields
+    );
 
     await db
       .from("evidence_packs")
       .update({
-        status: "ready",
+        status: completeness.blockers.length > 0 ? "blocked" : "ready",
         pack_json: packJson,
-        completeness_score: 0,
-        checklist: { items: [] },
+        completeness_score: completeness.score,
+        checklist: completeness.checklist,
+        blockers: completeness.blockers,
+        recommended_actions: completeness.recommended_actions,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packId);
@@ -53,7 +78,16 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       packId,
       actorType: "system",
       eventType: "pack_created",
-      eventPayload: { jobId: job.id, completenessScore: 0 },
+      eventPayload: {
+        jobId: job.id,
+        completenessScore: completeness.score,
+        blockers: completeness.blockers,
+      },
+    });
+
+    // Automation: evaluate auto-save gate
+    await evaluateAndMaybeAutoSave(packId).catch(() => {
+      // Non-fatal: auto-save evaluation failure shouldn't fail the build
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

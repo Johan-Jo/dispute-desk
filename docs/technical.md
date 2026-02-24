@@ -93,10 +93,12 @@ worker endpoint (`/api/jobs/worker`).
 
 ### Job Types
 
-| Type         | Trigger                    | Handler                            |
-|--------------|----------------------------|------------------------------------|
-| build_pack   | POST /api/disputes/:id/packs | lib/jobs/handlers/buildPackJob.ts |
-| render_pdf   | POST /api/packs/:packId/render-pdf | lib/jobs/handlers/renderPdfJob.ts |
+| Type             | Trigger                              | Handler                                |
+|------------------|--------------------------------------|----------------------------------------|
+| sync_disputes    | Cron or POST /api/disputes/sync      | lib/jobs/handlers/syncDisputesJob.ts   |
+| build_pack       | Automation pipeline or manual        | lib/jobs/handlers/buildPackJob.ts      |
+| render_pdf       | POST /api/packs/:packId/render-pdf   | lib/jobs/handlers/renderPdfJob.ts      |
+| save_to_shopify  | Auto-save gate or POST .../approve   | lib/jobs/handlers/saveToShopifyJob.ts  |
 
 ### Execution Flow
 
@@ -120,6 +122,41 @@ worker endpoint (`/api/jobs/worker`).
 | 007_jobs.sql | jobs table for async work |
 | 008_claim_jobs_rpc.sql | claim_jobs() RPC with SKIP LOCKED |
 | 009_portal.sql | portal_user_profiles + portal_user_shops + RLS |
+| 010_automation.sql | shop_settings + evidence_packs automation fields |
+
+## Automation Pipeline
+
+DisputeDesk is **automation-first**. The pipeline runs automatically
+when disputes are detected:
+
+### Flow
+
+1. `sync_disputes` job fetches disputes from Shopify (cron or manual).
+2. For each new dispute, `runAutomationPipeline()` checks `shop_settings`:
+   - If `auto_build_enabled` → enqueue `build_pack` job.
+3. `build_pack` collects evidence sources, evaluates completeness.
+4. `evaluateAndMaybeAutoSave()` checks the auto-save gate:
+   - `auto_save_enabled` + `score >= threshold` + `blockers == 0` + review status.
+   - Decision: `auto_save` | `park_for_review` | `block`.
+5. If `auto_save` → enqueue `save_to_shopify` job.
+
+### Key modules
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Settings | `lib/automation/settings.ts` | Read/write shop_settings with auto-upsert |
+| Completeness | `lib/automation/completeness.ts` | Per-reason templates, score + blockers |
+| Auto-Save Gate | `lib/automation/autoSaveGate.ts` | Decision logic for auto-save |
+| Pipeline | `lib/automation/pipeline.ts` | Orchestrator: trigger build + evaluate gate |
+
+### Pack Status Flow
+
+```
+queued → building → ready → saved_to_shopify
+                  → blocked (missing required items)
+                  → ready (parked for review → approve → saved_to_shopify)
+                  → failed
+```
 
 ## API Surface
 
@@ -134,6 +171,12 @@ worker endpoint (`/api/jobs/worker`).
 ### Shopify OAuth
 - `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`)
 - `GET /api/auth/shopify/callback` — complete OAuth, link portal user if portal source
+
+### Automation
+- `GET /api/automation/settings?shop_id=...` — read shop automation settings
+- `PATCH /api/automation/settings` — update automation toggles
+- `POST /api/disputes/sync` — enqueue dispute sync job
+- `POST /api/packs/:packId/approve` — approve pack for save + enqueue job
 
 ### Authenticated (Shopify session required)
 - `GET /api/disputes`

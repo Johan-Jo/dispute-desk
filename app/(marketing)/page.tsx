@@ -1,4 +1,4 @@
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, ExternalLink } from "lucide-react";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function MarketingLandingPage() {
@@ -38,25 +38,26 @@ export default function MarketingLandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-5xl lg:text-6xl font-bold text-[#0B1220] mb-6 leading-tight">
-                Your command center for Shopify disputes.
+                Automatic dispute ops for Shopify.
               </h1>
               <p className="text-xl text-[#64748B] mb-8 leading-relaxed">
-                Generate evidence packs, see what&apos;s missing, and save evidence
-                back to Shopify&nbsp;&mdash; you stay in control.
+                Connect once. DisputeDesk automatically builds evidence packs, scores
+                completeness, and saves evidence back to Shopify&nbsp;&mdash; you
+                submit in Shopify Admin.
               </p>
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">One-click evidence packs (orders, tracking, policies, uploads)</p>
+                  <Zap className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
+                  <p className="text-[#0B1220]">Evidence packs generated automatically when disputes appear</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Checklist + completeness score per reason</p>
+                  <p className="text-[#0B1220]">Rules + completeness scoring decide when to auto-save</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Immutable audit trail</p>
+                  <RefreshCw className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
+                  <p className="text-[#0B1220]">Evidence saved to Shopify automatically; submit in Shopify Admin</p>
                 </div>
               </div>
 
@@ -73,7 +74,8 @@ export default function MarketingLandingPage() {
               </div>
 
               <p className="text-sm text-[#64748B] mt-6 border-t border-[#E5E7EB] pt-6">
-                Evidence can be saved via API. Submission happens in Shopify Admin.
+                DisputeDesk saves evidence to Shopify via API. Submission to the card
+                network happens in Shopify Admin (or auto-submits on due date).
               </p>
             </div>
 
@@ -139,22 +141,22 @@ export default function MarketingLandingPage() {
               <div className="w-16 h-16 bg-[#DBEAFE] rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-8 h-8 text-[#1D4ED8]" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">1. Connect Your Store</h3>
-              <p className="text-[#64748B]">Install the app from Shopify App Store. Grant read-only access to orders and disputes.</p>
+              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">1. Connect Once</h3>
+              <p className="text-[#64748B]">Install from the Shopify App Store. DisputeDesk syncs disputes automatically from that point on.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-[#DCFCE7] rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <FileText className="w-8 h-8 text-[#22C55E]" />
+                <Zap className="w-8 h-8 text-[#22C55E]" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">2. Generate Evidence</h3>
-              <p className="text-[#64748B]">Click any dispute to generate a complete evidence pack with checklists and completeness scoring.</p>
+              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">2. Auto-Generate Packs</h3>
+              <p className="text-[#64748B]">When a dispute appears, DisputeDesk automatically builds an evidence pack with rules and completeness scoring.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-[#FEF3C7] rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <ExternalLink className="w-8 h-8 text-[#F59E0B]" />
+                <RefreshCw className="w-8 h-8 text-[#F59E0B]" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">3. Submit in Shopify</h3>
-              <p className="text-[#64748B]">Evidence is saved back to Shopify. Submit to the card network directly from Shopify Admin.</p>
+              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">3. Auto-Save to Shopify</h3>
+              <p className="text-[#64748B]">Complete packs are saved to Shopify automatically. Submit in Shopify Admin or let Shopify auto-submit on due date.</p>
             </div>
           </div>
         </div>
@@ -200,7 +202,8 @@ export default function MarketingLandingPage() {
               <div className="mb-6"><span className="text-4xl font-bold text-[#0B1220]">$0</span><span className="text-[#64748B]"> / month</span></div>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Up to 10 disputes/month</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />5 evidence packs</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Auto-build packs</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Review required before save</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Email support</li>
               </ul>
               <Button variant="secondary" className="w-full">Get Started</Button>
@@ -211,9 +214,10 @@ export default function MarketingLandingPage() {
               <div className="mb-6"><span className="text-4xl font-bold">$49</span><span className="opacity-80"> / month</span></div>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Up to 50 disputes/month</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />20 evidence packs</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Auto-build + auto-save to Shopify</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Review required (configurable)</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Rules engine</li>
                 <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Priority support</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Basic automation</li>
               </ul>
               <Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">Start Free Trial</Button>
             </div>
@@ -222,10 +226,10 @@ export default function MarketingLandingPage() {
               <div className="mb-6"><span className="text-4xl font-bold text-[#0B1220]">$99</span><span className="text-[#64748B]"> / month</span></div>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Unlimited disputes</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Unlimited packs</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Priority support</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Full automation (no review needed)</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Custom rules + thresholds</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Advanced automation</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Custom rules</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Priority support</li>
               </ul>
               <Button variant="secondary" className="w-full">Start Free Trial</Button>
             </div>
