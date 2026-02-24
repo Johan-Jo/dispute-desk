@@ -2,15 +2,18 @@
 
 ## Tech Stack
 
-| Layer          | Technology                                        |
-|----------------|---------------------------------------------------|
-| Embedded UI    | React 18 + Polaris + App Bridge React              |
-| Server         | Next.js 15 App Router (Node runtime)               |
-| Database       | Supabase Postgres with RLS                         |
-| Storage        | Supabase Storage (private buckets)                 |
-| PDF            | @react-pdf/renderer (deterministic, no browser)    |
-| Deployment     | Vercel (serverless + cron)                         |
-| CI/CD          | GitHub Actions                                     |
+| Layer              | Technology                                         |
+|--------------------|----------------------------------------------------|
+| Embedded UI        | React 18 + Polaris + App Bridge React              |
+| Portal / Marketing | React 18 + Tailwind CSS + custom design system     |
+| Server             | Next.js 15 App Router (Node runtime)               |
+| Auth (Portal)      | Supabase Auth (`@supabase/ssr`)                    |
+| Auth (Embedded)    | Shopify OAuth (offline + online sessions)          |
+| Database           | Supabase Postgres with RLS                         |
+| Storage            | Supabase Storage (private buckets)                 |
+| PDF                | @react-pdf/renderer (deterministic, no browser)    |
+| Deployment         | Vercel (serverless + cron)                         |
+| CI/CD              | GitHub Actions                                     |
 
 ## Shopify API
 
@@ -68,11 +71,14 @@ and key versioning for rotation.
 
 ## Supabase Access Model
 
-**Server-only.** The anon key is never used by client code.
+**Server-only for data access.** All data queries use `getServiceClient()`
+with the service role key. Shop isolation is enforced by verifying the
+Shopify session (embedded) or `portal_user_shops` link (portal), then
+scoping all queries to `shop_id`.
 
-All queries go through `getServiceClient()` using the service role key.
-Shop isolation is enforced by verifying the Shopify session in API route
-middleware and scoping all queries to `shop_id`.
+The **anon key** is exposed as `NEXT_PUBLIC_SUPABASE_ANON_KEY` and used
+**only** for Supabase Auth in the portal (sign-in, sign-up, password reset).
+It never accesses application data tables.
 
 RLS is enabled on all tables as defense-in-depth. Policies allow service
 role full access. If a request somehow bypasses application code, RLS
@@ -113,6 +119,7 @@ worker endpoint (`/api/jobs/worker`).
 | 006_rls_policies.sql | RLS policies (service role access) |
 | 007_jobs.sql | jobs table for async work |
 | 008_claim_jobs_rpc.sql | claim_jobs() RPC with SKIP LOCKED |
+| 009_portal.sql | portal_user_profiles + portal_user_shops + RLS |
 
 ## API Surface
 
@@ -120,6 +127,13 @@ worker endpoint (`/api/jobs/worker`).
 - `GET /api/health`
 - `POST /api/webhooks/app-uninstalled` (HMAC verified)
 - `POST /api/webhooks/shop-update` (HMAC verified)
+
+### Portal Auth
+- `POST /api/auth/portal/sign-out` — sign out portal user
+
+### Shopify OAuth
+- `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`)
+- `GET /api/auth/shopify/callback` — complete OAuth, link portal user if portal source
 
 ### Authenticated (Shopify session required)
 - `GET /api/disputes`
@@ -134,6 +148,51 @@ worker endpoint (`/api/jobs/worker`).
 
 ### Internal (CRON_SECRET required)
 - `POST /api/jobs/worker`
+
+## Design System
+
+The portal and marketing surfaces use a custom design system built on
+Tailwind CSS with shared components in `components/ui/`.
+
+### Design Tokens (CSS custom properties in `app/globals.css`)
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--dd-bg` | `#F6F8FB` | App background |
+| `--dd-surface` | `#FFFFFF` | Card / panel background |
+| `--dd-text` | `#0B1220` | Primary text |
+| `--dd-text-muted` | `#64748B` | Secondary text |
+| `--dd-border` | `#E5E7EB` | Borders and dividers |
+| `--dd-primary` | `#1D4ED8` | Primary actions |
+| `--dd-primary-deep` | `#4F46E5` | Focus rings, accents |
+| `--dd-success` | `#22C55E` | Success indicators |
+| `--dd-warning` | `#F59E0B` | Warning indicators |
+| `--dd-danger` | `#EF4444` | Error / destructive |
+
+### Shared Components (`components/ui/`)
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Button | `button.tsx` | CVA variants: primary, secondary, ghost, danger × sm/md/lg |
+| Badge | `badge.tsx` | CVA variants: default, success, warning, danger, info, primary |
+| AuthCard | `auth-card.tsx` | Centered card with title, subtitle, children, footer |
+| TextField | `text-field.tsx` | Input with label, error, and helper text |
+| PasswordField | `password-field.tsx` | Password input with toggle visibility + strength meter |
+| OAuthButton | `oauth-button.tsx` | Shopify-branded OAuth button (green) |
+| Divider | `divider.tsx` | Horizontal rule with optional label ("or") |
+| InlineError | `inline-error.tsx` | Red alert banner with icon |
+| InfoBanner | `info-banner.tsx` | Contextual banner: info, warning, success, danger |
+| KPICard | `kpi-card.tsx` | Metric card with label, value, change indicator |
+| cn() | `utils.ts` | `clsx` + `tailwind-merge` utility |
+
+### Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `tailwindcss` | Utility-first CSS framework |
+| `class-variance-authority` | Type-safe component variants |
+| `lucide-react` | Icon library (consistent with design) |
+| `clsx` + `tailwind-merge` | Conditional + deduplicated class names |
 
 ## CI Pipeline
 

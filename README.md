@@ -37,9 +37,10 @@ DisputeDesk ships as two web surfaces from one codebase:
 ## Tech Stack
 
 - **Frontend (Embedded):** React 18 + Polaris + App Bridge React
-- **Frontend (Portal/Marketing):** React 18 + Tailwind CSS
+- **Frontend (Portal/Marketing):** React 18 + Tailwind CSS + custom design system
+- **UI Components:** `components/ui/` — Button, Badge, AuthCard, TextField, PasswordField, KPICard, InfoBanner, etc. (CVA + lucide-react)
 - **Backend:** Next.js 15 App Router (Node runtime)
-- **Auth (Portal):** Supabase Auth (email/password, magic link)
+- **Auth (Portal):** Supabase Auth via `@supabase/ssr` (email/password, magic link)
 - **Auth (Embedded):** Shopify OAuth (offline + online sessions)
 - **Database:** Supabase Postgres (server-only access, RLS enabled)
 - **Storage:** Supabase Storage (private buckets for PDFs + uploads)
@@ -112,11 +113,34 @@ This is a Shopify Admin permission, not an OAuth scope.
 2. Verify app has `write_shopify_payments_dispute_evidences` scope.
 3. Ensure user has an active online session (re-open app from Shopify Admin).
 
+## Project Structure
+
+```
+app/
+  (marketing)/       → Public landing page (Tailwind)
+  (auth)/auth/       → Sign in, sign up, forgot/reset password, magic link
+  (portal)/portal/   → SaaS dashboard, disputes, packs, rules, billing, team
+  (embedded)/app/    → Shopify Admin embedded UI (Polaris)
+  api/               → Backend routes (auth, webhooks, jobs, packs, disputes)
+  globals.css        → Tailwind imports + design tokens
+components/ui/       → Shared design system components
+lib/
+  shopify/           → GraphQL client, throttle, session helpers
+  supabase/          → Server client, portal auth helpers
+  portal/            → Active shop cookie + linked shop queries
+  jobs/              → Job dispatcher + handlers
+supabase/migrations/ → SQL migrations (001–009)
+docs/                → Architecture, technical spec, epics, roadmap
+```
+
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for the full system
 design, two-surface architecture, auth models, async job architecture,
 and data flow.
+
+See [`docs/technical.md`](docs/technical.md) for the design system
+reference, component catalog, API surface, and CI pipeline.
 
 ## Development
 

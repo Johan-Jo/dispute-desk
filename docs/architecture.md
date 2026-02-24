@@ -36,6 +36,19 @@ Next.js App Router route groups ensure:
 - Embedded pages use Shopify session tokens.
 - Each group has its own `layout.tsx` with appropriate providers.
 
+### UI toolkit split
+
+| Surface | CSS / Components | Icons |
+|---------|-----------------|-------|
+| Embedded | Polaris (Shopify design system) | Polaris built-in |
+| Portal + Marketing + Auth | Tailwind CSS + `components/ui/*` (CVA) | lucide-react |
+
+The shared component library lives in `components/ui/` and uses
+`class-variance-authority` for type-safe variants plus `clsx` /
+`tailwind-merge` for conditional class merging. Design tokens are defined
+as CSS custom properties in `app/globals.css` (prefixed `--dd-*`).
+See [`docs/technical.md`](technical.md) for the full component catalog.
+
 ## System Diagram
 
 ```
