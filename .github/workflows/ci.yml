@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck-lint-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    needs: typecheck-lint-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run
+
+  forbidden-copy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for forbidden submission language in UI copy
+        run: |
+          FORBIDDEN_PATTERNS=(
+            "submit response"
+            "file dispute"
+            "submit to network"
+            "submit to card network"
+            "submit evidence to"
+          )
+          FOUND=0
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            MATCHES=$(grep -ri "$pattern" app/ components/ lib/constants/ 2>/dev/null || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error::Forbidden copy found: '$pattern'"
+              echo "$MATCHES"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::error::UI copy must use 'Save evidence' language, never 'submit'."
+            exit 1
+          fi
+          echo "No forbidden copy patterns found."
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=critical

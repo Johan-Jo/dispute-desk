@@ -1,0 +1,101 @@
+import { getServiceClient } from "../supabase/server";
+import {
+  encrypt,
+  decrypt,
+  serializeEncrypted,
+  deserializeEncrypted,
+} from "../security/encryption";
+
+export type SessionType = "offline" | "online";
+
+export interface StoredSession {
+  id: string;
+  shopId: string;
+  sessionType: SessionType;
+  userId: string | null;
+  shopDomain: string;
+  accessToken: string;
+  scopes: string;
+  expiresAt: string | null;
+}
+
+/**
+ * Upsert a Shopify session (online or offline) into shop_sessions.
+ * Access token is encrypted at rest with key version tracking.
+ */
+export async function storeSession(session: {
+  shopInternalId: string;
+  shopDomain: string;
+  sessionType: SessionType;
+  userId?: string | null;
+  accessToken: string;
+  scopes: string;
+  expiresAt?: string | null;
+}): Promise<void> {
+  const db = getServiceClient();
+  const encrypted = encrypt(session.accessToken);
+  const tokenStr = serializeEncrypted(encrypted);
+
+  const { error } = await db.from("shop_sessions").upsert(
+    {
+      shop_id: session.shopInternalId,
+      session_type: session.sessionType,
+      user_id: session.userId ?? null,
+      access_token_encrypted: tokenStr,
+      key_version: encrypted.keyVersion,
+      scopes: session.scopes,
+      expires_at: session.expiresAt ?? null,
+    },
+    { onConflict: "shop_id,session_type,user_id" }
+  );
+
+  if (error) throw new Error(`Failed to store session: ${error.message}`);
+}
+
+/**
+ * Load a session for the given shop. Defaults to offline.
+ * For Epic 5 (save evidence), pass sessionType='online'.
+ */
+export async function loadSession(
+  shopInternalId: string,
+  sessionType: SessionType = "offline"
+): Promise<StoredSession | null> {
+  const db = getServiceClient();
+
+  let query = db
+    .from("shop_sessions")
+    .select("*")
+    .eq("shop_id", shopInternalId)
+    .eq("session_type", sessionType);
+
+  if (sessionType === "offline") {
+    query = query.is("user_id", null);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(1).single();
+
+  if (error || !data) return null;
+
+  const encrypted = deserializeEncrypted(data.access_token_encrypted);
+  const accessToken = decrypt(encrypted);
+
+  return {
+    id: data.id,
+    shopId: data.shop_id,
+    sessionType: data.session_type,
+    userId: data.user_id,
+    shopDomain: data.shop_domain ?? "",
+    accessToken,
+    scopes: data.scopes,
+    expiresAt: data.expires_at,
+  };
+}
+
+export async function deleteShopSessions(shopInternalId: string): Promise<void> {
+  const db = getServiceClient();
+  const { error } = await db
+    .from("shop_sessions")
+    .delete()
+    .eq("shop_id", shopInternalId);
+  if (error) throw new Error(`Failed to delete sessions: ${error.message}`);
+}

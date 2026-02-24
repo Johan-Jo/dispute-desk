@@ -1,0 +1,34 @@
+# Shopify App Configuration — DisputeDesk (Dispute Ops)
+# https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "DisputeDesk"
+client_id = "${SHOPIFY_API_KEY}"
+application_url = "${SHOPIFY_APP_URL}"
+
+[auth]
+redirect_urls = [
+  "${SHOPIFY_APP_URL}/api/auth/shopify/callback",
+]
+
+[access_scopes]
+# read_orders: fetch order + fulfillment data for evidence packs
+# read_shopify_payments_disputes: list/detail disputes from Shopify Payments
+# write_shopify_payments_dispute_evidences: save evidence via disputeEvidenceUpdate
+scopes = "read_orders,read_shopify_payments_disputes,write_shopify_payments_dispute_evidences"
+
+[webhooks]
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/api/webhooks/app-uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = ["shop/update"]
+  uri = "/api/webhooks/shop-update"
+
+[app_proxy]
+# No proxy needed for V1
+
+[pos]
+embedded = false
