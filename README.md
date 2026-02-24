@@ -6,17 +6,25 @@
 
 ## What It Does
 
-DisputeDesk helps merchants handle Shopify Payments chargebacks by:
+DisputeDesk is an **automation-first** Shopify chargeback evidence app.
+Connect once, and DisputeDesk handles the rest:
 
-- Syncing disputes from Shopify Payments
-- Generating structured evidence packs (JSON + PDF)
-- Providing governance controls (auto-pack rules, review queues)
-- Saving evidence back to Shopify via GraphQL
-- Maintaining an immutable audit log of all actions
+1. **Auto-sync** — disputes are fetched from Shopify automatically.
+2. **Auto-build** — evidence packs are generated automatically when a
+   dispute appears (orders, tracking, policies, uploads).
+3. **Auto-save** — when the pack passes your rules (completeness score
+   + no blockers), evidence is saved back to Shopify via API.
+4. **Submit in Shopify** — submission to the card network happens in
+   Shopify Admin, or Shopify auto-submits on the due date.
+
+Merchants control the automation with per-store settings:
+- Toggle auto-build and auto-save independently
+- Require manual review before auto-save (default for Free/Starter)
+- Set a minimum completeness score threshold (default 80%)
+- Enable/disable the "zero blockers" gate
 
 **Important:** DisputeDesk saves evidence to Shopify — it does NOT
-programmatically submit dispute responses to card networks. Merchants
-finalize submission in Shopify Admin.
+programmatically submit dispute responses to card networks.
 
 ## Surfaces
 
@@ -128,8 +136,10 @@ lib/
   shopify/           → GraphQL client, throttle, session helpers
   supabase/          → Server client, portal auth helpers
   portal/            → Active shop cookie + linked shop queries
-  jobs/              → Job dispatcher + handlers
-supabase/migrations/ → SQL migrations (001–009)
+  automation/        → Pipeline, completeness engine, auto-save gate, settings
+  jobs/              → Job dispatcher + handlers (sync, build, save, render)
+scripts/             → Migration runner
+supabase/migrations/ → SQL migrations (001–010)
 docs/                → Architecture, technical spec, epics, roadmap
 ```
 
@@ -152,7 +162,7 @@ npx vitest run
 
 Tests include:
 - **Contract tests:** Validate Shopify GraphQL response shapes (zod schemas)
-- **Unit tests:** Encryption roundtrip, field mapping, etc.
+- **Unit tests:** Encryption roundtrip, field mapping, completeness scoring, auto-save gate, etc.
 
 ### CI
 

@@ -6,7 +6,10 @@
 
 ## Goal
 
-One-click "Generate Pack" produces structured evidence JSON from Shopify data + policy snapshots, with checklist scoring and full audit trail.
+Evidence packs are generated **automatically** when disputes appear (via the
+automation pipeline, see EPIC-A1). Manual "Generate Pack" remains as an override.
+Packs include structured evidence JSON from Shopify data + policy snapshots,
+with completeness scoring, blockers, and full audit trail.
 
 ## Tasks
 

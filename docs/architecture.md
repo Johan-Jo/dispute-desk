@@ -136,10 +136,19 @@ keeps the auth surface small.
 
 ## Async Job Architecture
 
-Pack building and PDF rendering run as async jobs to avoid serverless
-function timeouts:
+All heavy operations run as async jobs to avoid serverless function
+timeouts:
 
-1. API route creates the resource (pack row, etc.) and enqueues a job.
+| Job type | Trigger | Handler |
+|----------|---------|---------|
+| `sync_disputes` | Cron (every 2–5 min) or manual | Fetch disputes from Shopify, upsert, trigger automation pipeline |
+| `build_pack` | Automation pipeline or manual | Collect sources, score completeness, evaluate auto-save gate |
+| `render_pdf` | Manual request | Render PDF, upload to Storage |
+| `save_to_shopify` | Auto-save gate or manual approve | Push evidence to Shopify via GraphQL |
+
+### Execution model
+
+1. Trigger creates the resource and enqueues a job row.
 2. Route returns `202 Accepted` with `jobId` for polling.
 3. Vercel Cron calls `POST /api/jobs/worker` every 2 minutes.
 4. Worker claims queued jobs using `SELECT ... FOR UPDATE SKIP LOCKED`.
@@ -161,18 +170,62 @@ All GraphQL calls go through `requestShopifyGraphQL()` which uses this
 version, implements retry with exponential backoff + jitter for throttling
 (429, THROTTLED errors, 5xx), and never logs access tokens.
 
-## Data Flow (V1)
+## Data Flow (V1) — Automation-First
 
-1. UI requests dispute list → API route → Shopify GraphQL (paginated).
-2. Dispute sync upserts into `disputes` table, including `dispute_evidence_gid`.
-3. "Generate Pack" → API creates pack row + enqueues `build_pack` job.
-4. Worker collects sources (order, fulfillment, policies) → writes
-   `evidence_items` + `audit_events` → updates pack status to `ready`.
-5. "Render PDF" → enqueues `render_pdf` job → worker renders, uploads
-   to Storage, updates `pdf_path`.
-6. "Save Evidence to Shopify" → uses online session + `dispute_evidence_gid`
-   → calls `disputeEvidenceUpdate` → logs audit event.
-7. User clicks deep-link to open dispute in Shopify Admin to finalize.
+DisputeDesk operates as an **automation-first** pipeline. The default
+behavior is fully automatic; merchants configure gates and thresholds.
+
+### Automatic flow (default)
+
+1. **Sync** — `sync_disputes` cron job (or manual trigger) fetches disputes
+   from Shopify GraphQL, upserts into `disputes` table.
+2. **Auto-build** — for each new/updated dispute, `runAutomationPipeline()`
+   checks `shop_settings.auto_build_enabled`. If ON, creates an
+   `evidence_packs` row and enqueues a `build_pack` job.
+3. **Build** — worker collects sources (order, fulfillment, policies),
+   writes `evidence_items` + `audit_events`, runs the completeness engine
+   (per-reason templates → score + blockers + recommended actions).
+4. **Auto-save gate** — `evaluateAndMaybeAutoSave()` checks:
+   - `auto_save_enabled` on store settings
+   - `completeness_score >= auto_save_min_score`
+   - `blockers == 0` (if `enforce_no_blockers`)
+   - `require_review_before_save` (parks pack for manual approval)
+5. **Save** — if gates pass, enqueues `save_to_shopify` job → worker
+   calls `disputeEvidenceUpdate` with evidence GID → logs audit event →
+   updates pack status to `saved_to_shopify`.
+6. **Review queue** — if review is required, pack stays in `ready`
+   status. Merchant clicks "Approve & Save" → triggers save job.
+7. **Submit** — merchant finalizes in Shopify Admin (or Shopify
+   auto-submits on the dispute due date).
+
+### Manual overrides
+
+Merchants can always:
+- Trigger a manual sync (`POST /api/disputes/sync`)
+- Generate a pack manually (existing `build_pack` flow)
+- Approve a parked pack (`POST /api/packs/:packId/approve`)
+
+### Pack status flow
+
+```
+queued → building → ready → saved_to_shopify
+                  → blocked (missing required evidence)
+                  → ready (parked for review) → approve → saved_to_shopify
+                  → failed
+```
+
+### Automation settings (per store)
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| auto_build_enabled | true | Auto-create packs on new disputes |
+| auto_save_enabled | false | Auto-push evidence to Shopify |
+| require_review_before_save | true | Park packs for manual approval |
+| auto_save_min_score | 80 | Min completeness score for auto-save |
+| enforce_no_blockers | true | Block save if required items missing |
+
+Settings are stored in `shop_settings` (010_automation.sql) with
+auto-upsert via `ensure_shop_settings()` RPC.
 
 ## Cross-Cutting: Two-Surface UX Copy Compliance
 

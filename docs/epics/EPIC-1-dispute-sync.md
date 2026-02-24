@@ -38,9 +38,11 @@ Merchants see their Shopify Payments disputes in the embedded app with filtering
   - Linked order card: order number with deep-link to Shopify Admin order page.
   - Actions area: "Generate Pack" button (placeholder, wired in EPIC 2), "Sync" button.
 
-### 1.6 — Scheduled Sync (Optional Stretch)
-- Vercel Cron Job or Supabase Edge Function that runs every 6 hours per active shop.
-- If deferred, the manual "Sync Now" is sufficient for V1.
+### 1.6 — Scheduled Sync
+- `sync_disputes` job handler runs automatically via Vercel Cron (every 2–5 min).
+- Each sync triggers the automation pipeline (`runAutomationPipeline()`) for new/updated disputes.
+- Manual "Sync Now" button also available as override.
+- See EPIC-A1 for the full automation pipeline details.
 
 ## Key Files
 - `lib/shopify/queries/disputes.ts`
