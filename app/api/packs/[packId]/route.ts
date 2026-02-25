@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 /**
  * GET /api/packs/:packId
  *
- * Returns pack with evidence items, checklist, and current PDF job status summary.
+ * Returns pack with evidence items, checklist, audit log, and active job status.
  */
 export async function GET(
   _req: NextRequest,
@@ -23,32 +23,40 @@ export async function GET(
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
-  const { data: items } = await db
-    .from("evidence_items")
-    .select("*")
-    .eq("pack_id", packId)
-    .order("created_at", { ascending: true });
-
-  const { data: auditEvents } = await db
-    .from("audit_events")
-    .select("id, event_type, event_payload, actor_type, created_at")
-    .eq("pack_id", packId)
-    .order("created_at", { ascending: true });
-
-  // Check for active PDF render job
-  const { data: activeJob } = await db
-    .from("jobs")
-    .select("id, status, last_error")
-    .eq("entity_id", packId)
-    .eq("job_type", "render_pdf")
-    .in("status", ["queued", "running"])
-    .limit(1)
-    .maybeSingle();
+  const [itemsRes, auditRes, buildJobRes, pdfJobRes] = await Promise.all([
+    db
+      .from("evidence_items")
+      .select("*")
+      .eq("pack_id", packId)
+      .order("created_at", { ascending: true }),
+    db
+      .from("audit_events")
+      .select("id, event_type, event_payload, actor_type, created_at")
+      .eq("pack_id", packId)
+      .order("created_at", { ascending: true }),
+    db
+      .from("jobs")
+      .select("id, status, last_error, created_at, updated_at")
+      .eq("entity_id", packId)
+      .eq("job_type", "build_pack")
+      .in("status", ["queued", "running"])
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from("jobs")
+      .select("id, status, last_error, created_at, updated_at")
+      .eq("entity_id", packId)
+      .eq("job_type", "render_pdf")
+      .in("status", ["queued", "running"])
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   return NextResponse.json({
     ...pack,
-    evidence_items: items ?? [],
-    audit_events: auditEvents ?? [],
-    active_pdf_job: activeJob ?? null,
+    evidence_items: itemsRes.data ?? [],
+    audit_events: auditRes.data ?? [],
+    active_build_job: buildJobRes.data ?? null,
+    active_pdf_job: pdfJobRes.data ?? null,
   });
 }

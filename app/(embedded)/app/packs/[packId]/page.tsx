@@ -1,137 +1,346 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
+import {
+  Page,
+  Layout,
+  Card,
+  Text,
+  Badge,
+  BlockStack,
+  InlineStack,
+  Banner,
+  Button,
+  Spinner,
+  Divider,
+  ProgressBar,
+  Collapsible,
+  Icon,
+  DropZone,
+  LegacyStack,
+  Thumbnail,
+  List,
+} from "@shopify/polaris";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from "@shopify/polaris-icons";
+
+interface ChecklistItem {
+  field: string;
+  label: string;
+  required: boolean;
+  present: boolean;
+}
+
+interface EvidenceItem {
+  id: string;
+  type: string;
+  label: string;
+  source: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+interface AuditEvent {
+  id: string;
+  event_type: string;
+  event_payload: Record<string, unknown>;
+  actor_type: string;
+  created_at: string;
+}
 
 interface PackData {
   id: string;
+  shop_id: string;
+  dispute_id: string;
   status: string;
   completeness_score: number | null;
-  checklist: { items: unknown[] } | null;
-  pack_json: unknown;
-  pdf_path: string | null;
-  last_saved_to_shopify_at: string | null;
+  checklist: ChecklistItem[] | null;
+  blockers: string[] | null;
+  recommended_actions: string[] | null;
+  pack_json: Record<string, unknown> | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  evidence_items: EvidenceItem[];
+  audit_events: AuditEvent[];
+  active_build_job: { id: string; status: string } | null;
 }
 
-interface JobStatus {
-  id: string;
-  status: string;
-  last_error: string | null;
+function statusTone(status: string): "success" | "warning" | "critical" | "info" | undefined {
+  switch (status) {
+    case "saved_to_shopify": return "success";
+    case "ready": return "warning";
+    case "blocked": case "failed": return "critical";
+    case "building": case "queued": return "info";
+    default: return undefined;
+  }
 }
 
-/**
- * Pack preview page with job-based polling.
- *
- * After "Generate Pack" or "Render PDF", the UI polls the job endpoint
- * until succeeded/failed, then refreshes pack data.
- */
-export default function PackDetailPage() {
-  const params = useParams<{ packId: string }>();
-  const packId = params.packId;
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
 
+export default function PackPreviewPage() {
+  const { packId } = useParams<{ packId: string }>();
   const [pack, setPack] = useState<PackData | null>(null);
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [uploading, setUploading] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
     const res = await fetch(`/api/packs/${packId}`);
     if (res.ok) {
-      setPack(await res.json());
+      const data = await res.json();
+      setPack(data);
+      if (data.status !== "queued" && data.status !== "building") {
+        if (pollRef.current) clearInterval(pollRef.current);
+      }
     }
+    setLoading(false);
   }, [packId]);
 
   useEffect(() => {
-    if (!activeJobId) return;
-
-    const interval = setInterval(async () => {
-      const res = await fetch(`/api/jobs/${activeJobId}`);
-      if (!res.ok) return;
-      const job: JobStatus = await res.json();
-      setJobStatus(job);
-
-      if (job.status === "succeeded" || job.status === "failed") {
-        clearInterval(interval);
-        setActiveJobId(null);
-        if (job.status === "failed") {
-          setError(job.last_error ?? "Job failed");
-        }
-        await fetchPack();
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [activeJobId, fetchPack]);
-
-  useEffect(() => {
     fetchPack();
+    pollRef.current = setInterval(fetchPack, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchPack]);
 
-  const handleRenderPdf = async () => {
-    setError(null);
-    const res = await fetch(`/api/packs/${packId}/render-pdf`, {
-      method: "POST",
+  const toggleSection = (id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
-    if (res.ok) {
-      const { jobId } = await res.json();
-      setActiveJobId(jobId);
-      setJobStatus({ id: jobId, status: "queued", last_error: null });
-    } else {
-      setError("Failed to start PDF render");
-    }
   };
 
-  const handleDownload = async () => {
-    const res = await fetch(`/api/packs/${packId}/download`);
-    if (res.ok) {
-      const { url } = await res.json();
-      window.open(url, "_blank");
+  const handleUpload = async (_files: File[], accepted: File[]) => {
+    if (accepted.length === 0) return;
+    setUploading(true);
+    for (const file of accepted) {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("label", file.name);
+      await fetch(`/api/packs/${packId}/upload`, { method: "POST", body: form });
     }
+    await fetchPack();
+    setUploading(false);
   };
 
-  if (!pack) return <div>Loading pack...</div>;
+  if (loading) {
+    return (
+      <Page title="Evidence Pack">
+        <div style={{ padding: "3rem", textAlign: "center" }}>
+          <Spinner size="large" />
+        </div>
+      </Page>
+    );
+  }
+
+  if (!pack) {
+    return (
+      <Page title="Evidence Pack" backAction={{ content: "Back", url: "/app/disputes" }}>
+        <Banner tone="critical">Pack not found.</Banner>
+      </Page>
+    );
+  }
 
   const isBuilding = pack.status === "queued" || pack.status === "building";
-  const isJobRunning = activeJobId !== null;
+  const score = pack.completeness_score ?? 0;
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h1>Evidence Pack</h1>
-      <p>Status: {pack.status}</p>
+    <Page
+      title={`Pack ${pack.id.slice(0, 8)}`}
+      subtitle={`Created ${formatDate(pack.created_at)} · ${pack.created_by ?? "system"}`}
+      backAction={{ content: "Dispute", url: `/app/disputes/${pack.dispute_id}` }}
+    >
+      <Layout>
+        {isBuilding && (
+          <Layout.Section>
+            <Banner tone="info">
+              Building evidence pack... This page refreshes automatically.
+            </Banner>
+          </Layout.Section>
+        )}
 
-      {isBuilding && <p>Building evidence pack...</p>}
+        {/* Status + Score */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between">
+                <Text as="h2" variant="headingMd">Pack Status</Text>
+                <Badge tone={statusTone(pack.status)}>
+                  {pack.status.replace(/_/g, " ")}
+                </Badge>
+              </InlineStack>
+              <BlockStack gap="200">
+                <InlineStack align="space-between">
+                  <Text as="p" variant="bodySm" tone="subdued">Completeness</Text>
+                  <Text as="p" variant="bodyMd" fontWeight="bold">{score}%</Text>
+                </InlineStack>
+                <ProgressBar
+                  progress={score}
+                  tone={score >= 80 ? "success" : score >= 50 ? "highlight" : "critical"}
+                  size="small"
+                />
+              </BlockStack>
+              {pack.blockers && pack.blockers.length > 0 && (
+                <Banner tone="critical">
+                  <Text as="p" variant="bodySm" fontWeight="bold">
+                    {pack.blockers.length} blocker(s): {pack.blockers.join(", ")}
+                  </Text>
+                </Banner>
+              )}
+              {pack.recommended_actions && pack.recommended_actions.length > 0 && (
+                <Banner tone="warning">
+                  <Text as="p" variant="bodySm">
+                    Recommended: {pack.recommended_actions.join(", ")}
+                  </Text>
+                </Banner>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
 
-      {pack.completeness_score !== null && (
-        <p>Completeness: {pack.completeness_score}%</p>
-      )}
+        {/* Checklist */}
+        {pack.checklist && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">Evidence Checklist</Text>
+                <Divider />
+                {pack.checklist.map((item) => (
+                  <InlineStack key={item.field} gap="200" align="start" blockAlign="center">
+                    <Icon
+                      source={item.present ? CheckCircleIcon : XCircleIcon}
+                      tone={item.present ? "success" : item.required ? "critical" : "subdued"}
+                    />
+                    <BlockStack gap="0">
+                      <Text as="p" variant="bodyMd">
+                        {item.label}
+                        {item.required && !item.present && (
+                          <Badge tone="critical" size="small">required</Badge>
+                        )}
+                      </Text>
+                    </BlockStack>
+                  </InlineStack>
+                ))}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
 
-      {error && (
-        <div style={{ color: "red", margin: "1rem 0" }}>Error: {error}</div>
-      )}
+        {/* Evidence Sections */}
+        {pack.evidence_items.length > 0 && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">
+                  Evidence Items ({pack.evidence_items.length})
+                </Text>
+                <Divider />
+                {pack.evidence_items.map((item) => (
+                  <div key={item.id}>
+                    <div
+                      onClick={() => toggleSection(item.id)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <InlineStack align="space-between" blockAlign="center">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Badge>{item.type}</Badge>
+                          <Text as="p" variant="bodyMd" fontWeight="semibold">
+                            {item.label}
+                          </Text>
+                        </InlineStack>
+                        <Icon source={expandedSections.has(item.id) ? ChevronUpIcon : ChevronDownIcon} />
+                      </InlineStack>
+                    </div>
+                    <Collapsible
+                      open={expandedSections.has(item.id)}
+                      id={`section-${item.id}`}
+                    >
+                      <div style={{ padding: "12px 0", maxHeight: "300px", overflow: "auto" }}>
+                        <pre style={{ fontSize: "12px", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                          {JSON.stringify(item.payload, null, 2)}
+                        </pre>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          Source: {item.source} · Added {formatDate(item.created_at)}
+                        </Text>
+                      </div>
+                    </Collapsible>
+                    <Divider />
+                  </div>
+                ))}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
 
-      {isJobRunning && jobStatus && (
-        <p>
-          Job: {jobStatus.status}
-          {jobStatus.status === "running" && " (processing...)"}
-        </p>
-      )}
+        {/* File Upload */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">Upload Evidence</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                Drag files here or click to upload supporting evidence (images, PDFs, up to 10 MB).
+              </Text>
+              <DropZone
+                onDrop={handleUpload}
+                allowMultiple
+                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
+              >
+                {uploading ? (
+                  <DropZone.FileUpload actionHint="Uploading..." />
+                ) : (
+                  <DropZone.FileUpload />
+                )}
+              </DropZone>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
 
-      {pack.status === "ready" && !pack.pdf_path && (
-        <button onClick={handleRenderPdf} disabled={isJobRunning}>
-          {isJobRunning ? "Rendering PDF..." : "Render PDF"}
-        </button>
-      )}
+        {/* Audit Log */}
+        {pack.audit_events.length > 0 && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">Audit Log</Text>
+                <Divider />
+                {pack.audit_events.map((evt) => (
+                  <InlineStack key={evt.id} gap="200" blockAlign="start">
+                    <Text as="p" variant="bodySm" tone="subdued" breakWord>
+                      {formatDate(evt.created_at)}
+                    </Text>
+                    <BlockStack gap="0">
+                      <Text as="p" variant="bodySm">
+                        {evt.event_type.replace(/_/g, " ")} ({evt.actor_type})
+                      </Text>
+                    </BlockStack>
+                  </InlineStack>
+                ))}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
 
-      {pack.pdf_path && (
-        <button onClick={handleDownload}>Download PDF</button>
-      )}
-
-      {pack.status === "ready" && (
-        <p style={{ marginTop: "1rem", fontSize: "0.875rem" }}>
-          When ready, open Shopify Admin to review and finalize your dispute
-          response. Shopify will handle submission by the due date.
-        </p>
-      )}
-    </div>
+        {/* Compliance */}
+        <Layout.Section>
+          <Banner tone="info">
+            Evidence is saved to Shopify via API. Submission to the card
+            network happens in Shopify Admin, or Shopify auto-submits on the
+            due date.
+          </Banner>
+        </Layout.Section>
+      </Layout>
+    </Page>
   );
 }

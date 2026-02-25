@@ -158,6 +158,41 @@ queued → building → ready → saved_to_shopify
                   → failed
 ```
 
+## Evidence Pack Builder
+
+### Build Pipeline (`lib/packs/buildPack.ts`)
+
+1. Load dispute → shop → offline session from DB
+2. Decrypt access token (AES-256-GCM)
+3. Run 4 source collectors concurrently (`Promise.allSettled`)
+4. Insert `evidence_items` rows + audit events per section
+5. Compute completeness from collected fields
+6. Assemble `pack_json`, update pack row
+
+### Source Collectors (`lib/packs/sources/`)
+
+| Collector | File | Fields Provided |
+|-----------|------|-----------------|
+| Order | `orderSource.ts` | `order_confirmation`, `billing_address_match` |
+| Fulfillment | `fulfillmentSource.ts` | `shipping_tracking`, `delivery_proof` |
+| Policy | `policySource.ts` | `shipping_policy`, `refund_policy`, `cancellation_policy` |
+| Manual | `manualSource.ts` | `customer_communication` |
+
+### GraphQL Queries
+
+| Query | File | Purpose |
+|-------|------|---------|
+| `ORDER_DETAIL_QUERY` | `lib/shopify/queries/orders.ts` | Full order: line items, fulfillments, addresses, refunds, customer |
+| `DISPUTE_LIST_QUERY` | `lib/shopify/queries/disputes.ts` | Paginated dispute list |
+| `DISPUTE_DETAIL_QUERY` | `lib/shopify/queries/disputes.ts` | Single dispute with order + evidence |
+
+### Manual Upload
+
+- Endpoint: `POST /api/packs/:packId/upload` (multipart)
+- Storage: Supabase Storage `evidence-uploads/{shopId}/{packId}/`
+- Max 10 MB, types: PNG, JPEG, GIF, WebP, PDF, TXT, CSV
+- Creates `evidence_items` row with `source: manual_upload`
+
 ## API Surface
 
 ### Public
@@ -182,8 +217,10 @@ queued → building → ready → saved_to_shopify
 - `GET /api/disputes`
 - `GET /api/disputes/:id`
 - `POST /api/disputes/:id/sync`
-- `POST /api/disputes/:id/packs` → 202 + jobId
-- `GET /api/packs/:packId`
+- `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
+- `GET /api/disputes/:id/packs` → list packs for a dispute
+- `GET /api/packs/:packId` → full pack: items, checklist, audit log, active jobs
+- `POST /api/packs/:packId/upload` → multipart file upload (10 MB, creates evidence_item)
 - `POST /api/packs/:packId/render-pdf` → 202 + jobId
 - `POST /api/packs/:packId/save-to-shopify` (online session required)
 - `GET /api/packs/:packId/download`

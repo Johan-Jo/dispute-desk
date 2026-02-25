@@ -1,14 +1,14 @@
 import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
-import { evaluateCompleteness } from "../../automation/completeness";
+import { buildPack } from "../../packs/buildPack";
 import { evaluateAndMaybeAutoSave } from "../../automation/pipeline";
 import type { ClaimedJob } from "../claimJobs";
 
 /**
  * Job handler: build_pack
  *
- * Collects evidence sources, assembles pack JSON, computes checklist,
- * and writes evidence_items + audit_events.
+ * Delegates to the buildPack orchestrator which runs all source
+ * collectors, writes evidence_items, and computes completeness.
  *
  * entity_id = evidence_packs.id
  */
@@ -31,47 +31,9 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
   });
 
   try {
-    // Fetch dispute reason for completeness evaluation
-    const { data: pack } = await db
-      .from("evidence_packs")
-      .select("dispute_id")
-      .eq("id", packId)
-      .single();
-    const { data: dispute } = pack?.dispute_id
-      ? await db
-          .from("disputes")
-          .select("reason")
-          .eq("id", pack.dispute_id)
-          .single()
-      : { data: null };
-
-    // TODO: wire in actual source collectors (orderSource, fulfillmentSource, etc.)
-    // For now, produce a placeholder pack_json with collected field keys
-    const collectedFields = new Set<string>(["order_confirmation"]);
-    const packJson = {
-      version: 1,
-      generatedAt: new Date().toISOString(),
-      sections: [],
-      order_confirmation: { placeholder: true },
-    };
-
-    const completeness = evaluateCompleteness(
-      dispute?.reason ?? null,
-      collectedFields
-    );
-
-    await db
-      .from("evidence_packs")
-      .update({
-        status: completeness.blockers.length > 0 ? "blocked" : "ready",
-        pack_json: packJson,
-        completeness_score: completeness.score,
-        checklist: completeness.checklist,
-        blockers: completeness.blockers,
-        recommended_actions: completeness.recommended_actions,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", packId);
+    const result = await buildPack(packId, {
+      correlationId: job.id,
+    });
 
     await logAuditEvent({
       shopId: job.shopId,
@@ -80,8 +42,10 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       eventType: "pack_created",
       eventPayload: {
         jobId: job.id,
-        completenessScore: completeness.score,
-        blockers: completeness.blockers,
+        completenessScore: result.completenessScore,
+        blockers: result.blockers,
+        sectionsCollected: result.sectionsCollected,
+        itemsCreated: result.itemsCreated,
       },
     });
 

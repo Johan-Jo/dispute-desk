@@ -250,19 +250,28 @@ export default function DisputeDetailPage() {
                   </Text>
                 </>
               ) : (
-                <DataTable
-                  columnContentTypes={["text", "text", "numeric", "text", "text"]}
-                  headings={["Pack ID", "Status", "Score", "Blockers", "Created"]}
-                  rows={packs.map((p) => [
-                    p.id.slice(0, 8),
-                    p.status.replace(/_/g, " "),
-                    p.completeness_score != null ? `${p.completeness_score}%` : "—",
-                    p.blockers && p.blockers.length > 0
-                      ? `${p.blockers.length} blocker(s)`
-                      : "None",
-                    formatDate(p.created_at),
-                  ])}
-                />
+                <>
+                  <DataTable
+                    columnContentTypes={["text", "text", "numeric", "text", "text"]}
+                    headings={["Pack ID", "Status", "Score", "Blockers", "Created"]}
+                    rows={packs.map((p) => [
+                      p.id.slice(0, 8),
+                      p.status.replace(/_/g, " "),
+                      p.completeness_score != null ? `${p.completeness_score}%` : "—",
+                      p.blockers && p.blockers.length > 0
+                        ? `${p.blockers.length} blocker(s)`
+                        : "None",
+                      formatDate(p.created_at),
+                    ])}
+                  />
+                  <div style={{ marginTop: "8px" }}>
+                    {packs.map((p) => (
+                      <Button key={p.id} variant="plain" url={`/app/packs/${p.id}`}>
+                        View pack {p.id.slice(0, 8)} →
+                      </Button>
+                    ))}
+                  </div>
+                </>
               )}
             </BlockStack>
           </Card>
