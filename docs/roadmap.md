@@ -15,7 +15,7 @@
 | 4 | Governance & Review Queue | DONE | 3-4 | [EPIC-4](epics/EPIC-4-governance.md) |
 | 5 | Save Evidence to Shopify | DONE | 4 | [EPIC-5](epics/EPIC-5-save-to-shopify.md) |
 | 6 | Billing & Plan Limits | DONE | 5 | [EPIC-6](epics/EPIC-6-billing.md) |
-| 7 | Hardening | Pending | 5-6 | [EPIC-7](epics/EPIC-7-hardening.md) |
+| 7 | Hardening | DONE | 5-6 | [EPIC-7](epics/EPIC-7-hardening.md) |
 | 8 | Internal Admin Panel | Pending | 6-7 | [EPIC-8](epics/EPIC-8-admin-panel.md) |
 | 9 | Multi-Language (i18n) | Pending | 7-8 | [EPIC-9](epics/EPIC-9-i18n.md) |
 

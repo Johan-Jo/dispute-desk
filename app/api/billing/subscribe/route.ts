@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
-import { getPlan, type PlanId } from "@/lib/billing/plans";
+import { getPlan } from "@/lib/billing/plans";
+import { validateBody, billingSubscribeSchema } from "@/lib/middleware/validate";
 import {
   APP_SUBSCRIPTION_CREATE_MUTATION,
   type AppSubscriptionCreateResult,
@@ -25,16 +26,12 @@ function decryptToken(encrypted: string): string {
  * Creates a Shopify recurring subscription and returns the approval URL.
  */
 export async function POST(req: NextRequest) {
-  const { shop_id, plan_id } = await req.json();
-
-  if (!shop_id || !plan_id) {
-    return NextResponse.json({ error: "shop_id and plan_id required" }, { status: 400 });
-  }
+  const body = await req.json();
+  const validated = await validateBody(body, billingSubscribeSchema);
+  if ("error" in validated) return validated.error;
+  const { shop_id, plan_id } = validated.data;
 
   const plan = getPlan(plan_id);
-  if (plan.price === 0) {
-    return NextResponse.json({ error: "Cannot subscribe to free plan via billing" }, { status: 400 });
-  }
 
   const sb = getServiceClient();
 

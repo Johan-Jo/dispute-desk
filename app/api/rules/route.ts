@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { checkFeatureAccess } from "@/lib/billing/checkQuota";
+import { validateBody, ruleCreateSchema } from "@/lib/middleware/validate";
 
 export const runtime = "nodejs";
 
@@ -34,11 +35,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { shop_id, name, match, action, enabled, priority } = body;
-
-  if (!shop_id) {
-    return NextResponse.json({ error: "shop_id required" }, { status: 400 });
-  }
+  const validated = await validateBody(body, ruleCreateSchema);
+  if ("error" in validated) return validated.error;
+  const { shop_id, name, match, action, enabled, priority } = validated.data;
 
   const sb2 = getServiceClient();
   const { data: shop } = await sb2.from("shops").select("plan").eq("id", shop_id).single();

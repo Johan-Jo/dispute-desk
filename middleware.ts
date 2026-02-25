@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { checkRateLimit } from "@/lib/middleware/rateLimit";
 
 /**
  * Multi-surface middleware.
@@ -24,9 +25,17 @@ export async function middleware(req: NextRequest) {
 
   // --- API routes ---
   if (pathname.startsWith("/api/")) {
+    // Webhook rate limit: 1000/min global
+    if (pathname.startsWith("/api/webhooks")) {
+      const rl = checkRateLimit("webhooks:global", 1000);
+      if (!rl.allowed) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      }
+      return NextResponse.next();
+    }
+
     if (
       pathname.startsWith("/api/auth") ||
-      pathname.startsWith("/api/webhooks") ||
       pathname === "/api/health" ||
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/")
@@ -45,6 +54,15 @@ export async function middleware(req: NextRequest) {
           code: "SESSION_REQUIRED",
         },
         { status: 401 }
+      );
+    }
+
+    // Per-shop rate limit: 100/min
+    const rl = checkRateLimit(`shop:${shopId}`, 100);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again shortly." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
       );
     }
 

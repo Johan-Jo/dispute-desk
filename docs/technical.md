@@ -391,6 +391,32 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 2. `GET /api/billing/callback` → `shops.plan` updated on approval
 3. `GET /api/billing/usage` → returns plan + monthly usage
 
+## Hardening
+
+### Rate Limiting
+
+In-memory sliding-window counter in `lib/middleware/rateLimit.ts`.
+Per-shop: 100 req/min. Webhook global: 1000 req/min. Returns 429 with Retry-After.
+
+### Input Validation
+
+Zod schemas in `lib/middleware/validate.ts`. Applied to rules CRUD and billing subscribe.
+`validateBody(body, schema)` returns parsed data or 400 with field-level errors.
+
+### Data Retention
+
+Weekly cron archives packs older than `shops.retention_days` (default 365).
+PDFs deleted from storage. Audit events never deleted.
+
+### CI Pipeline
+
+`.github/workflows/ci.yml`: typecheck → lint → tests → npm audit → forbidden copy check.
+
+### Structured Logging
+
+`lib/logging/logger.ts`: JSON format with `timestamp`, `level`, `message`, context fields.
+`logger.timed()` wraps operations with duration measurement.
+
 ## Testing
 
 ### Unit Tests (Vitest)
