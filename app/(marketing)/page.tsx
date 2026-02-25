@@ -84,45 +84,74 @@ export default function MarketingLandingPage() {
 
             {/* Product preview card */}
             <div className="relative hidden lg:block">
-              <div className="bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] p-6">
-                <div className="mb-4">
-                  <h3 className="font-semibold text-[#0B1220] mb-2">Review Queue</h3>
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-[#F6F8FB] rounded-lg">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#1D4ED8]/20 to-[#22C55E]/20 rounded-3xl blur-xl" />
+
+              <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] p-6 overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#1D4ED8]/5 to-transparent rounded-full -mr-32 -mt-32" />
+
+                <div className="relative mb-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[#0B1220]">Review Queue</h3>
+                    <span className="text-xs text-[#64748B] bg-[#F6F8FB] px-2.5 py-1 rounded-full">3 pending</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {[
+                      { id: "DP-2401", amount: "$145.00", icon: "\uD83D\uDCB3" },
+                      { id: "DP-2402", amount: "$89.50", icon: "\uD83D\uDCE6" },
+                      { id: "DP-2403", amount: "$312.00", icon: "\uD83D\uDD04" },
+                    ].map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-[#F6F8FB] to-white rounded-xl border border-[#E5E7EB]/50 hover:border-[#1D4ED8]/30 transition-all duration-200 hover:shadow-sm">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#DBEAFE] rounded-lg" />
+                          <div className="w-11 h-11 bg-gradient-to-br from-[#DBEAFE] to-[#BFDBFE] rounded-lg flex items-center justify-center text-lg shadow-sm">
+                            {item.icon}
+                          </div>
                           <div>
-                            <p className="text-sm font-medium text-[#0B1220]">DP-240{i}</p>
-                            <p className="text-xs text-[#64748B]">$145.00</p>
+                            <p className="text-sm font-semibold text-[#0B1220]">{item.id}</p>
+                            <p className="text-xs text-[#64748B] font-medium">{item.amount}</p>
                           </div>
                         </div>
-                        <div className="px-2 py-1 bg-[#FEF3C7] text-[#92400E] text-xs rounded-md">Review</div>
+                        <div className="px-3 py-1.5 bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] text-[#92400E] text-xs font-semibold rounded-lg shadow-sm">
+                          Review
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-[#DBEAFE] rounded-lg p-4 border border-[#BFDBFE]">
-                  <h4 className="font-semibold text-[#0B1220] mb-3">Pack Completeness</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[#64748B]">Order Confirmation</span>
-                      <Check className="w-4 h-4 text-[#22C55E]" />
+                <div className="relative bg-gradient-to-br from-[#DBEAFE] via-[#DBEAFE] to-[#BFDBFE] rounded-xl p-5 border border-[#BFDBFE] shadow-inner">
+                  <h4 className="font-semibold text-[#0B1220] mb-4 flex items-center gap-2">
+                    <div className="w-6 h-6 bg-white/50 rounded-lg flex items-center justify-center">
+                      <Check className="w-4 h-4 text-[#1D4ED8]" />
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[#64748B]">Shipping Tracking</span>
-                      <Check className="w-4 h-4 text-[#22C55E]" />
+                    Pack Completeness
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2.5 bg-white/60 rounded-lg">
+                      <span className="text-sm text-[#0B1220] font-medium">Order Confirmation</span>
+                      <div className="w-5 h-5 bg-[#22C55E] rounded-md flex items-center justify-center shadow-sm">
+                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[#64748B]">Customer Communication</span>
-                      <div className="w-4 h-4 border-2 border-[#E5E7EB] rounded" />
+                    <div className="flex items-center justify-between p-2.5 bg-white/60 rounded-lg">
+                      <span className="text-sm text-[#0B1220] font-medium">Shipping Tracking</span>
+                      <div className="w-5 h-5 bg-[#22C55E] rounded-md flex items-center justify-center shadow-sm">
+                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5 bg-white/40 rounded-lg border border-[#E5E7EB]/30">
+                      <span className="text-sm text-[#64748B] font-medium">Customer Communication</span>
+                      <div className="w-5 h-5 border-2 border-[#CBD5E1] rounded-md bg-white/50" />
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-[#BFDBFE]">
-                    <div className="flex items-center justify-between text-sm font-medium">
-                      <span className="text-[#0B1220]">Completeness Score</span>
-                      <span className="text-[#1D4ED8]">67%</span>
+                  <div className="mt-4 pt-4 border-t border-white/40">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[#0B1220]">Completeness Score</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-2 bg-white/50 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-[#1D4ED8] to-[#0EA5E9] rounded-full" style={{ width: "67%" }} />
+                        </div>
+                        <span className="text-lg font-bold text-[#1D4ED8]">67%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
