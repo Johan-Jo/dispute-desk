@@ -133,11 +133,13 @@ app/
   globals.css        → Tailwind imports + design tokens
 components/ui/       → Shared design system components
 lib/
-  shopify/           → GraphQL client, throttle, session helpers
+  shopify/           → GraphQL client, throttle, session helpers, queries
   supabase/          → Server client, portal auth helpers
   portal/            → Active shop cookie + linked shop queries
   automation/        → Pipeline, completeness engine, auto-save gate, settings
+  packs/             → Pack builder orchestrator + source collectors
   jobs/              → Job dispatcher + handlers (sync, build, save, render)
+  disputes/          → Dispute sync service
 scripts/             → Migration runner + smoke test
 supabase/migrations/ → SQL migrations (001–010)
 docs/                → Architecture, technical spec, epics, roadmap
