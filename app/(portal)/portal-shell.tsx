@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Shield, ChevronDown, Store } from "lucide-react";
+import { Shield, ChevronDown, Store, Menu, X } from "lucide-react";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 interface Shop {
@@ -38,19 +39,40 @@ export function PortalShell({
   children,
 }: PortalShellProps) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="h-screen flex bg-[#F6F8FB]">
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-[#E5E7EB] flex flex-col">
-        {/* Logo */}
-        <div className="h-16 px-6 flex items-center border-b border-[#E5E7EB]">
+      <aside
+        className={`
+          fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-[#E5E7EB] flex flex-col
+          transform transition-transform duration-200 ease-in-out
+          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
+      >
+        {/* Logo + close on mobile */}
+        <div className="h-16 px-6 flex items-center justify-between border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-lg font-bold text-[#0B1220]">DisputeDesk</h1>
           </div>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] text-[#64748B]"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Store selector */}
@@ -89,6 +111,7 @@ export function PortalShell({
               <a
                 key={item.href}
                 href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
                 className={`w-full block px-3 h-10 leading-10 rounded-lg text-sm font-medium transition-colors mb-1 ${
                   isActive
                     ? "bg-[#E0F2FE] text-[#0EA5E9]"
@@ -116,24 +139,36 @@ export function PortalShell({
       </aside>
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-[#E5E7EB] px-6 flex items-center justify-end gap-3">
-          <LanguageSwitcher />
-          <a
-            href="/portal/settings"
-            className="flex items-center gap-2 px-3 h-10 rounded-lg hover:bg-[#F1F5F9] transition-colors"
+        <header className="h-16 bg-white border-b border-[#E5E7EB] px-4 lg:px-6 flex items-center justify-between gap-3">
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] text-[#64748B] transition-colors"
           >
-            <div className="w-8 h-8 bg-[#1D4ED8] rounded-full flex items-center justify-center text-white text-sm font-medium">
-              {userEmail.charAt(0).toUpperCase()}
-            </div>
-            <ChevronDown className="w-4 h-4 text-[#64748B]" />
-          </a>
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="hidden lg:block flex-1" />
+
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <a
+              href="/portal/settings"
+              className="flex items-center gap-2 px-3 h-10 rounded-lg hover:bg-[#F1F5F9] transition-colors"
+            >
+              <div className="w-8 h-8 bg-[#1D4ED8] rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {userEmail.charAt(0).toUpperCase()}
+              </div>
+              <ChevronDown className="w-4 h-4 text-[#64748B] hidden sm:block" />
+            </a>
+          </div>
         </header>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">
-          <div className="max-w-[1120px] mx-auto p-6">{children}</div>
+          <div className="max-w-[1120px] mx-auto p-4 sm:p-6">{children}</div>
         </main>
       </div>
     </div>

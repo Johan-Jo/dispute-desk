@@ -1,18 +1,20 @@
 "use client";
 
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Menu, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 export default function MarketingLandingPage() {
   const t = useTranslations("marketing");
+  const [mobileNav, setMobileNav] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="border-b border-[#E5E7EB] sticky top-0 bg-white z-50">
-        <div className="max-w-[1440px] mx-auto px-8 h-16 flex items-center justify-between">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
@@ -27,67 +29,87 @@ export default function MarketingLandingPage() {
             <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.pricing")}</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <LanguageSwitcher />
-            <a href="/auth/sign-in">
+            <a href="/auth/sign-in" className="hidden sm:block">
               <Button variant="ghost" size="sm">{t("nav.signIn")}</Button>
             </a>
-            <a href="/portal/connect-shopify">
+            <a href="/portal/connect-shopify" className="hidden sm:block">
               <Button variant="primary" size="sm">{t("nav.installOnShopify")}</Button>
             </a>
+            <button
+              onClick={() => setMobileNav(!mobileNav)}
+              className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] text-[#64748B]"
+            >
+              {mobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile nav dropdown */}
+        {mobileNav && (
+          <div className="md:hidden border-t border-[#E5E7EB] bg-white px-4 py-4 space-y-3">
+            <a href="#product" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.product")}</a>
+            <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.howItWorks")}</a>
+            <a href="#security" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.security")}</a>
+            <a href="#pricing" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.pricing")}</a>
+            <div className="pt-3 border-t border-[#E5E7EB] flex flex-col gap-2">
+              <a href="/auth/sign-in"><Button variant="ghost" size="sm" className="w-full">{t("nav.signIn")}</Button></a>
+              <a href="/portal/connect-shopify"><Button variant="primary" size="sm" className="w-full">{t("nav.installOnShopify")}</Button></a>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero */}
-      <section className="py-20 lg:py-28" style={{ background: "linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 60%)" }}>
-        <div className="max-w-[1440px] mx-auto px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="py-12 sm:py-20 lg:py-28" style={{ background: "linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 60%)" }}>
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div>
               <p className="text-sm uppercase tracking-wide text-[#1D4ED8] font-medium mb-3">
                 {t("hero.tagline")}
               </p>
-              <h1 className="text-5xl lg:text-6xl font-bold text-[#0B1220] mb-6 leading-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-[#0B1220] mb-4 sm:mb-6 leading-tight">
                 {t("hero.headline")}
               </h1>
-              <p className="text-xl text-[#64748B] mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-[#64748B] mb-6 sm:mb-8 leading-relaxed">
                 {t("hero.subheadline")}
               </p>
 
-              <div className="space-y-4 mb-8">
+              <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                 <div className="flex items-start gap-3">
-                  <Zap className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">{t("hero.bullet1")}</p>
+                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
+                  <p className="text-sm sm:text-base text-[#0B1220]">{t("hero.bullet1")}</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">{t("hero.bullet2")}</p>
+                  <Check className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
+                  <p className="text-sm sm:text-base text-[#0B1220]">{t("hero.bullet2")}</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <BarChart3 className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">{t("hero.bullet3")}</p>
+                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
+                  <p className="text-sm sm:text-base text-[#0B1220]">{t("hero.bullet3")}</p>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <a href="/portal/connect-shopify">
-                  <Button variant="primary" size="lg">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto">
                     {t("hero.installFree")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </a>
                 <a href="#pricing">
-                  <Button variant="secondary" size="lg">{t("hero.viewPricing")}</Button>
+                  <Button variant="secondary" size="lg" className="w-full sm:w-auto">{t("hero.viewPricing")}</Button>
                 </a>
               </div>
 
-              <p className="text-sm text-[#64748B] mt-6 border-t border-[#E5E7EB] pt-6">
+              <p className="text-xs sm:text-sm text-[#64748B] mt-4 sm:mt-6 border-t border-[#E5E7EB] pt-4 sm:pt-6">
                 {t("hero.disclaimer")}
               </p>
             </div>
 
-            {/* Product preview card */}
-            <div className="relative hidden lg:block">
+            {/* Product preview card — visible on all screens */}
+            <div className="relative mt-8 lg:mt-0">
               <div className="absolute -inset-1 bg-gradient-to-r from-[#1D4ED8]/20 to-[#22C55E]/20 rounded-3xl blur-xl" />
 
               <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] p-6 overflow-hidden">
@@ -166,13 +188,13 @@ export default function MarketingLandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20">
-        <div className="max-w-[1200px] mx-auto px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">{t("howItWorks.title")}</h2>
-            <p className="text-xl text-[#64748B]">{t("howItWorks.subtitle")}</p>
+      <section id="how-it-works" className="py-12 sm:py-16 lg:py-20">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-4">{t("howItWorks.title")}</h2>
+            <p className="text-lg sm:text-xl text-[#64748B]">{t("howItWorks.subtitle")}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-[#DBEAFE] rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-8 h-8 text-[#1D4ED8]" />
@@ -199,13 +221,13 @@ export default function MarketingLandingPage() {
       </section>
 
       {/* Security */}
-      <section id="security" className="py-20 bg-[#F6F8FB]">
-        <div className="max-w-[1200px] mx-auto px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">{t("security.title")}</h2>
-            <p className="text-xl text-[#64748B]">{t("security.subtitle")}</p>
+      <section id="security" className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-4">{t("security.title")}</h2>
+            <p className="text-lg sm:text-xl text-[#64748B]">{t("security.subtitle")}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <Lock className="w-8 h-8 text-[#1D4ED8] mb-4" />
               <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("security.encryptedTitle")}</h3>
@@ -226,15 +248,15 @@ export default function MarketingLandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-20">
-        <div className="max-w-[1200px] mx-auto px-8">
+      <section id="pricing" className="py-12 sm:py-16 lg:py-20">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
           <div className="text-center mb-6">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">{t("pricing.title")}</h2>
-            <p className="text-xl text-[#64748B] max-w-2xl mx-auto">{t("pricing.subtitle")}</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-4">{t("pricing.title")}</h2>
+            <p className="text-lg sm:text-xl text-[#64748B] max-w-2xl mx-auto">{t("pricing.subtitle")}</p>
           </div>
-          <p className="text-center text-sm text-[#94A3B8] mb-12">{t("pricing.trialInfo")}</p>
+          <p className="text-center text-sm text-[#94A3B8] mb-8 sm:mb-12">{t("pricing.trialInfo")}</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 sm:mb-12">
             {/* Free */}
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <h3 className="text-lg font-semibold text-[#0B1220] mb-1">{t("pricing.freeName")}</h3>
@@ -293,7 +315,7 @@ export default function MarketingLandingPage() {
           </div>
 
           {/* Top-ups */}
-          <div className="bg-[#F6F8FB] rounded-xl p-8 border border-[#E5E7EB]">
+          <div className="bg-[#F6F8FB] rounded-xl p-6 sm:p-8 border border-[#E5E7EB]">
             <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("pricing.topUpsTitle")}</h3>
             <p className="text-sm text-[#64748B] mb-4">{t("pricing.topUpsDesc")}</p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -311,9 +333,9 @@ export default function MarketingLandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0B1220] text-white py-12">
-        <div className="max-w-[1200px] mx-auto px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+      <footer className="bg-[#0B1220] text-white py-8 sm:py-12">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
