@@ -58,11 +58,11 @@ export default function DisputesPage() {
 
   // Read active shop from cookie
   const shopId = typeof window !== "undefined"
-    ? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? ""
+    ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
     : "";
 
   const fetchDisputes = useCallback(async () => {
-    if (!shopId) return;
+    if (!shopId) { setLoading(false); return; }
     setLoading(true);
     const params = new URLSearchParams({
       shop_id: shopId,
@@ -172,7 +172,7 @@ export default function DisputesPage() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-[#667085]">
-                    Loading disputes...
+                    {!shopId ? "Connect a store to view disputes." : "Loading disputes..."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

@@ -63,11 +63,11 @@ export default function BillingPage() {
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
   const shopId = typeof window !== "undefined"
-    ? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? ""
+    ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
     : "";
 
   const fetchUsage = useCallback(async () => {
-    if (!shopId) return;
+    if (!shopId) { setLoading(false); return; }
     setLoading(true);
     const res = await fetch(`/api/billing/usage?shop_id=${shopId}`);
     const data = await res.json();
@@ -96,7 +96,7 @@ export default function BillingPage() {
     return (
       <div>
         <h1 className="text-2xl font-bold text-[#0B1220] mb-6">Billing</h1>
-        <div className="text-center py-12 text-[#667085]">Loading billing info...</div>
+        <div className="text-center py-12 text-[#667085]">{!shopId ? "Connect a store to view billing." : "Loading billing info..."}</div>
       </div>
     );
   }

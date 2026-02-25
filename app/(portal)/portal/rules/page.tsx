@@ -51,13 +51,13 @@ export default function RulesSettingsPage() {
   const [formMaxAmount, setFormMaxAmount] = useState("");
 
   const shopId = typeof window !== "undefined"
-    ? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? ""
+    ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
     : "";
 
   const [planBlocked, setPlanBlocked] = useState(false);
 
   const fetchRules = useCallback(async () => {
-    if (!shopId) return;
+    if (!shopId) { setLoading(false); return; }
     setLoading(true);
     const res = await fetch(`/api/rules?shop_id=${shopId}`);
     const data = await res.json();
@@ -262,7 +262,7 @@ export default function RulesSettingsPage() {
 
       <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
         {loading ? (
-          <div className="px-4 py-12 text-center text-[#667085]">Loading rules...</div>
+          <div className="px-4 py-12 text-center text-[#667085]">{!shopId ? "Connect a store to manage rules." : "Loading rules..."}</div>
         ) : rules.length === 0 ? (
           <div className="px-4 py-12 text-center text-[#667085]">
             No rules configured. All new disputes will go to the review queue by default.
