@@ -6,7 +6,7 @@ import { SUPPORTED_LOCALES, LOCALE_LABELS, type SupportedLocale } from "@/lib/i1
 import { Globe } from "lucide-react";
 
 const FLAG_EMOJI: Record<SupportedLocale, string> = {
-  en: "\uD83C\uDDEC\uD83C\uDDE7",
+  en: "\uD83C\uDDFA\uD83C\uDDF8",
   sv: "\uD83C\uDDF8\uD83C\uDDEA",
   de: "\uD83C\uDDE9\uD83C\uDDEA",
   fr: "\uD83C\uDDEB\uD83C\uDDF7",
