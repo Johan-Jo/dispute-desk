@@ -1,44 +1,59 @@
-import { Plus, UserPlus } from "lucide-react";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { UserPlus, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const SAMPLE_MEMBERS = [
-  { name: "You", email: "you@company.com", role: "admin", status: "active" },
-  { name: "Alice Johnson", email: "alice@company.com", role: "member", status: "active" },
-  { name: "Bob Smith", email: "bob@company.com", role: "read_only", status: "pending" },
+const TEAM_MEMBERS = [
+  { name: "John Doe", email: "john@example.com", role: "Owner", status: "active", initials: "JD", color: "bg-[#1D4ED8]" },
+  { name: "Jane Smith", email: "jane@example.com", role: "Admin", status: "active", initials: "JS", color: "bg-[#7C3AED]" },
+  { name: "Mike Johnson", email: "mike@example.com", role: "Member", status: "active", initials: "MJ", color: "bg-[#059669]" },
+  { name: "Sarah Wilson", email: "sarah@example.com", role: "Member", status: "pending", initials: "SW", color: "bg-[#D97706]" },
 ];
 
+const roleBadgeVariant: Record<string, "primary" | "info" | "default"> = {
+  Owner: "primary",
+  Admin: "info",
+  Member: "default",
+};
+
 export default function TeamPage() {
+  const t = useTranslations("team");
+  const tc = useTranslations("common");
+  const tStatus = useTranslations("status");
+  const tTable = useTranslations("table");
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Team</h1>
-          <p className="text-sm text-[#667085]">Manage who has access to this store</p>
+          <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
+          <p className="text-sm text-[#667085]">{t("subtitle")}</p>
         </div>
         <Button variant="primary" size="sm">
-          <UserPlus className="w-4 h-4 mr-1" />
-          Invite member
+          <UserPlus className="w-4 h-4 mr-2" />
+          {t("inviteMember")}
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden mb-6">
         <table className="w-full text-sm">
           <thead className="bg-[#F7F8FA]">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Member</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Role</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Status</th>
-              <th className="text-right px-4 py-3 font-medium text-[#667085]">Actions</th>
+              <th className="text-left px-6 py-3 font-medium text-[#667085]">{t("member")}</th>
+              <th className="text-left px-6 py-3 font-medium text-[#667085]">{t("role")}</th>
+              <th className="text-left px-6 py-3 font-medium text-[#667085]">{tTable("status")}</th>
+              <th className="text-right px-6 py-3 font-medium text-[#667085]">{t("actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {SAMPLE_MEMBERS.map((m) => (
+            {TEAM_MEMBERS.map((m) => (
               <tr key={m.email} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA] transition-colors">
-                <td className="px-4 py-3">
+                <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#DBEAFE] rounded-full flex items-center justify-center text-[#1D4ED8] text-sm font-medium">
-                      {m.name.charAt(0)}
+                    <div className={`w-10 h-10 ${m.color} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+                      {m.initials}
                     </div>
                     <div>
                       <p className="font-medium text-[#0B1220]">{m.name}</p>
@@ -46,25 +61,40 @@ export default function TeamPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <Badge variant={m.role === "admin" ? "primary" : "default"}>
+                <td className="px-6 py-4">
+                  <Badge variant={roleBadgeVariant[m.role] ?? "default"}>
                     {m.role}
                   </Badge>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-6 py-4">
                   <Badge variant={m.status === "active" ? "success" : "warning"}>
-                    {m.status}
+                    {m.status === "active" ? tStatus("active") : tStatus("pending")}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  {m.name !== "You" && (
-                    <Button variant="ghost" size="sm">Remove</Button>
+                <td className="px-6 py-4 text-right">
+                  {m.role !== "Owner" && (
+                    <Button variant="ghost" size="sm">{tc("remove")}</Button>
                   )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pending Invitations */}
+      <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Mail className="w-5 h-5 text-[#667085]" />
+          <h3 className="font-semibold text-[#0B1220]">{t("pendingInvitations")}</h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="w-12 h-12 bg-[#F1F5F9] rounded-full flex items-center justify-center mx-auto mb-3">
+            <Mail className="w-6 h-6 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm text-[#667085] mb-1">{t("noPendingInvitations")}</p>
+          <p className="text-xs text-[#94A3B8]">{t("invitePrompt")}</p>
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Filter, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Search, Filter, RefreshCw, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useDemoMode } from "@/lib/demo-mode";
 
 interface Dispute {
   id: string;
@@ -17,6 +19,15 @@ interface Dispute {
   needs_review: boolean;
   last_synced_at: string | null;
 }
+
+const DEMO_DISPUTES = [
+  { id: "DP-2401", dispute_gid: "DP-2401", order_gid: "#1234", status: "needs_response", reason: "Fraudulent", amount: 145.00, currency_code: "USD", due_at: "2026-03-05", needs_review: false, last_synced_at: "2026-02-20", customer: "John Smith", email: "john@example.com" },
+  { id: "DP-2402", dispute_gid: "DP-2402", order_gid: "#1235", status: "under_review", reason: "Product Not Received", amount: 89.50, currency_code: "USD", due_at: "2026-03-06", needs_review: true, last_synced_at: "2026-02-21", customer: "Sarah Johnson", email: "sarah@example.com" },
+  { id: "DP-2403", dispute_gid: "DP-2403", order_gid: "#1236", status: "needs_response", reason: "Product Unacceptable", amount: 234.00, currency_code: "USD", due_at: "2026-03-07", needs_review: false, last_synced_at: "2026-02-22", customer: "Mike Davis", email: "mike@example.com" },
+  { id: "DP-2404", dispute_gid: "DP-2404", order_gid: "#1237", status: "won", reason: "Credit Not Processed", amount: 167.25, currency_code: "USD", due_at: "2026-03-08", needs_review: false, last_synced_at: "2026-02-23", customer: "Emma Wilson", email: "emma@example.com" },
+  { id: "DP-2405", dispute_gid: "DP-2405", order_gid: "#1238", status: "under_review", reason: "Fraudulent", amount: 299.99, currency_code: "USD", due_at: "2026-03-08", needs_review: true, last_synced_at: "2026-02-23", customer: "Alex Brown", email: "alex@example.com" },
+  { id: "DP-2406", dispute_gid: "DP-2406", order_gid: "#1239", status: "lost", reason: "Subscription Canceled", amount: 75.00, currency_code: "USD", due_at: "2026-03-09", needs_review: false, last_synced_at: "2026-02-24", customer: "Lisa Anderson", email: "lisa@example.com" },
+];
 
 function statusBadge(status: string | null) {
   const map: Record<string, { variant: "success" | "warning" | "danger" | "info" | "default"; label: string }> = {
@@ -48,6 +59,10 @@ function formatDate(iso: string | null): string {
 }
 
 export default function DisputesPage() {
+  const t = useTranslations("disputes");
+  const tc = useTranslations("common");
+  const tt = useTranslations("table");
+  const isDemo = useDemoMode();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -56,13 +71,12 @@ export default function DisputesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Read active shop from cookie
   const shopId = typeof window !== "undefined"
     ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
     : "";
 
   const fetchDisputes = useCallback(async () => {
-    if (!shopId) { setLoading(false); return; }
+    if (isDemo || !shopId) { setLoading(false); return; }
     setLoading(true);
     const params = new URLSearchParams({
       shop_id: shopId,
@@ -75,12 +89,12 @@ export default function DisputesPage() {
     setDisputes(json.disputes ?? []);
     setTotalPages(json.pagination?.total_pages ?? 0);
     setLoading(false);
-  }, [shopId, page, tab]);
+  }, [shopId, page, tab, isDemo]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
   const handleSync = async () => {
-    if (!shopId) return;
+    if (isDemo || !shopId) return;
     setSyncing(true);
     await fetch("/api/disputes/sync", {
       method: "POST",
@@ -91,30 +105,42 @@ export default function DisputesPage() {
     setSyncing(false);
   };
 
+  const demoDisputes = DEMO_DISPUTES as (typeof DEMO_DISPUTES[number] & Dispute)[];
+  const rows = isDemo ? demoDisputes : disputes;
+
   const filtered = search
-    ? disputes.filter(
+    ? rows.filter(
         (d) =>
           d.reason?.toLowerCase().includes(search.toLowerCase()) ||
-          d.dispute_gid.toLowerCase().includes(search.toLowerCase())
+          d.dispute_gid.toLowerCase().includes(search.toLowerCase()) ||
+          ("customer" in d && (d as typeof DEMO_DISPUTES[number]).customer?.toLowerCase().includes(search.toLowerCase()))
       )
-    : disputes;
+    : rows;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Disputes</h1>
-          <p className="text-sm text-[#667085]">Manage and respond to chargebacks</p>
+          <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
+          <p className="text-sm text-[#667085]">{t("manageSubtitle")}</p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncing}
-        >
-          <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing..." : "Sync Now"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {!isDemo && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncing}
+            >
+              <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? t("syncing") : t("syncNow")}
+            </Button>
+          )}
+          <Button variant="secondary" size="sm">
+            <ExternalLink className="w-4 h-4 mr-2" />
+            {t("openInShopify")}
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-4">
@@ -123,14 +149,14 @@ export default function DisputesPage() {
           size="sm"
           onClick={() => { setTab("all"); setPage(1); }}
         >
-          All Disputes
+          {t("allDisputes")}
         </Button>
         <Button
           variant={tab === "review" ? "primary" : "secondary"}
           size="sm"
           onClick={() => { setTab("review"); setPage(1); }}
         >
-          Review Queue
+          {t("reviewQueue")}
         </Button>
       </div>
 
@@ -139,7 +165,7 @@ export default function DisputesPage() {
           <Search className="w-4 h-4 absolute left-3 top-[50%] -translate-y-[50%] text-[#64748B]" />
           <input
             type="text"
-            placeholder="Search disputes..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full h-10 pl-10 pr-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
@@ -147,52 +173,57 @@ export default function DisputesPage() {
         </div>
         <Button variant="secondary" size="sm">
           <Filter className="w-4 h-4 mr-1" />
-          Filter
+          {tc("filter")}
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden" data-onboarding="disputes-table">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[#F7F8FA]">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">ID</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Order</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Amount</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Reason</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Deadline</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Last Synced</th>
-                {tab === "review" && (
-                  <th className="text-left px-4 py-3 font-medium text-[#667085]">Action</th>
-                )}
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("id")}</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">Customer</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("amount")}</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("reason")}</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("status")}</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("deadline")}</th>
+                <th className="text-right px-4 py-3 font-medium text-[#667085]">{tt("actions")}</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {!isDemo && loading ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-[#667085]">
-                    {!shopId ? "Connect a store to view disputes." : "Loading disputes..."}
+                    {tc("loading")}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-[#667085]">
-                    {shopId
-                      ? "No disputes found. Click Sync Now to fetch from Shopify."
-                      : "Connect a Shopify store to see disputes."}
+                    {t("noDisputes")}
                   </td>
                 </tr>
               ) : (
                 filtered.map((d) => (
                   <tr key={d.id} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA] transition-colors">
                     <td className="px-4 py-3">
-                      <a href={`/portal/disputes/${d.id}`} className="font-medium text-[#1D4ED8] hover:underline">
-                        {d.dispute_gid.split("/").pop()?.slice(0, 8) ?? d.id.slice(0, 8)}
+                      <a
+                        href={isDemo ? `/portal/disputes/${d.id}` : `/portal/disputes/${d.id}`}
+                        className="font-medium text-[#4F46E5] hover:underline"
+                      >
+                        {d.dispute_gid}
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-[#667085]">
-                      {d.order_gid ? `#${d.order_gid.split("/").pop()}` : "—"}
+                    <td className="px-4 py-3">
+                      {"customer" in d ? (
+                        <div>
+                          <div className="font-medium text-[#0B1220]">{(d as typeof DEMO_DISPUTES[number]).customer}</div>
+                          <div className="text-xs text-[#667085]">{(d as typeof DEMO_DISPUTES[number]).email}</div>
+                        </div>
+                      ) : (
+                        <span className="text-[#667085]">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-medium text-[#0B1220]">
                       {formatCurrency(d.amount, d.currency_code)}
@@ -200,22 +231,9 @@ export default function DisputesPage() {
                     <td className="px-4 py-3 text-[#667085]">{d.reason ?? "Unknown"}</td>
                     <td className="px-4 py-3">{statusBadge(d.status)}</td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at)}</td>
-                    <td className="px-4 py-3 text-[#667085]">{formatDate(d.last_synced_at)}</td>
-                    {tab === "review" && (
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            await fetch(`/api/disputes/${d.id}/approve`, { method: "POST" });
-                            await fetchDisputes();
-                          }}
-                        >
-                          Approve
-                        </Button>
-                      </td>
-                    )}
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -223,14 +241,14 @@ export default function DisputesPage() {
           </table>
         </div>
 
-        {totalPages > 1 && (
+        {!isDemo && totalPages > 1 && (
           <div className="flex items-center justify-center gap-3 p-3 border-t border-[#E5E7EB]">
             <Button variant="ghost" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>
-              Previous
+              {tc("previous")}
             </Button>
-            <span className="text-sm text-[#667085]">Page {page} of {totalPages}</span>
+            <span className="text-sm text-[#667085]">{tc("page", { page, total: totalPages })}</span>
             <Button variant="ghost" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
-              Next
+              {tc("next")}
             </Button>
           </div>
         )}

@@ -1,58 +1,114 @@
-import { FileText, Download } from "lucide-react";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const SAMPLE_PACKS = [
-  { id: "PK-001", dispute: "DP-2401", score: 67, status: "in_progress", updated: "Feb 24" },
-  { id: "PK-002", dispute: "DP-2402", score: 100, status: "complete", updated: "Feb 22" },
-  { id: "PK-003", dispute: "DP-2403", score: 85, status: "complete", updated: "Feb 20" },
+const PACKS = [
+  { id: "P-10342", disputeId: "D-10342", orderId: "#10492", reason: "Product not received", created: "2026-02-19", status: "Draft", completeness: 0 },
+  { id: "P-10343", disputeId: "D-10343", orderId: "#10488", reason: "Fraud", created: "2026-02-18", status: "Draft", completeness: 42 },
+  { id: "P-10344", disputeId: "D-10344", orderId: "#10463", reason: "Not as described", created: "2026-02-15", status: "Ready", completeness: 86 },
+  { id: "P-10345", disputeId: "D-10345", orderId: "#10501", reason: "Product not received", created: "2026-02-20", status: "Draft", completeness: 58 },
+  { id: "P-10346", disputeId: "D-10346", orderId: "#10475", reason: "Fraud", created: "2026-02-17", status: "Ready", completeness: 95 },
+  { id: "P-10348", disputeId: "D-10348", orderId: "#10498", reason: "Duplicate", created: "2026-02-19", status: "Draft", completeness: 68 },
+  { id: "P-10349", disputeId: "D-10349", orderId: "#10510", reason: "Product not received", created: "2026-02-16", status: "Ready", completeness: 78 },
 ];
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export default function PacksPage() {
+  const t = useTranslations("packs");
+  const tt = useTranslations("table");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredPacks = PACKS.filter(
+    (p) => statusFilter === "all" || p.status === statusFilter
+  );
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Evidence Packs</h1>
-          <p className="text-sm text-[#667085]">View and manage evidence packages</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
+        <p className="text-sm text-[#667085]">
+          {t("subtitle")}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {SAMPLE_PACKS.map((p) => (
-          <div key={p.id} className="bg-white rounded-lg border border-[#E5E7EB] p-6 hover:border-[#4F46E5] transition-colors">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-10 h-10 bg-[#EFF6FF] rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-[#4F46E5]" />
-              </div>
-              <Badge variant={p.status === "complete" ? "success" : "warning"}>
-                {p.status === "complete" ? "Complete" : "In progress"}
-              </Badge>
-            </div>
-            <h3 className="font-semibold text-[#0B1220] mb-1">{p.id}</h3>
-            <p className="text-sm text-[#667085] mb-3">Dispute: {p.dispute}</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#667085]">Completeness</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-24 h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${p.score === 100 ? "bg-[#22C55E]" : "bg-[#F59E0B]"}`}
-                      style={{ width: `${p.score}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-[#0B1220]">{p.score}%</span>
-                </div>
-              </div>
-              {p.status === "complete" && (
-                <Button variant="ghost" size="sm">
-                  <Download className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-[#667085] mt-3">Updated {p.updated}</p>
-          </div>
-        ))}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 mb-4">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-4 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+        >
+          <option value="all">{t("allStatuses")}</option>
+          <option value="Draft">Draft</option>
+          <option value="Ready">Ready</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden" data-onboarding="packs-grid">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[#F7F8FA]">
+              <tr className="border-b border-[#E5E7EB]">
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{tt("id")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{t("dispute")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{tt("order")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{tt("reason")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{tt("created")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{tt("status")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{t("completeness")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{t("pdf")}</th>
+                <th className="text-left text-xs font-medium text-[#667085] px-6 py-3">{tt("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPacks.map((pack) => (
+                <tr
+                  key={pack.id}
+                  className="border-b border-[#E5E7EB] last:border-0 hover:bg-[#F7F8FA] transition-colors"
+                >
+                  <td className="px-6 py-4 font-medium text-[#0B1220]">{pack.id}</td>
+                  <td className="px-6 py-4">
+                    <span className="text-[#4F46E5] hover:text-[#4338CA]">{pack.disputeId}</span>
+                  </td>
+                  <td className="px-6 py-4 text-[#667085]">{pack.orderId}</td>
+                  <td className="px-6 py-4 text-[#667085]">{pack.reason}</td>
+                  <td className="px-6 py-4 text-[#667085]">{formatDate(pack.created)}</td>
+                  <td className="px-6 py-4">
+                    <Badge variant={pack.status === "Ready" ? "success" : "warning"}>
+                      {pack.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-[#E5E7EB] rounded-full h-2 max-w-[60px]">
+                        <div
+                          className="bg-[#10B981] h-2 rounded-full"
+                          style={{ width: `${pack.completeness}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-[#667085]">{pack.completeness}%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {pack.status === "Ready" ? (
+                      <button className="text-sm text-[#4F46E5] hover:text-[#4338CA]">{t("download")}</button>
+                    ) : (
+                      <span className="text-sm text-[#667085]">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Button variant="ghost" size="sm">{t("view")}</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

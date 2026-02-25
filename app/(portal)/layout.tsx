@@ -44,9 +44,10 @@ export default async function PortalLayout({
     (activeShop?.shops as unknown as { shop_domain: string })?.shop_domain ??
     null;
 
+  const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
   const headerStore = await headers();
   const acceptLang = headerStore.get("accept-language");
-  const locale = resolveLocale(null, acceptLang);
+  const locale = resolveLocale(cookieLocale, acceptLang);
   const messages = await getMessages(locale);
 
   return (

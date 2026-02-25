@@ -1,9 +1,9 @@
 "use client";
 
-import { Zap } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Shield, Globe, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
-import { InfoBanner } from "@/components/ui/info-banner";
 
 function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: string; defaultChecked?: boolean }) {
   return (
@@ -21,91 +21,142 @@ function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: 
 }
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#0B1220]">Settings</h1>
-        <p className="text-sm text-[#667085]">Manage your account, automation, and preferences</p>
+        <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
+        <p className="text-sm text-[#667085]">{t("subtitle")}</p>
       </div>
 
-      <div className="space-y-6">
-        {/* Automation settings */}
-        <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-[#4F46E5]" />
-            <h3 className="font-semibold text-[#0B1220]">Automation</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Profile */}
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+            <h3 className="font-semibold text-[#0B1220] mb-4">{t("profileSection")}</h3>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 bg-[#1D4ED8] rounded-full flex items-center justify-center text-white text-xl font-bold">
+                JD
+              </div>
+              <div>
+                <p className="font-medium text-[#0B1220]">John Doe</p>
+                <p className="text-sm text-[#667085]">john@example.com</p>
+                <button className="text-sm text-[#4F46E5] hover:underline mt-1">{t("changeAvatar")}</button>
+              </div>
+            </div>
+            <div className="space-y-4 max-w-md">
+              <TextField label={t("fullName")} placeholder="John Doe" defaultValue="John Doe" />
+              <TextField label={t("email")} type="email" placeholder="john@example.com" defaultValue="john@example.com" disabled />
+              <TextField label={t("company")} placeholder="Acme Inc." defaultValue="Acme Inc." />
+              <Button variant="primary" size="sm">{t("saveChanges")}</Button>
+            </div>
           </div>
 
-          <InfoBanner variant="info">
-            Evidence is saved to Shopify via API. Submission to the card
-            network happens in Shopify Admin (or auto-submits on due date).
-            DisputeDesk does not submit on your behalf.
-          </InfoBanner>
-
-          <div className="space-y-3 mt-4">
-            <Toggle
-              label="Auto-build evidence packs"
-              desc="Automatically generate packs when new disputes are detected"
-              defaultChecked
-            />
-            <Toggle
-              label="Auto-save evidence to Shopify"
-              desc="Automatically push complete evidence to Shopify when gates pass"
-              defaultChecked
-            />
-            <Toggle
-              label="Require review before auto-save"
-              desc="Park packs in review queue for approval before saving to Shopify"
-              defaultChecked
-            />
-            <Toggle
-              label="Enforce zero blockers"
-              desc="Block auto-save if any required evidence items are missing"
-              defaultChecked
-            />
+          {/* Notifications */}
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+            <h3 className="font-semibold text-[#0B1220] mb-4">{t("notificationsSection")}</h3>
+            <div className="space-y-3">
+              <Toggle label={t("newDisputeAlerts")} desc={t("newDisputeAlertsDesc")} defaultChecked />
+              <Toggle label={t("deadlineReminders")} desc={t("deadlineRemindersDesc")} defaultChecked />
+              <Toggle label={t("weeklyReport")} desc={t("weeklyReportDesc")} defaultChecked />
+              <Toggle label={t("packCompletion")} desc={t("packCompletionDesc")} defaultChecked />
+              <Toggle label={t("autoSaveConfirmations")} desc={t("autoSaveConfirmationsDesc")} />
+            </div>
           </div>
 
-          <div className="mt-4 max-w-xs">
-            <TextField
-              label="Minimum completeness score for auto-save"
-              type="number"
-              placeholder="80"
-              defaultValue="80"
-              helperText="Packs below this score won't be auto-saved (0–100)"
-            />
+          {/* Security */}
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="w-5 h-5 text-[#4F46E5]" />
+              <h3 className="font-semibold text-[#0B1220]">{t("securitySection")}</h3>
+            </div>
+            <div className="space-y-4 max-w-md">
+              <div>
+                <label className="block text-sm font-medium text-[#667085] mb-1">{t("currentPassword")}</label>
+                <input type="password" placeholder="Enter current password" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#667085] mb-1">{t("newPassword")}</label>
+                <input type="password" placeholder="Enter new password" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+              </div>
+              <Button variant="primary" size="sm">{t("updatePassword")}</Button>
+            </div>
+
+            <hr className="my-6 border-[#E5E7EB]" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[#0B1220]">{t("twoFactor")}</p>
+                <p className="text-xs text-[#667085]">{t("twoFactorDesc")}</p>
+              </div>
+              <Button variant="secondary" size="sm">{t("enable2fa")}</Button>
+            </div>
           </div>
 
-          <div className="mt-4">
-            <Button variant="primary" size="sm">Save automation settings</Button>
+          {/* Danger Zone */}
+          <div className="bg-white rounded-lg border border-[#EF4444] p-6">
+            <h3 className="font-semibold text-[#991B1B] mb-2">{t("dangerZone")}</h3>
+            <p className="text-sm text-[#667085] mb-4">{t("deleteWarning")}</p>
+            <Button variant="danger" size="sm">{t("deleteAccount")}</Button>
           </div>
         </div>
 
-        {/* Profile */}
-        <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
-          <h3 className="font-semibold text-[#0B1220] mb-4">Profile</h3>
-          <div className="space-y-4 max-w-md">
-            <TextField label="Full Name" placeholder="John Doe" />
-            <TextField label="Email" type="email" placeholder="you@company.com" disabled />
-            <Button variant="primary" size="sm">Save changes</Button>
+        {/* Sidebar column */}
+        <div className="space-y-6">
+          {/* Account Info */}
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+            <h3 className="font-semibold text-[#0B1220] mb-4">{t("accountInfo")}</h3>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-[#667085]">Plan</dt>
+                <dd className="font-medium text-[#0B1220]">Professional</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[#667085]">Member since</dt>
+                <dd className="font-medium text-[#0B1220]">Jan 2026</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[#667085]">Stores connected</dt>
+                <dd className="font-medium text-[#0B1220]">0</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[#667085]">Team members</dt>
+                <dd className="font-medium text-[#0B1220]">4</dd>
+              </div>
+            </dl>
           </div>
-        </div>
 
-        {/* Notifications */}
-        <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
-          <h3 className="font-semibold text-[#0B1220] mb-4">Notifications</h3>
-          <div className="space-y-3">
-            <Toggle label="New dispute alerts" desc="Get notified when new chargebacks appear" defaultChecked />
-            <Toggle label="Deadline reminders" desc="Reminder emails before response deadlines" defaultChecked />
-            <Toggle label="Pack completion" desc="Notified when evidence packs finish generating" defaultChecked />
-            <Toggle label="Auto-save confirmations" desc="Notified when evidence is auto-saved to Shopify" defaultChecked />
+          {/* Preferences */}
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+            <h3 className="font-semibold text-[#0B1220] mb-4">{t("preferences")}</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-[#667085] mb-1">
+                  <Globe className="w-4 h-4" />
+                  {t("language")}
+                </label>
+                <select className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-white">
+                  <option>English</option>
+                  <option>Dutch</option>
+                  <option>German</option>
+                  <option>French</option>
+                </select>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-[#667085] mb-1">
+                  <Clock className="w-4 h-4" />
+                  {t("timezone")}
+                </label>
+                <select className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-white">
+                  <option>UTC (GMT+0)</option>
+                  <option>EST (GMT-5)</option>
+                  <option>CET (GMT+1)</option>
+                  <option>PST (GMT-8)</option>
+                </select>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Danger Zone */}
-        <div className="bg-white rounded-lg border border-[#EF4444] p-6">
-          <h3 className="font-semibold text-[#991B1B] mb-2">Danger Zone</h3>
-          <p className="text-sm text-[#667085] mb-4">Once deleted, your account and all data cannot be recovered.</p>
-          <Button variant="danger" size="sm">Delete account</Button>
         </div>
       </div>
     </div>

@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Shield, ChevronDown, Store, Menu, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { OnboardingProvider, useOnboarding } from "@/components/onboarding/onboarding-provider";
+import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
+import { onboardingSteps } from "@/lib/onboarding-config";
+import { DemoModeProvider } from "@/lib/demo-mode";
 
 interface Shop {
   shop_id: string;
@@ -19,17 +24,17 @@ interface PortalShellProps {
   children: React.ReactNode;
 }
 
-const NAV_ITEMS = [
-  { href: "/portal/dashboard", label: "Overview" },
-  { href: "/portal/disputes", label: "Disputes" },
-  { href: "/portal/packs", label: "Packs" },
-  { href: "/portal/rules", label: "Rules" },
-  { href: "/portal/policies", label: "Policies" },
-  { href: "/portal/billing", label: "Billing" },
-  { href: "/portal/team", label: "Team" },
-  { href: "/portal/settings", label: "Settings" },
-  { href: "/portal/help", label: "Help" },
-];
+const NAV_KEYS = [
+  { href: "/portal/dashboard", key: "overview" },
+  { href: "/portal/disputes", key: "disputes" },
+  { href: "/portal/packs", key: "packs" },
+  { href: "/portal/rules", key: "rules" },
+  { href: "/portal/policies", key: "policies" },
+  { href: "/portal/billing", key: "billing" },
+  { href: "/portal/team", key: "team" },
+  { href: "/portal/settings", key: "settings" },
+  { href: "/portal/help", key: "help" },
+] as const;
 
 export function PortalShell({
   userEmail,
@@ -39,9 +44,14 @@ export function PortalShell({
   children,
 }: PortalShellProps) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isDemo = shops.length === 0;
+
   return (
+    <DemoModeProvider isDemo={isDemo}>
+    <OnboardingProvider>
     <div className="h-screen flex bg-[#F6F8FB]">
       {/* Mobile overlay */}
       {mobileMenuOpen && (
@@ -91,18 +101,30 @@ export function PortalShell({
               <ChevronDown className="w-4 h-4 text-[#64748B]" />
             </a>
           ) : (
-            <a
-              href="/portal/connect-shopify"
-              className="block rounded-lg bg-[#1D4ED8] px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-[#1E40AF] transition-colors"
-            >
-              Connect a store
-            </a>
+            <div className="space-y-2">
+              <div className="w-full p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-lg flex items-center gap-3">
+                <Store className="w-4 h-4 text-[#D97706]" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[#0B1220]">{t("demoStore")}</p>
+                  <p className="text-xs text-[#92400E]">demo.myshopify.com</p>
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#F59E0B] text-white px-1.5 py-0.5 rounded">
+                  Demo
+                </span>
+              </div>
+              <a
+                href="/portal/connect-shopify"
+                className="block text-center text-xs text-[#1D4ED8] hover:underline"
+              >
+                {t("connectStore")}
+              </a>
+            </div>
           )}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
+          {NAV_KEYS.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/portal/dashboard" &&
@@ -118,7 +140,7 @@ export function PortalShell({
                     : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                 }`}
               >
-                {item.label}
+                {t(item.key)}
               </a>
             );
           })}
@@ -132,7 +154,7 @@ export function PortalShell({
               type="submit"
               className="mt-1 text-xs text-[#64748B] underline hover:text-[#0B1220]"
             >
-              Sign out
+              {t("signOut")}
             </button>
           </form>
         </div>
@@ -172,5 +194,24 @@ export function PortalShell({
         </main>
       </div>
     </div>
+    <OnboardingTourOverlay />
+    </OnboardingProvider>
+    </DemoModeProvider>
+  );
+}
+
+function OnboardingTourOverlay() {
+  const { showTour, completeTour, skipTour } = useOnboarding();
+  const router = useRouter();
+
+  if (!showTour) return null;
+
+  return (
+    <OnboardingTour
+      steps={onboardingSteps}
+      onComplete={completeTour}
+      onSkip={skipTour}
+      onNavigate={(path) => router.push(path)}
+    />
   );
 }

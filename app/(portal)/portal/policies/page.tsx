@@ -1,42 +1,112 @@
-import { Plus, FileText } from "lucide-react";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { FileText, Eye, Download, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const SAMPLE_POLICIES = [
-  { id: 1, name: "Refund Policy", lastUpdated: "Feb 15, 2026", status: "active" },
-  { id: 2, name: "Return Policy", lastUpdated: "Jan 20, 2026", status: "active" },
-  { id: 3, name: "Terms of Service", lastUpdated: "Dec 10, 2025", status: "draft" },
+const POLICIES = [
+  {
+    name: "Terms of Service",
+    type: "Legal Agreement",
+    format: "PDF",
+    size: "245 KB",
+    lastUpdated: "2026-01-15",
+  },
+  {
+    name: "Refund Policy",
+    type: "Customer Policy",
+    format: "PDF",
+    size: "128 KB",
+    lastUpdated: "2026-02-01",
+  },
+  {
+    name: "Privacy Policy",
+    type: "Legal Agreement",
+    format: "PDF",
+    size: "312 KB",
+    lastUpdated: "2026-01-20",
+  },
+  {
+    name: "Shipping Policy",
+    type: "Customer Policy",
+    format: "PDF",
+    size: "98 KB",
+    lastUpdated: "2026-02-10",
+  },
 ];
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function PoliciesPage() {
+  const t = useTranslations("policies");
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Policies</h1>
-          <p className="text-sm text-[#667085]">Manage store policies used in evidence packs</p>
+          <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
+          <p className="text-sm text-[#667085]">
+            {t("subtitle")}
+          </p>
         </div>
         <Button variant="primary" size="sm">
-          <Plus className="w-4 h-4 mr-1" />
-          Add policy
+          <FileText className="w-4 h-4 mr-2" />
+          {t("addPolicy")}
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {SAMPLE_POLICIES.map((p) => (
-          <div key={p.id} className="bg-white rounded-lg border border-[#E5E7EB] p-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#F1F5F9] rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-[#667085]" />
+      {/* Info card */}
+      <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-4 mb-6 flex items-start gap-3">
+        <Info className="w-5 h-5 text-[#3B82F6] flex-shrink-0 mt-0.5" />
+        <div>
+          <h4 className="text-sm font-semibold text-[#1E40AF] mb-1">{t("aboutPolicyDocs")}</h4>
+          <p className="text-sm text-[#1E40AF]/80">
+            {t("aboutPolicyDocsDesc")}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3" data-onboarding="policy-documents">
+        {POLICIES.map((policy) => (
+          <div
+            key={policy.name}
+            className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-5 hover:border-[#CBD5E1] transition-colors"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-[#EFF6FF] rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-[#3B82F6]" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[#0B1220]">{policy.name}</h3>
+                  <div className="flex items-center gap-3 mt-1">
+                    <Badge variant={policy.type === "Legal Agreement" ? "info" : "default"}>
+                      {policy.type}
+                    </Badge>
+                    <span className="text-xs text-[#667085]">{policy.format}</span>
+                    <span className="text-xs text-[#667085]">{policy.size}</span>
+                    <span className="text-xs text-[#667085]">Updated {formatDate(policy.lastUpdated)}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-[#0B1220]">{p.name}</p>
-                <p className="text-sm text-[#667085]">Updated {p.lastUpdated}</p>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button variant="secondary" size="sm">
+                  <Eye className="w-4 h-4 mr-1" />
+                  {t("preview")}
+                </Button>
+                <Button variant="ghost" size="sm">
+                  <Download className="w-4 h-4 mr-1" />
+                  {t("download")}
+                </Button>
               </div>
             </div>
-            <Badge variant={p.status === "active" ? "success" : "default"}>
-              {p.status === "active" ? "Active" : "Draft"}
-            </Badge>
           </div>
         ))}
       </div>
