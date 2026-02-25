@@ -92,7 +92,7 @@ export default function BillingPage() {
     setUpgrading(null);
   };
 
-  if (loading) {
+  if (loading || !shopId) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-[#0B1220] mb-6">Billing</h1>
