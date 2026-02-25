@@ -107,6 +107,16 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // --- Admin routes: require admin session cookie ---
+  if (pathname.startsWith("/admin")) {
+    if (pathname === "/admin/login") return NextResponse.next();
+    const adminCookie = req.cookies.get("dd_admin_session")?.value;
+    if (adminCookie !== "authenticated") {
+      return NextResponse.redirect(new URL("/admin/login", req.url));
+    }
+    return NextResponse.next();
+  }
+
   // --- Embedded app routes (/app/*): require Shopify session ---
   if (pathname.startsWith("/app")) {
     const shopDomain = req.cookies.get("shopify_shop")?.value;
@@ -130,6 +140,7 @@ export const config = {
     "/api/:path*",
     "/portal/:path*",
     "/app/:path*",
+    "/admin/:path*",
     "/auth/:path*",
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],

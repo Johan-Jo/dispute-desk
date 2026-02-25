@@ -1,0 +1,4 @@
+-- Admin override columns for shops
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS pack_limit_override INTEGER DEFAULT NULL;
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS auto_pack_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS admin_notes TEXT DEFAULT NULL;

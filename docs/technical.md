@@ -461,3 +461,33 @@ Requires `.env.local` with `SUPABASE_URL_POSTGRES` configured.
 4. Tests (Vitest: contract + unit)
 5. Forbidden copy grep (reject "submit response" etc. in UI code)
 6. `npm audit --audit-level=critical`
+
+## Internal Admin Panel
+
+A standalone operator dashboard at `/admin/*`, separate from the merchant-facing app.
+
+### Auth
+- V1: env-based `ADMIN_SECRET` validated against a password input.
+- HTTP-only session cookie (`dd_admin_session`, 8h TTL).
+- Middleware redirects unauthenticated `/admin/*` requests to `/admin/login`.
+
+### Pages
+| Route | Purpose |
+|-------|---------|
+| `/admin` | Dashboard — active shops, disputes, packs, job queue, plan distribution |
+| `/admin/shops` | Searchable shop list with plan/status filters |
+| `/admin/shops/[id]` | Shop detail + admin overrides (plan, pack limit, notes) |
+| `/admin/jobs` | Job monitor with status filters, stale detection, retry/cancel actions |
+| `/admin/audit` | Audit log viewer with shop/type filters, expandable payloads, CSV export |
+| `/admin/billing` | MRR, plan distribution, per-shop monthly usage |
+
+### API Routes
+- `POST /api/admin/login` — authenticate with admin secret
+- `GET /api/admin/logout` — clear session
+- `GET /api/admin/metrics` — aggregated dashboard data
+- `GET /api/admin/shops` — list shops (search, plan, status filters)
+- `GET/PATCH /api/admin/shops/[id]` — shop detail + admin overrides
+- `GET /api/admin/jobs` — list jobs with stale enrichment
+- `PATCH /api/admin/jobs/[id]` — retry or cancel jobs
+- `GET /api/admin/audit` — audit events (JSON or CSV format)
+- `GET /api/admin/billing` — MRR + plan distribution + per-shop usage
