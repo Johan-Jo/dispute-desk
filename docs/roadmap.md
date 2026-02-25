@@ -9,7 +9,7 @@
 | 0 | Foundations | DONE | 1 | [EPIC-0](epics/EPIC-0-foundations.md) |
 | P0 | External Portal + Marketing | DONE | 0-1 | [EPIC-P0](epics/EPIC-P0-portal-marketing.md) |
 | A1 | Automation Pipeline | In Progress | 1-3 | [EPIC-A1](epics/EPIC-A1-automation-pipeline.md) |
-| 1 | Dispute Sync | Pending | 1-2 | [EPIC-1](epics/EPIC-1-dispute-sync.md) |
+| 1 | Dispute Sync | DONE | 1-2 | [EPIC-1](epics/EPIC-1-dispute-sync.md) |
 | 2 | Evidence Pack Builder | Pending | 2-3 | [EPIC-2](epics/EPIC-2-evidence-pack-builder.md) |
 | 3 | PDF Rendering & Storage | Pending | 3 | [EPIC-3](epics/EPIC-3-pdf-rendering.md) |
 | 4 | Governance & Review Queue | Pending | 3-4 | [EPIC-4](epics/EPIC-4-governance.md) |

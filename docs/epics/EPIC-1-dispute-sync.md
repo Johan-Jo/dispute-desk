@@ -1,6 +1,6 @@
 # EPIC 1 — Dispute Sync
 
-> **Status:** Pending
+> **Status:** Done
 > **Week:** 1–2
 > **Dependencies:** EPIC 0
 
