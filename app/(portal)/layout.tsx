@@ -1,8 +1,11 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import { PortalShell } from "./portal-shell";
 import { getServiceClient } from "@/lib/supabase/server";
+import { NextIntlClientProvider } from "next-intl";
+import { resolveLocale } from "@/lib/i18n/config";
+import { getMessages } from "@/lib/i18n/getMessages";
 
 export default async function PortalLayout({
   children,
@@ -41,14 +44,21 @@ export default async function PortalLayout({
     (activeShop?.shops as unknown as { shop_domain: string })?.shop_domain ??
     null;
 
+  const headerStore = await headers();
+  const acceptLang = headerStore.get("accept-language");
+  const locale = resolveLocale(null, acceptLang);
+  const messages = await getMessages(locale);
+
   return (
-    <PortalShell
-      userEmail={user.email ?? ""}
-      shops={shops ?? []}
-      activeShopId={activeShopId}
-      activeShopDomain={activeShopDomain}
-    >
-      {children}
-    </PortalShell>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <PortalShell
+        userEmail={user.email ?? ""}
+        shops={shops ?? []}
+        activeShopId={activeShopId}
+        activeShopDomain={activeShopDomain}
+      >
+        {children}
+      </PortalShell>
+    </NextIntlClientProvider>
   );
 }

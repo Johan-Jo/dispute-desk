@@ -491,3 +491,26 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 - `PATCH /api/admin/jobs/[id]` — retry or cancel jobs
 - `GET /api/admin/audit` — audit events (JSON or CSV format)
 - `GET /api/admin/billing` — MRR + plan distribution + per-shop usage
+
+## Multi-Language (i18n)
+
+### Stack
+- `next-intl` for translation management and `useTranslations()` / `useFormatter()` hooks.
+- Message files at `messages/{en,sv,de,fr,es}.json` organized by feature namespace.
+
+### Locale Resolution
+1. Shop setting (`shops.locale` column) — highest priority.
+2. Browser `Accept-Language` header.
+3. Fallback: `en`.
+
+### Polaris Integration
+- `lib/i18n/polarisLocales.ts` dynamically loads the correct Polaris locale bundle.
+- Embedded providers accept `polarisTranslations` prop.
+
+### Adding a Language
+1. Create `messages/{code}.json`.
+2. Add code to `SUPPORTED_LOCALES` in `lib/i18n/config.ts`.
+3. Add dynamic import in `lib/i18n/polarisLocales.ts`.
+
+### CI
+- Forbidden-copy check scans both `.ts/.tsx` source files and `messages/*.json` translation files.

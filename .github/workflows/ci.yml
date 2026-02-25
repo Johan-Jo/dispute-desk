@@ -31,12 +31,12 @@ jobs:
       - name: Security audit
         run: npm audit --audit-level=critical
 
-      - name: Forbidden copy check
+      - name: Forbidden copy check (source + translations)
         run: |
           if grep -rn "submit response\|submit to card network\|file dispute response" \
-            --include="*.tsx" --include="*.ts" \
-            app/ components/ lib/ 2>/dev/null; then
-            echo "ERROR: Found forbidden UX copy"
+            --include="*.tsx" --include="*.ts" --include="*.json" \
+            app/ components/ lib/ messages/ 2>/dev/null; then
+            echo "ERROR: Found forbidden UX copy in source or translation files"
             exit 1
           fi
           echo "No forbidden copy found"
