@@ -51,9 +51,11 @@ Generate a professional, print-ready PDF evidence pack and make it downloadable 
 - Each render creates a new timestamp-based path; old path is preserved in audit log `previousPath`.
 - `pdf_path` on the pack row always points to the latest version.
 
-### 3.6 — Next.js Build Configuration
+### 3.6 — Dynamic Import Pattern (Estimate Pro standard)
 
-- `next.config.js` updated with `serverExternalPackages` to exclude `@react-pdf/renderer`, `@react-pdf/layout`, `@react-pdf/pdfkit`, `@react-pdf/primitives`, and `yoga-layout` from webpack bundling (resolved a build hang on Windows).
+- **`lib/packs/pdf/reactPdfRuntime.ts`** — Dedicated module exporting `getReactPdfRenderer()` and `getEvidencePackDocumentModule()` as async dynamic imports. Same pattern as Estimate Pro's `src/lib/pdf/estimate/reactPdfRuntime.ts`.
+- **`lib/packs/renderPdf.tsx`** — Uses the runtime module to keep `@react-pdf/renderer` out of webpack's static analysis. No `serverExternalPackages` needed.
+- **`export const runtime = "nodejs"`** set on render-pdf, download, and worker API routes.
 
 ### 3.7 — UI Integration
 
@@ -75,13 +77,14 @@ Both UIs poll for updates during rendering and stop polling when complete.
 |------|---------|
 | `lib/packs/pdf/styles.ts` | React-PDF stylesheet |
 | `lib/packs/pdf/EvidencePackDocument.tsx` | PDF document component |
-| `lib/packs/renderPdf.tsx` | Render orchestrator (dynamic import) |
+| `lib/packs/pdf/reactPdfRuntime.ts` | Dynamic import wrappers (EP pattern) |
+| `lib/packs/renderPdf.tsx` | Render orchestrator |
 | `lib/jobs/handlers/renderPdfJob.ts` | Job handler |
 | `app/api/packs/[packId]/render-pdf/route.ts` | Render trigger endpoint |
 | `app/api/packs/[packId]/download/route.ts` | Signed URL download endpoint |
 | `app/(embedded)/app/packs/[packId]/page.tsx` | Embedded pack preview (PDF actions) |
 | `app/(portal)/portal/packs/[packId]/page.tsx` | Portal pack preview (PDF actions) |
-| `next.config.js` | Server external packages config |
+| `app/api/jobs/worker/route.ts` | Job worker (runtime = nodejs) |
 
 ## Acceptance Criteria
 
@@ -90,4 +93,4 @@ Both UIs poll for updates during rendering and stop polling when complete.
 - [x] Signed URL download works and expires after 1 hour.
 - [x] Regeneration creates new version; audit log records both paths.
 - [x] UI shows render/download controls on both embedded and portal surfaces.
-- [x] Build passes with `@react-pdf/renderer` excluded from webpack.
+- [x] Build passes with dynamic import pattern (no serverExternalPackages needed).

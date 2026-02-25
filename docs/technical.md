@@ -206,7 +206,7 @@ queued → building → ready → saved_to_shopify
 
 1. `POST /api/packs/:packId/render-pdf` enqueues `render_pdf` job (returns 202).
 2. Job handler (`lib/jobs/handlers/renderPdfJob.ts`) loads pack + related data, calls `renderPackPdf()`.
-3. `renderPackPdf()` (`lib/packs/renderPdf.tsx`) uses dynamic imports for `@react-pdf/renderer` to avoid webpack bundling native deps at build time.
+3. `renderPackPdf()` (`lib/packs/renderPdf.tsx`) renders via dynamic imports.
 4. PDF buffer uploaded to Supabase Storage `evidence-packs/{shopId}/{packId}/{timestamp}.pdf`.
 5. `evidence_packs.pdf_path` updated; `pdf_rendered` audit event logged.
 
@@ -214,9 +214,14 @@ queued → building → ready → saved_to_shopify
 
 - `GET /api/packs/:packId/download` returns 1-hour signed URL from Supabase Storage.
 
-### Build Configuration
+### Dynamic Import Pattern (aligned with Estimate Pro)
 
-`next.config.js` marks `@react-pdf/renderer` and its transitive native packages (`yoga-layout`, `@react-pdf/layout`, `@react-pdf/pdfkit`, `@react-pdf/primitives`) as `serverExternalPackages` to prevent webpack from bundling them.
+`@react-pdf/renderer` has native dependencies (`yoga-layout`) that hang webpack if statically imported. The solution (matching the proven Estimate Pro pattern) uses a dedicated runtime module:
+
+- **`lib/packs/pdf/reactPdfRuntime.ts`** — exports `getReactPdfRenderer()` and `getEvidencePackDocumentModule()` as async dynamic imports.
+- **`lib/packs/renderPdf.tsx`** — calls the runtime module, uses `React.createElement()` + `renderToBuffer()`.
+- **`export const runtime = "nodejs"`** — set on render-pdf, download, and worker API routes.
+- **No `serverExternalPackages`** needed — dynamic imports keep the package out of webpack's static analysis graph entirely.
 
 ## API Surface
 
