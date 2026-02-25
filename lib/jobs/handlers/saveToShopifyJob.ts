@@ -2,23 +2,27 @@
  * Job handler: save_to_shopify
  *
  * Pushes evidence from a pack to Shopify via the disputeEvidenceUpdate
- * GraphQL mutation. Requires an offline session (auto-save path) or
- * online session (manual save path).
+ * GraphQL mutation using the field mapping engine.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-
+import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import { buildEvidenceInput, type PackSection } from "@/lib/shopify/fieldMapping";
+import {
+  DISPUTE_EVIDENCE_UPDATE_MUTATION,
+  type DisputeEvidenceUpdateResult,
+} from "@/lib/shopify/mutations/disputeEvidenceUpdate";
+import { logAuditEvent } from "@/lib/audit/logEvent";
 import type { ClaimedJob } from "../claimJobs";
 
-const EVIDENCE_UPDATE_MUTATION = `
-  mutation DisputeEvidenceUpdate($id: ID!, $input: ShopifyPaymentsDisputeEvidenceUpdateInput!) {
-    shopifyPaymentsDisputeEvidenceUpdate(id: $id, input: $input) {
-      disputeEvidence { id }
-      userErrors { field message }
-    }
+function decryptAccessToken(encrypted: string): string {
+  try {
+    return decrypt(deserializeEncrypted(encrypted));
+  } catch {
+    return encrypted;
   }
-`;
+}
 
 export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   const sb = getServiceClient();
@@ -27,7 +31,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
 
   const { data: pack } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, pack_json")
+    .select("id, shop_id, dispute_id, sections")
     .eq("id", packId)
     .single();
   if (!pack) throw new Error(`Pack not found: ${packId}`);
@@ -49,50 +53,52 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .single();
   if (!session) throw new Error(`No offline session for shop ${pack.shop_id}`);
 
-  const accessToken = session.access_token_encrypted;
-  const packJson = (pack.pack_json ?? {}) as Record<string, unknown>;
+  const accessToken = decryptAccessToken(session.access_token_encrypted);
+  const sections: PackSection[] = Array.isArray(pack.sections) ? pack.sections : [];
+  const input = buildEvidenceInput(sections);
 
-  // Map internal pack fields to Shopify evidence input
-  const input: Record<string, unknown> = {};
-  if (packJson.shipping_tracking) {
-    input.shippingDocumentation = JSON.stringify(packJson.shipping_tracking);
-  }
-  if (packJson.refund_policy) {
-    input.refundPolicyDisclosure = JSON.stringify(packJson.refund_policy);
-  }
-  if (packJson.order_confirmation) {
-    input.accessActivityLog = JSON.stringify(packJson.order_confirmation);
-  }
-  if (packJson.customer_communication) {
-    input.customerCommunication = JSON.stringify(
-      packJson.customer_communication
-    );
+  if (Object.keys(input).length === 0) {
+    throw new Error("No evidence fields to send — pack sections are empty");
   }
 
-  const result = await requestShopifyGraphQL<{
-    shopifyPaymentsDisputeEvidenceUpdate: {
-      disputeEvidence: { id: string } | null;
-      userErrors: { field: string[]; message: string }[];
-    };
-  }>({
+  await logAuditEvent({
+    shopId: pack.shop_id,
+    disputeId: pack.dispute_id,
+    packId,
+    actorType: "system",
+    eventType: "job_started",
+    eventPayload: { jobId: job.id, jobType: "save_to_shopify" },
+  });
+
+  const result = await requestShopifyGraphQL<DisputeEvidenceUpdateResult>({
     session: { shopDomain: session.shop_domain ?? "", accessToken },
-    query: EVIDENCE_UPDATE_MUTATION,
+    query: DISPUTE_EVIDENCE_UPDATE_MUTATION,
     variables: { id: dispute.dispute_evidence_gid, input },
     correlationId: `save-${job.id}`,
   });
 
-  const mutation = result.data?.shopifyPaymentsDisputeEvidenceUpdate;
+  const mutation = result.data?.disputeEvidenceUpdate;
   const userErrors = mutation?.userErrors ?? [];
 
   if (userErrors.length > 0) {
-    await sb.from("audit_events").insert({
-      shop_id: pack.shop_id,
-      dispute_id: pack.dispute_id,
-      pack_id: packId,
-      actor_type: "system",
-      event_type: "save_to_shopify_failed",
-      event_payload: { user_errors: userErrors, job_id: job.id },
+    await sb
+      .from("evidence_packs")
+      .update({ status: "save_failed", updated_at: new Date().toISOString() })
+      .eq("id", packId);
+
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "job_failed",
+      eventPayload: {
+        jobId: job.id,
+        jobType: "save_to_shopify",
+        user_errors: userErrors,
+      },
     });
+
     throw new Error(
       `Shopify userErrors: ${userErrors.map((e) => e.message).join(", ")}`
     );
@@ -108,13 +114,13 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     })
     .eq("id", packId);
 
-  await sb.from("audit_events").insert({
-    shop_id: pack.shop_id,
-    dispute_id: pack.dispute_id,
-    pack_id: packId,
-    actor_type: "system",
-    event_type: "evidence_saved_to_shopify",
-    event_payload: {
+  await logAuditEvent({
+    shopId: pack.shop_id,
+    disputeId: pack.dispute_id,
+    packId,
+    actorType: "system",
+    eventType: "evidence_saved_to_shopify",
+    eventPayload: {
       evidence_gid: dispute.dispute_evidence_gid,
       fields_sent: Object.keys(input),
       job_id: job.id,

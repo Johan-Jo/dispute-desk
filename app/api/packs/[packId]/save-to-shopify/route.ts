@@ -1,121 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { loadSession } from "@/lib/shopify/sessionStorage";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import {
-  DISPUTE_EVIDENCE_UPDATE_MUTATION,
-  type DisputeEvidenceUpdateResult,
-} from "@/lib/shopify/mutations/disputeEvidenceUpdate";
-import { buildEvidenceInput, type PackSection } from "@/lib/shopify/fieldMapping";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+
+export const runtime = "nodejs";
 
 /**
  * POST /api/packs/:packId/save-to-shopify
  *
- * Requires ONLINE session (user context) for disputeEvidenceUpdate.
- * Uses the dispute_evidence_gid stored during dispute sync.
- *
- * Body: { sections: PackSection[] }
+ * Enqueues a save_to_shopify job. The actual Shopify mutation
+ * runs in the job handler to isolate failures and enable retry.
  */
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
-  const db = getServiceClient();
+  const sb = getServiceClient();
 
-  // Load pack + dispute
-  const { data: pack, error: pErr } = await db
+  const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id")
+    .select("id, shop_id, dispute_id, status")
     .eq("id", packId)
     .single();
 
-  if (pErr || !pack) {
+  if (error || !pack) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
-  const { data: dispute, error: dErr } = await db
+  const { data: dispute } = await sb
     .from("disputes")
-    .select("id, dispute_evidence_gid, dispute_gid, shop_id")
+    .select("id, dispute_evidence_gid")
     .eq("id", pack.dispute_id)
     .single();
 
-  if (dErr || !dispute) {
-    return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
-  }
-
-  if (!dispute.dispute_evidence_gid) {
+  if (!dispute?.dispute_evidence_gid) {
     return NextResponse.json(
-      {
-        error: "Missing disputeEvidence GID. Sync the dispute first to fetch evidence ID.",
-        code: "MISSING_EVIDENCE_GID",
-      },
-      { status: 422 }
+      { error: "No dispute_evidence_gid found. Cannot save to Shopify." },
+      { status: 400 }
     );
   }
 
-  // Require online session
-  const onlineSession = await loadSession(pack.shop_id, "online");
-  if (!onlineSession) {
-    return NextResponse.json(
-      {
-        error: "Online session required. Please re-open the app from Shopify Admin to authenticate.",
-        code: "ONLINE_SESSION_REQUIRED",
-      },
-      { status: 403 }
-    );
-  }
-
-  // Build evidence input from sections
-  const body = (await req.json()) as { sections: PackSection[] };
-  const evidenceInput = buildEvidenceInput(body.sections);
-
-  // Call Shopify mutation
-  const result = await requestShopifyGraphQL<DisputeEvidenceUpdateResult>({
-    session: {
-      shopDomain: onlineSession.shopDomain,
-      accessToken: onlineSession.accessToken,
-    },
-    query: DISPUTE_EVIDENCE_UPDATE_MUTATION,
-    variables: {
-      id: dispute.dispute_evidence_gid,
-      input: evidenceInput,
-    },
-    correlationId: `save-evidence-${packId}`,
+  const { error: jobErr } = await sb.from("jobs").insert({
+    shop_id: pack.shop_id,
+    job_type: "save_to_shopify",
+    entity_id: packId,
   });
 
-  const userErrors = result.data?.disputeEvidenceUpdate?.userErrors ?? [];
+  if (jobErr) {
+    return NextResponse.json({ error: jobErr.message }, { status: 500 });
+  }
+
+  await sb
+    .from("evidence_packs")
+    .update({ status: "saving", updated_at: new Date().toISOString() })
+    .eq("id", packId);
 
   await logAuditEvent({
     shopId: pack.shop_id,
-    disputeId: dispute.id,
-    packId: pack.id,
+    disputeId: pack.dispute_id,
+    packId,
     actorType: "merchant",
     eventType: "evidence_saved_to_shopify",
-    eventPayload: {
-      evidenceGid: dispute.dispute_evidence_gid,
-      fieldsSent: Object.keys(evidenceInput),
-      userErrors,
-    },
+    eventPayload: { trigger: "manual", queued: true },
   });
 
-  if (userErrors.length > 0) {
-    return NextResponse.json(
-      { error: "Shopify returned errors", userErrors },
-      { status: 422 }
-    );
-  }
-
-  // Update pack timestamp
-  await db
-    .from("evidence_packs")
-    .update({ last_saved_to_shopify_at: new Date().toISOString() })
-    .eq("id", packId);
-
-  return NextResponse.json({
-    success: true,
-    savedFields: Object.keys(evidenceInput),
-    savedAt: new Date().toISOString(),
-  });
+  return NextResponse.json({ queued: true, packId }, { status: 202 });
 }

@@ -98,6 +98,7 @@ export default function PackPreviewPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [saving, setSaving] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
@@ -380,6 +381,54 @@ export default function PackPreviewPage() {
                 <Text as="p" variant="bodySm" tone="subdued">
                   Last rendered: {pack.pdf_path.split("/").pop()?.replace(/-/g, ":")}
                 </Text>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Save Evidence to Shopify */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">Save Evidence to Shopify</Text>
+              {pack.status === "saved_to_shopify" ? (
+                <>
+                  <Banner tone="success">
+                    Evidence saved to Shopify. Open Shopify Admin to review and
+                    finalize your response.
+                  </Banner>
+                  <Button
+                    url={`https://admin.shopify.com/store/${pack.shop_id}/orders`}
+                    target="_blank"
+                  >
+                    Open in Shopify Admin
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Saves structured evidence fields to Shopify via API.
+                    Submission to the card network happens in Shopify Admin.
+                  </Text>
+                  <Button
+                    variant="primary"
+                    loading={saving || pack.status === "saving"}
+                    disabled={pack.status === "building" || pack.status === "queued"}
+                    onClick={async () => {
+                      setSaving(true);
+                      await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
+                      await fetchPack();
+                      setSaving(false);
+                    }}
+                  >
+                    {pack.status === "saving" ? "Saving..." : "Save Evidence to Shopify"}
+                  </Button>
+                  {pack.status === "save_failed" && (
+                    <Banner tone="critical">
+                      Save failed. Check the audit log below for details, then retry.
+                    </Banner>
+                  )}
+                </>
               )}
             </BlockStack>
           </Card>

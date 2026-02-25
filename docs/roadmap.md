@@ -13,7 +13,7 @@
 | 2 | Evidence Pack Builder | DONE | 2-3 | [EPIC-2](epics/EPIC-2-evidence-pack-builder.md) |
 | 3 | PDF Rendering & Storage | DONE | 3 | [EPIC-3](epics/EPIC-3-pdf-rendering.md) |
 | 4 | Governance & Review Queue | DONE | 3-4 | [EPIC-4](epics/EPIC-4-governance.md) |
-| 5 | Save Evidence to Shopify | Pending | 4 | [EPIC-5](epics/EPIC-5-save-to-shopify.md) |
+| 5 | Save Evidence to Shopify | DONE | 4 | [EPIC-5](epics/EPIC-5-save-to-shopify.md) |
 | 6 | Billing & Plan Limits | Pending | 5 | [EPIC-6](epics/EPIC-6-billing.md) |
 | 7 | Hardening | Pending | 5-6 | [EPIC-7](epics/EPIC-7-hardening.md) |
 | 8 | Internal Admin Panel | Pending | 6-7 | [EPIC-8](epics/EPIC-8-admin-panel.md) |

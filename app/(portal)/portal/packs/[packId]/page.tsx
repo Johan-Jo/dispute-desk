@@ -105,6 +105,7 @@ export default function PackPreviewPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [saving, setSaving] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
@@ -348,6 +349,59 @@ export default function PackPreviewPage() {
             </p>
           </div>
         </label>
+      </div>
+
+      {/* Save Evidence to Shopify */}
+      <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
+        <h3 className="font-semibold text-[#0B1220] mb-3">Save Evidence to Shopify</h3>
+        {pack.status === "saved_to_shopify" ? (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-[#22C55E]" />
+              <span className="text-sm font-medium text-[#22C55E]">
+                Evidence saved to Shopify
+              </span>
+            </div>
+            <p className="text-sm text-[#667085] mb-3">
+              Open Shopify Admin to review and finalize your response.
+            </p>
+            <a
+              href={`https://admin.shopify.com`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-[#1D4ED8] hover:underline"
+            >
+              Open in Shopify Admin &rarr;
+            </a>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-[#667085] mb-3">
+              Saves structured evidence fields to Shopify via API.
+              Submission to the card network happens in Shopify Admin.
+            </p>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={saving || pack.status === "saving" || pack.status === "building" || pack.status === "queued"}
+              onClick={async () => {
+                setSaving(true);
+                await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
+                await fetchPack();
+                setSaving(false);
+              }}
+            >
+              {pack.status === "saving" || saving ? "Saving..." : "Save Evidence to Shopify"}
+            </Button>
+            {pack.status === "save_failed" && (
+              <div className="mt-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-3">
+                <p className="text-sm text-[#DC2626]">
+                  Save failed. Check the audit log below for details, then retry.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Completeness Gate */}

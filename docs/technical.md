@@ -346,6 +346,27 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 | `/api/rules/reorder` | POST | Reorder by priority |
 | `/api/disputes/:id/approve` | POST | Approve from review queue |
 
+## Save Evidence to Shopify
+
+### Field Mapping Engine
+
+`lib/shopify/fieldMapping.ts` maps internal pack sections to `DisputeEvidenceUpdateInput` fields:
+
+- `buildEvidenceInput(sections, disabledFields?)` — builds the Shopify input. Only non-empty fields are included.
+- `previewEvidenceMapping(sections)` — returns per-field preview for the UI.
+- Mapping: `shippingDocumentation` ← fulfillment/tracking/shipping, `refundPolicyDisclosure` ← refund_policy_snapshot, etc.
+
+### Save Pipeline
+
+1. `POST /api/packs/:packId/save-to-shopify` — enqueues `save_to_shopify` job, sets status to `saving`.
+2. Job handler loads pack sections + decrypted offline session token.
+3. Calls `disputeEvidenceUpdate` mutation with the dispute's `dispute_evidence_gid`.
+4. On success → `saved_to_shopify` status + timestamp. On error → `save_failed` + audit log.
+
+### UX Compliance
+
+All UI labels say "Save evidence." Never "Submit response" or "Submit to card network."
+
 ## Testing
 
 ### Unit Tests (Vitest)
