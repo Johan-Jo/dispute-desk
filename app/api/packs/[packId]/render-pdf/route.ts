@@ -3,6 +3,8 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 
+export const runtime = "nodejs";
+
 /**
  * POST /api/packs/:packId/render-pdf
  *

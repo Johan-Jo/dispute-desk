@@ -5,6 +5,8 @@ import { handleRenderPdf } from "@/lib/jobs/handlers/renderPdfJob";
 import { handleSyncDisputes } from "@/lib/jobs/handlers/syncDisputesJob";
 import { handleSaveToShopify } from "@/lib/jobs/handlers/saveToShopifyJob";
 
+export const runtime = "nodejs";
+
 const CRON_SECRET = process.env.CRON_SECRET;
 
 /**

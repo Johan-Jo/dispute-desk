@@ -1,20 +1,36 @@
+import React from "react";
+
 import type { PackPdfData } from "./pdf/EvidencePackDocument";
+import {
+  getEvidencePackDocumentModule,
+  getReactPdfRenderer,
+} from "./pdf/reactPdfRuntime";
+
+export interface RenderPackPdfResult {
+  buffer: Buffer;
+  contentType: "application/pdf";
+}
 
 /**
  * Render an evidence pack PDF to a Buffer.
  *
- * Uses dynamic import to avoid webpack bundling @react-pdf/renderer
- * at build time (the package has native deps that hang the build).
+ * Dynamic imports via reactPdfRuntime.ts keep @react-pdf/renderer
+ * out of the webpack static analysis graph (same pattern as Estimate Pro).
  */
-export async function renderPackPdf(data: PackPdfData): Promise<Buffer> {
-  const React = (await import("react")).default;
-  const { renderToBuffer } = await import("@react-pdf/renderer");
-  const { EvidencePackDocument } = await import("./pdf/EvidencePackDocument");
+export async function renderPackPdf(
+  data: PackPdfData
+): Promise<RenderPackPdfResult> {
+  const { renderToBuffer } = await getReactPdfRenderer();
+  const { EvidencePackDocument } = await getEvidencePackDocumentModule();
 
-  const element = React.createElement(EvidencePackDocument, { data });
-  // @react-pdf/renderer's renderToBuffer expects DocumentProps but our
-  // wrapper component returns a <Document> internally — safe to cast.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buffer = await renderToBuffer(element as any);
-  return Buffer.from(buffer);
+  console.info("evidence-pdf-render", { renderer: "react-pdf", packId: data.packId });
+
+  const buffer = await renderToBuffer(
+    React.createElement(EvidencePackDocument, { data })
+  );
+
+  return {
+    buffer: Buffer.from(buffer),
+    contentType: "application/pdf",
+  };
 }

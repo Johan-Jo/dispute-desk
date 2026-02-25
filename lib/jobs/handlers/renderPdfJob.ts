@@ -7,8 +7,9 @@ import type { ClaimedJob } from "../claimJobs";
 /**
  * Job handler: render_pdf
  *
- * Loads pack + audit events, renders PDF via @react-pdf/renderer,
- * uploads to Supabase Storage, updates pdf_path on the pack row.
+ * Loads pack + audit events, renders PDF via @react-pdf/renderer
+ * (dynamic imports via reactPdfRuntime), uploads to Supabase Storage,
+ * updates pdf_path on the pack row.
  *
  * entity_id = evidence_packs.id
  */
@@ -72,7 +73,14 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
       auditEvents: auditEvents ?? [],
     };
 
-    const pdfBuffer = await renderPackPdf(pdfData);
+    console.info("render-pdf-job", {
+      renderer: "react-pdf",
+      packId,
+      shopId: job.shopId,
+      jobId: job.id,
+    });
+
+    const result = await renderPackPdf(pdfData);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const storagePath = `${pack.shop_id}/${packId}/${timestamp}.pdf`;
@@ -80,8 +88,8 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
 
     const { error: uploadErr } = await db.storage
       .from("evidence-packs")
-      .upload(storagePath, pdfBuffer, {
-        contentType: "application/pdf",
+      .upload(storagePath, result.buffer, {
+        contentType: result.contentType,
         upsert: false,
       });
 
@@ -103,7 +111,7 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
         jobId: job.id,
         storagePath,
         previousPath: previousPath ?? null,
-        fileSizeBytes: pdfBuffer.length,
+        fileSizeBytes: result.buffer.length,
       },
     });
   } catch (err) {
