@@ -88,6 +88,7 @@ export default function DisputeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [quotaError, setQuotaError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -109,8 +110,14 @@ export default function DisputeDetailPage() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    await fetch(`/api/disputes/${id}/packs`, { method: "POST" });
-    await fetchData();
+    setQuotaError(null);
+    const res = await fetch(`/api/disputes/${id}/packs`, { method: "POST" });
+    if (res.status === 403) {
+      const data = await res.json();
+      setQuotaError(data.error ?? "Plan limit reached. Please upgrade.");
+    } else {
+      await fetchData();
+    }
     setGenerating(false);
   };
 
@@ -156,6 +163,19 @@ export default function DisputeDetailPage() {
       ]}
     >
       <Layout>
+        {quotaError && (
+          <Layout.Section>
+            <Banner
+              tone="warning"
+              title="Pack limit reached"
+              action={{ content: "Upgrade Plan", url: "/app/billing" }}
+              onDismiss={() => setQuotaError(null)}
+            >
+              <p>{quotaError}</p>
+            </Banner>
+          </Layout.Section>
+        )}
+
         {/* Summary card */}
         <Layout.Section>
           <Card>

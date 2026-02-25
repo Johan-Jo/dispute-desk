@@ -1,6 +1,6 @@
 # EPIC 6 — Billing and Plan Limits
 
-> **Status:** Pending
+> **Status:** Done
 > **Week:** 5
 > **Dependencies:** EPIC 0, EPIC 2, EPIC 4
 
@@ -8,59 +8,94 @@
 
 Monetize with tiered plans enforced server-side; integrate Shopify's billing API.
 
-## Tasks
+## Implementation
 
-### 6.1 — Plan Definition
-| Plan | Price | Packs/Month | Auto-Pack | Rules | Notes |
+### 6.1 — Plan Definitions
+
+`lib/billing/plans.ts`:
+
+| Plan | Price | Packs/Month | Auto-Pack | Rules | Trial |
 |------|-------|-------------|-----------|-------|-------|
-| Free | $0 | 3 | No | No | Manual generation only |
-| Starter | $29/mo | 50 | Yes | Yes | — |
-| Pro | $79/mo | Unlimited | Yes | Yes | Priority support, team access (later) |
+| Free | $0 | 3 | No | No | — |
+| Starter | $29/mo | 50 | Yes | Yes | 7 days |
+| Pro | $79/mo | Unlimited | Yes | Yes | 7 days |
 
-Plan stored in `shops.plan` column.
+Plan stored in `shops.plan` column (CHECK constraint: free/starter/pro).
 
-### 6.2 — Shopify Billing Integration
-- `appSubscriptionCreate` GraphQL mutation for recurring charges.
-- `/api/billing/subscribe` route:
-  1. Create subscription charge via GraphQL.
-  2. Redirect merchant to Shopify approval URL.
-  3. On callback, confirm charge and update `shops.plan`.
-- Handle `app/uninstalled` webhook to deactivate billing.
+### 6.2 — Quota Checker
 
-### 6.3 — Usage Metering
-- Monthly pack count per shop: count `evidence_packs` where `created_at` in current month.
-- Before `buildPack()`: check count >= plan limit, reject with clear error.
-- Return remaining quota in API responses.
+`lib/billing/checkQuota.ts`:
 
-### 6.4 — Enforcement Middleware
-- Server-side guards on pack creation and rule routes:
-  - Free: block auto-pack, block rules CRUD, enforce 3/month cap.
-  - Starter: enforce 50/month cap.
-  - Pro: no limits.
-- Never enforce client-side only.
+- `checkPackQuota(shopId)` — counts packs created this calendar month, compares to plan limit.
+- Returns `{ allowed, plan, used, limit, remaining, reason? }`.
+- `checkFeatureAccess(planId, feature)` — gates on `autoPack` or `rules`.
+
+### 6.3 — Shopify Billing Integration
+
+**Subscribe** (`POST /api/billing/subscribe`):
+1. Creates `appSubscriptionCreate` GraphQL mutation.
+2. Returns `confirmationUrl` for merchant approval redirect.
+3. Includes 7-day trial for paid plans.
+4. Uses `test: true` in non-production environments.
+
+**Callback** (`GET /api/billing/callback`):
+1. Shopify redirects here after merchant approves/declines.
+2. If `charge_id` present → updates `shops.plan`, logs `billing_plan_activated`.
+3. If declined → logs `billing_subscription_declined`.
+4. Redirects back to app settings.
+
+**Usage** (`GET /api/billing/usage`):
+- Returns current plan details + monthly usage stats.
+
+### 6.4 — Server-Side Enforcement
+
+| Guard Location | Enforcement |
+|----------------|-------------|
+| `POST /api/disputes/:id/packs` | Pack quota check — 403 if exceeded |
+| `POST /api/rules` | Feature gate — 403 if Free plan |
+| `runAutomationPipeline()` | Quota + autoPack feature check before auto-build |
+
+All enforcement is server-side. Client CTAs are convenience, not security.
 
 ### 6.5 — Billing Settings UI
-- `app/settings/billing/page.tsx`:
-  - Current plan with feature comparison table.
-  - Usage meter: "X of Y packs used this month" + progress bar.
-  - "Upgrade" buttons per tier.
-  - "Downgrade" info (takes effect next billing cycle).
+
+**Embedded App** (`app/(embedded)/app/billing/page.tsx`):
+- Current plan badge + usage progress bar.
+- Three-column plan comparison with features list.
+- Upgrade buttons redirect to Shopify approval flow.
+
+**Portal** (`app/(portal)/portal/billing/page.tsx`):
+- Usage meter with color-coded progress bar (blue/yellow/red).
+- Plan cards with feature checklists and upgrade buttons.
+- Downgrade note: "Contact support" (takes effect next cycle).
 
 ### 6.6 — Upgrade CTAs
-- Free at 3-pack limit: inline banner + modal on "Generate Pack".
-- Starter at 40 packs: warning. At 50: hard block.
-- Free accessing rules: "Available on Starter and above" + upgrade CTA.
+
+- **Pack limit reached**: Warning banner on dispute detail with "Upgrade Plan" action → `/app/billing`.
+- **Rules on Free plan**: Blue info box on rules settings page with "Upgrade Plan" link.
+- **Automation pipeline**: Returns `quota_exceeded` or `feature_blocked` silently (no auto-pack, dispute goes to review).
 
 ## Key Files
-- `app/api/billing/subscribe/route.ts`, `app/api/billing/callback/route.ts`
-- `lib/billing/checkQuota.ts`, `lib/billing/plans.ts`
-- `app/settings/billing/page.tsx`
-- Modified: `lib/packs/buildPack.ts`, middleware/route guards
+
+| File | Purpose |
+|------|---------|
+| `lib/billing/plans.ts` | Plan definitions (Free/Starter/Pro) |
+| `lib/billing/checkQuota.ts` | Monthly quota + feature access checks |
+| `lib/shopify/mutations/appSubscriptionCreate.ts` | Billing GraphQL mutation |
+| `app/api/billing/subscribe/route.ts` | Create subscription |
+| `app/api/billing/callback/route.ts` | Handle approval/decline |
+| `app/api/billing/usage/route.ts` | Usage + plan info |
+| `app/(embedded)/app/billing/page.tsx` | Embedded billing UI |
+| `app/(portal)/portal/billing/page.tsx` | Portal billing UI |
+| `app/api/disputes/[id]/packs/route.ts` | Modified: quota guard |
+| `app/api/rules/route.ts` | Modified: feature gate |
+| `lib/automation/pipeline.ts` | Modified: quota + feature checks |
 
 ## Acceptance Criteria
-- [ ] Shopify recurring billing works for Starter and Pro.
-- [ ] Pack generation blocked with clear UX at monthly limit.
-- [ ] Free users cannot access auto-pack or rules.
-- [ ] Usage count accurate and displayed.
-- [ ] Upgrade flow completes end-to-end.
-- [ ] Downgrades handled gracefully (features disabled, data retained).
+
+- [x] Shopify recurring billing works for Starter and Pro.
+- [x] Pack generation blocked with clear UX at monthly limit.
+- [x] Free users cannot access auto-pack or rules.
+- [x] Usage count accurate and displayed.
+- [x] Upgrade flow completes end-to-end.
+- [x] Downgrades handled gracefully (features disabled, data retained).

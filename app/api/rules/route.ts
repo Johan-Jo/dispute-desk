@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { checkFeatureAccess } from "@/lib/billing/checkQuota";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/rules
- * Create a new rule.
+ * Create a new rule. Requires Starter or Pro plan.
  */
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -37,6 +38,13 @@ export async function POST(req: NextRequest) {
 
   if (!shop_id) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
+  }
+
+  const sb2 = getServiceClient();
+  const { data: shop } = await sb2.from("shops").select("plan").eq("id", shop_id).single();
+  const access = checkFeatureAccess(shop?.plan ?? "free", "rules");
+  if (!access.allowed) {
+    return NextResponse.json({ error: access.reason, upgrade_required: true }, { status: 403 });
   }
 
   const sb = getServiceClient();

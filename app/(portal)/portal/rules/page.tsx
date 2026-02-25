@@ -54,6 +54,8 @@ export default function RulesSettingsPage() {
     ? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? ""
     : "";
 
+  const [planBlocked, setPlanBlocked] = useState(false);
+
   const fetchRules = useCallback(async () => {
     if (!shopId) return;
     setLoading(true);
@@ -61,6 +63,10 @@ export default function RulesSettingsPage() {
     const data = await res.json();
     setRules(Array.isArray(data) ? data : []);
     setLoading(false);
+
+    const usageRes = await fetch(`/api/billing/usage?shop_id=${shopId}`);
+    const usageData = await usageRes.json();
+    setPlanBlocked(!usageData.plan?.rules);
   }, [shopId]);
 
   useEffect(() => { fetchRules(); }, [fetchRules]);
@@ -131,13 +137,33 @@ export default function RulesSettingsPage() {
             First matching rule wins.
           </p>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={planBlocked}
+          onClick={() => setShowForm(!showForm)}
+        >
           <Plus className="w-4 h-4 mr-1" />
           Add Rule
         </Button>
       </div>
 
-      {showForm && (
+      {planBlocked && (
+        <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-5 mb-6">
+          <h4 className="font-semibold text-[#1E40AF] mb-1">Available on Starter and above</h4>
+          <p className="text-sm text-[#1E40AF] mb-3">
+            Custom rules require a paid plan. Upgrade to automate your dispute workflow.
+          </p>
+          <a
+            href="/portal/billing"
+            className="inline-block px-4 py-2 bg-[#1D4ED8] text-white text-sm font-medium rounded-lg hover:bg-[#1E40AF] transition-colors"
+          >
+            Upgrade Plan
+          </a>
+        </div>
+      )}
+
+      {showForm && !planBlocked && (
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
           <h3 className="font-semibold text-[#0B1220] mb-4">New Rule</h3>
 

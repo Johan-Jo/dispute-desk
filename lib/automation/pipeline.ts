@@ -9,6 +9,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { getShopSettings } from "./settings";
 import { evaluateCompleteness } from "./completeness";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
+import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 
 interface Dispute {
   id: string;
@@ -21,12 +22,22 @@ interface Dispute {
  * Returns the action taken.
  */
 export async function runAutomationPipeline(dispute: Dispute): Promise<{
-  action: "pack_enqueued" | "skipped_auto_build_off" | "existing_pack";
+  action: "pack_enqueued" | "skipped_auto_build_off" | "existing_pack" | "quota_exceeded" | "feature_blocked";
 }> {
   const settings = await getShopSettings(dispute.shop_id);
 
   if (!settings.auto_build_enabled) {
     return { action: "skipped_auto_build_off" };
+  }
+
+  const quota = await checkPackQuota(dispute.shop_id);
+  if (!quota.allowed) {
+    return { action: "quota_exceeded" };
+  }
+
+  const featureCheck = checkFeatureAccess(quota.plan, "autoPack");
+  if (!featureCheck.allowed) {
+    return { action: "feature_blocked" };
   }
 
   const sb = getServiceClient();

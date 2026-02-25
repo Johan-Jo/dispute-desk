@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { checkPackQuota } from "@/lib/billing/checkQuota";
 
 /**
  * POST /api/disputes/:id/packs
  *
  * Enqueues a build_pack job for the dispute. Returns 202 with packId + jobId.
  * If an active (non-failed, non-archived) pack already exists, returns it instead.
+ * Enforces monthly pack quota.
  */
 export async function POST(
   _req: NextRequest,
@@ -22,6 +24,14 @@ export async function POST(
 
   if (!dispute) {
     return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
+  }
+
+  const quota = await checkPackQuota(dispute.shop_id);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      { error: quota.reason, upgrade_required: true, usage: quota },
+      { status: 403 }
+    );
   }
 
   // Check for existing active pack

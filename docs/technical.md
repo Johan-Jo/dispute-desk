@@ -367,6 +367,30 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 
 All UI labels say "Save evidence." Never "Submit response" or "Submit to card network."
 
+## Billing & Plan Limits
+
+### Plans
+
+| Plan | Price | Packs/Month | Auto-Pack | Rules |
+|------|-------|-------------|-----------|-------|
+| Free | $0 | 3 | No | No |
+| Starter | $29/mo | 50 | Yes | Yes |
+| Pro | $79/mo | Unlimited | Yes | Yes |
+
+### Enforcement
+
+Server-side only. `checkPackQuota()` counts packs in the current calendar month.
+`checkFeatureAccess()` gates auto-pack and rules by plan tier.
+
+Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
+`runAutomationPipeline()` (both).
+
+### Shopify Billing Flow
+
+1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
+2. `GET /api/billing/callback` → `shops.plan` updated on approval
+3. `GET /api/billing/usage` → returns plan + monthly usage
+
 ## Testing
 
 ### Unit Tests (Vitest)
