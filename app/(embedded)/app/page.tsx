@@ -27,6 +27,7 @@ export default function EmbeddedDashboardPage() {
       title="DisputeDesk"
       subtitle="Automatic dispute evidence ops"
       primaryAction={{ content: "Automation Settings", url: "/app/settings/automation" }}
+      secondaryActions={[{ content: "Help", url: "/app/help" }]}
     >
       <Layout>
         {/* Automation banner */}

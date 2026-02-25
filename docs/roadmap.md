@@ -18,6 +18,7 @@
 | 7 | Hardening | DONE | 5-6 | [EPIC-7](epics/EPIC-7-hardening.md) |
 | 8 | Internal Admin Panel | DONE | 6-7 | [EPIC-8](epics/EPIC-8-admin-panel.md) |
 | 9 | Multi-Language (i18n) | DONE | 7-8 | [EPIC-9](epics/EPIC-9-i18n.md) |
+| 10 | User Help System | DONE | 8 | [EPIC-10](epics/EPIC-10-help-system.md) |
 
 ## Dependency Chain
 

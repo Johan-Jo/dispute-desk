@@ -300,5 +300,133 @@
     "score": "Punktzahl",
     "created": "Erstellt",
     "actions": "Aktionen"
+  },
+  "help": {
+    "title": "Hilfe-Center",
+    "search": "Hilfe-Artikel durchsuchen...",
+    "backToHelp": "Zurück zur Hilfe",
+    "relatedArticles": "Verwandte Artikel",
+    "contactSupport": "Brauchen Sie weitere Hilfe? Kontaktieren Sie den Support unter support@disputedesk.com",
+    "noResults": "Keine Artikel gefunden, die Ihrer Suche entsprechen.",
+    "categories": {
+      "gettingStarted": "Erste Schritte",
+      "gettingStartedDesc": "Shop verbinden, Streitfälle synchronisieren und Grundlagen lernen",
+      "disputes": "Streitfälle",
+      "disputesDesc": "Anzeigen, filtern, synchronisieren und verwalten",
+      "evidencePacks": "Bewispakete",
+      "evidencePacksDesc": "Erstellen, prüfen und Beweise stärken",
+      "automationRules": "Automatisierung & Regeln",
+      "automationRulesDesc": "Auto-Erstellung, Auto-Speicherung und Routing-Regeln konfigurieren",
+      "billing": "Abrechnung & Pläne",
+      "billingDesc": "Pläne, Kontingente, Upgrades und Testphase",
+      "savingToShopify": "Speichern bei Shopify",
+      "savingToShopifyDesc": "Wie Beweise gespeichert werden und was danach passiert"
+    },
+    "articles": {
+      "connectShopifyStore": {
+        "title": "So verbinden Sie Ihren Shopify-Shop",
+        "body": "Um DisputeDesk zu nutzen, müssen Sie Ihren Shopify-Shop verbinden:\n\n1. Klicken Sie im Portal auf \"Shopify-Shop verbinden\".\n2. Geben Sie Ihre Shop-Domain ein.\n3. Sie werden zu Shopify weitergeleitet, um DisputeDesk zu autorisieren.\n4. Erteilen Sie die angeforderten Berechtigungen.\n5. Nach der Autorisierung wird Ihr Shop im Dashboard angezeigt.\n\nDisputeDesk greift nur lesend auf Ihre Daten zu. Ihre Daten sind verschlüsselt und werden nie an Dritte weitergegeben."
+      },
+      "understandingDashboard": {
+        "title": "Das Dashboard verstehen",
+        "body": "Das Dashboard bietet einen Überblick über Ihre Streitfallbearbeitung.\n\nWichtige Kennzahlen:\n- Offene Streitfälle: Chargebacks, die auf eine Antwort warten.\n- Gewinnrate: Anteil der zu Ihren Gunsten gelösten Streitfälle.\n- Automatisch gespeichert: diesen Monat automatisch gespeicherte Pakete.\n- Gelöst: abgeschlossene Streitfälle.\n\nDer Automatisierungsstatus zeigt Ihre aktuellen Einstellungen."
+      },
+      "firstDisputeSync": {
+        "title": "Ihre erste Streitfall-Synchronisierung",
+        "body": "Nach dem Verbinden synchronisiert DisputeDesk Ihre offenen Streitfälle automatisch.\n\nSo funktioniert die Synchronisierung:\n- DisputeDesk prüft Shopify über die GraphQL-API auf neue Streitfälle.\n- Streitfälle werden mit Grund, Betrag, Status und Fälligkeitsdatum importiert.\n- Synchronisierung erfolgt automatisch über Webhooks.\n- Sie können auch manuell synchronisieren."
+      },
+      "automationOverview": {
+        "title": "Wie Automatisierung funktioniert",
+        "body": "DisputeDesk ist automatisierungsorientiert:\n\n1. Ein neuer Streitfall erscheint in Shopify.\n2. DisputeDesk erkennt ihn.\n3. Ihre Regeln werden ausgewertet.\n4. Bei Auto-Paket: ein Beweispaket wird automatisch erstellt.\n5. Die Vollständigkeitspunktzahl wird berechnet.\n6. Bei erforderlicher Prüfung: das Paket erscheint in der Warteschlange.\n\nSie kontrollieren jeden Schritt über Ihre Einstellungen und Regeln."
+      },
+      "viewingFilteringDisputes": {
+        "title": "Streitfälle anzeigen und filtern",
+        "body": "Die Streitfallseite zeigt alle Chargebacks in einer sortierbaren Tabelle.\n\nFiltern nach Status: Antwort erforderlich, In Prüfung, Gewonnen, Verloren.\n\nZwei Tabs:\n- Alle Streitfälle.\n- Prüfungswarteschlange: nur Streitfälle, die manuelle Prüfung erfordern."
+      },
+      "syncingDisputes": {
+        "title": "Streitfälle von Shopify synchronisieren",
+        "body": "DisputeDesk hält Ihre Streitfälle über zwei Mechanismen aktuell:\n\n1. Webhooks: Echtzeit-Benachrichtigungen von Shopify.\n2. Manuelle Synchronisierung: Klicken Sie auf \"Jetzt synchronisieren\"."
+      },
+      "reviewQueue": {
+        "title": "Die Prüfungswarteschlange",
+        "body": "Die Prüfungswarteschlange enthält Streitfälle, die Ihre manuelle Prüfung erfordern.\n\nStreitfälle landen hier wenn:\n- Eine Regel sie dorthin leitet.\n- Keine Regel passt.\n- \"Prüfung vor Auto-Speicherung\" aktiviert ist.\n\nSie können Streitfälle prüfen und genehmigen."
+      },
+      "approvingDisputes": {
+        "title": "Streitfälle aus der Warteschlange genehmigen",
+        "body": "Um einen Streitfall zu genehmigen:\n\n1. Gehen Sie zur Streitfallseite, Tab \"Prüfungswarteschlange\".\n2. Klicken Sie \"Genehmigen\".\n3. DisputeDesk startet die Automatisierungspipeline.\n4. Ein Beweispaket wird erstellt.\n5. Bei bestandenen Qualitätsprüfungen wird das Beweismaterial bei Shopify gespeichert.\n\nAlle Genehmigungen werden im Prüfprotokoll festgehalten."
+      },
+      "howPacksBuilt": {
+        "title": "Wie Bewispakete automatisch erstellt werden",
+        "body": "DisputeDesk sammelt automatisch Beweise aus mehreren Quellen:\n\n- Bestelldaten: Positionen, Beträge, Adresse (nur Stadtebene).\n- Versand & Tracking: Spediteur, Sendungsnummern, Lieferstatus.\n- Shop-Richtlinien: Versand-, Rückgabe- und Stornierungsrichtlinien.\n\nDas Paket wird nach Streitfallgrund strukturiert."
+      },
+      "generatingPackManually": {
+        "title": "Ein Paket manuell erstellen",
+        "body": "Sie können für jeden Streitfall ein Beweispaket erstellen:\n\n1. Gehen Sie zur Streitfall-Detailseite.\n2. Klicken Sie \"Paket erstellen\".\n3. DisputeDesk sammelt Beweise aus Bestell- und Tracking-Daten.\n4. Das Paket erscheint nach Fertigstellung.\n\nHinweis: Paketerstellung zählt gegen Ihr monatliches Kontingent."
+      },
+      "completenessScore": {
+        "title": "Die Vollständigkeitspunktzahl verstehen",
+        "body": "Jedes Beweispaket hat eine Punktzahl von 0% bis 100%.\n\nSchwellenwerte:\n- 80%+ (grün): starkes Paket.\n- 60–79% (gelb): akzeptabel, aber verbesserbar.\n- Unter 60% (rot): schwaches Paket.\n\nPakete unter Ihrem konfigurierten Minimum werden nicht automatisch gespeichert."
+      },
+      "fixingBlockers": {
+        "title": "Blockierungen im Beweispaket beheben",
+        "body": "Blockierungen sind fehlende Pflichtbeweise.\n\nHäufige Blockierungen:\n- Fehlende Tracking-Informationen.\n- Fehlende Rückgaberichtlinie.\n- Fehlende Bestelldetails.\n\nZum Beheben: Öffnen Sie das Paket, prüfen Sie die Checkliste und laden Sie fehlende Beweise hoch."
+      },
+      "uploadingEvidence": {
+        "title": "Zusätzliche Beweise hochladen",
+        "body": "Sie können Dateien hochladen:\n\n1. Öffnen Sie die Paket-Detailseite.\n2. Gehen Sie zu \"Beweise hochladen\".\n3. Klicken oder ziehen Sie Dateien.\n4. Unterstützte Formate: JPG, PNG, PDF.\n5. Maximale Dateigröße: 10 MB.\n\nHäufige Uploads: Kundenkommunikation, Lieferbestätigungen, Quittungen."
+      },
+      "evidenceChecklist": {
+        "title": "Die Beweischeckliste erklärt",
+        "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten."
+      },
+      "configuringAutomation": {
+        "title": "Automatisierungseinstellungen konfigurieren",
+        "body": "Einstellungen > Automatisierung:\n\n- Auto-Erstellung von Bewispaketen.\n- Auto-Speicherung bei Shopify.\n- Prüfung vor Auto-Speicherung.\n- Null Blockierungen erzwingen.\n- Mindestpunktzahl (Standard: 80)."
+      },
+      "creatingFirstRule": {
+        "title": "Ihre erste Regel erstellen",
+        "body": "Regeln steuern das Routing von Streitfällen.\n\nSo erstellen Sie eine Regel:\n1. Gehen Sie zur Regelseite.\n2. Klicken Sie \"Regel hinzufügen\".\n3. Name, Gründe, Betragsbereich und Aktion festlegen.\n4. Klicken Sie \"Regel erstellen\".\n\nRegeln sind ab dem Starter-Plan verfügbar."
+      },
+      "rulePriority": {
+        "title": "Regelpriorität und Auswertungsreihenfolge",
+        "body": "Regeln werden von oben nach unten ausgewertet. Die erste passende Regel gewinnt.\n\nOhne passende Regel geht der Streitfall in die Prüfungswarteschlange.\n\nTipp: Spezifische Regeln oben, Auffangregeln unten platzieren."
+      },
+      "completenessBlockerGates": {
+        "title": "Vollständigkeits- und Blockierungsschwellen",
+        "body": "Zwei Qualitätsprüfungen:\n\n1. Vollständigkeitsschwelle: Mindestpunktzahl erforderlich (Standard: 80%).\n2. Blockierungsschwelle: keine fehlenden Pflichtbeweise.\n\nBeide müssen bestanden werden für Auto-Speicherung. Manuelles Speichern ist immer möglich."
+      },
+      "planComparison": {
+        "title": "Free, Starter und Pro vergleichen",
+        "body": "Drei Pläne:\n\nFree (0€/Monat): 3 Pakete, manuell, PDF-Export, Shopify-Speicherung.\n\nStarter (29€/Monat): 50 Pakete, Auto-Paket, Regeln, 7 Tage Testphase.\n\nPro (79€/Monat): Unbegrenzt, Auto-Paket, Regeln, Prioritäts-Support, 7 Tage Testphase."
+      },
+      "upgradingPlan": {
+        "title": "So upgraden Sie Ihren Plan",
+        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase."
+      },
+      "packLimits": {
+        "title": "Paketlimits und Kontingente verstehen",
+        "body": "Monatliche Limits:\n\n- Free: 3 Pakete.\n- Starter: 50 Pakete.\n- Pro: Unbegrenzt.\n\nDer Zähler wird monatlich zurückgesetzt. Bei Erreichen des Limits wird die Paketerstellung blockiert."
+      },
+      "trialPeriod": {
+        "title": "Details zur Testphase",
+        "body": "Starter und Pro enthalten eine 7-tägige Testphase.\n\nWährend der Testphase haben Sie vollen Zugriff. Keine Gebühren bis zum Ende der Testphase.\n\nBei Kündigung vor Ablauf kehren Sie kostenlos zum Free-Plan zurück."
+      },
+      "howEvidenceSaved": {
+        "title": "Wie Beweise bei Shopify gespeichert werden",
+        "body": "DisputeDesk sendet strukturierte Daten an Shopify über die disputeEvidenceUpdate GraphQL-API.\n\nGespeichert werden: Versand-/Tracking-Dokumentation, Kundenkommunikation, Richtlinientexte und hochgeladene Dateien.\n\nWichtig: Speichern bei Shopify ist NICHT dasselbe wie Einreichen beim Kartennetzwerk."
+      },
+      "fieldMapping": {
+        "title": "Wie Beweisfelder Shopify zugeordnet werden",
+        "body": "DisputeDesk ordnet Ihre Paketsektionen den Shopify-Feldern zu:\n\n- Versand & Tracking → shippingDocumentation.\n- Kundendetails → customerCommunication.\n- Rückgaberichtlinie → refundPolicyDisclosure.\n- Stornierungsrichtlinie → cancellationPolicyDisclosure.\n- Bestellinformationen → accessActivityLog.\n- Hochgeladene Dateien → uncategorizedText.\n\nDie Zuordnung erfolgt automatisch."
+      },
+      "afterSaving": {
+        "title": "Was nach dem Speichern passiert",
+        "body": "Nach dem Speichern:\n\n1. Beweise erscheinen im Shopify Admin.\n2. Prüfen Sie in Shopify und fügen Sie Anmerkungen hinzu.\n3. Shopify reicht beim Kartennetzwerk ein — manuell oder automatisch.\n4. Das Kartennetzwerk prüft die Beweise.\n5. Entscheidung: Gewonnen oder Verloren.\n\nDisputeDesk überwacht den Status und aktualisiert ihn."
+      },
+      "notSubmitToNetworks": {
+        "title": "DisputeDesk reicht NICHT beim Kartennetzwerk ein",
+        "body": "Wichtig: DisputeDesk speichert Beweise bei Shopify, reicht aber NICHT beim Kartennetzwerk ein.\n\nDer Prozess:\n1. DisputeDesk erstellt Ihr Paket und speichert es bei Shopify.\n2. Die Einreichung wird von Shopify durchgeführt.\n3. Shopify reicht automatisch zum Fälligkeitsdatum ein oder Sie reichen manuell ein.\n\nSie behalten die Kontrolle. Prüfen Sie Ihre Beweise im Shopify Admin."
+      }
+    }
   }
 }

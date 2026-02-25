@@ -300,5 +300,133 @@
     "score": "Score",
     "created": "Créé",
     "actions": "Actions"
+  },
+  "help": {
+    "title": "Centre d'aide",
+    "search": "Rechercher des articles d'aide...",
+    "backToHelp": "Retour à l'aide",
+    "relatedArticles": "Articles connexes",
+    "contactSupport": "Besoin d'aide supplémentaire ? Contactez le support à support@disputedesk.com",
+    "noResults": "Aucun article ne correspond à votre recherche.",
+    "categories": {
+      "gettingStarted": "Premiers pas",
+      "gettingStartedDesc": "Connecter votre boutique, synchroniser les litiges et apprendre les bases",
+      "disputes": "Litiges",
+      "disputesDesc": "Afficher, filtrer, synchroniser et gérer vos rétrofacturations",
+      "evidencePacks": "Dossiers de preuves",
+      "evidencePacksDesc": "Créer, examiner et renforcer vos preuves",
+      "automationRules": "Automatisation et règles",
+      "automationRulesDesc": "Configurer la création et l'enregistrement automatiques et les règles de routage",
+      "billing": "Facturation et plans",
+      "billingDesc": "Plans, quotas, mises à niveau et période d'essai",
+      "savingToShopify": "Enregistrement sur Shopify",
+      "savingToShopifyDesc": "Comment les preuves sont enregistrées et la suite du processus"
+    },
+    "articles": {
+      "connectShopifyStore": {
+        "title": "Comment connecter votre boutique Shopify",
+        "body": "Pour utiliser DisputeDesk, connectez votre boutique Shopify :\n\n1. Depuis le portail, cliquez sur \"Connecter la boutique Shopify\".\n2. Entrez le domaine de votre boutique.\n3. Vous serez redirigé vers Shopify pour autoriser DisputeDesk.\n4. Accordez les permissions demandées.\n5. Après autorisation, votre boutique apparaîtra dans le tableau de bord.\n\nDisputeDesk accède à vos données en lecture seule. Vos données sont chiffrées et jamais partagées."
+      },
+      "understandingDashboard": {
+        "title": "Comprendre le tableau de bord",
+        "body": "Le tableau de bord offre un aperçu de vos opérations de litiges.\n\nMétriques clés :\n- Litiges ouverts : rétrofacturations en attente de réponse.\n- Taux de réussite : pourcentage de litiges résolus en votre faveur.\n- Enregistrements automatiques : dossiers enregistrés automatiquement ce mois.\n- Résolus : litiges terminés.\n\nLe statut d'automatisation montre vos paramètres actuels."
+      },
+      "firstDisputeSync": {
+        "title": "Votre première synchronisation de litiges",
+        "body": "Après la connexion, DisputeDesk synchronise automatiquement vos litiges ouverts.\n\nFonctionnement :\n- DisputeDesk vérifie Shopify via l'API GraphQL.\n- Les litiges sont importés avec motif, montant, statut et date limite.\n- La synchronisation se fait automatiquement via des webhooks.\n- Vous pouvez aussi synchroniser manuellement."
+      },
+      "automationOverview": {
+        "title": "Comment fonctionne l'automatisation",
+        "body": "DisputeDesk est conçu pour l'automatisation :\n\n1. Un nouveau litige apparaît dans Shopify.\n2. DisputeDesk le détecte.\n3. Vos règles sont évaluées.\n4. Si auto-dossier : un dossier est créé automatiquement.\n5. Le score de complétude est calculé.\n6. Si examen requis : le dossier va en file d'attente.\n\nVous contrôlez chaque étape via vos paramètres et règles."
+      },
+      "viewingFilteringDisputes": {
+        "title": "Afficher et filtrer les litiges",
+        "body": "La page Litiges affiche tous vos rétrofacturations dans un tableau triable.\n\nFiltres disponibles : statut, recherche par mots-clés.\n\nDeux onglets :\n- Tous les litiges.\n- File d'examen : litiges nécessitant un examen manuel."
+      },
+      "syncingDisputes": {
+        "title": "Synchroniser les litiges depuis Shopify",
+        "body": "DisputeDesk maintient vos litiges à jour via :\n\n1. Webhooks : notifications en temps réel de Shopify.\n2. Synchronisation manuelle : cliquez sur \"Synchroniser\"."
+      },
+      "reviewQueue": {
+        "title": "La file d'examen",
+        "body": "La file d'examen contient les litiges nécessitant votre examen manuel.\n\nLes litiges y arrivent quand :\n- Une règle les dirige ici.\n- Aucune règle ne correspond.\n- \"Exiger un examen\" est activé.\n\nVous pouvez examiner et approuver les litiges."
+      },
+      "approvingDisputes": {
+        "title": "Approuver des litiges depuis la file d'examen",
+        "body": "Pour approuver un litige :\n\n1. Allez à la page Litiges, onglet \"File d'examen\".\n2. Cliquez \"Approuver\".\n3. DisputeDesk lance le pipeline d'automatisation.\n4. Un dossier de preuves est créé.\n5. Si les contrôles passent, les preuves sont enregistrées sur Shopify.\n\nToutes les approbations sont enregistrées dans le journal d'audit."
+      },
+      "howPacksBuilt": {
+        "title": "Comment les dossiers sont créés automatiquement",
+        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n\nLe dossier est structuré selon le motif du litige."
+      },
+      "generatingPackManually": {
+        "title": "Créer un dossier manuellement",
+        "body": "Vous pouvez créer un dossier pour tout litige :\n\n1. Allez à la page de détails du litige.\n2. Cliquez \"Créer un dossier\".\n3. DisputeDesk collecte les preuves.\n4. Le dossier apparaît une fois terminé.\n\nNote : la création compte dans votre quota mensuel."
+      },
+      "completenessScore": {
+        "title": "Comprendre le score de complétude",
+        "body": "Chaque dossier a un score de 0% à 100%.\n\nSeuils :\n- 80%+ (vert) : dossier solide.\n- 60–79% (jaune) : acceptable mais améliorable.\n- Moins de 60% (rouge) : dossier faible.\n\nLes dossiers sous votre seuil minimum ne seront pas enregistrés automatiquement."
+      },
+      "fixingBlockers": {
+        "title": "Corriger les blocages dans votre dossier",
+        "body": "Les blocages sont des preuves obligatoires manquantes.\n\nBlocages courants :\n- Informations de suivi manquantes.\n- Politique de remboursement manquante.\n- Détails de commande manquants.\n\nPour corriger : ouvrez le dossier, vérifiez la liste de contrôle et téléchargez les preuves manquantes."
+      },
+      "uploadingEvidence": {
+        "title": "Télécharger des preuves supplémentaires",
+        "body": "Vous pouvez télécharger des fichiers :\n\n1. Ouvrez la page de détails du dossier.\n2. Allez à \"Télécharger des preuves\".\n3. Cliquez ou glissez des fichiers.\n4. Formats : JPG, PNG, PDF.\n5. Taille max : 10 Mo par fichier.\n\nTéléchargements courants : captures d'écran, confirmations de livraison, reçus."
+      },
+      "evidenceChecklist": {
+        "title": "La liste de contrôle des preuves expliquée",
+        "body": "La liste montre les preuves collectées et manquantes.\n\nMarquages :\n- Collecté (coche verte) : preuve trouvée.\n- Obligatoire mais manquant (rouge) : blocage.\n- Recommandé (jaune) : pas obligatoire mais utile.\n\nLa liste est adaptée au motif du litige."
+      },
+      "configuringAutomation": {
+        "title": "Configurer les paramètres d'automatisation",
+        "body": "Paramètres > Automatisation :\n\n- Création automatique des dossiers.\n- Enregistrement automatique sur Shopify.\n- Examen requis avant enregistrement.\n- Exiger zéro blocage.\n- Score minimum (par défaut : 80)."
+      },
+      "creatingFirstRule": {
+        "title": "Créer votre première règle",
+        "body": "Les règles contrôlent le routage des litiges.\n\nPour créer une règle :\n1. Allez à la page Règles.\n2. Cliquez \"Ajouter une règle\".\n3. Remplissez : nom, motifs, montant et action.\n4. Cliquez \"Créer la règle\".\n\nLes règles sont disponibles à partir du plan Starter."
+      },
+      "rulePriority": {
+        "title": "Priorité et ordre d'évaluation des règles",
+        "body": "Les règles sont évaluées de haut en bas. La première règle correspondante s'applique.\n\nSans correspondance, le litige va en file d'examen.\n\nConseil : placez les règles spécifiques en haut et les règles générales en bas."
+      },
+      "completenessBlockerGates": {
+        "title": "Seuils de complétude et de blocage",
+        "body": "Deux contrôles qualité :\n\n1. Seuil de complétude : score minimum requis (défaut : 80%).\n2. Seuil de blocage : aucune preuve obligatoire manquante.\n\nLes deux doivent passer pour l'enregistrement automatique. L'enregistrement manuel est toujours possible."
+      },
+      "planComparison": {
+        "title": "Comparer Free, Starter et Pro",
+        "body": "Trois plans :\n\nGratuit (0€/mois) : 3 dossiers, création manuelle, export PDF, enregistrement Shopify.\n\nStarter (29€/mois) : 50 dossiers, auto-dossier, règles, essai 7 jours.\n\nPro (79€/mois) : illimité, auto-dossier, règles, support prioritaire, essai 7 jours."
+      },
+      "upgradingPlan": {
+        "title": "Comment mettre à niveau votre plan",
+        "body": "Pour mettre à niveau :\n\n1. Allez à la page Facturation.\n2. Choisissez le plan souhaité.\n3. Cliquez \"Mettre à niveau\".\n4. Approuvez dans Shopify.\n\nLes plans payants incluent 7 jours d'essai gratuit."
+      },
+      "packLimits": {
+        "title": "Comprendre les limites de dossiers",
+        "body": "Limites mensuelles :\n\n- Gratuit : 3 dossiers.\n- Starter : 50 dossiers.\n- Pro : Illimité.\n\nLe compteur se réinitialise chaque mois. Quand la limite est atteinte, la création est bloquée."
+      },
+      "trialPeriod": {
+        "title": "Détails de la période d'essai",
+        "body": "Starter et Pro incluent 7 jours d'essai.\n\nPendant l'essai : accès complet. Pas de frais jusqu'à la fin.\n\nSi vous annulez avant, retour au plan Gratuit sans frais."
+      },
+      "howEvidenceSaved": {
+        "title": "Comment les preuves sont enregistrées sur Shopify",
+        "body": "DisputeDesk envoie des données structurées à Shopify via l'API disputeEvidenceUpdate.\n\nCe qui est enregistré : documentation d'expédition, communication client, politiques et fichiers téléchargés.\n\nImportant : enregistrer sur Shopify n'est PAS la même chose que soumettre au réseau de cartes."
+      },
+      "fieldMapping": {
+        "title": "Comment les champs sont associés à Shopify",
+        "body": "DisputeDesk associe vos sections de dossier aux champs Shopify :\n\n- Expédition & suivi → shippingDocumentation.\n- Détails client → customerCommunication.\n- Politique de remboursement → refundPolicyDisclosure.\n- Politique d'annulation → cancellationPolicyDisclosure.\n- Informations de commande → accessActivityLog.\n- Fichiers téléchargés → uncategorizedText.\n\nL'association est automatique."
+      },
+      "afterSaving": {
+        "title": "Que se passe-t-il après l'enregistrement",
+        "body": "Après l'enregistrement :\n\n1. Les preuves apparaissent dans Shopify Admin.\n2. Révisez dans Shopify et ajoutez des notes.\n3. Shopify soumet au réseau de cartes — manuellement ou automatiquement.\n4. Le réseau évalue les preuves.\n5. Résolution : Gagné ou Perdu.\n\nDisputeDesk surveille le statut et le met à jour."
+      },
+      "notSubmitToNetworks": {
+        "title": "DisputeDesk ne soumet PAS au réseau de cartes",
+        "body": "Important : DisputeDesk enregistre les preuves sur Shopify mais ne soumet PAS au réseau de cartes (Visa, Mastercard, etc.).\n\nLe processus :\n1. DisputeDesk crée votre dossier et l'enregistre sur Shopify.\n2. La soumission est gérée par Shopify.\n3. Shopify soumet automatiquement à la date limite ou vous le faites manuellement.\n\nVous gardez toujours le contrôle. Vérifiez vos preuves dans Shopify Admin."
+      }
+    }
   }
 }

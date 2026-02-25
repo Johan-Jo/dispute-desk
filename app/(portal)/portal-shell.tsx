@@ -26,6 +26,7 @@ const NAV_ITEMS = [
   { href: "/portal/billing", label: "Billing" },
   { href: "/portal/team", label: "Team" },
   { href: "/portal/settings", label: "Settings" },
+  { href: "/portal/help", label: "Help" },
 ];
 
 export function PortalShell({

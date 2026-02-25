@@ -514,3 +514,18 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 
 ### CI
 - Forbidden-copy check scans both `.ts/.tsx` source files and `messages/*.json` translation files.
+
+## Help System (EPIC 10)
+
+### Architecture
+- Articles are structured TypeScript objects (not markdown), stored in `lib/help/articles.ts` and `lib/help/categories.ts`.
+- Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` under the `help.*` namespace.
+- Both portal (`/portal/help`) and embedded app (`/app/help`) share the same data layer but use different UI components (Tailwind vs Polaris).
+
+### Search
+- Client-side filtering by article title and tags. No backend API required.
+
+### Adding an Article
+1. Add the article object to `HELP_ARTICLES` in `lib/help/articles.ts` (slug, category, title/body keys, tags).
+2. Add the corresponding `help.articles.{slug}.title` and `help.articles.{slug}.body` keys to all `messages/*.json` files.
+3. Both surfaces will pick it up automatically.

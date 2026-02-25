@@ -300,5 +300,133 @@
     "score": "Poäng",
     "created": "Skapad",
     "actions": "Åtgärder"
+  },
+  "help": {
+    "title": "Hjälpcenter",
+    "search": "Sök hjälpartiklar...",
+    "backToHelp": "Tillbaka till hjälp",
+    "relatedArticles": "Relaterade artiklar",
+    "contactSupport": "Behöver du mer hjälp? Kontakta support på support@disputedesk.com",
+    "noResults": "Inga artiklar hittades som matchar din sökning.",
+    "categories": {
+      "gettingStarted": "Kom igång",
+      "gettingStartedDesc": "Anslut din butik, synka tvister och lär dig grunderna",
+      "disputes": "Tvister",
+      "disputesDesc": "Visa, filtrera, synka och hantera dina återkrav",
+      "evidencePacks": "Bevispaket",
+      "evidencePacksDesc": "Bygg, granska och stärk dina bevis",
+      "automationRules": "Automation och regler",
+      "automationRulesDesc": "Konfigurera autobygg, autospara och routningsregler",
+      "billing": "Fakturering och planer",
+      "billingDesc": "Planer, kvoter, uppgraderingar och provperiod",
+      "savingToShopify": "Spara till Shopify",
+      "savingToShopifyDesc": "Hur bevis sparas och vad som händer sedan"
+    },
+    "articles": {
+      "connectShopifyStore": {
+        "title": "Hur du ansluter din Shopify-butik",
+        "body": "För att börja använda DisputeDesk behöver du ansluta din Shopify-butik. Så här gör du:\n\n1. Från portalen, klicka på \"Anslut Shopify-butik\" på butiksvalssidan.\n2. Ange din butiks domän (t.ex. min-butik.myshopify.com).\n3. Du omdirigeras till Shopify för att auktorisera DisputeDesk.\n4. Godkänn de begärda behörigheterna — DisputeDesk behöver läsåtkomst till ordrar, tvister, leveranser och kunddata.\n5. Efter auktorisering omdirigeras du tillbaka och din butik visas i instrumentpanelen.\n\nDisputeDesk använder din data i skrivskyddat läge. Din butiksdata är krypterad och delas aldrig med tredje part.\n\nEfter anslutning synkar DisputeDesk automatiskt dina öppna tvister. Det tar vanligtvis några sekunder."
+      },
+      "understandingDashboard": {
+        "title": "Förstå instrumentpanelen",
+        "body": "Instrumentpanelen ger dig en snabb överblick av din tvisthantering.\n\nViktiga mätvärden:\n- Öppna tvister: återkrav som väntar på svar.\n- Vinstfrekvens: andel tvister som lösts till din fördel.\n- Autosparade: bevispaket som automatiskt sparats till Shopify denna månad.\n- Lösta: totalt antal avslutade tvister (vunna eller förlorade).\n\nAutomationsstatusen visar dina aktuella inställningar: om autobygg och autospara är aktiverade, minsta fullständighetspoäng och om blockeringsgränsen är aktiv.\n\nTabellen Senaste tvister listar dina senaste återkrav med status, orsak, belopp och tidsfrist. Klicka på valfri tvist för att se detaljer och hantera bevis."
+      },
+      "firstDisputeSync": {
+        "title": "Din första tvistsynkronisering",
+        "body": "Efter att du anslutit din butik synkar DisputeDesk dina öppna tvister automatiskt.\n\nSå fungerar synkronisering:\n- DisputeDesk kontrollerar Shopify efter nya och uppdaterade tvister via Shopify GraphQL API.\n- Tvister importeras med orsak, belopp, status, förfallodatum och kopplad orderinformation.\n- Synkronisering sker automatiskt via webhooks när Shopify meddelar oss om ändringar.\n- Du kan också starta en manuell synkning genom att klicka \"Synka nu\" på Tvistsidan.\n\nEfter första synkningen, om du har automation aktiverad, börjar DisputeDesk utvärdera regler och bygga bevispaket automatiskt för tvister som behöver svar."
+      },
+      "automationOverview": {
+        "title": "Hur automation fungerar",
+        "body": "DisputeDesk är automationsföst. Så här fungerar flödet:\n\n1. En ny tvist uppstår i Shopify.\n2. DisputeDesk upptäcker den (via webhook eller schemalagd synk).\n3. Dina regler utvärderas för att avgöra: autopaket eller granskningskö.\n4. Om autopaket: ett bevispaket byggs automatiskt från orderdata, spårningsinfo och butikspolicyer.\n5. Fullständighetspoängen beräknas. Om den uppfyller ditt tröskelvärde och det inte finns några blockeringar, sparas beviset automatiskt till Shopify.\n6. Om granskning krävs: paketet visas i din granskningskö för manuellt godkännande.\n\nDu kontrollerar varje steg genom dina automationsinställningar och regler."
+      },
+      "viewingFilteringDisputes": {
+        "title": "Visa och filtrera tvister",
+        "body": "Tvistsidan visar alla dina återkrav i en sorterbar tabell.\n\nDu kan filtrera efter:\n- Status: Behöver svar, Under granskning, Vunnen, Förlorad.\n- Sök: skriv nyckelord för att hitta specifika tvister.\n\nTabellen visar varje tvists ID, kopplad order, belopp, orsak, status, tidsfrist och senaste synkronisering.\n\nTvå flikar finns tillgängliga:\n- Alla tvister: varje tvist oavsett status.\n- Granskningskö: bara tvister som flaggats för manuell granskning."
+      },
+      "syncingDisputes": {
+        "title": "Synkronisera tvister från Shopify",
+        "body": "DisputeDesk håller dina tvister uppdaterade via två mekanismer:\n\n1. Webhooks: Shopify skickar realtidsmeddelanden när tvister skapas eller uppdateras.\n2. Manuell synk: Klicka \"Synka nu\" på Tvistsidan för att starta en omedelbar synkning.\n\nUnder en synkning:\n- Hämtar alla öppna tvister från Shopify.\n- Skapar nya poster för tvister som inte spåras.\n- Uppdaterar befintliga tvister med senaste status.\n- För nya tvister utvärderas regler och automation triggas."
+      },
+      "reviewQueue": {
+        "title": "Granskningskön",
+        "body": "Granskningskön innehåller tvister som kräver din manuella granskning innan bevis sparas till Shopify.\n\nTvister hamnar i granskningskön när:\n- En regel dirigerar dem dit.\n- Ingen regel matchar och standardåtgärden är granskning.\n- Du har \"Kräv granskning före autospara\" aktiverad.\n\nFrån Granskningskö-fliken kan du:\n- Se alla tvister som väntar på din uppmärksamhet.\n- Klicka in på valfri tvist för att granska bevispaketet.\n- Klicka \"Godkänn\" för att trigga automationspipelinen."
+      },
+      "approvingDisputes": {
+        "title": "Godkänna tvister från granskningskön",
+        "body": "När en tvist är i din granskningskö behöver du godkänna den innan DisputeDesk bygger och sparar bevis.\n\nFör att godkänna:\n1. Gå till Tvistsidan och byt till fliken \"Granskningskö\".\n2. Klicka \"Godkänn\" bredvid tvisten.\n3. DisputeDesk triggar omedelbart automationspipelinen.\n4. Ett bevispaket byggs från orderdata, spårning och policyer.\n5. Om paketet passerar dina gränser sparas beviset till Shopify.\n\nAlla godkännanden loggas i granskningsloggen."
+      },
+      "howPacksBuilt": {
+        "title": "Hur bevispaket byggs automatiskt",
+        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis."
+      },
+      "generatingPackManually": {
+        "title": "Skapa ett paket manuellt",
+        "body": "Du kan manuellt skapa ett bevispaket för valfri tvist:\n\n1. Gå till tvistens detaljsida.\n2. Klicka \"Skapa paket\".\n3. DisputeDesk samlar bevis från order-, spårnings- och policydata.\n4. Paketet visas på sidan när det är klart.\n\nManuell skapning är användbart när automation är inaktiverad eller du vill återskapa ett paket.\n\nObs: paketskapning räknas mot din månatliga kvot."
+      },
+      "completenessScore": {
+        "title": "Förstå fullständighetspoängen",
+        "body": "Varje bevispaket har en fullständighetspoäng från 0% till 100%. Denna poäng visar hur mycket av det rekommenderade beviset som samlats in.\n\nPoängsteg:\n- 80%+ (grön): starkt paket, redo för autospara.\n- 60–79% (gul): acceptabelt men kan förstärkas.\n- Under 60% (röd): svagt paket — överväg att ladda upp mer bevis.\n\nOm du har autospara aktiverat, sparas inte paket under ditt konfigurerade minimum automatiskt."
+      },
+      "fixingBlockers": {
+        "title": "Åtgärda blockeringar i ditt bevispaket",
+        "body": "Blockeringar är saknade obligatoriska bevismaterial som hindrar ett bevispaket från att autosparas.\n\nVanliga blockeringar:\n- Saknad spårningsinformation.\n- Saknad returpolicy.\n- Saknad orderinformation.\n\nFör att åtgärda:\n1. Öppna bevispaketet.\n2. Kontrollera \"Bevischecklistan\" — blockeringar markeras i rött.\n3. Ladda upp det saknade beviset.\n4. Paketet omutvärderas och uppdaterar blockeringsstatusen."
+      },
+      "uploadingEvidence": {
+        "title": "Ladda upp ytterligare bevis",
+        "body": "Du kan ladda upp filer för att stärka ditt bevispaket:\n\n1. Öppna bevispaketets detaljsida.\n2. Scrolla till \"Ladda upp bevis\".\n3. Klicka för att ladda upp eller dra och släpp filer.\n4. Format som stöds: bilder (JPG, PNG) och PDF.\n5. Maximal filstorlek: 10 MB per fil.\n\nVanliga uppladdningar:\n- Skärmbilder av kundkommunikation.\n- Leveransbekräftelser.\n- Signerade kvitton eller fakturor."
+      },
+      "evidenceChecklist": {
+        "title": "Bevischecklistan förklarad",
+        "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod."
+      },
+      "configuringAutomation": {
+        "title": "Konfigurera automationsinställningar",
+        "body": "Automationsinställningar styr hur DisputeDesk hanterar nya tvister. Nå dem via Inställningar > Automation.\n\nTillgängliga växlar:\n- Autobygg bevispaket.\n- Autospara bevis till Shopify.\n- Kräv granskning före autospara.\n- Kräv noll blockeringar.\n\nMinsta fullständighetspoäng: ställ in tröskelvärdet (0–100). Standard är 80."
+      },
+      "creatingFirstRule": {
+        "title": "Skapa din första regel",
+        "body": "Regler låter dig styra hur tvister dirigeras — till autopaket eller granskningskö.\n\nFör att skapa en regel:\n1. Gå till Regelsidan.\n2. Klicka \"Lägg till regel\".\n3. Fyll i detaljerna: namn, matchande orsaker, beloppsintervall och åtgärd.\n4. Klicka \"Skapa regel\".\n\nExempel: skapa en regel som skickar alla tvister över 5000 kr till granskning.\n\nRegler finns på Starter- och Pro-planer."
+      },
+      "rulePriority": {
+        "title": "Regelprioritet och utvärderingsordning",
+        "body": "Regler utvärderas uppifrån och ner. Första regeln som matchar en tvist gäller.\n\nOm ingen regel matchar en tvist hamnar den i granskningskön som standard.\n\nTips: placera specifika regler överst och en generell \"Autopaket\"-regel längst ner."
+      },
+      "completenessBlockerGates": {
+        "title": "Fullständighets- och blockeringsgränser",
+        "body": "Gränser är kvalitetskontroller som styr om ett bevispaket kan autosparas.\n\n1. Fullständighetsgräns: paketets poäng måste nå ditt konfigurerade minimum (standard 80%).\n2. Blockeringsgräns: om aktiverad, hindras paket med saknade obligatoriska bevis.\n\nBåda gränserna måste passera för autospara. Du kan alltid spara manuellt oavsett gränsstatus."
+      },
+      "planComparison": {
+        "title": "Jämför Free, Starter och Pro",
+        "body": "DisputeDesk erbjuder tre planer:\n\nFree (0 kr/mån): 3 bevispaket, manuell skapning, PDF-export, spara till Shopify.\n\nStarter (299 kr/mån): 50 bevispaket, autopaket vid synk, anpassade regler, 7 dagars provperiod.\n\nPro (799 kr/mån): Obegränsat antal paket, autopaket vid synk, anpassade regler, prioriterad support, 7 dagars provperiod."
+      },
+      "upgradingPlan": {
+        "title": "Hur du uppgraderar din plan",
+        "body": "För att uppgradera:\n\n1. Gå till Faktureringssidan.\n2. Granska planjämförelsetabellen.\n3. Klicka \"Uppgradera till [Plan]\".\n4. Du omdirigeras till Shopify för att godkänna debiteringen.\n5. Efter godkännande aktiveras din plan omedelbart.\n\nBetalplaner inkluderar 7 dagars gratis provperiod."
+      },
+      "packLimits": {
+        "title": "Förstå paketgränser och kvoter",
+        "body": "Varje plan har en månatlig gräns:\n\n- Free: 3 paket/månad.\n- Starter: 50 paket/månad.\n- Pro: Obegränsat.\n\nRäknaren nollställs den första varje månad. Kontrollera din användning på Faktureringssidan.\n\nNär du når din gräns blockeras ny paketskapning och en varningsbanner visas."
+      },
+      "trialPeriod": {
+        "title": "Provperiodsdetaljer",
+        "body": "Både Starter- och Pro-planer inkluderar 7 dagars provperiod.\n\nUnder provperioden har du full tillgång till alla funktioner. Ingen debitering sker förrän provperioden slutar.\n\nOm du avbryter innan provperioden slutar återgår du till Free-planen utan kostnad."
+      },
+      "howEvidenceSaved": {
+        "title": "Hur bevis sparas till Shopify",
+        "body": "När du sparar bevis skickar DisputeDesk strukturerad data till Shopify via disputeEvidenceUpdate GraphQL API.\n\nVad som sparas:\n- Frakt- och spårningsdokumentation.\n- Kundkommunikation och orderdetaljer.\n- Retur- och avbokningspolicytext.\n- Uppladdade filer.\n\nViktigt: att spara bevis till Shopify är INTE samma sak som att skicka in till kortnätverket."
+      },
+      "fieldMapping": {
+        "title": "Hur bevisfält mappas till Shopify",
+        "body": "DisputeDesk mappar dina bevispaketssektioner till Shopifys tvistbevisfält:\n\n- Frakt och spårning → shippingDocumentation.\n- Kunddetaljer → customerCommunication.\n- Returpolicy → refundPolicyDisclosure.\n- Avbokningspolicy → cancellationPolicyDisclosure.\n- Orderinformation → accessActivityLog.\n- Uppladdade filer → uncategorizedText.\n\nDenna mappning sker automatiskt vid sparning."
+      },
+      "afterSaving": {
+        "title": "Vad händer efter att bevis sparats",
+        "body": "Efter att DisputeDesk sparat dina bevis till Shopify:\n\n1. Bevis visas i Shopify Admin.\n2. Granska i Shopify: du kan lägga till slutliga anteckningar.\n3. Inlämning till kortnätverket: Shopify skickar in antingen manuellt eller automatiskt på förfallodatumet.\n4. Kortnätverket utvärderar beviset.\n5. Tvisten löses som \"Vunnen\" eller \"Förlorad\".\n\nDisputeDesk övervakar tvistens status och uppdaterar den."
+      },
+      "notSubmitToNetworks": {
+        "title": "DisputeDesk skickar INTE in till kortnätverk",
+        "body": "Viktigt att förstå: DisputeDesk sparar bevis till Shopify men skickar INTE in svar till kortnätverk (Visa, Mastercard, etc.).\n\nProcessen:\n1. DisputeDesk bygger ditt bevispaket och sparar det till Shopify via API.\n2. Inlämning till kortnätverket hanteras helt av Shopify.\n3. Shopify skickar antingen in automatiskt på förfallodatumet eller så gör du det manuellt.\n\nDu behåller alltid kontrollen. Granska dina bevis i Shopify Admin innan de skickas in."
+      }
+    }
   }
 }

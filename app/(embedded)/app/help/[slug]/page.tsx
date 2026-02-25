@@ -1,0 +1,104 @@
+"use client";
+
+import { use } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Page,
+  Card,
+  Text,
+  BlockStack,
+  Box,
+  Button,
+  InlineStack,
+  Link as PolarisLink,
+} from "@shopify/polaris";
+import { getArticleBySlug, HELP_ARTICLES } from "@/lib/help/articles";
+import { getCategoryBySlug } from "@/lib/help/categories";
+import { useTranslations } from "next-intl";
+
+export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const t = useTranslations();
+  const router = useRouter();
+  const article = getArticleBySlug(slug);
+
+  if (!article) {
+    return (
+      <Page title="Article Not Found" backAction={{ content: t("help.backToHelp"), onAction: () => router.push("/app/help") }}>
+        <Card>
+          <Text as="p" tone="subdued">This article could not be found.</Text>
+        </Card>
+      </Page>
+    );
+  }
+
+  const category = getCategoryBySlug(article.category);
+  const body = t(article.bodyKey);
+  const paragraphs = body.split("\n\n");
+
+  const related = (article.relatedSlugs ?? [])
+    .map((s) => HELP_ARTICLES.find((a) => a.slug === s))
+    .filter(Boolean);
+
+  return (
+    <Page
+      title={t(article.titleKey)}
+      backAction={{ content: category ? t(category.labelKey) : t("help.backToHelp"), onAction: () => router.push("/app/help") }}
+    >
+      <BlockStack gap="400">
+        <Card>
+          <BlockStack gap="300">
+            {paragraphs.map((p, i) => {
+              const lines = p.split("\n");
+              const isList = lines.every((l) => /^[-•\d]+[.)]\s/.test(l.trim()) || l.trim() === "");
+              if (isList) {
+                return (
+                  <Box key={i}>
+                    <ul style={{ paddingLeft: "1.25rem", margin: 0 }}>
+                      {lines.filter((l) => l.trim()).map((l, j) => (
+                        <li key={j} style={{ marginBottom: "4px" }}>
+                          <Text as="span" variant="bodyMd">{l.replace(/^[-•\d]+[.)]\s*/, "")}</Text>
+                        </li>
+                      ))}
+                    </ul>
+                  </Box>
+                );
+              }
+              return (
+                <Text key={i} as="p" variant="bodyMd">
+                  {p}
+                </Text>
+              );
+            })}
+          </BlockStack>
+        </Card>
+
+        {related.length > 0 && (
+          <Card>
+            <BlockStack gap="200">
+              <Text as="h3" variant="headingSm">{t("help.relatedArticles")}</Text>
+              {related.map((r) => r && (
+                <Box key={r.slug}>
+                  <button
+                    onClick={() => router.push(`/app/help/${r.slug}`)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    <Text as="span" variant="bodyMd" tone="magic-subdued">
+                      {t(r.titleKey)}
+                    </Text>
+                  </button>
+                </Box>
+              ))}
+            </BlockStack>
+          </Card>
+        )}
+
+        <InlineStack align="center">
+          <Button variant="plain" onClick={() => router.push("/app/help")}>
+            ← {t("help.backToHelp")}
+          </Button>
+        </InlineStack>
+      </BlockStack>
+    </Page>
+  );
+}

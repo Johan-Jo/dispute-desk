@@ -300,5 +300,133 @@
     "score": "Puntuación",
     "created": "Creado",
     "actions": "Acciones"
+  },
+  "help": {
+    "title": "Centro de ayuda",
+    "search": "Buscar artículos de ayuda...",
+    "backToHelp": "Volver a la ayuda",
+    "relatedArticles": "Artículos relacionados",
+    "contactSupport": "¿Necesita más ayuda? Contacte a soporte en support@disputedesk.com",
+    "noResults": "No se encontraron artículos que coincidan con su búsqueda.",
+    "categories": {
+      "gettingStarted": "Primeros pasos",
+      "gettingStartedDesc": "Conectar su tienda, sincronizar disputas y aprender lo básico",
+      "disputes": "Disputas",
+      "disputesDesc": "Ver, filtrar, sincronizar y gestionar sus contracargos",
+      "evidencePacks": "Paquetes de evidencia",
+      "evidencePacksDesc": "Crear, revisar y fortalecer su evidencia",
+      "automationRules": "Automatización y reglas",
+      "automationRulesDesc": "Configurar creación y guardado automáticos y reglas de enrutamiento",
+      "billing": "Facturación y planes",
+      "billingDesc": "Planes, cuotas, actualizaciones y período de prueba",
+      "savingToShopify": "Guardar en Shopify",
+      "savingToShopifyDesc": "Cómo se guarda la evidencia y qué sucede después"
+    },
+    "articles": {
+      "connectShopifyStore": {
+        "title": "Cómo conectar su tienda Shopify",
+        "body": "Para usar DisputeDesk, conecte su tienda Shopify:\n\n1. Desde el portal, haga clic en \"Conectar tienda Shopify\".\n2. Ingrese el dominio de su tienda.\n3. Será redirigido a Shopify para autorizar DisputeDesk.\n4. Otorgue los permisos solicitados.\n5. Después de autorizar, su tienda aparecerá en el panel.\n\nDisputeDesk accede a sus datos en modo de solo lectura. Sus datos están encriptados y nunca se comparten."
+      },
+      "understandingDashboard": {
+        "title": "Entender el panel de control",
+        "body": "El panel ofrece una vista general de sus operaciones de disputas.\n\nMétricas clave:\n- Disputas abiertas: contracargos pendientes de respuesta.\n- Tasa de éxito: porcentaje de disputas resueltas a su favor.\n- Guardados automáticos: paquetes guardados automáticamente este mes.\n- Resueltas: disputas cerradas.\n\nEl estado de automatización muestra su configuración actual."
+      },
+      "firstDisputeSync": {
+        "title": "Su primera sincronización de disputas",
+        "body": "Después de conectar, DisputeDesk sincroniza sus disputas abiertas automáticamente.\n\nCómo funciona:\n- DisputeDesk verifica Shopify a través de la API GraphQL.\n- Las disputas se importan con motivo, monto, estado y fecha límite.\n- La sincronización ocurre automáticamente vía webhooks.\n- También puede sincronizar manualmente."
+      },
+      "automationOverview": {
+        "title": "Cómo funciona la automatización",
+        "body": "DisputeDesk prioriza la automatización:\n\n1. Una nueva disputa aparece en Shopify.\n2. DisputeDesk la detecta.\n3. Se evalúan sus reglas.\n4. Si auto-paquete: se crea un paquete automáticamente.\n5. Se calcula la puntuación de completitud.\n6. Si requiere revisión: el paquete va a la cola de revisión.\n\nUsted controla cada paso a través de su configuración y reglas."
+      },
+      "viewingFilteringDisputes": {
+        "title": "Ver y filtrar disputas",
+        "body": "La página de Disputas muestra todos sus contracargos en una tabla ordenable.\n\nFiltros: estado, búsqueda por palabras clave.\n\nDos pestañas:\n- Todas las disputas.\n- Cola de revisión: disputas que requieren revisión manual."
+      },
+      "syncingDisputes": {
+        "title": "Sincronizar disputas desde Shopify",
+        "body": "DisputeDesk mantiene sus disputas actualizadas mediante:\n\n1. Webhooks: notificaciones en tiempo real de Shopify.\n2. Sincronización manual: haga clic en \"Sincronizar\"."
+      },
+      "reviewQueue": {
+        "title": "La cola de revisión",
+        "body": "La cola de revisión contiene disputas que requieren su revisión manual.\n\nLas disputas llegan aquí cuando:\n- Una regla las dirige aquí.\n- Ninguna regla coincide.\n- \"Requerir revisión\" está activado.\n\nPuede revisar y aprobar las disputas."
+      },
+      "approvingDisputes": {
+        "title": "Aprobar disputas desde la cola de revisión",
+        "body": "Para aprobar una disputa:\n\n1. Vaya a la página de Disputas, pestaña \"Cola de revisión\".\n2. Haga clic en \"Aprobar\".\n3. DisputeDesk inicia el pipeline de automatización.\n4. Se crea un paquete de evidencia.\n5. Si pasan los controles, la evidencia se guarda en Shopify.\n\nTodas las aprobaciones quedan registradas en el registro de auditoría."
+      },
+      "howPacksBuilt": {
+        "title": "Cómo se crean los paquetes automáticamente",
+        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n\nEl paquete se estructura según el motivo de la disputa."
+      },
+      "generatingPackManually": {
+        "title": "Crear un paquete manualmente",
+        "body": "Puede crear un paquete para cualquier disputa:\n\n1. Vaya a la página de detalles de la disputa.\n2. Haga clic en \"Crear paquete\".\n3. DisputeDesk recopila la evidencia.\n4. El paquete aparece cuando está listo.\n\nNota: la creación cuenta contra su cuota mensual."
+      },
+      "completenessScore": {
+        "title": "Entender la puntuación de completitud",
+        "body": "Cada paquete tiene una puntuación de 0% a 100%.\n\nUmbrales:\n- 80%+ (verde): paquete fuerte.\n- 60–79% (amarillo): aceptable pero mejorable.\n- Menos de 60% (rojo): paquete débil.\n\nLos paquetes por debajo de su mínimo configurado no se guardarán automáticamente."
+      },
+      "fixingBlockers": {
+        "title": "Corregir bloqueos en su paquete de evidencia",
+        "body": "Los bloqueos son evidencias obligatorias faltantes.\n\nBloqueos comunes:\n- Información de seguimiento faltante.\n- Política de reembolso faltante.\n- Detalles del pedido faltantes.\n\nPara corregir: abra el paquete, revise la lista de verificación y suba la evidencia faltante."
+      },
+      "uploadingEvidence": {
+        "title": "Subir evidencia adicional",
+        "body": "Puede subir archivos:\n\n1. Abra la página de detalles del paquete.\n2. Vaya a \"Subir evidencia\".\n3. Haga clic o arrastre archivos.\n4. Formatos: JPG, PNG, PDF.\n5. Tamaño máximo: 10 MB por archivo.\n\nSubidas comunes: capturas de pantalla, confirmaciones de entrega, recibos."
+      },
+      "evidenceChecklist": {
+        "title": "La lista de verificación de evidencia explicada",
+        "body": "La lista muestra evidencia recopilada y faltante.\n\nMarcas:\n- Recopilado (marca verde): evidencia encontrada.\n- Obligatorio pero faltante (rojo): bloqueo.\n- Recomendado (amarillo): no obligatorio pero útil.\n\nLa lista se adapta al motivo de la disputa."
+      },
+      "configuringAutomation": {
+        "title": "Configurar ajustes de automatización",
+        "body": "Configuración > Automatización:\n\n- Creación automática de paquetes.\n- Guardado automático en Shopify.\n- Revisión requerida antes del guardado.\n- Exigir cero bloqueos.\n- Puntuación mínima (predeterminado: 80)."
+      },
+      "creatingFirstRule": {
+        "title": "Crear su primera regla",
+        "body": "Las reglas controlan el enrutamiento de disputas.\n\nPara crear una regla:\n1. Vaya a la página de Reglas.\n2. Haga clic en \"Agregar regla\".\n3. Complete: nombre, motivos, rango de monto y acción.\n4. Haga clic en \"Crear regla\".\n\nLas reglas están disponibles desde el plan Starter."
+      },
+      "rulePriority": {
+        "title": "Prioridad y orden de evaluación de reglas",
+        "body": "Las reglas se evalúan de arriba a abajo. La primera regla que coincida se aplica.\n\nSin coincidencia, la disputa va a la cola de revisión.\n\nConsejo: coloque reglas específicas arriba y reglas generales abajo."
+      },
+      "completenessBlockerGates": {
+        "title": "Umbrales de completitud y bloqueo",
+        "body": "Dos controles de calidad:\n\n1. Umbral de completitud: puntuación mínima requerida (predeterminado: 80%).\n2. Umbral de bloqueo: sin evidencias obligatorias faltantes.\n\nAmbos deben pasar para el guardado automático. El guardado manual siempre es posible."
+      },
+      "planComparison": {
+        "title": "Comparar Free, Starter y Pro",
+        "body": "Tres planes:\n\nGratis ($0/mes): 3 paquetes, creación manual, exportar PDF, guardar en Shopify.\n\nStarter ($29/mes): 50 paquetes, auto-paquete, reglas, prueba de 7 días.\n\nPro ($79/mes): ilimitado, auto-paquete, reglas, soporte prioritario, prueba de 7 días."
+      },
+      "upgradingPlan": {
+        "title": "Cómo actualizar su plan",
+        "body": "Para actualizar:\n\n1. Vaya a la página de Facturación.\n2. Elija el plan deseado.\n3. Haga clic en \"Actualizar\".\n4. Apruebe en Shopify.\n\nLos planes de pago incluyen 7 días de prueba gratis."
+      },
+      "packLimits": {
+        "title": "Entender los límites de paquetes",
+        "body": "Límites mensuales:\n\n- Gratis: 3 paquetes.\n- Starter: 50 paquetes.\n- Pro: Ilimitado.\n\nEl contador se reinicia cada mes. Al alcanzar el límite, la creación se bloquea."
+      },
+      "trialPeriod": {
+        "title": "Detalles del período de prueba",
+        "body": "Starter y Pro incluyen 7 días de prueba.\n\nDurante la prueba: acceso completo. Sin cargos hasta el final.\n\nSi cancela antes, vuelve al plan Gratis sin cargo."
+      },
+      "howEvidenceSaved": {
+        "title": "Cómo se guarda la evidencia en Shopify",
+        "body": "DisputeDesk envía datos estructurados a Shopify vía la API disputeEvidenceUpdate.\n\nQué se guarda: documentación de envío, comunicación con el cliente, políticas y archivos subidos.\n\nImportante: guardar en Shopify NO es lo mismo que enviar a la red de tarjetas."
+      },
+      "fieldMapping": {
+        "title": "Cómo se mapean los campos a Shopify",
+        "body": "DisputeDesk mapea las secciones de su paquete a los campos de Shopify:\n\n- Envío y seguimiento → shippingDocumentation.\n- Detalles del cliente → customerCommunication.\n- Política de reembolso → refundPolicyDisclosure.\n- Política de cancelación → cancellationPolicyDisclosure.\n- Información del pedido → accessActivityLog.\n- Archivos subidos → uncategorizedText.\n\nEl mapeo es automático."
+      },
+      "afterSaving": {
+        "title": "Qué sucede después de guardar",
+        "body": "Después de guardar:\n\n1. La evidencia aparece en Shopify Admin.\n2. Revise en Shopify y agregue notas.\n3. Shopify envía a la red de tarjetas — manual o automáticamente.\n4. La red evalúa la evidencia.\n5. Resolución: Ganada o Perdida.\n\nDisputeDesk monitorea el estado y lo actualiza."
+      },
+      "notSubmitToNetworks": {
+        "title": "DisputeDesk NO envía a redes de tarjetas",
+        "body": "Importante: DisputeDesk guarda evidencia en Shopify pero NO envía a redes de tarjetas (Visa, Mastercard, etc.).\n\nEl proceso:\n1. DisputeDesk crea su paquete y lo guarda en Shopify.\n2. El envío es gestionado por Shopify.\n3. Shopify envía automáticamente en la fecha límite o usted lo hace manualmente.\n\nUsted siempre mantiene el control. Revise su evidencia en Shopify Admin."
+      }
+    }
   }
 }
