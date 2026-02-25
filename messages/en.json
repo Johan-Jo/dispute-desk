@@ -447,5 +447,101 @@
         "body": "This is an important distinction: DisputeDesk saves evidence to Shopify, but does NOT send it onward to card networks (Visa, Mastercard, American Express, etc.).\n\nHere's the process:\n1. DisputeDesk builds your evidence pack and saves it to Shopify via API.\n2. Forwarding evidence to the card network is handled entirely by Shopify.\n3. Shopify either auto-sends on the due date or you respond manually from Shopify Admin.\n\nWhy it works this way:\n- Shopify is the merchant of record and handles the official communication with card networks.\n- This ensures compliance with payment processor requirements.\n- Your evidence is formatted and structured by DisputeDesk, then handed off to Shopify for the official process.\n\nYou always maintain control. Review your evidence in Shopify Admin before Shopify forwards it to the card network."
       }
     }
+  },
+  "marketing": {
+    "nav": {
+      "product": "Product",
+      "howItWorks": "How it works",
+      "security": "Security",
+      "pricing": "Pricing",
+      "signIn": "Sign in",
+      "installOnShopify": "Install on Shopify"
+    },
+    "hero": {
+      "tagline": "Dispute operations for Shopify",
+      "headline": "Run chargebacks like an ops team \u2014 not a 25% success-fee tax.",
+      "subheadline": "DisputeDesk helps you build evidence packs fast, enforce completeness, and keep a defensible audit trail \u2014 with merchant-controlled workflows and predictable pricing.",
+      "bullet1": "Evidence packs in minutes \u2014 drafts are unlimited, packs count only on export",
+      "bullet2": "Review queue + completeness gate to prevent weak submissions",
+      "bullet3": "Immutable audit trail for every change, file, and decision",
+      "installFree": "Install free",
+      "viewPricing": "View pricing",
+      "disclaimer": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin (or auto-submits on due date).",
+      "queueTitle": "Review Queue",
+      "queuePending": "{count} pending",
+      "queueReview": "Review",
+      "completenessTitle": "Pack Completeness",
+      "orderConfirmation": "Order Confirmation",
+      "shippingTracking": "Shipping Tracking",
+      "customerComm": "Customer Communication",
+      "completenessScore": "Completeness Score"
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "subtitle": "Three simple steps to better dispute management",
+      "step1Title": "1. Connect Once",
+      "step1Desc": "Install from the Shopify App Store. DisputeDesk syncs disputes automatically from that point on.",
+      "step2Title": "2. Auto-Generate Packs",
+      "step2Desc": "When a dispute appears, DisputeDesk automatically builds an evidence pack with rules and completeness scoring.",
+      "step3Title": "3. Auto-Save to Shopify",
+      "step3Desc": "Complete packs are saved to Shopify automatically. Submit in Shopify Admin or let Shopify auto-submit on due date."
+    },
+    "security": {
+      "title": "Built for security and compliance",
+      "subtitle": "Your data is protected at every step",
+      "encryptedTitle": "Encrypted Tokens",
+      "encryptedDesc": "All API keys and access tokens are encrypted at rest with AES-256.",
+      "auditTitle": "Immutable Audit Log",
+      "auditDesc": "Every action is logged with timestamps and user attribution for full traceability.",
+      "signedTitle": "Signed URLs",
+      "signedDesc": "Evidence files are stored with time-limited signed URLs to prevent unauthorized access."
+    },
+    "pricing": {
+      "title": "Predictable pricing for dispute ops",
+      "subtitle": "Free is for evaluation. Paid plans are for running dispute operations \u2014 with clear pack limits and simple top-ups. No hidden percentage.",
+      "trialInfo": "Paid plans include a 14-day trial with 25 packs. Free includes 3 packs total (lifetime).",
+      "freeName": "Free (Sandbox)",
+      "freeF1": "Unlimited draft building",
+      "freeF2": "Evidence pack builder",
+      "freeF3": "3 exported packs (lifetime)",
+      "freeF4": "Basic activity log",
+      "getStarted": "Get Started",
+      "starterName": "Starter",
+      "starterF1": "15 packs/month included",
+      "starterF2": "Basic rules (up to 5)",
+      "starterF3": "Review queue + completeness gate",
+      "starterF4": "Auto-build evidence packs",
+      "starterF5": "Email support",
+      "startTrial": "Start 14-Day Trial",
+      "growthName": "Growth",
+      "growthF1": "75 packs/month included",
+      "growthF2": "Advanced rules & playbooks",
+      "growthF3": "Bulk actions + templates",
+      "growthF4": "Multi-user access",
+      "growthF5": "Auto-save to Shopify",
+      "popular": "Popular",
+      "scaleName": "Scale",
+      "scaleF1": "300 packs/month included",
+      "scaleF2": "Multi-store support",
+      "scaleF3": "Advanced exports + audit trail",
+      "scaleF4": "SLA options",
+      "scaleF5": "Priority support",
+      "topUpsTitle": "Need more packs?",
+      "topUpsDesc": "Purchase top-up bundles any time. Credits are added immediately upon payment.",
+      "topUp25": "+25 packs",
+      "topUp100": "+100 packs"
+    },
+    "footer": {
+      "tagline": "Your command center for Shopify disputes.",
+      "product": "Product",
+      "features": "Features",
+      "company": "Company",
+      "about": "About",
+      "contact": "Contact",
+      "legal": "Legal",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "copyright": "\u00a9 2026 DisputeDesk. Not affiliated with Shopify Inc."
+    }
   }
 }

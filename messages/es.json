@@ -447,5 +447,101 @@
         "body": "Importante: DisputeDesk guarda evidencia en Shopify pero NO envía a redes de tarjetas (Visa, Mastercard, etc.).\n\nEl proceso:\n1. DisputeDesk crea su paquete y lo guarda en Shopify.\n2. El envío es gestionado por Shopify.\n3. Shopify envía automáticamente en la fecha límite o usted lo hace manualmente.\n\nUsted siempre mantiene el control. Revise su evidencia en Shopify Admin."
       }
     }
+  },
+  "marketing": {
+    "nav": {
+      "product": "Producto",
+      "howItWorks": "Cómo funciona",
+      "security": "Seguridad",
+      "pricing": "Precios",
+      "signIn": "Iniciar sesión",
+      "installOnShopify": "Instalar en Shopify"
+    },
+    "hero": {
+      "tagline": "Gestión de disputas para Shopify",
+      "headline": "Gestiona chargebacks como un equipo de operaciones — no como un impuesto del 25%.",
+      "subheadline": "DisputeDesk te ayuda a crear paquetes de evidencia rápidamente, asegurar completitud y mantener un registro de auditoría defendible — con flujos de trabajo controlados por el comerciante y precios predecibles.",
+      "bullet1": "Paquetes de evidencia en minutos — los borradores son ilimitados, los paquetes cuentan solo al exportar",
+      "bullet2": "Cola de revisión + control de completitud para prevenir envíos débiles",
+      "bullet3": "Registro de auditoría inmutable para cada cambio, archivo y decisión",
+      "installFree": "Instalar gratis",
+      "viewPricing": "Ver precios",
+      "disclaimer": "La evidencia se guarda en Shopify vía API. El envío a la red de tarjetas se hace en Shopify Admin (o se envía automáticamente en la fecha límite).",
+      "queueTitle": "Cola de revisión",
+      "queuePending": "{count} pendientes",
+      "queueReview": "Revisar",
+      "completenessTitle": "Completitud del paquete",
+      "orderConfirmation": "Confirmación de pedido",
+      "shippingTracking": "Seguimiento de envío",
+      "customerComm": "Comunicación con cliente",
+      "completenessScore": "Puntuación de completitud"
+    },
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "subtitle": "Tres simples pasos para una mejor gestión de disputas",
+      "step1Title": "1. Conecta una vez",
+      "step1Desc": "Instala desde la Shopify App Store. DisputeDesk sincroniza disputas automáticamente desde ese momento.",
+      "step2Title": "2. Genera paquetes automáticamente",
+      "step2Desc": "Cuando aparece una disputa, DisputeDesk construye automáticamente un paquete de evidencia con reglas y puntuación de completitud.",
+      "step3Title": "3. Guarda automáticamente en Shopify",
+      "step3Desc": "Los paquetes completos se guardan automáticamente en Shopify. Envía en Shopify Admin o deja que Shopify envíe automáticamente en la fecha límite."
+    },
+    "security": {
+      "title": "Diseñado para seguridad y cumplimiento",
+      "subtitle": "Tus datos están protegidos en cada paso",
+      "encryptedTitle": "Tokens cifrados",
+      "encryptedDesc": "Todas las claves API y tokens de acceso están cifrados en reposo con AES-256.",
+      "auditTitle": "Registro de auditoría inmutable",
+      "auditDesc": "Cada acción se registra con marcas de tiempo y atribución de usuario para trazabilidad completa.",
+      "signedTitle": "URLs firmadas",
+      "signedDesc": "Los archivos de evidencia se almacenan con URLs firmadas de tiempo limitado para prevenir acceso no autorizado."
+    },
+    "pricing": {
+      "title": "Precios predecibles para gestión de disputas",
+      "subtitle": "Free es para evaluación. Los planes pagos son para gestionar disputas — con límites claros de paquetes y recargas simples. Sin porcentaje oculto.",
+      "trialInfo": "Los planes pagos incluyen una prueba de 14 días con 25 paquetes. Free incluye 3 paquetes en total (de por vida).",
+      "freeName": "Free (Sandbox)",
+      "freeF1": "Creación ilimitada de borradores",
+      "freeF2": "Constructor de paquetes de evidencia",
+      "freeF3": "3 paquetes exportados (de por vida)",
+      "freeF4": "Registro de actividad básico",
+      "getStarted": "Comenzar",
+      "starterName": "Starter",
+      "starterF1": "15 paquetes/mes incluidos",
+      "starterF2": "Reglas básicas (hasta 5)",
+      "starterF3": "Cola de revisión + control de completitud",
+      "starterF4": "Construcción automática de paquetes",
+      "starterF5": "Soporte por email",
+      "startTrial": "Iniciar prueba de 14 días",
+      "growthName": "Growth",
+      "growthF1": "75 paquetes/mes incluidos",
+      "growthF2": "Reglas avanzadas y playbooks",
+      "growthF3": "Acciones masivas + plantillas",
+      "growthF4": "Acceso multi-usuario",
+      "growthF5": "Guardado automático en Shopify",
+      "popular": "Popular",
+      "scaleName": "Scale",
+      "scaleF1": "300 paquetes/mes incluidos",
+      "scaleF2": "Soporte multi-tienda",
+      "scaleF3": "Exportaciones avanzadas + registro de auditoría",
+      "scaleF4": "Opciones de SLA",
+      "scaleF5": "Soporte prioritario",
+      "topUpsTitle": "¿Necesitas más paquetes?",
+      "topUpsDesc": "Compra recargas en cualquier momento. Los créditos se agregan inmediatamente al pagar.",
+      "topUp25": "+25 paquetes",
+      "topUp100": "+100 paquetes"
+    },
+    "footer": {
+      "tagline": "Tu centro de comando para disputas de Shopify.",
+      "product": "Producto",
+      "features": "Funcionalidades",
+      "company": "Empresa",
+      "about": "Acerca de",
+      "contact": "Contacto",
+      "legal": "Legal",
+      "terms": "Términos de servicio",
+      "privacy": "Política de privacidad",
+      "copyright": "© 2026 DisputeDesk. No afiliado a Shopify Inc."
+    }
   }
 }

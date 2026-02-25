@@ -447,5 +447,101 @@
         "body": "Important : DisputeDesk enregistre les preuves sur Shopify mais ne soumet PAS au réseau de cartes (Visa, Mastercard, etc.).\n\nLe processus :\n1. DisputeDesk crée votre dossier et l'enregistre sur Shopify.\n2. La soumission est gérée par Shopify.\n3. Shopify soumet automatiquement à la date limite ou vous le faites manuellement.\n\nVous gardez toujours le contrôle. Vérifiez vos preuves dans Shopify Admin."
       }
     }
+  },
+  "marketing": {
+    "nav": {
+      "product": "Produit",
+      "howItWorks": "Comment ça marche",
+      "security": "Sécurité",
+      "pricing": "Tarifs",
+      "signIn": "Connexion",
+      "installOnShopify": "Installer sur Shopify"
+    },
+    "hero": {
+      "tagline": "Gestion des litiges pour Shopify",
+      "headline": "Gérez les chargebacks comme une équipe ops — pas comme une taxe de 25%.",
+      "subheadline": "DisputeDesk vous aide à créer des dossiers de preuves rapidement, à assurer la complétude et à maintenir une piste d'audit défendable — avec des workflows contrôlés par le marchand et des tarifs prévisibles.",
+      "bullet1": "Dossiers de preuves en minutes — les brouillons sont illimités, les packs comptent uniquement à l'export",
+      "bullet2": "File de révision + contrôle de complétude pour éviter les soumissions faibles",
+      "bullet3": "Piste d'audit immuable pour chaque modification, fichier et décision",
+      "installFree": "Installer gratuitement",
+      "viewPricing": "Voir les tarifs",
+      "disclaimer": "Les preuves sont sauvegardées dans Shopify via API. La soumission au réseau de cartes se fait dans Shopify Admin (ou automatiquement à la date d'échéance).",
+      "queueTitle": "File de révision",
+      "queuePending": "{count} en attente",
+      "queueReview": "Réviser",
+      "completenessTitle": "Complétude du dossier",
+      "orderConfirmation": "Confirmation de commande",
+      "shippingTracking": "Suivi d'expédition",
+      "customerComm": "Communication client",
+      "completenessScore": "Score de complétude"
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "subtitle": "Trois étapes simples pour une meilleure gestion des litiges",
+      "step1Title": "1. Connectez une fois",
+      "step1Desc": "Installez depuis le Shopify App Store. DisputeDesk synchronise automatiquement les litiges à partir de ce moment.",
+      "step2Title": "2. Génération automatique",
+      "step2Desc": "Quand un litige apparaît, DisputeDesk crée automatiquement un dossier de preuves avec des règles et un score de complétude.",
+      "step3Title": "3. Sauvegarde auto dans Shopify",
+      "step3Desc": "Les dossiers complets sont sauvegardés automatiquement dans Shopify. Soumettez dans Shopify Admin ou laissez Shopify envoyer automatiquement à la date d'échéance."
+    },
+    "security": {
+      "title": "Conçu pour la sécurité et la conformité",
+      "subtitle": "Vos données sont protégées à chaque étape",
+      "encryptedTitle": "Tokens chiffrés",
+      "encryptedDesc": "Toutes les clés API et tokens d'accès sont chiffrés au repos avec AES-256.",
+      "auditTitle": "Journal d'audit immuable",
+      "auditDesc": "Chaque action est enregistrée avec horodatage et attribution utilisateur pour une traçabilité complète.",
+      "signedTitle": "URLs signées",
+      "signedDesc": "Les fichiers de preuves sont stockés avec des URLs signées à durée limitée pour empêcher tout accès non autorisé."
+    },
+    "pricing": {
+      "title": "Tarifs prévisibles pour la gestion des litiges",
+      "subtitle": "Free est pour l'évaluation. Les plans payants sont pour gérer les litiges — avec des limites de packs claires et des recharges simples. Pas de pourcentage caché.",
+      "trialInfo": "Les plans payants incluent un essai de 14 jours avec 25 packs. Free inclut 3 packs au total (à vie).",
+      "freeName": "Free (Sandbox)",
+      "freeF1": "Création de brouillons illimitée",
+      "freeF2": "Constructeur de dossiers",
+      "freeF3": "3 dossiers exportés (à vie)",
+      "freeF4": "Journal d'activité basique",
+      "getStarted": "Commencer",
+      "starterName": "Starter",
+      "starterF1": "15 packs/mois inclus",
+      "starterF2": "Règles de base (jusqu'à 5)",
+      "starterF3": "File de révision + contrôle de complétude",
+      "starterF4": "Construction automatique des dossiers",
+      "starterF5": "Support par e-mail",
+      "startTrial": "Démarrer l'essai de 14 jours",
+      "growthName": "Growth",
+      "growthF1": "75 packs/mois inclus",
+      "growthF2": "Règles avancées & playbooks",
+      "growthF3": "Actions groupées + modèles",
+      "growthF4": "Accès multi-utilisateur",
+      "growthF5": "Sauvegarde auto dans Shopify",
+      "popular": "Populaire",
+      "scaleName": "Scale",
+      "scaleF1": "300 packs/mois inclus",
+      "scaleF2": "Support multi-boutique",
+      "scaleF3": "Exports avancés + piste d'audit",
+      "scaleF4": "Options SLA",
+      "scaleF5": "Support prioritaire",
+      "topUpsTitle": "Besoin de plus de packs ?",
+      "topUpsDesc": "Achetez des recharges à tout moment. Les crédits sont ajoutés immédiatement au paiement.",
+      "topUp25": "+25 packs",
+      "topUp100": "+100 packs"
+    },
+    "footer": {
+      "tagline": "Votre centre de commande pour les litiges Shopify.",
+      "product": "Produit",
+      "features": "Fonctionnalités",
+      "company": "Entreprise",
+      "about": "À propos",
+      "contact": "Contact",
+      "legal": "Juridique",
+      "terms": "Conditions d'utilisation",
+      "privacy": "Politique de confidentialité",
+      "copyright": "© 2026 DisputeDesk. Non affilié à Shopify Inc."
+    }
   }
 }

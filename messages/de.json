@@ -447,5 +447,101 @@
         "body": "Wichtig: DisputeDesk speichert Beweise bei Shopify, reicht aber NICHT beim Kartennetzwerk ein.\n\nDer Prozess:\n1. DisputeDesk erstellt Ihr Paket und speichert es bei Shopify.\n2. Die Einreichung wird von Shopify durchgeführt.\n3. Shopify reicht automatisch zum Fälligkeitsdatum ein oder Sie reichen manuell ein.\n\nSie behalten die Kontrolle. Prüfen Sie Ihre Beweise im Shopify Admin."
       }
     }
+  },
+  "marketing": {
+    "nav": {
+      "product": "Produkt",
+      "howItWorks": "So funktioniert's",
+      "security": "Sicherheit",
+      "pricing": "Preise",
+      "signIn": "Anmelden",
+      "installOnShopify": "Auf Shopify installieren"
+    },
+    "hero": {
+      "tagline": "Dispute-Operations für Shopify",
+      "headline": "Chargebacks wie ein Ops-Team managen — nicht als 25% Erfolgsgebühr.",
+      "subheadline": "DisputeDesk hilft Ihnen, Beweispakete schnell zu erstellen, Vollständigkeit sicherzustellen und einen verteidigbaren Audit-Trail zu führen — mit händlergesteuerten Workflows und planbaren Preisen.",
+      "bullet1": "Beweispakete in Minuten — Entwürfe sind unbegrenzt, Pakete zählen nur beim Export",
+      "bullet2": "Überprüfungswarteschlange + Vollständigkeits-Gate gegen schwache Einreichungen",
+      "bullet3": "Unveränderlicher Audit-Trail für jede Änderung, Datei und Entscheidung",
+      "installFree": "Kostenlos installieren",
+      "viewPricing": "Preise ansehen",
+      "disclaimer": "Beweise werden über API in Shopify gespeichert. Die Einreichung beim Kartennetzwerk erfolgt in Shopify Admin (oder automatisch am Fälligkeitsdatum).",
+      "queueTitle": "Überprüfungswarteschlange",
+      "queuePending": "{count} ausstehend",
+      "queueReview": "Prüfen",
+      "completenessTitle": "Paketvollständigkeit",
+      "orderConfirmation": "Bestellbestätigung",
+      "shippingTracking": "Sendungsverfolgung",
+      "customerComm": "Kundenkommunikation",
+      "completenessScore": "Vollständigkeitswert"
+    },
+    "howItWorks": {
+      "title": "So funktioniert's",
+      "subtitle": "Drei einfache Schritte für besseres Dispute-Management",
+      "step1Title": "1. Einmal verbinden",
+      "step1Desc": "Installieren Sie aus dem Shopify App Store. DisputeDesk synchronisiert Disputes ab diesem Zeitpunkt automatisch.",
+      "step2Title": "2. Pakete automatisch erstellen",
+      "step2Desc": "Bei einem neuen Dispute erstellt DisputeDesk automatisch ein Beweispaket mit Regeln und Vollständigkeitsbewertung.",
+      "step3Title": "3. Automatisch in Shopify speichern",
+      "step3Desc": "Vollständige Pakete werden automatisch in Shopify gespeichert. Einreichen in Shopify Admin oder Shopify sendet automatisch am Fälligkeitsdatum."
+    },
+    "security": {
+      "title": "Für Sicherheit und Compliance gebaut",
+      "subtitle": "Ihre Daten sind in jedem Schritt geschützt",
+      "encryptedTitle": "Verschlüsselte Tokens",
+      "encryptedDesc": "Alle API-Schlüssel und Zugangstokens werden im Ruhezustand mit AES-256 verschlüsselt.",
+      "auditTitle": "Unveränderliches Audit-Protokoll",
+      "auditDesc": "Jede Aktion wird mit Zeitstempeln und Benutzerzuordnung für volle Rückverfolgbarkeit protokolliert.",
+      "signedTitle": "Signierte URLs",
+      "signedDesc": "Beweisdateien werden mit zeitlich begrenzten signierten URLs gespeichert."
+    },
+    "pricing": {
+      "title": "Planbare Preise für Dispute-Operations",
+      "subtitle": "Free ist zur Evaluation. Bezahlpläne sind für den Betrieb — mit klaren Paketlimits und einfachen Aufladungen. Kein versteckter Prozentsatz.",
+      "trialInfo": "Bezahlpläne beinhalten eine 14-tägige Testversion mit 25 Paketen. Free beinhaltet 3 Pakete insgesamt (Lebensdauer).",
+      "freeName": "Free (Sandbox)",
+      "freeF1": "Unbegrenzte Entwürfe",
+      "freeF2": "Beweispaket-Builder",
+      "freeF3": "3 exportierte Pakete (Lebensdauer)",
+      "freeF4": "Basis-Aktivitätsprotokoll",
+      "getStarted": "Jetzt starten",
+      "starterName": "Starter",
+      "starterF1": "15 Pakete/Monat inklusive",
+      "starterF2": "Basisregeln (bis zu 5)",
+      "starterF3": "Überprüfungswarteschlange + Vollständigkeits-Gate",
+      "starterF4": "Automatische Paketerstellung",
+      "starterF5": "E-Mail-Support",
+      "startTrial": "14-Tage-Test starten",
+      "growthName": "Growth",
+      "growthF1": "75 Pakete/Monat inklusive",
+      "growthF2": "Erweiterte Regeln & Playbooks",
+      "growthF3": "Massenaktionen + Vorlagen",
+      "growthF4": "Mehrbenutzerzugang",
+      "growthF5": "Automatisches Speichern in Shopify",
+      "popular": "Beliebt",
+      "scaleName": "Scale",
+      "scaleF1": "300 Pakete/Monat inklusive",
+      "scaleF2": "Multi-Shop-Unterstützung",
+      "scaleF3": "Erweiterter Export + Audit-Trail",
+      "scaleF4": "SLA-Optionen",
+      "scaleF5": "Prioritäts-Support",
+      "topUpsTitle": "Mehr Pakete benötigt?",
+      "topUpsDesc": "Kaufen Sie Aufladungspakete jederzeit. Guthaben wird sofort bei Zahlung gutgeschrieben.",
+      "topUp25": "+25 Pakete",
+      "topUp100": "+100 Pakete"
+    },
+    "footer": {
+      "tagline": "Ihr Kommandozentrum für Shopify-Disputes.",
+      "product": "Produkt",
+      "features": "Funktionen",
+      "company": "Unternehmen",
+      "about": "Über uns",
+      "contact": "Kontakt",
+      "legal": "Rechtliches",
+      "terms": "Nutzungsbedingungen",
+      "privacy": "Datenschutz",
+      "copyright": "© 2026 DisputeDesk. Nicht mit Shopify Inc. verbunden."
+    }
   }
 }

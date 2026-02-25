@@ -447,5 +447,101 @@
         "body": "Viktigt att förstå: DisputeDesk sparar bevis till Shopify men skickar INTE in svar till kortnätverk (Visa, Mastercard, etc.).\n\nProcessen:\n1. DisputeDesk bygger ditt bevispaket och sparar det till Shopify via API.\n2. Inlämning till kortnätverket hanteras helt av Shopify.\n3. Shopify skickar antingen in automatiskt på förfallodatumet eller så gör du det manuellt.\n\nDu behåller alltid kontrollen. Granska dina bevis i Shopify Admin innan de skickas in."
       }
     }
+  },
+  "marketing": {
+    "nav": {
+      "product": "Produkt",
+      "howItWorks": "Så fungerar det",
+      "security": "Säkerhet",
+      "pricing": "Priser",
+      "signIn": "Logga in",
+      "installOnShopify": "Installera på Shopify"
+    },
+    "hero": {
+      "tagline": "Disputhantering för Shopify",
+      "headline": "Hantera tvister som ett ops-team — inte en 25% framgångsavgift.",
+      "subheadline": "DisputeDesk hjälper dig bygga bevispaket snabbt, säkerställa fullständighet och behålla ett försvarbart revisionsspår — med handlarstyrda arbetsflöden och förutsägbar prissättning.",
+      "bullet1": "Bevispaket på minuter — utkast är obegränsade, paket räknas bara vid export",
+      "bullet2": "Granskningskö + fullständighetsgate för att förhindra svaga inlämningar",
+      "bullet3": "Oföränderligt revisionsspår för varje ändring, fil och beslut",
+      "installFree": "Installera gratis",
+      "viewPricing": "Se priser",
+      "disclaimer": "Bevis sparas till Shopify via API. Inlämning till kortnätverket sker i Shopify Admin (eller auto-lämnas vid förfallodatum).",
+      "queueTitle": "Granskningskö",
+      "queuePending": "{count} väntande",
+      "queueReview": "Granska",
+      "completenessTitle": "Paketfullständighet",
+      "orderConfirmation": "Orderbekräftelse",
+      "shippingTracking": "Fraktspårning",
+      "customerComm": "Kundkommunikation",
+      "completenessScore": "Fullständighetspoäng"
+    },
+    "howItWorks": {
+      "title": "Så fungerar det",
+      "subtitle": "Tre enkla steg till bättre disputhantering",
+      "step1Title": "1. Anslut en gång",
+      "step1Desc": "Installera från Shopify App Store. DisputeDesk synkar tvister automatiskt från den tidpunkten.",
+      "step2Title": "2. Auto-generera paket",
+      "step2Desc": "När en tvist uppstår bygger DisputeDesk automatiskt ett bevispaket med regler och fullständighetspoäng.",
+      "step3Title": "3. Auto-spara till Shopify",
+      "step3Desc": "Kompletta paket sparas automatiskt till Shopify. Lämna in i Shopify Admin eller låt Shopify auto-lämna vid förfallodatum."
+    },
+    "security": {
+      "title": "Byggt för säkerhet och efterlevnad",
+      "subtitle": "Din data är skyddad i varje steg",
+      "encryptedTitle": "Krypterade tokens",
+      "encryptedDesc": "Alla API-nycklar och åtkomsttoken krypteras i vila med AES-256.",
+      "auditTitle": "Oföränderlig revisionslogg",
+      "auditDesc": "Varje åtgärd loggas med tidsstämplar och användarattribuering för full spårbarhet.",
+      "signedTitle": "Signerade URL:er",
+      "signedDesc": "Bevisfiler lagras med tidsbegränsade signerade URL:er för att förhindra obehörig åtkomst."
+    },
+    "pricing": {
+      "title": "Förutsägbar prissättning för disputhantering",
+      "subtitle": "Free är för utvärdering. Betalplaner är för att driva disputhantering — med tydliga paketgränser och enkla tillägg. Ingen dold procentsats.",
+      "trialInfo": "Betalplaner inkluderar 14 dagars provperiod med 25 paket. Free inkluderar 3 paket totalt (livstid).",
+      "freeName": "Free (Sandbox)",
+      "freeF1": "Obegränsat skapande av utkast",
+      "freeF2": "Bevispaketbyggare",
+      "freeF3": "3 exporterade paket (livstid)",
+      "freeF4": "Grundläggande aktivitetslogg",
+      "getStarted": "Kom igång",
+      "starterName": "Starter",
+      "starterF1": "15 paket/månad inkluderade",
+      "starterF2": "Grundläggande regler (upp till 5)",
+      "starterF3": "Granskningskö + fullständighetsgate",
+      "starterF4": "Auto-bygg bevispaket",
+      "starterF5": "E-postsupport",
+      "startTrial": "Starta 14 dagars provperiod",
+      "growthName": "Growth",
+      "growthF1": "75 paket/månad inkluderade",
+      "growthF2": "Avancerade regler & playbooks",
+      "growthF3": "Massåtgärder + mallar",
+      "growthF4": "Fleranvändaråtkomst",
+      "growthF5": "Automatisk sparning till Shopify",
+      "popular": "Populär",
+      "scaleName": "Scale",
+      "scaleF1": "300 paket/månad inkluderade",
+      "scaleF2": "Stöd för flera butiker",
+      "scaleF3": "Avancerad export + revisionsspår",
+      "scaleF4": "SLA-alternativ",
+      "scaleF5": "Prioriterad support",
+      "topUpsTitle": "Behöver du fler paket?",
+      "topUpsDesc": "Köp tilläggspaket när som helst. Krediter läggs till direkt vid betalning.",
+      "topUp25": "+25 paket",
+      "topUp100": "+100 paket"
+    },
+    "footer": {
+      "tagline": "Ditt kommandocenter för Shopify-tvister.",
+      "product": "Produkt",
+      "features": "Funktioner",
+      "company": "Företag",
+      "about": "Om oss",
+      "contact": "Kontakt",
+      "legal": "Juridiskt",
+      "terms": "Användarvillkor",
+      "privacy": "Integritetspolicy",
+      "copyright": "© 2026 DisputeDesk. Ej ansluten till Shopify Inc."
+    }
   }
 }

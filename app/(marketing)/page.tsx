@@ -1,7 +1,13 @@
+"use client";
+
 import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 export default function MarketingLandingPage() {
+  const t = useTranslations("marketing");
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -15,18 +21,19 @@ export default function MarketingLandingPage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#product" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">Product</a>
-            <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">How it works</a>
-            <a href="#security" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">Security</a>
-            <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">Pricing</a>
+            <a href="#product" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.product")}</a>
+            <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.howItWorks")}</a>
+            <a href="#security" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.security")}</a>
+            <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.pricing")}</a>
           </nav>
 
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <a href="/auth/sign-in">
-              <Button variant="ghost" size="sm">Sign in</Button>
+              <Button variant="ghost" size="sm">{t("nav.signIn")}</Button>
             </a>
             <a href="/portal/connect-shopify">
-              <Button variant="primary" size="sm">Install on Shopify</Button>
+              <Button variant="primary" size="sm">{t("nav.installOnShopify")}</Button>
             </a>
           </div>
         </div>
@@ -38,47 +45,44 @@ export default function MarketingLandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-sm uppercase tracking-wide text-[#1D4ED8] font-medium mb-3">
-                Dispute operations for Shopify
+                {t("hero.tagline")}
               </p>
               <h1 className="text-5xl lg:text-6xl font-bold text-[#0B1220] mb-6 leading-tight">
-                Run chargebacks like an ops team&nbsp;&mdash; not a 25% success-fee tax.
+                {t("hero.headline")}
               </h1>
               <p className="text-xl text-[#64748B] mb-8 leading-relaxed">
-                DisputeDesk helps you build evidence packs fast, enforce completeness,
-                and keep a defensible audit trail&nbsp;&mdash; with merchant-controlled
-                workflows and predictable pricing.
+                {t("hero.subheadline")}
               </p>
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-3">
                   <Zap className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Evidence packs in minutes &mdash; drafts are unlimited, packs count only on export</p>
+                  <p className="text-[#0B1220]">{t("hero.bullet1")}</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Review queue + completeness gate to prevent weak submissions</p>
+                  <p className="text-[#0B1220]">{t("hero.bullet2")}</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <BarChart3 className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Immutable audit trail for every change, file, and decision</p>
+                  <p className="text-[#0B1220]">{t("hero.bullet3")}</p>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <a href="/portal/connect-shopify">
                   <Button variant="primary" size="lg">
-                    Install free
+                    {t("hero.installFree")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </a>
                 <a href="#pricing">
-                  <Button variant="secondary" size="lg">View pricing</Button>
+                  <Button variant="secondary" size="lg">{t("hero.viewPricing")}</Button>
                 </a>
               </div>
 
               <p className="text-sm text-[#64748B] mt-6 border-t border-[#E5E7EB] pt-6">
-                Evidence is saved to Shopify via API. Submission to the card
-                network happens in Shopify Admin (or auto-submits on due date).
+                {t("hero.disclaimer")}
               </p>
             </div>
 
@@ -91,8 +95,8 @@ export default function MarketingLandingPage() {
 
                 <div className="relative mb-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-[#0B1220]">Review Queue</h3>
-                    <span className="text-xs text-[#64748B] bg-[#F6F8FB] px-2.5 py-1 rounded-full">3 pending</span>
+                    <h3 className="text-lg font-semibold text-[#0B1220]">{t("hero.queueTitle")}</h3>
+                    <span className="text-xs text-[#64748B] bg-[#F6F8FB] px-2.5 py-1 rounded-full">{t("hero.queuePending", { count: 3 })}</span>
                   </div>
                   <div className="space-y-2.5">
                     {[
@@ -111,7 +115,7 @@ export default function MarketingLandingPage() {
                           </div>
                         </div>
                         <div className="px-3 py-1.5 bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] text-[#92400E] text-xs font-semibold rounded-lg shadow-sm">
-                          Review
+                          {t("hero.queueReview")}
                         </div>
                       </div>
                     ))}
@@ -123,29 +127,29 @@ export default function MarketingLandingPage() {
                     <div className="w-6 h-6 bg-white/50 rounded-lg flex items-center justify-center">
                       <Check className="w-4 h-4 text-[#1D4ED8]" />
                     </div>
-                    Pack Completeness
+                    {t("hero.completenessTitle")}
                   </h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-2.5 bg-white/60 rounded-lg">
-                      <span className="text-sm text-[#0B1220] font-medium">Order Confirmation</span>
+                      <span className="text-sm text-[#0B1220] font-medium">{t("hero.orderConfirmation")}</span>
                       <div className="w-5 h-5 bg-[#22C55E] rounded-md flex items-center justify-center shadow-sm">
                         <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between p-2.5 bg-white/60 rounded-lg">
-                      <span className="text-sm text-[#0B1220] font-medium">Shipping Tracking</span>
+                      <span className="text-sm text-[#0B1220] font-medium">{t("hero.shippingTracking")}</span>
                       <div className="w-5 h-5 bg-[#22C55E] rounded-md flex items-center justify-center shadow-sm">
                         <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between p-2.5 bg-white/40 rounded-lg border border-[#E5E7EB]/30">
-                      <span className="text-sm text-[#64748B] font-medium">Customer Communication</span>
+                      <span className="text-sm text-[#64748B] font-medium">{t("hero.customerComm")}</span>
                       <div className="w-5 h-5 border-2 border-[#CBD5E1] rounded-md bg-white/50" />
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-white/40">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[#0B1220]">Completeness Score</span>
+                      <span className="text-sm font-semibold text-[#0B1220]">{t("hero.completenessScore")}</span>
                       <div className="flex items-center gap-2">
                         <div className="w-20 h-2 bg-white/50 rounded-full overflow-hidden">
                           <div className="h-full bg-gradient-to-r from-[#1D4ED8] to-[#0EA5E9] rounded-full" style={{ width: "67%" }} />
@@ -165,30 +169,30 @@ export default function MarketingLandingPage() {
       <section id="how-it-works" className="py-20">
         <div className="max-w-[1200px] mx-auto px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">How it works</h2>
-            <p className="text-xl text-[#64748B]">Three simple steps to better dispute management</p>
+            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">{t("howItWorks.title")}</h2>
+            <p className="text-xl text-[#64748B]">{t("howItWorks.subtitle")}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-[#DBEAFE] rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-8 h-8 text-[#1D4ED8]" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">1. Connect Once</h3>
-              <p className="text-[#64748B]">Install from the Shopify App Store. DisputeDesk syncs disputes automatically from that point on.</p>
+              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">{t("howItWorks.step1Title")}</h3>
+              <p className="text-[#64748B]">{t("howItWorks.step1Desc")}</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-[#DCFCE7] rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Zap className="w-8 h-8 text-[#22C55E]" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">2. Auto-Generate Packs</h3>
-              <p className="text-[#64748B]">When a dispute appears, DisputeDesk automatically builds an evidence pack with rules and completeness scoring.</p>
+              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">{t("howItWorks.step2Title")}</h3>
+              <p className="text-[#64748B]">{t("howItWorks.step2Desc")}</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-[#FEF3C7] rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <RefreshCw className="w-8 h-8 text-[#F59E0B]" />
               </div>
-              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">3. Auto-Save to Shopify</h3>
-              <p className="text-[#64748B]">Complete packs are saved to Shopify automatically. Submit in Shopify Admin or let Shopify auto-submit on due date.</p>
+              <h3 className="text-xl font-semibold text-[#0B1220] mb-3">{t("howItWorks.step3Title")}</h3>
+              <p className="text-[#64748B]">{t("howItWorks.step3Desc")}</p>
             </div>
           </div>
         </div>
@@ -198,24 +202,24 @@ export default function MarketingLandingPage() {
       <section id="security" className="py-20 bg-[#F6F8FB]">
         <div className="max-w-[1200px] mx-auto px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Built for security and compliance</h2>
-            <p className="text-xl text-[#64748B]">Your data is protected at every step</p>
+            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">{t("security.title")}</h2>
+            <p className="text-xl text-[#64748B]">{t("security.subtitle")}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <Lock className="w-8 h-8 text-[#1D4ED8] mb-4" />
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Encrypted Tokens</h3>
-              <p className="text-sm text-[#64748B]">All API keys and access tokens are encrypted at rest with AES-256.</p>
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("security.encryptedTitle")}</h3>
+              <p className="text-sm text-[#64748B]">{t("security.encryptedDesc")}</p>
             </div>
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <BarChart3 className="w-8 h-8 text-[#1D4ED8] mb-4" />
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Immutable Audit Log</h3>
-              <p className="text-sm text-[#64748B]">Every action is logged with timestamps and user attribution for full traceability.</p>
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("security.auditTitle")}</h3>
+              <p className="text-sm text-[#64748B]">{t("security.auditDesc")}</p>
             </div>
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <FileText className="w-8 h-8 text-[#1D4ED8] mb-4" />
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Signed URLs</h3>
-              <p className="text-sm text-[#64748B]">Evidence files are stored with time-limited signed URLs to prevent unauthorized access.</p>
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("security.signedTitle")}</h3>
+              <p className="text-sm text-[#64748B]">{t("security.signedDesc")}</p>
             </div>
           </div>
         </div>
@@ -225,87 +229,80 @@ export default function MarketingLandingPage() {
       <section id="pricing" className="py-20">
         <div className="max-w-[1200px] mx-auto px-8">
           <div className="text-center mb-6">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Predictable pricing for dispute ops</h2>
-            <p className="text-xl text-[#64748B] max-w-2xl mx-auto">
-              Free is for evaluation. Paid plans are for running dispute operations&nbsp;&mdash;
-              with clear pack limits and simple top-ups. No hidden percentage.
-            </p>
+            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">{t("pricing.title")}</h2>
+            <p className="text-xl text-[#64748B] max-w-2xl mx-auto">{t("pricing.subtitle")}</p>
           </div>
-          <p className="text-center text-sm text-[#94A3B8] mb-12">
-            Paid plans include a 14-day trial with 25 packs. Free includes 3 packs total (lifetime).
-          </p>
+          <p className="text-center text-sm text-[#94A3B8] mb-12">{t("pricing.trialInfo")}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {/* Free */}
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">Free (Sandbox)</h3>
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">{t("pricing.freeName")}</h3>
               <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$0</span></div>
               <ul className="space-y-2.5 mb-6">
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Unlimited draft building</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Evidence pack builder</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />3 exported packs (lifetime)</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Basic activity log</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF1")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF2")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF3")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF4")}</li>
               </ul>
-              <a href="/auth/sign-up"><Button variant="secondary" className="w-full">Get Started</Button></a>
+              <a href="/auth/sign-up"><Button variant="secondary" className="w-full">{t("pricing.getStarted")}</Button></a>
             </div>
 
             {/* Starter */}
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">Starter</h3>
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">{t("pricing.starterName")}</h3>
               <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$29</span><span className="text-[#64748B] text-sm">/mo</span></div>
               <ul className="space-y-2.5 mb-6">
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />15 packs/month included</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Basic rules (up to 5)</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Review queue + completeness gate</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Auto-build evidence packs</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Email support</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF1")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF2")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF3")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF4")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF5")}</li>
               </ul>
-              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">Start 14-Day Trial</Button></a>
+              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
             </div>
 
             {/* Growth */}
             <div className="bg-[#1D4ED8] rounded-xl p-6 text-white relative">
-              <div className="absolute top-3 right-3 bg-white text-[#1D4ED8] text-xs font-semibold px-2 py-0.5 rounded">Popular</div>
-              <h3 className="text-lg font-semibold mb-1">Growth</h3>
+              <div className="absolute top-3 right-3 bg-white text-[#1D4ED8] text-xs font-semibold px-2 py-0.5 rounded">{t("pricing.popular")}</div>
+              <h3 className="text-lg font-semibold mb-1">{t("pricing.growthName")}</h3>
               <div className="mb-5"><span className="text-3xl font-bold">$79</span><span className="opacity-80 text-sm">/mo</span></div>
               <ul className="space-y-2.5 mb-6">
-                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />75 packs/month included</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Advanced rules &amp; playbooks</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Bulk actions + templates</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Multi-user access</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Auto-save to Shopify</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF1")}</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF2")}</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF3")}</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF4")}</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF5")}</li>
               </ul>
-              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">Start 14-Day Trial</Button></a>
+              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">{t("pricing.startTrial")}</Button></a>
             </div>
 
             {/* Scale */}
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">Scale</h3>
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">{t("pricing.scaleName")}</h3>
               <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$149</span><span className="text-[#64748B] text-sm">/mo</span></div>
               <ul className="space-y-2.5 mb-6">
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />300 packs/month included</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Multi-store support</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Advanced exports + audit trail</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />SLA options</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Priority support</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF1")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF2")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF3")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF4")}</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF5")}</li>
               </ul>
-              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">Start 14-Day Trial</Button></a>
+              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
             </div>
           </div>
 
           {/* Top-ups */}
           <div className="bg-[#F6F8FB] rounded-xl p-8 border border-[#E5E7EB]">
-            <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Need more packs?</h3>
-            <p className="text-sm text-[#64748B] mb-4">
-              Purchase top-up bundles any time. Credits are added immediately upon payment.
-            </p>
+            <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("pricing.topUpsTitle")}</h3>
+            <p className="text-sm text-[#64748B] mb-4">{t("pricing.topUpsDesc")}</p>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex items-center gap-3 bg-white rounded-lg px-5 py-3 border border-[#E5E7EB]">
-                <span className="font-semibold text-[#0B1220]">+25 packs</span>
+                <span className="font-semibold text-[#0B1220]">{t("pricing.topUp25")}</span>
                 <span className="text-[#64748B]">$19</span>
               </div>
               <div className="flex items-center gap-3 bg-white rounded-lg px-5 py-3 border border-[#E5E7EB]">
-                <span className="font-semibold text-[#0B1220]">+100 packs</span>
+                <span className="font-semibold text-[#0B1220]">{t("pricing.topUp100")}</span>
                 <span className="text-[#64748B]">$59</span>
               </div>
             </div>
@@ -324,33 +321,33 @@ export default function MarketingLandingPage() {
                 </div>
                 <span className="text-lg font-bold">DisputeDesk</span>
               </div>
-              <p className="text-sm text-gray-400">Your command center for Shopify disputes.</p>
+              <p className="text-sm text-gray-400">{t("footer.tagline")}</p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Product</h3>
+              <h3 className="font-semibold mb-4">{t("footer.product")}</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#product" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#security" className="hover:text-white transition-colors">Security</a></li>
+                <li><a href="#product" className="hover:text-white transition-colors">{t("footer.features")}</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">{t("nav.pricing")}</a></li>
+                <li><a href="#security" className="hover:text-white transition-colors">{t("nav.security")}</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Company</h3>
+              <h3 className="font-semibold mb-4">{t("footer.company")}</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t("footer.about")}</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t("footer.contact")}</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Legal</h3>
+              <h3 className="font-semibold mb-4">{t("footer.legal")}</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t("footer.terms")}</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">{t("footer.privacy")}</a></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-sm text-gray-400 text-center">
-            <p>&copy; 2026 DisputeDesk. Not affiliated with Shopify Inc.</p>
+            <p>{t("footer.copyright")}</p>
           </div>
         </div>
       </footer>
