@@ -11,6 +11,7 @@ import {
   Upload,
   Clock,
   Shield,
+  FileDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ interface PackData {
   blockers: string[] | null;
   recommended_actions: string[] | null;
   pack_json: Record<string, unknown> | null;
+  pdf_path: string | null;
   saved_to_shopify_at: string | null;
   created_by: string | null;
   created_at: string;
@@ -57,6 +59,7 @@ interface PackData {
   evidence_items: EvidenceItem[];
   audit_events: AuditEvent[];
   active_build_job: { id: string; status: string } | null;
+  active_pdf_job: { id: string; status: string } | null;
 }
 
 function formatDate(iso: string | null): string {
@@ -101,6 +104,7 @@ export default function PackPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+  const [rendering, setRendering] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
@@ -108,9 +112,11 @@ export default function PackPreviewPage() {
     if (res.ok) {
       const data = await res.json();
       setPack(data);
-      if (data.status !== "queued" && data.status !== "building") {
-        if (pollRef.current) clearInterval(pollRef.current);
-      }
+      const isActive =
+        data.status === "queued" ||
+        data.status === "building" ||
+        data.active_pdf_job;
+      if (!isActive && pollRef.current) clearInterval(pollRef.current);
     }
     setLoading(false);
   }, [packId]);
@@ -151,6 +157,22 @@ export default function PackPreviewPage() {
       body: JSON.stringify({}),
     });
     await fetchPack();
+  };
+
+  const handleRenderPdf = async () => {
+    setRendering(true);
+    await fetch(`/api/packs/${packId}/render-pdf`, { method: "POST" });
+    pollRef.current = setInterval(fetchPack, 3000);
+    await fetchPack();
+    setRendering(false);
+  };
+
+  const handleDownload = async () => {
+    const res = await fetch(`/api/packs/${packId}/download`);
+    if (res.ok) {
+      const { url } = await res.json();
+      window.open(url, "_blank");
+    }
   };
 
   if (loading) {
@@ -326,6 +348,41 @@ export default function PackPreviewPage() {
             </p>
           </div>
         </label>
+      </div>
+
+      {/* PDF Export */}
+      <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
+        <h3 className="font-semibold text-[#0B1220] mb-3">PDF Export</h3>
+        {pack.active_pdf_job ? (
+          <InfoBanner variant="info">
+            Rendering PDF... This page refreshes automatically.
+          </InfoBanner>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRenderPdf}
+              disabled={rendering}
+            >
+              {rendering
+                ? "Rendering..."
+                : pack.pdf_path
+                  ? "Re-render PDF"
+                  : "Render PDF"}
+            </Button>
+            {pack.pdf_path && (
+              <Button variant="primary" size="sm" onClick={handleDownload}>
+                Download PDF
+              </Button>
+            )}
+          </div>
+        )}
+        {pack.pdf_path && (
+          <p className="text-xs text-[#667085] mt-2">
+            Last rendered: {pack.pdf_path.split("/").pop()?.replace(/-/g, ":")}
+          </p>
+        )}
       </div>
 
       {/* Audit Log */}

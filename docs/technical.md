@@ -193,6 +193,31 @@ queued → building → ready → saved_to_shopify
 - Max 10 MB, types: PNG, JPEG, GIF, WebP, PDF, TXT, CSV
 - Creates `evidence_items` row with `source: manual_upload`
 
+## PDF Rendering & Storage
+
+### Template (`lib/packs/pdf/`)
+
+- `styles.ts` — `@react-pdf/renderer` stylesheet with project-branded tokens.
+- `EvidencePackDocument.tsx` — Two-page React-PDF document:
+  - **Cover**: Shop name, dispute ref, date, completeness score (color-coded), blockers.
+  - **Content**: Checklist, blockers/recommended actions, order details, shipping/tracking, policies, manual attachments, audit trail.
+
+### Render Pipeline
+
+1. `POST /api/packs/:packId/render-pdf` enqueues `render_pdf` job (returns 202).
+2. Job handler (`lib/jobs/handlers/renderPdfJob.ts`) loads pack + related data, calls `renderPackPdf()`.
+3. `renderPackPdf()` (`lib/packs/renderPdf.tsx`) uses dynamic imports for `@react-pdf/renderer` to avoid webpack bundling native deps at build time.
+4. PDF buffer uploaded to Supabase Storage `evidence-packs/{shopId}/{packId}/{timestamp}.pdf`.
+5. `evidence_packs.pdf_path` updated; `pdf_rendered` audit event logged.
+
+### Download
+
+- `GET /api/packs/:packId/download` returns 1-hour signed URL from Supabase Storage.
+
+### Build Configuration
+
+`next.config.js` marks `@react-pdf/renderer` and its transitive native packages (`yoga-layout`, `@react-pdf/layout`, `@react-pdf/pdfkit`, `@react-pdf/primitives`) as `serverExternalPackages` to prevent webpack from bundling them.
+
 ## API Surface
 
 ### Public

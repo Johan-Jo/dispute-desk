@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: [
+    "@react-pdf/renderer",
+    "@react-pdf/layout",
+    "@react-pdf/pdfkit",
+    "@react-pdf/primitives",
+    "yoga-layout",
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",

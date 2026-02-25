@@ -1,12 +1,14 @@
 import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
+import { renderPackPdf } from "../../packs/renderPdf";
+import type { PackPdfData } from "../../packs/pdf/EvidencePackDocument";
 import type { ClaimedJob } from "../claimJobs";
 
 /**
  * Job handler: render_pdf
  *
- * Loads pack JSON, renders PDF via @react-pdf/renderer,
- * uploads to Supabase Storage, updates pdf_path.
+ * Loads pack + audit events, renders PDF via @react-pdf/renderer,
+ * uploads to Supabase Storage, updates pdf_path on the pack row.
  *
  * entity_id = evidence_packs.id
  */
@@ -26,23 +28,66 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
   try {
     const { data: pack, error: fetchErr } = await db
       .from("evidence_packs")
-      .select("pack_json, shop_id, pdf_path")
+      .select(
+        "id, shop_id, dispute_id, pack_json, completeness_score, checklist, blockers, recommended_actions, pdf_path, created_at"
+      )
       .eq("id", packId)
       .single();
 
     if (fetchErr || !pack) throw new Error("Pack not found");
 
-    // TODO: wire in actual @react-pdf/renderer call
-    // const pdfBuffer = await renderPdf(pack.pack_json);
+    const { data: dispute } = await db
+      .from("disputes")
+      .select("dispute_gid, reason")
+      .eq("id", pack.dispute_id)
+      .single();
+
+    const { data: shop } = await db
+      .from("shops")
+      .select("shop_domain")
+      .eq("id", pack.shop_id)
+      .single();
+
+    const { data: auditEvents } = await db
+      .from("audit_events")
+      .select("id, event_type, actor_type, created_at")
+      .eq("pack_id", packId)
+      .order("created_at", { ascending: true })
+      .limit(50);
+
+    const packJson = pack.pack_json as Record<string, unknown> | null;
+    const sections = (packJson?.sections as PackPdfData["sections"]) ?? [];
+
+    const pdfData: PackPdfData = {
+      packId: pack.id,
+      shopName: shop?.shop_domain ?? "Unknown Shop",
+      disputeGid: dispute?.dispute_gid ?? "Unknown",
+      disputeReason: dispute?.reason ?? null,
+      generatedAt: new Date().toISOString(),
+      completenessScore: pack.completeness_score ?? 0,
+      checklist: (pack.checklist as PackPdfData["checklist"]) ?? [],
+      blockers: (pack.blockers as string[]) ?? [],
+      recommendedActions: (pack.recommended_actions as string[]) ?? [],
+      sections,
+      auditEvents: auditEvents ?? [],
+    };
+
+    const pdfBuffer = await renderPackPdf(pdfData);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const storagePath = `${pack.shop_id}/${packId}/${timestamp}.pdf`;
     const previousPath = pack.pdf_path;
 
-    // TODO: upload pdfBuffer to Supabase Storage bucket "evidence-packs"
-    // const { error: uploadErr } = await db.storage
-    //   .from("evidence-packs")
-    //   .upload(storagePath, pdfBuffer, { contentType: "application/pdf" });
+    const { error: uploadErr } = await db.storage
+      .from("evidence-packs")
+      .upload(storagePath, pdfBuffer, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+
+    if (uploadErr) {
+      throw new Error(`Storage upload failed: ${uploadErr.message}`);
+    }
 
     await db
       .from("evidence_packs")
@@ -58,6 +103,7 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
         jobId: job.id,
         storagePath,
         previousPath: previousPath ?? null,
+        fileSizeBytes: pdfBuffer.length,
       },
     });
   } catch (err) {

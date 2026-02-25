@@ -63,12 +63,14 @@ interface PackData {
   blockers: string[] | null;
   recommended_actions: string[] | null;
   pack_json: Record<string, unknown> | null;
+  pdf_path: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
   evidence_items: EvidenceItem[];
   audit_events: AuditEvent[];
   active_build_job: { id: string; status: string } | null;
+  active_pdf_job: { id: string; status: string } | null;
 }
 
 function statusTone(status: string): "success" | "warning" | "critical" | "info" | undefined {
@@ -95,6 +97,7 @@ export default function PackPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+  const [rendering, setRendering] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
@@ -102,9 +105,11 @@ export default function PackPreviewPage() {
     if (res.ok) {
       const data = await res.json();
       setPack(data);
-      if (data.status !== "queued" && data.status !== "building") {
-        if (pollRef.current) clearInterval(pollRef.current);
-      }
+      const isActive =
+        data.status === "queued" ||
+        data.status === "building" ||
+        data.active_pdf_job;
+      if (!isActive && pollRef.current) clearInterval(pollRef.current);
     }
     setLoading(false);
   }, [packId]);
@@ -134,6 +139,22 @@ export default function PackPreviewPage() {
     }
     await fetchPack();
     setUploading(false);
+  };
+
+  const handleRenderPdf = async () => {
+    setRendering(true);
+    await fetch(`/api/packs/${packId}/render-pdf`, { method: "POST" });
+    pollRef.current = setInterval(fetchPack, 3000);
+    await fetchPack();
+    setRendering(false);
+  };
+
+  const handleDownload = async () => {
+    const res = await fetch(`/api/packs/${packId}/download`);
+    if (res.ok) {
+      const { url } = await res.json();
+      window.open(url, "_blank");
+    }
   };
 
   if (loading) {
@@ -331,6 +352,38 @@ export default function PackPreviewPage() {
             </Card>
           </Layout.Section>
         )}
+
+        {/* PDF Actions */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">PDF Export</Text>
+              <InlineStack gap="200">
+                {pack.active_pdf_job ? (
+                  <Banner tone="info">
+                    Rendering PDF... This page refreshes automatically.
+                  </Banner>
+                ) : (
+                  <>
+                    <Button onClick={handleRenderPdf} loading={rendering}>
+                      {pack.pdf_path ? "Re-render PDF" : "Render PDF"}
+                    </Button>
+                    {pack.pdf_path && (
+                      <Button variant="primary" onClick={handleDownload}>
+                        Download PDF
+                      </Button>
+                    )}
+                  </>
+                )}
+              </InlineStack>
+              {pack.pdf_path && (
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Last rendered: {pack.pdf_path.split("/").pop()?.replace(/-/g, ":")}
+                </Text>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
 
         {/* Compliance */}
         <Layout.Section>
