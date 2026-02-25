@@ -11,6 +11,7 @@ const FLAG_EMOJI: Record<SupportedLocale, string> = {
   de: "\uD83C\uDDE9\uD83C\uDDEA",
   fr: "\uD83C\uDDEB\uD83C\uDDF7",
   es: "\uD83C\uDDEA\uD83C\uDDF8",
+  pt: "\uD83C\uDDE7\uD83C\uDDF7",
 };
 
 export function LanguageSwitcher({ className }: { className?: string }) {
