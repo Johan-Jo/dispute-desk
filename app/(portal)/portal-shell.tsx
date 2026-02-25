@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Shield, Bell, ChevronDown, Store } from "lucide-react";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 interface Shop {
   shop_id: string;
@@ -118,6 +119,7 @@ export function PortalShell({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className="h-16 bg-white border-b border-[#E5E7EB] px-6 flex items-center justify-end gap-3">
+          <LanguageSwitcher />
           <button className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] text-[#64748B] transition-colors relative">
             <Bell className="w-5 h-5" />
             <span className="absolute top-2 right-2 w-2 h-2 bg-[#EF4444] rounded-full" />
