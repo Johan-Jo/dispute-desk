@@ -237,6 +237,42 @@ Tailwind CSS with shared components in `components/ui/`.
 | `lucide-react` | Icon library (consistent with design) |
 | `clsx` + `tailwind-merge` | Conditional + deduplicated class names |
 
+## Testing
+
+### Unit Tests (Vitest)
+
+| Suite | File | Assertions |
+|-------|------|------------|
+| Completeness Engine | `lib/automation/__tests__/completeness.test.ts` | 7 tests: per-reason scoring, blocker detection, recommended actions, GENERAL fallback, edge cases |
+| Auto-Save Gate | `lib/automation/__tests__/autoSaveGate.test.ts` | 9 tests: gate pass/block/park logic, threshold boundaries, priority ordering, approval overrides |
+
+Run with:
+```bash
+npx vitest run
+```
+
+### E2E Smoke Test (live DB)
+
+`scripts/smoke-test.mjs` runs against the real Supabase database and validates:
+
+1. Shop creation + `shop_settings` upsert with correct defaults
+2. Dispute seeding + DB round-trip (reason, amount, currency)
+3. Evidence pack creation + job enqueue
+4. Completeness scoring: low score + blockers → `blocked` status
+5. Auto-save gate: score below threshold → block decision
+6. High-score pack simulation → `ready` status, gate passes
+7. Save-to-Shopify simulation: `saved_to_shopify` status + timestamp
+8. Audit log recording + immutability trigger enforcement
+9. Extended status enum validation (`draft`, `blocked`, `saved_to_shopify`)
+10. Full cleanup (no leftover test data)
+
+Run with:
+```bash
+node scripts/smoke-test.mjs
+```
+
+Requires `.env.local` with `SUPABASE_URL_POSTGRES` configured.
+
 ## CI Pipeline
 
 1. Typecheck (`tsc --noEmit`)

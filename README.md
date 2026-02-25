@@ -138,7 +138,7 @@ lib/
   portal/            → Active shop cookie + linked shop queries
   automation/        → Pipeline, completeness engine, auto-save gate, settings
   jobs/              → Job dispatcher + handlers (sync, build, save, render)
-scripts/             → Migration runner
+scripts/             → Migration runner + smoke test
 supabase/migrations/ → SQL migrations (001–010)
 docs/                → Architecture, technical spec, epics, roadmap
 ```
@@ -157,12 +157,17 @@ reference, component catalog, API surface, and CI pipeline.
 ### Running Tests
 
 ```bash
+# Unit tests (completeness engine, auto-save gate, encryption, etc.)
 npx vitest run
+
+# E2E smoke test (requires .env.local with SUPABASE_URL_POSTGRES)
+node scripts/smoke-test.mjs
 ```
 
 Tests include:
 - **Contract tests:** Validate Shopify GraphQL response shapes (zod schemas)
-- **Unit tests:** Encryption roundtrip, field mapping, completeness scoring, auto-save gate, etc.
+- **Unit tests:** Encryption roundtrip, field mapping, completeness scoring (7 tests), auto-save gate logic (9 tests)
+- **E2E smoke test:** Seeds a dispute into live Supabase, validates the full automation pipeline (shop settings, pack creation, completeness scoring, gate decisions, save simulation, audit immutability), then cleans up
 
 ### CI
 
