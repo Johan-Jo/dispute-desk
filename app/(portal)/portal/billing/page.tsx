@@ -23,22 +23,37 @@ interface UsageInfo {
 const ALL_PLANS = [
   {
     id: "free",
-    name: "Free",
+    name: "Free (Sandbox)",
     price: 0,
-    features: ["3 packs/month", "Manual generation only", "PDF export", "Save to Shopify"],
+    label: "$0",
+    features: ["Unlimited draft building", "3 exported packs (lifetime)", "Basic activity log", "PDF export"],
   },
   {
     id: "starter",
     name: "Starter",
     price: 29,
-    features: ["50 packs/month", "Auto-pack on sync", "Custom rules", "PDF export", "Save to Shopify"],
+    label: "$29/mo",
+    features: ["15 packs/month", "Basic rules (up to 5)", "Auto-build packs", "Review queue", "Email support"],
   },
   {
-    id: "pro",
-    name: "Pro",
+    id: "growth",
+    name: "Growth",
     price: 79,
-    features: ["Unlimited packs", "Auto-pack on sync", "Custom rules", "PDF export", "Save to Shopify", "Priority support"],
+    label: "$79/mo",
+    features: ["75 packs/month", "Advanced rules", "Multi-user", "Bulk actions", "Auto-save to Shopify"],
   },
+  {
+    id: "scale",
+    name: "Scale",
+    price: 149,
+    label: "$149/mo",
+    features: ["300 packs/month", "Multi-store", "Advanced exports", "SLA options", "Priority support"],
+  },
+];
+
+const TOP_UPS = [
+  { sku: "topup_25", label: "+25 packs", price: "$19" },
+  { sku: "topup_100", label: "+100 packs", price: "$59" },
 ];
 
 export default function BillingPage() {
@@ -113,12 +128,12 @@ export default function BillingPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-[#667085]">Unlimited packs — no limit on your Pro plan.</p>
+          <p className="text-sm text-[#667085]">No pack credits remaining. Upgrade or purchase a top-up.</p>
         )}
       </div>
 
       {/* Plans Comparison */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {ALL_PLANS.map((p) => {
           const isCurrent = plan?.id === p.id;
           const isUpgrade = p.price > (plan?.price ?? 0);
@@ -131,9 +146,7 @@ export default function BillingPage() {
                 <h4 className="font-semibold text-[#0B1220]">{p.name}</h4>
                 {isCurrent && <Badge variant="success">Current</Badge>}
               </div>
-              <p className="text-2xl font-bold text-[#0B1220] mb-4">
-                {p.price === 0 ? "Free" : `$${p.price}/mo`}
-              </p>
+              <p className="text-2xl font-bold text-[#0B1220] mb-4">{p.label}</p>
               <ul className="space-y-2 mb-4">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-[#667085]">
@@ -163,8 +176,34 @@ export default function BillingPage() {
         })}
       </div>
 
+      {/* Top-ups */}
+      <div className="bg-[#F7F8FA] rounded-lg border border-[#E5E7EB] p-5 mt-6">
+        <h3 className="font-semibold text-[#0B1220] mb-2">Need more packs?</h3>
+        <p className="text-sm text-[#667085] mb-3">Purchase top-up bundles. Credits added immediately.</p>
+        <div className="flex gap-3">
+          {TOP_UPS.map((t) => (
+            <button
+              key={t.sku}
+              onClick={async () => {
+                const res = await fetch("/api/billing/topup", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ shop_id: shopId, sku: t.sku }),
+                });
+                const data = await res.json();
+                if (data.confirmationUrl) window.location.href = data.confirmationUrl;
+              }}
+              className="bg-white rounded-lg px-4 py-2 border border-[#E5E7EB] hover:border-[#1D4ED8] transition-colors text-sm"
+            >
+              <span className="font-medium text-[#0B1220]">{t.label}</span>{" "}
+              <span className="text-[#667085]">{t.price}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <p className="text-xs text-[#94A3B8] mt-4">
-        All paid plans include a 7-day free trial. Downgrades take effect at the next billing cycle.
+        Paid plans include a 14-day trial with 25 packs. Downgrades take effect at the next billing cycle.
         Your data is always retained.
       </p>
     </div>

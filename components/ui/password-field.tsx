@@ -36,13 +36,13 @@ export function PasswordField({ showStrength, ...props }: PasswordFieldProps) {
     <div>
       <div className="relative">
         <TextField
+          {...props}
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
             props.onChange?.(e);
           }}
-          {...props}
         />
         <button
           type="button"

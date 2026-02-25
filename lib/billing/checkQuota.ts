@@ -1,17 +1,19 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, type PlanId } from "./plans";
+import { getBalance } from "./consumePack";
 
 export interface QuotaResult {
   allowed: boolean;
   plan: PlanId;
   used: number;
   limit: number | null;
-  remaining: number | null;
+  remaining: number;
   reason?: string;
 }
 
 /**
- * Check if a shop can create a new evidence pack this month.
+ * Check if a shop can consume a pack credit (finalize/export/submit).
+ * Uses the credit-ledger balance rather than counting evidence_packs rows.
  */
 export async function checkPackQuota(shopId: string): Promise<QuotaResult> {
   const sb = getServiceClient();
@@ -25,30 +27,25 @@ export async function checkPackQuota(shopId: string): Promise<QuotaResult> {
   const planId = (shop?.plan ?? "free") as PlanId;
   const plan = getPlan(planId);
 
-  if (plan.packsPerMonth === null) {
-    return { allowed: true, plan: planId, used: 0, limit: null, remaining: null };
-  }
+  const remaining = await getBalance(shopId);
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-  const { count } = await sb
-    .from("evidence_packs")
+  const { data: usageData } = await sb
+    .from("pack_usage_events")
     .select("id", { count: "exact", head: true })
-    .eq("shop_id", shopId)
-    .gte("created_at", monthStart);
+    .eq("shop_id", shopId);
 
-  const used = count ?? 0;
-  const remaining = Math.max(0, plan.packsPerMonth - used);
+  const used = (usageData as unknown as number) ?? 0;
 
-  if (used >= plan.packsPerMonth) {
+  const limit = plan.packsLifetime ?? plan.packsPerMonth;
+
+  if (remaining < 1) {
     return {
       allowed: false,
       plan: planId,
       used,
-      limit: plan.packsPerMonth,
+      limit,
       remaining: 0,
-      reason: `Monthly pack limit reached (${used}/${plan.packsPerMonth}). Upgrade to increase your limit.`,
+      reason: "Pack limit reached. Upgrade your plan or purchase a top-up.",
     };
   }
 
@@ -56,7 +53,7 @@ export async function checkPackQuota(shopId: string): Promise<QuotaResult> {
     allowed: true,
     plan: planId,
     used,
-    limit: plan.packsPerMonth,
+    limit,
     remaining,
   };
 }

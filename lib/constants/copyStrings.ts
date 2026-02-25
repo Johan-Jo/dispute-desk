@@ -1,7 +1,7 @@
 /**
  * User-facing copy strings for dispute evidence actions.
  *
- * RULE: Never use "submit response", "file dispute", or "submit to network".
+ * RULE: Avoid implying DisputeDesk sends evidence to card networks directly.
  * CI grep enforces this in app/ and components/ directories.
  */
 

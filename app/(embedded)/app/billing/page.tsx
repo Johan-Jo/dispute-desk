@@ -31,25 +31,40 @@ interface UsageInfo {
   packsRemaining: number | null;
 }
 
-const ALL_PLANS: { id: string; name: string; price: number; features: string[] }[] = [
+const ALL_PLANS: { id: string; name: string; price: number; label: string; features: string[] }[] = [
   {
     id: "free",
-    name: "Free",
+    name: "Free (Sandbox)",
     price: 0,
-    features: ["3 packs/month", "Manual generation only", "PDF export", "Save to Shopify"],
+    label: "$0",
+    features: ["Unlimited draft building", "3 exported packs (lifetime)", "Basic activity log", "PDF export"],
   },
   {
     id: "starter",
     name: "Starter",
     price: 29,
-    features: ["50 packs/month", "Auto-pack on sync", "Custom rules", "PDF export", "Save to Shopify"],
+    label: "$29/mo",
+    features: ["15 packs/month", "Basic rules (up to 5)", "Auto-build packs", "Review queue", "Email support"],
   },
   {
-    id: "pro",
-    name: "Pro",
+    id: "growth",
+    name: "Growth",
     price: 79,
-    features: ["Unlimited packs", "Auto-pack on sync", "Custom rules", "PDF export", "Save to Shopify", "Priority support"],
+    label: "$79/mo",
+    features: ["75 packs/month", "Advanced rules", "Multi-user", "Bulk actions", "Auto-save to Shopify"],
   },
+  {
+    id: "scale",
+    name: "Scale",
+    price: 149,
+    label: "$149/mo",
+    features: ["300 packs/month", "Multi-store", "Advanced exports", "SLA options", "Priority support"],
+  },
+];
+
+const TOP_UPS = [
+  { sku: "topup_25", label: "+25 packs", price: "$19" },
+  { sku: "topup_100", label: "+100 packs", price: "$59" },
 ];
 
 export default function BillingPage() {
@@ -122,7 +137,7 @@ export default function BillingPage() {
                   </Text>
                 </>
               ) : (
-                <Text as="p" variant="bodyMd">Unlimited packs</Text>
+                <Text as="p" variant="bodyMd">No pack credits remaining.</Text>
               )}
             </BlockStack>
           </Card>
@@ -141,9 +156,7 @@ export default function BillingPage() {
                   <Text as="h3" variant="headingMd">{p.name}</Text>
                   {plan?.id === p.id && <Badge tone="success">Current</Badge>}
                 </InlineStack>
-                <Text as="p" variant="headingLg">
-                  {p.price === 0 ? "Free" : `$${p.price}/mo`}
-                </Text>
+                <Text as="p" variant="headingLg">{p.label}</Text>
                 <Divider />
                 <BlockStack gap="100">
                   {p.features.map((f) => (
@@ -156,7 +169,7 @@ export default function BillingPage() {
                     loading={upgrading === p.id}
                     onClick={() => handleUpgrade(p.id)}
                   >
-                    Upgrade to {p.name}
+                    {p.price > 0 ? `Start 14-Day Trial — ${p.name}` : `Switch to ${p.name}`}
                   </Button>
                 )}
                 {plan?.id === p.id && (
@@ -168,7 +181,43 @@ export default function BillingPage() {
             </Card>
           </Layout.Section>
         ))}
+
+        {/* Top-ups */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">Need more packs?</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                Purchase top-up bundles. Credits added immediately upon payment.
+              </Text>
+              <InlineStack gap="300">
+                {TOP_UPS.map((t) => (
+                  <Button
+                    key={t.sku}
+                    onClick={async () => {
+                      const res = await fetch("/api/billing/topup", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ shop_id: shopId, sku: t.sku }),
+                      });
+                      const data = await res.json();
+                      if (data.confirmationUrl) window.top!.location.href = data.confirmationUrl;
+                    }}
+                  >
+                    {t.label} — {t.price}
+                  </Button>
+                ))}
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
       </Layout>
+
+      <div style={{ padding: "0.5rem 0", textAlign: "center" }}>
+        <Text as="p" variant="bodySm" tone="subdued">
+          Paid plans include a 14-day trial with 25 packs. Downgrades take effect at the next billing cycle.
+        </Text>
+      </div>
     </Page>
   );
 }

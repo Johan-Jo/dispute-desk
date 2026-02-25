@@ -37,44 +37,47 @@ export default function MarketingLandingPage() {
         <div className="max-w-[1440px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
+              <p className="text-sm uppercase tracking-wide text-[#1D4ED8] font-medium mb-3">
+                Dispute operations for Shopify
+              </p>
               <h1 className="text-5xl lg:text-6xl font-bold text-[#0B1220] mb-6 leading-tight">
-                Automatic dispute ops for Shopify.
+                Run chargebacks like an ops team&nbsp;&mdash; not a 25% success-fee tax.
               </h1>
               <p className="text-xl text-[#64748B] mb-8 leading-relaxed">
-                Connect once. DisputeDesk automatically builds evidence packs, scores
-                completeness, and saves evidence back to Shopify&nbsp;&mdash; you
-                submit in Shopify Admin.
+                DisputeDesk helps you build evidence packs fast, enforce completeness,
+                and keep a defensible audit trail&nbsp;&mdash; with merchant-controlled
+                workflows and predictable pricing.
               </p>
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-3">
                   <Zap className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Evidence packs generated automatically when disputes appear</p>
+                  <p className="text-[#0B1220]">Evidence packs in minutes &mdash; drafts are unlimited, packs count only on export</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Rules + completeness scoring decide when to auto-save</p>
+                  <p className="text-[#0B1220]">Review queue + completeness gate to prevent weak submissions</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <RefreshCw className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
-                  <p className="text-[#0B1220]">Evidence saved to Shopify automatically; submit in Shopify Admin</p>
+                  <BarChart3 className="w-6 h-6 text-[#22C55E] flex-shrink-0 mt-1" />
+                  <p className="text-[#0B1220]">Immutable audit trail for every change, file, and decision</p>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <a href="/portal/connect-shopify">
                   <Button variant="primary" size="lg">
-                    Install on Shopify
+                    Install free
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </a>
-                <a href="/auth/sign-in">
-                  <Button variant="secondary" size="lg">Sign in</Button>
+                <a href="#pricing">
+                  <Button variant="secondary" size="lg">View pricing</Button>
                 </a>
               </div>
 
               <p className="text-sm text-[#64748B] mt-6 border-t border-[#E5E7EB] pt-6">
-                DisputeDesk saves evidence to Shopify via API. Submission to the card
+                Evidence is saved to Shopify via API. Submission to the card
                 network happens in Shopify Admin (or auto-submits on due date).
               </p>
             </div>
@@ -192,46 +195,90 @@ export default function MarketingLandingPage() {
       {/* Pricing */}
       <section id="pricing" className="py-20">
         <div className="max-w-[1200px] mx-auto px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Simple, transparent pricing</h2>
-            <p className="text-xl text-[#64748B]">Choose the plan that fits your business</p>
+          <div className="text-center mb-6">
+            <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Predictable pricing for dispute ops</h2>
+            <p className="text-xl text-[#64748B] max-w-2xl mx-auto">
+              Free is for evaluation. Paid plans are for running dispute operations&nbsp;&mdash;
+              with clear pack limits and simple top-ups. No hidden percentage.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-xl p-8 border border-[#E5E7EB]">
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Free</h3>
-              <div className="mb-6"><span className="text-4xl font-bold text-[#0B1220]">$0</span><span className="text-[#64748B]"> / month</span></div>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Up to 10 disputes/month</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Auto-build packs</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Review required before save</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Email support</li>
+          <p className="text-center text-sm text-[#94A3B8] mb-12">
+            Paid plans include a 14-day trial with 25 packs. Free includes 3 packs total (lifetime).
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {/* Free */}
+            <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">Free (Sandbox)</h3>
+              <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$0</span></div>
+              <ul className="space-y-2.5 mb-6">
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Unlimited draft building</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Evidence pack builder</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />3 exported packs (lifetime)</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Basic activity log</li>
               </ul>
-              <Button variant="secondary" className="w-full">Get Started</Button>
+              <a href="/auth/sign-up"><Button variant="secondary" className="w-full">Get Started</Button></a>
             </div>
-            <div className="bg-[#1D4ED8] rounded-xl p-8 text-white relative">
-              <div className="absolute top-4 right-4 bg-white text-[#1D4ED8] text-xs font-semibold px-2 py-1 rounded">Popular</div>
-              <h3 className="text-lg font-semibold mb-2">Starter</h3>
-              <div className="mb-6"><span className="text-4xl font-bold">$49</span><span className="opacity-80"> / month</span></div>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Up to 50 disputes/month</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Auto-build + auto-save to Shopify</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Review required (configurable)</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Rules engine</li>
-                <li className="flex items-start gap-2 text-sm"><Check className="w-5 h-5 flex-shrink-0" />Priority support</li>
+
+            {/* Starter */}
+            <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">Starter</h3>
+              <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$29</span><span className="text-[#64748B] text-sm">/mo</span></div>
+              <ul className="space-y-2.5 mb-6">
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />15 packs/month included</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Basic rules (up to 5)</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Review queue + completeness gate</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Auto-build evidence packs</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Email support</li>
               </ul>
-              <Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">Start Free Trial</Button>
+              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">Start 14-Day Trial</Button></a>
             </div>
-            <div className="bg-white rounded-xl p-8 border border-[#E5E7EB]">
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Pro</h3>
-              <div className="mb-6"><span className="text-4xl font-bold text-[#0B1220]">$99</span><span className="text-[#64748B]"> / month</span></div>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Unlimited disputes</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Full automation (no review needed)</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Custom rules + thresholds</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Advanced automation</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-5 h-5 text-[#22C55E] flex-shrink-0" />Priority support</li>
+
+            {/* Growth */}
+            <div className="bg-[#1D4ED8] rounded-xl p-6 text-white relative">
+              <div className="absolute top-3 right-3 bg-white text-[#1D4ED8] text-xs font-semibold px-2 py-0.5 rounded">Popular</div>
+              <h3 className="text-lg font-semibold mb-1">Growth</h3>
+              <div className="mb-5"><span className="text-3xl font-bold">$79</span><span className="opacity-80 text-sm">/mo</span></div>
+              <ul className="space-y-2.5 mb-6">
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />75 packs/month included</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Advanced rules &amp; playbooks</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Bulk actions + templates</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Multi-user access</li>
+                <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />Auto-save to Shopify</li>
               </ul>
-              <Button variant="secondary" className="w-full">Start Free Trial</Button>
+              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">Start 14-Day Trial</Button></a>
+            </div>
+
+            {/* Scale */}
+            <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-1">Scale</h3>
+              <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$149</span><span className="text-[#64748B] text-sm">/mo</span></div>
+              <ul className="space-y-2.5 mb-6">
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />300 packs/month included</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Multi-store support</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Advanced exports + audit trail</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />SLA options</li>
+                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />Priority support</li>
+              </ul>
+              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">Start 14-Day Trial</Button></a>
+            </div>
+          </div>
+
+          {/* Top-ups */}
+          <div className="bg-[#F6F8FB] rounded-xl p-8 border border-[#E5E7EB]">
+            <h3 className="text-lg font-semibold text-[#0B1220] mb-2">Need more packs?</h3>
+            <p className="text-sm text-[#64748B] mb-4">
+              Purchase top-up bundles any time. Credits are added immediately upon payment.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center gap-3 bg-white rounded-lg px-5 py-3 border border-[#E5E7EB]">
+                <span className="font-semibold text-[#0B1220]">+25 packs</span>
+                <span className="text-[#64748B]">$19</span>
+              </div>
+              <div className="flex items-center gap-3 bg-white rounded-lg px-5 py-3 border border-[#E5E7EB]">
+                <span className="font-semibold text-[#0B1220]">+100 packs</span>
+                <span className="text-[#64748B]">$59</span>
+              </div>
             </div>
           </div>
         </div>

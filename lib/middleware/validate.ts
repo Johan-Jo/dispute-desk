@@ -67,7 +67,12 @@ export const ruleUpdateSchema = z.object({
 
 export const billingSubscribeSchema = z.object({
   shop_id: shopIdParam,
-  plan_id: z.enum(["starter", "pro"]),
+  plan_id: z.enum(["starter", "growth", "scale"]),
+});
+
+export const billingTopUpSchema = z.object({
+  shop_id: shopIdParam,
+  sku: z.enum(["topup_25", "topup_100"]),
 });
 
 export const reorderSchema = z.object({
