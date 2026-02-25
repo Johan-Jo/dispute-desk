@@ -350,6 +350,26 @@ export default function PackPreviewPage() {
         </label>
       </div>
 
+      {/* Completeness Gate */}
+      {pack.completeness_score != null && pack.completeness_score < 60 && (
+        <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-lg p-4 mb-6">
+          <h4 className="font-semibold text-[#92400E] mb-1">Missing recommended evidence</h4>
+          <p className="text-sm text-[#92400E]">
+            This pack&apos;s completeness is {pack.completeness_score}% (below 60% threshold).
+            Missing evidence may weaken your dispute response.
+          </p>
+          {pack.checklist && (
+            <ul className="mt-2 text-sm text-[#92400E] list-disc pl-4 space-y-1">
+              {(pack.checklist as Array<{ field: string; label: string; required: boolean; present: boolean }>)
+                .filter((c) => !c.present && c.required)
+                .map((c) => (
+                  <li key={c.field}>{c.label} (required)</li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* PDF Export */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
         <h3 className="font-semibold text-[#0B1220] mb-3">PDF Export</h3>

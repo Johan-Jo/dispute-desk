@@ -385,6 +385,29 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
+        {/* Completeness Gate */}
+        {pack.completeness_score != null && pack.completeness_score < 60 && (
+          <Layout.Section>
+            <Banner tone="warning" title="Missing recommended evidence">
+              <p>
+                This pack&apos;s completeness is {pack.completeness_score}% (below 60% threshold).
+                Missing evidence may weaken your dispute response.
+              </p>
+              {pack.checklist && (
+                <ul style={{ marginTop: 8, paddingLeft: 16 }}>
+                  {(pack.checklist as ChecklistItem[])
+                    .filter((c) => !c.present && c.required)
+                    .map((c) => (
+                      <li key={c.field} style={{ marginBottom: 2 }}>
+                        {c.label} (required)
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </Banner>
+          </Layout.Section>
+        )}
+
         {/* Compliance */}
         <Layout.Section>
           <Banner tone="info">

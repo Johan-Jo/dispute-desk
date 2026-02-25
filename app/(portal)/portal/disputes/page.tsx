@@ -14,6 +14,7 @@ interface Dispute {
   amount: number | null;
   currency_code: string | null;
   due_at: string | null;
+  needs_review: boolean;
   last_synced_at: string | null;
 }
 
@@ -51,6 +52,7 @@ export default function DisputesPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"all" | "review">("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -67,12 +69,13 @@ export default function DisputesPage() {
       page: String(page),
       per_page: "25",
     });
+    if (tab === "review") params.set("needs_review", "true");
     const res = await fetch(`/api/disputes?${params}`);
     const json = await res.json();
     setDisputes(json.disputes ?? []);
     setTotalPages(json.pagination?.total_pages ?? 0);
     setLoading(false);
-  }, [shopId, page]);
+  }, [shopId, page, tab]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
@@ -114,6 +117,23 @@ export default function DisputesPage() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-2 mb-4">
+        <Button
+          variant={tab === "all" ? "primary" : "secondary"}
+          size="sm"
+          onClick={() => { setTab("all"); setPage(1); }}
+        >
+          All Disputes
+        </Button>
+        <Button
+          variant={tab === "review" ? "primary" : "secondary"}
+          size="sm"
+          onClick={() => { setTab("review"); setPage(1); }}
+        >
+          Review Queue
+        </Button>
+      </div>
+
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="w-4 h-4 absolute left-3 top-[50%] -translate-y-[50%] text-[#64748B]" />
@@ -143,6 +163,9 @@ export default function DisputesPage() {
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">Deadline</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">Last Synced</th>
+                {tab === "review" && (
+                  <th className="text-left px-4 py-3 font-medium text-[#667085]">Action</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -178,6 +201,21 @@ export default function DisputesPage() {
                     <td className="px-4 py-3">{statusBadge(d.status)}</td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at)}</td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(d.last_synced_at)}</td>
+                    {tab === "review" && (
+                      <td className="px-4 py-3">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            await fetch(`/api/disputes/${d.id}/approve`, { method: "POST" });
+                            await fetchDisputes();
+                          }}
+                        >
+                          Approve
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

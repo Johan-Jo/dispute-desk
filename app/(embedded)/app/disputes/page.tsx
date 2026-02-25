@@ -25,6 +25,7 @@ interface Dispute {
   amount: number | null;
   currency_code: string | null;
   due_at: string | null;
+  needs_review: boolean;
   last_synced_at: string | null;
 }
 
@@ -74,6 +75,7 @@ export default function DisputesListPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [tab, setTab] = useState<"all" | "review">("all");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
 
@@ -85,6 +87,7 @@ export default function DisputesListPage() {
     if (!shopId) return;
     setLoading(true);
     const params = new URLSearchParams({ shop_id: shopId, page: String(page), per_page: "25" });
+    if (tab === "review") params.set("needs_review", "true");
     if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
 
     const res = await fetch(`/api/disputes?${params}`);
@@ -92,7 +95,7 @@ export default function DisputesListPage() {
     setDisputes(json.disputes ?? []);
     setPagination(json.pagination ?? { total: 0, total_pages: 0 });
     setLoading(false);
-  }, [shopId, page, statusFilter]);
+  }, [shopId, page, statusFilter, tab]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
@@ -163,8 +166,23 @@ export default function DisputesListPage() {
         </Badge>
       </IndexTable.Cell>
       <IndexTable.Cell>{formatDate(d.last_synced_at)}</IndexTable.Cell>
+      {tab === "review" && (
+        <IndexTable.Cell>
+          <Button
+            size="micro"
+            onClick={() => handleApprove(d.id)}
+          >
+            Approve
+          </Button>
+        </IndexTable.Cell>
+      )}
     </IndexTable.Row>
   ));
+
+  const handleApprove = async (disputeId: string) => {
+    await fetch(`/api/disputes/${disputeId}/approve`, { method: "POST" });
+    await fetchDisputes();
+  };
 
   return (
     <Page
@@ -177,6 +195,23 @@ export default function DisputesListPage() {
       }}
     >
       <Layout>
+        <Layout.Section>
+          <InlineStack gap="200">
+            <Button
+              variant={tab === "all" ? "primary" : "secondary"}
+              onClick={() => { setTab("all"); setPage(1); }}
+            >
+              All Disputes
+            </Button>
+            <Button
+              variant={tab === "review" ? "primary" : "secondary"}
+              onClick={() => { setTab("review"); setPage(1); }}
+            >
+              Review Queue
+            </Button>
+          </InlineStack>
+        </Layout.Section>
+
         <Layout.Section>
           <Card padding="0">
             <Filters
@@ -204,6 +239,7 @@ export default function DisputesListPage() {
                   { title: "Due Date" },
                   { title: "Remaining" },
                   { title: "Last Synced" },
+                  ...(tab === "review" ? [{ title: "Action" }] : []),
                 ]}
                 selectable={false}
               >

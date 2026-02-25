@@ -33,6 +33,13 @@ export async function GET(req: NextRequest) {
     query = query.in("status", statuses);
   }
 
+  const needsReview = sp.get("needs_review");
+  if (needsReview === "true") {
+    query = query.eq("needs_review", true);
+  } else if (needsReview === "false") {
+    query = query.eq("needs_review", false);
+  }
+
   const dueBefore = sp.get("due_before");
   if (dueBefore) {
     query = query.lte("due_at", dueBefore);

@@ -1,6 +1,6 @@
 # EPIC 4 — Governance Controls and Review Queue
 
-> **Status:** Pending
+> **Status:** Done
 > **Week:** 3–4
 > **Dependencies:** EPIC 1, EPIC 2
 
@@ -8,56 +8,95 @@
 
 Merchants configure rules controlling whether disputes get auto-packed or routed to a manual review queue. Completeness gates prevent premature actions.
 
-## Tasks
+## Implementation
 
-### 4.1 — Rule Data Model and Evaluator
-- Rules in `rules` table: `match` (JSONB) + `action` (JSONB).
-- Match schema: `{ reason: string[], status: string[], amount_range: { min?, max? } }`. All AND-joined; empty = match all.
-- Action schema: `{ mode: "auto_pack" | "review", require_fields: string[] }`.
-- `lib/rules/evaluateRules.ts`:
-  - Fetch enabled rules for shop, ordered by priority.
-  - First matching rule wins.
-  - Default (no match): `review`.
+### 4.1 — Rule Evaluator
+
+`lib/rules/evaluateRules.ts` — deterministic rule engine:
+
+- Fetches enabled rules for shop, ordered by priority (ascending).
+- Matches each rule against dispute context (reason, status, amount).
+- All match conditions are AND-joined; empty match = match all.
+- First matching rule wins.
+- Default (no match): `{ mode: "review" }`.
+- Every rule application is logged as `rule_applied` audit event with rule ID, match conditions, and resulting action.
 
 ### 4.2 — Rule Execution on Dispute Sync
-- After sync, for each new/updated dispute:
-  - Evaluate rules.
-  - `auto_pack`: trigger `buildPack()` automatically.
-  - `review`: set `needs_review = true` on dispute.
-  - Log `audit_events` with `event_type: rule_applied`.
 
-### 4.3 — Review Queue UI
-- `app/disputes/page.tsx` — "Review Queue" tab showing `needs_review = true` disputes.
-- Sorted by due date ascending (most urgent first).
-- Each row: dispute summary, due date countdown, completeness, action buttons.
+`lib/disputes/syncDisputes.ts` — modified to call `evaluateRules()` for each new dispute:
 
-### 4.4 — Rules Settings UI
-- `app/settings/rules/page.tsx`:
-  - List rules with match summary, action, enabled toggle.
-  - "Add Rule" form: multi-select reasons, optional amount range, action dropdown, required fields.
-  - Edit / disable / delete.
-  - Reorder for priority (up/down arrows).
+- If result is `auto_pack` → triggers `runAutomationPipeline()`.
+- If result is `review` → sets `needs_review = true` on the dispute row.
+- Replaces the previous "always automate" behavior with rule-based routing.
 
-### 4.5 — Completeness Gate
-- On pack preview, if completeness < threshold (default 60%):
-  - Warning banner: "Missing recommended evidence."
-  - "Save to Shopify" shows confirmation dialog listing missing items.
-- Guidance only — merchant can proceed.
+### 4.3 — Rules CRUD API
 
-### 4.6 — Audit Trail for Rule Execution
-- Every evaluation: `event_type: rule_applied` with `{ rule_id, match_conditions, resulting_action }`.
-- Manual override: `event_type: rule_overridden`.
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/rules?shop_id=` | GET | List all rules for a shop (priority order) |
+| `/api/rules` | POST | Create a new rule |
+| `/api/rules/:id` | GET | Get a single rule |
+| `/api/rules/:id` | PATCH | Update rule (name, match, action, enabled, priority) |
+| `/api/rules/:id` | DELETE | Delete a rule (with audit log) |
+| `/api/rules/reorder` | POST | Reorder rules (sets priority = index) |
+| `/api/disputes/:id/approve` | POST | Approve dispute from review queue (clears `needs_review`, triggers automation, logs `rule_overridden`) |
+
+The disputes list API (`/api/disputes`) now supports `?needs_review=true|false` filter.
+
+### 4.4 — Review Queue UI
+
+Both the Shopify embedded app and the external portal disputes pages now have:
+
+- **Tab switcher**: "All Disputes" / "Review Queue" tabs.
+- Review Queue tab filters to `needs_review=true` disputes, sorted by due date.
+- **Approve button** on each row in review mode — calls the approve endpoint, clears `needs_review`, and triggers automation pipeline.
+
+### 4.5 — Rules Settings UI
+
+`app/(portal)/portal/rules/page.tsx`:
+
+- Lists all rules with priority order, match summary, action badge (Auto-Pack / Review).
+- **Add Rule** form: name, multi-select dispute reasons, optional amount range, action mode toggle.
+- **Enable/disable** toggle per rule.
+- **Reorder** with up/down arrows (first-match-wins priority).
+- **Delete** with audit logging.
+- Explanatory text: "First matching rule wins. No match → Review Queue."
+
+### 4.6 — Completeness Gate
+
+Both pack preview pages (embedded + portal) now show a warning banner when `completeness_score < 60`:
+
+- Yellow warning banner: "Missing recommended evidence."
+- Lists required checklist items that are not present.
+- Guidance only — merchant can proceed. Does not hard-block.
+
+### 4.7 — Schema Migration
+
+`supabase/migrations/011_rules_name.sql` — adds `name` column to the `rules` table.
 
 ## Key Files
-- `lib/rules/evaluateRules.ts`
-- `app/settings/rules/page.tsx`
-- `app/api/rules/route.ts`
-- Modified: `lib/disputes/syncDisputes.ts`, `app/disputes/page.tsx`, `app/packs/[packId]/page.tsx`
+
+| File | Purpose |
+|------|---------|
+| `lib/rules/evaluateRules.ts` | Rule engine — match + evaluate + audit log |
+| `lib/disputes/syncDisputes.ts` | Modified: calls evaluateRules before automation |
+| `app/api/rules/route.ts` | List + create rules |
+| `app/api/rules/[id]/route.ts` | Get + update + delete single rule |
+| `app/api/rules/reorder/route.ts` | Reorder rules by priority |
+| `app/api/disputes/[id]/approve/route.ts` | Approve from review queue |
+| `app/api/disputes/route.ts` | Modified: added `needs_review` filter |
+| `app/(embedded)/app/disputes/page.tsx` | Modified: review queue tab + approve |
+| `app/(portal)/portal/disputes/page.tsx` | Modified: review queue tab + approve |
+| `app/(portal)/portal/rules/page.tsx` | Rules settings CRUD UI |
+| `app/(embedded)/app/packs/[packId]/page.tsx` | Modified: completeness gate banner |
+| `app/(portal)/portal/packs/[packId]/page.tsx` | Modified: completeness gate banner |
+| `supabase/migrations/011_rules_name.sql` | Add name column to rules |
 
 ## Acceptance Criteria
-- [ ] Rules apply deterministically; same dispute + same rules = same outcome.
-- [ ] Every rule application logged in `audit_events` with full payload.
-- [ ] Review queue shows disputes needing review, sorted by due date.
-- [ ] Completeness gate warns but does not hard-block.
-- [ ] Rules UI allows CRUD + enable/disable + reorder.
-- [ ] Override rate trackable from audit events.
+
+- [x] Rules apply deterministically; same dispute + same rules = same outcome.
+- [x] Every rule application logged in `audit_events` with full payload.
+- [x] Review queue shows disputes needing review, sorted by due date.
+- [x] Completeness gate warns but does not hard-block.
+- [x] Rules UI allows CRUD + enable/disable + reorder.
+- [x] Override rate trackable from audit events (`rule_overridden` event type).

@@ -14,6 +14,7 @@ import {
 } from "@/lib/shopify/queries/disputes";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
+import { evaluateRules } from "@/lib/rules/evaluateRules";
 
 interface SyncResult {
   synced: number;
@@ -141,17 +142,34 @@ export async function syncDisputes(
           result.created++;
         }
 
-        // Trigger automation for new disputes only
+        // For new disputes: evaluate rules, then trigger automation or set needs_review
         if (!existing && triggerAutomation && upserted) {
-          await runAutomationPipeline({
-            id: upserted.id,
-            shop_id: shopId,
-            reason: d.reasonDetails?.reason ?? null,
-          }).catch((err) => {
+          try {
+            const evalResult = await evaluateRules({
+              id: upserted.id,
+              shop_id: shopId,
+              reason: d.reasonDetails?.reason ?? null,
+              status: d.status?.toLowerCase() ?? null,
+              amount: d.amount ? parseFloat(d.amount.amount) : null,
+            });
+
+            if (evalResult.action.mode === "review") {
+              await sb
+                .from("disputes")
+                .update({ needs_review: true, updated_at: new Date().toISOString() })
+                .eq("id", upserted.id);
+            } else {
+              await runAutomationPipeline({
+                id: upserted.id,
+                shop_id: shopId,
+                reason: d.reasonDetails?.reason ?? null,
+              });
+            }
+          } catch (err) {
             result.errors.push(
               `automation(${d.id}): ${err instanceof Error ? err.message : String(err)}`
             );
-          });
+          }
         }
       } catch (err) {
         result.errors.push(

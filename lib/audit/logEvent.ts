@@ -11,7 +11,8 @@ export type EventType =
   | "job_queued"
   | "job_started"
   | "job_succeeded"
-  | "job_failed";
+  | "job_failed"
+  | "rule_deleted";
 
 export interface AuditLogInput {
   shopId: string;

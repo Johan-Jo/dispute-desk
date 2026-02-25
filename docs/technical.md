@@ -304,6 +304,48 @@ Tailwind CSS with shared components in `components/ui/`.
 | `lucide-react` | Icon library (consistent with design) |
 | `clsx` + `tailwind-merge` | Conditional + deduplicated class names |
 
+## Governance Controls & Review Queue
+
+### Rule Engine
+
+`lib/rules/evaluateRules.ts` — deterministic, first-match-wins evaluator:
+
+1. Fetches enabled rules for shop, ordered by `priority ASC`.
+2. Each rule has `match` (JSONB: reason[], status[], amount_range) + `action` (JSONB: mode, require_fields).
+3. All match conditions are AND-joined; empty match = match all.
+4. First matching rule wins. No match defaults to `{ mode: "review" }`.
+5. Every evaluation logged as `rule_applied` audit event.
+
+### Sync Integration
+
+When `syncDisputes()` detects a new dispute:
+- Calls `evaluateRules()` with dispute context.
+- `auto_pack` → triggers `runAutomationPipeline()`.
+- `review` → sets `needs_review = true` on the dispute row.
+
+### Review Queue
+
+Both embedded and portal dispute pages have an "All Disputes" / "Review Queue" tab.
+Review queue filters `needs_review=true`, sorted by due date (most urgent first).
+Each row has an "Approve" button that clears `needs_review`, logs `rule_overridden`, and triggers automation.
+
+### Completeness Gate
+
+Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
+- Lists missing required checklist items.
+- Guidance only — merchant can still proceed.
+
+### Rules API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/rules?shop_id=` | GET | List rules (priority order) |
+| `/api/rules` | POST | Create rule |
+| `/api/rules/:id` | PATCH | Update rule |
+| `/api/rules/:id` | DELETE | Delete rule |
+| `/api/rules/reorder` | POST | Reorder by priority |
+| `/api/disputes/:id/approve` | POST | Approve from review queue |
+
 ## Testing
 
 ### Unit Tests (Vitest)
