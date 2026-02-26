@@ -57,7 +57,7 @@ export default function DashboardPage() {
       <div className="mb-6">
         <InfoBanner variant="info" title={t("infoBannerTitle")}>
           {t("infoBannerDesc")}{" "}
-          <a href="#" className="font-semibold hover:underline inline-flex items-center gap-1">
+          <a href="/portal/connect-shopify" className="font-semibold hover:underline inline-flex items-center gap-1">
             {t("openShopify")}
             <ExternalLink className="w-3 h-3" />
           </a>
@@ -138,7 +138,9 @@ export default function DashboardPage() {
                       <Badge variant={variant}>{ts(statusKey)}</Badge>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
+                      <a href={`/portal/disputes/${d.id}`}>
+                        <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
+                      </a>
                     </td>
                   </tr>
                 );
@@ -194,10 +196,12 @@ export default function DashboardPage() {
             <div className="flex-1">
               <h4 className="font-semibold text-[#0B1220] mb-1">{t("shopifyAdmin")}</h4>
               <p className="text-sm text-[#667085] mb-3">{t("shopifyAdminDesc")}</p>
-              <Button variant="ghost" size="sm">
-                {t("openShopify")}
-                <ExternalLink className="w-3 h-3 ml-1" />
-              </Button>
+              <a href="/portal/connect-shopify">
+                <Button variant="ghost" size="sm">
+                  {t("openShopify")}
+                  <ExternalLink className="w-3 h-3 ml-1" />
+                </Button>
+              </a>
             </div>
           </div>
         </div>

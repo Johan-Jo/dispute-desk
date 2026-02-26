@@ -72,6 +72,8 @@ export default function RulesSettingsPage() {
   const tc = useTranslations("common");
   const tr = useTranslations("reasons");
   const isDemo = useDemoMode();
+
+  const demoClick = () => {};
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -123,21 +125,25 @@ export default function RulesSettingsPage() {
   };
 
   if (isDemo) {
+    const firstRule = DEMO_RULES[0];
+    const remainingRules = DEMO_RULES.slice(1);
+
     return (
       <div>
-        <div className="flex items-center justify-between mb-6" data-onboarding="rules-header">
-          <div>
-            <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
-            <p className="text-[#667085]">{t("subtitleDemo")}</p>
+        <div data-onboarding="rules-header">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
+              <p className="text-[#667085]">{t("subtitleDemo")}</p>
+            </div>
+            <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={demoClick}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t("createRule")}
+            </Button>
           </div>
-          <Button variant="primary" size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            {t("createRule")}
-          </Button>
-        </div>
 
-        <div className="space-y-4">
-          {DEMO_RULES.map((rule) => (
+          <div className="space-y-4 mb-4">
+            {[firstRule].map((rule) => (
             <div key={rule.id} className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -169,15 +175,61 @@ export default function RulesSettingsPage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}>
                     {rule.status === "active" ? (
                       <ToggleRight className="w-5 h-5 text-[#10B981]" />
                     ) : (
                       <ToggleLeft className="w-5 h-5 text-[#667085]" />
                     )}
                   </Button>
-                  <Button variant="ghost" size="sm"><Edit className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="sm"><Trash2 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}><Edit className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {remainingRules.map((rule) => (
+            <div key={rule.id} className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                    <h3 className="font-semibold text-[#0B1220]">{t(rule.nameKey)}</h3>
+                    {rule.status === "active" ? (
+                      <Badge variant="success">{t("active")}</Badge>
+                    ) : (
+                      <Badge variant="default">{t("inactive")}</Badge>
+                    )}
+                    <span className="text-sm text-[#667085]">{rule.id}</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-[#667085] uppercase tracking-wider mb-1">{t("triggerCondition")}</p>
+                      <p className="text-sm text-[#0B1220] font-medium">{t(rule.triggerKey)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#667085] uppercase tracking-wider mb-1">{t("action")}</p>
+                      <p className="text-sm text-[#0B1220] font-medium">{t(rule.actionKey)}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#667085]">{t("executions")}</p>
+                    <p className="text-sm font-semibold text-[#0B1220]">{rule.executions}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}>
+                    {rule.status === "active" ? (
+                      <ToggleRight className="w-5 h-5 text-[#10B981]" />
+                    ) : (
+                      <ToggleLeft className="w-5 h-5 text-[#667085]" />
+                    )}
+                  </Button>
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}><Edit className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}><Trash2 className="w-4 h-4" /></Button>
                 </div>
               </div>
             </div>

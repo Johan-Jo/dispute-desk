@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import {
   ArrowLeft,
   CheckCircle,
@@ -62,9 +64,9 @@ interface PackData {
   active_pdf_job: { id: string; status: string } | null;
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string = "en"): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
+  return new Date(iso).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -73,15 +75,15 @@ function formatDate(iso: string | null): string {
   });
 }
 
-function statusConfig(status: string) {
+function statusConfig(status: string, ts: (key: string) => string) {
   const map: Record<string, { variant: "success" | "warning" | "danger" | "info" | "default"; label: string }> = {
-    saved_to_shopify: { variant: "success", label: "Saved to Shopify" },
-    ready: { variant: "info", label: "Ready" },
-    blocked: { variant: "danger", label: "Blocked" },
-    building: { variant: "info", label: "Building..." },
-    queued: { variant: "default", label: "Queued" },
-    failed: { variant: "danger", label: "Failed" },
-    draft: { variant: "default", label: "Draft" },
+    saved_to_shopify: { variant: "success", label: ts("savedToShopify") },
+    ready: { variant: "info", label: ts("ready") },
+    blocked: { variant: "danger", label: ts("blocked") },
+    building: { variant: "info", label: ts("building") },
+    queued: { variant: "default", label: ts("queued") },
+    failed: { variant: "danger", label: ts("failed") },
+    draft: { variant: "default", label: ts("draft") },
   };
   return map[status] ?? { variant: "default" as const, label: status };
 }
@@ -100,6 +102,9 @@ function scoreBarColor(score: number): string {
 
 export default function PackPreviewPage() {
   const { packId } = useParams<{ packId: string }>();
+  const t = useTranslations("packs");
+  const ts = useTranslations("status");
+  const locale = useLocale();
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -187,9 +192,9 @@ export default function PackPreviewPage() {
   if (!pack) {
     return (
       <div className="text-center py-20">
-        <p className="text-[#667085]">Pack not found.</p>
+        <p className="text-[#667085]">{t("packNotFound")}</p>
         <a href="/portal/disputes" className="text-[#1D4ED8] hover:underline text-sm mt-2 inline-block">
-          Back to disputes
+          {t("backToDisputes")}
         </a>
       </div>
     );
@@ -197,7 +202,7 @@ export default function PackPreviewPage() {
 
   const isBuilding = pack.status === "queued" || pack.status === "building";
   const score = pack.completeness_score ?? 0;
-  const cfg = statusConfig(pack.status);
+  const cfg = statusConfig(pack.status, ts);
 
   return (
     <div>
@@ -205,17 +210,17 @@ export default function PackPreviewPage() {
         href={`/portal/disputes/${pack.dispute_id}`}
         className="inline-flex items-center gap-1 text-sm text-[#667085] hover:text-[#0B1220] mb-4"
       >
-        <ArrowLeft className="w-4 h-4" /> Back to dispute
+        <ArrowLeft className="w-4 h-4" /> {t("backToDispute")}
       </a>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#0B1220]">
-            Evidence Pack {pack.id.slice(0, 8)}
+            {t("packTitle", { id: pack.id.slice(0, 8) })}
           </h1>
           <p className="text-sm text-[#667085]">
-            Created {formatDate(pack.created_at)} by {pack.created_by ?? "system"}
+            {t("created", { date: formatDate(pack.created_at, locale), creator: pack.created_by ?? "system" })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -223,7 +228,7 @@ export default function PackPreviewPage() {
           {pack.status === "ready" && (
             <Button variant="primary" size="sm" onClick={handleApprove}>
               <CheckCircle className="w-4 h-4 mr-1" />
-              Approve &amp; Save
+              {t("approveAndSave")}
             </Button>
           )}
         </div>
@@ -232,7 +237,7 @@ export default function PackPreviewPage() {
       {isBuilding && (
         <div className="mb-4">
           <InfoBanner variant="info">
-            Building evidence pack... This page refreshes automatically.
+            {t("building")}
           </InfoBanner>
         </div>
       )}
@@ -240,7 +245,7 @@ export default function PackPreviewPage() {
       {/* Score + Blockers */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#0B1220]">Completeness Score</h3>
+          <h3 className="font-semibold text-[#0B1220]">{t("completenessScore")}</h3>
           <span className={`text-2xl font-bold ${scoreColor(score)}`}>{score}%</span>
         </div>
         <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden mb-4">
@@ -253,14 +258,14 @@ export default function PackPreviewPage() {
         {pack.blockers && pack.blockers.length > 0 && (
           <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-md p-3 mb-3">
             <p className="text-sm font-medium text-[#DC2626]">
-              {pack.blockers.length} blocker(s): {pack.blockers.join(", ")}
+              {t("blockersLabel", { count: pack.blockers.length, list: pack.blockers.join(", ") })}
             </p>
           </div>
         )}
         {pack.recommended_actions && pack.recommended_actions.length > 0 && (
           <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-md p-3">
             <p className="text-sm text-[#92400E]">
-              Recommended: {pack.recommended_actions.join(", ")}
+              {t("recommended", { list: pack.recommended_actions.join(", ") })}
             </p>
           </div>
         )}
@@ -269,7 +274,7 @@ export default function PackPreviewPage() {
       {/* Checklist */}
       {pack.checklist && pack.checklist.length > 0 && (
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-          <h3 className="font-semibold text-[#0B1220] mb-4">Evidence Checklist</h3>
+          <h3 className="font-semibold text-[#0B1220] mb-4">{t("evidenceChecklist")}</h3>
           <div className="space-y-2">
             {pack.checklist.map((item) => (
               <div key={item.field} className="flex items-center gap-3">
@@ -280,7 +285,7 @@ export default function PackPreviewPage() {
                 )}
                 <span className="text-sm text-[#0B1220]">{item.label}</span>
                 {item.required && !item.present && (
-                  <Badge variant="danger">required</Badge>
+                  <Badge variant="danger">{t("required")}</Badge>
                 )}
               </div>
             ))}
@@ -293,7 +298,7 @@ export default function PackPreviewPage() {
         <div className="bg-white rounded-lg border border-[#E5E7EB] mb-6">
           <div className="p-5 border-b border-[#E5E7EB]">
             <h3 className="font-semibold text-[#0B1220]">
-              Evidence Items ({pack.evidence_items.length})
+              {t("evidenceItems", { count: pack.evidence_items.length })}
             </h3>
           </div>
           {pack.evidence_items.map((item) => (
@@ -318,7 +323,7 @@ export default function PackPreviewPage() {
                     {JSON.stringify(item.payload, null, 2)}
                   </pre>
                   <p className="text-xs text-[#667085] mt-2">
-                    Source: {item.source} · Added {formatDate(item.created_at)}
+                    {t("source", { source: item.source, date: formatDate(item.created_at, locale) })}
                   </p>
                 </div>
               )}
@@ -329,9 +334,9 @@ export default function PackPreviewPage() {
 
       {/* File Upload */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <h3 className="font-semibold text-[#0B1220] mb-2">Upload Evidence</h3>
+        <h3 className="font-semibold text-[#0B1220] mb-2">{t("uploadEvidence")}</h3>
         <p className="text-sm text-[#667085] mb-4">
-          Add supporting files (images, PDFs, up to 10 MB each).
+          {t("uploadPlaceholder")}
         </p>
         <label className="flex items-center justify-center border-2 border-dashed border-[#CBD5E1] rounded-lg p-6 cursor-pointer hover:border-[#1D4ED8] transition-colors">
           <input
@@ -345,7 +350,7 @@ export default function PackPreviewPage() {
           <div className="text-center">
             <Upload className="w-8 h-8 text-[#94A3B8] mx-auto mb-2" />
             <p className="text-sm text-[#667085]">
-              {uploading ? "Uploading..." : "Click to upload or drag files here"}
+              {uploading ? t("uploading") : t("clickToUpload")}
             </p>
           </div>
         </label>
@@ -353,32 +358,28 @@ export default function PackPreviewPage() {
 
       {/* Save Evidence to Shopify */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <h3 className="font-semibold text-[#0B1220] mb-3">Save Evidence to Shopify</h3>
+        <h3 className="font-semibold text-[#0B1220] mb-3">{t("saveToShopify")}</h3>
         {pack.status === "saved_to_shopify" ? (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle className="w-5 h-5 text-[#22C55E]" />
               <span className="text-sm font-medium text-[#22C55E]">
-                Evidence saved to Shopify
+                {t("saveSuccess")}
               </span>
             </div>
-            <p className="text-sm text-[#667085] mb-3">
-              Open Shopify Admin to review and finalize your response.
-            </p>
             <a
               href={`https://admin.shopify.com`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-[#1D4ED8] hover:underline"
             >
-              Open in Shopify Admin &rarr;
+              {t("openInShopifyAdmin")}
             </a>
           </div>
         ) : (
           <div>
             <p className="text-sm text-[#667085] mb-3">
-              Saves structured evidence fields to Shopify via API.
-              Submission to the card network happens in Shopify Admin.
+              {t("saveDescription")}
             </p>
             <Button
               variant="primary"
@@ -391,12 +392,12 @@ export default function PackPreviewPage() {
                 setSaving(false);
               }}
             >
-              {pack.status === "saving" || saving ? "Saving..." : "Save Evidence to Shopify"}
+              {pack.status === "saving" || saving ? t("saving") : t("saveToShopify")}
             </Button>
             {pack.status === "save_failed" && (
               <div className="mt-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-3">
                 <p className="text-sm text-[#DC2626]">
-                  Save failed. Check the audit log below for details, then retry.
+                  {t("saveFailed")}
                 </p>
               </div>
             )}
@@ -407,17 +408,16 @@ export default function PackPreviewPage() {
       {/* Completeness Gate */}
       {pack.completeness_score != null && pack.completeness_score < 60 && (
         <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-lg p-4 mb-6">
-          <h4 className="font-semibold text-[#92400E] mb-1">Missing recommended evidence</h4>
+          <h4 className="font-semibold text-[#92400E] mb-1">{t("missingEvidence")}</h4>
           <p className="text-sm text-[#92400E]">
-            This pack&apos;s completeness is {pack.completeness_score}% (below 60% threshold).
-            Missing evidence may weaken your dispute response.
+            {t("lowScore", { score: pack.completeness_score })}
           </p>
           {pack.checklist && (
             <ul className="mt-2 text-sm text-[#92400E] list-disc pl-4 space-y-1">
               {(pack.checklist as Array<{ field: string; label: string; required: boolean; present: boolean }>)
                 .filter((c) => !c.present && c.required)
                 .map((c) => (
-                  <li key={c.field}>{c.label} (required)</li>
+                  <li key={c.field}>{c.label} ({t("required")})</li>
                 ))}
             </ul>
           )}
@@ -426,10 +426,10 @@ export default function PackPreviewPage() {
 
       {/* PDF Export */}
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <h3 className="font-semibold text-[#0B1220] mb-3">PDF Export</h3>
+        <h3 className="font-semibold text-[#0B1220] mb-3">{t("pdfExport")}</h3>
         {pack.active_pdf_job ? (
           <InfoBanner variant="info">
-            Rendering PDF... This page refreshes automatically.
+            {t("renderingBanner")}
           </InfoBanner>
         ) : (
           <div className="flex items-center gap-3">
@@ -440,21 +440,21 @@ export default function PackPreviewPage() {
               disabled={rendering}
             >
               {rendering
-                ? "Rendering..."
+                ? t("rendering")
                 : pack.pdf_path
-                  ? "Re-render PDF"
-                  : "Render PDF"}
+                  ? t("reRenderPdf")
+                  : t("renderPdf")}
             </Button>
             {pack.pdf_path && (
               <Button variant="primary" size="sm" onClick={handleDownload}>
-                Download PDF
+                {t("downloadPdf")}
               </Button>
             )}
           </div>
         )}
         {pack.pdf_path && (
           <p className="text-xs text-[#667085] mt-2">
-            Last rendered: {pack.pdf_path.split("/").pop()?.replace(/-/g, ":")}
+            {t("lastRendered", { path: pack.pdf_path.split("/").pop()?.replace(/-/g, ":") ?? "" })}
           </p>
         )}
       </div>
@@ -462,7 +462,7 @@ export default function PackPreviewPage() {
       {/* Audit Log */}
       {pack.audit_events.length > 0 && (
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-          <h3 className="font-semibold text-[#0B1220] mb-4">Audit Log</h3>
+          <h3 className="font-semibold text-[#0B1220] mb-4">{t("auditLog")}</h3>
           <div className="space-y-3">
             {pack.audit_events.map((evt) => (
               <div key={evt.id} className="flex items-start gap-3">
@@ -472,7 +472,7 @@ export default function PackPreviewPage() {
                     {evt.event_type.replace(/_/g, " ")}
                     <span className="text-[#667085]"> ({evt.actor_type})</span>
                   </p>
-                  <p className="text-xs text-[#667085]">{formatDate(evt.created_at)}</p>
+                  <p className="text-xs text-[#667085]">{formatDate(evt.created_at, locale)}</p>
                 </div>
               </div>
             ))}
@@ -483,8 +483,7 @@ export default function PackPreviewPage() {
       {/* Compliance */}
       <InfoBanner variant="info">
         <Shield className="w-4 h-4 mr-2 inline" />
-        Evidence is saved to Shopify via API. Submission to the card network
-        happens in Shopify Admin, or Shopify auto-submits on the due date.
+        {t("compliance")}
       </InfoBanner>
     </div>
   );

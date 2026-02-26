@@ -22,6 +22,7 @@ function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: 
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   return (
     <div>
       <div className="mb-6">
@@ -42,14 +43,14 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium text-[#0B1220]">John Doe</p>
                 <p className="text-sm text-[#667085]">john@example.com</p>
-                <button className="text-sm text-[#4F46E5] hover:underline mt-1">{t("changeAvatar")}</button>
+                <button className="text-sm text-[#4F46E5] hover:underline mt-1" title={tc("demoOnly")}>{t("changeAvatar")}</button>
               </div>
             </div>
             <div className="space-y-4 max-w-md">
-              <TextField label={t("fullName")} placeholder="John Doe" defaultValue="John Doe" />
-              <TextField label={t("email")} type="email" placeholder="john@example.com" defaultValue="john@example.com" disabled />
-              <TextField label={t("company")} placeholder="Acme Inc." defaultValue="Acme Inc." />
-              <Button variant="primary" size="sm">{t("saveChanges")}</Button>
+              <TextField label={t("fullName")} placeholder={t("namePlaceholder")} defaultValue="John Doe" />
+              <TextField label={t("email")} type="email" placeholder={t("emailPlaceholder")} defaultValue="john@example.com" disabled />
+              <TextField label={t("company")} placeholder={t("companyPlaceholder")} defaultValue="Acme Inc." />
+              <Button variant="primary" size="sm" title={tc("demoOnly")}>{t("saveChanges")}</Button>
             </div>
           </div>
 
@@ -74,13 +75,13 @@ export default function SettingsPage() {
             <div className="space-y-4 max-w-md">
               <div>
                 <label className="block text-sm font-medium text-[#667085] mb-1">{t("currentPassword")}</label>
-                <input type="password" placeholder="Enter current password" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                <input type="password" placeholder={t("currentPasswordPlaceholder")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#667085] mb-1">{t("newPassword")}</label>
-                <input type="password" placeholder="Enter new password" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                <input type="password" placeholder={t("newPasswordPlaceholder")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
               </div>
-              <Button variant="primary" size="sm">{t("updatePassword")}</Button>
+              <Button variant="primary" size="sm" title={tc("demoOnly")}>{t("updatePassword")}</Button>
             </div>
 
             <hr className="my-6 border-[#E5E7EB]" />
@@ -90,7 +91,7 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-[#0B1220]">{t("twoFactor")}</p>
                 <p className="text-xs text-[#667085]">{t("twoFactorDesc")}</p>
               </div>
-              <Button variant="secondary" size="sm">{t("enable2fa")}</Button>
+              <Button variant="secondary" size="sm" title={tc("demoOnly")}>{t("enable2fa")}</Button>
             </div>
           </div>
 
@@ -98,7 +99,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-lg border border-[#EF4444] p-6">
             <h3 className="font-semibold text-[#991B1B] mb-2">{t("dangerZone")}</h3>
             <p className="text-sm text-[#667085] mb-4">{t("deleteWarning")}</p>
-            <Button variant="danger" size="sm">{t("deleteAccount")}</Button>
+            <Button variant="danger" size="sm" title={tc("demoOnly")}>{t("deleteAccount")}</Button>
           </div>
         </div>
 
@@ -109,19 +110,19 @@ export default function SettingsPage() {
             <h3 className="font-semibold text-[#0B1220] mb-4">{t("accountInfo")}</h3>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <dt className="text-[#667085]">Plan</dt>
-                <dd className="font-medium text-[#0B1220]">Professional</dd>
+                <dt className="text-[#667085]">{t("plan")}</dt>
+                <dd className="font-medium text-[#0B1220]">{t("professional")}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-[#667085]">Member since</dt>
-                <dd className="font-medium text-[#0B1220]">Jan 2026</dd>
+                <dt className="text-[#667085]">{t("memberSince")}</dt>
+                <dd className="font-medium text-[#0B1220]">{t("memberSinceValue")}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-[#667085]">Stores connected</dt>
+                <dt className="text-[#667085]">{t("storesConnected")}</dt>
                 <dd className="font-medium text-[#0B1220]">0</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-[#667085]">Team members</dt>
+                <dt className="text-[#667085]">{t("teamMembers")}</dt>
                 <dd className="font-medium text-[#0B1220]">4</dd>
               </div>
             </dl>
@@ -137,10 +138,12 @@ export default function SettingsPage() {
                   {t("language")}
                 </label>
                 <select className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-white">
-                  <option>English</option>
-                  <option>Dutch</option>
-                  <option>German</option>
-                  <option>French</option>
+                  <option value="en">English</option>
+                  <option value="sv">Svenska</option>
+                  <option value="de">Deutsch</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="pt">Português</option>
                 </select>
               </div>
               <div>

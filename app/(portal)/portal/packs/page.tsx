@@ -72,7 +72,7 @@ export default function PacksPage() {
                 >
                   <td className="px-6 py-4 font-medium text-[#0B1220]">{pack.id}</td>
                   <td className="px-6 py-4">
-                    <span className="text-[#4F46E5] hover:text-[#4338CA]">{pack.disputeId}</span>
+                    <a href={`/portal/disputes/${pack.disputeId}`} className="text-[#4F46E5] hover:text-[#4338CA] hover:underline">{pack.disputeId}</a>
                   </td>
                   <td className="px-6 py-4 text-[#667085]">{pack.orderId}</td>
                   <td className="px-6 py-4 text-[#667085]">{tr.has(pack.reason) ? tr(pack.reason) : pack.reason}</td>
@@ -101,7 +101,9 @@ export default function PacksPage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <Button variant="ghost" size="sm">{t("view")}</Button>
+                    <a href={`/portal/disputes/${pack.disputeId}`}>
+                      <Button variant="ghost" size="sm">{t("view")}</Button>
+                    </a>
                   </td>
                 </tr>
               ))}

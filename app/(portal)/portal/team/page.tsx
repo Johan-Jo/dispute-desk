@@ -6,16 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const TEAM_MEMBERS = [
-  { name: "John Doe", email: "john@example.com", role: "Owner", status: "active", initials: "JD", color: "bg-[#1D4ED8]" },
-  { name: "Jane Smith", email: "jane@example.com", role: "Admin", status: "active", initials: "JS", color: "bg-[#7C3AED]" },
-  { name: "Mike Johnson", email: "mike@example.com", role: "Member", status: "active", initials: "MJ", color: "bg-[#059669]" },
-  { name: "Sarah Wilson", email: "sarah@example.com", role: "Member", status: "pending", initials: "SW", color: "bg-[#D97706]" },
+  { name: "John Doe", email: "john@example.com", role: "owner", status: "active", initials: "JD", color: "bg-[#1D4ED8]" },
+  { name: "Jane Smith", email: "jane@example.com", role: "admin", status: "active", initials: "JS", color: "bg-[#7C3AED]" },
+  { name: "Mike Johnson", email: "mike@example.com", role: "member", status: "active", initials: "MJ", color: "bg-[#059669]" },
+  { name: "Sarah Wilson", email: "sarah@example.com", role: "member", status: "pending", initials: "SW", color: "bg-[#D97706]" },
 ];
 
 const roleBadgeVariant: Record<string, "primary" | "info" | "default"> = {
-  Owner: "primary",
-  Admin: "info",
-  Member: "default",
+  owner: "primary",
+  admin: "info",
+  member: "default",
 };
 
 export default function TeamPage() {
@@ -31,7 +31,7 @@ export default function TeamPage() {
           <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
           <p className="text-sm text-[#667085]">{t("subtitle")}</p>
         </div>
-        <Button variant="primary" size="sm">
+        <Button variant="primary" size="sm" title={tc("demoOnly")}>
           <UserPlus className="w-4 h-4 mr-2" />
           {t("inviteMember")}
         </Button>
@@ -63,7 +63,7 @@ export default function TeamPage() {
                 </td>
                 <td className="px-6 py-4">
                   <Badge variant={roleBadgeVariant[m.role] ?? "default"}>
-                    {m.role}
+                    {t(m.role)}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
@@ -72,8 +72,8 @@ export default function TeamPage() {
                   </Badge>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  {m.role !== "Owner" && (
-                    <Button variant="ghost" size="sm">{tc("remove")}</Button>
+                  {m.role !== "owner" && (
+                    <Button variant="ghost" size="sm" title={tc("demoOnly")}>{tc("remove")}</Button>
                   )}
                 </td>
               </tr>

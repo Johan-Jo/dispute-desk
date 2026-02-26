@@ -14,7 +14,10 @@ const POLICIES = [
 
 export default function PoliciesPage() {
   const t = useTranslations("policies");
+  const tc = useTranslations("common");
   const locale = useLocale();
+
+  const demoClick = () => {};
 
   return (
     <div>
@@ -25,7 +28,7 @@ export default function PoliciesPage() {
             {t("subtitle")}
           </p>
         </div>
-        <Button variant="primary" size="sm">
+        <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={demoClick}>
           <FileText className="w-4 h-4 mr-2" />
           {t("addPolicy")}
         </Button>
@@ -66,11 +69,11 @@ export default function PoliciesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" title={tc("demoOnly")} onClick={demoClick}>
                   <Eye className="w-4 h-4 mr-1" />
                   {t("preview")}
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}>
                   <Download className="w-4 h-4 mr-1" />
                   {t("download")}
                 </Button>

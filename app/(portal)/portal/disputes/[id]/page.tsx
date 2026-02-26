@@ -48,10 +48,10 @@ const DEMO_DISPUTES: Record<string, {
     customer: { name: "John Smith", email: "john.smith@example.com", phone: "+1 (555) 123-4567", address: "123 Main St, New York, NY 10001" },
     order: { id: "#1234", date: "2026-02-15", items: "Premium Wireless Headphones x1", shipping: "USPS Priority Mail", tracking: "9400111899223456789012" },
     timeline: [
-      { date: "Feb 20, 2026", event: "Dispute Created", detail: "Chargeback initiated by cardholder's bank" },
-      { date: "Feb 20, 2026", event: "Evidence Pack Generated", detail: "Automatic evidence pack created (85% complete)" },
-      { date: "Feb 21, 2026", event: "Tracking Added", detail: "Delivery confirmation added to evidence" },
-      { date: "Feb 24, 2026", event: "Last Sync", detail: "Data synced from Shopify" },
+      { date: "2026-02-20", event: "disputeCreated", detail: "chargebackInitiated" },
+      { date: "2026-02-20", event: "evidencePackGenerated", detail: "autoEvidencePackCreated" },
+      { date: "2026-02-21", event: "trackingAdded", detail: "deliveryConfirmationAdded" },
+      { date: "2026-02-24", event: "lastSync", detail: "dataSyncedFromShopify" },
     ],
   },
   "DP-2402": {
@@ -63,8 +63,8 @@ const DEMO_DISPUTES: Record<string, {
     customer: { name: "Sarah Johnson", email: "sarah.j@example.com", phone: "+1 (555) 234-5678", address: "456 Oak Ave, Los Angeles, CA 90001" },
     order: { id: "#1235", date: "2026-02-10", items: "Organic Skincare Set x1", shipping: "FedEx Ground", tracking: "7489102948573920184" },
     timeline: [
-      { date: "Feb 21, 2026", event: "Dispute Created", detail: "Customer claims product not received" },
-      { date: "Feb 22, 2026", event: "Under Review", detail: "Evidence being reviewed by team" },
+      { date: "2026-02-21", event: "disputeCreated", detail: "customerClaimsNotReceived" },
+      { date: "2026-02-22", event: "underReview", detail: "evidenceBeingReviewed" },
     ],
   },
   "DP-2403": {
@@ -76,7 +76,7 @@ const DEMO_DISPUTES: Record<string, {
     customer: { name: "Mike Davis", email: "mike.d@example.com", phone: "+1 (555) 345-6789", address: "789 Elm St, Chicago, IL 60601" },
     order: { id: "#1236", date: "2026-02-12", items: "Smart Watch Pro x1", shipping: "UPS 2-Day", tracking: "1Z999AA10123456784" },
     timeline: [
-      { date: "Feb 22, 2026", event: "Dispute Created", detail: "Customer claims product quality issues" },
+      { date: "2026-02-22", event: "disputeCreated", detail: "customerClaimsQualityIssues" },
     ],
   },
 };
@@ -249,9 +249,9 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
                 {idx < timeline.length - 1 && <div className="w-px flex-1 bg-[#E5E7EB] mt-1" />}
               </div>
               <div className="pb-4">
-                <p className="text-xs text-[#667085]">{item.date}</p>
-                <p className="text-sm font-medium text-[#0B1220]">{item.event}</p>
-                <p className="text-sm text-[#667085]">{item.detail}</p>
+                <p className="text-xs text-[#667085]">{formatDate(item.date, locale)}</p>
+                <p className="text-sm font-medium text-[#0B1220]">{t(item.event)}</p>
+                <p className="text-sm text-[#667085]">{t(item.detail)}</p>
               </div>
             </div>
           ))}

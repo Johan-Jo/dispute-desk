@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Store, Check } from "lucide-react";
 import { requirePortalUser } from "@/lib/supabase/portal";
 import { getLinkedShops, setActiveShopId } from "@/lib/portal/activeShop";
@@ -13,6 +14,7 @@ export default async function SelectStorePage({ searchParams }: Props) {
   const user = await requirePortalUser();
   const shops = await getLinkedShops(user.id);
   const params = await searchParams;
+  const t = await getTranslations("selectStore");
 
   if (params.shop_id) {
     const valid = shops.some((s) => s.shop_id === params.shop_id);
@@ -28,12 +30,12 @@ export default async function SelectStorePage({ searchParams }: Props) {
         <div className="w-16 h-16 bg-[#F7F8FA] rounded-2xl flex items-center justify-center mx-auto mb-6">
           <Store className="w-8 h-8 text-[#667085]" />
         </div>
-        <h2 className="text-2xl font-bold text-[#0B1220] mb-2">No stores connected</h2>
+        <h2 className="text-2xl font-bold text-[#0B1220] mb-2">{t("noStores")}</h2>
         <p className="text-sm text-[#667085] mb-6">
-          Connect your Shopify store to start managing disputes.
+          {t("noStoresDesc")}
         </p>
         <a href="/portal/connect-shopify">
-          <Button variant="primary" size="lg">Connect Shopify store</Button>
+          <Button variant="primary" size="lg">{t("connectStore")}</Button>
         </a>
       </div>
     );
@@ -42,8 +44,8 @@ export default async function SelectStorePage({ searchParams }: Props) {
   return (
     <div className="max-w-2xl mx-auto py-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#0B1220] mb-2">Select a store</h2>
-        <p className="text-sm text-[#667085]">Choose which store you want to work with</p>
+        <h2 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h2>
+        <p className="text-sm text-[#667085]">{t("subtitle")}</p>
       </div>
 
       <div className="space-y-3 mb-6">
@@ -69,7 +71,7 @@ export default async function SelectStorePage({ searchParams }: Props) {
                 </div>
                 <Badge variant="success">
                   <Check className="w-3 h-3 mr-1" />
-                  Connected
+                  {t("connected")}
                 </Badge>
               </div>
             </a>
@@ -78,7 +80,7 @@ export default async function SelectStorePage({ searchParams }: Props) {
       </div>
 
       <a href="/portal/connect-shopify">
-        <Button variant="secondary" className="w-full">Connect another store</Button>
+        <Button variant="secondary" className="w-full">{t("connectAnother")}</Button>
       </a>
     </div>
   );

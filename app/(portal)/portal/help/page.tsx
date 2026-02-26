@@ -34,7 +34,7 @@ export default function PortalHelpPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-[#0B1220] mb-1">{t("help.title")}</h1>
-        <p className="text-[#667085]">Find answers about disputes, evidence packs, automation, and billing.</p>
+        <p className="text-[#667085]">{t("help.subtitle")}</p>
       </div>
 
       <div className="relative mb-8">
@@ -85,7 +85,7 @@ export default function PortalHelpPage() {
                     <Icon className="w-5 h-5 text-[#1D4ED8] group-hover:text-white transition-colors" />
                   </div>
                   <h3 className="font-semibold text-[#0B1220] text-sm">{t(cat.labelKey)}</h3>
-                  <p className="text-xs text-[#94A3B8] mt-1">{count} articles</p>
+                  <p className="text-xs text-[#94A3B8] mt-1">{t("help.articleCount", { count })}</p>
                 </a>
               );
             })}

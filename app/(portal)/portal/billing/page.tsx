@@ -28,7 +28,7 @@ const ALL_PLANS = [
     name: "Starter",
     price: 29,
     label: "$29/mo",
-    features: ["Up to 25 disputes/month", "Basic evidence packs", "Email support", "Standard templates"],
+    features: ["starterFeature1", "starterFeature2", "starterFeature3", "starterFeature4"],
   },
   {
     id: "professional",
@@ -36,14 +36,14 @@ const ALL_PLANS = [
     price: 99,
     label: "$99/mo",
     popular: true,
-    features: ["Up to 100 disputes/month", "Advanced evidence packs", "Custom rules engine", "Priority support", "API access"],
+    features: ["proFeature1", "proFeature2", "proFeature3", "proFeature4", "proFeature5"],
   },
   {
     id: "enterprise",
     name: "Enterprise",
     price: 299,
     label: "$299/mo",
-    features: ["Unlimited disputes", "Unlimited evidence packs", "Advanced rules + AI", "Dedicated account manager", "Custom integrations", "SLA guarantee"],
+    features: ["entFeature1", "entFeature2", "entFeature3", "entFeature4", "entFeature5", "entFeature6"],
   },
 ];
 
@@ -79,6 +79,8 @@ function UsageMeter({ label, used, limit, unit }: { label: string; used: number;
 
 function DemoBilling() {
   const t = useTranslations("billing");
+  const tt = useTranslations("table");
+  const tc = useTranslations("common");
   return (
     <div>
       <div className="mb-6">
@@ -91,18 +93,18 @@ function DemoBilling() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-[#0B1220]">Professional Plan</h3>
-              <Badge variant="success">Current Plan</Badge>
+              <h3 className="font-semibold text-[#0B1220]">{t("professionalPlan")}</h3>
+              <Badge variant="success">{t("currentPlan")}</Badge>
             </div>
-            <p className="text-sm text-[#667085]">$99/month &middot; Next billing date: Mar 1, 2026</p>
+            <p className="text-sm text-[#667085]">{t("currentPlanDesc")}</p>
           </div>
-          <Button variant="secondary" size="sm">{t("manageSubscription")}</Button>
+          <Button variant="secondary" size="sm" title={tc("demoOnly")}>{t("manageSubscription")}</Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <UsageMeter label="Disputes" used={23} limit={100} unit="disputes" />
-          <UsageMeter label="Evidence Packs" used={47} limit="Unlimited" unit="packs" />
-          <UsageMeter label="API Calls" used={8234} limit={50000} unit="calls" />
+          <UsageMeter label={t("disputes")} used={23} limit={100} unit={t("disputesUnit")} />
+          <UsageMeter label={t("evidencePacks")} used={47} limit={t("unlimited")} unit={t("packsUnit")} />
+          <UsageMeter label={t("apiCalls")} used={8234} limit={50000} unit={t("callsUnit")} />
         </div>
       </div>
 
@@ -129,15 +131,15 @@ function DemoBilling() {
                 {p.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-[#667085]">
                     <CheckCircle className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
-                    {f}
+                    {t(f)}
                   </li>
                 ))}
               </ul>
               {isCurrent ? (
                 <div className="text-center text-sm text-[#667085] py-2">{t("yourCurrentPlan")}</div>
               ) : (
-                <Button variant={p.price > 99 ? "secondary" : "primary"} className="w-full">
-                  {p.price > 99 ? t("contactSales") : `Upgrade to ${p.name}`}
+                <Button variant={p.price > 99 ? "secondary" : "primary"} className="w-full" title={tc("demoOnly")}>
+                  {p.price > 99 ? t("contactSales") : t("upgradeTo", { plan: p.name })}
                 </Button>
               )}
             </div>
@@ -149,15 +151,15 @@ function DemoBilling() {
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-[#0B1220]">{t("paymentMethod")}</h3>
-          <Button variant="ghost" size="sm">{t("update")}</Button>
+          <Button variant="ghost" size="sm" title={tc("demoOnly")}>{t("update")}</Button>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-12 h-8 bg-[#1E3A5F] rounded flex items-center justify-center">
             <CreditCard className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[#0B1220]">Visa ending in 4242</p>
-            <p className="text-xs text-[#667085]">Expires 12/2027</p>
+            <p className="text-sm font-medium text-[#0B1220]">{t("visaEnding", { last4: "4242" })}</p>
+            <p className="text-xs text-[#667085]">{t("expires", { date: "12/2027" })}</p>
           </div>
         </div>
       </div>
@@ -170,11 +172,11 @@ function DemoBilling() {
         <table className="w-full text-sm">
           <thead className="bg-[#F7F8FA]">
             <tr>
-              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">Invoice</th>
-              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">Date</th>
-              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">Amount</th>
-              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">Status</th>
-              <th className="text-right px-6 py-3 text-xs font-medium text-[#667085]">Actions</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">{tt("invoice")}</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">{tt("date")}</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">{tt("amount")}</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-[#667085]">{tt("status")}</th>
+              <th className="text-right px-6 py-3 text-xs font-medium text-[#667085]">{tt("actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E5E7EB]">
@@ -183,9 +185,9 @@ function DemoBilling() {
                 <td className="px-6 py-3 font-medium text-[#0B1220]">{inv.id}</td>
                 <td className="px-6 py-3 text-[#667085]">{inv.date}</td>
                 <td className="px-6 py-3 text-[#0B1220]">{inv.amount}</td>
-                <td className="px-6 py-3"><Badge variant="success">{inv.status}</Badge></td>
+                <td className="px-6 py-3"><Badge variant="success">{t("paid")}</Badge></td>
                 <td className="px-6 py-3 text-right">
-                  <Button variant="ghost" size="sm">{t("download")}</Button>
+                  <Button variant="ghost" size="sm" title={tc("demoOnly")}>{t("download")}</Button>
                 </td>
               </tr>
             ))}
@@ -198,6 +200,7 @@ function DemoBilling() {
 
 export default function BillingPage() {
   const t = useTranslations("billing");
+  const tt = useTranslations("table");
   const tc = useTranslations("common");
   const isDemo = useDemoMode();
   const [plan, setPlan] = useState<PlanInfo | null>(null);
@@ -250,10 +253,10 @@ export default function BillingPage() {
     usage?.packsLimit ? Math.min(100, Math.round((usage.packsUsed / usage.packsLimit) * 100)) : 0;
 
   const REAL_PLANS = [
-    { id: "free", name: "Free (Sandbox)", price: 0, label: "$0", features: ["Unlimited draft building", "3 exported packs (lifetime)", "Basic activity log", "PDF export"] },
-    { id: "starter", name: "Starter", price: 29, label: "$29/mo", features: ["15 packs/month", "Basic rules (up to 5)", "Auto-build packs", "Review queue", "Email support"] },
-    { id: "growth", name: "Growth", price: 79, label: "$79/mo", features: ["75 packs/month", "Advanced rules", "Multi-user", "Bulk actions", "Auto-save to Shopify"] },
-    { id: "scale", name: "Scale", price: 149, label: "$149/mo", features: ["300 packs/month", "Multi-store", "Advanced exports", "SLA options", "Priority support"] },
+    { id: "free", name: "Free (Sandbox)", price: 0, label: "$0", features: ["freeFeature1", "freeFeature2", "freeFeature3", "freeFeature4"] },
+    { id: "starter", name: "Starter", price: 29, label: "$29/mo", features: ["realStarterFeature1", "realStarterFeature2", "realStarterFeature3", "realStarterFeature4", "realStarterFeature5"] },
+    { id: "growth", name: "Growth", price: 79, label: "$79/mo", features: ["growthFeature1", "growthFeature2", "growthFeature3", "growthFeature4", "growthFeature5"] },
+    { id: "scale", name: "Scale", price: 149, label: "$149/mo", features: ["scaleFeature1", "scaleFeature2", "scaleFeature3", "scaleFeature4", "scaleFeature5"] },
   ];
 
   return (
@@ -268,8 +271,8 @@ export default function BillingPage() {
         {usage?.packsLimit != null ? (
           <div>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-[#667085]">{usage.packsUsed} of {usage.packsLimit} packs used</span>
-              <span className="font-medium text-[#0B1220]">{usage.packsRemaining} remaining</span>
+              <span className="text-[#667085]">{t("packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}</span>
+              <span className="font-medium text-[#0B1220]">{t("packsRemaining", { count: usage.packsRemaining })}</span>
             </div>
             <div className="w-full bg-[#E5E7EB] rounded-full h-2">
               <div
@@ -279,7 +282,7 @@ export default function BillingPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-[#667085]">No pack credits remaining. Upgrade or purchase a top-up.</p>
+          <p className="text-sm text-[#667085]">{t("noPackCredits")}</p>
         )}
       </div>
 
@@ -294,14 +297,14 @@ export default function BillingPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold text-[#0B1220]">{p.name}</h4>
-                {isCurrent && <Badge variant="success">Current</Badge>}
+                {isCurrent && <Badge variant="success">{t("currentPlan")}</Badge>}
               </div>
               <p className="text-2xl font-bold text-[#0B1220] mb-4">{p.label}</p>
               <ul className="space-y-2 mb-4">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-[#667085]">
                     <CheckCircle className="w-4 h-4 text-[#22C55E] shrink-0" />
-                    {f}
+                    {t(f)}
                   </li>
                 ))}
               </ul>
@@ -309,10 +312,10 @@ export default function BillingPage() {
                 <div className="text-center text-sm text-[#667085] py-2">{t("yourCurrentPlan")}</div>
               ) : isUpgrade ? (
                 <Button variant="primary" className="w-full" disabled={upgrading === p.id} onClick={() => handleUpgrade(p.id)}>
-                  {upgrading === p.id ? "Redirecting..." : `Upgrade to ${p.name}`}
+                  {upgrading === p.id ? t("redirecting") : t("upgradeTo", { plan: p.name })}
                 </Button>
               ) : (
-                <div className="text-center text-xs text-[#94A3B8] py-2">Contact support to downgrade</div>
+                <div className="text-center text-xs text-[#94A3B8] py-2">{t("contactToDowngrade")}</div>
               )}
             </div>
           );

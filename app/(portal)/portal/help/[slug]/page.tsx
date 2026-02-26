@@ -15,7 +15,7 @@ export default function PortalHelpArticlePage({ params }: { params: Promise<{ sl
   if (!article) {
     return (
       <div className="max-w-3xl mx-auto py-12 text-center">
-        <p className="text-[#667085]">Article not found.</p>
+        <p className="text-[#667085]">{t("help.articleNotFound")}</p>
         <Link href="/portal/help" className="text-[#1D4ED8] text-sm hover:underline mt-2 inline-block">
           {t("help.backToHelp")}
         </Link>

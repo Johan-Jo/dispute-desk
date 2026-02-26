@@ -247,7 +247,9 @@ export default function DisputesPage() {
                     </td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at, locale)}</td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
+                      <a href={`/portal/disputes/${d.id}`}>
+                        <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
+                      </a>
                     </td>
                   </tr>
                 ))
