@@ -125,6 +125,7 @@ worker endpoint (`/api/jobs/worker`).
 | 010_automation.sql | shop_settings + evidence_packs automation fields |
 | 014_shops_locale.sql | shops.locale column for merchant locale preference |
 | 016_pack_templates.sql | pack_templates + pack_template_documents (reusable evidence templates) |
+| 017_bcp47_locales.sql | Migrate locale to BCP-47 tags, add user_locale, create pack_template_i18n |
 
 ## Automation Pipeline
 
@@ -511,20 +512,42 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 
 ### Stack
 - `next-intl` for translation management and `useTranslations()` / `useFormatter()` hooks.
-- Message files at `messages/{en,sv,de,fr,es,pt}.json` organized by feature namespace.
+- BCP-47 locale tags: `en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE`.
+- Message files at `messages/{locale}.json` (e.g. `en-US.json`, `sv-SE.json`).
 
-### Locale Resolution
-1. Shop setting (`shops.locale` column) — highest priority.
-2. Browser `Accept-Language` header.
-3. Fallback: `en`.
+### Locale Registry (`lib/i18n/locales.ts`)
+Single source of truth for all locale data. Exports:
+- `Locale` type — union of supported BCP-47 tags.
+- `LOCALES` — array with `locale`, `language`, `region`, `label`, `nativeName`, `short`.
+- `isLocale()` — type guard.
+- `normalizeLocale()` — maps freeform input (`'en'`, `'pt_BR'`, `'sv'`) to best match.
+- `resolveLocale({ userLocale, shopLocale, shopifyLocale })` — cascading fallback.
+- `getLocaleDisplay()` — UI display metadata.
+
+### Locale Resolution (cascading fallback)
+1. User locale (`dd_locale` cookie or `portal_user_profiles.user_locale`).
+2. Shop locale (`shops.locale` column, BCP-47).
+3. Shopify locale (inferred from `Accept-Language` header).
+4. Default: `en-US`.
+5. Partial locale fallback: `fr-CA` → base `fr` → `fr-FR`.
+
+### DB Storage
+- `shops.locale` — BCP-47 tag, default `'en-US'`.
+- `portal_user_profiles.user_locale` — nullable BCP-47 tag (null = inherit from shop).
+- `pack_template_i18n` — per-template locale translations (`template_id`, `locale` unique).
+
+### Template I18n (`lib/db/templates.ts`)
+- `getTemplateI18n(templateId, locale)` — exact match → base language → `en-US`.
+- `getTemplateI18nAll(templateId)` — all translations for admin editing.
+- `upsertTemplateI18n(templateId, locale, fields)` — upsert with conflict handling.
 
 ### Polaris Integration
 - `lib/i18n/polarisLocales.ts` dynamically loads the correct Polaris locale bundle.
 - Embedded providers accept `polarisTranslations` prop.
 
 ### Adding a Language
-1. Create `messages/{code}.json`.
-2. Add code to `SUPPORTED_LOCALES` in `lib/i18n/config.ts`.
+1. Create `messages/{locale}.json` (BCP-47 filename, e.g. `ja-JP.json`).
+2. Add entry to `LOCALES` array in `lib/i18n/locales.ts`.
 3. Add dynamic import in `lib/i18n/polarisLocales.ts`.
 
 ### CI
@@ -534,7 +557,7 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 
 ### Architecture
 - Articles are structured TypeScript objects (not markdown), stored in `lib/help/articles.ts` and `lib/help/categories.ts`.
-- Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` under the `help.*` namespace.
+- Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` (BCP-47, e.g. `en-US.json`) under the `help.*` namespace.
 - Both portal (`/portal/help`) and embedded app (`/app/help`) share the same data layer but use different UI components (Tailwind vs Polaris).
 
 ### Search
@@ -542,5 +565,5 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 
 ### Adding an Article
 1. Add the article object to `HELP_ARTICLES` in `lib/help/articles.ts` (slug, category, title/body keys, tags).
-2. Add the corresponding `help.articles.{slug}.title` and `help.articles.{slug}.body` keys to all `messages/*.json` files.
+2. Add the corresponding `help.articles.{slug}.title` and `help.articles.{slug}.body` keys to all `messages/{locale}.json` files (BCP-47 filenames).
 3. Both surfaces will pick it up automatically.

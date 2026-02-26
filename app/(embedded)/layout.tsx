@@ -1,6 +1,6 @@
 import { headers, cookies } from "next/headers";
 import { Providers } from "./providers";
-import { resolveLocale } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
 import { getPolarisTranslations } from "@/lib/i18n/polarisLocales";
 
@@ -13,7 +13,7 @@ export default async function EmbeddedLayout({
   const cookieStore = await cookies();
   const acceptLang = headerStore.get("accept-language");
   const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
-  const locale = resolveLocale(cookieLocale, acceptLang);
+  const locale = resolveLocale({ userLocale: cookieLocale, shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim() });
   const messages = await getMessages(locale);
   const polarisTranslations = await getPolarisTranslations(locale);
 

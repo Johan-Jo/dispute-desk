@@ -1,20 +1,20 @@
-import type { SupportedLocale } from "./config";
+import type { Locale } from "./locales";
 
 /**
- * Load Polaris translations for the given locale.
- * Polaris ships translations for many locales under @shopify/polaris/locales.
+ * Load Polaris translations for the given BCP-47 locale.
+ * Polaris ships translations under @shopify/polaris/locales.
  */
-export async function getPolarisTranslations(locale: SupportedLocale) {
+export async function getPolarisTranslations(locale: Locale) {
   switch (locale) {
-    case "sv":
+    case "sv-SE":
       return (await import("@shopify/polaris/locales/sv.json")).default;
-    case "de":
+    case "de-DE":
       return (await import("@shopify/polaris/locales/de.json")).default;
-    case "fr":
+    case "fr-FR":
       return (await import("@shopify/polaris/locales/fr.json")).default;
-    case "es":
+    case "es-ES":
       return (await import("@shopify/polaris/locales/es.json")).default;
-    case "pt":
+    case "pt-BR":
       return (await import("@shopify/polaris/locales/pt-BR.json")).default;
     default:
       return (await import("@shopify/polaris/locales/en.json")).default;

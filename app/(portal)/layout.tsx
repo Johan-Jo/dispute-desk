@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PortalShell } from "./portal-shell";
 import { getServiceClient } from "@/lib/supabase/server";
 import { NextIntlClientProvider } from "next-intl";
-import { resolveLocale } from "@/lib/i18n/config";
+import { resolveLocale } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
 
 export default async function PortalLayout({
@@ -33,21 +33,29 @@ export default async function PortalLayout({
   const sb = getServiceClient();
   const { data: shops } = await sb
     .from("portal_user_shops")
-    .select("shop_id, role, shops(shop_domain)")
+    .select("shop_id, role, shops(shop_domain, locale)")
     .eq("user_id", user.id);
 
   const activeShopId = cookieStore.get("dd_active_shop")?.value ?? null;
   const activeShop = shops?.find(
     (s: { shop_id: string }) => s.shop_id === activeShopId
   );
-  const activeShopDomain =
-    (activeShop?.shops as unknown as { shop_domain: string })?.shop_domain ??
-    null;
+  const shopData = activeShop?.shops as unknown as {
+    shop_domain: string;
+    locale: string | null;
+  } | null;
+  const activeShopDomain = shopData?.shop_domain ?? null;
+  const shopLocale = shopData?.locale ?? null;
 
   const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
   const headerStore = await headers();
   const acceptLang = headerStore.get("accept-language");
-  const locale = resolveLocale(cookieLocale, acceptLang);
+
+  const locale = resolveLocale({
+    userLocale: cookieLocale,
+    shopLocale,
+    shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim(),
+  });
   const messages = await getMessages(locale);
 
   return (
