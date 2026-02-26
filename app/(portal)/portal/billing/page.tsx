@@ -248,7 +248,7 @@ export default function BillingPage() {
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span className="text-[#667085]">{t("packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}</span>
-              <span className="font-medium text-[#0B1220]">{t("packsRemaining", { count: usage.packsRemaining })}</span>
+              <span className="font-medium text-[#0B1220]">{t("packsRemaining", { count: usage.packsRemaining ?? 0 })}</span>
             </div>
             <div className="w-full bg-[#E5E7EB] rounded-full h-2">
               <div
