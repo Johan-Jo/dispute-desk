@@ -1,14 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Menu, X } from "lucide-react";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Menu, X, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
+type RoiMode = "conservative" | "base" | "aggressive";
+
+const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean; disputes: string; plan: string; value: string; price: string; roi: string }[] }> = {
+  conservative: {
+    segments: [
+      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (15 packs)", value: "$80\u2013$300", price: "$29", roi: "~3\u201310\u00d7" },
+      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (75 packs)", value: "$500\u2013$2,500", price: "$79", roi: "~6\u201332\u00d7" },
+      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Pro/Scale (300 packs)", value: "$2,500\u2013$12,000", price: "$149", roi: "~17\u201380\u00d7" },
+    ],
+  },
+  base: {
+    segments: [
+      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (15 packs)", value: "$120\u2013$450", price: "$29", roi: "~4\u201315\u00d7" },
+      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (75 packs)", value: "$800\u2013$4,000", price: "$79", roi: "~10\u201350\u00d7" },
+      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Pro/Scale (300 packs)", value: "$4,000\u2013$20,000+", price: "$149", roi: "~25\u2013130\u00d7" },
+    ],
+  },
+  aggressive: {
+    segments: [
+      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (15 packs)", value: "$180\u2013$700", price: "$29", roi: "~6\u201324\u00d7" },
+      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (75 packs)", value: "$1,200\u2013$6,000", price: "$79", roi: "~15\u201376\u00d7" },
+      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Pro/Scale (300 packs)", value: "$6,000\u2013$30,000+", price: "$149", roi: "~40\u2013200\u00d7" },
+    ],
+  },
+};
+
 export default function MarketingLandingPage() {
   const t = useTranslations("marketing");
   const [mobileNav, setMobileNav] = useState(false);
+  const [roiMode, setRoiMode] = useState<RoiMode>("base");
 
   return (
     <div className="min-h-screen bg-white">
@@ -313,20 +340,95 @@ export default function MarketingLandingPage() {
               <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Top-ups */}
-          <div className="bg-[#F6F8FB] rounded-xl p-6 sm:p-8 border border-[#E5E7EB]">
-            <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("pricing.topUpsTitle")}</h3>
-            <p className="text-sm text-[#64748B] mb-4">{t("pricing.topUpsDesc")}</p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex items-center gap-3 bg-white rounded-lg px-5 py-3 border border-[#E5E7EB]">
-                <span className="font-semibold text-[#0B1220]">{t("pricing.topUp25")}</span>
-                <span className="text-[#64748B]">$19</span>
+      {/* ROI Snapshot */}
+      <section className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+          <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden">
+            {/* Header */}
+            <div className="p-6 sm:p-8 pb-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+                <div>
+                  <h2 className="text-2xl font-bold text-[#0B1220]">{t("roi.title")}</h2>
+                  <p className="text-[#64748B] mt-1">{t("roi.subtitle")}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex rounded-lg border border-[#E5E7EB] overflow-hidden">
+                    {(["conservative", "base", "aggressive"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setRoiMode(mode)}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                          roiMode === mode
+                            ? "bg-[#0B1220] text-white"
+                            : "bg-white text-[#64748B] hover:text-[#0B1220]"
+                        }`}
+                      >
+                        {t(`roi.mode${mode.charAt(0).toUpperCase() + mode.slice(1)}`)}
+                      </button>
+                    ))}
+                  </div>
+                  <a href="#pricing" className="hidden sm:flex items-center gap-1 text-sm font-medium text-[#1D4ED8] hover:underline whitespace-nowrap">
+                    {t("roi.calculateCta")}
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
-              <div className="flex items-center gap-3 bg-white rounded-lg px-5 py-3 border border-[#E5E7EB]">
-                <span className="font-semibold text-[#0B1220]">{t("pricing.topUp100")}</span>
-                <span className="text-[#64748B]">$59</span>
+
+              {/* Info banner */}
+              <div className="flex items-start gap-2.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg px-4 py-3 mt-5 mb-6">
+                <Info className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-[#1D4ED8]">
+                  <strong>{t("roi.bannerBold")}</strong>{" "}
+                  <span className="font-normal">{t("roi.bannerRest")}</span>
+                </p>
               </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-t border-b border-[#E5E7EB]">
+                    <th className="text-left px-6 sm:px-8 py-3 text-[10px] sm:text-xs font-medium text-[#64748B] uppercase tracking-wider">{t("roi.colSegment")}</th>
+                    <th className="text-center px-4 py-3 text-[10px] sm:text-xs font-medium text-[#64748B] uppercase tracking-wider hidden sm:table-cell">{t("roi.colDisputes")}</th>
+                    <th className="text-center px-4 py-3 text-[10px] sm:text-xs font-medium text-[#64748B] uppercase tracking-wider hidden md:table-cell">{t("roi.colPlan")}</th>
+                    <th className="text-center px-4 py-3 text-[10px] sm:text-xs font-medium text-[#64748B] uppercase tracking-wider">{t("roi.colValue")}</th>
+                    <th className="text-center px-4 py-3 text-[10px] sm:text-xs font-medium text-[#64748B] uppercase tracking-wider">{t("roi.colPrice")}</th>
+                    <th className="text-center px-4 py-3 text-[10px] sm:text-xs font-medium text-[#64748B] uppercase tracking-wider">{t("roi.colRoi")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ROI_DATA[roiMode].segments.map((row, i) => (
+                    <tr key={i} className="border-b border-[#E5E7EB] last:border-b-0">
+                      <td className="px-6 sm:px-8 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-[#0B1220]">{row.segment}</span>
+                          {row.popular && (
+                            <span className="text-[10px] font-medium text-[#1D4ED8] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {t("roi.mostPopular")}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-center px-4 py-4 text-sm text-[#64748B] hidden sm:table-cell">{row.disputes}</td>
+                      <td className="text-center px-4 py-4 text-sm text-[#64748B] hidden md:table-cell">{row.plan}</td>
+                      <td className="text-center px-4 py-4 text-sm font-medium text-[#0B1220]">{row.value}</td>
+                      <td className="text-center px-4 py-4 text-sm font-semibold text-[#0B1220]">{row.price}</td>
+                      <td className="text-center px-4 py-4">
+                        <span className="text-sm font-semibold text-[#22C55E]">{row.roi}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer note */}
+            <div className="px-6 sm:px-8 py-4 border-t border-[#E5E7EB]">
+              <p className="text-xs text-[#94A3B8]">{t("roi.disclaimer")}</p>
             </div>
           </div>
         </div>
