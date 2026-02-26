@@ -74,7 +74,7 @@ export default function EmbeddedDashboardPage() {
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.openDisputes")}</Text>
               <Text as="p" variant="headingXl">12</Text>
-              <Badge tone="attention">-8% {t("dashboard.vsLastMonth")}</Badge>
+              <Badge tone="attention">{`-8% ${t("dashboard.vsLastMonth")}`}</Badge>
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -84,7 +84,7 @@ export default function EmbeddedDashboardPage() {
             <BlockStack gap="200">
               <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.winRate")}</Text>
               <Text as="p" variant="headingXl">67%</Text>
-              <Badge tone="success">+5% {t("dashboard.vsLastMonth")}</Badge>
+              <Badge tone="success">{`+5% ${t("dashboard.vsLastMonth")}`}</Badge>
             </BlockStack>
           </Card>
         </Layout.Section>
