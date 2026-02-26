@@ -136,11 +136,58 @@ export default function RulesSettingsPage() {
               <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
               <p className="text-[#667085]">{t("subtitleDemo")}</p>
             </div>
-            <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={demoClick}>
+            <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
               <Plus className="w-4 h-4 mr-2" />
               {t("createRule")}
             </Button>
           </div>
+
+          {showForm && (
+            <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
+              <h3 className="font-semibold text-[#0B1220] mb-4">{t("newRule")}</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#667085] mb-1">{t("name")}</label>
+                  <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t("namePlaceholder")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#667085] mb-1">{t("matchReasons")}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {DISPUTE_REASONS.map((r) => (
+                      <button key={r} onClick={() => setFormReasons((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r])} className={`px-3 py-1 text-xs rounded-full border transition-colors ${formReasons.includes(r) ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>
+                        {REASON_KEYS[r] ? tr(REASON_KEYS[r]) : r.replace(/_/g, " ")}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[#94A3B8] mt-1">{t("matchReasonsHelp")}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#667085] mb-1">{t("minAmount")}</label>
+                    <input type="number" value={formMinAmount} onChange={(e) => setFormMinAmount(e.target.value)} placeholder="0" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#667085] mb-1">{t("maxAmount")}</label>
+                    <input type="number" value={formMaxAmount} onChange={(e) => setFormMaxAmount(e.target.value)} placeholder={t("noLimit")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#667085] mb-1">{t("action")}</label>
+                  <div className="flex gap-3">
+                    <button onClick={() => setFormMode("auto_pack")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto_pack" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
+                    <button onClick={() => setFormMode("review")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "review" ? "bg-[#F59E0B] text-white border-[#F59E0B]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#F59E0B]"}`}>{t("review")}</button>
+                  </div>
+                </div>
+                <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-3">
+                  <p className="text-sm text-[#1D4ED8]">{tc("demoOnly")}</p>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>{tc("cancel")}</Button>
+                  <Button variant="primary" size="sm" disabled title={tc("demoOnly")}>{t("createRule")}</Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4 mb-4">
             {[firstRule].map((rule) => (

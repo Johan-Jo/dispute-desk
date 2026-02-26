@@ -46,6 +46,15 @@ const TYPE_LABELS: Record<string, string> = {
   GENERAL: "typeGeneral",
 };
 
+const DEMO_PACKS: PackRow[] = [
+  { id: "EP-001", name: "Fraudulent Transaction — Standard", code: "EP-001", dispute_type: "FRAUD", status: "ACTIVE", source: "TEMPLATE", template_id: "tpl-001", documents_count: 8, usage_count: 23, last_used_at: "2026-02-20T00:00:00Z", created_at: "2026-01-10T00:00:00Z" },
+  { id: "EP-002", name: "Product Not Received — With Tracking", code: "EP-002", dispute_type: "PNR", status: "ACTIVE", source: "TEMPLATE", template_id: "tpl-002", documents_count: 5, usage_count: 15, last_used_at: "2026-02-18T00:00:00Z", created_at: "2026-01-12T00:00:00Z" },
+  { id: "EP-003", name: "Product Unacceptable — Quality Issues", code: "EP-003", dispute_type: "NOT_AS_DESCRIBED", status: "ACTIVE", source: "MANUAL", template_id: null, documents_count: 7, usage_count: 8, last_used_at: "2026-02-15T00:00:00Z", created_at: "2026-01-15T00:00:00Z" },
+  { id: "EP-004", name: "Subscription Cancelled — Comprehensive", code: "EP-004", dispute_type: "SUBSCRIPTION", status: "ACTIVE", source: "TEMPLATE", template_id: "tpl-004", documents_count: 6, usage_count: 12, last_used_at: "2026-02-10T00:00:00Z", created_at: "2026-01-18T00:00:00Z" },
+  { id: "EP-005", name: "Credit Not Processed — Standard", code: "EP-005", dispute_type: "REFUND", status: "DRAFT", source: "MANUAL", template_id: null, documents_count: 4, usage_count: 5, last_used_at: "2026-02-08T00:00:00Z", created_at: "2026-01-20T00:00:00Z" },
+  { id: "EP-006", name: "General Inquiry — Template", code: "EP-006", dispute_type: "GENERAL", status: "DRAFT", source: "MANUAL", template_id: null, documents_count: 3, usage_count: 0, last_used_at: null, created_at: "2026-01-22T00:00:00Z" },
+];
+
 function statusBadgeVariant(
   status: string
 ): "success" | "warning" | "default" {
@@ -60,8 +69,16 @@ export default function PacksLibraryPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const [packs, setPacks] = useState<PackRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const shopId =
+    typeof window !== "undefined"
+      ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ??
+        document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ??
+        "")
+      : "";
+  const isDemo = !shopId;
+
+  const [packs, setPacks] = useState<PackRow[]>(isDemo ? DEMO_PACKS : []);
+  const [loading, setLoading] = useState(!isDemo);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,26 +88,22 @@ export default function PacksLibraryPage() {
   const [formType, setFormType] = useState<string>(DISPUTE_TYPES[0]);
   const [creating, setCreating] = useState(false);
 
-  const shopId =
-    typeof window !== "undefined"
-      ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ??
-        document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ??
-        "")
-      : "";
-
   const fetchPacks = useCallback(async () => {
-    if (!shopId) return;
+    if (isDemo) return;
     const params = new URLSearchParams({ shopId });
     if (activeFilter !== "all") params.set("status", activeFilter.toUpperCase());
     if (searchQuery) params.set("q", searchQuery);
 
-    const res = await fetch(`/api/packs?${params}`);
-    if (res.ok) {
-      const data = await res.json();
-      setPacks(data.packs ?? []);
+    try {
+      const res = await fetch(`/api/packs?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPacks(data.packs ?? []);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [shopId, activeFilter, searchQuery]);
+  }, [isDemo, shopId, activeFilter, searchQuery]);
 
   useEffect(() => {
     fetchPacks();
