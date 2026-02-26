@@ -17,6 +17,7 @@ const PACKS = [
 
 export default function PacksPage() {
   const t = useTranslations("packs");
+  const tc = useTranslations("common");
   const tt = useTranslations("table");
   const ts = useTranslations("status");
   const tr = useTranslations("reasons");
@@ -95,7 +96,7 @@ export default function PacksPage() {
                   </td>
                   <td className="px-6 py-4">
                     {pack.status === "Ready" ? (
-                      <button className="text-sm text-[#4F46E5] hover:text-[#4338CA]">{t("download")}</button>
+                      <button className="text-sm text-[#4F46E5] hover:text-[#4338CA]" title={tc("demoOnly")}>{t("download")}</button>
                     ) : (
                       <span className="text-sm text-[#667085]">—</span>
                     )}

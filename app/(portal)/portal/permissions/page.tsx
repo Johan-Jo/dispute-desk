@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 export default function PermissionsPage() {
   const t = useTranslations("permissions");
+  const tc = useTranslations("common");
   return (
     <div className="max-w-md mx-auto py-8">
       <h2 className="text-2xl font-bold text-[#0B1220] mb-2">
@@ -39,7 +40,7 @@ export default function PermissionsPage() {
             {t("retryConnection")}
           </Button>
         </a>
-        <Button variant="ghost" className="w-full">
+        <Button variant="ghost" className="w-full" title={tc("demoOnly")}>
           {t("contactSupport")}
         </Button>
       </div>

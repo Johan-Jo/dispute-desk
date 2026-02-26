@@ -48,7 +48,7 @@ export default function PoliciesPage() {
       <div className="space-y-3" data-onboarding="policy-documents">
         {POLICIES.map((policy) => (
           <div
-            key={policy.name}
+            key={policy.nameKey}
             className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-5 hover:border-[#CBD5E1] transition-colors"
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

@@ -147,7 +147,7 @@ export default function DisputesPage() {
               {syncing ? t("syncing") : t("syncNow")}
             </Button>
           )}
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" title={isDemo ? tc("demoOnly") : undefined}>
             <ExternalLink className="w-4 h-4 mr-2" />
             {t("openInShopify")}
           </Button>
@@ -182,7 +182,7 @@ export default function DisputesPage() {
             className="w-full h-10 pl-10 pr-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
           />
         </div>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" title={isDemo ? tc("demoOnly") : undefined}>
           <Filter className="w-4 h-4 mr-1" />
           {tc("filter")}
         </Button>

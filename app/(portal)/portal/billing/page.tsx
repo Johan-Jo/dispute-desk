@@ -6,6 +6,7 @@ import { CheckCircle, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
+import { PLANS, type PlanId } from "@/lib/billing/plans";
 
 interface PlanInfo {
   id: string;
@@ -22,35 +23,13 @@ interface UsageInfo {
   packsRemaining: number | null;
 }
 
-const ALL_PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 29,
-    label: "$29/mo",
-    features: ["starterFeature1", "starterFeature2", "starterFeature3", "starterFeature4"],
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    price: 99,
-    label: "$99/mo",
-    popular: true,
-    features: ["proFeature1", "proFeature2", "proFeature3", "proFeature4", "proFeature5"],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 299,
-    label: "$299/mo",
-    features: ["entFeature1", "entFeature2", "entFeature3", "entFeature4", "entFeature5", "entFeature6"],
-  },
-];
+const DEMO_PLAN_IDS: PlanId[] = ["free", "starter", "growth", "scale"];
+const DEMO_CURRENT_PLAN: PlanId = "starter";
 
 const DEMO_INVOICES = [
-  { id: "INV-001", date: "Feb 1, 2026", amount: "$99.00", status: "Paid" },
-  { id: "INV-002", date: "Jan 1, 2026", amount: "$99.00", status: "Paid" },
-  { id: "INV-003", date: "Dec 1, 2025", amount: "$99.00", status: "Paid" },
+  { id: "INV-001", date: "Feb 1, 2026", amount: "$29.00", status: "Paid" },
+  { id: "INV-002", date: "Jan 1, 2026", amount: "$29.00", status: "Paid" },
+  { id: "INV-003", date: "Dec 1, 2025", amount: "$29.00", status: "Paid" },
 ];
 
 const TOP_UPS = [
@@ -93,7 +72,7 @@ function DemoBilling() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-[#0B1220]">{t("professionalPlan")}</h3>
+              <h3 className="font-semibold text-[#0B1220]">{PLANS[DEMO_CURRENT_PLAN].name}</h3>
               <Badge variant="success">{t("currentPlan")}</Badge>
             </div>
             <p className="text-sm text-[#667085]">{t("currentPlanDesc")}</p>
@@ -102,45 +81,44 @@ function DemoBilling() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <UsageMeter label={t("disputes")} used={23} limit={100} unit={t("disputesUnit")} />
-          <UsageMeter label={t("evidencePacks")} used={47} limit={t("unlimited")} unit={t("packsUnit")} />
-          <UsageMeter label={t("apiCalls")} used={8234} limit={50000} unit={t("callsUnit")} />
+          <UsageMeter label={t("evidencePacks")} used={5} limit={PLANS[DEMO_CURRENT_PLAN].packsPerMonth} unit={t("packsUnit")} />
         </div>
       </div>
 
       {/* Plan comparison */}
       <h3 className="font-semibold text-[#0B1220] mb-4">{t("plans")}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {ALL_PLANS.map((p) => {
-          const isCurrent = p.id === "professional";
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {DEMO_PLAN_IDS.map((planId) => {
+          const plan = PLANS[planId];
+          const isCurrent = planId === DEMO_CURRENT_PLAN;
+          const isUpgrade = plan.price > PLANS[DEMO_CURRENT_PLAN].price;
+          const label = plan.price === 0 ? "$0" : `$${plan.price}/mo`;
           return (
             <div
-              key={p.id}
-              className={`bg-white rounded-lg border p-6 relative ${isCurrent ? "border-[#1D4ED8] ring-1 ring-[#1D4ED8]" : "border-[#E5E7EB]"}`}
+              key={planId}
+              className={`bg-white rounded-lg border p-5 ${isCurrent ? "border-[#1D4ED8] ring-1 ring-[#1D4ED8]" : "border-[#E5E7EB]"}`}
             >
-              {p.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge variant="primary">{t("mostPopular")}</Badge>
-                </div>
-              )}
-              <div className="mb-4">
-                <h4 className="font-semibold text-[#0B1220]">{p.name}</h4>
-                <p className="text-3xl font-bold text-[#0B1220] mt-2">{p.label}</p>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-[#0B1220]">{plan.name}</h4>
+                {isCurrent && <Badge variant="success">{t("currentPlan")}</Badge>}
               </div>
+              <p className="text-2xl font-bold text-[#0B1220] mb-4">{label}</p>
               <ul className="space-y-2 mb-6">
-                {p.features.map((f) => (
+                {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-[#667085]">
                     <CheckCircle className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
-                    {t(f)}
+                    {f}
                   </li>
                 ))}
               </ul>
               {isCurrent ? (
                 <div className="text-center text-sm text-[#667085] py-2">{t("yourCurrentPlan")}</div>
-              ) : (
-                <Button variant={p.price > 99 ? "secondary" : "primary"} className="w-full" title={tc("demoOnly")}>
-                  {p.price > 99 ? t("contactSales") : t("upgradeTo", { plan: p.name })}
+              ) : isUpgrade ? (
+                <Button variant="primary" className="w-full" title={tc("demoOnly")}>
+                  {t("upgradeTo", { plan: plan.name })}
                 </Button>
+              ) : (
+                <div className="text-center text-xs text-[#94A3B8] py-2">{t("contactToDowngrade")}</div>
               )}
             </div>
           );
@@ -252,12 +230,10 @@ export default function BillingPage() {
   const usagePercent =
     usage?.packsLimit ? Math.min(100, Math.round((usage.packsUsed / usage.packsLimit) * 100)) : 0;
 
-  const REAL_PLANS = [
-    { id: "free", name: "Free (Sandbox)", price: 0, label: "$0", features: ["freeFeature1", "freeFeature2", "freeFeature3", "freeFeature4"] },
-    { id: "starter", name: "Starter", price: 29, label: "$29/mo", features: ["realStarterFeature1", "realStarterFeature2", "realStarterFeature3", "realStarterFeature4", "realStarterFeature5"] },
-    { id: "growth", name: "Growth", price: 79, label: "$79/mo", features: ["growthFeature1", "growthFeature2", "growthFeature3", "growthFeature4", "growthFeature5"] },
-    { id: "scale", name: "Scale", price: 149, label: "$149/mo", features: ["scaleFeature1", "scaleFeature2", "scaleFeature3", "scaleFeature4", "scaleFeature5"] },
-  ];
+  const REAL_PLANS = DEMO_PLAN_IDS.map((id) => {
+    const p = PLANS[id];
+    return { id: p.id, name: p.name, price: p.price, label: p.price === 0 ? "$0" : `$${p.price}/mo`, features: p.features };
+  });
 
   return (
     <div>

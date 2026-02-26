@@ -138,6 +138,7 @@ function packStatusBadge(status: string, tStatus: (key: string) => string) {
 
 function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
   const t = useTranslations("disputes");
+  const tc = useTranslations("common");
   const tStatus = useTranslations("status");
   const tt = useTranslations("table");
   const tr = useTranslations("reasons");
@@ -171,11 +172,11 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
           <p className="text-sm text-[#667085]">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : ""}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" title={tc("demoOnly")}>
             <RefreshCw className="w-4 h-4 mr-1" />
             {t("reSync")}
           </Button>
-          <Button variant="primary" size="sm">
+          <Button variant="primary" size="sm" title={tc("demoOnly")}>
             <FileText className="w-4 h-4 mr-1" />
             {t("generatePack")}
           </Button>
