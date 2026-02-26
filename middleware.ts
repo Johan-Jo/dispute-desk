@@ -119,6 +119,10 @@ export async function middleware(req: NextRequest) {
 
   // --- Embedded app routes (/app/*): require Shopify session ---
   if (pathname.startsWith("/app")) {
+    if (pathname === "/app/session-required") {
+      return NextResponse.next();
+    }
+
     const shopDomain = req.cookies.get("shopify_shop")?.value;
     if (!shopDomain) {
       const shopParam = req.nextUrl.searchParams.get("shop");
@@ -127,6 +131,10 @@ export async function middleware(req: NextRequest) {
           new URL(`/api/auth/shopify?shop=${shopParam}`, req.url)
         );
       }
+
+      const sessionUrl = new URL("/app/session-required", req.url);
+      sessionUrl.searchParams.set("returnTo", pathname + req.nextUrl.search);
+      return NextResponse.redirect(sessionUrl);
     }
 
     return NextResponse.next();

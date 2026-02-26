@@ -16,7 +16,7 @@ export default async function MarketingLayout({
   const messages = await getMessages(locale);
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
       {children}
     </NextIntlClientProvider>
   );

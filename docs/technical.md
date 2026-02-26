@@ -123,6 +123,8 @@ worker endpoint (`/api/jobs/worker`).
 | 008_claim_jobs_rpc.sql | claim_jobs() RPC with SKIP LOCKED |
 | 009_portal.sql | portal_user_profiles + portal_user_shops + RLS |
 | 010_automation.sql | shop_settings + evidence_packs automation fields |
+| 014_shops_locale.sql | shops.locale column for merchant locale preference |
+| 016_pack_templates.sql | pack_templates + pack_template_documents (reusable evidence templates) |
 
 ## Automation Pipeline
 
@@ -256,6 +258,17 @@ queued → building → ready → saved_to_shopify
 - `GET /api/packs/:packId/download`
 - `GET /api/jobs/:id`
 
+### Pack Templates (Shopify session required)
+- `GET /api/pack-templates?shopId=&status=&q=` — list templates with filters
+- `POST /api/pack-templates` — create template
+- `GET /api/pack-templates/:id` — template detail with documents
+- `PATCH /api/pack-templates/:id` — update template
+- `DELETE /api/pack-templates/:id` — delete template
+- `POST /api/pack-templates/:id/duplicate` — deep-copy template + documents
+- `GET /api/pack-templates/:id/documents` — list documents
+- `POST /api/pack-templates/:id/documents` — add document
+- `DELETE /api/pack-templates/:id/documents/:docId` — remove document
+
 ### Internal (CRON_SECRET required)
 - `POST /api/jobs/worker`
 
@@ -293,6 +306,8 @@ Tailwind CSS with shared components in `components/ui/`.
 | InlineError | `inline-error.tsx` | Red alert banner with icon |
 | InfoBanner | `info-banner.tsx` | Contextual banner: info, warning, success, danger |
 | KPICard | `kpi-card.tsx` | Metric card with label, value, change indicator |
+| FilterBar | `filter-bar.tsx` | Search input + pill-style status filters (reusable) |
+| Modal | `modal.tsx` | Backdrop, header with title/description/close, scrollable body, footer |
 | cn() | `utils.ts` | `clsx` + `tailwind-merge` utility |
 
 ### Key Dependencies
@@ -496,7 +511,7 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 
 ### Stack
 - `next-intl` for translation management and `useTranslations()` / `useFormatter()` hooks.
-- Message files at `messages/{en,sv,de,fr,es}.json` organized by feature namespace.
+- Message files at `messages/{en,sv,de,fr,es,pt}.json` organized by feature namespace.
 
 ### Locale Resolution
 1. Shop setting (`shops.locale` column) — highest priority.

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Page,
   Layout,
@@ -61,16 +62,6 @@ function formatDate(iso: string | null): string {
   });
 }
 
-function daysUntil(iso: string | null): string {
-  if (!iso) return "—";
-  const diff = Math.ceil(
-    (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
-  if (diff < 0) return `${Math.abs(diff)}d overdue`;
-  if (diff === 0) return "Due today";
-  return `${diff} days remaining`;
-}
-
 function packStatusTone(status: string): "success" | "warning" | "critical" | "info" | undefined {
   switch (status) {
     case "saved_to_shopify": return "success";
@@ -83,12 +74,23 @@ function packStatusTone(status: string): "success" | "warning" | "critical" | "i
 
 export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const t = useTranslations();
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [quotaError, setQuotaError] = useState<string | null>(null);
+
+  const daysUntil = (iso: string | null): string => {
+    if (!iso) return "—";
+    const diff = Math.ceil(
+      (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    if (diff < 0) return t("disputes.daysOverdue", { count: Math.abs(diff) });
+    if (diff === 0) return t("disputes.dueToday");
+    return t("disputes.daysRemaining", { count: diff });
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -114,7 +116,7 @@ export default function DisputeDetailPage() {
     const res = await fetch(`/api/disputes/${id}/packs`, { method: "POST" });
     if (res.status === 403) {
       const data = await res.json();
-      setQuotaError(data.error ?? "Plan limit reached. Please upgrade.");
+      setQuotaError(data.error ?? t("disputes.planLimitMessage"));
     } else {
       await fetchData();
     }
@@ -123,7 +125,7 @@ export default function DisputeDetailPage() {
 
   if (loading) {
     return (
-      <Page title="Dispute">
+      <Page title={t("disputes.title")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -133,8 +135,8 @@ export default function DisputeDetailPage() {
 
   if (!dispute) {
     return (
-      <Page title="Dispute" backAction={{ content: "Disputes", url: "/app/disputes" }}>
-        <Banner tone="critical">Dispute not found.</Banner>
+      <Page title={t("disputes.title")} backAction={{ content: t("disputes.title"), url: "/app/disputes" }}>
+        <Banner tone="critical">{t("disputes.disputeNotFound")}</Banner>
       </Page>
     );
   }
@@ -147,16 +149,16 @@ export default function DisputeDetailPage() {
 
   return (
     <Page
-      title={`Dispute ${dispute.dispute_gid.split("/").pop()}`}
-      backAction={{ content: "Disputes", url: "/app/disputes" }}
+      title={t("disputes.disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? "" })}
+      backAction={{ content: t("disputes.title"), url: "/app/disputes" }}
       primaryAction={{
-        content: generating ? "Generating..." : "Generate Pack",
+        content: generating ? t("disputes.generating") : t("disputes.generatePack"),
         onAction: handleGenerate,
         loading: generating,
       }}
       secondaryActions={[
         {
-          content: syncing ? "Syncing..." : "Re-sync",
+          content: syncing ? t("disputes.reSyncing") : t("disputes.reSync"),
           onAction: handleSync,
           loading: syncing,
         },
@@ -167,8 +169,8 @@ export default function DisputeDetailPage() {
           <Layout.Section>
             <Banner
               tone="warning"
-              title="Pack limit reached"
-              action={{ content: "Upgrade Plan", url: "/app/billing" }}
+              title={t("disputes.packLimitReached")}
+              action={{ content: t("disputes.upgradePlan"), url: "/app/billing" }}
               onDismiss={() => setQuotaError(null)}
             >
               <p>{quotaError}</p>
@@ -176,34 +178,33 @@ export default function DisputeDetailPage() {
           </Layout.Section>
         )}
 
-        {/* Summary card */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">Summary</Text>
+              <Text as="h2" variant="headingMd">{t("disputes.summary")}</Text>
               <InlineStack gap="800" wrap>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Status</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("table.status")}</Text>
                   <Badge tone={dispute.status === "won" ? "success" : dispute.status === "lost" ? "critical" : "warning"}>
                     {(dispute.status ?? "unknown").replace(/_/g, " ")}
                   </Badge>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Reason</Text>
-                  <Text as="p" variant="bodyMd">{dispute.reason ?? "Unknown"}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("disputes.reason")}</Text>
+                  <Text as="p" variant="bodyMd">{dispute.reason ?? t("status.unknown")}</Text>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Amount</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("disputes.amount")}</Text>
                   <Text as="p" variant="bodyMd" fontWeight="bold">
                     {formatCurrency(dispute.amount, dispute.currency_code)}
                   </Text>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Initiated</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("disputes.initiated")}</Text>
                   <Text as="p" variant="bodyMd">{formatDate(dispute.initiated_at)}</Text>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Due Date</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("disputes.dueDate")}</Text>
                   <Text as="p" variant="bodyMd">{formatDate(dispute.due_at)}</Text>
                 </BlockStack>
               </InlineStack>
@@ -215,20 +216,19 @@ export default function DisputeDetailPage() {
           </Card>
         </Layout.Section>
 
-        {/* Order card */}
         {orderNum && (
           <Layout.Section variant="oneHalf">
             <Card>
               <BlockStack gap="200">
-                <Text as="h2" variant="headingMd">Linked Order</Text>
-                <Text as="p" variant="bodyMd">Order #{orderNum}</Text>
+                <Text as="h2" variant="headingMd">{t("disputes.linkedOrder")}</Text>
+                <Text as="p" variant="bodyMd">{t("disputes.order")} #{orderNum}</Text>
                 {shopDomain && (
                   <Button
                     variant="plain"
                     url={`https://${shopDomain}/admin/orders/${orderNum}`}
                     target="_blank"
                   >
-                    Open in Shopify Admin
+                    {t("disputes.openInShopify")}
                   </Button>
                 )}
               </BlockStack>
@@ -236,29 +236,27 @@ export default function DisputeDetailPage() {
           </Layout.Section>
         )}
 
-        {/* Sync info */}
         <Layout.Section variant="oneHalf">
           <Card>
             <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">Sync Info</Text>
+              <Text as="h2" variant="headingMd">{t("disputes.syncInfo")}</Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                Last synced: {formatDate(dispute.last_synced_at)}
+                {t("disputes.lastSynced")}: {formatDate(dispute.last_synced_at)}
               </Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                Evidence GID: {dispute.dispute_evidence_gid ?? "Not available"}
+                {t("disputes.evidenceGid")}: {dispute.dispute_evidence_gid ?? t("common.notAvailable")}
               </Text>
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* Evidence Packs */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
-                <Text as="h2" variant="headingMd">Evidence Packs</Text>
+                <Text as="h2" variant="headingMd">{t("disputes.evidencePacks")}</Text>
                 <Button onClick={handleGenerate} loading={generating}>
-                  Generate New Pack
+                  {t("disputes.generateNewPack")}
                 </Button>
               </InlineStack>
 
@@ -266,28 +264,34 @@ export default function DisputeDetailPage() {
                 <>
                   <Divider />
                   <Text as="p" tone="subdued">
-                    No evidence packs yet. Generate one to get started.
+                    {t("disputes.noPacks")}
                   </Text>
                 </>
               ) : (
                 <>
                   <DataTable
                     columnContentTypes={["text", "text", "numeric", "text", "text"]}
-                    headings={["Pack ID", "Status", "Score", "Blockers", "Created"]}
+                    headings={[
+                      t("table.id"),
+                      t("table.status"),
+                      t("table.score"),
+                      t("disputes.blockers"),
+                      t("table.created"),
+                    ]}
                     rows={packs.map((p) => [
                       p.id.slice(0, 8),
                       p.status.replace(/_/g, " "),
                       p.completeness_score != null ? `${p.completeness_score}%` : "—",
                       p.blockers && p.blockers.length > 0
                         ? `${p.blockers.length} blocker(s)`
-                        : "None",
+                        : t("common.none"),
                       formatDate(p.created_at),
                     ])}
                   />
                   <div style={{ marginTop: "8px" }}>
                     {packs.map((p) => (
                       <Button key={p.id} variant="plain" url={`/app/packs/${p.id}`}>
-                        View pack {p.id.slice(0, 8)} →
+                        {t("packs.viewPack", { id: p.id.slice(0, 8) })}
                       </Button>
                     ))}
                   </div>
@@ -297,12 +301,9 @@ export default function DisputeDetailPage() {
           </Card>
         </Layout.Section>
 
-        {/* Compliance note */}
         <Layout.Section>
           <Banner tone="info">
-            Evidence is saved to Shopify via API. Submission to the card
-            network happens in Shopify Admin, or Shopify auto-submits on the
-            due date.
+            {t("disputes.compliance")}
           </Banner>
         </Layout.Section>
       </Layout>

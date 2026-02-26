@@ -14,6 +14,8 @@ export async function getPolarisTranslations(locale: SupportedLocale) {
       return (await import("@shopify/polaris/locales/fr.json")).default;
     case "es":
       return (await import("@shopify/polaris/locales/es.json")).default;
+    case "pt":
+      return (await import("@shopify/polaris/locales/pt-BR.json")).default;
     default:
       return (await import("@shopify/polaris/locales/en.json")).default;
   }

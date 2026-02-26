@@ -13,6 +13,7 @@ import {
   Button,
   Divider,
 } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 
 const DISPUTES = [
   ["DP-2401", "#1042", "$145.00", "Not received", "Auto-saved", "Mar 02"],
@@ -22,63 +23,58 @@ const DISPUTES = [
 ];
 
 export default function EmbeddedDashboardPage() {
+  const t = useTranslations();
+
   return (
     <Page
-      title="DisputeDesk"
-      subtitle="Automatic dispute evidence ops"
-      primaryAction={{ content: "Automation Settings", url: "/app/settings/automation" }}
-      secondaryActions={[{ content: "Help", url: "/app/help" }]}
+      title={t("dashboard.title")}
+      subtitle={t("dashboard.embeddedSubtitle")}
+      primaryAction={{ content: t("dashboard.automationSettings"), url: "/app/settings/automation" }}
+      secondaryActions={[{ content: t("nav.help"), url: "/app/help" }]}
     >
       <Layout>
-        {/* Automation banner */}
         <Layout.Section>
-          <Banner tone="success" title="Automation is ON">
-            <p>
-              DisputeDesk automatically builds evidence packs and saves
-              evidence back to Shopify when complete. Submission happens in
-              Shopify Admin.
-            </p>
+          <Banner tone="success" title={t("dashboard.automationOn")}>
+            <p>{t("dashboard.automationBanner")}</p>
           </Banner>
         </Layout.Section>
 
-        {/* Automation summary card */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">Automation Status</Text>
+              <Text as="h2" variant="headingMd">{t("dashboard.automationStatus")}</Text>
               <InlineStack gap="800" wrap>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Auto-build</Text>
-                  <Badge tone="success">On</Badge>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.autoBuild")}</Text>
+                  <Badge tone="success">{t("common.on")}</Badge>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Auto-save</Text>
-                  <Badge tone="success">On</Badge>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.autoSave")}</Text>
+                  <Badge tone="success">{t("common.on")}</Badge>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Review required</Text>
-                  <Badge tone="attention">Yes</Badge>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.reviewRequired")}</Text>
+                  <Badge tone="attention">{t("common.yes")}</Badge>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Min. score</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.minScore")}</Text>
                   <Badge>80%</Badge>
                 </BlockStack>
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">Blocker gate</Text>
-                  <Badge tone="success">On</Badge>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.blockerGate")}</Text>
+                  <Badge tone="success">{t("common.on")}</Badge>
                 </BlockStack>
               </InlineStack>
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* KPIs */}
         <Layout.Section variant="oneThird">
           <Card>
             <BlockStack gap="200">
-              <Text as="p" variant="bodySm" tone="subdued">Open Disputes</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.openDisputes")}</Text>
               <Text as="p" variant="headingXl">12</Text>
-              <Badge tone="attention">-8% vs last month</Badge>
+              <Badge tone="attention">-8% {t("dashboard.vsLastMonth")}</Badge>
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -86,9 +82,9 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section variant="oneThird">
           <Card>
             <BlockStack gap="200">
-              <Text as="p" variant="bodySm" tone="subdued">Win Rate</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.winRate")}</Text>
               <Text as="p" variant="headingXl">67%</Text>
-              <Badge tone="success">+5% vs last month</Badge>
+              <Badge tone="success">+5% {t("dashboard.vsLastMonth")}</Badge>
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -96,48 +92,45 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section variant="oneThird">
           <Card>
             <BlockStack gap="200">
-              <Text as="p" variant="bodySm" tone="subdued">Auto-Saved</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.autoSaved")}</Text>
               <Text as="p" variant="headingXl">28</Text>
-              <Badge tone="success">Automated this month</Badge>
+              <Badge tone="success">{t("dashboard.automatedThisMonth")}</Badge>
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* Disputes table */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
-                <Text as="h2" variant="headingMd">Recent Disputes</Text>
-                <Button variant="plain">View all</Button>
+                <Text as="h2" variant="headingMd">{t("dashboard.recentDisputes")}</Text>
+                <Button variant="plain">{t("common.viewAll")}</Button>
               </InlineStack>
               <DataTable
                 columnContentTypes={["text", "text", "numeric", "text", "text", "text"]}
-                headings={["ID", "Order", "Amount", "Reason", "Status", "Deadline"]}
+                headings={[
+                  t("table.id"),
+                  t("table.order"),
+                  t("table.amount"),
+                  t("table.reason"),
+                  t("table.status"),
+                  t("table.deadline"),
+                ]}
                 rows={DISPUTES}
               />
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* Compliance note */}
         <Layout.Section>
           <Card>
             <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">How Automation Works</Text>
+              <Text as="h2" variant="headingMd">{t("dashboard.howItWorks")}</Text>
               <Divider />
-              <Text as="p" variant="bodyMd">
-                1. DisputeDesk syncs disputes automatically from Shopify Payments.
-              </Text>
-              <Text as="p" variant="bodyMd">
-                2. Evidence packs are built automatically using order, tracking, and policy data.
-              </Text>
-              <Text as="p" variant="bodyMd">
-                3. When the pack passes your rules (completeness score + no blockers), evidence is saved to Shopify via API.
-              </Text>
-              <Text as="p" variant="bodyMd" tone="subdued">
-                Submission to the card network happens in Shopify Admin, or Shopify auto-submits on the due date. DisputeDesk does not submit on your behalf.
-              </Text>
+              <Text as="p" variant="bodyMd">{t("dashboard.howItWorksStep1")}</Text>
+              <Text as="p" variant="bodyMd">{t("dashboard.howItWorksStep2")}</Text>
+              <Text as="p" variant="bodyMd">{t("dashboard.howItWorksStep3")}</Text>
+              <Text as="p" variant="bodyMd" tone="subdued">{t("dashboard.howItWorksCompliance")}</Text>
             </BlockStack>
           </Card>
         </Layout.Section>

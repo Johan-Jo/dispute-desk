@@ -23,12 +23,23 @@ Created comprehensive translation files covering all merchant-facing UI:
 - `messages/de.json` — German
 - `messages/fr.json` — French
 - `messages/es.json` — Spanish
+- `messages/pt.json` — Portuguese (Brazilian)
 
-Keys organized by feature: `common.*`, `status.*`, `dashboard.*`, `disputes.*`, `packs.*`, `billing.*`, `rules.*`, `settings.*`, `connect.*`, `selectStore.*`, `permissions.*`, `team.*`, `policies.*`, `table.*`.
+Keys organized by feature: `common.*`, `status.*`, `dashboard.*`, `disputes.*`, `packs.*`, `billing.*`, `rules.*`, `settings.*`, `connect.*`, `selectStore.*`, `permissions.*`, `team.*`, `policies.*`, `table.*`, `packTemplates.*`, `sessionRequired.*`.
 
 ### 9.3 — Provider Integration
-- **Embedded app** (`app/(embedded)/providers.tsx`): Wraps children with `NextIntlClientProvider` + accepts `locale`, `messages`, and `polarisTranslations` props. Polaris AppProvider receives locale-specific translations.
+- **Embedded app** (`app/(embedded)/providers.tsx`): Wraps children with `NextIntlClientProvider` + accepts `locale`, `messages`, and `polarisTranslations` props. Polaris AppProvider receives locale-specific translations. The embedded layout reads `dd_locale` cookie and loads Polaris translations dynamically.
 - **Portal** (`app/(portal)/layout.tsx`): Wraps PortalShell with `NextIntlClientProvider`, resolving locale from Accept-Language header.
+- **Marketing** (`app/(marketing)/layout.tsx`): Wraps content with `NextIntlClientProvider`, resolving locale from Accept-Language header.
+
+### 9.8 — Embedded App i18n Parity
+All embedded app pages now use `useTranslations()` instead of hardcoded English strings:
+- Dashboard (`app/(embedded)/app/page.tsx`)
+- Disputes list (`app/(embedded)/app/disputes/page.tsx`)
+- Dispute detail (`app/(embedded)/app/disputes/[id]/page.tsx`)
+- Billing (`app/(embedded)/app/billing/page.tsx`)
+- Pack detail (`app/(embedded)/app/packs/[packId]/page.tsx`)
+- Session required (`app/(embedded)/app/session-required/page.tsx`)
 
 ### 9.4 — Compliance Copy
 - All compliance-critical strings ("save evidence" not "submit") are translated correctly in all languages.
@@ -52,6 +63,7 @@ Keys organized by feature: `common.*`, `status.*`, `dashboard.*`, `disputes.*`, 
 | German | de | Largest EU e-commerce market |
 | French | fr | Second-largest EU market + Canada |
 | Spanish | es | Large Shopify merchant base |
+| Portuguese | pt | Brazilian e-commerce market (uses pt-BR Polaris bundle) |
 
 ## Adding a New Language
 
@@ -62,7 +74,7 @@ Keys organized by feature: `common.*`, `status.*`, `dashboard.*`, `disputes.*`, 
 
 ## Key Files
 - `lib/i18n/config.ts`, `lib/i18n/getMessages.ts`, `lib/i18n/polarisLocales.ts`
-- `messages/{en,sv,de,fr,es}.json`
+- `messages/{en,sv,de,fr,es,pt}.json`
 - `app/(embedded)/providers.tsx`
 - `app/(portal)/layout.tsx`
 - `supabase/migrations/014_shops_locale.sql`

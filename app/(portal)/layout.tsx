@@ -51,7 +51,7 @@ export default async function PortalLayout({
   const messages = await getMessages(locale);
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
       <PortalShell
         userEmail={user.email ?? ""}
         shops={shops ?? []}

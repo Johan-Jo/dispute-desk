@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Page,
   Layout,
@@ -60,17 +62,9 @@ function formatDate(iso: string | null): string {
   });
 }
 
-function daysUntil(iso: string | null): string {
-  if (!iso) return "—";
-  const diff = Math.ceil(
-    (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
-  if (diff < 0) return "Overdue";
-  if (diff === 0) return "Today";
-  return `${diff}d`;
-}
-
 export default function DisputesListPage() {
+  const router = useRouter();
+  const t = useTranslations();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -114,19 +108,29 @@ export default function DisputesListPage() {
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(disputes as unknown as { [key: string]: unknown }[]);
 
+  const daysUntil = (iso: string | null): string => {
+    if (!iso) return "—";
+    const diff = Math.ceil(
+      (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    if (diff < 0) return t("common.overdue");
+    if (diff === 0) return t("common.today");
+    return t("common.daysRemaining", { count: diff });
+  };
+
   const filters = [
     {
       key: "status",
-      label: "Status",
+      label: t("table.status"),
       filter: (
         <ChoiceList
-          title="Status"
+          title={t("table.status")}
           titleHidden
           choices={[
-            { label: "Needs response", value: "needs_response" },
-            { label: "Under review", value: "under_review" },
-            { label: "Won", value: "won" },
-            { label: "Lost", value: "lost" },
+            { label: t("status.needsResponse"), value: "needs_response" },
+            { label: t("status.underReview"), value: "under_review" },
+            { label: t("status.won"), value: "won" },
+            { label: t("status.lost"), value: "lost" },
           ]}
           selected={statusFilter}
           onChange={setStatusFilter}
@@ -144,7 +148,7 @@ export default function DisputesListPage() {
       position={idx}
       selected={selectedResources.includes(d.id)}
       onClick={() => {
-        window.location.href = `/app/disputes/${d.id}`;
+        router.push(`/app/disputes/${d.id}`);
       }}
     >
       <IndexTable.Cell>
@@ -152,7 +156,7 @@ export default function DisputesListPage() {
           {d.dispute_gid.split("/").pop()?.slice(0, 8) ?? d.id.slice(0, 8)}
         </Text>
       </IndexTable.Cell>
-      <IndexTable.Cell>{d.reason ?? "Unknown"}</IndexTable.Cell>
+      <IndexTable.Cell>{d.reason ?? t("status.unknown")}</IndexTable.Cell>
       <IndexTable.Cell>
         <Badge tone={statusTone(d.status)}>
           {(d.status ?? "unknown").replace(/_/g, " ")}
@@ -161,7 +165,7 @@ export default function DisputesListPage() {
       <IndexTable.Cell>{formatCurrency(d.amount, d.currency_code)}</IndexTable.Cell>
       <IndexTable.Cell>{formatDate(d.due_at)}</IndexTable.Cell>
       <IndexTable.Cell>
-        <Badge tone={daysUntil(d.due_at) === "Overdue" ? "critical" : undefined}>
+        <Badge tone={daysUntil(d.due_at) === t("common.overdue") ? "critical" : undefined}>
           {daysUntil(d.due_at)}
         </Badge>
       </IndexTable.Cell>
@@ -172,7 +176,7 @@ export default function DisputesListPage() {
             size="micro"
             onClick={() => handleApprove(d.id)}
           >
-            Approve
+            {t("disputes.approve")}
           </Button>
         </IndexTable.Cell>
       )}
@@ -186,10 +190,10 @@ export default function DisputesListPage() {
 
   return (
     <Page
-      title="Disputes"
-      subtitle={`${pagination.total} total`}
+      title={t("disputes.title")}
+      subtitle={t("disputes.subtitle", { total: pagination.total })}
       primaryAction={{
-        content: syncing ? "Syncing..." : "Sync Now",
+        content: syncing ? t("disputes.syncing") : t("disputes.syncNow"),
         onAction: handleSync,
         loading: syncing,
       }}
@@ -201,13 +205,13 @@ export default function DisputesListPage() {
               variant={tab === "all" ? "primary" : "secondary"}
               onClick={() => { setTab("all"); setPage(1); }}
             >
-              All Disputes
+              {t("disputes.allDisputes")}
             </Button>
             <Button
               variant={tab === "review" ? "primary" : "secondary"}
               onClick={() => { setTab("review"); setPage(1); }}
             >
-              Review Queue
+              {t("disputes.reviewQueue")}
             </Button>
           </InlineStack>
         </Layout.Section>
@@ -232,14 +236,14 @@ export default function DisputesListPage() {
                 selectedItemsCount={allResourcesSelected ? "All" : selectedResources.length}
                 onSelectionChange={handleSelectionChange}
                 headings={[
-                  { title: "ID" },
-                  { title: "Reason" },
-                  { title: "Status" },
-                  { title: "Amount" },
-                  { title: "Due Date" },
-                  { title: "Remaining" },
-                  { title: "Last Synced" },
-                  ...(tab === "review" ? [{ title: "Action" }] : []),
+                  { title: t("table.id") },
+                  { title: t("table.reason") },
+                  { title: t("table.status") },
+                  { title: t("table.amount") },
+                  { title: t("disputes.dueDate") },
+                  { title: t("disputes.timeLeft") },
+                  { title: t("table.lastSynced") },
+                  ...(tab === "review" ? [{ title: t("table.action") }] : []),
                 ]}
                 selectable={false}
               >
@@ -251,12 +255,12 @@ export default function DisputesListPage() {
           {pagination.total_pages > 1 && (
             <div style={{ padding: "1rem", display: "flex", justifyContent: "center" }}>
               <InlineStack gap="300">
-                <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
+                <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("common.previous")}</Button>
                 <Text as="span" variant="bodySm">
-                  Page {page} of {pagination.total_pages}
+                  {t("common.page", { page, total: pagination.total_pages })}
                 </Text>
                 <Button disabled={page >= pagination.total_pages} onClick={() => setPage(page + 1)}>
-                  Next
+                  {t("common.next")}
                 </Button>
               </InlineStack>
             </div>

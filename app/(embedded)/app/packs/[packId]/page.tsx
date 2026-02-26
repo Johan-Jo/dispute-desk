@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Page,
   Layout,
@@ -93,6 +94,7 @@ function formatDate(iso: string | null): string {
 
 export default function PackPreviewPage() {
   const { packId } = useParams<{ packId: string }>();
+  const t = useTranslations();
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -160,7 +162,7 @@ export default function PackPreviewPage() {
 
   if (loading) {
     return (
-      <Page title="Evidence Pack">
+      <Page title={t("packs.title")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -170,8 +172,8 @@ export default function PackPreviewPage() {
 
   if (!pack) {
     return (
-      <Page title="Evidence Pack" backAction={{ content: "Back", url: "/app/disputes" }}>
-        <Banner tone="critical">Pack not found.</Banner>
+      <Page title={t("packs.title")} backAction={{ content: t("packs.backToDisputes"), url: "/app/disputes" }}>
+        <Banner tone="critical">{t("packs.packNotFound")}</Banner>
       </Page>
     );
   }
@@ -181,32 +183,31 @@ export default function PackPreviewPage() {
 
   return (
     <Page
-      title={`Pack ${pack.id.slice(0, 8)}`}
-      subtitle={`Created ${formatDate(pack.created_at)} · ${pack.created_by ?? "system"}`}
-      backAction={{ content: "Dispute", url: `/app/disputes/${pack.dispute_id}` }}
+      title={t("packs.packTitle", { id: pack.id.slice(0, 8) })}
+      subtitle={t("packs.created", { date: formatDate(pack.created_at), creator: pack.created_by ?? "system" })}
+      backAction={{ content: t("disputes.backToDisputes"), url: `/app/disputes/${pack.dispute_id}` }}
     >
       <Layout>
         {isBuilding && (
           <Layout.Section>
             <Banner tone="info">
-              Building evidence pack... This page refreshes automatically.
+              {t("packs.building")}
             </Banner>
           </Layout.Section>
         )}
 
-        {/* Status + Score */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
               <InlineStack align="space-between">
-                <Text as="h2" variant="headingMd">Pack Status</Text>
+                <Text as="h2" variant="headingMd">{t("packs.packStatus")}</Text>
                 <Badge tone={statusTone(pack.status)}>
                   {pack.status.replace(/_/g, " ")}
                 </Badge>
               </InlineStack>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text as="p" variant="bodySm" tone="subdued">Completeness</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("packs.completeness")}</Text>
                   <Text as="p" variant="bodyMd" fontWeight="bold">{score}%</Text>
                 </InlineStack>
                 <ProgressBar
@@ -218,14 +219,14 @@ export default function PackPreviewPage() {
               {pack.blockers && pack.blockers.length > 0 && (
                 <Banner tone="critical">
                   <Text as="p" variant="bodySm" fontWeight="bold">
-                    {pack.blockers.length} blocker(s): {pack.blockers.join(", ")}
+                    {t("packs.blockersLabel", { count: pack.blockers.length, list: pack.blockers.join(", ") })}
                   </Text>
                 </Banner>
               )}
               {pack.recommended_actions && pack.recommended_actions.length > 0 && (
                 <Banner tone="warning">
                   <Text as="p" variant="bodySm">
-                    Recommended: {pack.recommended_actions.join(", ")}
+                    {t("packs.recommended", { list: pack.recommended_actions.join(", ") })}
                   </Text>
                 </Banner>
               )}
@@ -233,12 +234,11 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
-        {/* Checklist */}
         {pack.checklist && (
           <Layout.Section>
             <Card>
               <BlockStack gap="300">
-                <Text as="h2" variant="headingMd">Evidence Checklist</Text>
+                <Text as="h2" variant="headingMd">{t("packs.evidenceChecklist")}</Text>
                 <Divider />
                 {pack.checklist.map((item) => (
                   <InlineStack key={item.field} gap="200" align="start" blockAlign="center">
@@ -250,7 +250,7 @@ export default function PackPreviewPage() {
                       <Text as="p" variant="bodyMd">
                         {item.label}
                         {item.required && !item.present && (
-                          <Badge tone="critical" size="small">required</Badge>
+                          <Badge tone="critical" size="small">{t("packs.required")}</Badge>
                         )}
                       </Text>
                     </BlockStack>
@@ -261,13 +261,12 @@ export default function PackPreviewPage() {
           </Layout.Section>
         )}
 
-        {/* Evidence Sections */}
         {pack.evidence_items.length > 0 && (
           <Layout.Section>
             <Card>
               <BlockStack gap="300">
                 <Text as="h2" variant="headingMd">
-                  Evidence Items ({pack.evidence_items.length})
+                  {t("packs.evidenceItems", { count: pack.evidence_items.length })}
                 </Text>
                 <Divider />
                 {pack.evidence_items.map((item) => (
@@ -295,7 +294,7 @@ export default function PackPreviewPage() {
                           {JSON.stringify(item.payload, null, 2)}
                         </pre>
                         <Text as="p" variant="bodySm" tone="subdued">
-                          Source: {item.source} · Added {formatDate(item.created_at)}
+                          {t("packs.source", { source: item.source, date: formatDate(item.created_at) })}
                         </Text>
                       </div>
                     </Collapsible>
@@ -307,13 +306,12 @@ export default function PackPreviewPage() {
           </Layout.Section>
         )}
 
-        {/* File Upload */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Upload Evidence</Text>
+              <Text as="h2" variant="headingMd">{t("packs.uploadEvidence")}</Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                Drag files here or click to upload supporting evidence (images, PDFs, up to 10 MB).
+                {t("packs.uploadPlaceholder")}
               </Text>
               <DropZone
                 onDrop={handleUpload}
@@ -321,7 +319,7 @@ export default function PackPreviewPage() {
                 accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
               >
                 {uploading ? (
-                  <DropZone.FileUpload actionHint="Uploading..." />
+                  <DropZone.FileUpload actionHint={t("packs.uploading")} />
                 ) : (
                   <DropZone.FileUpload />
                 )}
@@ -330,12 +328,11 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
-        {/* Audit Log */}
         {pack.audit_events.length > 0 && (
           <Layout.Section>
             <Card>
               <BlockStack gap="300">
-                <Text as="h2" variant="headingMd">Audit Log</Text>
+                <Text as="h2" variant="headingMd">{t("packs.auditLog")}</Text>
                 <Divider />
                 {pack.audit_events.map((evt) => (
                   <InlineStack key={evt.id} gap="200" blockAlign="start">
@@ -354,24 +351,23 @@ export default function PackPreviewPage() {
           </Layout.Section>
         )}
 
-        {/* PDF Actions */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">PDF Export</Text>
+              <Text as="h2" variant="headingMd">{t("packs.pdfExport")}</Text>
               <InlineStack gap="200">
                 {pack.active_pdf_job ? (
                   <Banner tone="info">
-                    Rendering PDF... This page refreshes automatically.
+                    {t("packs.renderingBanner")}
                   </Banner>
                 ) : (
                   <>
                     <Button onClick={handleRenderPdf} loading={rendering}>
-                      {pack.pdf_path ? "Re-render PDF" : "Render PDF"}
+                      {pack.pdf_path ? t("packs.reRenderPdf") : t("packs.renderPdf")}
                     </Button>
                     {pack.pdf_path && (
                       <Button variant="primary" onClick={handleDownload}>
-                        Download PDF
+                        {t("packs.downloadPdf")}
                       </Button>
                     )}
                   </>
@@ -379,36 +375,33 @@ export default function PackPreviewPage() {
               </InlineStack>
               {pack.pdf_path && (
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Last rendered: {pack.pdf_path.split("/").pop()?.replace(/-/g, ":")}
+                  {t("packs.lastRendered", { path: pack.pdf_path.split("/").pop()?.replace(/-/g, ":") ?? "" })}
                 </Text>
               )}
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* Save Evidence to Shopify */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Save Evidence to Shopify</Text>
+              <Text as="h2" variant="headingMd">{t("packs.saveToShopify")}</Text>
               {pack.status === "saved_to_shopify" ? (
                 <>
                   <Banner tone="success">
-                    Evidence saved to Shopify. Open Shopify Admin to review and
-                    finalize your response.
+                    {t("packs.saveSuccess")}
                   </Banner>
                   <Button
                     url={`https://admin.shopify.com/store/${pack.shop_id}/orders`}
                     target="_blank"
                   >
-                    Open in Shopify Admin
+                    {t("packs.openInShopifyAdmin")}
                   </Button>
                 </>
               ) : (
                 <>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Saves structured evidence fields to Shopify via API.
-                    Submission to the card network happens in Shopify Admin.
+                    {t("packs.saveDescription")}
                   </Text>
                   <Button
                     variant="primary"
@@ -421,11 +414,11 @@ export default function PackPreviewPage() {
                       setSaving(false);
                     }}
                   >
-                    {pack.status === "saving" ? "Saving..." : "Save Evidence to Shopify"}
+                    {pack.status === "saving" ? t("packs.saving") : t("packs.saveToShopify")}
                   </Button>
                   {pack.status === "save_failed" && (
                     <Banner tone="critical">
-                      Save failed. Check the audit log below for details, then retry.
+                      {t("packs.saveFailed")}
                     </Banner>
                   )}
                 </>
@@ -434,13 +427,11 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
-        {/* Completeness Gate */}
         {pack.completeness_score != null && pack.completeness_score < 60 && (
           <Layout.Section>
-            <Banner tone="warning" title="Missing recommended evidence">
+            <Banner tone="warning" title={t("packs.missingEvidence")}>
               <p>
-                This pack&apos;s completeness is {pack.completeness_score}% (below 60% threshold).
-                Missing evidence may weaken your dispute response.
+                {t("packs.lowScore", { score: pack.completeness_score })}
               </p>
               {pack.checklist && (
                 <ul style={{ marginTop: 8, paddingLeft: 16 }}>
@@ -448,7 +439,7 @@ export default function PackPreviewPage() {
                     .filter((c) => !c.present && c.required)
                     .map((c) => (
                       <li key={c.field} style={{ marginBottom: 2 }}>
-                        {c.label} (required)
+                        {c.label} ({t("packs.required")})
                       </li>
                     ))}
                 </ul>
@@ -457,12 +448,9 @@ export default function PackPreviewPage() {
           </Layout.Section>
         )}
 
-        {/* Compliance */}
         <Layout.Section>
           <Banner tone="info">
-            Evidence is saved to Shopify via API. Submission to the card
-            network happens in Shopify Admin, or Shopify auto-submits on the
-            due date.
+            {t("packs.compliance")}
           </Banner>
         </Layout.Section>
       </Layout>

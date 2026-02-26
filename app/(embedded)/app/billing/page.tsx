@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Page,
   Layout,
@@ -31,43 +32,29 @@ interface UsageInfo {
   packsRemaining: number | null;
 }
 
-const ALL_PLANS: { id: string; name: string; price: number; label: string; features: string[] }[] = [
-  {
-    id: "free",
-    name: "Free (Sandbox)",
-    price: 0,
-    label: "$0",
-    features: ["Unlimited draft building", "3 exported packs (lifetime)", "Basic activity log", "PDF export"],
-  },
-  {
-    id: "starter",
-    name: "Starter",
-    price: 29,
-    label: "$29/mo",
-    features: ["15 packs/month", "Basic rules (up to 5)", "Auto-build packs", "Review queue", "Email support"],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    price: 79,
-    label: "$79/mo",
-    features: ["75 packs/month", "Advanced rules", "Multi-user", "Bulk actions", "Auto-save to Shopify"],
-  },
-  {
-    id: "scale",
-    name: "Scale",
-    price: 149,
-    label: "$149/mo",
-    features: ["300 packs/month", "Multi-store", "Advanced exports", "SLA options", "Priority support"],
-  },
-];
+const PLAN_FEATURE_KEYS: Record<string, string[]> = {
+  free: ["billing.freeFeature1", "billing.freeFeature2", "billing.freeFeature3", "billing.freeFeature4"],
+  starter: ["billing.realStarterFeature1", "billing.realStarterFeature2", "billing.realStarterFeature3", "billing.realStarterFeature4", "billing.realStarterFeature5"],
+  growth: ["billing.growthFeature1", "billing.growthFeature2", "billing.growthFeature3", "billing.growthFeature4", "billing.growthFeature5"],
+  scale: ["billing.scaleFeature1", "billing.scaleFeature2", "billing.scaleFeature3", "billing.scaleFeature4", "billing.scaleFeature5"],
+};
+
+const PLAN_IDS = ["free", "starter", "growth", "scale"] as const;
+
+const PLAN_PRICES: Record<string, { price: number; label: string }> = {
+  free: { price: 0, label: "$0" },
+  starter: { price: 29, label: "$29/mo" },
+  growth: { price: 79, label: "$79/mo" },
+  scale: { price: 149, label: "$149/mo" },
+};
 
 const TOP_UPS = [
-  { sku: "topup_25", label: "+25 packs", price: "$19" },
-  { sku: "topup_100", label: "+100 packs", price: "$59" },
+  { sku: "topup_25", labelKey: "billing.topUp25", price: "$19" },
+  { sku: "topup_100", labelKey: "billing.topUp100", price: "$59" },
 ];
 
 export default function BillingPage() {
+  const t = useTranslations();
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +92,7 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <Page title="Billing">
+      <Page title={t("billing.title")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -118,93 +105,106 @@ export default function BillingPage() {
       ? Math.min(100, Math.round((usage.packsUsed / usage.packsLimit) * 100))
       : 0;
 
+  const planNameKeys: Record<string, string> = {
+    free: "billing.free",
+    starter: "billing.starter",
+    growth: "billing.growth",
+    scale: "billing.scale",
+  };
+
   return (
-    <Page title="Billing" subtitle={`Current plan: ${plan?.name ?? "Free"}`}>
+    <Page
+      title={t("billing.title")}
+      subtitle={`${t("billing.currentPlan")}: ${plan ? t(planNameKeys[plan.id] ?? "billing.free") : t("billing.free")}`}
+    >
       <Layout>
-        {/* Usage */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Usage This Month</Text>
+              <Text as="h2" variant="headingMd">{t("billing.usageThisMonth")}</Text>
               {usage?.packsLimit != null ? (
                 <>
                   <Text as="p" variant="bodyMd">
-                    {usage.packsUsed} of {usage.packsLimit} packs used
+                    {t("billing.packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}
                   </Text>
                   <ProgressBar progress={usagePercent} tone={usagePercent >= 90 ? "critical" : undefined} />
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {usage.packsRemaining} remaining
+                    {t("billing.packsRemaining", { count: usage.packsRemaining ?? 0 })}
                   </Text>
                 </>
               ) : (
-                <Text as="p" variant="bodyMd">No pack credits remaining.</Text>
+                <Text as="p" variant="bodyMd">{t("billing.noPackCredits")}</Text>
               )}
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* Plans */}
         <Layout.Section>
-          <Text as="h2" variant="headingMd">Plans</Text>
+          <Text as="h2" variant="headingMd">{t("billing.plans")}</Text>
         </Layout.Section>
 
-        {ALL_PLANS.map((p) => (
-          <Layout.Section key={p.id} variant="oneThird">
-            <Card>
-              <BlockStack gap="300">
-                <InlineStack align="space-between">
-                  <Text as="h3" variant="headingMd">{p.name}</Text>
-                  {plan?.id === p.id && <Badge tone="success">Current</Badge>}
-                </InlineStack>
-                <Text as="p" variant="headingLg">{p.label}</Text>
-                <Divider />
-                <BlockStack gap="100">
-                  {p.features.map((f) => (
-                    <Text key={f} as="p" variant="bodySm">✓ {f}</Text>
-                  ))}
+        {PLAN_IDS.map((planId) => {
+          const priceInfo = PLAN_PRICES[planId];
+          const featureKeys = PLAN_FEATURE_KEYS[planId];
+          return (
+            <Layout.Section key={planId} variant="oneThird">
+              <Card>
+                <BlockStack gap="300">
+                  <InlineStack align="space-between">
+                    <Text as="h3" variant="headingMd">{t(planNameKeys[planId])}</Text>
+                    {plan?.id === planId && <Badge tone="success">{t("billing.yourCurrentPlan")}</Badge>}
+                  </InlineStack>
+                  <Text as="p" variant="headingLg">{priceInfo.label}</Text>
+                  <Divider />
+                  <BlockStack gap="100">
+                    {featureKeys.map((key) => (
+                      <Text key={key} as="p" variant="bodySm">✓ {t(key)}</Text>
+                    ))}
+                  </BlockStack>
+                  {plan?.id !== planId && priceInfo.price > (plan?.price ?? 0) && (
+                    <Button
+                      variant="primary"
+                      loading={upgrading === planId}
+                      onClick={() => handleUpgrade(planId)}
+                    >
+                      {priceInfo.price > 0
+                        ? t("billing.startTrial", { plan: t(planNameKeys[planId]) })
+                        : t(planNameKeys[planId])}
+                    </Button>
+                  )}
+                  {plan?.id === planId && (
+                    <Banner tone="info">
+                      {t("billing.yourCurrentPlan")}
+                    </Banner>
+                  )}
                 </BlockStack>
-                {plan?.id !== p.id && p.price > (plan?.price ?? 0) && (
-                  <Button
-                    variant="primary"
-                    loading={upgrading === p.id}
-                    onClick={() => handleUpgrade(p.id)}
-                  >
-                    {p.price > 0 ? `Start 14-Day Trial — ${p.name}` : `Switch to ${p.name}`}
-                  </Button>
-                )}
-                {plan?.id === p.id && (
-                  <Banner tone="info">
-                    You&apos;re on this plan.
-                  </Banner>
-                )}
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        ))}
+              </Card>
+            </Layout.Section>
+          );
+        })}
 
-        {/* Top-ups */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Need more packs?</Text>
+              <Text as="h2" variant="headingMd">{t("billing.topUps")}</Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                Purchase top-up bundles. Credits added immediately upon payment.
+                {t("billing.topUpsDesc")}
               </Text>
               <InlineStack gap="300">
-                {TOP_UPS.map((t) => (
+                {TOP_UPS.map((topUp) => (
                   <Button
-                    key={t.sku}
+                    key={topUp.sku}
                     onClick={async () => {
                       const res = await fetch("/api/billing/topup", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ shop_id: shopId, sku: t.sku }),
+                        body: JSON.stringify({ shop_id: shopId, sku: topUp.sku }),
                       });
                       const data = await res.json();
                       if (data.confirmationUrl) window.top!.location.href = data.confirmationUrl;
                     }}
                   >
-                    {t.label} — {t.price}
+                    {t(topUp.labelKey)} — {topUp.price}
                   </Button>
                 ))}
               </InlineStack>
@@ -215,7 +215,7 @@ export default function BillingPage() {
 
       <div style={{ padding: "0.5rem 0", textAlign: "center" }}>
         <Text as="p" variant="bodySm" tone="subdued">
-          Paid plans include a 14-day trial with 25 packs. Downgrades take effect at the next billing cycle.
+          {t("billing.trialNote")}
         </Text>
       </div>
     </Page>

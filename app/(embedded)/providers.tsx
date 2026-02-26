@@ -20,7 +20,7 @@ export function Providers({
 }: ProvidersProps) {
   const i18n = polarisTranslations ?? enTranslations;
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
       <AppProvider i18n={i18n}>{children}</AppProvider>
     </NextIntlClientProvider>
   );
