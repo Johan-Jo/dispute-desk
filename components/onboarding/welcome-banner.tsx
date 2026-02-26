@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useOnboarding } from "./onboarding-provider";
 import { useDemoMode } from "@/lib/demo-mode";
 
 export function WelcomeBanner() {
+  const t = useTranslations("onboarding");
   const isDemo = useDemoMode();
   const { hasCompletedOnboarding, hasDismissedBanner, startTour, dismissBanner } =
     useOnboarding();
@@ -36,12 +38,11 @@ export function WelcomeBanner() {
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-5 h-5 text-white" />
             <h3 className="text-lg font-semibold text-white">
-              Welcome to DisputeDesk!
+              {t("bannerTitle")}
             </h3>
           </div>
           <p className="text-blue-100 mb-4 sm:mb-0">
-            Take a quick 2-minute tour to learn how to manage chargebacks like a
-            pro.
+            {t("bannerDesc")}
           </p>
         </div>
 
@@ -53,7 +54,7 @@ export function WelcomeBanner() {
             className="bg-white text-[#1D4ED8] hover:bg-blue-50"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            Start Tour
+            {t("startTour")}
           </Button>
           <button
             onClick={handleDismiss}

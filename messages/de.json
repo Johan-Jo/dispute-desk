@@ -93,7 +93,10 @@
     "shopifyAdminDesc": "Beweise an Kartennetzwerke senden",
     "goToDisputes": "Zu Streitfällen",
     "viewPacks": "Pakete anzeigen",
-    "openShopify": "Shopify öffnen"
+    "openShopify": "Shopify öffnen",
+    "infoBannerTitle": "Beweise in DisputeDesk erstellt",
+    "infoBannerDesc": "Beweispakete werden hier erstellt und verwaltet. Um Beweise an das Kartennetzwerk zu senden, müssen Sie",
+    "viewDetails": "Details anzeigen"
   },
   "disputes": {
     "title": "Streitfälle",
@@ -290,7 +293,21 @@
     "unnamedRule": "Unbenannte Regel",
     "matchesAll": "Passt auf alle Streitfälle",
     "footer": "Regeln werden von oben nach unten ausgewertet. Erste passende Regel gewinnt. Streitfälle ohne passende Regel gehen in die Prüfungswarteschlange.",
-    "noRules": "Keine Regeln konfiguriert. Alle neuen Streitfälle gehen standardmäßig in die Prüfungswarteschlange."
+    "noRules": "Keine Regeln konfiguriert. Alle neuen Streitfälle gehen standardmäßig in die Prüfungswarteschlange.",
+    "reason": "Grund",
+    "statusLabel": "Status",
+    "demoRule1Name": "Standard-Betrugsbeweise automatisch anhängen",
+    "demoRule1Trigger": "Streitfall-Typ: Betrug",
+    "demoRule1Action": "Paket anhängen: EP-001",
+    "demoRule2Name": "Warnung bei hohem Wert",
+    "demoRule2Trigger": "Betrag > 500 $",
+    "demoRule2Action": "E-Mail-Benachrichtigung senden",
+    "demoRule3Name": "Produkt nicht erhalten - Sendungsverfolgung erforderlich",
+    "demoRule3Trigger": "Streitfall-Typ: Produkt nicht erhalten",
+    "demoRule3Action": "Paket anhängen: EP-002",
+    "demoRule4Name": "Dringende Fristwarnung",
+    "demoRule4Trigger": "Fälligkeitsdatum < 3 Tage",
+    "demoRule4Action": "Als dringend markieren"
   },
   "settings": {
     "title": "Einstellungen",
@@ -393,11 +410,26 @@
     "title": "Richtlinien",
     "subtitle": "Shop-Richtlinien für Bewispakete verwalten",
     "addPolicy": "Richtlinie hinzufügen",
-    "updated": "Aktualisiert {date}",
+    "updated": "Aktualisiert",
+    "termsOfService": "Allgemeine Geschäftsbedingungen",
+    "refundPolicy": "Rückerstattungsrichtlinie",
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "shippingPolicy": "Versandrichtlinie",
+    "legalAgreement": "Rechtsvereinbarung",
+    "customerPolicy": "Kundenrichtlinie",
     "aboutPolicyDocs": "Über Richtliniendokumente",
     "aboutPolicyDocsDesc": "Richtliniendokumente werden in Bewispaketen verwendet.",
     "preview": "Vorschau",
     "download": "Herunterladen"
+  },
+  "reasons": {
+    "fraudulent": "Betrug",
+    "productNotReceived": "Produkt nicht erhalten",
+    "productUnacceptable": "Produkt nicht akzeptabel",
+    "creditNotProcessed": "Gutschrift nicht verarbeitet",
+    "subscriptionCanceled": "Abonnement gekündigt",
+    "duplicate": "Duplikat",
+    "general": "Allgemein"
   },
   "table": {
     "id": "ID",
@@ -411,7 +443,9 @@
     "pack": "Paket",
     "score": "Punktzahl",
     "created": "Erstellt",
-    "actions": "Aktionen"
+    "actions": "Aktionen",
+    "customer": "Kunde",
+    "date": "Datum"
   },
   "help": {
     "title": "Hilfe-Center",
@@ -540,6 +574,31 @@
         "body": "Wichtig: DisputeDesk speichert Beweise bei Shopify, reicht aber NICHT beim Kartennetzwerk ein.\n\nDer Prozess:\n1. DisputeDesk erstellt Ihr Paket und speichert es bei Shopify.\n2. Die Einreichung wird von Shopify durchgeführt.\n3. Shopify reicht automatisch zum Fälligkeitsdatum ein oder Sie reichen manuell ein.\n\nSie behalten die Kontrolle. Prüfen Sie Ihre Beweise im Shopify Admin."
       }
     }
+  },
+  "onboarding": {
+    "bannerTitle": "Willkommen bei DisputeDesk!",
+    "bannerDesc": "Machen Sie eine kurze 2-Minuten-Tour, um zu lernen, wie Sie Rückbuchungen wie ein Profi verwalten.",
+    "startTour": "Tour starten",
+    "skipTour": "Überspringen",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "finish": "Fertig",
+    "stepOf": "Schritt {current} von {total}",
+    "welcomeTitle": "Willkommen bei DisputeDesk! 👋",
+    "welcomeDesc": "Lassen Sie uns eine kurze Tour machen, um Ihnen den Einstieg in die Verwaltung Ihrer Shopify-Rückbuchungen zu erleichtern. Das dauert nur 2 Minuten.",
+    "dashboardTitle": "Ihre Kommandozentrale",
+    "dashboardDesc": "Dies ist Ihr Dashboard, auf dem Sie alle wichtigen Kennzahlen auf einen Blick sehen: aktive Streitfälle, Gewinnrate, verwendete Beweispakete und bevorstehende Fristen.",
+    "disputesListTitle": "Alle Streitfälle verwalten",
+    "disputesListDesc": "Alle Streitfälle an einem Ort anzeigen und verwalten. Nach Status filtern, nach Priorität sortieren und schnell sehen, welche Streitfälle Ihre Aufmerksamkeit erfordern.",
+    "evidencePacksTitle": "Beweispaket-Bibliothek",
+    "evidencePacksDesc": "Erstellen Sie wiederverwendbare Beweisvorlagen für verschiedene Streitfalltypen. Jedes Paket enthält alle Dokumente, die zur Bekämpfung einer bestimmten Art von Rückbuchung benötigt werden.",
+    "automationRulesTitle": "Mit Regeln automatisieren",
+    "automationRulesDesc": "Richten Sie Automatisierungsregeln ein, um automatisch Beweispakete anzuhängen, Benachrichtigungen zu senden oder dringende Streitfälle zu markieren.",
+    "policiesTitle": "Geschäftsrichtlinien",
+    "policiesDesc": "Laden Sie Ihre Geschäftsrichtlinien hoch und verwalten Sie sie, um sie schnell als Beweismittel in Streitfällen einzusetzen.",
+    "completeTitle": "Verbinden Sie Ihren Shop! 🚀",
+    "completeDesc": "Sie haben gesehen, was DisputeDesk kann. Verbinden Sie jetzt Ihren echten Shopify-Shop, um Streitfälle zu verwalten, Bewispakete zu erstellen und Rückbuchungen automatisch zu gewinnen.",
+    "connectStore": "Shop verbinden"
   },
   "marketing": {
     "nav": {

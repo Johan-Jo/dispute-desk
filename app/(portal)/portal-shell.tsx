@@ -115,6 +115,7 @@ export function PortalShell({
               <a
                 href="/portal/connect-shopify"
                 className="block text-center text-xs text-[#1D4ED8] hover:underline"
+                data-onboarding="connect-store"
               >
                 {t("connectStore")}
               </a>

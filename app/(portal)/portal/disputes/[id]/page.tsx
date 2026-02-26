@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ArrowLeft, RefreshCw, FileText, Clock, AlertTriangle, CheckCircle, User, MapPin, Package, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2401": {
     dispute: {
       id: "DP-2401", dispute_gid: "DP-2401", dispute_evidence_gid: "EV-2401", order_gid: "#1234",
-      status: "needs_response", reason: "Fraudulent", amount: 145.00, currency_code: "USD",
+      status: "needs_response", reason: "fraudulent", amount: 145.00, currency_code: "USD",
       initiated_at: "2026-02-20", due_at: "2026-03-05", last_synced_at: "2026-02-24",
     },
     customer: { name: "John Smith", email: "john.smith@example.com", phone: "+1 (555) 123-4567", address: "123 Main St, New York, NY 10001" },
@@ -57,7 +57,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2402": {
     dispute: {
       id: "DP-2402", dispute_gid: "DP-2402", dispute_evidence_gid: null, order_gid: "#1235",
-      status: "under_review", reason: "Product Not Received", amount: 89.50, currency_code: "USD",
+      status: "under_review", reason: "productNotReceived", amount: 89.50, currency_code: "USD",
       initiated_at: "2026-02-21", due_at: "2026-03-06", last_synced_at: "2026-02-24",
     },
     customer: { name: "Sarah Johnson", email: "sarah.j@example.com", phone: "+1 (555) 234-5678", address: "456 Oak Ave, Los Angeles, CA 90001" },
@@ -70,7 +70,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2403": {
     dispute: {
       id: "DP-2403", dispute_gid: "DP-2403", dispute_evidence_gid: null, order_gid: "#1236",
-      status: "needs_response", reason: "Product Unacceptable", amount: 234.00, currency_code: "USD",
+      status: "needs_response", reason: "productUnacceptable", amount: 234.00, currency_code: "USD",
       initiated_at: "2026-02-22", due_at: "2026-03-07", last_synced_at: "2026-02-24",
     },
     customer: { name: "Mike Davis", email: "mike.d@example.com", phone: "+1 (555) 345-6789", address: "789 Elm St, Chicago, IL 60601" },
@@ -81,14 +81,14 @@ const DEMO_DISPUTES: Record<string, {
   },
 };
 
-function formatCurrency(amount: number | null, code: string | null): string {
+function formatCurrency(amount: number | null, code: string | null, locale: string): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: code ?? "USD" }).format(amount);
+  return new Intl.NumberFormat(locale, { style: "currency", currency: code ?? "USD" }).format(amount);
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function daysUntil(iso: string | null): { key: string; params?: { count: number }; urgent: boolean } | { key: "none"; urgent: false } {
@@ -140,6 +140,8 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
   const t = useTranslations("disputes");
   const tStatus = useTranslations("status");
   const tt = useTranslations("table");
+  const tr = useTranslations("reasons");
+  const locale = useLocale();
   const data = DEMO_DISPUTES[disputeId];
 
   if (!data) {
@@ -166,7 +168,7 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#0B1220]">{t("disputeTitle", { id: dispute.dispute_gid })}</h1>
-          <p className="text-sm text-[#667085]">{dispute.reason}</p>
+          <p className="text-sm text-[#667085]">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm">
@@ -184,7 +186,7 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <p className="text-xs text-[#667085] mb-1">{t("amount")}</p>
-          <p className="text-xl font-bold text-[#0B1220]">{formatCurrency(dispute.amount, dispute.currency_code)}</p>
+          <p className="text-xl font-bold text-[#0B1220]">{formatCurrency(dispute.amount, dispute.currency_code, locale)}</p>
         </div>
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <p className="text-xs text-[#667085] mb-1">{tt("status")}</p>
@@ -192,7 +194,7 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
         </div>
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <p className="text-xs text-[#667085] mb-1">{t("dueDate")}</p>
-          <p className="text-sm font-medium text-[#0B1220]">{formatDate(dispute.due_at)}</p>
+          <p className="text-sm font-medium text-[#0B1220]">{formatDate(dispute.due_at, locale)}</p>
         </div>
         <div className={`bg-white rounded-lg border p-4 ${deadline.urgent ? "border-[#EF4444]" : "border-[#E5E7EB]"}`}>
           <p className="text-xs text-[#667085] mb-1">{t("timeLeft")}</p>
@@ -268,6 +270,8 @@ export default function DisputeDetailPage() {
   const tc = useTranslations("common");
   const tt = useTranslations("table");
   const tStatus = useTranslations("status");
+  const tr = useTranslations("reasons");
+  const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const isDemo = useDemoMode();
   const [dispute, setDispute] = useState<Dispute | null>(null);
@@ -348,7 +352,7 @@ export default function DisputeDetailPage() {
           <h1 className="text-2xl font-bold text-[#0B1220]">
             {t("disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? id })}
           </h1>
-          <p className="text-sm text-[#667085]">{dispute.reason ?? t("unknownReason")}</p>
+          <p className="text-sm text-[#667085]">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : t("unknownReason")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleSync} disabled={syncing}>
@@ -365,7 +369,7 @@ export default function DisputeDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <p className="text-xs text-[#667085] mb-1">{t("amount")}</p>
-          <p className="text-xl font-bold text-[#0B1220]">{formatCurrency(dispute.amount, dispute.currency_code)}</p>
+          <p className="text-xl font-bold text-[#0B1220]">{formatCurrency(dispute.amount, dispute.currency_code, locale)}</p>
         </div>
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <p className="text-xs text-[#667085] mb-1">{tt("status")}</p>
@@ -375,7 +379,7 @@ export default function DisputeDetailPage() {
         </div>
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <p className="text-xs text-[#667085] mb-1">{t("dueDate")}</p>
-          <p className="text-sm font-medium text-[#0B1220]">{formatDate(dispute.due_at)}</p>
+          <p className="text-sm font-medium text-[#0B1220]">{formatDate(dispute.due_at, locale)}</p>
         </div>
         <div className={`bg-white rounded-lg border p-4 ${deadline.urgent ? "border-[#EF4444]" : "border-[#E5E7EB]"}`}>
           <p className="text-xs text-[#667085] mb-1">{t("timeLeft")}</p>
@@ -390,10 +394,10 @@ export default function DisputeDetailPage() {
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">
           <h3 className="font-semibold text-[#0B1220] mb-3">{t("details")}</h3>
           <dl className="space-y-2 text-sm">
-            <div className="flex justify-between"><dt className="text-[#667085]">{t("initiated")}</dt><dd className="text-[#0B1220]">{formatDate(dispute.initiated_at)}</dd></div>
+            <div className="flex justify-between"><dt className="text-[#667085]">{t("initiated")}</dt><dd className="text-[#0B1220]">{formatDate(dispute.initiated_at, locale)}</dd></div>
             <div className="flex justify-between"><dt className="text-[#667085]">{t("order")}</dt><dd className="text-[#0B1220]">{dispute.order_gid ? `#${dispute.order_gid.split("/").pop()}` : "—"}</dd></div>
             <div className="flex justify-between"><dt className="text-[#667085]">{t("evidenceGid")}</dt><dd className="text-[#0B1220] truncate max-w-[200px]">{dispute.dispute_evidence_gid ?? tc("notAvailable")}</dd></div>
-            <div className="flex justify-between"><dt className="text-[#667085]">{t("lastSynced")}</dt><dd className="text-[#0B1220]">{formatDate(dispute.last_synced_at)}</dd></div>
+            <div className="flex justify-between"><dt className="text-[#667085]">{t("lastSynced")}</dt><dd className="text-[#0B1220]">{formatDate(dispute.last_synced_at, locale)}</dd></div>
           </dl>
         </div>
 
@@ -439,7 +443,7 @@ export default function DisputeDetailPage() {
                     <td className="px-4 py-3">{packStatusBadge(p.status, tStatus)}</td>
                     <td className="px-4 py-3">{p.completeness_score != null ? <span className={p.completeness_score >= 80 ? "text-[#22C55E]" : p.completeness_score >= 50 ? "text-[#F59E0B]" : "text-[#EF4444]"}>{p.completeness_score}%</span> : "—"}</td>
                     <td className="px-4 py-3 text-[#667085]">{p.blockers && p.blockers.length > 0 ? p.blockers.join(", ") : tc("none")}</td>
-                    <td className="px-4 py-3 text-[#667085]">{formatDate(p.created_at)}</td>
+                    <td className="px-4 py-3 text-[#667085]">{formatDate(p.created_at, locale)}</td>
                     <td className="px-4 py-3">
                       {p.status === "ready" && (
                         <Button variant="primary" size="sm" onClick={() => handleApprove(p.id)}>
@@ -448,7 +452,7 @@ export default function DisputeDetailPage() {
                         </Button>
                       )}
                       {p.status === "saved_to_shopify" && p.saved_to_shopify_at && (
-                        <span className="text-xs text-[#22C55E]">{t("saved", { date: formatDate(p.saved_to_shopify_at) })}</span>
+                        <span className="text-xs text-[#22C55E]">{t("saved", { date: formatDate(p.saved_to_shopify_at, locale) })}</span>
                       )}
                     </td>
                   </tr>

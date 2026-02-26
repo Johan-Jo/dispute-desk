@@ -1,27 +1,26 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const PACKS = [
-  { id: "P-10342", disputeId: "D-10342", orderId: "#10492", reason: "Product not received", created: "2026-02-19", status: "Draft", completeness: 0 },
-  { id: "P-10343", disputeId: "D-10343", orderId: "#10488", reason: "Fraud", created: "2026-02-18", status: "Draft", completeness: 42 },
-  { id: "P-10344", disputeId: "D-10344", orderId: "#10463", reason: "Not as described", created: "2026-02-15", status: "Ready", completeness: 86 },
-  { id: "P-10345", disputeId: "D-10345", orderId: "#10501", reason: "Product not received", created: "2026-02-20", status: "Draft", completeness: 58 },
-  { id: "P-10346", disputeId: "D-10346", orderId: "#10475", reason: "Fraud", created: "2026-02-17", status: "Ready", completeness: 95 },
-  { id: "P-10348", disputeId: "D-10348", orderId: "#10498", reason: "Duplicate", created: "2026-02-19", status: "Draft", completeness: 68 },
-  { id: "P-10349", disputeId: "D-10349", orderId: "#10510", reason: "Product not received", created: "2026-02-16", status: "Ready", completeness: 78 },
+  { id: "P-10342", disputeId: "D-10342", orderId: "#10492", reason: "productNotReceived", created: "2026-02-19", status: "Draft", completeness: 0 },
+  { id: "P-10343", disputeId: "D-10343", orderId: "#10488", reason: "fraudulent", created: "2026-02-18", status: "Draft", completeness: 42 },
+  { id: "P-10344", disputeId: "D-10344", orderId: "#10463", reason: "productUnacceptable", created: "2026-02-15", status: "Ready", completeness: 86 },
+  { id: "P-10345", disputeId: "D-10345", orderId: "#10501", reason: "productNotReceived", created: "2026-02-20", status: "Draft", completeness: 58 },
+  { id: "P-10346", disputeId: "D-10346", orderId: "#10475", reason: "fraudulent", created: "2026-02-17", status: "Ready", completeness: 95 },
+  { id: "P-10348", disputeId: "D-10348", orderId: "#10498", reason: "duplicate", created: "2026-02-19", status: "Draft", completeness: 68 },
+  { id: "P-10349", disputeId: "D-10349", orderId: "#10510", reason: "productNotReceived", created: "2026-02-16", status: "Ready", completeness: 78 },
 ];
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
 
 export default function PacksPage() {
   const t = useTranslations("packs");
   const tt = useTranslations("table");
+  const ts = useTranslations("status");
+  const tr = useTranslations("reasons");
+  const locale = useLocale();
   const [statusFilter, setStatusFilter] = useState("all");
 
   const filteredPacks = PACKS.filter(
@@ -44,8 +43,8 @@ export default function PacksPage() {
           className="px-4 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
         >
           <option value="all">{t("allStatuses")}</option>
-          <option value="Draft">Draft</option>
-          <option value="Ready">Ready</option>
+          <option value="Draft">{ts("draft")}</option>
+          <option value="Ready">{ts("ready")}</option>
         </select>
       </div>
 
@@ -76,11 +75,11 @@ export default function PacksPage() {
                     <span className="text-[#4F46E5] hover:text-[#4338CA]">{pack.disputeId}</span>
                   </td>
                   <td className="px-6 py-4 text-[#667085]">{pack.orderId}</td>
-                  <td className="px-6 py-4 text-[#667085]">{pack.reason}</td>
-                  <td className="px-6 py-4 text-[#667085]">{formatDate(pack.created)}</td>
+                  <td className="px-6 py-4 text-[#667085]">{tr.has(pack.reason) ? tr(pack.reason) : pack.reason}</td>
+                  <td className="px-6 py-4 text-[#667085]">{new Date(pack.created).toLocaleDateString(locale)}</td>
                   <td className="px-6 py-4">
                     <Badge variant={pack.status === "Ready" ? "success" : "warning"}>
-                      {pack.status}
+                      {pack.status === "Ready" ? ts("ready") : ts("draft")}
                     </Badge>
                   </td>
                   <td className="px-6 py-4">

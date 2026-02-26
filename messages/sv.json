@@ -76,6 +76,9 @@
     "goToDisputes": "Gå till tvister",
     "viewPacks": "Visa paket",
     "openShopify": "Öppna Shopify",
+    "infoBannerTitle": "Bevis genererade i DisputeDesk",
+    "infoBannerDesc": "Bevispaket skapas och hanteras här. För att skicka bevis till kortnätverket måste du",
+    "viewDetails": "Visa detaljer",
     "automationSettings": "Automationsinställningar",
     "automationOn": "Automation är PÅ",
     "automationBanner": "DisputeDesk bygger automatiskt bevispaket och sparar bevis tillbaka till Shopify när de är klara. Inlämning sker i Shopify Admin.",
@@ -290,7 +293,21 @@
     "unnamedRule": "Namnlös regel",
     "matchesAll": "Matchar alla tvister",
     "footer": "Regler utvärderas uppifrån och ner. Första matchande regel gäller. Tvister som inte matchar någon regel går till granskningskö.",
-    "noRules": "Inga regler konfigurerade. Alla nya tvister går till granskningskön som standard."
+    "noRules": "Inga regler konfigurerade. Alla nya tvister går till granskningskön som standard.",
+    "reason": "Anledning",
+    "statusLabel": "Status",
+    "demoRule1Name": "Bifoga standard bevispaket för bedrägeri",
+    "demoRule1Trigger": "Tvist-typ: Bedrägeri",
+    "demoRule1Action": "Bifoga paket: EP-001",
+    "demoRule2Name": "Varning för högt värde",
+    "demoRule2Trigger": "Belopp > 500 $",
+    "demoRule2Action": "Skicka e-postnotifikation",
+    "demoRule3Name": "Produkt ej mottagen - Spårning krävs",
+    "demoRule3Trigger": "Tvist-typ: Produkt ej mottagen",
+    "demoRule3Action": "Bifoga paket: EP-002",
+    "demoRule4Name": "Brådskande deadline-varning",
+    "demoRule4Trigger": "Förfallodatum < 3 dagar",
+    "demoRule4Action": "Flagga som brådskande"
   },
   "settings": {
     "title": "Inställningar",
@@ -393,11 +410,26 @@
     "title": "Policyer",
     "subtitle": "Hantera butikspolicyer som används i bevispaket",
     "addPolicy": "Lägg till policy",
-    "updated": "Uppdaterad {date}",
+    "updated": "Uppdaterad",
+    "termsOfService": "Användarvillkor",
+    "refundPolicy": "Återbetalningspolicy",
+    "privacyPolicy": "Integritetspolicy",
+    "shippingPolicy": "Fraktpolicy",
+    "legalAgreement": "Juridiskt avtal",
+    "customerPolicy": "Kundpolicy",
     "aboutPolicyDocs": "Om policydokument",
     "aboutPolicyDocsDesc": "Butikspolicyer inkluderas automatiskt i bevispaket när de är relevanta. Håll dina policyer uppdaterade för att stärka dina tvistsvar. Format som stöds: PDF, DOCX.",
     "preview": "Förhandsgranska",
     "download": "Ladda ner"
+  },
+  "reasons": {
+    "fraudulent": "Bedrägeri",
+    "productNotReceived": "Produkt ej mottagen",
+    "productUnacceptable": "Oacceptabel produkt",
+    "creditNotProcessed": "Kredit ej behandlad",
+    "subscriptionCanceled": "Prenumeration avbruten",
+    "duplicate": "Dubblett",
+    "general": "Allmänt"
   },
   "table": {
     "id": "ID",
@@ -411,7 +443,9 @@
     "pack": "Paket",
     "score": "Poäng",
     "created": "Skapad",
-    "actions": "Åtgärder"
+    "actions": "Åtgärder",
+    "customer": "Kund",
+    "date": "Datum"
   },
   "help": {
     "title": "Hjälpcenter",
@@ -540,6 +574,31 @@
         "body": "Viktigt att förstå: DisputeDesk sparar bevis till Shopify men skickar INTE in svar till kortnätverk (Visa, Mastercard, etc.).\n\nProcessen:\n1. DisputeDesk bygger ditt bevispaket och sparar det till Shopify via API.\n2. Inlämning till kortnätverket hanteras helt av Shopify.\n3. Shopify skickar antingen in automatiskt på förfallodatumet eller så gör du det manuellt.\n\nDu behåller alltid kontrollen. Granska dina bevis i Shopify Admin innan de skickas in."
       }
     }
+  },
+  "onboarding": {
+    "bannerTitle": "Välkommen till DisputeDesk!",
+    "bannerDesc": "Ta en snabb 2-minuters rundtur för att lära dig hantera återkrav som ett proffs.",
+    "startTour": "Starta rundtur",
+    "skipTour": "Hoppa över",
+    "next": "Nästa",
+    "previous": "Föregående",
+    "finish": "Slutför",
+    "stepOf": "Steg {current} av {total}",
+    "welcomeTitle": "Välkommen till DisputeDesk! 👋",
+    "welcomeDesc": "Låt oss ta en snabb rundtur för att hjälpa dig komma igång med att hantera dina Shopify-återkrav effektivt. Det tar bara 2 minuter.",
+    "dashboardTitle": "Ditt kontrollcenter",
+    "dashboardDesc": "Det här är din instrumentpanel där du kan se alla dina nyckeltal: aktiva tvister, vinstfrekvens, använda bevispaket och kommande tidsfrister.",
+    "disputesListTitle": "Hantera alla tvister",
+    "disputesListDesc": "Visa och hantera alla dina tvister på ett ställe. Filtrera efter status, sortera efter prioritet och se snabbt vilka tvister som behöver din uppmärksamhet.",
+    "evidencePacksTitle": "Bevispaketbibliotek",
+    "evidencePacksDesc": "Skapa återanvändbara bevismallar för olika tvisttyper. Varje paket innehåller alla dokument som behövs för att bemöta en specifik typ av återkrav.",
+    "automationRulesTitle": "Automatisera med regler",
+    "automationRulesDesc": "Sätt upp automationsregler för att automatiskt bifoga bevispaket, skicka aviseringar eller flagga brådskande tvister baserat på anpassade villkor.",
+    "policiesTitle": "Butikspolicydokument",
+    "policiesDesc": "Ladda upp och hantera dina butikspolicyer (Användarvillkor, Returpolicy, etc.) för att snabbt inkludera dem som bevis i tvister.",
+    "completeTitle": "Anslut din butik! 🚀",
+    "completeDesc": "Du har sett vad DisputeDesk kan göra. Anslut nu din riktiga Shopify-butik för att börja hantera tvister, bygga bevispaket och vinna återkrav automatiskt.",
+    "connectStore": "Anslut butik"
   },
   "marketing": {
     "nav": {

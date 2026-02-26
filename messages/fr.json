@@ -93,7 +93,10 @@
     "shopifyAdminDesc": "Soumettre des preuves aux réseaux de cartes",
     "goToDisputes": "Aller aux litiges",
     "viewPacks": "Voir les dossiers",
-    "openShopify": "Ouvrir Shopify"
+    "openShopify": "Ouvrir Shopify",
+    "infoBannerTitle": "Preuves générées dans DisputeDesk",
+    "infoBannerDesc": "Les dossiers de preuves sont créés et gérés ici. Pour soumettre des preuves au réseau de cartes, vous devez",
+    "viewDetails": "Voir les détails"
   },
   "disputes": {
     "title": "Litiges",
@@ -290,7 +293,21 @@
     "unnamedRule": "Règle sans nom",
     "matchesAll": "Correspond à tous les litiges",
     "footer": "Les règles sont évaluées de haut en bas. La première règle correspondante s'applique. Les litiges sans correspondance vont en file d'examen.",
-    "noRules": "Aucune règle configurée. Tous les nouveaux litiges iront en file d'examen par défaut."
+    "noRules": "Aucune règle configurée. Tous les nouveaux litiges iront en file d'examen par défaut.",
+    "reason": "Motif",
+    "statusLabel": "Statut",
+    "demoRule1Name": "Joindre automatiquement les preuves standard de fraude",
+    "demoRule1Trigger": "Type de litige : Frauduleux",
+    "demoRule1Action": "Joindre dossier : EP-001",
+    "demoRule2Name": "Alerte litige de haute valeur",
+    "demoRule2Trigger": "Montant > 500 $",
+    "demoRule2Action": "Envoyer une notification par e-mail",
+    "demoRule3Name": "Produit non reçu - Suivi requis",
+    "demoRule3Trigger": "Type de litige : Produit non reçu",
+    "demoRule3Action": "Joindre dossier : EP-002",
+    "demoRule4Name": "Avertissement délai urgent",
+    "demoRule4Trigger": "Date limite < 3 jours",
+    "demoRule4Action": "Marquer comme urgent"
   },
   "settings": {
     "title": "Paramètres",
@@ -393,11 +410,26 @@
     "title": "Politiques",
     "subtitle": "Gérer les politiques utilisées dans les dossiers",
     "addPolicy": "Ajouter une politique",
-    "updated": "Mis à jour {date}",
+    "updated": "Mis à jour",
+    "termsOfService": "Conditions d'utilisation",
+    "refundPolicy": "Politique de remboursement",
+    "privacyPolicy": "Politique de confidentialité",
+    "shippingPolicy": "Politique d'expédition",
+    "legalAgreement": "Accord juridique",
+    "customerPolicy": "Politique client",
     "aboutPolicyDocs": "À propos des documents de politique",
     "aboutPolicyDocsDesc": "Les documents de politique sont utilisés dans les dossiers de preuves.",
     "preview": "Aperçu",
     "download": "Télécharger"
+  },
+  "reasons": {
+    "fraudulent": "Frauduleux",
+    "productNotReceived": "Produit non reçu",
+    "productUnacceptable": "Produit inacceptable",
+    "creditNotProcessed": "Crédit non traité",
+    "subscriptionCanceled": "Abonnement annulé",
+    "duplicate": "Doublon",
+    "general": "Général"
   },
   "table": {
     "id": "ID",
@@ -411,7 +443,9 @@
     "pack": "Dossier",
     "score": "Score",
     "created": "Créé",
-    "actions": "Actions"
+    "actions": "Actions",
+    "customer": "Client",
+    "date": "Date"
   },
   "help": {
     "title": "Centre d'aide",
@@ -540,6 +574,31 @@
         "body": "Important : DisputeDesk enregistre les preuves sur Shopify mais ne soumet PAS au réseau de cartes (Visa, Mastercard, etc.).\n\nLe processus :\n1. DisputeDesk crée votre dossier et l'enregistre sur Shopify.\n2. La soumission est gérée par Shopify.\n3. Shopify soumet automatiquement à la date limite ou vous le faites manuellement.\n\nVous gardez toujours le contrôle. Vérifiez vos preuves dans Shopify Admin."
       }
     }
+  },
+  "onboarding": {
+    "bannerTitle": "Bienvenue sur DisputeDesk !",
+    "bannerDesc": "Faites une visite rapide de 2 minutes pour apprendre à gérer les rétrofacturations comme un pro.",
+    "startTour": "Commencer la visite",
+    "skipTour": "Passer",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "finish": "Terminer",
+    "stepOf": "Étape {current} sur {total}",
+    "welcomeTitle": "Bienvenue sur DisputeDesk ! 👋",
+    "welcomeDesc": "Faisons une visite rapide pour vous aider à démarrer la gestion de vos rétrofacturations Shopify efficacement. Cela ne prendra que 2 minutes.",
+    "dashboardTitle": "Votre centre de commande",
+    "dashboardDesc": "Voici votre tableau de bord où vous pouvez voir tous vos indicateurs clés : litiges actifs, taux de réussite, dossiers de preuves utilisés et échéances à venir.",
+    "disputesListTitle": "Gérer tous les litiges",
+    "disputesListDesc": "Visualisez et gérez tous vos litiges en un seul endroit. Filtrez par statut, triez par priorité et identifiez rapidement les litiges nécessitant votre attention.",
+    "evidencePacksTitle": "Bibliothèque de dossiers de preuves",
+    "evidencePacksDesc": "Créez des modèles de preuves réutilisables pour différents types de litiges. Chaque dossier contient tous les documents nécessaires pour contester un type spécifique de rétrofacturation.",
+    "automationRulesTitle": "Automatiser avec des règles",
+    "automationRulesDesc": "Configurez des règles d'automatisation pour joindre automatiquement des dossiers de preuves, envoyer des notifications ou signaler les litiges urgents.",
+    "policiesTitle": "Documents de politique",
+    "policiesDesc": "Téléchargez et gérez vos politiques de boutique pour les inclure rapidement comme preuves dans les litiges.",
+    "completeTitle": "Connectez votre boutique ! 🚀",
+    "completeDesc": "Vous avez vu ce que DisputeDesk peut faire. Connectez maintenant votre vraie boutique Shopify pour gérer les litiges, créer des dossiers de preuves et gagner les rétrofacturations automatiquement.",
+    "connectStore": "Connecter la boutique"
   },
   "marketing": {
     "nav": {

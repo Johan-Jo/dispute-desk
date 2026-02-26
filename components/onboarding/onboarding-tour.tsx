@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { X, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { OnboardingStep } from "@/lib/onboarding-config";
 
 interface OnboardingTourProps {
@@ -18,6 +19,7 @@ export function OnboardingTour({
   onSkip,
   onNavigate,
 }: OnboardingTourProps) {
+  const t = useTranslations("onboarding");
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
@@ -66,6 +68,7 @@ export function OnboardingTour({
   const handleNext = () => {
     if (isLastStep) {
       onComplete();
+      onNavigate("/portal/connect-shopify");
     } else {
       setCurrentStep(currentStep + 1);
     }
@@ -223,7 +226,7 @@ export function OnboardingTour({
           <div className="mb-6">
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-xl font-bold text-[#0B1220] pr-4">
-                {step.title}
+                {t(`${step.id}Title`)}
               </h3>
               <button
                 onClick={onSkip}
@@ -233,7 +236,7 @@ export function OnboardingTour({
               </button>
             </div>
             <p className="text-[#667085] leading-relaxed">
-              {step.description}
+              {t(`${step.id}Desc`)}
             </p>
           </div>
 
@@ -243,24 +246,24 @@ export function OnboardingTour({
               {!isFirstStep && (
                 <Button variant="ghost" size="sm" onClick={handlePrevious}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Previous
+                  {t("previous")}
                 </Button>
               )}
             </div>
 
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={onSkip}>
-                Skip Tour
+                {t("skipTour")}
               </Button>
               <Button variant="primary" size="sm" onClick={handleNext}>
                 {isLastStep ? (
                   <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Finish
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    {t("connectStore")}
                   </>
                 ) : (
                   <>
-                    Next
+                    {t("next")}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
@@ -270,7 +273,7 @@ export function OnboardingTour({
 
           {/* Step counter */}
           <div className="text-center text-sm text-[#667085] mt-4">
-            Step {currentStep + 1} of {steps.length}
+            {t("stepOf", { current: currentStep + 1, total: steps.length })}
           </div>
         </div>
       </div>

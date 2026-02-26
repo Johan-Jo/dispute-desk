@@ -18,10 +18,10 @@ interface Rule {
 }
 
 const DEMO_RULES = [
-  { id: "R-001", name: "Auto-attach Standard Fraud Evidence", trigger: "Dispute Type: Fraudulent", actionLabel: "Attach Pack: EP-001", status: "active", executions: 23 },
-  { id: "R-002", name: "High-Value Dispute Alert", trigger: "Amount > $500", actionLabel: "Send Email Notification", status: "active", executions: 8 },
-  { id: "R-003", name: "Product Not Received - Tracking Required", trigger: "Dispute Type: Product Not Received", actionLabel: "Attach Pack: EP-002", status: "active", executions: 15 },
-  { id: "R-004", name: "Urgent Deadline Warning", trigger: "Due Date < 3 days", actionLabel: "Flag as Urgent", status: "inactive", executions: 0 },
+  { id: "R-001", nameKey: "demoRule1Name", triggerKey: "demoRule1Trigger", actionKey: "demoRule1Action", status: "active", executions: 23 },
+  { id: "R-002", nameKey: "demoRule2Name", triggerKey: "demoRule2Trigger", actionKey: "demoRule2Action", status: "active", executions: 8 },
+  { id: "R-003", nameKey: "demoRule3Name", triggerKey: "demoRule3Trigger", actionKey: "demoRule3Action", status: "active", executions: 15 },
+  { id: "R-004", nameKey: "demoRule4Name", triggerKey: "demoRule4Trigger", actionKey: "demoRule4Action", status: "inactive", executions: 0 },
 ];
 
 const DISPUTE_REASONS = [
@@ -34,22 +34,43 @@ const DISPUTE_REASONS = [
   "GENERAL",
 ];
 
-function matchSummary(match: Rule["match"]): string {
+const REASON_KEYS: Record<string, string> = {
+  PRODUCT_NOT_RECEIVED: "productNotReceived",
+  PRODUCT_UNACCEPTABLE: "productUnacceptable",
+  FRAUDULENT: "fraudulent",
+  CREDIT_NOT_PROCESSED: "creditNotProcessed",
+  SUBSCRIPTION_CANCELED: "subscriptionCanceled",
+  DUPLICATE: "duplicate",
+  GENERAL: "general",
+};
+
+function matchSummary(
+  match: Rule["match"],
+  tRules: (key: string) => string,
+  tReasons: { has: (key: string) => boolean; (key: string): string },
+): string {
   const parts: string[] = [];
-  if (match.reason?.length) parts.push(`Reason: ${match.reason.join(", ")}`);
-  if (match.status?.length) parts.push(`Status: ${match.status.join(", ")}`);
+  if (match.reason?.length) {
+    const translated = match.reason.map((r) => {
+      const key = REASON_KEYS[r];
+      return key && tReasons.has(key) ? tReasons(key) : r.replace(/_/g, " ");
+    });
+    parts.push(`${tRules("reason")}: ${translated.join(", ")}`);
+  }
+  if (match.status?.length) parts.push(`${tRules("statusLabel")}: ${match.status.join(", ")}`);
   if (match.amount_range) {
     const { min, max } = match.amount_range;
     if (min != null && max != null) parts.push(`$${min}–$${max}`);
     else if (min != null) parts.push(`≥ $${min}`);
     else if (max != null) parts.push(`≤ $${max}`);
   }
-  return parts.length ? parts.join(" · ") : "Matches all disputes";
+  return parts.length ? parts.join(" · ") : tRules("matchesAll");
 }
 
 export default function RulesSettingsPage() {
   const t = useTranslations("rules");
   const tc = useTranslations("common");
+  const tr = useTranslations("reasons");
   const isDemo = useDemoMode();
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +142,7 @@ export default function RulesSettingsPage() {
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
-                    <h3 className="font-semibold text-[#0B1220]">{rule.name}</h3>
+                    <h3 className="font-semibold text-[#0B1220]">{t(rule.nameKey)}</h3>
                     {rule.status === "active" ? (
                       <Badge variant="success">{t("active")}</Badge>
                     ) : (
@@ -133,11 +154,11 @@ export default function RulesSettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-[#667085] uppercase tracking-wider mb-1">{t("triggerCondition")}</p>
-                      <p className="text-sm text-[#0B1220] font-medium">{rule.trigger}</p>
+                      <p className="text-sm text-[#0B1220] font-medium">{t(rule.triggerKey)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-[#667085] uppercase tracking-wider mb-1">{t("action")}</p>
-                      <p className="text-sm text-[#0B1220] font-medium">{rule.actionLabel}</p>
+                      <p className="text-sm text-[#0B1220] font-medium">{t(rule.actionKey)}</p>
                     </div>
                   </div>
 
@@ -202,7 +223,7 @@ export default function RulesSettingsPage() {
               <div className="flex flex-wrap gap-2">
                 {DISPUTE_REASONS.map((r) => (
                   <button key={r} onClick={() => setFormReasons((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r])} className={`px-3 py-1 text-xs rounded-full border transition-colors ${formReasons.includes(r) ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>
-                    {r.replace(/_/g, " ")}
+                    {REASON_KEYS[r] ? tr(REASON_KEYS[r]) : r.replace(/_/g, " ")}
                   </button>
                 ))}
               </div>
@@ -250,7 +271,7 @@ export default function RulesSettingsPage() {
                       {rule.action.mode === "auto_pack" ? t("autoPack") : t("review")}
                     </Badge>
                   </div>
-                  <p className="text-xs text-[#667085]">{matchSummary(rule.match)}</p>
+                  <p className="text-xs text-[#667085]">{matchSummary(rule.match, t, tr as any)}</p>
                 </div>
               </div>
             ))}

@@ -93,7 +93,10 @@
     "shopifyAdminDesc": "Submit evidence to card networks",
     "goToDisputes": "Go to Disputes",
     "viewPacks": "View Packs",
-    "openShopify": "Open Shopify"
+    "openShopify": "Open Shopify",
+    "infoBannerTitle": "Evidence Generated in DisputeDesk",
+    "infoBannerDesc": "Evidence packs are created and managed here. To submit evidence to the card network, you must",
+    "viewDetails": "View Details"
   },
   "disputes": {
     "title": "Disputes",
@@ -290,7 +293,21 @@
     "unnamedRule": "Unnamed Rule",
     "matchesAll": "Matches all disputes",
     "footer": "Rules are evaluated top-to-bottom. First matching rule wins. Disputes matching no rule go to Review Queue.",
-    "noRules": "No rules configured. All new disputes will go to the review queue by default."
+    "noRules": "No rules configured. All new disputes will go to the review queue by default.",
+    "reason": "Reason",
+    "statusLabel": "Status",
+    "demoRule1Name": "Auto-attach Standard Fraud Evidence",
+    "demoRule1Trigger": "Dispute Type: Fraudulent",
+    "demoRule1Action": "Attach Pack: EP-001",
+    "demoRule2Name": "High-Value Dispute Alert",
+    "demoRule2Trigger": "Amount > $500",
+    "demoRule2Action": "Send Email Notification",
+    "demoRule3Name": "Product Not Received - Tracking Required",
+    "demoRule3Trigger": "Dispute Type: Product Not Received",
+    "demoRule3Action": "Attach Pack: EP-002",
+    "demoRule4Name": "Urgent Deadline Warning",
+    "demoRule4Trigger": "Due Date < 3 days",
+    "demoRule4Action": "Flag as Urgent"
   },
   "settings": {
     "title": "Settings",
@@ -397,7 +414,22 @@
     "aboutPolicyDocsDesc": "Store policies are automatically included in evidence packs when relevant to a dispute. Keep your policies up-to-date to strengthen your dispute responses. Supported formats: PDF, DOCX.",
     "preview": "Preview",
     "download": "Download",
-    "updated": "Updated {date}"
+    "updated": "Updated",
+    "termsOfService": "Terms of Service",
+    "refundPolicy": "Refund Policy",
+    "privacyPolicy": "Privacy Policy",
+    "shippingPolicy": "Shipping Policy",
+    "legalAgreement": "Legal Agreement",
+    "customerPolicy": "Customer Policy"
+  },
+  "reasons": {
+    "fraudulent": "Fraudulent",
+    "productNotReceived": "Product Not Received",
+    "productUnacceptable": "Product Unacceptable",
+    "creditNotProcessed": "Credit Not Processed",
+    "subscriptionCanceled": "Subscription Canceled",
+    "duplicate": "Duplicate",
+    "general": "General"
   },
   "table": {
     "id": "ID",
@@ -411,7 +443,9 @@
     "pack": "Pack",
     "score": "Score",
     "created": "Created",
-    "actions": "Actions"
+    "actions": "Actions",
+    "customer": "Customer",
+    "date": "Date"
   },
   "help": {
     "title": "Help Center",
@@ -540,6 +574,31 @@
         "body": "This is an important distinction: DisputeDesk saves evidence to Shopify, but does NOT send it onward to card networks (Visa, Mastercard, American Express, etc.).\n\nHere's the process:\n1. DisputeDesk builds your evidence pack and saves it to Shopify via API.\n2. Forwarding evidence to the card network is handled entirely by Shopify.\n3. Shopify either auto-sends on the due date or you respond manually from Shopify Admin.\n\nWhy it works this way:\n- Shopify is the merchant of record and handles the official communication with card networks.\n- This ensures compliance with payment processor requirements.\n- Your evidence is formatted and structured by DisputeDesk, then handed off to Shopify for the official process.\n\nYou always maintain control. Review your evidence in Shopify Admin before Shopify forwards it to the card network."
       }
     }
+  },
+  "onboarding": {
+    "bannerTitle": "Welcome to DisputeDesk!",
+    "bannerDesc": "Take a quick 2-minute tour to learn how to manage chargebacks like a pro.",
+    "startTour": "Start Tour",
+    "skipTour": "Skip Tour",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "stepOf": "Step {current} of {total}",
+    "welcomeTitle": "Welcome to DisputeDesk! \uD83D\uDC4B",
+    "welcomeDesc": "Let's take a quick tour to help you get started with managing your Shopify chargebacks efficiently. This will only take 2 minutes.",
+    "dashboardTitle": "Your Command Center",
+    "dashboardDesc": "This is your dashboard where you can see all your key metrics at a glance: active disputes, win rate, evidence packs used, and upcoming deadlines.",
+    "disputesListTitle": "Manage All Disputes",
+    "disputesListDesc": "View and manage all your disputes in one place. Filter by status, sort by priority, and quickly see which disputes need your attention.",
+    "evidencePacksTitle": "Evidence Packs Library",
+    "evidencePacksDesc": "Create reusable evidence templates for different dispute types. Each pack contains all the documents needed to fight a specific type of chargeback.",
+    "automationRulesTitle": "Automate with Rules",
+    "automationRulesDesc": "Set up automation rules to automatically attach evidence packs, send notifications, or flag urgent disputes based on custom conditions.",
+    "policiesTitle": "Store Policy Documents",
+    "policiesDesc": "Upload and manage your store policies (Terms of Service, Refund Policy, etc.) to quickly include them as evidence in disputes.",
+    "completeTitle": "Connect Your Store! \uD83D\uDE80",
+    "completeDesc": "You've seen what DisputeDesk can do. Now connect your real Shopify store to start managing disputes, building evidence packs, and winning chargebacks automatically.",
+    "connectStore": "Connect Store"
   },
   "marketing": {
     "nav": {

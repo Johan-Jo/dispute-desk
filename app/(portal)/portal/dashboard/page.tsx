@@ -8,7 +8,7 @@ import {
   ArrowRight,
   ExternalLink,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { KPICard } from "@/components/ui/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,16 +22,26 @@ const recentDisputes = [
   { id: "DP-2404", customer: "Emma Wilson", date: "2024-02-23", amount: "$167.25", status: "won" },
 ];
 
-const statusMap: Record<string, { variant: "success" | "warning" | "info" | "danger"; label: string }> = {
-  needs_evidence: { variant: "warning", label: "Needs Evidence" },
-  under_review: { variant: "info", label: "Under Review" },
-  won: { variant: "success", label: "Won" },
-  lost: { variant: "danger", label: "Lost" },
+const STATUS_VARIANTS: Record<string, "success" | "warning" | "info" | "danger"> = {
+  needs_evidence: "warning",
+  under_review: "info",
+  won: "success",
+  lost: "danger",
+};
+
+const STATUS_KEYS: Record<string, string> = {
+  needs_evidence: "needsReview",
+  under_review: "underReview",
+  won: "won",
+  lost: "lost",
 };
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
+  const tt = useTranslations("table");
+  const ts = useTranslations("status");
+  const locale = useLocale();
 
   return (
     <div>
@@ -45,11 +55,10 @@ export default function DashboardPage() {
       <WelcomeBanner />
 
       <div className="mb-6">
-        <InfoBanner variant="info" title="Evidence Generated in DisputeDesk">
-          Evidence packs are created and managed here. To submit evidence to
-          the card network, you must{" "}
+        <InfoBanner variant="info" title={t("infoBannerTitle")}>
+          {t("infoBannerDesc")}{" "}
           <a href="#" className="font-semibold hover:underline inline-flex items-center gap-1">
-            open Shopify Admin
+            {t("openShopify")}
             <ExternalLink className="w-3 h-3" />
           </a>
           .
@@ -107,28 +116,29 @@ export default function DashboardPage() {
           <table className="w-full text-sm">
             <thead className="bg-[#F7F8FA] border-b border-[#E5E7EB]">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">Dispute ID</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">Customer</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">Date</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">Amount</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">Status</th>
-                <th className="text-right px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">Actions</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("id")}</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("customer")}</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("date")}</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("amount")}</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("status")}</th>
+                <th className="text-right px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E7EB]">
               {recentDisputes.map((d) => {
-                const cfg = statusMap[d.status] ?? statusMap.needs_evidence;
+                const variant = STATUS_VARIANTS[d.status] ?? "warning";
+                const statusKey = STATUS_KEYS[d.status] ?? "unknown";
                 return (
                   <tr key={d.id} className="hover:bg-[#F7F8FA] transition-colors">
                     <td className="px-6 py-4 font-medium text-[#0B1220]">{d.id}</td>
                     <td className="px-6 py-4 text-[#0B1220]">{d.customer}</td>
-                    <td className="px-6 py-4 text-[#667085]">{d.date}</td>
+                    <td className="px-6 py-4 text-[#667085]">{new Date(d.date).toLocaleDateString(locale)}</td>
                     <td className="px-6 py-4 font-medium text-[#0B1220]">{d.amount}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                      <Badge variant={variant}>{ts(statusKey)}</Badge>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm">View Details</Button>
+                      <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
                     </td>
                   </tr>
                 );

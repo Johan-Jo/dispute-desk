@@ -93,7 +93,10 @@
     "shopifyAdminDesc": "Enviar evidencia a redes de tarjetas",
     "goToDisputes": "Ir a disputas",
     "viewPacks": "Ver paquetes",
-    "openShopify": "Abrir Shopify"
+    "openShopify": "Abrir Shopify",
+    "infoBannerTitle": "Evidencia generada en DisputeDesk",
+    "infoBannerDesc": "Los paquetes de evidencia se crean y gestionan aquí. Para enviar evidencia a la red de tarjetas, debe",
+    "viewDetails": "Ver detalles"
   },
   "disputes": {
     "title": "Disputas",
@@ -290,7 +293,21 @@
     "unnamedRule": "Regla sin nombre",
     "matchesAll": "Coincide con todas las disputas",
     "footer": "Las reglas se evalúan de arriba a abajo. La primera regla que coincida se aplica. Las disputas sin coincidencia van a la cola de revisión.",
-    "noRules": "Sin reglas configuradas. Todas las nuevas disputas irán a la cola de revisión por defecto."
+    "noRules": "Sin reglas configuradas. Todas las nuevas disputas irán a la cola de revisión por defecto.",
+    "reason": "Motivo",
+    "statusLabel": "Estado",
+    "demoRule1Name": "Adjuntar evidencia estándar de fraude",
+    "demoRule1Trigger": "Tipo de disputa: Fraudulento",
+    "demoRule1Action": "Adjuntar paquete: EP-001",
+    "demoRule2Name": "Alerta de disputa de alto valor",
+    "demoRule2Trigger": "Monto > $500",
+    "demoRule2Action": "Enviar notificación por correo",
+    "demoRule3Name": "Producto no recibido - Rastreo requerido",
+    "demoRule3Trigger": "Tipo de disputa: Producto no recibido",
+    "demoRule3Action": "Adjuntar paquete: EP-002",
+    "demoRule4Name": "Advertencia de plazo urgente",
+    "demoRule4Trigger": "Fecha límite < 3 días",
+    "demoRule4Action": "Marcar como urgente"
   },
   "settings": {
     "title": "Configuración",
@@ -393,11 +410,26 @@
     "title": "Políticas",
     "subtitle": "Gestionar políticas de la tienda para paquetes de evidencia",
     "addPolicy": "Agregar política",
-    "updated": "Actualizado {date}",
+    "updated": "Actualizado",
+    "termsOfService": "Términos de servicio",
+    "refundPolicy": "Política de reembolso",
+    "privacyPolicy": "Política de privacidad",
+    "shippingPolicy": "Política de envío",
+    "legalAgreement": "Acuerdo legal",
+    "customerPolicy": "Política del cliente",
     "aboutPolicyDocs": "Acerca de los documentos de política",
     "aboutPolicyDocsDesc": "Los documentos de política se utilizan en los paquetes de evidencia.",
     "preview": "Vista previa",
     "download": "Descargar"
+  },
+  "reasons": {
+    "fraudulent": "Fraudulento",
+    "productNotReceived": "Producto no recibido",
+    "productUnacceptable": "Producto inaceptable",
+    "creditNotProcessed": "Crédito no procesado",
+    "subscriptionCanceled": "Suscripción cancelada",
+    "duplicate": "Duplicado",
+    "general": "General"
   },
   "table": {
     "id": "ID",
@@ -411,7 +443,9 @@
     "pack": "Paquete",
     "score": "Puntuación",
     "created": "Creado",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "customer": "Cliente",
+    "date": "Fecha"
   },
   "help": {
     "title": "Centro de ayuda",
@@ -540,6 +574,31 @@
         "body": "Importante: DisputeDesk guarda evidencia en Shopify pero NO envía a redes de tarjetas (Visa, Mastercard, etc.).\n\nEl proceso:\n1. DisputeDesk crea su paquete y lo guarda en Shopify.\n2. El envío es gestionado por Shopify.\n3. Shopify envía automáticamente en la fecha límite o usted lo hace manualmente.\n\nUsted siempre mantiene el control. Revise su evidencia en Shopify Admin."
       }
     }
+  },
+  "onboarding": {
+    "bannerTitle": "¡Bienvenido a DisputeDesk!",
+    "bannerDesc": "Haz un recorrido rápido de 2 minutos para aprender a gestionar contracargos como un profesional.",
+    "startTour": "Iniciar recorrido",
+    "skipTour": "Omitir",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "finish": "Finalizar",
+    "stepOf": "Paso {current} de {total}",
+    "welcomeTitle": "¡Bienvenido a DisputeDesk! 👋",
+    "welcomeDesc": "Hagamos un recorrido rápido para ayudarte a comenzar a gestionar tus contracargos de Shopify de manera eficiente. Solo tomará 2 minutos.",
+    "dashboardTitle": "Tu centro de control",
+    "dashboardDesc": "Este es tu panel donde puedes ver todas tus métricas clave: disputas activas, tasa de éxito, paquetes de evidencia utilizados y plazos próximos.",
+    "disputesListTitle": "Gestionar todas las disputas",
+    "disputesListDesc": "Visualiza y gestiona todas tus disputas en un solo lugar. Filtra por estado, ordena por prioridad y ve rápidamente qué disputas necesitan tu atención.",
+    "evidencePacksTitle": "Biblioteca de paquetes de evidencia",
+    "evidencePacksDesc": "Crea plantillas de evidencia reutilizables para diferentes tipos de disputas. Cada paquete contiene todos los documentos necesarios para combatir un tipo específico de contracargo.",
+    "automationRulesTitle": "Automatizar con reglas",
+    "automationRulesDesc": "Configura reglas de automatización para adjuntar automáticamente paquetes de evidencia, enviar notificaciones o marcar disputas urgentes según condiciones personalizadas.",
+    "policiesTitle": "Documentos de políticas",
+    "policiesDesc": "Sube y gestiona las políticas de tu tienda para incluirlas rápidamente como evidencia en las disputas.",
+    "completeTitle": "¡Conecta tu tienda! 🚀",
+    "completeDesc": "Ya has visto lo que DisputeDesk puede hacer. Ahora conecta tu tienda real de Shopify para empezar a gestionar disputas, crear paquetes de evidencia y ganar contracargos automáticamente.",
+    "connectStore": "Conectar tienda"
   },
   "marketing": {
     "nav": {

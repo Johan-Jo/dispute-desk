@@ -1,51 +1,20 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const POLICIES = [
-  {
-    name: "Terms of Service",
-    type: "Legal Agreement",
-    format: "PDF",
-    size: "245 KB",
-    lastUpdated: "2026-01-15",
-  },
-  {
-    name: "Refund Policy",
-    type: "Customer Policy",
-    format: "PDF",
-    size: "128 KB",
-    lastUpdated: "2026-02-01",
-  },
-  {
-    name: "Privacy Policy",
-    type: "Legal Agreement",
-    format: "PDF",
-    size: "312 KB",
-    lastUpdated: "2026-01-20",
-  },
-  {
-    name: "Shipping Policy",
-    type: "Customer Policy",
-    format: "PDF",
-    size: "98 KB",
-    lastUpdated: "2026-02-10",
-  },
+  { nameKey: "termsOfService", typeKey: "legalAgreement", format: "PDF", size: "245 KB", lastUpdated: "2026-01-15" },
+  { nameKey: "refundPolicy", typeKey: "customerPolicy", format: "PDF", size: "128 KB", lastUpdated: "2026-02-01" },
+  { nameKey: "privacyPolicy", typeKey: "legalAgreement", format: "PDF", size: "312 KB", lastUpdated: "2026-01-20" },
+  { nameKey: "shippingPolicy", typeKey: "customerPolicy", format: "PDF", size: "98 KB", lastUpdated: "2026-02-10" },
 ];
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export default function PoliciesPage() {
   const t = useTranslations("policies");
+  const locale = useLocale();
 
   return (
     <div>
@@ -85,14 +54,14 @@ export default function PoliciesPage() {
                   <FileText className="w-5 h-5 text-[#3B82F6]" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#0B1220]">{policy.name}</h3>
+                  <h3 className="font-semibold text-[#0B1220]">{t(policy.nameKey)}</h3>
                   <div className="flex items-center gap-3 mt-1">
-                    <Badge variant={policy.type === "Legal Agreement" ? "info" : "default"}>
-                      {policy.type}
+                    <Badge variant={policy.typeKey === "legalAgreement" ? "info" : "default"}>
+                      {t(policy.typeKey)}
                     </Badge>
                     <span className="text-xs text-[#667085]">{policy.format}</span>
                     <span className="text-xs text-[#667085]">{policy.size}</span>
-                    <span className="text-xs text-[#667085]">Updated {formatDate(policy.lastUpdated)}</span>
+                    <span className="text-xs text-[#667085]">{t("updated")} {new Date(policy.lastUpdated).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}</span>
                   </div>
                 </div>
               </div>

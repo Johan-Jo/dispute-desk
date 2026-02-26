@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Search, Filter, RefreshCw, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,47 +21,58 @@ interface Dispute {
 }
 
 const DEMO_DISPUTES = [
-  { id: "DP-2401", dispute_gid: "DP-2401", order_gid: "#1234", status: "needs_response", reason: "Fraudulent", amount: 145.00, currency_code: "USD", due_at: "2026-03-05", needs_review: false, last_synced_at: "2026-02-20", customer: "John Smith", email: "john@example.com" },
-  { id: "DP-2402", dispute_gid: "DP-2402", order_gid: "#1235", status: "under_review", reason: "Product Not Received", amount: 89.50, currency_code: "USD", due_at: "2026-03-06", needs_review: true, last_synced_at: "2026-02-21", customer: "Sarah Johnson", email: "sarah@example.com" },
-  { id: "DP-2403", dispute_gid: "DP-2403", order_gid: "#1236", status: "needs_response", reason: "Product Unacceptable", amount: 234.00, currency_code: "USD", due_at: "2026-03-07", needs_review: false, last_synced_at: "2026-02-22", customer: "Mike Davis", email: "mike@example.com" },
-  { id: "DP-2404", dispute_gid: "DP-2404", order_gid: "#1237", status: "won", reason: "Credit Not Processed", amount: 167.25, currency_code: "USD", due_at: "2026-03-08", needs_review: false, last_synced_at: "2026-02-23", customer: "Emma Wilson", email: "emma@example.com" },
-  { id: "DP-2405", dispute_gid: "DP-2405", order_gid: "#1238", status: "under_review", reason: "Fraudulent", amount: 299.99, currency_code: "USD", due_at: "2026-03-08", needs_review: true, last_synced_at: "2026-02-23", customer: "Alex Brown", email: "alex@example.com" },
-  { id: "DP-2406", dispute_gid: "DP-2406", order_gid: "#1239", status: "lost", reason: "Subscription Canceled", amount: 75.00, currency_code: "USD", due_at: "2026-03-09", needs_review: false, last_synced_at: "2026-02-24", customer: "Lisa Anderson", email: "lisa@example.com" },
+  { id: "DP-2401", dispute_gid: "DP-2401", order_gid: "#1234", status: "needs_response", reason: "fraudulent", amount: 145.00, currency_code: "USD", due_at: "2026-03-05", needs_review: false, last_synced_at: "2026-02-20", customer: "John Smith", email: "john@example.com" },
+  { id: "DP-2402", dispute_gid: "DP-2402", order_gid: "#1235", status: "under_review", reason: "productNotReceived", amount: 89.50, currency_code: "USD", due_at: "2026-03-06", needs_review: true, last_synced_at: "2026-02-21", customer: "Sarah Johnson", email: "sarah@example.com" },
+  { id: "DP-2403", dispute_gid: "DP-2403", order_gid: "#1236", status: "needs_response", reason: "productUnacceptable", amount: 234.00, currency_code: "USD", due_at: "2026-03-07", needs_review: false, last_synced_at: "2026-02-22", customer: "Mike Davis", email: "mike@example.com" },
+  { id: "DP-2404", dispute_gid: "DP-2404", order_gid: "#1237", status: "won", reason: "creditNotProcessed", amount: 167.25, currency_code: "USD", due_at: "2026-03-08", needs_review: false, last_synced_at: "2026-02-23", customer: "Emma Wilson", email: "emma@example.com" },
+  { id: "DP-2405", dispute_gid: "DP-2405", order_gid: "#1238", status: "under_review", reason: "fraudulent", amount: 299.99, currency_code: "USD", due_at: "2026-03-08", needs_review: true, last_synced_at: "2026-02-23", customer: "Alex Brown", email: "alex@example.com" },
+  { id: "DP-2406", dispute_gid: "DP-2406", order_gid: "#1239", status: "lost", reason: "subscriptionCanceled", amount: 75.00, currency_code: "USD", due_at: "2026-03-09", needs_review: false, last_synced_at: "2026-02-24", customer: "Lisa Anderson", email: "lisa@example.com" },
 ];
 
-function statusBadge(status: string | null) {
-  const map: Record<string, { variant: "success" | "warning" | "danger" | "info" | "default"; label: string }> = {
-    saved_to_shopify: { variant: "success", label: "Saved to Shopify" },
-    needs_response: { variant: "warning", label: "Needs Response" },
-    needs_review: { variant: "warning", label: "Needs Review" },
-    under_review: { variant: "info", label: "Under Review" },
-    building: { variant: "info", label: "Building..." },
-    blocked: { variant: "danger", label: "Blocked" },
-    ready: { variant: "info", label: "Ready to Save" },
-    won: { variant: "success", label: "Won" },
-    lost: { variant: "danger", label: "Lost" },
-  };
-  const cfg = map[status ?? ""] ?? { variant: "default" as const, label: status ?? "Unknown" };
-  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
-}
+const STATUS_VARIANTS: Record<string, "success" | "warning" | "danger" | "info" | "default"> = {
+  saved_to_shopify: "success",
+  needs_response: "warning",
+  needs_review: "warning",
+  under_review: "info",
+  building: "info",
+  blocked: "danger",
+  ready: "info",
+  won: "success",
+  lost: "danger",
+};
 
-function formatCurrency(amount: number | null, code: string | null): string {
+const STATUS_KEYS: Record<string, string> = {
+  saved_to_shopify: "savedToShopify",
+  needs_response: "needsResponse",
+  needs_review: "needsReview",
+  under_review: "underReview",
+  building: "building",
+  blocked: "blocked",
+  ready: "readyToSave",
+  won: "won",
+  lost: "lost",
+};
+
+function formatCurrency(amount: number | null, code: string | null, locale: string): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: code ?? "USD",
   }).format(amount);
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 export default function DisputesPage() {
   const t = useTranslations("disputes");
   const tc = useTranslations("common");
   const tt = useTranslations("table");
+  const ts = useTranslations("status");
+  const tr = useTranslations("reasons");
+  const locale = useLocale();
   const isDemo = useDemoMode();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +122,7 @@ export default function DisputesPage() {
   const filtered = search
     ? rows.filter(
         (d) =>
-          d.reason?.toLowerCase().includes(search.toLowerCase()) ||
+          (d.reason && tr.has(d.reason) ? tr(d.reason) : d.reason ?? "").toLowerCase().includes(search.toLowerCase()) ||
           d.dispute_gid.toLowerCase().includes(search.toLowerCase()) ||
           ("customer" in d && (d as typeof DEMO_DISPUTES[number]).customer?.toLowerCase().includes(search.toLowerCase()))
       )
@@ -183,7 +194,7 @@ export default function DisputesPage() {
             <thead className="bg-[#F7F8FA]">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("id")}</th>
-                <th className="text-left px-4 py-3 font-medium text-[#667085]">Customer</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("customer")}</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("amount")}</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("reason")}</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("status")}</th>
@@ -226,11 +237,15 @@ export default function DisputesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium text-[#0B1220]">
-                      {formatCurrency(d.amount, d.currency_code)}
+                      {formatCurrency(d.amount, d.currency_code, locale)}
                     </td>
-                    <td className="px-4 py-3 text-[#667085]">{d.reason ?? "Unknown"}</td>
-                    <td className="px-4 py-3">{statusBadge(d.status)}</td>
-                    <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at)}</td>
+                    <td className="px-4 py-3 text-[#667085]">{d.reason ? tr.has(d.reason) ? tr(d.reason) : d.reason : ts("unknown")}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={STATUS_VARIANTS[d.status ?? ""] ?? "default"}>
+                        {ts(STATUS_KEYS[d.status ?? ""] ?? "unknown")}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at, locale)}</td>
                     <td className="px-4 py-3 text-right">
                       <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
                     </td>
