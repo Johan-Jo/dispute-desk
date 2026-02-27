@@ -129,9 +129,14 @@ app/
   (auth)/auth/       → Sign in, sign up, forgot/reset password, magic link
   (portal)/portal/   → SaaS dashboard, disputes, packs, rules, billing, team
   (embedded)/app/    → Shopify Admin embedded UI (Polaris)
+  (embedded)/app/setup/[step]/ → Setup wizard pages (Polaris)
   api/               → Backend routes (auth, webhooks, jobs, packs, disputes)
+  api/setup/         → Setup wizard state management routes
+  api/integrations/  → Third-party integration routes (Gorgias, etc.)
+  api/files/         → Evidence sample file management routes
   globals.css        → Tailwind imports + design tokens
 components/ui/       → Shared design system components
+components/setup/    → Setup wizard components (shell, steps, modals, progress ring)
 lib/
   shopify/           → GraphQL client, throttle, session helpers, queries
   supabase/          → Server client, portal auth helpers
@@ -140,8 +145,12 @@ lib/
   packs/             → Pack builder orchestrator + source collectors
   jobs/              → Job dispatcher + handlers (sync, build, save, render)
   disputes/          → Dispute sync service
+  setup/             → Setup wizard types, constants, event logging
+  security/          → AES-256-GCM encryption (sessions + integration secrets)
+  help/              → Help articles, categories, guide configs, analytics
 scripts/             → Migration runner + smoke test
-supabase/migrations/ → SQL migrations (001–010)
+supabase/migrations/ → SQL migrations (001–020)
+tests/               → Unit tests + API route handler tests + test helpers
 docs/                → Architecture, technical spec, epics, roadmap
 ```
 
@@ -159,7 +168,7 @@ reference, component catalog, API surface, and CI pipeline.
 ### Running Tests
 
 ```bash
-# Unit tests (completeness engine, auto-save gate, encryption, etc.)
+# Unit + API route handler tests
 npx vitest run
 
 # E2E smoke test (requires .env.local with SUPABASE_URL_POSTGRES)
@@ -168,7 +177,8 @@ node scripts/smoke-test.mjs
 
 Tests include:
 - **Contract tests:** Validate Shopify GraphQL response shapes (zod schemas)
-- **Unit tests:** Encryption roundtrip, field mapping, completeness scoring (7 tests), auto-save gate logic (9 tests)
+- **Unit tests:** Encryption roundtrip, field mapping, completeness scoring, auto-save gate logic, setup wizard constants/types/events, URL param helpers
+- **API route handler tests:** Setup state/step/skip/undo-skip, integrations status, Gorgias connect/disconnect, sample file upload/list/delete (using custom Supabase + Next.js mocks)
 - **E2E smoke test:** Seeds a dispute into live Supabase, validates the full automation pipeline (shop settings, pack creation, completeness scoring, gate decisions, save simulation, audit immutability), then cleans up
 
 ### CI

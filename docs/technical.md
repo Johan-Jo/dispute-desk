@@ -126,6 +126,7 @@ worker endpoint (`/api/jobs/worker`).
 | 014_shops_locale.sql | shops.locale column for merchant locale preference |
 | 016_pack_templates.sql | pack_templates + pack_template_documents (reusable evidence templates) |
 | 017_bcp47_locales.sql | Migrate locale to BCP-47 tags, add user_locale, create pack_template_i18n |
+| 020_setup_wizard.sql | shop_setup, integrations, integration_secrets, evidence_files, app_events + evidence-samples storage bucket |
 
 ## Automation Pipeline
 
@@ -269,6 +270,23 @@ queued → building → ready → saved_to_shopify
 - `GET /api/pack-templates/:id/documents` — list documents
 - `POST /api/pack-templates/:id/documents` — add document
 - `DELETE /api/pack-templates/:id/documents/:docId` — remove document
+
+### Setup Wizard (Shopify session required)
+- `GET /api/setup/state` — current wizard state for the shop
+- `POST /api/setup/step` — mark a step done with payload
+- `POST /api/setup/skip` — skip a step with reason
+- `POST /api/setup/undo-skip` — undo a skip (reset to todo)
+
+### Integrations (Shopify session required)
+- `GET /api/integrations/status` — list integration statuses for a shop
+- `POST /api/integrations/gorgias/connect` — connect Gorgias (subdomain, email, API key → encrypted)
+- `POST /api/integrations/gorgias/test` — re-test Gorgias connection
+- `POST /api/integrations/gorgias/disconnect` — disconnect Gorgias
+
+### Evidence Sample Files (Shopify session required)
+- `GET /api/files/samples` — list uploaded sample files
+- `POST /api/files/samples` — upload a sample file to Supabase Storage
+- `POST /api/files/samples/delete` — delete a sample file (storage + DB)
 
 ### Internal (CRON_SECRET required)
 - `POST /api/jobs/worker`
@@ -441,6 +459,27 @@ PDFs deleted from storage. Audit events never deleted.
 |-------|------|------------|
 | Completeness Engine | `lib/automation/__tests__/completeness.test.ts` | 7 tests: per-reason scoring, blocker detection, recommended actions, GENERAL fallback, edge cases |
 | Auto-Save Gate | `lib/automation/__tests__/autoSaveGate.test.ts` | 9 tests: gate pass/block/park logic, threshold boundaries, priority ordering, approval overrides |
+| withShopParams | `tests/unit/withShopParams.test.ts` | URL param preservation, missing params, edge cases |
+| Setup Constants | `tests/unit/setupConstants.test.ts` | Step definitions, prerequisite logic, next-actionable-step |
+| Setup Types | `tests/unit/setupTypes.test.ts` | Type structure and enum validation |
+| Setup Events | `tests/unit/setupEvents.test.ts` | logSetupEvent Supabase insertion |
+| Setup Migration | `tests/unit/setupMigration.test.ts` | SQL migration structure validation |
+| Setup State API | `tests/api/setup/state.test.ts` | GET /api/setup/state route handler |
+| Setup Step API | `tests/api/setup/step.test.ts` | POST /api/setup/step route handler |
+| Setup Skip API | `tests/api/setup/skip.test.ts` | POST /api/setup/skip route handler |
+| Setup Undo-Skip API | `tests/api/setup/undoSkip.test.ts` | POST /api/setup/undo-skip route handler |
+| Integrations Status API | `tests/api/integrations/status.test.ts` | GET /api/integrations/status route handler |
+| Gorgias Connect API | `tests/api/integrations/gorgiasConnect.test.ts` | POST /api/integrations/gorgias/connect |
+| Gorgias Disconnect API | `tests/api/integrations/gorgiasDisconnect.test.ts` | POST /api/integrations/gorgias/disconnect |
+| Sample Files API | `tests/api/files/samples.test.ts` | GET + POST /api/files/samples |
+| Sample Files Delete API | `tests/api/files/samplesDelete.test.ts` | POST /api/files/samples/delete |
+
+### Test Helpers
+
+| Helper | Path | Purpose |
+|--------|------|---------|
+| Supabase Mock | `tests/helpers/supabaseMock.ts` | Chainable query builder mock for Supabase client |
+| Next.js Mock | `tests/helpers/nextMock.ts` | MockNextRequest + MockNextResponse for route handler tests |
 
 Run with:
 ```bash
@@ -553,6 +592,77 @@ Single source of truth for all locale data. Exports:
 ### CI
 - Forbidden-copy check scans both `.ts/.tsx` source files and `messages/*.json` translation files.
 
+## Setup Wizard & Onboarding
+
+### Overview
+
+A 7-step guided setup wizard helps merchants configure DisputeDesk after
+installation. Progress is tracked per-shop in the `shop_setup` table and
+surfaced on the dashboard via a Setup Checklist card with a ring progress
+indicator.
+
+### Wizard Steps
+
+| # | ID | Title | Prerequisites |
+|---|-----|-------|---------------|
+| 1 | `welcome_goals` | Welcome & Goals | — |
+| 2 | `permissions` | Permissions & Data Access | — |
+| 3 | `sync_disputes` | Sync Disputes & Timeline | `permissions` |
+| 4 | `business_policies` | Business Policies | `sync_disputes` |
+| 5 | `evidence_sources` | Evidence Sources (V1 full) | `business_policies` |
+| 6 | `automation_rules` | Automation Rules | — |
+| 7 | `team_notifications` | Team & Notifications | — |
+
+Steps 1-4, 6-7 have skeleton UI. Step 5 is fully implemented (V1).
+
+### Step 5: Evidence Sources (V1)
+
+Four integration tiles:
+- **Tracking Carrier**: Shopify Tracking (built-in). Shows as AVAILABLE/CONNECTED. Does NOT count toward step completion.
+- **Helpdesk (Gorgias)**: Full connect flow with subdomain, email, API key. Credentials encrypted (AES-256-GCM via `lib/security/encryption.ts`). Server-side connection test (`GET /api/tickets?limit=1`). Manage/disconnect support.
+- **Email**: Coming soon (info modal).
+- **Warehouse / 3PL**: Coming soon (info modal).
+- **Sample Files**: Upload via Polaris DropZone (PDF/JPG/PNG). Stored in Supabase Storage `evidence-samples/{shop_id}/samples/`. Metadata in `evidence_files`.
+
+Completion rule: DONE if (Gorgias connected) OR (≥1 sample file uploaded) OR (skipped with reason).
+
+### State Machine
+
+Per-shop state persisted in `shop_setup` table:
+- Step statuses: `todo | in_progress | done | skipped`.
+- Each step has an optional `payload` (JSON) and `skipped_reason`.
+- "Save & Continue" marks done. "Skip for now" marks skipped with reason. "Undo skip" resets to todo.
+- Light gating: `permissions` → `sync_disputes` → `business_policies` → `evidence_sources`.
+
+### Embedded Navigation
+
+All wizard links preserve `shop` and `host` query parameters via
+`lib/withShopParams.ts` for Shopify App Bridge compatibility.
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| ProgressRing | `components/setup/ProgressRing.tsx` | SVG ring progress indicator |
+| SetupChecklistCard | `components/setup/SetupChecklistCard.tsx` | Dashboard checklist card |
+| SetupWizardShell | `components/setup/SetupWizardShell.tsx` | Wizard layout (progress bar, step tiles, nav) |
+| StepCardsRow | `components/setup/StepCardsRow.tsx` | Horizontal step tile row |
+| WhatThisUnlocksCard | `components/setup/WhatThisUnlocksCard.tsx` | Right sidebar benefit card |
+| BottomNav | `components/setup/BottomNav.tsx` | Back / Save / Skip buttons |
+| SkipReasonModal | `components/setup/modals/SkipReasonModal.tsx` | Skip confirmation with reason |
+| ConnectGorgiasModal | `components/setup/modals/ConnectGorgiasModal.tsx` | Gorgias credential entry |
+| UploadSampleFilesModal | `components/setup/modals/UploadSampleFilesModal.tsx` | Sample file upload |
+| ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
+
+### Shared Utilities
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Types | `lib/setup/types.ts` | StepStatus, StepState, ShopSetupRow, etc. |
+| Constants | `lib/setup/constants.ts` | SETUP_STEPS, prerequisite logic, helpers |
+| Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
+| withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |
+
 ## Help System (EPIC 10)
 
 ### Architecture
@@ -567,3 +677,19 @@ Single source of truth for all locale data. Exports:
 1. Add the article object to `HELP_ARTICLES` in `lib/help/articles.ts` (slug, category, title/body keys, tags).
 2. Add the corresponding `help.articles.{slug}.title` and `help.articles.{slug}.body` keys to all `messages/{locale}.json` files (BCP-47 filenames).
 3. Both surfaces will pick it up automatically.
+
+### Interactive Help Guides
+
+In addition to static articles, DisputeDesk offers interactive guided tours
+that walk merchants through key features with step-by-step overlays.
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Guide Config | `lib/help-guides-config.ts` | 6 guided tours with step definitions |
+| Guide Analytics | `lib/help-guide-analytics.ts` | Tour event tracking |
+| Guide Provider | `components/help-guide-provider.tsx` | React context for tour state |
+| Tour Overlay | `components/embedded-help-guide-tour.tsx` | Step-by-step overlay UI |
+| Floating Button | `components/floating-help-button.tsx` | Quick-access help button |
+
+Guides are launchable from both the embedded and portal help pages via
+search-param-driven navigation (`?guide=<guideId>`).

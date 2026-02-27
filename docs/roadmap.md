@@ -1,6 +1,6 @@
 # DisputeDesk V1 Roadmap
 
-> **Last updated:** 2026-02-26
+> **Last updated:** 2026-02-27
 
 ## Progress
 
@@ -19,6 +19,8 @@
 | 8 | Internal Admin Panel | DONE | 6-7 | [EPIC-8](epics/EPIC-8-admin-panel.md) |
 | 9 | Multi-Language (i18n) | DONE | 7-8 | [EPIC-9](epics/EPIC-9-i18n.md) |
 | 10 | User Help System | DONE | 8 | [EPIC-10](epics/EPIC-10-help-system.md) |
+| 10b | Interactive Help Guides | DONE | 8 | — |
+| 11 | Setup Wizard & Onboarding | DONE | 9 | — |
 
 ## Dependency Chain
 
@@ -48,6 +50,10 @@ flowchart LR
   E7 --> E8
   E0 --> E9[EPIC9 i18n]
   E7 --> E9
+  E9 --> E10[EPIC10 HelpSystem]
+  E10 --> E10b[EPIC10b HelpGuides]
+  E0 --> E11[EPIC11 SetupWizard]
+  E9 --> E11
 ```
 
 ## Product Model
@@ -71,3 +77,7 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 - **EPIC P0** delivers the marketing + portal UI.
 - Portal placeholder pages are wired to real data as each epic completes.
 - Embedded app inside Shopify Admin remains the primary surface.
+- **EPIC 10b** adds interactive guided tours on top of the static help articles.
+- **EPIC 11** adds the 7-step setup wizard with dashboard checklist card,
+  Evidence Sources V1 (Gorgias connect + sample files), and the onboarding
+  state machine.

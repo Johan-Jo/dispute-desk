@@ -82,12 +82,12 @@ See [`docs/technical.md`](technical.md) for the full component catalog.
                   ┌───────────┼────────────┐
                   │           │            │
                   ▼           ▼            ▼
-            ┌──────┐    ┌────────┐   ┌──────────────────┐
-            │Shopify│    │Supabase│   │Supabase Storage  │
-            │GraphQL│    │Postgres│   │(evidence-packs,  │
-            │Admin  │    │+ Auth  │   │ evidence-uploads)│
-            │API    │    │(RLS)   │   │                  │
-            └──────┘    └────────┘   └──────────────────┘
+            ┌──────┐    ┌────────┐   ┌──────────────────┐   ┌────────┐
+            │Shopify│    │Supabase│   │Supabase Storage  │   │External│
+            │GraphQL│    │Postgres│   │(evidence-packs,  │   │APIs    │
+            │Admin  │    │+ Auth  │   │ evidence-uploads,│   │(Gorgias│
+            │API    │    │(RLS)   │   │ evidence-samples)│   │ etc.)  │
+            └──────┘    └────────┘   └──────────────────┘   └────────┘
 ```
 
 ## Auth Model
@@ -234,6 +234,42 @@ Both surfaces (embedded + portal) must use "Save evidence" language — never
 covers all source files and translation files.
 
 Portal always deep-links to Shopify Admin for final submission.
+
+## Setup Wizard & Onboarding
+
+DisputeDesk includes a 7-step guided setup wizard (`/app/setup/[step]`) to
+help merchants configure the app after installation. The wizard is embedded
+within Shopify Admin using Polaris and preserves `shop`/`host` query params
+for App Bridge compatibility.
+
+### Dashboard Integration
+
+The merchant dashboard displays a **Setup Checklist** card with:
+- SVG ring progress indicator (completed / total steps).
+- Checklist rows for each step with done/incomplete/skipped states.
+- "Continue setup" button navigating to the next actionable step.
+- "Book a 15-min setup call" link.
+
+### State Persistence
+
+Wizard state is stored in `shop_setup` (one row per shop):
+- `steps` JSONB column: per-step `{ status, payload, skipped_reason }`.
+- Light prerequisite gating between specific steps.
+- All state mutations logged to `app_events`.
+
+### Third-Party Integrations
+
+The wizard supports connecting external services (V1: Gorgias helpdesk):
+- Credentials stored encrypted in `integration_secrets` (AES-256-GCM).
+- Server-side connection testing before marking as connected.
+- `integrations` table tracks per-shop integration status.
+
+### Evidence Sample Files
+
+Merchants can upload sample evidence files during setup:
+- Private Supabase Storage bucket: `evidence-samples/{shop_id}/samples/`.
+- Metadata tracked in `evidence_files` table.
+- Events logged to `app_events`.
 
 ## Audit Log
 
