@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import {
   Page,
   Layout,
@@ -12,8 +13,10 @@ import {
   DataTable,
   Button,
   Divider,
+  Spinner,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { SetupChecklistCard } from "@/components/setup/SetupChecklistCard";
 
 const DISPUTES = [
   ["DP-2401", "#1042", "$145.00", "Not received", "Auto-saved", "Mar 02"],
@@ -97,6 +100,12 @@ export default function EmbeddedDashboardPage() {
               <Badge tone="success">{t("dashboard.automatedThisMonth")}</Badge>
             </BlockStack>
           </Card>
+        </Layout.Section>
+
+        <Layout.Section>
+          <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
+            <SetupChecklistCard />
+          </Suspense>
         </Layout.Section>
 
         <Layout.Section>
