@@ -136,7 +136,7 @@ export default function RulesSettingsPage() {
               <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
               <p className="text-[#667085]">{t("subtitleDemo")}</p>
             </div>
-            <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
+            <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)} data-onboarding="create-rule-button">
               <Plus className="w-4 h-4 mr-2" />
               {t("createRule")}
             </Button>
@@ -189,7 +189,7 @@ export default function RulesSettingsPage() {
             </div>
           )}
 
-          <div className="space-y-4 mb-4">
+          <div className="space-y-4 mb-4" data-onboarding="rules-list">
             {[firstRule].map((rule) => (
             <div key={rule.id} className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -293,7 +293,7 @@ export default function RulesSettingsPage() {
           <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
           <p className="text-sm text-[#667085]">{t("subtitle")}</p>
         </div>
-        <Button variant="primary" size="sm" disabled={planBlocked} onClick={() => setShowForm(!showForm)}>
+        <Button variant="primary" size="sm" disabled={planBlocked} onClick={() => setShowForm(!showForm)} data-onboarding="create-rule-button">
           <Plus className="w-4 h-4 mr-1" />
           {t("addRule")}
         </Button>

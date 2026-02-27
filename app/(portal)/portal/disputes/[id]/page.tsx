@@ -143,7 +143,19 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
   const tt = useTranslations("table");
   const tr = useTranslations("reasons");
   const locale = useLocale();
+  const [syncing, setSyncing] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const data = DEMO_DISPUTES[disputeId];
+
+  const handleDemoSync = () => {
+    setSyncing(true);
+    setTimeout(() => setSyncing(false), 1500);
+  };
+
+  const handleDemoGenerate = () => {
+    setGenerating(true);
+    setTimeout(() => setGenerating(false), 2000);
+  };
 
   if (!data) {
     return (
@@ -172,13 +184,13 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
           <p className="text-sm text-[#667085]">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : ""}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" title={tc("demoOnly")}>
-            <RefreshCw className="w-4 h-4 mr-1" />
-            {t("reSync")}
+          <Button variant="secondary" size="sm" title={tc("demoOnly")} onClick={handleDemoSync} disabled={syncing}>
+            <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? t("reSyncing") : t("reSync")}
           </Button>
-          <Button variant="primary" size="sm" title={tc("demoOnly")}>
+          <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={handleDemoGenerate} disabled={generating}>
             <FileText className="w-4 h-4 mr-1" />
-            {t("generatePack")}
+            {generating ? t("generating") : t("generatePack")}
           </Button>
         </div>
       </div>

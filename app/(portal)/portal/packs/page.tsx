@@ -186,6 +186,7 @@ export default function PacksLibraryPage() {
               size="sm"
               className="flex-1 sm:flex-none"
               onClick={() => setIsTemplateLibraryOpen(true)}
+              data-onboarding="template-library-button"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               {t("startFromTemplate")}
@@ -195,6 +196,7 @@ export default function PacksLibraryPage() {
               size="sm"
               className="flex-1 sm:flex-none"
               onClick={() => setIsCreateOpen(true)}
+              data-onboarding="create-pack-button"
             >
               <Plus className="w-4 h-4 mr-2" />
               {t("createPack")}
@@ -204,7 +206,10 @@ export default function PacksLibraryPage() {
       </div>
 
       {/* Card with filter + table */}
-      <div className="mx-4 sm:mx-6 mb-4 sm:mb-6 flex-1 flex flex-col overflow-hidden bg-white rounded-xl border border-[#E5E7EB]">
+      <div
+        className="mx-4 sm:mx-6 mb-4 sm:mb-6 flex-1 flex flex-col overflow-hidden bg-white rounded-xl border border-[#E5E7EB]"
+        data-onboarding="packs-grid"
+      >
         <FilterBar
           searchPlaceholder={t("searchPlaceholder")}
           onSearch={(v) => setSearchQuery(v)}
@@ -244,10 +249,11 @@ export default function PacksLibraryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E7EB] bg-white">
-                {packs.map((pack) => (
+                {packs.map((pack, idx) => (
                   <tr
                     key={pack.id}
                     className="hover:bg-[#F7F8FA] transition-colors cursor-pointer"
+                    {...(idx === 0 ? { "data-onboarding": "pack-row" } : {})}
                     onClick={() => router.push(`/portal/packs/${pack.id}`)}
                   >
                     <td className="px-4 sm:px-6 py-4">

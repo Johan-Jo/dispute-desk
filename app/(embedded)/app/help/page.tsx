@@ -12,6 +12,7 @@ import {
   Box,
   InlineStack,
   Icon,
+  Button,
 } from "@shopify/polaris";
 import {
   SearchIcon,
@@ -22,8 +23,10 @@ import {
   ExportIcon,
   PlayIcon,
 } from "@shopify/polaris-icons";
+import { useHelpGuideSafe } from "@/components/help/help-guide-provider";
 import { HELP_CATEGORIES } from "@/lib/help/categories";
 import { HELP_ARTICLES, getArticlesByCategory } from "@/lib/help/articles";
+import { getPortalGuideTranslationKeyPrefix, HELP_GUIDE_IDS } from "@/lib/help-guides-config";
 import { useTranslations } from "next-intl";
 
 const POLARIS_ICON_MAP: Record<string, typeof SearchIcon> = {
@@ -35,9 +38,19 @@ const POLARIS_ICON_MAP: Record<string, typeof SearchIcon> = {
   upload: ExportIcon,
 };
 
+const GUIDE_ICON_MAP: Record<(typeof HELP_GUIDE_IDS)[number], typeof SearchIcon> = {
+  "review-dispute": DeliveryIcon,
+  "build-pack": OrderIcon,
+  "automation-rules": SettingsIcon,
+  "install-template": OrderIcon,
+  "configure-policies": DeliveryIcon,
+  "pack-builder-advanced": SettingsIcon,
+};
+
 export default function EmbeddedHelpPage() {
   const t = useTranslations();
   const router = useRouter();
+  const helpGuide = useHelpGuideSafe();
   const [query, setQuery] = useState("");
 
   const filteredArticles = useMemo(() => {
@@ -53,6 +66,41 @@ export default function EmbeddedHelpPage() {
   return (
     <Page title={t("help.title")}>
       <BlockStack gap="400">
+        {helpGuide && (
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingMd">{t("help.interactiveGuidesTitle")}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{t("help.interactiveGuidesDesc")}</Text>
+              <InlineGrid columns={{ xs: 1, sm: 2, lg: 3 }} gap="400">
+                {HELP_GUIDE_IDS.map((guideId) => {
+                  const IconSource = GUIDE_ICON_MAP[guideId];
+                  const keyPrefix = getPortalGuideTranslationKeyPrefix(guideId);
+                  return (
+                    <Card key={guideId}>
+                      <BlockStack gap="300">
+                        <InlineStack gap="200" align="start">
+                          <Icon source={IconSource} tone="base" />
+                          <Text as="h3" variant="headingSm">{t(`help.${keyPrefix}.title`)}</Text>
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {t(`help.${keyPrefix}.description`)}
+                        </Text>
+                        <Button
+                          variant="primary"
+                          size="slim"
+                          onClick={() => helpGuide.startGuide(guideId)}
+                        >
+                          {t("help.startGuide")}
+                        </Button>
+                      </BlockStack>
+                    </Card>
+                  );
+                })}
+              </InlineGrid>
+            </BlockStack>
+          </Card>
+        )}
+
         <TextField
           label=""
           value={query}

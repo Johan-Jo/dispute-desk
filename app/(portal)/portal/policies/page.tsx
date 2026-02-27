@@ -28,7 +28,7 @@ export default function PoliciesPage() {
             {t("subtitle")}
           </p>
         </div>
-        <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={demoClick}>
+        <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={demoClick} data-onboarding="add-policy-button">
           <FileText className="w-4 h-4 mr-2" />
           {t("addPolicy")}
         </Button>

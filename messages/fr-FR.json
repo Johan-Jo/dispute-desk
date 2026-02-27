@@ -518,10 +518,141 @@
     "backToHelp": "Retour à l'aide",
     "relatedArticles": "Articles connexes",
     "contactSupport": "Besoin d'aide supplémentaire ? Contactez le support à support@disputedesk.com",
-    "subtitle": "Trouvez des réponses sur les litiges, les dossiers de preuves, l'automatisation et la facturation.",
+    "subtitle": "Obtenez de l'aide avec DisputeDesk grâce aux visites interactives, guides détaillés et bonnes pratiques",
     "articleCount": "{count} articles",
     "articleNotFound": "Article non trouvé.",
     "noResults": "Aucun article ne correspond à votre recherche.",
+    "interactiveGuidesTitle": "Visites interactives",
+    "interactiveGuidesDesc": "Conseils étape par étape pour les tâches essentielles",
+    "interactiveGuideLabel": "Guide interactif",
+    "startGuide": "Démarrer le guide",
+    "startTour": "Démarrer la visite",
+    "recommended": "Recommandé",
+    "comingSoon": "Bientôt disponible",
+    "readFullArticle": "Lire l'article complet",
+    "quickTasksTitle": "Tâches rapides",
+    "browseByTopic": "Parcourir par sujet",
+    "documentationTitle": "Documentation",
+    "quickTasks": {
+      "createPack": "Créer un pack",
+      "handleDispute": "Gérer un litige",
+      "createRule": "Créer une règle"
+    },
+    "tours": {
+      "reviewDispute": {
+        "title": "Gérer un litige de bout en bout",
+        "description": "Guide complet de la réception d'un litige à la soumission des preuves"
+      },
+      "buildPack": {
+        "title": "Créer votre premier pack",
+        "description": "Apprenez à créer un pack de preuves avec tous les documents requis"
+      },
+      "automationRules": {
+        "title": "Configurer les règles d'attribution automatique",
+        "description": "Automatisez l'attribution des packs selon le type de litige et les détails de commande"
+      },
+      "installTemplate": {
+        "title": "Installer et personnaliser des modèles",
+        "description": "Installez des modèles pré-construits et personnalisez-les pour votre boutique"
+      },
+      "configurePolicies": {
+        "title": "Configurer les politiques du magasin",
+        "description": "Ajoutez vos politiques d'expédition, de remboursement et conditions générales"
+      },
+      "packBuilderAdvanced": {
+        "title": "Fonctionnalités avancées du constructeur de packs",
+        "description": "Maîtrisez la logique conditionnelle, les champs personnalisés et les modèles narratifs"
+      }
+    },
+    "resources": {
+      "contactSupport": "Contacter le support",
+      "contactSupportDesc": "Obtenez de l'aide de notre équipe support sous 24 heures",
+      "sendMessage": "Envoyer un message",
+      "bestPractices": "Bonnes pratiques",
+      "bestPracticesDesc": "Apprenez des marchands à succès et gagnez plus de litiges",
+      "viewGuide": "Voir le guide",
+      "apiDocs": "Documentation API",
+      "apiDocsDesc": "Intégrez DisputeDesk à vos workflows personnalisés",
+      "viewDocs": "Voir la documentation"
+    },
+    "status": {
+      "operational": "Tous les systèmes sont opérationnels",
+      "lastChecked": "Dernière vérification : il y a 2 minutes"
+    },
+    "fab": {
+      "title": "Besoin d'aide ?",
+      "helpCenter": "Centre d'aide",
+      "quickTour": "Visite rapide",
+      "contactSupport": "Contacter le support"
+    },
+    "guides": {
+      "reviewDispute": {
+        "title": "Gérer un litige",
+        "description": "Apprenez à trouver et examiner les litiges.",
+        "introTitle": "Gérer un litige de bout en bout",
+        "introDesc": "Ce guide vous accompagne dans le workflow — de la recherche d'un litige à son examen.",
+        "disputeTabsTitle": "Tous les litiges et file d'attente",
+        "disputeTabsDesc": "Basculez entre tous les litiges et la file d'attente de révision.",
+        "disputesTableTitle": "Votre tableau de litiges",
+        "disputesTableDesc": "Tous vos litiges avec statut, montant, motif et échéance. Cliquez sur une ligne pour les détails.",
+        "disputeRowTitle": "Sélectionner un litige",
+        "disputeRowDesc": "Cliquez sur un litige pour ouvrir la vue détaillée. Cherchez le statut 'Réponse requise'."
+      },
+      "buildPack": {
+        "title": "Créer un pack de preuves",
+        "description": "Créez et gérez des packs de preuves.",
+        "introTitle": "Créer votre premier pack de preuves",
+        "introDesc": "Les packs de preuves sont des collections de documents. Voyons où ils se trouvent et comment en créer un.",
+        "packsGridTitle": "Votre bibliothèque de packs",
+        "packsGridDesc": "Tous vos packs sont listés ici. Filtrez par statut, type ou recherchez par nom.",
+        "createPackBtnTitle": "Créer un pack",
+        "createPackBtnDesc": "Cliquez ici pour créer un nouveau pack. Nommez-le, choisissez un type et ajoutez des documents.",
+        "templateBtnTitle": "Partir d'un modèle",
+        "templateBtnDesc": "Les modèles vous donnent une longueur d'avance. Cliquez pour parcourir la bibliothèque."
+      },
+      "automationRules": {
+        "title": "Configurer l'automatisation",
+        "description": "Configurez les règles d'auto-construction et de routage.",
+        "introTitle": "Configurer les règles d'attribution automatique",
+        "introDesc": "Les règles attribuent automatiquement le bon pack. Voyons comment elles fonctionnent.",
+        "rulesHeaderTitle": "Règles et automatisation",
+        "rulesHeaderDesc": "Votre hub d'automatisation. Les règles évaluent les litiges entrants.",
+        "createRuleBtnTitle": "Créer une règle",
+        "createRuleBtnDesc": "Cliquez ici pour créer une nouvelle règle. Définissez les conditions, l'action et la priorité.",
+        "rulesListTitle": "Vos règles actives",
+        "rulesListDesc": "Les règles sont évaluées par ordre de priorité. La première correspondance attribue son pack."
+      },
+      "installTemplate": {
+        "title": "Installer des modèles",
+        "description": "Installez et personnalisez des modèles pré-construits.",
+        "introTitle": "Installer et personnaliser des modèles",
+        "introDesc": "DisputeDesk propose des modèles experts. Installons-en un et personnalisons-le.",
+        "templateBtnTitle": "Parcourir la bibliothèque",
+        "templateBtnDesc": "Cliquez sur 'Partir d'un modèle' pour ouvrir la bibliothèque.",
+        "packsGridTitle": "Modèles installés",
+        "packsGridDesc": "Après installation, les modèles apparaissent ici comme brouillons. Ouvrez pour personnaliser."
+      },
+      "configurePolicies": {
+        "title": "Configurer les politiques",
+        "description": "Ajoutez vos politiques d'expédition et de remboursement.",
+        "introTitle": "Configurer vos politiques",
+        "introDesc": "Vos politiques sont des preuves clés. Ajoutons-les à DisputeDesk.",
+        "addPolicyBtnTitle": "Ajouter une politique",
+        "addPolicyBtnDesc": "Cliquez pour ajouter une nouvelle politique.",
+        "policyDocumentsTitle": "Vos documents de politique",
+        "policyDocumentsDesc": "Les politiques listées ici sont automatiquement incluses dans les packs pertinents."
+      },
+      "packBuilderAdvanced": {
+        "title": "Fonctionnalités avancées",
+        "description": "Maîtrisez la gestion et l'optimisation des packs.",
+        "introTitle": "Fonctionnalités avancées du constructeur",
+        "introDesc": "Explorons les fonctionnalités avancées — édition, personnalisation et optimisation.",
+        "packsGridTitle": "Votre bibliothèque de packs",
+        "packsGridDesc": "Les packs sont organisés par type et statut. Utilisez les filtres pour trouver rapidement.",
+        "packRowTitle": "Ouvrir un pack",
+        "packRowDesc": "Cliquez sur un pack pour la vue détaillée. Modifiez les documents et ajustez les paramètres."
+      }
+    },
     "categories": {
       "gettingStarted": "Premiers pas",
       "gettingStartedDesc": "Connecter votre boutique, synchroniser les litiges et apprendre les bases",

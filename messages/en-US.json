@@ -513,10 +513,141 @@
     "backToHelp": "Back to Help",
     "relatedArticles": "Related Articles",
     "contactSupport": "Need more help? Contact support at support@disputedesk.com",
-    "subtitle": "Find answers about disputes, evidence packs, automation, and billing.",
+    "subtitle": "Get help with DisputeDesk through interactive tours, detailed guides, and best practices",
     "articleCount": "{count} articles",
     "articleNotFound": "Article not found.",
     "noResults": "No articles found matching your search.",
+    "interactiveGuidesTitle": "Interactive Tours",
+    "interactiveGuidesDesc": "Step-by-step guidance for key tasks",
+    "interactiveGuideLabel": "Interactive guide",
+    "startGuide": "Start guide",
+    "startTour": "Start Tour",
+    "recommended": "Recommended",
+    "comingSoon": "Coming soon",
+    "readFullArticle": "Read full article",
+    "quickTasksTitle": "Quick Tasks",
+    "browseByTopic": "Browse by Topic",
+    "documentationTitle": "Documentation",
+    "quickTasks": {
+      "createPack": "Build a Pack",
+      "handleDispute": "Handle Dispute",
+      "createRule": "Create Rule"
+    },
+    "tours": {
+      "reviewDispute": {
+        "title": "Handle a Dispute End-to-End",
+        "description": "Complete walkthrough from receiving a dispute to submitting evidence"
+      },
+      "buildPack": {
+        "title": "Create Your First Pack",
+        "description": "Learn how to build an evidence pack from scratch with all required documents"
+      },
+      "automationRules": {
+        "title": "Set Up Auto-Assignment Rules",
+        "description": "Automate pack assignment based on dispute type and order details"
+      },
+      "installTemplate": {
+        "title": "Install & Customize Templates",
+        "description": "Install pre-built templates and customize them for your store"
+      },
+      "configurePolicies": {
+        "title": "Configure Store Policies",
+        "description": "Add your shipping, refund, and terms policies for evidence packs"
+      },
+      "packBuilderAdvanced": {
+        "title": "Advanced Pack Builder Features",
+        "description": "Master conditional logic, custom fields, and narrative templates"
+      }
+    },
+    "resources": {
+      "contactSupport": "Contact Support",
+      "contactSupportDesc": "Get help from our support team within 24 hours",
+      "sendMessage": "Send Message",
+      "bestPractices": "Best Practices",
+      "bestPracticesDesc": "Learn from successful merchants and win more disputes",
+      "viewGuide": "View Guide",
+      "apiDocs": "API Documentation",
+      "apiDocsDesc": "Integrate DisputeDesk with your custom workflows",
+      "viewDocs": "View Docs"
+    },
+    "status": {
+      "operational": "All systems operational",
+      "lastChecked": "Last checked: 2 minutes ago"
+    },
+    "fab": {
+      "title": "Need Help?",
+      "helpCenter": "Help Center",
+      "quickTour": "Quick Tour",
+      "contactSupport": "Contact Support"
+    },
+    "guides": {
+      "reviewDispute": {
+        "title": "Handle a Dispute",
+        "description": "Learn how to find and review disputes that need your attention.",
+        "introTitle": "Handle a Dispute End-to-End",
+        "introDesc": "This guide walks you through the dispute workflow — from finding a chargeback to reviewing it and taking action.",
+        "disputeTabsTitle": "All Disputes & Review Queue",
+        "disputeTabsDesc": "Switch between all disputes and the review queue. The review queue shows disputes flagged for your attention.",
+        "disputesTableTitle": "Your Disputes Table",
+        "disputesTableDesc": "All your chargebacks appear here with status, amount, reason, and deadline. Click any row to view full details.",
+        "disputeRowTitle": "Select a Dispute",
+        "disputeRowDesc": "Click on a dispute to open the detail view. Look for 'Needs Response' status — those require your attention first."
+      },
+      "buildPack": {
+        "title": "Build an Evidence Pack",
+        "description": "See how to create and manage evidence packs for your chargebacks.",
+        "introTitle": "Create Your First Evidence Pack",
+        "introDesc": "Evidence packs are collections of documents that prove your case. Let's see where they live and how to create one.",
+        "packsGridTitle": "Your Packs Library",
+        "packsGridDesc": "All your evidence packs are listed here. You can filter by status, type, or search by name.",
+        "createPackBtnTitle": "Create a Pack",
+        "createPackBtnDesc": "Click this button to build a new pack from scratch. You'll name it, choose a dispute type, and add documents.",
+        "templateBtnTitle": "Start From a Template",
+        "templateBtnDesc": "Templates give you a head start with pre-built packs for common dispute types. Click to browse the template library."
+      },
+      "automationRules": {
+        "title": "Set Up Automation",
+        "description": "Configure rules to auto-build packs and route disputes to review.",
+        "introTitle": "Set Up Auto-Assignment Rules",
+        "introDesc": "Rules automatically assign the right pack to disputes based on conditions you define. Let's see how they work.",
+        "rulesHeaderTitle": "Rules & Automation",
+        "rulesHeaderDesc": "This is your automation hub. Rules evaluate incoming disputes and decide what happens next.",
+        "createRuleBtnTitle": "Create a Rule",
+        "createRuleBtnDesc": "Click here to create a new automation rule. You'll set conditions, choose an action, and set priority.",
+        "rulesListTitle": "Your Active Rules",
+        "rulesListDesc": "Rules are evaluated in priority order. The first matching rule assigns its pack. Edit or reorder rules here."
+      },
+      "installTemplate": {
+        "title": "Install & Customize Templates",
+        "description": "Install pre-built templates and customize them for your store.",
+        "introTitle": "Install & Customize Templates",
+        "introDesc": "DisputeDesk offers expert-built templates for common dispute types. Let's install one and customize it.",
+        "templateBtnTitle": "Browse Template Library",
+        "templateBtnDesc": "Click 'Start from Template' to open the template library. You can preview, install, and customize any template.",
+        "packsGridTitle": "Installed Templates",
+        "packsGridDesc": "After installation, templates appear here as draft packs. Open any to customize fields, documents, and the narrative."
+      },
+      "configurePolicies": {
+        "title": "Configure Store Policies",
+        "description": "Add your shipping, refund, and terms policies for evidence packs.",
+        "introTitle": "Configure Your Store Policies",
+        "introDesc": "Your store policies (shipping, refund, terms) are key evidence in disputes. Let's add them to DisputeDesk.",
+        "addPolicyBtnTitle": "Add a Policy",
+        "addPolicyBtnDesc": "Click to add a new policy. You can link to your existing pages or paste the full text.",
+        "policyDocumentsTitle": "Your Policy Documents",
+        "policyDocumentsDesc": "Policies listed here are automatically included in relevant evidence packs. Keep them up to date for stronger evidence."
+      },
+      "packBuilderAdvanced": {
+        "title": "Advanced Pack Features",
+        "description": "Master pack management, editing, and optimization.",
+        "introTitle": "Advanced Pack Builder Features",
+        "introDesc": "Let's explore advanced pack features — editing, customizing documents, and optimizing your evidence strategy.",
+        "packsGridTitle": "Your Packs Library",
+        "packsGridDesc": "Your packs are organized by type and status. Use filters to find specific packs quickly.",
+        "packRowTitle": "Open a Pack",
+        "packRowDesc": "Click any pack to open the detail view. From there you can edit documents, update the narrative, and adjust settings."
+      }
+    },
     "categories": {
       "gettingStarted": "Getting Started",
       "gettingStartedDesc": "Connect your store, sync disputes, and learn the basics",

@@ -217,7 +217,7 @@ export default function DisputesListPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <Card padding="0">
+          <Card padding="0" data-help-guide="disputes-table">
             <Filters
               queryValue=""
               filters={filters}

@@ -518,10 +518,141 @@
     "backToHelp": "Zurück zur Hilfe",
     "relatedArticles": "Verwandte Artikel",
     "contactSupport": "Brauchen Sie weitere Hilfe? Kontaktieren Sie den Support unter support@disputedesk.com",
-    "subtitle": "Antworten zu Streitfällen, Bewispaketen, Automatisierung und Abrechnung.",
+    "subtitle": "Hilfe zu DisputeDesk durch interaktive Touren, detaillierte Anleitungen und Best Practices",
     "articleCount": "{count} Artikel",
     "articleNotFound": "Artikel nicht gefunden.",
     "noResults": "Keine Artikel gefunden, die Ihrer Suche entsprechen.",
+    "interactiveGuidesTitle": "Interaktive Touren",
+    "interactiveGuidesDesc": "Schritt-für-Schritt-Anleitungen für wichtige Aufgaben",
+    "interactiveGuideLabel": "Interaktive Anleitung",
+    "startGuide": "Anleitung starten",
+    "startTour": "Tour starten",
+    "recommended": "Empfohlen",
+    "comingSoon": "Demnächst verfügbar",
+    "readFullArticle": "Vollständigen Artikel lesen",
+    "quickTasksTitle": "Schnellaufgaben",
+    "browseByTopic": "Nach Thema durchsuchen",
+    "documentationTitle": "Dokumentation",
+    "quickTasks": {
+      "createPack": "Paket erstellen",
+      "handleDispute": "Streitfall bearbeiten",
+      "createRule": "Regel erstellen"
+    },
+    "tours": {
+      "reviewDispute": {
+        "title": "Streitfall vollständig bearbeiten",
+        "description": "Komplette Anleitung vom Eingang bis zur Beweiseinreichung"
+      },
+      "buildPack": {
+        "title": "Erstes Beweispaket erstellen",
+        "description": "Erfahren Sie, wie Sie ein Beweispaket mit allen erforderlichen Dokumenten erstellen"
+      },
+      "automationRules": {
+        "title": "Auto-Zuweisungsregeln einrichten",
+        "description": "Automatisieren Sie die Paketzuweisung basierend auf Streittyp und Bestelldetails"
+      },
+      "installTemplate": {
+        "title": "Vorlagen installieren und anpassen",
+        "description": "Installieren Sie vorgefertigte Vorlagen und passen Sie sie für Ihren Shop an"
+      },
+      "configurePolicies": {
+        "title": "Shop-Richtlinien konfigurieren",
+        "description": "Fügen Sie Ihre Versand-, Rückgabe- und Geschäftsbedingungen hinzu"
+      },
+      "packBuilderAdvanced": {
+        "title": "Erweiterte Paket-Builder-Funktionen",
+        "description": "Bedingte Logik, benutzerdefinierte Felder und Erzählvorlagen meistern"
+      }
+    },
+    "resources": {
+      "contactSupport": "Support kontaktieren",
+      "contactSupportDesc": "Erhalten Sie Hilfe von unserem Support-Team innerhalb von 24 Stunden",
+      "sendMessage": "Nachricht senden",
+      "bestPractices": "Best Practices",
+      "bestPracticesDesc": "Lernen Sie von erfolgreichen Händlern und gewinnen Sie mehr Streitfälle",
+      "viewGuide": "Leitfaden ansehen",
+      "apiDocs": "API-Dokumentation",
+      "apiDocsDesc": "Integrieren Sie DisputeDesk in Ihre individuellen Workflows",
+      "viewDocs": "Docs ansehen"
+    },
+    "status": {
+      "operational": "Alle Systeme betriebsbereit",
+      "lastChecked": "Zuletzt geprüft: vor 2 Minuten"
+    },
+    "fab": {
+      "title": "Hilfe benötigt?",
+      "helpCenter": "Hilfecenter",
+      "quickTour": "Schnelltour",
+      "contactSupport": "Support kontaktieren"
+    },
+    "guides": {
+      "reviewDispute": {
+        "title": "Streitfall bearbeiten",
+        "description": "Erfahren Sie, wie Sie Streitfälle finden und prüfen.",
+        "introTitle": "Streitfall vollständig bearbeiten",
+        "introDesc": "Diese Anleitung führt Sie durch den Streitfall-Workflow — vom Finden bis zur Prüfung.",
+        "disputeTabsTitle": "Alle Streitfälle & Warteschlange",
+        "disputeTabsDesc": "Wechseln Sie zwischen allen Streitfällen und der Prüfungswarteschlange.",
+        "disputesTableTitle": "Ihre Streitfall-Tabelle",
+        "disputesTableDesc": "Alle Chargebacks mit Status, Betrag, Grund und Frist. Klicken Sie auf eine Zeile für Details.",
+        "disputeRowTitle": "Streitfall auswählen",
+        "disputeRowDesc": "Klicken Sie auf einen Streitfall. Achten Sie auf 'Antwort erforderlich' — diese brauchen zuerst Aufmerksamkeit."
+      },
+      "buildPack": {
+        "title": "Beweispaket erstellen",
+        "description": "Erstellen und verwalten Sie Bewispakete.",
+        "introTitle": "Erstes Beweispaket erstellen",
+        "introDesc": "Bewispakete sind Dokumentensammlungen für Ihren Fall. Schauen wir, wo sie sind und wie man eines erstellt.",
+        "packsGridTitle": "Ihre Paket-Bibliothek",
+        "packsGridDesc": "Alle Bewispakete sind hier aufgelistet. Filtern Sie nach Status, Typ oder suchen Sie nach Name.",
+        "createPackBtnTitle": "Paket erstellen",
+        "createPackBtnDesc": "Klicken Sie hier, um ein neues Paket zu erstellen. Sie benennen es, wählen einen Streittyp und fügen Dokumente hinzu.",
+        "templateBtnTitle": "Von Vorlage starten",
+        "templateBtnDesc": "Vorlagen geben Ihnen einen Vorsprung. Klicken Sie, um die Vorlagenbibliothek zu durchsuchen."
+      },
+      "automationRules": {
+        "title": "Automatisierung einrichten",
+        "description": "Regeln für Auto-Build und Streitfall-Routing konfigurieren.",
+        "introTitle": "Auto-Zuweisungsregeln einrichten",
+        "introDesc": "Regeln weisen automatisch das richtige Paket zu. Schauen wir, wie sie funktionieren.",
+        "rulesHeaderTitle": "Regeln & Automatisierung",
+        "rulesHeaderDesc": "Ihr Automatisierungs-Hub. Regeln bewerten eingehende Streitfälle und entscheiden, was passiert.",
+        "createRuleBtnTitle": "Regel erstellen",
+        "createRuleBtnDesc": "Klicken Sie hier für eine neue Regel. Sie setzen Bedingungen, wählen eine Aktion und setzen die Priorität.",
+        "rulesListTitle": "Aktive Regeln",
+        "rulesListDesc": "Regeln werden nach Priorität ausgewertet. Die erste passende Regel weist ihr Paket zu."
+      },
+      "installTemplate": {
+        "title": "Vorlagen installieren",
+        "description": "Vorgefertigte Vorlagen installieren und anpassen.",
+        "introTitle": "Vorlagen installieren und anpassen",
+        "introDesc": "DisputeDesk bietet Experten-Vorlagen für häufige Streittypen. Installieren und anpassen.",
+        "templateBtnTitle": "Vorlagenbibliothek durchsuchen",
+        "templateBtnDesc": "Klicken Sie auf 'Von Vorlage starten', um die Bibliothek zu öffnen.",
+        "packsGridTitle": "Installierte Vorlagen",
+        "packsGridDesc": "Nach der Installation erscheinen Vorlagen hier als Entwürfe. Öffnen Sie eine zum Anpassen."
+      },
+      "configurePolicies": {
+        "title": "Shop-Richtlinien konfigurieren",
+        "description": "Versand-, Rückgabe- und Geschäftsbedingungen hinzufügen.",
+        "introTitle": "Shop-Richtlinien konfigurieren",
+        "introDesc": "Ihre Richtlinien sind wichtige Beweise. Fügen wir sie zu DisputeDesk hinzu.",
+        "addPolicyBtnTitle": "Richtlinie hinzufügen",
+        "addPolicyBtnDesc": "Klicken Sie, um eine neue Richtlinie hinzuzufügen.",
+        "policyDocumentsTitle": "Ihre Richtlinien-Dokumente",
+        "policyDocumentsDesc": "Hier aufgelistete Richtlinien werden automatisch in relevante Bewispakete aufgenommen."
+      },
+      "packBuilderAdvanced": {
+        "title": "Erweiterte Paket-Funktionen",
+        "description": "Paketverwaltung, Bearbeitung und Optimierung meistern.",
+        "introTitle": "Erweiterte Paket-Builder-Funktionen",
+        "introDesc": "Entdecken wir erweiterte Paket-Funktionen — Bearbeitung, Dokumente anpassen und Beweisstrategie optimieren.",
+        "packsGridTitle": "Ihre Paket-Bibliothek",
+        "packsGridDesc": "Pakete sind nach Typ und Status organisiert. Verwenden Sie Filter zum schnellen Finden.",
+        "packRowTitle": "Paket öffnen",
+        "packRowDesc": "Klicken Sie auf ein Paket für die Detailansicht. Dort können Sie Dokumente bearbeiten und Einstellungen anpassen."
+      }
+    },
     "categories": {
       "gettingStarted": "Erste Schritte",
       "gettingStartedDesc": "Shop verbinden, Streitfälle synchronisieren und Grundlagen lernen",

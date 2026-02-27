@@ -9,8 +9,13 @@ import type { OnboardingStep } from "@/lib/onboarding-config";
 interface OnboardingTourProps {
   steps: OnboardingStep[];
   onComplete: () => void;
-  onSkip: () => void;
+  /** Called when user skips/closes. stepIndex is the current step (0-based) when available. */
+  onSkip: (stepIndex?: number) => void;
   onNavigate: (path: string) => void;
+  /** When set, step title/desc use this namespace (e.g. "help"). */
+  translationNamespace?: string;
+  /** When set with translationNamespace, step keys are ${translationKeyPrefix}.${step.id}Title/Desc (e.g. "guides.reviewDispute"). */
+  translationKeyPrefix?: string;
 }
 
 export function OnboardingTour({
@@ -18,8 +23,12 @@ export function OnboardingTour({
   onComplete,
   onSkip,
   onNavigate,
+  translationNamespace,
+  translationKeyPrefix,
 }: OnboardingTourProps) {
   const t = useTranslations("onboarding");
+  const tStep = useTranslations(translationNamespace ?? "onboarding");
+  const stepKeyPrefix = translationKeyPrefix ? `${translationKeyPrefix}.` : "";
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
@@ -68,7 +77,9 @@ export function OnboardingTour({
   const handleNext = () => {
     if (isLastStep) {
       onComplete();
-      onNavigate("/portal/connect-shopify");
+      if (!translationNamespace) {
+        onNavigate("/portal/connect-shopify");
+      }
     } else {
       setCurrentStep(currentStep + 1);
     }
@@ -151,7 +162,7 @@ export function OnboardingTour({
       {targetRect && step?.spotlight ? (
         <svg
           className="absolute inset-0 w-full h-full pointer-events-auto"
-          onClick={onSkip}
+          onClick={() => onSkip(currentStep)}
         >
           <defs>
             <mask id="onboarding-spotlight-mask">
@@ -179,7 +190,7 @@ export function OnboardingTour({
       ) : (
         <div
           className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-auto"
-          onClick={onSkip}
+          onClick={() => onSkip(currentStep)}
         />
       )}
 
@@ -226,17 +237,17 @@ export function OnboardingTour({
           <div className="mb-6">
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-xl font-bold text-[#0B1220] pr-4">
-                {t(`${step.id}Title`)}
+                {tStep(`${stepKeyPrefix}${step.id}Title`)}
               </h3>
               <button
-                onClick={onSkip}
+                onClick={() => onSkip(currentStep)}
                 className="text-[#667085] hover:text-[#0B1220] transition-colors flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-[#667085] leading-relaxed">
-              {t(`${step.id}Desc`)}
+              {tStep(`${stepKeyPrefix}${step.id}Desc`)}
             </p>
           </div>
 
@@ -252,14 +263,14 @@ export function OnboardingTour({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={onSkip}>
+              <Button variant="ghost" size="sm" onClick={() => onSkip(currentStep)}>
                 {t("skipTour")}
               </Button>
               <Button variant="primary" size="sm" onClick={handleNext}>
                 {isLastStep ? (
                   <>
                     <ArrowRight className="w-4 h-4 mr-2" />
-                    {t("connectStore")}
+                    {translationNamespace ? t("finish") : t("connectStore")}
                   </>
                 ) : (
                   <>

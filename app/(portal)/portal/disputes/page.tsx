@@ -154,7 +154,7 @@ export default function DisputesPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4" data-onboarding="disputes-tabs">
         <Button
           variant={tab === "all" ? "primary" : "secondary"}
           size="sm"
@@ -216,8 +216,8 @@ export default function DisputesPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((d) => (
-                  <tr key={d.id} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA] transition-colors">
+                filtered.map((d, idx) => (
+                  <tr key={d.id} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA] transition-colors" {...(idx === 0 ? { "data-onboarding": "dispute-row" } : {})}>
                     <td className="px-4 py-3">
                       <a
                         href={isDemo ? `/portal/disputes/${d.id}` : `/portal/disputes/${d.id}`}

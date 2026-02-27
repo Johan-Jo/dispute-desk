@@ -5,8 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { Shield, ChevronDown, Store, Menu, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { HelpGuideProvider, useHelpGuideSafe, trackHelpGuideCompleteOnFinish, trackHelpGuideSkip } from "@/components/help/help-guide-provider";
+import { FloatingHelpButton } from "@/components/help/floating-help-button";
 import { OnboardingProvider, useOnboarding } from "@/components/onboarding/onboarding-provider";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
+import { getPortalGuideSteps, getPortalGuideTranslationKeyPrefix, HELP_TRANSLATION_NAMESPACE, type HelpGuideId } from "@/lib/help-guides-config";
 import { onboardingSteps } from "@/lib/onboarding-config";
 import { DemoModeProvider } from "@/lib/demo-mode";
 
@@ -51,6 +54,7 @@ export function PortalShell({
 
   return (
     <DemoModeProvider isDemo={isDemo}>
+    <HelpGuideProvider>
     <OnboardingProvider>
     <div className="h-screen flex bg-[#F6F8FB]">
       {/* Mobile overlay */}
@@ -196,23 +200,61 @@ export function PortalShell({
       </div>
     </div>
     <OnboardingTourOverlay />
+    <HelpGuideTourOverlay />
+    <FloatingHelpButton />
     </OnboardingProvider>
+    </HelpGuideProvider>
     </DemoModeProvider>
   );
 }
 
 function OnboardingTourOverlay() {
   const { showTour, completeTour, skipTour } = useOnboarding();
+  const helpGuide = useHelpGuideSafe();
   const router = useRouter();
 
-  if (!showTour) return null;
+  if (!showTour || helpGuide?.activeGuideId) return null;
 
   return (
     <OnboardingTour
       steps={onboardingSteps}
       onComplete={completeTour}
-      onSkip={skipTour}
+      onSkip={(stepIndex) => skipTour()}
       onNavigate={(path) => router.push(path)}
+    />
+  );
+}
+
+function HelpGuideTourOverlay() {
+  const helpGuide = useHelpGuideSafe();
+  const { showTour } = useOnboarding();
+  const router = useRouter();
+
+  if (!helpGuide?.activeGuideId || showTour) return null;
+
+  const guideId = helpGuide.activeGuideId as HelpGuideId;
+  const steps = getPortalGuideSteps(guideId);
+  const translationNamespace = HELP_TRANSLATION_NAMESPACE;
+  const translationKeyPrefix = getPortalGuideTranslationKeyPrefix(guideId);
+
+  const handleComplete = () => {
+    trackHelpGuideCompleteOnFinish(guideId);
+    helpGuide.closeGuide();
+  };
+
+  const handleSkip = (stepIndex?: number) => {
+    trackHelpGuideSkip(guideId, stepIndex ?? 0);
+    helpGuide.closeGuide();
+  };
+
+  return (
+    <OnboardingTour
+      steps={steps}
+      onComplete={handleComplete}
+      onSkip={handleSkip}
+      onNavigate={(path) => router.push(path)}
+      translationNamespace={translationNamespace}
+      translationKeyPrefix={translationKeyPrefix}
     />
   );
 }
