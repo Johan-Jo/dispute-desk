@@ -43,8 +43,49 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    const shopDomain = req.cookies.get("shopify_shop")?.value;
-    const shopId = req.cookies.get("shopify_shop_id")?.value;
+    let shopDomain = req.cookies.get("shopify_shop")?.value;
+    let shopId = req.cookies.get("shopify_shop_id")?.value;
+
+    // Portal fallback: setup/integrations/files APIs can use Supabase Auth + active_shop
+    const isPortalSetupApi =
+      pathname.startsWith("/api/setup/") ||
+      pathname.startsWith("/api/integrations/") ||
+      pathname.startsWith("/api/files/samples");
+
+    if ((!shopDomain || !shopId) && isPortalSetupApi) {
+      const activeShopId =
+        req.cookies.get("dd_active_shop")?.value ??
+        req.cookies.get("active_shop_id")?.value;
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => req.cookies.getAll(),
+            setAll: () => {},
+          },
+        }
+      );
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user && activeShopId) {
+        const { getServiceClient } = await import("@/lib/supabase/server");
+        const db = getServiceClient();
+        const { data: link } = await db
+          .from("portal_user_shops")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("shop_id", activeShopId)
+          .single();
+
+        if (link) {
+          shopId = activeShopId;
+          shopDomain = "portal"; // placeholder
+        }
+      }
+    }
 
     if (!shopDomain || !shopId) {
       return NextResponse.json(
@@ -66,10 +107,12 @@ export async function middleware(req: NextRequest) {
       );
     }
 
-    const res = NextResponse.next();
-    res.headers.set("x-shop-domain", shopDomain);
-    res.headers.set("x-shop-id", shopId);
-    return res;
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-shop-domain", shopDomain);
+    requestHeaders.set("x-shop-id", shopId);
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
 
   // --- Portal routes: require Supabase Auth ---

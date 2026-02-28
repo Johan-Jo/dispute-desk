@@ -9,7 +9,12 @@ import {
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
 
 export async function GET(req: NextRequest) {
-  const shopId = req.headers.get("x-shop-id");
+  const url =
+    "nextUrl" in req && req.nextUrl
+      ? req.nextUrl
+      : new URL(req.url);
+  const shopId =
+    url.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }

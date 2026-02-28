@@ -43,6 +43,12 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
+          <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
+            <SetupChecklistCard />
+          </Suspense>
+        </Layout.Section>
+
+        <Layout.Section>
           <Card>
             <BlockStack gap="400">
               <Text as="h2" variant="headingMd">{t("dashboard.automationStatus")}</Text>
@@ -100,12 +106,6 @@ export default function EmbeddedDashboardPage() {
               <Badge tone="success">{t("dashboard.automatedThisMonth")}</Badge>
             </BlockStack>
           </Card>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
-            <SetupChecklistCard />
-          </Suspense>
         </Layout.Section>
 
         <Layout.Section>

@@ -36,7 +36,10 @@ export default async function PortalLayout({
     .select("shop_id, role, shops(shop_domain, locale)")
     .eq("user_id", user.id);
 
-  const activeShopId = cookieStore.get("dd_active_shop")?.value ?? null;
+  const activeShopId =
+    cookieStore.get("dd_active_shop")?.value ??
+    cookieStore.get("active_shop_id")?.value ??
+    null;
   const activeShop = shops?.find(
     (s: { shop_id: string }) => s.shop_id === activeShopId
   );

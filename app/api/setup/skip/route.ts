@@ -7,12 +7,13 @@ import type { StepId, StepState, SkippedReason } from "@/lib/setup/types";
 const VALID_REASONS: SkippedReason[] = ["do_later", "not_relevant", "need_help"];
 
 export async function POST(req: NextRequest) {
-  const shopId = req.headers.get("x-shop-id");
+  const body = await req.json();
+  const shopId =
+    body.shop_id ?? req.headers.get("x-shop-id");
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
-  const body = await req.json();
   const stepId = body.stepId as StepId;
   const reason = body.reason as SkippedReason;
 

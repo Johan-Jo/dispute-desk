@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
 import { WelcomeBanner } from "@/components/onboarding/welcome-banner";
+import { PortalSetupChecklistCard } from "@/components/setup/PortalSetupChecklistCard";
 
 const recentDisputes = [
   { id: "DP-2401", customer: "John Smith", date: "2024-02-20", amount: "$145.00", status: "needs_evidence" },
@@ -53,6 +54,8 @@ export default function DashboardPage() {
       </div>
 
       <WelcomeBanner />
+
+      <PortalSetupChecklistCard />
 
       <div className="mb-6">
         <InfoBanner variant="info" title={t("infoBannerTitle")}>

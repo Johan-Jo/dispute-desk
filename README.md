@@ -173,7 +173,27 @@ npx vitest run
 
 # E2E smoke test (requires .env.local with SUPABASE_URL_POSTGRES)
 node scripts/smoke-test.mjs
+
+# E2E browser tests (Playwright) — portal Setup Checklist, etc.
+npm run test:e2e
 ```
+
+**E2E tests** require `E2E_TEST_EMAIL` and `E2E_TEST_PASSWORD` in `.env.local`. The
+test user must have at least one connected shop (via Connect Shopify). Add these
+to `.env.local`:
+
+```
+E2E_TEST_EMAIL=your-test-user@example.com
+E2E_TEST_PASSWORD=your-test-password
+```
+
+With the dev server already running (e.g. on port 3001), run:
+
+```bash
+$env:PLAYWRIGHT_BASE_URL="http://localhost:3001"; npm run test:e2e
+```
+
+Otherwise Playwright will start the app on port 3099 (ensure that port is free).
 
 Tests include:
 - **Contract tests:** Validate Shopify GraphQL response shapes (zod schemas)
