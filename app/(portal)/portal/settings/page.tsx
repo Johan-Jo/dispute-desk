@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Shield, Globe, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
+import { DemoNotice } from "@/components/ui/demo-notice";
 
 function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: string; defaultChecked?: boolean }) {
   return (
@@ -29,6 +30,8 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
         <p className="text-sm text-[#667085]">{t("subtitle")}</p>
       </div>
+
+      <DemoNotice />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main column */}

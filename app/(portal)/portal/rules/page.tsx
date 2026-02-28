@@ -6,6 +6,7 @@ import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
+import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface Rule {
   id: string;
@@ -141,6 +142,8 @@ export default function RulesSettingsPage() {
               {t("createRule")}
             </Button>
           </div>
+
+          {isDemo && <DemoNotice />}
 
           {showForm && (
             <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">

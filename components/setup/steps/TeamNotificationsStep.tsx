@@ -61,7 +61,7 @@ export function TeamNotificationsStep({ onSaveRef }: TeamNotificationsStepProps)
             autoComplete="off"
           />
         </div>
-        <Button>Send invite</Button>
+        <Button disabled={!teamEmail}>Send invite</Button>
       </InlineStack>
 
       <Text as="h3" variant="headingMd">

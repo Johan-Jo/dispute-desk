@@ -40,9 +40,11 @@ export default function PermissionsPage() {
             {t("retryConnection")}
           </Button>
         </a>
-        <Button variant="ghost" className="w-full" title={tc("demoOnly")}>
-          {t("contactSupport")}
-        </Button>
+        <a href="mailto:support@disputedesk.com">
+          <Button variant="ghost" className="w-full">
+            {t("contactSupport")}
+          </Button>
+        </a>
       </div>
     </div>
   );

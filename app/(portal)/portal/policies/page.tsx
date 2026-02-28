@@ -4,6 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DemoNotice } from "@/components/ui/demo-notice";
 
 const POLICIES = [
   { nameKey: "termsOfService", typeKey: "legalAgreement", format: "PDF", size: "245 KB", lastUpdated: "2026-01-15" },
@@ -33,6 +34,8 @@ export default function PoliciesPage() {
           {t("addPolicy")}
         </Button>
       </div>
+
+      <DemoNotice />
 
       {/* Info card */}
       <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-4 mb-6 flex items-start gap-3">

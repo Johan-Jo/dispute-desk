@@ -6,6 +6,7 @@ import { Search, Filter, RefreshCw, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
+import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface Dispute {
   id: string;
@@ -147,12 +148,22 @@ export default function DisputesPage() {
               {syncing ? t("syncing") : t("syncNow")}
             </Button>
           )}
-          <Button variant="secondary" size="sm" title={isDemo ? tc("demoOnly") : undefined}>
+          <Button
+            variant="secondary"
+            size="sm"
+            title={isDemo ? tc("demoOnly") : undefined}
+            onClick={() => {
+              if (isDemo) { alert(tc("demoOnly")); return; }
+              window.open("https://admin.shopify.com/store/", "_blank");
+            }}
+          >
             <ExternalLink className="w-4 h-4 mr-2" />
             {t("openInShopify")}
           </Button>
         </div>
       </div>
+
+      {isDemo && <DemoNotice />}
 
       <div className="flex items-center gap-2 mb-4" data-onboarding="disputes-tabs">
         <Button
@@ -182,7 +193,12 @@ export default function DisputesPage() {
             className="w-full h-10 pl-10 pr-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
           />
         </div>
-        <Button variant="secondary" size="sm" title={isDemo ? tc("demoOnly") : undefined}>
+        <Button
+          variant="secondary"
+          size="sm"
+          title={isDemo ? tc("demoOnly") : undefined}
+          onClick={() => { if (isDemo) alert(tc("demoOnly")); }}
+        >
           <Filter className="w-4 h-4 mr-1" />
           {tc("filter")}
         </Button>

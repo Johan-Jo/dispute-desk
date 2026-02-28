@@ -50,7 +50,7 @@ export default function MarketingLandingPage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#product" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.product")}</a>
+            <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.product")}</a>
             <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.howItWorks")}</a>
             <a href="#security" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.security")}</a>
             <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.pricing")}</a>
@@ -76,7 +76,7 @@ export default function MarketingLandingPage() {
         {/* Mobile nav dropdown */}
         {mobileNav && (
           <div className="md:hidden border-t border-[#E5E7EB] bg-white px-4 py-4 space-y-3">
-            <a href="#product" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.product")}</a>
+            <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.product")}</a>
             <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.howItWorks")}</a>
             <a href="#security" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.security")}</a>
             <a href="#pricing" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.pricing")}</a>
@@ -450,7 +450,7 @@ export default function MarketingLandingPage() {
             <div>
               <h3 className="font-semibold mb-4">{t("footer.product")}</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#product" className="hover:text-white transition-colors">{t("footer.features")}</a></li>
+                <li><a href="#how-it-works" className="hover:text-white transition-colors">{t("footer.features")}</a></li>
                 <li><a href="#pricing" className="hover:text-white transition-colors">{t("nav.pricing")}</a></li>
                 <li><a href="#security" className="hover:text-white transition-colors">{t("nav.security")}</a></li>
               </ul>
@@ -458,15 +458,15 @@ export default function MarketingLandingPage() {
             <div>
               <h3 className="font-semibold mb-4">{t("footer.company")}</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">{t("footer.about")}</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t("footer.contact")}</a></li>
+                <li><a href="#how-it-works" className="hover:text-white transition-colors">{t("footer.about")}</a></li>
+                <li><a href="mailto:support@disputedesk.com" className="hover:text-white transition-colors">{t("footer.contact")}</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">{t("footer.legal")}</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">{t("footer.terms")}</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">{t("footer.privacy")}</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">{t("footer.terms")}</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">{t("footer.privacy")}</a></li>
               </ul>
             </div>
           </div>

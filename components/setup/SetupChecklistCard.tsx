@@ -104,7 +104,7 @@ export function SetupChecklistCard() {
               </Text>
             </BlockStack>
           </InlineStack>
-          <Button variant="plain" url="https://disputedesk.com/help" external>
+          <Button variant="plain" url="/app/help">
             Need help?
           </Button>
         </InlineStack>
@@ -176,7 +176,7 @@ export function SetupChecklistCard() {
             Continue setup →
           </Button>
           <InlineStack align="center">
-            <Button variant="plain" url="#">
+            <Button variant="plain" url="mailto:support@disputedesk.com?subject=Setup%20call%20request">
               Book a 15-min setup call
             </Button>
           </InlineStack>

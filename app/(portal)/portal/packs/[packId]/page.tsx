@@ -193,7 +193,7 @@ export default function PackPreviewPage() {
     return (
       <div className="text-center py-20">
         <p className="text-[#667085]">{t("packNotFound")}</p>
-        <a href="/portal/disputes" className="text-[#1D4ED8] hover:underline text-sm mt-2 inline-block">
+        <a href="/portal/packs" className="text-[#1D4ED8] hover:underline text-sm mt-2 inline-block">
           {t("backToDisputes")}
         </a>
       </div>

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
 import { PLANS, type PlanId } from "@/lib/billing/plans";
+import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface PlanInfo {
   id: string;
@@ -66,6 +67,8 @@ function DemoBilling() {
         <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
         <p className="text-sm text-[#667085]">{t("demoSubtitle")}</p>
       </div>
+
+      <DemoNotice />
 
       {/* Current plan */}
       <div className="bg-white rounded-lg border border-[#1D4ED8] ring-1 ring-[#1D4ED8] p-6 mb-6">

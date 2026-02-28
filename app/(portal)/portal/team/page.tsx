@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { UserPlus, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DemoNotice } from "@/components/ui/demo-notice";
 
 const TEAM_MEMBERS = [
   { name: "John Doe", email: "john@example.com", role: "owner", status: "active", initials: "JD", color: "bg-[#1D4ED8]" },
@@ -31,11 +32,13 @@ export default function TeamPage() {
           <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
           <p className="text-sm text-[#667085]">{t("subtitle")}</p>
         </div>
-        <Button variant="primary" size="sm" title={tc("demoOnly")}>
+        <Button variant="primary" size="sm" disabled title={tc("demoOnly")}>
           <UserPlus className="w-4 h-4 mr-2" />
           {t("inviteMember")}
         </Button>
       </div>
+
+      <DemoNotice />
 
       <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden mb-6">
         <table className="w-full text-sm">

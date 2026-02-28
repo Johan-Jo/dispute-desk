@@ -169,6 +169,7 @@ export function TemplateLibraryModal({
       setTimeout(() => {
         setInstalling(null);
         setInstalledIds((prev) => [...prev, templateId]);
+        onInstalled(templateId);
       }, 600);
       return;
     }
@@ -406,7 +407,11 @@ export function TemplateLibraryModal({
                             <CheckCircle2 className="w-4 h-4 mr-2 text-[#22C55E]" />
                             {t("installed")}
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onInstalled(tpl.id)}
+                          >
                             {t("openPack")}
                           </Button>
                         </>
@@ -424,7 +429,12 @@ export function TemplateLibraryModal({
                             ) : null}
                             {t("install")}
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleInstall(tpl.id)}
+                            disabled={installing === tpl.id}
+                          >
                             {t("preview")}
                           </Button>
                         </>

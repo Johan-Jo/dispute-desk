@@ -32,7 +32,7 @@ export default function EmbeddedDashboardPage() {
     <Page
       title={t("dashboard.title")}
       subtitle={t("dashboard.embeddedSubtitle")}
-      primaryAction={{ content: t("dashboard.automationSettings"), url: "/app/settings/automation" }}
+      primaryAction={{ content: t("dashboard.automationSettings"), url: "/app/disputes" }}
       secondaryActions={[{ content: t("nav.help"), url: "/app/help" }]}
     >
       <Layout>
@@ -113,7 +113,7 @@ export default function EmbeddedDashboardPage() {
             <BlockStack gap="400">
               <InlineStack align="space-between">
                 <Text as="h2" variant="headingMd">{t("dashboard.recentDisputes")}</Text>
-                <Button variant="plain">{t("common.viewAll")}</Button>
+                <Button variant="plain" url="/app/disputes">{t("common.viewAll")}</Button>
               </InlineStack>
               <DataTable
                 columnContentTypes={["text", "text", "numeric", "text", "text", "text"]}

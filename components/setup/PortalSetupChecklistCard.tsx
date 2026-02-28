@@ -33,9 +33,7 @@ function ConnectStoreChecklist() {
           </div>
         </div>
         <a
-          href="https://disputedesk.com/help"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/portal/help"
           className="text-sm text-[#1D4ED8] hover:underline"
         >
           {t("needHelp")}
@@ -112,7 +110,7 @@ function ActiveShopChecklist() {
 
   const navigateToStep = useCallback(
     (stepId: StepId) => {
-      router.push(`/app/setup/${stepId}`);
+      router.push(`/portal/dashboard?setup_step=${stepId}`);
     },
     [router]
   );
@@ -172,9 +170,7 @@ function ActiveShopChecklist() {
           </div>
         </div>
         <a
-          href="https://disputedesk.com/help"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/portal/help"
           className="text-sm text-[#1D4ED8] hover:underline"
         >
           {t("needHelp")}
@@ -252,7 +248,7 @@ function ActiveShopChecklist() {
         </Button>
         <div>
           <a
-            href="#"
+            href="mailto:support@disputedesk.com?subject=Setup%20call%20request"
             className="text-sm text-[#64748B] hover:text-[#1D4ED8] hover:underline"
           >
             {t("bookSetupCall")}

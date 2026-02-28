@@ -30,6 +30,8 @@
     "notAvailable": "Not available",
     "none": "None",
     "demoOnly": "Connect your store to unlock this feature",
+    "demoNotice": "You're viewing sample data. Connect your Shopify store to manage real data.",
+    "connectStoreCTA": "Connect store",
     "on": "On",
     "off": "Off",
     "yes": "Yes",

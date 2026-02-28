@@ -70,6 +70,7 @@ export default function DisputesListPage() {
   const [syncing, setSyncing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [tab, setTab] = useState<"all" | "review">("all");
+  const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
 
@@ -141,7 +142,18 @@ export default function DisputesListPage() {
     },
   ];
 
-  const rowMarkup = disputes.map((d, idx) => (
+  const visibleDisputes = queryValue
+    ? disputes.filter((d) => {
+        const q = queryValue.toLowerCase();
+        return (
+          d.dispute_gid.toLowerCase().includes(q) ||
+          (d.reason ?? "").toLowerCase().includes(q) ||
+          (d.order_gid ?? "").toLowerCase().includes(q)
+        );
+      })
+    : disputes;
+
+  const rowMarkup = visibleDisputes.map((d, idx) => (
     <IndexTable.Row
       id={d.id}
       key={d.id}
@@ -219,11 +231,11 @@ export default function DisputesListPage() {
         <Layout.Section>
           <Card padding="0" data-help-guide="disputes-table">
             <Filters
-              queryValue=""
+              queryValue={queryValue}
               filters={filters}
-              onQueryChange={() => {}}
-              onQueryClear={() => {}}
-              onClearAll={() => setStatusFilter([])}
+              onQueryChange={setQueryValue}
+              onQueryClear={() => setQueryValue("")}
+              onClearAll={() => { setStatusFilter([]); setQueryValue(""); }}
             />
             {loading ? (
               <div style={{ padding: "2rem", textAlign: "center" }}>
