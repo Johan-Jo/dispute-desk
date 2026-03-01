@@ -29,6 +29,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from "@shopify/polaris-icons";
+import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 
 interface ChecklistItem {
   field: string;
@@ -58,6 +59,8 @@ interface PackData {
   id: string;
   shop_id: string;
   dispute_id: string;
+  shop_domain?: string | null;
+  dispute_gid?: string | null;
   status: string;
   completeness_score: number | null;
   checklist: ChecklistItem[] | null;
@@ -101,6 +104,7 @@ export default function PackPreviewPage() {
   const [uploading, setUploading] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
@@ -129,6 +133,25 @@ export default function PackPreviewPage() {
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  const disputeUrl =
+    pack?.shop_domain && pack?.dispute_gid
+      ? getShopifyDisputeUrl(pack.shop_domain, pack.dispute_gid)
+      : null;
+
+  const copyEvidence = async (item: EvidenceItem) => {
+    const text =
+      typeof item.payload === "string"
+        ? item.payload
+        : `${item.label}\n\n${JSON.stringify(item.payload, null, 2)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(item.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setCopiedId(null);
+    }
   };
 
   const handleUpload = async (_files: File[], accepted: File[]) => {
@@ -234,6 +257,22 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
+        {disputeUrl && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">{t("packs.submitEvidenceInShopify")}</Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("packs.submitEvidenceInShopifyHint")}
+                </Text>
+                <Button url={disputeUrl} target="_blank">
+                  {t("packs.openInShopifyAdmin")}
+                </Button>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
+
         {pack.checklist && (
           <Layout.Section>
             <Card>
@@ -282,7 +321,19 @@ export default function PackPreviewPage() {
                             {item.label}
                           </Text>
                         </InlineStack>
-                        <Icon source={expandedSections.has(item.id) ? ChevronUpIcon : ChevronDownIcon} />
+                        <InlineStack gap="200" blockAlign="center">
+                          <Button
+                            size="slim"
+                            variant="plain"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyEvidence(item);
+                            }}
+                          >
+                            {copiedId === item.id ? t("packs.copied") : t("packs.copyToClipboard")}
+                          </Button>
+                          <Icon source={expandedSections.has(item.id) ? ChevronUpIcon : ChevronDownIcon} />
+                        </InlineStack>
                       </InlineStack>
                     </div>
                     <Collapsible
@@ -391,12 +442,11 @@ export default function PackPreviewPage() {
                   <Banner tone="success">
                     {t("packs.saveSuccess")}
                   </Banner>
-                  <Button
-                    url={`https://admin.shopify.com/store/${pack.shop_id}/orders`}
-                    target="_blank"
-                  >
-                    {t("packs.openInShopifyAdmin")}
-                  </Button>
+                  {disputeUrl && (
+                    <Button url={disputeUrl} target="_blank">
+                      {t("packs.openInShopifyAdmin")}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <>

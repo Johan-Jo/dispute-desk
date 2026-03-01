@@ -13,15 +13,25 @@ export async function GET(
   const { packId } = await params;
   const db = getServiceClient();
 
-  const { data: pack, error } = await db
+  const { data: row, error } = await db
     .from("evidence_packs")
-    .select("*")
+    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid)")
     .eq("id", packId)
     .single();
 
-  if (error || !pack) {
+  if (error || !row) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
+
+  const shop = Array.isArray((row as { shop?: unknown }).shop)
+    ? (row as { shop: { shop_domain?: string }[] }).shop[0]
+    : (row as { shop?: { shop_domain?: string } }).shop;
+  const disputeRow = Array.isArray((row as { dispute?: unknown }).dispute)
+    ? (row as { dispute: { dispute_gid?: string }[] }).dispute[0]
+    : (row as { dispute?: { dispute_gid?: string } }).dispute;
+  const shop_domain = shop?.shop_domain ?? null;
+  const dispute_gid = disputeRow?.dispute_gid ?? null;
+  const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
 
   const [itemsRes, auditRes, buildJobRes, pdfJobRes] = await Promise.all([
     db
@@ -54,6 +64,8 @@ export async function GET(
 
   return NextResponse.json({
     ...pack,
+    shop_domain,
+    dispute_gid,
     evidence_items: itemsRes.data ?? [],
     audit_events: auditRes.data ?? [],
     active_build_job: buildJobRes.data ?? null,

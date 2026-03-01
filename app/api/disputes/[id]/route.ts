@@ -14,15 +14,19 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const sb = getServiceClient();
 
-  const { data: dispute, error } = await sb
+  const { data: row, error } = await sb
     .from("disputes")
-    .select("*")
+    .select("*, shops(shop_domain)")
     .eq("id", id)
     .single();
 
-  if (error || !dispute) {
+  if (error || !row) {
     return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
   }
+
+  const shop = Array.isArray(row.shops) ? row.shops[0] : row.shops;
+  const shop_domain = (shop as { shop_domain?: string } | null)?.shop_domain ?? null;
+  const { shops: _s, ...dispute } = row as typeof row & { shops?: unknown };
 
   const { data: packs } = await sb
     .from("evidence_packs")
@@ -35,5 +39,6 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   return NextResponse.json({
     dispute,
     packs: packs ?? [],
+    shop_domain,
   });
 }

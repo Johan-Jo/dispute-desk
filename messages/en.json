@@ -140,6 +140,7 @@
     "completeness": "Completeness",
     "blockers": "Blockers",
     "openInShopify": "Open in Shopify Admin",
+    "openDisputeInShopify": "Open dispute in Shopify",
     "generateNewPack": "Generate New Pack",
     "noPacks": "No evidence packs yet. Generate one to get started.",
     "noPacksAuto": "No evidence packs yet. The automation pipeline will generate one automatically, or click Generate Pack.",
@@ -229,7 +230,11 @@
     "approveAndSave": "Approve & Save",
     "completenessScore": "Completeness Score",
     "openInShopifyAdmin": "Open in Shopify Admin →",
-    "viewPack": "View pack {id} →"
+    "viewPack": "View pack {id} →",
+    "copyToClipboard": "Copy",
+    "copied": "Copied",
+    "submitEvidenceInShopify": "Submit evidence in Shopify",
+    "submitEvidenceInShopifyHint": "Open the dispute in Shopify, then copy each section below and paste into the matching evidence field."
   },
   "billing": {
     "title": "Billing",
@@ -1011,6 +1016,7 @@
     "installed": "Installed",
     "installedAsDraft": "Installed as Draft",
     "openPack": "Open pack",
+    "closePreview": "Close preview",
     "required": "required",
     "optional": "optional",
     "keyEvidence": "Key evidence:",

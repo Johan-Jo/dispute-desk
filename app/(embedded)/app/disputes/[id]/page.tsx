@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import {
   Page,
   Layout,
@@ -77,6 +78,7 @@ export default function DisputeDetailPage() {
   const t = useTranslations();
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
+  const [shopDomain, setShopDomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -98,6 +100,7 @@ export default function DisputeDetailPage() {
     const json = await res.json();
     setDispute(json.dispute ?? null);
     setPacks(json.packs ?? []);
+    setShopDomain(json.shop_domain ?? null);
     setLoading(false);
   }, [id]);
 
@@ -142,9 +145,13 @@ export default function DisputeDetailPage() {
   }
 
   const orderNum = dispute.order_gid?.split("/").pop();
-  const shopDomain =
+  const shopDomainForOrder =
     typeof window !== "undefined"
       ? document.cookie.match(/shopify_shop=([^;]+)/)?.[1]
+      : null;
+  const disputeUrl =
+    shopDomain && dispute.dispute_gid
+      ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
       : null;
 
   return (
@@ -212,6 +219,11 @@ export default function DisputeDetailPage() {
               <Banner tone={dispute.due_at && new Date(dispute.due_at) < new Date() ? "critical" : "warning"}>
                 {daysUntil(dispute.due_at)}
               </Banner>
+              {disputeUrl && (
+                <Button url={disputeUrl} target="_blank">
+                  {t("disputes.openDisputeInShopify")}
+                </Button>
+              )}
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -222,10 +234,10 @@ export default function DisputeDetailPage() {
               <BlockStack gap="200">
                 <Text as="h2" variant="headingMd">{t("disputes.linkedOrder")}</Text>
                 <Text as="p" variant="bodyMd">{t("disputes.order")} #{orderNum}</Text>
-                {shopDomain && (
+                {shopDomainForOrder && (
                   <Button
                     variant="plain"
-                    url={`https://${shopDomain}/admin/orders/${orderNum}`}
+                    url={`https://${shopDomainForOrder}/admin/orders/${orderNum}`}
                     target="_blank"
                   >
                     {t("disputes.openInShopify")}

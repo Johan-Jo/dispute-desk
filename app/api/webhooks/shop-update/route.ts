@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
 import { getServiceClient } from "@/lib/supabase/server";
+import { loadSession } from "@/lib/shopify/sessionStorage";
+import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 
 /**
  * POST /api/webhooks/shop-update
  *
  * Handles shop/update webhook. Updates shop domain if changed.
+ * Re-registers dispute webhooks so subscriptions are restored if dropped.
  */
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -29,8 +32,36 @@ export async function POST(req: NextRequest) {
     .update({ updated_at: new Date().toISOString() })
     .eq("shop_domain", shopDomain);
 
-  // TODO: attempt to register disputes/create or disputes/update webhook
-  // if available for API version 2026-01. Log if registration fails.
+  // Re-register dispute webhooks (e.g. if subscriptions were dropped after reinstall)
+  const { data: shop } = await db
+    .from("shops")
+    .select("id")
+    .eq("shop_domain", shopDomain)
+    .single();
+
+  if (shop) {
+    const session = await loadSession(shop.id, "offline");
+    if (session?.accessToken) {
+      registerDisputeWebhooks({
+        shopDomain,
+        accessToken: session.accessToken,
+      })
+        .then((result) => {
+          if (!result.ok && result.errors.length) {
+            console.warn(
+              "[webhooks] shop/update dispute webhook registration:",
+              result.errors
+            );
+          }
+        })
+        .catch((err) => {
+          console.warn(
+            "[webhooks] shop/update dispute webhook registration failed:",
+            err?.message ?? err
+          );
+        });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
