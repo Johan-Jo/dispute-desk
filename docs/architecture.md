@@ -124,8 +124,20 @@ Next.js API routes using the service role key.
 1. Portal user signs up / signs in (Supabase Auth).
 2. User clicks "Connect Shopify Store" → triggers Shopify OAuth with `source=portal`.
 3. OAuth callback creates shop + offline session + `portal_user_shops` row.
-4. User selects active shop from dropdown → stored in `active_shop_id` cookie.
+4. Callback sets `active_shop_id` cookie on the redirect response and sends
+   the user to `/portal/dashboard` — no manual store selection needed.
 5. All portal data queries scope to `active_shop_id` via the user's linked shops.
+6. For multi-store users, the sidebar store selector links to
+   `/portal/select-store` where they can switch between connected shops.
+
+### Cookieless OAuth State
+
+Shopify OAuth state is carried in a **signed token** instead of cookies.
+`encodeOAuthState()` packs `{ nonce, phase, source, returnTo }` into a
+base64url payload with an HMAC-SHA256 signature, passed as the `state`
+parameter. The callback verifies the signature with `decodeOAuthState()`.
+This avoids cross-site cookie issues that occur when the OAuth flow
+starts inside a Shopify Admin iframe.
 
 ### Why no JWT shop_id claims?
 

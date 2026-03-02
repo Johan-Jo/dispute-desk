@@ -1,6 +1,6 @@
 # DisputeDesk V1 Roadmap
 
-> **Last updated:** 2026-02-27
+> **Last updated:** 2026-03-01
 
 ## Progress
 
@@ -81,3 +81,8 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 - **EPIC 11** adds the 7-step setup wizard with dashboard checklist card,
   Evidence Sources V1 (Gorgias connect + sample files), and the onboarding
   state machine.
+- **Shopify App Store:** App registered in Shopify Partners. OAuth installs
+  working (cookieless state token). Dispute evidence write scopes
+  (`read_shopify_payments_dispute_evidences`,
+  `write_shopify_payments_dispute_evidences`) pending Shopify approval;
+  portal uses "Open in Shopify Admin" + copy-to-clipboard workaround.

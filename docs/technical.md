@@ -22,9 +22,19 @@
 
 ```
 read_orders
+read_customers
+read_products
+read_fulfillments
+read_shipping
 read_shopify_payments_disputes
-write_shopify_payments_dispute_evidences
+read_files
+write_files
 ```
+
+> **Pending approval:** `read_shopify_payments_dispute_evidences` and
+> `write_shopify_payments_dispute_evidences` require Shopify review (app
+> maturity gate). Until approved, the portal provides an "Open in Shopify
+> Admin" button and per-section "Copy" for manual evidence submission.
 
 ### API Version
 
@@ -87,8 +97,9 @@ prevents cross-shop data leakage.
 
 ## Email (Resend)
 
-Transactional email is sent via **Resend**. Layout is string-based HTML
-(ported from Estimate Pro): table-based, 600px, DisputeDesk branding.
+Transactional email is sent via **Resend**. Layout is minimal string-based
+HTML (single link, no big CTA buttons or "copy this link" blocks) to
+minimize spam classification.
 
 - **Env:** `RESEND_API_KEY` (required). `EMAIL_FROM` defaults to
   `DisputeDesk <notifications@mail.disputedesk.app>` (sending subdomain). The
@@ -259,8 +270,11 @@ queued → building → ready → saved_to_shopify
 - `POST /api/auth/portal/sign-out` — sign out portal user
 
 ### Shopify OAuth
-- `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`)
-- `GET /api/auth/shopify/callback` — complete OAuth, link portal user if portal source
+- `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`).
+  State is encoded as a signed token (not a cookie) via `encodeOAuthState()`.
+- `GET /api/auth/shopify/callback` — verify HMAC + signed state token, exchange
+  code for access token, store session. For `source=portal`: links the portal
+  user to the shop, sets `active_shop_id` cookie, and redirects to `/portal/dashboard`.
 
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings
