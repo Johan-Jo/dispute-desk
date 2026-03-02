@@ -176,13 +176,19 @@ async function linkPortalUserToShop(
 ) {
   const { createServerClient } = await import("@supabase/ssr");
 
+  const allCookies = req.cookies.getAll();
+  console.log(
+    "[linkPortalUserToShop] cookies present:",
+    allCookies.map((c) => c.name)
+  );
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return req.cookies.getAll();
+          return allCookies;
         },
         setAll() {},
       },
@@ -191,9 +197,18 @@ async function linkPortalUserToShop(
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) return;
+  if (!user) {
+    console.warn(
+      "[linkPortalUserToShop] No portal user found in callback cookies — cannot link shop.",
+      authError?.message ?? "no auth error"
+    );
+    return;
+  }
+
+  console.log("[linkPortalUserToShop] user=%s shop=%s", user.id, shopId);
 
   const { count } = await db
     .from("portal_user_shops")
@@ -202,7 +217,7 @@ async function linkPortalUserToShop(
 
   const isFirstShop = (count ?? 0) === 0;
 
-  await db.from("portal_user_shops").upsert(
+  const { error: upsertError } = await db.from("portal_user_shops").upsert(
     {
       user_id: user.id,
       shop_id: shopId,
@@ -210,6 +225,10 @@ async function linkPortalUserToShop(
     },
     { onConflict: "user_id,shop_id" }
   );
+
+  if (upsertError) {
+    console.error("[linkPortalUserToShop] upsert failed:", upsertError.message);
+  }
 
   if (isFirstShop && user.email) {
     const fullName =
