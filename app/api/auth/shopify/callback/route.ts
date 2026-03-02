@@ -35,6 +35,18 @@ export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
   const savedState = cookieStore.get("shopify_oauth_state")?.value;
   if (!savedState || savedState !== state) {
+    // Callback may load in an iframe (Shopify Admin), so the state cookie can be blocked.
+    // Retry once in the top-level window so the cookie is sent (first-party).
+    const isTopLevelRetry = req.nextUrl.searchParams.get("_top") === "1";
+    if (!isTopLevelRetry) {
+      const retryUrl = new URL(req.url);
+      retryUrl.searchParams.set("_top", "1");
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Completing install…</title></head><body><p>Completing install…</p><script>window.top.location.href=${JSON.stringify(retryUrl.toString())};</script></body></html>`;
+      return new NextResponse(html, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
     return NextResponse.json(
       { error: "State mismatch — possible CSRF" },
       { status: 403 }
