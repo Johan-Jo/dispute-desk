@@ -106,6 +106,7 @@ export async function GET(req: NextRequest) {
 
       if (source === "portal") {
         await linkPortalUserToShop(req, db, shopInternalId);
+        await ensureShopSetup(db, shopInternalId);
         const destination = returnTo === "/portal/select-store"
           ? "/portal/dashboard"
           : (returnTo || "/portal/dashboard");
@@ -166,6 +167,25 @@ export async function GET(req: NextRequest) {
       { error: "OAuth callback failed", detail: message },
       { status: 500 }
     );
+  }
+}
+
+async function ensureShopSetup(
+  db: ReturnType<typeof getServiceClient>,
+  shopId: string
+) {
+  const { data: existing } = await db
+    .from("shop_setup")
+    .select("shop_id")
+    .eq("shop_id", shopId)
+    .single();
+
+  if (!existing) {
+    await db.from("shop_setup").insert({
+      shop_id: shopId,
+      steps: {},
+      current_step: null,
+    });
   }
 }
 

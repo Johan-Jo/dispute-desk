@@ -20,11 +20,20 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = getServiceClient();
-  const { data: row } = await sb
+  let { data: row } = await sb
     .from("shop_setup")
     .select("*")
     .eq("shop_id", shopId)
     .single();
+
+  if (!row) {
+    const { data: inserted } = await sb
+      .from("shop_setup")
+      .insert({ shop_id: shopId, steps: {}, current_step: null })
+      .select("*")
+      .single();
+    row = inserted;
+  }
 
   const defaultState: StepState = { status: "todo" };
   const stepsMap = (row?.steps ?? {}) as Partial<Record<StepId, StepState>>;

@@ -50,7 +50,9 @@ export function PortalShell({
   const t = useTranslations("nav");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const isDemo = shops.length === 0;
+  const hasRealShopActive =
+    !!activeShopId && shops.some((s) => s.shop_id === activeShopId);
+  const isDemo = !hasRealShopActive;
 
   return (
     <DemoModeProvider isDemo={isDemo}>
@@ -94,15 +96,32 @@ export function PortalShell({
           {shops.length > 0 ? (
             <a
               href="/portal/select-store"
-              className="w-full p-3 bg-[#F1F5F9] hover:bg-[#E5E7EB] rounded-lg flex items-center gap-3 transition-colors"
+              className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors ${
+                isDemo
+                  ? "bg-[#FFFBEB] border border-[#FDE68A] hover:bg-[#FEF3C7]"
+                  : "bg-[#F1F5F9] hover:bg-[#E5E7EB]"
+              }`}
             >
-              <Store className="w-4 h-4 text-[#64748B]" />
+              <Store className={`w-4 h-4 ${isDemo ? "text-[#D97706]" : "text-[#64748B]"}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#0B1220] truncate">
-                  {activeShopDomain ?? "Select store"}
-                </p>
+                {isDemo ? (
+                  <>
+                    <p className="text-sm font-medium text-[#0B1220]">{t("demoStore")}</p>
+                    <p className="text-xs text-[#92400E]">demo.myshopify.com</p>
+                  </>
+                ) : (
+                  <p className="text-sm font-medium text-[#0B1220] truncate">
+                    {activeShopDomain ?? "Select store"}
+                  </p>
+                )}
               </div>
-              <ChevronDown className="w-4 h-4 text-[#64748B]" />
+              {isDemo ? (
+                <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#F59E0B] text-white px-1.5 py-0.5 rounded">
+                  Demo
+                </span>
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[#64748B]" />
+              )}
             </a>
           ) : (
             <div className="space-y-2">

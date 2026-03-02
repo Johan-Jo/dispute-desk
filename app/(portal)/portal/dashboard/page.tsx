@@ -7,6 +7,7 @@ import {
   DollarSign,
   ArrowRight,
   ExternalLink,
+  Inbox,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { KPICard } from "@/components/ui/kpi-card";
@@ -15,8 +16,9 @@ import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
 import { WelcomeBanner } from "@/components/onboarding/welcome-banner";
 import { PortalSetupChecklistCard } from "@/components/setup/PortalSetupChecklistCard";
+import { useDemoMode } from "@/lib/demo-mode";
 
-const recentDisputes = [
+const DEMO_DISPUTES = [
   { id: "DP-2401", customer: "John Smith", date: "2024-02-20", amount: "$145.00", status: "needs_evidence" },
   { id: "DP-2402", customer: "Sarah Johnson", date: "2024-02-21", amount: "$89.50", status: "under_review" },
   { id: "DP-2403", customer: "Mike Davis", date: "2024-02-22", amount: "$234.00", status: "needs_evidence" },
@@ -43,6 +45,9 @@ export default function DashboardPage() {
   const tt = useTranslations("table");
   const ts = useTranslations("status");
   const locale = useLocale();
+  const isDemo = useDemoMode();
+
+  const recentDisputes = isDemo ? DEMO_DISPUTES : [];
 
   return (
     <div>
@@ -72,30 +77,30 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-onboarding="dashboard-stats">
         <KPICard
           label={t("activeDisputes")}
-          value="23"
-          change={-12}
-          changeLabel={t("vsLastMonth")}
+          value={isDemo ? "23" : "0"}
+          change={isDemo ? -12 : undefined}
+          changeLabel={isDemo ? t("vsLastMonth") : undefined}
           icon={<AlertTriangle className="w-6 h-6" />}
         />
         <KPICard
           label={t("winRate")}
-          value="68%"
-          change={5}
-          changeLabel={t("vsLastMonth")}
+          value={isDemo ? "68%" : "—"}
+          change={isDemo ? 5 : undefined}
+          changeLabel={isDemo ? t("vsLastMonth") : undefined}
           icon={<TrendingUp className="w-6 h-6" />}
         />
         <KPICard
           label={t("evidencePacks")}
-          value="47"
-          change={8}
-          changeLabel={t("vsLastMonth")}
+          value={isDemo ? "47" : "0"}
+          change={isDemo ? 8 : undefined}
+          changeLabel={isDemo ? t("vsLastMonth") : undefined}
           icon={<Package className="w-6 h-6" />}
         />
         <KPICard
           label={t("amountAtRisk")}
-          value="$3,421"
-          change={-15}
-          changeLabel={t("vsLastMonth")}
+          value={isDemo ? "$3,421" : "$0"}
+          change={isDemo ? -15 : undefined}
+          changeLabel={isDemo ? t("vsLastMonth") : undefined}
           icon={<DollarSign className="w-6 h-6" />}
         />
       </div>
@@ -115,42 +120,50 @@ export default function DashboardPage() {
           </a>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F7F8FA] border-b border-[#E5E7EB]">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("id")}</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("customer")}</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("date")}</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("amount")}</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("status")}</th>
-                <th className="text-right px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
-              {recentDisputes.map((d) => {
-                const variant = STATUS_VARIANTS[d.status] ?? "warning";
-                const statusKey = STATUS_KEYS[d.status] ?? "unknown";
-                return (
-                  <tr key={d.id} className="hover:bg-[#F7F8FA] transition-colors">
-                    <td className="px-6 py-4 font-medium text-[#0B1220]">{d.id}</td>
-                    <td className="px-6 py-4 text-[#0B1220]">{d.customer}</td>
-                    <td className="px-6 py-4 text-[#667085]">{new Date(d.date).toLocaleDateString(locale)}</td>
-                    <td className="px-6 py-4 font-medium text-[#0B1220]">{d.amount}</td>
-                    <td className="px-6 py-4">
-                      <Badge variant={variant}>{ts(statusKey)}</Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <a href={`/portal/disputes/${d.id}`}>
-                        <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
-                      </a>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {recentDisputes.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[#F7F8FA] border-b border-[#E5E7EB]">
+                <tr>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("id")}</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("customer")}</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("date")}</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("amount")}</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("status")}</th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("actions")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB]">
+                {recentDisputes.map((d) => {
+                  const variant = STATUS_VARIANTS[d.status] ?? "warning";
+                  const statusKey = STATUS_KEYS[d.status] ?? "unknown";
+                  return (
+                    <tr key={d.id} className="hover:bg-[#F7F8FA] transition-colors">
+                      <td className="px-6 py-4 font-medium text-[#0B1220]">{d.id}</td>
+                      <td className="px-6 py-4 text-[#0B1220]">{d.customer}</td>
+                      <td className="px-6 py-4 text-[#667085]">{new Date(d.date).toLocaleDateString(locale)}</td>
+                      <td className="px-6 py-4 font-medium text-[#0B1220]">{d.amount}</td>
+                      <td className="px-6 py-4">
+                        <Badge variant={variant}>{ts(statusKey)}</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <a href={`/portal/disputes/${d.id}`}>
+                          <Button variant="ghost" size="sm">{t("viewDetails")}</Button>
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-12 text-center">
+            <Inbox className="w-10 h-10 text-[#D1D5DB] mx-auto mb-3" />
+            <p className="text-sm font-medium text-[#0B1220] mb-1">{t("noDisputesYet")}</p>
+            <p className="text-xs text-[#667085]">{t("noDisputesYetDesc")}</p>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}

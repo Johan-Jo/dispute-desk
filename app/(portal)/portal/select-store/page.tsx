@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Store, Check } from "lucide-react";
 import { requirePortalUser } from "@/lib/supabase/portal";
-import { getLinkedShops, setActiveShopId } from "@/lib/portal/activeShop";
+import {
+  getLinkedShops,
+  setActiveShopId,
+  clearActiveShopId,
+} from "@/lib/portal/activeShop";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +19,11 @@ export default async function SelectStorePage({ searchParams }: Props) {
   const shops = await getLinkedShops(user.id);
   const params = await searchParams;
   const t = await getTranslations("selectStore");
+
+  if (params.shop_id === "demo") {
+    await clearActiveShopId();
+    redirect("/portal/dashboard");
+  }
 
   if (params.shop_id) {
     const valid = shops.some((s) => s.shop_id === params.shop_id);
@@ -78,6 +87,29 @@ export default async function SelectStorePage({ searchParams }: Props) {
           );
         })}
       </div>
+
+      {/* Demo Store option */}
+      <a
+        href="/portal/select-store?shop_id=demo"
+        className="block p-4 border border-[#FDE68A] bg-[#FFFBEB] rounded-lg hover:bg-[#FEF3C7] transition-colors mb-6"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-[#FEF3C7] rounded-lg flex items-center justify-center">
+              <Store className="w-6 h-6 text-[#D97706]" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-[#0B1220] mb-1">
+                {t("demoStore")}
+              </h4>
+              <p className="text-sm text-[#92400E]">demo.myshopify.com</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#F59E0B] text-white px-2 py-1 rounded">
+            Demo
+          </span>
+        </div>
+      </a>
 
       <a href="/portal/connect-shopify">
         <Button variant="secondary" className="w-full">{t("connectAnother")}</Button>

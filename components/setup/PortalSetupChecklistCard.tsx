@@ -86,6 +86,25 @@ function ConnectStoreChecklist() {
   );
 }
 
+const STEP_ROUTES: Record<StepId, string> = {
+  welcome_goals: "/portal/settings",
+  permissions: "/portal/connect-shopify",
+  sync_disputes: "/portal/disputes",
+  business_policies: "/portal/policies",
+  evidence_sources: "/portal/packs",
+  automation_rules: "/portal/rules",
+  team_notifications: "/portal/team",
+};
+
+function getShopIdFromCookie(): string {
+  if (typeof document === "undefined") return "";
+  return (
+    document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ??
+    document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ??
+    ""
+  );
+}
+
 function ActiveShopChecklist() {
   const t = useTranslations("setup");
   const router = useRouter();
@@ -93,8 +112,10 @@ function ActiveShopChecklist() {
   const [loading, setLoading] = useState(true);
 
   const fetchState = useCallback(async () => {
+    const shopId = getShopIdFromCookie();
+    if (!shopId) { setLoading(false); return; }
     try {
-      const res = await fetch("/api/setup/state");
+      const res = await fetch(`/api/setup/state?shop_id=${shopId}`);
       if (res.ok) {
         const data: SetupStateResponse = await res.json();
         setState(data);
@@ -110,7 +131,7 @@ function ActiveShopChecklist() {
 
   const navigateToStep = useCallback(
     (stepId: StepId) => {
-      router.push(`/portal/dashboard?setup_step=${stepId}`);
+      router.push(STEP_ROUTES[stepId] ?? "/portal/dashboard");
     },
     [router]
   );

@@ -13,18 +13,32 @@ export async function getActiveShopId(): Promise<string | null> {
   return cookieStore.get(COOKIE_NAME)?.value ?? null;
 }
 
+const DD_COOKIE_NAME = "dd_active_shop";
+
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "lax" as const,
+  maxAge: 60 * 60 * 24 * 90,
+  path: "/",
+};
+
 /**
  * Sets the active shop cookie. Call from /portal/select-store.
  */
 export async function setActiveShopId(shopId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, shopId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 90,
-    path: "/",
-  });
+  cookieStore.set(COOKIE_NAME, shopId, COOKIE_OPTS);
+  cookieStore.set(DD_COOKIE_NAME, shopId, COOKIE_OPTS);
+}
+
+/**
+ * Clears the active shop cookies to switch back to demo mode.
+ */
+export async function clearActiveShopId() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(DD_COOKIE_NAME);
 }
 
 /**
