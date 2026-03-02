@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  if (!verifyHmac(params)) {
+  // Verify HMAC using only params Shopify sent (exclude our retry param _top)
+  const { _top: _retry, ...shopifyParams } = params;
+  if (!verifyHmac(shopifyParams)) {
     return NextResponse.json(
       { error: "HMAC verification failed" },
       { status: 403 }
