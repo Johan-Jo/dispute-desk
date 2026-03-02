@@ -42,112 +42,119 @@ export async function GET(req: NextRequest) {
 
   const { phase, source, returnTo } = oauthState;
 
-  const tokenResult = await exchangeCodeForToken(shop, code);
+  try {
+    const tokenResult = await exchangeCodeForToken(shop, code);
 
-  const db = getServiceClient();
-  const { data: existingShop } = await db
-    .from("shops")
-    .select("id")
-    .eq("shop_domain", shop)
-    .single();
-
-  let shopInternalId: string;
-
-  if (existingShop) {
-    shopInternalId = existingShop.id;
-    await db
+    const db = getServiceClient();
+    const { data: existingShop } = await db
       .from("shops")
-      .update({
-        uninstalled_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", shopInternalId);
-  } else {
-    const { data: newShop, error } = await db
-      .from("shops")
-      .insert({ shop_domain: shop })
       .select("id")
+      .eq("shop_domain", shop)
       .single();
-    if (error || !newShop) {
-      return NextResponse.json(
-        { error: `Failed to create shop: ${error?.message}` },
-        { status: 500 }
-      );
+
+    let shopInternalId: string;
+
+    if (existingShop) {
+      shopInternalId = existingShop.id;
+      await db
+        .from("shops")
+        .update({
+          uninstalled_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", shopInternalId);
+    } else {
+      const { data: newShop, error } = await db
+        .from("shops")
+        .insert({ shop_domain: shop })
+        .select("id")
+        .single();
+      if (error || !newShop) {
+        return NextResponse.json(
+          { error: `Failed to create shop: ${error?.message}` },
+          { status: 500 }
+        );
+      }
+      shopInternalId = newShop.id;
     }
-    shopInternalId = newShop.id;
-  }
 
-  const cookieStore = await cookies();
+    const cookieStore = await cookies();
 
-  if (phase === "offline") {
+    if (phase === "offline") {
+      await storeSession({
+        shopInternalId,
+        shopDomain: shop,
+        sessionType: "offline",
+        userId: null,
+        accessToken: tokenResult.accessToken,
+        scopes: tokenResult.scope,
+        expiresAt: null,
+      });
+
+      registerDisputeWebhooks({
+        shopDomain: shop,
+        accessToken: tokenResult.accessToken,
+      })
+        .then((result) => {
+          if (!result.ok && result.errors.length) {
+            console.warn("[webhooks] Dispute webhook registration:", result.errors);
+          }
+        })
+        .catch((err) => {
+          console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
+        });
+
+      if (source === "portal") {
+        await linkPortalUserToShop(req, db, shopInternalId);
+        const destination = returnTo || "/portal/select-store";
+        return NextResponse.redirect(new URL(destination, req.url));
+      }
+
+      const onlineAuthUrl = `${APP_URL}/api/auth/shopify?shop=${shop}&phase=online`;
+      return NextResponse.redirect(onlineAuthUrl);
+    }
+
+    const userId = tokenResult.associatedUser?.id?.toString() ?? null;
+    const expiresAt = tokenResult.expiresIn
+      ? new Date(Date.now() + tokenResult.expiresIn * 1000).toISOString()
+      : null;
+
     await storeSession({
       shopInternalId,
       shopDomain: shop,
-      sessionType: "offline",
-      userId: null,
+      sessionType: "online",
+      userId,
       accessToken: tokenResult.accessToken,
       scopes: tokenResult.scope,
-      expiresAt: null,
+      expiresAt,
     });
 
-    registerDisputeWebhooks({
-      shopDomain: shop,
-      accessToken: tokenResult.accessToken,
-    })
-      .then((result) => {
-        if (!result.ok && result.errors.length) {
-          console.warn("[webhooks] Dispute webhook registration:", result.errors);
-        }
-      })
-      .catch((err) => {
-        console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
-      });
+    cookieStore.set("shopify_shop", shop, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
 
-    if (source === "portal") {
-      await linkPortalUserToShop(req, db, shopInternalId);
-      const destination = returnTo || "/portal/select-store";
-      return NextResponse.redirect(new URL(destination, req.url));
-    }
+    cookieStore.set("shopify_shop_id", shopInternalId, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
 
-    // Embedded flow: proceed to online token phase
-    const onlineAuthUrl = `${APP_URL}/api/auth/shopify?shop=${shop}&phase=online`;
-    return NextResponse.redirect(onlineAuthUrl);
+    const embeddedUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`;
+    return NextResponse.redirect(embeddedUrl);
+  } catch (err) {
+    console.error("[auth/shopify/callback] Unhandled error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { error: "OAuth callback failed", detail: message },
+      { status: 500 }
+    );
   }
-
-  // Online phase — store user-scoped session
-  const userId = tokenResult.associatedUser?.id?.toString() ?? null;
-  const expiresAt = tokenResult.expiresIn
-    ? new Date(Date.now() + tokenResult.expiresIn * 1000).toISOString()
-    : null;
-
-  await storeSession({
-    shopInternalId,
-    shopDomain: shop,
-    sessionType: "online",
-    userId,
-    accessToken: tokenResult.accessToken,
-    scopes: tokenResult.scope,
-    expiresAt,
-  });
-
-  cookieStore.set("shopify_shop", shop, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-  });
-
-  cookieStore.set("shopify_shop_id", shopInternalId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-  });
-
-  const embeddedUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`;
-  return NextResponse.redirect(embeddedUrl);
 }
 
 async function linkPortalUserToShop(
