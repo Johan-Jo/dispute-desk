@@ -1,0 +1,83 @@
+/**
+ * Send welcome email via Resend.
+ * Used after sign-up (email/password) or when a user links their first shop (OAuth).
+ */
+
+import { Resend } from "resend";
+import {
+  generateWelcomeEmailHTML,
+  generateWelcomeEmailText,
+  getWelcomeSubject,
+  type WelcomeEmailVariables,
+} from "./templates";
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+/** Use verified sending subdomain in Resend (mail.disputedesk.app). Set EMAIL_FROM to override. */
+const FROM_EMAIL =
+  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+/** Reply-To (avoid no-reply; helps deliverability). Defaults to same as FROM. */
+const REPLY_TO =
+  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+
+function getDashboardUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/portal/dashboard`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/portal/dashboard`;
+  }
+  return "http://localhost:3000/portal/dashboard";
+}
+
+export interface SendWelcomeOptions {
+  to: string;
+  fullName?: string;
+  idempotencyKey: string;
+}
+
+/**
+ * Send the welcome email to a newly registered user.
+ * Returns { ok: true } on success, { ok: false, error: string } on failure.
+ * Does not throw; callers should log and not block UX.
+ */
+export async function sendWelcomeEmail(
+  options: SendWelcomeOptions
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set — skipping welcome email");
+    return { ok: false, error: "Email service not configured" };
+  }
+
+  const dashboardUrl = getDashboardUrl();
+  const firstName =
+    options.fullName?.trim().split(/\s+/)[0] || "there";
+
+  const variables: WelcomeEmailVariables = {
+    firstName,
+    dashboardUrl,
+  };
+
+  const html = generateWelcomeEmailHTML(variables);
+  const text = generateWelcomeEmailText(variables);
+  const subject = getWelcomeSubject();
+
+  const resend = new Resend(RESEND_API_KEY);
+  const { data, error } = await resend.emails.send(
+    {
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to: options.to,
+      subject,
+      html,
+      text,
+    },
+    { idempotencyKey: options.idempotencyKey }
+  );
+
+  if (error) {
+    console.error("[email] Welcome send failed:", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}

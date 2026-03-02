@@ -43,6 +43,12 @@ export default function SignUpPage() {
       setError(err.message);
     } else {
       setSuccess(true);
+      // Fire-and-forget welcome email (do not block UX)
+      fetch("/api/emails/welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, fullName: fullName.trim() || undefined }),
+      }).catch(() => {});
     }
     setLoading(false);
   };

@@ -4,6 +4,7 @@ import { verifyHmac, exchangeCodeForToken } from "@/lib/shopify/auth";
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 
 const APP_URL = process.env.SHOPIFY_APP_URL!;
 
@@ -175,6 +176,7 @@ export async function GET(req: NextRequest) {
 /**
  * Link the current portal user (from Supabase Auth cookie) to the shop.
  * Creates a portal_user_shops row if one doesn't already exist.
+ * If this is the user's first shop link, sends a welcome email.
  */
 async function linkPortalUserToShop(
   req: NextRequest,
@@ -204,7 +206,13 @@ async function linkPortalUserToShop(
 
   if (!user) return;
 
-  // Upsert: create link if not exists
+  const { count } = await db
+    .from("portal_user_shops")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  const isFirstShop = (count ?? 0) === 0;
+
   await db.from("portal_user_shops").upsert(
     {
       user_id: user.id,
@@ -213,4 +221,16 @@ async function linkPortalUserToShop(
     },
     { onConflict: "user_id,shop_id" }
   );
+
+  if (isFirstShop && user.email) {
+    const fullName =
+      (user.user_metadata?.full_name as string | undefined)?.trim() || undefined;
+    sendWelcomeEmail({
+      to: user.email,
+      fullName,
+      idempotencyKey: `welcome/${user.id}`,
+    }).then((result) => {
+      if (!result.ok) console.warn("[email] Welcome send failed after OAuth:", result.error);
+    });
+  }
 }

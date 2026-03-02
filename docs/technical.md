@@ -11,6 +11,7 @@
 | Auth (Embedded)    | Shopify OAuth (offline + online sessions)          |
 | Database           | Supabase Postgres with RLS                         |
 | Storage            | Supabase Storage (private buckets)                 |
+| Email              | Resend (transactional; welcome email)               |
 | PDF                | @react-pdf/renderer (deterministic, no browser)    |
 | Deployment         | Vercel (serverless + cron)                         |
 | CI/CD              | GitHub Actions                                     |
@@ -83,6 +84,24 @@ It never accesses application data tables.
 RLS is enabled on all tables as defense-in-depth. Policies allow service
 role full access. If a request somehow bypasses application code, RLS
 prevents cross-shop data leakage.
+
+## Email (Resend)
+
+Transactional email is sent via **Resend**. Layout is string-based HTML
+(ported from Estimate Pro): table-based, 600px, DisputeDesk branding.
+
+- **Env:** `RESEND_API_KEY` (required). `EMAIL_FROM` defaults to
+  `DisputeDesk <notifications@mail.disputedesk.app>` (sending subdomain). The
+  domain must be verified in Resend (resend.com/domains). `EMAIL_REPLY_TO` sets
+  Reply-To (defaults to same as FROM; avoid no-reply for deliverability).
+- **Deliverability (inbox vs spam):** (1) Add DMARC (Resend: resend.com/docs/dashboard/domains/dmarc). (2) **Links in the email must use your sending domain** — set `NEXT_PUBLIC_APP_URL=https://disputedesk.app` so the dashboard link is not localhost. (3) Sending subdomain `mail.disputedesk.app` is the default; keep `EMAIL_FROM`/`EMAIL_REPLY_TO` on that subdomain so root domain reputation stays separate. (4) In Resend dashboard, turn off click/open tracking for the domain if enabled.
+- **Templates:** `lib/email/templates.ts` (welcome HTML/text).
+- **Send:** `lib/email/sendWelcome.ts`; `POST /api/emails/welcome` (body:
+  `email`, optional `fullName`).
+- **Welcome email** is sent when:
+  1. User completes email/password sign-up (client calls API after success).
+  2. User links their first shop via Shopify OAuth (callback sends server-side).
+- Idempotency keys (`welcome/{email}` or `welcome/{userId}`) avoid duplicates.
 
 ## Async Jobs
 
