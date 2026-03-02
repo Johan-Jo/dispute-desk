@@ -106,8 +106,20 @@ export async function GET(req: NextRequest) {
 
       if (source === "portal") {
         await linkPortalUserToShop(req, db, shopInternalId);
-        const destination = returnTo || "/portal/select-store";
-        return NextResponse.redirect(new URL(destination, req.url));
+        const destination = returnTo === "/portal/select-store"
+          ? "/portal/dashboard"
+          : (returnTo || "/portal/dashboard");
+        const res = NextResponse.redirect(new URL(destination, req.url));
+        const cookieOpts = {
+          httpOnly: true,
+          secure: true,
+          sameSite: "lax" as const,
+          maxAge: 60 * 60 * 24 * 90,
+          path: "/",
+        };
+        res.cookies.set("active_shop_id", shopInternalId, cookieOpts);
+        res.cookies.set("dd_active_shop", shopInternalId, cookieOpts);
+        return res;
       }
 
       const onlineAuthUrl = `${APP_URL}/api/auth/shopify?shop=${shop}&phase=online`;

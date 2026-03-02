@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"try { require('fs').rmSync('.next', { recursive: true, force: true }); } catch (e) {}\" && next dev",
+    "shopify:dev": "node -e \"require('dotenv').config({ path: '.env.local' }); const cid = process.env.SHOPIFY_API_KEY; if (!cid) throw new Error('SHOPIFY_API_KEY missing in .env.local'); require('child_process').execSync('npx shopify app dev --client-id ' + cid, { stdio: 'inherit', shell: true });\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

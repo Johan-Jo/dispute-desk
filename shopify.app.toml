@@ -13,7 +13,7 @@ redirect_urls = [
 ]
 
 [access_scopes]
-# read_shopify_payments_dispute_evidences blocked at version create; add via support or when Shopify allows
+# read_shopify_payments_dispute_evidences, write_shopify_payments_dispute_evidences blocked at version create (app_access); use Open in Shopify + copy until approved
 scopes = "read_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_files,write_files"
 
 [webhooks]

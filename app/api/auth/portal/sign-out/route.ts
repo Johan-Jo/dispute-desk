@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
 
   await supabase.auth.signOut();
 
-  // Clear active shop cookie
   res.cookies.delete("active_shop_id");
+  res.cookies.delete("dd_active_shop");
 
   return res;
 }
