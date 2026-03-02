@@ -107,6 +107,8 @@ export function TemplateLibraryModal({
   const [sortBy, setSortBy] = useState("recommended");
   const [installing, setInstalling] = useState<string | null>(null);
   const [installedIds, setInstalledIds] = useState<string[]>([]);
+  const [installedPackIds, setInstalledPackIds] = useState<Record<string, string>>({});
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [isInstallingBulk, setIsInstallingBulk] = useState(false);
   const [showInstalledBanner, setShowInstalledBanner] = useState(false);
 
@@ -138,6 +140,8 @@ export function TemplateLibraryModal({
     if (isOpen) {
       fetchTemplates();
       setInstalledIds([]);
+      setInstalledPackIds({});
+      setPreviewTemplateId(null);
       setSearchQuery("");
       setShowInstalledBanner(false);
     }
@@ -169,7 +173,6 @@ export function TemplateLibraryModal({
       setTimeout(() => {
         setInstalling(null);
         setInstalledIds((prev) => [...prev, templateId]);
-        onInstalled(templateId);
       }, 600);
       return;
     }
@@ -184,6 +187,7 @@ export function TemplateLibraryModal({
       if (res.ok) {
         const pack = await res.json();
         setInstalledIds((prev) => [...prev, templateId]);
+        setInstalledPackIds((prev) => ({ ...prev, [templateId]: pack.id }));
         onInstalled(pack.id);
       }
     } finally {
@@ -201,6 +205,10 @@ export function TemplateLibraryModal({
     }, 1200);
   };
 
+  const previewTpl = previewTemplateId
+    ? sorted.find((p) => p.id === previewTemplateId)
+    : null;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -210,6 +218,73 @@ export function TemplateLibraryModal({
       size="xl"
     >
       <div className="space-y-6">
+        {/* Preview panel */}
+        {previewTpl && (
+          <div className="bg-[#F6F8FB] border border-[#E5E7EB] rounded-xl p-5">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-[#0B1220]">
+                  {t("preview")}: {t(previewTpl.nameKey)}
+                </h3>
+                <p className="text-sm text-[#667085] mt-1">
+                  {DISPUTE_TYPE_LABEL_KEYS[previewTpl.dispute_type]
+                    ? t(DISPUTE_TYPE_LABEL_KEYS[previewTpl.dispute_type])
+                    : previewTpl.dispute_type}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPreviewTemplateId(null)}
+              >
+                ×
+              </Button>
+            </div>
+            <p className="text-sm text-[#667085] mb-3">
+              <strong className="text-[#0B1220]">{t("worksBestFor")}</strong>{" "}
+              {t(previewTpl.bestForKey)}
+            </p>
+            <p className="text-sm text-[#667085] mb-3">
+              {previewTpl.requiredDocs} {t("required")}, {previewTpl.optionalDocs}{" "}
+              {t("optional")}
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {previewTpl.keyEvidence.map((evKey, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-white text-[#0B1220] rounded text-xs border border-[#E5E7EB]"
+                >
+                  {EVIDENCE_ICONS[evKey]}
+                  {t(evKey)}
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPreviewTemplateId(null)}
+              >
+                {t("closePreview")}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setPreviewTemplateId(null);
+                  handleInstall(previewTpl.id);
+                }}
+                disabled={installing === previewTpl.id}
+              >
+                {installing === previewTpl.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                ) : null}
+                {t("install")}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Installed Banner */}
         {showInstalledBanner && (
           <div className="bg-[#DCFCE7] border border-[#BBF7D0] rounded-lg p-4 flex items-start gap-3">
@@ -410,7 +485,14 @@ export function TemplateLibraryModal({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onInstalled(tpl.id)}
+                            onClick={() => {
+                              const packId = installedPackIds[tpl.id];
+                              if (packId) {
+                                onInstalled(packId);
+                              } else {
+                                window.location.href = "/portal/connect-shopify";
+                              }
+                            }}
                           >
                             {t("openPack")}
                           </Button>
@@ -432,8 +514,7 @@ export function TemplateLibraryModal({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleInstall(tpl.id)}
-                            disabled={installing === tpl.id}
+                            onClick={() => setPreviewTemplateId(tpl.id)}
                           >
                             {t("preview")}
                           </Button>

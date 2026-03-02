@@ -201,6 +201,23 @@ Tests include:
 - **API route handler tests:** Setup state/step/skip/undo-skip, integrations status, Gorgias connect/disconnect, sample file upload/list/delete (using custom Supabase + Next.js mocks)
 - **E2E smoke test:** Seeds a dispute into live Supabase, validates the full automation pipeline (shop settings, pack creation, completeness scoring, gate decisions, save simulation, audit immutability), then cleans up
 
+### Testing with bulk disputes
+
+To test the pipeline and UI with many disputes without creating them in Shopify, use the bulk seed script. It inserts test disputes into Supabase only (they do not exist in Shopify).
+
+```bash
+# Seed 30 disputes for a dev shop (requires SUPABASE_URL_POSTGRES in .env.local)
+node scripts/seed-bulk-disputes.mjs --shop dev-store.myshopify.com --count 30
+
+# By shop UUID
+node scripts/seed-bulk-disputes.mjs --shop-id <uuid> --count 20
+
+# Remove all seeded disputes for that shop
+node scripts/seed-bulk-disputes.mjs --shop dev-store.myshopify.com --cleanup
+```
+
+Seeded disputes use `dispute_gid` like `gid://shopify/ShopifyPaymentsDispute/seed-1` so they can be identified and cleaned up safely.
+
 ### CI
 
 GitHub Actions runs on push/PR to main:

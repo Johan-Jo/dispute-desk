@@ -2,19 +2,19 @@
 # https://shopify.dev/docs/apps/tools/cli/configuration
 
 name = "DisputeDesk"
+# For deploy, CLI reads these literally. Use SHOPIFY_APP_URL from .env.local at runtime.
 client_id = "${SHOPIFY_API_KEY}"
-application_url = "${SHOPIFY_APP_URL}"
+application_url = "https://disputedesk.app"
+embedded = true
 
 [auth]
 redirect_urls = [
-  "${SHOPIFY_APP_URL}/api/auth/shopify/callback",
+  "https://disputedesk.app/api/auth/shopify/callback",
 ]
 
 [access_scopes]
-# read_orders: fetch order + fulfillment data for evidence packs
-# read_shopify_payments_disputes: list/detail disputes from Shopify Payments
-# write_shopify_payments_dispute_evidences: save evidence via disputeEvidenceUpdate
-scopes = "read_orders,read_shopify_payments_disputes,write_shopify_payments_dispute_evidences"
+# read_shopify_payments_dispute_evidences blocked at version create; add via support or when Shopify allows
+scopes = "read_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_files,write_files"
 
 [webhooks]
 api_version = "2026-01"
@@ -27,8 +27,13 @@ api_version = "2026-01"
   topics = ["shop/update"]
   uri = "/api/webhooks/shop-update"
 
+# disputes/create and disputes/update registered at runtime (OAuth) - require protected-customer-data approval in Partners
+
+# App proxy not used; minimal values required by CLI validation
 [app_proxy]
-# No proxy needed for V1
+url = "https://example.com/proxy"
+subpath = "app"
+prefix = "apps"
 
 [pos]
 embedded = false

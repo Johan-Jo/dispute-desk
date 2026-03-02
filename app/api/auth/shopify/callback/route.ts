@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyHmac, exchangeCodeForToken } from "@/lib/shopify/auth";
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
+import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 
 const APP_URL = process.env.SHOPIFY_APP_URL!;
 
@@ -88,6 +89,26 @@ export async function GET(req: NextRequest) {
       scopes: tokenResult.scope,
       expiresAt: null,
     });
+
+    // Register dispute webhooks (non-blocking; do not delay redirect)
+    registerDisputeWebhooks({
+      shopDomain: shop,
+      accessToken: tokenResult.accessToken,
+    })
+      .then((result) => {
+        if (!result.ok && result.errors.length) {
+          console.warn(
+            "[webhooks] Dispute webhook registration:",
+            result.errors
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn(
+          "[webhooks] Dispute webhook registration failed:",
+          err?.message ?? err
+        );
+      });
 
     cookieStore.delete("shopify_oauth_state");
     cookieStore.delete("shopify_oauth_phase");

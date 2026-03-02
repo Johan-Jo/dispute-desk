@@ -95,7 +95,7 @@ worker endpoint (`/api/jobs/worker`).
 
 | Type             | Trigger                              | Handler                                |
 |------------------|--------------------------------------|----------------------------------------|
-| sync_disputes    | Cron or POST /api/disputes/sync      | lib/jobs/handlers/syncDisputesJob.ts   |
+| sync_disputes    | Cron, manual, or dispute webhooks    | lib/jobs/handlers/syncDisputesJob.ts   |
 | build_pack       | Automation pipeline or manual        | lib/jobs/handlers/buildPackJob.ts      |
 | render_pdf       | POST /api/packs/:packId/render-pdf   | lib/jobs/handlers/renderPdfJob.ts      |
 | save_to_shopify  | Auto-save gate or POST .../approve   | lib/jobs/handlers/saveToShopifyJob.ts  |
@@ -233,6 +233,8 @@ queued → building → ready → saved_to_shopify
 - `GET /api/health`
 - `POST /api/webhooks/app-uninstalled` (HMAC verified)
 - `POST /api/webhooks/shop-update` (HMAC verified)
+- `POST /api/webhooks/disputes-create` (HMAC verified) — enqueues sync_disputes for the shop
+- `POST /api/webhooks/disputes-update` (HMAC verified) — enqueues sync_disputes for the shop
 
 ### Portal Auth
 - `POST /api/auth/portal/sign-out` — sign out portal user
