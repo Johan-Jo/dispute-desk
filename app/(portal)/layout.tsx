@@ -31,22 +31,23 @@ export default async function PortalLayout({
   if (!user) redirect("/auth/sign-in");
 
   const sb = getServiceClient();
-  const { data: shops, error: shopsError } = await sb
+  let { data: shops, error: shopsError } = await sb
     .from("portal_user_shops")
     .select("shop_id, role, shops(shop_domain, locale)")
     .eq("user_id", user.id);
 
+  if (shopsError?.message?.includes("does not exist")) {
+    const fallback = await sb
+      .from("portal_user_shops")
+      .select("shop_id, role, shops(shop_domain)")
+      .eq("user_id", user.id);
+    shops = fallback.data;
+    shopsError = fallback.error;
+  }
+
   if (shopsError) {
     console.error("[portal/layout] shops query error:", shopsError.message);
   }
-  console.log(
-    "[portal/layout] user=%s shops=%d activeShopCookie=%s",
-    user.id,
-    shops?.length ?? 0,
-    cookieStore.get("dd_active_shop")?.value ??
-      cookieStore.get("active_shop_id")?.value ??
-      "none"
-  );
 
   const activeShopId =
     cookieStore.get("dd_active_shop")?.value ??
