@@ -13,16 +13,6 @@ import { checkRateLimit } from "@/lib/middleware/rateLimit";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // --- OAuth install: Shopify can send ?shop= to / or /app; must start flow (with breakout) so state cookie is set ---
-  const shopParam = req.nextUrl.searchParams.get("shop");
-  if (shopParam && /\.myshopify\.com$/.test(shopParam)) {
-    if (pathname === "/" || pathname.startsWith("/app")) {
-      return NextResponse.redirect(
-        new URL(`/api/auth/shopify/start?shop=${shopParam}`, req.url)
-      );
-    }
-  }
-
   // --- Public routes: marketing, auth, static assets ---
   if (
     pathname === "/" ||
@@ -180,9 +170,8 @@ export async function middleware(req: NextRequest) {
     if (!shopDomain) {
       const shopParam = req.nextUrl.searchParams.get("shop");
       if (shopParam) {
-        // Break out of iframe first so /api/auth/shopify sets the state cookie in top-level (same context as callback retry)
         return NextResponse.redirect(
-          new URL(`/api/auth/shopify/start?shop=${shopParam}`, req.url)
+          new URL(`/api/auth/shopify?shop=${shopParam}`, req.url)
         );
       }
 

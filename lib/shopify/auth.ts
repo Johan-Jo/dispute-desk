@@ -1,9 +1,9 @@
 import crypto from "crypto";
 
-const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY!;
-const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET!;
+const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
+const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
 const SHOPIFY_SCOPES = process.env.SHOPIFY_SCOPES ?? "read_orders,read_shopify_payments_disputes,write_shopify_payments_dispute_evidences";
-const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL!;
+const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ?? "";
 
 /**
  * Build the Shopify OAuth authorization URL.
