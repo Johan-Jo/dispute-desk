@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildAuthUrl, generateNonce } from "@/lib/shopify/auth";
-import { cookies } from "next/headers";
+import { buildAuthUrl, generateNonce, encodeOAuthState } from "@/lib/shopify/auth";
 
 /**
  * GET /api/auth/shopify?shop=xxx.myshopify.com[&source=portal&return_to=/portal/select-store]
  *
- * Initiates Shopify OAuth. First requests an offline (shop-wide) token.
- * After offline token is stored, redirects back for an online (user-scoped) token.
- *
- * Supports portal-initiated OAuth via source=portal query param.
+ * Initiates Shopify OAuth. Encodes phase/source/return_to in a signed state
+ * token so the callback can recover them without cookies (which are unreliable
+ * across cross-site redirects).
  */
 export async function GET(req: NextRequest) {
   const shop = req.nextUrl.searchParams.get("shop");
@@ -38,32 +36,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const cookieStore = await cookies();
   const phase = req.nextUrl.searchParams.get("phase") ?? "offline";
   const isOnline = phase === "online";
-
   const source = req.nextUrl.searchParams.get("source") ?? "embedded";
   const returnTo = req.nextUrl.searchParams.get("return_to") ?? "";
 
   const nonce = generateNonce();
+  const stateToken = encodeOAuthState({ nonce, phase, source, returnTo });
 
-  // SameSite=None so the cookie is sent when Shopify redirects back to the callback (cross-site or iframe)
-  const oauthCookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none" as const,
-    maxAge: 600,
-    path: "/",
-  };
-
-  cookieStore.set("shopify_oauth_state", nonce, oauthCookieOptions);
-  cookieStore.set("shopify_oauth_phase", phase, oauthCookieOptions);
-  cookieStore.set("shopify_oauth_source", source, oauthCookieOptions);
-
-  if (returnTo) {
-    cookieStore.set("shopify_oauth_return_to", returnTo, oauthCookieOptions);
-  }
-
-  const authUrl = buildAuthUrl(shop, nonce, isOnline);
+  const authUrl = buildAuthUrl(shop, stateToken, isOnline);
   return NextResponse.redirect(authUrl);
 }

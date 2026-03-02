@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyHmac, exchangeCodeForToken } from "@/lib/shopify/auth";
+import { verifyHmac, exchangeCodeForToken, decodeOAuthState } from "@/lib/shopify/auth";
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
@@ -12,7 +12,7 @@ const APP_URL = process.env.SHOPIFY_APP_URL!;
  * GET /api/auth/shopify/callback
  *
  * Handles both offline and online OAuth callbacks.
- * Supports portal-initiated OAuth (source=portal) — links portal user to shop.
+ * Phase/source/return_to are recovered from the signed state token (not cookies).
  */
 export async function GET(req: NextRequest) {
   const params = Object.fromEntries(req.nextUrl.searchParams.entries());
@@ -25,39 +25,22 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Verify HMAC using only params Shopify sent (exclude our retry param _top)
-  const { _top: _retry, ...shopifyParams } = params;
-  if (!verifyHmac(shopifyParams)) {
+  if (!verifyHmac(params)) {
     return NextResponse.json(
       { error: "HMAC verification failed" },
       { status: 403 }
     );
   }
 
-  const cookieStore = await cookies();
-  const savedState = cookieStore.get("shopify_oauth_state")?.value;
-  if (!savedState || savedState !== state) {
-    // Callback may load in an iframe (Shopify Admin), so the state cookie can be blocked.
-    // Retry once in the top-level window so the cookie is sent (first-party).
-    const isTopLevelRetry = req.nextUrl.searchParams.get("_top") === "1";
-    if (!isTopLevelRetry) {
-      const retryUrl = new URL(req.url);
-      retryUrl.searchParams.set("_top", "1");
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Completing install…</title></head><body><p>Completing install…</p><script>window.top.location.href=${JSON.stringify(retryUrl.toString())};</script></body></html>`;
-      return new NextResponse(html, {
-        status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
-    }
+  const oauthState = decodeOAuthState(state);
+  if (!oauthState) {
     return NextResponse.json(
-      { error: "State mismatch — possible CSRF" },
+      { error: "Invalid or tampered state token" },
       { status: 403 }
     );
   }
 
-  const phase = cookieStore.get("shopify_oauth_phase")?.value ?? "offline";
-  const source = cookieStore.get("shopify_oauth_source")?.value ?? "embedded";
-  const returnTo = cookieStore.get("shopify_oauth_return_to")?.value ?? "";
+  const { phase, source, returnTo } = oauthState;
 
   const tokenResult = await exchangeCodeForToken(shop, code);
 
@@ -94,6 +77,8 @@ export async function GET(req: NextRequest) {
     shopInternalId = newShop.id;
   }
 
+  const cookieStore = await cookies();
+
   if (phase === "offline") {
     await storeSession({
       shopInternalId,
@@ -105,36 +90,21 @@ export async function GET(req: NextRequest) {
       expiresAt: null,
     });
 
-    // Register dispute webhooks (non-blocking; do not delay redirect)
     registerDisputeWebhooks({
       shopDomain: shop,
       accessToken: tokenResult.accessToken,
     })
       .then((result) => {
         if (!result.ok && result.errors.length) {
-          console.warn(
-            "[webhooks] Dispute webhook registration:",
-            result.errors
-          );
+          console.warn("[webhooks] Dispute webhook registration:", result.errors);
         }
       })
       .catch((err) => {
-        console.warn(
-          "[webhooks] Dispute webhook registration failed:",
-          err?.message ?? err
-        );
+        console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
       });
 
-    cookieStore.delete("shopify_oauth_state");
-    cookieStore.delete("shopify_oauth_phase");
-
     if (source === "portal") {
-      // Portal flow: skip online phase, link user to shop, redirect to portal
       await linkPortalUserToShop(req, db, shopInternalId);
-
-      cookieStore.delete("shopify_oauth_source");
-      cookieStore.delete("shopify_oauth_return_to");
-
       const destination = returnTo || "/portal/select-store";
       return NextResponse.redirect(new URL(destination, req.url));
     }
@@ -160,13 +130,6 @@ export async function GET(req: NextRequest) {
     expiresAt,
   });
 
-  // Clean up all OAuth cookies
-  cookieStore.delete("shopify_oauth_state");
-  cookieStore.delete("shopify_oauth_phase");
-  cookieStore.delete("shopify_oauth_source");
-  cookieStore.delete("shopify_oauth_return_to");
-
-  // Set shop cookies for embedded session middleware
   cookieStore.set("shopify_shop", shop, {
     httpOnly: true,
     secure: true,
@@ -187,11 +150,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.redirect(embeddedUrl);
 }
 
-/**
- * Link the current portal user (from Supabase Auth cookie) to the shop.
- * Creates a portal_user_shops row if one doesn't already exist.
- * If this is the user's first shop link, sends a welcome email.
- */
 async function linkPortalUserToShop(
   req: NextRequest,
   db: ReturnType<typeof getServiceClient>,
@@ -207,9 +165,7 @@ async function linkPortalUserToShop(
         getAll() {
           return req.cookies.getAll();
         },
-        setAll() {
-          // Read-only in this context — session cookies are already set
-        },
+        setAll() {},
       },
     }
   );

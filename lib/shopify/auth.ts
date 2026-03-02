@@ -103,3 +103,58 @@ export function verifyHmac(query: Record<string, string>): boolean {
 export function generateNonce(): string {
   return crypto.randomBytes(16).toString("hex");
 }
+
+/**
+ * Encode OAuth metadata into a signed state token.
+ * Shopify passes the state param back verbatim on callback,
+ * so we can recover phase/source/return_to without cookies.
+ */
+export function encodeOAuthState(data: {
+  nonce: string;
+  phase: string;
+  source: string;
+  returnTo: string;
+}): string {
+  const payload = Buffer.from(JSON.stringify(data)).toString("base64url");
+  const sig = crypto
+    .createHmac("sha256", SHOPIFY_API_SECRET)
+    .update(payload)
+    .digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+/**
+ * Decode and verify a signed OAuth state token.
+ * Returns null if the signature is invalid or data is malformed.
+ */
+export function decodeOAuthState(state: string): {
+  nonce: string;
+  phase: string;
+  source: string;
+  returnTo: string;
+} | null {
+  const dotIdx = state.lastIndexOf(".");
+  if (dotIdx === -1) return null;
+
+  const payload = state.slice(0, dotIdx);
+  const sig = state.slice(dotIdx + 1);
+
+  const expected = crypto
+    .createHmac("sha256", SHOPIFY_API_SECRET)
+    .update(payload)
+    .digest("base64url");
+
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
