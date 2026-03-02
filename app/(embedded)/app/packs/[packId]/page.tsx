@@ -322,16 +322,15 @@ export default function PackPreviewPage() {
                           </Text>
                         </InlineStack>
                         <InlineStack gap="200" blockAlign="center">
-                          <Button
-                            size="slim"
-                            variant="plain"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyEvidence(item);
-                            }}
-                          >
-                            {copiedId === item.id ? t("packs.copied") : t("packs.copyToClipboard")}
-                          </Button>
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="slim"
+                              variant="plain"
+                              onClick={() => copyEvidence(item)}
+                            >
+                              {copiedId === item.id ? t("packs.copied") : t("packs.copyToClipboard")}
+                            </Button>
+                          </span>
                           <Icon source={expandedSections.has(item.id) ? ChevronUpIcon : ChevronDownIcon} />
                         </InlineStack>
                       </InlineStack>
