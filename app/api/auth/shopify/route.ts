@@ -20,6 +20,24 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const appUrl = process.env.SHOPIFY_APP_URL;
+  if (!apiKey || !appUrl) {
+    console.error(
+      "[auth/shopify] Missing env: SHOPIFY_API_KEY=%s SHOPIFY_APP_URL=%s",
+      apiKey ? "set" : "missing",
+      appUrl ? "set" : "missing"
+    );
+    return NextResponse.json(
+      {
+        error: "Server misconfiguration",
+        detail:
+          "SHOPIFY_API_KEY or SHOPIFY_APP_URL is not set. Set them in .env.local (local) or in your hosting provider's environment (e.g. Vercel).",
+      },
+      { status: 500 }
+    );
+  }
+
   const cookieStore = await cookies();
   const phase = req.nextUrl.searchParams.get("phase") ?? "offline";
   const isOnline = phase === "online";
@@ -29,39 +47,21 @@ export async function GET(req: NextRequest) {
 
   const nonce = generateNonce();
 
-  cookieStore.set("shopify_oauth_state", nonce, {
+  // SameSite=None so the cookie is sent when Shopify redirects back to the callback (cross-site or iframe)
+  const oauthCookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: "lax",
+    sameSite: "none" as const,
     maxAge: 600,
     path: "/",
-  });
+  };
 
-  cookieStore.set("shopify_oauth_phase", phase, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 600,
-    path: "/",
-  });
-
-  // Persist source + return_to through the OAuth flow
-  cookieStore.set("shopify_oauth_source", source, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: 600,
-    path: "/",
-  });
+  cookieStore.set("shopify_oauth_state", nonce, oauthCookieOptions);
+  cookieStore.set("shopify_oauth_phase", phase, oauthCookieOptions);
+  cookieStore.set("shopify_oauth_source", source, oauthCookieOptions);
 
   if (returnTo) {
-    cookieStore.set("shopify_oauth_return_to", returnTo, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge: 600,
-      path: "/",
-    });
+    cookieStore.set("shopify_oauth_return_to", returnTo, oauthCookieOptions);
   }
 
   const authUrl = buildAuthUrl(shop, nonce, isOnline);
