@@ -170,8 +170,9 @@ export async function middleware(req: NextRequest) {
     if (!shopDomain) {
       const shopParam = req.nextUrl.searchParams.get("shop");
       if (shopParam) {
+        // Break out of iframe first so /api/auth/shopify sets the state cookie in top-level (same context as callback retry)
         return NextResponse.redirect(
-          new URL(`/api/auth/shopify?shop=${shopParam}`, req.url)
+          new URL(`/api/auth/shopify/start?shop=${shopParam}`, req.url)
         );
       }
 
