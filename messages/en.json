@@ -11,7 +11,8 @@
     "help": "Help",
     "signOut": "Sign out",
     "connectStore": "Connect your real store",
-    "demoStore": "Demo Store"
+    "demoStore": "Demo Store",
+    "clearShopReconnect": "Clear shop & reconnect"
   },
   "common": {
     "loading": "Loading...",

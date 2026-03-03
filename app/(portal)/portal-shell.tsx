@@ -131,6 +131,12 @@ export function PortalShell({
               >
                 {t("connectStore")}
               </a>
+              <a
+                href="/api/portal/clear-shop"
+                className="block text-center text-xs text-[#64748B] hover:underline"
+              >
+                {t("clearShopReconnect")}
+              </a>
             </div>
           ) : (
             <div className="space-y-2">

@@ -12,21 +12,8 @@ export interface StepDefinition {
 
 export const SETUP_STEPS: StepDefinition[] = [
   {
-    id: "welcome_goals",
-    index: 1,
-    title: "Welcome & Goals",
-    dashboardLabel: "Set your goals",
-    timeEstimate: "1 min",
-    prerequisites: [],
-    unlocks: [
-      "Personalized setup based on your goals",
-      "Optimized workflows for your use case",
-      "Relevant recommendations and tips",
-    ],
-  },
-  {
     id: "permissions",
-    index: 2,
+    index: 1,
     title: "Connect your store",
     dashboardLabel: "Connect your store",
     timeEstimate: "2 min",
@@ -36,6 +23,19 @@ export const SETUP_STEPS: StepDefinition[] = [
       "Read and respond to disputes",
       "Upload evidence documents automatically",
       "Secure, read-only access where possible",
+    ],
+  },
+  {
+    id: "welcome_goals",
+    index: 2,
+    title: "Welcome & Goals",
+    dashboardLabel: "Set your goals",
+    timeEstimate: "1 min",
+    prerequisites: ["permissions"],
+    unlocks: [
+      "Personalized setup based on your goals",
+      "Optimized workflows for your use case",
+      "Relevant recommendations and tips",
     ],
   },
   {
