@@ -189,16 +189,38 @@ async function ensureShopSetup(
 ) {
   const { data: existing } = await db
     .from("shop_setup")
-    .select("shop_id")
+    .select("shop_id, steps")
     .eq("shop_id", shopId)
     .single();
+
+  const permissionsDone = {
+    status: "done",
+    completed_at: new Date().toISOString(),
+    payload: { auto: true, trigger: "oauth_callback" },
+  };
 
   if (!existing) {
     await db.from("shop_setup").insert({
       shop_id: shopId,
-      steps: {},
-      current_step: null,
+      steps: { permissions: permissionsDone },
+      current_step: "permissions",
     });
+  } else {
+    const steps = (existing.steps ?? {}) as Record<string, unknown>;
+    const alreadyDone =
+      steps.permissions &&
+      (steps.permissions as { status?: string }).status === "done";
+    if (!alreadyDone) {
+      steps.permissions = permissionsDone;
+      await db
+        .from("shop_setup")
+        .update({
+          steps,
+          current_step: "permissions",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("shop_id", shopId);
+    }
   }
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Search, Filter, RefreshCw, ExternalLink } from "lucide-react";
+import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
@@ -68,6 +69,7 @@ function formatDate(iso: string | null, locale: string): string {
 }
 
 export default function DisputesPage() {
+  useCompleteSetupStep("sync_disputes");
   const t = useTranslations("disputes");
   const tc = useTranslations("common");
   const tt = useTranslations("table");

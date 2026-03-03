@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { UserPlus, Mail } from "lucide-react";
+import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DemoNotice } from "@/components/ui/demo-notice";
@@ -20,6 +21,7 @@ const roleBadgeVariant: Record<string, "primary" | "info" | "default"> = {
 };
 
 export default function TeamPage() {
+  useCompleteSetupStep("team_notifications");
   const t = useTranslations("team");
   const tc = useTranslations("common");
   const tStatus = useTranslations("status");

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
@@ -69,6 +70,7 @@ function matchSummary(
 }
 
 export default function RulesSettingsPage() {
+  useCompleteSetupStep("automation_rules");
   const t = useTranslations("rules");
   const tc = useTranslations("common");
   const tr = useTranslations("reasons");

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Shield, Globe, Clock } from "lucide-react";
+import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { DemoNotice } from "@/components/ui/demo-notice";
@@ -22,6 +23,7 @@ function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: 
 }
 
 export default function SettingsPage() {
+  useCompleteSetupStep("welcome_goals");
   const t = useTranslations("settings");
   const tc = useTranslations("common");
   return (

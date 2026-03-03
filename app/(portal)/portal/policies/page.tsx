@@ -2,6 +2,7 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Info } from "lucide-react";
+import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DemoNotice } from "@/components/ui/demo-notice";
@@ -14,6 +15,7 @@ const POLICIES = [
 ];
 
 export default function PoliciesPage() {
+  useCompleteSetupStep("business_policies");
   const t = useTranslations("policies");
   const tc = useTranslations("common");
   const locale = useLocale();
