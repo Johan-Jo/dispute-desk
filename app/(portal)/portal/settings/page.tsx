@@ -1,8 +1,8 @@
 "use client";
 
+import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Shield, Globe, Clock } from "lucide-react";
-import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { DemoNotice } from "@/components/ui/demo-notice";
@@ -23,9 +23,18 @@ function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: 
 }
 
 export default function SettingsPage() {
-  useCompleteSetupStep("welcome_goals");
   const t = useTranslations("settings");
   const tc = useTranslations("common");
+
+  const handleSaveProfile = useCallback(async () => {
+    await fetch("/api/setup/step", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ stepId: "welcome_goals" }),
+    });
+  }, []);
+
   return (
     <div>
       <div className="mb-6">
@@ -55,7 +64,7 @@ export default function SettingsPage() {
               <TextField label={t("fullName")} placeholder={t("namePlaceholder")} defaultValue="John Doe" />
               <TextField label={t("email")} type="email" placeholder={t("emailPlaceholder")} defaultValue="john@example.com" disabled />
               <TextField label={t("company")} placeholder={t("companyPlaceholder")} defaultValue="Acme Inc." />
-              <Button variant="primary" size="sm" title={tc("demoOnly")}>{t("saveChanges")}</Button>
+              <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={handleSaveProfile}>{t("saveChanges")}</Button>
             </div>
           </div>
 

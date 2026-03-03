@@ -126,9 +126,18 @@ function ActiveShopChecklist() {
   );
 
   const handleContinueSetup = useCallback(() => {
-    if (state?.nextStepId) {
-      navigateToStep(state.nextStepId);
-    }
+    if (!state?.nextStepId) return;
+    // Right after connecting, next step from API is "welcome_goals" (Settings). Send users to
+    // Sync disputes instead so they see their data, not the generic Settings page.
+    const onlyPermissionsDone =
+      state.steps?.permissions?.status === "done" &&
+      state.steps?.sync_disputes?.status !== "done" &&
+      state.steps?.welcome_goals?.status !== "done";
+    const targetStep =
+      onlyPermissionsDone && state.nextStepId === "welcome_goals"
+        ? "sync_disputes"
+        : state.nextStepId;
+    navigateToStep(targetStep);
   }, [state, navigateToStep]);
 
   const handleUndoSkip = useCallback(
@@ -158,7 +167,10 @@ function ActiveShopChecklist() {
   }
 
   const { steps, progress } = state;
-  const remaining = progress.total - progress.doneCount;
+  // Count "Connect your Shopify store" as step 1 of 8 (this view only shows when connected)
+  const totalWithConnect = progress.total + 1;
+  const doneWithConnect = 1 + progress.doneCount;
+  const remaining = totalWithConnect - doneWithConnect;
 
   return (
     <div
@@ -167,7 +179,7 @@ function ActiveShopChecklist() {
     >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-center gap-4">
-          <ProgressRing completed={progress.doneCount} total={progress.total} />
+          <ProgressRing completed={doneWithConnect} total={totalWithConnect} />
           <div>
             <h2 className="text-lg font-semibold text-[#0B1220]">
               {t("checklistTitle")}
