@@ -240,7 +240,19 @@ function ActiveShopChecklist() {
                 </span>
               </div>
 
-              {isDone && <Badge variant="success">{t("done")}</Badge>}
+              {isDone && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="success">{t("done")}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigateToStep(stepDef.id)}
+                    className="text-[#64748B] hover:text-[#0B1220]"
+                  >
+                    {t("edit")}
+                  </Button>
+                </div>
+              )}
               {isSkipped && (
                 <Button
                   variant="ghost"
