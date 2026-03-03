@@ -96,15 +96,6 @@ const STEP_ROUTES: Record<StepId, string> = {
   team_notifications: "/portal/team",
 };
 
-function getShopIdFromCookie(): string {
-  if (typeof document === "undefined") return "";
-  return (
-    document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ??
-    document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ??
-    ""
-  );
-}
-
 function ActiveShopChecklist() {
   const t = useTranslations("setup");
   const router = useRouter();
@@ -112,10 +103,8 @@ function ActiveShopChecklist() {
   const [loading, setLoading] = useState(true);
 
   const fetchState = useCallback(async () => {
-    const shopId = getShopIdFromCookie();
-    if (!shopId) { setLoading(false); return; }
     try {
-      const res = await fetch(`/api/setup/state?shop_id=${shopId}`);
+      const res = await fetch("/api/setup/state", { credentials: "same-origin" });
       if (res.ok) {
         const data: SetupStateResponse = await res.json();
         setState(data);
