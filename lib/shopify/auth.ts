@@ -7,11 +7,12 @@ const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ?? "";
 
 /**
  * Build the Shopify OAuth authorization URL.
+ * redirect_uri must be whitelisted in the Shopify app; use SHOPIFY_APP_URL (prod/dev), not localhost.
  * @param shop - e.g. "my-store.myshopify.com"
  * @param isOnline - true for online (user-scoped) token, false for offline (shop-wide)
  */
 export function buildAuthUrl(shop: string, state: string, isOnline: boolean = false): string {
-  const redirectUri = `${SHOPIFY_APP_URL}/api/auth/shopify/callback`;
+  const redirectUri = `${SHOPIFY_APP_URL.replace(/\/$/, "")}/api/auth/shopify/callback`;
   const accessMode = isOnline ? "&grant_options[]=per-user" : "";
 
   return (

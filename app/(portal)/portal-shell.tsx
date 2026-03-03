@@ -94,35 +94,44 @@ export function PortalShell({
         {/* Store selector */}
         <div className="px-4 py-4 border-b border-[#E5E7EB]">
           {shops.length > 0 ? (
-            <a
-              href="/portal/select-store"
-              className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors ${
-                isDemo
-                  ? "bg-[#FFFBEB] border border-[#FDE68A] hover:bg-[#FEF3C7]"
-                  : "bg-[#F1F5F9] hover:bg-[#E5E7EB]"
-              }`}
-            >
-              <Store className={`w-4 h-4 ${isDemo ? "text-[#D97706]" : "text-[#64748B]"}`} />
-              <div className="flex-1 min-w-0">
+            <div className="space-y-2">
+              <a
+                href="/portal/select-store"
+                className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors ${
+                  isDemo
+                    ? "bg-[#FFFBEB] border border-[#FDE68A] hover:bg-[#FEF3C7]"
+                    : "bg-[#F1F5F9] hover:bg-[#E5E7EB]"
+                }`}
+              >
+                <Store className={`w-4 h-4 ${isDemo ? "text-[#D97706]" : "text-[#64748B]"}`} />
+                <div className="flex-1 min-w-0">
+                  {isDemo ? (
+                    <>
+                      <p className="text-sm font-medium text-[#0B1220]">{t("demoStore")}</p>
+                      <p className="text-xs text-[#92400E]">demo.myshopify.com</p>
+                    </>
+                  ) : (
+                    <p className="text-sm font-medium text-[#0B1220] truncate">
+                      {activeShopDomain ?? "Select store"}
+                    </p>
+                  )}
+                </div>
                 {isDemo ? (
-                  <>
-                    <p className="text-sm font-medium text-[#0B1220]">{t("demoStore")}</p>
-                    <p className="text-xs text-[#92400E]">demo.myshopify.com</p>
-                  </>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#F59E0B] text-white px-1.5 py-0.5 rounded">
+                    Demo
+                  </span>
                 ) : (
-                  <p className="text-sm font-medium text-[#0B1220] truncate">
-                    {activeShopDomain ?? "Select store"}
-                  </p>
+                  <ChevronDown className="w-4 h-4 text-[#64748B]" />
                 )}
-              </div>
-              {isDemo ? (
-                <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#F59E0B] text-white px-1.5 py-0.5 rounded">
-                  Demo
-                </span>
-              ) : (
-                <ChevronDown className="w-4 h-4 text-[#64748B]" />
-              )}
-            </a>
+              </a>
+              <a
+                href="/portal/connect-shopify"
+                className="block text-center text-xs text-[#1D4ED8] hover:underline"
+                data-onboarding="connect-store"
+              >
+                {t("connectStore")}
+              </a>
+            </div>
           ) : (
             <div className="space-y-2">
               <div className="w-full p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-lg flex items-center gap-3">

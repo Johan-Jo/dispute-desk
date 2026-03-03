@@ -30,9 +30,12 @@ export default function ConnectShopifyPage() {
       </p>
 
       <div className="bg-[#EFF6FF] border border-[#C7D2FE] rounded-lg p-4 mb-6">
-        <h4 className="font-semibold text-[#0B1220] mb-2">
-          {t("whatWeAccess")}
+        <h4 className="font-semibold text-[#0B1220] mb-1">
+          {t("whatWeNeed")}
         </h4>
+        <p className="text-sm text-[#667085] mb-3">
+          {t("whatWeNeedIntro")}
+        </p>
         <ul className="space-y-2 text-sm text-[#667085]">
           <li className="flex items-start gap-2">
             <ArrowRight className="w-4 h-4 text-[#4F46E5] flex-shrink-0 mt-0.5" />
@@ -46,6 +49,10 @@ export default function ConnectShopifyPage() {
             <ArrowRight className="w-4 h-4 text-[#4F46E5] flex-shrink-0 mt-0.5" />
             {t("accessCustomerEmail")}
           </li>
+          <li className="flex items-start gap-2">
+            <ArrowRight className="w-4 h-4 text-[#4F46E5] flex-shrink-0 mt-0.5" />
+            {t("uploadEvidence")}
+          </li>
         </ul>
       </div>
 
@@ -54,6 +61,9 @@ export default function ConnectShopifyPage() {
           <label className="block text-sm font-medium text-[#0B1220] mb-2">
             {t("storeDomain")}
           </label>
+          <p className="text-xs text-[#64748B] mb-2">
+            {t("storeDomainHelp")}
+          </p>
           <div className="flex items-center gap-2">
             <input
               type="text"

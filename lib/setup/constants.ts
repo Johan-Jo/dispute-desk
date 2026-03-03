@@ -27,8 +27,8 @@ export const SETUP_STEPS: StepDefinition[] = [
   {
     id: "permissions",
     index: 2,
-    title: "Permissions",
-    dashboardLabel: "Verify permissions",
+    title: "Connect your store",
+    dashboardLabel: "Connect your store",
     timeEstimate: "2 min",
     prerequisites: [],
     unlocks: [

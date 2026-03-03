@@ -8,34 +8,55 @@ import type { StepId } from "@/lib/setup/types";
 import { PortalSetupWizardShell } from "@/components/setup/PortalSetupWizardShell";
 import { PortalWelcomeGoalsStep } from "@/components/setup/PortalWelcomeGoalsStep";
 
-const STEP_CTA: Record<StepId, { href: string; label: string }> = {
-  welcome_goals: { href: "/portal/setup/welcome_goals", label: "Set your goals" },
-  permissions: { href: "/portal/connect-shopify", label: "Verify permissions" },
-  sync_disputes: { href: "/portal/disputes", label: "Sync disputes" },
-  business_policies: { href: "/portal/policies", label: "Add business policies" },
-  evidence_sources: { href: "/portal/packs", label: "Connect evidence sources" },
-  automation_rules: { href: "/portal/rules", label: "Configure automation" },
-  team_notifications: { href: "/portal/team", label: "Invite team members" },
+const STEP_CTA: Record<
+  StepId,
+  { href: string; label: string; ask: string }
+> = {
+  welcome_goals: { href: "/portal/setup/welcome_goals", label: "Set your goals", ask: "" },
+  permissions: {
+    href: "/portal/connect-shopify",
+    label: "Connect your Shopify store",
+    ask: "Connect your Shopify store—you’ll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you’re done, come back here and click Save & Continue.",
+  },
+  sync_disputes: {
+    href: "/portal/disputes",
+    label: "Open Disputes",
+    ask: "Import your disputes from Shopify so you can see and manage them in one place. After you’ve synced, come back and click Save & Continue.",
+  },
+  business_policies: {
+    href: "/portal/policies",
+    label: "Open Policies",
+    ask: "Add your refund and policy page URLs so we can include them in evidence automatically. When you’re done, come back and click Save & Continue.",
+  },
+  evidence_sources: {
+    href: "/portal/packs",
+    label: "Open Packs & Evidence",
+    ask: "Connect tools (e.g. tracking, helpdesk) so we can gather evidence for you. When you’ve added what you need, come back and click Save & Continue.",
+  },
+  automation_rules: {
+    href: "/portal/rules",
+    label: "Open Automation Rules",
+    ask: "Set up rules so DisputeDesk can handle disputes and deadlines for you. When you’re done, come back and click Save & Continue.",
+  },
+  team_notifications: {
+    href: "/portal/team",
+    label: "Open Team",
+    ask: "Invite teammates and choose how you get notified about disputes. When you’re done, come back and click Save & Continue.",
+  },
 };
 
 function PortalStepStub({ stepId }: { stepId: StepId }) {
   const cta = STEP_CTA[stepId];
+  if (!cta) return null;
   return (
     <div>
-      <p className="text-sm text-[#667085] mb-4">
-        Complete this step to continue your setup.
-      </p>
-      {cta && (
-        <Link
-          href={cta.href}
-          className="inline-flex items-center text-sm font-medium text-[#1D4ED8] hover:underline"
-        >
-          {cta.label} →
-        </Link>
-      )}
-      <p className="text-xs text-[#94A3B8] mt-4">
-        Click &quot;Save &amp; Continue&quot; below when done to mark this step complete.
-      </p>
+      <p className="text-sm text-[#667085] mb-4">{cta.ask}</p>
+      <Link
+        href={cta.href}
+        className="inline-flex items-center text-sm font-medium text-[#1D4ED8] hover:underline"
+      >
+        {cta.label} →
+      </Link>
     </div>
   );
 }

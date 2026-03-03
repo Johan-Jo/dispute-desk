@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ProgressRing } from "./ProgressRing";
 import { SETUP_STEPS } from "@/lib/setup/constants";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
@@ -13,7 +12,8 @@ import { useTranslations } from "next-intl";
 
 function ConnectStoreChecklist() {
   const t = useTranslations("setup");
-  const totalWithConnect = SETUP_STEPS.length + 1;
+  const stepsToShow = SETUP_STEPS.filter((s) => s.id !== "permissions");
+  const totalWithConnect = 1 + stepsToShow.length;
 
   return (
     <div
@@ -40,34 +40,26 @@ function ConnectStoreChecklist() {
         </a>
       </div>
 
-      <div className="space-y-2 mb-6">
-        {/* Step 0: Connect Store */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-[#EFF6FF] border border-[#C7D2FE]">
-          <div className="flex items-center gap-3">
-            <Store className="w-5 h-5 text-[#4F46E5]" />
-            <span className="text-sm font-medium text-[#0B1220]">
-              {t("connectStoreTitle")}
-            </span>
-          </div>
-          <a href="/portal/connect-shopify">
-            <Button variant="primary" size="sm">
-              {t("connectCTA")}
-            </Button>
-          </a>
-        </div>
-
-        {/* Steps 1-7: locked */}
-        {SETUP_STEPS.map((stepDef) => (
+      <div className="flex flex-wrap gap-2 mb-6">
+        <a
+          href="/portal/connect-shopify"
+          className="flex flex-col items-center text-center py-3 px-3 rounded-lg flex-1 min-w-[100px] max-w-[140px] bg-[#EFF6FF] border-2 border-[#1D4ED8] hover:bg-[#DBEAFE] cursor-pointer"
+        >
+          <Store className="w-9 h-9 text-[#4F46E5] mb-2" />
+          <span className="text-sm font-medium text-[#0B1220]">
+            {t("connectStoreTitle")}
+          </span>
+          <span className="text-xs text-[#1D4ED8] mt-1">{t("connectCTA")}</span>
+        </a>
+        {SETUP_STEPS.filter((s) => s.id !== "permissions").map((stepDef) => (
           <div
             key={stepDef.id}
-            className="flex items-center justify-between p-3 rounded-lg opacity-50"
+            className="flex flex-col items-center text-center py-3 px-3 rounded-lg flex-1 min-w-[100px] max-w-[140px] opacity-50 bg-[#F8FAFC] border-2 border-[#E2E8F0]"
           >
-            <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-[#CBD5E1]" />
-              <span className="text-sm font-medium text-[#94A3B8]">
-                {stepDef.dashboardLabel}
-              </span>
-            </div>
+            <Lock className="w-9 h-9 text-[#CBD5E1] mb-2" />
+            <span className="text-sm font-medium text-[#94A3B8]">
+              {stepDef.dashboardLabel}
+            </span>
           </div>
         ))}
       </div>
@@ -157,9 +149,11 @@ function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
   }
 
   const { steps, progress } = state;
-  // Count connect/demo as step 1 of 8
-  const totalWithConnect = progress.total + 1;
-  const doneWithConnect = 1 + progress.doneCount;
+  // Permissions are granted when connecting — don't show as separate step
+  const stepsToShow = SETUP_STEPS.filter((s) => s.id !== "permissions");
+  const permissionsDone = steps.permissions?.status === "done";
+  const totalWithConnect = 1 + stepsToShow.length;
+  const doneWithConnect = 1 + progress.doneCount - (permissionsDone ? 1 : 0);
   const remaining = totalWithConnect - doneWithConnect;
 
   return (
@@ -189,19 +183,17 @@ function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
         </a>
       </div>
 
-      <div className="space-y-2 mb-6">
-        {/* Step 1: Connect store (real shop) or Demo store connected (demo mode) */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-[#ECFDF5]">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-            <span className="text-sm font-medium text-[#0B1220]">
-              {isDemo ? t("demoStoreConnected") : t("connectStoreTitle")}
-            </span>
-          </div>
-          <Badge variant="success">{t("done")}</Badge>
+      <div className="flex flex-wrap gap-2 mb-6">
+        {/* Connect store (always done when this checklist is shown) */}
+        <div className="flex flex-col items-center text-center py-3 px-3 rounded-lg flex-1 min-w-[100px] max-w-[140px] bg-[#ECFDF5] border-2 border-[#10B981]">
+          <CheckCircle2 className="w-9 h-9 text-[#10B981] mb-2" />
+          <span className="text-sm font-medium text-[#0B1220]">
+            {isDemo ? t("demoStoreConnected") : t("connectStoreTitle")}
+          </span>
+          <span className="text-xs text-[#64748B] mt-1">{t("done")}</span>
         </div>
 
-        {SETUP_STEPS.map((stepDef) => {
+        {stepsToShow.map((stepDef) => {
           const stepState: StepState = steps[stepDef.id] ?? { status: "todo" };
           const isDone = stepState.status === "done";
           const isSkipped = stepState.status === "skipped";
@@ -209,57 +201,62 @@ function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
           return (
             <div
               key={stepDef.id}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                isDone ? "bg-[#ECFDF5]" : ""
+              role="button"
+              tabIndex={0}
+              onClick={() => navigateToStep(stepDef.id)}
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") && navigateToStep(stepDef.id)
+              }
+              className={`flex flex-col items-center text-center py-3 px-3 rounded-lg flex-1 min-w-[100px] max-w-[140px] cursor-pointer border-2 transition-colors ${
+                isDone
+                  ? "bg-[#ECFDF5] border-[#10B981] hover:bg-[#D1FAE5]"
+                  : isSkipped
+                    ? "bg-[#F8FAFC] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                    : "bg-[#F6F6F7] border-[#E5E7EB] hover:bg-[#EFF6FF] hover:border-[#1D4ED8]"
               }`}
             >
-              <div className="flex items-center gap-3">
-                {isDone ? (
-                  <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-                ) : isSkipped ? (
-                  <XCircle className="w-5 h-5 text-[#94A3B8]" />
-                ) : (
-                  <Circle className="w-5 h-5 text-[#94A3B8]" />
-                )}
-                <span
-                  className={`text-sm font-medium ${
-                    isSkipped ? "text-[#94A3B8]" : "text-[#0B1220]"
-                  }`}
-                >
-                  {stepDef.dashboardLabel}
-                </span>
-              </div>
-
+              {isDone ? (
+                <CheckCircle2 className="w-9 h-9 text-[#10B981] mb-2" />
+              ) : isSkipped ? (
+                <XCircle className="w-9 h-9 text-[#94A3B8] mb-2" />
+              ) : (
+                <Circle className="w-9 h-9 text-[#94A3B8] mb-2" />
+              )}
+              <span
+                className={`text-sm font-medium ${
+                  isSkipped ? "text-[#94A3B8]" : "text-[#0B1220]"
+                }`}
+              >
+                {stepDef.dashboardLabel}
+              </span>
               {isDone && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="success">{t("done")}</Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigateToStep(stepDef.id)}
-                    className="text-[#64748B] hover:text-[#0B1220]"
-                  >
-                    {t("edit")}
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigateToStep(stepDef.id);
+                  }}
+                  className="mt-2 text-xs text-[#64748B] hover:text-[#0B1220] h-auto py-0"
+                >
+                  {t("edit")}
+                </Button>
               )}
               {isSkipped && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleUndoSkip(stepDef.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUndoSkip(stepDef.id);
+                  }}
+                  className="mt-2 text-xs h-auto py-0"
                 >
                   {t("undoSkip")}
                 </Button>
               )}
               {!isDone && !isSkipped && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigateToStep(stepDef.id)}
-                >
-                  {t("complete")}
-                </Button>
+                <span className="text-xs text-[#64748B] mt-1">{t("complete")}</span>
               )}
             </div>
           );
