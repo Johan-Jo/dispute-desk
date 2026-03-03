@@ -640,7 +640,7 @@
     "articles": {
       "connectShopifyStore": {
         "title": "Cómo conectar su tienda Shopify",
-        "body": "Para usar DisputeDesk, conecte su tienda Shopify:\n\n1. Desde el portal, haga clic en \"Conectar tienda Shopify\".\n2. Ingrese el dominio de su tienda.\n3. Será redirigido a Shopify para autorizar DisputeDesk.\n4. Otorgue los permisos solicitados.\n5. Después de autorizar, su tienda aparecerá en el panel.\n\nDisputeDesk accede a sus datos en modo de solo lectura. Sus datos están encriptados y nunca se comparten."
+        "body": "Para usar DisputeDesk, conecte su tienda Shopify:\n\n1. Desde el portal, haga clic en \"Conectar tienda Shopify\".\n2. Ingrese el dominio de su tienda.\n3. Será redirigido a Shopify para autorizar DisputeDesk.\n4. Otorgue los permisos solicitados — DisputeDesk necesita acceso a pedidos, disputas, evidencias de disputa, envíos y datos de clientes.\n5. Después de autorizar, su tienda aparecerá en el panel.\n\nReconectar una tienda:\nSi DisputeDesk se ha actualizado con nuevos permisos (por ejemplo, después de una actualización de la aplicación), es posible que necesite reconectar su tienda. En la página de selección de tienda, haga clic en \"Reconectar (actualizar permisos)\" debajo del nombre de su tienda. Será redirigido a Shopify para volver a autorizar. Sus datos y configuraciones existentes se conservan — solo se actualizan los permisos.\n\nSus datos están encriptados y nunca se comparten con terceros.\n\nDespués de conectar, DisputeDesk sincronizará automáticamente sus disputas abiertas. Esto generalmente toma solo unos segundos."
       },
       "understandingDashboard": {
         "title": "Entender el panel de control",

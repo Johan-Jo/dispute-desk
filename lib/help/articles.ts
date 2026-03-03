@@ -15,7 +15,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     titleKey: "help.articles.connectShopifyStore.title",
     bodyKey: "help.articles.connectShopifyStore.body",
     relatedSlugs: ["first-dispute-sync", "understanding-dashboard"],
-    tags: ["connect", "install", "shopify", "oauth", "setup"],
+    tags: ["connect", "install", "shopify", "oauth", "setup", "reconnect", "permissions", "reauthorize"],
   },
   {
     slug: "understanding-dashboard",
