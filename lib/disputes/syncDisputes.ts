@@ -92,9 +92,9 @@ export async function syncDisputes(
     });
 
     const edges: { node: DisputeListNode; cursor: string }[] =
-      gqlResult.data?.shopifyPaymentsAccount?.disputes?.edges ?? [];
+      gqlResult.data?.disputes?.edges ?? [];
     const pageInfo =
-      gqlResult.data?.shopifyPaymentsAccount?.disputes?.pageInfo;
+      gqlResult.data?.disputes?.pageInfo;
 
     if (edges.length === 0) break;
 
@@ -112,7 +112,7 @@ export async function syncDisputes(
         const row = {
           shop_id: shopId,
           dispute_gid: d.id,
-          dispute_evidence_gid: d.evidence?.id ?? null,
+          dispute_evidence_gid: d.disputeEvidence?.id ?? null,
           order_gid: d.order?.id ?? null,
           status: d.status?.toLowerCase() ?? null,
           reason: d.reasonDetails?.reason ?? null,

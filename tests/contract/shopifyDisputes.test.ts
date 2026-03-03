@@ -9,32 +9,30 @@ describe("Shopify GraphQL contract tests (pinned 2026-01)", () => {
   it("validates dispute list response shape", () => {
     const fixture = {
       data: {
-        shopifyPaymentsAccount: {
-          disputes: {
-            edges: [
-              {
-                cursor: "eyJsYXN0X2lkIjo1fQ==",
-                node: {
-                  id: "gid://shopify/ShopifyPaymentsDispute/123456",
-                  status: "NEEDS_RESPONSE",
-                  reasonDetails: { reason: "FRAUDULENT" },
-                  amount: { amount: "49.99", currencyCode: "USD" },
-                  initiatedAt: "2026-02-20T10:00:00Z",
-                  evidenceDueBy: "2026-03-05T10:00:00Z",
-                  order: {
-                    id: "gid://shopify/Order/789",
-                    name: "#1001",
-                  },
-                  disputeEvidence: {
-                    id: "gid://shopify/ShopifyPaymentsDisputeEvidence/456",
-                  },
+        disputes: {
+          edges: [
+            {
+              cursor: "eyJsYXN0X2lkIjo1fQ==",
+              node: {
+                id: "gid://shopify/ShopifyPaymentsDispute/123456",
+                status: "NEEDS_RESPONSE",
+                reasonDetails: { reason: "FRAUDULENT" },
+                amount: { amount: "49.99", currencyCode: "USD" },
+                initiatedAt: "2026-02-20T10:00:00Z",
+                evidenceDueBy: "2026-03-05T10:00:00Z",
+                order: {
+                  id: "gid://shopify/Order/789",
+                  name: "#1001",
+                },
+                disputeEvidence: {
+                  id: "gid://shopify/ShopifyPaymentsDisputeEvidence/456",
                 },
               },
-            ],
-            pageInfo: {
-              hasNextPage: false,
-              endCursor: "eyJsYXN0X2lkIjo1fQ==",
             },
+          ],
+          pageInfo: {
+            hasNextPage: false,
+            endCursor: "eyJsYXN0X2lkIjo1fQ==",
           },
         },
       },
@@ -47,27 +45,25 @@ describe("Shopify GraphQL contract tests (pinned 2026-01)", () => {
   it("validates dispute list with null optional fields", () => {
     const fixture = {
       data: {
-        shopifyPaymentsAccount: {
-          disputes: {
-            edges: [
-              {
-                cursor: "abc",
-                node: {
-                  id: "gid://shopify/ShopifyPaymentsDispute/999",
-                  status: "WON",
-                  reasonDetails: null,
-                  amount: { amount: "10.00", currencyCode: "EUR" },
-                  initiatedAt: null,
-                  evidenceDueBy: null,
-                  order: null,
-                  disputeEvidence: null,
-                },
+        disputes: {
+          edges: [
+            {
+              cursor: "abc",
+              node: {
+                id: "gid://shopify/ShopifyPaymentsDispute/999",
+                status: "WON",
+                reasonDetails: null,
+                amount: { amount: "10.00", currencyCode: "EUR" },
+                initiatedAt: null,
+                evidenceDueBy: null,
+                order: null,
+                disputeEvidence: null,
               },
-            ],
-            pageInfo: {
-              hasNextPage: false,
-              endCursor: null,
             },
+          ],
+          pageInfo: {
+            hasNextPage: false,
+            endCursor: null,
           },
         },
       },
@@ -80,7 +76,7 @@ describe("Shopify GraphQL contract tests (pinned 2026-01)", () => {
   it("validates dispute detail response shape", () => {
     const fixture = {
       data: {
-        node: {
+        dispute: {
           id: "gid://shopify/ShopifyPaymentsDispute/123456",
           status: "NEEDS_RESPONSE",
           reasonDetails: { reason: "PRODUCT_NOT_RECEIVED" },
@@ -162,25 +158,23 @@ describe("Shopify GraphQL contract tests (pinned 2026-01)", () => {
   it("rejects dispute list with invalid GID prefix", () => {
     const fixture = {
       data: {
-        shopifyPaymentsAccount: {
-          disputes: {
-            edges: [
-              {
-                cursor: "abc",
-                node: {
-                  id: "not-a-gid",
-                  status: "WON",
-                  reasonDetails: null,
-                  amount: { amount: "10.00", currencyCode: "EUR" },
-                  initiatedAt: null,
-                  evidenceDueBy: null,
-                  order: null,
-                  disputeEvidence: null,
-                },
+        disputes: {
+          edges: [
+            {
+              cursor: "abc",
+              node: {
+                id: "not-a-gid",
+                status: "WON",
+                reasonDetails: null,
+                amount: { amount: "10.00", currencyCode: "EUR" },
+                initiatedAt: null,
+                evidenceDueBy: null,
+                order: null,
+                disputeEvidence: null,
               },
-            ],
-            pageInfo: { hasNextPage: false, endCursor: null },
-          },
+            },
+          ],
+          pageInfo: { hasNextPage: false, endCursor: null },
         },
       },
     };

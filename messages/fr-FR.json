@@ -440,7 +440,8 @@
     "subtitle": "Choisissez la boutique avec laquelle travailler",
     "connectStore": "Connecter une boutique Shopify",
     "connected": "Connectée",
-    "connectAnother": "Connecter une autre boutique"
+    "connectAnother": "Connecter une autre boutique",
+    "reconnect": "Reconnecter (actualiser les permissions)"
   },
   "permissions": {
     "title": "Permission requise",

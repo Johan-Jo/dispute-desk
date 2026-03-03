@@ -3,7 +3,7 @@
 
 name = "DisputeDesk"
 # For deploy, CLI reads these literally. Use SHOPIFY_APP_URL from .env.local at runtime.
-client_id = "${SHOPIFY_API_KEY}"
+client_id = "84f40ec77c9ba18e9eabc1657d9b6af8"
 application_url = "https://disputedesk.app"
 embedded = true
 
@@ -13,7 +13,11 @@ redirect_urls = [
 ]
 
 [access_scopes]
-# read_shopify_payments_dispute_evidences, write_shopify_payments_dispute_evidences blocked at version create (app_access); use Open in Shopify + copy until approved
+# Evidence scopes (read/write_shopify_payments_dispute_evidences) approved by
+# App Review (2026-03-02, Reggie F.) but blocked by CLI deploy validation
+# (Shopify/cli#4288 — restricted to "Payments Apps" in the deploy pipeline).
+# They ARE requested in our custom OAuth flow (SHOPIFY_SCOPES env var) and
+# Shopify grants them at install time.
 scopes = "read_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_files,write_files"
 
 [webhooks]

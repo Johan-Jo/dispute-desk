@@ -1,74 +1,74 @@
 /**
  * Shopify GraphQL queries for disputes.
  *
- * Uses the shopifyPaymentsAccount.disputes connection.
+ * Uses the root-level `disputes` / `dispute` queries (available since 2024-10).
+ * These only require `read_shopify_payments_disputes`, unlike the
+ * `shopifyPaymentsAccount.disputes` path which also needs
+ * `read_shopify_payments` or `read_shopify_payments_accounts`.
+ *
  * Pin version is handled by requestShopifyGraphQL → shopifyGraphQLEndpoint.
  */
 
 export const DISPUTE_LIST_QUERY = `
   query DisputeList($first: Int!, $after: String) {
-    shopifyPaymentsAccount {
-      disputes(first: $first, after: $after) {
-        edges {
-          node {
-            id
-            status
-            reasonDetails { reason }
-            amount { amount currencyCode }
-            initiatedAt
-            evidenceDueBy
-            evidenceSentAt
-            finalizedOn
-            order { id legacyResourceId name }
-            evidence { id }
-          }
-          cursor
+    disputes(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          status
+          reasonDetails { reason }
+          amount { amount currencyCode }
+          initiatedAt
+          evidenceDueBy
+          evidenceSentOn
+          finalizedOn
+          order { id legacyResourceId name }
+          disputeEvidence { id }
         }
-        pageInfo { hasNextPage }
+        cursor
       }
+      pageInfo { hasNextPage }
     }
   }
 `;
 
 export const DISPUTE_DETAIL_QUERY = `
   query DisputeDetail($id: ID!) {
-    node(id: $id) {
-      ... on ShopifyPaymentsDispute {
+    dispute(id: $id) {
+      id
+      status
+      reasonDetails { reason }
+      amount { amount currencyCode }
+      initiatedAt
+      evidenceDueBy
+      evidenceSentOn
+      finalizedOn
+      order {
         id
-        status
-        reasonDetails { reason }
-        amount { amount currencyCode }
-        initiatedAt
-        evidenceDueBy
-        evidenceSentAt
-        finalizedOn
-        order {
+        legacyResourceId
+        name
+        email
+        createdAt
+        totalPriceSet { shopMoney { amount currencyCode } }
+        shippingAddress { city provinceCode countryCode }
+        fulfillments(first: 10) {
           id
-          legacyResourceId
-          name
-          email
+          status
+          trackingInfo(first: 5) { number url company }
           createdAt
-          totalPriceSet { shopMoney { amount currencyCode } }
-          shippingAddress { city provinceCode countryCode }
-          fulfillments(first: 10) {
-            id
-            status
-            trackingInfo(first: 5) { number url company }
-            createdAt
-          }
         }
-        evidence {
-          id
-          accessActivityLog
-          cancellationPolicyDisclosure
-          cancellationRebuttal
-          customerCommunication
-          customerEmailAddress
-          refundPolicyDisclosure
-          refundRefusalExplanation
-          shippingDocumentation
-          uncategorizedText
-        }
+      }
+      disputeEvidence {
+        id
+        accessActivityLog
+        cancellationPolicyDisclosure
+        cancellationRebuttal
+        customerCommunication
+        customerEmailAddress
+        refundPolicyDisclosure
+        refundRefusalExplanation
+        shippingDocumentation
+        uncategorizedText
       }
     }
   }
@@ -81,18 +81,16 @@ export interface DisputeListNode {
   amount: { amount: string; currencyCode: string } | null;
   initiatedAt: string | null;
   evidenceDueBy: string | null;
-  evidenceSentAt: string | null;
+  evidenceSentOn: string | null;
   finalizedOn: string | null;
   order: { id: string; legacyResourceId: string; name: string } | null;
-  evidence: { id: string } | null;
+  disputeEvidence: { id: string } | null;
 }
 
 export interface DisputeListResponse {
-  shopifyPaymentsAccount: {
-    disputes: {
-      edges: { node: DisputeListNode; cursor: string }[];
-      pageInfo: { hasNextPage: boolean };
-    };
+  disputes: {
+    edges: { node: DisputeListNode; cursor: string }[];
+    pageInfo: { hasNextPage: boolean };
   };
 }
 
@@ -103,7 +101,7 @@ export interface DisputeDetailNode {
   amount: { amount: string; currencyCode: string } | null;
   initiatedAt: string | null;
   evidenceDueBy: string | null;
-  evidenceSentAt: string | null;
+  evidenceSentOn: string | null;
   finalizedOn: string | null;
   order: {
     id: string;
@@ -124,7 +122,7 @@ export interface DisputeDetailNode {
       createdAt: string;
     }>;
   } | null;
-  evidence: {
+  disputeEvidence: {
     id: string;
     accessActivityLog: string | null;
     cancellationPolicyDisclosure: string | null;
@@ -139,5 +137,5 @@ export interface DisputeDetailNode {
 }
 
 export interface DisputeDetailResponse {
-  node: DisputeDetailNode;
+  dispute: DisputeDetailNode;
 }

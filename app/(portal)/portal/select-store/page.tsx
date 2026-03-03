@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Store, Check } from "lucide-react";
+import { Store, Check, RefreshCw } from "lucide-react";
 import { requirePortalUser } from "@/lib/supabase/portal";
 import {
   getLinkedShops,
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 interface Props {
-  searchParams: Promise<{ shop_id?: string }>;
+  searchParams: Promise<{ shop_id?: string; reauth?: string }>;
 }
 
 export default async function SelectStorePage({ searchParams }: Props) {
@@ -23,6 +23,20 @@ export default async function SelectStorePage({ searchParams }: Props) {
   if (params.shop_id === "demo") {
     await clearActiveShopId();
     redirect("/portal/dashboard");
+  }
+
+  if (params.reauth) {
+    const shop = shops.find((s) => s.shop_id === params.reauth);
+    if (shop) {
+      const domain =
+        (shop.shops as unknown as { shop_domain: string })?.shop_domain;
+      if (domain) {
+        redirect(
+          `/api/auth/shopify?shop=${encodeURIComponent(domain)}` +
+            `&source=portal&return_to=${encodeURIComponent("/portal/select-store")}`
+        );
+      }
+    }
   }
 
   if (params.shop_id) {
@@ -63,27 +77,40 @@ export default async function SelectStorePage({ searchParams }: Props) {
             (s.shops as unknown as { shop_domain: string })?.shop_domain ??
             s.shop_id;
           return (
-            <a
+            <div
               key={s.shop_id}
-              href={`/portal/select-store?shop_id=${s.shop_id}`}
-              className="w-full block p-4 border border-[#E5E7EB] rounded-lg hover:border-[#4F46E5] hover:bg-[#F7F8FA] transition-colors bg-white"
+              className="p-4 border border-[#E5E7EB] rounded-lg bg-white"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#F7F8FA] rounded-lg flex items-center justify-center">
-                    <Store className="w-6 h-6 text-[#667085]" />
+              <a
+                href={`/portal/select-store?shop_id=${s.shop_id}`}
+                className="block hover:opacity-80 transition-opacity"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-[#F7F8FA] rounded-lg flex items-center justify-center">
+                      <Store className="w-6 h-6 text-[#667085]" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-[#0B1220] mb-1">{domain}</h4>
+                      <p className="text-sm text-[#667085]">{s.role}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-[#0B1220] mb-1">{domain}</h4>
-                    <p className="text-sm text-[#667085]">{s.role}</p>
-                  </div>
+                  <Badge variant="success">
+                    <Check className="w-3 h-3 mr-1" />
+                    {t("connected")}
+                  </Badge>
                 </div>
-                <Badge variant="success">
-                  <Check className="w-3 h-3 mr-1" />
-                  {t("connected")}
-                </Badge>
+              </a>
+              <div className="mt-2 pl-15 ml-[60px]">
+                <a
+                  href={`/portal/select-store?reauth=${s.shop_id}`}
+                  className="inline-flex items-center gap-1 text-xs text-[#4F46E5] hover:text-[#4338CA] transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  {t("reconnect")}
+                </a>
               </div>
-            </a>
+            </div>
           );
         })}
       </div>

@@ -32,18 +32,16 @@ export const DisputeListNodeSchema = z.object({
 
 export const DisputeListResponseSchema = z.object({
   data: z.object({
-    shopifyPaymentsAccount: z.object({
-      disputes: z.object({
-        edges: z.array(
-          z.object({
-            cursor: z.string(),
-            node: DisputeListNodeSchema,
-          })
-        ),
-        pageInfo: z.object({
-          hasNextPage: z.boolean(),
-          endCursor: z.string().nullable(),
-        }),
+    disputes: z.object({
+      edges: z.array(
+        z.object({
+          cursor: z.string(),
+          node: DisputeListNodeSchema,
+        })
+      ),
+      pageInfo: z.object({
+        hasNextPage: z.boolean(),
+        endCursor: z.string().nullable(),
       }),
     }),
   }),
@@ -93,7 +91,7 @@ export const DisputeDetailNodeSchema = z.object({
 
 export const DisputeDetailResponseSchema = z.object({
   data: z.object({
-    node: DisputeDetailNodeSchema,
+    dispute: DisputeDetailNodeSchema,
   }),
 });
 

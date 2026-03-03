@@ -435,7 +435,8 @@
     "subtitle": "Elija la tienda con la que desea trabajar",
     "connectStore": "Conectar tienda Shopify",
     "connected": "Conectada",
-    "connectAnother": "Conectar otra tienda"
+    "connectAnother": "Conectar otra tienda",
+    "reconnect": "Reconectar (actualizar permisos)"
   },
   "permissions": {
     "title": "Permiso requerido",

@@ -440,7 +440,8 @@
     "subtitle": "Escolha com qual loja você deseja trabalhar",
     "connectStore": "Conectar loja Shopify",
     "connected": "Conectada",
-    "connectAnother": "Conectar outra loja"
+    "connectAnother": "Conectar outra loja",
+    "reconnect": "Reconectar (atualizar permissões)"
   },
   "permissions": {
     "title": "Permissão necessária",

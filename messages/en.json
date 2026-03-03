@@ -445,6 +445,7 @@
     "connectStore": "Connect Shopify store",
     "connected": "Connected",
     "connectAnother": "Connect another store",
+    "reconnect": "Reconnect (refresh permissions)",
     "demoStore": "Demo Store"
   },
   "permissions": {

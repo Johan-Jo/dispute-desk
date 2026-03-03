@@ -43,7 +43,20 @@ export async function GET(req: NextRequest) {
   const { phase, source, returnTo } = oauthState;
 
   try {
-    const tokenResult = await exchangeCodeForToken(shop, code);
+    let tokenResult;
+    try {
+      tokenResult = await exchangeCodeForToken(shop, code);
+    } catch (exchangeErr) {
+      const msg = exchangeErr instanceof Error ? exchangeErr.message : "";
+      if (msg.includes("already used") || msg.includes("invalid_request")) {
+        console.warn("[auth/shopify/callback] Auth code expired or reused, restarting OAuth");
+        const retryUrl =
+          `${APP_URL}/api/auth/shopify?shop=${encodeURIComponent(shop)}` +
+          `&source=${source}&return_to=${encodeURIComponent(returnTo || "")}`;
+        return NextResponse.redirect(retryUrl);
+      }
+      throw exchangeErr;
+    }
 
     const db = getServiceClient();
     const { data: existingShop } = await db

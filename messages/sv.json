@@ -440,7 +440,8 @@
     "subtitle": "Välj vilken butik du vill arbeta med",
     "connectStore": "Anslut Shopify-butik",
     "connected": "Ansluten",
-    "connectAnother": "Anslut en annan butik"
+    "connectAnother": "Anslut en annan butik",
+    "reconnect": "Återanslut (uppdatera behörigheter)"
   },
   "permissions": {
     "title": "Behörighet krävs",

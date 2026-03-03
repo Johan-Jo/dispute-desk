@@ -27,14 +27,20 @@ read_products
 read_fulfillments
 read_shipping
 read_shopify_payments_disputes
+read_shopify_payments_dispute_evidences
+write_shopify_payments_dispute_evidences
 read_files
 write_files
 ```
 
-> **Pending approval:** `read_shopify_payments_dispute_evidences` and
-> `write_shopify_payments_dispute_evidences` require Shopify review (app
-> maturity gate). Until approved, the portal provides an "Open in Shopify
-> Admin" button and per-section "Copy" for manual evidence submission.
+> **Approved (2026-03-02):** `read_shopify_payments_dispute_evidences` and
+> `write_shopify_payments_dispute_evidences` were approved by Shopify App
+> Review (Reggie F.). However, the Shopify CLI deploy pipeline rejects
+> these scopes in `shopify.app.toml` ([Shopify/cli#4288](https://github.com/Shopify/cli/issues/4288) —
+> restricted to "Payments Apps" category). **Workaround:** the evidence
+> scopes are requested only in the custom OAuth flow (`SHOPIFY_SCOPES` env
+> var) and Shopify grants them at install/re-auth time. They are NOT in the
+> TOML `[access_scopes]`.
 
 ### API Version
 

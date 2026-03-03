@@ -68,7 +68,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     correlationId: `single-sync-${id}`,
   });
 
-  const node = gqlResult.data?.node;
+  const node = gqlResult.data?.dispute;
   if (!node) {
     return NextResponse.json(
       { error: "Dispute not found in Shopify" },
@@ -83,7 +83,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
       reason: node.reasonDetails?.reason ?? null,
       amount: node.amount ? parseFloat(node.amount.amount) : null,
       currency_code: node.amount?.currencyCode ?? null,
-      dispute_evidence_gid: node.evidence?.id ?? null,
+      dispute_evidence_gid: node.disputeEvidence?.id ?? null,
       initiated_at: node.initiatedAt,
       due_at: node.evidenceDueBy,
       last_synced_at: new Date().toISOString(),
