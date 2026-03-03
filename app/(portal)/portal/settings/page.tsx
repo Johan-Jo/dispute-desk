@@ -6,6 +6,7 @@ import { Shield, Globe, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { DemoNotice } from "@/components/ui/demo-notice";
+import { useShopCount } from "@/lib/demo-mode";
 
 function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: string; defaultChecked?: boolean }) {
   return (
@@ -25,14 +26,10 @@ function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: 
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const tc = useTranslations("common");
+  const shopCount = useShopCount();
 
   const handleSaveProfile = useCallback(async () => {
-    await fetch("/api/setup/step", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ stepId: "welcome_goals" }),
-    });
+    // Settings page is not part of the wizard; profile save only (no setup step completion).
   }, []);
 
   return (
@@ -133,7 +130,7 @@ export default function SettingsPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-[#667085]">{t("storesConnected")}</dt>
-                <dd className="font-medium text-[#0B1220]">0</dd>
+                <dd className="font-medium text-[#0B1220]">{shopCount}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-[#667085]">{t("teamMembers")}</dt>

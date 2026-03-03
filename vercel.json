@@ -1,16 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/jobs/worker",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/sync-disputes",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/retention-cleanup",
-      "schedule": "0 3 * * 0"
-    }
-  ]
+  "crons": []
 }

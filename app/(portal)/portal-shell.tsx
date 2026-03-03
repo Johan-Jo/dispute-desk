@@ -55,7 +55,7 @@ export function PortalShell({
   const isDemo = !hasRealShopActive;
 
   return (
-    <DemoModeProvider isDemo={isDemo}>
+    <DemoModeProvider isDemo={isDemo} shopCount={shops.length}>
     <HelpGuideProvider>
     <OnboardingProvider>
     <div className="h-screen flex bg-[#F6F8FB]">
@@ -187,7 +187,7 @@ export function PortalShell({
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-[#E5E7EB] px-4 lg:px-6 flex items-center justify-between gap-3">
+        <header className="h-16 flex-shrink-0 bg-white border-b border-[#E5E7EB] px-4 lg:px-6 flex items-center justify-between gap-3">
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -213,8 +213,8 @@ export function PortalShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
-          <div className="max-w-[1120px] mx-auto p-4 sm:p-6">{children}</div>
+        <main className="flex-1 overflow-auto min-h-0">
+          <div className="max-w-[1120px] mx-auto pt-6 pb-6 px-4 sm:pt-8 sm:pb-8 sm:px-6">{children}</div>
         </main>
       </div>
     </div>

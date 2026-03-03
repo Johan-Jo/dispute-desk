@@ -70,19 +70,26 @@ export async function middleware(req: NextRequest) {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user && activeShopId) {
-        const { getServiceClient } = await import("@/lib/supabase/server");
-        const db = getServiceClient();
-        const { data: link } = await db
-          .from("portal_user_shops")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("shop_id", activeShopId)
-          .single();
+      if (user) {
+        if (activeShopId) {
+          const { getServiceClient } = await import("@/lib/supabase/server");
+          const db = getServiceClient();
+          const { data: link } = await db
+            .from("portal_user_shops")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("shop_id", activeShopId)
+            .single();
 
-        if (link) {
-          shopId = activeShopId;
-          shopDomain = "portal"; // placeholder
+          if (link) {
+            shopId = activeShopId;
+            shopDomain = "portal"; // placeholder
+          }
+        }
+        // Test shop (demo) mode: no active shop or invalid — use demo so wizard works
+        if (!shopId) {
+          shopId = "demo";
+          shopDomain = "demo.myshopify.com";
         }
       }
     }

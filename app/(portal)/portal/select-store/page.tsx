@@ -2,11 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Store, Check, RefreshCw } from "lucide-react";
 import { requirePortalUser } from "@/lib/supabase/portal";
-import {
-  getLinkedShops,
-  setActiveShopId,
-  clearActiveShopId,
-} from "@/lib/portal/activeShop";
+import { getLinkedShops } from "@/lib/portal/activeShop";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -21,8 +17,7 @@ export default async function SelectStorePage({ searchParams }: Props) {
   const t = await getTranslations("selectStore");
 
   if (params.shop_id === "demo") {
-    await clearActiveShopId();
-    redirect("/portal/dashboard");
+    redirect("/api/portal/switch-demo");
   }
 
   if (params.reauth) {
@@ -42,8 +37,7 @@ export default async function SelectStorePage({ searchParams }: Props) {
   if (params.shop_id) {
     const valid = shops.some((s) => s.shop_id === params.shop_id);
     if (valid) {
-      await setActiveShopId(params.shop_id);
-      redirect("/portal/dashboard");
+      redirect(`/api/portal/switch-shop?shop_id=${encodeURIComponent(params.shop_id)}`);
     }
   }
 

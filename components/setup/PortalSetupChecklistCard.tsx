@@ -8,7 +8,7 @@ import { ProgressRing } from "./ProgressRing";
 import { SETUP_STEPS } from "@/lib/setup/constants";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
 import { CheckCircle2, XCircle, Circle, Store, Lock } from "lucide-react";
-import { useDemoMode } from "@/lib/demo-mode";
+import { useDemoMode, useShopCount } from "@/lib/demo-mode";
 import { useTranslations } from "next-intl";
 
 function ConnectStoreChecklist() {
@@ -87,16 +87,16 @@ function ConnectStoreChecklist() {
 }
 
 const STEP_ROUTES: Record<StepId, string> = {
-  welcome_goals: "/portal/settings",
-  permissions: "/portal/connect-shopify",
-  sync_disputes: "/portal/disputes",
-  business_policies: "/portal/policies",
-  evidence_sources: "/portal/packs",
-  automation_rules: "/portal/rules",
-  team_notifications: "/portal/team",
+  welcome_goals: "/portal/setup/welcome_goals",
+  permissions: "/portal/setup/permissions",
+  sync_disputes: "/portal/setup/sync_disputes",
+  business_policies: "/portal/setup/business_policies",
+  evidence_sources: "/portal/setup/evidence_sources",
+  automation_rules: "/portal/setup/automation_rules",
+  team_notifications: "/portal/setup/team_notifications",
 };
 
-function ActiveShopChecklist() {
+function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [state, setState] = useState<SetupStateResponse | null>(null);
@@ -127,17 +127,7 @@ function ActiveShopChecklist() {
 
   const handleContinueSetup = useCallback(() => {
     if (!state?.nextStepId) return;
-    // Right after connecting, next step from API is "welcome_goals" (Settings). Send users to
-    // Sync disputes instead so they see their data, not the generic Settings page.
-    const onlyPermissionsDone =
-      state.steps?.permissions?.status === "done" &&
-      state.steps?.sync_disputes?.status !== "done" &&
-      state.steps?.welcome_goals?.status !== "done";
-    const targetStep =
-      onlyPermissionsDone && state.nextStepId === "welcome_goals"
-        ? "sync_disputes"
-        : state.nextStepId;
-    navigateToStep(targetStep);
+    navigateToStep(state.nextStepId);
   }, [state, navigateToStep]);
 
   const handleUndoSkip = useCallback(
@@ -167,7 +157,7 @@ function ActiveShopChecklist() {
   }
 
   const { steps, progress } = state;
-  // Count "Connect your Shopify store" as step 1 of 8 (this view only shows when connected)
+  // Count connect/demo as step 1 of 8
   const totalWithConnect = progress.total + 1;
   const doneWithConnect = 1 + progress.doneCount;
   const remaining = totalWithConnect - doneWithConnect;
@@ -200,12 +190,12 @@ function ActiveShopChecklist() {
       </div>
 
       <div className="space-y-2 mb-6">
-        {/* Store connected — show as done */}
+        {/* Step 1: Connect store (real shop) or Demo store connected (demo mode) */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-[#ECFDF5]">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
             <span className="text-sm font-medium text-[#0B1220]">
-              {t("connectStoreTitle")}
+              {isDemo ? t("demoStoreConnected") : t("connectStoreTitle")}
             </span>
           </div>
           <Badge variant="success">{t("done")}</Badge>
@@ -295,11 +285,13 @@ function ActiveShopChecklist() {
 
 export function PortalSetupChecklistCard() {
   const isDemo = useDemoMode();
-  const hasShop = !isDemo;
+  const shopCount = useShopCount();
+  // Show full wizard when: real shop selected, or demo (test shop) mode with at least one linked shop
+  const showWizard = !isDemo || shopCount > 0;
 
-  if (!hasShop) {
+  if (!showWizard) {
     return <ConnectStoreChecklist />;
   }
 
-  return <ActiveShopChecklist />;
+  return <ActiveShopChecklist isDemo={isDemo} />;
 }

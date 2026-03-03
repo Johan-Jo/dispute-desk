@@ -224,13 +224,13 @@ describe("Setup flow: end-to-end progression", () => {
 
   describe("STEP_ROUTES for portal (navigation targets)", () => {
     const STEP_ROUTES: Record<StepId, string> = {
-      welcome_goals: "/portal/settings",
-      permissions: "/portal/connect-shopify",
-      sync_disputes: "/portal/disputes",
-      business_policies: "/portal/policies",
-      evidence_sources: "/portal/packs",
-      automation_rules: "/portal/rules",
-      team_notifications: "/portal/team",
+      welcome_goals: "/portal/setup/welcome_goals",
+      permissions: "/portal/setup/permissions",
+      sync_disputes: "/portal/setup/sync_disputes",
+      business_policies: "/portal/setup/business_policies",
+      evidence_sources: "/portal/setup/evidence_sources",
+      automation_rules: "/portal/setup/automation_rules",
+      team_notifications: "/portal/setup/team_notifications",
     };
 
     it("every step has a portal route", () => {

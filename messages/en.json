@@ -1089,6 +1089,7 @@
     "continueSetup": "Continue setup →",
     "bookSetupCall": "Book a 15-min setup call",
     "connectStoreTitle": "Connect your Shopify store",
+    "demoStoreConnected": "Demo store connected",
     "connectCTA": "Connect store",
     "stepsLocked": "Complete store connection to unlock remaining steps",
     "done": "Done",
@@ -1109,7 +1110,7 @@
     "skipConfirm": "Skip this step",
     "welcomeGoals": {
       "title": "Let's set up DisputeDesk",
-      "subtitle": "What's your top priority? This helps us personalize your setup.",
+      "subtitle": "What's your top priority? Don't worry—DisputeDesk will help you win more disputes, save time through automation, and prevent future chargebacks all at once. This just helps us personalize your setup.",
       "goalWin": "Win more chargebacks",
       "goalWinDesc": "Build comprehensive evidence packs and increase win rates",
       "goalAutomate": "Reduce workload (automation)",
