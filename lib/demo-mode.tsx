@@ -8,7 +8,6 @@ const UseDemoDataContext = createContext(false);
 
 /** Store domains that should show seeded demo data (e.g. dispute list) when connected. */
 const TEST_STORE_DOMAINS = [
-  "dispute-ops-test.myshopify.com",
   "demo.myshopify.com",
 ];
 
