@@ -35,5 +35,6 @@ export default defineConfig({
           url: "http://localhost:3099",
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
+          env: { NEXT_E2E_BUILD: "1" },
         },
 });

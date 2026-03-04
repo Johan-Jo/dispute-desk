@@ -109,15 +109,18 @@ export default function DisputesPage() {
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
   const handleSync = async () => {
-    if (useDemoDataForList || !shopId) return;
+    if (!shopId) return;
     setSyncing(true);
-    await fetch("/api/disputes/sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shop_id: shopId }),
-    });
-    await fetchDisputes();
-    setSyncing(false);
+    try {
+      await fetch("/api/disputes/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: shopId }),
+      });
+      await fetchDisputes();
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const demoDisputes = DEMO_DISPUTES as (typeof DEMO_DISPUTES[number] & Dispute)[];

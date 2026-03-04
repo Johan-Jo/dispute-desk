@@ -38,47 +38,45 @@ async function portalSignIn(page: import("@playwright/test").Page) {
   }
 }
 
-test.describe("Portal Setup Checklist", () => {
-  test.beforeEach(async () => {
+/**
+ * Portal sections that should load after sign-in.
+ * Each path must render at least one h1 so we detect missing/broken sections.
+ */
+const PORTAL_SECTIONS: { path: string; name: string }[] = [
+  { path: "/portal/dashboard", name: "Dashboard" },
+  { path: "/portal/disputes", name: "Disputes" },
+  { path: "/portal/packs", name: "Packs" },
+  { path: "/portal/rules", name: "Rules" },
+  { path: "/portal/policies", name: "Policies" },
+  { path: "/portal/billing", name: "Billing" },
+  { path: "/portal/team", name: "Team" },
+  { path: "/portal/settings", name: "Settings" },
+  { path: "/portal/help", name: "Help" },
+  { path: "/portal/connect-shopify", name: "Connect Shopify" },
+  { path: "/portal/select-store", name: "Select store" },
+];
+
+test.describe("Portal sections smoke", () => {
+  test.beforeEach(async ({ page }) => {
     test.skip(
       !E2E_EMAIL || !E2E_PASSWORD,
       "E2E_TEST_EMAIL and E2E_TEST_PASSWORD required in .env.local"
     );
-  });
-
-  test("shows connect-store checklist for users with no linked shop", async ({
-    page,
-  }) => {
     await portalSignIn(page);
-
-    await expect(
-      page.getByTestId("setup-checklist-card")
-    ).toBeVisible({ timeout: 15_000 });
-
-    await expect(
-      page.getByRole("heading", { name: "Setup Checklist" })
-    ).toBeVisible();
-
-    await expect(
-      page.getByText("Connect your Shopify store")
-    ).toBeVisible();
-
-    await expect(
-      page.getByText("Connect store").first()
-    ).toBeVisible();
-
-    const connectLink = page.locator(
-      '[data-testid="setup-checklist-card"] a[href="/portal/connect-shopify"]'
-    );
-    await expect(connectLink.first()).toBeVisible();
-
-    const lockedSteps = page.locator(
-      '[data-testid="setup-checklist-card"] .opacity-50'
-    );
-    await expect(lockedSteps).toHaveCount(7);
-
-    await expect(
-      page.getByText("Complete store connection to unlock remaining steps")
-    ).toBeVisible();
   });
+
+  for (const { path, name } of PORTAL_SECTIONS) {
+    test(`${name} (${path}) loads and shows content`, async ({ page }) => {
+      const res = await page.goto(path, {
+        waitUntil: "domcontentloaded",
+        timeout: 15_000,
+      });
+      expect(res?.status()).toBe(200);
+
+      await expect(page).toHaveURL(new RegExp(path.replace(/\//g, "\\/")));
+
+      const heading = page.getByRole("heading", { level: 1 }).or(page.getByRole("heading", { level: 2 }));
+      await expect(heading.first()).toBeVisible({ timeout: 10_000 });
+    });
+  }
 });

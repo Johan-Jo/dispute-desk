@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
   const shopId =
     url.searchParams.get("shop_id") ??
     req.headers.get("x-shop-id") ??
-    req.cookies.get("dd_active_shop")?.value ??
-    req.cookies.get("active_shop_id")?.value;
+    req.cookies?.get?.("dd_active_shop")?.value ??
+    req.cookies?.get?.("active_shop_id")?.value;
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }

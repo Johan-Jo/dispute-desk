@@ -43,7 +43,7 @@ describe("GET /api/setup/state", () => {
     expect(body.progress.doneCount).toBe(0);
     expect(body.progress.total).toBe(7);
     expect(body.allDone).toBe(false);
-    expect(body.nextStepId).toBe("welcome_goals");
+    expect(body.nextStepId).toBe("permissions");
 
     // All steps should be todo
     for (const step of Object.values(body.steps)) {

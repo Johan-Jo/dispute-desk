@@ -5,6 +5,7 @@ node_modules/
 
 # next.js
 .next/
+.next-e2e/
 out/
 
 # env files (never commit real secrets)

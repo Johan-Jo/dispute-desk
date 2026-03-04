@@ -106,7 +106,7 @@ export default function SignInPage() {
           </a>
         </div>
 
-        {error && <p className="text-sm text-[#EF4444]">{error}</p>}
+        {error && <p className="text-sm text-[#EF4444]" data-testid="sign-in-error">{error}</p>}
 
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}

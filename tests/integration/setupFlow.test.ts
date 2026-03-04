@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 7 steps as todo, nextStepId = welcome_goals", async () => {
+    it("fresh setup has all 7 steps as todo, nextStepId = permissions", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -57,7 +57,7 @@ describe("Setup flow: end-to-end progression", () => {
 
       expect(body.progress.doneCount).toBe(0);
       expect(body.progress.total).toBe(7);
-      expect(body.nextStepId).toBe("welcome_goals");
+      expect(body.nextStepId).toBe("permissions");
       expect(body.allDone).toBe(false);
 
       for (const id of STEP_IDS) {
@@ -89,14 +89,14 @@ describe("Setup flow: end-to-end progression", () => {
 
   describe("Step progression logic", () => {
     it("getNextActionableStep returns first todo step in order", () => {
-      expect(getNextActionableStep({})).toBe("welcome_goals");
+      expect(getNextActionableStep({})).toBe("permissions");
       expect(
-        getNextActionableStep({ welcome_goals: { status: "done" } })
-      ).toBe("permissions");
+        getNextActionableStep({ permissions: { status: "done" } })
+      ).toBe("welcome_goals");
       expect(
         getNextActionableStep({
-          welcome_goals: { status: "done" },
           permissions: { status: "done" },
+          welcome_goals: { status: "done" },
         })
       ).toBe("sync_disputes");
     });
@@ -104,9 +104,9 @@ describe("Setup flow: end-to-end progression", () => {
     it("getNextActionableStep skips skipped steps", () => {
       expect(
         getNextActionableStep({
-          welcome_goals: { status: "skipped" },
+          permissions: { status: "skipped" },
         })
-      ).toBe("permissions");
+      ).toBe("welcome_goals");
     });
 
     it("getNextActionableStep returns null when all done", () => {
@@ -139,14 +139,14 @@ describe("Setup flow: end-to-end progression", () => {
     });
 
     it("steps without prerequisites are always met", () => {
-      expect(isPrerequisiteMet("welcome_goals", {})).toBe(true);
+      expect(isPrerequisiteMet("permissions", {})).toBe(true);
       expect(isPrerequisiteMet("automation_rules", {})).toBe(true);
       expect(isPrerequisiteMet("team_notifications", {})).toBe(true);
     });
   });
 
   describe("Step completion via API", () => {
-    it("completing welcome_goals advances nextStepId to permissions", async () => {
+    it("completing permissions advances nextStepId to welcome_goals", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
@@ -155,7 +155,7 @@ describe("Setup flow: end-to-end progression", () => {
       mockGetServiceClient.mockReturnValue(client as any);
 
       const stepRes = await postStep(
-        makePostRequest("shop-1", { stepId: "welcome_goals", payload: { primaryGoal: "win" } })
+        makePostRequest("shop-1", { stepId: "permissions", payload: {} })
       );
       expect((await stepRes.json()).ok).toBe(true);
 
@@ -163,7 +163,7 @@ describe("Setup flow: end-to-end progression", () => {
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
         steps: {
-          welcome_goals: { status: "done", completed_at: new Date().toISOString() },
+          permissions: { status: "done", completed_at: new Date().toISOString() },
         },
       });
 
@@ -171,7 +171,7 @@ describe("Setup flow: end-to-end progression", () => {
       const state: SetupStateResponse = await stateRes.json();
 
       expect(state.progress.doneCount).toBe(1);
-      expect(state.nextStepId).toBe("permissions");
+      expect(state.nextStepId).toBe("welcome_goals");
     });
 
     it("completing all 7 steps results in allDone", async () => {

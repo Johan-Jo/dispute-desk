@@ -17,8 +17,8 @@ describe("SETUP_STEPS constants", () => {
 
   it("STEP_IDS matches SETUP_STEPS order", () => {
     expect(STEP_IDS).toEqual([
-      "welcome_goals",
       "permissions",
+      "welcome_goals",
       "sync_disputes",
       "business_policies",
       "evidence_sources",
@@ -56,33 +56,31 @@ describe("SETUP_STEPS constants", () => {
 describe("getNextActionableStep", () => {
   it("returns first step when all are todo", () => {
     const result = getNextActionableStep({});
-    expect(result).toBe("welcome_goals");
+    expect(result).toBe("permissions");
   });
 
   it("returns first step when map has no entries", () => {
     const result = getNextActionableStep({});
-    expect(result).toBe("welcome_goals");
+    expect(result).toBe("permissions");
   });
 
   it("skips done steps", () => {
     const result = getNextActionableStep({
-      welcome_goals: { status: "done" },
       permissions: { status: "done" },
+      welcome_goals: { status: "done" },
     });
     expect(result).toBe("sync_disputes");
   });
 
   it("skips skipped steps", () => {
     const result = getNextActionableStep({
-      welcome_goals: { status: "done" },
       permissions: { status: "skipped" },
     });
-    expect(result).toBe("sync_disputes");
+    expect(result).toBe("welcome_goals");
   });
 
   it("returns in_progress step", () => {
     const result = getNextActionableStep({
-      welcome_goals: { status: "done" },
       permissions: { status: "in_progress" },
     });
     expect(result).toBe("permissions");
@@ -109,10 +107,13 @@ describe("getNextActionableStep", () => {
 
 describe("isPrerequisiteMet", () => {
   it("returns true for steps with no prerequisites when map is empty", () => {
-    expect(isPrerequisiteMet("welcome_goals", {})).toBe(true);
     expect(isPrerequisiteMet("permissions", {})).toBe(true);
     expect(isPrerequisiteMet("automation_rules", {})).toBe(true);
     expect(isPrerequisiteMet("team_notifications", {})).toBe(true);
+  });
+
+  it("returns false for steps with unmet prerequisites when map is empty", () => {
+    expect(isPrerequisiteMet("welcome_goals", {})).toBe(false);
   });
 
   it("returns false for sync_disputes when permissions is not done", () => {

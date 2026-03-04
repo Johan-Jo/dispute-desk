@@ -7,7 +7,7 @@ import { ArrowLeft, RefreshCw, FileText, Clock, AlertTriangle, CheckCircle, User
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
-import { useDemoMode } from "@/lib/demo-mode";
+import { useDemoMode, useDemoData } from "@/lib/demo-mode";
 
 interface Dispute {
   id: string;
@@ -77,6 +77,46 @@ const DEMO_DISPUTES: Record<string, {
     order: { id: "#1236", date: "2026-02-12", items: "Smart Watch Pro x1", shipping: "UPS 2-Day", tracking: "1Z999AA10123456784" },
     timeline: [
       { date: "2026-02-22", event: "disputeCreated", detail: "customerClaimsQualityIssues" },
+    ],
+  },
+  "DP-2404": {
+    dispute: {
+      id: "DP-2404", dispute_gid: "DP-2404", dispute_evidence_gid: null, order_gid: "#1237",
+      status: "won", reason: "creditNotProcessed", amount: 167.25, currency_code: "USD",
+      initiated_at: "2026-02-23", due_at: "2026-03-08", last_synced_at: "2026-02-24",
+    },
+    customer: { name: "Emma Wilson", email: "emma@example.com", phone: "+1 (555) 456-7890", address: "321 Pine Rd, Seattle, WA 98101" },
+    order: { id: "#1237", date: "2026-02-14", items: "Desk Lamp x1", shipping: "USPS Ground", tracking: "9405511899223456789013" },
+    timeline: [
+      { date: "2026-02-23", event: "disputeCreated", detail: "creditNotProcessed" },
+      { date: "2026-02-28", event: "underReview", detail: "evidenceBeingReviewed" },
+      { date: "2026-03-01", event: "won", detail: "disputeWon" },
+    ],
+  },
+  "DP-2405": {
+    dispute: {
+      id: "DP-2405", dispute_gid: "DP-2405", dispute_evidence_gid: null, order_gid: "#1238",
+      status: "under_review", reason: "fraudulent", amount: 299.99, currency_code: "USD",
+      initiated_at: "2026-02-23", due_at: "2026-03-08", last_synced_at: "2026-02-24",
+    },
+    customer: { name: "Alex Brown", email: "alex@example.com", phone: "+1 (555) 567-8901", address: "555 Cedar Ln, Denver, CO 80201" },
+    order: { id: "#1238", date: "2026-02-16", items: "Wireless Speaker x1", shipping: "FedEx Express", tracking: "7489102948573920185" },
+    timeline: [
+      { date: "2026-02-23", event: "disputeCreated", detail: "chargebackInitiated" },
+      { date: "2026-02-24", event: "underReview", detail: "evidenceBeingReviewed" },
+    ],
+  },
+  "DP-2406": {
+    dispute: {
+      id: "DP-2406", dispute_gid: "DP-2406", dispute_evidence_gid: null, order_gid: "#1239",
+      status: "lost", reason: "subscriptionCanceled", amount: 75.00, currency_code: "USD",
+      initiated_at: "2026-02-24", due_at: "2026-03-09", last_synced_at: "2026-02-24",
+    },
+    customer: { name: "Lisa Anderson", email: "lisa@example.com", phone: "+1 (555) 678-9012", address: "777 Birch St, Austin, TX 78701" },
+    order: { id: "#1239", date: "2026-02-18", items: "Subscription Box x1", shipping: "USPS First Class", tracking: "9400111899223456789014" },
+    timeline: [
+      { date: "2026-02-24", event: "disputeCreated", detail: "subscriptionCanceled" },
+      { date: "2026-03-02", event: "lost", detail: "disputeLost" },
     ],
   },
 };
@@ -278,6 +318,8 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
   );
 }
 
+const DEMO_ID_PATTERN = /^DP-\d+$/;
+
 export default function DisputeDetailPage() {
   const t = useTranslations("disputes");
   const tc = useTranslations("common");
@@ -287,25 +329,29 @@ export default function DisputeDetailPage() {
   const locale = useLocale();
   const { id } = useParams<{ id: string }>();
   const isDemo = useDemoMode();
+  const useDemoDataForDetail = useDemoData();
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  const isDemoId = typeof id === "string" && DEMO_ID_PATTERN.test(id);
+  const showDemoDetail = isDemo || (useDemoDataForDetail && isDemoId);
+
   const fetchData = useCallback(async () => {
-    if (isDemo) { setLoading(false); return; }
+    if (showDemoDetail) { setLoading(false); return; }
     setLoading(true);
     const res = await fetch(`/api/disputes/${id}`);
     const json = await res.json();
     setDispute(json.dispute ?? null);
     setPacks(json.packs ?? []);
     setLoading(false);
-  }, [id, isDemo]);
+  }, [id, showDemoDetail]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (isDemo) return <DemoDisputeDetail disputeId={id} />;
+  if (showDemoDetail) return <DemoDisputeDetail disputeId={id ?? ""} />;
 
   const handleSync = async () => {
     setSyncing(true);
