@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "seed:shopify": "node scripts/shopify/seed-teststore.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.0.0",

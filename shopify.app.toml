@@ -18,7 +18,8 @@ redirect_urls = [
 # (Shopify/cli#4288 — restricted to "Payments Apps" in the deploy pipeline).
 # They ARE requested in our custom OAuth flow (SHOPIFY_SCOPES env var) and
 # Shopify grants them at install time.
-scopes = "read_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_files,write_files"
+# Seed script (scripts/shopify/) needs: write_draft_orders, write_fulfillments, write_merchant_managed_fulfillment_orders
+scopes = "read_orders,write_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_files,write_files,write_draft_orders,write_fulfillments,write_merchant_managed_fulfillment_orders"
 
 [webhooks]
 api_version = "2026-01"

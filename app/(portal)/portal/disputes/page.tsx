@@ -6,7 +6,7 @@ import { Search, Filter, RefreshCw, ExternalLink } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDemoMode } from "@/lib/demo-mode";
+import { useDemoMode, useDemoData } from "@/lib/demo-mode";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface Dispute {
@@ -77,6 +77,7 @@ export default function DisputesPage() {
   const tr = useTranslations("reasons");
   const locale = useLocale();
   const isDemo = useDemoMode();
+  const useDemoDataForList = useDemoData();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -90,7 +91,7 @@ export default function DisputesPage() {
     : "";
 
   const fetchDisputes = useCallback(async () => {
-    if (isDemo || !shopId) { setLoading(false); return; }
+    if (useDemoDataForList || !shopId) { setLoading(false); return; }
     setLoading(true);
     const params = new URLSearchParams({
       shop_id: shopId,
@@ -103,12 +104,12 @@ export default function DisputesPage() {
     setDisputes(json.disputes ?? []);
     setTotalPages(json.pagination?.total_pages ?? 0);
     setLoading(false);
-  }, [shopId, page, tab, isDemo]);
+  }, [shopId, page, tab, useDemoDataForList]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
   const handleSync = async () => {
-    if (isDemo || !shopId) return;
+    if (useDemoDataForList || !shopId) return;
     setSyncing(true);
     await fetch("/api/disputes/sync", {
       method: "POST",
@@ -120,7 +121,7 @@ export default function DisputesPage() {
   };
 
   const demoDisputes = DEMO_DISPUTES as (typeof DEMO_DISPUTES[number] & Dispute)[];
-  const rows = isDemo ? demoDisputes : disputes;
+  const rows = useDemoDataForList ? demoDisputes : disputes;
 
   const filtered = search
     ? rows.filter(

@@ -55,7 +55,7 @@ export function PortalShell({
   const isDemo = !hasRealShopActive;
 
   return (
-    <DemoModeProvider isDemo={isDemo} shopCount={shops.length}>
+    <DemoModeProvider isDemo={isDemo} shopCount={shops.length} activeShopDomain={activeShopDomain}>
     <HelpGuideProvider>
     <OnboardingProvider>
     <div className="h-screen flex bg-[#F6F8FB]">

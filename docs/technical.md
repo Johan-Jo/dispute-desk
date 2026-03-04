@@ -42,6 +42,24 @@ write_files
 > var) and Shopify grants them at install/re-auth time. They are NOT in the
 > TOML `[access_scopes]`.
 
+### Additional Scopes (seed script only)
+
+The test store seed script (`scripts/shopify/seed-teststore.mjs`) requires
+these extra scopes in `shopify.app.toml`, deployed via `shopify app deploy`:
+
+```
+write_orders
+write_draft_orders
+write_fulfillments
+write_merchant_managed_fulfillment_orders
+```
+
+The seed script uses the REST `POST /orders.json` endpoint (requires
+`write_orders`) instead of DraftOrder GraphQL mutations to avoid the
+protected-customer-data restriction on the DraftOrder object. The app must
+also have **Protected Customer Data** access declared in the Partner
+Dashboard (API access requests section). See `scripts/shopify/README.md`.
+
 ### API Version
 
 Pinned to `2026-01` via `SHOPIFY_API_VERSION` env var. Default in code
