@@ -129,6 +129,8 @@ Next.js API routes using the service role key.
 5. All portal data queries scope to `active_shop_id` via the user's linked shops.
 6. For multi-store users, the sidebar store selector links to
    `/portal/select-store` where they can switch between connected shops.
+7. **Clear shop & reconnect**: In the sidebar, under the store name, a "Clear shop & reconnect" link calls `GET /api/portal/clear-shop`. This route is exempt from the API middleware's Shopify-session requirement so portal-only users (who may have no Shopify cookies) can use it. It clears the active-shop cookies and redirects to `/portal/connect-shopify` for a fresh connect flow.
+8. **Demo vs real data**: When no shop is selected, the portal runs in demo mode (placeholder UI). Only the store domain `demo.myshopify.com` is treated as a demo-data store; all other connected stores (including development stores) get live dispute data and sync. See `docs/technical.md` § Portal demo mode & test stores.
 
 ### Cookieless OAuth State
 
