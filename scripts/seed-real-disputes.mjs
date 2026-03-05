@@ -312,18 +312,36 @@ async function fillCardInCheckout(page, timeoutMs) {
   });
   await sleep(2000);
 
-  // Use label-based matching exclusively: find each card field by its label text,
-  // mark it with a data attribute, then fill via Puppeteer handle.
+  // Mark only the first *visible* card field of each type so we fill the form the user sees.
+  // (Multiple payment forms exist in the DOM; filling the first in DOM order often hits a hidden one.)
   await page.evaluate(() => {
+    const isVisible = (el) => {
+      if (!el || el.hidden || el.type === "hidden") return false;
+      const style = window.getComputedStyle(el);
+      if (style.visibility === "hidden" || style.display === "none" || style.opacity === "0") return false;
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    document.querySelectorAll("[data-dd-card]").forEach((el) => el.removeAttribute("data-dd-card"));
+    const found = { number: false, expiry: false, cvc: false };
     const labels = document.querySelectorAll("label");
     for (const label of labels) {
       const text = (label.textContent || "").trim().toLowerCase();
       const forId = label.getAttribute("for");
       const input = (forId ? document.getElementById(forId) : null) || label.querySelector("input");
       if (!input || input.hidden || input.type === "hidden") continue;
-      if (/card\s*number/.test(text)) input.setAttribute("data-dd-card", "number");
-      else if (/expir|expiry|mm\s*\/?\s*yy/.test(text)) input.setAttribute("data-dd-card", "expiry");
-      else if (/security\s*code|cvc|cvv/.test(text)) input.setAttribute("data-dd-card", "cvc");
+      if (!isVisible(input)) continue;
+      if (/card\s*number/.test(text) && !found.number) {
+        input.setAttribute("data-dd-card", "number");
+        found.number = true;
+      } else if (/expir|expiry|mm\s*\/?\s*yy/.test(text) && !found.expiry) {
+        input.setAttribute("data-dd-card", "expiry");
+        found.expiry = true;
+      } else if (/security\s*code|cvc|cvv/.test(text) && !found.cvc) {
+        input.setAttribute("data-dd-card", "cvc");
+        found.cvc = true;
+      }
+      if (found.number && found.expiry && found.cvc) break;
     }
   });
 
@@ -606,11 +624,10 @@ async function runOneCheckout(opts, seq, runId, results, puppeteer) {
     const url = page.url();
     const content = await page.content();
 
+    // Require thank-you URL (Shopify uses /thank_you or thank-you) to avoid false positives from payment page copy
     const isThankYou =
-      url.includes("/thank_you") ||
-      url.includes("thank-you") ||
-      /thank\s*you/i.test(content) ||
-      /order\s*confirmed/i.test(content);
+      (url.includes("/thank_you") || url.includes("thank-you")) &&
+      (/thank\s*you|order\s*confirmed|confirmation/i.test(content));
 
     const finalBody = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
     if (/password incorrect|wrong password/i.test(finalBody)) {
