@@ -130,7 +130,8 @@ Next.js API routes using the service role key.
 6. For multi-store users, the sidebar store selector links to
    `/portal/select-store` where they can switch between connected shops.
 7. **Clear shop & reconnect**: In the sidebar, under the store name, a "Clear shop & reconnect" link calls `GET /api/portal/clear-shop`. This route is exempt from the API middleware's Shopify-session requirement so portal-only users (who may have no Shopify cookies) can use it. It clears the active-shop cookies and redirects to `/portal/connect-shopify` for a fresh connect flow.
-8. **Demo vs real data**: When no shop is selected, the portal runs in demo mode (placeholder UI). Only the store domain `demo.myshopify.com` is treated as a demo-data store; all other connected stores (including development stores) get live dispute data and sync. See `docs/technical.md` § Portal demo mode & test stores.
+8. **Portal APIs**: The middleware allows certain API prefixes without Shopify session cookies when the user has Supabase Auth and a valid `active_shop_id` in `portal_user_shops`: `/api/setup/`, `/api/integrations/`, `/api/files/samples`, and `/api/disputes`. So the portal disputes page (list, Sync Now, dispute detail) and setup/integrations/sample-files flows work with Supabase + active-shop only. See `docs/technical.md` § API middleware — shop identity and portal fallback.
+9. **Demo vs real data**: When no shop is selected, the portal runs in demo mode (placeholder UI). Only the store domain `demo.myshopify.com` is treated as a demo-data store; all other connected stores (including development stores) get live dispute data and sync. See `docs/technical.md` § Portal demo mode & test stores.
 
 ### Cookieless OAuth State
 

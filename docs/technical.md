@@ -298,6 +298,18 @@ queued → building → ready → saved_to_shopify
 - `POST /api/auth/portal/sign-out` — sign out portal user
 - `GET /api/portal/clear-shop` — no Shopify session required (exempt in middleware). Clears active-shop cookies and redirects to `/portal/connect-shopify` so the user can reconnect. Used by the portal sidebar link "Clear shop & reconnect".
 
+### API middleware — shop identity and portal fallback
+
+Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolves it in two ways:
+
+1. **Embedded app:** `shopify_shop` and `shopify_shop_id` cookies (set after OAuth when the app is opened from Shopify Admin). If missing, the request gets `401` with message "Unauthorized. Install or re-open the app from Shopify Admin." and `code: SESSION_REQUIRED`.
+
+2. **Portal fallback:** For certain API prefixes, if Shopify cookies are absent, middleware accepts **Supabase Auth** plus the active-shop cookie (`dd_active_shop` or `active_shop_id`). It verifies the user has that shop in `portal_user_shops`, then sets `x-shop-id` / `x-shop-domain` (domain as `"portal"`) and allows the request. This allows the portal disputes page (and setup, integrations, sample files) to work without embedded-app cookies.
+
+**Portal API prefixes** (Supabase + active_shop allowed): `/api/setup/`, `/api/integrations/`, `/api/files/samples`, `/api/disputes` (includes `GET /api/disputes`, `POST /api/disputes/sync`, and `/api/disputes/:id` routes). All other shop-scoped APIs require Shopify session cookies.
+
+**Portal client and active shop:** The active-shop cookie is httpOnly, so client components cannot read it. The server layout reads the cookie and passes `activeShopId` into `PortalShell`, which provides it via `ActiveShopProvider` / `useActiveShopId()` (`lib/portal/activeShopContext.tsx`). Portal pages such as the disputes list use `useActiveShopId()` to get the current shop and pass it as `shop_id` in API calls (e.g. `GET /api/disputes?shop_id=...`, `POST /api/disputes/sync` with body `{ shop_id }`). Sync Now shows an in-progress state (Loader icon, "Syncing...", `aria-busy`) and surfaces sync errors or a success message (e.g. "No disputes in Shopify" or "Synced N dispute(s)").
+
 ### Portal demo mode & test stores
 - **Demo mode** (`isDemo`): true when no real shop is selected (no `active_shop_id` cookie or cookie not in user's linked shops). Portal shows a demo store label and some actions are disabled.
 - **Demo data** (`useDemoData`): when true, dispute list, dashboard, rules, and billing show hardcoded demo/placeholder data instead of calling the API. True when `isDemo` is true **or** the active shop's domain is in `TEST_STORE_DOMAINS` (see `lib/demo-mode.tsx`).
@@ -316,10 +328,14 @@ queued → building → ready → saved_to_shopify
 - `POST /api/disputes/sync` — enqueue dispute sync job
 - `POST /api/packs/:packId/approve` — approve pack for save + enqueue job
 
-### Authenticated (Shopify session required)
-- `GET /api/disputes`
-- `GET /api/disputes/:id`
-- `POST /api/disputes/:id/sync`
+### Authenticated (shop context required)
+
+Shop context is provided by either (1) Shopify session cookies (embedded app) or (2) Supabase Auth + active_shop (portal) for the routes listed under "Portal API prefixes" above.
+
+- `GET /api/disputes` — list disputes (portal: pass `shop_id` query; embedded: shop from cookies)
+- `GET /api/disputes/:id` — single dispute
+- `POST /api/disputes/sync` — run sync for shop (portal: body `{ shop_id }`; runs synchronously, not job)
+- `POST /api/disputes/:id/sync` — re-sync one dispute
 - `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
 - `GET /api/disputes/:id/packs` → list packs for a dispute
 - `GET /api/packs/:packId` → full pack: items, checklist, audit log, active jobs
