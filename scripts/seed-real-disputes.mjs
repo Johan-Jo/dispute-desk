@@ -57,7 +57,9 @@ function parseArgs() {
   const bool = (name) => args.includes(name);
   const env = loadEnv();
   const shop = get("--shop") || env.SHOPIFY_STORE_DOMAIN || (args[0] && !String(args[0]).startsWith("--") ? args[0] : undefined);
-  const count = Math.max(1, parseInt(get("--count", "1"), 10) || (args[2] && !String(args[2]).startsWith("--") ? parseInt(args[2], 10) : NaN) || 1);
+  const countArg = get("--count");
+  const countPos = args[2] && !String(args[2]).startsWith("--") ? parseInt(args[2], 10) : NaN;
+  const count = Math.max(1, (countArg != null ? parseInt(countArg, 10) : NaN) || (Number.isFinite(countPos) ? countPos : 1) || 1);
   const headless = get("--headless", "true") !== "false";
   const runId = get("--run-id") || `${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36)}`;
   const tag = get("--tag", "dd-real-dispute");
