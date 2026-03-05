@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "seed:shopify": "node scripts/shopify/seed-teststore.mjs"
+    "seed:shopify": "node scripts/shopify/seed-teststore.mjs",
+    "seed:synthetic-disputes": "node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --ensure-shop --count 20",
+    "seed:real-disputes": "node scripts/seed-real-disputes.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.0.0",
@@ -44,6 +46,7 @@
     "eslint-config-next": "^15.0.0",
     "pg": "^8.18.0",
     "postcss": "^8.5.6",
+    "puppeteer": "^23.11.1",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0"

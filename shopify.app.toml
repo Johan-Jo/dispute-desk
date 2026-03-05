@@ -13,13 +13,9 @@ redirect_urls = [
 ]
 
 [access_scopes]
-# Evidence scopes (read/write_shopify_payments_dispute_evidences) approved by
-# App Review (2026-03-02, Reggie F.) but blocked by CLI deploy validation
-# (Shopify/cli#4288 — restricted to "Payments Apps" in the deploy pipeline).
-# They ARE requested in our custom OAuth flow (SHOPIFY_SCOPES env var) and
-# Shopify grants them at install time.
+# Evidence scopes approved by App Review and synced to app config (2026-03-04, ticket 64535407).
 # Seed script (scripts/shopify/) needs: write_draft_orders, write_fulfillments, write_merchant_managed_fulfillment_orders
-scopes = "read_orders,write_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_files,write_files,write_draft_orders,write_fulfillments,write_merchant_managed_fulfillment_orders"
+scopes = "read_orders,write_orders,read_customers,read_products,write_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences,read_files,write_files,write_draft_orders,write_fulfillments,write_merchant_managed_fulfillment_orders,read_locations,read_inventory,write_inventory"
 
 [webhooks]
 api_version = "2026-01"

@@ -399,6 +399,7 @@ export default function DisputeDetailPage() {
   const deadline = daysUntil(dispute.due_at);
   const deadlineText = deadline.key === "none" ? "—" : "params" in deadline && deadline.params ? t(deadline.key, deadline.params) : t(deadline.key);
   const statusKey = DISPUTE_STATUS_KEYS[dispute.status ?? ""] ?? "unknown";
+  const isSynthetic = dispute.dispute_gid?.includes("/seed-") ?? false;
 
   return (
     <div>
@@ -408,10 +409,13 @@ export default function DisputeDetailPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">
-            {t("disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? id })}
-          </h1>
-          <p className="text-sm text-[#667085]">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : t("unknownReason")}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-[#0B1220]">
+              {t("disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? id })}
+            </h1>
+            {isSynthetic && <Badge variant="info">Synthetic</Badge>}
+          </div>
+          <p className="text-sm text-[#667085] mt-1">{dispute.reason ? tr.has(dispute.reason) ? tr(dispute.reason) : dispute.reason : t("unknownReason")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleSync} disabled={syncing}>

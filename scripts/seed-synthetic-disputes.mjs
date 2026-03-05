@@ -1,20 +1,28 @@
 /**
- * Bulk-seed test disputes into Supabase for a given shop.
- * Use for dev/testing the pipeline and UI without creating disputes in Shopify.
+ * Seed SYNTHETIC disputes into Supabase only. These rows do NOT exist in Shopify.
+ * Use for UI/dev testing only. Not mirrored. For real test data, see docs/testing-store-mirror.md.
  *
  * Usage:
- *   node scripts/seed-bulk-disputes.mjs --shop dev-store.myshopify.com [--count 30]
- *   node scripts/seed-bulk-disputes.mjs --shop-id <uuid> [--count 20]
- *   node scripts/seed-bulk-disputes.mjs --shop dev-store.myshopify.com --cleanup
+ *   npm run seed:synthetic-disputes
+ *   node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com [--count 30]
+ *   node scripts/seed-synthetic-disputes.mjs --shop-id <uuid> [--count 20]
+ *   node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --ensure-shop
+ *   node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --cleanup
  *
  * Reads SUPABASE_URL_POSTGRES from .env.local.
  */
 
 import pg from "pg";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
 const { Client } = pg;
+
+const WARNING_BANNER = `
+⚠️  Seeding synthetic disputes into Supabase only.
+    These disputes DO NOT exist in Shopify. Not mirrored.
+    For Shopify-backed test data, see docs/testing-store-mirror.md.
+`;
 
 const REASONS = [
   "PRODUCT_NOT_RECEIVED",
@@ -25,8 +33,11 @@ const REASONS = [
   "PRODUCT_UNACCEPTABLE",
 ];
 
+const DEV_SHOP_ID = "00000000-0000-0000-0000-000000000001";
+
 function loadEnv() {
   const envPath = join(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return {};
   const vars = {};
   for (const line of readFileSync(envPath, "utf-8").split("\n")) {
     const trimmed = line.trim();
@@ -40,7 +51,14 @@ function loadEnv() {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const out = { shop: null, shopId: null, count: 20, cleanup: false };
+  const env = loadEnv();
+  const out = {
+    shop: env.SEED_DISPUTES_SHOP || null,
+    shopId: null,
+    count: Math.max(1, parseInt(env.SEED_DISPUTES_COUNT || "20", 10) || 20),
+    cleanup: false,
+    ensureShop: false,
+  };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--shop" && args[i + 1]) {
       out.shop = args[++i];
@@ -50,16 +68,18 @@ function parseArgs() {
       out.count = Math.max(1, parseInt(args[++i], 10) || 20);
     } else if (args[i] === "--cleanup") {
       out.cleanup = true;
+    } else if (args[i] === "--ensure-shop") {
+      out.ensureShop = true;
     }
   }
   return out;
 }
 
 async function main() {
-  const { shop, shopId, count, cleanup } = parseArgs();
+  const { shop, shopId, count, cleanup, ensureShop } = parseArgs();
 
   if (!shop && !shopId) {
-    console.error("Usage: --shop <domain> or --shop-id <uuid> required.");
+    console.error("Usage: --shop <domain> or --shop-id <uuid> required. Or set SEED_DISPUTES_SHOP in .env.local and run npm run seed:synthetic-disputes");
     process.exit(1);
   }
   if (shop && shopId) {
@@ -74,20 +94,12 @@ async function main() {
     process.exit(1);
   }
 
-  const match = url.match(
-    /postgresql:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)/
-  );
-  if (!match) {
-    console.error("SUPABASE_URL_POSTGRES format not recognized");
-    process.exit(1);
+  if (!cleanup) {
+    console.warn(WARNING_BANNER);
   }
 
   const client = new Client({
-    host: match[3],
-    port: parseInt(match[4], 10),
-    database: match[5],
-    user: match[1],
-    password: match[2],
+    connectionString: url,
     ssl: { rejectUnauthorized: false },
   });
 
@@ -106,12 +118,27 @@ async function main() {
     }
     resolvedShopId = rows[0].id;
   } else {
-    const { rows } = await client.query(
+    let { rows } = await client.query(
       "SELECT id FROM shops WHERE shop_domain = $1",
       [shop]
     );
     if (rows.length === 0) {
-      console.error("Shop not found for domain:", shop);
+      if (ensureShop) {
+        await client.query(
+          `INSERT INTO shops (id, shop_domain, shop_id, plan)
+           VALUES ($1, $2, 'gid://shopify/Shop/1', 'growth')
+           ON CONFLICT (shop_domain) DO NOTHING`,
+          [DEV_SHOP_ID, shop]
+        );
+        const r = await client.query("SELECT id FROM shops WHERE shop_domain = $1", [shop]);
+        rows = r.rows;
+        if (rows.length > 0) {
+          console.log("Created or found shop for", shop);
+        }
+      }
+    }
+    if (rows.length === 0) {
+      console.error("Shop not found for domain:", shop, "- add the shop first or use --ensure-shop");
       await client.end();
       process.exit(1);
     }
@@ -124,7 +151,7 @@ async function main() {
        WHERE shop_id = $1 AND dispute_gid LIKE 'gid://shopify/ShopifyPaymentsDispute/seed-%'`,
       [resolvedShopId]
     );
-    console.log("Cleaned up", rowCount, "seeded dispute(s).");
+    console.log("Cleaned up", rowCount, "synthetic dispute(s).");
     await client.end();
     return;
   }
@@ -150,7 +177,7 @@ async function main() {
     inserted++;
   }
 
-  console.log("Seeded", inserted, "dispute(s) for shop", resolvedShopId);
+  console.log("Seeded", inserted, "synthetic dispute(s) for shop", resolvedShopId);
   await client.end();
 }
 

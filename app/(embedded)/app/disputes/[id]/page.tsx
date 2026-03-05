@@ -144,6 +144,7 @@ export default function DisputeDetailPage() {
     );
   }
 
+  const isSynthetic = dispute.dispute_gid?.includes("/seed-") ?? false;
   const orderNum = dispute.order_gid?.split("/").pop();
   const shopDomainForOrder =
     typeof window !== "undefined"
@@ -158,6 +159,7 @@ export default function DisputeDetailPage() {
     <Page
       title={t("disputes.disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? "" })}
       backAction={{ content: t("disputes.title"), url: "/app/disputes" }}
+      titleMetadata={isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined}
       primaryAction={{
         content: generating ? t("disputes.generating") : t("disputes.generatePack"),
         onAction: handleGenerate,

@@ -29,7 +29,7 @@ This plan outlines practical options for dev/testing with many disputes.
 
 | Step | Action |
 |------|--------|
-| 1 | Add a dedicated script (e.g. `scripts/seed-bulk-disputes.mjs`) that reads from `.env.local` (e.g. `SUPABASE_URL_POSTGRES`, shop id or domain). |
+| 1 | Add a dedicated script (e.g. `scripts/seed-synthetic-disputes.mjs`) that reads from `.env.local` (e.g. `SUPABASE_URL_POSTGRES`, shop id or domain). |
 | 2 | Script inserts N rows into `disputes` for a test shop (e.g. `shop_id` from `shops` for a known dev shop). Use varied `reason`, `amount`, `currency_code`, `due_at`, `status` (e.g. `needs_response`). Reuse existing `dispute_gid` pattern (e.g. `gid://shopify/ShopifyPaymentsDispute/seed-{i}`) and respect unique constraint `(shop_id, dispute_gid)`. |
 | 3 | Optional: script can also create `evidence_packs` for a subset of disputes to test list/detail and pack-building. |
 | 4 | Document in README or `docs/technical.md`: when to use bulk seed vs smoke test, and that this does not create disputes in Shopify. |
@@ -37,7 +37,7 @@ This plan outlines practical options for dev/testing with many disputes.
 
 **Files to add/touch:**
 
-- `scripts/seed-bulk-disputes.mjs` (new).
+- `scripts/seed-synthetic-disputes.mjs` (implemented; run via `npm run seed:synthetic-disputes`).
 - `docs/technical.md` or README: short “Testing with bulk disputes” section.
 
 ---

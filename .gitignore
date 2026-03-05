@@ -21,6 +21,9 @@ npm-debug.log*
 /playwright-report/
 /blob-report/
 
+# seed artifacts (run outputs, screenshots)
+artifacts/
+
 # misc
 .DS_Store
 *.tsbuildinfo

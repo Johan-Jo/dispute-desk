@@ -4,7 +4,7 @@ This folder contains scripts to seed the **test store** `disputedesk.myshopify.c
 
 The seed script uses the **REST Admin API** (`POST /orders.json`) to create orders directly, then **GraphQL** for fulfillments and tracking events. This avoids the DraftOrder protected-customer-data restriction.
 
-Disputes/chargebacks cannot be created via the Admin API. The script seeds everything else; creating real disputes is done manually with Shopify Payments Test Mode (see below).
+Disputes/chargebacks cannot be created via the Admin API. The script seeds everything else; creating real disputes is done manually with Shopify Payments Test Mode (see below). For the full “mirror a store” flow (orders + real test disputes + sync), see [docs/testing-store-mirror.md](../../docs/testing-store-mirror.md). For UI-only testing with dispute rows that do not exist in Shopify, use the **synthetic** dispute script: `npm run seed:synthetic-disputes` ([scripts/seed-synthetic-disputes.mjs](../seed-synthetic-disputes.mjs)).
 
 ## 1. Authentication
 
@@ -23,6 +23,8 @@ The app used for seeding needs these **Admin API scopes** on the target store:
 | Scope | Purpose |
 |-------|---------|
 | `write_orders` | Create orders via REST API. |
+| `write_products` | Create products (catalog) for seed. |
+| `write_inventory` | Set product variant inventory (in stock). |
 | `write_fulfillments` | Create fulfillment tracking events. |
 | One of: `write_assigned_fulfillment_orders` / `write_merchant_managed_fulfillment_orders` / `write_third_party_fulfillment_orders` | Create fulfillments. |
 
@@ -58,10 +60,16 @@ After deploying, **reinstall the app** on the target store to pick up the new sc
    npm run seed:shopify
    ```
 
+   To seed a **specific store** (overrides `SHOPIFY_STORE_DOMAIN`):
+
+   ```bash
+   npm run seed:shopify -- --shop surasvenne.myshopify.com
+   ```
+
    Or directly:
 
    ```bash
-   node scripts/shopify/seed-teststore.mjs
+   node scripts/shopify/seed-teststore.mjs [--shop <domain>]
    ```
 
 3. The script prints each created order with Admin URL and scenario tags.
@@ -70,7 +78,8 @@ After deploying, **reinstall the app** on the target store to pick up the new sc
 
 ## 4. What gets created
 
-- **Orders**: Created via REST `POST /orders.json` with `financial_status: paid`. Two line items per order, Brazilian shipping/billing addresses.
+- **Products** (first): The script creates `SEED_PRODUCT_COUNT` products (default 10) via GraphQL: each has one variant with a price, and inventory is set to 100 at the shop’s first location so they are **in stock**. Requires `write_products` and `write_inventory` scopes. If no location is found or product creation fails, orders fall back to ad-hoc line items (no catalog).
+- **Orders**: Created via REST `POST /orders.json` with `financial_status: paid`. When products were seeded, each order uses two line items from those catalog variants; otherwise two ad-hoc line items per order. Brazilian shipping/billing addresses.
 - **Tags**: Every order gets `DD_SEED`, `DD_SEED_BATCH:v1`, and `DD_SCENARIO:{scenario}`.
 - **Scenarios** (rotated by order index):
   - **DELIVERED**: Fulfillment + 3 tracking events: `IN_TRANSIT` → `OUT_FOR_DELIVERY` → `DELIVERED`.
@@ -93,7 +102,7 @@ Disputes cannot be created via the Admin API. To generate real disputed transact
 ```bash
 # scripts/shopify — add to .env.local
 
-# Store (optional; defaults shown)
+# Store (optional; defaults to disputedesk.myshopify.com; or pass --shop <domain>)
 SHOPIFY_STORE_DOMAIN=disputedesk.myshopify.com
 SHOPIFY_API_VERSION=2026-01
 
@@ -110,6 +119,7 @@ SHOPIFY_ADMIN_TOKEN=shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # SHOPIFY_SEED_CLIENT_SECRET=your_seed_app_secret
 
 # Seed options (optional)
+SEED_PRODUCT_COUNT=10
 SEED_COUNT=20
 SEED_CURRENCY=USD
 ```

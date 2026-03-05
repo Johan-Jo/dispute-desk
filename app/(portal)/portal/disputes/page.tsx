@@ -43,6 +43,10 @@ const STATUS_VARIANTS: Record<string, "success" | "warning" | "danger" | "info" 
   lost: "danger",
 };
 
+function isSyntheticDispute(disputeGid: string): boolean {
+  return disputeGid?.includes("/seed-") ?? false;
+}
+
 const STATUS_KEYS: Record<string, string> = {
   saved_to_shopify: "savedToShopify",
   needs_response: "needsResponse",
@@ -241,12 +245,17 @@ export default function DisputesPage() {
                 filtered.map((d, idx) => (
                   <tr key={d.id} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA] transition-colors" {...(idx === 0 ? { "data-onboarding": "dispute-row" } : {})}>
                     <td className="px-4 py-3">
-                      <a
-                        href={isDemo ? `/portal/disputes/${d.id}` : `/portal/disputes/${d.id}`}
-                        className="font-medium text-[#4F46E5] hover:underline"
-                      >
-                        {d.dispute_gid}
-                      </a>
+                      <span className="inline-flex items-center gap-2">
+                        <a
+                          href={isDemo ? `/portal/disputes/${d.id}` : `/portal/disputes/${d.id}`}
+                          className="font-medium text-[#4F46E5] hover:underline"
+                        >
+                          {d.dispute_gid}
+                        </a>
+                        {!isDemo && isSyntheticDispute(d.dispute_gid) && (
+                          <Badge variant="info">Synthetic</Badge>
+                        )}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       {"customer" in d ? (

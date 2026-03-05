@@ -201,22 +201,34 @@ Tests include:
 - **API route handler tests:** Setup state/step/skip/undo-skip, integrations status, Gorgias connect/disconnect, sample file upload/list/delete (using custom Supabase + Next.js mocks)
 - **E2E smoke test:** Seeds a dispute into live Supabase, validates the full automation pipeline (shop settings, pack creation, completeness scoring, gate decisions, save simulation, audit immutability), then cleans up
 
-### Testing with bulk disputes
+### Testing: Mirror a Shopify store
 
-To test the pipeline and UI with many disputes without creating them in Shopify, use the bulk seed script. It inserts test disputes into Supabase only (they do not exist in Shopify).
+To create **Shopify-backed** test data (orders, fulfillments, and real test disputes), follow [docs/testing-store-mirror.md](docs/testing-store-mirror.md). Mirroring means data exists in Shopify first and is synced into Supabase.
+
+### Synthetic disputes (DB-only; not mirrored)
+
+To test the pipeline and UI with many dispute rows **without** creating them in Shopify, use the synthetic dispute seed script. It inserts rows into Supabase only; these disputes **do not exist in Shopify** and are for UI/dev only.
 
 ```bash
-# Seed 30 disputes for a dev shop (requires SUPABASE_URL_POSTGRES in .env.local)
-node scripts/seed-bulk-disputes.mjs --shop dev-store.myshopify.com --count 30
+# Seed 20 synthetic disputes for dev shop (requires SUPABASE_URL_POSTGRES in .env.local)
+npm run seed:synthetic-disputes
 
-# By shop UUID
-node scripts/seed-bulk-disputes.mjs --shop-id <uuid> --count 20
-
-# Remove all seeded disputes for that shop
-node scripts/seed-bulk-disputes.mjs --shop dev-store.myshopify.com --cleanup
+# Or with options:
+node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --count 30
+node scripts/seed-synthetic-disputes.mjs --shop-id <uuid> --count 20
+node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --cleanup
 ```
 
-Seeded disputes use `dispute_gid` like `gid://shopify/ShopifyPaymentsDispute/seed-1` so they can be identified and cleaned up safely.
+Synthetic disputes use `dispute_gid` like `gid://shopify/ShopifyPaymentsDispute/seed-1` and are shown with a **Synthetic** badge in the app.
+
+### Real disputes (test-mode checkout)
+
+To create **real** test chargebacks in Shopify Payments, use the real-dispute generator. It places orders through **storefront checkout** using Shopify’s disputed-transaction test card; those orders appear in **Shopify Payments → Disputes**. Requires Shopify Payments in **test mode**, a product (handle or variant ID), and an Admin API token for tagging. See [docs/real-disputes.md](docs/real-disputes.md) for details, options, and limitations.
+
+```bash
+# One order (requires test-mode ack and SHOPIFY_ADMIN_TOKEN)
+npm run seed:real-disputes -- --shop surasvenne.myshopify.com --product-handle my-product --i-know-this-is-test-mode
+```
 
 ### CI
 

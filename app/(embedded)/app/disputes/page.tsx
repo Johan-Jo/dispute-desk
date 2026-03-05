@@ -36,6 +36,10 @@ interface DisputesResponse {
   pagination: { page: number; per_page: number; total: number; total_pages: number };
 }
 
+function isSyntheticDispute(disputeGid: string): boolean {
+  return disputeGid?.includes("/seed-") ?? false;
+}
+
 function statusTone(status: string | null): "success" | "warning" | "critical" | "info" | undefined {
   switch (status) {
     case "won": return "success";
@@ -164,9 +168,14 @@ export default function DisputesListPage() {
       }}
     >
       <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" fontWeight="semibold">
-          {d.dispute_gid.split("/").pop()?.slice(0, 8) ?? d.id.slice(0, 8)}
-        </Text>
+        <InlineStack gap="200" blockAlign="center">
+          <Text as="span" variant="bodyMd" fontWeight="semibold">
+            {d.dispute_gid.split("/").pop()?.slice(0, 8) ?? d.id.slice(0, 8)}
+          </Text>
+          {isSyntheticDispute(d.dispute_gid) && (
+            <Badge tone="info">Synthetic</Badge>
+          )}
+        </InlineStack>
       </IndexTable.Cell>
       <IndexTable.Cell>{d.reason ?? t("status.unknown")}</IndexTable.Cell>
       <IndexTable.Cell>
