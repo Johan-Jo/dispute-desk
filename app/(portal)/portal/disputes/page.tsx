@@ -331,12 +331,12 @@ export default function DisputesPage() {
                     <td className="px-4 py-3">
                       {"customer" in d ? (
                         <div>
-                          <div className="font-medium text-[#0B1220]">{(d as typeof DEMO_DISPUTES[number]).customer}</div>
-                          <div className="text-xs text-[#667085]">{(d as typeof DEMO_DISPUTES[number]).email}</div>
+                          <div className="font-medium text-[#0B1220]">{(d as { customer?: string }).customer ?? "—"}</div>
+                          <div className="text-xs text-[#667085]">{(d as { email?: string }).email ?? ""}</div>
                         </div>
                       ) : (
                         <span className="text-[#0B1220]">
-                          {(d as Dispute).customer_display_name ?? (d as Dispute).order_name ?? "—"}
+                          {d.customer_display_name ?? d.order_name ?? "—"}
                         </span>
                       )}
                     </td>
