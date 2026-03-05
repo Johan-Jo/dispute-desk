@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Search, Filter, RefreshCw, ExternalLink } from "lucide-react";
+import { Search, Filter, RefreshCw, Loader2, ExternalLink } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
+import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode, useDemoData } from "@/lib/demo-mode";
@@ -85,14 +86,14 @@ export default function DisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "review">("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
-  const shopId = typeof window !== "undefined"
-    ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
-    : "";
+  const shopId = useActiveShopId() ?? "";
 
   const fetchDisputes = useCallback(async () => {
     if (useDemoDataForList || !shopId) { setLoading(false); return; }
@@ -115,13 +116,28 @@ export default function DisputesPage() {
   const handleSync = async () => {
     if (!shopId) return;
     setSyncing(true);
+    setSyncError(null);
+    setSyncMessage(null);
     try {
-      await fetch("/api/disputes/sync", {
+      const res = await fetch("/api/disputes/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shop_id: shopId }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncError(data?.error ?? `Sync failed (${res.status})`);
+        return;
+      }
+      const synced = data?.synced ?? 0;
+      setSyncMessage(
+        synced === 0
+          ? "Sync complete. No disputes in Shopify for this store."
+          : `Synced ${synced} dispute(s) from Shopify.`
+      );
       await fetchDisputes();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setSyncing(false);
     }
@@ -153,8 +169,14 @@ export default function DisputesPage() {
               size="sm"
               onClick={handleSync}
               disabled={syncing}
+              aria-busy={syncing}
+              className={syncing ? "cursor-wait" : undefined}
             >
-              <RefreshCw className={`w-4 h-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" aria-hidden />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-1" />
+              )}
               {syncing ? t("syncing") : t("syncNow")}
             </Button>
           )}
@@ -174,6 +196,17 @@ export default function DisputesPage() {
       </div>
 
       {isDemo && <DemoNotice />}
+
+      {syncError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
+          {syncError}
+        </div>
+      )}
+      {syncMessage && (
+        <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
+          {syncMessage}
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mb-4" data-onboarding="disputes-tabs">
         <Button

@@ -12,6 +12,7 @@ import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
 import { getPortalGuideSteps, getPortalGuideTranslationKeyPrefix, HELP_TRANSLATION_NAMESPACE, type HelpGuideId } from "@/lib/help-guides-config";
 import { onboardingSteps } from "@/lib/onboarding-config";
 import { DemoModeProvider } from "@/lib/demo-mode";
+import { ActiveShopProvider } from "@/lib/portal/activeShopContext";
 
 interface Shop {
   shop_id: string;
@@ -55,6 +56,7 @@ export function PortalShell({
   const isDemo = !hasRealShopActive;
 
   return (
+    <ActiveShopProvider activeShopId={activeShopId}>
     <DemoModeProvider isDemo={isDemo} shopCount={shops.length} activeShopDomain={activeShopDomain}>
     <HelpGuideProvider>
     <OnboardingProvider>
@@ -239,6 +241,7 @@ export function PortalShell({
     </OnboardingProvider>
     </HelpGuideProvider>
     </DemoModeProvider>
+    </ActiveShopProvider>
   );
 }
 

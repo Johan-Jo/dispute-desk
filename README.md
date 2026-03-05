@@ -48,7 +48,7 @@ DisputeDesk ships as two web surfaces from one codebase:
 - **Frontend (Portal/Marketing):** React 18 + Tailwind CSS + custom design system
 - **UI Components:** `components/ui/` — Button, Badge, AuthCard, TextField, PasswordField, KPICard, InfoBanner, etc. (CVA + lucide-react)
 - **Backend:** Next.js 15 App Router (Node runtime)
-- **Auth (Portal):** Supabase Auth via `@supabase/ssr` (email/password, magic link)
+- **Auth (Portal):** Supabase Auth via @supabase/ssr (email/password, magic link)
 - **Auth (Embedded):** Shopify OAuth (offline + online sessions)
 - **Database:** Supabase Postgres (server-only access, RLS enabled)
 - **Storage:** Supabase Storage (private buckets for PDFs + uploads)
@@ -223,12 +223,33 @@ Synthetic disputes use `dispute_gid` like `gid://shopify/ShopifyPaymentsDispute/
 
 ### Real disputes (test-mode checkout)
 
-To create **real** test chargebacks in Shopify Payments, use the real-dispute generator. It places orders through **storefront checkout** using Shopify’s disputed-transaction test card; those orders appear in **Shopify Payments → Disputes**. Requires Shopify Payments in **test mode**, a product (handle or variant ID), and an Admin API token for tagging. See [docs/real-disputes.md](docs/real-disputes.md) for details, options, and limitations.
+To create **real** test chargebacks in Shopify Payments, use the real-dispute generator. It places orders through **storefront checkout** using Shopify's disputed-transaction test card; those orders appear in **Shopify Payments → Disputes**. Requires Shopify Payments in **test mode**, a product (handle or variant ID), and an Admin API token for tagging. See [docs/real-disputes.md](docs/real-disputes.md) for details, options, and limitations.
 
 ```bash
 # One order (requires test-mode ack and SHOPIFY_ADMIN_TOKEN)
 npm run seed:real-disputes -- --shop surasvenne.myshopify.com --product-handle my-product --i-know-this-is-test-mode
 ```
+
+### Test dispute evidence (append + submit) end-to-end
+
+The script `scripts/test-dispute-evidence.mjs` verifies against a **real** Shopify Payments dispute in your dev/test store:
+
+1. **Append (draft):** Updates an evidence text field and confirms it appears as draft (evidence not submitted).
+2. **Submit:** Attempts programmatic submit via `submitEvidence: true` and reports whether the dispute moved to submitted.
+
+**Env vars:** `SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_ADMIN_TOKEN`; optional `SHOPIFY_API_VERSION` (default `2026-01`).
+
+**Run:**
+
+```bash
+# Use first eligible dispute from the store
+node scripts/test-dispute-evidence.mjs
+
+# Use a specific dispute (dispute GID, not evidence GID)
+node scripts/test-dispute-evidence.mjs --dispute-gid "gid://shopify/ShopifyPaymentsDispute/123456"
+```
+
+Required scopes: `read_shopify_payments_disputes`, `read_shopify_payments_dispute_evidences`, `write_shopify_payments_dispute_evidences`. The merchant user must have **Manage orders information** in Shopify Admin.
 
 ### CI
 

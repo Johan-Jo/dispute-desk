@@ -2,7 +2,6 @@
 # https://shopify.dev/docs/apps/tools/cli/configuration
 
 name = "DisputeDesk"
-# For deploy, CLI reads these literally. Use SHOPIFY_APP_URL from .env.local at runtime.
 client_id = "84f40ec77c9ba18e9eabc1657d9b6af8"
 application_url = "https://disputedesk.app"
 embedded = true
