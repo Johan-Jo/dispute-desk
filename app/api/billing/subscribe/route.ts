@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!session) {
-    return NextResponse.json({ error: "No session found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Reconnect this store to upgrade. Use “Clear shop & reconnect” in the sidebar, then open the app from Shopify Admin." },
+      { status: 404 }
+    );
   }
 
   const accessToken = decryptToken(session.access_token_encrypted);

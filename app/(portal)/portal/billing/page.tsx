@@ -189,6 +189,7 @@ export default function BillingPage() {
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const shopId = useActiveShopId() ?? "";
 
@@ -207,17 +208,26 @@ export default function BillingPage() {
   if (isDemo) return <DemoBilling />;
 
   const handleUpgrade = async (planId: string) => {
+    setUpgradeError(null);
     setUpgrading(planId);
-    const res = await fetch("/api/billing/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shop_id: shopId, plan_id: planId }),
-    });
-    const data = await res.json();
-    if (data.confirmationUrl) {
-      window.location.href = data.confirmationUrl;
+    try {
+      const res = await fetch("/api/billing/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: shopId, plan_id: planId }),
+      });
+      const data = await res.json();
+      if (data.confirmationUrl) {
+        window.location.href = data.confirmationUrl;
+        return;
+      }
+      const message = typeof data.error === "string" ? data.error : t("upgradeFailed");
+      setUpgradeError(message);
+    } catch {
+      setUpgradeError(t("upgradeFailed"));
+    } finally {
+      setUpgrading(null);
     }
-    setUpgrading(null);
   };
 
   if (loading || !shopId) {
@@ -243,6 +253,15 @@ export default function BillingPage() {
         <h1 className="text-2xl font-bold text-[#0B1220]">{t("title")}</h1>
         <p className="text-sm text-[#667085]">{t("subtitle")}</p>
       </div>
+
+      {upgradeError && (
+        <div className="mb-6 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-sm text-[#B91C1C] flex items-start justify-between gap-3">
+          <span>{upgradeError}</span>
+          <button type="button" onClick={() => setUpgradeError(null)} className="shrink-0 text-[#B91C1C] hover:underline" aria-label={tc("dismiss")}>
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
         <h3 className="font-semibold text-[#0B1220] mb-3">{t("usageThisMonth")}</h3>
