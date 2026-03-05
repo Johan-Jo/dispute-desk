@@ -50,7 +50,10 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .select("access_token_encrypted, key_version, shop_domain")
     .eq("shop_id", pack.shop_id)
     .eq("session_type", "offline")
-    .single();
+    .is("user_id", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (!session) throw new Error(`No offline session for shop ${pack.shop_id}`);
 
   const accessToken = decryptAccessToken(session.access_token_encrypted);

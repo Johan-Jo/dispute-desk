@@ -22,6 +22,10 @@ export interface StoredSession {
 /**
  * Upsert a Shopify session (online or offline) into shop_sessions.
  * Access token is encrypted at rest with key version tracking.
+ *
+ * For offline sessions (user_id IS NULL), PostgreSQL's unique constraint
+ * treats NULLs as distinct, so onConflict won't match. We use a
+ * delete-then-insert pattern for offline sessions to avoid duplicates.
  */
 export async function storeSession(session: {
   shopInternalId: string;
@@ -36,20 +40,32 @@ export async function storeSession(session: {
   const encrypted = encrypt(session.accessToken);
   const tokenStr = serializeEncrypted(encrypted);
 
-  const { error } = await db.from("shop_sessions").upsert(
-    {
-      shop_id: session.shopInternalId,
-      session_type: session.sessionType,
-      user_id: session.userId ?? null,
-      access_token_encrypted: tokenStr,
-      key_version: encrypted.keyVersion,
-      scopes: session.scopes,
-      expires_at: session.expiresAt ?? null,
-    },
-    { onConflict: "shop_id,session_type,user_id" }
-  );
+  const row = {
+    shop_id: session.shopInternalId,
+    session_type: session.sessionType,
+    user_id: session.userId ?? null,
+    access_token_encrypted: tokenStr,
+    key_version: encrypted.keyVersion,
+    scopes: session.scopes,
+    expires_at: session.expiresAt ?? null,
+  };
 
-  if (error) throw new Error(`Failed to store session: ${error.message}`);
+  if (session.sessionType === "offline") {
+    await db
+      .from("shop_sessions")
+      .delete()
+      .eq("shop_id", session.shopInternalId)
+      .eq("session_type", "offline")
+      .is("user_id", null);
+
+    const { error } = await db.from("shop_sessions").insert(row);
+    if (error) throw new Error(`Failed to store session: ${error.message}`);
+  } else {
+    const { error } = await db.from("shop_sessions").upsert(row, {
+      onConflict: "shop_id,session_type,user_id",
+    });
+    if (error) throw new Error(`Failed to store session: ${error.message}`);
+  }
 }
 
 /**
@@ -72,7 +88,7 @@ export async function loadSession(
     query = query.is("user_id", null);
   }
 
-  const { data, error } = await query.order("created_at", { ascending: false }).limit(1).single();
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
 
   if (error || !data) return null;
 

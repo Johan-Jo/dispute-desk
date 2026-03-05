@@ -87,6 +87,8 @@ export default function DisputesPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncErrorCode, setSyncErrorCode] = useState<string | null>(null);
+  const [syncErrorShopDomain, setSyncErrorShopDomain] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "review">("all");
@@ -117,6 +119,8 @@ export default function DisputesPage() {
     if (!shopId) return;
     setSyncing(true);
     setSyncError(null);
+    setSyncErrorCode(null);
+    setSyncErrorShopDomain(null);
     setSyncMessage(null);
     try {
       const res = await fetch("/api/disputes/sync", {
@@ -127,6 +131,8 @@ export default function DisputesPage() {
       const data = await res.json();
       if (!res.ok) {
         setSyncError(data?.error ?? `Sync failed (${res.status})`);
+        setSyncErrorCode(data?.code ?? null);
+        setSyncErrorShopDomain(data?.shop_domain ?? null);
         return;
       }
       const synced = data?.synced ?? 0;
@@ -138,6 +144,8 @@ export default function DisputesPage() {
       await fetchDisputes();
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Sync failed");
+      setSyncErrorCode(null);
+      setSyncErrorShopDomain(null);
     } finally {
       setSyncing(false);
     }
@@ -198,8 +206,26 @@ export default function DisputesPage() {
       {isDemo && <DemoNotice />}
 
       {syncError && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
-          {syncError}
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm space-y-2">
+          <p>
+            {syncErrorCode === "NO_OFFLINE_SESSION"
+              ? "This store isn’t connected for syncing. Reconnect it so we can fetch disputes from Shopify."
+              : syncError}
+          </p>
+          {syncErrorCode === "NO_OFFLINE_SESSION" && (
+            <p>
+              <a
+                href={
+                  syncErrorShopDomain
+                    ? `/api/auth/shopify?shop=${encodeURIComponent(syncErrorShopDomain)}&source=portal&return_to=${encodeURIComponent("/portal/disputes")}`
+                    : "/api/portal/clear-shop"
+                }
+                className="font-medium underline hover:no-underline"
+              >
+                {syncErrorShopDomain ? "Reconnect this store" : "Clear shop & reconnect"}
+              </a>
+            </p>
+          )}
         </div>
       )}
       {syncMessage && (

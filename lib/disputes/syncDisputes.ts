@@ -73,7 +73,10 @@ export async function syncDisputes(
     .select("access_token_encrypted, key_version, shop_domain")
     .eq("shop_id", shopId)
     .eq("session_type", "offline")
-    .single();
+    .is("user_id", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (!session) throw new Error(`No offline session for shop ${shopId}`);
 
   const accessToken = decryptAccessToken(session.access_token_encrypted);
