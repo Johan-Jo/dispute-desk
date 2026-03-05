@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Plus, FileText, Edit, Trash2, Sparkles } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
+import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterBar, type FilterOption } from "@/components/ui/filter-bar";
@@ -71,12 +72,7 @@ export default function PacksLibraryPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const shopId =
-    typeof window !== "undefined"
-      ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ??
-        document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ??
-        "")
-      : "";
+  const shopId = useActiveShopId() ?? "";
   const isDemo = !shopId;
 
   const [packs, setPacks] = useState<PackRow[]>(isDemo ? DEMO_PACKS : []);

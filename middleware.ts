@@ -54,7 +54,9 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/files/samples") ||
       pathname.startsWith("/api/disputes") ||
       pathname.startsWith("/api/packs") ||
-      pathname.startsWith("/api/policies");
+      pathname.startsWith("/api/policies") ||
+      pathname.startsWith("/api/billing") ||
+      pathname.startsWith("/api/rules");
 
     if ((!shopDomain || !shopId) && isPortalApi) {
       const activeShopId =

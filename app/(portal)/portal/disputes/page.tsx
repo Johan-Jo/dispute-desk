@@ -168,9 +168,9 @@ export default function DisputesPage() {
         (d) =>
           (d.reason && tr.has(d.reason) ? tr(d.reason) : d.reason ?? "").toLowerCase().includes(search.toLowerCase()) ||
           d.dispute_gid.toLowerCase().includes(search.toLowerCase()) ||
-          ("customer" in d && (d as typeof DEMO_DISPUTES[number]).customer?.toLowerCase().includes(search.toLowerCase())) ||
-          (d as Dispute).customer_display_name?.toLowerCase().includes(search.toLowerCase()) ||
-          (d as Dispute).order_name?.toLowerCase().includes(search.toLowerCase())
+          ("customer" in d && (d as { customer?: string }).customer?.toLowerCase().includes(search.toLowerCase())) ||
+          d.customer_display_name?.toLowerCase().includes(search.toLowerCase()) ||
+          d.order_name?.toLowerCase().includes(search.toLowerCase())
       )
     : rows;
 

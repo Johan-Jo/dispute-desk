@@ -6,6 +6,7 @@ import { CheckCircle, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
+import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { PLANS, type PlanId } from "@/lib/billing/plans";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
@@ -189,9 +190,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
-  const shopId = typeof window !== "undefined"
-    ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
-    : "";
+  const shopId = useActiveShopId() ?? "";
 
   const fetchUsage = useCallback(async () => {
     if (isDemo || !shopId) { setLoading(false); return; }

@@ -7,6 +7,7 @@ import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
+import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface Rule {
@@ -87,9 +88,7 @@ export default function RulesSettingsPage() {
   const [formMinAmount, setFormMinAmount] = useState("");
   const [formMaxAmount, setFormMaxAmount] = useState("");
 
-  const shopId = typeof window !== "undefined"
-    ? (document.cookie.match(/dd_active_shop=([^;]+)/)?.[1] ?? document.cookie.match(/active_shop_id=([^;]+)/)?.[1] ?? "")
-    : "";
+  const shopId = useActiveShopId() ?? "";
 
   const [planBlocked, setPlanBlocked] = useState(false);
 
