@@ -487,6 +487,7 @@
     "aboutPolicyDocs": "About Policy Documents",
     "aboutPolicyDocsDesc": "Store policies are automatically included in evidence packs when relevant to a dispute. Keep your policies up-to-date to strengthen your dispute responses. Supported formats: PDF, DOCX.",
     "preview": "Preview",
+    "previewNotAvailable": "Preview not available for this policy.",
     "download": "Download",
     "updated": "Updated",
     "termsOfService": "Terms of Service",

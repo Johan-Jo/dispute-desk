@@ -22,7 +22,7 @@ export const DISPUTE_LIST_QUERY = `
           evidenceDueBy
           evidenceSentOn
           finalizedOn
-          order { id legacyResourceId name }
+          order { id legacyResourceId name customer { displayName } }
           disputeEvidence { id }
         }
         cursor
@@ -83,7 +83,12 @@ export interface DisputeListNode {
   evidenceDueBy: string | null;
   evidenceSentOn: string | null;
   finalizedOn: string | null;
-  order: { id: string; legacyResourceId: string; name: string } | null;
+  order: {
+    id: string;
+    legacyResourceId: string;
+    name: string;
+    customer?: { displayName: string } | null;
+  } | null;
   disputeEvidence: { id: string } | null;
 }
 

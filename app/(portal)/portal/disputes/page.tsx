@@ -14,6 +14,8 @@ interface Dispute {
   id: string;
   dispute_gid: string;
   order_gid: string | null;
+  order_name: string | null;
+  customer_display_name: string | null;
   status: string | null;
   reason: string | null;
   amount: number | null;
@@ -46,6 +48,13 @@ const STATUS_VARIANTS: Record<string, "success" | "warning" | "danger" | "info" 
 
 function isSyntheticDispute(disputeGid: string): boolean {
   return disputeGid?.includes("/seed-") ?? false;
+}
+
+/** Extract numeric ID from dispute GID (e.g. gid://shopify/ShopifyPaymentsDispute/123 -> 123). */
+function disputeGidToShortId(disputeGid: string): string {
+  if (!disputeGid) return "—";
+  const last = disputeGid.split("/").pop();
+  return last ?? disputeGid;
 }
 
 const STATUS_KEYS: Record<string, string> = {
@@ -159,7 +168,9 @@ export default function DisputesPage() {
         (d) =>
           (d.reason && tr.has(d.reason) ? tr(d.reason) : d.reason ?? "").toLowerCase().includes(search.toLowerCase()) ||
           d.dispute_gid.toLowerCase().includes(search.toLowerCase()) ||
-          ("customer" in d && (d as typeof DEMO_DISPUTES[number]).customer?.toLowerCase().includes(search.toLowerCase()))
+          ("customer" in d && (d as typeof DEMO_DISPUTES[number]).customer?.toLowerCase().includes(search.toLowerCase())) ||
+          (d as Dispute).customer_display_name?.toLowerCase().includes(search.toLowerCase()) ||
+          (d as Dispute).order_name?.toLowerCase().includes(search.toLowerCase())
       )
     : rows;
 
@@ -306,10 +317,11 @@ export default function DisputesPage() {
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-2">
                         <a
-                          href={isDemo ? `/portal/disputes/${d.id}` : `/portal/disputes/${d.id}`}
+                          href={`/portal/disputes/${d.id}`}
                           className="font-medium text-[#4F46E5] hover:underline"
+                          title={d.dispute_gid}
                         >
-                          {d.dispute_gid}
+                          {isDemo ? d.dispute_gid : disputeGidToShortId(d.dispute_gid)}
                         </a>
                         {!isDemo && isSyntheticDispute(d.dispute_gid) && (
                           <Badge variant="info">Synthetic</Badge>
@@ -323,7 +335,9 @@ export default function DisputesPage() {
                           <div className="text-xs text-[#667085]">{(d as typeof DEMO_DISPUTES[number]).email}</div>
                         </div>
                       ) : (
-                        <span className="text-[#667085]">—</span>
+                        <span className="text-[#0B1220]">
+                          {(d as Dispute).customer_display_name ?? (d as Dispute).order_name ?? "—"}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium text-[#0B1220]">

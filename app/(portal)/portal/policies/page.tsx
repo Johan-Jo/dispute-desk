@@ -1,17 +1,20 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Info } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
+import { useActiveShopId } from "@/lib/portal/activeShopContext";
+import { useDemoMode } from "@/lib/demo-mode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
-const POLICIES = [
-  { nameKey: "termsOfService", typeKey: "legalAgreement", format: "PDF", size: "245 KB", lastUpdated: "2026-01-15" },
-  { nameKey: "refundPolicy", typeKey: "customerPolicy", format: "PDF", size: "128 KB", lastUpdated: "2026-02-01" },
-  { nameKey: "privacyPolicy", typeKey: "legalAgreement", format: "PDF", size: "312 KB", lastUpdated: "2026-01-20" },
-  { nameKey: "shippingPolicy", typeKey: "customerPolicy", format: "PDF", size: "98 KB", lastUpdated: "2026-02-10" },
+const STATIC_POLICIES = [
+  { nameKey: "termsOfService", typeKey: "legalAgreement", format: "PDF", size: "245 KB", lastUpdated: "2026-01-15", policyType: "terms" as const, url: null as string | null },
+  { nameKey: "refundPolicy", typeKey: "customerPolicy", format: "PDF", size: "128 KB", lastUpdated: "2026-02-01", policyType: "refunds" as const, url: null as string | null },
+  { nameKey: "privacyPolicy", typeKey: "legalAgreement", format: "PDF", size: "312 KB", lastUpdated: "2026-01-20", policyType: null as string | null, url: null as string | null },
+  { nameKey: "shippingPolicy", typeKey: "customerPolicy", format: "PDF", size: "98 KB", lastUpdated: "2026-02-10", policyType: "shipping" as const, url: null as string | null },
 ];
 
 export default function PoliciesPage() {
@@ -19,8 +22,55 @@ export default function PoliciesPage() {
   const t = useTranslations("policies");
   const tc = useTranslations("common");
   const locale = useLocale();
+  const isDemo = useDemoMode();
+  const shopId = useActiveShopId() ?? "";
 
-  const demoClick = () => {};
+  const [policyByType, setPolicyByType] = useState<Record<string, { url: string | null; captured_at: string }>>({});
+
+  const fetchPolicies = useCallback(async () => {
+    if (isDemo || !shopId) return;
+    try {
+      const res = await fetch(`/api/policies?shop_id=${encodeURIComponent(shopId)}`);
+      const data = await res.json();
+      const list = data.policies ?? [];
+      const byType: Record<string, { url: string | null; captured_at: string }> = {};
+      for (const p of list) {
+        byType[p.policy_type] = { url: p.url ?? null, captured_at: p.captured_at ?? "" };
+      }
+      setPolicyByType(byType);
+    } catch {
+      setPolicyByType({});
+    }
+  }, [shopId, isDemo]);
+
+  useEffect(() => {
+    fetchPolicies();
+  }, [fetchPolicies]);
+
+  const policies = STATIC_POLICIES.map((staticRow) => {
+    const api = staticRow.policyType ? policyByType[staticRow.policyType] : null;
+    return {
+      ...staticRow,
+      url: api?.url ?? null,
+      lastUpdated: api?.captured_at ? new Date(api.captured_at).toISOString().slice(0, 10) : staticRow.lastUpdated,
+    };
+  });
+
+  const handlePreview = (url: string | null) => {
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      alert(t("previewNotAvailable"));
+    }
+  };
+
+  const handleDownload = (url: string | null) => {
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      alert(t("previewNotAvailable"));
+    }
+  };
 
   return (
     <div>
@@ -51,7 +101,7 @@ export default function PoliciesPage() {
       </div>
 
       <div className="space-y-3" data-onboarding="policy-documents">
-        {POLICIES.map((policy) => (
+        {policies.map((policy) => (
           <div
             key={policy.nameKey}
             className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-5 hover:border-[#CBD5E1] transition-colors"
@@ -69,16 +119,28 @@ export default function PoliciesPage() {
                     </Badge>
                     <span className="text-xs text-[#667085]">{policy.format}</span>
                     <span className="text-xs text-[#667085]">{policy.size}</span>
-                    <span className="text-xs text-[#667085]">{t("updated")} {new Date(policy.lastUpdated).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}</span>
+                    {policy.lastUpdated && (
+                      <span className="text-xs text-[#667085]">{t("updated")} {new Date(policy.lastUpdated).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}</span>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Button variant="secondary" size="sm" title={tc("demoOnly")} onClick={demoClick}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  title={policy.url ? undefined : tc("demoOnly")}
+                  onClick={() => handlePreview(isDemo ? null : policy.url)}
+                >
                   <Eye className="w-4 h-4 mr-1" />
                   {t("preview")}
                 </Button>
-                <Button variant="ghost" size="sm" title={tc("demoOnly")} onClick={demoClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title={policy.url ? undefined : tc("demoOnly")}
+                  onClick={() => handleDownload(isDemo ? null : policy.url)}
+                >
                   <Download className="w-4 h-4 mr-1" />
                   {t("download")}
                 </Button>
