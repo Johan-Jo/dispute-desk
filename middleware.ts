@@ -47,13 +47,14 @@ export async function middleware(req: NextRequest) {
     let shopDomain = req.cookies.get("shopify_shop")?.value;
     let shopId = req.cookies.get("shopify_shop_id")?.value;
 
-    // Portal fallback: setup/integrations/files APIs can use Supabase Auth + active_shop
-    const isPortalSetupApi =
+    // Portal fallback: setup/integrations/files/disputes APIs can use Supabase Auth + active_shop
+    const isPortalApi =
       pathname.startsWith("/api/setup/") ||
       pathname.startsWith("/api/integrations/") ||
-      pathname.startsWith("/api/files/samples");
+      pathname.startsWith("/api/files/samples") ||
+      pathname.startsWith("/api/disputes");
 
-    if ((!shopDomain || !shopId) && isPortalSetupApi) {
+    if ((!shopDomain || !shopId) && isPortalApi) {
       const activeShopId =
         req.cookies.get("dd_active_shop")?.value ??
         req.cookies.get("active_shop_id")?.value;
