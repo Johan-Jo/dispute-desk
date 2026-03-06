@@ -145,6 +145,11 @@ export default function DisputesPage() {
         return;
       }
       const synced = data?.synced ?? 0;
+      const syncErrors: string[] = data?.errors ?? [];
+      if (syncErrors.length > 0) {
+        setSyncError(`Sync errors: ${syncErrors.join("; ")}`);
+        return;
+      }
       setSyncMessage(
         synced === 0
           ? "Sync complete. No disputes in Shopify for this store."

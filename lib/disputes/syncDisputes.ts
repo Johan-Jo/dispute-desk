@@ -94,6 +94,13 @@ export async function syncDisputes(
       correlationId: opts?.correlationId,
     });
 
+    if (gqlResult.errors?.length) {
+      for (const e of gqlResult.errors) {
+        result.errors.push(`GraphQL: ${e.message}`);
+      }
+      break;
+    }
+
     const edges: { node: DisputeListNode; cursor: string }[] =
       gqlResult.data?.disputes?.edges ?? [];
     const pageInfo =
