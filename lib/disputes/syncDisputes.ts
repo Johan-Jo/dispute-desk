@@ -126,9 +126,10 @@ export async function syncDisputes(
           order_gid: d.order?.id ?? null,
           order_name: d.order?.name ?? null,
           customer_display_name:
-            d.order?.displayAddress?.name?.trim() ||
-            d.order?.shippingAddress?.name?.trim() ||
-            d.order?.customer?.displayName?.trim() ||
+            [d.disputeEvidence?.customerFirstName, d.disputeEvidence?.customerLastName]
+              .filter(Boolean).join(" ").trim() ||
+            d.disputeEvidence?.shippingAddress?.name?.trim() ||
+            d.disputeEvidence?.billingAddress?.name?.trim() ||
             null,
           status: d.status?.toLowerCase() ?? null,
           reason: d.reasonDetails?.reason ?? null,

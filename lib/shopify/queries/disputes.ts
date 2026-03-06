@@ -22,8 +22,15 @@ export const DISPUTE_LIST_QUERY = `
           evidenceDueBy
           evidenceSentOn
           finalizedOn
-          order { id legacyResourceId name customer { displayName } displayAddress { name } shippingAddress { name } }
-          disputeEvidence { id }
+          order { id legacyResourceId name }
+          disputeEvidence {
+            id
+            customerFirstName
+            customerLastName
+            customerEmailAddress
+            shippingAddress { name }
+            billingAddress { name }
+          }
         }
         cursor
       }
@@ -87,11 +94,15 @@ export interface DisputeListNode {
     id: string;
     legacyResourceId: string;
     name: string;
-    customer?: { displayName: string } | null;
-    displayAddress?: { name: string | null } | null;
-    shippingAddress?: { name: string | null } | null;
   } | null;
-  disputeEvidence: { id: string } | null;
+  disputeEvidence: {
+    id: string;
+    customerFirstName: string | null;
+    customerLastName: string | null;
+    customerEmailAddress: string | null;
+    shippingAddress?: { name: string | null } | null;
+    billingAddress?: { name: string | null } | null;
+  } | null;
 }
 
 export interface DisputeListResponse {
@@ -152,27 +163,10 @@ export const DISPUTE_PROFILE_QUERY = `
   query DisputeProfile($id: ID!) {
     dispute(id: $id) {
       id
-      order {
-        id
-        legacyResourceId
-        name
-        email
-        phone
-        createdAt
-        totalPriceSet { shopMoney { amount currencyCode } }
-        customer { displayName }
-        displayAddress {
-          name
-          address1
-          address2
-          city
-          province
-          provinceCode
-          country
-          countryCode
-          zip
-          phone
-        }
+      disputeEvidence {
+        customerFirstName
+        customerLastName
+        customerEmailAddress
         shippingAddress {
           name
           address1
@@ -197,6 +191,13 @@ export const DISPUTE_PROFILE_QUERY = `
           zip
           phone
         }
+      }
+      order {
+        id
+        legacyResourceId
+        name
+        createdAt
+        totalPriceSet { shopMoney { amount currencyCode } }
         fulfillments(first: 5) {
           id
           status
@@ -208,51 +209,33 @@ export const DISPUTE_PROFILE_QUERY = `
   }
 `;
 
+export interface DisputeProfileAddress {
+  name: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  province: string | null;
+  provinceCode: string | null;
+  country: string | null;
+  countryCode: string | null;
+  zip: string | null;
+  phone: string | null;
+}
+
+export interface DisputeProfileEvidence {
+  customerFirstName: string | null;
+  customerLastName: string | null;
+  customerEmailAddress: string | null;
+  shippingAddress: DisputeProfileAddress | null;
+  billingAddress: DisputeProfileAddress | null;
+}
+
 export interface DisputeProfileOrder {
   id: string;
   legacyResourceId: string;
   name: string;
-  email: string | null;
-  phone: string | null;
   createdAt: string;
   totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
-  customer?: { displayName: string } | null;
-  displayAddress?: {
-    name: string | null;
-    address1: string | null;
-    address2: string | null;
-    city: string | null;
-    province: string | null;
-    provinceCode: string | null;
-    country: string | null;
-    countryCode: string | null;
-    zip: string | null;
-    phone: string | null;
-  } | null;
-  shippingAddress?: {
-    name: string | null;
-    address1: string | null;
-    address2: string | null;
-    city: string | null;
-    province: string | null;
-    provinceCode: string | null;
-    country: string | null;
-    countryCode: string | null;
-    zip: string | null;
-    phone: string | null;
-  } | null;
-  billingAddress?: {
-    name: string | null;
-    address1: string | null;
-    address2: string | null;
-    city: string | null;
-    province: string | null;
-    provinceCode: string | null;
-    country: string | null;
-    countryCode: string | null;
-    zip: string | null;
-    phone: string | null;
-  } | null;
   fulfillments: Array<{
     id: string;
     status: string;
@@ -264,6 +247,7 @@ export interface DisputeProfileOrder {
 export interface DisputeProfileResponse {
   dispute: {
     id: string;
+    disputeEvidence: DisputeProfileEvidence | null;
     order: DisputeProfileOrder | null;
   };
 }

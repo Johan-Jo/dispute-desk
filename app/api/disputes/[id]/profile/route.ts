@@ -80,29 +80,29 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     );
   }
 
+  const ev = node.disputeEvidence;
+
   return NextResponse.json({
-    profile: node.order
-      ? {
-          orderName: node.order.name,
-          orderId: node.order.legacyResourceId,
-          createdAt: node.order.createdAt,
-          total: node.order.totalPriceSet?.shopMoney,
-          customerName:
-            node.order.displayAddress?.name?.trim() ||
-            node.order.shippingAddress?.name?.trim() ||
-            node.order.customer?.displayName?.trim() ||
-            null,
-          email: node.order.email?.trim() || null,
-          phone:
-            node.order.phone?.trim() ||
-            node.order.displayAddress?.phone?.trim() ||
-            node.order.shippingAddress?.phone?.trim() ||
-            null,
-          displayAddress: node.order.displayAddress,
-          shippingAddress: node.order.shippingAddress,
-          billingAddress: node.order.billingAddress,
-          fulfillments: node.order.fulfillments ?? [],
-        }
-      : null,
+    profile: {
+      orderName: node.order?.name ?? null,
+      orderId: node.order?.legacyResourceId ?? null,
+      createdAt: node.order?.createdAt ?? null,
+      total: node.order?.totalPriceSet?.shopMoney ?? null,
+      customerName:
+        [ev?.customerFirstName, ev?.customerLastName]
+          .filter(Boolean).join(" ").trim() ||
+        ev?.shippingAddress?.name?.trim() ||
+        ev?.billingAddress?.name?.trim() ||
+        null,
+      email: ev?.customerEmailAddress?.trim() || null,
+      phone:
+        ev?.shippingAddress?.phone?.trim() ||
+        ev?.billingAddress?.phone?.trim() ||
+        null,
+      shippingAddress: ev?.shippingAddress ?? null,
+      billingAddress: ev?.billingAddress ?? null,
+      displayAddress: ev?.shippingAddress ?? null,
+      fulfillments: node.order?.fulfillments ?? [],
+    },
   });
 }
