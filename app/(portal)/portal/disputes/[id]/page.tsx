@@ -76,6 +76,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2401": {
     dispute: {
       id: "DP-2401", dispute_gid: "DP-2401", dispute_evidence_gid: "EV-2401", order_gid: "#1234",
+      order_name: "#1234", customer_display_name: "John Smith",
       status: "needs_response", reason: "fraudulent", amount: 145.00, currency_code: "USD",
       initiated_at: "2026-02-20", due_at: "2026-03-05", last_synced_at: "2026-02-24",
     },
@@ -91,6 +92,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2402": {
     dispute: {
       id: "DP-2402", dispute_gid: "DP-2402", dispute_evidence_gid: null, order_gid: "#1235",
+      order_name: "#1235", customer_display_name: "Sarah Johnson",
       status: "under_review", reason: "productNotReceived", amount: 89.50, currency_code: "USD",
       initiated_at: "2026-02-21", due_at: "2026-03-06", last_synced_at: "2026-02-24",
     },
@@ -104,6 +106,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2403": {
     dispute: {
       id: "DP-2403", dispute_gid: "DP-2403", dispute_evidence_gid: null, order_gid: "#1236",
+      order_name: "#1236", customer_display_name: "Mike Davis",
       status: "needs_response", reason: "productUnacceptable", amount: 234.00, currency_code: "USD",
       initiated_at: "2026-02-22", due_at: "2026-03-07", last_synced_at: "2026-02-24",
     },
@@ -116,6 +119,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2404": {
     dispute: {
       id: "DP-2404", dispute_gid: "DP-2404", dispute_evidence_gid: null, order_gid: "#1237",
+      order_name: "#1237", customer_display_name: "Emma Wilson",
       status: "won", reason: "creditNotProcessed", amount: 167.25, currency_code: "USD",
       initiated_at: "2026-02-23", due_at: "2026-03-08", last_synced_at: "2026-02-24",
     },
@@ -130,6 +134,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2405": {
     dispute: {
       id: "DP-2405", dispute_gid: "DP-2405", dispute_evidence_gid: null, order_gid: "#1238",
+      order_name: "#1238", customer_display_name: "Alex Brown",
       status: "under_review", reason: "fraudulent", amount: 299.99, currency_code: "USD",
       initiated_at: "2026-02-23", due_at: "2026-03-08", last_synced_at: "2026-02-24",
     },
@@ -143,6 +148,7 @@ const DEMO_DISPUTES: Record<string, {
   "DP-2406": {
     dispute: {
       id: "DP-2406", dispute_gid: "DP-2406", dispute_evidence_gid: null, order_gid: "#1239",
+      order_name: "#1239", customer_display_name: "Lisa Anderson",
       status: "lost", reason: "subscriptionCanceled", amount: 75.00, currency_code: "USD",
       initiated_at: "2026-02-24", due_at: "2026-03-09", last_synced_at: "2026-02-24",
     },
