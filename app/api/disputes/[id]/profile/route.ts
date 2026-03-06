@@ -88,9 +88,9 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
           createdAt: node.order.createdAt,
           total: node.order.totalPriceSet?.shopMoney,
           customerName:
-            node.order.customer?.displayName?.trim() ||
             node.order.displayAddress?.name?.trim() ||
             node.order.shippingAddress?.name?.trim() ||
+            node.order.customer?.displayName?.trim() ||
             null,
           email: node.order.email?.trim() || null,
           phone:
