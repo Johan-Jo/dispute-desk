@@ -79,6 +79,8 @@ cp .env.example .env.local
 
 # 3. Run Supabase migrations
 npx supabase db push
+# If the project is not linked to Supabase, use the script instead (requires SUPABASE_URL_POSTGRES in .env.local):
+# node scripts/run-migration.mjs
 
 # 4. Start dev server
 npm run dev
@@ -149,7 +151,8 @@ lib/
   security/          → AES-256-GCM encryption (sessions + integration secrets)
   help/              → Help articles, categories, guide configs, analytics
 scripts/             → Migration runner + smoke test
-supabase/migrations/ → SQL migrations (001–020)
+supabase/migrations/ → SQL migrations (001–023)
+content/policy-templates/ → Markdown policy templates (refund, shipping, terms)
 tests/               → Unit tests + API route handler tests + test helpers
 docs/                → Architecture, technical spec, epics, roadmap
 ```

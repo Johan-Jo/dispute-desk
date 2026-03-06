@@ -111,7 +111,7 @@ function DemoBilling() {
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-[#667085]">
                     <CheckCircle className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
-                    {f}
+                    {t(f)}
                   </li>
                 ))}
               </ul>

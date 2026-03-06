@@ -1,21 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { FileText, Eye, Download, Info } from "lucide-react";
+import { FileText, Eye, Download, Upload, Copy, Check } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { useDemoMode } from "@/lib/demo-mode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DemoNotice } from "@/components/ui/demo-notice";
+import { InfoBanner } from "@/components/ui/info-banner";
+import { Modal } from "@/components/ui/modal";
 
-const STATIC_POLICIES = [
-  { nameKey: "termsOfService", typeKey: "legalAgreement", format: "PDF", size: "245 KB", lastUpdated: "2026-01-15", policyType: "terms" as const, url: null as string | null },
-  { nameKey: "refundPolicy", typeKey: "customerPolicy", format: "PDF", size: "128 KB", lastUpdated: "2026-02-01", policyType: "refunds" as const, url: null as string | null },
-  { nameKey: "privacyPolicy", typeKey: "legalAgreement", format: "PDF", size: "312 KB", lastUpdated: "2026-01-20", policyType: null as string | null, url: null as string | null },
-  { nameKey: "shippingPolicy", typeKey: "customerPolicy", format: "PDF", size: "98 KB", lastUpdated: "2026-02-10", policyType: "shipping" as const, url: null as string | null },
+const POLICY_ROWS = [
+  { nameKey: "termsOfService", typeKey: "legalAgreement", policyType: "terms" as const },
+  { nameKey: "refundPolicy", typeKey: "customerPolicy", policyType: "refunds" as const },
+  { nameKey: "shippingPolicy", typeKey: "customerPolicy", policyType: "shipping" as const },
 ];
+
+const TEMPLATE_DESC_KEYS: Record<string, string> = {
+  refunds: "refundTemplateDesc",
+  shipping: "shippingTemplateDesc",
+  terms: "termsTemplateDesc",
+};
+const TEMPLATE_TITLE_KEYS: Record<string, string> = {
+  refunds: "refundPolicy",
+  shipping: "shippingPolicy",
+  terms: "termsOfService",
+};
 
 export default function PoliciesPage() {
   useCompleteSetupStep("business_policies");
@@ -26,6 +38,15 @@ export default function PoliciesPage() {
   const shopId = useActiveShopId() ?? "";
 
   const [policyByType, setPolicyByType] = useState<Record<string, { url: string | null; captured_at: string }>>({});
+  const [templates, setTemplates] = useState<{ type: string; name: string; description: string }[]>([]);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateModalType, setTemplateModalType] = useState<string | null>(null);
+  const [templateModalBody, setTemplateModalBody] = useState("");
+  const [templateModalLoading, setTemplateModalLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [showMissingBanner, setShowMissingBanner] = useState(true);
+  const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fetchPolicies = useCallback(async () => {
     if (isDemo || !shopId) return;
@@ -47,60 +68,187 @@ export default function PoliciesPage() {
     fetchPolicies();
   }, [fetchPolicies]);
 
-  const policies = STATIC_POLICIES.map((staticRow) => {
-    const api = staticRow.policyType ? policyByType[staticRow.policyType] : null;
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/policy-templates");
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.templates ?? [];
+        setTemplates(
+          list.map((tmpl: { type: string; name: string; description: string }) => ({
+            type: tmpl.type,
+            name: tmpl.name,
+            description: tmpl.description,
+          }))
+        );
+      }
+    } catch {
+      setTemplates([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isDemo && !shopId) return;
+    if (isDemo || !shopId) return;
+    const hasAny = Object.keys(policyByType).length > 0;
+    if (!hasAny) fetchTemplates();
+  }, [isDemo, shopId, policyByType, fetchTemplates]);
+
+  const policies = POLICY_ROWS.map((row) => {
+    const api = policyByType[row.policyType];
     return {
-      ...staticRow,
+      ...row,
       url: api?.url ?? null,
-      lastUpdated: api?.captured_at ? new Date(api.captured_at).toISOString().slice(0, 10) : staticRow.lastUpdated,
+      lastUpdated: api?.captured_at ?? null,
     };
   });
 
-  const handlePreview = (url: string | null) => {
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
-    } else {
-      alert(t("previewNotAvailable"));
+  const hasPolicies = Object.keys(policyByType).length > 0;
+
+  const openTemplateModal = useCallback(async (type: string) => {
+    setTemplateModalType(type);
+    setTemplateModalOpen(true);
+    setTemplateModalBody("");
+    setTemplateModalLoading(true);
+    try {
+      const res = await fetch(`/api/policy-templates/${type}/content`);
+      if (res.ok) {
+        const data = await res.json();
+        setTemplateModalBody(data.body ?? "");
+      }
+    } catch {
+      setTemplateModalBody("");
+    } finally {
+      setTemplateModalLoading(false);
     }
+  }, []);
+
+  const handleCopyTemplate = useCallback(() => {
+    if (!templateModalBody) return;
+    void navigator.clipboard.writeText(templateModalBody);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [templateModalBody]);
+
+  const handleDownloadTemplate = useCallback(() => {
+    if (!templateModalBody || !templateModalType) return;
+    const name = templateModalType === "refunds" ? "refund-policy" : templateModalType === "shipping" ? "shipping-policy" : "terms-of-service";
+    const blob = new Blob([templateModalBody], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [templateModalBody, templateModalType]);
+
+  const handleUpload = useCallback(
+    async (policyType: string, file: File) => {
+      if (!shopId || isDemo) return;
+      setUploadingType(policyType);
+      try {
+        const form = new FormData();
+        form.set("file", file);
+        form.set("shop_id", shopId);
+        form.set("policy_type", policyType);
+        const res = await fetch("/api/policies/upload", { method: "POST", body: form });
+        if (res.ok) {
+          await fetchPolicies();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error ?? t("uploadError"));
+        }
+      } catch {
+        alert(t("uploadError"));
+      } finally {
+        setUploadingType(null);
+      }
+    },
+    [shopId, isDemo, fetchPolicies, t]
+  );
+
+  const handlePreview = (url: string | null) => {
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else alert(t("previewNotAvailable"));
   };
 
   const handleDownload = (url: string | null) => {
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
-    } else {
-      alert(t("previewNotAvailable"));
-    }
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else alert(t("previewNotAvailable"));
   };
-
-  const demoClick = () => {};
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220] mb-2">{t("title")}</h1>
+          <h1 className="text-2xl font-bold text-[#0B1220] mb-2">
+            {hasPolicies ? t("title") : t("defineTitle")}
+          </h1>
           <p className="text-sm text-[#667085]">
-            {t("subtitle")}
+            {hasPolicies ? t("subtitle") : t("defineSubtitle")}
           </p>
         </div>
-        <Button variant="primary" size="sm" title={tc("demoOnly")} onClick={demoClick} data-onboarding="add-policy-button">
-          <FileText className="w-4 h-4 mr-2" />
-          {t("addPolicy")}
-        </Button>
       </div>
 
       <DemoNotice />
 
-      {/* Info card */}
-      <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-4 mb-6 flex items-start gap-3">
-        <Info className="w-5 h-5 text-[#3B82F6] flex-shrink-0 mt-0.5" />
-        <div>
-          <h4 className="text-sm font-semibold text-[#1E40AF] mb-1">{t("aboutPolicyDocs")}</h4>
-          <p className="text-sm text-[#1E40AF]/80">
-            {t("aboutPolicyDocsDesc")}
-          </p>
+      {hasPolicies && showMissingBanner && (
+        <div className="mb-4">
+          <InfoBanner variant="info" onDismiss={() => setShowMissingBanner(false)}>
+            {t("missingPolicy")}
+          </InfoBanner>
         </div>
-      </div>
+      )}
+
+      {!hasPolicies && !isDemo && shopId && (
+        <>
+          <div className="mb-6">
+            <h4 className="text-sm font-medium text-[#0B1220] mb-3">{t("suggestedTemplates")}</h4>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {templates.map((tmpl) => (
+                <div
+                  key={tmpl.type}
+                  className="bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#CBD5E1] transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="w-5 h-5 text-[#3B82F6]" />
+                    <span className="font-medium text-[#0B1220] text-sm">{tmpl.name}</span>
+                  </div>
+                  <p className="text-xs text-[#667085] mb-4 line-clamp-2">
+                    {t(TEMPLATE_DESC_KEYS[tmpl.type] ?? "refundTemplateDesc")}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => openTemplateModal(tmpl.type)}>
+                      {t("useTemplate")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current[tmpl.type]?.click()}
+                      disabled={!!uploadingType}
+                    >
+                      {uploadingType === tmpl.type ? t("uploading") : t("uploadYourOwn")}
+                    </Button>
+                    <input
+                      ref={(el) => {
+                        fileInputRef.current[tmpl.type] = el;
+                      }}
+                      type="file"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUpload(tmpl.type, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="space-y-3" data-onboarding="policy-documents">
         {policies.map((policy) => (
@@ -115,42 +263,118 @@ export default function PoliciesPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-[#0B1220]">{t(policy.nameKey)}</h3>
-                  <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <Badge variant={policy.typeKey === "legalAgreement" ? "info" : "default"}>
                       {t(policy.typeKey)}
                     </Badge>
-                    <span className="text-xs text-[#667085]">{policy.format}</span>
-                    <span className="text-xs text-[#667085]">{policy.size}</span>
+                    {policy.url ? (
+                      <span className="text-xs text-[#667085]">{t("defined")}</span>
+                    ) : (
+                      <span className="text-xs text-[#667085]">{t("notDefined")}</span>
+                    )}
                     {policy.lastUpdated && (
-                      <span className="text-xs text-[#667085]">{t("updated")} {new Date(policy.lastUpdated).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <span className="text-xs text-[#667085]">
+                        {t("updated")}{" "}
+                        {new Date(policy.lastUpdated).toLocaleDateString(locale, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
                     )}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  title={policy.url ? undefined : tc("demoOnly")}
-                  onClick={() => handlePreview(isDemo ? null : policy.url)}
-                >
-                  <Eye className="w-4 h-4 mr-1" />
-                  {t("preview")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  title={policy.url ? undefined : tc("demoOnly")}
-                  onClick={() => handleDownload(isDemo ? null : policy.url)}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  {t("download")}
-                </Button>
+                {policy.url ? (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={() => handlePreview(isDemo ? null : policy.url)}>
+                      <Eye className="w-4 h-4 mr-1" />
+                      {t("preview")}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDownload(isDemo ? null : policy.url)}>
+                      <Download className="w-4 h-4 mr-1" />
+                      {t("download")}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => openTemplateModal(policy.policyType)}
+                      disabled={!!uploadingType}
+                    >
+                      {t("useTemplate")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current[policy.policyType]?.click()}
+                      disabled={!!uploadingType}
+                    >
+                      {uploadingType === policy.policyType ? (
+                        t("uploading")
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-1" />
+                          {t("addPolicy")}
+                        </>
+                      )}
+                    </Button>
+                    <input
+                      ref={(el) => {
+                        fileInputRef.current[policy.policyType] = el;
+                      }}
+                      type="file"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUpload(policy.policyType, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      <Modal
+        isOpen={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        title={templateModalType ? t(TEMPLATE_TITLE_KEYS[templateModalType] ?? "useTemplate") : t("useTemplate")}
+        description={t("templateDisclaimer")}
+        size="lg"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={handleCopyTemplate} disabled={!templateModalBody}>
+              {copied ? <Check className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
+              {copied ? t("copied") : t("copyToClipboard")}
+            </Button>
+            <Button variant="secondary" onClick={handleDownloadTemplate} disabled={!templateModalBody}>
+              <Download className="w-4 h-4 mr-1" />
+              {t("downloadTemplate")}
+            </Button>
+            <Button variant="primary" onClick={() => setTemplateModalOpen(false)}>
+              {tc("cancel")}
+            </Button>
+          </div>
+        }
+      >
+        {templateModalLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin w-8 h-8 border-2 border-[#1D4ED8] border-t-transparent rounded-full" />
+          </div>
+        ) : (
+          <pre className="text-xs text-[#0B1220] whitespace-pre-wrap font-sans max-h-[60vh] overflow-y-auto p-4 bg-[#F7F8FA] rounded-lg">
+            {templateModalBody || ""}
+          </pre>
+        )}
+      </Modal>
     </div>
   );
 }

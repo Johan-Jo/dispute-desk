@@ -111,6 +111,7 @@ export function TemplateLibraryModal({
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [isInstallingBulk, setIsInstallingBulk] = useState(false);
   const [showInstalledBanner, setShowInstalledBanner] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
@@ -144,6 +145,7 @@ export function TemplateLibraryModal({
       setPreviewTemplateId(null);
       setSearchQuery("");
       setShowInstalledBanner(false);
+      setInstallError(null);
     }
   }, [isOpen, fetchTemplates]);
 
@@ -168,6 +170,7 @@ export function TemplateLibraryModal({
 
   const handleInstall = async (templateId: string) => {
     setInstalling(templateId);
+    setInstallError(null);
 
     if (!shopId) {
       setTimeout(() => {
@@ -189,7 +192,18 @@ export function TemplateLibraryModal({
         setInstalledIds((prev) => [...prev, templateId]);
         setInstalledPackIds((prev) => ({ ...prev, [templateId]: pack.id }));
         onInstalled(pack.id);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        const message =
+          typeof data?.error === "string"
+            ? data.error
+            : res.status === 500
+              ? "Template could not be installed. It may not exist in this environment."
+              : `Install failed (${res.status}).`;
+        setInstallError(message);
       }
+    } catch (err) {
+      setInstallError(err instanceof Error ? err.message : "Network error. Try again.");
     } finally {
       setInstalling(null);
     }
@@ -304,6 +318,21 @@ export function TemplateLibraryModal({
             >
               {t("goToPacks")}
             </Button>
+          </div>
+        )}
+
+        {/* Install error */}
+        {installError && (
+          <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-4 flex items-start justify-between gap-3">
+            <p className="text-sm text-[#B91C1C]">{installError}</p>
+            <button
+              type="button"
+              onClick={() => setInstallError(null)}
+              className="text-[#B91C1C] hover:underline shrink-0"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
           </div>
         )}
 

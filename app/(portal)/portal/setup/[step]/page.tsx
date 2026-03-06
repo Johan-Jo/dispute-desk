@@ -16,32 +16,32 @@ const STEP_CTA: Record<
   permissions: {
     href: "/portal/connect-shopify",
     label: "Connect your Shopify store",
-    ask: "Connect your Shopify store—you’ll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you’re done, come back here and click Save & Continue.",
+    ask: "Connect your Shopify store—you'll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you're done, come back here and click Save & Continue.",
   },
   sync_disputes: {
     href: "/portal/disputes",
     label: "Open Disputes",
-    ask: "Import your disputes from Shopify so you can see and manage them in one place. After you’ve synced, come back and click Save & Continue.",
+    ask: "Import your disputes from Shopify so you can see and manage them in one place. After you've synced, come back and click Save & Continue.",
   },
   business_policies: {
     href: "/portal/policies",
     label: "Open Policies",
-    ask: "Add your refund and policy page URLs so we can include them in evidence automatically. When you’re done, come back and click Save & Continue.",
+    ask: "Define your store policies using our suggested templates or by uploading your own documents. Policies strengthen your dispute evidence. When you're done, come back and click Save & Continue.",
   },
   evidence_sources: {
     href: "/portal/packs",
     label: "Open Packs & Evidence",
-    ask: "Connect tools (e.g. tracking, helpdesk) so we can gather evidence for you. When you’ve added what you need, come back and click Save & Continue.",
+    ask: "Set up your evidence packs using our recommended templates. Each pack is tailored to a dispute type and collects the right documents automatically. When you've installed what you need, come back and click Save & Continue.",
   },
   automation_rules: {
     href: "/portal/rules",
     label: "Open Automation Rules",
-    ask: "Set up rules so DisputeDesk can handle disputes and deadlines for you. When you’re done, come back and click Save & Continue.",
+    ask: "Configure rules to automate your dispute workflow. Install our suggested starter rules or create custom ones. When you're done, come back and click Save & Continue.",
   },
   team_notifications: {
     href: "/portal/team",
     label: "Open Team",
-    ask: "Invite teammates and choose how you get notified about disputes. When you’re done, come back and click Save & Continue.",
+    ask: "Invite teammates and choose how you get notified about disputes. When you're done, come back and click Save & Continue.",
   },
 };
 

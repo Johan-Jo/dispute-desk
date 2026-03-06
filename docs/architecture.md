@@ -86,7 +86,8 @@ See [`docs/technical.md`](technical.md) for the full component catalog.
             │Shopify│    │Supabase│   │Supabase Storage  │   │External│
             │GraphQL│    │Postgres│   │(evidence-packs,  │   │APIs    │
             │Admin  │    │+ Auth  │   │ evidence-uploads,│   │(Gorgias│
-            │API    │    │(RLS)   │   │ evidence-samples)│   │ etc.)  │
+            │API    │    │(RLS)   │               │ evidence-samples,│   │ etc.)  │
+            │ policy-uploads) │   │        │
             └──────┘    └────────┘   └──────────────────┘   └────────┘
 ```
 

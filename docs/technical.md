@@ -169,6 +169,8 @@ worker endpoint (`/api/jobs/worker`).
 
 ## Database Migrations
 
+Migrations live in `supabase/migrations/`. Apply with `npx supabase db push` when the project is linked, or `node scripts/run-migration.mjs` using `SUPABASE_URL_POSTGRES` from `.env.local`.
+
 | File | Contents |
 |------|----------|
 | 001_core_shops_sessions.sql | shops + shop_sessions (online/offline, key_version) |
@@ -181,10 +183,19 @@ worker endpoint (`/api/jobs/worker`).
 | 008_claim_jobs_rpc.sql | claim_jobs() RPC with SKIP LOCKED |
 | 009_portal.sql | portal_user_profiles + portal_user_shops + RLS |
 | 010_automation.sql | shop_settings + evidence_packs automation fields |
-| 014_shops_locale.sql | shops.locale column for merchant locale preference |
+| 011_rules_name.sql | rules.name column |
+| 012_shops_retention.sql | shops.retention_days, uninstalled_at |
+| 013_shops_admin_overrides.sql | pack_limit_override, auto_pack_enabled, admin_notes |
+| 014_shops_locale.sql | shops.locale (BCP-47) for merchant locale preference |
+| 015_pack_credits.sql | plan_entitlements, pack usage, RLS |
 | 016_pack_templates.sql | pack_templates + pack_template_documents (reusable evidence templates) |
-| 017_bcp47_locales.sql | Migrate locale to BCP-47 tags, add user_locale, create pack_template_i18n |
-| 020_setup_wizard.sql | shop_setup, integrations, integration_secrets, evidence_files, app_events + evidence-samples storage bucket |
+| 017_bcp47_locales.sql | user_locale, pack_template_i18n |
+| 018_template_library_narratives.sql | template library narrative fields |
+| 019_seed_global_templates.sql | seed global pack templates |
+| 020_setup_wizard.sql | shop_setup, integrations, integration_secrets, evidence_files, app_events + evidence-samples bucket |
+| 021_fix_offline_session_duplicates.sql | fix duplicate offline session handling |
+| 022_disputes_order_customer_display.sql | disputes order/customer display fields |
+| 023_policy_uploads_bucket.sql | storage bucket `policy-uploads` for policy document uploads (portal) |
 
 ## Automation Pipeline
 
@@ -255,6 +266,13 @@ queued → building → ready → saved_to_shopify
 - Max 10 MB, types: PNG, JPEG, GIF, WebP, PDF, TXT, CSV
 - Creates `evidence_items` row with `source: manual_upload`
 
+### Policy Templates & Store Policy Upload (Portal)
+
+Store policies (Terms, Refund, Shipping) are included in evidence packs. Merchants can define them via:
+
+- **Templates:** Markdown files in `content/policy-templates/` (refund, shipping, terms-of-service). `GET /api/policy-templates` lists types; `GET /api/policy-templates/[type]/content` returns body. UI offers "Use Template" (copy/download) and "Upload Your Own."
+- **Upload:** `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepts PDF/DOCX, max 10 MB. Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`; used by the pack builder policy source.
+
 ## PDF Rendering & Storage
 
 ### Template (`lib/packs/pdf/`)
@@ -306,7 +324,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 2. **Portal fallback:** For certain API prefixes, if Shopify cookies are absent, middleware accepts **Supabase Auth** plus the active-shop cookie (`dd_active_shop` or `active_shop_id`). It verifies the user has that shop in `portal_user_shops`, then sets `x-shop-id` / `x-shop-domain` (domain as `"portal"`) and allows the request. This allows the portal disputes page (and setup, integrations, sample files) to work without embedded-app cookies.
 
-**Portal API prefixes** (Supabase + active_shop allowed): `/api/setup/`, `/api/integrations/`, `/api/files/samples`, `/api/disputes` (includes `GET /api/disputes`, `POST /api/disputes/sync`, and `/api/disputes/:id` routes). All other shop-scoped APIs require Shopify session cookies.
+**Portal API prefixes** (Supabase + active_shop allowed): `/api/setup/`, `/api/integrations/`, `/api/files/samples`, `/api/disputes`, `/api/policies` (list, upload). All other shop-scoped APIs require Shopify session cookies.
 
 **Portal client and active shop:** The active-shop cookie is httpOnly, so client components cannot read it. The server layout reads the cookie and passes `activeShopId` into `PortalShell`, which provides it via `ActiveShopProvider` / `useActiveShopId()` (`lib/portal/activeShopContext.tsx`). Portal pages such as the disputes list use `useActiveShopId()` to get the current shop and pass it as `shop_id` in API calls (e.g. `GET /api/disputes?shop_id=...`, `POST /api/disputes/sync` with body `{ shop_id }`). Sync Now shows an in-progress state (Loader icon, "Syncing...", `aria-busy`) and surfaces sync errors or a success message (e.g. "No disputes in Shopify" or "Synced N dispute(s)").
 
@@ -355,6 +373,15 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `GET /api/pack-templates/:id/documents` — list documents
 - `POST /api/pack-templates/:id/documents` — add document
 - `DELETE /api/pack-templates/:id/documents/:docId` — remove document
+
+### Portal Template Library (Packs) & Policy APIs
+- `GET /api/templates?locale=&category=` — list pack templates (portal Packs page; filter `is_recommended` for suggested)
+- `GET /api/templates/:id/preview?locale=` — template preview
+- `POST /api/templates/:id/install` — install template for shop (creates pack from template)
+- `GET /api/policy-templates` — list policy template types (refund, shipping, terms-of-service)
+- `GET /api/policy-templates/[type]/content` — Markdown body for a policy template
+- `GET /api/policies?shop_id=` — list policy snapshots for shop
+- `POST /api/policies/upload` — upload policy file (FormData: file, shop_id, policy_type); stores in `policy-uploads` bucket, inserts `policy_snapshots`
 
 ### Setup Wizard (Shopify session required)
 - `GET /api/setup/state` — current wizard state for the shop
@@ -463,7 +490,10 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 | `/api/rules/:id` | PATCH | Update rule |
 | `/api/rules/:id` | DELETE | Delete rule |
 | `/api/rules/reorder` | POST | Reorder by priority |
+| `/api/rules/install-preset` | POST | Bulk install rule presets (body: `shop_id`, optional `preset_ids[]`). Idempotent by preset name. Plan-gated. |
 | `/api/disputes/:id/approve` | POST | Approve from review queue |
+
+Rule presets are defined in `lib/rules/presets.ts` (e.g. fraud auto-pack, PNR auto-pack, high-value review, catch-all review). Portal Rules page offers "Install Suggested Rules" and empty-state preset cards.
 
 ## Save Evidence to Shopify
 

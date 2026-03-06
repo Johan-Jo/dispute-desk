@@ -11,7 +11,7 @@ Knowledge-base-style help center available on both the external portal (`/portal
 ### Data Layer
 
 - **`lib/help/categories.ts`** — 6 help categories (Getting Started, Disputes, Evidence Packs, Automation & Rules, Billing & Plans, Saving to Shopify) with icon references and i18n keys.
-- **`lib/help/articles.ts`** — 25 articles with slug, category, title/body i18n keys, related article cross-links, and search tags.
+- **`lib/help/articles.ts`** — 28 articles with slug, category, title/body i18n keys, related article cross-links, and search tags. Includes Evidence pack templates, Defining store policies, Rule presets.
 
 ### Portal Surface
 

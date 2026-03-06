@@ -29,12 +29,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     rules: false,
     maxRules: 0,
     trialDays: 0,
-    features: [
-      "Unlimited draft building & preview",
-      "Evidence pack builder (drafts)",
-      "Basic activity log",
-      `Up to ${FREE_LIFETIME_PACKS} exported packs total (lifetime)`,
-    ],
+    features: ["freeFeature1", "freeFeature2", "freeFeature3", "freeFeature4"],
     limits: [
       "No rules automation",
       "No bulk actions",
@@ -50,13 +45,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     rules: true,
     maxRules: 5,
     trialDays: TRIAL_DAYS,
-    features: [
-      "15 packs/month included",
-      "Basic rules (up to 5)",
-      "Review queue + completeness gate",
-      "Auto-build evidence packs",
-      "Email support",
-    ],
+    features: ["realStarterFeature1", "realStarterFeature2", "realStarterFeature3", "realStarterFeature4", "realStarterFeature5"],
   },
   growth: {
     id: "growth",
@@ -67,13 +56,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     rules: true,
     maxRules: null,
     trialDays: TRIAL_DAYS,
-    features: [
-      "75 packs/month included",
-      "Advanced rules & playbooks",
-      "Bulk actions + templates",
-      "Multi-user access",
-      "Auto-save to Shopify",
-    ],
+    features: ["growthFeature1", "growthFeature2", "growthFeature3", "growthFeature4", "growthFeature5"],
   },
   scale: {
     id: "scale",
@@ -84,13 +67,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     rules: true,
     maxRules: null,
     trialDays: TRIAL_DAYS,
-    features: [
-      "300 packs/month included",
-      "Multi-store support",
-      "Advanced exports + audit trail",
-      "SLA options",
-      "Priority support",
-    ],
+    features: ["scaleFeature1", "scaleFeature2", "scaleFeature3", "scaleFeature4", "scaleFeature5"],
   },
 };
 

@@ -9,6 +9,7 @@ import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterBar, type FilterOption } from "@/components/ui/filter-bar";
+import { InfoBanner } from "@/components/ui/info-banner";
 import { Modal } from "@/components/ui/modal";
 import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
 
@@ -85,6 +86,9 @@ export default function PacksLibraryPage() {
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState<string>(DISPUTE_TYPES[0]);
   const [creating, setCreating] = useState(false);
+  const [templates, setTemplates] = useState<{ id: string; name: string; short_description: string; dispute_type: string; is_recommended: boolean }[]>([]);
+  const [installingTemplateId, setInstallingTemplateId] = useState<string | null>(null);
+  const [showExploreBanner, setShowExploreBanner] = useState(true);
 
   const fetchPacks = useCallback(async () => {
     if (isDemo) return;
@@ -106,6 +110,45 @@ export default function PacksLibraryPage() {
   useEffect(() => {
     fetchPacks();
   }, [fetchPacks]);
+
+  const fetchTemplates = useCallback(async () => {
+    if (isDemo) return;
+    try {
+      const res = await fetch(`/api/templates?locale=${locale}`);
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.templates ?? [];
+        setTemplates(list.filter((t: { is_recommended: boolean }) => t.is_recommended).slice(0, 4));
+      }
+    } catch {
+      setTemplates([]);
+    }
+  }, [isDemo, locale]);
+
+  useEffect(() => {
+    if (!loading && packs.length === 0 && !isDemo) fetchTemplates();
+  }, [loading, packs.length, isDemo, fetchTemplates]);
+
+  const handleInstallTemplate = useCallback(
+    async (templateId: string) => {
+      if (!shopId) return;
+      setInstallingTemplateId(templateId);
+      try {
+        const res = await fetch(`/api/templates/${templateId}/install`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shopId }),
+        });
+        if (res.ok) {
+          const pack = await res.json();
+          router.push(`/portal/packs/${pack.id}`);
+        }
+      } finally {
+        setInstallingTemplateId(null);
+      }
+    },
+    [shopId, router]
+  );
 
   const filters: FilterOption[] = [
     { label: t("filterAll"), value: "all", active: activeFilter === "all" },
@@ -202,6 +245,22 @@ export default function PacksLibraryPage() {
           </div>
         </div>
       </div>
+
+      {/* Populated state: compact banner */}
+      {!loading && packs.length > 0 && showExploreBanner && (
+        <div className="mx-4 sm:mx-6 mb-4">
+          <InfoBanner variant="info" onDismiss={() => setShowExploreBanner(false)}>
+            {t("exploreMoreTemplates")}{" "}
+            <button
+              type="button"
+              onClick={() => setIsTemplateLibraryOpen(true)}
+              className="font-semibold underline hover:no-underline"
+            >
+              {t("browseTemplates")}
+            </button>
+          </InfoBanner>
+        </div>
+      )}
 
       {/* Card with filter + table */}
       <div
@@ -322,24 +381,76 @@ export default function PacksLibraryPage() {
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#F7F8FA] flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-[#667085]" />
-              </div>
+            <div className="p-6 sm:p-8 max-w-3xl mx-auto">
               <h3 className="text-lg font-semibold text-[#0B1220] mb-2">
-                {t("emptyTitle")}
+                {t("setupTitle")}
               </h3>
-              <p className="text-sm text-[#667085] mb-4 max-w-md">
-                {t("emptyDescription")}
+              <p className="text-sm text-[#667085] mb-6">
+                {t("setupDescription")}
               </p>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setIsTemplateLibraryOpen(true)}
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {t("startFromTemplate")}
-              </Button>
+              {templates.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-[#0B1220] mb-3">
+                    {t("recommendedTemplates")}
+                  </h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {templates.map((tmpl) => (
+                      <div
+                        key={tmpl.id}
+                        className="bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#CBD5E1] transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <p className="font-medium text-[#0B1220] text-sm line-clamp-2">
+                            {tmpl.name}
+                          </p>
+                          <Badge variant="default" className="flex-shrink-0 text-xs">
+                            {TYPE_LABELS[tmpl.dispute_type]
+                              ? t(TYPE_LABELS[tmpl.dispute_type])
+                              : tmpl.dispute_type}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-[#667085] line-clamp-2 mb-3">
+                          {tmpl.short_description}
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-full"
+                          disabled={installingTemplateId !== null}
+                          onClick={() => handleInstallTemplate(tmpl.id)}
+                        >
+                          {installingTemplateId === tmpl.id ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                              {t("installTemplate")}
+                            </span>
+                          ) : (
+                            t("installTemplate")
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setIsTemplateLibraryOpen(true)}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {t("browseAllTemplates")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateOpen(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t("createFromScratch")}
+                </Button>
+              </div>
             </div>
           )}
         </div>

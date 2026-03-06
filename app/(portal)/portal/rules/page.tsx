@@ -6,8 +6,10 @@ import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoBanner } from "@/components/ui/info-banner";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
+import { RULE_PRESETS } from "@/lib/rules/presets";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface Rule {
@@ -91,6 +93,9 @@ export default function RulesSettingsPage() {
   const shopId = useActiveShopId() ?? "";
 
   const [planBlocked, setPlanBlocked] = useState(false);
+  const [showPresetsBanner, setShowPresetsBanner] = useState(true);
+  const [showPresetsSection, setShowPresetsSection] = useState(false);
+  const [installingPresets, setInstallingPresets] = useState(false);
 
   const fetchRules = useCallback(async () => {
     if (isDemo || !shopId) { setLoading(false); return; }
@@ -124,6 +129,21 @@ export default function RulesSettingsPage() {
     setShowForm(false);
     setFormName(""); setFormReasons([]); setFormMode("auto_pack"); setFormMinAmount(""); setFormMaxAmount("");
     await fetchRules();
+  };
+
+  const handleInstallPresets = async () => {
+    if (!shopId || planBlocked) return;
+    setInstallingPresets(true);
+    try {
+      const res = await fetch("/api/rules/install-preset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: shopId }),
+      });
+      if (res.ok) await fetchRules();
+    } finally {
+      setInstallingPresets(false);
+    }
   };
 
   if (isDemo) {
@@ -313,6 +333,21 @@ export default function RulesSettingsPage() {
         </div>
       )}
 
+      {!loading && rules.length > 0 && !planBlocked && showPresetsBanner && (
+        <div className="mb-4">
+          <InfoBanner variant="info" onDismiss={() => setShowPresetsBanner(false)}>
+            {t("morePresets")}{" "}
+            <button
+              type="button"
+              onClick={() => setShowPresetsSection(true)}
+              className="font-semibold underline hover:no-underline"
+            >
+              {t("viewPresets")}
+            </button>
+          </InfoBanner>
+        </div>
+      )}
+
       {showForm && !planBlocked && (
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
           <h3 className="font-semibold text-[#0B1220] mb-4">{t("newRule")}</h3>
@@ -361,7 +396,54 @@ export default function RulesSettingsPage() {
         {loading ? (
           <div className="px-4 py-12 text-center text-[#667085]">{tc("loading")}</div>
         ) : rules.length === 0 ? (
-          <div className="px-4 py-12 text-center text-[#667085]">{t("noRules")}</div>
+          planBlocked ? (
+            <div className="px-4 py-12 text-center text-[#667085]">{t("noRules")}</div>
+          ) : (
+            <div className="p-6 sm:p-8 max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("setupTitle")}</h3>
+              <p className="text-sm text-[#667085] mb-6">{t("setupDescription")}</p>
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-[#0B1220] mb-3">{t("suggestedRules")}</h4>
+                <div className="space-y-3">
+                  {RULE_PRESETS.map((preset) => (
+                    <div
+                      key={preset.id}
+                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 border border-[#E5E7EB] rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-[#0B1220] text-sm">{t(preset.nameKey)}</p>
+                        <p className="text-xs text-[#667085]">{t(preset.descriptionKey)}</p>
+                      </div>
+                      <Badge variant={preset.action.mode === "auto_pack" ? "success" : "warning"} className="flex-shrink-0 w-fit">
+                        {preset.action.mode === "auto_pack" ? t("autoPack") : t("review")}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={installingPresets}
+                  onClick={handleInstallPresets}
+                >
+                  {installingPresets ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                      {t("installAll")}
+                    </span>
+                  ) : (
+                    t("installAll")
+                  )}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t("createCustomRule")}
+                </Button>
+              </div>
+            </div>
+          )
         ) : (
           <div className="divide-y divide-[#E5E7EB]">
             {rules.map((rule, idx) => (
@@ -381,6 +463,43 @@ export default function RulesSettingsPage() {
           </div>
         )}
       </div>
+
+      {showPresetsSection && rules.length > 0 && !planBlocked && (
+        <div className="mt-6 p-6 bg-[#F7F8FA] rounded-lg border border-[#E5E7EB]">
+          <h4 className="text-sm font-medium text-[#0B1220] mb-3">{t("suggestedRules")}</h4>
+          <div className="space-y-3 mb-4">
+            {RULE_PRESETS.map((preset) => (
+              <div
+                key={preset.id}
+                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 bg-white border border-[#E5E7EB] rounded-lg"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-[#0B1220] text-sm">{t(preset.nameKey)}</p>
+                  <p className="text-xs text-[#667085]">{t(preset.descriptionKey)}</p>
+                </div>
+                <Badge variant={preset.action.mode === "auto_pack" ? "success" : "warning"} className="flex-shrink-0 w-fit">
+                  {preset.action.mode === "auto_pack" ? t("autoPack") : t("review")}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={installingPresets}
+            onClick={handleInstallPresets}
+          >
+            {installingPresets ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="animate-spin w-3.5 h-3.5 border-2 border-[#1D4ED8] border-t-transparent rounded-full" />
+                {t("installAll")}
+              </span>
+            ) : (
+              t("installAll")
+            )}
+          </Button>
+        </div>
+      )}
 
       <p className="text-xs text-[#94A3B8] mt-3">{t("footer")}</p>
     </div>

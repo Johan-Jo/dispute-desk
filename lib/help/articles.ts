@@ -125,6 +125,22 @@ export const HELP_ARTICLES: HelpArticle[] = [
     relatedSlugs: ["completeness-score", "how-packs-built"],
     tags: ["checklist", "required", "recommended", "items"],
   },
+  {
+    slug: "evidence-pack-templates",
+    category: "evidence-packs",
+    titleKey: "help.articles.evidencePackTemplates.title",
+    bodyKey: "help.articles.evidencePackTemplates.body",
+    relatedSlugs: ["how-packs-built", "generating-pack-manually"],
+    tags: ["template", "library", "install", "packs", "recommended"],
+  },
+  {
+    slug: "defining-store-policies",
+    category: "evidence-packs",
+    titleKey: "help.articles.definingStorePolicies.title",
+    bodyKey: "help.articles.definingStorePolicies.body",
+    relatedSlugs: ["how-packs-built", "evidence-checklist"],
+    tags: ["policies", "terms", "refund", "shipping", "upload", "template"],
+  },
 
   // --- Automation & Rules ---
   {
@@ -158,6 +174,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     bodyKey: "help.articles.completenessBlockerGates.body",
     relatedSlugs: ["configuring-automation", "completeness-score"],
     tags: ["gate", "threshold", "blocker", "completeness", "auto-save"],
+  },
+  {
+    slug: "rule-presets",
+    category: "automation-rules",
+    titleKey: "help.articles.rulePresets.title",
+    bodyKey: "help.articles.rulePresets.body",
+    relatedSlugs: ["creating-first-rule", "configuring-automation"],
+    tags: ["preset", "suggested", "install", "auto-pack", "review"],
   },
 
   // --- Billing & Plans ---
