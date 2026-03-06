@@ -559,11 +559,11 @@ export default function DisputeDetailPage() {
               )}
               {profile?.fulfillments && profile.fulfillments.length > 0 && (
                 <>
-                  {profile.fulfillments.flatMap((f) => f.trackingInfo).filter(Boolean).slice(0, 3).map((t, i) => (
+                  {profile.fulfillments.flatMap((f) => f.trackingInfo).filter(Boolean).slice(0, 3).map((trk, i) => (
                     <div key={i} className="flex justify-between gap-2">
                       <dt className="text-[#667085] shrink-0">{t("tracking")}</dt>
-                      <dd className="text-[#0B1220] font-mono text-xs truncate max-w-[180px]" title={t.number}>
-                        {t.url ? <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-[#1D4ED8] hover:underline">{t.number}</a> : t.number}
+                      <dd className="text-[#0B1220] font-mono text-xs truncate max-w-[180px]" title={trk.number}>
+                        {trk.url ? <a href={trk.url} target="_blank" rel="noopener noreferrer" className="text-[#1D4ED8] hover:underline">{trk.number}</a> : trk.number}
                       </dd>
                     </div>
                   ))}
