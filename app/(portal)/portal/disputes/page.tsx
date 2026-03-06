@@ -290,6 +290,7 @@ export default function DisputesPage() {
             <thead className="bg-[#F7F8FA]">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("id")}</th>
+                <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("order")}</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("customer")}</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("amount")}</th>
                 <th className="text-left px-4 py-3 font-medium text-[#667085]">{tt("reason")}</th>
@@ -301,13 +302,13 @@ export default function DisputesPage() {
             <tbody>
               {!isDemo && loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-[#667085]">
+                  <td colSpan={8} className="px-4 py-12 text-center text-[#667085]">
                     {tc("loading")}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-[#667085]">
+                  <td colSpan={8} className="px-4 py-12 text-center text-[#667085]">
                     {t("noDisputes")}
                   </td>
                 </tr>
@@ -328,6 +329,9 @@ export default function DisputesPage() {
                         )}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-[#0B1220]">
+                      {d.order_name ?? (d.order_gid ? `#${d.order_gid.split("/").pop() ?? ""}` : "—")}
+                    </td>
                     <td className="px-4 py-3">
                       {"customer" in d ? (
                         <div>
@@ -335,13 +339,7 @@ export default function DisputesPage() {
                           <div className="text-xs text-[#667085]">{(d as { email?: string }).email ?? ""}</div>
                         </div>
                       ) : (
-                        <span className="text-[#0B1220]">
-                          {d.customer_display_name ??
-                            d.order_name ??
-                            (d.order_gid
-                              ? `Order #${d.order_gid.split("/").pop() ?? ""}`
-                              : "—")}
-                        </span>
+                        <span className="text-[#0B1220]">{d.customer_display_name ?? "—"}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium text-[#0B1220]">
