@@ -382,6 +382,7 @@ export default function DisputeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [packError, setPackError] = useState<string | null>(null);
 
   const isDemoId = typeof id === "string" && DEMO_ID_PATTERN.test(id);
   const showDemoDetail = isDemo || (useDemoDataForDetail && isDemoId);
@@ -413,10 +414,22 @@ export default function DisputeDetailPage() {
   };
 
   const handleGenerate = async () => {
+    setPackError(null);
     setGenerating(true);
-    await fetch(`/api/disputes/${id}/packs`, { method: "POST" });
-    await fetchData();
-    setGenerating(false);
+    try {
+      const res = await fetch(`/api/disputes/${id}/packs`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = typeof data.error === "string" ? data.error : res.status === 403 ? "Pack limit reached. Upgrade your plan or buy a top-up." : "Could not create pack.";
+        setPackError(data.upgrade_required ? (data.error || "Pack limit reached. Upgrade your plan or buy a top-up.") : msg);
+        return;
+      }
+      await fetchData();
+    } catch (e) {
+      setPackError(e instanceof Error ? e.message : "Network error. Try again.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleApprove = async (packId: string) => {
@@ -581,6 +594,13 @@ export default function DisputeDetailPage() {
           )}
         </div>
       </div>
+
+      {packError && (
+        <div className="mb-6 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-sm text-[#B91C1C] flex items-start justify-between gap-3">
+          <span>{packError}</span>
+          <button type="button" onClick={() => setPackError(null)} className="shrink-0 text-[#B91C1C] hover:underline" aria-label={tc("dismiss")}>×</button>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-[#E5E7EB] mb-6">
         <div className="flex items-center justify-between p-4 border-b border-[#E5E7EB]">
