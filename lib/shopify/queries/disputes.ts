@@ -22,7 +22,7 @@ export const DISPUTE_LIST_QUERY = `
           evidenceDueBy
           evidenceSentOn
           finalizedOn
-          order { id legacyResourceId name customer { displayName } }
+          order { id legacyResourceId name customer { displayName } displayAddress { name } shippingAddress { name } }
           disputeEvidence { id }
         }
         cursor
@@ -88,6 +88,8 @@ export interface DisputeListNode {
     legacyResourceId: string;
     name: string;
     customer?: { displayName: string } | null;
+    displayAddress?: { name: string | null } | null;
+    shippingAddress?: { name: string | null } | null;
   } | null;
   disputeEvidence: { id: string } | null;
 }
@@ -143,4 +145,125 @@ export interface DisputeDetailNode {
 
 export interface DisputeDetailResponse {
   dispute: DisputeDetailNode;
+}
+
+/** Fetches dispute with full order/customer/address for profile display. */
+export const DISPUTE_PROFILE_QUERY = `
+  query DisputeProfile($id: ID!) {
+    dispute(id: $id) {
+      id
+      order {
+        id
+        legacyResourceId
+        name
+        email
+        phone
+        createdAt
+        totalPriceSet { shopMoney { amount currencyCode } }
+        customer { displayName }
+        displayAddress {
+          name
+          address1
+          address2
+          city
+          province
+          provinceCode
+          country
+          countryCode
+          zip
+          phone
+        }
+        shippingAddress {
+          name
+          address1
+          address2
+          city
+          province
+          provinceCode
+          country
+          countryCode
+          zip
+          phone
+        }
+        billingAddress {
+          name
+          address1
+          address2
+          city
+          province
+          provinceCode
+          country
+          countryCode
+          zip
+          phone
+        }
+        fulfillments(first: 5) {
+          id
+          status
+          trackingInfo(first: 3) { number url company }
+          createdAt
+        }
+      }
+    }
+  }
+`;
+
+export interface DisputeProfileOrder {
+  id: string;
+  legacyResourceId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  createdAt: string;
+  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  customer?: { displayName: string } | null;
+  displayAddress?: {
+    name: string | null;
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    province: string | null;
+    provinceCode: string | null;
+    country: string | null;
+    countryCode: string | null;
+    zip: string | null;
+    phone: string | null;
+  } | null;
+  shippingAddress?: {
+    name: string | null;
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    province: string | null;
+    provinceCode: string | null;
+    country: string | null;
+    countryCode: string | null;
+    zip: string | null;
+    phone: string | null;
+  } | null;
+  billingAddress?: {
+    name: string | null;
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    province: string | null;
+    provinceCode: string | null;
+    country: string | null;
+    countryCode: string | null;
+    zip: string | null;
+    phone: string | null;
+  } | null;
+  fulfillments: Array<{
+    id: string;
+    status: string;
+    trackingInfo: Array<{ number: string; url: string; company: string }>;
+    createdAt: string;
+  }>;
+}
+
+export interface DisputeProfileResponse {
+  dispute: {
+    id: string;
+    order: DisputeProfileOrder | null;
+  };
 }

@@ -14,6 +14,8 @@ interface Dispute {
   dispute_gid: string;
   dispute_evidence_gid: string | null;
   order_gid: string | null;
+  order_name: string | null;
+  customer_display_name: string | null;
   status: string | null;
   reason: string | null;
   amount: number | null;
@@ -21,6 +23,38 @@ interface Dispute {
   initiated_at: string | null;
   due_at: string | null;
   last_synced_at: string | null;
+}
+
+interface ProfileAddress {
+  name?: string | null;
+  address1?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  province?: string | null;
+  provinceCode?: string | null;
+  country?: string | null;
+  countryCode?: string | null;
+  zip?: string | null;
+  phone?: string | null;
+}
+
+interface DisputeProfile {
+  orderName: string;
+  orderId: string;
+  createdAt: string;
+  total?: { amount: string; currencyCode: string };
+  customerName: string | null;
+  email: string | null;
+  phone: string | null;
+  displayAddress: ProfileAddress | null;
+  shippingAddress: ProfileAddress | null;
+  billingAddress: ProfileAddress | null;
+  fulfillments: Array<{
+    id: string;
+    status: string;
+    trackingInfo: Array<{ number: string; url: string; company: string }>;
+    createdAt: string;
+  }>;
 }
 
 interface Pack {
@@ -129,6 +163,18 @@ function formatCurrency(amount: number | null, code: string | null, locale: stri
 function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatAddress(addr: ProfileAddress | null | undefined): string {
+  if (!addr) return "—";
+  const parts = [
+    addr.name,
+    addr.address1,
+    addr.address2,
+    [addr.city, addr.provinceCode ?? addr.province, addr.zip].filter(Boolean).join(" "),
+    addr.country,
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : "—";
 }
 
 function daysUntil(iso: string | null): { key: string; params?: { count: number }; urgent: boolean } | { key: "none"; urgent: false } {
@@ -332,6 +378,7 @@ export default function DisputeDetailPage() {
   const useDemoDataForDetail = useDemoData();
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
+  const [profile, setProfile] = useState<DisputeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -342,10 +389,15 @@ export default function DisputeDetailPage() {
   const fetchData = useCallback(async () => {
     if (showDemoDetail) { setLoading(false); return; }
     setLoading(true);
-    const res = await fetch(`/api/disputes/${id}`);
+    const [res, profileRes] = await Promise.all([
+      fetch(`/api/disputes/${id}`),
+      fetch(`/api/disputes/${id}/profile`),
+    ]);
     const json = await res.json();
+    const profileJson = await profileRes.json();
     setDispute(json.dispute ?? null);
     setPacks(json.packs ?? []);
+    setProfile(profileJson.profile ?? null);
     setLoading(false);
   }, [id, showDemoDetail]);
 
@@ -452,6 +504,56 @@ export default function DisputeDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Customer & order profile */}
+      {(profile || dispute.order_name || dispute.customer_display_name) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <User className="w-4 h-4 text-[#667085]" />
+              <h3 className="font-semibold text-[#0B1220]">{t("customerInfo")}</h3>
+            </div>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("name")}</dt><dd className="text-[#0B1220] font-medium text-right">{profile?.customerName ?? dispute.customer_display_name ?? dispute.order_name ?? "—"}</dd></div>
+              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("email")}</dt><dd className="text-[#0B1220] text-right break-all">{profile?.email ?? "—"}</dd></div>
+              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("phone")}</dt><dd className="text-[#0B1220] text-right">{profile?.phone ?? "—"}</dd></div>
+              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("address")}</dt><dd className="text-[#0B1220] text-right max-w-[220px]">{formatAddress(profile?.displayAddress ?? profile?.shippingAddress)}</dd></div>
+              {profile?.shippingAddress && profile.shippingAddress !== profile.displayAddress && (
+                <div className="flex justify-between gap-2 pt-2 border-t border-[#E5E7EB]"><dt className="text-[#667085] shrink-0">{t("shipping")}</dt><dd className="text-[#0B1220] text-right max-w-[220px]">{formatAddress(profile.shippingAddress)}</dd></div>
+              )}
+              {profile?.billingAddress && (
+                <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">Billing</dt><dd className="text-[#0B1220] text-right max-w-[220px]">{formatAddress(profile.billingAddress)}</dd></div>
+              )}
+            </dl>
+          </div>
+
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Package className="w-4 h-4 text-[#667085]" />
+              <h3 className="font-semibold text-[#0B1220]">{t("orderDetails")}</h3>
+            </div>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("orderId")}</dt><dd className="text-[#0B1220] font-medium">{profile?.orderName ?? (dispute.order_gid ? `#${dispute.order_gid.split("/").pop()}` : dispute.order_name ?? "—")}</dd></div>
+              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("date")}</dt><dd className="text-[#0B1220]">{profile?.createdAt ? formatDate(profile.createdAt, locale) : "—"}</dd></div>
+              {profile?.total && (
+                <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">Total</dt><dd className="text-[#0B1220]">{formatCurrency(parseFloat(profile.total.amount), profile.total.currencyCode, locale)}</dd></div>
+              )}
+              {profile?.fulfillments && profile.fulfillments.length > 0 && (
+                <>
+                  {profile.fulfillments.flatMap((f) => f.trackingInfo).filter(Boolean).slice(0, 3).map((t, i) => (
+                    <div key={i} className="flex justify-between gap-2">
+                      <dt className="text-[#667085] shrink-0">{t("tracking")}</dt>
+                      <dd className="text-[#0B1220] font-mono text-xs truncate max-w-[180px]" title={t.number}>
+                        {t.url ? <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-[#1D4ED8] hover:underline">{t.number}</a> : t.number}
+                      </dd>
+                    </div>
+                  ))}
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-[#E5E7EB] p-4">

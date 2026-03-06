@@ -336,7 +336,11 @@ export default function DisputesPage() {
                         </div>
                       ) : (
                         <span className="text-[#0B1220]">
-                          {d.customer_display_name ?? d.order_name ?? "—"}
+                          {d.customer_display_name ??
+                            d.order_name ??
+                            (d.order_gid
+                              ? `Order #${d.order_gid.split("/").pop() ?? ""}`
+                              : "—")}
                         </span>
                       )}
                     </td>

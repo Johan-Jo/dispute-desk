@@ -118,7 +118,11 @@ export async function syncDisputes(
           dispute_evidence_gid: d.disputeEvidence?.id ?? null,
           order_gid: d.order?.id ?? null,
           order_name: d.order?.name ?? null,
-          customer_display_name: d.order?.customer?.displayName ?? null,
+          customer_display_name:
+            d.order?.customer?.displayName?.trim() ||
+            d.order?.displayAddress?.name?.trim() ||
+            d.order?.shippingAddress?.name?.trim() ||
+            null,
           status: d.status?.toLowerCase() ?? null,
           reason: d.reasonDetails?.reason ?? null,
           amount: d.amount ? parseFloat(d.amount.amount) : null,
