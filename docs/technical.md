@@ -171,6 +171,12 @@ worker endpoint (`/api/jobs/worker`).
 
 Migrations live in `supabase/migrations/`. Apply with `npx supabase db push` when the project is linked, or `node scripts/run-migration.mjs` using `SUPABASE_URL_POSTGRES` from `.env.local`.
 
+### Supabase CLI (recommended)
+
+- **One-time:** `npx supabase login` then `npx supabase link --project-ref <ref>` (ref from Dashboard or project URL, e.g. `sddzuglxdnkhcnjmcpbj`). Credentials are stored locally for future use.
+- **Apply migrations:** `npx supabase db push` (only runs migrations not yet applied).
+- **Existing DB:** If the database was created outside the CLI (e.g. `run-migration.mjs` or Dashboard), the CLI has no applied history. Run `npx supabase migration repair 001 002 ... 023 --status applied` once to mark them applied without re-running SQL; then `db push` works for new migrations only.
+
 | File | Contents |
 |------|----------|
 | 001_core_shops_sessions.sql | shops + shop_sessions (online/offline, key_version) |

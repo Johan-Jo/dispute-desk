@@ -24,6 +24,9 @@ npm-debug.log*
 # seed artifacts (run outputs, screenshots)
 artifacts/
 
+# Supabase CLI link state (each dev runs supabase link once)
+supabase/.temp/
+
 # misc
 .DS_Store
 *.tsbuildinfo
