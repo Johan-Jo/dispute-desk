@@ -46,7 +46,8 @@ interface AuditEvent {
 interface PackData {
   id: string;
   shop_id: string;
-  dispute_id: string;
+  name?: string;
+  dispute_id: string | null;
   status: string;
   completeness_score: number | null;
   checklist: ChecklistItem[] | null;
@@ -204,20 +205,22 @@ export default function PackPreviewPage() {
   const score = pack.completeness_score ?? 0;
   const cfg = statusConfig(pack.status, ts);
 
+  const isLibraryPack = pack.dispute_id == null;
+
   return (
     <div>
       <a
-        href={`/portal/disputes/${pack.dispute_id}`}
+        href={isLibraryPack ? "/portal/packs" : `/portal/disputes/${pack.dispute_id}`}
         className="inline-flex items-center gap-1 text-sm text-[#667085] hover:text-[#0B1220] mb-4"
       >
-        <ArrowLeft className="w-4 h-4" /> {t("backToDispute")}
+        <ArrowLeft className="w-4 h-4" /> {isLibraryPack ? t("backToPacks") : t("backToDispute")}
       </a>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#0B1220]">
-            {t("packTitle", { id: pack.id.slice(0, 8) })}
+            {pack.name ?? t("packTitle", { id: pack.id.slice(0, 8) })}
           </h1>
           <p className="text-sm text-[#667085]">
             {t("created", { date: formatDate(pack.created_at, locale), creator: pack.created_by ?? "system" })}

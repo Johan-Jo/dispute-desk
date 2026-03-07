@@ -231,6 +231,7 @@
     "compliance": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin, or Shopify auto-submits on the due date.",
     "packNotFound": "Pack not found.",
     "backToDisputes": "Back to disputes",
+    "backToPacks": "Back to packs",
     "approveAndSave": "Approve & Save",
     "completenessScore": "Completeness Score",
     "openInShopifyAdmin": "Open in Shopify Admin →",
@@ -772,7 +773,7 @@
       },
       "evidencePackTemplates": {
         "title": "Using evidence pack templates",
-        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. You can then customize it from the Packs library.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
+        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
       },
       "definingStorePolicies": {
         "title": "Defining your store policies",

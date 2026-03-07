@@ -154,6 +154,32 @@ export async function installTemplate(
   return pack as Pack;
 }
 
+/**
+ * Fetch a single pack by id from the library (packs) table.
+ * Returns null if not found. Used by GET /api/packs/[packId] fallback when the pack
+ * is not an evidence_pack (e.g. template-installed pack).
+ */
+export async function getPackById(packId: string): Promise<(Pack & { shop_domain?: string | null }) | null> {
+  const sb = getServiceClient();
+
+  const { data, error } = await sb
+    .from("packs")
+    .select("*, shop:shops(shop_domain)")
+    .eq("id", packId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const shop = Array.isArray((data as { shop?: unknown }).shop)
+    ? (data as { shop: { shop_domain?: string }[] }).shop[0]
+    : (data as { shop?: { shop_domain?: string } }).shop;
+  const shop_domain = shop?.shop_domain ?? null;
+  const { shop: _shop, ...pack } = data as typeof data & { shop?: unknown };
+  return { ...pack, shop_domain } as Pack & { shop_domain: string | null };
+}
+
 /** Fetch all packs for a shop with optional status filter. */
 export async function listPacks(
   shopId: string,

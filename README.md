@@ -79,7 +79,8 @@ cp .env.example .env.local
 
 # 3. Run Supabase migrations
 npx supabase db push
-# If the project is not linked to Supabase, use the script instead (requires SUPABASE_URL_POSTGRES in .env.local):
+# Requires a linked Supabase project (run `npx supabase link` first, or run migrations from the Supabase Dashboard / CI).
+# If the project is not linked, use the script instead (requires SUPABASE_URL_POSTGRES in .env.local):
 # node scripts/run-migration.mjs
 
 # 4. Start dev server

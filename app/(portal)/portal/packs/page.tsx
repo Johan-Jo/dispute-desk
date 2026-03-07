@@ -435,7 +435,7 @@ export default function PacksLibraryPage() {
               )}
               <div className="flex flex-wrap gap-2">
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setIsTemplateLibraryOpen(true)}
                 >

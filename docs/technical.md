@@ -356,7 +356,7 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/disputes/:id/sync` — re-sync one dispute
 - `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
 - `GET /api/disputes/:id/packs` → list packs for a dispute
-- `GET /api/packs/:packId` → full pack: items, checklist, audit log, active jobs
+- `GET /api/packs/:packId` → full pack: items, checklist, audit log, active jobs. If the id is not in `evidence_packs`, falls back to the library `packs` table (e.g. template-installed packs) and returns a compatible shape with empty evidence/jobs.
 - `POST /api/packs/:packId/upload` → multipart file upload (10 MB, creates evidence_item)
 - `POST /api/packs/:packId/render-pdf` → 202 + jobId
 - `POST /api/packs/:packId/save-to-shopify` (online session required)
@@ -591,6 +591,8 @@ PDFs deleted from storage. Audit events never deleted.
 | Policy Templates API | `tests/api/policy-templates/route.test.ts` | GET /api/policy-templates |
 | Policy Template Content API | `tests/api/policy-templates/content.test.ts` | GET /api/policy-templates/[type]/content |
 | Rules Install Preset API | `tests/api/rules/installPreset.test.ts` | POST /api/rules/install-preset |
+| Pack Detail API | `tests/api/packs/packDetailRoute.test.ts` | GET /api/packs/[packId] (evidence_packs + library packs fallback) |
+| Templates API | `tests/api/templates/route.test.ts` | GET /api/templates (list pack templates) |
 
 ### Test Helpers
 
