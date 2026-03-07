@@ -588,6 +588,9 @@ PDFs deleted from storage. Audit events never deleted.
 | Gorgias Disconnect API | `tests/api/integrations/gorgiasDisconnect.test.ts` | POST /api/integrations/gorgias/disconnect |
 | Sample Files API | `tests/api/files/samples.test.ts` | GET + POST /api/files/samples |
 | Sample Files Delete API | `tests/api/files/samplesDelete.test.ts` | POST /api/files/samples/delete |
+| Policy Templates API | `tests/api/policy-templates/route.test.ts` | GET /api/policy-templates |
+| Policy Template Content API | `tests/api/policy-templates/content.test.ts` | GET /api/policy-templates/[type]/content |
+| Rules Install Preset API | `tests/api/rules/installPreset.test.ts` | POST /api/rules/install-preset |
 
 ### Test Helpers
 

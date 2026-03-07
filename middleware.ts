@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
+import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 
 /**
  * Multi-surface middleware.
@@ -47,17 +48,8 @@ export async function middleware(req: NextRequest) {
     let shopDomain = req.cookies.get("shopify_shop")?.value;
     let shopId = req.cookies.get("shopify_shop_id")?.value;
 
-    // Portal fallback: setup/integrations/files/disputes APIs can use Supabase Auth + active_shop
-    const isPortalApi =
-      pathname.startsWith("/api/setup/") ||
-      pathname.startsWith("/api/integrations/") ||
-      pathname.startsWith("/api/files/samples") ||
-      pathname.startsWith("/api/disputes") ||
-      pathname.startsWith("/api/packs") ||
-      pathname.startsWith("/api/policies") ||
-      pathname.startsWith("/api/policy-templates") ||
-      pathname.startsWith("/api/billing") ||
-      pathname.startsWith("/api/rules");
+    // Portal fallback: these APIs can use Supabase Auth + active_shop (see lib/middleware/portalApiPrefixes.ts)
+    const isPortalApi = isPortalApiPath(pathname);
 
     if ((!shopDomain || !shopId) && isPortalApi) {
       const activeShopId =
