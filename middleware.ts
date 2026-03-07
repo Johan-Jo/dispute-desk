@@ -55,6 +55,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/disputes") ||
       pathname.startsWith("/api/packs") ||
       pathname.startsWith("/api/policies") ||
+      pathname.startsWith("/api/policy-templates") ||
       pathname.startsWith("/api/billing") ||
       pathname.startsWith("/api/rules");
 
