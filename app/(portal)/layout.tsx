@@ -59,7 +59,10 @@ export default async function PortalLayout({
     shopLocale,
     shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim(),
   });
-  const messages = await getMessages(locale);
+  let messages = await getMessages(locale);
+  if (!messages || typeof messages !== "object") {
+    messages = (await import("@/messages/en-US.json")).default;
+  }
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
