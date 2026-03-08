@@ -229,7 +229,10 @@
     "approveAndSave": "Aprobar y guardar",
     "completenessScore": "Puntuación de completitud",
     "pageExplainerTitle": "Qué hacer en esta página",
-    "pageExplainerBody": "Este es su paquete de pruebas para la disputa. (1) Suba archivos de apoyo (recibos, seguimiento, políticas) en el área de carga; la puntuación de completitud muestra la solidez de sus pruebas. (2) Cuando esté listo, use \"Guardar pruebas en Shopify\" para enviar los datos a Shopify; el envío final a la red de tarjetas se hace en Shopify Admin (o Shopify envía automáticamente en la fecha de vencimiento). (3) Puede \"Generar PDF\" para descargar un PDF del paquete para sus registros o envío manual.",
+    "pageExplainerStep1": "Suba archivos de apoyo (recibos, seguimiento, políticas) en el área de carga. La puntuación de completitud muestra la solidez de sus pruebas.",
+    "pageExplainerStep2": "Cuando esté listo, use \"Guardar pruebas en Shopify\" para enviar los datos a Shopify. El envío final a la red de tarjetas se hace en Shopify Admin (o Shopify envía automáticamente en la fecha de vencimiento).",
+    "pageExplainerStep3": "Use \"Generar PDF\" para descargar un PDF del paquete para sus registros o envío manual.",
+    "pageExplainerSuggestions": "Sugerencias: recibo de envío, prueba de seguimiento, política de la tienda o confirmación de pedido.",
     "openInShopifyAdmin": "Abrir en Shopify Admin →"
   },
   "billing": {

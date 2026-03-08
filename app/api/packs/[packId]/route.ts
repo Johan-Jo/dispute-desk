@@ -33,6 +33,19 @@ export async function GET(
     const dispute_gid = disputeRow?.dispute_gid ?? null;
     const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
 
+    // Library packs (dispute_id null): merge name from packs table so UI shows correct title
+    if (pack.dispute_id == null) {
+      const { data: libraryRow } = await db
+        .from("packs")
+        .select("name, dispute_type")
+        .eq("id", packId)
+        .single();
+      if (libraryRow) {
+        (pack as Record<string, unknown>).name = libraryRow.name;
+        (pack as Record<string, unknown>).dispute_type = libraryRow.dispute_type;
+      }
+    }
+
     const [itemsRes, auditRes, buildJobRes, pdfJobRes] = await Promise.all([
       db
         .from("evidence_items")
@@ -76,7 +89,11 @@ export async function GET(
   // Fallback: library pack (packs table) e.g. from template install
   const libraryPack = await getPackById(packId);
   if (!libraryPack) {
-    return NextResponse.json({ error: "Pack not found" }, { status: 404 });
+    // Pack is in neither evidence_packs nor packs (e.g. wrong ID or different environment DB)
+    return NextResponse.json(
+      { error: "Pack not found. If this pack was just created, ensure you're on the same environment (e.g. production DB)." },
+      { status: 404 }
+    );
   }
 
   const { shop_domain, ...rest } = libraryPack;

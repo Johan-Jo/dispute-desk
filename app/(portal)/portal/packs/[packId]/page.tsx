@@ -110,6 +110,8 @@ export default function PackPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [saving, setSaving] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -146,11 +148,24 @@ export default function PackPreviewPage() {
     const files = e.target.files;
     if (!files?.length) return;
     setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
+    let ok = true;
     for (const file of Array.from(files)) {
       const form = new FormData();
       form.append("file", file);
       form.append("label", file.name);
-      await fetch(`/api/packs/${packId}/upload`, { method: "POST", body: form });
+      const res = await fetch(`/api/packs/${packId}/upload`, { method: "POST", body: form });
+      if (!res.ok) {
+        ok = false;
+        const data = await res.json().catch(() => ({}));
+        setUploadError(data?.error ?? t("uploadFailed"));
+        break;
+      }
+    }
+    if (ok) {
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 4000);
     }
     await fetchPack();
     setUploading(false);
@@ -239,7 +254,12 @@ export default function PackPreviewPage() {
 
       <div className="mb-6">
         <InfoBanner variant="info" title={t("pageExplainerTitle")}>
-          {t("pageExplainerBody")}
+          <div className="space-y-2">
+            <p><strong>1.</strong> {t("pageExplainerStep1")}</p>
+            <p><strong>2.</strong> {t("pageExplainerStep2")}</p>
+            <p><strong>3.</strong> {t("pageExplainerStep3")}</p>
+            <p className="text-[#1E40AF]/90 mt-2">{t("pageExplainerSuggestions")}</p>
+          </div>
         </InfoBanner>
       </div>
 
@@ -347,6 +367,18 @@ export default function PackPreviewPage() {
         <p className="text-sm text-[#667085] mb-4">
           {t("uploadPlaceholder")}
         </p>
+        {uploadSuccess && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] px-4 py-2 text-sm">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            {t("uploadSuccess")}
+          </div>
+        )}
+        {uploadError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] px-4 py-2 text-sm">
+            <XCircle className="w-5 h-5 flex-shrink-0" />
+            {uploadError}
+          </div>
+        )}
         <label className="flex items-center justify-center border-2 border-dashed border-[#CBD5E1] rounded-lg p-6 cursor-pointer hover:border-[#1D4ED8] transition-colors">
           <input
             type="file"

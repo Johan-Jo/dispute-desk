@@ -22,11 +22,15 @@ interface TemplateCard {
   slug: string;
   dispute_type: string;
   is_recommended: boolean;
-  nameKey: string;
-  bestForKey: string;
-  requiredDocs: number;
-  optionalDocs: number;
-  keyEvidence: string[];
+  nameKey?: string;
+  bestForKey?: string;
+  requiredDocs?: number;
+  optionalDocs?: number;
+  keyEvidence?: string[];
+  /** From API: already-localized name (use when present instead of t(nameKey)) */
+  name?: string;
+  /** From API: already-localized works_best_for text */
+  works_best_for?: string | null;
 }
 
 const CATEGORY_KEYS = [
@@ -153,11 +157,13 @@ export function TemplateLibraryModal({
 
   const filtered = templates.filter((tpl) => {
     const matchesCategory = !category || tpl.dispute_type === category;
-    const name = t(tpl.nameKey);
+    const name =
+      tpl.name ??
+      (tpl.nameKey ? t(tpl.nameKey) : tpl.slug ?? "");
     const matchesSearch =
       !searchQuery ||
-      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tpl.dispute_type.toLowerCase().includes(searchQuery.toLowerCase());
+      (typeof name === "string" && name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (tpl.dispute_type ?? "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -256,14 +262,14 @@ export function TemplateLibraryModal({
             </div>
             <p className="text-sm text-[#667085] mb-3">
               <strong className="text-[#0B1220]">{t("worksBestFor")}</strong>{" "}
-              {t(previewTpl.bestForKey)}
+              {previewTpl.works_best_for ?? (previewTpl.bestForKey ? t(previewTpl.bestForKey) : "")}
             </p>
             <p className="text-sm text-[#667085] mb-3">
-              {previewTpl.requiredDocs} {t("required")}, {previewTpl.optionalDocs}{" "}
+              {previewTpl.requiredDocs ?? 0} {t("required")}, {previewTpl.optionalDocs ?? 0}{" "}
               {t("optional")}
             </p>
             <div className="flex flex-wrap gap-1.5 mb-4">
-              {previewTpl.keyEvidence.map((evKey, idx) => (
+              {(previewTpl.keyEvidence ?? []).map((evKey, idx) => (
                 <span
                   key={idx}
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-white text-[#0B1220] rounded text-xs border border-[#E5E7EB]"
@@ -436,7 +442,7 @@ export function TemplateLibraryModal({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold text-[#0B1220]">
-                          {t(tpl.nameKey)}
+                          {tpl.name ?? (tpl.nameKey ? t(tpl.nameKey) : tpl.slug)}
                         </h3>
                         {tpl.is_recommended && (
                           <Badge variant="default" className="text-xs">
@@ -458,24 +464,24 @@ export function TemplateLibraryModal({
                       <FileText className="w-4 h-4 text-[#667085]" />
                       <span className="text-[#667085]">
                         <strong className="text-[#0B1220]">
-                          {tpl.requiredDocs}
+                          {tpl.requiredDocs ?? 0}
                         </strong>{" "}
                         {t("required")},{" "}
                         <strong className="text-[#0B1220]">
-                          {tpl.optionalDocs}
+                          {tpl.optionalDocs ?? 0}
                         </strong>{" "}
                         {t("optional")}
                       </span>
                     </div>
 
                     {/* Key Evidence */}
-                    {tpl.keyEvidence.length > 0 && (
+                    {(tpl.keyEvidence ?? []).length > 0 && (
                       <div className="flex items-start gap-2 text-sm">
                         <span className="text-[#667085] font-medium whitespace-nowrap">
                           {t("keyEvidence")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {tpl.keyEvidence.map((evKey, idx) => (
+                          {(tpl.keyEvidence ?? []).map((evKey, idx) => (
                             <span
                               key={idx}
                               className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F6F8FB] text-[#0B1220] rounded text-xs border border-[#E5E7EB]"
@@ -493,7 +499,7 @@ export function TemplateLibraryModal({
                       <strong className="text-[#0B1220]">
                         {t("worksBestFor")}
                       </strong>{" "}
-                      {t(tpl.bestForKey)}
+                      {tpl.works_best_for ?? (tpl.bestForKey ? t(tpl.bestForKey) : "")}
                     </div>
                   </div>
 

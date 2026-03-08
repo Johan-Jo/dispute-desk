@@ -63,6 +63,18 @@ export async function installTemplate(
     return null;
   }
 
+  // 2b. Create matching evidence_packs row so uploads and evidence_items work (dispute_id NULL for library packs)
+  const { error: epErr } = await sb.from("evidence_packs").insert({
+    id: pack.id,
+    shop_id: pack.shop_id,
+    dispute_id: null,
+    status: "draft",
+  });
+  if (epErr) {
+    console.error("[installTemplate] evidence_packs insert", epErr?.message);
+    return null;
+  }
+
   // 3. Fetch template sections + items
   const { data: tplSections } = await sb
     .from("pack_template_sections")
