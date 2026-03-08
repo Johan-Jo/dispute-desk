@@ -79,21 +79,27 @@ export default function PoliciesPage() {
   const templateEditorRef = useRef<HTMLDivElement | null>(null);
   const skipNextEditorSyncRef = useRef(false);
 
-  const fetchPolicies = useCallback(async () => {
-    if (isDemo || !shopId) return;
-    try {
-      const res = await fetch(`/api/policies?shop_id=${encodeURIComponent(shopId)}`);
-      const data = await res.json();
-      const list = data.policies ?? [];
-      const byType: Record<string, { url: string | null; captured_at: string }> = {};
-      for (const p of list) {
-        byType[p.policy_type] = { url: p.url ?? null, captured_at: p.captured_at ?? "" };
+  const fetchPolicies = useCallback(
+    async (cacheBust = false) => {
+      if (isDemo || !shopId) return;
+      try {
+        const url = cacheBust
+          ? `/api/policies?shop_id=${encodeURIComponent(shopId)}&_=${Date.now()}`
+          : `/api/policies?shop_id=${encodeURIComponent(shopId)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const list = data.policies ?? [];
+        const byType: Record<string, { url: string | null; captured_at: string }> = {};
+        for (const p of list) {
+          byType[p.policy_type] = { url: p.url ?? null, captured_at: p.captured_at ?? "" };
+        }
+        setPolicyByType(byType);
+      } catch {
+        setPolicyByType({});
       }
-      setPolicyByType(byType);
-    } catch {
-      setPolicyByType({});
-    }
-  }, [shopId, isDemo]);
+    },
+    [shopId, isDemo]
+  );
 
   useEffect(() => {
     fetchPolicies();
@@ -252,8 +258,8 @@ export default function PoliciesPage() {
         }),
       });
       if (res.ok) {
+        await fetchPolicies(true);
         setTemplateModalOpen(false);
-        await fetchPolicies();
       } else {
         const data = await res.json().catch(() => ({}));
         alert(data.error ?? t("uploadError"));
@@ -391,7 +397,12 @@ export default function PoliciesPage() {
                       {t(policy.typeKey)}
                     </Badge>
                     {policy.url ? (
-                      <span className="text-xs text-[#667085]">{t("defined")}</span>
+                      <>
+                        <span className="text-xs text-[#667085]">{t("defined")}</span>
+                        <Badge variant="default" className="bg-[#059669] text-white text-xs font-medium">
+                          {t("applied")}
+                        </Badge>
+                      </>
                     ) : (
                       <span className="text-xs text-[#667085]">{t("notDefined")}</span>
                     )}
