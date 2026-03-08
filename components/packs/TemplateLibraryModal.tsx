@@ -244,7 +244,7 @@ export function TemplateLibraryModal({
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-[#0B1220]">
-                  {t("preview")}: {t(previewTpl.nameKey)}
+                  {t("preview")}: {previewTpl.name ?? (previewTpl.nameKey ? t(previewTpl.nameKey) : previewTpl.slug ?? "")}
                 </h3>
                 <p className="text-sm text-[#667085] mt-1">
                   {DISPUTE_TYPE_LABEL_KEYS[previewTpl.dispute_type]
