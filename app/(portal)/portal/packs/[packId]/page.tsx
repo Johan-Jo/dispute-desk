@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
+import Link from "next/link";
 import {
   ArrowLeft,
   CheckCircle,
@@ -17,7 +18,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { InfoBanner } from "@/components/ui/info-banner";
+import {
+  StepCard,
+  StatusBanner,
+  ReadinessMeter,
+  TemplateOriginCard,
+  SuggestedEvidenceChecklist,
+} from "@/components/packs/detail";
 
 interface ChecklistItem {
   field: string;
@@ -48,6 +55,7 @@ interface PackData {
   shop_id: string;
   name?: string;
   dispute_id: string | null;
+  dispute_type?: string | null;
   status: string;
   completeness_score: number | null;
   checklist: ChecklistItem[] | null;
@@ -63,6 +71,11 @@ interface PackData {
   audit_events: AuditEvent[];
   active_build_job: { id: string; status: string } | null;
   active_pdf_job: { id: string; status: string } | null;
+  source?: string | null;
+  template_id?: string | null;
+  template_name?: string | null;
+  shop_domain?: string | null;
+  dispute_gid?: string | null;
 }
 
 function formatDate(iso: string | null, locale: string = "en"): string {
@@ -89,16 +102,37 @@ function statusConfig(status: string, ts: (key: string) => string) {
   return map[status] ?? { variant: "default" as const, label: status };
 }
 
-function scoreColor(score: number): string {
-  if (score >= 80) return "text-[#22C55E]";
-  if (score >= 50) return "text-[#F59E0B]";
-  return "text-[#EF4444]";
+/** Suggested evidence message keys by dispute type (fallback when no checklist). */
+const SUGGESTED_EVIDENCE_KEYS: Record<string, string[]> = {
+  FRAUD: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy", "suggestedFraudScreening", "suggestedMetadata"],
+  FRAUDULENT: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy", "suggestedFraudScreening", "suggestedMetadata"],
+  PNR: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy"],
+  PRODUCT_NOT_RECEIVED: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy"],
+  NOT_AS_DESCRIBED: ["suggestedOrderConfirmation", "suggestedRefundPolicy", "suggestedCustomerComm", "suggestedStorePolicy"],
+  DUPLICATE: ["suggestedOrderConfirmation", "suggestedBillingShipping", "suggestedCustomerComm"],
+  SUBSCRIPTION: ["suggestedOrderConfirmation", "suggestedRefundPolicy", "suggestedCustomerComm"],
+  REFUND: ["suggestedOrderConfirmation", "suggestedRefundPolicy", "suggestedCustomerComm"],
+  GENERAL: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedCustomerComm", "suggestedRefundPolicy", "suggestedStorePolicy"],
+};
+
+function getReadinessStateLabel(score: number, t: (key: string) => string): string {
+  if (score >= 90) return t("readinessReadyToReview");
+  if (score >= 60) return t("readinessNearlyReady");
+  if (score >= 25) return t("readinessInProgress");
+  return t("readinessJustStarted");
 }
 
-function scoreBarColor(score: number): string {
-  if (score >= 80) return "bg-[#22C55E]";
-  if (score >= 50) return "bg-[#F59E0B]";
-  return "bg-[#EF4444]";
+function getStatusBanner(
+  pack: PackData,
+  t: (key: string) => string
+): { variant: "draft" | "template" | "saved" | "ready" | "submitted" | "info"; message: string } {
+  if (pack.status === "saved_to_shopify")
+    return { variant: "saved", message: t("statusSaved") };
+  if (pack.status === "ready")
+    return { variant: "ready", message: t("statusReady") };
+  if (pack.source === "TEMPLATE" && !pack.saved_to_shopify_at)
+    return { variant: "template", message: t("statusTemplateDraft") };
+  return { variant: "draft", message: t("statusDraft") };
 }
 
 export default function PackPreviewPage() {
@@ -181,7 +215,7 @@ export default function PackPreviewPage() {
     await fetchPack();
   };
 
-  const handleRenderPdf = async () => {
+  const handleExportPdf = async () => {
     setRendering(true);
     await fetch(`/api/packs/${packId}/render-pdf`, { method: "POST" });
     pollRef.current = setInterval(fetchPack, 3000);
@@ -209,9 +243,9 @@ export default function PackPreviewPage() {
     return (
       <div className="text-center py-20">
         <p className="text-[#667085]">{t("packNotFound")}</p>
-        <a href="/portal/packs" className="text-[#1D4ED8] hover:underline text-sm mt-2 inline-block">
-          {t("backToDisputes")}
-        </a>
+        <Link href="/portal/packs" className="text-[#1D4ED8] hover:underline text-sm mt-2 inline-block">
+          {t("backToPacks")}
+        </Link>
       </div>
     );
   }
@@ -219,112 +253,133 @@ export default function PackPreviewPage() {
   const isBuilding = pack.status === "queued" || pack.status === "building";
   const score = pack.completeness_score ?? 0;
   const cfg = statusConfig(pack.status, ts);
-
   const isLibraryPack = pack.dispute_id == null;
+  const fromTemplate = pack.source === "TEMPLATE" && (pack.template_name ?? pack.name);
+  const disputeTypeKey = pack.dispute_type ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_") : "GENERAL";
+  const disputeTypeLabel = pack.dispute_type
+    ? (t as (key: string) => string)(`disputeTypeLabel.${disputeTypeKey}`) || pack.dispute_type.replace(/_/g, " ")
+    : null;
+  const suggestedKeys = SUGGESTED_EVIDENCE_KEYS[disputeTypeKey] ?? SUGGESTED_EVIDENCE_KEYS.GENERAL;
+  const suggestedLabels = suggestedKeys.map((key) => t(key));
+  const statusBanner = getStatusBanner(pack, t);
 
   return (
     <div>
-      <a
+      <Link
         href={isLibraryPack ? "/portal/packs" : `/portal/disputes/${pack.dispute_id}`}
         className="inline-flex items-center gap-1 text-sm text-[#667085] hover:text-[#0B1220] mb-4"
       >
         <ArrowLeft className="w-4 h-4" /> {isLibraryPack ? t("backToPacks") : t("backToDispute")}
-      </a>
+      </Link>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">
-            {pack.name ?? t("packTitle", { id: pack.id.slice(0, 8) })}
-          </h1>
-          <p className="text-sm text-[#667085]">
-            {t("created", { date: formatDate(pack.created_at, locale), creator: pack.created_by ?? "system" })}
+      {/* A. Hero / Summary */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mb-6">
+        <h1 className="text-2xl font-bold text-[#0B1220] mb-2">
+          {t("detailHeroTitle")}
+        </h1>
+        <p className="text-[#667085] mb-4">{t("detailHeroDescription")}</p>
+        <div className="flex flex-wrap gap-4 text-sm text-[#667085] mb-4">
+          {pack.name && (
+            <span className="font-medium text-[#0B1220]">{pack.name}</span>
+          )}
+          {disputeTypeLabel && (
+            <span><strong className="text-[#0B1220]">{t("detailDisputeType")}</strong> {disputeTypeLabel}</span>
+          )}
+          <span><strong className="text-[#0B1220]">{t("detailStatus")}</strong> <Badge variant={cfg.variant}>{cfg.label}</Badge></span>
+          <span><strong className="text-[#0B1220]">{t("detailCreated")}</strong> {formatDate(pack.created_at, locale)}</span>
+        </div>
+        <ol className="list-decimal list-inside text-sm text-[#667085] space-y-1">
+          <li>{t("detailWorkflow1")}</li>
+          <li>{t("detailWorkflow2")}</li>
+          <li>{t("detailWorkflow3")}</li>
+          <li>{t("detailWorkflow4")}</li>
+          <li className="text-[#94A3B8]">{t("detailWorkflowOptional")}</li>
+        </ol>
+      </div>
+
+      {/* B. Template continuity */}
+      {fromTemplate && (
+        <TemplateOriginCard
+          startedFromTemplateLabel={t("startedFromTemplate")}
+          templateName={pack.template_name ?? pack.name ?? ""}
+          basedOnLabel={t("basedOnTemplate", { name: pack.template_name ?? pack.name ?? "" })}
+          description={t("templateContinuityDescription")}
+          browseTemplatesHref="/portal/packs"
+          browseTemplatesLabel={t("browseTemplates")}
+          templateBadgeLabel={t("templateBadge")}
+        />
+      )}
+
+      {/* C. Recommended evidence */}
+      <SuggestedEvidenceChecklist
+        title={t("recommendedForDispute")}
+        description={t("recommendedForDisputeDescription")}
+        guideLabel={t("useChecklistAsGuide")}
+        checklist={pack.checklist}
+        suggestedLabels={suggestedLabels}
+      />
+
+      {/* D. Readiness */}
+      <ReadinessMeter
+        score={score}
+        label={t("packReadiness")}
+        helperText={t("readinessHelper")}
+        stateLabel={getReadinessStateLabel(score, t)}
+      />
+
+      {pack.blockers && pack.blockers.length > 0 && (
+        <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-4 mb-6">
+          <p className="text-sm font-medium text-[#DC2626]">
+            {t("blockersLabel", { count: pack.blockers.length, list: pack.blockers.join(", ") })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={cfg.variant}>{cfg.label}</Badge>
-          {pack.status === "ready" && (
-            <Button variant="primary" size="sm" onClick={handleApprove}>
-              <CheckCircle className="w-4 h-4 mr-1" />
-              {t("approveAndSave")}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <InfoBanner variant="info" title={t("pageExplainerTitle")}>
-          <div className="space-y-2">
-            <p><strong>1.</strong> {t("pageExplainerStep1")}</p>
-            <p><strong>2.</strong> {t("pageExplainerStep2")}</p>
-            <p><strong>3.</strong> {t("pageExplainerStep3")}</p>
-            <p className="text-[#1E40AF]/90 mt-2">{t("pageExplainerSuggestions")}</p>
-          </div>
-        </InfoBanner>
-      </div>
+      )}
 
       {isBuilding && (
-        <div className="mb-4">
-          <InfoBanner variant="info">
-            {t("building")}
-          </InfoBanner>
+        <div className="mb-6">
+          <StatusBanner variant="info" message={t("building")} />
         </div>
       )}
 
-      {/* Score + Blockers */}
-      <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#0B1220]">{t("completenessScore")}</h3>
-          <span className={`text-2xl font-bold ${scoreColor(score)}`}>{score}%</span>
-        </div>
-        <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden mb-4">
-          <div
-            className={`h-full rounded-full transition-all ${scoreBarColor(score)}`}
-            style={{ width: `${score}%` }}
-          />
-        </div>
+      {/* E. Step 1 — Upload */}
+      <StepCard stepNumber={1} title={t("step1Title")}>
+        <p>{t("step1Description")}</p>
+        <p className="text-[#94A3B8]">{t("step1FileRestrictions")}</p>
+        {fromTemplate && <p className="text-[#1E40AF] font-medium">{t("step1MatchChecklist")}</p>}
+      </StepCard>
 
-        {pack.blockers && pack.blockers.length > 0 && (
-          <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-md p-3 mb-3">
-            <p className="text-sm font-medium text-[#DC2626]">
-              {t("blockersLabel", { count: pack.blockers.length, list: pack.blockers.join(", ") })}
-            </p>
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6 ml-0">
+        {uploadSuccess && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] px-4 py-2 text-sm">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            {t("uploadSuccess")}
           </div>
         )}
-        {pack.recommended_actions && pack.recommended_actions.length > 0 && (
-          <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-md p-3">
-            <p className="text-sm text-[#92400E]">
-              {t("recommended", { list: pack.recommended_actions.join(", ") })}
-            </p>
+        {uploadError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] px-4 py-2 text-sm">
+            <XCircle className="w-5 h-5 flex-shrink-0" />
+            {uploadError}
           </div>
         )}
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#CBD5E1] rounded-lg p-8 cursor-pointer hover:border-[#1D4ED8] transition-colors">
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
+            onChange={handleUpload}
+            disabled={uploading}
+          />
+          <Upload className="w-10 h-10 text-[#94A3B8] mb-3" />
+          <p className="text-sm text-[#667085] text-center">
+            {uploading ? t("uploading") : pack.evidence_items.length === 0 ? t("step1EmptyState") : t("clickToUpload")}
+          </p>
+        </label>
       </div>
 
-      {/* Checklist */}
-      {pack.checklist && pack.checklist.length > 0 && (
-        <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-          <h3 className="font-semibold text-[#0B1220] mb-4">{t("evidenceChecklist")}</h3>
-          <div className="space-y-2">
-            {pack.checklist.map((item) => (
-              <div key={item.field} className="flex items-center gap-3">
-                {item.present ? (
-                  <CheckCircle className="w-5 h-5 text-[#22C55E] shrink-0" />
-                ) : (
-                  <XCircle className={`w-5 h-5 shrink-0 ${item.required ? "text-[#EF4444]" : "text-[#94A3B8]"}`} />
-                )}
-                <span className="text-sm text-[#0B1220]">{item.label}</span>
-                {item.required && !item.present && (
-                  <Badge variant="danger">{t("required")}</Badge>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Evidence Sections */}
+      {/* Evidence list */}
       {pack.evidence_items.length > 0 && (
-        <div className="bg-white rounded-lg border border-[#E5E7EB] mb-6">
+        <div className="bg-white rounded-xl border border-[#E5E7EB] mb-6">
           <div className="p-5 border-b border-[#E5E7EB]">
             <h3 className="font-semibold text-[#0B1220]">
               {t("evidenceItems", { count: pack.evidence_items.length })}
@@ -340,11 +395,7 @@ export default function PackPreviewPage() {
                   <Badge variant="default">{item.type}</Badge>
                   <span className="text-sm font-medium text-[#0B1220]">{item.label}</span>
                 </div>
-                {expanded.has(item.id) ? (
-                  <ChevronUp className="w-4 h-4 text-[#667085]" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-[#667085]" />
-                )}
+                {expanded.has(item.id) ? <ChevronUp className="w-4 h-4 text-[#667085]" /> : <ChevronDown className="w-4 h-4 text-[#667085]" />}
               </button>
               {expanded.has(item.id) && (
                 <div className="px-4 pb-4">
@@ -361,71 +412,37 @@ export default function PackPreviewPage() {
         </div>
       )}
 
-      {/* File Upload */}
-      <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <h3 className="font-semibold text-[#0B1220] mb-2">{t("uploadEvidence")}</h3>
-        <p className="text-sm text-[#667085] mb-4">
-          {t("uploadPlaceholder")}
-        </p>
-        {uploadSuccess && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] px-4 py-2 text-sm">
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            {t("uploadSuccess")}
-          </div>
-        )}
-        {uploadError && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] px-4 py-2 text-sm">
-            <XCircle className="w-5 h-5 flex-shrink-0" />
-            {uploadError}
-          </div>
-        )}
-        <label className="flex items-center justify-center border-2 border-dashed border-[#CBD5E1] rounded-lg p-6 cursor-pointer hover:border-[#1D4ED8] transition-colors">
-          <input
-            type="file"
-            multiple
-            className="hidden"
-            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-          <div className="text-center">
-            <Upload className="w-8 h-8 text-[#94A3B8] mx-auto mb-2" />
-            <p className="text-sm text-[#667085]">
-              {uploading ? t("uploading") : t("clickToUpload")}
-            </p>
-          </div>
-        </label>
-      </div>
+      {/* F. Step 2 — Save to Shopify */}
+      <StepCard stepNumber={2} title={t("step2Title")}>
+        <p>{t("step2Description")}</p>
+      </StepCard>
 
-      {/* Save Evidence to Shopify */}
-      <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <h3 className="font-semibold text-[#0B1220] mb-3">{t("saveToShopify")}</h3>
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6">
         {pack.status === "saved_to_shopify" ? (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
+          <>
+            <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-5 h-5 text-[#22C55E]" />
-              <span className="text-sm font-medium text-[#22C55E]">
-                {t("saveSuccess")}
-              </span>
+              <span className="font-medium text-[#22C55E]">{t("savedToShopifyBadge")}</span>
             </div>
+            <p className="text-sm text-[#667085] mb-2">{t("step2AfterSave")}</p>
+            {pack.saved_to_shopify_at && (
+              <p className="text-xs text-[#94A3B8] mb-3">{t("lastSavedToShopify", { date: formatDate(pack.saved_to_shopify_at, locale) })}</p>
+            )}
             <a
-              href={`https://admin.shopify.com`}
+              href="https://admin.shopify.com"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-[#1D4ED8] hover:underline"
             >
               {t("openInShopifyAdmin")}
             </a>
-          </div>
+          </>
         ) : (
-          <div>
-            <p className="text-sm text-[#667085] mb-3">
-              {t("saveDescription")}
-            </p>
+          <>
             <Button
               variant="primary"
               size="sm"
-              disabled={saving || pack.status === "saving" || pack.status === "building" || pack.status === "queued"}
+              disabled={saving || pack.status === "saving" || isBuilding}
               onClick={async () => {
                 setSaving(true);
                 await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
@@ -437,72 +454,60 @@ export default function PackPreviewPage() {
             </Button>
             {pack.status === "save_failed" && (
               <div className="mt-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-3">
-                <p className="text-sm text-[#DC2626]">
-                  {t("saveFailed")}
-                </p>
+                <p className="text-sm text-[#DC2626]">{t("saveFailed")}</p>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
-      {/* Completeness Gate */}
-      {pack.completeness_score != null && pack.completeness_score < 60 && (
-        <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-lg p-4 mb-6">
-          <h4 className="font-semibold text-[#92400E] mb-1">{t("missingEvidence")}</h4>
-          <p className="text-sm text-[#92400E]">
-            {t("lowScore", { score: pack.completeness_score })}
-          </p>
-          {pack.checklist && (
-            <ul className="mt-2 text-sm text-[#92400E] list-disc pl-4 space-y-1">
-              {(pack.checklist as Array<{ field: string; label: string; required: boolean; present: boolean }>)
-                .filter((c) => !c.present && c.required)
-                .map((c) => (
-                  <li key={c.field}>{c.label} ({t("required")})</li>
-                ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {/* G. Step 3 — Submit in Shopify Admin */}
+      <StepCard stepNumber={3} title={t("step3Title")}>
+        <p>{t("step3Description")}</p>
+        <a
+          href="https://admin.shopify.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-2 text-sm font-medium text-[#1D4ED8] hover:underline"
+        >
+          {t("openInShopifyAdmin")}
+        </a>
+      </StepCard>
 
-      {/* PDF Export */}
-      <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-        <h3 className="font-semibold text-[#0B1220] mb-3">{t("pdfExport")}</h3>
+      {/* H. Optional — Export PDF */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mb-6">
+        <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("stepOptionalPdfTitle")}</h3>
+        <p className="text-sm text-[#667085] mb-2">{t("stepOptionalPdfDescription")}</p>
+        <p className="text-sm text-[#94A3B8] mb-4">{t("stepOptionalPdfNote")}</p>
         {pack.active_pdf_job ? (
-          <InfoBanner variant="info">
-            {t("renderingBanner")}
-          </InfoBanner>
+          <p className="text-sm text-[#1E40AF]">{t("generatingPdf")}</p>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleRenderPdf}
+              onClick={handleExportPdf}
               disabled={rendering}
             >
-              {rendering
-                ? t("rendering")
-                : pack.pdf_path
-                  ? t("reRenderPdf")
-                  : t("renderPdf")}
+              {rendering ? t("generatingPdf") : pack.pdf_path ? t("reRenderPdf") : t("exportPdf")}
             </Button>
             {pack.pdf_path && (
               <Button variant="primary" size="sm" onClick={handleDownload}>
-                {t("downloadPdf")}
+                {t("downloadPdfReady")}
               </Button>
             )}
           </div>
         )}
-        {pack.pdf_path && (
-          <p className="text-xs text-[#667085] mt-2">
-            {t("lastRendered", { path: pack.pdf_path.split("/").pop()?.replace(/-/g, ":") ?? "" })}
-          </p>
-        )}
       </div>
 
-      {/* Audit Log */}
+      {/* Status banner */}
+      <div className="mb-6">
+        <StatusBanner variant={statusBanner.variant} message={statusBanner.message} />
+      </div>
+
+      {/* Audit log */}
       {pack.audit_events.length > 0 && (
-        <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
+        <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6">
           <h3 className="font-semibold text-[#0B1220] mb-4">{t("auditLog")}</h3>
           <div className="space-y-3">
             {pack.audit_events.map((evt) => (
@@ -522,10 +527,10 @@ export default function PackPreviewPage() {
       )}
 
       {/* Compliance */}
-      <InfoBanner variant="info">
-        <Shield className="w-4 h-4 mr-2 inline" />
+      <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 text-sm text-[#667085]">
+        <Shield className="w-4 h-4 inline mr-2 align-middle" />
         {t("compliance")}
-      </InfoBanner>
+      </div>
     </div>
   );
 }

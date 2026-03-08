@@ -33,16 +33,27 @@ export async function GET(
     const dispute_gid = disputeRow?.dispute_gid ?? null;
     const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
 
-    // Library packs (dispute_id null): merge name from packs table so UI shows correct title
+    // Library packs (dispute_id null): merge name, dispute_type, source, template_id, template_name from packs
     if (pack.dispute_id == null) {
       const { data: libraryRow } = await db
         .from("packs")
-        .select("name, dispute_type")
+        .select("name, dispute_type, source, template_id")
         .eq("id", packId)
         .single();
       if (libraryRow) {
         (pack as Record<string, unknown>).name = libraryRow.name;
         (pack as Record<string, unknown>).dispute_type = libraryRow.dispute_type;
+        (pack as Record<string, unknown>).source = libraryRow.source;
+        (pack as Record<string, unknown>).template_id = libraryRow.template_id;
+        if (libraryRow.template_id) {
+          const { data: i18nRow } = await db
+            .from("pack_template_i18n")
+            .select("name")
+            .eq("template_id", libraryRow.template_id)
+            .eq("locale", "en-US")
+            .maybeSingle();
+          (pack as Record<string, unknown>).template_name = i18nRow?.name ?? null;
+        }
       }
     }
 
@@ -96,9 +107,22 @@ export async function GET(
     );
   }
 
-  const { shop_domain, ...rest } = libraryPack;
+  const { shop_domain, template_id, ...rest } = libraryPack as typeof libraryPack & { template_id?: string | null };
+  let template_name: string | null = null;
+  if (template_id) {
+    const { data: i18nRow } = await db
+      .from("pack_template_i18n")
+      .select("name")
+      .eq("template_id", template_id)
+      .eq("locale", "en-US")
+      .maybeSingle();
+    template_name = i18nRow?.name ?? null;
+  }
+
   return NextResponse.json({
     ...rest,
+    template_id: template_id ?? null,
+    template_name,
     dispute_id: null,
     completeness_score: null,
     checklist: null,
