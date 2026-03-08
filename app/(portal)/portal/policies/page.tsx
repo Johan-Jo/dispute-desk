@@ -51,6 +51,11 @@ function contentEditableHtmlToBody(html: string): string {
     .replace(/&gt;/g, ">");
 }
 
+/** Strip ** markdown so output is plain text with no asterisks (bold only visual in editor). */
+function bodyToPlainText(body: string): string {
+  return body.replace(/\*\*([^*]+)\*\*/g, "$1");
+}
+
 export default function PoliciesPage() {
   useCompleteSetupStep("business_policies");
   const t = useTranslations("policies");
@@ -212,7 +217,7 @@ export default function PoliciesPage() {
   }, [templateModalBody]);
 
   const handleCopyTemplate = useCallback(() => {
-    const body = getEditorBody();
+    const body = bodyToPlainText(getEditorBody());
     if (!body) return;
     void navigator.clipboard.writeText(body);
     setCopied(true);
@@ -220,7 +225,7 @@ export default function PoliciesPage() {
   }, [getEditorBody]);
 
   const handleDownloadTemplate = useCallback(() => {
-    const body = getEditorBody();
+    const body = bodyToPlainText(getEditorBody());
     if (!body || !templateModalType) return;
     const name = templateModalType === "refunds" ? "refund-policy" : templateModalType === "shipping" ? "shipping-policy" : "terms-of-service";
     const blob = new Blob([body], { type: "text/plain" });
@@ -233,7 +238,7 @@ export default function PoliciesPage() {
   }, [getEditorBody, templateModalType]);
 
   const handleSaveAndApply = useCallback(async () => {
-    const body = getEditorBody().trim();
+    const body = bodyToPlainText(getEditorBody()).trim();
     if (!shopId || isDemo || !body || !templateModalType) return;
     setTemplateApplying(true);
     try {
