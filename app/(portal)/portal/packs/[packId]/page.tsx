@@ -237,6 +237,12 @@ export default function PackPreviewPage() {
         </div>
       </div>
 
+      <div className="mb-6">
+        <InfoBanner variant="info" title={t("pageExplainerTitle")}>
+          {t("pageExplainerBody")}
+        </InfoBanner>
+      </div>
+
       {isBuilding && (
         <div className="mb-4">
           <InfoBanner variant="info">

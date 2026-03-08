@@ -234,6 +234,8 @@
     "backToPacks": "Back to packs",
     "approveAndSave": "Approve & Save",
     "completenessScore": "Completeness Score",
+    "pageExplainerTitle": "What to do on this page",
+    "pageExplainerBody": "This is your evidence pack for the dispute. (1) Upload supporting files (receipts, tracking, policies) in the upload area — the Completeness Score shows how strong your evidence is. (2) When ready, use \"Save Evidence to Shopify\" to send the data to Shopify; final submission to the card network is done in Shopify Admin (or auto-submitted by Shopify on the due date). (3) You can \"Render PDF\" to download a PDF of the pack for your records or manual submission.",
     "openInShopifyAdmin": "Open in Shopify Admin →",
     "viewPack": "View pack {id} →",
     "copyToClipboard": "Copy",
