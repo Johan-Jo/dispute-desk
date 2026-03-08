@@ -29,6 +29,28 @@ const TEMPLATE_TITLE_KEYS: Record<string, string> = {
   terms: "termsOfService",
 };
 
+function templateBodyToDisplayHtml(body: string): string {
+  const escaped = body
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  return escaped.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function contentEditableHtmlToBody(html: string): string {
+  let out = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/strong>/gi, "**")
+    .replace(/<strong>/gi, "**");
+  out = out.replace(/<[^>]+>/g, "");
+  return out
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, ">");
+}
+
 export default function PoliciesPage() {
   useCompleteSetupStep("business_policies");
   const t = useTranslations("policies");
@@ -49,6 +71,8 @@ export default function PoliciesPage() {
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [showMissingBanner, setShowMissingBanner] = useState(true);
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const templateEditorRef = useRef<HTMLDivElement | null>(null);
+  const skipNextEditorSyncRef = useRef(false);
 
   const fetchPolicies = useCallback(async () => {
     if (isDemo || !shopId) return;
@@ -156,11 +180,13 @@ export default function PoliciesPage() {
       setTemplateModalOpen(true);
       setTemplateModalBody("");
       setTemplateModalLoading(true);
+      skipNextEditorSyncRef.current = false;
       try {
         const res = await fetch(`/api/policy-templates/${type}/content`);
         if (res.ok) {
           const data = await res.json();
           const raw = data.body ?? "";
+          skipNextEditorSyncRef.current = true;
           setTemplateModalBody(prefillTemplateBody(raw, type));
         }
       } catch {
@@ -172,27 +198,43 @@ export default function PoliciesPage() {
     [prefillTemplateBody]
   );
 
-  const handleCopyTemplate = useCallback(() => {
-    if (!templateModalBody) return;
-    void navigator.clipboard.writeText(templateModalBody);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  useEffect(() => {
+    if (!templateModalOpen || !templateModalBody || !templateEditorRef.current) return;
+    if (!skipNextEditorSyncRef.current) return;
+    skipNextEditorSyncRef.current = false;
+    const html = templateBodyToDisplayHtml(templateModalBody);
+    templateEditorRef.current.innerHTML = html.replace(/\n/g, "<br>");
+  }, [templateModalOpen, templateModalBody]);
+
+  const getEditorBody = useCallback((): string => {
+    const el = templateEditorRef.current;
+    return el ? contentEditableHtmlToBody(el.innerHTML) : templateModalBody;
   }, [templateModalBody]);
 
+  const handleCopyTemplate = useCallback(() => {
+    const body = getEditorBody();
+    if (!body) return;
+    void navigator.clipboard.writeText(body);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [getEditorBody]);
+
   const handleDownloadTemplate = useCallback(() => {
-    if (!templateModalBody || !templateModalType) return;
+    const body = getEditorBody();
+    if (!body || !templateModalType) return;
     const name = templateModalType === "refunds" ? "refund-policy" : templateModalType === "shipping" ? "shipping-policy" : "terms-of-service";
-    const blob = new Blob([templateModalBody], { type: "text/plain" });
+    const blob = new Blob([body], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `${name}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [templateModalBody, templateModalType]);
+  }, [getEditorBody, templateModalType]);
 
   const handleSaveAndApply = useCallback(async () => {
-    if (!shopId || isDemo || !templateModalBody?.trim() || !templateModalType) return;
+    const body = getEditorBody().trim();
+    if (!shopId || isDemo || !body || !templateModalType) return;
     setTemplateApplying(true);
     try {
       const res = await fetch("/api/policies/apply", {
@@ -201,7 +243,7 @@ export default function PoliciesPage() {
         body: JSON.stringify({
           shop_id: shopId,
           policy_type: templateModalType,
-          content: templateModalBody.trim(),
+          content: body,
         }),
       });
       if (res.ok) {
@@ -216,7 +258,7 @@ export default function PoliciesPage() {
     } finally {
       setTemplateApplying(false);
     }
-  }, [shopId, isDemo, templateModalBody, templateModalType, fetchPolicies, t]);
+  }, [shopId, isDemo, getEditorBody, templateModalType, fetchPolicies, t]);
 
   const handleUpload = useCallback(
     async (policyType: string, file: File) => {
@@ -461,12 +503,19 @@ export default function PoliciesPage() {
               {t("verifyBoldBeforeAccept")}
             </p>
             <div className="relative">
-              <textarea
-                value={templateModalBody}
-                onChange={(e) => setTemplateModalBody(e.target.value)}
-                className="w-full text-xs text-[#0B1220] font-sans max-h-[50vh] min-h-[280px] overflow-y-auto p-4 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1D4ED8] focus:border-[#1D4ED8] resize-y"
-                placeholder={t("editTemplatePlaceholder")}
-                spellCheck="true"
+              <div
+                ref={templateEditorRef}
+                contentEditable
+                suppressContentEditableWarning
+                className="w-full text-xs text-[#0B1220] font-sans max-h-[50vh] min-h-[280px] overflow-y-auto p-4 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1D4ED8] focus:border-[#1D4ED8] outline-none [&_strong]:font-bold"
+                data-placeholder={t("editTemplatePlaceholder")}
+                spellCheck
+                onInput={() => {
+                  const el = templateEditorRef.current;
+                  if (!el) return;
+                  const body = contentEditableHtmlToBody(el.innerHTML);
+                  setTemplateModalBody(body);
+                }}
               />
             </div>
           </div>
