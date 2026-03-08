@@ -146,15 +146,21 @@ export default function DisputesPage() {
       }
       const synced = data?.synced ?? 0;
       const syncErrors: string[] = data?.errors ?? [];
+      const debug = data?.debug as { shop_domain?: string; first_page_edges?: number } | undefined;
       if (syncErrors.length > 0) {
         setSyncError(`Sync errors: ${syncErrors.join("; ")}`);
         return;
       }
-      setSyncMessage(
-        synced === 0
-          ? "Sync complete. No disputes in Shopify for this store."
-          : `Synced ${synced} dispute(s) from Shopify.`
-      );
+      if (synced === 0) {
+        const shopDomain = debug?.shop_domain;
+        setSyncMessage(
+          shopDomain
+            ? `Sync complete. Shopify returned 0 disputes for this store (${shopDomain}). If you expect disputes, confirm the store above is correct and check Payments → Disputes in Shopify Admin.`
+            : "Sync complete. No disputes in Shopify for this store."
+        );
+      } else {
+        setSyncMessage(`Synced ${synced} dispute(s) from Shopify.`);
+      }
       await fetchDisputes();
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Sync failed");
@@ -314,7 +320,10 @@ export default function DisputesPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-[#667085]">
-                    {t("noDisputes")}
+                    <p className="mb-1">{t("noDisputes")}</p>
+                    {!isDemo && shopId && (
+                      <p className="text-xs mt-2 max-w-md mx-auto">{t("noDisputesHint")}</p>
+                    )}
                   </td>
                 </tr>
               ) : (

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Upload, Copy, Check } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
-import { useActiveShopId } from "@/lib/portal/activeShopContext";
+import { useActiveShopId, useActiveShopDomain } from "@/lib/portal/activeShopContext";
 import { useDemoMode } from "@/lib/demo-mode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export default function PoliciesPage() {
   const locale = useLocale();
   const isDemo = useDemoMode();
   const shopId = useActiveShopId() ?? "";
+  const shopDomain = useActiveShopDomain();
 
   const [policyByType, setPolicyByType] = useState<Record<string, { url: string | null; captured_at: string }>>({});
   const [templates, setTemplates] = useState<{ type: string; name: string; description: string }[]>([]);
@@ -43,6 +44,7 @@ export default function PoliciesPage() {
   const [templateModalType, setTemplateModalType] = useState<string | null>(null);
   const [templateModalBody, setTemplateModalBody] = useState("");
   const [templateModalLoading, setTemplateModalLoading] = useState(false);
+  const [templateApplying, setTemplateApplying] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [showMissingBanner, setShowMissingBanner] = useState(true);
@@ -105,23 +107,43 @@ export default function PoliciesPage() {
 
   const hasPolicies = Object.keys(policyByType).length > 0;
 
-  const openTemplateModal = useCallback(async (type: string) => {
-    setTemplateModalType(type);
-    setTemplateModalOpen(true);
-    setTemplateModalBody("");
-    setTemplateModalLoading(true);
-    try {
-      const res = await fetch(`/api/policy-templates/${type}/content`);
-      if (res.ok) {
-        const data = await res.json();
-        setTemplateModalBody(data.body ?? "");
-      }
-    } catch {
+  const prefillTemplateBody = useCallback(
+    (body: string): string => {
+      let out = body;
+      const storeName = shopDomain?.replace(/\.myshopify\.com$/i, "") ?? "Your Store";
+      out = out.replace(/\[Your Store Name\]/g, storeName);
+      const today = new Date().toLocaleDateString(locale, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      out = out.replace(/\[Date\]/g, today);
+      return out;
+    },
+    [shopDomain, locale]
+  );
+
+  const openTemplateModal = useCallback(
+    async (type: string) => {
+      setTemplateModalType(type);
+      setTemplateModalOpen(true);
       setTemplateModalBody("");
-    } finally {
-      setTemplateModalLoading(false);
-    }
-  }, []);
+      setTemplateModalLoading(true);
+      try {
+        const res = await fetch(`/api/policy-templates/${type}/content`);
+        if (res.ok) {
+          const data = await res.json();
+          const raw = data.body ?? "";
+          setTemplateModalBody(prefillTemplateBody(raw));
+        }
+      } catch {
+        setTemplateModalBody("");
+      } finally {
+        setTemplateModalLoading(false);
+      }
+    },
+    [prefillTemplateBody]
+  );
 
   const handleCopyTemplate = useCallback(() => {
     if (!templateModalBody) return;
@@ -141,6 +163,33 @@ export default function PoliciesPage() {
     a.click();
     URL.revokeObjectURL(url);
   }, [templateModalBody, templateModalType]);
+
+  const handleSaveAndApply = useCallback(async () => {
+    if (!shopId || isDemo || !templateModalBody?.trim() || !templateModalType) return;
+    setTemplateApplying(true);
+    try {
+      const res = await fetch("/api/policies/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          policy_type: templateModalType,
+          content: templateModalBody.trim(),
+        }),
+      });
+      if (res.ok) {
+        setTemplateModalOpen(false);
+        await fetchPolicies();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? t("uploadError"));
+      }
+    } catch {
+      alert(t("uploadError"));
+    } finally {
+      setTemplateApplying(false);
+    }
+  }, [shopId, isDemo, templateModalBody, templateModalType, fetchPolicies, t]);
 
   const handleUpload = useCallback(
     async (policyType: string, file: File) => {
@@ -350,18 +399,25 @@ export default function PoliciesPage() {
         description={t("templateDisclaimer")}
         size="lg"
         footer={
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleCopyTemplate} disabled={!templateModalBody}>
-              {copied ? <Check className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
-              {copied ? t("copied") : t("copyToClipboard")}
-            </Button>
-            <Button variant="secondary" onClick={handleDownloadTemplate} disabled={!templateModalBody}>
-              <Download className="w-4 h-4 mr-1" />
-              {t("downloadTemplate")}
-            </Button>
-            <Button variant="primary" onClick={() => setTemplateModalOpen(false)}>
-              {tc("cancel")}
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={handleCopyTemplate} disabled={!templateModalBody}>
+                {copied ? <Check className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
+                {copied ? t("copied") : t("copyToClipboard")}
+              </Button>
+              <Button variant="secondary" onClick={handleDownloadTemplate} disabled={!templateModalBody}>
+                <Download className="w-4 h-4 mr-1" />
+                {t("downloadTemplate")}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={handleSaveAndApply} disabled={!templateModalBody?.trim() || templateApplying || isDemo}>
+                {templateApplying ? t("applying") : t("saveAndApply")}
+              </Button>
+              <Button variant="secondary" onClick={() => setTemplateModalOpen(false)}>
+                {tc("cancel")}
+              </Button>
+            </div>
           </div>
         }
       >
@@ -370,9 +426,20 @@ export default function PoliciesPage() {
             <div className="animate-spin w-8 h-8 border-2 border-[#1D4ED8] border-t-transparent rounded-full" />
           </div>
         ) : (
-          <pre className="text-xs text-[#0B1220] whitespace-pre-wrap font-sans max-h-[60vh] overflow-y-auto p-4 bg-[#F7F8FA] rounded-lg">
-            {templateModalBody || ""}
-          </pre>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-[#1D4ED8] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md px-3 py-2">
+              {t("suggestedStandardsNote")}
+            </p>
+            <div className="relative">
+              <textarea
+                value={templateModalBody}
+                onChange={(e) => setTemplateModalBody(e.target.value)}
+                className="w-full text-xs text-[#0B1220] font-sans max-h-[50vh] min-h-[280px] overflow-y-auto p-4 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#1D4ED8] focus:border-[#1D4ED8] resize-y"
+                placeholder={t("editTemplatePlaceholder")}
+                spellCheck="true"
+              />
+            </div>
+          </div>
         )}
       </Modal>
     </div>

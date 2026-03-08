@@ -56,7 +56,7 @@ export function PortalShell({
   const isDemo = !hasRealShopActive;
 
   return (
-    <ActiveShopProvider activeShopId={activeShopId}>
+    <ActiveShopProvider activeShopId={activeShopId} activeShopDomain={activeShopDomain}>
     <DemoModeProvider isDemo={isDemo} shopCount={shops.length} activeShopDomain={activeShopDomain}>
     <HelpGuideProvider>
     <OnboardingProvider>

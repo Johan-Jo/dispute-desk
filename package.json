@@ -49,6 +49,7 @@
     "puppeteer": "^23.11.1",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.5.0",
+    "vercel": "^50.28.0",
     "vitest": "^2.0.0"
   }
 }

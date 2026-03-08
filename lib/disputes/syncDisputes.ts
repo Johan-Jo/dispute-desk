@@ -16,11 +16,13 @@ import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 
-interface SyncResult {
+export interface SyncResult {
   synced: number;
   created: number;
   updated: number;
   errors: string[];
+  /** Set when synced === 0 to help diagnose "no disputes" (no tokens or PII). */
+  debug?: { shop_domain: string; first_page_edges: number };
 }
 
 /**
@@ -84,6 +86,7 @@ export async function syncDisputes(
   const result: SyncResult = { synced: 0, created: 0, updated: 0, errors: [] };
   let hasNextPage = true;
   let after: string | null = null;
+  let firstPageEdgesCount: number | null = null;
 
   while (hasNextPage) {
     const variables: Record<string, unknown> = { first: 50, after };
@@ -98,6 +101,9 @@ export async function syncDisputes(
       for (const e of gqlResult.errors) {
         result.errors.push(`GraphQL: ${e.message}`);
       }
+      if (firstPageEdgesCount === null) {
+        result.debug = { shop_domain: shop.shop_domain, first_page_edges: 0 };
+      }
       break;
     }
 
@@ -106,7 +112,13 @@ export async function syncDisputes(
     const pageInfo =
       gqlResult.data?.disputes?.pageInfo;
 
-    if (edges.length === 0) break;
+    if (firstPageEdgesCount === null) firstPageEdgesCount = edges.length;
+    if (edges.length === 0) {
+      if (result.synced === 0) {
+        result.debug = { shop_domain: shop.shop_domain, first_page_edges: 0 };
+      }
+      break;
+    }
 
     for (const edge of edges) {
       const d = edge.node;
@@ -198,6 +210,13 @@ export async function syncDisputes(
     }
 
     hasNextPage = pageInfo?.hasNextPage ?? false;
+  }
+
+  if (result.synced === 0 && result.debug === undefined) {
+    result.debug = {
+      shop_domain: shop.shop_domain,
+      first_page_edges: firstPageEdgesCount ?? 0,
+    };
   }
 
   // Audit the sync

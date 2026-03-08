@@ -148,6 +148,7 @@
     "noPacks": "No evidence packs yet. Generate one to get started.",
     "noPacksAuto": "No evidence packs yet. The automation pipeline will generate one automatically, or click Generate Pack.",
     "noDisputes": "No disputes found. Click Sync Now to fetch from Shopify.",
+    "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now.",
     "connectStore": "Connect a Shopify store to see disputes.",
     "packLimitReached": "Pack limit reached",
     "planLimitMessage": "Plan limit reached. Please upgrade.",
@@ -605,7 +606,11 @@
     "refundTemplateDesc": "Standard return and refund terms for dispute evidence.",
     "shippingTemplateDesc": "Shipping timelines, carriers, and delivery terms.",
     "termsTemplateDesc": "Payment terms, cancellations, and dispute procedures.",
-    "templateDisclaimer": "These templates are starting points, not legal advice. Review with your legal team before publishing."
+    "templateDisclaimer": "These templates are starting points, not legal advice. Review with your legal team before publishing.",
+    "suggestedStandardsNote": "Suggested sections (Return Window, Eligible Items, How to Request a Refund, etc.) are included below. Edit the principal data points—store name, dates, return days, support email—then save and apply.",
+    "editTemplatePlaceholder": "Edit your policy text here…",
+    "saveAndApply": "Save & Apply",
+    "applying": "Applying…"
   },
   "reasons": {
     "fraudulent": "Fraudulent",
