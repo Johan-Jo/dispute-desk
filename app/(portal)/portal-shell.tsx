@@ -25,6 +25,8 @@ interface PortalShellProps {
   shops: Shop[];
   activeShopId: string | null;
   activeShopDomain: string | null;
+  activeShopLocale?: string | null;
+  activeShopPlan?: string | null;
   children: React.ReactNode;
 }
 
@@ -45,6 +47,8 @@ export function PortalShell({
   shops,
   activeShopId,
   activeShopDomain,
+  activeShopLocale,
+  activeShopPlan,
   children,
 }: PortalShellProps) {
   const pathname = usePathname();
@@ -56,7 +60,7 @@ export function PortalShell({
   const isDemo = !hasRealShopActive;
 
   return (
-    <ActiveShopProvider activeShopId={activeShopId} activeShopDomain={activeShopDomain}>
+    <ActiveShopProvider activeShopId={activeShopId} activeShopDomain={activeShopDomain} activeShopLocale={activeShopLocale} activeShopPlan={activeShopPlan}>
     <DemoModeProvider isDemo={isDemo} shopCount={shops.length} activeShopDomain={activeShopDomain}>
     <HelpGuideProvider>
     <OnboardingProvider>

@@ -607,7 +607,8 @@
     "shippingTemplateDesc": "Shipping timelines, carriers, and delivery terms.",
     "termsTemplateDesc": "Payment terms, cancellations, and dispute procedures.",
     "templateDisclaimer": "These templates are starting points, not legal advice. Review with your legal team before publishing.",
-    "suggestedStandardsNote": "Suggested sections (Return Window, Eligible Items, How to Request a Refund, etc.) are included below. Edit the principal data points—store name, dates, return days, support email—then save and apply.",
+    "suggestedStandardsNote": "Suggested sections (Return Window, Eligible Items, How to Request a Refund, etc.) are prefilled from your store data. Edit any values as needed.",
+    "verifyBoldBeforeAccept": "Values in bold are suggestions. Verify and edit if needed before saving or applying.",
     "editTemplatePlaceholder": "Edit your policy text here…",
     "saveAndApply": "Save & Apply",
     "applying": "Applying…"

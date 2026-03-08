@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Upload, Copy, Check } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
-import { useActiveShopId, useActiveShopDomain } from "@/lib/portal/activeShopContext";
+import { useActiveShopId, useActiveShopData } from "@/lib/portal/activeShopContext";
 import { useDemoMode } from "@/lib/demo-mode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export default function PoliciesPage() {
   const locale = useLocale();
   const isDemo = useDemoMode();
   const shopId = useActiveShopId() ?? "";
-  const shopDomain = useActiveShopDomain();
+  const shopData = useActiveShopData();
 
   const [policyByType, setPolicyByType] = useState<Record<string, { url: string | null; captured_at: string }>>({});
   const [templates, setTemplates] = useState<{ type: string; name: string; description: string }[]>([]);
@@ -108,19 +108,46 @@ export default function PoliciesPage() {
   const hasPolicies = Object.keys(policyByType).length > 0;
 
   const prefillTemplateBody = useCallback(
-    (body: string): string => {
+    (body: string, templateType: string): string => {
       let out = body;
-      const storeName = shopDomain?.replace(/\.myshopify\.com$/i, "") ?? "Your Store";
-      out = out.replace(/\[Your Store Name\]/g, storeName);
+      const domain = shopData.shop_domain ?? "";
+      const storeName = domain.replace(/\.myshopify\.com$/i, "") || "Your Store";
+      const supportEmail = domain ? `support@${domain}` : "support@yourstore.com";
       const today = new Date().toLocaleDateString(locale, {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
+      const jurisdiction =
+        (shopData.locale && shopData.locale.startsWith("en-")) || !shopData.locale
+          ? "the United States"
+          : shopData.locale.startsWith("en-GB")
+            ? "England and Wales"
+            : "your jurisdiction";
+
+      out = out.replace(/\[Your Store Name\]/g, storeName);
       out = out.replace(/\[Date\]/g, today);
+      out = out.replace(/\[your support email\]/g, `**${supportEmail}**`);
+      out = out.replace(/\[cutoff time\]/g, "**2:00 PM**");
+      out = out.replace(/\[amount\]/g, "**$50**");
+      out = out.replace(/\[Carrier names, e\.g\. USPS, UPS, FedEx\]/g, "**USPS, UPS, FedEx**");
+      out = out.replace(/\[Jurisdiction\]/g, `**${jurisdiction}**`);
+      if (templateType === "shipping") {
+        out = out.replace(/\*\*\[X\]\*\* business days/, "**3** business days");
+        out = out.replace(/\*\*\[X–Y\] business days\*\*/g, "**5–10** business days");
+        out = out.replace(/\*\*\[X-Y\] business days\*\*/g, "**5–10** business days");
+        out = out.replace(/\[X\] business days/g, "**5** business days");
+        out = out.replace(/\[X\] days of delivery/g, "**30** days of delivery");
+        out = out.replace(/\[X\]/g, "**3**");
+      } else {
+        out = out.replace(/\*\*\[X\]\*\*/g, "**30**");
+        out = out.replace(/\[X\]/g, "**30**");
+      }
+      out = out.replace(/\[X–Y\]/g, "**5–10**");
+      out = out.replace(/\[X-Y\]/g, "**5–10**");
       return out;
     },
-    [shopDomain, locale]
+    [shopData.shop_domain, shopData.locale, locale]
   );
 
   const openTemplateModal = useCallback(
@@ -134,7 +161,7 @@ export default function PoliciesPage() {
         if (res.ok) {
           const data = await res.json();
           const raw = data.body ?? "";
-          setTemplateModalBody(prefillTemplateBody(raw));
+          setTemplateModalBody(prefillTemplateBody(raw, type));
         }
       } catch {
         setTemplateModalBody("");
@@ -429,6 +456,9 @@ export default function PoliciesPage() {
           <div className="space-y-2">
             <p className="text-xs font-medium text-[#1D4ED8] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md px-3 py-2">
               {t("suggestedStandardsNote")}
+            </p>
+            <p className="text-xs font-medium text-[#0B1220] bg-[#FEF3C7] border border-[#FCD34D] rounded-md px-3 py-2">
+              {t("verifyBoldBeforeAccept")}
             </p>
             <div className="relative">
               <textarea
