@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 
-const VALID_POLICY_TYPES = ["refunds", "shipping", "terms"] as const;
+const VALID_POLICY_TYPES = ["refunds", "shipping", "terms", "privacy", "contact"] as const;
 const MAX_CONTENT_LENGTH = 500 * 1024; // 500 KB
 
 /**
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   if (!VALID_POLICY_TYPES.includes(policyType as (typeof VALID_POLICY_TYPES)[number])) {
     return NextResponse.json(
-      { error: "policy_type must be one of: refunds, shipping, terms" },
+      { error: "policy_type must be one of: refunds, shipping, terms, privacy, contact" },
       { status: 400 }
     );
   }

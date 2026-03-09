@@ -39,4 +39,20 @@ describe("GET /api/policy-templates/[type]/content", () => {
     expect(data.body).toBeDefined();
     expect(data.body).toContain("Shipping");
   });
+
+  it("returns 200 with body for type privacy", async () => {
+    const res = await makeRequest("privacy");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.body).toBeDefined();
+    expect(data.body).toContain("Privacy");
+  });
+
+  it("returns 200 with body for type contact", async () => {
+    const res = await makeRequest("contact");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.body).toBeDefined();
+    expect(data.body).toContain("Contact");
+  });
 });

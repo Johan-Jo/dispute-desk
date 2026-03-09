@@ -1,33 +1,89 @@
 # Shipping Policy
 
-**Last updated: [Date]**
+Last updated: March 9, 2026
 
-[Your Store Name] ships orders to the addresses you provide at checkout. This policy explains our processing times, carriers, and how we handle shipping issues.
+This Shipping Policy explains how [Store Name] processes, ships, and delivers orders.
 
-## Processing Time
+## 1. Processing Times
 
-We process and ship orders within **[X]** business days (excluding weekends and holidays) after payment is confirmed. Orders placed after [cutoff time] may be processed the next business day.
+Orders are typically processed within [X] business days after payment is confirmed.
 
-## Carriers and Delivery
+Processing times may be longer during:
+- holidays;
+- promotional periods;
+- product launches;
+- high-order-volume periods;
+- unforeseen operational disruptions.
 
-- We ship via [Carrier names, e.g. USPS, UPS, FedEx] depending on destination and package size.
-- Domestic delivery typically takes **[X–Y] business days** after shipment.
-- International delivery times vary by destination; allow **[X–Y] business days** for delivery once shipped.
-- You will receive a tracking number and link by email once your order ships.
+Processing time is separate from shipping time.
 
-## Shipping Costs
+## 2. Shipping Destinations
 
-Shipping costs are calculated at checkout based on destination, weight, and selected shipping method. Free shipping may apply to orders over [amount] or to specific promotions.
+We currently ship to [list countries/regions].
 
-## Lost or Damaged Packages
+We do not ship to P.O. boxes, parcel lockers, or certain restricted destinations unless expressly stated.
 
-- **Lost in transit:** If tracking shows no movement for [X] business days, contact us with your order number. We will work with the carrier and, if the package is confirmed lost, replace or refund the order.
-- **Damaged on arrival:** Please contact us within [X] days of delivery with photos of the packaging and product. We will arrange a replacement or refund as appropriate.
+## 3. Shipping Rates
 
-## Incorrect or Incomplete Address
+Shipping fees are shown at checkout before payment is completed.
 
-We are not responsible for orders shipped to incorrect or incomplete addresses provided at checkout. Please verify your address before placing your order. If an order is returned to us due to an address error, we will contact you to arrange reshipment (additional shipping fees may apply).
+Any customs duties, import taxes, local VAT, brokerage fees, or similar charges are the responsibility of the customer unless stated otherwise.
 
----
+## 4. Delivery Estimates
 
-*This template is a starting point for your store policy. It is not legal advice. Review with your legal team before publishing.*
+Estimated delivery times depend on destination, shipping method, and carrier. Delivery dates shown at checkout or in shipping notifications are estimates only and not guaranteed unless expressly stated.
+
+We are not liable for carrier delays, customs delays, weather disruptions, labor disruptions, or other circumstances outside our reasonable control.
+
+## 5. Order Tracking
+
+Where tracking is available, you will receive a shipping confirmation email with tracking information once your order has been dispatched.
+
+Tracking updates are provided by the carrier and may take time to appear after shipment.
+
+## 6. Customer Address Responsibility
+
+Customers are responsible for entering a complete and correct shipping address at checkout.
+
+If an incorrect, incomplete, or undeliverable address is provided:
+- delivery may be delayed or fail;
+- the package may be returned to us;
+- reshipping fees may apply;
+- any refund may be reduced by shipping costs where permitted by law.
+
+## 7. Split Shipments
+
+Some orders may ship in separate packages depending on stock availability, warehouse location, or carrier limitations. Where possible, you will receive tracking details for each shipment.
+
+## 8. Delivered but Not Received
+
+If tracking shows that your order was delivered but you cannot locate it, please:
+- verify the shipping address;
+- check with household members, neighbors, concierge, reception, or mailroom staff;
+- check around your delivery location;
+- contact the carrier.
+
+If you still need help, contact us at [Support Email]. We will review the issue and assist where possible.
+
+## 9. Lost, Delayed, or Damaged Packages
+
+If your order is significantly delayed, lost in transit, or arrives damaged, contact us at [Support Email] with your order number and any supporting details or photos.
+
+We may need time to investigate with the carrier before approving a replacement or refund.
+
+## 10. Customs and Import Fees
+
+For international orders, customs clearance may cause delays. Import duties, taxes, and related charges are generally the responsibility of the customer unless otherwise stated at checkout.
+
+We are not responsible for delays caused by customs authorities.
+
+## 11. Refused or Unclaimed Shipments
+
+If a shipment is refused, unclaimed, or returned due to customer inaction or an incorrect address, we may deduct shipping, return, and handling charges from any refund where permitted by law.
+
+## 12. Contact
+
+For shipping questions, please contact:
+
+[Store Name]
+[Support Email]

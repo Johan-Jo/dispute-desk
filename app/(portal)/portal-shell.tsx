@@ -12,7 +12,7 @@ import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
 import { getPortalGuideSteps, getPortalGuideTranslationKeyPrefix, HELP_TRANSLATION_NAMESPACE, type HelpGuideId } from "@/lib/help-guides-config";
 import { onboardingSteps } from "@/lib/onboarding-config";
 import { DemoModeProvider } from "@/lib/demo-mode";
-import { ActiveShopProvider } from "@/lib/portal/activeShopContext";
+import { ActiveShopProvider, type PolicyTemplateLang } from "@/lib/portal/activeShopContext";
 
 interface Shop {
   shop_id: string;
@@ -27,6 +27,7 @@ interface PortalShellProps {
   activeShopDomain: string | null;
   activeShopLocale?: string | null;
   activeShopPlan?: string | null;
+  activeShopPolicyTemplateLang?: PolicyTemplateLang | null;
   children: React.ReactNode;
 }
 
@@ -49,6 +50,7 @@ export function PortalShell({
   activeShopDomain,
   activeShopLocale,
   activeShopPlan,
+  activeShopPolicyTemplateLang,
   children,
 }: PortalShellProps) {
   const pathname = usePathname();
@@ -60,7 +62,7 @@ export function PortalShell({
   const isDemo = !hasRealShopActive;
 
   return (
-    <ActiveShopProvider activeShopId={activeShopId} activeShopDomain={activeShopDomain} activeShopLocale={activeShopLocale} activeShopPlan={activeShopPlan}>
+    <ActiveShopProvider activeShopId={activeShopId} activeShopDomain={activeShopDomain} activeShopLocale={activeShopLocale} activeShopPlan={activeShopPlan} activeShopPolicyTemplateLang={activeShopPolicyTemplateLang}>
     <DemoModeProvider isDemo={isDemo} shopCount={shops.length} activeShopDomain={activeShopDomain}>
     <HelpGuideProvider>
     <OnboardingProvider>

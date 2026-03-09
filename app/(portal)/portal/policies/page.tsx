@@ -16,17 +16,24 @@ const POLICY_ROWS = [
   { nameKey: "termsOfService", typeKey: "legalAgreement", policyType: "terms" as const },
   { nameKey: "refundPolicy", typeKey: "customerPolicy", policyType: "refunds" as const },
   { nameKey: "shippingPolicy", typeKey: "customerPolicy", policyType: "shipping" as const },
+  { nameKey: "privacyPolicy", typeKey: "customerPolicy", policyType: "privacy" as const },
+  { nameKey: "contactPolicy", typeKey: "customerPolicy", policyType: "contact" as const },
 ];
 
-const TEMPLATE_DESC_KEYS: Record<string, string> = {
-  refunds: "refundTemplateDesc",
-  shipping: "shippingTemplateDesc",
-  terms: "termsTemplateDesc",
-};
 const TEMPLATE_TITLE_KEYS: Record<string, string> = {
+  terms: "termsOfService",
   refunds: "refundPolicy",
   shipping: "shippingPolicy",
-  terms: "termsOfService",
+  privacy: "privacyPolicy",
+  contact: "contactPolicy",
+};
+
+const TEMPLATE_DOWNLOAD_FILENAMES: Record<string, string> = {
+  terms: "terms-of-service",
+  refunds: "refund-policy",
+  shipping: "shipping-policy",
+  privacy: "privacy-policy",
+  contact: "contact-customer-service-policy",
 };
 
 function templateBodyToDisplayHtml(body: string): string {
@@ -66,7 +73,19 @@ export default function PoliciesPage() {
   const shopData = useActiveShopData();
 
   const [policyByType, setPolicyByType] = useState<Record<string, { url: string | null; captured_at: string }>>({});
-  const [templates, setTemplates] = useState<{ type: string; name: string; description: string }[]>([]);
+  const [templates, setTemplates] = useState<
+    {
+      type: string;
+      name: string;
+      description: string;
+      bestFor?: string;
+      disputeDefenseValue?: string;
+      qualityBadge?: string;
+      categoryTags?: string[];
+      merchantPlaceholders?: string[];
+      merchantNotes?: string[];
+    }[]
+  >([]);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateModalType, setTemplateModalType] = useState<string | null>(null);
   const [templateModalBody, setTemplateModalBody] = useState("");
@@ -112,11 +131,29 @@ export default function PoliciesPage() {
         const data = await res.json();
         const list = data.templates ?? [];
         setTemplates(
-          list.map((tmpl: { type: string; name: string; description: string }) => ({
-            type: tmpl.type,
-            name: tmpl.name,
-            description: tmpl.description,
-          }))
+          list.map(
+            (tmpl: {
+              type: string;
+              name: string;
+              description: string;
+              bestFor?: string;
+              disputeDefenseValue?: string;
+              qualityBadge?: string;
+              categoryTags?: string[];
+              merchantPlaceholders?: string[];
+              merchantNotes?: string[];
+            }) => ({
+              type: tmpl.type,
+              name: tmpl.name,
+              description: tmpl.description,
+              bestFor: tmpl.bestFor,
+              disputeDefenseValue: tmpl.disputeDefenseValue,
+              qualityBadge: tmpl.qualityBadge,
+              categoryTags: tmpl.categoryTags,
+              merchantPlaceholders: tmpl.merchantPlaceholders,
+              merchantNotes: tmpl.merchantNotes,
+            })
+          )
         );
       }
     } catch {
@@ -125,11 +162,9 @@ export default function PoliciesPage() {
   }, []);
 
   useEffect(() => {
-    if (!isDemo && !shopId) return;
     if (isDemo || !shopId) return;
-    const hasAny = Object.keys(policyByType).length > 0;
-    if (!hasAny) fetchTemplates();
-  }, [isDemo, shopId, policyByType, fetchTemplates]);
+    fetchTemplates();
+  }, [isDemo, shopId, fetchTemplates]);
 
   const policies = POLICY_ROWS.map((row) => {
     const api = policyByType[row.policyType];
@@ -161,18 +196,31 @@ export default function PoliciesPage() {
             : "your jurisdiction";
 
       out = out.replace(/\[Your Store Name\]/g, storeName);
+      out = out.replace(/\[Store Name\]/g, storeName);
       out = out.replace(/\[Date\]/g, today);
-      out = out.replace(/\[your support email\]/g, `**${supportEmail}**`);
-      out = out.replace(/\[cutoff time\]/g, "**2:00 PM**");
-      out = out.replace(/\[amount\]/g, "**$50**");
-      out = out.replace(/\[Carrier names, e\.g\. USPS, UPS, FedEx\]/g, "**USPS, UPS, FedEx**");
-      out = out.replace(/\[Jurisdiction\]/g, `**${jurisdiction}**`);
+      out = out.replace(/\[your support email\]/g, supportEmail);
+      out = out.replace(/\[Support Email\]/g, supportEmail);
+      out = out.replace(/\[Privacy Email \/ Support Email\]/g, supportEmail);
+      out = out.replace(/\[cutoff time\]/g, "2:00 PM");
+      out = out.replace(/\[amount\]/g, "$50");
+      out = out.replace(/\[Carrier names, e\.g\. USPS, UPS, FedEx\]/g, "USPS, UPS, FedEx");
+      out = out.replace(/\[Jurisdiction\]/g, jurisdiction);
+      out = out.replace(/\[Legal Company Name\]/g, storeName);
+      out = out.replace(/\[Registered Address\]/g, "[Registered Address]");
+      out = out.replace(/\[Business Address\]/g, "[Business Address]");
+      out = out.replace(/\[Phone Number, if applicable\]/g, "[Phone Number]");
+      out = out.replace(/\[Currency\]/g, "USD");
+      out = out.replace(/\[Country \/ State\]/g, jurisdiction);
+      out = out.replace(/\[Company Registration Number \/ Tax ID, if applicable\]/g, "[Tax ID]");
+      out = out.replace(/\[Days and Hours, including time zone\]/g, "Monday–Friday, 9am–5pm local");
+      out = out.replace(/\[Days and Hours\]/g, "Monday–Friday, 9am–5pm local");
       if (templateType === "shipping") {
         out = out.replace(/\*\*\[X\]\*\* business days/, "**3** business days");
         out = out.replace(/\*\*\[X–Y\] business days\*\*/g, "**5–10** business days");
         out = out.replace(/\*\*\[X-Y\] business days\*\*/g, "**5–10** business days");
         out = out.replace(/\[X\] business days/g, "**5** business days");
         out = out.replace(/\[X\] days of delivery/g, "**30** days of delivery");
+        out = out.replace(/\[list countries\/regions\]/g, "the United States and Canada");
         out = out.replace(/\[X\]/g, "**3**");
       } else {
         out = out.replace(/\*\*\[X\]\*\*/g, "**30**");
@@ -193,7 +241,10 @@ export default function PoliciesPage() {
       setTemplateModalLoading(true);
       skipNextEditorSyncRef.current = false;
       try {
-        const res = await fetch(`/api/policy-templates/${type}/content`);
+        const url = shopId
+          ? `/api/policy-templates/${type}/content?shop_id=${encodeURIComponent(shopId)}`
+          : `/api/policy-templates/${type}/content`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           const raw = data.body ?? "";
@@ -206,7 +257,7 @@ export default function PoliciesPage() {
         setTemplateModalLoading(false);
       }
     },
-    [prefillTemplateBody]
+    [prefillTemplateBody, shopId]
   );
 
   useEffect(() => {
@@ -233,7 +284,7 @@ export default function PoliciesPage() {
   const handleDownloadTemplate = useCallback(() => {
     const body = bodyToPlainText(getEditorBody());
     if (!body || !templateModalType) return;
-    const name = templateModalType === "refunds" ? "refund-policy" : templateModalType === "shipping" ? "shipping-policy" : "terms-of-service";
+    const name = TEMPLATE_DOWNLOAD_FILENAMES[templateModalType] ?? templateModalType;
     const blob = new Blob([body], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -332,20 +383,45 @@ export default function PoliciesPage() {
       {!hasPolicies && !isDemo && shopId && (
         <>
           <div className="mb-6">
-            <h4 className="text-sm font-medium text-[#0B1220] mb-3">{t("suggestedTemplates")}</h4>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <h2 className="text-lg font-semibold text-[#0B1220] mb-1">{t("policyLibraryTitle")}</h2>
+            <p className="text-sm text-[#667085] mb-4">{t("policyLibrarySubtitle")}</p>
+            <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
               {templates.map((tmpl) => (
                 <div
                   key={tmpl.type}
                   className="bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#CBD5E1] transition-colors"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-5 h-5 text-[#3B82F6]" />
-                    <span className="font-medium text-[#0B1220] text-sm">{tmpl.name}</span>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-5 h-5 text-[#3B82F6] flex-shrink-0" />
+                      <span className="font-medium text-[#0B1220] text-sm">{tmpl.name}</span>
+                    </div>
+                    {tmpl.qualityBadge && (
+                      <Badge variant="default" className="text-xs flex-shrink-0">
+                        {tmpl.qualityBadge}
+                      </Badge>
+                    )}
                   </div>
-                  <p className="text-xs text-[#667085] mb-4 line-clamp-2">
-                    {t(TEMPLATE_DESC_KEYS[tmpl.type] ?? "refundTemplateDesc")}
-                  </p>
+                  <p className="text-xs text-[#667085] mb-2 line-clamp-2">{tmpl.description}</p>
+                  {tmpl.bestFor && (
+                    <p className="text-xs text-[#475569] mb-1">
+                      <span className="font-medium">{t("bestFor")}:</span> {tmpl.bestFor}
+                    </p>
+                  )}
+                  {tmpl.disputeDefenseValue && (
+                    <p className="text-xs text-[#1D4ED8] bg-[#EFF6FF] border border-[#BFDBFE] rounded px-2 py-1.5 mb-3">
+                      {tmpl.disputeDefenseValue}
+                    </p>
+                  )}
+                  {tmpl.categoryTags && tmpl.categoryTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {tmpl.categoryTags.slice(0, 4).map((tag) => (
+                        <Badge key={tag} variant="default" className="text-[10px] font-normal">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     <Button variant="secondary" size="sm" onClick={() => openTemplateModal(tmpl.type)}>
                       {t("useTemplate")}
@@ -480,7 +556,7 @@ export default function PoliciesPage() {
       <Modal
         isOpen={templateModalOpen}
         onClose={() => setTemplateModalOpen(false)}
-        title={templateModalType ? t(TEMPLATE_TITLE_KEYS[templateModalType] ?? "useTemplate") : t("useTemplate")}
+        title={templateModalType ? t(TEMPLATE_TITLE_KEYS[templateModalType] ?? templateModalType) : t("useTemplate")}
         description={t("templateDisclaimer")}
         size="lg"
         footer={
@@ -518,6 +594,20 @@ export default function PoliciesPage() {
             <p className="text-xs font-medium text-[#0B1220] bg-[#FEF3C7] border border-[#FCD34D] rounded-md px-3 py-2">
               {t("verifyBoldBeforeAccept")}
             </p>
+            {templateModalType && (() => {
+              const tmpl = templates.find((x) => x.type === templateModalType);
+              if (!tmpl?.merchantNotes?.length) return null;
+              return (
+                <div className="text-xs text-[#475569] bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-3 py-2">
+                  <p className="font-medium text-[#0B1220] mb-1">{t("merchantNotesLabel")}</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {tmpl.merchantNotes.map((note, i) => (
+                      <li key={i}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
             <div className="relative">
               <div
                 ref={templateEditorRef}

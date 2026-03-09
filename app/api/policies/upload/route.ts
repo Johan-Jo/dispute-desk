@@ -6,12 +6,12 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
-const VALID_POLICY_TYPES = ["refunds", "shipping", "terms"] as const;
+const VALID_POLICY_TYPES = ["refunds", "shipping", "terms", "privacy", "contact"] as const;
 
 /**
  * POST /api/policies/upload
  *
- * Body: FormData with file, shop_id, policy_type (refunds | shipping | terms).
+ * Body: FormData with file, shop_id, policy_type (refunds | shipping | terms | privacy | contact).
  * Uploads the file to policy-uploads bucket and inserts a policy_snapshots row.
  */
 export async function POST(req: NextRequest) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   if (!VALID_POLICY_TYPES.includes(policyType as (typeof VALID_POLICY_TYPES)[number])) {
     return NextResponse.json(
-      { error: "policy_type must be one of: refunds, shipping, terms" },
+      { error: "policy_type must be one of: refunds, shipping, terms, privacy, contact" },
       { status: 400 }
     );
   }

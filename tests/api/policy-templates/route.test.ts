@@ -10,12 +10,12 @@ describe("GET /api/policy-templates", () => {
     expect(Array.isArray(data.templates)).toBe(true);
   });
 
-  it("returns exactly three templates with type, name, description", async () => {
+  it("returns exactly five templates in library order with type, name, description", async () => {
     const res = await GET();
     const data = await res.json();
-    expect(data.templates).toHaveLength(3);
-    const types = new Set(data.templates.map((t: { type: string }) => t.type));
-    expect(types).toEqual(new Set(["refunds", "shipping", "terms"]));
+    expect(data.templates).toHaveLength(5);
+    const types = data.templates.map((t: { type: string }) => t.type);
+    expect(types).toEqual(["terms", "refunds", "shipping", "privacy", "contact"]);
     for (const t of data.templates) {
       expect(t).toHaveProperty("type");
       expect(t).toHaveProperty("name");
@@ -23,5 +23,12 @@ describe("GET /api/policy-templates", () => {
       expect(typeof t.name).toBe("string");
       expect(typeof t.description).toBe("string");
     }
+  });
+
+  it("returns pack title and subtitle", async () => {
+    const res = await GET();
+    const data = await res.json();
+    expect(data.packTitle).toBeDefined();
+    expect(data.packSubtitle).toBeDefined();
   });
 });

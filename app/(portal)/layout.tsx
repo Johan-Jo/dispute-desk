@@ -33,7 +33,7 @@ export default async function PortalLayout({
   const sb = getServiceClient();
   const { data: shops } = await sb
     .from("portal_user_shops")
-    .select("shop_id, role, shops(shop_domain, locale, plan)")
+    .select("shop_id, role, shops(shop_domain, locale, plan, policy_template_lang)")
     .eq("user_id", user.id);
 
   const activeShopId =
@@ -47,10 +47,16 @@ export default async function PortalLayout({
     shop_domain: string;
     locale: string | null;
     plan: string | null;
+    policy_template_lang: "en" | "locale" | null;
   } | null;
   const activeShopDomain = shopData?.shop_domain ?? null;
   const shopLocale = shopData?.locale ?? null;
   const activeShopPlan = shopData?.plan ?? null;
+  const raw = shopData?.policy_template_lang ?? "en";
+  const shopPolicyTemplateLang =
+    raw === "locale" || !["en", "de", "fr", "es", "pt", "sv"].includes(raw)
+      ? "en"
+      : (raw as "en" | "de" | "fr" | "es" | "pt" | "sv");
 
   const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
   const headerStore = await headers();
@@ -75,6 +81,7 @@ export default async function PortalLayout({
         activeShopDomain={activeShopDomain}
         activeShopLocale={shopLocale}
         activeShopPlan={activeShopPlan}
+        activeShopPolicyTemplateLang={shopPolicyTemplateLang}
       >
         {children}
       </PortalShell>

@@ -1,42 +1,90 @@
 # Refund Policy
 
-**Last updated: [Date]**
+Last updated: March 9, 2026
 
-[Your Store Name] ("we", "our", or "us") is committed to your satisfaction. This Refund Policy explains when and how you can request a refund.
+At [Store Name], we want you to be satisfied with your purchase. This Refund Policy explains when returns, refunds, exchanges, and cancellations may be available.
 
-## Return Window
+## 1. Order Issues
 
-We accept return requests within **[X]** days of delivery. The item must be unused, in original packaging where applicable, and in resalable condition.
+If your item arrives damaged, defective, incorrect, or incomplete, please contact us at [Support Email] within [X] days of delivery.
 
-## Eligible Items
+Please include:
+- your order number;
+- a description of the issue;
+- clear photos of the item and packaging, where applicable.
 
-- Most physical goods are eligible for return within the return window.
-- Digital goods, perishables, and items marked "Final Sale" are not eligible for refund unless required by law.
-- Custom or personalized items may not be eligible; see the product page for details.
+We may need this information to review the claim and offer an appropriate resolution.
 
-## How to Request a Refund
+## 2. Change-of-Mind Returns
 
-1. Contact us at [your support email] with your order number and reason for the return.
-2. We will provide a return authorization and instructions.
-3. Ship the item to the address we provide. We recommend using a trackable method.
-4. Once we receive and inspect the item, we will process your refund within **5–10 business days**.
+We accept returns for change of mind within [X] days of delivery, provided that:
+- the item is unused;
+- the item is in its original condition;
+- the item is in its original packaging, if applicable;
+- proof of purchase is provided.
 
-## Refund Method
+Customers are responsible for return shipping costs unless the return is due to our error, a defective item, or where otherwise required by law.
 
-Refunds are issued to the original payment method. Depending on your bank or card issuer, it may take an additional 5–10 business days for the refund to appear on your statement.
+## 3. Non-Returnable Items
 
-## Exclusions
+The following items are not eligible for return or refund unless required by law:
+- personalized or custom-made items;
+- final sale or clearance items;
+- gift cards;
+- perishable goods;
+- intimate or sanitary goods, where applicable;
+- digital products once delivered or accessed;
+- items showing signs of use, wear, damage, or alteration caused after delivery.
 
-We do not offer refunds for:
-- Items used, damaged, or not in resalable condition
-- Items returned after the return window
-- Digital downloads or subscription access once provided
-- Items explicitly marked as non-refundable
+## 4. Refunds
 
-## Disputes
+Once we receive and inspect your returned item, we will notify you whether the refund is approved.
 
-If you have a concern about a charge, please contact us before initiating a dispute with your bank. We are happy to work with you to resolve any issue.
+If approved, refunds will be issued to the original payment method within [X] business days. Your bank or card issuer may take additional time to process and post the refund.
 
----
+Original shipping fees are non-refundable unless:
+- the item was defective;
+- the wrong item was sent;
+- the return is required by law.
 
-*This template is a starting point for your store policy. It is not legal advice. Review with your legal team before publishing.*
+## 5. Exchanges
+
+We offer exchanges for eligible items where stock is available. If you would like to request an exchange, please contact [Support Email].
+
+If the requested replacement is unavailable, we may offer a refund or store credit where appropriate.
+
+## 6. Cancellations
+
+Orders may be canceled before shipment by contacting us as soon as possible at [Support Email]. Once an order has been processed or shipped, cancellation may no longer be possible and the order will instead be subject to this Refund Policy.
+
+Custom, made-to-order, or personalized items may not be cancellable once production has started.
+
+## 7. Refused Deliveries and Returned Packages
+
+If an order is refused at delivery or returned to us due to an incorrect or incomplete shipping address provided by the customer, we may deduct shipping and handling costs from any refund, where permitted by law.
+
+## 8. Lost Packages
+
+If tracking shows the package has not been delivered, please contact us and we will review the situation with the carrier.
+
+If tracking shows the package was delivered to the shipping address provided at checkout, we may ask you to:
+- verify the shipping address;
+- check with household members, neighbors, building staff, or local collection points;
+- wait a short period in case of carrier delivery delays;
+- contact the carrier directly where appropriate.
+
+Refunds or replacements for lost packages will be handled based on the carrier result, the order circumstances, and applicable law.
+
+## 9. Chargebacks
+
+If you experience a problem with your order, please contact us first at [Support Email]. Opening a chargeback does not usually speed up resolution and may delay the outcome while the payment provider investigates.
+
+We are committed to resolving legitimate issues fairly.
+
+## 10. Contact
+
+To request a return, refund, or exchange, contact:
+
+[Store Name]
+[Support Email]
+[Phone Number, if applicable]

@@ -1,29 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { existsSync } from "fs";
+import { POLICY_TYPES, type PolicyTemplateType } from "@/lib/policy-templates/library";
+import { getServiceClient } from "@/lib/supabase/server";
 
-const VALID_TYPES = ["refunds", "shipping", "terms"] as const;
-const FILE_MAP: Record<(typeof VALID_TYPES)[number], string> = {
+const VALID_TYPES = POLICY_TYPES;
+const FILE_MAP: Record<PolicyTemplateType, string> = {
+  terms: "terms-of-service.md",
   refunds: "refund-policy.md",
   shipping: "shipping-policy.md",
-  terms: "terms-of-service.md",
+  privacy: "privacy-policy.md",
+  contact: "contact-customer-service-policy.md",
 };
+
+/** Languages that have a content subfolder. English uses root. */
+const TRANSLATED_LANGS = ["de", "fr", "es", "pt", "sv"] as const;
 
 /**
  * GET /api/policy-templates/[type]/content
- * Returns the Markdown body for the given policy template type.
+ * Query: shop_id (optional). If present, uses shop's policy_template_lang to serve
+ * content in that language (en = root, de/fr/es/pt/sv = subfolder when available).
+ * User chooses the language in Settings (e.g. English even when UI locale is German).
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ type: string }> }
 ) {
   const { type } = await params;
-  if (!VALID_TYPES.includes(type as (typeof VALID_TYPES)[number])) {
+  if (!VALID_TYPES.includes(type as PolicyTemplateType)) {
     return NextResponse.json({ error: "Invalid template type" }, { status: 400 });
   }
 
-  const filename = FILE_MAP[type as (typeof VALID_TYPES)[number]];
-  const path = join(process.cwd(), "content", "policy-templates", filename);
+  const filename = FILE_MAP[type as PolicyTemplateType];
+  const baseDir = join(process.cwd(), "content", "policy-templates");
+  let contentLang: string | null = null;
+
+  const shopId = req.nextUrl?.searchParams?.get("shop_id") ?? null;
+  if (shopId) {
+    const sb = getServiceClient();
+    const { data: shop } = await sb
+      .from("shops")
+      .select("policy_template_lang")
+      .eq("id", shopId)
+      .single();
+
+    const pref = shop?.policy_template_lang;
+    if (pref && pref !== "en" && TRANSLATED_LANGS.includes(pref as (typeof TRANSLATED_LANGS)[number])) {
+      contentLang = pref;
+    }
+  }
+
+  let path: string;
+  if (contentLang) {
+    const translatedPath = join(baseDir, contentLang, filename);
+    if (existsSync(translatedPath)) {
+      path = translatedPath;
+    } else {
+      path = join(baseDir, filename);
+    }
+  } else {
+    path = join(baseDir, filename);
+  }
 
   try {
     const body = await readFile(path, "utf-8");

@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Shield, Globe, Clock } from "lucide-react";
+import { Shield, Globe, Clock, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { DemoNotice } from "@/components/ui/demo-notice";
 import { useShopCount } from "@/lib/demo-mode";
+import { useActiveShopId, useActiveShopData, type PolicyTemplateLang } from "@/lib/portal/activeShopContext";
 
 function Toggle({ label, desc, defaultChecked = false }: { label: string; desc: string; defaultChecked?: boolean }) {
   return (
@@ -27,10 +29,41 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const tc = useTranslations("common");
   const shopCount = useShopCount();
+  const router = useRouter();
+  const activeShopId = useActiveShopId();
+  const activeShopData = useActiveShopData();
+  const [policyTemplateSaving, setPolicyTemplateSaving] = useState(false);
+  const [policyTemplateMessage, setPolicyTemplateMessage] = useState<"saved" | "error" | null>(null);
 
   const handleSaveProfile = useCallback(async () => {
     // Settings page is not part of the wizard; profile save only (no setup step completion).
   }, []);
+
+  const handlePolicyTemplateChange = useCallback(
+    async (value: PolicyTemplateLang) => {
+      if (!activeShopId) return;
+      setPolicyTemplateSaving(true);
+      setPolicyTemplateMessage(null);
+      try {
+        const res = await fetch("/api/portal/shop-settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shop_id: activeShopId, policy_template_lang: value }),
+        });
+        if (res.ok) {
+          setPolicyTemplateMessage("saved");
+          router.refresh();
+        } else {
+          setPolicyTemplateMessage("error");
+        }
+      } catch {
+        setPolicyTemplateMessage("error");
+      } finally {
+        setPolicyTemplateSaving(false);
+      }
+    },
+    [activeShopId, router]
+  );
 
   return (
     <div>
@@ -170,6 +203,47 @@ export default function SettingsPage() {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Policy templates */}
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-5 h-5 text-[#4F46E5]" />
+              <h3 className="font-semibold text-[#0B1220]">{t("policyTemplatesSection")}</h3>
+            </div>
+            <p className="text-sm text-[#667085] mb-4">{t("policyTemplatesDesc")}</p>
+            {activeShopId ? (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-[#667085] mb-1">
+                  {t("policyTemplatesLabel")}
+                </label>
+                <select
+                  value={
+                    ["en", "de", "fr", "es", "pt", "sv"].includes(activeShopData.policy_template_lang)
+                      ? activeShopData.policy_template_lang
+                      : "en"
+                  }
+                  onChange={(e) => handlePolicyTemplateChange(e.target.value as PolicyTemplateLang)}
+                  disabled={policyTemplateSaving}
+                  className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-white"
+                >
+                  <option value="en">{t("policyTemplateLangEn")}</option>
+                  <option value="de">{t("policyTemplateLangDe")}</option>
+                  <option value="fr">{t("policyTemplateLangFr")}</option>
+                  <option value="es">{t("policyTemplateLangEs")}</option>
+                  <option value="pt">{t("policyTemplateLangPt")}</option>
+                  <option value="sv">{t("policyTemplateLangSv")}</option>
+                </select>
+                {policyTemplateMessage === "saved" && (
+                  <p className="text-xs text-[#059669]">{t("policyTemplatesSaved")}</p>
+                )}
+                {policyTemplateMessage === "error" && (
+                  <p className="text-xs text-[#DC2626]">{t("policyTemplatesError")}</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-[#667085]">{t("policyTemplatesNoStore")}</p>
+            )}
           </div>
         </div>
       </div>
