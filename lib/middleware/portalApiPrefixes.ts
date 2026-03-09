@@ -6,6 +6,7 @@
  * and add it to the test in tests/unit/portalApiPrefixes.test.ts.
  */
 export const PORTAL_API_PREFIXES = [
+  "/api/portal/",
   "/api/setup/",
   "/api/integrations/",
   "/api/files/samples",

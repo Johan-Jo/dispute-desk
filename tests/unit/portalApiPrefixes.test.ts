@@ -11,6 +11,7 @@ import {
  * lib/middleware/portalApiPrefixes.ts AND to this list so the test fails if we forget.
  */
 const PORTAL_APIS_WE_USE = [
+  "/api/portal/",
   "/api/setup/",
   "/api/integrations/",
   "/api/files/samples",
@@ -43,6 +44,11 @@ describe("Portal API prefixes (middleware allowlist)", () => {
   it("isPortalApiPath returns true for policy-templates", () => {
     expect(isPortalApiPath("/api/policy-templates")).toBe(true);
     expect(isPortalApiPath("/api/policy-templates/terms/content")).toBe(true);
+  });
+
+  it("isPortalApiPath returns true for portal switch-demo and switch-shop", () => {
+    expect(isPortalApiPath("/api/portal/switch-demo")).toBe(true);
+    expect(isPortalApiPath("/api/portal/switch-shop")).toBe(true);
   });
 
   it("isPortalApiPath returns false for non-portal APIs", () => {
