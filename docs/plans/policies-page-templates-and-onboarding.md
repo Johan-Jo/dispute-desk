@@ -1,5 +1,9 @@
 # Plan: Policies Page — Suggested Templates & First-Visit Onboarding
 
+**Current state (as of implementation):** The Policies page has five policy types (Terms, Refund, Shipping, Privacy, Contact). A Policy Library with template cards, “Use Template” and “Upload Your Own,” and Settings → Policy templates (explicit language choice for template text: en, de, fr, es, pt, sv) are implemented. Migrations 025–027; see `docs/technical.md` (Policy Templates & Store Policy Upload).
+
+---
+
 ## Goal
 
 When a merchant connects a new store and lands on the Policies page (either by navigating directly or via the setup wizard), they should:

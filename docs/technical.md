@@ -202,6 +202,9 @@ Migrations live in `supabase/migrations/`. Apply with `npx supabase db push` whe
 | 021_fix_offline_session_duplicates.sql | fix duplicate offline session handling |
 | 022_disputes_order_customer_display.sql | disputes order/customer display fields |
 | 023_policy_uploads_bucket.sql | storage bucket `policy-uploads` for policy document uploads (portal) |
+| 025_policy_snapshots_privacy_contact.sql | policy_snapshots: allow policy_type `privacy`, `contact` |
+| 026_shops_policy_template_lang.sql | shops.policy_template_lang (language of policy template content) |
+| 027_policy_template_lang_explicit.sql | policy_template_lang values: en, de, fr, es, pt, sv (explicit choice) |
 
 ## Automation Pipeline
 
@@ -254,7 +257,7 @@ queued → building → ready → saved_to_shopify
 |-----------|------|-----------------|
 | Order | `orderSource.ts` | `order_confirmation`, `billing_address_match` |
 | Fulfillment | `fulfillmentSource.ts` | `shipping_tracking`, `delivery_proof` |
-| Policy | `policySource.ts` | `shipping_policy`, `refund_policy`, `cancellation_policy` |
+| Policy | `policySource.ts` | `shipping_policy`, `refund_policy`, `cancellation_policy` (terms, refunds, shipping; privacy/contact stored but not yet mapped to Shopify evidence) |
 | Manual | `manualSource.ts` | `customer_communication` |
 
 ### GraphQL Queries
@@ -274,10 +277,19 @@ queued → building → ready → saved_to_shopify
 
 ### Policy Templates & Store Policy Upload (Portal)
 
-Store policies (Terms, Refund, Shipping) are included in evidence packs. Merchants can define them via:
+Store policies are included in evidence packs. Five policy types are supported: **Terms of Service**, **Refund Policy**, **Shipping Policy**, **Privacy Policy**, and **Contact Information & Customer Service Policy**.
 
-- **Templates:** Markdown files in `content/policy-templates/` (refund, shipping, terms-of-service). `GET /api/policy-templates` lists types; `GET /api/policy-templates/[type]/content` returns body. UI offers "Use Template" (copy/download) and "Upload Your Own."
-- **Upload:** `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepts PDF/DOCX, max 10 MB. Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`; used by the pack builder policy source.
+**Policy Library:** Metadata (title, description, best-for, dispute-defence value, placeholders, merchant notes) lives in `lib/policy-templates/library.ts`. Template bodies are Markdown in `content/policy-templates/` (English) and `content/policy-templates/{lang}/` for translations (e.g. `de/` for German).
+
+**APIs:**
+- `GET /api/policy-templates` — Returns the Policy Library (all five templates in display order, with pack title/subtitle).
+- `GET /api/policy-templates/[type]/content?shop_id=...` — Returns the Markdown body for the given type. If `shop_id` is present, the shop’s **policy template language** preference (`shops.policy_template_lang`) is used: `en` → root folder; `de`, `fr`, `es`, `pt`, `sv` → subfolder when present, else fallback to English.
+- **Policy template language:** Each shop has `policy_template_lang` (`en` | `de` | `fr` | `es` | `pt` | `sv`). Users choose the language of the policy **text** in Settings (Portal → Settings → Policy templates). They can use English even when the UI locale is e.g. German.
+- `PATCH /api/portal/shop-settings` — Body: `{ shop_id, policy_template_lang }`. Updates the shop’s policy template language (portal user must have access to the shop).
+- `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepted types: `refunds`, `shipping`, `terms`, `privacy`, `contact`. PDF/DOCX, max 10 MB. Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`.
+- `POST /api/policies/apply` — JSON: `{ shop_id, policy_type, content }`. Saves template text as a file and creates a `policy_snapshots` row (used when the merchant edits a template in the modal and clicks “Save & Apply”).
+
+**Evidence pack mapping:** The policy source collector (`lib/packs/sources/policySource.ts`) maps `terms` → `cancellation_policy`, `refunds` → `refund_policy`, `shipping` → `shipping_policy` for Shopify evidence fields. Privacy and contact snapshots are stored and shown on the Policies page but are not yet mapped to Shopify dispute evidence fields.
 
 ## PDF Rendering & Storage
 
