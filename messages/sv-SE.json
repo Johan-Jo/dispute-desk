@@ -511,6 +511,7 @@
     "preview": "Förhandsgranska",
     "previewNotAvailable": "Förhandsgranskning finns inte för denna policy.",
     "download": "Ladda ner",
+    "edit": "Redigera",
     "defineTitle": "Definiera dina butikspolicyer",
     "defineSubtitle": "Policyer inkluderas i bevis. Definiera villkor, återbetalning, frakt, integritet och kontakt.",
     "suggestedTemplates": "Föreslagna mallar",
@@ -534,7 +535,11 @@
     "verifyBoldBeforeAccept": "Värden i fetstil är förslag. Kontrollera innan du accepterar.",
     "editTemplatePlaceholder": "Redigera policytexten här…",
     "saveAndApply": "Spara och tillämpa",
-    "applying": "Tillämpar…"
+    "applying": "Tillämpar…",
+    "clearAllPolicies": "Rensa alla policyer",
+    "clearAllPoliciesConfirm": "Ta bort alla policydokument för denna butik? Du kan ladda upp eller tillämpa mallar igen efteråt.",
+    "clearAllPoliciesSuccess": "Alla policyer borttagna. Du kan nu ladda upp eller använda mallar igen.",
+    "clearAllPoliciesError": "Kunde inte rensa policyer. Försök igen."
   },
   "reasons": {
     "fraudulent": "Bedrägeri",

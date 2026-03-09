@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { FileText, Eye, Download, Upload, Copy, Check } from "lucide-react";
+import { FileText, Eye, Download, Upload, Copy, Check, Pencil } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { useActiveShopId, useActiveShopData } from "@/lib/portal/activeShopContext";
 import { useDemoMode } from "@/lib/demo-mode";
@@ -93,6 +93,7 @@ export default function PoliciesPage() {
   const [templateApplying, setTemplateApplying] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [clearingPolicies, setClearingPolicies] = useState(false);
   const [showMissingBanner, setShowMissingBanner] = useState(true);
   const fileInputRef = useRef<Record<string, HTMLInputElement | null>>({});
   const templateEditorRef = useRef<HTMLDivElement | null>(null);
@@ -260,6 +261,45 @@ export default function PoliciesPage() {
     [prefillTemplateBody, shopId]
   );
 
+  const openTemplateModalForEdit = useCallback(
+    async (type: string) => {
+      setTemplateModalType(type);
+      setTemplateModalOpen(true);
+      setTemplateModalBody("");
+      setTemplateModalLoading(true);
+      skipNextEditorSyncRef.current = false;
+      try {
+        const contentRes = await fetch(
+          `/api/policies/content?shop_id=${encodeURIComponent(shopId)}&policy_type=${encodeURIComponent(type)}`
+        );
+        if (contentRes.ok) {
+          const { content } = (await contentRes.json()) as { content?: string | null };
+          if (content != null && content.trim() !== "") {
+            skipNextEditorSyncRef.current = true;
+            setTemplateModalBody(content);
+            setTemplateModalLoading(false);
+            return;
+          }
+        }
+        const templateUrl = shopId
+          ? `/api/policy-templates/${type}/content?shop_id=${encodeURIComponent(shopId)}`
+          : `/api/policy-templates/${type}/content`;
+        const templateRes = await fetch(templateUrl);
+        if (templateRes.ok) {
+          const data = await templateRes.json();
+          const raw = data.body ?? "";
+          skipNextEditorSyncRef.current = true;
+          setTemplateModalBody(prefillTemplateBody(raw, type));
+        }
+      } catch {
+        setTemplateModalBody("");
+      } finally {
+        setTemplateModalLoading(false);
+      }
+    },
+    [prefillTemplateBody, shopId]
+  );
+
   useEffect(() => {
     if (!templateModalOpen || !templateModalBody || !templateEditorRef.current) return;
     if (!skipNextEditorSyncRef.current) return;
@@ -357,6 +397,30 @@ export default function PoliciesPage() {
     else alert(t("previewNotAvailable"));
   };
 
+  const handleClearAllPolicies = useCallback(async () => {
+    if (isDemo || !shopId) return;
+    if (!window.confirm(t("clearAllPoliciesConfirm"))) return;
+    setClearingPolicies(true);
+    try {
+      const res = await fetch("/api/policies", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: shopId }),
+      });
+      if (res.ok) {
+        await fetchPolicies(true);
+        alert(t("clearAllPoliciesSuccess"));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? t("clearAllPoliciesError"));
+      }
+    } catch {
+      alert(t("clearAllPoliciesError"));
+    } finally {
+      setClearingPolicies(false);
+    }
+  }, [shopId, isDemo, fetchPolicies, t]);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -368,6 +432,17 @@ export default function PoliciesPage() {
             {hasPolicies ? t("subtitle") : t("defineSubtitle")}
           </p>
         </div>
+        {hasPolicies && !isDemo && shopId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAllPolicies}
+            disabled={clearingPolicies}
+            className="text-[#64748B] hover:text-[#0B1220]"
+          >
+            {clearingPolicies ? tc("loading") : t("clearAllPolicies")}
+          </Button>
+        )}
       </div>
 
       <DemoNotice />
@@ -498,6 +573,15 @@ export default function PoliciesPage() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 {policy.url ? (
                   <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => (isDemo ? undefined : openTemplateModalForEdit(policy.policyType))}
+                      disabled={!!isDemo}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      {t("edit")}
+                    </Button>
                     <Button variant="secondary" size="sm" onClick={() => handlePreview(isDemo ? null : policy.url)}>
                       <Eye className="w-4 h-4 mr-1" />
                       {t("preview")}

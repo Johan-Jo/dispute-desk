@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       shop_id: shopId,
       policy_type: policyType,
       url,
+      extracted_text: content,
       captured_at: new Date().toISOString(),
     })
     .select("id, url, policy_type")

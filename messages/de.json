@@ -511,6 +511,7 @@
     "preview": "Vorschau",
     "previewNotAvailable": "Vorschau für diese Richtlinie nicht verfügbar.",
     "download": "Herunterladen",
+    "edit": "Bearbeiten",
     "defineTitle": "Richtlinien definieren",
     "defineSubtitle": "Richtlinien fließen in Beweismittel ein. Definieren Sie AGB, Rückerstattung, Versand, Datenschutz und Kontakt.",
     "suggestedTemplates": "Empfohlene Vorlagen",
@@ -534,7 +535,11 @@
     "verifyBoldBeforeAccept": "Fett markierte Werte sind Vorschläge. Vor Übernehmen prüfen.",
     "editTemplatePlaceholder": "Richtlinientext hier bearbeiten…",
     "saveAndApply": "Speichern & übernehmen",
-    "applying": "Wird übernommen…"
+    "applying": "Wird übernommen…",
+    "clearAllPolicies": "Alle Richtlinien löschen",
+    "clearAllPoliciesConfirm": "Alle Richtliniendokumente für diesen Shop entfernen? Sie können sie danach erneut hochladen oder Vorlagen anwenden.",
+    "clearAllPoliciesSuccess": "Alle Richtlinien gelöscht. Sie können sie jetzt erneut hochladen oder Vorlagen verwenden.",
+    "clearAllPoliciesError": "Richtlinien konnten nicht gelöscht werden. Bitte erneut versuchen."
   },
   "reasons": {
     "fraudulent": "Betrug",

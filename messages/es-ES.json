@@ -505,6 +505,7 @@
     "preview": "Vista previa",
     "previewNotAvailable": "Vista previa no disponible para esta política.",
     "download": "Descargar",
+    "edit": "Editar",
     "defineTitle": "Definir las políticas de tu tienda",
     "defineSubtitle": "Las políticas se incluyen en las pruebas. Define condiciones, reembolsos, envío, privacidad y contacto.",
     "suggestedTemplates": "Plantillas sugeridas",
@@ -528,7 +529,11 @@
     "verifyBoldBeforeAccept": "Los valores en negrita son sugerencias. Verifica antes de aceptar.",
     "editTemplatePlaceholder": "Edita el texto de la política aquí…",
     "saveAndApply": "Guardar y aplicar",
-    "applying": "Aplicando…"
+    "applying": "Aplicando…",
+    "clearAllPolicies": "Borrar todas las políticas",
+    "clearAllPoliciesConfirm": "¿Eliminar todos los documentos de política de esta tienda? Podrá volver a subirlos o aplicar plantillas después.",
+    "clearAllPoliciesSuccess": "Todas las políticas borradas. Puede volver a subirlas o usar plantillas.",
+    "clearAllPoliciesError": "No se pudieron borrar las políticas. Inténtelo de nuevo."
   },
   "reasons": {
     "fraudulent": "Fraudulento",

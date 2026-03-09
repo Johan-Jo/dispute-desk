@@ -511,6 +511,7 @@
     "preview": "Aperçu",
     "previewNotAvailable": "Aperçu non disponible pour cette politique.",
     "download": "Télécharger",
+    "edit": "Modifier",
     "defineTitle": "Définir vos politiques boutique",
     "defineSubtitle": "Les politiques sont incluses dans les preuves. Définissez CGV, remboursement, livraison, confidentialité et contact.",
     "suggestedTemplates": "Modèles suggérés",
@@ -534,7 +535,11 @@
     "verifyBoldBeforeAccept": "Les valeurs en gras sont des suggestions. Vérifiez avant d'accepter.",
     "editTemplatePlaceholder": "Modifiez le texte de la politique ici…",
     "saveAndApply": "Enregistrer et appliquer",
-    "applying": "Application…"
+    "applying": "Application…",
+    "clearAllPolicies": "Effacer toutes les politiques",
+    "clearAllPoliciesConfirm": "Supprimer tous les documents de politique de cette boutique ? Vous pourrez les téléverser ou réappliquer les modèles ensuite.",
+    "clearAllPoliciesSuccess": "Toutes les politiques ont été effacées. Vous pouvez les ajouter à nouveau par téléversement ou modèles.",
+    "clearAllPoliciesError": "Impossible d'effacer les politiques. Veuillez réessayer."
   },
   "reasons": {
     "fraudulent": "Frauduleux",
