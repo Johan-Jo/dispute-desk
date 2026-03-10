@@ -1216,6 +1216,8 @@
     "setEvidenceSourcesDesc": "For each evidence type, choose whether DisputeDesk should collect it automatically, reuse a standard document, or ask your team to add it when a dispute appears.",
     "sourceAuto": "Auto-collected from Shopify",
     "sourceReusable": "Upload once or link existing policy",
+    "reusablePolicyHint": "Set your refund and cancellation policies in Policies; we use them automatically when building packs.",
+    "openPolicies": "Open Policies",
     "sourceManual": "Added manually per dispute",
     "sourceStoreOrManual": "From store when available, else manual",
     "back": "Back",

@@ -589,7 +589,7 @@ export function TemplateSetupWizard({
                           key={evidence.id}
                           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border border-[#E5E7EB] bg-[#FAFBFC]"
                         >
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-[#0B1220]">
                               {evidence.title ?? (evidence.titleKey ? t(evidence.titleKey) : evidence.id)}
                             </h3>
@@ -598,10 +598,23 @@ export function TemplateSetupWizard({
                                 {evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")}
                               </p>
                             )}
+                            {sourceKind === "reusable" && (
+                              <p className="text-xs text-[#667085] mt-2">
+                                {t("reusablePolicyHint")}{" "}
+                                <Link
+                                  href="/portal/policies"
+                                  className="text-[#1D4ED8] font-medium hover:underline"
+                                >
+                                  {t("openPolicies")}
+                                </Link>
+                              </p>
+                            )}
                           </div>
-                          <span className={cn("text-xs font-medium px-2.5 py-1 rounded border flex-shrink-0 w-fit", sourceClasses)}>
-                            {sourceLabel}
-                          </span>
+                          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                            <span className={cn("text-xs font-medium px-2.5 py-1 rounded border w-fit", sourceClasses)}>
+                              {sourceLabel}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
