@@ -272,6 +272,7 @@ export default function PackPreviewPage() {
       <TemplateSetupWizard
         packId={packId}
         pack={{
+          id: pack.id,
           name: pack.name,
           dispute_type: pack.dispute_type,
           created_at: pack.created_at,

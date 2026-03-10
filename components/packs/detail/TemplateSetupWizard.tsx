@@ -41,6 +41,7 @@ interface UploadedFile {
 }
 
 export interface TemplateSetupWizardPack {
+  id?: string | null;
   name?: string | null;
   dispute_type?: string | null;
   created_at?: string | null;
