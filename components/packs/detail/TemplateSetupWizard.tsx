@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import {
   CheckCircle2,
   Circle,
@@ -98,6 +99,24 @@ const REUSABLE_CHECKLIST_FIELDS = new Set([
 
 /** Checklist field names that map to store-or-manual. */
 const STORE_OR_MANUAL_CHECKLIST_FIELDS = new Set(["product_description", "product_description_or_listing"]);
+
+/** Map evidence id or checklist field to Policies page policy_type (for deep link). */
+function getPolicyTypeParam(evidenceId: string): string {
+  const normalized = evidenceId.toLowerCase().replace(/-/g, "_");
+  if (evidenceId === "refund-policy" || normalized === "refund_policy") return "refunds";
+  if (evidenceId === "store-policy" || evidenceId === "terms-of-service" || normalized === "store_policy" || normalized === "terms" || normalized === "terms_of_service") return "terms";
+  if (normalized === "shipping_policy") return "shipping";
+  return "refunds";
+}
+
+/** Evidence id → policy_type for status check (refunds, terms, shipping). Returns null if not a policy type. */
+function getPolicyTypeForStatus(evidenceId: string): "refunds" | "terms" | "shipping" | null {
+  const normalized = evidenceId.toLowerCase().replace(/-/g, "_");
+  if (evidenceId === "refund-policy" || normalized === "refund_policy") return "refunds";
+  if (evidenceId === "store-policy" || evidenceId === "terms-of-service" || normalized === "store_policy" || normalized === "terms" || normalized === "terms_of_service") return "terms";
+  if (normalized === "shipping_policy") return "shipping";
+  return null;
+}
 
 /** Default evidence config per dispute type (id, titleKey, descKey, badge). */
 const DEFAULT_EVIDENCE: EvidenceType[] = [
@@ -283,6 +302,28 @@ export function TemplateSetupWizard({
   });
   const [isDragging, setIsDragging] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
+  const [submissionMode, setSubmissionMode] = React.useState<"auto" | "manual">("manual");
+  const [policySetByType, setPolicySetByType] = React.useState<Record<string, boolean>>({});
+
+  const activeShopId = useActiveShopId();
+  const fetchPolicyStatus = useCallback(async () => {
+    if (!activeShopId) return;
+    try {
+      const res = await fetch(`/api/policies?shop_id=${encodeURIComponent(activeShopId)}`);
+      const data = await res.json();
+      const list = data.policies ?? [];
+      const byType: Record<string, boolean> = {};
+      for (const p of list) {
+        byType[p.policy_type] = true;
+      }
+      setPolicySetByType(byType);
+    } catch {
+      setPolicySetByType({});
+    }
+  }, [activeShopId]);
+  useEffect(() => {
+    fetchPolicyStatus();
+  }, [fetchPolicyStatus]);
 
   const steps = [
     { number: 1, titleKey: "step1Title" as const, completed: currentStep > 1 },
@@ -537,11 +578,28 @@ export function TemplateSetupWizard({
                           <p className="text-sm text-[#667085]">
                             {evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")}
                           </p>
-                          {evidence.automation === "reusable" && (
-                            <p className="text-xs text-[#1D4ED8] mt-1.5 font-medium">
-                              {t("chooseEvidencePoliciesHint")}
-                            </p>
-                          )}
+                          {evidence.automation === "reusable" && (() => {
+                            const policyType = getPolicyTypeForStatus(evidence.id);
+                            const isSet = policyType != null && policySetByType[policyType];
+                            return (
+                              <p className="text-xs mt-1.5 font-medium">
+                                {isSet ? (
+                                  <span className="text-[#047857]">{t("policySetLabel")}</span>
+                                ) : (
+                                  <>
+                                    <span className="text-[#B45309]">{t("policyNotSetLabel")}</span>
+                                    {" — "}
+                                    <Link
+                                      href={`/portal/policies?policy=${policyType ?? "refunds"}`}
+                                      className="text-[#1D4ED8] hover:underline"
+                                    >
+                                      {t("addInPolicies")}
+                                    </Link>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
                         </div>
                       </div>
                     </button>
@@ -620,11 +678,13 @@ export function TemplateSetupWizard({
                               <p className="text-xs text-[#667085] mt-2">
                                 {t("reusablePolicyHint")}{" "}
                                 <Link
-                                  href="/portal/policies"
+                                  href={`/portal/policies?policy=${getPolicyTypeParam(evidence.id)}`}
                                   className="text-[#1D4ED8] font-medium hover:underline"
                                 >
                                   {t("openPolicies")}
                                 </Link>
+                                {" · "}
+                                <span className="text-[#667085]">{t("reusablePolicyLinkBack")}</span>
                               </p>
                             )}
                           </div>
@@ -686,11 +746,73 @@ export function TemplateSetupWizard({
                     </div>
                   </div>
                 </div>
-                <div className="bg-[#FFFBEB] border border-[#FEF0C7] rounded-lg p-4 flex items-start gap-3 mb-6">
-                  <HelpCircle className="w-5 h-5 text-[#F59E0B] flex-shrink-0" />
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-[#0B1220] mb-3">{t("submissionChoiceHeading")}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionMode("auto")}
+                      className={cn(
+                        "text-left p-4 rounded-lg border-2 transition-all",
+                        submissionMode === "auto"
+                          ? "border-[#1D4ED8] bg-[#EFF6FF]"
+                          : "border-[#E5E7EB] bg-white hover:border-[#1D4ED8]/40"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                            submissionMode === "auto" ? "border-[#1D4ED8] bg-[#1D4ED8]" : "border-[#E5E7EB]"
+                          )}
+                        >
+                          {submissionMode === "auto" && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#0B1220]">{t("submissionAutoLabel")}</p>
+                          <p className="text-sm text-[#667085] mt-1">{t("submissionAutoDesc")}</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionMode("manual")}
+                      className={cn(
+                        "text-left p-4 rounded-lg border-2 transition-all",
+                        submissionMode === "manual"
+                          ? "border-[#1D4ED8] bg-[#EFF6FF]"
+                          : "border-[#E5E7EB] bg-white hover:border-[#1D4ED8]/40"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                            submissionMode === "manual" ? "border-[#1D4ED8] bg-[#1D4ED8]" : "border-[#E5E7EB]"
+                          )}
+                        >
+                          {submissionMode === "manual" && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#0B1220]">{t("submissionManualLabel")}</p>
+                          <p className="text-sm text-[#667085] mt-1">{t("submissionManualDesc")}</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+                <div className={cn(
+                  "rounded-lg p-4 flex items-start gap-3 mb-6",
+                  submissionMode === "auto" ? "bg-[#ECFDF5] border border-[#A7F3D0]" : "bg-[#FFFBEB] border border-[#FEF0C7]"
+                )}>
+                  <HelpCircle className={cn("w-5 h-5 flex-shrink-0", submissionMode === "auto" ? "text-[#059669]" : "text-[#F59E0B]")} />
                   <div>
-                    <p className="text-sm font-medium text-[#92400E] mb-1">{t("importantToKnow")}</p>
-                    <p className="text-sm text-[#92400E]">{t("importantNote")}</p>
+                    <p className="text-sm font-medium mb-1" style={submissionMode === "auto" ? { color: "#047857" } : { color: "#92400E" }}>
+                      {t("importantToKnow")}
+                    </p>
+                    <p className="text-sm" style={submissionMode === "auto" ? { color: "#047857" } : { color: "#92400E" }}>
+                      {submissionMode === "auto" ? t("importantNoteAuto") : t("importantNote")}
+                    </p>
                   </div>
                 </div>
                 <div className="border border-[#E5E7EB] rounded-lg p-4">

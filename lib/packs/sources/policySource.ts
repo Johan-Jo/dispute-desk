@@ -43,6 +43,7 @@ export async function collectPolicyEvidence(
     if (field) fieldsProvided.push(field);
 
     policyEntries.push({
+      policySnapshotId: policy.id,
       policyType: type,
       url: policy.url,
       capturedAt: policy.captured_at,

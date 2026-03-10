@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Upload, Copy, Check, Pencil } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
@@ -65,6 +66,7 @@ function bodyToPlainText(body: string): string {
 
 export default function PoliciesPage() {
   useCompleteSetupStep("business_policies");
+  const searchParams = useSearchParams();
   const t = useTranslations("policies");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -166,6 +168,15 @@ export default function PoliciesPage() {
     if (isDemo || !shopId) return;
     fetchTemplates();
   }, [isDemo, shopId, fetchTemplates]);
+
+  const policyHighlight = searchParams.get("policy");
+  useEffect(() => {
+    if (!policyHighlight) return;
+    const el = document.getElementById(`policy-${policyHighlight}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [policyHighlight]);
 
   const policies = POLICY_ROWS.map((row) => {
     const api = policyByType[row.policyType];
@@ -533,8 +544,9 @@ export default function PoliciesPage() {
       <div className="space-y-3" data-onboarding="policy-documents">
         {policies.map((policy) => (
           <div
+            id={`policy-${policy.policyType}`}
             key={policy.nameKey}
-            className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-5 hover:border-[#CBD5E1] transition-colors"
+            className="bg-white rounded-lg border border-[#E5E7EB] p-4 sm:p-5 hover:border-[#CBD5E1] transition-colors scroll-mt-4"
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-start gap-4">
