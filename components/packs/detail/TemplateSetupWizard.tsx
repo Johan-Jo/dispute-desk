@@ -8,11 +8,9 @@ import {
   CheckCircle2,
   Circle,
   ArrowLeft,
-  Upload,
   FileText,
   AlertCircle,
   HelpCircle,
-  X,
   Check,
   ChevronRight,
   Download,
@@ -53,14 +51,32 @@ export interface TemplateSetupWizardPack {
   checklist?: { field: string; label: string; required: boolean; present?: boolean }[] | null;
 }
 
-/** Evidence type IDs that DisputeDesk auto-collects from Shopify (order, tracking, policies). */
+/** Evidence type IDs that DisputeDesk auto-collects from Shopify (order, tracking, billing). */
 const AUTO_EVIDENCE_IDS = new Set([
   "order-confirmation",
   "tracking-info",
-  "refund-policy",
-  "store-policy",
   "billing-shipping",
 ]);
+
+/** Evidence types provided as reusable store documents (upload once or link policy). */
+const REUSABLE_EVIDENCE_IDS = new Set([
+  "refund-policy",
+  "store-policy",
+  "terms-of-service",
+]);
+
+/** Evidence types: from store when available, else added manually per dispute. */
+const STORE_OR_MANUAL_EVIDENCE_IDS = new Set(["product-description"]);
+
+/** How each evidence type is provided. Used in step 2 "Set evidence sources". */
+export type EvidenceSourceKind = "auto" | "reusable" | "manual" | "store_or_manual";
+
+function getEvidenceSourceKind(id: string): EvidenceSourceKind {
+  if (AUTO_EVIDENCE_IDS.has(id)) return "auto";
+  if (REUSABLE_EVIDENCE_IDS.has(id)) return "reusable";
+  if (STORE_OR_MANUAL_EVIDENCE_IDS.has(id)) return "store_or_manual";
+  return "manual";
+}
 
 /** Checklist field names (normalized) that map to auto-collected evidence. */
 const AUTO_CHECKLIST_FIELDS = new Set([
@@ -68,12 +84,20 @@ const AUTO_CHECKLIST_FIELDS = new Set([
   "order_confirmation",
   "tracking",
   "tracking_info",
+  "billing_shipping",
+]);
+
+/** Checklist field names that map to reusable store documents. */
+const REUSABLE_CHECKLIST_FIELDS = new Set([
   "refund_policy",
   "store_policy",
-  "billing_shipping",
   "shipping_policy",
   "terms",
+  "terms_of_service",
 ]);
+
+/** Checklist field names that map to store-or-manual. */
+const STORE_OR_MANUAL_CHECKLIST_FIELDS = new Set(["product_description", "product_description_or_listing"]);
 
 /** Default evidence config per dispute type (id, titleKey, descKey, badge). */
 const DEFAULT_EVIDENCE: EvidenceType[] = [
@@ -156,6 +180,14 @@ const DISPUTE_EVIDENCE_DEFAULTS: Record<string, Omit<EvidenceType, "selected" | 
 function isAutoChecklistField(field: string): boolean {
   const normalized = field.toLowerCase().replace(/-/g, "_");
   return AUTO_CHECKLIST_FIELDS.has(normalized) || AUTO_EVIDENCE_IDS.has(field);
+}
+
+function getEvidenceSourceKindFromChecklistField(field: string): EvidenceSourceKind {
+  const normalized = field.toLowerCase().replace(/-/g, "_");
+  if (AUTO_CHECKLIST_FIELDS.has(normalized)) return "auto";
+  if (REUSABLE_CHECKLIST_FIELDS.has(normalized)) return "reusable";
+  if (STORE_OR_MANUAL_CHECKLIST_FIELDS.has(normalized)) return "store_or_manual";
+  return "manual";
 }
 
 function buildInitialEvidenceTypes(
@@ -510,7 +542,7 @@ export function TemplateSetupWizard({
                     onClick={() => setCurrentStep(2)}
                     disabled={requiredCount < totalRequired}
                   >
-                    {t("saveAndContinueFiles")}
+                    {t("continueToEvidenceSources")}
                     <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
@@ -526,81 +558,62 @@ export function TemplateSetupWizard({
             {currentStep === 2 && (
               <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
                 <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-[#0B1220] mb-2">{t("addExampleFilesHeading")}</h2>
-                  <p className="text-sm text-[#667085]">{t("addExampleFilesDesc")}</p>
+                  <h2 className="text-lg font-semibold text-[#0B1220] mb-2">{t("setEvidenceSourcesHeading")}</h2>
+                  <p className="text-sm text-[#667085]">{t("setEvidenceSourcesDesc")}</p>
                 </div>
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
-                    isDragging ? "border-[#1D4ED8] bg-[#EFF6FF]" : "border-[#E5E7EB] bg-[#F6F8FB]"
-                  )}
-                >
-                  <Upload className="w-12 h-12 text-[#667085] mx-auto mb-4" />
-                  <h3 className="font-medium text-[#0B1220] mb-2">{t("uploadExampleFiles")}</h3>
-                  <p className="text-sm text-[#667085] mb-4">{t("uploadExampleDesc")}</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    id="file-upload-wizard"
-                    onChange={(e) => handleFileUpload(e.target.files)}
-                    disabled={uploading}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? "Uploading…" : t("chooseFiles")}
-                  </Button>
-                  <p className="text-xs text-[#667085] mt-2">{t("fileRestrictions")}</p>
-                </div>
-                {uploadedFiles.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <h3 className="text-sm font-medium text-[#0B1220]">
-                      {t("uploadedFiles", { count: uploadedFiles.length })}
-                    </h3>
-                    {uploadedFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center justify-between p-3 bg-[#F6F8FB] rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-4 h-4 text-[#667085]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#0B1220]">{file.name}</p>
-                            <p className="text-xs text-[#667085]">{file.size}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile(file.id)}
-                          className="text-[#667085] hover:text-[#B42318] transition-colors"
+                <div className="space-y-3">
+                  {evidenceTypes
+                    .filter((e) => e.selected)
+                    .map((evidence) => {
+                      const sourceKind = pack?.checklist?.length
+                        ? getEvidenceSourceKindFromChecklistField(evidence.id)
+                        : getEvidenceSourceKind(evidence.id);
+                      const sourceLabel =
+                        sourceKind === "auto"
+                          ? t("sourceAuto")
+                          : sourceKind === "reusable"
+                            ? t("sourceReusable")
+                            : sourceKind === "store_or_manual"
+                              ? t("sourceStoreOrManual")
+                              : t("sourceManual");
+                      const sourceClasses =
+                        sourceKind === "auto"
+                          ? "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]"
+                          : sourceKind === "reusable"
+                            ? "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]"
+                            : sourceKind === "store_or_manual"
+                              ? "bg-[#F5F3FF] text-[#5B21B6] border-[#DDD6FE]"
+                              : "bg-[#F6F8FB] text-[#667085] border-[#E5E7EB]";
+                      return (
+                        <div
+                          key={evidence.id}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border border-[#E5E7EB] bg-[#FAFBFC]"
                         >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <div>
+                            <h3 className="font-medium text-[#0B1220]">
+                              {evidence.title ?? (evidence.titleKey ? t(evidence.titleKey) : evidence.id)}
+                            </h3>
+                            {(evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")) && (
+                              <p className="text-sm text-[#667085] mt-0.5">
+                                {evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")}
+                              </p>
+                            )}
+                          </div>
+                          <span className={cn("text-xs font-medium px-2.5 py-1 rounded border flex-shrink-0 w-fit", sourceClasses)}>
+                            {sourceLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
                 <div className="mt-6 flex items-center justify-between">
                   <Button variant="ghost" onClick={() => setCurrentStep(1)}>
                     {t("back")}
                   </Button>
-                  <div className="flex gap-3">
-                    <Button variant="ghost" onClick={() => setCurrentStep(3)}>
-                      {t("skipForNow")}
-                    </Button>
-                    <Button variant="primary" onClick={() => setCurrentStep(3)}>
-                      {t("continueToReview")}
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
+                  <Button variant="primary" onClick={() => setCurrentStep(3)}>
+                    {t("continueToReview")}
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </div>
             )}
@@ -707,11 +720,8 @@ export function TemplateSetupWizard({
                     </p>
                   </div>
                   <div className="border border-[#E5E7EB] rounded-lg p-4">
-                    <p className="text-sm text-[#667085] mb-1">{t("exampleFiles")}</p>
-                    <p className="text-2xl font-bold text-[#0B1220]">{uploadedFiles.length}</p>
-                    <p className="text-xs text-[#667085] mt-1">
-                      {uploadedFiles.length > 0 ? t("readyForUse") : t("noneAdded")}
-                    </p>
+                    <p className="text-sm text-[#667085] mb-1">{t("evidenceSourcesSummary")}</p>
+                    <p className="text-sm font-medium text-[#0B1220]">{t("evidenceSourcesSummaryText")}</p>
                   </div>
                   <div className="border border-[#E5E7EB] rounded-lg p-4">
                     <p className="text-sm text-[#667085] mb-1">{t("disputeType")}</p>
