@@ -49,6 +49,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const shopDomain = session.shop_domain?.trim() || null;
+  if (!shopDomain) {
+    return NextResponse.json(
+      {
+        error:
+          'Store session is invalid (missing shop domain). Use "Clear shop & reconnect" in the sidebar, then open the app from Shopify Admin.',
+      },
+      { status: 400 }
+    );
+  }
+
   const accessToken = decryptToken(session.access_token_encrypted);
   const isTest = process.env.NODE_ENV !== "production";
 
@@ -56,7 +67,7 @@ export async function POST(req: NextRequest) {
   const returnUrl = `${appUrl}/api/billing/callback?shop_id=${shop_id}&plan_id=${plan_id}`;
 
   const result = await requestShopifyGraphQL<AppSubscriptionCreateResult>({
-    session: { shopDomain: session.shop_domain, accessToken },
+    session: { shopDomain, accessToken },
     query: APP_SUBSCRIPTION_CREATE_MUTATION,
     variables: {
       name: `DisputeDesk ${plan.name}`,

@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/favicon.svg" }];
+  },
   // Use separate build dir when started by Playwright E2E to avoid .next/trace EPERM lock
   distDir: process.env.NEXT_E2E_BUILD ? ".next-e2e" : ".next",
   outputFileTracingRoot: path.join(__dirname),

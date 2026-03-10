@@ -282,6 +282,7 @@
     "expires": "Läuft ab {date}",
     "paid": "Bezahlt",
     "connectStore": "Verbinden Sie einen Shop, um die Abrechnung anzuzeigen.",
+    "upgradeFailed": "Upgrade konnte nicht gestartet werden. Verbinden Sie den Shop erneut über die Seitenleiste und versuchen Sie es erneut, oder installieren Sie die App aus dem Shopify Admin.",
     "topUps": "Mehr Pakete benötigt?",
     "topUpsDesc": "Aufladungspakete kaufen. Guthaben sofort verfügbar.",
     "topUp25": "+25 Pakete — $19",

@@ -14,5 +14,6 @@ export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
   cookieStore.delete(DD_COOKIE_NAME);
-  return NextResponse.redirect(new URL("/portal/connect-shopify", req.url));
+  const origin = req.nextUrl.origin;
+  return NextResponse.redirect(`${origin}/portal/connect-shopify`, 303);
 }

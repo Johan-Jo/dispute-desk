@@ -282,6 +282,7 @@
     "expires": "Expire le {date}",
     "paid": "Payé",
     "connectStore": "Connectez une boutique pour voir la facturation.",
+    "upgradeFailed": "La mise à niveau n'a pas pu être démarrée. Reconnectez cette boutique depuis la barre latérale et réessayez, ou installez l'application depuis l'administration Shopify.",
     "topUps": "Besoin de plus de packs ?",
     "topUpsDesc": "Achetez des packs complémentaires. Crédits ajoutés immédiatement.",
     "topUp25": "+25 packs — 19 $",
