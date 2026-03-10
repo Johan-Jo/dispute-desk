@@ -408,7 +408,14 @@ export function TemplateSetupWizard({
               <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
                 <div className="mb-4">
                   <h2 className="text-lg font-semibold text-[#0B1220] mb-2">{t("chooseEvidenceHeading")}</h2>
-                  <p className="text-sm text-[#667085]">{t("chooseEvidenceDesc")}</p>
+                  <p className="text-sm text-[#667085] mb-3">{t("chooseEvidenceDesc")}</p>
+                  <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] p-3 text-sm text-[#1E40AF]">
+                    <p className="font-medium text-[#1D4ED8] mb-1">{t("chooseEvidenceAutoLabel")}</p>
+                    <p className="text-[#1E40AF] mb-3">{t("chooseEvidenceAutoText")}</p>
+                    <p className="font-medium text-[#1D4ED8] mb-1">{t("chooseEvidenceManualLabel")}</p>
+                    <p className="text-[#1E40AF] mb-2">{t("chooseEvidenceManualText")}</p>
+                    <p className="text-[#1E40AF] text-xs border-t border-[#BFDBFE] pt-2 mt-2">{t("chooseEvidenceSelectHint")}</p>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {evidenceTypes.map((evidence) => (
