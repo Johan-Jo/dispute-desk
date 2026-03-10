@@ -119,8 +119,11 @@ function getReadinessStateLabel(score: number, t: (key: string) => string): stri
 
 function getStatusBanner(
   pack: PackData,
-  t: (key: string) => string
+  t: (key: string) => string,
+  isLibraryPack: boolean
 ): { tone: "critical" | "warning" | "success" | "info"; message: string } {
+  if (isLibraryPack)
+    return { tone: "info", message: t("packs.statusBannerTemplate") };
   if (pack.status === "saved_to_shopify")
     return { tone: "success", message: t("packs.statusSaved") };
   if (pack.status === "ready")
@@ -246,7 +249,7 @@ export default function PackPreviewPage() {
     : null;
   const suggestedKeys = SUGGESTED_EVIDENCE_KEYS[disputeTypeKey] ?? SUGGESTED_EVIDENCE_KEYS.GENERAL;
   const suggestedLabels = suggestedKeys.map((key) => t(key));
-  const statusBanner = getStatusBanner(pack, t);
+  const statusBanner = getStatusBanner(pack, t, isLibraryPack);
 
   const backUrl = isLibraryPack ? "/app/packs" : `/app/disputes/${pack.dispute_id}`;
   const backLabel = isLibraryPack ? t("packs.backToPacks") : t("disputes.backToDisputes");
@@ -262,8 +265,15 @@ export default function PackPreviewPage() {
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <Text as="h1" variant="headingLg">{t("packs.detailHeroTitle")}</Text>
-              <Text as="p" variant="bodyMd" tone="subdued">{t("packs.detailHeroDescription")}</Text>
+              <Text as="h1" variant="headingLg">
+                {isLibraryPack ? t("packs.detailHeroTitleTemplate") : t("packs.detailHeroTitle")}
+              </Text>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                {isLibraryPack ? t("packs.detailHeroDescriptionTemplate") : t("packs.detailHeroDescription")}
+              </Text>
+              {!isLibraryPack && (
+                <Text as="p" variant="bodySm" tone="subdued">{t("packs.autoCollectedIntro")}</Text>
+              )}
               <InlineStack gap="400" wrap>
                 {pack.name && <Text as="span" variant="bodySm" fontWeight="semibold">{pack.name}</Text>}
                 {disputeTypeLabel && (
@@ -279,13 +289,15 @@ export default function PackPreviewPage() {
                   {t("packs.detailCreated")} {formatDate(pack.created_at)}
                 </Text>
               </InlineStack>
-              <BlockStack gap="100">
-                <Text as="p" variant="bodySm" tone="subdued">1. {t("packs.detailWorkflow1")}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">2. {t("packs.detailWorkflow2")}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">3. {t("packs.detailWorkflow3")}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">4. {t("packs.detailWorkflow4")}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">5. {t("packs.detailWorkflowOptional")}</Text>
-              </BlockStack>
+              {!isLibraryPack && (
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodySm" tone="subdued">1. {t("packs.detailWorkflow1")}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">2. {t("packs.detailWorkflow2")}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">3. {t("packs.detailWorkflow3")}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">4. {t("packs.detailWorkflow4")}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">5. {t("packs.detailWorkflowOptional")}</Text>
+                </BlockStack>
+              )}
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -311,9 +323,15 @@ export default function PackPreviewPage() {
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">{t("packs.recommendedForDispute")}</Text>
-              <Text as="p" variant="bodySm" tone="subdued">{t("packs.recommendedForDisputeDescription")}</Text>
-              <Text as="p" variant="bodySm" fontWeight="medium">{t("packs.useChecklistAsGuide")}</Text>
+              <Text as="h2" variant="headingMd">
+                {isLibraryPack ? t("packs.recommendedForTemplate") : t("packs.recommendedForDispute")}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {isLibraryPack ? t("packs.recommendedForTemplateDescription") : t("packs.recommendedForDisputeDescription")}
+              </Text>
+              <Text as="p" variant="bodySm" fontWeight="medium">
+                {isLibraryPack ? t("packs.useChecklistAsGuideTemplate") : t("packs.recommendedGatherHint")}
+              </Text>
               <Divider />
               {(pack.checklist?.length
                 ? pack.checklist.map((c) => ({ label: c.label, present: c.present }))
@@ -333,10 +351,17 @@ export default function PackPreviewPage() {
           <Card>
             <BlockStack gap="300">
               <InlineStack align="space-between" blockAlign="center">
-                <Text as="h2" variant="headingMd">{t("packs.packReadiness")}</Text>
+                <Text as="h2" variant="headingMd">
+                  {isLibraryPack ? t("packs.packReadinessTemplate") : t("packs.packReadiness")}
+                </Text>
                 <Text as="p" variant="bodyMd" fontWeight="bold">{score}%</Text>
               </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{t("packs.readinessHelper")}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {isLibraryPack ? t("packs.readinessHelperTemplate") : t("packs.readinessHelper")}
+              </Text>
+              {!isLibraryPack && (
+                <Text as="p" variant="bodySm" tone="subdued">{t("packs.readinessActionHint")}</Text>
+              )}
               <ProgressBar
                 progress={score}
                 tone={score >= 80 ? "success" : score >= 50 ? "highlight" : "critical"}
@@ -368,16 +393,29 @@ export default function PackPreviewPage() {
             <BlockStack gap="300">
               <InlineStack gap="200" blockAlign="center">
                 <Badge tone="info">1</Badge>
-                <Text as="h2" variant="headingMd">{t("packs.step1Title")}</Text>
+                <Text as="h2" variant="headingMd">
+                  {isLibraryPack ? t("packs.step1TitleTemplate") : t("packs.step1Title")}
+                </Text>
               </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{t("packs.step1Description")}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {isLibraryPack ? t("packs.step1DescriptionTemplate") : t("packs.step1DescriptionDispute")}
+              </Text>
+              {!isLibraryPack && (
+                <Banner tone="info">{t("packs.autoCollectedCallout")}</Banner>
+              )}
               <Text as="p" variant="bodySm" tone="subdued">{t("packs.step1FileRestrictions")}</Text>
-              {fromTemplate && <Text as="p" variant="bodySm" fontWeight="medium">{t("packs.step1MatchChecklist")}</Text>}
+              {fromTemplate && !isLibraryPack && <Text as="p" variant="bodySm" fontWeight="medium">{t("packs.step1MatchChecklist")}</Text>}
               <DropZone onDrop={handleUpload} allowMultiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv">
                 {uploading ? (
                   <DropZone.FileUpload actionHint={t("packs.uploading")} />
                 ) : (
-                  <DropZone.FileUpload actionHint={pack.evidence_items.length === 0 ? t("packs.step1EmptyState") : t("packs.clickToUpload")} />
+                  <DropZone.FileUpload
+                    actionHint={
+                      pack.evidence_items.length === 0
+                        ? (isLibraryPack ? t("packs.step1EmptyState") : t("packs.step1EmptyStateDispute"))
+                        : t("packs.clickToUpload")
+                    }
+                  />
                 )}
               </DropZone>
             </BlockStack>
@@ -426,64 +464,80 @@ export default function PackPreviewPage() {
           </Layout.Section>
         )}
 
-        {/* F. Step 2 — Save to Shopify */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <InlineStack gap="200" blockAlign="center">
-                <Badge tone="info">2</Badge>
-                <Text as="h2" variant="headingMd">{t("packs.step2Title")}</Text>
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{t("packs.step2Description")}</Text>
-              {pack.status === "saved_to_shopify" ? (
-                <>
-                  <InlineStack gap="200" blockAlign="center">
-                    <Icon source={CheckCircleIcon} tone="success" />
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">{t("packs.savedToShopifyBadge")}</Text>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">{t("packs.step2AfterSave")}</Text>
-                  {pack.saved_to_shopify_at && (
-                    <Text as="p" variant="bodySm" tone="subdued">{t("packs.lastSavedToShopify", { date: formatDate(pack.saved_to_shopify_at) })}</Text>
-                  )}
-                  {disputeUrl && <Button url={disputeUrl} target="_blank">{t("packs.openInShopifyAdmin")}</Button>}
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="primary"
-                    loading={saving || pack.status === "saving"}
-                    disabled={isBuilding}
-                    onClick={async () => {
-                      setSaving(true);
-                      await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
-                      await fetchPack();
-                      setSaving(false);
-                    }}
-                  >
-                    {pack.status === "saving" || saving ? t("packs.saving") : t("packs.saveToShopify")}
-                  </Button>
-                  {pack.status === "save_failed" && (
-                    <Banner tone="critical">{t("packs.saveFailed")}</Banner>
-                  )}
-                </>
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
+        {/* When this template is used (template mode only) */}
+        {isLibraryPack && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">{t("packs.whenTemplateUsedTitle")}</Text>
+                <Text as="p" variant="bodyMd" tone="subdued">{t("packs.whenTemplateUsedDescription")}</Text>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
 
-        {/* G. Step 3 — Submit in Shopify Admin */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <InlineStack gap="200" blockAlign="center">
-                <Badge tone="info">3</Badge>
-                <Text as="h2" variant="headingMd">{t("packs.step3Title")}</Text>
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{t("packs.step3Description")}</Text>
-              {disputeUrl && <Button url={disputeUrl} target="_blank">{t("packs.openInShopifyAdmin")}</Button>}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
+        {/* F. Step 2 — Save to Shopify (dispute only) */}
+        {!isLibraryPack && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack gap="200" blockAlign="center">
+                  <Badge tone="info">2</Badge>
+                  <Text as="h2" variant="headingMd">{t("packs.step2Title")}</Text>
+                </InlineStack>
+                <Text as="p" variant="bodySm" tone="subdued">{t("packs.step2Description")}</Text>
+                {pack.status === "saved_to_shopify" ? (
+                  <>
+                    <InlineStack gap="200" blockAlign="center">
+                      <Icon source={CheckCircleIcon} tone="success" />
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">{t("packs.savedToShopifyBadge")}</Text>
+                    </InlineStack>
+                    <Text as="p" variant="bodySm" tone="subdued">{t("packs.step2AfterSave")}</Text>
+                    {pack.saved_to_shopify_at && (
+                      <Text as="p" variant="bodySm" tone="subdued">{t("packs.lastSavedToShopify", { date: formatDate(pack.saved_to_shopify_at) })}</Text>
+                    )}
+                    {disputeUrl && <Button url={disputeUrl} target="_blank">{t("packs.openInShopifyAdmin")}</Button>}
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="primary"
+                      loading={saving || pack.status === "saving"}
+                      disabled={isBuilding}
+                      onClick={async () => {
+                        setSaving(true);
+                        await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
+                        await fetchPack();
+                        setSaving(false);
+                      }}
+                    >
+                      {pack.status === "saving" || saving ? t("packs.saving") : t("packs.saveToShopify")}
+                    </Button>
+                    {pack.status === "save_failed" && (
+                      <Banner tone="critical">{t("packs.saveFailed")}</Banner>
+                    )}
+                  </>
+                )}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
+
+        {/* G. Step 3 — Submit in Shopify Admin (dispute only) */}
+        {!isLibraryPack && (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack gap="200" blockAlign="center">
+                  <Badge tone="info">3</Badge>
+                  <Text as="h2" variant="headingMd">{t("packs.step3Title")}</Text>
+                </InlineStack>
+                <Text as="p" variant="bodySm" tone="subdued">{t("packs.step3Description")}</Text>
+                {disputeUrl && <Button url={disputeUrl} target="_blank">{t("packs.openInShopifyAdmin")}</Button>}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        )}
 
         {/* H. Optional — Export PDF */}
         <Layout.Section>

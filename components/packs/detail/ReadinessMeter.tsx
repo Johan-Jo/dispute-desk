@@ -5,6 +5,8 @@ interface ReadinessMeterProps {
   label: string;
   helperText: string;
   stateLabel: string;
+  /** Optional hint shown after helperText (e.g. "Add files in Step 1 below to increase this score.") */
+  actionHint?: string;
 }
 
 function barColor(score: number): string {
@@ -26,6 +28,7 @@ export function ReadinessMeter({
   label,
   helperText,
   stateLabel,
+  actionHint,
 }: ReadinessMeterProps) {
   return (
     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6">
@@ -34,6 +37,7 @@ export function ReadinessMeter({
         <span className={`text-xl font-bold ${textColor(score)}`}>{score}%</span>
       </div>
       <p className="text-sm text-[#667085] mb-3">{helperText}</p>
+      {actionHint && <p className="text-sm text-[#667085] mb-3">{actionHint}</p>}
       <div className="w-full h-2.5 bg-[#E5E7EB] rounded-full overflow-hidden mb-2">
         <div
           className={`h-full rounded-full transition-all ${barColor(score)}`}

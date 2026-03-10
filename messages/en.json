@@ -250,11 +250,18 @@
     "submitEvidenceInShopifyHint": "Open the dispute in Shopify, then copy each section below and paste into the matching evidence field.",
     "detailHeroTitle": "Prepare your evidence pack",
     "detailHeroDescription": "Use this page to collect and save the documents and details that support your dispute. DisputeDesk helps you prepare the pack; final submission happens in Shopify Admin.",
+    "detailHeroTitleTemplate": "Define your evidence template",
+    "detailHeroDescriptionTemplate": "This template defines what evidence we collect when a dispute matches. DisputeDesk will build packs from this template and can save them to Shopify automatically. You're setting the blueprint here — not collecting evidence for one case.",
+    "flowExplainShort": "On this page you collect evidence for this dispute and save it to Shopify. Final submission to the card network is done in Shopify Admin.",
+    "flowWhereCallout": "DisputeDesk: upload evidence and save to Shopify. Shopify Admin: final submit to the card network.",
+    "autoCollectedIntro": "We've pulled order details, tracking, and your store policies from Shopify. Add any extra documents below to strengthen the pack.",
+    "autoCollectedCallout": "Already included from your store: order, tracking, policies. Add more below if needed.",
     "detailWorkflow1": "Review the starter template",
     "detailWorkflow2": "Upload supporting files",
     "detailWorkflow3": "Save evidence to Shopify",
     "detailWorkflow4": "Submit in Shopify Admin",
     "detailWorkflowOptional": "Optional: Export a PDF copy",
+    "stepYouAreHere": "You are here",
     "detailDisputeType": "Dispute type",
     "detailStatus": "Status",
     "detailDueDate": "Due date",
@@ -262,22 +269,34 @@
     "startedFromTemplate": "Started from template",
     "basedOnTemplate": "Based on {name}",
     "templateContinuityDescription": "This starter template highlights the documents and details commonly used for this dispute type. Add, remove, or ignore items as needed.",
+    "templateThenStep1": "The checklist below shows evidence that usually helps for this dispute type. Add your files in Step 1.",
     "browseTemplates": "Browse templates",
     "templateBadge": "Template",
     "recommendedForDispute": "Recommended for this dispute",
     "recommendedForDisputeDescription": "Start with the evidence most commonly used for this type of dispute.",
+    "recommendedGatherHint": "Gather these types of evidence (upload them in Step 1 below).",
+    "recommendedForTemplate": "What evidence this template requires",
+    "recommendedForTemplateDescription": "Define the types of evidence we should collect when this template is applied to a dispute.",
     "useChecklistAsGuide": "Use this checklist as a guide",
+    "useChecklistAsGuideTemplate": "When a dispute uses this template, we'll look for these evidence types.",
     "packReadiness": "Pack readiness",
+    "packReadinessTemplate": "Template completeness",
     "evidenceCompleteness": "Evidence completeness",
     "readinessHelper": "This score estimates how complete your evidence pack is based on the files and evidence added so far.",
+    "readinessHelperTemplate": "This score reflects how complete your template definition is (required evidence types and optional files).",
+    "readinessActionHint": "Add and upload evidence in Step 1 below to increase this score.",
     "readinessJustStarted": "Just started",
     "readinessInProgress": "In progress",
     "readinessNearlyReady": "Nearly ready",
     "readinessReadyToReview": "Ready to review",
     "step1Title": "1. Upload supporting files",
     "step1Description": "Add the documents that support your case. Useful evidence often includes receipts, tracking, delivery confirmation, store policies, and customer communication.",
-    "step1FileRestrictions": "Images and PDFs, up to 10 MB each.",
+    "step1DescriptionDispute": "Order confirmation, tracking, and store policies are already included from your store. Add extra documents that aren't in Shopify (e.g. customer emails, screenshots, custom receipts) to strengthen the pack.",
     "step1EmptyState": "No files uploaded yet. Start by adding the documents that best support this dispute.",
+    "step1EmptyStateDispute": "No extra files yet. Order, tracking, and policies are already included from your store. Add customer communication, screenshots, or other documents here if needed.",
+    "step1TitleTemplate": "1. Define required evidence (and optional sample files)",
+    "step1DescriptionTemplate": "Set what this template expects. You can add sample or placeholder files so the template is ready for automation.",
+    "step1FileRestrictions": "Images and PDFs, up to 10 MB each.",
     "step1MatchChecklist": "Upload the files that match the recommended checklist above.",
     "step2Title": "2. Save evidence to Shopify",
     "step2Description": "Send the evidence from DisputeDesk to Shopify. This saves your work in Shopify, but does not complete the final dispute submission.",
@@ -293,6 +312,9 @@
     "generatingPdf": "Generating PDF…",
     "downloadPdfReady": "Download PDF",
     "pdfGenerationFailed": "PDF generation failed. Try again.",
+    "whenTemplateUsedTitle": "When this template is used",
+    "whenTemplateUsedDescription": "When a dispute matches this template, DisputeDesk builds a pack, saves it to Shopify, and you (or automation) complete submission in Shopify Admin.",
+    "statusBannerTemplate": "This is a template. It will be applied automatically to matching disputes, or you can assign it manually.",
     "statusDraft": "Draft only — your evidence has not been saved to Shopify yet.",
     "statusTemplateDraft": "Started from template — now add your files and save the evidence to Shopify.",
     "statusSaved": "Saved to Shopify — final submission still needs to be completed in Shopify Admin.",
@@ -854,7 +876,7 @@
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
-        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack."
+        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nOn the pack detail page we make this clear: order, tracking, and store policies are already included from your store. The upload section is for additional documents (e.g. customer emails, screenshots) that aren't in Shopify. After collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence)."
       },
       "generatingPackManually": {
         "title": "Generating a pack manually",
@@ -870,7 +892,7 @@
       },
       "uploadingEvidence": {
         "title": "Uploading additional evidence",
-        "body": "You can upload files to strengthen your evidence pack:\n\n1. Open the evidence pack detail page.\n2. Scroll to the \"Upload Evidence\" section.\n3. Click to upload or drag and drop files.\n4. Supported formats: images (JPG, PNG) and PDF files.\n5. Maximum file size: 10 MB per file.\n\nUploaded files are attached to the evidence pack and included when saving to Shopify. They appear in the \"Evidence Items\" section with a timestamp and source label.\n\nCommon uploads include:\n- Screenshots of customer communication.\n- Delivery confirmation photos.\n- Signed receipts or invoices.\n- Additional tracking documentation."
+        "body": "Order confirmation, tracking/delivery proof, and store policies are already pulled from your Shopify store when the pack is built. The upload section is for additional evidence that isn't in Shopify.\n\nTo add more evidence:\n1. Open the evidence pack detail page (for a dispute).\n2. Scroll to the \"Upload\" or \"Upload supporting files\" section.\n3. Click to upload or drag and drop files.\n4. Supported formats: images (JPG, PNG) and PDF files. Maximum file size: 10 MB per file.\n\nUploaded files are attached to the pack and included when saving to Shopify. They appear in the Evidence Items section with a timestamp and source label.\n\nCommon uploads include:\n- Screenshots of customer communication.\n- Delivery confirmation photos.\n- Signed receipts or invoices.\n- Additional tracking documentation."
       },
       "evidenceChecklist": {
         "title": "Evidence checklist explained",
@@ -878,7 +900,7 @@
       },
       "evidencePackTemplates": {
         "title": "Using evidence pack templates",
-        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
+        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\n**Template vs dispute pack:** When you open a pack, the page adapts. If the pack is a **template** (no dispute linked), you see \"Define your evidence template\" — you're setting the blueprint for what evidence to collect when a dispute matches. There is no \"Save to Shopify\" or \"Submit in Shopify Admin\" for the template itself; those steps happen per dispute when the template is used. If the pack is linked to a **dispute**, you see \"Prepare your evidence pack\" and the full flow: we've already pulled order, tracking, and policies from your store; you can add extra documents and then save and submit.\n\n\"Browse All Templates\" opens the full template library. \"Create from Scratch\" starts an empty pack. Templates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
       },
       "definingStorePolicies": {
         "title": "Defining your store policies",

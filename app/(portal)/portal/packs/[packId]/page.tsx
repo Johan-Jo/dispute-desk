@@ -124,8 +124,11 @@ function getReadinessStateLabel(score: number, t: (key: string) => string): stri
 
 function getStatusBanner(
   pack: PackData,
-  t: (key: string) => string
+  t: (key: string) => string,
+  isLibraryPack: boolean
 ): { variant: "draft" | "template" | "saved" | "ready" | "submitted" | "info"; message: string } {
+  if (isLibraryPack)
+    return { variant: "info", message: t("statusBannerTemplate") };
   if (pack.status === "saved_to_shopify")
     return { variant: "saved", message: t("statusSaved") };
   if (pack.status === "ready")
@@ -261,7 +264,7 @@ export default function PackPreviewPage() {
     : null;
   const suggestedKeys = SUGGESTED_EVIDENCE_KEYS[disputeTypeKey] ?? SUGGESTED_EVIDENCE_KEYS.GENERAL;
   const suggestedLabels = suggestedKeys.map((key) => t(key));
-  const statusBanner = getStatusBanner(pack, t);
+  const statusBanner = getStatusBanner(pack, t, isLibraryPack);
 
   return (
     <div>
@@ -275,9 +278,14 @@ export default function PackPreviewPage() {
       {/* A. Hero / Summary */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mb-6">
         <h1 className="text-2xl font-bold text-[#0B1220] mb-2">
-          {t("detailHeroTitle")}
+          {isLibraryPack ? t("detailHeroTitleTemplate") : t("detailHeroTitle")}
         </h1>
-        <p className="text-[#667085] mb-4">{t("detailHeroDescription")}</p>
+        <p className="text-[#667085] mb-4">
+          {isLibraryPack ? t("detailHeroDescriptionTemplate") : t("detailHeroDescription")}
+        </p>
+        {!isLibraryPack && (
+          <p className="text-sm text-[#667085] mb-4">{t("autoCollectedIntro")}</p>
+        )}
         <div className="flex flex-wrap gap-4 text-sm text-[#667085] mb-4">
           {pack.name && (
             <span className="font-medium text-[#0B1220]">{pack.name}</span>
@@ -288,13 +296,15 @@ export default function PackPreviewPage() {
           <span><strong className="text-[#0B1220]">{t("detailStatus")}</strong> <Badge variant={cfg.variant}>{cfg.label}</Badge></span>
           <span><strong className="text-[#0B1220]">{t("detailCreated")}</strong> {formatDate(pack.created_at, locale)}</span>
         </div>
-        <ol className="list-decimal list-inside text-sm text-[#667085] space-y-1">
-          <li>{t("detailWorkflow1")}</li>
-          <li>{t("detailWorkflow2")}</li>
-          <li>{t("detailWorkflow3")}</li>
-          <li>{t("detailWorkflow4")}</li>
-          <li className="text-[#94A3B8]">{t("detailWorkflowOptional")}</li>
-        </ol>
+        {!isLibraryPack && (
+          <ol className="list-decimal list-inside text-sm text-[#667085] space-y-1">
+            <li>{t("detailWorkflow1")}</li>
+            <li>{t("detailWorkflow2")}</li>
+            <li>{t("detailWorkflow3")}</li>
+            <li>{t("detailWorkflow4")}</li>
+            <li className="text-[#94A3B8]">{t("detailWorkflowOptional")}</li>
+          </ol>
+        )}
       </div>
 
       {/* B. Template continuity */}
@@ -312,9 +322,9 @@ export default function PackPreviewPage() {
 
       {/* C. Recommended evidence */}
       <SuggestedEvidenceChecklist
-        title={t("recommendedForDispute")}
-        description={t("recommendedForDisputeDescription")}
-        guideLabel={t("useChecklistAsGuide")}
+        title={isLibraryPack ? t("recommendedForTemplate") : t("recommendedForDispute")}
+        description={isLibraryPack ? t("recommendedForTemplateDescription") : t("recommendedForDisputeDescription")}
+        guideLabel={isLibraryPack ? t("useChecklistAsGuideTemplate") : t("recommendedGatherHint")}
         checklist={pack.checklist}
         suggestedLabels={suggestedLabels}
       />
@@ -322,9 +332,10 @@ export default function PackPreviewPage() {
       {/* D. Readiness */}
       <ReadinessMeter
         score={score}
-        label={t("packReadiness")}
-        helperText={t("readinessHelper")}
+        label={isLibraryPack ? t("packReadinessTemplate") : t("packReadiness")}
+        helperText={isLibraryPack ? t("readinessHelperTemplate") : t("readinessHelper")}
         stateLabel={getReadinessStateLabel(score, t)}
+        actionHint={!isLibraryPack ? t("readinessActionHint") : undefined}
       />
 
       {pack.blockers && pack.blockers.length > 0 && (
@@ -342,10 +353,15 @@ export default function PackPreviewPage() {
       )}
 
       {/* E. Step 1 — Upload */}
-      <StepCard stepNumber={1} title={t("step1Title")}>
-        <p>{t("step1Description")}</p>
+      <StepCard stepNumber={1} title={isLibraryPack ? t("step1TitleTemplate") : t("step1Title")}>
+        <p>{isLibraryPack ? t("step1DescriptionTemplate") : t("step1DescriptionDispute")}</p>
+        {!isLibraryPack && (
+          <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-sm text-[#1E40AF] mb-2">
+            {t("autoCollectedCallout")}
+          </div>
+        )}
         <p className="text-[#94A3B8]">{t("step1FileRestrictions")}</p>
-        {fromTemplate && <p className="text-[#1E40AF] font-medium">{t("step1MatchChecklist")}</p>}
+        {fromTemplate && !isLibraryPack && <p className="text-[#1E40AF] font-medium">{t("step1MatchChecklist")}</p>}
       </StepCard>
 
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6 ml-0">
@@ -372,7 +388,7 @@ export default function PackPreviewPage() {
           />
           <Upload className="w-10 h-10 text-[#94A3B8] mb-3" />
           <p className="text-sm text-[#667085] text-center">
-            {uploading ? t("uploading") : pack.evidence_items.length === 0 ? t("step1EmptyState") : t("clickToUpload")}
+            {uploading ? t("uploading") : pack.evidence_items.length === 0 ? (isLibraryPack ? t("step1EmptyState") : t("step1EmptyStateDispute")) : t("clickToUpload")}
           </p>
         </label>
       </div>
@@ -412,67 +428,79 @@ export default function PackPreviewPage() {
         </div>
       )}
 
-      {/* F. Step 2 — Save to Shopify */}
-      <StepCard stepNumber={2} title={t("step2Title")}>
-        <p>{t("step2Description")}</p>
-      </StepCard>
+      {/* When this template is used (template mode only) */}
+      {isLibraryPack && (
+        <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mb-6">
+          <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("whenTemplateUsedTitle")}</h3>
+          <p className="text-sm text-[#667085]">{t("whenTemplateUsedDescription")}</p>
+        </div>
+      )}
 
-      <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6">
-        {pack.status === "saved_to_shopify" ? (
-          <>
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="w-5 h-5 text-[#22C55E]" />
-              <span className="font-medium text-[#22C55E]">{t("savedToShopifyBadge")}</span>
-            </div>
-            <p className="text-sm text-[#667085] mb-2">{t("step2AfterSave")}</p>
-            {pack.saved_to_shopify_at && (
-              <p className="text-xs text-[#94A3B8] mb-3">{t("lastSavedToShopify", { date: formatDate(pack.saved_to_shopify_at, locale) })}</p>
+      {/* F. Step 2 — Save to Shopify (dispute only) */}
+      {!isLibraryPack && (
+        <>
+          <StepCard stepNumber={2} title={t("step2Title")}>
+            <p>{t("step2Description")}</p>
+          </StepCard>
+
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 mb-6">
+            {pack.status === "saved_to_shopify" ? (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-[#22C55E]" />
+                  <span className="font-medium text-[#22C55E]">{t("savedToShopifyBadge")}</span>
+                </div>
+                <p className="text-sm text-[#667085] mb-2">{t("step2AfterSave")}</p>
+                {pack.saved_to_shopify_at && (
+                  <p className="text-xs text-[#94A3B8] mb-3">{t("lastSavedToShopify", { date: formatDate(pack.saved_to_shopify_at, locale) })}</p>
+                )}
+                <a
+                  href="https://admin.shopify.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-[#1D4ED8] hover:underline"
+                >
+                  {t("openInShopifyAdmin")}
+                </a>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={saving || pack.status === "saving" || isBuilding}
+                  onClick={async () => {
+                    setSaving(true);
+                    await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
+                    await fetchPack();
+                    setSaving(false);
+                  }}
+                >
+                  {pack.status === "saving" || saving ? t("saving") : t("saveToShopify")}
+                </Button>
+                {pack.status === "save_failed" && (
+                  <div className="mt-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-3">
+                    <p className="text-sm text-[#DC2626]">{t("saveFailed")}</p>
+                  </div>
+                )}
+              </>
             )}
+          </div>
+
+          {/* G. Step 3 — Submit in Shopify Admin */}
+          <StepCard stepNumber={3} title={t("step3Title")}>
+            <p>{t("step3Description")}</p>
             <a
               href="https://admin.shopify.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[#1D4ED8] hover:underline"
+              className="inline-block mt-2 text-sm font-medium text-[#1D4ED8] hover:underline"
             >
               {t("openInShopifyAdmin")}
             </a>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={saving || pack.status === "saving" || isBuilding}
-              onClick={async () => {
-                setSaving(true);
-                await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
-                await fetchPack();
-                setSaving(false);
-              }}
-            >
-              {pack.status === "saving" || saving ? t("saving") : t("saveToShopify")}
-            </Button>
-            {pack.status === "save_failed" && (
-              <div className="mt-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-3">
-                <p className="text-sm text-[#DC2626]">{t("saveFailed")}</p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* G. Step 3 — Submit in Shopify Admin */}
-      <StepCard stepNumber={3} title={t("step3Title")}>
-        <p>{t("step3Description")}</p>
-        <a
-          href="https://admin.shopify.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-2 text-sm font-medium text-[#1D4ED8] hover:underline"
-        >
-          {t("openInShopifyAdmin")}
-        </a>
-      </StepCard>
+          </StepCard>
+        </>
+      )}
 
       {/* H. Optional — Export PDF */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mb-6">

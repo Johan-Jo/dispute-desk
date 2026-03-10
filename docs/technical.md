@@ -276,6 +276,19 @@ queued → building → ready → saved_to_shopify
 - Max 10 MB, types: PNG, JPEG, GIF, WebP, PDF, TXT, CSV
 - Creates `evidence_items` row with `source: manual_upload`
 
+### Pack detail page: template vs dispute mode
+
+The pack detail page (embedded `app/packs/[packId]` and portal `portal/packs/[packId]`) is used in two contexts, distinguished by `evidence_packs.dispute_id`:
+
+- **Template (library) pack** — `dispute_id == null`. The user is defining a **reusable template** that specifies what evidence to collect. This template is applied automatically (or manually) when a dispute matches. The UI shows "Define your evidence template", a checklist of required evidence types, optional sample files, and a "When this template is used" card. **Save evidence to Shopify** and **Submit in Shopify Admin** are not shown (they apply per dispute when the template is used).
+- **Dispute pack** — `dispute_id != null`. The user is preparing evidence for **one specific dispute**. The UI shows "Prepare your evidence pack", the full flow (upload → save to Shopify → submit in Admin), and copy that states order/tracking/policies are already pulled from Shopify; upload is for additional documents.
+
+Conditional copy and sections are driven by `isLibraryPack` (derived from `pack.dispute_id == null`) in both embedded and portal pack detail pages. i18n keys are namespaced (e.g. `detailHeroTitleTemplate`, `step1DescriptionDispute`) so template vs dispute wording stays consistent.
+
+### Auto-collected evidence vs manual upload
+
+When a pack is **built** for a dispute (automation or "Generate Pack"), evidence is collected automatically from Shopify and stored policy snapshots: order data (orderSource), fulfillment/tracking (fulfillmentSource), and store policies (policySource). Manual upload is for **additional** evidence that is not in Shopify (e.g. customer emails, screenshots, custom receipts). The pack detail UI in dispute mode states this explicitly: "We've pulled order details, tracking, and your store policies from Shopify. Add any extra documents below to strengthen the pack." and "Already included from your store: order, tracking, policies. Add more below if needed."
+
 ### Policy Templates & Store Policy Upload (Portal)
 
 Store policies are included in evidence packs. Five policy types are supported: **Terms of Service**, **Refund Policy**, **Shipping Policy**, **Privacy Policy**, and **Contact Information & Customer Service Policy**.
