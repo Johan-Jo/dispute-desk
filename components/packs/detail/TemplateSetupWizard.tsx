@@ -29,8 +29,8 @@ interface EvidenceType {
   description?: string;
   badge: "Required" | "Recommended" | "Optional";
   selected: boolean;
-  /** Whether DisputeDesk auto-collects this from Shopify or the user adds it manually */
-  automation: "auto" | "manual";
+  /** How this evidence is provided: auto from Shopify, set once in Policies, or manual per dispute */
+  automation: "auto" | "reusable" | "manual";
 }
 
 interface UploadedFile {
@@ -103,10 +103,10 @@ const STORE_OR_MANUAL_CHECKLIST_FIELDS = new Set(["product_description", "produc
 const DEFAULT_EVIDENCE: EvidenceType[] = [
   { id: "order-confirmation", titleKey: "evidenceOrderConfirmation", descKey: "evidenceOrderConfirmationDesc", badge: "Required", selected: true, automation: "auto" },
   { id: "tracking-info", titleKey: "evidenceTracking", descKey: "evidenceTrackingDesc", badge: "Required", selected: true, automation: "auto" },
-  { id: "refund-policy", titleKey: "evidenceRefundPolicy", descKey: "evidenceRefundPolicyDesc", badge: "Recommended", selected: true, automation: "auto" },
+  { id: "refund-policy", titleKey: "evidenceRefundPolicy", descKey: "evidenceRefundPolicyDesc", badge: "Recommended", selected: true, automation: "reusable" },
   { id: "customer-comms", titleKey: "evidenceCustomerComms", descKey: "evidenceCustomerCommsDesc", badge: "Recommended", selected: true, automation: "manual" },
   { id: "product-description", titleKey: "evidenceProductDescription", descKey: "evidenceProductDescriptionDesc", badge: "Optional", selected: false, automation: "manual" },
-  { id: "terms-of-service", titleKey: "evidenceTerms", descKey: "evidenceTermsDesc", badge: "Optional", selected: false, automation: "manual" },
+  { id: "terms-of-service", titleKey: "evidenceTerms", descKey: "evidenceTermsDesc", badge: "Optional", selected: false, automation: "reusable" },
 ];
 
 const DISPUTE_EVIDENCE_DEFAULTS: Record<string, Omit<EvidenceType, "selected" | "automation">[]> = {
@@ -190,6 +190,11 @@ function getEvidenceSourceKindFromChecklistField(field: string): EvidenceSourceK
   return "manual";
 }
 
+function isReusableChecklistField(field: string): boolean {
+  const normalized = field.toLowerCase().replace(/-/g, "_");
+  return REUSABLE_CHECKLIST_FIELDS.has(normalized);
+}
+
 function buildInitialEvidenceTypes(
   pack: TemplateSetupWizardPack | null | undefined,
   disputeTypeKey: string
@@ -203,7 +208,7 @@ function buildInitialEvidenceTypes(
       description: "",
       badge: c.required ? ("Required" as const) : ("Recommended" as const),
       selected: true,
-      automation: isAutoChecklistField(c.field) ? "auto" : "manual",
+      automation: isAutoChecklistField(c.field) ? "auto" : isReusableChecklistField(c.field) ? "reusable" : "manual",
     }));
   }
   const defaults = DISPUTE_EVIDENCE_DEFAULTS[disputeTypeKey] ?? DEFAULT_EVIDENCE.map(({ selected: _, automation: __, ...e }) => e);
@@ -212,7 +217,7 @@ function buildInitialEvidenceTypes(
     titleKey: e.titleKey,
     descKey: e.descKey,
     selected: (e as { badge?: string }).badge !== "Optional",
-    automation: AUTO_EVIDENCE_IDS.has(e.id) ? "auto" : "manual",
+    automation: AUTO_EVIDENCE_IDS.has(e.id) ? "auto" : REUSABLE_EVIDENCE_IDS.has(e.id) ? "reusable" : "manual",
   }));
 }
 
@@ -475,6 +480,8 @@ export function TemplateSetupWizard({
                   <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] p-3 text-sm text-[#1E40AF]">
                     <p className="font-medium text-[#1D4ED8] mb-1">{t("chooseEvidenceAutoLabel")}</p>
                     <p className="text-[#1E40AF] mb-3">{t("chooseEvidenceAutoText")}</p>
+                    <p className="font-medium text-[#1D4ED8] mb-1">{t("chooseEvidencePoliciesLabel")}</p>
+                    <p className="text-[#1E40AF] mb-3">{t("chooseEvidencePoliciesText")}</p>
                     <p className="font-medium text-[#1D4ED8] mb-1">{t("chooseEvidenceManualLabel")}</p>
                     <p className="text-[#1E40AF] mb-2">{t("chooseEvidenceManualText")}</p>
                     <p className="text-[#1E40AF] text-xs border-t border-[#BFDBFE] pt-2 mt-2">{t("chooseEvidenceSelectHint")}</p>
@@ -515,15 +522,26 @@ export function TemplateSetupWizard({
                                 "text-xs px-2 py-0.5 rounded border",
                                 evidence.automation === "auto"
                                   ? "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]"
-                                  : "bg-[#F6F8FB] text-[#667085] border-[#E5E7EB]"
+                                  : evidence.automation === "reusable"
+                                    ? "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]"
+                                    : "bg-[#F6F8FB] text-[#667085] border-[#E5E7EB]"
                               )}
                             >
-                              {evidence.automation === "auto" ? t("chooseEvidenceAutoLabel") : t("chooseEvidenceManualLabel")}
+                              {evidence.automation === "auto"
+                                ? t("chooseEvidenceAutoLabel")
+                                : evidence.automation === "reusable"
+                                  ? t("chooseEvidencePoliciesLabel")
+                                  : t("chooseEvidenceManualLabel")}
                             </span>
                           </div>
                           <p className="text-sm text-[#667085]">
                             {evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")}
                           </p>
+                          {evidence.automation === "reusable" && (
+                            <p className="text-xs text-[#1D4ED8] mt-1.5 font-medium">
+                              {t("chooseEvidencePoliciesHint")}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </button>
