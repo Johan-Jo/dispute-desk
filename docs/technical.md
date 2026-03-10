@@ -202,6 +202,7 @@ Migrations live in `supabase/migrations/`. Apply with `npx supabase db push` whe
 | 021_fix_offline_session_duplicates.sql | fix duplicate offline session handling |
 | 022_disputes_order_customer_display.sql | disputes order/customer display fields |
 | 023_policy_uploads_bucket.sql | storage bucket `policy-uploads` for policy document uploads (portal) |
+| 024_evidence_packs_nullable_dispute.sql | evidence_packs.dispute_id nullable (library/template packs) |
 | 025_policy_snapshots_privacy_contact.sql | policy_snapshots: allow policy_type `privacy`, `contact` |
 | 026_shops_policy_template_lang.sql | shops.policy_template_lang (language of policy template content) |
 | 027_policy_template_lang_explicit.sql | policy_template_lang values: en, de, fr, es, pt, sv (explicit choice) |
@@ -806,8 +807,9 @@ All wizard links preserve `shop` and `host` query parameters via
 ## Help System (EPIC 10)
 
 ### Architecture
-- Articles are structured TypeScript objects (not markdown), stored in `lib/help/articles.ts` and `lib/help/categories.ts`.
-- Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` (BCP-47, e.g. `en-US.json`) under the `help.*` namespace.
+- 29 articles defined in `lib/help/articles.ts` (slug, category, title/body keys, tags); categories in `lib/help/categories.ts`.
+- Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` (BCP-47) under the `help.articles.{slug}.title` and `help.articles.{slug}.body` namespace.
+- All 12 locales (`en`, `en-US`, `de`, `de-DE`, `fr`, `fr-FR`, `es`, `es-ES`, `pt`, `pt-BR`, `sv`, `sv-SE`) must include translations for every article to support the Help Center in all languages.
 - Both portal (`/portal/help`) and embedded app (`/app/help`) share the same data layer but use different UI components (Tailwind vs Polaris).
 
 ### Search
