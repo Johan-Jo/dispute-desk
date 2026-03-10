@@ -291,17 +291,18 @@ When a pack is **built** for a dispute (automation or "Generate Pack"), evidence
 
 ### Template Customize Wizard (Portal)
 
-The **Template Setup Wizard** is a 4-step flow in the portal for configuring a new evidence template before it is used for disputes.
+The **Template Setup Wizard** is a 4-step full-page flow in the portal for configuring a new evidence template before it is used for disputes.
 
-- **Route:** `/portal/packs/customize`. Optional query `?template=...` can identify the source template (e.g. from the template library).
-- **Implementation:** `app/(portal)/portal/packs/customize/page.tsx` (client component). Uses project UI: `Button`, `Badge`, `cn()` from `@/components/ui`; copy from `templateCustomize` i18n namespace in `messages/en.json` and `messages/en-US.json`.
+- **Route:** `/portal/packs/customize`. Optional query `?template=...` can identify the source template (e.g. from the template library). The same wizard is shown when opening a template (library) pack at `/portal/packs/[packId]` when `dispute_id` is null.
+- **Implementation:** `components/packs/detail/TemplateSetupWizard.tsx`; entry points: `app/(portal)/portal/packs/customize/page.tsx` and pack detail page. Uses `Button`, `Badge`, `cn()` from `@/components/ui`; copy from `templateCustomize` i18n namespace in `messages/en.json` and `messages/en-US.json`.
 - **Steps:**
-  1. **Choose evidence to collect** — Select which evidence types (Required / Recommended / Optional) this template should gather; all required must be selected to continue.
-  2. **Add example files** — Optional upload of example documents (PDF, PNG, JPG) to standardize future packs.
-  3. **Review how automation works** — Explains the flow: dispute appears → pack prepared → ready to review; and that saving the template does not submit a dispute.
-  4. **Activate template** — Summary (evidence types count, example files count, dispute type, source) and actions: Save as draft or Activate template (both navigate back to `/portal/packs`).
+  1. **Choose evidence to collect** — Select which evidence types (Required / Recommended / Optional) this template should gather. Each type shows how it is provided: **Auto-collected from Shopify**, **Set in Policies** (with status “Policy set” or “Not set — Add in Policies”), or **You add manually**. All required must be selected to continue.
+  2. **Set evidence sources** — Full-page “Where will DisputeDesk get this evidence from?” Review pre-configured sources: each selected type is shown with an icon callout (auto / reusable store document / manual) and short explanation. Reusable types have an **Upload** button linking to Policies. A summary row shows counts: X Automated, X Reusable, X Manual.
+  3. **Review how automation works** — Explains the flow: dispute appears → pack prepared → ready to review. **Submission choice:** Auto-submit to Shopify on the dispute due date, or email to review and submit manually. “Important to know” copy reflects the chosen option.
+  4. **Activate template** — Summary (evidence types count, how evidence is provided, dispute type, source) and actions: Save as draft or Activate template (both navigate back to `/portal/packs`).
+- **Policy link-back:** When building a pack, policy evidence stores `policySnapshotId` in the evidence item payload so the source policy can be traced. The Policies page supports `?policy=refunds|terms|shipping` to scroll to the relevant policy section.
 - **Sidebar:** Sticky panel with setup progress percentage, step checklist, template status badge (Ready / In progress), and links: Back to templates, Export a PDF copy.
-- **Navigation:** Back link to Evidence Packs; step navigation (Back, Skip for now, Continue, Activate) does not yet persist to API — the wizard is UI-only until backend endpoints for creating/updating template packs from the wizard are added.
+- **Navigation:** Back link to Evidence Packs; step navigation (Back, Continue) does not yet persist to API — the wizard is UI-only until backend endpoints for creating/updating template packs from the wizard are added.
 
 ### Policy Templates & Store Policy Upload (Portal)
 

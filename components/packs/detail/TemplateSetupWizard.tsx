@@ -15,6 +15,8 @@ import {
   Check,
   ChevronRight,
   Download,
+  Zap,
+  Paperclip,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -633,71 +635,96 @@ export function TemplateSetupWizard({
 
             {currentStep === 2 && (
               <div className="bg-white rounded-lg border border-[#E5E7EB] p-6">
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-[#0B1220] mb-2">{t("setEvidenceSourcesHeading")}</h2>
-                  <p className="text-sm text-[#667085]">{t("setEvidenceSourcesDesc")}</p>
-                </div>
-                <div className="space-y-3">
+                <h2 className="text-xl font-semibold text-[#0B1220] mb-1">{t("whereEvidenceFromHeading")}</h2>
+                <p className="text-sm text-[#667085] mb-6">{t("whereEvidenceFromDesc")}</p>
+                <div className="space-y-6">
                   {evidenceTypes
                     .filter((e) => e.selected)
                     .map((evidence) => {
                       const sourceKind = pack?.checklist?.length
                         ? getEvidenceSourceKindFromChecklistField(evidence.id)
                         : getEvidenceSourceKind(evidence.id);
+                      const isAuto = sourceKind === "auto";
+                      const isReusable = sourceKind === "reusable";
+                      const isStoreOrManual = sourceKind === "store_or_manual";
+                      const isManual = sourceKind === "manual";
                       const sourceLabel =
-                        sourceKind === "auto"
+                        isAuto
                           ? t("sourceAuto")
-                          : sourceKind === "reusable"
-                            ? t("sourceReusable")
-                            : sourceKind === "store_or_manual"
+                          : isReusable
+                            ? t("sourceReusableDocument")
+                            : isStoreOrManual
                               ? t("sourceStoreOrManual")
                               : t("sourceManual");
-                      const sourceClasses =
-                        sourceKind === "auto"
-                          ? "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]"
-                          : sourceKind === "reusable"
-                            ? "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]"
-                            : sourceKind === "store_or_manual"
-                              ? "bg-[#F5F3FF] text-[#5B21B6] border-[#DDD6FE]"
-                              : "bg-[#F6F8FB] text-[#667085] border-[#E5E7EB]";
+                      const sourceDetail =
+                        isAuto
+                          ? t("sourceAutoDetail")
+                          : isReusable
+                            ? t("sourceReusableDetail")
+                            : isManual
+                              ? t("sourceManualDetail")
+                              : t("sourceStoreOrManual");
+                      const boxClass = isAuto
+                        ? "bg-[#ECFDF5] border-[#A7F3D0] text-[#047857]"
+                        : isReusable
+                          ? "bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]"
+                          : "bg-[#FFFBEB] border-[#FEF0C7] text-[#92400E]";
+                      const Icon = isAuto ? Zap : isReusable ? Paperclip : FileText;
                       return (
-                        <div
-                          key={evidence.id}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border border-[#E5E7EB] bg-[#FAFBFC]"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-[#0B1220]">
-                              {evidence.title ?? (evidence.titleKey ? t(evidence.titleKey) : evidence.id)}
-                            </h3>
-                            {(evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")) && (
-                              <p className="text-sm text-[#667085] mt-0.5">
-                                {evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")}
-                              </p>
+                        <div key={evidence.id} className="space-y-2">
+                          <h3 className="font-medium text-[#0B1220]">
+                            {evidence.title ?? (evidence.titleKey ? t(evidence.titleKey) : evidence.id)}
+                          </h3>
+                          <p className="text-sm text-[#667085]">
+                            {evidence.description ?? (evidence.descKey ? t(evidence.descKey) : "")}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className={cn("flex items-center gap-3 rounded-lg border px-4 py-3 min-w-0 flex-1", boxClass)}>
+                              <Icon className="w-5 h-5 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="font-medium">{sourceLabel}</p>
+                                <p className="text-sm opacity-90 mt-0.5">{sourceDetail}</p>
+                              </div>
+                            </div>
+                            {isReusable && (
+                              <Link
+                                href={`/portal/policies?policy=${getPolicyTypeParam(evidence.id)}`}
+                                className="flex-shrink-0"
+                              >
+                                <Button variant="secondary" type="button">
+                                  {t("upload")}
+                                </Button>
+                              </Link>
                             )}
-                            {sourceKind === "reusable" && (
-                              <p className="text-xs text-[#667085] mt-2">
-                                {t("reusablePolicyHint")}{" "}
-                                <Link
-                                  href={`/portal/policies?policy=${getPolicyTypeParam(evidence.id)}`}
-                                  className="text-[#1D4ED8] font-medium hover:underline"
-                                >
-                                  {t("openPolicies")}
-                                </Link>
-                                {" · "}
-                                <span className="text-[#667085]">{t("reusablePolicyLinkBack")}</span>
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                            <span className={cn("text-xs font-medium px-2.5 py-1 rounded border w-fit", sourceClasses)}>
-                              {sourceLabel}
-                            </span>
                           </div>
                         </div>
                       );
                     })}
                 </div>
-                <div className="mt-6 flex items-center justify-between">
+                <div className="mt-8 flex flex-wrap items-center gap-4">
+                  {(() => {
+                    const autoCount = evidenceTypes.filter((e) => e.selected && (pack?.checklist?.length ? getEvidenceSourceKindFromChecklistField(e.id) === "auto" : getEvidenceSourceKind(e.id) === "auto")).length;
+                    const reusableCount = evidenceTypes.filter((e) => e.selected && (pack?.checklist?.length ? getEvidenceSourceKindFromChecklistField(e.id) === "reusable" : getEvidenceSourceKind(e.id) === "reusable")).length;
+                    const manualCount = evidenceTypes.filter((e) => e.selected).length - autoCount - reusableCount;
+                    return (
+                      <>
+                        <div className="flex items-center gap-2 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] px-3 py-2">
+                          <Zap className="w-4 h-4 text-[#047857]" />
+                          <span className="text-sm font-medium text-[#047857]">{t("summaryAutomated", { count: autoCount })}</span>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-[#EFF6FF] border border-[#BFDBFE] px-3 py-2">
+                          <Paperclip className="w-4 h-4 text-[#1D4ED8]" />
+                          <span className="text-sm font-medium text-[#1D4ED8]">{t("summaryReusable", { count: reusableCount })}</span>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-[#FFFBEB] border border-[#FEF0C7] px-3 py-2">
+                          <FileText className="w-4 h-4 text-[#92400E]" />
+                          <span className="text-sm font-medium text-[#92400E]">{t("summaryManual", { count: manualCount })}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="mt-8 flex items-center justify-between">
                   <Button variant="ghost" onClick={() => setCurrentStep(1)}>
                     {t("back")}
                   </Button>
