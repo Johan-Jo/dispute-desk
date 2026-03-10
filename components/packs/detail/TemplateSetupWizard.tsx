@@ -31,6 +31,8 @@ interface EvidenceType {
   description?: string;
   badge: "Required" | "Recommended" | "Optional";
   selected: boolean;
+  /** Whether DisputeDesk auto-collects this from Shopify or the user adds it manually */
+  automation: "auto" | "manual";
 }
 
 interface UploadedFile {
@@ -51,17 +53,39 @@ export interface TemplateSetupWizardPack {
   checklist?: { field: string; label: string; required: boolean; present?: boolean }[] | null;
 }
 
+/** Evidence type IDs that DisputeDesk auto-collects from Shopify (order, tracking, policies). */
+const AUTO_EVIDENCE_IDS = new Set([
+  "order-confirmation",
+  "tracking-info",
+  "refund-policy",
+  "store-policy",
+  "billing-shipping",
+]);
+
+/** Checklist field names (normalized) that map to auto-collected evidence. */
+const AUTO_CHECKLIST_FIELDS = new Set([
+  "order",
+  "order_confirmation",
+  "tracking",
+  "tracking_info",
+  "refund_policy",
+  "store_policy",
+  "billing_shipping",
+  "shipping_policy",
+  "terms",
+]);
+
 /** Default evidence config per dispute type (id, titleKey, descKey, badge). */
 const DEFAULT_EVIDENCE: EvidenceType[] = [
-  { id: "order-confirmation", titleKey: "evidenceOrderConfirmation", descKey: "evidenceOrderConfirmationDesc", badge: "Required", selected: true },
-  { id: "tracking-info", titleKey: "evidenceTracking", descKey: "evidenceTrackingDesc", badge: "Required", selected: true },
-  { id: "refund-policy", titleKey: "evidenceRefundPolicy", descKey: "evidenceRefundPolicyDesc", badge: "Recommended", selected: true },
-  { id: "customer-comms", titleKey: "evidenceCustomerComms", descKey: "evidenceCustomerCommsDesc", badge: "Recommended", selected: true },
-  { id: "product-description", titleKey: "evidenceProductDescription", descKey: "evidenceProductDescriptionDesc", badge: "Optional", selected: false },
-  { id: "terms-of-service", titleKey: "evidenceTerms", descKey: "evidenceTermsDesc", badge: "Optional", selected: false },
+  { id: "order-confirmation", titleKey: "evidenceOrderConfirmation", descKey: "evidenceOrderConfirmationDesc", badge: "Required", selected: true, automation: "auto" },
+  { id: "tracking-info", titleKey: "evidenceTracking", descKey: "evidenceTrackingDesc", badge: "Required", selected: true, automation: "auto" },
+  { id: "refund-policy", titleKey: "evidenceRefundPolicy", descKey: "evidenceRefundPolicyDesc", badge: "Recommended", selected: true, automation: "auto" },
+  { id: "customer-comms", titleKey: "evidenceCustomerComms", descKey: "evidenceCustomerCommsDesc", badge: "Recommended", selected: true, automation: "manual" },
+  { id: "product-description", titleKey: "evidenceProductDescription", descKey: "evidenceProductDescriptionDesc", badge: "Optional", selected: false, automation: "manual" },
+  { id: "terms-of-service", titleKey: "evidenceTerms", descKey: "evidenceTermsDesc", badge: "Optional", selected: false, automation: "manual" },
 ];
 
-const DISPUTE_EVIDENCE_DEFAULTS: Record<string, Omit<EvidenceType, "selected">[]> = {
+const DISPUTE_EVIDENCE_DEFAULTS: Record<string, Omit<EvidenceType, "selected" | "automation">[]> = {
   PRODUCT_NOT_RECEIVED: [
     { id: "order-confirmation", titleKey: "evidenceOrderConfirmation", descKey: "evidenceOrderConfirmationDesc", badge: "Required" },
     { id: "tracking-info", titleKey: "evidenceTracking", descKey: "evidenceTrackingDesc", badge: "Required" },
@@ -129,6 +153,11 @@ const DISPUTE_EVIDENCE_DEFAULTS: Record<string, Omit<EvidenceType, "selected">[]
   ],
 };
 
+function isAutoChecklistField(field: string): boolean {
+  const normalized = field.toLowerCase().replace(/-/g, "_");
+  return AUTO_CHECKLIST_FIELDS.has(normalized) || AUTO_EVIDENCE_IDS.has(field);
+}
+
 function buildInitialEvidenceTypes(
   pack: TemplateSetupWizardPack | null | undefined,
   disputeTypeKey: string
@@ -142,14 +171,16 @@ function buildInitialEvidenceTypes(
       description: "",
       badge: c.required ? ("Required" as const) : ("Recommended" as const),
       selected: true,
+      automation: isAutoChecklistField(c.field) ? "auto" : "manual",
     }));
   }
-  const defaults = DISPUTE_EVIDENCE_DEFAULTS[disputeTypeKey] ?? DEFAULT_EVIDENCE.map(({ selected: _, ...e }) => e);
+  const defaults = DISPUTE_EVIDENCE_DEFAULTS[disputeTypeKey] ?? DEFAULT_EVIDENCE.map(({ selected: _, automation: __, ...e }) => e);
   return defaults.map((e) => ({
     ...e,
     titleKey: e.titleKey,
     descKey: e.descKey,
-    selected: e.badge !== "Optional",
+    selected: (e as { badge?: string }).badge !== "Optional",
+    automation: AUTO_EVIDENCE_IDS.has(e.id) ? "auto" : "manual",
   }));
 }
 
@@ -440,12 +471,22 @@ export function TemplateSetupWizard({
                           {evidence.selected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center flex-wrap gap-2 mb-1">
                             <h3 className="font-medium text-[#0B1220]">
                               {evidence.title ?? (evidence.titleKey ? t(evidence.titleKey) : evidence.id)}
                             </h3>
                             <span className={cn("text-xs px-2 py-0.5 rounded border", getBadgeClasses(evidence.badge))}>
                               {badgeLabel(evidence.badge)}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-xs px-2 py-0.5 rounded border",
+                                evidence.automation === "auto"
+                                  ? "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]"
+                                  : "bg-[#F6F8FB] text-[#667085] border-[#E5E7EB]"
+                              )}
+                            >
+                              {evidence.automation === "auto" ? t("chooseEvidenceAutoLabel") : t("chooseEvidenceManualLabel")}
                             </span>
                           </div>
                           <p className="text-sm text-[#667085]">
