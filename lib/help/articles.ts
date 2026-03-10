@@ -130,8 +130,16 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "evidence-packs",
     titleKey: "help.articles.evidencePackTemplates.title",
     bodyKey: "help.articles.evidencePackTemplates.body",
-    relatedSlugs: ["how-packs-built", "generating-pack-manually"],
+    relatedSlugs: ["how-packs-built", "generating-pack-manually", "template-setup-wizard"],
     tags: ["template", "library", "install", "packs", "recommended"],
+  },
+  {
+    slug: "template-setup-wizard",
+    category: "evidence-packs",
+    titleKey: "help.articles.templateSetupWizard.title",
+    bodyKey: "help.articles.templateSetupWizard.body",
+    relatedSlugs: ["evidence-pack-templates", "how-packs-built"],
+    tags: ["template", "wizard", "setup", "customize", "evidence", "activate"],
   },
   {
     slug: "defining-store-policies",

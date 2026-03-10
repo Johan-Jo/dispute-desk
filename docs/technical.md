@@ -289,6 +289,20 @@ Conditional copy and sections are driven by `isLibraryPack` (derived from `pack.
 
 When a pack is **built** for a dispute (automation or "Generate Pack"), evidence is collected automatically from Shopify and stored policy snapshots: order data (orderSource), fulfillment/tracking (fulfillmentSource), and store policies (policySource). Manual upload is for **additional** evidence that is not in Shopify (e.g. customer emails, screenshots, custom receipts). The pack detail UI in dispute mode states this explicitly: "We've pulled order details, tracking, and your store policies from Shopify. Add any extra documents below to strengthen the pack." and "Already included from your store: order, tracking, policies. Add more below if needed."
 
+### Template Customize Wizard (Portal)
+
+The **Template Setup Wizard** is a 4-step flow in the portal for configuring a new evidence template before it is used for disputes.
+
+- **Route:** `/portal/packs/customize`. Optional query `?template=...` can identify the source template (e.g. from the template library).
+- **Implementation:** `app/(portal)/portal/packs/customize/page.tsx` (client component). Uses project UI: `Button`, `Badge`, `cn()` from `@/components/ui`; copy from `templateCustomize` i18n namespace in `messages/en.json` and `messages/en-US.json`.
+- **Steps:**
+  1. **Choose evidence to collect** — Select which evidence types (Required / Recommended / Optional) this template should gather; all required must be selected to continue.
+  2. **Add example files** — Optional upload of example documents (PDF, PNG, JPG) to standardize future packs.
+  3. **Review how automation works** — Explains the flow: dispute appears → pack prepared → ready to review; and that saving the template does not submit a dispute.
+  4. **Activate template** — Summary (evidence types count, example files count, dispute type, source) and actions: Save as draft or Activate template (both navigate back to `/portal/packs`).
+- **Sidebar:** Sticky panel with setup progress percentage, step checklist, template status badge (Ready / In progress), and links: Back to templates, Export a PDF copy.
+- **Navigation:** Back link to Evidence Packs; step navigation (Back, Skip for now, Continue, Activate) does not yet persist to API — the wizard is UI-only until backend endpoints for creating/updating template packs from the wizard are added.
+
 ### Policy Templates & Store Policy Upload (Portal)
 
 Store policies are included in evidence packs. Five policy types are supported: **Terms of Service**, **Refund Policy**, **Shipping Policy**, **Privacy Policy**, and **Contact Information & Customer Service Policy**.

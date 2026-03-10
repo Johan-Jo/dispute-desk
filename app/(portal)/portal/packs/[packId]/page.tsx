@@ -24,6 +24,7 @@ import {
   ReadinessMeter,
   TemplateOriginCard,
   SuggestedEvidenceChecklist,
+  TemplateSetupWizard,
 } from "@/components/packs/detail";
 
 interface ChecklistItem {
@@ -265,6 +266,29 @@ export default function PackPreviewPage() {
   const suggestedKeys = SUGGESTED_EVIDENCE_KEYS[disputeTypeKey] ?? SUGGESTED_EVIDENCE_KEYS.GENERAL;
   const suggestedLabels = suggestedKeys.map((key) => t(key));
   const statusBanner = getStatusBanner(pack, t, isLibraryPack);
+
+  if (isLibraryPack) {
+    return (
+      <TemplateSetupWizard
+        packId={packId}
+        pack={{
+          name: pack.name,
+          dispute_type: pack.dispute_type,
+          created_at: pack.created_at,
+          template_name: pack.template_name,
+          evidence_items: pack.evidence_items?.map((item) => ({
+            id: item.id,
+            label: item.label,
+            type: item.type,
+          })),
+          checklist: pack.checklist ?? undefined,
+        }}
+        formatDate={(iso) => formatDate(iso, locale)}
+        disputeTypeLabel={disputeTypeLabel ?? undefined}
+        onUploadSuccess={fetchPack}
+      />
+    );
+  }
 
   return (
     <div>

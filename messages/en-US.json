@@ -899,7 +899,11 @@
       },
       "evidencePackTemplates": {
         "title": "Using evidence pack templates",
-        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
+        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\n**Template Setup Wizard:** In the portal you can use the Template Setup Wizard (Packs > customize or /portal/packs/customize) to configure a new template in four steps: choose evidence types, add example files, review automation, and activate. See \"Template setup wizard\" for details.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
+      },
+      "templateSetupWizard": {
+        "title": "Template setup wizard",
+        "body": "The Template Setup Wizard (in the portal at Packs > customize, or /portal/packs/customize) walks you through setting up a new evidence template in four steps.\n\n**Step 1 — Choose evidence to collect:** Select which types of evidence this template should gather. Each type is marked Required, Recommended, or Optional. You must select all required types before continuing. These define what DisputeDesk will look for when a dispute matches this template.\n\n**Step 2 — Add example files:** Optionally upload example documents (e.g. screenshots, PDFs, receipts, policies) that are commonly used for this dispute type. These help standardize future packs; you can update them later.\n\n**Step 3 — Review how automation works:** The wizard explains that when a dispute matches this template, DisputeDesk will prepare the evidence pack using the types and files you selected. It also clarifies that saving the template does not submit a dispute — you or your team always review evidence before submission.\n\n**Step 4 — Activate template:** Review a summary (evidence types count, example files, dispute type, source). You can **Save as draft** to finish later or **Activate template** to start using it. Both actions return you to the Packs library.\n\nThe sidebar shows your setup progress and a checklist of the four steps. Use \"Back to Evidence Packs\" at any time to leave the wizard without saving."
       },
       "definingStorePolicies": {
         "title": "Defining your store policies",
@@ -1257,6 +1261,13 @@
     "evidenceProductDescriptionDesc": "Shows what the customer saw when they made the purchase.",
     "evidenceTerms": "Terms of service",
     "evidenceTermsDesc": "Shows the full terms the customer agreed to.",
+    "evidenceBillingShipping": "Billing and shipping match details",
+    "evidenceBillingShippingDesc": "Shows billing and shipping address match for fraud signals.",
+    "evidenceFraudScreening": "Fraud screening or risk signals",
+    "evidenceFraudScreeningDesc": "AVS/CVV, risk scores, or screening results if available.",
+    "evidenceMetadata": "Device / IP / address metadata",
+    "evidenceMetadataDesc": "Device, IP, or address metadata if available for the dispute.",
+    "afterItem2WithType": "DisputeDesk will auto-suggest this template for {type} disputes",
     "badgeRequired": "Required",
     "badgeRecommended": "Recommended",
     "badgeOptional": "Optional",
