@@ -29,7 +29,7 @@ export function TemplateOriginCard({
           {startedFromTemplateLabel}
         </span>
         <Badge variant="info" className="text-xs">
-          {templateBadgeLabel}
+          {templateName || templateBadgeLabel}
         </Badge>
       </div>
       <p className="font-medium text-[#0B1220] mb-1">

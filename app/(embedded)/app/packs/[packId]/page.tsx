@@ -309,7 +309,7 @@ export default function PackPreviewPage() {
               <BlockStack gap="300">
                 <InlineStack gap="200" blockAlign="center">
                   <Text as="span" variant="bodyMd" fontWeight="semibold">{t("packs.startedFromTemplate")}</Text>
-                  <Badge tone="info">{t("packs.templateBadge")}</Badge>
+                  <Badge tone="info">{pack.template_name ?? pack.name ?? t("packs.templateBadge")}</Badge>
                 </InlineStack>
                 <Text as="p" variant="bodyMd">{t("packs.basedOnTemplate", { name: pack.template_name ?? pack.name ?? "" })}</Text>
                 <Text as="p" variant="bodySm" tone="subdued">{t("packs.templateContinuityDescription")}</Text>
