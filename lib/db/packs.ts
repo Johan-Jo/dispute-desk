@@ -262,6 +262,35 @@ export async function createPack(
   return data as Pack;
 }
 
+/**
+ * Delete a library pack by id. Unlinks audit_events, then deletes evidence_packs
+ * and packs (cascade removes pack_sections, pack_narratives, etc.).
+ * Returns true if a pack was deleted, false if not found or error.
+ */
+export async function deletePack(packId: string): Promise<boolean> {
+  const sb = getServiceClient();
+
+  const { data: packRow } = await sb
+    .from("packs")
+    .select("id")
+    .eq("id", packId)
+    .single();
+
+  if (!packRow) {
+    return false;
+  }
+
+  await sb.from("audit_events").update({ pack_id: null }).eq("pack_id", packId);
+  await sb.from("evidence_packs").delete().eq("id", packId);
+  const { error: packErr } = await sb.from("packs").delete().eq("id", packId);
+
+  if (packErr) {
+    console.error("[deletePack]", packErr.message);
+    return false;
+  }
+  return true;
+}
+
 export async function getPackNarrativeSettings(
   packId: string
 ): Promise<PackNarrativeSettings | null> {

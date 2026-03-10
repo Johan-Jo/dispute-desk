@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { FilterBar, type FilterOption } from "@/components/ui/filter-bar";
 import { InfoBanner } from "@/components/ui/info-banner";
 import { Modal } from "@/components/ui/modal";
-import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
 
 interface PackRow {
   id: string;
@@ -82,7 +81,6 @@ export default function PacksLibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState<string>(DISPUTE_TYPES[0]);
   const [creating, setCreating] = useState(false);
@@ -192,14 +190,14 @@ export default function PacksLibraryPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm(t("confirmDelete"))) return;
-    await fetch(`/api/packs/${id}`, { method: "DELETE" });
-    await fetchPacks();
+    if (isDemo) {
+      setPacks((prev) => prev.filter((p) => p.id !== id));
+      return;
+    }
+    const res = await fetch(`/api/packs/${id}`, { method: "DELETE" });
+    if (res.ok) await fetchPacks();
   };
 
-  const handleTemplateInstalled = (packId: string) => {
-    setIsTemplateLibraryOpen(false);
-    router.push(`/portal/packs/${packId}`);
-  };
 
   const formatDate = (iso: string | null) => {
     if (!iso) return t("never");
@@ -226,7 +224,7 @@ export default function PacksLibraryPage() {
               variant="primary"
               size="sm"
               className="flex-1 sm:flex-none"
-              onClick={() => setIsTemplateLibraryOpen(true)}
+              onClick={() => router.push("/portal/packs/templates")}
               data-onboarding="template-library-button"
             >
               <Sparkles className="w-4 h-4 mr-2" />
@@ -253,7 +251,7 @@ export default function PacksLibraryPage() {
             {t("exploreMoreTemplates")}{" "}
             <button
               type="button"
-              onClick={() => setIsTemplateLibraryOpen(true)}
+              onClick={() => router.push("/portal/packs/templates")}
               className="font-semibold underline hover:no-underline"
             >
               {t("browseTemplates")}
@@ -275,16 +273,16 @@ export default function PacksLibraryPage() {
           onClearFilters={() => setActiveFilter("all")}
         />
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto min-w-0">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin w-8 h-8 border-2 border-[#1D4ED8] border-t-transparent rounded-full" />
             </div>
           ) : packs.length > 0 ? (
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-[#F7F8FA] border-b border-[#E5E7EB] sticky top-0">
                 <tr>
-                  <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">
+                  <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider w-[35%] min-w-0">
                     {t("packName")}
                   </th>
                   <th className="text-left px-4 sm:px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider hidden lg:table-cell">
@@ -313,12 +311,12 @@ export default function PacksLibraryPage() {
                     {...(idx === 0 ? { "data-onboarding": "pack-row" } : {})}
                     onClick={() => router.push(`/portal/packs/${pack.id}`)}
                   >
-                    <td className="px-4 sm:px-6 py-4">
-                      <div className="flex items-center gap-3">
+                    <td className="px-4 sm:px-6 py-4 w-[35%] min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 bg-[#EFF6FF] rounded-lg flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-[#4F46E5]" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1 overflow-hidden">
                           <p className="font-medium text-[#0B1220] truncate">
                             {pack.name}
                           </p>
@@ -437,7 +435,7 @@ export default function PacksLibraryPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setIsTemplateLibraryOpen(true)}
+                  onClick={() => router.push("/portal/packs/templates")}
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
                   {t("browseAllTemplates")}
@@ -517,14 +515,6 @@ export default function PacksLibraryPage() {
         </div>
       </Modal>
 
-      {/* Template Library Modal */}
-      <TemplateLibraryModal
-        isOpen={isTemplateLibraryOpen}
-        onClose={() => setIsTemplateLibraryOpen(false)}
-        shopId={shopId}
-        locale={locale}
-        onInstalled={handleTemplateInstalled}
-      />
     </div>
   );
 }

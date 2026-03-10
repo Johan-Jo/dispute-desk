@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import {
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
 import { cn } from "@/components/ui/utils";
 
 interface EvidenceType {
@@ -119,6 +120,12 @@ function getPolicyTypeForStatus(evidenceId: string): "refunds" | "terms" | "ship
   if (normalized === "shipping_policy") return "shipping";
   return null;
 }
+
+const POLICY_TYPE_NAME_KEYS: Record<string, string> = {
+  refunds: "policyNameRefunds",
+  terms: "policyNameTerms",
+  shipping: "policyNameShipping",
+};
 
 /** Default evidence config per dispute type (id, titleKey, descKey, badge). */
 const DEFAULT_EVIDENCE: EvidenceType[] = [
@@ -275,14 +282,27 @@ export function TemplateSetupWizard({
 }: TemplateSetupWizardProps) {
   const t = useTranslations("templateCustomize");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalFileInputRef = useRef<HTMLInputElement>(null);
 
   const disputeTypeLabel = disputeTypeLabelProp ?? pack?.dispute_type?.replace(/_/g, " ") ?? t("productNotReceived");
   const disputeTypeKey = (pack?.dispute_type ?? "PRODUCT_NOT_RECEIVED").toUpperCase().replace(/\s+/g, "_");
   const createdLabel = pack?.created_at ? formatDate(pack.created_at) : t("today");
   const templateName = pack?.template_name ?? pack?.name ?? null;
 
-  const [currentStep, setCurrentStep] = React.useState(1);
+  const stepFromUrl = searchParams.get("step");
+  const [currentStep, setCurrentStep] = React.useState(() => {
+    const n = stepFromUrl ? parseInt(stepFromUrl, 10) : 0;
+    return n >= 1 && n <= 4 ? n : 1;
+  });
+  React.useEffect(() => {
+    const n = stepFromUrl ? parseInt(stepFromUrl, 10) : 0;
+    if (n >= 1 && n <= 4) setCurrentStep(n);
+  }, [stepFromUrl]);
+  const returnUrl = `${pathname}?${searchParams.toString() ? `${searchParams.toString()}&` : ""}step=2`;
+
   const [evidenceTypes, setEvidenceTypes] = React.useState<EvidenceType[]>(() =>
     buildInitialEvidenceTypes(pack, disputeTypeKey)
   );
@@ -306,6 +326,12 @@ export function TemplateSetupWizard({
   const [uploading, setUploading] = React.useState(false);
   const [submissionMode, setSubmissionMode] = React.useState<"auto" | "manual">("manual");
   const [policySetByType, setPolicySetByType] = React.useState<Record<string, boolean>>({});
+  const [policyModalEvidence, setPolicyModalEvidence] = React.useState<{
+    evidenceId: string;
+    policyType: string;
+    evidenceTitle: string;
+  } | null>(null);
+  const [confirmedPolicyIds, setConfirmedPolicyIds] = React.useState<Set<string>>(new Set());
 
   const activeShopId = useActiveShopId();
   const fetchPolicyStatus = useCallback(async () => {
@@ -686,16 +712,85 @@ export function TemplateSetupWizard({
                                 <p className="text-sm opacity-90 mt-0.5">{sourceDetail}</p>
                               </div>
                             </div>
-                            {isReusable && (
-                              <Link
-                                href={`/portal/policies?policy=${getPolicyTypeParam(evidence.id)}`}
-                                className="flex-shrink-0"
-                              >
-                                <Button variant="secondary" type="button">
-                                  {t("upload")}
-                                </Button>
-                              </Link>
-                            )}
+                            {isReusable && (() => {
+                              const policyType = getPolicyTypeForStatus(evidence.id);
+                              const policyParam = getPolicyTypeParam(evidence.id);
+                              const isSet = policyType != null && policySetByType[policyType];
+                              const policyName = policyType ? t(POLICY_TYPE_NAME_KEYS[policyType] ?? "policyNameRefunds") : t("policyNameRefunds");
+                              const evidenceTitle = evidence.title ?? (evidence.titleKey ? t(evidence.titleKey) : evidence.id);
+                              const isConfirmed = confirmedPolicyIds.has(evidence.id);
+                              if (isSet) {
+                                return (
+                                  <div className="flex flex-col items-stretch sm:items-end gap-2 flex-shrink-0">
+                                    <p className="text-xs text-[#667085]">{t("suggestUsePolicy", { policyName })}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                    {isConfirmed ? (
+                                      <span className="flex items-center gap-1.5 text-sm text-[#047857] font-medium">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        {t("usingThisPolicy")}
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          variant="primary"
+                                          size="sm"
+                                          type="button"
+                                          onClick={() => {
+                                            setConfirmedPolicyIds((prev) => new Set(prev).add(evidence.id));
+                                            fetchPolicyStatus();
+                                          }}
+                                        >
+                                          {t("useThisPolicy")}
+                                        </Button>
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          type="button"
+                                          onClick={() =>
+                                            setPolicyModalEvidence({
+                                              evidenceId: evidence.id,
+                                              policyType: policyParam,
+                                              evidenceTitle,
+                                            })
+                                          }
+                                        >
+                                          {t("changeOrUpload")}
+                                        </Button>
+                                      </>
+                                    )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="flex flex-col items-stretch sm:items-end gap-2 flex-shrink-0">
+                                  <p className="text-xs text-[#667085]">{t("setPolicyOrUpload")}</p>
+                                  <div className="flex flex-wrap gap-2">
+                                  <Link
+                                    href={`/portal/policies?policy=${policyParam}&returnUrl=${encodeURIComponent(returnUrl)}`}
+                                  >
+                                    <Button variant="secondary" size="sm" type="button">
+                                      {t("setInPolicies")}
+                                    </Button>
+                                  </Link>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() =>
+                                      setPolicyModalEvidence({
+                                        evidenceId: evidence.id,
+                                        policyType: policyParam,
+                                        evidenceTitle,
+                                      })
+                                    }
+                                  >
+                                    {t("uploadFile")}
+                                  </Button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -992,6 +1087,55 @@ export function TemplateSetupWizard({
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={policyModalEvidence != null}
+        onClose={() => setPolicyModalEvidence(null)}
+        title={policyModalEvidence ? t("policyModalTitle", { name: policyModalEvidence.evidenceTitle }) : ""}
+        description={t("policyModalReturnHint")}
+        size="md"
+        footer={
+          <Button variant="ghost" onClick={() => setPolicyModalEvidence(null)}>
+            {t("cancel")}
+          </Button>
+        }
+      >
+        {policyModalEvidence && (
+          <div className="space-y-4">
+            <p className="text-sm text-[#667085]">{t("policyModalOpenPoliciesDesc")}</p>
+            <Link
+              href={`/portal/policies?policy=${policyModalEvidence.policyType}&returnUrl=${encodeURIComponent(returnUrl)}`}
+            >
+              <Button variant="primary" type="button" className="w-full sm:w-auto">
+                {t("openPolicies")}
+              </Button>
+            </Link>
+            <p className="text-sm text-[#667085] pt-2 border-t border-[#E5E7EB]">{t("policyModalOrUpload")}</p>
+            <input
+              ref={modalFileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files?.length) {
+                  handleFileUpload(files);
+                  setPolicyModalEvidence(null);
+                }
+                e.target.value = "";
+              }}
+            />
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => modalFileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? t("uploading") : t("uploadFile")}
+            </Button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

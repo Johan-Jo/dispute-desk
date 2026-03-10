@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { getPackById } from "@/lib/db/packs";
+import { getPackById, deletePack } from "@/lib/db/packs";
 
 /**
  * GET /api/packs/:packId
@@ -139,4 +139,22 @@ export async function GET(
     active_build_job: null,
     active_pdf_job: null,
   });
+}
+
+/**
+ * DELETE /api/packs/:packId
+ *
+ * Deletes a library pack (must exist in packs table). Unlinks audit_events,
+ * removes evidence_packs row, then deletes pack (cascade removes sections, narratives).
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ packId: string }> }
+) {
+  const { packId } = await params;
+  const deleted = await deletePack(packId);
+  if (!deleted) {
+    return NextResponse.json({ error: "Pack not found or could not be deleted" }, { status: 404 });
+  }
+  return new NextResponse(null, { status: 204 });
 }

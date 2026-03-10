@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Upload, Copy, Check, Pencil } from "lucide-react";
@@ -432,8 +433,22 @@ export default function PoliciesPage() {
     }
   }, [shopId, isDemo, fetchPolicies, t]);
 
+  const returnUrl = searchParams.get("returnUrl");
+
   return (
     <div>
+      {returnUrl && (
+        <div className="mb-4">
+          <InfoBanner variant="info">
+            <Link
+              href={decodeURIComponent(returnUrl)}
+              className="font-semibold underline hover:no-underline text-[#0B1220]"
+            >
+              {t("returnToTemplateSetup")}
+            </Link>
+          </InfoBanner>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#0B1220] mb-2">
