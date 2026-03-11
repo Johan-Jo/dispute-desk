@@ -101,6 +101,14 @@ permission.
 Both stored in `shop_sessions` with encrypted access tokens (AES-256-GCM)
 and key versioning for rotation.
 
+### Embedded session cookies
+
+After Shopify OAuth, the callback sets `shopify_shop` and `shopify_shop_id`
+as HTTP-only, secure cookies with **`sameSite: "none"`**. This is required
+so the browser sends them when the app is loaded inside Shopify Admin’s
+iframe (cross-origin). With `sameSite: "lax"`, cookies would not be sent
+in that context and the app would redirect to auth repeatedly.
+
 ### Encryption Key Rotation
 
 - Keys named `TOKEN_ENCRYPTION_KEY_V1`, `TOKEN_ENCRYPTION_KEY_V2`, etc.
@@ -369,7 +377,7 @@ Store policies are included in evidence packs. Five policy types are supported: 
 
 Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolves it in two ways:
 
-1. **Embedded app:** `shopify_shop` and `shopify_shop_id` cookies (set after OAuth when the app is opened from Shopify Admin). If missing, the request gets `401` with message "Unauthorized. Install or re-open the app from Shopify Admin." and `code: SESSION_REQUIRED`.
+1. **Embedded app:** `shopify_shop` and `shopify_shop_id` cookies (set after OAuth when the app is opened from Shopify Admin). These cookies use `sameSite: "none"` so the browser sends them in the cross-origin iframe. If missing, the request gets `401` with message "Unauthorized. Install or re-open the app from Shopify Admin." and `code: SESSION_REQUIRED`.
 
 2. **Portal fallback:** For certain API prefixes, if Shopify cookies are absent, middleware accepts **Supabase Auth** plus the active-shop cookie (`dd_active_shop` or `active_shop_id`). It verifies the user has that shop in `portal_user_shops`, then sets `x-shop-id` / `x-shop-domain` (domain as `"portal"`) and allows the request. This allows the portal disputes page (and setup, integrations, sample files) to work without embedded-app cookies.
 
@@ -385,14 +393,17 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 ### Embedded app (Shopify Admin iframe) troubleshooting
 - **App URL:** In Partner Dashboard, App URL must be exactly `https://disputedesk.app` (no trailing slash; same protocol and domain as deployment). Mismatch can cause "postMessage target origin does not match" and broken iframe.
 - **Host param:** When the app is opened from Admin, the iframe URL must include `shop` and `host` query params. Middleware redirects `/?shop=…` to `/app?shop=…&host=…` preserving params. The embedded layout forwards `host` via `x-shopify-host` and a `shopify-host` meta tag for App Bridge. If the iframe URL lacks `host`, App Bridge may use the wrong origin for `postMessage` (disputedesk.app instead of admin.shopify.com).
-- **OAuth in iframe:** Auth route returns breakout HTML (`window.top.location.href = …`) when the request is from the iframe or from embedded (so admin.shopify.com is never loaded inside the iframe).
+- **OAuth in iframe:** `GET /api/auth/shopify` always returns a 302 redirect to Shopify’s OAuth URL. No HTML breakout page is used. Session cookies (`shopify_shop`, `shopify_shop_id`) are set by the callback with `sameSite: "none"` and `secure: true` so the browser sends them in the cross-origin iframe on subsequent requests; without this, the middleware would not see the session and would redirect to auth again (redirect loop).
 
 ### Shopify OAuth
 - `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`).
-  State is encoded as a signed token (not a cookie) via `encodeOAuthState()`.
+  Always responds with 302 redirect to Shopify’s authorize URL. State is encoded
+  as a signed token (not a cookie) via `encodeOAuthState()`.
 - `GET /api/auth/shopify/callback` — verify HMAC + signed state token, exchange
-  code for access token, store session. For `source=portal`: links the portal
-  user to the shop, sets `active_shop_id` cookie, and redirects to `/portal/dashboard`.
+  code for access token, store session. Sets `shopify_shop` and `shopify_shop_id`
+  cookies with `sameSite: "none"` so they are sent when the app is loaded in
+  Shopify Admin’s iframe. For `source=portal`: links the portal user to the shop,
+  sets `active_shop_id` cookie, and redirects to `/portal/dashboard`.
 
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings

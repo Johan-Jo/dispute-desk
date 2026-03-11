@@ -143,6 +143,15 @@ parameter. The callback verifies the signature with `decodeOAuthState()`.
 This avoids cross-site cookie issues that occur when the OAuth flow
 starts inside a Shopify Admin iframe.
 
+### Embedded session cookies
+
+The callback sets `shopify_shop` and `shopify_shop_id` with **`sameSite: "none"`**
+(and `secure: true`) so the browser sends them when the app is loaded in
+Shopify Admin’s iframe. Without this, the middleware would not see the
+session and would redirect to auth again (redirect loop). The auth route
+always responds with a 302 redirect to Shopify OAuth; no HTML breakout
+page is used.
+
 ### Why no JWT shop_id claims?
 
 V1 does not rely on custom Supabase JWT claims for shop isolation. The
