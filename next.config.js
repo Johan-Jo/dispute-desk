@@ -20,45 +20,28 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   },
+  // Header rule order: when multiple rules match, the LAST one wins. So put allow-framing (embedded) rules LAST.
   headers: async () => [
     {
-      // Embedded app routes: allow Shopify Admin to iframe
-      source: "/app/:path*",
+      // Default: deny framing via CSP only (no X-Frame-Options so embedded allow rules are not blocked)
+      source: "/((?!app/).*)",
       headers: [
         {
           key: "Content-Security-Policy",
           value: [
-            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
+            "frame-ancestors 'none'",
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com",
-            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
-            "connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com",
-            "font-src 'self' https://cdn.shopify.com",
-          ].join("; "),
-        },
-      ],
-    },
-    {
-      // Auth route loaded in iframe before breakout; must allow framing so the HTML can load and run window.top.location
-      source: "/api/auth/shopify",
-      headers: [
-        {
-          key: "Content-Security-Policy",
-          value: [
-            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
-            "connect-src 'self'",
+            "img-src 'self' data: https://*.supabase.co",
+            "connect-src 'self' https://*.supabase.co",
             "font-src 'self'",
           ].join("; "),
         },
       ],
     },
     {
-      // Root: allow framing so Shopify can load app (iframe); middleware redirects ?shop= to /app
+      // Root: allow framing (Shopify iframe). MUST come after deny so it wins for path "/".
       source: "/",
       headers: [
         {
@@ -76,23 +59,37 @@ const nextConfig = {
       ],
     },
     {
-      // Marketing, portal, auth: deny framing (not embedded)
-      source: "/((?!app/).*)",
+      // Auth route in iframe: allow framing so breakout HTML can load. MUST come after deny.
+      source: "/api/auth/shopify",
       headers: [
-        {
-          key: "X-Frame-Options",
-          value: "DENY",
-        },
         {
           key: "Content-Security-Policy",
           value: [
-            "frame-ancestors 'none'",
+            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: https://*.supabase.co",
-            "connect-src 'self' https://*.supabase.co",
+            "img-src 'self' data:",
+            "connect-src 'self'",
             "font-src 'self'",
+          ].join("; "),
+        },
+      ],
+    },
+    {
+      // Embedded app: allow framing. MUST come last so it wins for /app and /app/*.
+      source: "/app/:path*",
+      headers: [
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
+            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            "connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com",
+            "font-src 'self' https://cdn.shopify.com",
           ].join("; "),
         },
       ],
