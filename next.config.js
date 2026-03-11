@@ -59,7 +59,7 @@ const nextConfig = {
       ],
     },
     {
-      // Auth route in iframe: allow framing so breakout HTML can load. MUST come after deny.
+      // Auth route in iframe: allow framing + App Bridge so breakout redirect works. MUST come after deny.
       source: "/api/auth/shopify",
       headers: [
         {
@@ -67,11 +67,11 @@ const nextConfig = {
           value: [
             "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
-            "connect-src 'self'",
-            "font-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
+            "img-src 'self' data: https://cdn.shopify.com",
+            "connect-src 'self' https://*.myshopify.com wss://*.shopifycloud.com",
+            "font-src 'self' https://cdn.shopify.com",
           ].join("; "),
         },
       ],

@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
     cookieStore.set("shopify_shop", shop, {
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 60 * 60 * 24 * 30,
       path: "/",
     });
@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
     cookieStore.set("shopify_shop_id", shopInternalId, {
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 60 * 60 * 24 * 30,
       path: "/",
     });
