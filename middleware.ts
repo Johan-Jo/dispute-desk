@@ -14,6 +14,13 @@ import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // --- Embedded app entry: Shopify loads application_url (/) in iframe; redirect to /app with same query ---
+  if (pathname === "/" && req.nextUrl.searchParams.has("shop")) {
+    const appUrl = new URL("/app", req.url);
+    req.nextUrl.searchParams.forEach((value, key) => appUrl.searchParams.set(key, value));
+    return NextResponse.redirect(appUrl);
+  }
+
   // --- Public routes: marketing, auth, static assets ---
   if (
     pathname === "/" ||

@@ -40,6 +40,24 @@ const nextConfig = {
       ],
     },
     {
+      // Root: allow framing so Shopify can load app (iframe); middleware redirects ?shop= to /app
+      source: "/",
+      headers: [
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
+            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            "connect-src 'self' https://*.myshopify.com https://*.supabase.co",
+            "font-src 'self' https://cdn.shopify.com",
+          ].join("; "),
+        },
+      ],
+    },
+    {
       // Marketing, portal, auth: deny framing (not embedded)
       source: "/((?!app/).*)",
       headers: [
