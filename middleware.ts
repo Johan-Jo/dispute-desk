@@ -187,9 +187,10 @@ export async function middleware(req: NextRequest) {
     if (!shopDomain) {
       const shopParam = req.nextUrl.searchParams.get("shop");
       if (shopParam) {
-        return NextResponse.redirect(
-          new URL(`/api/auth/shopify?shop=${shopParam}`, req.url)
-        );
+        const authUrl = new URL("/api/auth/shopify", req.url);
+        authUrl.searchParams.set("shop", shopParam);
+        if (hostParam) authUrl.searchParams.set("host", hostParam);
+        return NextResponse.redirect(authUrl);
       }
 
       const sessionUrl = new URL("/app/session-required", req.url);
