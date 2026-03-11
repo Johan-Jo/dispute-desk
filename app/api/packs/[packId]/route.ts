@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { getPackById, deletePack } from "@/lib/db/packs";
+import { getPackById, deletePack, updatePackStatus } from "@/lib/db/packs";
 
 /**
  * GET /api/packs/:packId
@@ -139,6 +139,38 @@ export async function GET(
     active_build_job: null,
     active_pdf_job: null,
   });
+}
+
+/**
+ * PATCH /api/packs/:packId
+ *
+ * Body: { status: "DRAFT" | "ACTIVE" | "ARCHIVED" }
+ *
+ * Updates a library pack's status (e.g. activate a draft template pack).
+ */
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ packId: string }> }
+) {
+  const { packId } = await params;
+  let body: { status?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const status = body?.status;
+  if (!status || !["DRAFT", "ACTIVE", "ARCHIVED"].includes(status)) {
+    return NextResponse.json(
+      { error: "status must be one of: DRAFT, ACTIVE, ARCHIVED" },
+      { status: 400 }
+    );
+  }
+  const pack = await updatePackStatus(packId, status as "DRAFT" | "ACTIVE" | "ARCHIVED");
+  if (!pack) {
+    return NextResponse.json({ error: "Pack not found or could not be updated" }, { status: 404 });
+  }
+  return NextResponse.json(pack);
 }
 
 /**

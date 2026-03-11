@@ -213,14 +213,49 @@ export function TemplateLibraryContent({
     }
   };
 
-  const handleInstallRecommended = () => {
+  const handleInstallRecommended = async () => {
     setIsInstallingBulk(true);
+    setInstallError(null);
     const recommended = templates.filter((tpl) => tpl.is_recommended);
-    setTimeout(() => {
-      setInstalledIds((prev) => [...prev, ...recommended.map((tpl) => tpl.id)]);
-      setIsInstallingBulk(false);
+    if (!shopId) {
+      setTimeout(() => {
+        setInstalledIds((prev) => [...prev, ...recommended.map((tpl) => tpl.id)]);
+        setIsInstallingBulk(false);
+        setShowInstalledBanner(true);
+      }, 1200);
+      return;
+    }
+    const newPackIds: Record<string, string> = {};
+    for (const tpl of recommended) {
+      try {
+        const res = await fetch(`/api/templates/${tpl.id}/install`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shopId }),
+        });
+        if (res.ok) {
+          const pack = await res.json();
+          newPackIds[tpl.id] = pack.id;
+          setInstalledIds((prev) => [...prev, tpl.id]);
+          setInstalledPackIds((prev) => ({ ...prev, [tpl.id]: pack.id }));
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const message =
+            typeof data?.error === "string"
+              ? data.error
+              : `Install failed for ${tpl.name ?? tpl.slug ?? tpl.id} (${res.status}).`;
+          setInstallError(message);
+          break;
+        }
+      } catch (err) {
+        setInstallError(err instanceof Error ? err.message : "Network error. Try again.");
+        break;
+      }
+    }
+    if (Object.keys(newPackIds).length > 0) {
       setShowInstalledBanner(true);
-    }, 1200);
+    }
+    setIsInstallingBulk(false);
   };
 
   const previewTpl = previewTemplateId ? sorted.find((p) => p.id === previewTemplateId) : null;

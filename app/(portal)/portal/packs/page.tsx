@@ -188,6 +188,31 @@ export default function PacksLibraryPage() {
     setCreating(false);
   };
 
+  const [activatingPackId, setActivatingPackId] = useState<string | null>(null);
+
+  const handleActivate = useCallback(
+    async (packId: string) => {
+      if (isDemo) {
+        setPacks((prev) =>
+          prev.map((p) => (p.id === packId ? { ...p, status: "ACTIVE" as const } : p))
+        );
+        return;
+      }
+      setActivatingPackId(packId);
+      try {
+        const res = await fetch(`/api/packs/${packId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "ACTIVE" }),
+        });
+        if (res.ok) await fetchPacks();
+      } finally {
+        setActivatingPackId(null);
+      }
+    },
+    [isDemo, fetchPacks]
+  );
+
   const handleDelete = async (id: string) => {
     if (!confirm(t("confirmDelete"))) return;
     if (isDemo) {
@@ -356,6 +381,20 @@ export default function PacksLibraryPage() {
                         className="flex items-center justify-end gap-2"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        {pack.status === "DRAFT" && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={activatingPackId !== null}
+                            onClick={() => handleActivate(pack.id)}
+                          >
+                            {activatingPackId === pack.id ? (
+                              <span className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full inline-block" />
+                            ) : (
+                              t("activate")
+                            )}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"

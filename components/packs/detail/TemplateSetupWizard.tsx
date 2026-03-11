@@ -17,6 +17,7 @@ import {
   Download,
   Zap,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -448,6 +449,35 @@ export function TemplateSetupWizard({
   };
 
   const goToPacks = () => router.push("/portal/packs");
+
+  const [activating, setActivating] = React.useState(false);
+  const [activateError, setActivateError] = React.useState<string | null>(null);
+
+  const handleActivate = async () => {
+    if (!packId) {
+      goToPacks();
+      return;
+    }
+    setActivateError(null);
+    setActivating(true);
+    try {
+      const res = await fetch(`/api/packs/${packId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      });
+      if (res.ok) {
+        goToPacks();
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setActivateError(typeof data?.error === "string" ? data.error : "Failed to activate pack.");
+    } catch {
+      setActivateError("Network error. Try again.");
+    } finally {
+      setActivating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F6F8FB]">
@@ -1007,17 +1037,35 @@ export function TemplateSetupWizard({
                     <p className="font-semibold text-[#0B1220]">{templateName ?? t("recommendedTemplate")}</p>
                   </div>
                 </div>
+                {activateError && (
+                  <p className="text-sm text-[#B91C1C] mb-4" role="alert">
+                    {activateError}
+                  </p>
+                )}
                 <div className="mt-6 flex items-center justify-between">
                   <Button variant="ghost" onClick={() => setCurrentStep(3)}>
                     {t("back")}
                   </Button>
                   <div className="flex gap-3">
-                    <Button variant="secondary" onClick={goToPacks}>
+                    <Button variant="secondary" onClick={goToPacks} disabled={activating}>
                       {t("saveAsDraft")}
                     </Button>
-                    <Button variant="primary" onClick={goToPacks}>
-                      {t("activateTemplate")}
-                      <Check className="w-4 h-4 ml-2" />
+                    <Button
+                      variant="primary"
+                      onClick={handleActivate}
+                      disabled={activating}
+                    >
+                      {activating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {t("activating")}
+                        </>
+                      ) : (
+                        <>
+                          {t("activateTemplate")}
+                          <Check className="w-4 h-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

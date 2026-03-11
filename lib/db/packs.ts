@@ -291,6 +291,47 @@ export async function deletePack(packId: string): Promise<boolean> {
   return true;
 }
 
+const PACK_STATUSES = ["DRAFT", "ACTIVE", "ARCHIVED"] as const;
+
+/**
+ * Update a library pack's status (packs table). Used when user activates a draft pack.
+ * Optionally syncs evidence_packs.status for library packs (draft → ready when ACTIVE).
+ */
+export async function updatePackStatus(
+  packId: string,
+  status: "DRAFT" | "ACTIVE" | "ARCHIVED"
+): Promise<Pack | null> {
+  if (!PACK_STATUSES.includes(status)) {
+    return null;
+  }
+  const sb = getServiceClient();
+
+  const { data: pack, error: packErr } = await sb
+    .from("packs")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", packId)
+    .select("*")
+    .single();
+
+  if (packErr || !pack) {
+    console.error("[updatePackStatus]", packErr?.message);
+    return null;
+  }
+
+  // Keep evidence_packs in sync for library packs (dispute_id is null)
+  const epStatus = status === "ACTIVE" ? "ready" : status === "ARCHIVED" ? "archived" : "draft";
+  await sb
+    .from("evidence_packs")
+    .update({ status: epStatus, updated_at: new Date().toISOString() })
+    .eq("id", packId)
+    .is("dispute_id", null);
+
+  return pack as Pack;
+}
+
 export async function getPackNarrativeSettings(
   packId: string
 ): Promise<PackNarrativeSettings | null> {
