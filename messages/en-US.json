@@ -381,6 +381,7 @@
     "paid": "Paid",
     "connectStore": "Connect a store to view billing.",
     "upgradeFailed": "Upgrade could not be started. Reconnect this store from the sidebar and try again, or install the app from Shopify Admin.",
+    "openInShopifyAdmin": "Open in Shopify Admin",
     "topUps": "Need more packs?",
     "topUpsDesc": "Purchase top-up bundles. Credits added immediately.",
     "topUp25": "+25 packs — $19",

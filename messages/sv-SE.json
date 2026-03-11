@@ -285,6 +285,7 @@
     "paid": "Betald",
     "connectStore": "Anslut en butik för att visa fakturering.",
     "upgradeFailed": "Uppgraderingen kunde inte startas. Återanslut butiken från sidofältet och försök igen, eller installera appen från Shopify Admin.",
+    "openInShopifyAdmin": "Öppna i Shopify Admin",
     "topUps": "Behöver du fler paket?",
     "topUpsDesc": "Köp tilläggspaket. Krediter läggs till omedelbart.",
     "topUp25": "+25 paket — $19",

@@ -256,7 +256,22 @@ export default function BillingPage() {
 
       {upgradeError && (
         <div className="mb-6 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-sm text-[#B91C1C] flex items-start justify-between gap-3">
-          <span>{upgradeError}</span>
+          <span>
+            {upgradeError}
+            {(upgradeError.includes("missing shop domain") || upgradeError.includes("Shopify Admin")) && (
+              <>
+                {" "}
+                <a
+                  href="https://admin.shopify.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline hover:no-underline"
+                >
+                  {t("openInShopifyAdmin")}
+                </a>
+              </>
+            )}
+          </span>
           <button type="button" onClick={() => setUpgradeError(null)} className="shrink-0 text-[#B91C1C] hover:underline" aria-label={tc("dismiss")}>
             ×
           </button>

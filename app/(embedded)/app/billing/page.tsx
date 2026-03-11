@@ -59,6 +59,7 @@ export default function BillingPage() {
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const shopId = typeof window !== "undefined"
     ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
@@ -77,17 +78,26 @@ export default function BillingPage() {
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
   const handleUpgrade = async (planId: string) => {
+    setUpgradeError(null);
     setUpgrading(planId);
-    const res = await fetch("/api/billing/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shop_id: shopId, plan_id: planId }),
-    });
-    const data = await res.json();
-    if (data.confirmationUrl) {
-      window.top!.location.href = data.confirmationUrl;
+    try {
+      const res = await fetch("/api/billing/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: shopId, plan_id: planId }),
+      });
+      const data = await res.json();
+      if (data.confirmationUrl) {
+        window.top!.location.href = data.confirmationUrl;
+        return;
+      }
+      const message = typeof data.error === "string" ? data.error : t("billing.upgradeFailed");
+      setUpgradeError(message);
+    } catch {
+      setUpgradeError(t("billing.upgradeFailed"));
+    } finally {
+      setUpgrading(null);
     }
-    setUpgrading(null);
   };
 
   if (loading) {
@@ -112,12 +122,40 @@ export default function BillingPage() {
     scale: "billing.scale",
   };
 
+  const showOpenInShopifyLink =
+    upgradeError &&
+    (upgradeError.includes("missing shop domain") || upgradeError.includes("Shopify Admin"));
+
   return (
     <Page
       title={t("billing.title")}
       subtitle={`${t("billing.currentPlan")}: ${plan ? t(planNameKeys[plan.id] ?? "billing.free") : t("billing.free")}`}
     >
       <Layout>
+        {upgradeError && (
+          <Layout.Section>
+            <Banner tone="critical" onDismiss={() => setUpgradeError(null)}>
+              <BlockStack gap="200">
+                <Text as="p" variant="bodyMd">
+                  {upgradeError}
+                  {showOpenInShopifyLink && (
+                    <>
+                      {" "}
+                      <a
+                        href="https://admin.shopify.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontWeight: 600, textDecoration: "underline" }}
+                      >
+                        {t("billing.openInShopifyAdmin")}
+                      </a>
+                    </>
+                  )}
+                </Text>
+              </BlockStack>
+            </Banner>
+          </Layout.Section>
+        )}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
