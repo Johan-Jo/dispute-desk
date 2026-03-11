@@ -18,11 +18,22 @@ export default async function EmbeddedLayout({
   const polarisTranslations = await getPolarisTranslations(locale);
   const shopifyHost = headerStore.get("x-shopify-host")?.trim() ?? "";
 
+  const apiKey = process.env.SHOPIFY_API_KEY ?? "";
   return (
     <>
-      <meta name="shopify-api-key" content={process.env.SHOPIFY_API_KEY} />
+      <meta name="shopify-api-key" content={apiKey} />
       {shopifyHost ? <meta name="shopify-host" content={shopifyHost} /> : null}
-      <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" />
+      {/* Ensure host is available to App Bridge: from server (x-shopify-host) or from URL so postMessage uses admin.shopify.com */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var u=new URL(window.location.href);var h=document.querySelector('meta[name="shopify-host"]')?.content||u.searchParams.get('host')||'';if(h){window.__shopify_host__=h;}if(!u.searchParams.get('host')&&h){var q=new URLSearchParams(u.search);q.set('host',h);window.history.replaceState(null,'',u.pathname+'?'+q.toString());}})();`,
+        }}
+      />
+      <script
+        src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
+        data-api-key={apiKey}
+        {...(shopifyHost ? { "data-host": shopifyHost } : {})}
+      />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
         {children}
       </Providers>

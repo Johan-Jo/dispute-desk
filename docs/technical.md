@@ -382,6 +382,11 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - **Demo data** (`useDemoData`): when true, dispute list, dashboard, rules, and billing show hardcoded demo/placeholder data instead of calling the API. True when `isDemo` is true **or** the active shop's domain is in `TEST_STORE_DOMAINS` (see `lib/demo-mode.tsx`).
 - **Test store domains**: Only `demo.myshopify.com` is in `TEST_STORE_DOMAINS`. All other stores (including development stores such as `dispute-ops-test.myshopify.com`) are treated as real stores: they receive live API data and "Sync Now" works.
 
+### Embedded app (Shopify Admin iframe) troubleshooting
+- **App URL:** In Partner Dashboard, App URL must be exactly `https://disputedesk.app` (no trailing slash; same protocol and domain as deployment). Mismatch can cause "postMessage target origin does not match" and broken iframe.
+- **Host param:** When the app is opened from Admin, the iframe URL must include `shop` and `host` query params. Middleware redirects `/?shop=…` to `/app?shop=…&host=…` preserving params. The embedded layout forwards `host` via `x-shopify-host` and a `shopify-host` meta tag for App Bridge. If the iframe URL lacks `host`, App Bridge may use the wrong origin for `postMessage` (disputedesk.app instead of admin.shopify.com).
+- **OAuth in iframe:** Auth route returns breakout HTML (`window.top.location.href = …`) when the request is from the iframe or from embedded (so admin.shopify.com is never loaded inside the iframe).
+
 ### Shopify OAuth
 - `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`).
   State is encoded as a signed token (not a cookie) via `encodeOAuthState()`.
@@ -588,6 +593,8 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
 2. `GET /api/billing/callback` → `shops.plan` updated on approval
 3. `GET /api/billing/usage` → returns plan + monthly usage
+
+If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
 
 ## Hardening
 
