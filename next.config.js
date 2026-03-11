@@ -40,6 +40,24 @@ const nextConfig = {
       ],
     },
     {
+      // Auth route loaded in iframe before breakout; must allow framing so the HTML can load and run window.top.location
+      source: "/api/auth/shopify",
+      headers: [
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "font-src 'self'",
+          ].join("; "),
+        },
+      ],
+    },
+    {
       // Root: allow framing so Shopify can load app (iframe); middleware redirects ?shop= to /app
       source: "/",
       headers: [

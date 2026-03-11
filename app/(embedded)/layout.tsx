@@ -23,15 +23,16 @@ export default async function EmbeddedLayout({
     <>
       <meta name="shopify-api-key" content={apiKey} />
       {shopifyHost ? <meta name="shopify-host" content={shopifyHost} /> : null}
-      {/* Ensure host is available to App Bridge: from server (x-shopify-host) or from URL so postMessage uses admin.shopify.com */}
+      {/* Persist and restore host so App Bridge has it (required for postMessage to admin.shopify.com). Fallback: derive host from shop (base64(shop+'/admin')) when Shopify does not send it. */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){var u=new URL(window.location.href);var h=document.querySelector('meta[name="shopify-host"]')?.content||u.searchParams.get('host')||'';if(h){window.__shopify_host__=h;}if(!u.searchParams.get('host')&&h){var q=new URLSearchParams(u.search);q.set('host',h);window.history.replaceState(null,'',u.pathname+'?'+q.toString());}})();`,
+          __html: `(function(){var u=new URL(window.location.href);var h=document.querySelector('meta[name="shopify-host"]')?.content||u.searchParams.get('host')||sessionStorage.getItem('shopify_host')||'';var shop=u.searchParams.get('shop');if(!h&&shop&&typeof btoa==='function'){try{h=btoa(shop+'/admin');}catch(e){}}if(h){sessionStorage.setItem('shopify_host',h);window.__shopify_host__=h;}if(!u.searchParams.get('host')&&h){var q=new URLSearchParams(u.search);q.set('host',h);if(shop)q.set('shop',shop);window.history.replaceState(null,'',u.pathname+'?'+q.toString());}})();`,
         }}
       />
       <script
         src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
         data-api-key={apiKey}
+        defer
         {...(shopifyHost ? { "data-host": shopifyHost } : {})}
       />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
