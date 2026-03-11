@@ -86,7 +86,12 @@ export async function registerDisputeWebhooks(params: {
     }
     if (payload?.userErrors?.length) {
       const msg = payload.userErrors.map((e) => e.message).join("; ");
-      errors.push(`${topic}: ${msg}`);
+      // Already registered (e.g. re-auth or previous install) — treat as success
+      if (/already been taken|already exists/i.test(msg)) {
+        created.push(topic);
+      } else {
+        errors.push(`${topic}: ${msg}`);
+      }
       continue;
     }
     if (payload?.webhookSubscription?.id) {
