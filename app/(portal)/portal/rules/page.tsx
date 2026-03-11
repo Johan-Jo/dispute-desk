@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Zap } from "lucide-react";
 import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
+import { Modal } from "@/components/ui/modal";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { RULE_PRESETS } from "@/lib/rules/presets";
@@ -349,98 +350,160 @@ export default function RulesSettingsPage() {
       )}
 
       {showForm && !planBlocked && (
-        <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
-          <h3 className="font-semibold text-[#0B1220] mb-4">{t("newRule")}</h3>
+        <Modal
+          isOpen={true}
+          onClose={() => setShowForm(false)}
+          title={t("createRuleModalTitle")}
+          description={t("createRuleModalDescription")}
+          size="lg"
+          footer={
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>{tc("cancel")}</Button>
+              <Button variant="primary" size="sm" onClick={handleCreate}>{t("createRule")}</Button>
+            </>
+          }
+        >
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#667085] mb-1">{t("name")}</label>
-              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t("namePlaceholder")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+              <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t("namePlaceholder")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#667085] mb-1">{t("matchReasons")}</label>
-              <div className="flex flex-wrap gap-2">
-                {DISPUTE_REASONS.map((r) => (
-                  <button key={r} onClick={() => setFormReasons((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r])} className={`px-3 py-1 text-xs rounded-full border transition-colors ${formReasons.includes(r) ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>
-                    {REASON_KEYS[r] ? tr(REASON_KEYS[r]) : r.replace(/_/g, " ")}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-[#94A3B8] mt-1">{t("matchReasonsHelp")}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="border border-[#E5E7EB] rounded-lg p-4 bg-[#F7F8FA]">
+              <h4 className="font-semibold text-[#0B1220] mb-3">{t("triggerCondition")}</h4>
               <div>
-                <label className="block text-sm font-medium text-[#667085] mb-1">{t("minAmount")}</label>
-                <input type="number" value={formMinAmount} onChange={(e) => setFormMinAmount(e.target.value)} placeholder="0" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                <label className="block text-sm font-medium text-[#667085] mb-1">{t("matchReasons")}</label>
+                <div className="flex flex-wrap gap-2">
+                  {DISPUTE_REASONS.map((r) => (
+                    <button key={r} type="button" onClick={() => setFormReasons((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r])} className={`px-3 py-1 text-xs rounded-full border transition-colors ${formReasons.includes(r) ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>
+                      {REASON_KEYS[r] ? tr(REASON_KEYS[r]) : r.replace(/_/g, " ")}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-[#94A3B8] mt-1">{t("matchReasonsHelp")}</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#667085] mb-1">{t("maxAmount")}</label>
-                <input type="number" value={formMaxAmount} onChange={(e) => setFormMaxAmount(e.target.value)} placeholder={t("noLimit")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#667085] mb-1">{t("minAmount")}</label>
+                  <input type="number" value={formMinAmount} onChange={(e) => setFormMinAmount(e.target.value)} placeholder="0" className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#667085] mb-1">{t("maxAmount")}</label>
+                  <input type="number" value={formMaxAmount} onChange={(e) => setFormMaxAmount(e.target.value)} placeholder={t("noLimit")} className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] bg-white" />
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#667085] mb-1">{t("action")}</label>
+            <div className="border border-[#E5E7EB] rounded-lg p-4 bg-[#F7F8FA]">
+              <h4 className="font-semibold text-[#0B1220] mb-3">{t("action")}</h4>
               <div className="flex gap-3">
-                <button onClick={() => setFormMode("auto_pack")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto_pack" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
-                <button onClick={() => setFormMode("review")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "review" ? "bg-[#F59E0B] text-white border-[#F59E0B]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#F59E0B]"}`}>{t("review")}</button>
+                <button type="button" onClick={() => setFormMode("auto_pack")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto_pack" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
+                <button type="button" onClick={() => setFormMode("review")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "review" ? "bg-[#F59E0B] text-white border-[#F59E0B]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#F59E0B]"}`}>{t("review")}</button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>{tc("cancel")}</Button>
-              <Button variant="primary" size="sm" onClick={handleCreate}>{t("createRule")}</Button>
+            <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-4">
+              <p className="text-sm text-[#1D4ED8]">
+                <span className="font-semibold">💡 </span>
+                {t("footer")}
+              </p>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
-      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
         {loading ? (
           <div className="px-4 py-12 text-center text-[#667085]">{tc("loading")}</div>
         ) : rules.length === 0 ? (
           planBlocked ? (
             <div className="px-4 py-12 text-center text-[#667085]">{t("noRules")}</div>
           ) : (
-            <div className="p-6 sm:p-8 max-w-2xl mx-auto">
-              <h3 className="text-lg font-semibold text-[#0B1220] mb-2">{t("setupTitle")}</h3>
-              <p className="text-sm text-[#667085] mb-6">{t("setupDescription")}</p>
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-[#0B1220] mb-3">{t("suggestedRules")}</h4>
-                <div className="space-y-3">
-                  {RULE_PRESETS.map((preset) => (
-                    <div
-                      key={preset.id}
-                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 border border-[#E5E7EB] rounded-lg"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-[#0B1220] text-sm">{t(preset.nameKey)}</p>
-                        <p className="text-xs text-[#667085]">{t(preset.descriptionKey)}</p>
-                      </div>
-                      <Badge variant={preset.action.mode === "auto_pack" ? "success" : "warning"} className="flex-shrink-0 w-fit">
-                        {preset.action.mode === "auto_pack" ? t("autoPack") : t("review")}
-                      </Badge>
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="bg-gradient-to-br from-white to-[#F9FAFB] rounded-2xl border border-[#E5E7EB] shadow-sm p-8 sm:p-12 lg:p-16">
+                <div className="max-w-3xl mx-auto">
+                  <div className="flex justify-center mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-[#1D4ED8] to-[#3B82F6] rounded-2xl flex items-center justify-center shadow-lg shadow-[#1D4ED8]/20">
+                      <Zap className="w-8 h-8 text-white" />
                     </div>
-                  ))}
+                  </div>
+                  <h2 className="text-2xl font-bold text-[#0B1220] mb-3 text-center">
+                    {t("setupTitle")}
+                  </h2>
+                  <p className="text-base text-[#667085] text-center mb-12 leading-relaxed max-w-2xl mx-auto">
+                    {t("setupDescription")}
+                  </p>
+
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#E5E7EB] to-transparent" />
+                    <h3 className="text-sm font-bold text-[#0B1220] uppercase tracking-wide">
+                      {t("suggestedRules")}
+                    </h3>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#E5E7EB] to-transparent" />
+                  </div>
+
+                  <div className="space-y-3 mb-10">
+                    {RULE_PRESETS.map((preset, index) => (
+                      <div
+                        key={preset.id}
+                        className="group relative bg-white rounded-xl border border-[#E5E7EB] p-5 hover:border-[#1D4ED8]/30 hover:shadow-md transition-all duration-200"
+                      >
+                        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#1D4ED8] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md">
+                          {index + 1}
+                        </div>
+                        <div className="flex items-start justify-between gap-6 pl-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-base font-bold text-[#0B1220] mb-2 group-hover:text-[#1D4ED8] transition-colors">
+                              {t(preset.nameKey)}
+                            </h4>
+                            <p className="text-sm text-[#667085] leading-relaxed">
+                              {t(preset.descriptionKey)}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={preset.action.mode === "auto_pack" ? "success" : "warning"}
+                            className="text-xs whitespace-nowrap flex-shrink-0 mt-1 font-semibold px-3 py-1.5"
+                          >
+                            {preset.action.mode === "auto_pack" ? t("autoPack") : t("review")}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center gap-4 mb-8">
+                    <Button
+                      variant="primary"
+                      disabled={installingPresets}
+                      onClick={handleInstallPresets}
+                      className="w-full sm:w-auto px-8 py-3 text-base font-semibold shadow-lg shadow-[#1D4ED8]/20 hover:shadow-xl hover:shadow-[#1D4ED8]/30 transition-all"
+                    >
+                      {installingPresets ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                          {t("installAll")}
+                        </span>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-2" />
+                          {t("installAll")}
+                        </>
+                      )}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(true)}
+                      className="text-sm text-[#1D4ED8] hover:text-[#1e40af] transition-colors flex items-center gap-2 font-semibold group"
+                    >
+                      <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
+                      {t("createCustomRule")}
+                    </button>
+                  </div>
+
+                  <div className="bg-[#F0F9FF] border border-[#BAE6FD] rounded-xl p-4">
+                    <p className="text-sm text-[#0369A1] text-center leading-relaxed">
+                      <span className="font-semibold">💡 </span>
+                      {t("setupFooterTip")}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={installingPresets}
-                  onClick={handleInstallPresets}
-                >
-                  {installingPresets ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
-                      {t("installAll")}
-                    </span>
-                  ) : (
-                    t("installAll")
-                  )}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t("createCustomRule")}
-                </Button>
               </div>
             </div>
           )
