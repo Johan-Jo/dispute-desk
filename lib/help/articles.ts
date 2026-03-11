@@ -225,6 +225,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     relatedSlugs: ["upgrading-plan", "plan-comparison"],
     tags: ["trial", "free", "7 days", "test"],
   },
+  {
+    slug: "store-session-upgrade",
+    category: "billing",
+    titleKey: "help.articles.storeSessionUpgrade.title",
+    bodyKey: "help.articles.storeSessionUpgrade.body",
+    relatedSlugs: ["upgrading-plan", "connect-shopify-store"],
+    tags: ["upgrade", "billing", "reconnect", "store session", "shopify admin"],
+  },
 
   // --- Saving to Shopify ---
   {

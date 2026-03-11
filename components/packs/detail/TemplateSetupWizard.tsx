@@ -354,6 +354,25 @@ export function TemplateSetupWizard({
     fetchPolicyStatus();
   }, [fetchPolicyStatus]);
 
+  // Auto-select suggested policies when they are already set in Policies (no click required)
+  useEffect(() => {
+    if (Object.keys(policySetByType).length === 0) return;
+    setConfirmedPolicyIds((prev) => {
+      const next = new Set(prev);
+      evidenceTypes
+        .filter((e) => e.selected)
+        .forEach((evidence) => {
+          const sourceKind = pack?.checklist?.length
+            ? getEvidenceSourceKindFromChecklistField(evidence.id)
+            : getEvidenceSourceKind(evidence.id);
+          if (sourceKind !== "reusable") return;
+          const policyType = getPolicyTypeForStatus(evidence.id);
+          if (policyType && policySetByType[policyType]) next.add(evidence.id);
+        });
+      return next;
+    });
+  }, [policySetByType, evidenceTypes, pack?.checklist?.length]);
+
   const steps = [
     { number: 1, titleKey: "step1Title" as const, completed: currentStep > 1 },
     { number: 2, titleKey: "step2Title" as const, completed: currentStep > 2 },

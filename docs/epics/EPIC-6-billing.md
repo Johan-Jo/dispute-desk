@@ -75,6 +75,10 @@ All enforcement is server-side. Client CTAs are convenience, not security.
 - **Rules on Free plan**: Blue info box on rules settings page with "Upgrade Plan" link.
 - **Automation pipeline**: Returns `quota_exceeded` or `feature_blocked` silently (no auto-pack, dispute goes to review).
 
+### 6.7 — Store session invalid (upgrade blocked)
+
+When `POST /api/billing/subscribe` is called with a shop that has no session or a session missing `shop_domain`, the API returns 404 or 400 with an error telling the merchant to use **Clear shop & reconnect** and then open the app from Shopify Admin. The billing page (portal and embedded) shows this error and an **Open in Shopify Admin** link so the merchant can fix the session in one click.
+
 ## Key Files
 
 | File | Purpose |
