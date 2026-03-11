@@ -175,8 +175,12 @@ export async function middleware(req: NextRequest) {
 
   // --- Embedded app routes (/app/*): require Shopify session ---
   if (pathname.startsWith("/app")) {
+    const hostParam = req.nextUrl.searchParams.get("host") ?? "";
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-shopify-host", hostParam);
+
     if (pathname === "/app/session-required") {
-      return NextResponse.next();
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
     const shopDomain = req.cookies.get("shopify_shop")?.value;
@@ -193,7 +197,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(sessionUrl);
     }
 
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   return NextResponse.next();

@@ -16,10 +16,12 @@ export default async function EmbeddedLayout({
   const locale = resolveLocale({ userLocale: cookieLocale, shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim() });
   const messages = await getMessages(locale);
   const polarisTranslations = await getPolarisTranslations(locale);
+  const shopifyHost = headerStore.get("x-shopify-host")?.trim() ?? "";
 
   return (
     <>
       <meta name="shopify-api-key" content={process.env.SHOPIFY_API_KEY} />
+      {shopifyHost ? <meta name="shopify-host" content={shopifyHost} /> : null}
       <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
         {children}
