@@ -45,5 +45,18 @@ export async function GET(req: NextRequest) {
   const stateToken = encodeOAuthState({ nonce, phase, source, returnTo });
 
   const authUrl = buildAuthUrl(shop, stateToken, isOnline);
+
+  // When loaded in the embedded app iframe, a 302 to Shopify would load admin.shopify.com
+  // inside the iframe, which is blocked by X-Frame-Options. Break out to the top window.
+  const inIframe = req.headers.get("sec-fetch-dest") === "iframe";
+  const fromEmbedded = source === "embedded";
+  if (inIframe || fromEmbedded) {
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><script>window.top.location.href=${JSON.stringify(authUrl)};</script><p>Redirecting to Shopify…</p></body></html>`;
+    return new NextResponse(html, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+
   return NextResponse.redirect(authUrl);
 }
