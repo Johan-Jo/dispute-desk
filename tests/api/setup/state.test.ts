@@ -41,7 +41,7 @@ describe("GET /api/setup/state", () => {
 
     const body = await res.json();
     expect(body.progress.doneCount).toBe(0);
-    expect(body.progress.total).toBe(7);
+    expect(body.progress.total).toBe(10);
     expect(body.allDone).toBe(false);
     expect(body.nextStepId).toBe("permissions");
 
@@ -56,9 +56,9 @@ describe("GET /api/setup/state", () => {
     setTableResult(client, "shop_setup", {
       shop_id: "shop-123",
       steps: {
-        welcome_goals: { status: "done", completed_at: "2026-01-01" },
+        overview: { status: "done", completed_at: "2026-01-01" },
         permissions: { status: "done", completed_at: "2026-01-01" },
-        sync_disputes: { status: "in_progress" },
+        disputes: { status: "in_progress" },
       },
     });
     mockGetServiceClient.mockReturnValue(client as any);
@@ -67,17 +67,36 @@ describe("GET /api/setup/state", () => {
     const body = await res.json();
 
     expect(body.progress.doneCount).toBe(2);
-    expect(body.progress.total).toBe(7);
-    expect(body.nextStepId).toBe("sync_disputes");
+    expect(body.progress.total).toBe(10);
+    expect(body.nextStepId).toBe("disputes");
     expect(body.allDone).toBe(false);
   });
 
-  it("returns allDone when all 7 steps are done", async () => {
+  it("migrates legacy step ids to new ids", async () => {
+    const client = createMockSupabaseClient();
+    setTableResult(client, "shop_setup", {
+      shop_id: "shop-123",
+      steps: {
+        welcome_goals: { status: "done", completed_at: "2026-01-01" },
+        permissions: { status: "done" },
+        sync_disputes: { status: "in_progress" },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(client as any);
+
+    const res = await GET(makeRequest("shop-123"));
+    const body = await res.json();
+
+    expect(body.steps.overview?.status).toBe("done");
+    expect(body.steps.disputes?.status).toBe("in_progress");
+    expect(body.nextStepId).toBe("disputes");
+  });
+
+  it("returns allDone when all 10 steps are done", async () => {
     const allDoneSteps: Record<string, { status: string }> = {};
     const ids = [
-      "welcome_goals", "permissions", "sync_disputes",
-      "business_policies", "evidence_sources", "automation_rules",
-      "team_notifications",
+      "permissions", "overview", "disputes", "packs", "rules",
+      "policies", "billing", "team", "settings", "help",
     ];
     for (const id of ids) {
       allDoneSteps[id] = { status: "done", completed_at: "2026-01-01" } as any;
@@ -93,7 +112,7 @@ describe("GET /api/setup/state", () => {
     const res = await GET(makeRequest("shop-123"));
     const body = await res.json();
 
-    expect(body.progress.doneCount).toBe(7);
+    expect(body.progress.doneCount).toBe(10);
     expect(body.allDone).toBe(true);
     expect(body.nextStepId).toBeNull();
   });

@@ -15,10 +15,10 @@ export default function SetupRedirectPage() {
       const res = await fetch("/api/setup/state");
       if (res.ok) {
         const data: SetupStateResponse = await res.json();
-        const target = data.nextStepId ?? "welcome_goals";
+        const target = data.nextStepId ?? "permissions";
         router.replace(withShopParams(`/app/setup/${target}`, searchParams));
       } else {
-        router.replace(withShopParams("/app/setup/welcome_goals", searchParams));
+        router.replace(withShopParams("/app/setup/permissions", searchParams));
       }
     }
     redirect();

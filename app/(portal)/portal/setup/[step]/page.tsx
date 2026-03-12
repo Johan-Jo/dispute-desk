@@ -8,40 +8,54 @@ import type { StepId } from "@/lib/setup/types";
 import { PortalSetupWizardShell } from "@/components/setup/PortalSetupWizardShell";
 import { PortalWelcomeGoalsStep } from "@/components/setup/PortalWelcomeGoalsStep";
 
-const STEP_CTA: Record<
-  StepId,
-  { href: string; label: string; ask: string }
+const STEP_CTA: Partial<
+  Record<StepId, { href: string; label: string; ask: string }>
 > = {
-  welcome_goals: { href: "/portal/setup/welcome_goals", label: "Set your goals", ask: "" },
   permissions: {
     href: "/portal/connect-shopify",
     label: "Connect your Shopify store",
     ask: "Connect your Shopify store—you'll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you're done, come back here and click Save & Continue.",
   },
-  sync_disputes: {
+  overview: { href: "/portal/setup/overview", label: "Set your goals", ask: "" },
+  disputes: {
     href: "/portal/disputes",
     label: "Open Disputes",
     ask: "Import your disputes from Shopify so you can see and manage them in one place. After you've synced, come back and click Save & Continue.",
   },
-  business_policies: {
-    href: "/portal/policies",
-    label: "Open Policies",
-    ask: "Define your store policies using our suggested templates or by uploading your own documents. Policies strengthen your dispute evidence. When you're done, come back and click Save & Continue.",
-  },
-  evidence_sources: {
+  packs: {
     href: "/portal/packs",
-    label: "Open Packs & Evidence",
+    label: "Open Evidence Packs",
     ask: "Set up your evidence packs using our recommended templates. Each pack is tailored to a dispute type and collects the right documents automatically. When you've installed what you need, come back and click Save & Continue.",
   },
-  automation_rules: {
+  rules: {
     href: "/portal/rules",
     label: "Open Automation Rules",
     ask: "Configure rules to automate your dispute workflow. Install our suggested starter rules or create custom ones. When you're done, come back and click Save & Continue.",
   },
-  team_notifications: {
+  policies: {
+    href: "/portal/policies",
+    label: "Open Policies",
+    ask: "Define your store policies using our suggested templates or by uploading your own documents. Policies strengthen your dispute evidence. When you're done, come back and click Save & Continue.",
+  },
+  billing: {
+    href: "/portal/billing",
+    label: "Open Billing",
+    ask: "Review your plan and usage. When you're done, come back and click Save & Continue.",
+  },
+  team: {
     href: "/portal/team",
     label: "Open Team",
     ask: "Invite teammates and choose how you get notified about disputes. When you're done, come back and click Save & Continue.",
+  },
+  settings: {
+    href: "/portal/settings",
+    label: "Open Settings",
+    ask: "Configure auto-build, auto-save, and review requirements. When you're done, come back and click Save & Continue.",
+  },
+  help: {
+    href: "/portal/help",
+    label: "Open Help",
+    ask: "Browse the Help Center and guides. When you're done, come back and click Save & Continue.",
   },
 };
 
@@ -92,8 +106,8 @@ function StepPageInner() {
   };
 
   const stepContent =
-    stepId === "welcome_goals" ? (
-      <PortalWelcomeGoalsStep onSaveRef={saveRef} />
+    stepId === "overview" ? (
+      <PortalWelcomeGoalsStep stepId={stepId} onSaveRef={saveRef} />
     ) : (
       <PortalStepStub stepId={stepId} />
     );

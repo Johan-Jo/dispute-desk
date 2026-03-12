@@ -262,8 +262,8 @@ Portal always deep-links to Shopify Admin for final submission.
 
 ## Setup Wizard & Onboarding
 
-DisputeDesk includes a 7-step guided setup wizard (`/app/setup/[step]`) to
-help merchants configure the app after installation. The wizard is embedded
+DisputeDesk includes a 10-step guided setup wizard (`/app/setup/[step]`) that
+mirrors the app site structure (overview → disputes → packs → rules → policies → billing → team → settings → help). The wizard is embedded
 within Shopify Admin using Polaris and preserves `shop`/`host` query params
 for App Bridge compatibility.
 

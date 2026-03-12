@@ -83,7 +83,7 @@ function formatDate(iso: string | null, locale: string): string {
 }
 
 export default function DisputesPage() {
-  useCompleteSetupStep("sync_disputes");
+  useCompleteSetupStep("disputes");
   const t = useTranslations("disputes");
   const tc = useTranslations("common");
   const tt = useTranslations("table");

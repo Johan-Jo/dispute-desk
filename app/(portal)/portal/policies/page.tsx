@@ -66,7 +66,7 @@ function bodyToPlainText(body: string): string {
 }
 
 export default function PoliciesPage() {
-  useCompleteSetupStep("business_policies");
+  useCompleteSetupStep("policies");
   const searchParams = useSearchParams();
   const t = useTranslations("policies");
   const tc = useTranslations("common");

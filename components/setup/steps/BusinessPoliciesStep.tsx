@@ -9,11 +9,14 @@ import {
   FormLayout,
 } from "@shopify/polaris";
 
+import type { StepId } from "@/lib/setup/types";
+
 interface BusinessPoliciesStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function BusinessPoliciesStep({ onSaveRef }: BusinessPoliciesStepProps) {
+export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const [returnWindow, setReturnWindow] = useState("30");
   const [shippingSLA, setShippingSLA] = useState("48");
   const [cancellation, setCancellation] = useState("");
@@ -27,7 +30,7 @@ export function BusinessPoliciesStep({ onSaveRef }: BusinessPoliciesStepProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "business_policies",
+          stepId,
           payload: {
             returnWindow,
             shippingSLA,
@@ -40,7 +43,7 @@ export function BusinessPoliciesStep({ onSaveRef }: BusinessPoliciesStepProps) {
       });
       return res.ok;
     };
-  }, [onSaveRef, returnWindow, shippingSLA, cancellation, returnsUrl, shippingUrl, termsUrl]);
+  }, [stepId, onSaveRef, returnWindow, shippingSLA, cancellation, returnsUrl, shippingUrl, termsUrl]);
 
   return (
     <BlockStack gap="400">

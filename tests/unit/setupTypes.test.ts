@@ -23,40 +23,46 @@ describe("setup types", () => {
 
   it("StepId values match expected set", () => {
     const ids: StepId[] = [
-      "welcome_goals",
       "permissions",
-      "sync_disputes",
-      "business_policies",
-      "evidence_sources",
-      "automation_rules",
-      "team_notifications",
+      "overview",
+      "disputes",
+      "packs",
+      "rules",
+      "policies",
+      "billing",
+      "team",
+      "settings",
+      "help",
     ];
-    expect(ids).toHaveLength(7);
+    expect(ids).toHaveLength(10);
   });
 
   it("StepsMap can hold partial step states", () => {
     const map: StepsMap = {
-      welcome_goals: { status: "done", completed_at: "2026-01-01" },
+      overview: { status: "done", completed_at: "2026-01-01" },
       permissions: { status: "skipped", skipped_reason: "do_later" },
     };
-    expect(map.welcome_goals?.status).toBe("done");
+    expect(map.overview?.status).toBe("done");
     expect(map.permissions?.skipped_reason).toBe("do_later");
-    expect(map.sync_disputes).toBeUndefined();
+    expect(map.disputes).toBeUndefined();
   });
 
   it("SetupStateResponse shape is valid", () => {
     const response: SetupStateResponse = {
       steps: {
-        welcome_goals: { status: "done" },
+        overview: { status: "done" },
         permissions: { status: "done" },
-        sync_disputes: { status: "todo" },
-        business_policies: { status: "todo" },
-        evidence_sources: { status: "todo" },
-        automation_rules: { status: "todo" },
-        team_notifications: { status: "todo" },
+        disputes: { status: "todo" },
+        packs: { status: "todo" },
+        rules: { status: "todo" },
+        policies: { status: "todo" },
+        billing: { status: "todo" },
+        team: { status: "todo" },
+        settings: { status: "todo" },
+        help: { status: "todo" },
       },
-      progress: { doneCount: 2, total: 7 },
-      nextStepId: "sync_disputes",
+      progress: { doneCount: 2, total: 10 },
+      nextStepId: "disputes",
       allDone: false,
     };
     expect(response.progress.doneCount).toBe(2);

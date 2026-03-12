@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 7 steps as todo, nextStepId = permissions", async () => {
+    it("fresh setup has all 10 steps as todo, nextStepId = permissions", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -56,7 +56,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.progress.doneCount).toBe(0);
-      expect(body.progress.total).toBe(7);
+      expect(body.progress.total).toBe(10);
       expect(body.nextStepId).toBe("permissions");
       expect(body.allDone).toBe(false);
 
@@ -82,8 +82,8 @@ describe("Setup flow: end-to-end progression", () => {
 
       // This SHOULD be "done" after OAuth — currently fails
       expect(body.steps.permissions.status).toBe("todo");
-      // nextStepId should ideally skip permissions and go to welcome_goals
-      // (since welcome_goals has no prerequisites, it stays first)
+      // nextStepId should ideally skip permissions and go to overview
+      // (since overview has no prerequisites after permissions, it stays next)
     });
   });
 
@@ -92,13 +92,13 @@ describe("Setup flow: end-to-end progression", () => {
       expect(getNextActionableStep({})).toBe("permissions");
       expect(
         getNextActionableStep({ permissions: { status: "done" } })
-      ).toBe("welcome_goals");
+      ).toBe("overview");
       expect(
         getNextActionableStep({
           permissions: { status: "done" },
-          welcome_goals: { status: "done" },
+          overview: { status: "done" },
         })
-      ).toBe("sync_disputes");
+      ).toBe("disputes");
     });
 
     it("getNextActionableStep skips skipped steps", () => {
@@ -106,7 +106,7 @@ describe("Setup flow: end-to-end progression", () => {
         getNextActionableStep({
           permissions: { status: "skipped" },
         })
-      ).toBe("welcome_goals");
+      ).toBe("overview");
     });
 
     it("getNextActionableStep returns null when all done", () => {
@@ -115,38 +115,38 @@ describe("Setup flow: end-to-end progression", () => {
       expect(getNextActionableStep(allDone)).toBeNull();
     });
 
-    it("prerequisite check: sync_disputes requires permissions done", () => {
-      expect(isPrerequisiteMet("sync_disputes", {})).toBe(false);
+    it("prerequisite check: disputes requires permissions done", () => {
+      expect(isPrerequisiteMet("disputes", {})).toBe(false);
       expect(
-        isPrerequisiteMet("sync_disputes", {
+        isPrerequisiteMet("disputes", {
           permissions: { status: "done" },
         })
       ).toBe(true);
       expect(
-        isPrerequisiteMet("sync_disputes", {
+        isPrerequisiteMet("disputes", {
           permissions: { status: "todo" },
         })
       ).toBe(false);
     });
 
-    it("prerequisite chain: business_policies needs sync_disputes done", () => {
-      expect(isPrerequisiteMet("business_policies", {})).toBe(false);
+    it("prerequisite chain: policies needs disputes done", () => {
+      expect(isPrerequisiteMet("policies", {})).toBe(false);
       expect(
-        isPrerequisiteMet("business_policies", {
-          sync_disputes: { status: "done" },
+        isPrerequisiteMet("policies", {
+          disputes: { status: "done" },
         })
       ).toBe(true);
     });
 
     it("steps without prerequisites are always met", () => {
       expect(isPrerequisiteMet("permissions", {})).toBe(true);
-      expect(isPrerequisiteMet("automation_rules", {})).toBe(true);
-      expect(isPrerequisiteMet("team_notifications", {})).toBe(true);
+      expect(isPrerequisiteMet("rules", {})).toBe(true);
+      expect(isPrerequisiteMet("team", {})).toBe(true);
     });
   });
 
   describe("Step completion via API", () => {
-    it("completing permissions advances nextStepId to welcome_goals", async () => {
+    it("completing permissions advances nextStepId to overview", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
@@ -171,10 +171,10 @@ describe("Setup flow: end-to-end progression", () => {
       const state: SetupStateResponse = await stateRes.json();
 
       expect(state.progress.doneCount).toBe(1);
-      expect(state.nextStepId).toBe("welcome_goals");
+      expect(state.nextStepId).toBe("overview");
     });
 
-    it("completing all 7 steps results in allDone", async () => {
+    it("completing all 10 steps results in allDone", async () => {
       const allDoneSteps: Record<string, StepState> = {};
       for (const id of STEP_IDS) {
         allDoneSteps[id] = { status: "done", completed_at: new Date().toISOString() };
@@ -191,7 +191,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.allDone).toBe(true);
-      expect(body.progress.doneCount).toBe(7);
+      expect(body.progress.doneCount).toBe(10);
       expect(body.nextStepId).toBeNull();
     });
   });
@@ -224,13 +224,16 @@ describe("Setup flow: end-to-end progression", () => {
 
   describe("STEP_ROUTES for portal (navigation targets)", () => {
     const STEP_ROUTES: Record<StepId, string> = {
-      welcome_goals: "/portal/setup/welcome_goals",
       permissions: "/portal/setup/permissions",
-      sync_disputes: "/portal/setup/sync_disputes",
-      business_policies: "/portal/setup/business_policies",
-      evidence_sources: "/portal/setup/evidence_sources",
-      automation_rules: "/portal/setup/automation_rules",
-      team_notifications: "/portal/setup/team_notifications",
+      overview: "/portal/setup/overview",
+      disputes: "/portal/setup/disputes",
+      packs: "/portal/setup/packs",
+      rules: "/portal/setup/rules",
+      policies: "/portal/setup/policies",
+      billing: "/portal/setup/billing",
+      team: "/portal/setup/team",
+      settings: "/portal/setup/settings",
+      help: "/portal/setup/help",
     };
 
     it("every step has a portal route", () => {

@@ -10,9 +10,15 @@ import { WelcomeGoalsStep } from "@/components/setup/steps/WelcomeGoalsStep";
 import { PermissionsStep } from "@/components/setup/steps/PermissionsStep";
 import { SyncDisputesStep } from "@/components/setup/steps/SyncDisputesStep";
 import { BusinessPoliciesStep } from "@/components/setup/steps/BusinessPoliciesStep";
-import { EvidenceSourcesStep } from "@/components/setup/steps/EvidenceSourcesStep";
 import { AutomationRulesStep } from "@/components/setup/steps/AutomationRulesStep";
 import { TeamNotificationsStep } from "@/components/setup/steps/TeamNotificationsStep";
+import { PacksStep } from "@/components/setup/steps/PacksStep";
+import { BillingStep } from "@/components/setup/steps/BillingStep";
+import { SettingsStep } from "@/components/setup/steps/SettingsStep";
+import { HelpStep } from "@/components/setup/steps/HelpStep";
+
+const stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
+type StepComponentType = React.ComponentType<typeof stepComponentProps>;
 
 function StepPageInner() {
   const params = useParams<{ step: string }>();
@@ -34,14 +40,17 @@ function StepPageInner() {
     );
   }
 
-  const stepComponents: Record<StepId, React.ComponentType<{ onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null> }>> = {
-    welcome_goals: WelcomeGoalsStep,
+  const stepComponents: Record<StepId, StepComponentType> = {
     permissions: PermissionsStep,
-    sync_disputes: SyncDisputesStep,
-    business_policies: BusinessPoliciesStep,
-    evidence_sources: EvidenceSourcesStep,
-    automation_rules: AutomationRulesStep,
-    team_notifications: TeamNotificationsStep,
+    overview: WelcomeGoalsStep,
+    disputes: SyncDisputesStep,
+    packs: PacksStep,
+    rules: AutomationRulesStep,
+    policies: BusinessPoliciesStep,
+    billing: BillingStep,
+    team: TeamNotificationsStep,
+    settings: SettingsStep,
+    help: HelpStep,
   };
 
   const StepComponent = stepComponents[stepId];
@@ -61,7 +70,7 @@ function StepPageInner() {
 
   return (
     <SetupWizardShell stepId={stepId} onSave={handleSave}>
-      <StepComponent onSaveRef={saveRef} />
+      <StepComponent stepId={stepId} onSaveRef={saveRef} />
     </SetupWizardShell>
   );
 }

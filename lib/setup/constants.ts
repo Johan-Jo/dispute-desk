@@ -10,6 +10,7 @@ export interface StepDefinition {
   unlocks: string[];
 }
 
+/** Wizard steps ordered to mirror site structure (dashboard → disputes → packs → rules → policies → billing → team → settings → help). */
 export const SETUP_STEPS: StepDefinition[] = [
   {
     id: "permissions",
@@ -26,9 +27,9 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "welcome_goals",
+    id: "overview",
     index: 2,
-    title: "Welcome & Goals",
+    title: "Overview & Goals",
     dashboardLabel: "Set your goals",
     timeEstimate: "1 min",
     prerequisites: ["permissions"],
@@ -39,9 +40,9 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "sync_disputes",
+    id: "disputes",
     index: 3,
-    title: "Sync Disputes",
+    title: "Disputes",
     dashboardLabel: "Sync disputes",
     timeEstimate: "2 min",
     prerequisites: ["permissions"],
@@ -53,36 +54,21 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "business_policies",
+    id: "packs",
     index: 4,
-    title: "Business Policies",
-    dashboardLabel: "Add business policies",
+    title: "Evidence Packs",
+    dashboardLabel: "Evidence packs",
     timeEstimate: "2 min",
-    prerequisites: ["sync_disputes"],
+    prerequisites: ["disputes"],
     unlocks: [
-      "Auto-fill policy information in evidence",
-      "Consistent, professional documentation",
-      "Strengthen evidence with clear terms",
-      "Easy updates when policies change",
-    ],
-  },
-  {
-    id: "evidence_sources",
-    index: 5,
-    title: "Evidence Sources",
-    dashboardLabel: "Connect evidence sources",
-    timeEstimate: "2 min",
-    prerequisites: ["business_policies"],
-    unlocks: [
-      "Automatic tracking and delivery proof",
-      "Customer communication history",
+      "Auto-build evidence for each dispute",
+      "Templates for common dispute types",
       "Complete evidence packs automatically",
-      "Save hours of manual work per dispute",
     ],
   },
   {
-    id: "automation_rules",
-    index: 6,
+    id: "rules",
+    index: 5,
     title: "Automation Rules",
     dashboardLabel: "Configure automation",
     timeEstimate: "2 min",
@@ -95,8 +81,35 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "team_notifications",
+    id: "policies",
+    index: 6,
+    title: "Business Policies",
+    dashboardLabel: "Add business policies",
+    timeEstimate: "2 min",
+    prerequisites: ["disputes"],
+    unlocks: [
+      "Auto-fill policy information in evidence",
+      "Consistent, professional documentation",
+      "Strengthen evidence with clear terms",
+      "Easy updates when policies change",
+    ],
+  },
+  {
+    id: "billing",
     index: 7,
+    title: "Billing & Plan",
+    dashboardLabel: "Billing & plan",
+    timeEstimate: "1 min",
+    prerequisites: [],
+    unlocks: [
+      "Choose the right plan for your volume",
+      "Track pack usage and limits",
+      "Upgrade or add top-ups as needed",
+    ],
+  },
+  {
+    id: "team",
+    index: 8,
     title: "Team & Notifications",
     dashboardLabel: "Invite team members",
     timeEstimate: "1 min",
@@ -108,6 +121,32 @@ export const SETUP_STEPS: StepDefinition[] = [
       "Customizable notification preferences",
     ],
   },
+  {
+    id: "settings",
+    index: 9,
+    title: "Settings",
+    dashboardLabel: "Settings",
+    timeEstimate: "1 min",
+    prerequisites: [],
+    unlocks: [
+      "Configure auto-build and auto-save",
+      "Set completeness thresholds",
+      "Manage review requirements",
+    ],
+  },
+  {
+    id: "help",
+    index: 10,
+    title: "Help & Resources",
+    dashboardLabel: "Help & resources",
+    timeEstimate: "1 min",
+    prerequisites: [],
+    unlocks: [
+      "Help Center and guides",
+      "Contact support",
+      "API and integration docs",
+    ],
+  },
 ];
 
 export const STEP_IDS: StepId[] = SETUP_STEPS.map((s) => s.id);
@@ -117,6 +156,16 @@ export const STEP_BY_ID = Object.fromEntries(
 ) as Record<StepId, StepDefinition>;
 
 export const TOTAL_STEPS = SETUP_STEPS.length;
+
+/** Map legacy step ids to new step ids for migration of shop_setup.steps */
+export const LEGACY_STEP_ID_MAP: Record<string, StepId> = {
+  welcome_goals: "overview",
+  sync_disputes: "disputes",
+  business_policies: "policies",
+  evidence_sources: "packs",
+  automation_rules: "rules",
+  team_notifications: "team",
+};
 
 export function getNextActionableStep(
   stepsMap: Partial<Record<StepId, { status: string }>>

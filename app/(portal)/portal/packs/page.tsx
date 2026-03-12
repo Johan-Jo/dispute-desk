@@ -66,7 +66,7 @@ function statusBadgeVariant(
 }
 
 export default function PacksLibraryPage() {
-  useCompleteSetupStep("evidence_sources");
+  useCompleteSetupStep("packs");
   const t = useTranslations("packTemplates");
   const tTable = useTranslations("table");
   const locale = useLocale();

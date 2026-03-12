@@ -21,7 +21,7 @@ const roleBadgeVariant: Record<string, "primary" | "info" | "default"> = {
 };
 
 export default function TeamPage() {
-  useCompleteSetupStep("team_notifications");
+  useCompleteSetupStep("team");
   const t = useTranslations("team");
   const tc = useTranslations("common");
   const tStatus = useTranslations("status");

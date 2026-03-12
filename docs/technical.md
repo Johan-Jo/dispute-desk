@@ -788,19 +788,24 @@ installation. Progress is tracked per-shop in the `shop_setup` table and
 surfaced on the dashboard via a Setup Checklist card with a ring progress
 indicator.
 
-### Wizard Steps
+### Wizard Steps (site-structure aligned)
+
+Wizard steps mirror the app section order: overview → disputes → packs → rules → policies → billing → team → settings → help.
 
 | # | ID | Title | Prerequisites |
 |---|-----|-------|---------------|
-| 1 | `welcome_goals` | Welcome & Goals | — |
-| 2 | `permissions` | Permissions & Data Access | — |
-| 3 | `sync_disputes` | Sync Disputes & Timeline | `permissions` |
-| 4 | `business_policies` | Business Policies | `sync_disputes` |
-| 5 | `evidence_sources` | Evidence Sources (V1 full) | `business_policies` |
-| 6 | `automation_rules` | Automation Rules | — |
-| 7 | `team_notifications` | Team & Notifications | — |
+| 1 | `permissions` | Connect your store | — |
+| 2 | `overview` | Overview & Goals | `permissions` |
+| 3 | `disputes` | Disputes | `permissions` |
+| 4 | `packs` | Evidence Packs | `disputes` |
+| 5 | `rules` | Automation Rules | — |
+| 6 | `policies` | Business Policies | `disputes` |
+| 7 | `billing` | Billing & Plan | — |
+| 8 | `team` | Team & Notifications | — |
+| 9 | `settings` | Settings | — |
+| 10 | `help` | Help & Resources | — |
 
-Steps 1-4, 6-7 have skeleton UI. Step 5 is fully implemented (V1).
+Legacy step ids (`welcome_goals`, `sync_disputes`, etc.) are migrated to the new ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
 
 ### Step 5: Evidence Sources (V1)
 
@@ -819,7 +824,7 @@ Per-shop state persisted in `shop_setup` table:
 - Step statuses: `todo | in_progress | done | skipped`.
 - Each step has an optional `payload` (JSON) and `skipped_reason`.
 - "Save & Continue" marks done. "Skip for now" marks skipped with reason. "Undo skip" resets to todo.
-- Light gating: `permissions` → `sync_disputes` → `business_policies` → `evidence_sources`.
+- Light gating: `permissions` → `overview` → `disputes` → `packs`; `disputes` → `policies`.
 
 ### Embedded Navigation
 

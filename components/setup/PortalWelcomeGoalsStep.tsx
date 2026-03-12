@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CheckCircle2 } from "lucide-react";
+import type { StepId } from "@/lib/setup/types";
 
 interface PortalWelcomeGoalsStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function PortalWelcomeGoalsStep({ onSaveRef }: PortalWelcomeGoalsStepProps) {
+export function PortalWelcomeGoalsStep({ stepId, onSaveRef }: PortalWelcomeGoalsStepProps) {
   const t = useTranslations("setup");
   const [goal, setGoal] = useState<string>("");
 
@@ -19,13 +21,13 @@ export function PortalWelcomeGoalsStep({ onSaveRef }: PortalWelcomeGoalsStepProp
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
-          stepId: "welcome_goals",
+          stepId,
           payload: goal ? { primaryGoal: goal } : {},
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, goal]);
+  }, [stepId, onSaveRef, goal]);
 
   return (
     <div>

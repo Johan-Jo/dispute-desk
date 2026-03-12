@@ -5,8 +5,22 @@ import {
   STEP_IDS,
   TOTAL_STEPS,
   getNextActionableStep,
+  LEGACY_STEP_ID_MAP,
 } from "@/lib/setup/constants";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
+
+/** Migrate legacy step keys to new step ids when reading shop_setup.steps */
+function migrateStepsMap(raw: Record<string, unknown> | null): Partial<Record<StepId, StepState>> {
+  const steps = (raw ?? {}) as Record<string, StepState>;
+  const out: Partial<Record<StepId, StepState>> = {};
+  for (const [key, state] of Object.entries(steps)) {
+    const newId = LEGACY_STEP_ID_MAP[key] ?? (STEP_IDS.includes(key as StepId) ? (key as StepId) : null);
+    if (newId && state && typeof state === "object" && "status" in state) {
+      out[newId] = state;
+    }
+  }
+  return out;
+}
 
 export async function GET(req: NextRequest) {
   const url =
@@ -39,7 +53,7 @@ export async function GET(req: NextRequest) {
   }
 
   const defaultState: StepState = { status: "todo" };
-  const stepsMap = (row?.steps ?? {}) as Partial<Record<StepId, StepState>>;
+  const stepsMap = migrateStepsMap(row?.steps as Record<string, unknown> | null);
 
   const fullSteps = {} as Record<StepId, StepState>;
   let doneCount = 0;

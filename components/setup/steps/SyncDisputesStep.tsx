@@ -11,11 +11,14 @@ import {
   Spinner,
 } from "@shopify/polaris";
 
+import type { StepId } from "@/lib/setup/types";
+
 interface SyncDisputesStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function SyncDisputesStep({ onSaveRef }: SyncDisputesStepProps) {
+export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
   const [dateRange, setDateRange] = useState("90");
   const [autoSync, setAutoSync] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -27,13 +30,13 @@ export function SyncDisputesStep({ onSaveRef }: SyncDisputesStepProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "sync_disputes",
+          stepId,
           payload: { dateRange, autoSync },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, dateRange, autoSync]);
+  }, [stepId, onSaveRef, dateRange, autoSync]);
 
   const handleSync = () => {
     setSyncing(true);

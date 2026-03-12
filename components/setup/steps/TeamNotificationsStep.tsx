@@ -10,11 +10,14 @@ import {
   InlineStack,
 } from "@shopify/polaris";
 
+import type { StepId } from "@/lib/setup/types";
+
 interface TeamNotificationsStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function TeamNotificationsStep({ onSaveRef }: TeamNotificationsStepProps) {
+export function TeamNotificationsStep({ stepId, onSaveRef }: TeamNotificationsStepProps) {
   const [teamEmail, setTeamEmail] = useState("");
   const [newDispute, setNewDispute] = useState(true);
   const [beforeDue, setBeforeDue] = useState(true);
@@ -26,7 +29,7 @@ export function TeamNotificationsStep({ onSaveRef }: TeamNotificationsStepProps)
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "team_notifications",
+          stepId,
           payload: {
             teamEmail,
             notifications: { newDispute, beforeDue, evidenceReady },
@@ -35,7 +38,7 @@ export function TeamNotificationsStep({ onSaveRef }: TeamNotificationsStepProps)
       });
       return res.ok;
     };
-  }, [onSaveRef, teamEmail, newDispute, beforeDue, evidenceReady]);
+  }, [stepId, onSaveRef, teamEmail, newDispute, beforeDue, evidenceReady]);
 
   return (
     <BlockStack gap="400">

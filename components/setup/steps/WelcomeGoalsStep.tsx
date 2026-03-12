@@ -11,11 +11,14 @@ import {
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 
+import type { StepId } from "@/lib/setup/types";
+
 interface WelcomeGoalsStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function WelcomeGoalsStep({ onSaveRef }: WelcomeGoalsStepProps) {
+export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
   const [goal, setGoal] = useState("");
 
   useEffect(() => {
@@ -24,13 +27,13 @@ export function WelcomeGoalsStep({ onSaveRef }: WelcomeGoalsStepProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "welcome_goals",
+          stepId,
           payload: { primaryGoal: goal },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, goal]);
+  }, [stepId, onSaveRef, goal]);
 
   return (
     <BlockStack gap="400">

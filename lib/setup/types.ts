@@ -10,13 +10,16 @@ export interface StepState {
 }
 
 export type StepId =
-  | "welcome_goals"
   | "permissions"
-  | "sync_disputes"
-  | "business_policies"
-  | "evidence_sources"
-  | "automation_rules"
-  | "team_notifications";
+  | "overview"
+  | "disputes"
+  | "packs"
+  | "rules"
+  | "policies"
+  | "billing"
+  | "team"
+  | "settings"
+  | "help";
 
 export type StepsMap = Partial<Record<StepId, StepState>>;
 

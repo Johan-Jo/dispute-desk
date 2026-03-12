@@ -10,20 +10,23 @@ import {
 import type { StepId } from "@/lib/setup/types";
 
 describe("SETUP_STEPS constants", () => {
-  it("has exactly 7 steps", () => {
-    expect(SETUP_STEPS).toHaveLength(7);
-    expect(TOTAL_STEPS).toBe(7);
+  it("has exactly 10 steps (site-structure aligned)", () => {
+    expect(SETUP_STEPS).toHaveLength(10);
+    expect(TOTAL_STEPS).toBe(10);
   });
 
   it("STEP_IDS matches SETUP_STEPS order", () => {
     expect(STEP_IDS).toEqual([
       "permissions",
-      "welcome_goals",
-      "sync_disputes",
-      "business_policies",
-      "evidence_sources",
-      "automation_rules",
-      "team_notifications",
+      "overview",
+      "disputes",
+      "packs",
+      "rules",
+      "policies",
+      "billing",
+      "team",
+      "settings",
+      "help",
     ]);
   });
 
@@ -33,7 +36,7 @@ describe("SETUP_STEPS constants", () => {
     }
   });
 
-  it("each step has index 1-7 in order", () => {
+  it("each step has index 1-10 in order", () => {
     SETUP_STEPS.forEach((step, i) => {
       expect(step.index).toBe(i + 1);
     });
@@ -67,16 +70,16 @@ describe("getNextActionableStep", () => {
   it("skips done steps", () => {
     const result = getNextActionableStep({
       permissions: { status: "done" },
-      welcome_goals: { status: "done" },
+      overview: { status: "done" },
     });
-    expect(result).toBe("sync_disputes");
+    expect(result).toBe("disputes");
   });
 
   it("skips skipped steps", () => {
     const result = getNextActionableStep({
       permissions: { status: "skipped" },
     });
-    expect(result).toBe("welcome_goals");
+    expect(result).toBe("overview");
   });
 
   it("returns in_progress step", () => {
@@ -108,65 +111,65 @@ describe("getNextActionableStep", () => {
 describe("isPrerequisiteMet", () => {
   it("returns true for steps with no prerequisites when map is empty", () => {
     expect(isPrerequisiteMet("permissions", {})).toBe(true);
-    expect(isPrerequisiteMet("automation_rules", {})).toBe(true);
-    expect(isPrerequisiteMet("team_notifications", {})).toBe(true);
+    expect(isPrerequisiteMet("rules", {})).toBe(true);
+    expect(isPrerequisiteMet("team", {})).toBe(true);
   });
 
   it("returns false for steps with unmet prerequisites when map is empty", () => {
-    expect(isPrerequisiteMet("welcome_goals", {})).toBe(false);
+    expect(isPrerequisiteMet("overview", {})).toBe(false);
   });
 
-  it("returns false for sync_disputes when permissions is not done", () => {
-    expect(isPrerequisiteMet("sync_disputes", {})).toBe(false);
+  it("returns false for disputes when permissions is not done", () => {
+    expect(isPrerequisiteMet("disputes", {})).toBe(false);
     expect(
-      isPrerequisiteMet("sync_disputes", {
+      isPrerequisiteMet("disputes", {
         permissions: { status: "in_progress" },
       })
     ).toBe(false);
     expect(
-      isPrerequisiteMet("sync_disputes", {
+      isPrerequisiteMet("disputes", {
         permissions: { status: "skipped" },
       })
     ).toBe(false);
   });
 
-  it("returns true for sync_disputes when permissions is done", () => {
+  it("returns true for disputes when permissions is done", () => {
     expect(
-      isPrerequisiteMet("sync_disputes", {
+      isPrerequisiteMet("disputes", {
         permissions: { status: "done" },
       })
     ).toBe(true);
   });
 
-  it("returns false for business_policies when sync_disputes is not done", () => {
+  it("returns false for policies when disputes is not done", () => {
     expect(
-      isPrerequisiteMet("business_policies", {
+      isPrerequisiteMet("policies", {
         permissions: { status: "done" },
       })
     ).toBe(false);
   });
 
-  it("returns true for business_policies when sync_disputes is done", () => {
+  it("returns true for policies when disputes is done", () => {
     expect(
-      isPrerequisiteMet("business_policies", {
-        sync_disputes: { status: "done" },
+      isPrerequisiteMet("policies", {
+        disputes: { status: "done" },
       })
     ).toBe(true);
   });
 
-  it("returns false for evidence_sources when business_policies is not done", () => {
+  it("returns false for packs when disputes is not done", () => {
     expect(
-      isPrerequisiteMet("evidence_sources", {
+      isPrerequisiteMet("packs", {
         permissions: { status: "done" },
-        sync_disputes: { status: "done" },
+        overview: { status: "done" },
       })
     ).toBe(false);
   });
 
-  it("returns true for evidence_sources when business_policies is done", () => {
+  it("returns true for packs when disputes is done", () => {
     expect(
-      isPrerequisiteMet("evidence_sources", {
-        business_policies: { status: "done" },
+      isPrerequisiteMet("packs", {
+        disputes: { status: "done" },
       })
     ).toBe(true);
   });

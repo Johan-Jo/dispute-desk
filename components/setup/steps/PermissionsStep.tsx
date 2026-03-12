@@ -12,7 +12,10 @@ import {
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 
+import type { StepId } from "@/lib/setup/types";
+
 interface PermissionsStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
@@ -23,7 +26,7 @@ const PERMISSIONS = [
   { key: "files", label: "Files", desc: "Upload evidence documents" },
 ];
 
-export function PermissionsStep({ onSaveRef }: PermissionsStepProps) {
+export function PermissionsStep({ stepId, onSaveRef }: PermissionsStepProps) {
   const [verified, setVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
@@ -33,13 +36,13 @@ export function PermissionsStep({ onSaveRef }: PermissionsStepProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "permissions",
+          stepId,
           payload: { verified },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, verified]);
+  }, [stepId, onSaveRef, verified]);
 
   const handleVerify = () => {
     setVerifying(true);

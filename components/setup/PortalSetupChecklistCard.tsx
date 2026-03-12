@@ -79,13 +79,16 @@ function ConnectStoreChecklist() {
 }
 
 const STEP_ROUTES: Record<StepId, string> = {
-  welcome_goals: "/portal/setup/welcome_goals",
   permissions: "/portal/setup/permissions",
-  sync_disputes: "/portal/setup/sync_disputes",
-  business_policies: "/portal/setup/business_policies",
-  evidence_sources: "/portal/setup/evidence_sources",
-  automation_rules: "/portal/setup/automation_rules",
-  team_notifications: "/portal/setup/team_notifications",
+  overview: "/portal/setup/overview",
+  disputes: "/portal/setup/disputes",
+  packs: "/portal/setup/packs",
+  rules: "/portal/setup/rules",
+  policies: "/portal/setup/policies",
+  billing: "/portal/setup/billing",
+  team: "/portal/setup/team",
+  settings: "/portal/setup/settings",
+  help: "/portal/setup/help",
 };
 
 function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {

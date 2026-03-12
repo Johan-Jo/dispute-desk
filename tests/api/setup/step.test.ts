@@ -34,7 +34,7 @@ describe("POST /api/setup/step", () => {
   });
 
   it("returns 400 when shop_id is missing", async () => {
-    const res = await POST(makeRequest(null, { stepId: "welcome_goals" }));
+    const res = await POST(makeRequest(null, { stepId: "overview" }));
     expect(res.status).toBe(400);
   });
 
@@ -51,20 +51,20 @@ describe("POST /api/setup/step", () => {
     mockGetServiceClient.mockReturnValue(client as any);
 
     const res = await POST(makeRequest("shop-1", {
-      stepId: "welcome_goals",
+      stepId: "overview",
       payload: { primaryGoal: "win" },
     }));
 
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.stepId).toBe("welcome_goals");
+    expect(body.stepId).toBe("overview");
     expect(body.status).toBe("done");
 
     expect(client._builders.shop_setup.insert).toHaveBeenCalled();
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
       "step_completed",
-      expect.objectContaining({ stepId: "welcome_goals" })
+      expect.objectContaining({ stepId: "overview" })
     );
   });
 
@@ -73,7 +73,7 @@ describe("POST /api/setup/step", () => {
     setTableResult(client, "shop_setup", {
       shop_id: "shop-1",
       steps: {
-        welcome_goals: { status: "done" },
+        overview: { status: "done" },
       },
     });
     mockGetServiceClient.mockReturnValue(client as any);

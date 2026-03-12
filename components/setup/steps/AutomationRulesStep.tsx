@@ -8,11 +8,14 @@ import {
   Banner,
 } from "@shopify/polaris";
 
+import type { StepId } from "@/lib/setup/types";
+
 interface AutomationRulesStepProps {
+  stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-export function AutomationRulesStep({ onSaveRef }: AutomationRulesStepProps) {
+export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepProps) {
   const [preset, setPreset] = useState("");
 
   useEffect(() => {
@@ -21,13 +24,13 @@ export function AutomationRulesStep({ onSaveRef }: AutomationRulesStepProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "automation_rules",
+          stepId,
           payload: { automationPreset: preset },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, preset]);
+  }, [stepId, onSaveRef, preset]);
 
   return (
     <BlockStack gap="400">

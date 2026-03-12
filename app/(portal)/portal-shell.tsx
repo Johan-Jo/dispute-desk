@@ -13,6 +13,7 @@ import { getPortalGuideSteps, getPortalGuideTranslationKeyPrefix, HELP_TRANSLATI
 import { onboardingSteps } from "@/lib/onboarding-config";
 import { DemoModeProvider } from "@/lib/demo-mode";
 import { ActiveShopProvider, type PolicyTemplateLang } from "@/lib/portal/activeShopContext";
+import { PORTAL_NAV_ITEMS } from "@/lib/app-sections";
 
 interface Shop {
   shop_id: string;
@@ -30,18 +31,6 @@ interface PortalShellProps {
   activeShopPolicyTemplateLang?: PolicyTemplateLang | null;
   children: React.ReactNode;
 }
-
-const NAV_KEYS = [
-  { href: "/portal/dashboard", key: "overview" },
-  { href: "/portal/disputes", key: "disputes" },
-  { href: "/portal/packs", key: "packs" },
-  { href: "/portal/rules", key: "rules" },
-  { href: "/portal/policies", key: "policies" },
-  { href: "/portal/billing", key: "billing" },
-  { href: "/portal/team", key: "team" },
-  { href: "/portal/settings", key: "settings" },
-  { href: "/portal/help", key: "help" },
-] as const;
 
 export function PortalShell({
   userEmail,
@@ -171,7 +160,7 @@ export function PortalShell({
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          {NAV_KEYS.map((item) => {
+          {PORTAL_NAV_ITEMS.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/portal/dashboard" &&

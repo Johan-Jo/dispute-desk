@@ -74,7 +74,7 @@ function matchSummary(
 }
 
 export default function RulesSettingsPage() {
-  useCompleteSetupStep("automation_rules");
+  useCompleteSetupStep("rules");
   const t = useTranslations("rules");
   const tc = useTranslations("common");
   const tr = useTranslations("reasons");
