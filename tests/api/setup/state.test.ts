@@ -41,7 +41,7 @@ describe("GET /api/setup/state", () => {
 
     const body = await res.json();
     expect(body.progress.doneCount).toBe(0);
-    expect(body.progress.total).toBe(10);
+    expect(body.progress.total).toBe(7);
     expect(body.allDone).toBe(false);
     expect(body.nextStepId).toBe("permissions");
 
@@ -67,7 +67,7 @@ describe("GET /api/setup/state", () => {
     const body = await res.json();
 
     expect(body.progress.doneCount).toBe(2);
-    expect(body.progress.total).toBe(10);
+    expect(body.progress.total).toBe(7);
     expect(body.nextStepId).toBe("disputes");
     expect(body.allDone).toBe(false);
   });
@@ -92,11 +92,11 @@ describe("GET /api/setup/state", () => {
     expect(body.nextStepId).toBe("disputes");
   });
 
-  it("returns allDone when all 10 steps are done", async () => {
+  it("returns allDone when all 7 onboarding steps are done", async () => {
     const allDoneSteps: Record<string, { status: string }> = {};
     const ids = [
       "permissions", "overview", "disputes", "packs", "rules",
-      "policies", "billing", "team", "settings", "help",
+      "policies", "team",
     ];
     for (const id of ids) {
       allDoneSteps[id] = { status: "done", completed_at: "2026-01-01" } as any;
@@ -112,7 +112,7 @@ describe("GET /api/setup/state", () => {
     const res = await GET(makeRequest("shop-123"));
     const body = await res.json();
 
-    expect(body.progress.doneCount).toBe(10);
+    expect(body.progress.doneCount).toBe(7);
     expect(body.allDone).toBe(true);
     expect(body.nextStepId).toBeNull();
   });

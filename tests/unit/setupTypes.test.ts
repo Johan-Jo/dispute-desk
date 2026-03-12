@@ -56,12 +56,9 @@ describe("setup types", () => {
         packs: { status: "todo" },
         rules: { status: "todo" },
         policies: { status: "todo" },
-        billing: { status: "todo" },
         team: { status: "todo" },
-        settings: { status: "todo" },
-        help: { status: "todo" },
       },
-      progress: { doneCount: 2, total: 10 },
+      progress: { doneCount: 2, total: 7 },
       nextStepId: "disputes",
       allDone: false,
     };

@@ -10,9 +10,9 @@ import {
 import type { StepId } from "@/lib/setup/types";
 
 describe("SETUP_STEPS constants", () => {
-  it("has exactly 10 steps (site-structure aligned)", () => {
-    expect(SETUP_STEPS).toHaveLength(10);
-    expect(TOTAL_STEPS).toBe(10);
+  it("has exactly 7 onboarding steps (billing, settings, help are app-only)", () => {
+    expect(SETUP_STEPS).toHaveLength(7);
+    expect(TOTAL_STEPS).toBe(7);
   });
 
   it("STEP_IDS matches SETUP_STEPS order", () => {
@@ -23,10 +23,7 @@ describe("SETUP_STEPS constants", () => {
       "packs",
       "rules",
       "policies",
-      "billing",
       "team",
-      "settings",
-      "help",
     ]);
   });
 
@@ -36,7 +33,7 @@ describe("SETUP_STEPS constants", () => {
     }
   });
 
-  it("each step has index 1-10 in order", () => {
+  it("each step has index 1-7 in order", () => {
     SETUP_STEPS.forEach((step, i) => {
       expect(step.index).toBe(i + 1);
     });

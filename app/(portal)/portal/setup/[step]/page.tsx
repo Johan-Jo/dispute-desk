@@ -37,25 +37,10 @@ const STEP_CTA: Partial<
     label: "Open Policies",
     ask: "Define your store policies using our suggested templates or by uploading your own documents. Policies strengthen your dispute evidence. When you're done, come back and click Save & Continue.",
   },
-  billing: {
-    href: "/portal/billing",
-    label: "Open Billing",
-    ask: "Review your plan and usage. When you're done, come back and click Save & Continue.",
-  },
   team: {
     href: "/portal/team",
     label: "Open Team",
     ask: "Invite teammates and choose how you get notified about disputes. When you're done, come back and click Save & Continue.",
-  },
-  settings: {
-    href: "/portal/settings",
-    label: "Open Settings",
-    ask: "Configure auto-build, auto-save, and review requirements. When you're done, come back and click Save & Continue.",
-  },
-  help: {
-    href: "/portal/help",
-    label: "Open Help",
-    ask: "Browse the Help Center and guides. When you're done, come back and click Save & Continue.",
   },
 };
 

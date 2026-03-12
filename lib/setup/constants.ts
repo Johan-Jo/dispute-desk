@@ -10,7 +10,7 @@ export interface StepDefinition {
   unlocks: string[];
 }
 
-/** Wizard steps ordered to mirror site structure (dashboard → disputes → packs → rules → policies → billing → team → settings → help). */
+/** Wizard steps for onboarding (connect → goals → disputes → packs → rules → policies → team). Billing, settings, and help are app sections only, not part of setup. */
 export const SETUP_STEPS: StepDefinition[] = [
   {
     id: "permissions",
@@ -95,21 +95,8 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "billing",
-    index: 7,
-    title: "Billing & Plan",
-    dashboardLabel: "Billing & plan",
-    timeEstimate: "1 min",
-    prerequisites: [],
-    unlocks: [
-      "Choose the right plan for your volume",
-      "Track pack usage and limits",
-      "Upgrade or add top-ups as needed",
-    ],
-  },
-  {
     id: "team",
-    index: 8,
+    index: 7,
     title: "Team & Notifications",
     dashboardLabel: "Invite team members",
     timeEstimate: "1 min",
@@ -119,32 +106,6 @@ export const SETUP_STEPS: StepDefinition[] = [
       "Stay informed on critical updates",
       "Slack integration for real-time alerts",
       "Customizable notification preferences",
-    ],
-  },
-  {
-    id: "settings",
-    index: 9,
-    title: "Settings",
-    dashboardLabel: "Settings",
-    timeEstimate: "1 min",
-    prerequisites: [],
-    unlocks: [
-      "Configure auto-build and auto-save",
-      "Set completeness thresholds",
-      "Manage review requirements",
-    ],
-  },
-  {
-    id: "help",
-    index: 10,
-    title: "Help & Resources",
-    dashboardLabel: "Help & resources",
-    timeEstimate: "1 min",
-    prerequisites: [],
-    unlocks: [
-      "Help Center and guides",
-      "Contact support",
-      "API and integration docs",
     ],
   },
 ];

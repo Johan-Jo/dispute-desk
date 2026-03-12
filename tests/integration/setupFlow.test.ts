@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 10 steps as todo, nextStepId = permissions", async () => {
+    it("fresh setup has all 7 steps as todo, nextStepId = permissions", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -56,7 +56,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.progress.doneCount).toBe(0);
-      expect(body.progress.total).toBe(10);
+      expect(body.progress.total).toBe(7);
       expect(body.nextStepId).toBe("permissions");
       expect(body.allDone).toBe(false);
 
@@ -174,7 +174,7 @@ describe("Setup flow: end-to-end progression", () => {
       expect(state.nextStepId).toBe("overview");
     });
 
-    it("completing all 10 steps results in allDone", async () => {
+    it("completing all 7 steps results in allDone", async () => {
       const allDoneSteps: Record<string, StepState> = {};
       for (const id of STEP_IDS) {
         allDoneSteps[id] = { status: "done", completed_at: new Date().toISOString() };
@@ -191,7 +191,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.allDone).toBe(true);
-      expect(body.progress.doneCount).toBe(10);
+      expect(body.progress.doneCount).toBe(7);
       expect(body.nextStepId).toBeNull();
     });
   });
@@ -222,21 +222,18 @@ describe("Setup flow: end-to-end progression", () => {
     });
   });
 
-  describe("STEP_ROUTES for portal (navigation targets)", () => {
-    const STEP_ROUTES: Record<StepId, string> = {
+  describe("STEP_ROUTES for portal (onboarding steps only)", () => {
+    const STEP_ROUTES: Record<string, string> = {
       permissions: "/portal/setup/permissions",
       overview: "/portal/setup/overview",
       disputes: "/portal/setup/disputes",
       packs: "/portal/setup/packs",
       rules: "/portal/setup/rules",
       policies: "/portal/setup/policies",
-      billing: "/portal/setup/billing",
       team: "/portal/setup/team",
-      settings: "/portal/setup/settings",
-      help: "/portal/setup/help",
     };
 
-    it("every step has a portal route", () => {
+    it("every onboarding step has a portal route", () => {
       for (const step of SETUP_STEPS) {
         expect(STEP_ROUTES[step.id]).toBeDefined();
         expect(STEP_ROUTES[step.id]).toMatch(/^\/portal\//);
