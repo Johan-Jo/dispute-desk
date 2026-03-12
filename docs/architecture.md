@@ -289,6 +289,12 @@ The wizard supports connecting external services (V1: Gorgias helpdesk):
 - Server-side connection testing before marking as connected.
 - `integrations` table tracks per-shop integration status.
 
+### Help (embedded vs portal)
+
+In-app help (`/app/help`) is separate from the portal help center (`/portal/help`):
+- Embedded app uses a curated subset of articles and optional copy overrides for Shopify Admin context (`lib/help/embedded.ts`, `help.embedded` i18n).
+- Portal uses the full article set and shared `help.*` namespace. See Technical Specification — Help System (EPIC 10).
+
 ### Evidence Sample Files
 
 Merchants can upload sample evidence files during setup:

@@ -10,40 +10,51 @@ import {
   Box,
   Button,
   InlineStack,
-  Link as PolarisLink,
 } from "@shopify/polaris";
-import { getArticleBySlug, HELP_ARTICLES } from "@/lib/help/articles";
+import {
+  getArticleBySlugForEmbedded,
+  getEmbeddedArticleTitleKey,
+  getEmbeddedArticleBodyKey,
+  getEmbeddedRelatedSlugs,
+} from "@/lib/help/embedded";
+import { HELP_ARTICLES } from "@/lib/help/articles";
 import { getCategoryBySlug } from "@/lib/help/categories";
 import { useTranslations } from "next-intl";
+
+const EMBEDDED_NAMESPACE = "help.embedded";
 
 export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const t = useTranslations();
+  const tEmbedded = useTranslations(EMBEDDED_NAMESPACE);
   const router = useRouter();
-  const article = getArticleBySlug(slug);
+  const article = getArticleBySlugForEmbedded(slug);
 
   if (!article) {
     return (
-      <Page title="Article Not Found" backAction={{ content: t("help.backToHelp"), onAction: () => router.push("/app/help") }}>
+      <Page title={tEmbedded("title")} backAction={{ content: tEmbedded("backToHelp"), onAction: () => router.push("/app/help") }}>
         <Card>
-          <Text as="p" tone="subdued">This article could not be found.</Text>
+          <Text as="p" tone="subdued">This article is not available in the app. Open the Help Center in the DisputeDesk portal for the full article list.</Text>
         </Card>
       </Page>
     );
   }
 
   const category = getCategoryBySlug(article.category);
-  const body = t(article.bodyKey);
+  const titleKey = getEmbeddedArticleTitleKey(article);
+  const bodyKey = getEmbeddedArticleBodyKey(article);
+  const body = t(bodyKey);
   const paragraphs = body.split("\n\n");
 
-  const related = (article.relatedSlugs ?? [])
+  const relatedSlugs = getEmbeddedRelatedSlugs(article);
+  const related = relatedSlugs
     .map((s) => HELP_ARTICLES.find((a) => a.slug === s))
     .filter(Boolean);
 
   return (
     <Page
-      title={t(article.titleKey)}
-      backAction={{ content: category ? t(category.labelKey) : t("help.backToHelp"), onAction: () => router.push("/app/help") }}
+      title={t(titleKey)}
+      backAction={{ content: category ? t(category.labelKey) : tEmbedded("backToHelp"), onAction: () => router.push("/app/help") }}
     >
       <BlockStack gap="400">
         <Card>
@@ -76,7 +87,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
         {related.length > 0 && (
           <Card>
             <BlockStack gap="200">
-              <Text as="h3" variant="headingSm">{t("help.relatedArticles")}</Text>
+              <Text as="h3" variant="headingSm">{tEmbedded("relatedArticles")}</Text>
               {related.map((r) => r && (
                 <Box key={r.slug}>
                   <button
@@ -84,7 +95,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
                     style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                   >
                     <Text as="span" variant="bodyMd" tone="magic-subdued">
-                      {t(r.titleKey)}
+                      {t(getEmbeddedArticleTitleKey(r))}
                     </Text>
                   </button>
                 </Box>
@@ -95,7 +106,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
 
         <InlineStack align="center">
           <Button variant="plain" onClick={() => router.push("/app/help")}>
-            ← {t("help.backToHelp")}
+            ← {tEmbedded("backToHelp")}
           </Button>
         </InlineStack>
       </BlockStack>

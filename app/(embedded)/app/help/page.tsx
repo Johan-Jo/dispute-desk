@@ -24,8 +24,12 @@ import {
   PlayIcon,
 } from "@shopify/polaris-icons";
 import { useHelpGuideSafe } from "@/components/help/help-guide-provider";
-import { HELP_CATEGORIES } from "@/lib/help/categories";
-import { HELP_ARTICLES, getArticlesByCategory } from "@/lib/help/articles";
+import {
+  getEmbeddedCategories,
+  getEmbeddedArticles,
+  getArticlesByCategoryForEmbedded,
+  getEmbeddedArticleTitleKey,
+} from "@/lib/help/embedded";
 import { getPortalGuideTranslationKeyPrefix, HELP_GUIDE_IDS } from "@/lib/help-guides-config";
 import { useTranslations } from "next-intl";
 
@@ -47,30 +51,37 @@ const GUIDE_ICON_MAP: Record<(typeof HELP_GUIDE_IDS)[number], typeof SearchIcon>
   "pack-builder-advanced": SettingsIcon,
 };
 
+const EMBEDDED_NAMESPACE = "help.embedded";
+
 export default function EmbeddedHelpPage() {
   const t = useTranslations();
+  const tEmbedded = useTranslations(EMBEDDED_NAMESPACE);
   const router = useRouter();
   const helpGuide = useHelpGuideSafe();
   const [query, setQuery] = useState("");
 
+  const embeddedArticles = getEmbeddedArticles();
+  const embeddedCategories = getEmbeddedCategories();
+
   const filteredArticles = useMemo(() => {
     if (!query.trim()) return null;
     const q = query.toLowerCase();
-    return HELP_ARTICLES.filter((a) => {
-      const title = t(a.titleKey).toLowerCase();
+    return embeddedArticles.filter((a) => {
+      const titleKey = getEmbeddedArticleTitleKey(a);
+      const title = t(titleKey).toLowerCase();
       const tags = a.tags?.join(" ").toLowerCase() ?? "";
       return title.includes(q) || tags.includes(q);
     });
-  }, [query, t]);
+  }, [query, t, embeddedArticles]);
 
   return (
-    <Page title={t("help.title")}>
+    <Page title={tEmbedded("title")}>
       <BlockStack gap="400">
         {helpGuide && (
           <Card>
             <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">{t("help.interactiveGuidesTitle")}</Text>
-              <Text as="p" variant="bodySm" tone="subdued">{t("help.interactiveGuidesDesc")}</Text>
+              <Text as="h2" variant="headingMd">{tEmbedded("interactiveGuidesTitle")}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">{tEmbedded("interactiveGuidesDesc")}</Text>
               <InlineGrid columns={{ xs: 1, sm: 2, lg: 3 }} gap="400">
                 {HELP_GUIDE_IDS.map((guideId) => {
                   const IconSource = GUIDE_ICON_MAP[guideId];
@@ -90,7 +101,7 @@ export default function EmbeddedHelpPage() {
                           size="slim"
                           onClick={() => helpGuide.startGuide(guideId)}
                         >
-                          {t("help.startGuide")}
+                          {tEmbedded("startGuide")}
                         </Button>
                       </BlockStack>
                     </Card>
@@ -105,7 +116,7 @@ export default function EmbeddedHelpPage() {
           label=""
           value={query}
           onChange={setQuery}
-          placeholder={t("help.search")}
+          placeholder={tEmbedded("search")}
           prefix={<Icon source={SearchIcon} />}
           autoComplete="off"
           clearButton
@@ -116,7 +127,7 @@ export default function EmbeddedHelpPage() {
           filteredArticles.length === 0 ? (
             <Card>
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                {t("help.noResults")}
+                {tEmbedded("noResults")}
               </Text>
             </Card>
           ) : (
@@ -134,7 +145,7 @@ export default function EmbeddedHelpPage() {
                       style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
                     >
                       <Text as="p" variant="bodyMd" fontWeight="semibold">
-                        {t(a.titleKey)}
+                        {t(getEmbeddedArticleTitleKey(a))}
                       </Text>
                     </button>
                   </Box>
@@ -145,9 +156,9 @@ export default function EmbeddedHelpPage() {
         ) : (
           <>
             <InlineGrid columns={{ xs: 1, sm: 2, lg: 3 }} gap="400">
-              {HELP_CATEGORIES.map((cat) => {
+              {embeddedCategories.map((cat) => {
                 const iconSource = POLARIS_ICON_MAP[cat.icon] ?? SearchIcon;
-                const count = getArticlesByCategory(cat.slug).length;
+                const count = getArticlesByCategoryForEmbedded(cat.slug).length;
                 return (
                   <a
                     key={cat.slug}
@@ -170,8 +181,8 @@ export default function EmbeddedHelpPage() {
               })}
             </InlineGrid>
 
-            {HELP_CATEGORIES.map((cat) => {
-              const articles = getArticlesByCategory(cat.slug);
+            {embeddedCategories.map((cat) => {
+              const articles = getArticlesByCategoryForEmbedded(cat.slug);
               return (
                 <div key={cat.slug} id={cat.slug}>
                   <Box paddingBlockStart="400" paddingBlockEnd="200">
@@ -192,7 +203,7 @@ export default function EmbeddedHelpPage() {
                             style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: 0 }}
                           >
                             <Text as="p" variant="bodyMd" fontWeight="medium">
-                              {t(a.titleKey)}
+                              {t(getEmbeddedArticleTitleKey(a))}
                             </Text>
                           </button>
                         </Box>
@@ -207,7 +218,7 @@ export default function EmbeddedHelpPage() {
 
         <Box paddingBlockStart="400" paddingBlockEnd="600">
           <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-            {t("help.contactSupport")}
+            {tEmbedded("contactSupport")}
           </Text>
         </Box>
       </BlockStack>

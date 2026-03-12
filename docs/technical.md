@@ -860,8 +860,13 @@ All wizard links preserve `shop` and `host` query parameters via
 ### Architecture
 - 29 articles defined in `lib/help/articles.ts` (slug, category, title/body keys, tags); categories in `lib/help/categories.ts`.
 - Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` (BCP-47) under the `help.articles.{slug}.title` and `help.articles.{slug}.body` namespace.
-- All 12 locales (`en`, `en-US`, `de`, `de-DE`, `fr`, `fr-FR`, `es`, `es-ES`, `pt`, `pt-BR`, `sv`, `sv-SE`) must include translations for every article to support the Help Center in all languages.
-- Both portal (`/portal/help`) and embedded app (`/app/help`) share the same data layer but use different UI components (Tailwind vs Polaris).
+- All 12 locales must include translations for every article to support the Help Center in all languages.
+
+### Embedded app help (separate and adapted)
+- The **Shopify embedded app** (`/app/help`) uses a **separate** help surface so the in-app experience can be adapted for the Shopify Admin context.
+- **Data:** `lib/help/embedded.ts` defines which article slugs are available in the app (`EMBEDDED_ARTICLE_SLUGS`), ordered categories, and optional copy overrides. Portal-only articles (e.g. `template-setup-wizard`) are excluded from the embedded list.
+- **Copy:** Embedded UI strings (title, search, backToHelp, etc.) and selected article bodies use the `help.embedded` i18n namespace in `messages/{locale}.json`. Where `EMBEDDED_ARTICLE_COPY_OVERRIDES` is set, titles and bodies are taken from `help.embedded.articles.{slug}.title` / `.body`; otherwise the shared `help.articles.*` keys are used.
+- **Portal** (`/portal/help`) continues to use the full `HELP_ARTICLES` and `HELP_CATEGORIES` with the shared `help.*` namespace (Tailwind UI).
 
 ### Search
 - Client-side filtering by article title and tags. No backend API required.
@@ -869,7 +874,7 @@ All wizard links preserve `shop` and `host` query parameters via
 ### Adding an Article
 1. Add the article object to `HELP_ARTICLES` in `lib/help/articles.ts` (slug, category, title/body keys, tags).
 2. Add the corresponding `help.articles.{slug}.title` and `help.articles.{slug}.body` keys to all `messages/{locale}.json` files (BCP-47 filenames).
-3. Both surfaces will pick it up automatically.
+3. **Portal** will show it automatically. For **embedded app**: add the slug to `EMBEDDED_ARTICLE_SLUGS` in `lib/help/embedded.ts`; optionally add `help.embedded.articles.{slug}.title` and `.body` in messages for in-app–specific copy.
 
 ### Interactive Help Guides
 

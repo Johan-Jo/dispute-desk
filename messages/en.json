@@ -971,6 +971,31 @@
         "title": "DisputeDesk does NOT send evidence to card networks",
         "body": "This is an important distinction: DisputeDesk saves evidence to Shopify, but does NOT send it onward to card networks (Visa, Mastercard, American Express, etc.).\n\nHere's the process:\n1. DisputeDesk builds your evidence pack and saves it to Shopify via API.\n2. Forwarding evidence to the card network is handled entirely by Shopify.\n3. Shopify either auto-sends on the due date or you respond manually from Shopify Admin.\n\nWhy it works this way:\n- Shopify is the merchant of record and handles the official communication with card networks.\n- This ensures compliance with payment processor requirements.\n- Your evidence is formatted and structured by DisputeDesk, then handed off to Shopify for the official process.\n\nYou always maintain control. Review your evidence in Shopify Admin before Shopify forwards it to the card network."
       }
+    },
+    "embedded": {
+      "title": "Help (in Shopify)",
+      "search": "Search help...",
+      "backToHelp": "Back to Help",
+      "relatedArticles": "Related Articles",
+      "contactSupport": "Need more help? Contact support@disputedesk.com",
+      "noResults": "No articles found.",
+      "interactiveGuidesTitle": "Interactive Tours",
+      "interactiveGuidesDesc": "Step-by-step guidance for key tasks in this app.",
+      "startGuide": "Start guide",
+      "articles": {
+        "connectShopifyStore": {
+          "title": "Connecting your store in the Shopify app",
+          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.com) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
+        },
+        "understandingDashboard": {
+          "title": "Understanding the dashboard in this app",
+          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nKey metrics: Open Disputes, Win Rate, Auto-Saved count, and Resolved total.\n\nThe Automation Status card shows your current settings: auto-build, auto-save, minimum completeness score, and blocker gate.\n\nThe Recent Disputes table lists your latest chargebacks. Use the Disputes link in the app to view and filter all disputes, or click a row to see full details and manage evidence."
+        },
+        "afterSaving": {
+          "title": "What happens after saving evidence",
+          "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution. You can continue working in this app or in the portal."
+        }
+      }
     }
   },
   "onboarding": {
