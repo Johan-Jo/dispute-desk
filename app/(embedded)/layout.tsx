@@ -1,3 +1,9 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/layout.tsx (embedded app shell)
+ * Figma Make source: src/app/pages/shopify/shopify-shell.tsx
+ * Reference: top bar, sidebar, app nav (Dashboard, Disputes, Evidence Packs, Rules, Plan, Settings). Adapt nav to Polaris/App Bridge.
+ */
 import { headers, cookies } from "next/headers";
 import { Providers } from "./providers";
 import { resolveLocale } from "@/lib/i18n/locales";

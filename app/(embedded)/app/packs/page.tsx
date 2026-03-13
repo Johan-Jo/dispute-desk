@@ -1,3 +1,9 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/app/packs/page.tsx
+ * Figma Make source: src/app/pages/shopify/shopify-packs.tsx
+ * Reference: evidence packs list layout.
+ */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";

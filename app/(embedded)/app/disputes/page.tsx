@@ -1,3 +1,9 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/app/disputes/page.tsx
+ * Figma Make source: src/app/pages/shopify/shopify-disputes.tsx
+ * Reference: disputes list layout, filters, table/row design.
+ */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";

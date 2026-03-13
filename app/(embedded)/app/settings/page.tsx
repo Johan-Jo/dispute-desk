@@ -1,3 +1,9 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/app/settings/page.tsx
+ * Figma Make source: src/app/pages/shopify/shopify-settings.tsx
+ * Reference: settings form/layout.
+ */
 "use client";
 
 import { useTranslations } from "next-intl";

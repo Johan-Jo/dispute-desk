@@ -1,3 +1,9 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/app/billing/page.tsx
+ * Figma Make source: src/app/pages/shopify/shopify-plan-management.tsx
+ * Reference: plan cards, 14-day free trial copy, upgrade CTAs. Reuse existing /api/billing/* (no backend changes).
+ */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
