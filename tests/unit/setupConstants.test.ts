@@ -10,14 +10,15 @@ import {
 import type { StepId } from "@/lib/setup/types";
 
 describe("SETUP_STEPS constants", () => {
-  it("has exactly 7 onboarding steps (billing, settings, help are app-only)", () => {
-    expect(SETUP_STEPS).toHaveLength(7);
-    expect(TOTAL_STEPS).toBe(7);
+  it("has exactly 8 onboarding steps (billing, settings, help are app-only)", () => {
+    expect(SETUP_STEPS).toHaveLength(8);
+    expect(TOTAL_STEPS).toBe(8);
   });
 
   it("STEP_IDS matches SETUP_STEPS order", () => {
     expect(STEP_IDS).toEqual([
       "permissions",
+      "open_in_admin",
       "overview",
       "disputes",
       "packs",
@@ -69,14 +70,21 @@ describe("getNextActionableStep", () => {
       permissions: { status: "done" },
       overview: { status: "done" },
     });
-    expect(result).toBe("disputes");
+    expect(result).toBe("open_in_admin");
+    expect(
+      getNextActionableStep({
+        permissions: { status: "done" },
+        open_in_admin: { status: "done" },
+        overview: { status: "done" },
+      })
+    ).toBe("disputes");
   });
 
   it("skips skipped steps", () => {
     const result = getNextActionableStep({
       permissions: { status: "skipped" },
     });
-    expect(result).toBe("overview");
+    expect(result).toBe("open_in_admin");
   });
 
   it("returns in_progress step", () => {

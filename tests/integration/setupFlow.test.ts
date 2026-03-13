@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 7 steps as todo, nextStepId = permissions", async () => {
+    it("fresh setup has all 8 steps as todo, nextStepId = permissions", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -56,7 +56,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.progress.doneCount).toBe(0);
-      expect(body.progress.total).toBe(7);
+      expect(body.progress.total).toBe(8);
       expect(body.nextStepId).toBe("permissions");
       expect(body.allDone).toBe(false);
 
@@ -92,10 +92,11 @@ describe("Setup flow: end-to-end progression", () => {
       expect(getNextActionableStep({})).toBe("permissions");
       expect(
         getNextActionableStep({ permissions: { status: "done" } })
-      ).toBe("overview");
+      ).toBe("open_in_admin");
       expect(
         getNextActionableStep({
           permissions: { status: "done" },
+          open_in_admin: { status: "done" },
           overview: { status: "done" },
         })
       ).toBe("disputes");
@@ -106,7 +107,7 @@ describe("Setup flow: end-to-end progression", () => {
         getNextActionableStep({
           permissions: { status: "skipped" },
         })
-      ).toBe("overview");
+      ).toBe("open_in_admin");
     });
 
     it("getNextActionableStep returns null when all done", () => {
@@ -146,7 +147,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("Step completion via API", () => {
-    it("completing permissions advances nextStepId to overview", async () => {
+    it("completing permissions advances nextStepId to open_in_admin", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
@@ -171,10 +172,10 @@ describe("Setup flow: end-to-end progression", () => {
       const state: SetupStateResponse = await stateRes.json();
 
       expect(state.progress.doneCount).toBe(1);
-      expect(state.nextStepId).toBe("overview");
+      expect(state.nextStepId).toBe("open_in_admin");
     });
 
-    it("completing all 7 steps results in allDone", async () => {
+    it("completing all 8 steps results in allDone", async () => {
       const allDoneSteps: Record<string, StepState> = {};
       for (const id of STEP_IDS) {
         allDoneSteps[id] = { status: "done", completed_at: new Date().toISOString() };
@@ -191,7 +192,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.allDone).toBe(true);
-      expect(body.progress.doneCount).toBe(7);
+      expect(body.progress.doneCount).toBe(8);
       expect(body.nextStepId).toBeNull();
     });
   });
@@ -225,6 +226,7 @@ describe("Setup flow: end-to-end progression", () => {
   describe("STEP_ROUTES for portal (onboarding steps only)", () => {
     const STEP_ROUTES: Record<string, string> = {
       permissions: "/portal/setup/permissions",
+      open_in_admin: "/portal/setup/open_in_admin",
       overview: "/portal/setup/overview",
       disputes: "/portal/setup/disputes",
       packs: "/portal/setup/packs",

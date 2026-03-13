@@ -17,6 +17,11 @@ const STEP_CTA: Partial<
     ask: "Connect your Shopify store—you'll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you're done, come back here and click Save & Continue.",
   },
   overview: { href: "/portal/setup/overview", label: "Set your goals", ask: "" },
+  open_in_admin: {
+    href: "/portal/dashboard",
+    label: "Open in Shopify Admin",
+    ask: "This step is for the Shopify embedded app. Open the app from your store’s Admin to pin it. You can continue to the next step.",
+  },
   disputes: {
     href: "/portal/disputes",
     label: "Open Disputes",

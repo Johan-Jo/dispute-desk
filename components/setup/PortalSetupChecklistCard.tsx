@@ -80,6 +80,7 @@ function ConnectStoreChecklist() {
 
 const STEP_ROUTES: Record<StepId, string> = {
   permissions: "/portal/setup/permissions",
+  open_in_admin: "/portal/setup/open_in_admin",
   overview: "/portal/setup/overview",
   disputes: "/portal/setup/disputes",
   packs: "/portal/setup/packs",
