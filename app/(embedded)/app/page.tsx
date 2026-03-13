@@ -1,3 +1,11 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/app/page.tsx (dashboard)
+ * Figma Make source: src/app/pages/shopify/shopify-home.tsx
+ * Reference: setup banner, overview stats (Total Disputes, Win Rate, Revenue Recovered, Avg. Response Time),
+ * period selector, recent disputes list, Win Rate Trend + Dispute Categories charts.
+ * Shell/layout: shopify-shell.tsx. Onboarding: onboarding-wizard.tsx.
+ */
 "use client";
 
 import { Suspense } from "react";
@@ -17,6 +25,7 @@ import {
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { SetupChecklistCard } from "@/components/setup/SetupChecklistCard";
+import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
 
 const DISPUTES = [
   ["DP-2401", "#1042", "$145.00", "Not received", "Auto-saved", "Mar 02"],
@@ -42,6 +51,9 @@ export default function EmbeddedDashboardPage() {
           </Banner>
         </Layout.Section>
 
+        <Layout.Section>
+          <ConfigGuideCard />
+        </Layout.Section>
         <Layout.Section>
           <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
             <SetupChecklistCard />

@@ -19,6 +19,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
 import { SETUP_STEPS } from "@/lib/setup/constants";
+import { openInAdmin } from "@/lib/embedded/openInAdmin";
 import { ProgressRing } from "./ProgressRing";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
 
@@ -69,6 +70,19 @@ export function SetupChecklistCard() {
       navigateToStep(stepId);
     },
     [fetchState, navigateToStep]
+  );
+
+  const handleOpenInAdmin = useCallback(
+    async (stepId: StepId) => {
+      openInAdmin({ newContext: true });
+      await fetch("/api/setup/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stepId, payload: {} }),
+      });
+      await fetchState();
+    },
+    [fetchState]
   );
 
   if (loading) {
@@ -157,12 +171,21 @@ export function SetupChecklistCard() {
                     </Button>
                   )}
                   {!isDone && !isSkipped && (
-                    <Button
-                      variant="plain"
-                      onClick={() => navigateToStep(stepDef.id)}
-                    >
-                      Complete
-                    </Button>
+                    stepDef.id === "open_in_admin" ? (
+                      <Button
+                        variant="plain"
+                        onClick={() => handleOpenInAdmin(stepDef.id)}
+                      >
+                        Open in Admin
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="plain"
+                        onClick={() => navigateToStep(stepDef.id)}
+                      >
+                        Complete
+                      </Button>
+                    )
                   )}
                 </InlineStack>
               </Box>

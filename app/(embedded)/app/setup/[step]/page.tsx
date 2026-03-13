@@ -1,3 +1,9 @@
+/**
+ * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
+ * Route: app/(embedded)/app/setup/[step]/page.tsx
+ * Figma Make source: src/app/pages/shopify/onboarding-wizard.tsx
+ * Reference: multi-step onboarding wizard. Add step for "Open in Admin" (no theme extension).
+ */
 "use client";
 
 import { Suspense } from "react";
@@ -16,6 +22,7 @@ import { PacksStep } from "@/components/setup/steps/PacksStep";
 import { BillingStep } from "@/components/setup/steps/BillingStep";
 import { SettingsStep } from "@/components/setup/steps/SettingsStep";
 import { HelpStep } from "@/components/setup/steps/HelpStep";
+import { OpenInAdminStep } from "@/components/setup/steps/OpenInAdminStep";
 
 const stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
 type StepComponentType = React.ComponentType<typeof stepComponentProps>;
@@ -42,6 +49,7 @@ function StepPageInner() {
 
   const stepComponents: Record<StepId, StepComponentType> = {
     permissions: PermissionsStep,
+    open_in_admin: OpenInAdminStep,
     overview: WelcomeGoalsStep,
     disputes: SyncDisputesStep,
     packs: PacksStep,

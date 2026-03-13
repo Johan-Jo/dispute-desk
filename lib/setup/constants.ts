@@ -27,12 +27,24 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "overview",
+    id: "open_in_admin",
     index: 2,
+    title: "Open in Shopify Admin",
+    dashboardLabel: "Open in Shopify Admin",
+    timeEstimate: "1 min",
+    prerequisites: ["permissions"],
+    unlocks: [
+      "Pin the app for quick access",
+      "Use DisputeDesk from your Admin sidebar",
+    ],
+  },
+  {
+    id: "overview",
+    index: 3,
     title: "Overview & Goals",
     dashboardLabel: "Set your goals",
     timeEstimate: "1 min",
-    prerequisites: ["permissions"],
+    prerequisites: ["permissions", "open_in_admin"],
     unlocks: [
       "Personalized setup based on your goals",
       "Optimized workflows for your use case",
@@ -41,7 +53,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "disputes",
-    index: 3,
+    index: 4,
     title: "Disputes",
     dashboardLabel: "Sync disputes",
     timeEstimate: "2 min",
@@ -55,7 +67,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "packs",
-    index: 4,
+    index: 5,
     title: "Evidence Packs",
     dashboardLabel: "Evidence packs",
     timeEstimate: "2 min",
@@ -68,7 +80,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "rules",
-    index: 5,
+    index: 6,
     title: "Automation Rules",
     dashboardLabel: "Configure automation",
     timeEstimate: "2 min",
@@ -82,7 +94,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "policies",
-    index: 6,
+    index: 7,
     title: "Business Policies",
     dashboardLabel: "Add business policies",
     timeEstimate: "2 min",
@@ -96,7 +108,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "team",
-    index: 7,
+    index: 8,
     title: "Team & Notifications",
     dashboardLabel: "Invite team members",
     timeEstimate: "1 min",

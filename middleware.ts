@@ -180,7 +180,16 @@ export async function middleware(req: NextRequest) {
     requestHeaders.set("x-shopify-host", hostParam);
 
     if (pathname === "/app/session-required") {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      const res = NextResponse.next({ request: { headers: requestHeaders } });
+      const localeParam = req.nextUrl.searchParams.get("locale")?.trim();
+      if (localeParam) {
+        res.cookies.set("dd_locale", localeParam, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: "lax",
+        });
+      }
+      return res;
     }
 
     const shopDomain = req.cookies.get("shopify_shop")?.value;
@@ -198,7 +207,16 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(sessionUrl);
     }
 
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    const localeParam = req.nextUrl.searchParams.get("locale")?.trim();
+    if (localeParam) {
+      res.cookies.set("dd_locale", localeParam, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
+    return res;
   }
 
   return NextResponse.next();

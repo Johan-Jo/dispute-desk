@@ -11,6 +11,7 @@ export interface StepState {
 
 export type StepId =
   | "permissions"
+  | "open_in_admin"
   | "overview"
   | "disputes"
   | "packs"
