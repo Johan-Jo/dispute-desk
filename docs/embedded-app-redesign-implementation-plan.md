@@ -6,6 +6,16 @@
 
 ## Implementation status (2025-03)
 
+**Shell (E1):** Nav is provided only via `s-app-nav` (AppNavSidebar). The embedded app layout (`app/(embedded)/app/layout.tsx`) renders no in-iframe horizontal tab bar—only `AppNavSidebar` (hidden in DOM so Shopify can read it) and main content. If a horizontal nav still appears in the embedded view, see **E1 — Shell and nav (homework)** below. Polaris and existing layout unchanged.
+
+**E1 — Shell and nav (homework):**
+
+- **Our repo:** We do not render any in-iframe horizontal nav. There is no `EmbeddedAppNav` (or similar) component; the only nav is `AppNavSidebar`, which renders `s-app-nav` with `display: none` so Shopify can read it. No duplicate nav in the app body.
+- **Shopify docs:** [App Nav](https://shopify.dev/docs/api/app-home/app-bridge-web-components/app-nav) states that on desktop the navigation menu appears as part of the app nav, on the left of the screen (sidebar); on mobile it appears in a dropdown from the TitleBar. So by design, desktop nav is sidebar-only.
+- **Title bar:** The [title bar](https://shopify.dev/docs/api/app-home/app-bridge-web-components/title-bar) is configured by the `s-page` web component (heading, primary/secondary actions, breadcrumb). We use Polaris `Page`, not `s-page`; the admin title bar is rendered **outside** the app iframe by Shopify. We cannot remove or change that from inside our app.
+- **If a horizontal bar still appears:** (1) If it is inside our iframe, add a scoped CSS override in the embedded layout to hide it once we know the selector (e.g. from DevTools; Shopify may use minified classes). (2) If it is in the host (admin) chrome, we have no access to hide it; there is no documented API to show app nav only in the sidebar and not in the header. [Community](https://community.shopify.com/t/hide-embedded-app-navigation-bar/40597/2) notes that hiding the bar via CSS is possible but fragile (host-generated class names).
+- **Concrete mitigation:** Add an embedded-only CSS rule to hide an in-iframe nav bar when the selector is identified; document the source of the selector in a code comment.
+
 **Completed:** All embedded pages use real APIs and data (no stubs).
 
 | Page | Real data sources | Notes |
@@ -87,7 +97,7 @@ Figma **Make** files are code-based: they expose **source files** (React pages),
 ### 3.1.1 Product decision table
 
 | Option | Decision | Notes |
-|--------|----------|--------|
+|--------|----------|-------|
 | Theme app extension | No | Admin-only app; no storefront widget. |
 | Open in Admin / Pin app | Yes | Single setup step with copy + button that opens Admin/app URL. |
 | Deep link target | Admin (or theme editor if product later adds it) | Use App Bridge Redirect as primary; see §3.3. |
@@ -149,7 +159,7 @@ Theme app extension is **not** in scope. If product later requests storefront pr
 ### 5.1 Where locale comes from
 
 - Locale for the embedded app must come from **Shopify**: prefer **session JWT** (session token claims) or **`locale` query param** on embed load when Shopify provides it; **Accept-Language** and **cookie** (`dd_locale`) are acceptable fallbacks. Use `resolveLocale()` / `normalizeLocale()` in `lib/i18n/locales.ts` to map to a supported BCP-47 locale.
-- Without this wiring, the embedded app cannot reliably show the merchant’s language; translations will not switch.
+- Without this wiring, the embedded app cannot reliably show the merchant's language; translations will not switch.
 
 ### 5.2 Plumb into provider
 
