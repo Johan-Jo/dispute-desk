@@ -4,6 +4,28 @@
 
 ---
 
+## Implementation status (2025-03)
+
+**Completed:** All embedded pages use real APIs and data (no stubs).
+
+| Page | Real data sources | Notes |
+|------|-------------------|-------|
+| Dashboard | `GET /api/dashboard/stats`, `GET /api/disputes`, `GET /api/setup/state` | KPIs, win rate trend, dispute categories from disputes; recent disputes list |
+| Rules | `GET /api/rules` | Real `match`/`action` schema; `matchSummary` formatting; `Array.isArray` response handling |
+| Settings | `GET /api/billing/usage`, `GET/PATCH /api/shop/preferences` | Store domain from usage; notification prefs persisted in `shop_setup` |
+| Packs | `GET /api/packs`, `GET /api/templates` | Real `documents_count`, `usage_count`, `last_used_at`; no fake completeness bar |
+| Disputes | `GET /api/disputes` | Filters, tabs, IndexTable |
+| Billing | `GET /api/billing/usage`, `POST /api/billing/subscribe` | Plan display, trial copy |
+
+**New APIs:**
+- `GET /api/dashboard/stats?shop_id=&period=` — KPIs, win rate trend, dispute categories
+- `GET /api/shop/preferences?shop_id=` — notification preferences
+- `PATCH /api/shop/preferences` — update notifications
+
+**Billing usage:** Now returns `shop_domain` for store connection display in Settings.
+
+---
+
 ## 1. Design implementation
 
 ### 1.1 Design context

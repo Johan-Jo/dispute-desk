@@ -405,6 +405,13 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
   Shopify Admin’s iframe. For `source=portal`: links the portal user to the shop,
   sets `active_shop_id` cookie, and redirects to `/portal/dashboard`.
 
+### Dashboard Stats (Embedded)
+- `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns real KPIs for the embedded dashboard: `totalDisputes`, `winRate`, `revenueRecovered`, `avgResponseTime`, `winRateTrend` (6 buckets), `disputeCategories` (by reason). Period filters disputes by `created_at`.
+
+### Shop Preferences (Embedded Settings)
+- `GET /api/shop/preferences?shop_id=...` — returns notification preferences from `shop_setup.steps.team.payload.notifications` (newDispute, beforeDue, evidenceReady). Used by embedded Settings page.
+- `PATCH /api/shop/preferences` — body `{ shop_id, notifications: { newDispute?, beforeDue?, evidenceReady? } }`. Merges into team step payload and upserts `shop_setup`. Used to persist notification toggles.
+
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings
 - `PATCH /api/automation/settings` — update automation toggles
@@ -603,7 +610,7 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
 2. `GET /api/billing/callback` → `shops.plan` updated on approval
-3. `GET /api/billing/usage` → returns plan + monthly usage
+3. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain` (used by embedded Settings for store connection display).
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
 
