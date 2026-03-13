@@ -102,7 +102,22 @@
     "howItWorksStep1": "1. DisputeDesk synchronise automatiquement les litiges depuis Shopify Payments.",
     "howItWorksStep2": "2. Les dossiers de preuves sont créés automatiquement à partir des données de commande, de suivi et de politique.",
     "howItWorksStep3": "3. Lorsque le dossier respecte vos règles (score de complétude + aucun bloqueur), les preuves sont enregistrées sur Shopify via l'API.",
-    "howItWorksCompliance": "La soumission au réseau de cartes se fait dans Shopify Admin, ou Shopify soumet automatiquement à la date d'échéance. DisputeDesk ne soumet pas en votre nom."
+    "howItWorksCompliance": "La soumission au réseau de cartes se fait dans Shopify Admin, ou Shopify soumet automatiquement à la date d'échéance. DisputeDesk ne soumet pas en votre nom.",
+    "noDisputesYet": "Pas encore de litiges",
+    "noDisputesYetDesc": "Les litiges apparaîtront ici une fois synchronisés depuis votre boutique Shopify.",
+    "completeSetup": "Complétez la configuration",
+    "completeSetupDesc": "Terminez la configuration pour tirer le meilleur parti de DisputeDesk.",
+    "resumeSetup": "Reprendre la configuration",
+    "continueSetup": "Continuer la configuration",
+    "period24h": "24 h",
+    "period7d": "7 jours",
+    "period30d": "30 jours",
+    "periodAll": "Tout",
+    "totalDisputes": "Litiges totaux",
+    "revenueRecovered": "Revenus récupérés",
+    "avgResponseTime": "Délai moyen de réponse",
+    "winRateTrend": "Tendance du taux de gain",
+    "disputeCategories": "Catégories de litiges"
   },
   "disputes": {
     "title": "Litiges",
@@ -242,6 +257,8 @@
     "openInShopifyAdmin": "Ouvrir dans Shopify Admin →"
   },
   "billing": {
+    "planManagement": "Gestion des forfaits",
+    "showAllPlans": "Afficher tous les forfaits",
     "title": "Facturation",
     "subtitle": "Gérez votre abonnement et votre utilisation",
     "demoSubtitle": "Gérez votre abonnement, utilisation et méthodes de paiement",

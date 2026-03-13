@@ -102,7 +102,22 @@
     "howItWorksStep1": "1. DisputeDesk synchronisiert Streitfälle automatisch von Shopify Payments.",
     "howItWorksStep2": "2. Beweispakete werden automatisch aus Bestell-, Versand- und Richtliniendaten erstellt.",
     "howItWorksStep3": "3. Wenn das Paket Ihre Regeln erfüllt (Vollständigkeitswert + keine Blocker), werden Beweise automatisch über die API an Shopify gesendet.",
-    "howItWorksCompliance": "Die Übermittlung an das Kartennetzwerk erfolgt im Shopify Admin oder Shopify sendet automatisch am Fälligkeitsdatum. DisputeDesk übermittelt nicht in Ihrem Namen."
+    "howItWorksCompliance": "Die Übermittlung an das Kartennetzwerk erfolgt im Shopify Admin oder Shopify sendet automatisch am Fälligkeitsdatum. DisputeDesk übermittelt nicht in Ihrem Namen.",
+    "noDisputesYet": "Noch keine Streitfälle",
+    "noDisputesYetDesc": "Streitfälle erscheinen hier, sobald sie mit Ihrem Shopify-Shop synchronisiert wurden.",
+    "completeSetup": "Setup abschließen",
+    "completeSetupDesc": "Schließen Sie die Einrichtung ab, um DisputeDesk optimal zu nutzen.",
+    "resumeSetup": "Setup fortsetzen",
+    "continueSetup": "Setup fortsetzen",
+    "period24h": "24 Std.",
+    "period7d": "7 Tage",
+    "period30d": "30 Tage",
+    "periodAll": "Gesamt",
+    "totalDisputes": "Streitfälle gesamt",
+    "revenueRecovered": "Wiederhergestellte Einnahmen",
+    "avgResponseTime": "Durchschn. Reaktionszeit",
+    "winRateTrend": "Gewinnraten-Trend",
+    "disputeCategories": "Streitfall-Kategorien"
   },
   "disputes": {
     "title": "Streitfälle",
@@ -242,6 +257,8 @@
     "openInShopifyAdmin": "In Shopify Admin öffnen →"
   },
   "billing": {
+    "planManagement": "Planverwaltung",
+    "showAllPlans": "Alle Pläne anzeigen",
     "title": "Abrechnung",
     "subtitle": "Verwalten Sie Ihren Plan und Ihre Nutzung",
     "demoSubtitle": "Verwalten Sie Ihr Abonnement, Ihre Nutzung und Zahlungsmethoden",

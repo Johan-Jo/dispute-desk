@@ -2,7 +2,8 @@
  * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
  * Route: app/(embedded)/app/disputes/page.tsx
  * Figma Make source: src/app/pages/shopify/shopify-disputes.tsx
- * Reference: disputes list layout, filters, table/row design.
+ * Reference: header "View and manage all your chargebacks and disputes", search bar,
+ * Filter + Export actions, table (ID, Order, Reason, Amount, Status, Due Date, chevron).
  */
 "use client";
 
@@ -21,7 +22,7 @@ import {
   Button,
   Spinner,
   InlineStack,
-  useIndexResourceState,
+  BlockStack,
 } from "@shopify/polaris";
 
 interface Dispute {
@@ -57,19 +58,12 @@ function statusTone(status: string | null): "success" | "warning" | "critical" |
 
 function formatCurrency(amount: number | null, code: string | null): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: code ?? "USD",
-  }).format(amount);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: code ?? "USD" }).format(amount);
 }
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function DisputesListPage() {
@@ -84,9 +78,10 @@ export default function DisputesListPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
 
-  const shopId = typeof window !== "undefined"
-    ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-    : "";
+  const shopId =
+    typeof window !== "undefined"
+      ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
+      : "";
 
   const fetchDisputes = useCallback(async () => {
     if (!shopId) return;
@@ -94,7 +89,6 @@ export default function DisputesListPage() {
     const params = new URLSearchParams({ shop_id: shopId, page: String(page), per_page: "25" });
     if (tab === "review") params.set("needs_review", "true");
     if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
-
     const res = await fetch(`/api/disputes?${params}`);
     const json: DisputesResponse = await res.json();
     setDisputes(json.disputes ?? []);
@@ -115,15 +109,14 @@ export default function DisputesListPage() {
     setSyncing(false);
   };
 
-  const resourceName = { singular: "dispute", plural: "disputes" };
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(disputes as unknown as { [key: string]: unknown }[]);
+  const handleApprove = async (disputeId: string) => {
+    await fetch(`/api/disputes/${disputeId}/approve`, { method: "POST" });
+    await fetchDisputes();
+  };
 
   const daysUntil = (iso: string | null): string => {
     if (!iso) return "—";
-    const diff = Math.ceil(
-      (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-    );
+    const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (diff < 0) return t("common.overdue");
     if (diff === 0) return t("common.today");
     return t("common.daysRemaining", { count: diff });
@@ -168,41 +161,39 @@ export default function DisputesListPage() {
       id={d.id}
       key={d.id}
       position={idx}
-      selected={selectedResources.includes(d.id)}
-      onClick={() => {
-        router.push(`/app/disputes/${d.id}`);
-      }}
+      onClick={() => router.push(`/app/disputes/${d.id}`)}
     >
       <IndexTable.Cell>
         <InlineStack gap="200" blockAlign="center">
           <Text as="span" variant="bodyMd" fontWeight="semibold">
             {d.dispute_gid.split("/").pop()?.slice(0, 8) ?? d.id.slice(0, 8)}
           </Text>
-          {isSyntheticDispute(d.dispute_gid) && (
-            <Badge tone="info">Synthetic</Badge>
-          )}
+          {isSyntheticDispute(d.dispute_gid) && <Badge tone="info">Synthetic</Badge>}
         </InlineStack>
       </IndexTable.Cell>
+      <IndexTable.Cell>
+        <Text as="span" variant="bodyMd" tone="subdued">
+          {d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "—"}
+        </Text>
+      </IndexTable.Cell>
       <IndexTable.Cell>{d.reason ?? t("status.unknown")}</IndexTable.Cell>
+      <IndexTable.Cell>{formatCurrency(d.amount, d.currency_code)}</IndexTable.Cell>
       <IndexTable.Cell>
         <Badge tone={statusTone(d.status)}>
           {(d.status ?? "unknown").replace(/_/g, " ")}
         </Badge>
       </IndexTable.Cell>
-      <IndexTable.Cell>{formatCurrency(d.amount, d.currency_code)}</IndexTable.Cell>
-      <IndexTable.Cell>{formatDate(d.due_at)}</IndexTable.Cell>
       <IndexTable.Cell>
-        <Badge tone={daysUntil(d.due_at) === t("common.overdue") ? "critical" : undefined}>
-          {daysUntil(d.due_at)}
-        </Badge>
+        <BlockStack gap="050">
+          <Text as="span" variant="bodySm">{formatDate(d.due_at)}</Text>
+          <Text as="span" variant="bodySm" tone={daysUntil(d.due_at) === t("common.overdue") ? "critical" : "subdued"}>
+            {daysUntil(d.due_at)}
+          </Text>
+        </BlockStack>
       </IndexTable.Cell>
-      <IndexTable.Cell>{formatDate(d.last_synced_at)}</IndexTable.Cell>
       {tab === "review" && (
         <IndexTable.Cell>
-          <Button
-            size="micro"
-            onClick={() => handleApprove(d.id)}
-          >
+          <Button size="micro" onClick={() => handleApprove(d.id)}>
             {t("disputes.approve")}
           </Button>
         </IndexTable.Cell>
@@ -210,15 +201,10 @@ export default function DisputesListPage() {
     </IndexTable.Row>
   ));
 
-  const handleApprove = async (disputeId: string) => {
-    await fetch(`/api/disputes/${disputeId}/approve`, { method: "POST" });
-    await fetchDisputes();
-  };
-
   return (
     <Page
       title={t("disputes.title")}
-      subtitle={t("disputes.subtitle", { total: pagination.total })}
+      subtitle={t("disputes.manageSubtitle")}
       primaryAction={{
         content: syncing ? t("disputes.syncing") : t("disputes.syncNow"),
         onAction: handleSync,
@@ -244,13 +230,14 @@ export default function DisputesListPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <Card padding="0" data-help-guide="disputes-table">
+          <Card padding="0">
             <Filters
               queryValue={queryValue}
               filters={filters}
               onQueryChange={setQueryValue}
               onQueryClear={() => setQueryValue("")}
               onClearAll={() => { setStatusFilter([]); setQueryValue(""); }}
+              queryPlaceholder={t("common.search")}
             />
             {loading ? (
               <div style={{ padding: "2rem", textAlign: "center" }}>
@@ -258,18 +245,15 @@ export default function DisputesListPage() {
               </div>
             ) : (
               <IndexTable
-                resourceName={resourceName}
-                itemCount={disputes.length}
-                selectedItemsCount={allResourcesSelected ? "All" : selectedResources.length}
-                onSelectionChange={handleSelectionChange}
+                resourceName={{ singular: "dispute", plural: "disputes" }}
+                itemCount={visibleDisputes.length}
                 headings={[
                   { title: t("table.id") },
+                  { title: t("table.order") },
                   { title: t("table.reason") },
-                  { title: t("table.status") },
                   { title: t("table.amount") },
+                  { title: t("table.status") },
                   { title: t("disputes.dueDate") },
-                  { title: t("disputes.timeLeft") },
-                  { title: t("table.lastSynced") },
                   ...(tab === "review" ? [{ title: t("table.action") }] : []),
                 ]}
                 selectable={false}

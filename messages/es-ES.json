@@ -102,7 +102,22 @@
     "howItWorksStep1": "1. DisputeDesk sincroniza disputas automáticamente desde Shopify Payments.",
     "howItWorksStep2": "2. Los paquetes de evidencia se crean automáticamente usando datos de pedidos, seguimiento y políticas.",
     "howItWorksStep3": "3. Cuando el paquete cumple tus reglas (puntuación de completitud + sin bloqueadores), la evidencia se guarda en Shopify vía API.",
-    "howItWorksCompliance": "El envío a la red de tarjetas se realiza en Shopify Admin, o Shopify envía automáticamente en la fecha de vencimiento. DisputeDesk no envía en tu nombre."
+    "howItWorksCompliance": "El envío a la red de tarjetas se realiza en Shopify Admin, o Shopify envía automáticamente en la fecha de vencimiento. DisputeDesk no envía en tu nombre.",
+    "noDisputesYet": "Aún no hay disputas",
+    "noDisputesYetDesc": "Las disputas aparecerán aquí cuando se sincronicen desde tu tienda Shopify.",
+    "completeSetup": "Completa la configuración",
+    "completeSetupDesc": "Termina la configuración para sacar el máximo partido a DisputeDesk.",
+    "resumeSetup": "Reanudar configuración",
+    "continueSetup": "Continuar configuración",
+    "period24h": "24 h",
+    "period7d": "7 días",
+    "period30d": "30 días",
+    "periodAll": "Todo",
+    "totalDisputes": "Disputas totales",
+    "revenueRecovered": "Ingresos recuperados",
+    "avgResponseTime": "Tiempo medio de respuesta",
+    "winRateTrend": "Tendencia de tasa de éxito",
+    "disputeCategories": "Categorías de disputas"
   },
   "disputes": {
     "title": "Disputas",
@@ -236,6 +251,8 @@
     "openInShopifyAdmin": "Abrir en Shopify Admin →"
   },
   "billing": {
+    "planManagement": "Gestión de planes",
+    "showAllPlans": "Mostrar todos los planes",
     "title": "Facturación",
     "subtitle": "Gestione su plan y uso",
     "demoSubtitle": "Gestione su suscripción, uso y métodos de pago",

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const sb = getServiceClient();
   const { data: shop } = await sb
     .from("shops")
-    .select("plan")
+    .select("plan, shop_domain")
     .eq("id", shopId)
     .single();
 
@@ -41,5 +41,6 @@ export async function GET(req: NextRequest) {
       packsLimit: quota.limit,
       packsRemaining: quota.remaining,
     },
+    shop_domain: (shop as { shop_domain?: string } | null)?.shop_domain ?? null,
   });
 }

@@ -104,7 +104,22 @@
     "howItWorksStep1": "1. DisputeDesk synkroniserar tvister automatiskt från Shopify Payments.",
     "howItWorksStep2": "2. Bevispaket byggs automatiskt med beställnings-, spårnings- och policydata.",
     "howItWorksStep3": "3. När paketet uppfyller dina regler (fullständighetspoäng + inga blockerare) sparas bevisen till Shopify via API.",
-    "howItWorksCompliance": "Inlämning till kortnätverket sker i Shopify Admin, eller Shopify skickar automatiskt på förfallodatumet. DisputeDesk skickar inte å dina vägnar."
+    "howItWorksCompliance": "Inlämning till kortnätverket sker i Shopify Admin, eller Shopify skickar automatiskt på förfallodatumet. DisputeDesk skickar inte å dina vägnar.",
+    "noDisputesYet": "Inga disputer än",
+    "noDisputesYetDesc": "Disputer visas här när de har synkroniserats från din Shopify-butik.",
+    "completeSetup": "Slutför konfiguration",
+    "completeSetupDesc": "Slutför konfigurationen för att få ut det mesta av DisputeDesk.",
+    "resumeSetup": "Återuppta konfiguration",
+    "continueSetup": "Fortsätt konfiguration",
+    "period24h": "24 h",
+    "period7d": "7 dagar",
+    "period30d": "30 dagar",
+    "periodAll": "All tid",
+    "totalDisputes": "Totalt antal disputer",
+    "revenueRecovered": "Återvunnen intäkt",
+    "avgResponseTime": "Snitt svarstid",
+    "winRateTrend": "Vinsttendens",
+    "disputeCategories": "Dispuskategorier"
   },
   "disputes": {
     "title": "Tvister",
@@ -244,6 +259,8 @@
     "openInShopifyAdmin": "Öppna i Shopify Admin →"
   },
   "billing": {
+    "planManagement": "Planhantering",
+    "showAllPlans": "Visa alla planer",
     "title": "Fakturering",
     "subtitle": "Hantera din plan och användning",
     "demoSubtitle": "Hantera din prenumeration, användning och betalningsmetoder",

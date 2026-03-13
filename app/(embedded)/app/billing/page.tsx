@@ -21,6 +21,7 @@ import {
   Spinner,
   Banner,
   Divider,
+  Checkbox,
 } from "@shopify/polaris";
 
 interface PlanInfo {
@@ -66,6 +67,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  const [showAllPlans, setShowAllPlans] = useState(true);
 
   const shopId = typeof window !== "undefined"
     ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
@@ -134,7 +136,7 @@ export default function BillingPage() {
 
   return (
     <Page
-      title={t("billing.title")}
+      title={t("billing.planManagement")}
       subtitle={`${t("billing.currentPlan")}: ${plan ? t(planNameKeys[plan.id] ?? "billing.free") : t("billing.free")}`}
     >
       <Layout>
@@ -184,19 +186,29 @@ export default function BillingPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <Text as="h2" variant="headingMd">{t("billing.plans")}</Text>
+          <InlineStack align="space-between" blockAlign="center" wrap>
+            <Text as="h2" variant="headingMd">{t("billing.plans")}</Text>
+            <Checkbox
+              label={t("billing.showAllPlans")}
+              checked={showAllPlans}
+              onChange={setShowAllPlans}
+            />
+          </InlineStack>
         </Layout.Section>
 
-        {PLAN_IDS.map((planId) => {
+        {(showAllPlans ? PLAN_IDS : PLAN_IDS.filter((id) => id === (plan?.id ?? "free"))).map((planId) => {
           const priceInfo = PLAN_PRICES[planId];
           const featureKeys = PLAN_FEATURE_KEYS[planId];
           return (
             <Layout.Section key={planId} variant="oneThird">
               <Card>
                 <BlockStack gap="300">
-                  <InlineStack align="space-between">
+                  <InlineStack align="space-between" wrap>
                     <Text as="h3" variant="headingMd">{t(planNameKeys[planId])}</Text>
-                    {plan?.id === planId && <Badge tone="success">{t("billing.yourCurrentPlan")}</Badge>}
+                    <InlineStack gap="200">
+                      {planId === "growth" && <Badge tone="attention">{t("billing.mostPopular")}</Badge>}
+                      {plan?.id === planId && <Badge tone="success">{t("billing.yourCurrentPlan")}</Badge>}
+                    </InlineStack>
                   </InlineStack>
                   <Text as="p" variant="headingLg">{priceInfo.label}</Text>
                   <Divider />
@@ -211,9 +223,11 @@ export default function BillingPage() {
                       loading={upgrading === planId}
                       onClick={() => handleUpgrade(planId)}
                     >
-                      {priceInfo.price > 0
+                      {planId === "starter" && priceInfo.price > 0
                         ? t("billing.startTrial", { plan: t(planNameKeys[planId]) })
-                        : t(planNameKeys[planId])}
+                        : priceInfo.price > 0
+                          ? t("billing.upgradeTo", { plan: t(planNameKeys[planId]) })
+                          : t(planNameKeys[planId])}
                     </Button>
                   )}
                   {plan?.id === planId && (
