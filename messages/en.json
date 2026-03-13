@@ -1,6 +1,7 @@
 {
   "nav": {
     "overview": "Overview",
+    "dashboard": "Dashboard",
     "disputes": "Disputes",
     "packs": "Packs",
     "rules": "Rules",
@@ -108,7 +109,19 @@
     "howItWorksStep3": "3. When the pack passes your rules (completeness score + no blockers), evidence is saved to Shopify via API.",
     "howItWorksCompliance": "Submission to the card network happens in Shopify Admin, or Shopify auto-submits on the due date. DisputeDesk does not submit on your behalf.",
     "noDisputesYet": "No disputes yet",
-    "noDisputesYetDesc": "Disputes will appear here once they are synced from your Shopify store."
+    "noDisputesYetDesc": "Disputes will appear here once they are synced from your Shopify store.",
+    "completeSetup": "Complete your setup",
+    "completeSetupDesc": "Finish setup to get the most out of DisputeDesk.",
+    "continueSetup": "Continue setup",
+    "period24h": "24h",
+    "period7d": "7 days",
+    "period30d": "30 days",
+    "periodAll": "All time",
+    "totalDisputes": "Total Disputes",
+    "revenueRecovered": "Revenue Recovered",
+    "avgResponseTime": "Avg. Response Time",
+    "winRateTrend": "Win Rate Trend",
+    "disputeCategories": "Dispute Categories"
   },
   "disputes": {
     "title": "Disputes",

@@ -1,6 +1,7 @@
 {
   "nav": {
     "overview": "Resumen",
+    "dashboard": "Panel",
     "disputes": "Disputas",
     "packs": "Paquetes",
     "rules": "Reglas",
