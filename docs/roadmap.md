@@ -78,9 +78,8 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 - Portal placeholder pages are wired to real data as each epic completes.
 - Embedded app inside Shopify Admin remains the primary surface.
 - **EPIC 10b** adds interactive guided tours on top of the static help articles.
-- **EPIC 11** adds the 7-step setup wizard with dashboard checklist card,
-  Evidence Sources V1 (Gorgias connect + sample files), and the onboarding
-  state machine.
+- **EPIC 11** adds the 7-step setup wizard with dashboard checklist card
+  (connect → goals → disputes → packs → rules → policies → team; billing, settings, and help are app sections only), Evidence Sources V1 (Gorgias connect + sample files), and the onboarding state machine.
 - **Shopify App Store:** App registered in Shopify Partners. OAuth installs
   working (cookieless state token). Dispute evidence write scopes
   (`read_shopify_payments_dispute_evidences`,

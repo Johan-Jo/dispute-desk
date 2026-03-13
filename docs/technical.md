@@ -784,13 +784,12 @@ Single source of truth for all locale data. Exports:
 ### Overview
 
 A 7-step guided setup wizard helps merchants configure DisputeDesk after
-installation. Progress is tracked per-shop in the `shop_setup` table and
-surfaced on the dashboard via a Setup Checklist card with a ring progress
-indicator.
+installation. Progress is tracked per-shop in the `shop_setup` table and surfaced on the
+dashboard via a Setup Checklist card with a ring progress indicator.
 
-### Wizard Steps (site-structure aligned)
+**Billing, Settings, and Help** are app sections (reachable from nav) but are **not** part of the onboarding checklist; the wizard focuses on connect → goals → disputes → packs → rules → policies → team.
 
-Wizard steps mirror the app section order: overview → disputes → packs → rules → policies → billing → team → settings → help.
+### Wizard Steps (onboarding only)
 
 | # | ID | Title | Prerequisites |
 |---|-----|-------|---------------|
@@ -800,10 +799,7 @@ Wizard steps mirror the app section order: overview → disputes → packs → r
 | 4 | `packs` | Evidence Packs | `disputes` |
 | 5 | `rules` | Automation Rules | — |
 | 6 | `policies` | Business Policies | `disputes` |
-| 7 | `billing` | Billing & Plan | — |
-| 8 | `team` | Team & Notifications | — |
-| 9 | `settings` | Settings | — |
-| 10 | `help` | Help & Resources | — |
+| 7 | `team` | Team & Notifications | — |
 
 Legacy step ids (`welcome_goals`, `sync_disputes`, etc.) are migrated to the new ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
 
