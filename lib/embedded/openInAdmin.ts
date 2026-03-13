@@ -38,7 +38,8 @@ export function openInAdmin(options?: { newContext?: boolean }): boolean {
   if (!w) return false;
 
   try {
-    const appBridge = (w as unknown as { "app-bridge"?: { actions?: { Redirect?: { dispatch: (action: unknown, payload: string | { url: string; newContext?: boolean }) => void; Action?: { REMOTE: unknown } } } })["app-bridge"];
+    const win = w as Window & { "app-bridge"?: { actions?: { Redirect?: { dispatch: (a: unknown, p: string | { url: string; newContext?: boolean }) => void; Action?: { REMOTE: unknown } } } } };
+    const appBridge = win["app-bridge"];
     const redirect = appBridge?.actions?.Redirect;
     if (redirect?.dispatch) {
       const action = redirect.Action?.REMOTE ?? "REMOTE";
