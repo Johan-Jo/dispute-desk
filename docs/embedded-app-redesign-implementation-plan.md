@@ -4,7 +4,7 @@
 
 ---
 
-## Implementation status (2026-03-14)
+## Implementation status (2026-03-14, updated)
 
 **E1 — Shell and navigation ✅**
 - `s-link` children in `s-app-nav` per App Bridge web component spec (not `<a>` tags).
@@ -26,6 +26,12 @@
 - `setup/page.tsx` redirect falls back to `"overview"` (was `"permissions"`).
 - `SetupChecklistCard` removed from dashboard (not in new Figma design).
 - All 6 locales backfilled with `setup.welcome`, `setup.stepper`, `setup.getStarted` keys.
+
+**E8 — Wizard steps: Set policies, Generate packs, Add rules ✅**
+- `BusinessPoliciesStep`: 5 policy type rows (Returns, Shipping, Terms, Privacy, Contact); each row has a URL `TextField` + "Use template" `Button` that sets `source: "template"` and clears the URL field; inline note when template applied; payload saved via `POST /api/setup/step`.
+- `PacksStep`: fetches `GET /api/templates` on mount; shows checkbox cards (name, description, dispute_type); pre-checks `is_recommended` templates; loading spinner + empty state; on save installs each selected template via `POST /api/templates/:id/install` then marks step done.
+- `AutomationRulesStep`: checkbox cards from `RULE_PRESETS` (4 presets); pre-checks `preset-fraud-auto` + `preset-pnr-auto`; each card shows name, match summary, action badge (Auto-pack / Review); on save calls `POST /api/rules/install-preset` with selected IDs then marks step done.
+- i18n: `setup.policies.*`, `setup.packs.*`, `setup.rules.*` added to all 6 locale files.
 
 **E3 — Open in Admin step ✅**
 - `OpenInAdminStep.tsx` wired to `useTranslations('setup.openInAdmin')`.
