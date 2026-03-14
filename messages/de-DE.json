@@ -1603,6 +1603,37 @@
       "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
       "cta": "Open in Shopify Admin",
       "checklistAction": "Open in Admin"
+    },
+    "getStarted": "Los geht’s →",
+    "stepper": {
+      "disputes": "Streitfälle",
+      "policies": "Richtlinien",
+      "packs": "Packs",
+      "rules": "Regeln",
+      "team": "Team"
+    },
+    "welcome": {
+      "title": "Welcome to DisputeDesk",
+      "subtitle": "Let’s get you set up in just a few minutes",
+      "accomplishHeading": "What you’ll accomplish in this setup:",
+      "step1Title": "Sync your disputes",
+      "step1Desc": "Import existing disputes from your Shopify store",
+      "step2Title": "Add your business policies",
+      "step2Desc": "Link shipping, refund, and other policies for evidence packs",
+      "step3Title": "Generate evidence packs",
+      "step3Desc": "Create templates for organizing dispute evidence",
+      "step4Title": "Set up automation rules",
+      "step4Desc": "Automatically route disputes based on type and criteria",
+      "step5Title": "Invite your team",
+      "step5Desc": "Add team members to collaborate on dispute management",
+      "statTimeValue": "5 mins",
+      "statTimeLabel": "Setup time",
+      "statStepsValue": "5 steps",
+      "statStepsLabel": "To complete",
+      "statAutoValue": "100%",
+      "statAutoLabel": "Automated",
+      "skipInfoTitle": "You can skip any step",
+      "skipInfoDesc": "All settings can be configured later from the Settings page."
     }
   },
   "configGuide": {

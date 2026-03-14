@@ -25,7 +25,6 @@ import {
   Box,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
-import { SetupChecklistCard } from "@/components/setup/SetupChecklistCard";
 import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
 import type { SetupStateResponse } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
@@ -366,12 +365,6 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section>
           <ConfigGuideCard />
         </Layout.Section>
-        <Layout.Section>
-          <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
-            <SetupChecklistCard />
-          </Suspense>
-        </Layout.Section>
-
         {/* Overview: period selector + 4 KPI cards (real data from API) */}
         <Layout.Section>
           <DashboardKpis period={period} onPeriodChange={setPeriod} />

@@ -2,23 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Page,
-  Layout,
-  Card,
-  BlockStack,
-  Text,
-  InlineStack,
-  ProgressBar,
-  Spinner,
-} from "@shopify/polaris";
+import { Page, Card, BlockStack, Spinner, Button, InlineStack } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
-import { SETUP_STEPS, TOTAL_STEPS, STEP_BY_ID } from "@/lib/setup/constants";
+import { WIZARD_STEP_IDS, STEP_BY_ID } from "@/lib/setup/constants";
 import type { StepId, StepsMap, SetupStateResponse } from "@/lib/setup/types";
-import { StepCardsRow } from "./StepCardsRow";
-import { WhatThisUnlocksCard } from "./WhatThisUnlocksCard";
-import { BottomNav } from "./BottomNav";
+import { WizardStepper } from "./WizardStepper";
 import { SkipReasonModal } from "./modals/SkipReasonModal";
 
 interface SetupWizardShellProps {
@@ -27,11 +16,7 @@ interface SetupWizardShellProps {
   onSave: () => Promise<boolean>;
 }
 
-export function SetupWizardShell({
-  stepId,
-  children,
-  onSave,
-}: SetupWizardShellProps) {
+export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellProps) {
   const t = useTranslations("setup");
   const tNav = useTranslations("nav");
   const router = useRouter();
@@ -42,22 +27,21 @@ export function SetupWizardShell({
   const [skipModalOpen, setSkipModalOpen] = useState(false);
 
   const stepDef = STEP_BY_ID[stepId];
-  const stepIndex = stepDef?.index ?? 1;
+  const wizardIndex = WIZARD_STEP_IDS.indexOf(stepId);
+  const isFirst = wizardIndex === 0;
+  const isLast = wizardIndex === WIZARD_STEP_IDS.length - 1;
+  const isWelcome = stepId === "overview";
 
   const fetchState = useCallback(async () => {
     try {
       const res = await fetch("/api/setup/state");
-      if (res.ok) {
-        setState(await res.json());
-      }
+      if (res.ok) setState(await res.json());
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchState();
-  }, [fetchState]);
+  useEffect(() => { fetchState(); }, [fetchState]);
 
   const navigateToStep = useCallback(
     (target: StepId) => {
@@ -66,28 +50,27 @@ export function SetupWizardShell({
     [router, searchParams]
   );
 
-  const getAdjacentStep = useCallback(
+  const getAdjacentWizardStep = useCallback(
     (direction: "prev" | "next"): StepId | null => {
-      const idx = SETUP_STEPS.findIndex((s) => s.id === stepId);
-      if (direction === "prev" && idx > 0) return SETUP_STEPS[idx - 1].id;
-      if (direction === "next" && idx < SETUP_STEPS.length - 1)
-        return SETUP_STEPS[idx + 1].id;
+      const idx = WIZARD_STEP_IDS.indexOf(stepId);
+      if (direction === "prev" && idx > 0) return WIZARD_STEP_IDS[idx - 1];
+      if (direction === "next" && idx < WIZARD_STEP_IDS.length - 1) return WIZARD_STEP_IDS[idx + 1];
       return null;
     },
     [stepId]
   );
 
   const handleBack = useCallback(() => {
-    const prev = getAdjacentStep("prev");
+    const prev = getAdjacentWizardStep("prev");
     if (prev) navigateToStep(prev);
-  }, [getAdjacentStep, navigateToStep]);
+  }, [getAdjacentWizardStep, navigateToStep]);
 
   const handleSaveAndContinue = useCallback(async () => {
     setSaving(true);
     try {
       const ok = await onSave();
       if (ok) {
-        const next = getAdjacentStep("next");
+        const next = getAdjacentWizardStep("next");
         if (next) {
           navigateToStep(next);
         } else {
@@ -97,7 +80,7 @@ export function SetupWizardShell({
     } finally {
       setSaving(false);
     }
-  }, [onSave, getAdjacentStep, navigateToStep, router, searchParams]);
+  }, [onSave, getAdjacentWizardStep, navigateToStep, router, searchParams]);
 
   const handleSkipConfirm = useCallback(
     async (reason: string) => {
@@ -107,92 +90,73 @@ export function SetupWizardShell({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stepId, reason }),
       });
-      const next = getAdjacentStep("next");
+      const next = getAdjacentWizardStep("next");
       if (next) {
         navigateToStep(next);
       } else {
         router.push(withShopParams("/app", searchParams));
       }
     },
-    [stepId, getAdjacentStep, navigateToStep, router, searchParams]
+    [stepId, getAdjacentWizardStep, navigateToStep, router, searchParams]
   );
 
   if (loading) {
     return (
       <Page>
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400" inlineAlign="center">
-                <Spinner />
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
+        <Card>
+          <BlockStack gap="400" inlineAlign="center">
+            <Spinner />
+          </BlockStack>
+        </Card>
       </Page>
     );
   }
 
   const stepsMap: StepsMap = state?.steps ?? {};
-  const doneCount = state?.progress.doneCount ?? 0;
-  const progressPct = TOTAL_STEPS > 0 ? (stepIndex / TOTAL_STEPS) * 100 : 0;
 
   return (
     <Page
-      title={t("wizardTitle")}
-      subtitle={t("wizardSubtitle")}
-      backAction={{
-        content: tNav("dashboard"),
-        url: withShopParams("/app", searchParams),
-      }}
+      backAction={{ content: tNav("dashboard"), url: withShopParams("/app", searchParams) }}
     >
-      <Layout>
-        {/* Progress + Step Cards */}
-        <Layout.Section>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {/* Top stepper — hidden on welcome screen */}
+        {!isWelcome && (
+          <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
+        )}
+
+        <div style={{ marginTop: isWelcome ? 0 : 20 }}>
           <Card>
             <BlockStack gap="400">
-              <InlineStack align="space-between">
-                <Text as="span" variant="bodySm" fontWeight="semibold">
-                  {t("progress")}
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {t("xOfY", { current: stepIndex, total: TOTAL_STEPS })}
-                </Text>
-              </InlineStack>
-              <ProgressBar progress={progressPct} size="small" tone="primary" />
-              <StepCardsRow
-                currentStepId={stepId}
-                stepsMap={stepsMap}
-                onStepClick={navigateToStep}
-              />
+              {children}
+
+              {/* Bottom nav */}
+              <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16, marginTop: 8 }}>
+                {isWelcome ? (
+                  <Button variant="primary" onClick={handleSaveAndContinue} loading={saving} fullWidth>
+                    {t("getStarted")}
+                  </Button>
+                ) : (
+                  <InlineStack align="space-between">
+                    <div>
+                      {!isFirst && (
+                        <Button onClick={handleBack}>{t("back")}</Button>
+                      )}
+                    </div>
+                    <InlineStack gap="300">
+                      {!isLast && (
+                        <Button onClick={() => setSkipModalOpen(true)}>{t("skipForNow")}</Button>
+                      )}
+                      <Button variant="primary" onClick={handleSaveAndContinue} loading={saving}>
+                        {isLast ? t("finishSetup") : t("saveAndContinue")}
+                      </Button>
+                    </InlineStack>
+                  </InlineStack>
+                )}
+              </div>
             </BlockStack>
           </Card>
-        </Layout.Section>
-
-        {/* Two-column: step content + what this unlocks */}
-        <Layout.Section>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-            <Card>
-              <BlockStack gap="400">
-                {children}
-                <BottomNav
-                  onBack={stepIndex > 1 ? handleBack : undefined}
-                  onSaveAndContinue={handleSaveAndContinue}
-                  onSkip={
-                    stepIndex < TOTAL_STEPS
-                      ? () => setSkipModalOpen(true)
-                      : undefined
-                  }
-                  isFirst={stepIndex === 1}
-                  isLast={stepIndex === TOTAL_STEPS}
-                  saving={saving}
-                />
-              </BlockStack>
-            </Card>
-            <WhatThisUnlocksCard stepId={stepId} />
-          </div>
-        </Layout.Section>
-      </Layout>
+        </div>
+      </div>
 
       <SkipReasonModal
         open={skipModalOpen}

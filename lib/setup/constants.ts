@@ -130,6 +130,14 @@ export const STEP_BY_ID = Object.fromEntries(
 
 export const TOTAL_STEPS = SETUP_STEPS.length;
 
+/** Steps navigated by the setup wizard (excludes permissions / open_in_admin which are auto-completed). */
+export const WIZARD_STEP_IDS: StepId[] = ["overview", "disputes", "policies", "packs", "rules", "team"];
+
+/** Steps shown in the wizard top stepper bar (excludes the overview/welcome screen). */
+export const WIZARD_STEPPER_IDS: StepId[] = ["disputes", "policies", "packs", "rules", "team"];
+
+export const TOTAL_WIZARD_STEPS = WIZARD_STEP_IDS.length;
+
 /** Map legacy step ids to new step ids for migration of shop_setup.steps */
 export const LEGACY_STEP_ID_MAP: Record<string, StepId> = {
   welcome_goals: "overview",
@@ -148,6 +156,19 @@ export function getNextActionableStep(
     const status = state?.status ?? "todo";
     if (status === "todo" || status === "in_progress") {
       return step.id;
+    }
+  }
+  return null;
+}
+
+/** Returns the next incomplete step within the wizard flow (WIZARD_STEP_IDS only). */
+export function getNextWizardStep(
+  stepsMap: Partial<Record<StepId, { status: string }>>
+): StepId | null {
+  for (const id of WIZARD_STEP_IDS) {
+    const status = stepsMap[id]?.status ?? "todo";
+    if (status === "todo" || status === "in_progress") {
+      return id;
     }
   }
   return null;

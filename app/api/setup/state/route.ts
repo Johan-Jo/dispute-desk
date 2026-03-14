@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
-  SETUP_STEPS,
   STEP_IDS,
-  TOTAL_STEPS,
-  getNextActionableStep,
+  WIZARD_STEP_IDS,
+  TOTAL_WIZARD_STEPS,
+  getNextWizardStep,
   LEGACY_STEP_ID_MAP,
 } from "@/lib/setup/constants";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
@@ -56,19 +56,25 @@ export async function GET(req: NextRequest) {
   const stepsMap = migrateStepsMap(row?.steps as Record<string, unknown> | null);
 
   const fullSteps = {} as Record<StepId, StepState>;
-  let doneCount = 0;
   for (const id of STEP_IDS) {
     fullSteps[id] = stepsMap[id] ?? { ...defaultState };
-    if (fullSteps[id].status === "done") doneCount++;
   }
 
-  const nextStepId = getNextActionableStep(fullSteps);
+  const nextStepId = getNextWizardStep(fullSteps);
+
+  // Progress and allDone based on wizard steps only (excludes auto-steps like permissions/open_in_admin)
+  let wizardDoneCount = 0;
+  for (const id of WIZARD_STEP_IDS) {
+    if (fullSteps[id]?.status === "done" || fullSteps[id]?.status === "skipped") {
+      wizardDoneCount++;
+    }
+  }
 
   const response: SetupStateResponse = {
     steps: fullSteps,
-    progress: { doneCount, total: TOTAL_STEPS },
+    progress: { doneCount: wizardDoneCount, total: TOTAL_WIZARD_STEPS },
     nextStepId,
-    allDone: doneCount === TOTAL_STEPS,
+    allDone: wizardDoneCount === TOTAL_WIZARD_STEPS,
   };
 
   return NextResponse.json(response);

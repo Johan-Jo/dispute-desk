@@ -16,6 +16,17 @@
 - Embedded layout reads `x-shopify-locale` as `shopLocale` in `resolveLocale()` — fixes first-request language (the `dd_locale` cookie is response-only on the first request).
 - Backfilled ~400 missing keys across de-DE, fr-FR, es-ES, pt-BR, sv-SE; all 5 locales now at 0 missing keys vs en-US.
 
+**E6 — Setup wizard redesign ✅**
+- `SetupWizardShell` redesigned: horizontal `WizardStepper` at top (5 steps), full-width content card, no "What this unlocks" sidebar, "Get Started →" on welcome screen.
+- `WizardStepper` new component: Sync disputes → Set policies → Generate packs → Add rules → Add team, with icons, connecting lines, active/completed/pending states.
+- `WelcomeGoalsStep` redesigned to Figma spec: shield icon, heading, numbered accomplishments list (5 items), stats row (5 mins / 5 steps / 100%), blue skip-info banner.
+- `WIZARD_STEP_IDS` = [overview, disputes, policies, packs, rules, team]; `WIZARD_STEPPER_IDS` = [disputes, policies, packs, rules, team].
+- `getNextWizardStep()` added — iterates `WIZARD_STEP_IDS` only; API now uses this so `nextStepId` always resolves to a wizard step.
+- API `progress`/`allDone` now counts wizard steps only (6), not all 8.
+- `setup/page.tsx` redirect falls back to `"overview"` (was `"permissions"`).
+- `SetupChecklistCard` removed from dashboard (not in new Figma design).
+- All 6 locales backfilled with `setup.welcome`, `setup.stepper`, `setup.getStarted` keys.
+
 **E3 — Open in Admin step ✅**
 - `OpenInAdminStep.tsx` wired to `useTranslations('setup.openInAdmin')`.
 - `SetupChecklistCard.tsx` wired to existing `setup.*` i18n keys (was all hardcoded English).
