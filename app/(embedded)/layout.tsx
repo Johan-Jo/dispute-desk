@@ -38,7 +38,6 @@ export default async function EmbeddedLayout({
       <script
         src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
         data-api-key={apiKey}
-        defer
         {...(shopifyHost ? { "data-host": shopifyHost } : {})}
       />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
