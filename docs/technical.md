@@ -393,6 +393,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 ### Embedded app (Shopify Admin iframe) troubleshooting
 - **App URL:** In Partner Dashboard, App URL must be exactly `https://disputedesk.app` (no trailing slash; same protocol and domain as deployment). Mismatch can cause "postMessage target origin does not match" and broken iframe.
 - **Host param:** When the app is opened from Admin, the iframe URL must include `shop` and `host` query params. Middleware redirects `/?shop=…` to `/app?shop=…&host=…` preserving params. The embedded layout forwards `host` via `x-shopify-host` and a `shopify-host` meta tag for App Bridge. If the iframe URL lacks `host`, App Bridge may use the wrong origin for `postMessage` (disputedesk.app instead of admin.shopify.com).
+- **App Bridge script placement:** App Bridge CDN script (`app-bridge.js`) must be a synchronous blocking `<script>` — no `async`, `defer`, or `type=module`. React hoists `<script src>` from nested Server Components and adds `async`/`defer` automatically. The script is therefore placed in the explicit `<head>` of the root layout (`app/layout.tsx`) where React does not modify it. It must not be loaded via `next/script` or any deferred strategy.
 - **OAuth in iframe:** `GET /api/auth/shopify` always returns a 302 redirect to Shopify’s OAuth URL. No HTML breakout page is used. Session cookies (`shopify_shop`, `shopify_shop_id`) are set by the callback with `sameSite: "none"` and `secure: true` so the browser sends them in the cross-origin iframe on subsequent requests; without this, the middleware would not see the session and would redirect to auth again (redirect loop).
 
 ### Shopify OAuth
@@ -759,10 +760,11 @@ Single source of truth for all locale data. Exports:
 
 ### Locale Resolution (cascading fallback)
 1. User locale (`dd_locale` cookie or `portal_user_profiles.user_locale`).
-2. Shop locale (`shops.locale` column, BCP-47).
-3. Shopify locale (inferred from `Accept-Language` header).
-4. Default: `en-US`.
-5. Partial locale fallback: `fr-CA` → base `fr` → `fr-FR`.
+2. Shopify locale param: `?locale=` query param from Shopify on embed load, forwarded by middleware as `x-shopify-locale` request header so it is available on the **first** request (the `dd_locale` cookie is set in the response and is only readable from the second request onward).
+3. Shop locale (`shops.locale` column, BCP-47).
+4. Accept-Language header.
+5. Default: `en-US`.
+6. Partial locale fallback: `fr-CA` → base `fr` → `fr-FR`.
 
 ### DB Storage
 - `shops.locale` — BCP-47 tag, default `'en-US'`.
@@ -790,23 +792,24 @@ Single source of truth for all locale data. Exports:
 
 ### Overview
 
-A 7-step guided setup wizard helps merchants configure DisputeDesk after
+An 8-step guided setup wizard helps merchants configure DisputeDesk after
 installation. Progress is tracked per-shop in the `shop_setup` table and surfaced on the
 dashboard via a Setup Checklist card with a ring progress indicator.
 
-**Billing, Settings, and Help** are app sections (reachable from nav) but are **not** part of the onboarding checklist; the wizard focuses on connect → goals → disputes → packs → rules → policies → team.
+**Billing, Settings, and Help** are app sections (reachable from nav) but are **not** part of the onboarding checklist.
 
 ### Wizard Steps (onboarding only)
 
 | # | ID | Title | Prerequisites |
 |---|-----|-------|---------------|
 | 1 | `permissions` | Connect your store | — |
-| 2 | `overview` | Overview & Goals | `permissions` |
-| 3 | `disputes` | Disputes | `permissions` |
-| 4 | `packs` | Evidence Packs | `disputes` |
-| 5 | `rules` | Automation Rules | — |
-| 6 | `policies` | Business Policies | `disputes` |
-| 7 | `team` | Team & Notifications | — |
+| 2 | `open_in_admin` | Open in Shopify Admin | `permissions` |
+| 3 | `overview` | Overview & Goals | `permissions`, `open_in_admin` |
+| 4 | `disputes` | Disputes | `permissions` |
+| 5 | `packs` | Evidence Packs | `disputes` |
+| 6 | `rules` | Automation Rules | — |
+| 7 | `policies` | Business Policies | `disputes` |
+| 8 | `team` | Team & Notifications | — |
 
 Legacy step ids (`welcome_goals`, `sync_disputes`, etc.) are migrated to the new ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
 

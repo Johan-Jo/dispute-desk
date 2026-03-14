@@ -4,9 +4,23 @@
 
 ---
 
-## Implementation status (2025-03)
+## Implementation status (2026-03-14)
 
-**Shell (E1):** Nav is provided only via `s-app-nav` (AppNavSidebar). The embedded app layout (`app/(embedded)/app/layout.tsx`) renders no in-iframe horizontal tab bar—only `AppNavSidebar` (hidden in DOM so Shopify can read it) and main content. If a horizontal nav still appears in the embedded view, see **E1 — Shell and nav (homework)** below. Polaris and existing layout unchanged.
+**E1 — Shell and navigation ✅**
+- `s-link` children in `s-app-nav` per App Bridge web component spec (not `<a>` tags).
+- App Bridge script moved to root layout `<head>` — React adds `async`/`defer` to `<script src>` in nested Server Components; the explicit `<head>` in the root layout is the only safe placement.
+- `defer` removed; App Bridge aborts with an error if loaded with `defer`, `async`, or `type=module`.
+
+**E2 — Locale and i18n wiring ✅**
+- Middleware forwards `?locale=` query param as `x-shopify-locale` request header.
+- Embedded layout reads `x-shopify-locale` as `shopLocale` in `resolveLocale()` — fixes first-request language (the `dd_locale` cookie is response-only on the first request).
+- Backfilled ~400 missing keys across de-DE, fr-FR, es-ES, pt-BR, sv-SE; all 5 locales now at 0 missing keys vs en-US.
+
+**E3 — Open in Admin step ✅**
+- `OpenInAdminStep.tsx` wired to `useTranslations('setup.openInAdmin')`.
+- `SetupChecklistCard.tsx` wired to existing `setup.*` i18n keys (was all hardcoded English).
+- Added `setup.openInAdmin` namespace to en-US.json; backfilled all 5 non-English locales.
+- `lib/embedded/openInAdmin.ts`: App Bridge Redirect as primary; `window.open` / `window.top.location.href` as fallbacks.
 
 **E1 — Shell and nav (homework):**
 
