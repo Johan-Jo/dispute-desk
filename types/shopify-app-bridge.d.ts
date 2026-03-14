@@ -9,6 +9,10 @@ declare namespace React {
         React.HTMLAttributes<HTMLElement>,
         HTMLElement
       > & { children?: React.ReactNode };
+      "s-link": React.DetailedHTMLProps<
+        React.AnchorHTMLAttributes<HTMLElement>,
+        HTMLElement
+      > & { children?: React.ReactNode };
     }
   }
 }
