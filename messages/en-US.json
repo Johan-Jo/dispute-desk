@@ -1603,5 +1603,11 @@
       "cta": "Open in Shopify Admin",
       "checklistAction": "Open in Admin"
     }
+  },
+  "configGuide": {
+    "title": "Quick access",
+    "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
+    "cta": "Open in Shopify Admin",
+    "dismiss": "Dismiss"
   }
 }

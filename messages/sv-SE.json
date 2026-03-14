@@ -1605,5 +1605,11 @@
     "badgeOptional": "Optional",
     "draft": "Draft",
     "productNotReceived": "Product Not Received"
+  },
+  "configGuide": {
+    "title": "Quick access",
+    "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
+    "cta": "Open in Shopify Admin",
+    "dismiss": "Dismiss"
   }
 }

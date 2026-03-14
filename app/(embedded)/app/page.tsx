@@ -188,7 +188,8 @@ function RecentDisputesTable() {
   );
 }
 
-function DashboardKpis({ period, onPeriodChange, t }: { period: PeriodKey; onPeriodChange: (p: PeriodKey) => void; t: (k: string) => string }) {
+function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriodChange: (p: PeriodKey) => void }) {
+  const t = useTranslations();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -269,7 +270,8 @@ function DashboardKpis({ period, onPeriodChange, t }: { period: PeriodKey; onPer
   );
 }
 
-function DashboardCharts({ period, t }: { period: PeriodKey; t: (k: string) => string }) {
+function DashboardCharts({ period }: { period: PeriodKey }) {
+  const t = useTranslations();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -353,7 +355,7 @@ export default function EmbeddedDashboardPage() {
     <Page
       title={t("dashboard.title")}
       subtitle={t("dashboard.embeddedSubtitle")}
-      primaryAction={{ content: t("dashboard.automationSettings"), url: "/app/disputes" }}
+      primaryAction={{ content: t("dashboard.automationSettings"), url: "/app/settings" }}
       secondaryActions={[{ content: t("nav.help"), url: "/app/help" }]}
     >
       <Layout>
@@ -372,7 +374,7 @@ export default function EmbeddedDashboardPage() {
 
         {/* Overview: period selector + 4 KPI cards (real data from API) */}
         <Layout.Section>
-          <DashboardKpis period={period} onPeriodChange={setPeriod} t={t} />
+          <DashboardKpis period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
         <Layout.Section>
@@ -382,7 +384,7 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         {/* Win Rate Trend + Dispute Categories (real data from API) */}
-        <DashboardCharts period={period} t={t} />
+        <DashboardCharts period={period} />
       </Layout>
     </Page>
   );

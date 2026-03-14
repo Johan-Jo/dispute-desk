@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { Card, BlockStack, InlineStack, Text, Button } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 import { openInAdmin } from "@/lib/embedded/openInAdmin";
 
 const STORAGE_KEY = "dd_config_guide_dismissed";
 
 export function ConfigGuideCard() {
+  const t = useTranslations("configGuide");
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
@@ -33,20 +35,20 @@ export function ConfigGuideCard() {
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingMd">
-            Quick access
+            {t("title")}
           </Text>
           <Button variant="plain" onClick={handleDismiss}>
-            Dismiss
+            {t("dismiss")}
           </Button>
         </InlineStack>
         <Text as="p" variant="bodyMd" tone="subdued">
-          Pin the app in Shopify Admin to open DisputeDesk from your sidebar.
+          {t("description")}
         </Text>
         <Button
           variant="primary"
           onClick={() => openInAdmin({ newContext: true })}
         >
-          Open in Shopify Admin
+          {t("cta")}
         </Button>
       </BlockStack>
     </Card>
