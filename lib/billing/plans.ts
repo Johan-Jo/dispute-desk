@@ -26,8 +26,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     packsPerMonth: 0,
     packsLifetime: FREE_LIFETIME_PACKS,
     autoPack: false,
-    rules: true,
-    maxRules: 5,
+    rules: false,
+    maxRules: 0,
     trialDays: 0,
     features: ["freeFeature1", "freeFeature2", "freeFeature3", "freeFeature4"],
     limits: [

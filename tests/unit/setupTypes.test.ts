@@ -24,17 +24,15 @@ describe("setup types", () => {
   it("StepId values match expected set", () => {
     const ids: StepId[] = [
       "permissions",
+      "open_in_admin",
       "overview",
       "disputes",
       "packs",
       "rules",
       "policies",
-      "billing",
       "team",
-      "settings",
-      "help",
     ];
-    expect(ids).toHaveLength(10);
+    expect(ids).toHaveLength(8);
   });
 
   it("StepsMap can hold partial step states", () => {
@@ -50,16 +48,17 @@ describe("setup types", () => {
   it("SetupStateResponse shape is valid", () => {
     const response: SetupStateResponse = {
       steps: {
-        overview: { status: "done" },
         permissions: { status: "done" },
+        open_in_admin: { status: "done" },
+        overview: { status: "todo" },
         disputes: { status: "todo" },
         packs: { status: "todo" },
         rules: { status: "todo" },
         policies: { status: "todo" },
         team: { status: "todo" },
       },
-      progress: { doneCount: 2, total: 7 },
-      nextStepId: "disputes",
+      progress: { doneCount: 2, total: 8 },
+      nextStepId: "overview",
       allDone: false,
     };
     expect(response.progress.doneCount).toBe(2);

@@ -17,10 +17,7 @@ export type StepId =
   | "packs"
   | "rules"
   | "policies"
-  | "billing"
-  | "team"
-  | "settings"
-  | "help";
+  | "team";
 
 export type StepsMap = Partial<Record<StepId, StepState>>;
 

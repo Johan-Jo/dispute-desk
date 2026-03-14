@@ -87,10 +87,6 @@ const STEP_ROUTES: Record<StepId, string> = {
   rules: "/portal/setup/rules",
   policies: "/portal/setup/policies",
   team: "/portal/setup/team",
-  // Billing, settings, help are not part of onboarding; kept for type compatibility
-  billing: "/portal/billing",
-  settings: "/portal/settings",
-  help: "/portal/help",
 };
 
 function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {

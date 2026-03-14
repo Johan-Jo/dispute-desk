@@ -19,9 +19,6 @@ import { BusinessPoliciesStep } from "@/components/setup/steps/BusinessPoliciesS
 import { AutomationRulesStep } from "@/components/setup/steps/AutomationRulesStep";
 import { TeamNotificationsStep } from "@/components/setup/steps/TeamNotificationsStep";
 import { PacksStep } from "@/components/setup/steps/PacksStep";
-import { BillingStep } from "@/components/setup/steps/BillingStep";
-import { SettingsStep } from "@/components/setup/steps/SettingsStep";
-import { HelpStep } from "@/components/setup/steps/HelpStep";
 import { OpenInAdminStep } from "@/components/setup/steps/OpenInAdminStep";
 
 const stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
@@ -55,10 +52,7 @@ function StepPageInner() {
     packs: PacksStep,
     rules: AutomationRulesStep,
     policies: BusinessPoliciesStep,
-    billing: BillingStep,
     team: TeamNotificationsStep,
-    settings: SettingsStep,
-    help: HelpStep,
   };
 
   const StepComponent = stepComponents[stepId];

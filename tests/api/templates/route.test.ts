@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NextRequest } from "next/server";
 
 vi.mock("@/lib/db/templates", () => ({
   listTemplates: vi.fn(),
@@ -32,7 +33,7 @@ describe("GET /api/templates", () => {
     ]);
 
     const url = new URL("http://localhost/api/templates");
-    const req = { nextUrl: url } as Request;
+    const req = { nextUrl: url } as unknown as NextRequest;
     const res = await GET(req);
 
     expect(res.status).toBe(200);
@@ -49,7 +50,7 @@ describe("GET /api/templates", () => {
     mockListTemplates.mockResolvedValue([]);
 
     const url = new URL("http://localhost/api/templates");
-    const req = { nextUrl: url } as Request;
+    const req = { nextUrl: url } as unknown as NextRequest;
     const res = await GET(req);
 
     expect(res.status).toBe(200);

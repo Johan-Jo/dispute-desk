@@ -9,6 +9,7 @@ describe("evaluateCompleteness", () => {
       "delivery_proof",
       "shipping_policy",
       "customer_communication",
+      "supporting_documents",
     ]);
     const result = evaluateCompleteness("PRODUCT_NOT_RECEIVED", fields);
 
@@ -22,7 +23,7 @@ describe("evaluateCompleteness", () => {
     const fields = new Set(["shipping_policy"]);
     const result = evaluateCompleteness("PRODUCT_NOT_RECEIVED", fields);
 
-    expect(result.score).toBe(20); // 1 of 5
+    expect(result.score).toBe(17); // 1 of 6
     expect(result.blockers).toContain("Order Confirmation");
     expect(result.blockers).toContain("Shipping Tracking");
     expect(result.blockers).toContain("Delivery Proof");
@@ -37,7 +38,7 @@ describe("evaluateCompleteness", () => {
     ]);
     const result = evaluateCompleteness("PRODUCT_NOT_RECEIVED", fields);
 
-    expect(result.score).toBe(60); // 3 of 5
+    expect(result.score).toBe(50); // 3 of 6
     expect(result.blockers).toHaveLength(0);
     expect(result.recommended_actions).toContain("Add Shipping Policy");
     expect(result.recommended_actions).toContain("Add Customer Communication");
@@ -66,7 +67,7 @@ describe("evaluateCompleteness", () => {
     const result = evaluateCompleteness("FRAUDULENT", fields);
 
     expect(result.blockers).toHaveLength(0);
-    expect(result.score).toBe(40); // 2 of 5
+    expect(result.score).toBe(33); // 2 of 6
     expect(result.recommended_actions.length).toBeGreaterThan(0);
   });
 

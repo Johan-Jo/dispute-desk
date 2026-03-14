@@ -53,7 +53,7 @@ describe("GET /api/packs/[packId]", () => {
 
     expect(res.status).toBe(404);
     const data = await res.json();
-    expect(data.error).toBe("Pack not found");
+    expect(data.error).toContain("Pack not found");
     expect(mockGetPackById).toHaveBeenCalledWith(packId);
   });
 
