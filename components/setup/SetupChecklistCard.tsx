@@ -17,6 +17,7 @@ import {
   XCircleIcon,
 } from "@shopify/polaris-icons";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { SETUP_STEPS } from "@/lib/setup/constants";
 import { openInAdmin } from "@/lib/embedded/openInAdmin";
@@ -24,6 +25,7 @@ import { ProgressRing } from "./ProgressRing";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
 
 export function SetupChecklistCard() {
+  const t = useTranslations("setup");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<SetupStateResponse | null>(null);
@@ -110,16 +112,17 @@ export function SetupChecklistCard() {
             <ProgressRing completed={progress.doneCount} total={progress.total} />
             <BlockStack gap="100">
               <Text as="h2" variant="headingMd">
-                Setup Checklist
+                {t("checklistTitle")}
               </Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                {progress.total - progress.doneCount} step
-                {progress.total - progress.doneCount !== 1 ? "s" : ""} remaining
+                {progress.total - progress.doneCount === 1
+                  ? t("stepsRemaining", { count: 1 })
+                  : t("stepsRemainingPlural", { count: progress.total - progress.doneCount })}
               </Text>
             </BlockStack>
           </InlineStack>
           <Button variant="plain" url="/app/help">
-            Need help?
+            {t("needHelp")}
           </Button>
         </InlineStack>
 
@@ -160,14 +163,14 @@ export function SetupChecklistCard() {
                   </InlineStack>
 
                   {isDone && (
-                    <Badge tone="success">Done</Badge>
+                    <Badge tone="success">{t("done")}</Badge>
                   )}
                   {isSkipped && (
                     <Button
                       variant="plain"
                       onClick={() => handleUndoSkip(stepDef.id)}
                     >
-                      Undo skip
+                      {t("undoSkip")}
                     </Button>
                   )}
                   {!isDone && !isSkipped && (
@@ -176,14 +179,14 @@ export function SetupChecklistCard() {
                         variant="plain"
                         onClick={() => handleOpenInAdmin(stepDef.id)}
                       >
-                        Open in Admin
+                        {t("openInAdmin.checklistAction")}
                       </Button>
                     ) : (
                       <Button
                         variant="plain"
                         onClick={() => navigateToStep(stepDef.id)}
                       >
-                        Complete
+                        {t("complete")}
                       </Button>
                     )
                   )}
@@ -196,11 +199,11 @@ export function SetupChecklistCard() {
         {/* Actions */}
         <BlockStack gap="200">
           <Button variant="primary" onClick={handleContinueSetup}>
-            Continue setup →
+            {t("continueSetup")}
           </Button>
           <InlineStack align="center">
             <Button variant="plain" url="mailto:support@disputedesk.com?subject=Setup%20call%20request">
-              Book a 15-min setup call
+              {t("bookSetupCall")}
             </Button>
           </InlineStack>
         </BlockStack>

@@ -1597,6 +1597,12 @@
       "beforeDueDesc": "Reminder to submit evidence",
       "evidenceReady": "Evidence pack ready",
       "evidenceReadyDesc": "When automated evidence is compiled"
+    },
+    "openInAdmin": {
+      "title": "Open in Shopify Admin",
+      "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
+      "cta": "Open in Shopify Admin",
+      "checklistAction": "Open in Admin"
     }
   }
 }

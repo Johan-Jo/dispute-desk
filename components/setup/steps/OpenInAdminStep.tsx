@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { BlockStack, Text, Button } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 import { openInAdmin } from "@/lib/embedded/openInAdmin";
 import type { StepId } from "@/lib/setup/types";
 
@@ -11,6 +12,8 @@ interface OpenInAdminStepProps {
 }
 
 export function OpenInAdminStep({ stepId, onSaveRef }: OpenInAdminStepProps) {
+  const t = useTranslations("setup.openInAdmin");
+
   useEffect(() => {
     onSaveRef.current = async () => {
       const res = await fetch("/api/setup/step", {
@@ -25,16 +28,16 @@ export function OpenInAdminStep({ stepId, onSaveRef }: OpenInAdminStepProps) {
   return (
     <BlockStack gap="400">
       <Text as="h2" variant="headingLg">
-        Open in Shopify Admin
+        {t("title")}
       </Text>
       <Text as="p" variant="bodyMd" tone="subdued">
-        Open the app in your Shopify Admin to pin it to the sidebar for quick access.
+        {t("description")}
       </Text>
       <Button
         variant="primary"
         onClick={() => openInAdmin({ newContext: true })}
       >
-        Open in Shopify Admin
+        {t("cta")}
       </Button>
     </BlockStack>
   );

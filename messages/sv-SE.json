@@ -1462,6 +1462,12 @@
       "beforeDueDesc": "Påminnelse om att skicka in bevis",
       "evidenceReady": "Bevispaket klart",
       "evidenceReadyDesc": "När automatiskt bevis är sammanställt"
+    },
+    "openInAdmin": {
+      "title": "Open in Shopify Admin",
+      "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
+      "cta": "Open in Shopify Admin",
+      "checklistAction": "Open in Admin"
     }
   },
   "templateCustomize": {
