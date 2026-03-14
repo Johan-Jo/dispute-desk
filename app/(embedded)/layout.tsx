@@ -35,11 +35,6 @@ export default async function EmbeddedLayout({
           __html: `(function(){var u=new URL(window.location.href);var h=document.querySelector('meta[name="shopify-host"]')?.content||u.searchParams.get('host')||sessionStorage.getItem('shopify_host')||'';var shop=u.searchParams.get('shop');if(!h&&shop&&typeof btoa==='function'){try{h=btoa(shop+'/admin');}catch(e){}}if(h){sessionStorage.setItem('shopify_host',h);window.__shopify_host__=h;}if(!u.searchParams.get('host')&&h){var q=new URLSearchParams(u.search);q.set('host',h);if(shop)q.set('shop',shop);window.history.replaceState(null,'',u.pathname+'?'+q.toString());}})();`,
         }}
       />
-      <script
-        src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
-        data-api-key={apiKey}
-        {...(shopifyHost ? { "data-host": shopifyHost } : {})}
-      />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
         {children}
       </Providers>
