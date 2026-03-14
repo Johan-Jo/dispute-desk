@@ -1599,7 +1599,8 @@
       "contactPlaceholder": "https://yourstore.com/contact",
       "useTemplate": "Use template",
       "templateApplied": "Template applied",
-      "templateNote": "DisputeDesk template will be applied — customise later in Policies."
+      "templateNote": "This template will be saved to your Policies — customise it later.",
+      "removeTemplate": "Remove"
     },
     "packs": {
       "title": "Generate Evidence Packs",

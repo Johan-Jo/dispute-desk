@@ -1600,7 +1600,8 @@
       "contactPlaceholder": "https://sualoja.com/contato",
       "useTemplate": "Usar modelo",
       "templateApplied": "Modelo aplicado",
-      "templateNote": "O modelo do DisputeDesk será aplicado — personalize depois em Políticas."
+      "templateNote": "Este modelo será salvo nas suas políticas — personalize depois.",
+      "removeTemplate": "Remover"
     },
     "packs": {
       "title": "Gerar pacotes de evidências",

@@ -1600,7 +1600,8 @@
       "contactPlaceholder": "https://deinshop.com/kontakt",
       "useTemplate": "Vorlage verwenden",
       "templateApplied": "Vorlage angewendet",
-      "templateNote": "DisputeDesk-Vorlage wird angewendet — später in den Richtlinien anpassen."
+      "templateNote": "Diese Vorlage wird in deinen Richtlinien gespeichert — später anpassen.",
+      "removeTemplate": "Entfernen"
     },
     "packs": {
       "title": "Beweispackets generieren",

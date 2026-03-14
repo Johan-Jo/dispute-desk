@@ -1465,7 +1465,8 @@
       "contactPlaceholder": "https://dinbutik.com/kontakt",
       "useTemplate": "Använd mall",
       "templateApplied": "Mall tillämpad",
-      "templateNote": "DisputeDesks mall kommer att tillämpas — anpassa den senare under Policyer."
+      "templateNote": "Den här mallen sparas i dina policyer — anpassa den senare.",
+      "removeTemplate": "Ta bort"
     },
     "packs": {
       "title": "Generera bevispaket",

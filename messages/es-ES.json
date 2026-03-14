@@ -1600,7 +1600,8 @@
       "contactPlaceholder": "https://tutienda.com/contacto",
       "useTemplate": "Usar plantilla",
       "templateApplied": "Plantilla aplicada",
-      "templateNote": "Se aplicará la plantilla de DisputeDesk — personalízala más tarde en Políticas."
+      "templateNote": "Esta plantilla se guardará en tus políticas — personalízala más tarde.",
+      "removeTemplate": "Eliminar"
     },
     "packs": {
       "title": "Generar paquetes de evidencia",

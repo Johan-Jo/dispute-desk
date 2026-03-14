@@ -1600,7 +1600,8 @@
       "contactPlaceholder": "https://votreboutique.com/contact",
       "useTemplate": "Utiliser un modèle",
       "templateApplied": "Modèle appliqué",
-      "templateNote": "Le modèle DisputeDesk sera appliqué — personnalisez-le plus tard dans Politiques."
+      "templateNote": "Ce modèle sera enregistré dans vos politiques — personnalisez-le plus tard.",
+      "removeTemplate": "Supprimer"
     },
     "packs": {
       "title": "Générer des dossiers de preuves",
