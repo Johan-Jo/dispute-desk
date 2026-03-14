@@ -1585,6 +1585,35 @@
       "balancedDesc": "Auto-submit low-risk disputes (under $100 with complete evidence)",
       "autoSubmitWarning": "DisputeDesk will automatically submit evidence for qualifying disputes. You can review and adjust any submission before the due date."
     },
+    "policies": {
+      "title": "Geschäftsrichtlinien",
+      "subtitle": "Füge deine Richtlinien-URLs hinzu, damit DisputeDesk sie in Beweispakete einbinden kann.",
+      "returnsLabel": "Rückgaberichtlinie",
+      "returnsPlaceholder": "https://deinshop.com/rueckgabe",
+      "shippingLabel": "Versandrichtlinie",
+      "shippingPlaceholder": "https://deinshop.com/versand",
+      "termsLabel": "Nutzungsbedingungen",
+      "termsPlaceholder": "https://deinshop.com/agb",
+      "privacyLabel": "Datenschutzerklärung",
+      "privacyPlaceholder": "https://deinshop.com/datenschutz",
+      "contactLabel": "Kontakt / Support",
+      "contactPlaceholder": "https://deinshop.com/kontakt",
+      "useTemplate": "Vorlage verwenden",
+      "templateApplied": "Vorlage angewendet",
+      "templateNote": "DisputeDesk-Vorlage wird angewendet — später in den Richtlinien anpassen."
+    },
+    "packs": {
+      "title": "Beweispackets generieren",
+      "subtitle": "Wähle, welche Vorlagen für deinen Shop installiert werden sollen.",
+      "recommended": "Empfohlen",
+      "empty": "Keine Vorlagen verfügbar. Du kannst Packs später im Bereich Packs hinzufügen."
+    },
+    "rules": {
+      "title": "Automatisierungsregeln",
+      "subtitle": "Wähle, welche Regeln installiert werden sollen.",
+      "badgeAutoPack": "Auto-Pack",
+      "badgeReview": "Prüfung"
+    },
     "teamNotifications": {
       "title": "Team & Notifications",
       "subtitle": "Invite teammates and configure how you want to be notified.",

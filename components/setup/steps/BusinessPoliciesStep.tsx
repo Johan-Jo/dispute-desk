@@ -3,13 +3,27 @@
 import { useEffect, useState } from "react";
 import {
   BlockStack,
+  InlineStack,
   Text,
-  Select,
   TextField,
-  FormLayout,
+  Button,
+  Box,
+  Divider,
 } from "@shopify/polaris";
-
+import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
+
+type PolicySource = "url" | "template";
+
+interface PolicyState {
+  url: string;
+  source: PolicySource;
+}
+
+const POLICY_TYPES = ["returns", "shipping", "terms", "privacy", "contact"] as const;
+type PolicyType = (typeof POLICY_TYPES)[number];
+
+const defaultState = (): PolicyState => ({ url: "", source: "url" });
 
 interface BusinessPoliciesStepProps {
   stepId: StepId;
@@ -17,12 +31,29 @@ interface BusinessPoliciesStepProps {
 }
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
-  const [returnWindow, setReturnWindow] = useState("30");
-  const [shippingSLA, setShippingSLA] = useState("48");
-  const [cancellation, setCancellation] = useState("");
-  const [returnsUrl, setReturnsUrl] = useState("");
-  const [shippingUrl, setShippingUrl] = useState("");
-  const [termsUrl, setTermsUrl] = useState("");
+  const t = useTranslations("setup.policies");
+
+  const [policies, setPolicies] = useState<Record<PolicyType, PolicyState>>({
+    returns: defaultState(),
+    shipping: defaultState(),
+    terms: defaultState(),
+    privacy: defaultState(),
+    contact: defaultState(),
+  });
+
+  function setUrl(type: PolicyType, url: string) {
+    setPolicies((prev) => ({
+      ...prev,
+      [type]: { url, source: "url" },
+    }));
+  }
+
+  function useTemplate(type: PolicyType) {
+    setPolicies((prev) => ({
+      ...prev,
+      [type]: { url: "", source: "template" },
+    }));
+  }
 
   useEffect(() => {
     onSaveRef.current = async () => {
@@ -31,92 +62,66 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId,
-          payload: {
-            returnWindow,
-            shippingSLA,
-            cancellationPolicy: cancellation,
-            returnsUrl,
-            shippingUrl,
-            termsUrl,
-          },
+          payload: { policies },
         }),
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, returnWindow, shippingSLA, cancellation, returnsUrl, shippingUrl, termsUrl]);
+  }, [stepId, onSaveRef, policies]);
 
   return (
     <BlockStack gap="400">
       <Text as="h2" variant="headingLg">
-        Business Policies
+        {t("title")}
       </Text>
       <Text as="p" variant="bodyMd" tone="subdued">
-        These policies will be automatically included in your evidence packs.
+        {t("subtitle")}
       </Text>
 
-      <FormLayout>
-        <FormLayout.Group>
-          <Select
-            label="Return window"
-            options={[
-              { label: "7 days", value: "7" },
-              { label: "14 days", value: "14" },
-              { label: "30 days", value: "30" },
-              { label: "60 days", value: "60" },
-            ]}
-            value={returnWindow}
-            onChange={setReturnWindow}
-          />
-          <Select
-            label="Shipping SLA"
-            options={[
-              { label: "24 hours", value: "24" },
-              { label: "48 hours", value: "48" },
-              { label: "72 hours", value: "72" },
-            ]}
-            value={shippingSLA}
-            onChange={setShippingSLA}
-          />
-        </FormLayout.Group>
+      <BlockStack gap="300">
+        {POLICY_TYPES.map((type, i) => {
+          const policy = policies[type];
+          const isTemplate = policy.source === "template";
+          return (
+            <Box key={type}>
+              {i > 0 && <Divider />}
+              <Box paddingBlockStart={i > 0 ? "300" : "0"}>
+                <BlockStack gap="200">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="span" variant="bodyMd" fontWeight="semibold">
+                      {t(`${type}Label` as Parameters<typeof t>[0])}
+                    </Text>
+                    <Button
+                      variant="plain"
+                      size="slim"
+                      disabled={isTemplate}
+                      onClick={() => useTemplate(type)}
+                    >
+                      {isTemplate ? t("templateApplied") : t("useTemplate")}
+                    </Button>
+                  </InlineStack>
 
-        <TextField
-          label="Cancellation policy"
-          value={cancellation}
-          onChange={setCancellation}
-          multiline={3}
-          placeholder="Describe your cancellation policy..."
-          autoComplete="off"
-        />
-
-        <Text as="h3" variant="headingMd">
-          Policy URLs
-        </Text>
-
-        <TextField
-          label="Returns policy URL"
-          value={returnsUrl}
-          onChange={setReturnsUrl}
-          type="url"
-          placeholder="https://yourstore.com/returns"
-          autoComplete="off"
-        />
-        <TextField
-          label="Shipping policy URL"
-          value={shippingUrl}
-          onChange={setShippingUrl}
-          type="url"
-          placeholder="https://yourstore.com/shipping"
-          autoComplete="off"
-        />
-        <TextField
-          label="Terms of service URL"
-          value={termsUrl}
-          onChange={setTermsUrl}
-          type="url"
-          placeholder="https://yourstore.com/terms"
-          autoComplete="off"
-        />
-      </FormLayout>
+                  {isTemplate ? (
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("templateNote")}
+                    </Text>
+                  ) : (
+                    <TextField
+                      label={t(`${type}Label` as Parameters<typeof t>[0])}
+                      labelHidden
+                      value={policy.url}
+                      onChange={(val) => setUrl(type, val)}
+                      type="url"
+                      placeholder={t(`${type}Placeholder` as Parameters<typeof t>[0])}
+                      autoComplete="off"
+                    />
+                  )}
+                </BlockStack>
+              </Box>
+            </Box>
+          );
+        })}
+      </BlockStack>
     </BlockStack>
   );
 }

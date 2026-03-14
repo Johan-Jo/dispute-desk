@@ -1585,6 +1585,35 @@
       "balancedDesc": "Auto-submit low-risk disputes (under $100 with complete evidence)",
       "autoSubmitWarning": "DisputeDesk will automatically submit evidence for qualifying disputes. You can review and adjust any submission before the due date."
     },
+    "policies": {
+      "title": "Politiques commerciales",
+      "subtitle": "Ajoutez vos URLs de politique pour que DisputeDesk puisse les inclure dans les dossiers de preuves.",
+      "returnsLabel": "Politique de retour",
+      "returnsPlaceholder": "https://votreboutique.com/retours",
+      "shippingLabel": "Politique d'expédition",
+      "shippingPlaceholder": "https://votreboutique.com/livraison",
+      "termsLabel": "Conditions d'utilisation",
+      "termsPlaceholder": "https://votreboutique.com/cgu",
+      "privacyLabel": "Politique de confidentialité",
+      "privacyPlaceholder": "https://votreboutique.com/confidentialite",
+      "contactLabel": "Contact / support",
+      "contactPlaceholder": "https://votreboutique.com/contact",
+      "useTemplate": "Utiliser un modèle",
+      "templateApplied": "Modèle appliqué",
+      "templateNote": "Le modèle DisputeDesk sera appliqué — personnalisez-le plus tard dans Politiques."
+    },
+    "packs": {
+      "title": "Générer des dossiers de preuves",
+      "subtitle": "Choisissez les modèles à installer pour votre boutique.",
+      "recommended": "Recommandé",
+      "empty": "Aucun modèle disponible. Vous pouvez ajouter des packs plus tard dans la section Packs."
+    },
+    "rules": {
+      "title": "Règles d'automatisation",
+      "subtitle": "Choisissez les règles à installer.",
+      "badgeAutoPack": "Auto-pack",
+      "badgeReview": "Révision"
+    },
     "teamNotifications": {
       "title": "Team & Notifications",
       "subtitle": "Invite teammates and configure how you want to be notified.",

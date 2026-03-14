@@ -1450,6 +1450,35 @@
       "balancedDesc": "Autoskicka lågrisk-tvister (under $100 med fullständiga bevis)",
       "autoSubmitWarning": "DisputeDesk skickar automatiskt in bevis för kvalificerade tvister."
     },
+    "policies": {
+      "title": "Affärspolicyer",
+      "subtitle": "Lägg till dina policy-URL:er så att DisputeDesk kan inkludera dem i bevispaket.",
+      "returnsLabel": "Returpolicy",
+      "returnsPlaceholder": "https://dinbutik.com/retur",
+      "shippingLabel": "Fraktpolicy",
+      "shippingPlaceholder": "https://dinbutik.com/frakt",
+      "termsLabel": "Användarvillkor",
+      "termsPlaceholder": "https://dinbutik.com/villkor",
+      "privacyLabel": "Integritetspolicy",
+      "privacyPlaceholder": "https://dinbutik.com/integritet",
+      "contactLabel": "Kontakt / support",
+      "contactPlaceholder": "https://dinbutik.com/kontakt",
+      "useTemplate": "Använd mall",
+      "templateApplied": "Mall tillämpad",
+      "templateNote": "DisputeDesks mall kommer att tillämpas — anpassa den senare under Policyer."
+    },
+    "packs": {
+      "title": "Generera bevispaket",
+      "subtitle": "Välj vilka mallar som ska installeras för din butik.",
+      "recommended": "Rekommenderad",
+      "empty": "Inga mallar tillgängliga. Du kan lägga till packs senare under Packs."
+    },
+    "rules": {
+      "title": "Automatiseringsregler",
+      "subtitle": "Välj vilka regler som ska installeras.",
+      "badgeAutoPack": "Auto-pack",
+      "badgeReview": "Granskning"
+    },
     "teamNotifications": {
       "title": "Team och notifieringar",
       "subtitle": "Bjud in teammedlemmar och ställ in notifieringar.",

@@ -1585,6 +1585,35 @@
       "balancedDesc": "Auto-submit low-risk disputes (under $100 with complete evidence)",
       "autoSubmitWarning": "DisputeDesk will automatically submit evidence for qualifying disputes. You can review and adjust any submission before the due date."
     },
+    "policies": {
+      "title": "Políticas comerciales",
+      "subtitle": "Añade tus URLs de política para que DisputeDesk pueda incluirlas en los paquetes de evidencia.",
+      "returnsLabel": "Política de devoluciones",
+      "returnsPlaceholder": "https://tutienda.com/devoluciones",
+      "shippingLabel": "Política de envío",
+      "shippingPlaceholder": "https://tutienda.com/envio",
+      "termsLabel": "Términos de servicio",
+      "termsPlaceholder": "https://tutienda.com/terminos",
+      "privacyLabel": "Política de privacidad",
+      "privacyPlaceholder": "https://tutienda.com/privacidad",
+      "contactLabel": "Contacto / soporte",
+      "contactPlaceholder": "https://tutienda.com/contacto",
+      "useTemplate": "Usar plantilla",
+      "templateApplied": "Plantilla aplicada",
+      "templateNote": "Se aplicará la plantilla de DisputeDesk — personalízala más tarde en Políticas."
+    },
+    "packs": {
+      "title": "Generar paquetes de evidencia",
+      "subtitle": "Elige qué plantillas instalar para tu tienda.",
+      "recommended": "Recomendado",
+      "empty": "No hay plantillas disponibles. Puedes añadir packs más tarde en la sección Packs."
+    },
+    "rules": {
+      "title": "Reglas de automatización",
+      "subtitle": "Elige qué reglas instalar.",
+      "badgeAutoPack": "Auto-pack",
+      "badgeReview": "Revisión"
+    },
     "teamNotifications": {
       "title": "Team & Notifications",
       "subtitle": "Invite teammates and configure how you want to be notified.",

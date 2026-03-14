@@ -1585,6 +1585,35 @@
       "balancedDesc": "Auto-submit low-risk disputes (under $100 with complete evidence)",
       "autoSubmitWarning": "DisputeDesk will automatically submit evidence for qualifying disputes. You can review and adjust any submission before the due date."
     },
+    "policies": {
+      "title": "Políticas comerciais",
+      "subtitle": "Adicione suas URLs de política para que o DisputeDesk possa incluí-las nos pacotes de evidências.",
+      "returnsLabel": "Política de devoluções",
+      "returnsPlaceholder": "https://sualoja.com/devolucoes",
+      "shippingLabel": "Política de envio",
+      "shippingPlaceholder": "https://sualoja.com/envio",
+      "termsLabel": "Termos de serviço",
+      "termsPlaceholder": "https://sualoja.com/termos",
+      "privacyLabel": "Política de privacidade",
+      "privacyPlaceholder": "https://sualoja.com/privacidade",
+      "contactLabel": "Contato / suporte",
+      "contactPlaceholder": "https://sualoja.com/contato",
+      "useTemplate": "Usar modelo",
+      "templateApplied": "Modelo aplicado",
+      "templateNote": "O modelo do DisputeDesk será aplicado — personalize depois em Políticas."
+    },
+    "packs": {
+      "title": "Gerar pacotes de evidências",
+      "subtitle": "Escolha quais modelos instalar para sua loja.",
+      "recommended": "Recomendado",
+      "empty": "Nenhum modelo disponível. Você pode adicionar packs depois na seção Packs."
+    },
+    "rules": {
+      "title": "Regras de automação",
+      "subtitle": "Escolha quais regras instalar.",
+      "badgeAutoPack": "Auto-pack",
+      "badgeReview": "Revisão"
+    },
     "teamNotifications": {
       "title": "Team & Notifications",
       "subtitle": "Invite teammates and configure how you want to be notified.",
