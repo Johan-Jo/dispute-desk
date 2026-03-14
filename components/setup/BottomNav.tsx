@@ -1,6 +1,7 @@
 "use client";
 
 import { InlineStack, Button } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 
 interface BottomNavProps {
   onBack?: () => void;
@@ -19,6 +20,7 @@ export function BottomNav({
   isLast,
   saving,
 }: BottomNavProps) {
+  const t = useTranslations("setup");
   return (
     <div
       style={{
@@ -30,19 +32,19 @@ export function BottomNav({
       <InlineStack gap="300" align="space-between">
         <div>
           {!isFirst && onBack && (
-            <Button onClick={onBack}>← Back</Button>
+            <Button onClick={onBack}>{t("back")}</Button>
           )}
         </div>
         <InlineStack gap="300">
           {!isLast && onSkip && (
-            <Button onClick={onSkip}>Skip for now</Button>
+            <Button onClick={onSkip}>{t("skipForNow")}</Button>
           )}
           <Button
             variant="primary"
             onClick={onSaveAndContinue}
             loading={saving}
           >
-            {isLast ? "Finish Setup" : "Save & Continue →"}
+            {isLast ? t("finishSetup") : t("saveAndContinue")}
           </Button>
         </InlineStack>
       </InlineStack>

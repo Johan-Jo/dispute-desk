@@ -2,6 +2,7 @@
 
 import { Card, BlockStack, Text, Icon, InlineStack, Divider } from "@shopify/polaris";
 import { CheckCircleIcon, ClockIcon } from "@shopify/polaris-icons";
+import { useTranslations } from "next-intl";
 import { STEP_BY_ID } from "@/lib/setup/constants";
 import type { StepId } from "@/lib/setup/types";
 
@@ -10,6 +11,7 @@ interface WhatThisUnlocksCardProps {
 }
 
 export function WhatThisUnlocksCard({ stepId }: WhatThisUnlocksCardProps) {
+  const t = useTranslations("setup");
   const step = STEP_BY_ID[stepId];
   if (!step) return null;
 
@@ -26,7 +28,7 @@ export function WhatThisUnlocksCard({ stepId }: WhatThisUnlocksCardProps) {
     >
       <BlockStack gap="400">
         <Text as="h3" variant="headingMd" fontWeight="semibold">
-          What this unlocks
+          {t("whatThisUnlocks")}
         </Text>
 
         <BlockStack gap="300">
@@ -47,7 +49,7 @@ export function WhatThisUnlocksCard({ stepId }: WhatThisUnlocksCardProps) {
         <InlineStack gap="200" blockAlign="center">
           <Icon source={ClockIcon} tone="subdued" />
           <Text as="span" variant="bodySm" tone="subdued">
-            Estimated: {step.timeEstimate}
+            {t("estimated", { time: step.timeEstimate })}
           </Text>
         </InlineStack>
       </BlockStack>

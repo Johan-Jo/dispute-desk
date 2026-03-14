@@ -12,6 +12,7 @@ import {
   ProgressBar,
   Spinner,
 } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { SETUP_STEPS, TOTAL_STEPS, STEP_BY_ID } from "@/lib/setup/constants";
 import type { StepId, StepsMap, SetupStateResponse } from "@/lib/setup/types";
@@ -31,6 +32,8 @@ export function SetupWizardShell({
   children,
   onSave,
 }: SetupWizardShellProps) {
+  const t = useTranslations("setup");
+  const tNav = useTranslations("nav");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<SetupStateResponse | null>(null);
@@ -136,10 +139,10 @@ export function SetupWizardShell({
 
   return (
     <Page
-      title="Setup Wizard"
-      subtitle="Complete these steps to get DisputeDesk ready for your business"
+      title={t("wizardTitle")}
+      subtitle={t("wizardSubtitle")}
       backAction={{
-        content: "Dashboard",
+        content: tNav("dashboard"),
         url: withShopParams("/app", searchParams),
       }}
     >
@@ -150,10 +153,10 @@ export function SetupWizardShell({
             <BlockStack gap="400">
               <InlineStack align="space-between">
                 <Text as="span" variant="bodySm" fontWeight="semibold">
-                  Progress
+                  {t("progress")}
                 </Text>
                 <Text as="span" variant="bodySm" tone="subdued">
-                  {stepIndex} of {TOTAL_STEPS}
+                  {t("xOfY", { current: stepIndex, total: TOTAL_STEPS })}
                 </Text>
               </InlineStack>
               <ProgressBar progress={progressPct} size="small" tone="primary" />
@@ -193,7 +196,7 @@ export function SetupWizardShell({
 
       <SkipReasonModal
         open={skipModalOpen}
-        stepTitle={stepDef?.title ?? ""}
+        stepTitle={stepDef?.title ?? t("wizardTitle")}
         onClose={() => setSkipModalOpen(false)}
         onConfirm={handleSkipConfirm}
       />
