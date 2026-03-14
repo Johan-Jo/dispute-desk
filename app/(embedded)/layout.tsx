@@ -19,7 +19,16 @@ export default async function EmbeddedLayout({
   const cookieStore = await cookies();
   const acceptLang = headerStore.get("accept-language");
   const cookieLocale = cookieStore.get("dd_locale")?.value ?? null;
-  const locale = resolveLocale({ userLocale: cookieLocale, shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim() });
+  // x-shopify-locale is set by middleware from the ?locale= query param on every
+  // embedded app load — use it as the primary Shopify locale source so the first
+  // request renders in the right language (the cookie isn't available until the
+  // second request since it's set in the middleware response, not the request).
+  const shopifyLocaleHeader = headerStore.get("x-shopify-locale");
+  const locale = resolveLocale({
+    userLocale: cookieLocale,
+    shopLocale: shopifyLocaleHeader,
+    shopifyLocale: acceptLang?.split(",")[0]?.split(";")[0]?.trim(),
+  });
   const messages = await getMessages(locale);
   const polarisTranslations = await getPolarisTranslations(locale);
   const shopifyHost = headerStore.get("x-shopify-host")?.trim() ?? "";

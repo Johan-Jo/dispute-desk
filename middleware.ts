@@ -176,12 +176,15 @@ export async function middleware(req: NextRequest) {
   // --- Embedded app routes (/app/*): require Shopify session ---
   if (pathname.startsWith("/app")) {
     const hostParam = req.nextUrl.searchParams.get("host") ?? "";
+    const localeParam = req.nextUrl.searchParams.get("locale")?.trim() ?? "";
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-shopify-host", hostParam);
+    // Forward locale param as header so embedded layout can use it on the first
+    // request (cookie is set in the response and isn't available until next request).
+    if (localeParam) requestHeaders.set("x-shopify-locale", localeParam);
 
     if (pathname === "/app/session-required") {
       const res = NextResponse.next({ request: { headers: requestHeaders } });
-      const localeParam = req.nextUrl.searchParams.get("locale")?.trim();
       if (localeParam) {
         res.cookies.set("dd_locale", localeParam, {
           path: "/",
@@ -208,7 +211,6 @@ export async function middleware(req: NextRequest) {
     }
 
     const res = NextResponse.next({ request: { headers: requestHeaders } });
-    const localeParam = req.nextUrl.searchParams.get("locale")?.trim();
     if (localeParam) {
       res.cookies.set("dd_locale", localeParam, {
         path: "/",
