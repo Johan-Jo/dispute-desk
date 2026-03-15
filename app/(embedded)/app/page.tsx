@@ -28,7 +28,7 @@ import { useTranslations } from "next-intl";
 import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
 import type { SetupStateResponse } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 type PeriodKey = "24h" | "7d" | "30d" | "all";
 
@@ -62,6 +62,7 @@ const DEFAULT_STATS: DashboardStats = {
 function DashboardSetupBanner() {
   const t = useTranslations();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [state, setState] = useState<SetupStateResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,12 +70,18 @@ function DashboardSetupBanner() {
     let cancelled = false;
     fetch("/api/setup/state")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setState(data ?? null);
+      .then((data: SetupStateResponse | null) => {
+        if (!cancelled) {
+          setState(data ?? null);
+          // First-time install: permissions not yet done → redirect to authorization page
+          if (data && data.steps?.permissions?.status === "todo") {
+            router.replace("/app/connect");
+          }
+        }
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [router]);
 
   if (loading || !state || state.allDone) return null;
 

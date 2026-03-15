@@ -1667,6 +1667,25 @@
     "draft": "Draft",
     "productNotReceived": "Product Not Received"
   },
+  "connect": {
+    "title": "Auktorisera DisputeDesk",
+    "statusConnected": "Ansluten",
+    "statusNotConnected": "Ej ansluten",
+    "description": "Auktorisera ditt Shopify-konto och klicka på Tillåt för att ansluta. DisputeDesk använder dessa behörigheter för att synkronisera tvister, skapa bevispaket och spara svar å dina vägnar.",
+    "storeConnected": "Shopify-butik ansluten",
+    "permissionsHeading": "Följande behörigheter kommer att beviljas:",
+    "permOrders": "Beställningar",
+    "permOrdersDesc": "Läs beställningsdetaljer för bevispaket",
+    "permCustomers": "Kunder",
+    "permCustomersDesc": "Läs kundinformation för tvistekontext",
+    "permDisputes": "Tvister",
+    "permDisputesDesc": "Läs och skriv tvistebevis",
+    "permFiles": "Filer",
+    "permFilesDesc": "Ladda upp bevisdokument till Shopify",
+    "ctaAuthorize": "Auktorisera konto",
+    "ctaContinue": "Fortsätt till inställningar →",
+    "footer": "Endast du har åtkomst. Du kan återkalla behörigheter när som helst från Shopify Admin → Appar."
+  },
   "configGuide": {
     "title": "Quick access",
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",

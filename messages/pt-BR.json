@@ -1666,6 +1666,25 @@
       "skipInfoDesc": "All settings can be configured later from the Settings page."
     }
   },
+  "connect": {
+    "title": "Autorizar DisputeDesk",
+    "statusConnected": "Conectado",
+    "statusNotConnected": "Não conectado",
+    "description": "Autorize sua conta do Shopify e clique em Permitir para conectar. O DisputeDesk usará essas permissões para sincronizar disputas, criar pacotes de evidências e salvar respostas em seu nome.",
+    "storeConnected": "Loja Shopify conectada",
+    "permissionsHeading": "As seguintes permissões serão concedidas:",
+    "permOrders": "Pedidos",
+    "permOrdersDesc": "Ler detalhes de pedidos para pacotes de evidências",
+    "permCustomers": "Clientes",
+    "permCustomersDesc": "Ler informações de clientes para contexto de disputas",
+    "permDisputes": "Disputas",
+    "permDisputesDesc": "Ler e gravar evidências de disputas",
+    "permFiles": "Arquivos",
+    "permFilesDesc": "Fazer upload de documentos de evidência para o Shopify",
+    "ctaAuthorize": "Autorizar conta",
+    "ctaContinue": "Continuar para a configuração →",
+    "footer": "Somente você terá acesso. Você pode revogar as permissões a qualquer momento em Shopify Admin → Apps."
+  },
   "configGuide": {
     "title": "Quick access",
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",

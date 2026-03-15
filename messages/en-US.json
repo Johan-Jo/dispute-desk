@@ -1665,6 +1665,25 @@
       "team": "Add team"
     }
   },
+  "connect": {
+    "title": "Authorize DisputeDesk",
+    "statusConnected": "Connected",
+    "statusNotConnected": "Not connected",
+    "description": "Authorize your Shopify account and click Allow to connect. DisputeDesk will use these permissions to automatically sync disputes, build evidence packs, and save responses on your behalf.",
+    "storeConnected": "Shopify store connected",
+    "permissionsHeading": "The following permissions will be granted:",
+    "permOrders": "Orders",
+    "permOrdersDesc": "Read order details for evidence packs",
+    "permCustomers": "Customers",
+    "permCustomersDesc": "Read customer information for dispute context",
+    "permDisputes": "Disputes",
+    "permDisputesDesc": "Read and write dispute evidence",
+    "permFiles": "Files",
+    "permFilesDesc": "Upload evidence documents to Shopify",
+    "ctaAuthorize": "Authorize account",
+    "ctaContinue": "Continue to setup →",
+    "footer": "Only you will have access. You can revoke permissions at any time from Shopify Admin → Apps."
+  },
   "configGuide": {
     "title": "Quick access",
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
