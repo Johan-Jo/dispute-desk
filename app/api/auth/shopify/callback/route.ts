@@ -171,6 +171,9 @@ export async function GET(req: NextRequest) {
       path: "/",
     });
 
+    // Mark permissions step done for embedded installs (portal handles this above).
+    await ensureShopSetup(db, shopInternalId);
+
     const embeddedUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`;
     return NextResponse.redirect(embeddedUrl);
   } catch (err) {
