@@ -4,6 +4,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { POLICY_TYPES, type PolicyTemplateType } from "@/lib/policy-templates/library";
 import { getServiceClient } from "@/lib/supabase/server";
+import { fetchShopDetails, applyShopPlaceholders } from "@/lib/shopify/shopDetails";
 
 const VALID_TYPES = POLICY_TYPES;
 const FILE_MAP: Record<PolicyTemplateType, string> = {
@@ -64,7 +65,16 @@ export async function GET(
   }
 
   try {
-    const body = await readFile(path, "utf-8");
+    let body = await readFile(path, "utf-8");
+
+    // Substitute real shop data into placeholders when shop_id is provided
+    if (shopId) {
+      const shopDetails = await fetchShopDetails(shopId);
+      if (shopDetails) {
+        body = applyShopPlaceholders(body, shopDetails);
+      }
+    }
+
     return NextResponse.json({ body });
   } catch (err) {
     console.error("[policy-templates/content]", err);

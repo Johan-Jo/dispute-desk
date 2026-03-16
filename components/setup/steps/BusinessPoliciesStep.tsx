@@ -17,11 +17,11 @@ import type { PolicyTemplateType } from "@/lib/policy-templates/library";
 import type { StepId } from "@/lib/setup/types";
 
 const POLICY_ROWS = [
-  { key: "returns", libraryType: "refunds" as PolicyTemplateType },
-  { key: "shipping", libraryType: "shipping" as PolicyTemplateType },
-  { key: "terms", libraryType: "terms" as PolicyTemplateType },
-  { key: "privacy", libraryType: "privacy" as PolicyTemplateType },
-  { key: "contact", libraryType: "contact" as PolicyTemplateType },
+  { key: "returns", libraryType: "refunds" as PolicyTemplateType, defaultPath: "/policies/refund-policy" },
+  { key: "shipping", libraryType: "shipping" as PolicyTemplateType, defaultPath: "/policies/shipping-policy" },
+  { key: "terms", libraryType: "terms" as PolicyTemplateType, defaultPath: "/policies/terms-of-service" },
+  { key: "privacy", libraryType: "privacy" as PolicyTemplateType, defaultPath: "/policies/privacy-policy" },
+  { key: "contact", libraryType: "contact" as PolicyTemplateType, defaultPath: "/pages/contact" },
 ] as const;
 
 type PolicyKey = (typeof POLICY_ROWS)[number]["key"];
@@ -36,6 +36,13 @@ interface TemplateMeta {
 type PolicyState =
   | { source: "url"; url: string }
   | { source: "template"; content: string; loading?: boolean };
+
+interface ShopDetails {
+  name: string;
+  email: string;
+  phone: string;
+  primaryDomain: string;
+}
 
 function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
@@ -59,7 +66,9 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
   const [templateMeta, setTemplateMeta] = useState<Record<string, TemplateMeta>>({});
   const [metaLoading, setMetaLoading] = useState(true);
+  const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
 
+  // Fetch template metadata + shop details in parallel on mount
   useEffect(() => {
     fetch("/api/policy-templates")
       .then((r) => r.json())
@@ -72,12 +81,37 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       })
       .catch(() => {})
       .finally(() => setMetaLoading(false));
+
+    const shopId = getShopId();
+    if (shopId) {
+      fetch(`/api/shop/details?shop_id=${shopId}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((details: ShopDetails | null) => {
+          if (!details) return;
+          setShopDetails(details);
+          // Pre-fill URL fields with shop's primary domain
+          const origin = details.primaryDomain.replace(/\/$/, "");
+          setPolicies((prev) => {
+            const next = { ...prev };
+            for (const row of POLICY_ROWS) {
+              const current = prev[row.key];
+              if (current.source === "url" && !current.url) {
+                next[row.key] = { source: "url", url: `${origin}${row.defaultPath}` };
+              }
+            }
+            return next;
+          });
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const loadTemplate = useCallback(async (key: PolicyKey, libraryType: PolicyTemplateType) => {
     setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "", loading: true } }));
     try {
-      const res = await fetch(`/api/policy-templates/${libraryType}/content`);
+      const shopId = getShopId();
+      const qs = shopId ? `?shop_id=${shopId}` : "";
+      const res = await fetch(`/api/policy-templates/${libraryType}/content${qs}`);
       const { body } = await res.json();
       setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
     } catch {
@@ -94,7 +128,10 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   }
 
   function removeTemplate(key: PolicyKey) {
-    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: "" } }));
+    const row = POLICY_ROWS.find((r) => r.key === key)!;
+    const origin = shopDetails?.primaryDomain.replace(/\/$/, "") ?? "";
+    const defaultUrl = origin ? `${origin}${row.defaultPath}` : "";
+    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: defaultUrl } }));
   }
 
   useEffect(() => {
