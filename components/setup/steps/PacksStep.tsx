@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  BlockStack,
-  InlineStack,
-  Text,
-  Checkbox,
-  Badge,
-  Box,
-  Divider,
-  Spinner,
-} from "@shopify/polaris";
+import { BlockStack, Text, InlineStack, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 
@@ -49,11 +40,11 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
       .finally(() => setLoading(false));
   }, []);
 
-  function toggle(id: string, checked: boolean) {
+  function toggle(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -75,10 +66,7 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stepId,
-          payload: { installedTemplates: selectedIds },
-        }),
+        body: JSON.stringify({ stepId, payload: { installedTemplates: Array.from(selected) } }),
       });
       return res.ok;
     };
@@ -103,44 +91,87 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
         </Text>
       ) : (
         <BlockStack gap="300">
-          {templates.map((tpl, i) => {
+          {templates.map((tpl) => {
             const isChecked = selected.has(tpl.id);
+
             return (
-              <Box key={tpl.id}>
-                {i > 0 && <Divider />}
-                <Box paddingBlockStart={i > 0 ? "300" : "0"}>
-                  <InlineStack align="space-between" blockAlign="start" wrap={false}>
-                    <InlineStack gap="300" blockAlign="start" wrap={false}>
-                      <Checkbox
-                        label=""
-                        labelHidden
-                        checked={isChecked}
-                        onChange={(checked) => toggle(tpl.id, checked)}
-                      />
-                      <BlockStack gap="100">
-                        <InlineStack gap="200" blockAlign="center">
-                          <Text as="span" variant="bodyMd" fontWeight="semibold">
-                            {tpl.name}
-                          </Text>
-                          {tpl.is_recommended && (
-                            <Badge tone="success">{t("recommended")}</Badge>
-                          )}
-                        </InlineStack>
-                        {tpl.short_description && (
-                          <Text as="span" variant="bodySm" tone="subdued">
-                            {tpl.short_description}
-                          </Text>
-                        )}
-                        {tpl.dispute_type && (
-                          <Text as="span" variant="bodySm" tone="subdued">
-                            {tpl.dispute_type}
-                          </Text>
-                        )}
-                      </BlockStack>
-                    </InlineStack>
-                  </InlineStack>
-                </Box>
-              </Box>
+              <div
+                key={tpl.id}
+                role="checkbox"
+                aria-checked={isChecked}
+                tabIndex={0}
+                onClick={() => toggle(tpl.id)}
+                onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggle(tpl.id); }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  padding: "14px 16px",
+                  borderRadius: 8,
+                  border: isChecked ? "2px solid #2C6ECB" : "1px solid #C9CCCF",
+                  background: isChecked ? "#F2F7FE" : "#FFFFFF",
+                  cursor: "pointer",
+                  transition: "border-color 0.15s, background 0.15s",
+                  userSelect: "none",
+                }}
+              >
+                {/* Checkbox */}
+                <div style={{ marginTop: 2, flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 4,
+                      border: isChecked ? "none" : "2px solid #8C9196",
+                      background: isChecked ? "#2C6ECB" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {isChecked && (
+                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                        <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#202223", lineHeight: "20px" }}>
+                      {tpl.name}
+                    </span>
+                    {tpl.is_recommended && (
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          lineHeight: "16px",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          background: "#E3F1DF",
+                          color: "#1A6A30",
+                        }}
+                      >
+                        {t("recommended")}
+                      </span>
+                    )}
+                  </div>
+                  {tpl.short_description && (
+                    <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6D7175", lineHeight: "18px" }}>
+                      {tpl.short_description}
+                    </p>
+                  )}
+                  {tpl.dispute_type && (
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#8C9196", lineHeight: "16px" }}>
+                      {tpl.dispute_type}
+                    </p>
+                  )}
+                </div>
+              </div>
             );
           })}
         </BlockStack>

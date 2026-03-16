@@ -466,7 +466,7 @@
     "review": "Send to Review",
     "createRule": "Create Rule",
     "unnamedRule": "Unnamed Rule",
-    "matchesAll": "Matches all disputes",
+    "matchesAll": "All disputes",
     "footer": "Rules are evaluated top-to-bottom. First matching rule wins. Disputes matching no rule go to Review Queue.",
     "noRules": "No rules configured. All new disputes will go to the review queue by default.",
     "setupTitle": "Automate Your Dispute Workflow",
@@ -500,7 +500,9 @@
     "demoRule3Action": "Attach Pack: EP-002",
     "demoRule4Name": "Urgent Deadline Warning",
     "demoRule4Trigger": "Due Date < 3 days",
-    "demoRule4Action": "Flag as Urgent"
+    "demoRule4Action": "Flag as Urgent",
+    "reasonFraudulent": "Fraudulent",
+    "reasonProductNotReceived": "Product Not Received"
   },
   "settings": {
     "title": "Settings",
@@ -598,19 +600,23 @@
     "deleteAccount": "Delete account"
   },
   "connect": {
-    "title": "Connect your Shopify store",
-    "subtitle": "We need access to your store so we can sync disputes, build evidence packs, and submit responses to card networks on your behalf. You’ll approve the access below in Shopify.",
-    "whatWeNeed": "What we need from Shopify",
-    "whatWeNeedIntro": "DisputeDesk needs the following access. We use it only to manage disputes and evidence; all access is read-only except when we upload evidence for you.",
-    "readDisputesOrders": "Disputes and orders (read) — to list your chargebacks, due dates, and attach order details to evidence",
-    "viewTracking": "Tracking and fulfillment (read) — to include delivery proof in evidence",
-    "accessCustomerEmail": "Customer email (read) — to include in evidence when required by card networks",
-    "uploadEvidence": "Dispute evidence (read and write) — to submit evidence and documents to Shopify on your behalf",
-    "storeDomain": "Your store domain",
-    "storeDomainHelp": "Enter the subdomain only (e.g. my-store). Your full URL is my-store.myshopify.com.",
-    "storePlaceholder": "my-store",
-    "connectButton": "Connect Shopify Store",
-    "privacyNote": "Your store data is encrypted and never shared with third parties."
+    "title": "Authorize DisputeDesk",
+    "statusConnected": "Connected",
+    "statusNotConnected": "Not connected",
+    "description": "Authorize your Shopify account and click Allow to connect. DisputeDesk will use these permissions to automatically sync disputes, build evidence packs, and save responses on your behalf.",
+    "storeConnected": "Shopify store connected",
+    "permissionsHeading": "The following permissions will be granted:",
+    "permOrders": "Orders",
+    "permOrdersDesc": "Read order details for evidence packs",
+    "permCustomers": "Customers",
+    "permCustomersDesc": "Read customer information for dispute context",
+    "permDisputes": "Disputes",
+    "permDisputesDesc": "Read and write dispute evidence",
+    "permFiles": "Files",
+    "permFilesDesc": "Upload evidence documents to Shopify",
+    "ctaAuthorize": "Authorize account",
+    "ctaContinue": "Continue to setup →",
+    "footer": "Only you will have access. You can revoke permissions at any time from Shopify Admin → Apps."
   },
   "selectStore": {
     "noStores": "No stores connected",
@@ -1663,25 +1669,6 @@
       "rules": "Add rules",
       "team": "Add team"
     }
-  },
-  "connect": {
-    "title": "Authorize DisputeDesk",
-    "statusConnected": "Connected",
-    "statusNotConnected": "Not connected",
-    "description": "Authorize your Shopify account and click Allow to connect. DisputeDesk will use these permissions to automatically sync disputes, build evidence packs, and save responses on your behalf.",
-    "storeConnected": "Shopify store connected",
-    "permissionsHeading": "The following permissions will be granted:",
-    "permOrders": "Orders",
-    "permOrdersDesc": "Read order details for evidence packs",
-    "permCustomers": "Customers",
-    "permCustomersDesc": "Read customer information for dispute context",
-    "permDisputes": "Disputes",
-    "permDisputesDesc": "Read and write dispute evidence",
-    "permFiles": "Files",
-    "permFilesDesc": "Upload evidence documents to Shopify",
-    "ctaAuthorize": "Authorize account",
-    "ctaContinue": "Continue to setup →",
-    "footer": "Only you will have access. You can revoke permissions at any time from Shopify Admin → Apps."
   },
   "configGuide": {
     "title": "Quick access",
