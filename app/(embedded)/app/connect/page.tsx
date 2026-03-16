@@ -69,9 +69,18 @@ export default function ConnectPage() {
 
   function handleAuthorize() {
     const domain = getShopDomain();
-    if (domain) {
-      window.location.href = `/api/auth/shopify?shop=${domain}&phase=offline`;
+    if (!domain) return;
+    // OAuth must happen in the top-level window, not the embedded iframe.
+    const authUrl = `${window.location.origin}/api/auth/shopify?shop=${domain}&phase=offline`;
+    try {
+      if (window.top) {
+        window.top.location.href = authUrl;
+        return;
+      }
+    } catch {
+      // cross-origin top frame — fall through
     }
+    window.location.href = authUrl;
   }
 
   function handleContinue() {
