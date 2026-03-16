@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   BlockStack,
   InlineStack,
@@ -16,7 +16,6 @@ import { useTranslations } from "next-intl";
 import type { PolicyTemplateType } from "@/lib/policy-templates/library";
 import type { StepId } from "@/lib/setup/types";
 
-// Wizard policy types and their matching library types
 const POLICY_ROWS = [
   { key: "returns", libraryType: "refunds" as PolicyTemplateType },
   { key: "shipping", libraryType: "shipping" as PolicyTemplateType },
@@ -34,10 +33,9 @@ interface TemplateMeta {
   qualityBadge: string;
 }
 
-interface PolicyState {
-  url: string;
-  source: "url" | "template";
-}
+type PolicyState =
+  | { source: "url"; url: string }
+  | { source: "template"; content: string; loading?: boolean };
 
 function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
@@ -52,11 +50,11 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   const t = useTranslations("setup.policies");
 
   const [policies, setPolicies] = useState<Record<PolicyKey, PolicyState>>({
-    returns: { url: "", source: "url" },
-    shipping: { url: "", source: "url" },
-    terms: { url: "", source: "url" },
-    privacy: { url: "", source: "url" },
-    contact: { url: "", source: "url" },
+    returns: { source: "url", url: "" },
+    shipping: { source: "url", url: "" },
+    terms: { source: "url", url: "" },
+    privacy: { source: "url", url: "" },
+    contact: { source: "url", url: "" },
   });
 
   const [templateMeta, setTemplateMeta] = useState<Record<string, TemplateMeta>>({});
@@ -76,33 +74,40 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       .finally(() => setMetaLoading(false));
   }, []);
 
+  const loadTemplate = useCallback(async (key: PolicyKey, libraryType: PolicyTemplateType) => {
+    setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "", loading: true } }));
+    try {
+      const res = await fetch(`/api/policy-templates/${libraryType}/content`);
+      const { body } = await res.json();
+      setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
+    } catch {
+      setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "" } }));
+    }
+  }, []);
+
   function setUrl(key: PolicyKey, url: string) {
-    setPolicies((prev) => ({ ...prev, [key]: { url, source: "url" } }));
+    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url } }));
   }
 
-  function selectTemplate(key: PolicyKey) {
-    setPolicies((prev) => ({ ...prev, [key]: { url: "", source: "template" } }));
+  function setContent(key: PolicyKey, content: string) {
+    setPolicies((prev) => ({ ...prev, [key]: { source: "template", content } }));
   }
 
   function removeTemplate(key: PolicyKey) {
-    setPolicies((prev) => ({ ...prev, [key]: { url: "", source: "url" } }));
+    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: "" } }));
   }
 
   useEffect(() => {
     onSaveRef.current = async () => {
       const shopId = getShopId();
 
-      // Apply templates for template-sourced policies
       for (const row of POLICY_ROWS) {
-        if (policies[row.key].source !== "template") continue;
-        const contentRes = await fetch(`/api/policy-templates/${row.libraryType}/content`);
-        if (!contentRes.ok) return false;
-        const { body } = await contentRes.json();
-
+        const p = policies[row.key];
+        if (p.source !== "template") continue;
         const applyRes = await fetch("/api/policies/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shop_id: shopId, policy_type: row.libraryType, content: body }),
+          body: JSON.stringify({ shop_id: shopId, policy_type: row.libraryType, content: p.content }),
         });
         if (!applyRes.ok) return false;
       }
@@ -130,62 +135,59 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           const policy = policies[row.key];
           const meta = templateMeta[row.libraryType];
           const isTemplate = policy.source === "template";
+          const isLoading = isTemplate && (policy as { loading?: boolean }).loading;
 
           return (
             <Box key={row.key}>
               {i > 0 && <Divider />}
               <Box paddingBlockStart={i > 0 ? "300" : "0"}>
                 <BlockStack gap="200">
+                  {/* Row header */}
                   <InlineStack align="space-between" blockAlign="center">
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">
-                      {t(`${row.key}Label` as Parameters<typeof t>[0])}
-                    </Text>
-                    {!isTemplate && (
-                      metaLoading ? (
-                        <Spinner size="small" />
-                      ) : (
-                        <Button variant="plain" size="slim" onClick={() => selectTemplate(row.key)}>
-                          {t("useTemplate")}
-                        </Button>
-                      )
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="span" variant="bodyMd" fontWeight="semibold">
+                        {t(`${row.key}Label` as Parameters<typeof t>[0])}
+                      </Text>
+                      {isTemplate && meta && (
+                        <Badge tone="success">{meta.qualityBadge}</Badge>
+                      )}
+                    </InlineStack>
+                    {isTemplate ? (
+                      <Button variant="plain" size="slim" onClick={() => removeTemplate(row.key)}>
+                        {t("removeTemplate")}
+                      </Button>
+                    ) : metaLoading ? (
+                      <Spinner size="small" />
+                    ) : (
+                      <Button variant="plain" size="slim" onClick={() => loadTemplate(row.key, row.libraryType)}>
+                        {t("useTemplate")}
+                      </Button>
                     )}
                   </InlineStack>
 
-                  {isTemplate && meta ? (
-                    <Box
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      padding="300"
-                    >
-                      <InlineStack align="space-between" blockAlign="start" wrap={false}>
-                        <BlockStack gap="100">
-                          <InlineStack gap="200" blockAlign="center">
-                            <Text as="span" variant="bodyMd" fontWeight="semibold">
-                              {meta.name}
-                            </Text>
-                            <Badge tone="success">{meta.qualityBadge}</Badge>
-                          </InlineStack>
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {meta.description}
-                          </Text>
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {t("templateNote")}
-                          </Text>
-                        </BlockStack>
-                        <Button variant="plain" size="slim" onClick={() => removeTemplate(row.key)}>
-                          {t("removeTemplate")}
-                        </Button>
+                  {/* Content */}
+                  {isTemplate ? (
+                    isLoading ? (
+                      <InlineStack align="center">
+                        <Spinner size="small" />
                       </InlineStack>
-                    </Box>
-                  ) : isTemplate && !meta ? (
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {t("templateNote")}
-                    </Text>
+                    ) : (
+                      <TextField
+                        label={t(`${row.key}Label` as Parameters<typeof t>[0])}
+                        labelHidden
+                        value={(policy as { content: string }).content}
+                        onChange={(val) => setContent(row.key, val)}
+                        multiline={8}
+                        autoComplete="off"
+                        helpText={t("templateHelpText")}
+                        monospaced
+                      />
+                    )
                   ) : (
                     <TextField
                       label={t(`${row.key}Label` as Parameters<typeof t>[0])}
                       labelHidden
-                      value={policy.url}
+                      value={(policy as { url: string }).url}
                       onChange={(val) => setUrl(row.key, val)}
                       type="url"
                       placeholder={t(`${row.key}Placeholder` as Parameters<typeof t>[0])}

@@ -1464,9 +1464,8 @@
       "contactLabel": "Kontakt / support",
       "contactPlaceholder": "https://dinbutik.com/kontakt",
       "useTemplate": "Använd mall",
-      "templateApplied": "Mall tillämpad",
-      "templateNote": "Den här mallen sparas i dina policyer — anpassa den senare.",
-      "removeTemplate": "Ta bort"
+      "removeTemplate": "Ta bort",
+      "templateHelpText": "Redigera mallen för att anpassa den till din butik. Innehållet sparas när du klickar på Spara & Fortsätt."
     },
     "packs": {
       "title": "Generera bevispaket",

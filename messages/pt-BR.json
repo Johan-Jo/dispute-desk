@@ -1599,9 +1599,8 @@
       "contactLabel": "Contato / suporte",
       "contactPlaceholder": "https://sualoja.com/contato",
       "useTemplate": "Usar modelo",
-      "templateApplied": "Modelo aplicado",
-      "templateNote": "Este modelo será salvo nas suas políticas — personalize depois.",
-      "removeTemplate": "Remover"
+      "removeTemplate": "Remover",
+      "templateHelpText": "Edite o modelo para se adequar à sua loja. Este conteúdo será salvo ao clicar em Salvar & Continuar."
     },
     "packs": {
       "title": "Gerar pacotes de evidências",

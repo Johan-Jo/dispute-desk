@@ -1599,9 +1599,8 @@
       "contactLabel": "Contacto / soporte",
       "contactPlaceholder": "https://tutienda.com/contacto",
       "useTemplate": "Usar plantilla",
-      "templateApplied": "Plantilla aplicada",
-      "templateNote": "Esta plantilla se guardará en tus políticas — personalízala más tarde.",
-      "removeTemplate": "Eliminar"
+      "removeTemplate": "Eliminar",
+      "templateHelpText": "Edita la plantilla para adaptarla a tu tienda. Este contenido se guardará al hacer clic en Guardar & Continuar."
     },
     "packs": {
       "title": "Generar paquetes de evidencia",

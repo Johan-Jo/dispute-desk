@@ -1599,9 +1599,8 @@
       "contactLabel": "Contact / support",
       "contactPlaceholder": "https://votreboutique.com/contact",
       "useTemplate": "Utiliser un modèle",
-      "templateApplied": "Modèle appliqué",
-      "templateNote": "Ce modèle sera enregistré dans vos politiques — personnalisez-le plus tard.",
-      "removeTemplate": "Supprimer"
+      "removeTemplate": "Supprimer",
+      "templateHelpText": "Modifiez le modèle pour l'adapter à votre boutique. Ce contenu sera enregistré lors du clic sur Enregistrer & Continuer."
     },
     "packs": {
       "title": "Générer des dossiers de preuves",

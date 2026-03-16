@@ -1599,9 +1599,8 @@
       "contactLabel": "Kontakt / Support",
       "contactPlaceholder": "https://deinshop.com/kontakt",
       "useTemplate": "Vorlage verwenden",
-      "templateApplied": "Vorlage angewendet",
-      "templateNote": "Diese Vorlage wird in deinen Richtlinien gespeichert — später anpassen.",
-      "removeTemplate": "Entfernen"
+      "removeTemplate": "Entfernen",
+      "templateHelpText": "Bearbeite die Vorlage passend zu deinem Shop. Der Inhalt wird beim Klick auf Speichern & Weiter gespeichert."
     },
     "packs": {
       "title": "Beweispackets generieren",
