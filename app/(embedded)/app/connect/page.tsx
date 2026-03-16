@@ -70,17 +70,15 @@ export default function ConnectPage() {
   function handleAuthorize() {
     const domain = getShopDomain();
     if (!domain) return;
-    // OAuth must happen in the top-level window, not the embedded iframe.
+    // Use target="_top" anchor to navigate the top frame without triggering
+    // App Bridge's navigation interceptor (which causes postMessage errors).
     const authUrl = `${window.location.origin}/api/auth/shopify?shop=${domain}&phase=offline`;
-    try {
-      if (window.top) {
-        window.top.location.href = authUrl;
-        return;
-      }
-    } catch {
-      // cross-origin top frame — fall through
-    }
-    window.location.href = authUrl;
+    const a = document.createElement("a");
+    a.href = authUrl;
+    a.target = "_top";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function handleContinue() {
