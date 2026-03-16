@@ -33,8 +33,30 @@ const PERMISSION_ITEMS = [
 ] as const;
 
 function getShopDomain(): string | null {
-  if (typeof document === "undefined") return null;
-  return document.cookie.match(/shopify_shop=([^;]+)/)?.[1] ?? null;
+  if (typeof window === "undefined") return null;
+
+  // 1. Cookie set by OAuth callback
+  const cookie = document.cookie.match(/shopify_shop=([^;]+)/)?.[1];
+  if (cookie) return decodeURIComponent(cookie);
+
+  // 2. ?shop= URL param (Shopify includes this in embedded app URL)
+  const shopParam = new URL(window.location.href).searchParams.get("shop");
+  if (shopParam) return shopParam;
+
+  // 3. Decode ?host= or sessionStorage shopify_host (base64url of "store.myshopify.com/admin")
+  const hostRaw =
+    new URL(window.location.href).searchParams.get("host") ||
+    sessionStorage.getItem("shopify_host") ||
+    "";
+  if (hostRaw) {
+    try {
+      const decoded = atob(hostRaw.replace(/-/g, "+").replace(/_/g, "/"));
+      const domain = decoded.split("/")[0];
+      if (domain.includes(".myshopify.com")) return domain;
+    } catch { /* ignore */ }
+  }
+
+  return null;
 }
 
 function getShopId(): string | null {
@@ -69,7 +91,17 @@ export default function ConnectPage() {
 
   function handleAuthorize() {
     const domain = getShopDomain();
-    if (!domain) return;
+    if (!domain) {
+      // Fallback: redirect to OAuth without a shop param — the auth route will
+      // prompt the user to enter their shop domain.
+      const a = document.createElement("a");
+      a.href = `${window.location.origin}/api/auth/shopify`;
+      a.target = "_top";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
     // Use target="_top" anchor to navigate the top frame without triggering
     // App Bridge's navigation interceptor (which causes postMessage errors).
     const authUrl = `${window.location.origin}/api/auth/shopify?shop=${domain}&phase=offline`;
