@@ -48,6 +48,28 @@ function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
 }
 
+/** Best-effort shop origin from cookies / URL — works without an API call. */
+function getShopOriginFallback(): string | null {
+  // shopify_shop cookie = "example.myshopify.com"
+  const domain = document.cookie.match(/shopify_shop=([^;]+)/)?.[1];
+  if (domain) return `https://${domain}`;
+  // ?shop= query param as last resort
+  const shopParam = new URLSearchParams(window.location.search).get("shop");
+  if (shopParam) return `https://${shopParam}`;
+  return null;
+}
+
+function prefillUrls(origin: string): Record<PolicyKey, PolicyState> {
+  const base = origin.replace(/\/$/, "");
+  return {
+    returns: { source: "url", url: `${base}/policies/refund-policy` },
+    shipping: { source: "url", url: `${base}/policies/shipping-policy` },
+    terms: { source: "url", url: `${base}/policies/terms-of-service` },
+    privacy: { source: "url", url: `${base}/policies/privacy-policy` },
+    contact: { source: "url", url: `${base}/pages/contact` },
+  };
+}
+
 interface BusinessPoliciesStepProps {
   stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
@@ -82,6 +104,14 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       .catch(() => {})
       .finally(() => setMetaLoading(false));
 
+    // Step 1: pre-fill immediately from cookie/URL (no API needed)
+    const fallbackOrigin = getShopOriginFallback();
+    if (fallbackOrigin) {
+      setPolicies(prefillUrls(fallbackOrigin));
+    }
+
+    // Step 2: fetch richer shop details (custom domain, name, email, etc.)
+    // and upgrade the URLs if the primary domain differs from the cookie domain
     const shopId = getShopId();
     if (shopId) {
       fetch(`/api/shop/details?shop_id=${shopId}`)
@@ -89,13 +119,15 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         .then((details: ShopDetails | null) => {
           if (!details) return;
           setShopDetails(details);
-          // Pre-fill URL fields with shop's primary domain
+          // Only override if primaryDomain differs from what we already filled
           const origin = details.primaryDomain.replace(/\/$/, "");
+          if (fallbackOrigin && origin === fallbackOrigin.replace(/\/$/, "")) return;
           setPolicies((prev) => {
             const next = { ...prev };
             for (const row of POLICY_ROWS) {
               const current = prev[row.key];
-              if (current.source === "url" && !current.url) {
+              // Only replace if still a url source (user hasn't switched to template)
+              if (current.source === "url") {
                 next[row.key] = { source: "url", url: `${origin}${row.defaultPath}` };
               }
             }
