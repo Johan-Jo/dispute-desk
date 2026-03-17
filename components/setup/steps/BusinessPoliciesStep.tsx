@@ -172,53 +172,53 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       {!selectedFlow && (
         <div>
           <div className="flex flex-col items-center text-center mb-10">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#D97706] flex items-center justify-center mb-4 shadow-sm">
-              <FileText className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
+              <FileText className="w-7 h-7 text-white" />
             </div>
-            <h2 className="text-[22px] font-semibold text-[#202223] mb-2">{t("title")}</h2>
-            <p className="text-sm text-[#6D7175] leading-snug">{t("flowSelectSubtitle")}</p>
+            <h2 className="text-[24px] leading-[32px] font-semibold text-[#202223] mb-2">{t("title")}</h2>
+            <p className="text-[15px] leading-[24px] text-[#6D7175]">{t("flowSelectSubtitle")}</p>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-8">
             <button
               onClick={() => setSelectedFlow("own")}
-              className="bg-white border border-[#E4E5E7] hover:border-[#1D4ED8] shadow-[0_1px_3px_rgba(15,23,42,0.06)] rounded-[12px] px-6 py-7 text-center transition-all group flex flex-col items-center"
+              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] rounded-[16px] px-8 py-7 text-center transition-all group flex flex-col items-center min-h-[172px]"
             >
-              <div className="w-10 h-10 rounded-full bg-[#F7F8FA] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-3">
-                <Link className="w-5 h-5 text-[#6D7175] group-hover:text-[#1D4ED8]" />
+              <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
+                <Link className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[15px] font-semibold text-[#202223] mb-1">{t("ownFlowTitle")}</h3>
-              <p className="text-xs text-[#6D7175] leading-snug">{t("ownFlowShortDesc")}</p>
+              <h3 className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1.5">{t("ownFlowTitle")}</h3>
+              <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("ownFlowShortDesc")}</p>
             </button>
 
             <button
               onClick={() => setSelectedFlow("template")}
-              className="bg-white border border-[#E4E5E7] hover:border-[#1D4ED8] shadow-[0_1px_3px_rgba(15,23,42,0.06)] rounded-[12px] px-6 py-7 text-center transition-all group flex flex-col items-center"
+              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] rounded-[16px] px-8 py-7 text-center transition-all group flex flex-col items-center min-h-[172px]"
             >
-              <div className="w-10 h-10 rounded-full bg-[#F7F8FA] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-3">
-                <Zap className="w-5 h-5 text-[#6D7175] group-hover:text-[#1D4ED8]" />
+              <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
+                <Zap className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[15px] font-semibold text-[#202223] mb-1">{t("templateFlowTitle")}</h3>
-              <p className="text-xs text-[#6D7175] leading-snug">{t("templateFlowShortDesc")}</p>
+              <h3 className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1.5">{t("templateFlowTitle")}</h3>
+              <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("templateFlowShortDesc")}</p>
             </button>
 
             <button
               onClick={() => setSelectedFlow("mixed")}
-              className="bg-white border border-[#E4E5E7] hover:border-[#1D4ED8] shadow-[0_1px_3px_rgba(15,23,42,0.06)] rounded-[12px] px-6 py-7 text-center transition-all group flex flex-col items-center"
+              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] rounded-[16px] px-8 py-7 text-center transition-all group flex flex-col items-center min-h-[172px]"
             >
-              <div className="w-10 h-10 rounded-full bg-[#F7F8FA] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-3">
-                <Layers className="w-5 h-5 text-[#6D7175] group-hover:text-[#1D4ED8]" />
+              <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
+                <Layers className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[15px] font-semibold text-[#202223] mb-1">{t("mixedFlowTitle")}</h3>
-              <p className="text-xs text-[#6D7175] leading-snug">{t("mixedFlowShortDesc")}</p>
+              <h3 className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1.5">{t("mixedFlowTitle")}</h3>
+              <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("mixedFlowShortDesc")}</p>
             </button>
           </div>
 
-          <div className="flex items-start gap-3 p-4 border border-[#E5E7EB] rounded-[10px] bg-[#F3F4F6]">
-            <Info className="w-4 h-4 text-[#6D7175] flex-shrink-0" />
+          <div className="flex items-start gap-3 p-6 border border-[#E5E7EB] rounded-[12px] bg-[#F3F4F6]">
+            <Info className="w-5 h-5 text-[#8C9196] flex-shrink-0 mt-[1px]" />
             <div>
-              <p className="text-sm font-semibold text-[#202223] mb-0.5">{t("whyPoliciesTitle")}</p>
-              <p className="text-sm text-[#6D7175] leading-snug">{t("whyPoliciesDesc")}</p>
+              <p className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1">{t("whyPoliciesTitle")}</p>
+              <p className="text-[14px] leading-[22px] text-[#6D7175]">{t("whyPoliciesDesc")}</p>
             </div>
           </div>
         </div>
