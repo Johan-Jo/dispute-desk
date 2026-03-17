@@ -32,70 +32,70 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 0 8px", gap: 32 }}>
-      {/* Logo + heading */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" }}>
+    <div style={{ maxWidth: 672, margin: "0 auto" }}>
+      {/* Icon + heading */}
+      <div style={{ textAlign: "center", marginBottom: 40 }}>
         <div
           style={{
-            width: 72,
-            height: 72,
+            width: 80,
+            height: 80,
             background: "linear-gradient(135deg, #1D4ED8 0%, #1e40af 100%)",
-            borderRadius: 16,
+            borderRadius: 18,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            margin: "0 auto 24px",
           }}
         >
           <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
             <path d="M12 2L4 5v6c0 5.25 3.4 10.15 8 11.35C17.6 21.15 21 16.25 21 11V5l-9-3zm0 2.18l7 2.33V11c0 4.13-2.72 7.98-7 9.17-4.28-1.19-7-5.04-7-9.17V6.51l7-2.33zM10.59 14l-2.83-2.83 1.41-1.41L10.59 11.17l4.24-4.24 1.41 1.41L10.59 14z" />
           </svg>
         </div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#202223", lineHeight: 1.2 }}>
-            {t("title")}
-          </h1>
-          <p style={{ margin: "8px 0 0", fontSize: 15, color: "#6D7175" }}>
-            {t("subtitle")}
-          </p>
-        </div>
+        <h1 style={{ margin: "0 0 12px", fontSize: 30, fontWeight: 600, color: "#202223", lineHeight: 1.2 }}>
+          {t("title")}
+        </h1>
+        <p style={{ margin: 0, fontSize: 17, color: "#6D7175" }}>
+          {t("subtitle")}
+        </p>
       </div>
 
       {/* What you'll accomplish */}
       <div
         style={{
-          width: "100%",
-          border: "1px solid #E1E3E5",
-          borderRadius: 12,
-          padding: 20,
           background: "#F7F8FA",
+          border: "1px solid #E1E3E5",
+          borderRadius: 10,
+          padding: 24,
+          marginBottom: 32,
         }}
       >
-        <p style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: "#202223" }}>
+        <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600, color: "#202223" }}>
           {t("accomplishHeading")}
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {steps.map((step, i) => (
             <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div
                 style={{
-                  width: 28,
-                  height: 28,
+                  width: 24,
+                  height: 24,
                   borderRadius: "50%",
                   background: "#1D4ED8",
                   color: "#fff",
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
+                  marginTop: 2,
                 }}
               >
                 {i + 1}
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>{step.title}</div>
-                <div style={{ fontSize: 13, color: "#6D7175", marginTop: 2 }}>{step.desc}</div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#202223" }}>{step.title}</div>
+                <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2 }}>{step.desc}</div>
               </div>
             </div>
           ))}
@@ -103,7 +103,7 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
       </div>
 
       {/* Stats row */}
-      <div style={{ display: "flex", width: "100%", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
         {[
           { value: t("statTimeValue"), label: t("statTimeLabel") },
           { value: t("statStepsValue"), label: t("statStepsLabel") },
@@ -112,15 +112,14 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
           <div
             key={stat.label}
             style={{
-              flex: 1,
               border: "1px solid #E1E3E5",
               borderRadius: 8,
-              padding: "14px 12px",
+              padding: "16px 12px",
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#1D4ED8" }}>{stat.value}</div>
-            <div style={{ fontSize: 12, color: "#6D7175", marginTop: 4 }}>{stat.label}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#1D4ED8", marginBottom: 4 }}>{stat.value}</div>
+            <div style={{ fontSize: 12, color: "#6D7175" }}>{stat.label}</div>
           </div>
         ))}
       </div>
@@ -128,22 +127,23 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
       {/* Skip info banner */}
       <div
         style={{
-          width: "100%",
           background: "#EFF6FF",
           border: "1px solid #BFDBFE",
           borderRadius: 8,
-          padding: "12px 16px",
+          padding: "20px",
           display: "flex",
-          gap: 10,
+          gap: 12,
           alignItems: "flex-start",
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="#1D4ED8" style={{ flexShrink: 0, marginTop: 1 }}>
-          <path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4zm-.5 4h1v5h-1V8zm0-2.5h1v1h-1v-1z" />
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#1E40AF" }}>{t("skipInfoTitle")}</div>
-          <div style={{ fontSize: 13, color: "#1E40AF", marginTop: 2 }}>{t("skipInfoDesc")}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#1E40AF", marginBottom: 4 }}>{t("skipInfoTitle")}</div>
+          <div style={{ fontSize: 14, color: "#1E40AF" }}>{t("skipInfoDesc")}</div>
         </div>
       </div>
     </div>

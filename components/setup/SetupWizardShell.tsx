@@ -118,7 +118,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
     <Page
       backAction={{ content: tNav("dashboard"), url: withShopParams("/app", searchParams) }}
     >
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+      <div>
         <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
 
         <div style={{ marginTop: 16 }}>
