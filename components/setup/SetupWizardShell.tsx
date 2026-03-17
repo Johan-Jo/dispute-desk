@@ -74,7 +74,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
         if (next) {
           navigateToStep(next);
         } else {
-          router.push(withShopParams("/app", searchParams));
+          router.push(withShopParams("/app/setup/complete", searchParams));
         }
       }
     } finally {
@@ -94,7 +94,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
       if (next) {
         navigateToStep(next);
       } else {
-        router.push(withShopParams("/app", searchParams));
+        router.push(withShopParams("/app/setup/complete", searchParams));
       }
     },
     [stepId, getAdjacentWizardStep, navigateToStep, router, searchParams]
@@ -119,39 +119,33 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
       backAction={{ content: tNav("dashboard"), url: withShopParams("/app", searchParams) }}
     >
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        {/* Top stepper — hidden on welcome screen */}
-        {!isWelcome && (
-          <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
-        )}
+        <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
 
-        <div style={{ marginTop: isWelcome ? 0 : 20 }}>
+        <div style={{ marginTop: 16 }}>
           <Card>
             <BlockStack gap="400">
               {children}
 
               {/* Bottom nav */}
               <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16, marginTop: 8 }}>
-                {isWelcome ? (
-                  <Button variant="primary" onClick={handleSaveAndContinue} loading={saving} fullWidth>
-                    {t("getStarted")}
-                  </Button>
-                ) : (
-                  <InlineStack align="space-between">
-                    <div>
-                      {!isFirst && (
-                        <Button onClick={handleBack}>{t("back")}</Button>
-                      )}
-                    </div>
-                    <InlineStack gap="300">
-                      {!isLast && (
-                        <Button onClick={() => setSkipModalOpen(true)}>{t("skipForNow")}</Button>
-                      )}
-                      <Button variant="primary" onClick={handleSaveAndContinue} loading={saving}>
-                        {isLast ? t("finishSetup") : t("saveAndContinue")}
-                      </Button>
-                    </InlineStack>
+                <InlineStack align="space-between">
+                  <div>
+                    {!isFirst && !isWelcome && (
+                      <Button onClick={handleBack}>{t("back")}</Button>
+                    )}
+                    {isWelcome && (
+                      <Button disabled>{t("back")}</Button>
+                    )}
+                  </div>
+                  <InlineStack gap="300">
+                    {!isWelcome && !isLast && (
+                      <Button onClick={() => setSkipModalOpen(true)}>{t("skipForNow")}</Button>
+                    )}
+                    <Button variant="primary" onClick={handleSaveAndContinue} loading={saving}>
+                      {isWelcome ? t("getStarted") : isLast ? t("finishSetup") : t("saveAndContinue")}
+                    </Button>
                   </InlineStack>
-                )}
+                </InlineStack>
               </div>
             </BlockStack>
           </Card>

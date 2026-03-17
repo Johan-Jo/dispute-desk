@@ -72,8 +72,8 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
       style={{
         display: "flex",
         alignItems: "flex-start",
-        justifyContent: "center",
-        padding: "24px 0 8px",
+        justifyContent: "space-between",
+        padding: "8px 0 8px",
         gap: 0,
       }}
     >
