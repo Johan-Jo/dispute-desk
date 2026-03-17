@@ -19,6 +19,8 @@ interface Dispute {
   id: string;
   dispute_gid: string;
   order_gid: string | null;
+  order_name: string | null;
+  customer_display_name: string | null;
   status: string | null;
   reason: string | null;
   amount: number | null;
@@ -281,7 +283,7 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
             {/* Table header */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "160px 1fr 110px 130px 100px",
+              gridTemplateColumns: "140px 1fr 1fr 110px 130px 100px",
               padding: "9px 20px",
               background: "#F7F8FA",
               borderBottom: "1px solid #E1E3E5",
@@ -293,6 +295,7 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
               gap: 12,
             }}>
               <div>{tTable("id")}</div>
+              <div>{tTable("customer")}</div>
               <div>{tTable("reason")}</div>
               <div>{tTable("amount")}</div>
               <div>{tTable("status")}</div>
@@ -319,7 +322,7 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
                   key={d.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "160px 1fr 110px 130px 100px",
+                    gridTemplateColumns: "140px 1fr 1fr 110px 130px 100px",
                     padding: "11px 20px",
                     gap: 12,
                     borderBottom: isLast ? "none" : "1px solid #F1F2F4",
@@ -330,6 +333,9 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
                 >
                   <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 500, color: "#202223" }}>
                     #{d.dispute_gid.split("/").pop()?.slice(-10) ?? d.id.slice(0, 10)}
+                  </div>
+                  <div style={{ color: "#202223", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {d.customer_display_name ?? (d.order_name ? d.order_name : "—")}
                   </div>
                   <div style={{ color: "#202223", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "capitalize" }}>
                     {d.reason ? d.reason.replace(/_/g, " ") : "—"}
