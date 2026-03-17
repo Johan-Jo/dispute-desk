@@ -12,6 +12,13 @@ const POLICY_ROWS = [
   { key: "privacy", libraryType: "privacy" as PolicyTemplateType, defaultPath: "/policies/privacy-policy", required: false },
 ] as const;
 
+// Templates available in the Policy Templates section (no privacy template)
+const TEMPLATE_ROWS = [
+  { key: "shipping" as const, libraryType: "shipping" as PolicyTemplateType, nameKey: "shippingTemplateName" as const, descKey: "shippingTemplateDesc" as const },
+  { key: "returns" as const, libraryType: "refunds" as PolicyTemplateType, nameKey: "returnsTemplateName" as const, descKey: "returnsTemplateDesc" as const },
+  { key: "terms" as const, libraryType: "terms" as PolicyTemplateType, nameKey: "termsTemplateName" as const, descKey: "termsTemplateDesc" as const },
+];
+
 type PolicyKey = (typeof POLICY_ROWS)[number]["key"];
 
 type PolicyState =
@@ -95,7 +102,6 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         const { body } = await res.json();
         setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
       } catch {
-        // Revert to URL mode on failure so the input is still usable
         setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: (prev[key] as { url?: string }).url ?? "" } }));
       }
     },
@@ -104,7 +110,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
   const loadAllTemplates = useCallback(async () => {
     setLoadingAll(true);
-    await Promise.all(POLICY_ROWS.map((row) => loadTemplate(row.key, row.libraryType)));
+    await Promise.all(TEMPLATE_ROWS.map((row) => loadTemplate(row.key, row.libraryType)));
     setLoadingAll(false);
   }, [loadTemplate]);
 
@@ -141,7 +147,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     };
   }, [stepId, onSaveRef, policies, resolvedShopId]);
 
-  const helperKey: Partial<Record<PolicyKey, "shippingHelper" | "returnsHelper" | "termsHelper" | "privacyHelper">> = {
+  const helperKey: Record<PolicyKey, Parameters<typeof t>[0]> = {
     shipping: "shippingHelper",
     returns: "returnsHelper",
     terms: "termsHelper",
@@ -161,7 +167,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 20px",
+            margin: "0 auto 16px",
           }}
         >
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -183,11 +189,11 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         style={{
           display: "flex",
           alignItems: "flex-start",
-          gap: 14,
+          gap: 12,
           padding: "20px",
           background: "#EFF6FF",
           border: "1px solid #BFDBFE",
-          borderRadius: 10,
+          borderRadius: 8,
           marginBottom: 24,
         }}
       >
@@ -211,9 +217,9 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           <div style={{ fontSize: 14, fontWeight: 600, color: "#1E40AF", marginBottom: 4 }}>
             {t("wizardTitle")}
           </div>
-          <div style={{ fontSize: 13, color: "#1E40AF", lineHeight: "18px", marginBottom: 12 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#1E40AF", lineHeight: "18px" }}>
             {t("wizardDesc")}
-          </div>
+          </p>
           <button
             onClick={loadAllTemplates}
             disabled={loadingAll}
@@ -224,7 +230,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               border: "none",
               borderRadius: 6,
               fontSize: 13,
-              fontWeight: 600,
+              fontWeight: 500,
               cursor: loadingAll ? "not-allowed" : "pointer",
               opacity: loadingAll ? 0.7 : 1,
             }}
@@ -235,19 +241,18 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       </div>
 
       {/* Policy URL / template inputs */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
         {POLICY_ROWS.map((row) => {
           const policy = policies[row.key];
           const isTemplate = policy.source === "template";
           const isLoading = isTemplate && (policy as { loading?: boolean }).loading;
-          const hKey = helperKey[row.key];
 
           return (
             <div key={row.key}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <label style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
                   {t(`${row.key}Label` as Parameters<typeof t>[0])}
-                  {row.required && <span style={{ color: "#DC2626", marginLeft: 2 }}>*</span>}
+                  {row.required && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
                 </label>
                 {isTemplate && (
                   <button
@@ -261,7 +266,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
               {isTemplate ? (
                 isLoading ? (
-                  <div style={{ padding: "24px", textAlign: "center" }}>
+                  <div style={{ padding: "20px", textAlign: "center", border: "1px solid #C9CCCF", borderRadius: 8 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                     </svg>
@@ -294,7 +299,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   style={{
                     width: "100%",
                     boxSizing: "border-box",
-                    padding: "10px 12px",
+                    padding: "10px 16px",
                     border: "1px solid #C9CCCF",
                     borderRadius: 8,
                     fontSize: 14,
@@ -304,19 +309,114 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 />
               )}
 
-              {hKey && (
-                <p style={{ margin: "5px 0 0", fontSize: 12, color: "#6D7175" }}>
-                  {t(hKey)}
-                </p>
-              )}
-              {isTemplate && !isLoading && (
-                <p style={{ margin: "5px 0 0", fontSize: 12, color: "#6D7175" }}>
-                  {t("templateHelpText")}
-                </p>
-              )}
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6D7175" }}>
+                {t(helperKey[row.key])}
+              </p>
             </div>
           );
         })}
+      </div>
+
+      {/* Policy Templates Section */}
+      <div
+        style={{
+          border: "1px solid #E1E3E5",
+          borderRadius: 8,
+          padding: 20,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>{t("templatesTitle")}</span>
+          <span style={{ fontSize: 12, fontWeight: 500, padding: "2px 8px", background: "#DCFCE7", color: "#059669", borderRadius: 4 }}>
+            {t("templatesAvailable")}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {TEMPLATE_ROWS.map((row) => {
+            const isApplied = policies[row.key].source === "template";
+            const isLoading = isApplied && (policies[row.key] as { loading?: boolean }).loading;
+            return (
+              <div
+                key={row.key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px",
+                  background: "#F7F8FA",
+                  borderRadius: 8,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#202223" }}>
+                    {t(row.nameKey)}
+                  </p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6D7175" }}>
+                    {t(row.descKey)}
+                  </p>
+                </div>
+                {isApplied ? (
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "#059669", whiteSpace: "nowrap" }}>
+                    ✓ {t("applied")}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => loadTemplate(row.key, row.libraryType)}
+                    disabled={isLoading}
+                    style={{
+                      padding: "6px 12px",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: "#1D4ED8",
+                      background: "none",
+                      border: "none",
+                      cursor: isLoading ? "not-allowed" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {isLoading ? "…" : t("preview")}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Info banner */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 12,
+          padding: 16,
+          background: "#F7F8FA",
+          border: "1px solid #E1E3E5",
+          borderRadius: 8,
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+          <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "#202223" }}>
+            {t("autoIncludeTitle")}
+          </p>
+          <p style={{ margin: 0, fontSize: 13, color: "#6D7175", lineHeight: "18px" }}>
+            {t("autoIncludeDesc")}
+          </p>
+        </div>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
