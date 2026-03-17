@@ -1708,6 +1708,8 @@
       "previewEditNote": "Du kannst diese Vorlage nach der Auswahl bearbeiten",
       "selectTemplateBtn": "Diese Vorlage auswählen",
       "mixedChooseSource": "Wähle, wie du diese Richtlinie einrichten möchtest",
+      "editTemplateBtn": "Vorlage bearbeiten",
+      "templateEditorComingSoon": "Die Vorlagenbearbeitung ist in diesem Schritt bald verfügbar.",
       "closeBtn": "Schließen"
     },
     "packs": {

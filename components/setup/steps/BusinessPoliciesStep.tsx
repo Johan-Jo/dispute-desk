@@ -33,6 +33,7 @@ function getShopOriginFallback(): string | null {
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
+  const [showTemplateEditorNotice, setShowTemplateEditorNotice] = useState(false);
 
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
@@ -291,12 +292,20 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                       <p className="text-xs text-[#6D7175]">{meta[key].desc}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => openPreview(key)}
-                    className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors flex-shrink-0"
-                  >
-                    {t("previewBtn")}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openPreview(key)}
+                      className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors"
+                    >
+                      {t("previewBtn")}
+                    </button>
+                    <button
+                      onClick={() => setShowTemplateEditorNotice(true)}
+                      className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors"
+                    >
+                      {t("editTemplateBtn")}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -389,12 +398,20 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   <div className="bg-[#F7F8FA] rounded-lg p-3 text-xs text-[#6D7175]">
                     {meta[key].desc}
                   </div>
-                  <button
-                    onClick={() => openPreview(key)}
-                    className="w-full px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
-                  >
-                    {t("previewBtn")}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openPreview(key)}
+                      className="flex-1 px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
+                    >
+                      {t("previewBtn")}
+                    </button>
+                    <button
+                      onClick={() => setShowTemplateEditorNotice(true)}
+                      className="flex-1 px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
+                    >
+                      {t("editTemplateBtn")}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -453,6 +470,23 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTemplateEditorNotice && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-[#202223] mb-2">{t("editTemplateBtn")}</h3>
+            <p className="text-sm text-[#6D7175] mb-5">{t("templateEditorComingSoon")}</p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowTemplateEditorNotice(false)}
+                className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {t("closeBtn")}
+              </button>
             </div>
           </div>
         </div>

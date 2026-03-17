@@ -1708,6 +1708,8 @@
       "previewEditNote": "Vous pouvez modifier ce modèle après sélection",
       "selectTemplateBtn": "Sélectionner ce modèle",
       "mixedChooseSource": "Choisissez comment configurer cette politique",
+      "editTemplateBtn": "Modifier le modèle",
+      "templateEditorComingSoon": "La modification du modèle sera bientôt disponible dans ce flux.",
       "closeBtn": "Fermer"
     },
     "packs": {

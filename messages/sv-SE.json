@@ -1573,6 +1573,8 @@
       "previewEditNote": "Du kan redigera den här mallen efter valet",
       "selectTemplateBtn": "Välj den här mallen",
       "mixedChooseSource": "Välj hur du vill sätta upp den här policyn",
+      "editTemplateBtn": "Redigera mall",
+      "templateEditorComingSoon": "Mallredigering kommer snart i det här flödet.",
       "closeBtn": "Stäng"
     },
     "packs": {

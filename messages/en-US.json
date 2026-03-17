@@ -1708,6 +1708,8 @@
       "previewEditNote": "You can edit this template after selection",
       "selectTemplateBtn": "Select This Template",
       "mixedChooseSource": "Choose how to set up this policy",
+      "editTemplateBtn": "Edit template",
+      "templateEditorComingSoon": "Template editing is coming soon in this flow.",
       "closeBtn": "Close"
     },
     "packs": {

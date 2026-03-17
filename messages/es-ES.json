@@ -1708,6 +1708,8 @@
       "previewEditNote": "Puedes editar esta plantilla después de seleccionarla",
       "selectTemplateBtn": "Seleccionar esta plantilla",
       "mixedChooseSource": "Elige cómo configurar esta política",
+      "editTemplateBtn": "Editar plantilla",
+      "templateEditorComingSoon": "La edición de plantillas estará disponible pronto en este flujo.",
       "closeBtn": "Cerrar"
     },
     "packs": {
