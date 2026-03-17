@@ -18,7 +18,6 @@ interface SetupWizardShellProps {
 
 export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellProps) {
   const t = useTranslations("setup");
-  const tNav = useTranslations("nav");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<SetupStateResponse | null>(null);
@@ -115,9 +114,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
   const stepsMap: StepsMap = state?.steps ?? {};
 
   return (
-    <Page
-      backAction={{ content: tNav("dashboard"), url: withShopParams("/app", searchParams) }}
-    >
+    <Page>
       <div>
         <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
 
