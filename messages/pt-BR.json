@@ -1588,7 +1588,8 @@
       "previewHeading": "Disputas ativas",
       "noDisputesYet": "Nenhuma disputa encontrada ainda — salve e continue para iniciar a sincronização.",
       "viewAll": "Ver todas as {count} disputas",
-      "disputeRow": "{count} dispute | {count} disputes"
+      "disputeRow": "{count} dispute | {count} disputes",
+      "moreDisputes": "disputas a mais"
     },
     "businessPolicies": {
       "title": "Políticas comerciais",

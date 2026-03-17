@@ -1453,7 +1453,8 @@
       "previewHeading": "Aktiva tvister",
       "noDisputesYet": "Inga tvister hittades ännu — spara och fortsätt för att starta synkroniseringen.",
       "viewAll": "Visa alla {count} tvister",
-      "disputeRow": "{count} dispute | {count} disputes"
+      "disputeRow": "{count} dispute | {count} disputes",
+      "moreDisputes": "fler tvister"
     },
     "businessPolicies": {
       "title": "Affärspolicyer",

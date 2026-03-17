@@ -1588,7 +1588,8 @@
       "previewHeading": "Litiges actifs",
       "noDisputesYet": "Aucun litige trouvé — sauvegardez et continuez pour démarrer la synchronisation.",
       "viewAll": "Voir les {count} litiges",
-      "disputeRow": "{count} dispute | {count} disputes"
+      "disputeRow": "{count} dispute | {count} disputes",
+      "moreDisputes": "litiges supplémentaires"
     },
     "businessPolicies": {
       "title": "Politiques commerciales",

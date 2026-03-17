@@ -51,17 +51,16 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function daysUntil(iso: string | null): { text: string; urgent: boolean } {
-  if (!iso) return { text: "—", urgent: false };
-  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return { text: "Overdue", urgent: true };
-  if (diff === 0) return { text: "Today", urgent: true };
-  if (diff <= 3) return { text: `${diff}d left`, urgent: true };
-  return { text: `${diff}d left`, urgent: false };
+function daysUntilDiff(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
   const t = useTranslations("setup.syncDisputes");
+  const tStatus = useTranslations("status");
+  const tTable = useTranslations("table");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const [dateRange, setDateRange] = useState("90");
   const [autoSync, setAutoSync] = useState(true);
@@ -103,7 +102,7 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
   }, [stepId, onSaveRef, dateRange, autoSync]);
 
   return (
-    <div style={{ maxWidth: 672, margin: "0 auto" }}>
+    <div>
       {/* Icon + heading */}
       <div style={{ textAlign: "center", marginBottom: 32 }}>
         <div
@@ -252,9 +251,10 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
 
       {/* Active disputes preview */}
       <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#202223" }}>
-            {t("previewHeading")}{total > 0 && <span style={{ marginLeft: 6, fontSize: 13, fontWeight: 500, color: "#6D7175" }}>({total})</span>}
+            {t("previewHeading")}
+            {total > 0 && <span style={{ marginLeft: 6, fontSize: 13, fontWeight: 500, color: "#6D7175" }}>({total})</span>}
           </p>
           {total > 5 && (
             <a
@@ -267,19 +267,13 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
         </div>
 
         {loadingDisputes ? (
-          <div style={{ padding: "24px 0", textAlign: "center" }}>
+          <div style={{ padding: "32px 0", textAlign: "center" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
           </div>
         ) : disputes.length === 0 ? (
-          <div style={{
-            padding: "20px 16px",
-            background: "#F7F8FA",
-            border: "1px solid #E1E3E5",
-            borderRadius: 8,
-            textAlign: "center",
-          }}>
+          <div style={{ padding: "20px 16px", background: "#F7F8FA", border: "1px solid #E1E3E5", borderRadius: 8, textAlign: "center" }}>
             <p style={{ margin: 0, fontSize: 13, color: "#6D7175" }}>{t("noDisputesYet")}</p>
           </div>
         ) : (
@@ -287,84 +281,77 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
             {/* Table header */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1.5fr 100px 100px 90px",
-              padding: "8px 16px",
+              gridTemplateColumns: "160px 1fr 110px 130px 100px",
+              padding: "9px 20px",
               background: "#F7F8FA",
               borderBottom: "1px solid #E1E3E5",
               fontSize: 11,
               fontWeight: 600,
-              color: "#6D7175",
+              color: "#8C9196",
               textTransform: "uppercase",
-              letterSpacing: "0.5px",
+              letterSpacing: "0.6px",
+              gap: 12,
             }}>
-              <div>ID</div>
-              <div>Reason</div>
-              <div>Amount</div>
-              <div>Status</div>
-              <div>Due</div>
+              <div>{tTable("id")}</div>
+              <div>{tTable("reason")}</div>
+              <div>{tTable("amount")}</div>
+              <div>{tTable("status")}</div>
+              <div>{tTable("deadline")}</div>
             </div>
 
             {/* Dispute rows */}
             {disputes.map((d, i) => {
               const sc = statusColor(d.status);
-              const due = daysUntil(d.due_at);
+              const diff = daysUntilDiff(d.due_at);
+              const dueLabel = diff === null ? "—"
+                : diff < 0 ? tCommon("overdue")
+                : diff === 0 ? tCommon("today")
+                : tCommon("daysRemaining", { count: diff });
+              const dueUrgent = diff !== null && diff <= 0;
+              const statusKey = d.status === "needs_response" ? "needsResponse"
+                : d.status === "under_review" ? "underReview"
+                : d.status === "won" ? "won"
+                : d.status === "lost" ? "lost"
+                : "unknown";
               const isLast = i === disputes.length - 1;
               return (
                 <div
                   key={d.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1.5fr 100px 100px 90px",
-                    padding: "10px 16px",
-                    borderBottom: isLast ? "none" : "1px solid #F1F1F1",
+                    gridTemplateColumns: "160px 1fr 110px 130px 100px",
+                    padding: "11px 20px",
+                    gap: 12,
+                    borderBottom: isLast ? "none" : "1px solid #F1F2F4",
                     alignItems: "center",
                     background: "#FFFFFF",
                     fontSize: 13,
                   }}
                 >
-                  <div style={{ fontWeight: 500, color: "#202223", fontFamily: "monospace", fontSize: 12 }}>
-                    #{d.dispute_gid.split("/").pop()?.slice(-8) ?? d.id.slice(0, 8)}
+                  <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 500, color: "#202223" }}>
+                    #{d.dispute_gid.split("/").pop()?.slice(-10) ?? d.id.slice(0, 10)}
                   </div>
-                  <div style={{ color: "#202223", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ color: "#202223", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "capitalize" }}>
                     {d.reason ? d.reason.replace(/_/g, " ") : "—"}
                   </div>
                   <div style={{ color: "#202223", fontWeight: 500 }}>
                     {formatCurrency(d.amount, d.currency_code)}
                   </div>
                   <div>
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: "2px 7px",
-                      borderRadius: 4,
-                      background: sc.bg,
-                      color: sc.color,
-                      whiteSpace: "nowrap",
-                    }}>
-                      {(d.status ?? "unknown").replace(/_/g, " ")}
+                    <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 4, background: sc.bg, color: sc.color, whiteSpace: "nowrap" }}>
+                      {tStatus(statusKey as "needsResponse" | "underReview" | "won" | "lost" | "unknown")}
                     </span>
                   </div>
-                  <div style={{
-                    fontSize: 12,
-                    color: due.urgent ? "#B91C1C" : "#6D7175",
-                    fontWeight: due.urgent ? 600 : 400,
-                  }}>
-                    {due.text !== "—" ? due.text : formatDate(d.due_at)}
+                  <div style={{ fontSize: 12, color: dueUrgent ? "#B91C1C" : "#6D7175", fontWeight: dueUrgent ? 600 : 400 }}>
+                    {dueLabel}
                   </div>
                 </div>
               );
             })}
 
             {total > 5 && (
-              <div style={{
-                padding: "10px 16px",
-                background: "#F7F8FA",
-                borderTop: "1px solid #E1E3E5",
-                fontSize: 13,
-                color: "#6D7175",
-                textAlign: "center",
-              }}>
-                + {total - 5} more disputes
+              <div style={{ padding: "10px 20px", background: "#F7F8FA", borderTop: "1px solid #E1E3E5", fontSize: 13, color: "#6D7175", textAlign: "center" }}>
+                + {total - 5} {t("moreDisputes")}
               </div>
             )}
           </div>

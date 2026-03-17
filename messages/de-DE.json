@@ -1588,7 +1588,8 @@
       "previewHeading": "Aktive Streitfälle",
       "noDisputesYet": "Noch keine Streitfälle gefunden — speichern und fortfahren, um die Synchronisierung zu starten.",
       "viewAll": "Alle {count} Streitfälle anzeigen",
-      "disputeRow": "{count} dispute | {count} disputes"
+      "disputeRow": "{count} dispute | {count} disputes",
+      "moreDisputes": "weitere Streitfälle"
     },
     "businessPolicies": {
       "title": "Unternehmensrichtlinien",

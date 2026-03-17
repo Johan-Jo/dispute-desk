@@ -1588,7 +1588,8 @@
       "previewHeading": "Active disputes",
       "noDisputesYet": "No disputes found yet — save and continue to start syncing.",
       "viewAll": "View all {count} disputes",
-      "disputeRow": "{count} dispute | {count} disputes"
+      "disputeRow": "{count} dispute | {count} disputes",
+      "moreDisputes": "more disputes"
     },
     "businessPolicies": {
       "title": "Business Policies",
