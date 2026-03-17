@@ -60,6 +60,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
   const [loadingAll, setLoadingAll] = useState(false);
+  const [templateErrors, setTemplateErrors] = useState<Partial<Record<PolicyKey, string>>>({});
 
   useEffect(() => {
     const fallbackOrigin = getShopOriginFallback();
@@ -94,15 +95,31 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
   const loadTemplate = useCallback(
     async (key: PolicyKey, libraryType: PolicyTemplateType) => {
-      setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "", loading: true } }));
+      // Capture the current URL before switching to template/loading state
+      let savedUrl = "";
+      setPolicies((prev) => {
+        const p = prev[key];
+        if (p.source === "url") savedUrl = p.url;
+        return { ...prev, [key]: { source: "template", content: "", loading: true } };
+      });
+      setTemplateErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
       try {
         const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
         const res = await fetch(`/api/policy-templates/${libraryType}/content${qs}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { body } = await res.json();
-        setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
-      } catch {
-        setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: (prev[key] as { url?: string }).url ?? "" } }));
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error((errJson as { error?: string }).error ?? `HTTP ${res.status}`);
+        }
+        const { body } = (await res.json()) as { body?: string };
+        if (!body) throw new Error("Template returned empty content");
+        setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body } }));
+      } catch (err) {
+        console.error(`[loadTemplate] ${libraryType}:`, err);
+        setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: savedUrl } }));
+        setTemplateErrors((prev) => ({
+          ...prev,
+          [key]: err instanceof Error ? err.message : "Failed to load template",
+        }));
       }
     },
     [resolvedShopId]
@@ -312,6 +329,11 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6D7175" }}>
                 {t(helperKey[row.key])}
               </p>
+              {templateErrors[row.key] && (
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#DC2626" }}>
+                  ⚠ {templateErrors[row.key]}
+                </p>
+              )}
             </div>
           );
         })}
@@ -368,6 +390,22 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   <span style={{ fontSize: 12, fontWeight: 500, color: "#059669", whiteSpace: "nowrap" }}>
                     ✓ {t("applied")}
                   </span>
+                ) : templateErrors[row.key] ? (
+                  <button
+                    onClick={() => loadTemplate(row.key, row.libraryType)}
+                    style={{
+                      padding: "6px 12px",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: "#DC2626",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ↺ Retry
+                  </button>
                 ) : (
                   <button
                     onClick={() => loadTemplate(row.key, row.libraryType)}
