@@ -861,6 +861,43 @@ All wizard links preserve `shop` and `host` query parameters via
 | Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
 | withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |
 
+### Step 7: Business Policies (`BusinessPoliciesStep`)
+
+**Current state (as of 2026-03-17):** The step implements a 3-flow selection UX
+(own policies / use templates / mix & match) built from a React component the
+owner provided. It is functional and i18n-complete across all 6 locales.
+
+**What is NOT done — Figma alignment:**
+The step has not been matched to the Figma Make design. An attempt was made to
+align it during the session ending 2026-03-17 but failed due to a tooling
+blocker and an incorrect intermediate implementation:
+
+1. `get_metadata` (Figma MCP) does not support Make files — it returned
+   `"This tool is not supported for Make files"` when called against the
+   Make file key `5o2yOdPqVmvwjaK8eTeUUx`.
+2. `get_design_context` requires a specific `nodeId`. Without access to the
+   file tree the policies screen node ID was unknown and was not provided.
+3. Before attempting the MCP, the working implementation was incorrectly
+   replaced with a horizontal 3-card grid layout based on a misread screenshot
+   (commit `ee0f619`). That was reverted in commit `8e241c4`.
+
+**To resume Figma alignment:** Open the Figma Make file, navigate to the
+policies wizard step, and share the URL (including `node-id` query param)
+with the agent. Then call `get_design_context` with that node ID.
+
+**Key files:**
+- `components/setup/steps/BusinessPoliciesStep.tsx` — step component
+- `content/policy-templates/` — Markdown template bodies
+- `app/api/policy-templates/[type]/content/route.ts` — template content API
+- `app/api/policies/apply/route.ts` — apply template API
+- `next.config.js` → `outputFileTracingIncludes` — bundles `.md` files with Vercel
+
+**Vercel bundling fix (2026-03-13):** Policy template Markdown files are not
+automatically traced by Vercel's bundler when loaded via `fs.readFile` with a
+dynamic path. `outputFileTracingIncludes` in `next.config.js` explicitly
+includes `./content/policy-templates/**/*.md` for the
+`/api/policy-templates/[type]/content` route.
+
 ## Help System (EPIC 10)
 
 ### Architecture
