@@ -115,7 +115,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
 
   return (
     <Page>
-      <div>
+      <div style={{ padding: "0 24px" }}>
         <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
 
         <div style={{ marginTop: 16 }}>
