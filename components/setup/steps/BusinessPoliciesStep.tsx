@@ -167,19 +167,19 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       {/* ── Flow selection ── */}
       {!selectedFlow && (
         <div>
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-[#D97706] flex items-center justify-center mb-4 shadow-sm">
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#D97706] flex items-center justify-center mb-4 shadow-sm">
               <FileText className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-[#202223] mb-2">{t("title")}</h2>
             <p className="text-sm text-[#6D7175]">{t("flowSelectSubtitle")}</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-8">
             <button
               onClick={() => setSelectedFlow("own")}
               className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] hover:shadow-sm rounded-xl p-6 text-center transition-all group flex flex-col items-center"
@@ -214,7 +214,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             </button>
           </div>
 
-          <div className="flex items-start gap-3 p-4 border border-[#E1E3E5] rounded-xl bg-white">
+          <div className="flex items-start gap-3 p-4 border border-[#E5E7EB] rounded-lg bg-[#F9FAFB]">
             <Info className="w-5 h-5 text-[#6D7175] flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-[#202223] mb-0.5">{t("whyPoliciesTitle")}</p>
