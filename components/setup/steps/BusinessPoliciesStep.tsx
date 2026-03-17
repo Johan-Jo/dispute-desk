@@ -34,6 +34,7 @@ function getShopOriginFallback(): string | null {
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
   const [showTemplateEditorNotice, setShowTemplateEditorNotice] = useState(false);
+  const debugBuildId = "debug-2026-03-17-1";
 
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
@@ -172,6 +173,11 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       {/* ── Flow selection ── */}
       {!selectedFlow && (
         <div>
+          <div className="mb-4 flex justify-end">
+            <div className="rounded-md bg-[#FEE2E2] px-3 py-1 text-xs font-bold text-[#991B1B]">
+              {debugBuildId}
+            </div>
+          </div>
           <div className="flex flex-col items-center text-center mb-10">
             <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
               <FileText className="w-7 h-7 text-white" />
