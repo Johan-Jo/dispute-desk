@@ -29,9 +29,56 @@ This project has the **Figma MCP server** installed. Use it whenever the user sh
 
 ## MCP server
 
-- **Server name**: `user-Figma`
+- **Server name in Claude Code**: `figma-official`
 - **Tools**: `get_design_context`, `get_metadata`, `get_screenshot`, `get_figjam`, `generate_diagram`, Code Connect tools, etc.
-- **Resources**: Use `fetch_mcp_resource` with URIs returned from the tools (e.g. `file://figma/make/...` or `file://figma/docs/...`).
+- **Resources**: The resource URIs returned by `get_design_context` look like `file://figma/make/source/<fileKey>/src/...` but **cannot be fetched with `ReadMcpResourceTool`** — see known limitation below.
+
+## ReadMcpResourceTool — requires HTTP server mode
+
+### The problem (stdio mode — DO NOT use)
+
+When `figma-official` is configured as a **stdio** process in Claude Code settings, `ReadMcpResourceTool` always returns:
+
+```
+Server "figma-official" is not connected
+```
+
+The stdio server is stateless — it connects for one `mcp__figma-official__*` tool call then disconnects. `ReadMcpResourceTool` requires a persistent connection, which stdio never provides. This was verified across many sessions (March 2026).
+
+### The fix — run in HTTP mode + connect via SSE (SOLVED March 2026)
+
+`ReadMcpResourceTool` works when the server runs persistently in **HTTP mode** and Claude Code connects via SSE.
+
+**Step 1 — start the server in a standalone terminal (outside VS Code):**
+```powershell
+npx -y figma-developer-mcp --figma-api-key=YOUR_FIGMA_API_KEY
+```
+This starts an HTTP server on `127.0.0.1:3333`. Run it in Windows Terminal or PowerShell — **not** the VS Code integrated terminal — so it survives Claude Code restarts. If port 3333 is already in use, an instance is already running.
+
+**Step 2 — configure `.mcp.json` to use HTTP/SSE (already committed):**
+```json
+{
+  "mcpServers": {
+    "figma-official": {
+      "url": "http://127.0.0.1:3333/sse"
+    }
+  }
+}
+```
+
+**Step 3 — reload VS Code window** (Ctrl+Shift+P → "Developer: Reload Window").
+
+After reload, `ReadMcpResourceTool` with `server: "figma-official"` successfully reads Figma Make source files.
+
+**Important:** The `mcp__figma-official__get_design_context` tool must still be called first (with empty `nodeId`) to get the file listing before calling `ReadMcpResourceTool`. This reconnects the server if it went idle.
+
+### What works (with HTTP server running)
+- `mcp__figma-official__get_design_context` — file listing for Make files
+- `mcp__figma-official__get_screenshot` — with a valid `nodeId`
+- `ReadMcpResourceTool` with `server: "figma-official"` — reads Make source files ✅
+
+### What does NOT work regardless
+- `mcp__figma-official__get_metadata` on Make files — "not supported for Make files"
 
 ## DisputeDesk Figma Make file
 

@@ -84,15 +84,13 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
         const isPast = i < currentIndex;
         const isComplete = isDone || isPast;
 
-        const circleColor = isComplete
-          ? "#008060"
-          : isActive
-          ? "#2C6ECB"
-          : "#8C9196";
-        const circleBg = isComplete || isActive ? circleColor : "transparent";
-        const circleBorder = isComplete || isActive ? circleColor : "#C9CCCF";
-        const iconColor = isComplete || isActive ? "#fff" : "#8C9196";
-        const labelColor = isActive ? "#202223" : "#6D7175";
+        // Active step is always blue (Figma: #1D4ED8), even if marked done by API
+        const circleBg = isActive ? "#1D4ED8" : isComplete ? "#059669" : "#fff";
+        const circleBorder = isActive ? "#1D4ED8" : isComplete ? "#059669" : "#E1E3E5";
+        const iconColor = isActive || isComplete ? "#fff" : "#8C9196";
+        const labelColor = isActive ? "#202223" : "#8C9196";
+        // Show checkmark only for past-completed steps, not the active one
+        const showCheckmark = isComplete && !isActive;
 
         return (
           <div
@@ -124,7 +122,7 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
                   transition: "all 0.2s",
                 }}
               >
-                {isComplete ? (
+                {showCheckmark ? (
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M8.5 13.5l-3-3 1.06-1.06L8.5 11.38l4.94-4.94L14.5 7.5l-6 6z" />
                   </svg>
@@ -152,7 +150,7 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
                 style={{
                   flex: 1,
                   height: 2,
-                  background: isComplete ? "#008060" : "#E1E3E5",
+                  background: isComplete && !isActive ? "#059669" : "#E1E3E5",
                   marginTop: 19,
                   transition: "background 0.2s",
                 }}
