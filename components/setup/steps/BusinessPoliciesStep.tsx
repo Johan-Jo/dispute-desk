@@ -175,7 +175,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
               <FileText className="w-7 h-7 text-white" />
             </div>
-            <h2 className="text-[24px] leading-[32px] font-semibold text-[#202223] mb-2">{t("title")}</h2>
+            <h2 className="text-[26px] leading-[34px] font-bold text-[#202223] mb-2">{t("title")}</h2>
             <p className="text-[15px] leading-[24px] text-[#6D7175]">{t("flowSelectSubtitle")}</p>
           </div>
 
@@ -187,7 +187,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
                 <Link className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1.5">{t("ownFlowTitle")}</h3>
+              <h3 className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1.5">{t("ownFlowTitle")}</h3>
               <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("ownFlowShortDesc")}</p>
             </button>
 
@@ -198,7 +198,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
                 <Zap className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1.5">{t("templateFlowTitle")}</h3>
+              <h3 className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1.5">{t("templateFlowTitle")}</h3>
               <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("templateFlowShortDesc")}</p>
             </button>
 
@@ -209,7 +209,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
                 <Layers className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1.5">{t("mixedFlowTitle")}</h3>
+              <h3 className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1.5">{t("mixedFlowTitle")}</h3>
               <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("mixedFlowShortDesc")}</p>
             </button>
           </div>
@@ -217,7 +217,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           <div className="flex items-start gap-3 p-6 border border-[#E5E7EB] rounded-[12px] bg-[#F3F4F6]">
             <Info className="w-5 h-5 text-[#8C9196] flex-shrink-0 mt-[1px]" />
             <div>
-              <p className="text-[15px] leading-[22px] font-semibold text-[#202223] mb-1">{t("whyPoliciesTitle")}</p>
+              <p className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1">{t("whyPoliciesTitle")}</p>
               <p className="text-[14px] leading-[22px] text-[#6D7175]">{t("whyPoliciesDesc")}</p>
             </div>
           </div>
