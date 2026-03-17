@@ -1449,7 +1449,11 @@
       "unlock3": "Förfallodatumsaviseringar och statusspårning",
       "startSync": "Starta synkronisering",
       "syncing": "Synkroniserar tvister…",
-      "synced": "Tvister synkroniserades."
+      "synced": "Tvister synkroniserades.",
+      "previewHeading": "Aktiva tvister",
+      "noDisputesYet": "Inga tvister hittades ännu — spara och fortsätt för att starta synkroniseringen.",
+      "viewAll": "Visa alla {count} tvister",
+      "disputeRow": "{count} dispute | {count} disputes"
     },
     "businessPolicies": {
       "title": "Affärspolicyer",
@@ -1547,7 +1551,7 @@
     },
     "getStarted": "Kom igång →",
     "stepper": {
-      "disputes": "Tvister",
+      "disputes": "Synkronisera",
       "policies": "Policyer",
       "packs": "Paket",
       "rules": "Regler",

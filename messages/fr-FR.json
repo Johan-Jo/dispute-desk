@@ -1584,7 +1584,11 @@
       "unlock3": "Alertes d'échéance et suivi du statut",
       "startSync": "Démarrer la synchronisation",
       "syncing": "Synchronisation des litiges…",
-      "synced": "Litiges synchronisés avec succès."
+      "synced": "Litiges synchronisés avec succès.",
+      "previewHeading": "Litiges actifs",
+      "noDisputesYet": "Aucun litige trouvé — sauvegardez et continuez pour démarrer la synchronisation.",
+      "viewAll": "Voir les {count} litiges",
+      "disputeRow": "{count} dispute | {count} disputes"
     },
     "businessPolicies": {
       "title": "Politiques commerciales",
@@ -1682,7 +1686,7 @@
     },
     "getStarted": "Commencer →",
     "stepper": {
-      "disputes": "Litiges",
+      "disputes": "Synchroniser",
       "policies": "Politiques",
       "packs": "Packs",
       "rules": "Règles",

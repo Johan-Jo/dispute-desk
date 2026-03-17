@@ -1584,7 +1584,11 @@
       "unlock3": "Alertas de prazo e acompanhamento de status",
       "startSync": "Iniciar sincronização",
       "syncing": "Sincronizando disputas…",
-      "synced": "Disputas sincronizadas com sucesso."
+      "synced": "Disputas sincronizadas com sucesso.",
+      "previewHeading": "Disputas ativas",
+      "noDisputesYet": "Nenhuma disputa encontrada ainda — salve e continue para iniciar a sincronização.",
+      "viewAll": "Ver todas as {count} disputas",
+      "disputeRow": "{count} dispute | {count} disputes"
     },
     "businessPolicies": {
       "title": "Políticas comerciais",
@@ -1682,7 +1686,7 @@
     },
     "getStarted": "Começar →",
     "stepper": {
-      "disputes": "Disputas",
+      "disputes": "Sincronizar",
       "policies": "Políticas",
       "packs": "Packs",
       "rules": "Regras",

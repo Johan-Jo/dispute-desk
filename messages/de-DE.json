@@ -1584,7 +1584,11 @@
       "unlock3": "Fälligkeitswarnungen und Statusverfolgung",
       "startSync": "Synchronisierung starten",
       "syncing": "Streitigkeiten werden synchronisiert…",
-      "synced": "Streitigkeiten erfolgreich synchronisiert."
+      "synced": "Streitigkeiten erfolgreich synchronisiert.",
+      "previewHeading": "Aktive Streitfälle",
+      "noDisputesYet": "Noch keine Streitfälle gefunden — speichern und fortfahren, um die Synchronisierung zu starten.",
+      "viewAll": "Alle {count} Streitfälle anzeigen",
+      "disputeRow": "{count} dispute | {count} disputes"
     },
     "businessPolicies": {
       "title": "Unternehmensrichtlinien",
@@ -1682,9 +1686,9 @@
     },
     "getStarted": "Los geht's →",
     "stepper": {
-      "disputes": "Streitfälle",
+      "disputes": "Synchronisieren",
       "policies": "Richtlinien",
-      "packs": "Packs",
+      "packs": "Pakete",
       "rules": "Regeln",
       "team": "Team"
     },

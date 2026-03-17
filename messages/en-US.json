@@ -1519,7 +1519,18 @@
     "stepsLocked": "Complete store connection to unlock remaining steps",
     "done": "Done",
     "edit": "Edit",
-    "complete": "Complete",
+    "complete": {
+      "title": "You're all set!",
+      "subtitle": "DisputeDesk is ready to handle your chargebacks automatically.",
+      "readyHeading": "Here's what's configured",
+      "highlight1": "Disputes sync from Shopify automatically",
+      "highlight2": "Business policies added to evidence",
+      "highlight3": "Evidence packs auto-generated",
+      "highlight4": "Automation rules active",
+      "infoTitle": "How it works from here",
+      "infoDesc": "New disputes are synced automatically. Evidence is built and saved to Shopify. You review and submit in Shopify Admin.",
+      "goToDashboard": "Go to Dashboard"
+    },
     "undoSkip": "Undo skip",
     "back": "← Back",
     "saveAndContinue": "Save & Continue →",
@@ -1573,7 +1584,11 @@
       "unlock3": "Due-date alerts and status tracking",
       "startSync": "Start Sync",
       "syncing": "Syncing disputes...",
-      "synced": "Disputes synced successfully."
+      "synced": "Disputes synced successfully.",
+      "previewHeading": "Active disputes",
+      "noDisputesYet": "No disputes found yet — save and continue to start syncing.",
+      "viewAll": "View all {count} disputes",
+      "disputeRow": "{count} dispute | {count} disputes"
     },
     "businessPolicies": {
       "title": "Business Policies",
@@ -1699,18 +1714,6 @@
       "packs": "Generate packs",
       "rules": "Add rules",
       "team": "Add team"
-    },
-    "complete": {
-      "title": "You're all set!",
-      "subtitle": "DisputeDesk is ready to handle your chargebacks automatically.",
-      "readyHeading": "Here's what's configured",
-      "highlight1": "Disputes sync from Shopify automatically",
-      "highlight2": "Business policies added to evidence",
-      "highlight3": "Evidence packs auto-generated",
-      "highlight4": "Automation rules active",
-      "infoTitle": "How it works from here",
-      "infoDesc": "New disputes are synced automatically. Evidence is built and saved to Shopify. You review and submit in Shopify Admin.",
-      "goToDashboard": "Go to Dashboard"
     }
   },
   "configGuide": {
