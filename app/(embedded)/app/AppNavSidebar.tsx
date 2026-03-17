@@ -21,6 +21,7 @@ export async function AppNavSidebar() {
       <s-link href="/app/disputes">{t("nav.disputes")}</s-link>
       <s-link href="/app/packs">{t("nav.packs")}</s-link>
       <s-link href="/app/rules">{t("nav.rules")}</s-link>
+      <s-link href="/app/analytics">{t("nav.analytics")}</s-link>
       <s-link href="/app/billing">{t("nav.billing")}</s-link>
       <s-link href="/app/settings">{t("nav.settings")}</s-link>
       <s-link href="/app/help">{t("nav.help")}</s-link>

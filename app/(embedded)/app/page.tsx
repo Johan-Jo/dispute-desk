@@ -30,6 +30,13 @@ import type { SetupStateResponse } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
 import { useSearchParams, useRouter } from "next/navigation";
 
+interface AutomationSettings {
+  auto_build_enabled: boolean;
+  auto_save_enabled: boolean;
+  auto_save_min_score: number;
+  enforce_no_blockers: boolean;
+}
+
 type PeriodKey = "24h" | "7d" | "30d" | "all";
 
 interface DisputeRow {
@@ -353,6 +360,68 @@ function DashboardCharts({ period }: { period: PeriodKey }) {
   );
 }
 
+function AutomationStatusCard() {
+  const t = useTranslations("dashboard");
+  const [settings, setSettings] = useState<AutomationSettings | null>(null);
+
+  useEffect(() => {
+    const shopId = document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1];
+    if (!shopId) return;
+    fetch(`/api/automation/settings?shop_id=${shopId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data) setSettings(data); });
+  }, []);
+
+  if (!settings) return null;
+
+  return (
+    <Card>
+      <BlockStack gap="300">
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="h2" variant="headingMd">{t("automationStatus")}</Text>
+          <Button variant="plain" size="slim" url="/app/settings">{t("settings")}</Button>
+        </InlineStack>
+        <InlineStack gap="400" wrap>
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="span" variant="bodySm" tone="subdued">{t("autoBuild")}</Text>
+            {settings.auto_build_enabled
+              ? <Badge tone="success">ON</Badge>
+              : <Badge>OFF</Badge>}
+          </InlineStack>
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="span" variant="bodySm" tone="subdued">{t("autoSave")}</Text>
+            {settings.auto_save_enabled
+              ? <Badge tone="success">ON</Badge>
+              : <Badge>OFF</Badge>}
+          </InlineStack>
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="span" variant="bodySm" tone="subdued">{t("minScore")}</Text>
+            <Text as="span" variant="bodySm" fontWeight="semibold">{settings.auto_save_min_score}%</Text>
+          </InlineStack>
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="span" variant="bodySm" tone="subdued">{t("blockerGate")}</Text>
+            {settings.enforce_no_blockers
+              ? <Badge tone="success">ON</Badge>
+              : <Badge>OFF</Badge>}
+          </InlineStack>
+        </InlineStack>
+        <div
+          style={{
+            background: "#F6F6F7",
+            borderRadius: 6,
+            padding: "10px 12px",
+            fontSize: 13,
+            color: "#6D7175",
+            lineHeight: 1.5,
+          }}
+        >
+          {t("automationBanner")}
+        </div>
+      </BlockStack>
+    </Card>
+  );
+}
+
 export default function EmbeddedDashboardPage() {
   const t = useTranslations();
   const [period, setPeriod] = useState<PeriodKey>("30d");
@@ -372,6 +441,11 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section>
           <ConfigGuideCard />
         </Layout.Section>
+
+        <Layout.Section>
+          <AutomationStatusCard />
+        </Layout.Section>
+
         {/* Overview: period selector + 4 KPI cards (real data from API) */}
         <Layout.Section>
           <DashboardKpis period={period} onPeriodChange={setPeriod} />

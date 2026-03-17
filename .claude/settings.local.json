@@ -4,5 +4,9 @@
       "Bash(npx vitest:*)",
       "Bash(npx tsc:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "figma-official"
+  ],
+  "enableAllProjectMcpServers": true
 }
