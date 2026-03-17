@@ -69,16 +69,10 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
   const [total, setTotal] = useState(0);
   const [loadingDisputes, setLoadingDisputes] = useState(true);
 
-  const shopId =
-    typeof window !== "undefined"
-      ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-      : "";
-
   const fetchDisputes = useCallback(async () => {
-    if (!shopId) { setLoadingDisputes(false); return; }
     setLoadingDisputes(true);
     try {
-      const res = await fetch(`/api/disputes?shop_id=${shopId}&page=1&per_page=5`);
+      const res = await fetch(`/api/disputes?page=1&per_page=5`);
       if (res.ok) {
         const json = await res.json();
         setDisputes(json.disputes ?? []);
@@ -87,7 +81,7 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
     } finally {
       setLoadingDisputes(false);
     }
-  }, [shopId]);
+  }, []);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
