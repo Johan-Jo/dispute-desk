@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X } from "lucide-react";
+import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info } from "lucide-react";
 import type { StepId } from "@/lib/setup/types";
 
 type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
@@ -170,74 +170,63 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     <div className="max-w-2xl mx-auto">
       {/* ── Flow selection ── */}
       {!selectedFlow && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#202223] mb-6">{t("flowSelectTitle")}</h2>
-
-          {/* Own */}
-          <button
-            onClick={() => setSelectedFlow("own")}
-            className="w-full bg-white border-2 border-[#E1E3E5] hover:border-[#1D4ED8] rounded-xl p-6 text-left transition-all group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg bg-[#EFF6FF] group-hover:bg-[#DBEAFE] flex items-center justify-center transition-colors flex-shrink-0">
-                <Link className="w-6 h-6 text-[#1D4ED8]" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-[#202223] mb-1">{t("ownFlowTitle")}</h3>
-                <p className="text-sm text-[#6D7175] mb-3">{t("ownFlowDesc")}</p>
-                <div className="flex items-center gap-2 text-xs text-[#6D7175]">
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">URL Links</span>
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">File Upload</span>
-                </div>
-              </div>
+        <div>
+          {/* Header */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#D97706] flex items-center justify-center mb-4 shadow-sm">
+              <FileText className="w-8 h-8 text-white" />
             </div>
-          </button>
+            <h2 className="text-2xl font-bold text-[#202223] mb-2">{t("title")}</h2>
+            <p className="text-sm text-[#6D7175]">{t("flowSelectSubtitle")}</p>
+          </div>
 
-          {/* Template */}
-          <button
-            onClick={() => setSelectedFlow("template")}
-            className="w-full bg-white border-2 border-[#E1E3E5] hover:border-[#1D4ED8] rounded-xl p-6 text-left transition-all group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg bg-[#F0FDF4] group-hover:bg-[#DCFCE7] flex items-center justify-center transition-colors flex-shrink-0">
-                <FileText className="w-6 h-6 text-[#22C55E]" />
+          {/* 3 horizontal cards */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {/* Own */}
+            <button
+              onClick={() => setSelectedFlow("own")}
+              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] hover:shadow-sm rounded-xl p-6 text-center transition-all group flex flex-col items-center"
+            >
+              <div className="w-11 h-11 rounded-full bg-[#F7F8FA] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-3">
+                <Link className="w-5 h-5 text-[#6D7175] group-hover:text-[#1D4ED8]" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-[#202223] mb-1 flex items-center gap-2">
-                  {t("templateFlowTitle")}
-                  <span className="px-2 py-0.5 bg-[#22C55E] text-white text-xs font-medium rounded-full">
-                    {t("templateFlowBadge")}
-                  </span>
-                </h3>
-                <p className="text-sm text-[#6D7175] mb-3">{t("templateFlowDesc")}</p>
-                <div className="flex items-center gap-2 text-xs text-[#6D7175]">
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Quick Setup</span>
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Editable</span>
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Best Practice</span>
-                </div>
-              </div>
-            </div>
-          </button>
+              <h3 className="text-sm font-semibold text-[#202223] mb-1">{t("ownFlowTitle")}</h3>
+              <p className="text-xs text-[#6D7175] leading-relaxed">{t("ownFlowShortDesc")}</p>
+            </button>
 
-          {/* Mixed */}
-          <button
-            onClick={() => setSelectedFlow("mixed")}
-            className="w-full bg-white border-2 border-[#E1E3E5] hover:border-[#1D4ED8] rounded-xl p-6 text-left transition-all group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg bg-[#FEF3C7] group-hover:bg-[#FEF08A] flex items-center justify-center transition-colors flex-shrink-0">
-                <Zap className="w-6 h-6 text-[#F59E0B]" />
+            {/* Template */}
+            <button
+              onClick={() => setSelectedFlow("template")}
+              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] hover:shadow-sm rounded-xl p-6 text-center transition-all group flex flex-col items-center"
+            >
+              <div className="w-11 h-11 rounded-full bg-[#F7F8FA] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-3">
+                <Zap className="w-5 h-5 text-[#6D7175] group-hover:text-[#1D4ED8]" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-[#202223] mb-1">{t("mixedFlowTitle")}</h3>
-                <p className="text-sm text-[#6D7175] mb-3">{t("mixedFlowDesc")}</p>
-                <div className="flex items-center gap-2 text-xs text-[#6D7175]">
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Flexible</span>
-                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Customizable</span>
-                </div>
+              <h3 className="text-sm font-semibold text-[#202223] mb-1">{t("templateFlowTitle")}</h3>
+              <p className="text-xs text-[#6D7175] leading-relaxed">{t("templateFlowShortDesc")}</p>
+            </button>
+
+            {/* Mixed */}
+            <button
+              onClick={() => setSelectedFlow("mixed")}
+              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] hover:shadow-sm rounded-xl p-6 text-center transition-all group flex flex-col items-center"
+            >
+              <div className="w-11 h-11 rounded-full bg-[#F7F8FA] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-3">
+                <Layers className="w-5 h-5 text-[#6D7175] group-hover:text-[#1D4ED8]" />
               </div>
+              <h3 className="text-sm font-semibold text-[#202223] mb-1">{t("mixedFlowTitle")}</h3>
+              <p className="text-xs text-[#6D7175] leading-relaxed">{t("mixedFlowShortDesc")}</p>
+            </button>
+          </div>
+
+          {/* Why policies matter banner */}
+          <div className="flex items-start gap-3 p-4 border border-[#E1E3E5] rounded-xl bg-white">
+            <Info className="w-5 h-5 text-[#6D7175] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-[#202223] mb-0.5">{t("whyPoliciesTitle")}</p>
+              <p className="text-sm text-[#6D7175]">{t("whyPoliciesDesc")}</p>
             </div>
-          </button>
+          </div>
         </div>
       )}
 
