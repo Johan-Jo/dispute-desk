@@ -1,59 +1,31 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import {
-  BlockStack,
-  InlineStack,
-  Text,
-  TextField,
-  Button,
-  Box,
-  Divider,
-  Badge,
-  Spinner,
-} from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { PolicyTemplateType } from "@/lib/policy-templates/library";
 import type { StepId } from "@/lib/setup/types";
 
 const POLICY_ROWS = [
-  { key: "returns", libraryType: "refunds" as PolicyTemplateType, defaultPath: "/policies/refund-policy" },
-  { key: "shipping", libraryType: "shipping" as PolicyTemplateType, defaultPath: "/policies/shipping-policy" },
-  { key: "terms", libraryType: "terms" as PolicyTemplateType, defaultPath: "/policies/terms-of-service" },
-  { key: "privacy", libraryType: "privacy" as PolicyTemplateType, defaultPath: "/policies/privacy-policy" },
-  { key: "contact", libraryType: "contact" as PolicyTemplateType, defaultPath: "/pages/contact" },
+  { key: "shipping", libraryType: "shipping" as PolicyTemplateType, defaultPath: "/policies/shipping-policy", required: true },
+  { key: "returns", libraryType: "refunds" as PolicyTemplateType, defaultPath: "/policies/refund-policy", required: true },
+  { key: "terms", libraryType: "terms" as PolicyTemplateType, defaultPath: "/policies/terms-of-service", required: false },
+  { key: "privacy", libraryType: "privacy" as PolicyTemplateType, defaultPath: "/policies/privacy-policy", required: false },
 ] as const;
 
 type PolicyKey = (typeof POLICY_ROWS)[number]["key"];
-
-interface TemplateMeta {
-  type: PolicyTemplateType;
-  name: string;
-  description: string;
-  qualityBadge: string;
-}
 
 type PolicyState =
   | { source: "url"; url: string }
   | { source: "template"; content: string; loading?: boolean };
 
-interface ShopDetails {
-  name: string;
-  email: string;
-  phone: string;
-  primaryDomain: string;
+interface BusinessPoliciesStepProps {
+  stepId: StepId;
+  onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-function getShopId(): string | null {
-  return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
-}
-
-/** Best-effort shop origin from cookies / URL — works without an API call. */
 function getShopOriginFallback(): string | null {
-  // shopify_shop cookie = "example.myshopify.com"
   const domain = document.cookie.match(/shopify_shop=([^;]+)/)?.[1];
   if (domain) return `https://${domain}`;
-  // ?shop= query param as last resort
   const shopParam = new URLSearchParams(window.location.search).get("shop");
   if (shopParam) return `https://${shopParam}`;
   return null;
@@ -62,94 +34,77 @@ function getShopOriginFallback(): string | null {
 function prefillUrls(origin: string): Record<PolicyKey, PolicyState> {
   const base = origin.replace(/\/$/, "");
   return {
-    returns: { source: "url", url: `${base}/policies/refund-policy` },
     shipping: { source: "url", url: `${base}/policies/shipping-policy` },
+    returns: { source: "url", url: `${base}/policies/refund-policy` },
     terms: { source: "url", url: `${base}/policies/terms-of-service` },
     privacy: { source: "url", url: `${base}/policies/privacy-policy` },
-    contact: { source: "url", url: `${base}/pages/contact` },
   };
-}
-
-interface BusinessPoliciesStepProps {
-  stepId: StepId;
-  onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
 
   const [policies, setPolicies] = useState<Record<PolicyKey, PolicyState>>({
-    returns: { source: "url", url: "" },
     shipping: { source: "url", url: "" },
+    returns: { source: "url", url: "" },
     terms: { source: "url", url: "" },
     privacy: { source: "url", url: "" },
-    contact: { source: "url", url: "" },
   });
 
-  const [templateMeta, setTemplateMeta] = useState<Record<string, TemplateMeta>>({});
-  const [metaLoading, setMetaLoading] = useState(true);
-  const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
+  const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
+  const [loadingAll, setLoadingAll] = useState(false);
 
-  // Fetch template metadata + shop details in parallel on mount
   useEffect(() => {
-    fetch("/api/policy-templates")
-      .then((r) => r.json())
-      .then((data: { templates: Array<{ type: string; name: string; description: string; qualityBadge: string }> }) => {
-        const map: Record<string, TemplateMeta> = {};
-        for (const tpl of data.templates ?? []) {
-          map[tpl.type] = { type: tpl.type as PolicyTemplateType, name: tpl.name, description: tpl.description, qualityBadge: tpl.qualityBadge };
-        }
-        setTemplateMeta(map);
-      })
-      .catch(() => {})
-      .finally(() => setMetaLoading(false));
-
-    // Step 1: pre-fill immediately from cookie/URL (no API needed)
     const fallbackOrigin = getShopOriginFallback();
     if (fallbackOrigin) {
-      setPolicies(prefillUrls(fallbackOrigin));
+      setPolicies((prev) => ({ ...prev, ...prefillUrls(fallbackOrigin) }));
     }
 
-    // Step 2: fetch richer shop details (custom domain, name, email, etc.)
-    // and upgrade the URLs if the primary domain differs from the cookie domain
-    const shopId = getShopId();
-    if (shopId) {
-      fetch(`/api/shop/details?shop_id=${shopId}`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((details: ShopDetails | null) => {
-          if (!details) return;
-          setShopDetails(details);
-          // Only override if primaryDomain differs from what we already filled
-          const origin = details.primaryDomain.replace(/\/$/, "");
-          if (fallbackOrigin && origin === fallbackOrigin.replace(/\/$/, "")) return;
-          setPolicies((prev) => {
-            const next = { ...prev };
-            for (const row of POLICY_ROWS) {
-              const current = prev[row.key];
-              // Only replace if still a url source (user hasn't switched to template)
-              if (current.source === "url") {
-                next[row.key] = { source: "url", url: `${origin}${row.defaultPath}` };
+    fetch("/api/setup/state")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.shopId) return;
+        setResolvedShopId(data.shopId);
+        return fetch(`/api/shop/details?shop_id=${data.shopId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((details) => {
+            if (!details?.primaryDomain) return;
+            const origin = details.primaryDomain.replace(/\/$/, "");
+            if (fallbackOrigin && origin === fallbackOrigin.replace(/\/$/, "")) return;
+            setPolicies((prev) => {
+              const next = { ...prev };
+              for (const row of POLICY_ROWS) {
+                if (prev[row.key].source === "url") {
+                  next[row.key] = { source: "url", url: `${origin}${row.defaultPath}` };
+                }
               }
-            }
-            return next;
+              return next;
+            });
           });
-        })
-        .catch(() => {});
-    }
+      })
+      .catch(() => {});
   }, []);
 
-  const loadTemplate = useCallback(async (key: PolicyKey, libraryType: PolicyTemplateType) => {
-    setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "", loading: true } }));
-    try {
-      const shopId = getShopId();
-      const qs = shopId ? `?shop_id=${shopId}` : "";
-      const res = await fetch(`/api/policy-templates/${libraryType}/content${qs}`);
-      const { body } = await res.json();
-      setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
-    } catch {
-      setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "" } }));
-    }
-  }, []);
+  const loadTemplate = useCallback(
+    async (key: PolicyKey, libraryType: PolicyTemplateType) => {
+      setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "", loading: true } }));
+      try {
+        const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
+        const res = await fetch(`/api/policy-templates/${libraryType}/content${qs}`);
+        const { body } = await res.json();
+        setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
+      } catch {
+        setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "" } }));
+      }
+    },
+    [resolvedShopId]
+  );
+
+  const loadAllTemplates = useCallback(async () => {
+    setLoadingAll(true);
+    await Promise.all(POLICY_ROWS.map((row) => loadTemplate(row.key, row.libraryType)));
+    setLoadingAll(false);
+  }, [loadTemplate]);
 
   function setUrl(key: PolicyKey, url: string) {
     setPolicies((prev) => ({ ...prev, [key]: { source: "url", url } }));
@@ -160,27 +115,21 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   }
 
   function removeTemplate(key: PolicyKey) {
-    const row = POLICY_ROWS.find((r) => r.key === key)!;
-    const origin = shopDetails?.primaryDomain.replace(/\/$/, "") ?? "";
-    const defaultUrl = origin ? `${origin}${row.defaultPath}` : "";
-    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: defaultUrl } }));
+    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: "" } }));
   }
 
   useEffect(() => {
     onSaveRef.current = async () => {
-      const shopId = getShopId();
-
       for (const row of POLICY_ROWS) {
         const p = policies[row.key];
         if (p.source !== "template") continue;
         const applyRes = await fetch("/api/policies/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shop_id: shopId, policy_type: row.libraryType, content: p.content }),
+          body: JSON.stringify({ shop_id: resolvedShopId, policy_type: row.libraryType, content: p.content }),
         });
         if (!applyRes.ok) return false;
       }
-
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -188,87 +137,199 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, policies]);
+  }, [stepId, onSaveRef, policies, resolvedShopId]);
+
+  const helperKey: Partial<Record<PolicyKey, "shippingHelper" | "returnsHelper">> = {
+    shipping: "shippingHelper",
+    returns: "returnsHelper",
+  };
 
   return (
-    <BlockStack gap="400">
-      <Text as="h2" variant="headingLg">
-        {t("title")}
-      </Text>
-      <Text as="p" variant="bodyMd" tone="subdued">
-        {t("subtitle")}
-      </Text>
+    <div>
+      {/* Icon + heading */}
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+            borderRadius: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 20px",
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <polyline points="9 15 11 17 15 13" />
+          </svg>
+        </div>
+        <h2 style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 600, color: "#202223", lineHeight: 1.3 }}>
+          {t("title")}
+        </h2>
+        <p style={{ margin: 0, fontSize: 15, color: "#6D7175" }}>
+          {t("subtitle")}
+        </p>
+      </div>
 
-      <BlockStack gap="300">
-        {POLICY_ROWS.map((row, i) => {
+      {/* Policy Wizard Banner */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 14,
+          padding: "16px 18px",
+          background: "#EFF6FF",
+          border: "1px solid #BFDBFE",
+          borderRadius: 10,
+          marginBottom: 28,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            flexShrink: 0,
+            background: "#1D4ED8",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 1,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#1E40AF", marginBottom: 3 }}>
+                {t("wizardTitle")}
+              </div>
+              <div style={{ fontSize: 13, color: "#3B82F6", lineHeight: "18px" }}>
+                {t("wizardDesc")}
+              </div>
+            </div>
+            <button
+              onClick={loadAllTemplates}
+              disabled={loadingAll}
+              style={{
+                flexShrink: 0,
+                padding: "8px 14px",
+                background: "#1D4ED8",
+                color: "white",
+                border: "none",
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: loadingAll ? "not-allowed" : "pointer",
+                opacity: loadingAll ? 0.7 : 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {loadingAll ? "…" : t("wizardCta")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Policy URL / template inputs */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        {POLICY_ROWS.map((row) => {
           const policy = policies[row.key];
-          const meta = templateMeta[row.libraryType];
           const isTemplate = policy.source === "template";
           const isLoading = isTemplate && (policy as { loading?: boolean }).loading;
+          const hKey = helperKey[row.key];
 
           return (
-            <Box key={row.key}>
-              {i > 0 && <Divider />}
-              <Box paddingBlockStart={i > 0 ? "300" : "0"}>
-                <BlockStack gap="200">
-                  {/* Row header */}
-                  <InlineStack align="space-between" blockAlign="center">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Text as="span" variant="bodyMd" fontWeight="semibold">
-                        {t(`${row.key}Label` as Parameters<typeof t>[0])}
-                      </Text>
-                      {isTemplate && meta && (
-                        <Badge tone="success">{meta.qualityBadge}</Badge>
-                      )}
-                    </InlineStack>
-                    {isTemplate ? (
-                      <Button variant="plain" size="slim" onClick={() => removeTemplate(row.key)}>
-                        {t("removeTemplate")}
-                      </Button>
-                    ) : metaLoading ? (
-                      <Spinner size="small" />
-                    ) : (
-                      <Button variant="plain" size="slim" onClick={() => loadTemplate(row.key, row.libraryType)}>
-                        {t("useTemplate")}
-                      </Button>
-                    )}
-                  </InlineStack>
+            <div key={row.key}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
+                  {t(`${row.key}Label` as Parameters<typeof t>[0])}
+                  {row.required && <span style={{ color: "#B91C1C", marginLeft: 2 }}>*</span>}
+                </label>
+                {isTemplate ? (
+                  <button
+                    onClick={() => removeTemplate(row.key)}
+                    style={{ fontSize: 13, color: "#6D7175", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {t("removeTemplate")}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => loadTemplate(row.key, row.libraryType)}
+                    style={{ fontSize: 13, color: "#1D4ED8", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 500 }}
+                  >
+                    {t("useTemplate")}
+                  </button>
+                )}
+              </div>
 
-                  {/* Content */}
-                  {isTemplate ? (
-                    isLoading ? (
-                      <InlineStack align="center">
-                        <Spinner size="small" />
-                      </InlineStack>
-                    ) : (
-                      <TextField
-                        label={t(`${row.key}Label` as Parameters<typeof t>[0])}
-                        labelHidden
-                        value={(policy as { content: string }).content}
-                        onChange={(val) => setContent(row.key, val)}
-                        multiline={8}
-                        autoComplete="off"
-                        helpText={t("templateHelpText")}
-                        monospaced
-                      />
-                    )
-                  ) : (
-                    <TextField
-                      label={t(`${row.key}Label` as Parameters<typeof t>[0])}
-                      labelHidden
-                      value={(policy as { url: string }).url}
-                      onChange={(val) => setUrl(row.key, val)}
-                      type="url"
-                      placeholder={t(`${row.key}Placeholder` as Parameters<typeof t>[0])}
-                      autoComplete="off"
-                    />
-                  )}
-                </BlockStack>
-              </Box>
-            </Box>
+              {isTemplate ? (
+                isLoading ? (
+                  <div style={{ padding: "24px", textAlign: "center" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                    </svg>
+                  </div>
+                ) : (
+                  <textarea
+                    value={(policy as { content: string }).content}
+                    onChange={(e) => setContent(row.key, e.target.value)}
+                    rows={6}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 12px",
+                      border: "1px solid #C9CCCF",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontFamily: "monospace",
+                      color: "#202223",
+                      resize: "vertical",
+                      outline: "none",
+                    }}
+                  />
+                )
+              ) : (
+                <input
+                  type="url"
+                  value={(policy as { url: string }).url}
+                  onChange={(e) => setUrl(row.key, e.target.value)}
+                  placeholder={t(`${row.key}Placeholder` as Parameters<typeof t>[0])}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "10px 12px",
+                    border: "1px solid #C9CCCF",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    color: "#202223",
+                    outline: "none",
+                  }}
+                />
+              )}
+
+              {hKey && !isTemplate && (
+                <p style={{ margin: "5px 0 0", fontSize: 12, color: "#6D7175" }}>
+                  {t(hKey)}
+                </p>
+              )}
+              {isTemplate && !isLoading && (
+                <p style={{ margin: "5px 0 0", fontSize: 12, color: "#6D7175" }}>
+                  {t("templateHelpText")}
+                </p>
+              )}
+            </div>
           );
         })}
-      </BlockStack>
-    </BlockStack>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   );
 }
