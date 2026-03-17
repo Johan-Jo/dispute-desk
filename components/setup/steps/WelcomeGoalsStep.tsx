@@ -39,7 +39,7 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
           style={{
             width: 72,
             height: 72,
-            background: "linear-gradient(135deg, #2C6ECB 0%, #1A4F9B 100%)",
+            background: "linear-gradient(135deg, #1D4ED8 0%, #1e40af 100%)",
             borderRadius: 16,
             display: "flex",
             alignItems: "center",
@@ -67,7 +67,7 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
           border: "1px solid #E1E3E5",
           borderRadius: 12,
           padding: 20,
-          background: "#fff",
+          background: "#F7F8FA",
         }}
       >
         <p style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: "#202223" }}>
@@ -81,7 +81,7 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  background: "#2C6ECB",
+                  background: "#1D4ED8",
                   color: "#fff",
                   fontSize: 13,
                   fontWeight: 700,
@@ -119,7 +119,7 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#2C6ECB" }}>{stat.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#1D4ED8" }}>{stat.value}</div>
             <div style={{ fontSize: 12, color: "#6D7175", marginTop: 4 }}>{stat.label}</div>
           </div>
         ))}
@@ -129,8 +129,8 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
       <div
         style={{
           width: "100%",
-          background: "#EBF5FA",
-          border: "1px solid #2C6ECB",
+          background: "#EFF6FF",
+          border: "1px solid #BFDBFE",
           borderRadius: 8,
           padding: "12px 16px",
           display: "flex",
@@ -138,12 +138,12 @@ export function WelcomeGoalsStep({ stepId, onSaveRef }: WelcomeGoalsStepProps) {
           alignItems: "flex-start",
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="#2C6ECB" style={{ flexShrink: 0, marginTop: 1 }}>
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="#1D4ED8" style={{ flexShrink: 0, marginTop: 1 }}>
           <path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4zm-.5 4h1v5h-1V8zm0-2.5h1v1h-1v-1z" />
         </svg>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#2C6ECB" }}>{t("skipInfoTitle")}</div>
-          <div style={{ fontSize: 13, color: "#4A5568", marginTop: 2 }}>{t("skipInfoDesc")}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1E40AF" }}>{t("skipInfoTitle")}</div>
+          <div style={{ fontSize: 13, color: "#1E40AF", marginTop: 2 }}>{t("skipInfoDesc")}</div>
         </div>
       </div>
     </div>
