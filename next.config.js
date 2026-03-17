@@ -11,6 +11,10 @@ const nextConfig = {
   // Use separate build dir when started by Playwright E2E to avoid .next/trace EPERM lock
   distDir: process.env.NEXT_E2E_BUILD ? ".next-e2e" : ".next",
   outputFileTracingRoot: path.join(__dirname),
+  outputFileTracingIncludes: {
+    // Bundle the markdown template files with the serverless function
+    "/api/policy-templates/[type]/content": ["./content/policy-templates/**/*.md"],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
