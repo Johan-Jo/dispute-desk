@@ -2,28 +2,21 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import type { PolicyTemplateType } from "@/lib/policy-templates/library";
+import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X } from "lucide-react";
 import type { StepId } from "@/lib/setup/types";
 
-const POLICY_ROWS = [
-  { key: "shipping", libraryType: "shipping" as PolicyTemplateType, defaultPath: "/policies/shipping-policy", required: true },
-  { key: "returns", libraryType: "refunds" as PolicyTemplateType, defaultPath: "/policies/refund-policy", required: true },
-  { key: "terms", libraryType: "terms" as PolicyTemplateType, defaultPath: "/policies/terms-of-service", required: false },
-  { key: "privacy", libraryType: "privacy" as PolicyTemplateType, defaultPath: "/policies/privacy-policy", required: false },
-] as const;
+type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
+type FlowType = "own" | "template" | "mixed";
+type MixedOption = "url" | "upload" | "template";
 
-// Templates available in the Policy Templates section (no privacy template)
-const TEMPLATE_ROWS = [
-  { key: "shipping" as const, libraryType: "shipping" as PolicyTemplateType, nameKey: "shippingTemplateName" as const, descKey: "shippingTemplateDesc" as const },
-  { key: "returns" as const, libraryType: "refunds" as PolicyTemplateType, nameKey: "returnsTemplateName" as const, descKey: "returnsTemplateDesc" as const },
-  { key: "terms" as const, libraryType: "terms" as PolicyTemplateType, nameKey: "termsTemplateName" as const, descKey: "termsTemplateDesc" as const },
-];
+const POLICY_KEYS: PolicyKey[] = ["shipping", "refunds", "terms", "privacy"];
 
-type PolicyKey = (typeof POLICY_ROWS)[number]["key"];
-
-type PolicyState =
-  | { source: "url"; url: string }
-  | { source: "template"; content: string; loading?: boolean };
+const POLICY_PATHS: Record<PolicyKey, string> = {
+  shipping: "/policies/shipping-policy",
+  refunds: "/policies/refund-policy",
+  terms: "/policies/terms-of-service",
+  privacy: "/policies/privacy-policy",
+};
 
 interface BusinessPoliciesStepProps {
   stepId: StepId;
@@ -38,34 +31,38 @@ function getShopOriginFallback(): string | null {
   return null;
 }
 
-function prefillUrls(origin: string): Record<PolicyKey, PolicyState> {
-  const base = origin.replace(/\/$/, "");
-  return {
-    shipping: { source: "url", url: `${base}/policies/shipping-policy` },
-    returns: { source: "url", url: `${base}/policies/refund-policy` },
-    terms: { source: "url", url: `${base}/policies/terms-of-service` },
-    privacy: { source: "url", url: `${base}/policies/privacy-policy` },
-  };
-}
-
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
 
-  const [policies, setPolicies] = useState<Record<PolicyKey, PolicyState>>({
-    shipping: { source: "url", url: "" },
-    returns: { source: "url", url: "" },
-    terms: { source: "url", url: "" },
-    privacy: { source: "url", url: "" },
+  const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
+  const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
+
+  const [ownUrls, setOwnUrls] = useState<Record<PolicyKey, string>>({
+    shipping: "", refunds: "", terms: "", privacy: "",
   });
 
-  const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
-  const [loadingAll, setLoadingAll] = useState(false);
-  const [templateErrors, setTemplateErrors] = useState<Partial<Record<PolicyKey, string>>>({});
+  const [mixedOptions, setMixedOptions] = useState<Record<PolicyKey, MixedOption>>({
+    shipping: "template", refunds: "template", terms: "template", privacy: "template",
+  });
+  const [mixedUrls, setMixedUrls] = useState<Record<PolicyKey, string>>({
+    shipping: "", refunds: "", terms: "", privacy: "",
+  });
+  const [uploadedFiles, setUploadedFiles] = useState<Partial<Record<PolicyKey, { id: string; url: string }>>>({});
+  const [uploadLoading, setUploadLoading] = useState<Partial<Record<PolicyKey, boolean>>>({});
+
+  const [previewKey, setPreviewKey] = useState<PolicyKey | null>(null);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     const fallbackOrigin = getShopOriginFallback();
     if (fallbackOrigin) {
-      setPolicies((prev) => ({ ...prev, ...prefillUrls(fallbackOrigin) }));
+      const base = fallbackOrigin.replace(/\/$/, "");
+      const prefilled = Object.fromEntries(
+        POLICY_KEYS.map((k) => [k, `${base}${POLICY_PATHS[k]}`])
+      ) as Record<PolicyKey, string>;
+      setOwnUrls(prefilled);
+      setMixedUrls(prefilled);
     }
 
     fetch("/api/setup/state")
@@ -77,387 +74,406 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           .then((r) => (r.ok ? r.json() : null))
           .then((details) => {
             if (!details?.primaryDomain) return;
-            const origin = details.primaryDomain.replace(/\/$/, "");
-            if (fallbackOrigin && origin === fallbackOrigin.replace(/\/$/, "")) return;
-            setPolicies((prev) => {
-              const next = { ...prev };
-              for (const row of POLICY_ROWS) {
-                if (prev[row.key].source === "url") {
-                  next[row.key] = { source: "url", url: `${origin}${row.defaultPath}` };
-                }
-              }
-              return next;
-            });
+            const base = details.primaryDomain.replace(/\/$/, "");
+            if (fallbackOrigin && base === fallbackOrigin.replace(/\/$/, "")) return;
+            const prefilled = Object.fromEntries(
+              POLICY_KEYS.map((k) => [k, `${base}${POLICY_PATHS[k]}`])
+            ) as Record<PolicyKey, string>;
+            setOwnUrls(prefilled);
+            setMixedUrls(prefilled);
           });
       })
       .catch(() => {});
   }, []);
 
-  const loadTemplate = useCallback(
-    async (key: PolicyKey, libraryType: PolicyTemplateType) => {
-      // Capture the current URL before switching to template/loading state
-      let savedUrl = "";
-      setPolicies((prev) => {
-        const p = prev[key];
-        if (p.source === "url") savedUrl = p.url;
-        return { ...prev, [key]: { source: "template", content: "", loading: true } };
-      });
-      setTemplateErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+  const openPreview = useCallback(
+    async (key: PolicyKey) => {
+      setPreviewKey(key);
+      setPreviewContent("");
+      setPreviewLoading(true);
       try {
         const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
-        const res = await fetch(`/api/policy-templates/${libraryType}/content${qs}`);
-        if (!res.ok) {
-          const errJson = await res.json().catch(() => ({}));
-          throw new Error((errJson as { error?: string }).error ?? `HTTP ${res.status}`);
+        const res = await fetch(`/api/policy-templates/${key}/content${qs}`);
+        if (res.ok) {
+          const { body } = (await res.json()) as { body?: string };
+          setPreviewContent(body ?? "");
         }
-        const { body } = (await res.json()) as { body?: string };
-        if (!body) throw new Error("Template returned empty content");
-        setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body } }));
-      } catch (err) {
-        console.error(`[loadTemplate] ${libraryType}:`, err);
-        setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: savedUrl } }));
-        setTemplateErrors((prev) => ({
-          ...prev,
-          [key]: err instanceof Error ? err.message : "Failed to load template",
-        }));
-      }
+      } catch {}
+      setPreviewLoading(false);
     },
     [resolvedShopId]
   );
 
-  const loadAllTemplates = useCallback(async () => {
-    setLoadingAll(true);
-    await Promise.all(TEMPLATE_ROWS.map((row) => loadTemplate(row.key, row.libraryType)));
-    setLoadingAll(false);
-  }, [loadTemplate]);
-
-  function setUrl(key: PolicyKey, url: string) {
-    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url } }));
-  }
-
-  function setContent(key: PolicyKey, content: string) {
-    setPolicies((prev) => ({ ...prev, [key]: { source: "template", content } }));
-  }
-
-  function removeTemplate(key: PolicyKey) {
-    setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: "" } }));
-  }
+  const handleFileUpload = useCallback(
+    async (key: PolicyKey, file: File) => {
+      setUploadLoading((prev) => ({ ...prev, [key]: true }));
+      const form = new FormData();
+      form.append("file", file);
+      form.append("policy_type", key);
+      if (resolvedShopId) form.append("shop_id", resolvedShopId);
+      try {
+        const res = await fetch("/api/policies/upload", { method: "POST", body: form });
+        if (res.ok) {
+          const { id, url } = (await res.json()) as { id: string; url: string };
+          setUploadedFiles((prev) => ({ ...prev, [key]: { id, url } }));
+        }
+      } catch {}
+      setUploadLoading((prev) => ({ ...prev, [key]: false }));
+    },
+    [resolvedShopId]
+  );
 
   useEffect(() => {
     onSaveRef.current = async () => {
-      for (const row of POLICY_ROWS) {
-        const p = policies[row.key];
-        if (p.source !== "template") continue;
+      if (!selectedFlow) return false;
+
+      const templateKeys: PolicyKey[] =
+        selectedFlow === "template"
+          ? POLICY_KEYS
+          : selectedFlow === "mixed"
+          ? POLICY_KEYS.filter((k) => mixedOptions[k] === "template")
+          : [];
+
+      for (const key of templateKeys) {
+        const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
+        const contentRes = await fetch(`/api/policy-templates/${key}/content${qs}`);
+        if (!contentRes.ok) return false;
+        const { body } = (await contentRes.json()) as { body?: string };
         const applyRes = await fetch("/api/policies/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shop_id: resolvedShopId, policy_type: row.libraryType, content: p.content }),
+          body: JSON.stringify({ shop_id: resolvedShopId, policy_type: key, content: body }),
         });
         if (!applyRes.ok) return false;
       }
+
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stepId, payload: { policies } }),
+        body: JSON.stringify({
+          stepId,
+          payload: { flow: selectedFlow, ownUrls, mixedOptions, mixedUrls, uploadedFiles },
+        }),
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, policies, resolvedShopId]);
+  }, [stepId, onSaveRef, selectedFlow, ownUrls, mixedOptions, mixedUrls, uploadedFiles, resolvedShopId]);
 
-  const helperKey: Record<PolicyKey, Parameters<typeof t>[0]> = {
-    shipping: "shippingHelper",
-    returns: "returnsHelper",
-    terms: "termsHelper",
-    privacy: "privacyHelper",
+  const meta: Record<PolicyKey, { title: string; desc: string }> = {
+    shipping: { title: t("shippingTitle"), desc: t("shippingDesc") },
+    refunds:  { title: t("refundsTitle"),  desc: t("refundsDesc") },
+    terms:    { title: t("termsTitle"),    desc: t("termsDesc") },
+    privacy:  { title: t("privacyTitle"), desc: t("privacyDesc") },
   };
 
   return (
-    <div style={{ maxWidth: 672, margin: "0 auto" }}>
-      {/* Icon + heading */}
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-            borderRadius: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-          }}
-        >
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <polyline points="9 15 11 17 15 13" />
-          </svg>
-        </div>
-        <h2 style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 600, color: "#202223", lineHeight: 1.3 }}>
-          {t("title")}
-        </h2>
-        <p style={{ margin: 0, fontSize: 15, color: "#6D7175" }}>
-          {t("subtitle")}
-        </p>
-      </div>
+    <div className="max-w-2xl mx-auto">
+      {/* ── Flow selection ── */}
+      {!selectedFlow && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-[#202223] mb-6">{t("flowSelectTitle")}</h2>
 
-      {/* Policy Wizard Banner */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 12,
-          padding: "20px",
-          background: "#EFF6FF",
-          border: "1px solid #BFDBFE",
-          borderRadius: 8,
-          marginBottom: 24,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            flexShrink: 0,
-            background: "#1D4ED8",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-          </svg>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#1E40AF", marginBottom: 4 }}>
-            {t("wizardTitle")}
-          </div>
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#1E40AF", lineHeight: "18px" }}>
-            {t("wizardDesc")}
-          </p>
+          {/* Own */}
           <button
-            onClick={loadAllTemplates}
-            disabled={loadingAll}
-            style={{
-              padding: "8px 16px",
-              background: "#1D4ED8",
-              color: "white",
-              border: "none",
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: loadingAll ? "not-allowed" : "pointer",
-              opacity: loadingAll ? 0.7 : 1,
-            }}
+            onClick={() => setSelectedFlow("own")}
+            className="w-full bg-white border-2 border-[#E1E3E5] hover:border-[#1D4ED8] rounded-xl p-6 text-left transition-all group"
           >
-            {loadingAll ? "…" : t("wizardCta")}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg bg-[#EFF6FF] group-hover:bg-[#DBEAFE] flex items-center justify-center transition-colors flex-shrink-0">
+                <Link className="w-6 h-6 text-[#1D4ED8]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-[#202223] mb-1">{t("ownFlowTitle")}</h3>
+                <p className="text-sm text-[#6D7175] mb-3">{t("ownFlowDesc")}</p>
+                <div className="flex items-center gap-2 text-xs text-[#6D7175]">
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">URL Links</span>
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">File Upload</span>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Template */}
+          <button
+            onClick={() => setSelectedFlow("template")}
+            className="w-full bg-white border-2 border-[#E1E3E5] hover:border-[#1D4ED8] rounded-xl p-6 text-left transition-all group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg bg-[#F0FDF4] group-hover:bg-[#DCFCE7] flex items-center justify-center transition-colors flex-shrink-0">
+                <FileText className="w-6 h-6 text-[#22C55E]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-[#202223] mb-1 flex items-center gap-2">
+                  {t("templateFlowTitle")}
+                  <span className="px-2 py-0.5 bg-[#22C55E] text-white text-xs font-medium rounded-full">
+                    {t("templateFlowBadge")}
+                  </span>
+                </h3>
+                <p className="text-sm text-[#6D7175] mb-3">{t("templateFlowDesc")}</p>
+                <div className="flex items-center gap-2 text-xs text-[#6D7175]">
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Quick Setup</span>
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Editable</span>
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Best Practice</span>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Mixed */}
+          <button
+            onClick={() => setSelectedFlow("mixed")}
+            className="w-full bg-white border-2 border-[#E1E3E5] hover:border-[#1D4ED8] rounded-xl p-6 text-left transition-all group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg bg-[#FEF3C7] group-hover:bg-[#FEF08A] flex items-center justify-center transition-colors flex-shrink-0">
+                <Zap className="w-6 h-6 text-[#F59E0B]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-[#202223] mb-1">{t("mixedFlowTitle")}</h3>
+                <p className="text-sm text-[#6D7175] mb-3">{t("mixedFlowDesc")}</p>
+                <div className="flex items-center gap-2 text-xs text-[#6D7175]">
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Flexible</span>
+                  <span className="px-2 py-1 bg-[#F7F8FA] rounded">Customizable</span>
+                </div>
+              </div>
+            </div>
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Policy URL / template inputs */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
-        {POLICY_ROWS.map((row) => {
-          const policy = policies[row.key];
-          const isTemplate = policy.source === "template";
-          const isLoading = isTemplate && (policy as { loading?: boolean }).loading;
+      {/* ── Own flow ── */}
+      {selectedFlow === "own" && (
+        <div className="space-y-6">
+          <button
+            onClick={() => setSelectedFlow(null)}
+            className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t("backToFlowSelection")}
+          </button>
 
-          return (
-            <div key={row.key}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <label style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-                  {t(`${row.key}Label` as Parameters<typeof t>[0])}
-                  {row.required && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
-                </label>
-                {isTemplate && (
+          <div className="bg-white rounded-xl border border-[#E1E3E5] p-6">
+            <h3 className="text-base font-semibold text-[#202223] mb-1">{t("ownFlowTitle")}</h3>
+            <p className="text-sm text-[#6D7175] mb-6">{t("ownFlowDesc")}</p>
+            <div className="space-y-4">
+              {POLICY_KEYS.map((key) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium text-[#202223] mb-2">
+                    {meta[key].title}
+                  </label>
+                  <input
+                    type="url"
+                    value={ownUrls[key]}
+                    onChange={(e) => setOwnUrls((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={`https://yourstore.myshopify.com${POLICY_PATHS[key]}`}
+                    className="w-full px-4 py-2.5 border border-[#C9CCCF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Template flow ── */}
+      {selectedFlow === "template" && (
+        <div className="space-y-6">
+          <button
+            onClick={() => setSelectedFlow(null)}
+            className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t("backToFlowSelection")}
+          </button>
+
+          <div className="bg-white rounded-xl border border-[#E1E3E5] p-6">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h3 className="text-base font-semibold text-[#202223] mb-1">{t("templateSelectedTitle")}</h3>
+                <p className="text-sm text-[#6D7175]">{t("templateSelectedDesc")}</p>
+              </div>
+              <CheckCircle2 className="w-6 h-6 text-[#22C55E] flex-shrink-0" />
+            </div>
+
+            <div className="space-y-3">
+              {POLICY_KEYS.map((key) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between p-4 bg-[#F7F8FA] rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-[#1D4ED8] flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-[#202223]">{meta[key].title}</p>
+                      <p className="text-xs text-[#6D7175]">{meta[key].desc}</p>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => removeTemplate(row.key)}
-                    style={{ fontSize: 12, color: "#6D7175", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    onClick={() => openPreview(key)}
+                    className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors flex-shrink-0"
                   >
-                    ← {t("removeTemplate")}
+                    {t("previewBtn")}
                   </button>
-                )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mixed flow ── */}
+      {selectedFlow === "mixed" && (
+        <div className="space-y-6">
+          <button
+            onClick={() => setSelectedFlow(null)}
+            className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t("backToFlowSelection")}
+          </button>
+
+          {POLICY_KEYS.map((key) => (
+            <div key={key} className="bg-white rounded-xl border border-[#E1E3E5] p-6">
+              <h3 className="text-base font-semibold text-[#202223] mb-1">{meta[key].title}</h3>
+              <p className="text-sm text-[#6D7175] mb-4">{t("mixedChooseSource")}</p>
+
+              <div className="flex items-center gap-2 mb-4">
+                {(["url", "upload", "template"] as MixedOption[]).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setMixedOptions((prev) => ({ ...prev, [key]: opt }))}
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                      mixedOptions[key] === opt
+                        ? "bg-[#1D4ED8] text-white"
+                        : "bg-[#F7F8FA] text-[#202223] hover:bg-[#E1E3E5]"
+                    }`}
+                  >
+                    {opt === "url" && <Link className="w-3.5 h-3.5" />}
+                    {opt === "upload" && <Upload className="w-3.5 h-3.5" />}
+                    {opt === "template" && <Zap className="w-3.5 h-3.5" />}
+                    {opt === "url" ? t("optionUrl") : opt === "upload" ? t("optionUpload") : t("optionTemplate")}
+                  </button>
+                ))}
               </div>
 
-              {isTemplate ? (
-                isLoading ? (
-                  <div style={{ padding: "20px", textAlign: "center", border: "1px solid #C9CCCF", borderRadius: 8 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
-                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                    </svg>
-                  </div>
-                ) : (
-                  <textarea
-                    value={(policy as { content: string }).content}
-                    onChange={(e) => setContent(row.key, e.target.value)}
-                    rows={6}
-                    style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      padding: "10px 12px",
-                      border: "1px solid #C9CCCF",
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontFamily: "monospace",
-                      color: "#202223",
-                      resize: "vertical",
-                      outline: "none",
-                    }}
-                  />
-                )
-              ) : (
+              {mixedOptions[key] === "url" && (
                 <input
                   type="url"
-                  value={(policy as { url: string }).url}
-                  onChange={(e) => setUrl(row.key, e.target.value)}
-                  placeholder={t(`${row.key}Placeholder` as Parameters<typeof t>[0])}
-                  style={{
-                    width: "100%",
-                    boxSizing: "border-box",
-                    padding: "10px 16px",
-                    border: "1px solid #C9CCCF",
-                    borderRadius: 8,
-                    fontSize: 14,
-                    color: "#202223",
-                    outline: "none",
-                  }}
+                  value={mixedUrls[key]}
+                  onChange={(e) => setMixedUrls((prev) => ({ ...prev, [key]: e.target.value }))}
+                  placeholder={`https://yourstore.myshopify.com${POLICY_PATHS[key]}`}
+                  className="w-full px-4 py-2.5 border border-[#C9CCCF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
                 />
               )}
 
-              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6D7175" }}>
-                {t(helperKey[row.key])}
-              </p>
-              {templateErrors[row.key] && (
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#DC2626" }}>
-                  ⚠ {templateErrors[row.key]}
-                </p>
+              {mixedOptions[key] === "upload" && (
+                uploadedFiles[key] ? (
+                  <div className="flex items-center gap-3 p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-[#22C55E] flex-shrink-0" />
+                    <p className="text-sm text-[#15803D] flex-1 truncate">
+                      {uploadedFiles[key]!.url.split("/").pop()}
+                    </p>
+                    <button
+                      onClick={() => setUploadedFiles((prev) => { const n = { ...prev }; delete n[key]; return n; })}
+                      className="text-xs text-[#6D7175] hover:text-[#202223]"
+                    >
+                      {t("removeUpload")}
+                    </button>
+                  </div>
+                ) : (
+                  <label className="block border-2 border-dashed border-[#C9CCCF] rounded-lg p-6 text-center hover:border-[#1D4ED8] hover:bg-[#F7F8FA] transition-all cursor-pointer">
+                    <Upload className="w-8 h-8 text-[#6D7175] mx-auto mb-2" />
+                    <p className="text-sm font-medium text-[#202223] mb-1">{t("uploadCta")}</p>
+                    <p className="text-xs text-[#6D7175]">{t("uploadHint")}</p>
+                    {uploadLoading[key] && (
+                      <p className="text-xs text-[#1D4ED8] mt-2">Uploading…</p>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.doc"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(key, file);
+                      }}
+                    />
+                  </label>
+                )
+              )}
+
+              {mixedOptions[key] === "template" && (
+                <div className="space-y-3">
+                  <div className="bg-[#F7F8FA] rounded-lg p-3 text-xs text-[#6D7175]">
+                    {meta[key].desc}
+                  </div>
+                  <button
+                    onClick={() => openPreview(key)}
+                    className="w-full px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
+                  >
+                    {t("previewBtn")}
+                  </button>
+                </div>
               )}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Policy Templates Section */}
-      <div
-        style={{
-          border: "1px solid #E1E3E5",
-          borderRadius: 8,
-          padding: 20,
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>{t("templatesTitle")}</span>
-          <span style={{ fontSize: 12, fontWeight: 500, padding: "2px 8px", background: "#DCFCE7", color: "#059669", borderRadius: 4 }}>
-            {t("templatesAvailable")}
-          </span>
+          ))}
         </div>
+      )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {TEMPLATE_ROWS.map((row) => {
-            const isApplied = policies[row.key].source === "template";
-            const isLoading = isApplied && (policies[row.key] as { loading?: boolean }).loading;
-            return (
-              <div
-                key={row.key}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px",
-                  background: "#F7F8FA",
-                  borderRadius: 8,
-                }}
+      {/* ── Preview modal ── */}
+      {previewKey && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E3E5]">
+              <div>
+                <h3 className="text-lg font-semibold text-[#202223]">{meta[previewKey].title}</h3>
+                <p className="text-xs text-[#6D7175] mt-0.5">{t("templatePreviewTitle")}</p>
+              </div>
+              <button
+                onClick={() => setPreviewKey(null)}
+                className="p-2 hover:bg-[#F7F8FA] rounded-lg transition-colors"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#202223" }}>
-                    {t(row.nameKey)}
-                  </p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6D7175" }}>
-                    {t(row.descKey)}
-                  </p>
+                <X className="w-5 h-5 text-[#6D7175]" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-32 text-sm text-[#6D7175]">
+                  Loading template…
                 </div>
-                {isApplied ? (
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "#059669", whiteSpace: "nowrap" }}>
-                    ✓ {t("applied")}
-                  </span>
-                ) : templateErrors[row.key] ? (
+              ) : (
+                <pre className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap font-sans">
+                  {previewContent}
+                </pre>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-4 border-t border-[#E1E3E5] bg-[#F7F8FA]">
+              <p className="text-xs text-[#6D7175]">{t("previewEditNote")}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPreviewKey(null)}
+                  className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
+                >
+                  {t("closeBtn")}
+                </button>
+                {selectedFlow === "mixed" && (
                   <button
-                    onClick={() => loadTemplate(row.key, row.libraryType)}
-                    style={{
-                      padding: "6px 12px",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: "#DC2626",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
+                    onClick={() => {
+                      setMixedOptions((prev) => ({ ...prev, [previewKey]: "template" }));
+                      setPreviewKey(null);
                     }}
+                    className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    ↺ Retry
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => loadTemplate(row.key, row.libraryType)}
-                    disabled={isLoading}
-                    style={{
-                      padding: "6px 12px",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: "#1D4ED8",
-                      background: "none",
-                      border: "none",
-                      cursor: isLoading ? "not-allowed" : "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {isLoading ? "…" : t("preview")}
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t("selectTemplateBtn")}
                   </button>
                 )}
               </div>
-            );
-          })}
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Info banner */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 12,
-          padding: 16,
-          background: "#F7F8FA",
-          border: "1px solid #E1E3E5",
-          borderRadius: 8,
-        }}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6D7175" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-        <div>
-          <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "#202223" }}>
-            {t("autoIncludeTitle")}
-          </p>
-          <p style={{ margin: 0, fontSize: 13, color: "#6D7175", lineHeight: "18px" }}>
-            {t("autoIncludeDesc")}
-          </p>
-        </div>
-      </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      )}
     </div>
   );
 }
