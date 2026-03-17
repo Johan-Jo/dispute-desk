@@ -9,6 +9,7 @@
     "billing": "Facturation",
     "team": "Équipe",
     "settings": "Paramètres",
+    "analytics": "Analytiques",
     "help": "Aide",
     "signOut": "Déconnexion",
     "connectStore": "Connecter votre vraie boutique",
@@ -352,6 +353,22 @@
       "DUPLICATE": "Duplicate charge",
       "GENERAL": "General"
     }
+  },
+  "analytics": {
+    "title": "Analytiques",
+    "subtitle": "Métriques de performance et tendances des litiges",
+    "overview": "Aperçu",
+    "period24h": "24h",
+    "period7d": "7 jours",
+    "period30d": "30 jours",
+    "periodAll": "Toute la période",
+    "totalDisputes": "Total des litiges",
+    "winRate": "Taux de succès",
+    "revenueRecovered": "Revenus récupérés",
+    "avgResponseTime": "Temps de réponse moy.",
+    "winRateTrend": "Tendance du taux de succès",
+    "byReason": "Litiges par motif",
+    "noData": "Aucune donnée pour cette période."
   },
   "billing": {
     "planManagement": "Gestion des forfaits",
@@ -1540,6 +1557,20 @@
     "syncDisputes": {
       "title": "Synchroniser les litiges & la chronologie",
       "subtitle": "Importez vos litiges récents pour commencer.",
+      "dateRangeHeading": "Jusqu'où souhaitez-vous importer ?",
+      "days30Title": "30 derniers jours",
+      "days30Desc": "Démarrage léger — litiges récents uniquement",
+      "days90Title": "90 derniers jours",
+      "days90Desc": "Recommandé — couvre la plupart des délais de contestation",
+      "days90Recommended": "Recommandé",
+      "days180Title": "180 derniers jours",
+      "days180Desc": "Historique complet — tous les litiges des 6 derniers mois",
+      "autoSyncTitle": "Synchronisation automatique des nouveaux litiges",
+      "autoSyncDesc": "Importez automatiquement les nouveaux litiges dès qu'ils surviennent",
+      "unlockHeading": "Ce que vous obtiendrez",
+      "unlock1": "Litiges importés et prêts à gérer",
+      "unlock2": "Dossiers de preuves générés automatiquement",
+      "unlock3": "Alertes d'échéance et suivi du statut",
       "startSync": "Démarrer la synchronisation",
       "syncing": "Synchronisation des litiges…",
       "synced": "Litiges synchronisés avec succès."
@@ -1645,6 +1676,18 @@
       "packs": "Packs",
       "rules": "Règles",
       "team": "Équipe"
+    },
+    "complete": {
+      "title": "Tout est prêt !",
+      "subtitle": "DisputeDesk est prêt à gérer vos rétrofacturations automatiquement.",
+      "readyHeading": "Ce qui a été configuré",
+      "highlight1": "Les litiges se synchronisent automatiquement depuis Shopify",
+      "highlight2": "Politiques d'entreprise ajoutées aux preuves",
+      "highlight3": "Packs de preuves générés automatiquement",
+      "highlight4": "Règles d'automatisation actives",
+      "infoTitle": "Comment ça fonctionne maintenant",
+      "infoDesc": "Les nouveaux litiges sont synchronisés automatiquement. Les preuves sont créées et enregistrées dans Shopify. Vous révisez et soumettez dans l'Admin Shopify.",
+      "goToDashboard": "Aller au tableau de bord"
     },
     "welcome": {
       "title": "Bienvenue sur DisputeDesk",

@@ -9,6 +9,7 @@
     "billing": "Abrechnung",
     "team": "Team",
     "settings": "Einstellungen",
+    "analytics": "Analysen",
     "help": "Hilfe",
     "signOut": "Abmelden",
     "connectStore": "Echten Shop verbinden",
@@ -352,6 +353,22 @@
       "DUPLICATE": "Duplicate charge",
       "GENERAL": "General"
     }
+  },
+  "analytics": {
+    "title": "Analysen",
+    "subtitle": "Leistungskennzahlen und Trends zu Streitfällen",
+    "overview": "Übersicht",
+    "period24h": "24h",
+    "period7d": "7 Tage",
+    "period30d": "30 Tage",
+    "periodAll": "Gesamte Zeit",
+    "totalDisputes": "Streitfälle gesamt",
+    "winRate": "Erfolgsquote",
+    "revenueRecovered": "Zurückgewonnener Umsatz",
+    "avgResponseTime": "Ø Antwortzeit",
+    "winRateTrend": "Trend der Erfolgsquote",
+    "byReason": "Streitfälle nach Grund",
+    "noData": "Keine Daten für diesen Zeitraum."
   },
   "billing": {
     "planManagement": "Planverwaltung",
@@ -1540,6 +1557,20 @@
     "syncDisputes": {
       "title": "Streitigkeiten & Zeitleiste synchronisieren",
       "subtitle": "Importiere deine aktuellen Streitigkeiten, um loszulegen.",
+      "dateRangeHeading": "Wie weit sollen wir zurückimportieren?",
+      "days30Title": "Letzte 30 Tage",
+      "days30Desc": "Leichter Einstieg – nur aktuelle Streitigkeiten",
+      "days90Title": "Letzte 90 Tage",
+      "days90Desc": "Empfohlen – deckt die meisten Anfechtungszeiträume ab",
+      "days90Recommended": "Empfohlen",
+      "days180Title": "Letzte 180 Tage",
+      "days180Desc": "Vollständige Historie – alle Streitigkeiten der letzten 6 Monate",
+      "autoSyncTitle": "Neue Streitigkeiten automatisch synchronisieren",
+      "autoSyncDesc": "Neue Streitigkeiten werden automatisch importiert, sobald sie auftreten",
+      "unlockHeading": "Was du erhältst",
+      "unlock1": "Streitigkeiten importiert und bereit zur Verwaltung",
+      "unlock2": "Beweispakete automatisch erstellt",
+      "unlock3": "Fälligkeitswarnungen und Statusverfolgung",
       "startSync": "Synchronisierung starten",
       "syncing": "Streitigkeiten werden synchronisiert…",
       "synced": "Streitigkeiten erfolgreich synchronisiert."
@@ -1645,6 +1676,18 @@
       "packs": "Packs",
       "rules": "Regeln",
       "team": "Team"
+    },
+    "complete": {
+      "title": "Alles eingerichtet!",
+      "subtitle": "DisputeDesk ist bereit, Ihre Rückbuchungen automatisch zu bearbeiten.",
+      "readyHeading": "Was konfiguriert wurde",
+      "highlight1": "Streitfälle werden automatisch von Shopify synchronisiert",
+      "highlight2": "Geschäftsrichtlinien zu Beweisen hinzugefügt",
+      "highlight3": "Beweispakete werden automatisch erstellt",
+      "highlight4": "Automatisierungsregeln aktiv",
+      "infoTitle": "Wie es von hier aus funktioniert",
+      "infoDesc": "Neue Streitfälle werden automatisch synchronisiert. Beweise werden erstellt und in Shopify gespeichert. Überprüfung und Einreichung erfolgen im Shopify-Admin.",
+      "goToDashboard": "Zum Dashboard"
     },
     "welcome": {
       "title": "Willkommen bei DisputeDesk",

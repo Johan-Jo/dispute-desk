@@ -9,6 +9,7 @@
     "billing": "Facturación",
     "team": "Equipo",
     "settings": "Configuración",
+    "analytics": "Análisis",
     "help": "Ayuda",
     "signOut": "Cerrar sesión",
     "connectStore": "Conectar tu tienda real",
@@ -352,6 +353,22 @@
       "DUPLICATE": "Duplicate charge",
       "GENERAL": "General"
     }
+  },
+  "analytics": {
+    "title": "Análisis",
+    "subtitle": "Métricas de rendimiento y tendencias de disputas",
+    "overview": "Resumen",
+    "period24h": "24h",
+    "period7d": "7 días",
+    "period30d": "30 días",
+    "periodAll": "Todo el tiempo",
+    "totalDisputes": "Total de disputas",
+    "winRate": "Tasa de éxito",
+    "revenueRecovered": "Ingresos recuperados",
+    "avgResponseTime": "Tiempo de respuesta prom.",
+    "winRateTrend": "Tendencia de tasa de éxito",
+    "byReason": "Disputas por motivo",
+    "noData": "Sin datos para este período."
   },
   "billing": {
     "planManagement": "Gestión de planes",
@@ -1540,6 +1557,20 @@
     "syncDisputes": {
       "title": "Sincronizar disputas y cronología",
       "subtitle": "Importa tus disputas recientes para comenzar.",
+      "dateRangeHeading": "¿Hasta cuándo debemos importar?",
+      "days30Title": "Últimos 30 días",
+      "days30Desc": "Inicio ligero — solo disputas recientes",
+      "days90Title": "Últimos 90 días",
+      "days90Desc": "Recomendado — cubre la mayoría de los plazos de disputa",
+      "days90Recommended": "Recomendado",
+      "days180Title": "Últimos 180 días",
+      "days180Desc": "Historial completo — todas las disputas de los últimos 6 meses",
+      "autoSyncTitle": "Sincronizar nuevas disputas automáticamente",
+      "autoSyncDesc": "Importa automáticamente las nuevas disputas en cuanto se produzcan",
+      "unlockHeading": "Lo que obtendrás",
+      "unlock1": "Disputas importadas y listas para gestionar",
+      "unlock2": "Paquetes de evidencia generados automáticamente",
+      "unlock3": "Alertas de vencimiento y seguimiento del estado",
       "startSync": "Iniciar sincronización",
       "syncing": "Sincronizando disputas…",
       "synced": "Disputas sincronizadas correctamente."
@@ -1645,6 +1676,18 @@
       "packs": "Packs",
       "rules": "Reglas",
       "team": "Equipo"
+    },
+    "complete": {
+      "title": "¡Todo listo!",
+      "subtitle": "DisputeDesk está listo para manejar tus contracargos automáticamente.",
+      "readyHeading": "Qué se ha configurado",
+      "highlight1": "Las disputas se sincronizan automáticamente desde Shopify",
+      "highlight2": "Políticas comerciales añadidas a las pruebas",
+      "highlight3": "Paquetes de pruebas generados automáticamente",
+      "highlight4": "Reglas de automatización activas",
+      "infoTitle": "Cómo funciona desde aquí",
+      "infoDesc": "Las nuevas disputas se sincronizan automáticamente. Las pruebas se crean y guardan en Shopify. Revisas y envías en el Admin de Shopify.",
+      "goToDashboard": "Ir al panel"
     },
     "welcome": {
       "title": "Bienvenido a DisputeDesk",

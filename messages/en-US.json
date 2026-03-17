@@ -9,6 +9,7 @@
     "billing": "Billing",
     "team": "Team",
     "settings": "Settings",
+    "analytics": "Analytics",
     "help": "Help",
     "signOut": "Sign out",
     "connectStore": "Connect your real store",
@@ -352,6 +353,22 @@
       "DUPLICATE": "Duplicate charge",
       "GENERAL": "General"
     }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Dispute performance metrics and trends",
+    "overview": "Overview",
+    "period24h": "24h",
+    "period7d": "7 days",
+    "period30d": "30 days",
+    "periodAll": "All time",
+    "totalDisputes": "Total Disputes",
+    "winRate": "Win Rate",
+    "revenueRecovered": "Revenue Recovered",
+    "avgResponseTime": "Avg. Response Time",
+    "winRateTrend": "Win Rate Trend",
+    "byReason": "Disputes by Reason",
+    "noData": "No data for this period."
   },
   "billing": {
     "title": "Billing",
@@ -1540,6 +1557,20 @@
     "syncDisputes": {
       "title": "Sync Disputes & Timeline",
       "subtitle": "Import your recent disputes to get started.",
+      "dateRangeHeading": "How far back should we import?",
+      "days30Title": "Last 30 days",
+      "days30Desc": "Lightweight start — recent disputes only",
+      "days90Title": "Last 90 days",
+      "days90Desc": "Recommended — covers most dispute windows",
+      "days90Recommended": "Recommended",
+      "days180Title": "Last 180 days",
+      "days180Desc": "Full history — all disputes in the past 6 months",
+      "autoSyncTitle": "Auto-sync new disputes",
+      "autoSyncDesc": "Automatically import new disputes as they occur",
+      "unlockHeading": "What you'll get",
+      "unlock1": "Disputes imported and ready to manage",
+      "unlock2": "Evidence packs generated automatically",
+      "unlock3": "Due-date alerts and status tracking",
       "startSync": "Start Sync",
       "syncing": "Syncing disputes...",
       "synced": "Disputes synced successfully."
@@ -1668,6 +1699,18 @@
       "packs": "Generate packs",
       "rules": "Add rules",
       "team": "Add team"
+    },
+    "complete": {
+      "title": "You're all set!",
+      "subtitle": "DisputeDesk is ready to handle your chargebacks automatically.",
+      "readyHeading": "Here's what's configured",
+      "highlight1": "Disputes sync from Shopify automatically",
+      "highlight2": "Business policies added to evidence",
+      "highlight3": "Evidence packs auto-generated",
+      "highlight4": "Automation rules active",
+      "infoTitle": "How it works from here",
+      "infoDesc": "New disputes are synced automatically. Evidence is built and saved to Shopify. You review and submit in Shopify Admin.",
+      "goToDashboard": "Go to Dashboard"
     }
   },
   "configGuide": {

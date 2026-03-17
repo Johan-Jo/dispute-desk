@@ -9,6 +9,7 @@
     "billing": "Fakturering",
     "team": "Team",
     "settings": "Inställningar",
+    "analytics": "Analyser",
     "help": "Hjälp",
     "signOut": "Logga ut",
     "connectStore": "Anslut din riktiga butik",
@@ -353,6 +354,22 @@
       "DUPLICATE": "Duplicate charge",
       "GENERAL": "General"
     }
+  },
+  "analytics": {
+    "title": "Analyser",
+    "subtitle": "Prestandamått och trender för tvister",
+    "overview": "Översikt",
+    "period24h": "24h",
+    "period7d": "7 dagar",
+    "period30d": "30 dagar",
+    "periodAll": "All tid",
+    "totalDisputes": "Totala tvister",
+    "winRate": "Vinstfrekvens",
+    "revenueRecovered": "Återvunna intäkter",
+    "avgResponseTime": "Genomsnittlig svarstid",
+    "winRateTrend": "Trend för vinstfrekvens",
+    "byReason": "Tvister per anledning",
+    "noData": "Inga data för denna period."
   },
   "billing": {
     "planManagement": "Planhantering",
@@ -1405,6 +1422,20 @@
     "syncDisputes": {
       "title": "Synkronisera tvister och tidslinje",
       "subtitle": "Importera dina senaste tvister för att komma igång.",
+      "dateRangeHeading": "Hur långt tillbaka ska vi importera?",
+      "days30Title": "Senaste 30 dagarna",
+      "days30Desc": "Lättviktig start — endast senaste tvister",
+      "days90Title": "Senaste 90 dagarna",
+      "days90Desc": "Rekommenderat — täcker de flesta tvistfönster",
+      "days90Recommended": "Rekommenderat",
+      "days180Title": "Senaste 180 dagarna",
+      "days180Desc": "Fullständig historik — alla tvister de senaste 6 månaderna",
+      "autoSyncTitle": "Synkronisera nya tvister automatiskt",
+      "autoSyncDesc": "Importera automatiskt nya tvister när de uppstår",
+      "unlockHeading": "Det här får du",
+      "unlock1": "Tvister importerade och redo att hantera",
+      "unlock2": "Bevispaket genereras automatiskt",
+      "unlock3": "Förfallodatumsaviseringar och statusspårning",
       "startSync": "Starta synkronisering",
       "syncing": "Synkroniserar tvister…",
       "synced": "Tvister synkroniserades."
@@ -1510,6 +1541,18 @@
       "packs": "Paket",
       "rules": "Regler",
       "team": "Team"
+    },
+    "complete": {
+      "title": "Allt är klart!",
+      "subtitle": "DisputeDesk är redo att hantera dina återbetalningar automatiskt.",
+      "readyHeading": "Vad som har konfigurerats",
+      "highlight1": "Tvister synkroniseras automatiskt från Shopify",
+      "highlight2": "Affärspolicyer tillagda i bevisen",
+      "highlight3": "Bevispaket genereras automatiskt",
+      "highlight4": "Automatiseringsregler aktiva",
+      "infoTitle": "Hur det fungerar härifrån",
+      "infoDesc": "Nya tvister synkroniseras automatiskt. Bevis skapas och sparas i Shopify. Du granskar och skickar in i Shopify Admin.",
+      "goToDashboard": "Gå till instrumentpanelen"
     },
     "welcome": {
       "title": "Välkommen till DisputeDesk",
