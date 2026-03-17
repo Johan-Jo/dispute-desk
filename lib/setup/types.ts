@@ -33,6 +33,7 @@ export interface SetupStateResponse {
   progress: { doneCount: number; total: number };
   nextStepId: StepId | null;
   allDone: boolean;
+  shopId?: string;
 }
 
 export type IntegrationType =

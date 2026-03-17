@@ -72,7 +72,13 @@ export function SyncDisputesStep({ stepId, onSaveRef }: SyncDisputesStepProps) {
   const fetchDisputes = useCallback(async () => {
     setLoadingDisputes(true);
     try {
-      const res = await fetch(`/api/disputes?page=1&per_page=5`);
+      // Get the resolved shopId from setup state (uses same auth as the wizard)
+      const stateRes = await fetch("/api/setup/state");
+      const shopId = stateRes.ok ? (await stateRes.json()).shopId : undefined;
+      const url = shopId
+        ? `/api/disputes?shop_id=${shopId}&page=1&per_page=5`
+        : `/api/disputes?page=1&per_page=5`;
+      const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
         setDisputes(json.disputes ?? []);

@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
     progress: { doneCount: wizardDoneCount, total: TOTAL_WIZARD_STEPS },
     nextStepId,
     allDone: wizardDoneCount === TOTAL_WIZARD_STEPS,
+    shopId,
   };
 
   return NextResponse.json(response);
