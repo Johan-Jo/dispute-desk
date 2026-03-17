@@ -91,10 +91,12 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       try {
         const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
         const res = await fetch(`/api/policy-templates/${libraryType}/content${qs}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { body } = await res.json();
         setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: body ?? "" } }));
       } catch {
-        setPolicies((prev) => ({ ...prev, [key]: { source: "template", content: "" } }));
+        // Revert to URL mode on failure so the input is still usable
+        setPolicies((prev) => ({ ...prev, [key]: { source: "url", url: (prev[key] as { url?: string }).url ?? "" } }));
       }
     },
     [resolvedShopId]
@@ -139,13 +141,15 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     };
   }, [stepId, onSaveRef, policies, resolvedShopId]);
 
-  const helperKey: Partial<Record<PolicyKey, "shippingHelper" | "returnsHelper">> = {
+  const helperKey: Partial<Record<PolicyKey, "shippingHelper" | "returnsHelper" | "termsHelper" | "privacyHelper">> = {
     shipping: "shippingHelper",
     returns: "returnsHelper",
+    terms: "termsHelper",
+    privacy: "privacyHelper",
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: 672, margin: "0 auto" }}>
       {/* Icon + heading */}
       <div style={{ textAlign: "center", marginBottom: 32 }}>
         <div
@@ -180,60 +184,53 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           display: "flex",
           alignItems: "flex-start",
           gap: 14,
-          padding: "16px 18px",
+          padding: "20px",
           background: "#EFF6FF",
           border: "1px solid #BFDBFE",
           borderRadius: 10,
-          marginBottom: 28,
+          marginBottom: 24,
         }}
       >
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             flexShrink: 0,
             background: "#1D4ED8",
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            marginTop: 1,
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
           </svg>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#1E40AF", marginBottom: 3 }}>
-                {t("wizardTitle")}
-              </div>
-              <div style={{ fontSize: 13, color: "#3B82F6", lineHeight: "18px" }}>
-                {t("wizardDesc")}
-              </div>
-            </div>
-            <button
-              onClick={loadAllTemplates}
-              disabled={loadingAll}
-              style={{
-                flexShrink: 0,
-                padding: "8px 14px",
-                background: "#1D4ED8",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: loadingAll ? "not-allowed" : "pointer",
-                opacity: loadingAll ? 0.7 : 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {loadingAll ? "…" : t("wizardCta")}
-            </button>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#1E40AF", marginBottom: 4 }}>
+            {t("wizardTitle")}
           </div>
+          <div style={{ fontSize: 13, color: "#1E40AF", lineHeight: "18px", marginBottom: 12 }}>
+            {t("wizardDesc")}
+          </div>
+          <button
+            onClick={loadAllTemplates}
+            disabled={loadingAll}
+            style={{
+              padding: "8px 16px",
+              background: "#1D4ED8",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: loadingAll ? "not-allowed" : "pointer",
+              opacity: loadingAll ? 0.7 : 1,
+            }}
+          >
+            {loadingAll ? "…" : t("wizardCta")}
+          </button>
         </div>
       </div>
 
@@ -250,21 +247,14 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <label style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
                   {t(`${row.key}Label` as Parameters<typeof t>[0])}
-                  {row.required && <span style={{ color: "#B91C1C", marginLeft: 2 }}>*</span>}
+                  {row.required && <span style={{ color: "#DC2626", marginLeft: 2 }}>*</span>}
                 </label>
-                {isTemplate ? (
+                {isTemplate && (
                   <button
                     onClick={() => removeTemplate(row.key)}
-                    style={{ fontSize: 13, color: "#6D7175", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    style={{ fontSize: 12, color: "#6D7175", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                   >
-                    {t("removeTemplate")}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => loadTemplate(row.key, row.libraryType)}
-                    style={{ fontSize: 13, color: "#1D4ED8", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 500 }}
-                  >
-                    {t("useTemplate")}
+                    ← {t("removeTemplate")}
                   </button>
                 )}
               </div>
@@ -314,7 +304,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 />
               )}
 
-              {hKey && !isTemplate && (
+              {hKey && (
                 <p style={{ margin: "5px 0 0", fontSize: 12, color: "#6D7175" }}>
                   {t(hKey)}
                 </p>
