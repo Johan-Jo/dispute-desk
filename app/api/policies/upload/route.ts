@@ -9,6 +9,7 @@ const ALLOWED_TYPES = new Set([
   "text/plain",
   "text/markdown",
 ]);
+const ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "doc", "txt", "md"]);
 const VALID_POLICY_TYPES = ["refunds", "shipping", "terms", "privacy", "contact"] as const;
 
 /**
@@ -44,14 +45,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
+  const isAllowedByMime = ALLOWED_TYPES.has(file.type);
+  const isAllowedByExt = ALLOWED_EXTENSIONS.has(ext);
+  if (!isAllowedByMime && !isAllowedByExt) {
     return NextResponse.json(
       { error: "Only PDF, DOCX, DOC, TXT, and Markdown files are allowed" },
       { status: 400 }
     );
   }
-
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
   const storagePath = `${shopId}/${policyType}/${Date.now()}.${ext}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());

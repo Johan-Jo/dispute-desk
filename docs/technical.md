@@ -323,7 +323,7 @@ Store policies are included in evidence packs. Five policy types are supported: 
 - `GET /api/policy-templates/[type]/content?shop_id=...` — Returns the Markdown body for the given type. If `shop_id` is present, the shop’s **policy template language** preference (`shops.policy_template_lang`) is used: `en` → root folder; `de`, `fr`, `es`, `pt`, `sv` → subfolder when present, else fallback to English.
 - **Policy template language:** Each shop has `policy_template_lang` (`en` | `de` | `fr` | `es` | `pt` | `sv`). Users choose the language of the policy **text** in Settings (Portal → Settings → Policy templates). They can use English even when the UI locale is e.g. German.
 - `PATCH /api/portal/shop-settings` — Body: `{ shop_id, policy_template_lang }`. Updates the shop’s policy template language (portal user must have access to the shop).
-- `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepted types: `refunds`, `shipping`, `terms`, `privacy`, `contact`. PDF/DOCX, max 10 MB. Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`.
+- `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepted types: `refunds`, `shipping`, `terms`, `privacy`, `contact`. Allowed document formats: PDF, DOCX, DOC, TXT, Markdown (`.md`), max 10 MB. Validation accepts either allowed MIME types or allowed file extensions (browser-safe fallback for text uploads). Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`.
 - `GET /api/policies/content?shop_id=...&policy_type=...` — Returns `{ content: string | null }` for the latest snapshot’s `extracted_text` (for editing). Requires portal user with access to the shop.
 - `DELETE /api/policies` — Body: `{ shop_id }`. Removes all policy snapshots for the shop. Requires portal user with access to the shop. Used to clear policies for re-review.
 - `POST /api/policies/apply` — JSON: `{ shop_id, policy_type, content }`. Saves template text as a file, stores it in `policy_snapshots.extracted_text` for the Edit flow, and creates a snapshot row (used when the merchant edits a template in the modal and clicks “Save & Apply”).
@@ -893,12 +893,14 @@ components or other pages. Any future embedded component using Tailwind
 same treatment (or switch to `<div>`/`<span>` which Polaris does not reset).
 
 **Alignment status (2026-03-18):**
-Policy setup UI is aligned to the onboarding-wizard template-screen variant:
+Policy setup UI is aligned to the onboarding-wizard variants:
 - Flow-selection screen (3-card grid, centered header, info banner)
-- Own flow (URL inputs per policy)
+- Own flow (per-policy cards with Link URL / Upload file toggle, required/optional badges,
+  helper copy, and info banner)
 - Template flow (Back to options, blue template banner, Required/Optional badges,
   and single full-width "Preview Template" button per policy row)
-- Mixed flow (segmented control per policy)
+- Mixed flow (per-policy cards with Link URL / Upload file / Template toggle,
+  required/optional badges, helper copy, and "Best of both worlds" info panel)
 - Preview modal (dark overlay, prose body, footer with Select button)
 
 **Important behavior note:** Template bodies are fetched only when opening

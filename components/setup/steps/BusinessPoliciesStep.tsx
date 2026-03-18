@@ -46,7 +46,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   });
 
   const [mixedOptions, setMixedOptions] = useState<Record<PolicyKey, MixedOption>>({
-    shipping: "template", refunds: "template", terms: "template", privacy: "template",
+    shipping: "url", refunds: "url", terms: "url", privacy: "url",
   });
   const [mixedUrls, setMixedUrls] = useState<Record<PolicyKey, string>>({
     shipping: "", refunds: "", terms: "", privacy: "",
@@ -462,29 +462,56 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t("backToFlowSelection")}
+            {t("backToOptions")}
           </button>
 
-          {POLICY_KEYS.map((key) => (
-            <div key={key} className="bg-white rounded-xl border border-[#E1E3E5] p-6">
-              <h3 className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{meta[key].title}</h3>
-              <p className="text-[#6D7175] mb-4" style={{ fontSize: 14 }}>{t("mixedChooseSource")}</p>
+          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 bg-[#1D4ED8] rounded-full flex items-center justify-center flex-shrink-0">
+                <Layers className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[#1E40AF] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("mixedBannerTitle")}</p>
+                <p className="text-[#1E40AF]" style={{ fontSize: 14 }}>{t("mixedBannerDesc")}</p>
+              </div>
+            </div>
+          </div>
 
-              <div className="flex items-center gap-2 mb-4">
+          {POLICY_KEYS.map((key) => (
+            <div key={key} className="border border-[#E1E3E5] rounded-lg p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>
+                    {meta[key].title}{policyIsRequired[key] ? " *" : ""}
+                  </p>
+                  <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{ownPolicySupportCopy[key]}</p>
+                </div>
+                <span
+                  className={`px-2 py-1 rounded text-xs flex-shrink-0 ${
+                    policyIsRequired[key] ? "bg-[#DCFCE7] text-[#059669]" : "bg-[#F1F2F4] text-[#6D7175]"
+                  }`}
+                  style={{ fontWeight: 600 }}
+                >
+                  {policyIsRequired[key] ? t("requiredLabel") : t("optionalLabel")}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 {(["url", "upload", "template"] as MixedOption[]).map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setMixedOptions((prev) => ({ ...prev, [key]: opt }))}
-                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    className={`px-3 py-2.5 border rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
                       mixedOptions[key] === opt
-                        ? "bg-[#1D4ED8] text-white"
-                        : "bg-[#F7F8FA] text-[#202223] hover:bg-[#E1E3E5]"
+                        ? "border-[#1D4ED8] bg-[#EFF6FF] text-[#1D4ED8]"
+                        : "border-[#E1E3E5] text-[#6D7175] hover:border-[#C9CCCF]"
                     }`}
+                    style={{ fontWeight: 600 }}
                   >
                     {opt === "url" && <Link className="w-3.5 h-3.5" />}
                     {opt === "upload" && <Upload className="w-3.5 h-3.5" />}
                     {opt === "template" && <Zap className="w-3.5 h-3.5" />}
-                    {opt === "url" ? t("optionUrl") : opt === "upload" ? t("optionUpload") : t("optionTemplate")}
+                    {opt === "url" ? t("linkUrlBtn") : opt === "upload" ? t("uploadFileBtn") : t("optionTemplate")}
                   </button>
                 ))}
               </div>
@@ -517,13 +544,13 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   <label className="block border-2 border-dashed border-[#C9CCCF] rounded-lg p-6 text-center hover:border-[#1D4ED8] hover:bg-[#F7F8FA] transition-all cursor-pointer">
                     <Upload className="w-8 h-8 text-[#6D7175] mx-auto mb-2" />
                     <p className="text-[#202223] mb-1" style={{ fontWeight: 500, fontSize: 14 }}>{t("uploadCta")}</p>
-                    <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("uploadHint")}</p>
+                    <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("uploadHintExtended")}</p>
                     {uploadLoading[key] && (
                       <p className="text-[#1D4ED8] mt-2" style={{ fontSize: 12 }}>Uploading…</p>
                     )}
                     <input
                       type="file"
-                      accept=".pdf,.docx,.doc"
+                      accept=".pdf,.docx,.doc,.txt,.md"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -550,6 +577,16 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               )}
             </div>
           ))}
+
+          <div className="bg-[#F7F8FA] border border-[#E1E3E5] rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-[#6D7175] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("mixedBestTitle")}</p>
+                <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{t("mixedBestDesc")}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
