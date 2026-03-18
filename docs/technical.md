@@ -893,14 +893,17 @@ components or other pages. Any future embedded component using Tailwind
 same treatment (or switch to `<div>`/`<span>` which Polaris does not reset).
 
 **Alignment status (2026-03-18):**
-All policy screens are aligned to the Figma Make source:
+Policy setup UI is aligned to the onboarding-wizard template-screen variant:
 - Flow-selection screen (3-card grid, centered header, info banner)
 - Own flow (URL inputs per policy)
-- Template flow (template list with Preview + Edit buttons)
+- Template flow (Back to options, blue template banner, Required/Optional badges,
+  and single full-width "Preview Template" button per policy row)
 - Mixed flow (segmented control per policy)
 - Preview modal (dark overlay, prose body, footer with Select button)
-- Edit template modal (full editor with sidebar sections, preview/edit toggle,
-  word count, reset, and Save Changes — replaces former "coming soon" stub)
+
+**Important behavior note:** Template bodies are fetched only when opening
+Preview (or when saving step selections). They are not pre-fetched on initial
+render of the template list.
 
 **Key files:**
 - `components/setup/steps/BusinessPoliciesStep.tsx` — step component

@@ -147,7 +147,18 @@ export const HELP_ARTICLES: HelpArticle[] = [
     titleKey: "help.articles.definingStorePolicies.title",
     bodyKey: "help.articles.definingStorePolicies.body",
     relatedSlugs: ["how-packs-built", "evidence-checklist"],
-    tags: ["policies", "terms", "refund", "shipping", "upload", "template"],
+    tags: [
+      "policies",
+      "terms",
+      "refund",
+      "shipping",
+      "upload",
+      "template",
+      "preview template",
+      "required",
+      "optional",
+      "back to options",
+    ],
   },
 
   // --- Automation & Rules ---

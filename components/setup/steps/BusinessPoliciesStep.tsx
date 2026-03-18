@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info, Save, Eye, EyeOff, RotateCcw, AlertCircle } from "lucide-react";
+import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info } from "lucide-react";
 import type { StepId } from "@/lib/setup/types";
 
 type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
@@ -16,20 +16,6 @@ const POLICY_PATHS: Record<PolicyKey, string> = {
   refunds: "/policies/refund-policy",
   terms: "/policies/terms-of-service",
   privacy: "/policies/privacy-policy",
-};
-
-const POLICY_COLORS: Record<PolicyKey, string> = {
-  shipping: "#1D4ED8",
-  refunds: "#9333EA",
-  terms: "#EA580C",
-  privacy: "#22C55E",
-};
-
-const POLICY_ICONS: Record<PolicyKey, string> = {
-  shipping: "📦",
-  refunds: "↩️",
-  terms: "📋",
-  privacy: "🔒",
 };
 
 interface BusinessPoliciesStepProps {
@@ -47,11 +33,6 @@ function getShopOriginFallback(): string | null {
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
-  const [editingTemplate, setEditingTemplate] = useState<PolicyKey | null>(null);
-  const [editorContent, setEditorContent] = useState("");
-  const [editorOriginal, setEditorOriginal] = useState("");
-  const [editorShowPreview, setEditorShowPreview] = useState(false);
-  const [editorLoading, setEditorLoading] = useState(false);
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
 
@@ -122,37 +103,6 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     [resolvedShopId]
   );
 
-  const openEditor = useCallback(
-    async (key: PolicyKey) => {
-      setEditingTemplate(key);
-      setEditorContent("");
-      setEditorOriginal("");
-      setEditorShowPreview(false);
-      setEditorLoading(true);
-      try {
-        const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
-        const res = await fetch(`/api/policy-templates/${key}/content${qs}`);
-        if (res.ok) {
-          const { body } = (await res.json()) as { body?: string };
-          setEditorContent(body ?? "");
-          setEditorOriginal(body ?? "");
-        }
-      } catch {}
-      setEditorLoading(false);
-    },
-    [resolvedShopId]
-  );
-
-  const saveEditorContent = useCallback(async () => {
-    if (!editingTemplate) return;
-    const res = await fetch("/api/policies/apply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shop_id: resolvedShopId, policy_type: editingTemplate, content: editorContent }),
-    });
-    if (res.ok) setEditingTemplate(null);
-  }, [editingTemplate, editorContent, resolvedShopId]);
-
   const handleFileUpload = useCallback(
     async (key: PolicyKey, file: File) => {
       setUploadLoading((prev) => ({ ...prev, [key]: true }));
@@ -215,19 +165,26 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     privacy:  { title: t("privacyTitle"), desc: t("privacyDesc") },
   };
 
+  const policyIsRequired: Record<PolicyKey, boolean> = {
+    shipping: true,
+    refunds: true,
+    terms: false,
+    privacy: false,
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
+      <div className="flex flex-col items-center text-center mb-10">
+        <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
+          <FileText className="w-7 h-7 text-white" />
+        </div>
+        <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>{t("title")}</h2>
+        <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
+      </div>
+
       {/* ── Flow selection ── */}
       {!selectedFlow && (
         <div>
-          <div className="flex flex-col items-center text-center mb-10">
-            <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
-              <FileText className="w-7 h-7 text-white" />
-            </div>
-            <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>{t("title")}</h2>
-            <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
-          </div>
-
           <div className="grid grid-cols-3 gap-4 mb-8">
             <button
               onClick={() => setSelectedFlow("own")}
@@ -315,47 +272,60 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t("backToFlowSelection")}
+            {t("backToOptions")}
           </button>
 
-          <div className="bg-white rounded-xl border border-[#E1E3E5] p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h3 className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("templateSelectedTitle")}</h3>
-                <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{t("templateSelectedDesc")}</p>
+          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 bg-[#1D4ED8] rounded-full flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 text-white" />
               </div>
-              <CheckCircle2 className="w-6 h-6 text-[#22C55E] flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-[#1E40AF] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("templateBannerTitle")}</p>
+                <p className="text-[#1E40AF]" style={{ fontSize: 14 }}>{t("templateBannerDesc")}</p>
+              </div>
             </div>
+          </div>
 
-            <div className="space-y-3">
-              {POLICY_KEYS.map((key) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between p-4 bg-[#F7F8FA] rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-[#1D4ED8] flex-shrink-0" />
+          <div className="space-y-3">
+            {POLICY_KEYS.map((key) => (
+              <div key={key} className="border border-[#E1E3E5] rounded-lg p-4 hover:border-[#1D4ED8] transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start gap-3">
+                    <FileText className={`w-5 h-5 flex-shrink-0 mt-0.5 ${policyIsRequired[key] ? "text-[#1D4ED8]" : "text-[#6D7175]"}`} />
                     <div>
-                      <p className="text-[#202223]" style={{ fontWeight: 500, fontSize: 14 }}>{meta[key].title}</p>
-                      <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{meta[key].desc}</p>
+                      <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{meta[key].title}</p>
+                      <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{meta[key].desc}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openPreview(key)}
-                      className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors"
-                    >
-                      {t("previewBtn")}
-                    </button>
-                    <button
-                      onClick={() => openEditor(key)}
-                      className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors"
-                    >
-                      {t("editTemplateBtn")}
-                    </button>
-                  </div>
+                  <span
+                    className={`px-2 py-1 rounded text-xs flex-shrink-0 ${
+                      policyIsRequired[key] ? "bg-[#DCFCE7] text-[#059669]" : "bg-[#F1F2F4] text-[#6D7175]"
+                    }`}
+                    style={{ fontWeight: 600 }}
+                  >
+                    {policyIsRequired[key] ? t("requiredLabel") : t("optionalLabel")}
+                  </span>
                 </div>
-              ))}
+
+                <button
+                  onClick={() => openPreview(key)}
+                  className="w-full px-4 py-2 bg-[#F7F8FA] hover:bg-[#E1E3E5] border border-[#E1E3E5] text-sm text-[#202223] rounded-lg transition-colors"
+                  style={{ fontWeight: 600 }}
+                >
+                  {t("previewTemplateBtn")}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-[#FFF4E5] border border-[#FFCC80] rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-[#B95000] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("customizeAfterGenerationTitle")}</p>
+                <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{t("customizeAfterGenerationDesc")}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -446,20 +416,13 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   <div className="bg-[#F7F8FA] rounded-lg p-3 text-xs text-[#6D7175]">
                     {meta[key].desc}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openPreview(key)}
-                      className="flex-1 px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
-                    >
-                      {t("previewBtn")}
-                    </button>
-                    <button
-                      onClick={() => openEditor(key)}
-                      className="flex-1 px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
-                    >
-                      {t("editTemplateBtn")}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => openPreview(key)}
+                    className="w-full px-4 py-2 bg-[#F7F8FA] hover:bg-[#E1E3E5] border border-[#E1E3E5] text-sm text-[#202223] rounded-lg transition-colors"
+                    style={{ fontWeight: 600 }}
+                  >
+                    {t("previewTemplateBtn")}
+                  </button>
                 </div>
               )}
             </div>
@@ -525,138 +488,6 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         </div>
       )}
 
-      {editingTemplate && (
-        <div className="fixed inset-0 bg-[#0B1220]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E3E5]">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
-                  style={{ backgroundColor: `${POLICY_COLORS[editingTemplate]}15` }}
-                >
-                  {POLICY_ICONS[editingTemplate]}
-                </div>
-                <div>
-                  <h2 className="text-[#202223]" style={{ fontWeight: 600, fontSize: 18 }}>
-                    {t("editorTitle", { policyTitle: meta[editingTemplate].title })}
-                  </h2>
-                  <p className="text-[#6D7175] mt-0.5" style={{ fontSize: 12 }}>{t("editorSubtitle")}</p>
-                </div>
-              </div>
-              <button onClick={() => setEditingTemplate(null)} className="p-2 hover:bg-[#F7F8FA] rounded-lg transition-colors">
-                <X className="w-5 h-5 text-[#6D7175]" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-hidden flex">
-              <div className="w-64 border-r border-[#E1E3E5] bg-[#F7F8FA] p-4 overflow-y-auto hidden md:block">
-                <h3 className="text-[#202223] mb-3 uppercase tracking-wide" style={{ fontWeight: 600, fontSize: 11 }}>
-                  {t("editorRequiredSections")}
-                </h3>
-                <div className="space-y-2">
-                  {t(`${editingTemplate}Sections`).split(",").map((section, i) => (
-                    <div key={section} className="flex items-start gap-2 p-2 bg-white rounded-lg border border-[#E1E3E5]">
-                      <div
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-white mt-0.5"
-                        style={{ backgroundColor: POLICY_COLORS[editingTemplate], fontSize: 10, fontWeight: 700 }}
-                      >
-                        {i + 1}
-                      </div>
-                      <p className="text-[#202223]" style={{ fontSize: 12, fontWeight: 500 }}>{section.trim()}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6 p-3 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-[#1D4ED8] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-[#1D4ED8] mb-1" style={{ fontSize: 12, fontWeight: 500 }}>{t("editorLegalNote")}</p>
-                      <p className="text-[#1e40af] leading-relaxed" style={{ fontSize: 12 }}>{t("editorLegalDesc")}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-3 border-b border-[#E1E3E5] bg-[#F7F8FA]">
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setEditorShowPreview(!editorShowPreview)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                        editorShowPreview ? "bg-[#1D4ED8] text-white" : "bg-white text-[#202223] border border-[#E1E3E5] hover:bg-[#F7F8FA]"
-                      }`}
-                    >
-                      {editorShowPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      {editorShowPreview ? t("editorEdit") : t("editorPreview")}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(t("editorResetConfirm"))) {
-                          setEditorContent(editorOriginal);
-                        }
-                      }}
-                      disabled={editorContent === editorOriginal}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 bg-white text-[#202223] border border-[#E1E3E5] hover:bg-[#F7F8FA] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      {t("editorReset")}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-[#6D7175]">
-                    <span className="flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5" />
-                      {t("editorWordCount", { count: editorContent.split(/\s+/).filter((w) => w.length > 0).length })}
-                    </span>
-                    {editorContent !== editorOriginal && (
-                      <span className="px-2 py-1 bg-[#FEF3C7] text-[#92400E] rounded-md font-medium">
-                        {t("editorUnsaved")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6">
-                  {editorLoading ? (
-                    <div className="flex items-center justify-center h-32 text-sm text-[#6D7175]">Loading…</div>
-                  ) : editorShowPreview ? (
-                    <div className="max-w-3xl mx-auto prose prose-sm">
-                      <div className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap">{editorContent}</div>
-                    </div>
-                  ) : (
-                    <textarea
-                      value={editorContent}
-                      onChange={(e) => setEditorContent(e.target.value)}
-                      className="w-full h-full min-h-[500px] p-6 border border-[#E1E3E5] rounded-lg text-sm text-[#202223] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent resize-none"
-                      placeholder={t("editorPlaceholder")}
-                      style={{ fontFamily: 'ui-monospace, Monaco, "Cascadia Code", "Segoe UI Mono", monospace' }}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between px-6 py-4 border-t border-[#E1E3E5] bg-[#F7F8FA]">
-              <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("editorMarkdownHint")}</p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setEditingTemplate(null)}
-                  className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
-                >
-                  {t("closeBtn")}
-                </button>
-                <button
-                  onClick={saveEditorContent}
-                  disabled={editorContent === editorOriginal}
-                  className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4" />
-                  {t("editorSaveChanges")}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
