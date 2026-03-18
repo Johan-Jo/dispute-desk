@@ -1,19 +1,17 @@
 /**
- * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
- * Route: app/(embedded)/app/packs/page.tsx
- * Figma Make source: src/app/pages/shopify/shopify-packs.tsx
- * Reference: header "Create and manage reusable evidence templates", search bar,
- * "Create Pack" primary action, card grid (icon, name, id, disputes count, completeness %, last used,
- * Active/Draft badge, "View pack" with chevron).
+ * Embedded packs page aligned to portal/web layout:
+ * - Header with "Start from template" + "Create Pack"
+ * - Dismissible template info banner
+ * - Search + status tabs + table view
+ * - Row actions (activate/edit/delete)
  */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Page,
-  Layout,
   Card,
   Text,
   Badge,
@@ -23,9 +21,12 @@ import {
   BlockStack,
   Modal,
   EmptyState,
-  Filters,
-  ChoiceList,
+  Banner,
+  Tabs,
+  TextField,
+  Select,
 } from "@shopify/polaris";
+import { SearchIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
 interface PackRow {
   id: string;
@@ -35,7 +36,6 @@ interface PackRow {
   status: string;
   source: string;
   template_id: string | null;
-  documents_count?: number;
   usage_count: number;
   last_used_at: string | null;
   created_at: string;
@@ -60,28 +60,59 @@ const TYPE_LABELS: Record<string, string> = {
   GENERAL: "typeGeneral",
 };
 
-function statusTone(status: string): "success" | "warning" | undefined {
+const DISPUTE_TYPES = [
+  "FRAUD",
+  "PNR",
+  "NOT_AS_DESCRIBED",
+  "SUBSCRIPTION",
+  "REFUND",
+  "DUPLICATE",
+  "DIGITAL",
+  "GENERAL",
+] as const;
+
+function formatDate(iso: string | null, locale: string, fallback: string): string {
+  if (!iso) return fallback;
+  return new Date(iso).toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function statusTone(status: string): "success" | "attention" | undefined {
   if (status === "ACTIVE") return "success";
-  if (status === "DRAFT") return "warning";
+  if (status === "DRAFT") return "attention";
   return undefined;
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
+type StatusTab = "all" | "active" | "draft" | "archived";
 
 export default function PacksListPage() {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations();
+
   const [packs, setPacks] = useState<PackRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [queryValue, setQueryValue] = useState("");
+  const [statusTab, setStatusTab] = useState<StatusTab>("all");
+
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [installingId, setInstallingId] = useState<string | null>(null);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formType, setFormType] = useState<string>(DISPUTE_TYPES[0]);
+
+  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [showTemplateBanner, setShowTemplateBanner] = useState(true);
+  const [recommendedTemplates, setRecommendedTemplates] = useState<TemplateItem[]>([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
+  const [recommendedFetchedForShopId, setRecommendedFetchedForShopId] = useState<string | null>(null);
 
   const shopId =
     typeof window !== "undefined"
@@ -89,25 +120,33 @@ export default function PacksListPage() {
       : "";
 
   const fetchPacks = useCallback(async () => {
-    if (!shopId) return;
+    if (!shopId) {
+      setLoading(false);
+      setPacks([]);
+      return;
+    }
+
     setLoading(true);
     const params = new URLSearchParams({ shopId });
-    if (statusFilter.length === 1 && statusFilter[0] !== "all") {
-      params.set("status", statusFilter[0].toUpperCase());
-    }
+    if (statusTab !== "all") params.set("status", statusTab.toUpperCase());
     if (queryValue.trim()) params.set("q", queryValue.trim());
+
     try {
-      const res = await fetch(`/api/packs?${params}`);
+      const res = await fetch(`/api/packs?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setPacks(data.packs ?? []);
+      } else {
+        setPacks([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [shopId, statusFilter, queryValue]);
+  }, [shopId, statusTab, queryValue]);
 
-  useEffect(() => { fetchPacks(); }, [fetchPacks]);
+  useEffect(() => {
+    fetchPacks();
+  }, [fetchPacks]);
 
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
@@ -116,15 +155,46 @@ export default function PacksListPage() {
       if (res.ok) {
         const data = await res.json();
         setTemplates(data.templates ?? []);
+      } else {
+        setTemplates([]);
       }
     } finally {
       setTemplatesLoading(false);
     }
   }, []);
 
+  const fetchRecommendedTemplates = useCallback(async () => {
+    if (!shopId) return;
+    setRecommendedLoading(true);
+    try {
+      const res = await fetch(`/api/templates?locale=${encodeURIComponent(locale)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const list = (data.templates ?? []) as TemplateItem[];
+        setRecommendedTemplates(list.filter((tpl) => Boolean(tpl.is_recommended)).slice(0, 4));
+      } else {
+        setRecommendedTemplates([]);
+      }
+    } finally {
+      setRecommendedLoading(false);
+    }
+  }, [locale, shopId]);
+
   useEffect(() => {
     if (templateModalOpen) fetchTemplates();
   }, [templateModalOpen, fetchTemplates]);
+
+  useEffect(() => {
+    if (!shopId) return;
+    if (loading) return;
+    if (packs.length !== 0) return;
+    if (recommendedFetchedForShopId === shopId) return;
+    setRecommendedFetchedForShopId(shopId);
+    fetchRecommendedTemplates().catch(() => {
+      setRecommendedTemplates([]);
+      setRecommendedLoading(false);
+    });
+  }, [fetchRecommendedTemplates, loading, packs.length, recommendedFetchedForShopId, shopId]);
 
   const handleInstallTemplate = useCallback(
     async (templateId: string) => {
@@ -148,36 +218,80 @@ export default function PacksListPage() {
     [shopId, router]
   );
 
+  const handleActivate = useCallback(
+    async (packId: string) => {
+      setActivatingId(packId);
+      try {
+        const res = await fetch(`/api/packs/${packId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "ACTIVE" }),
+        });
+        if (res.ok) await fetchPacks();
+      } finally {
+        setActivatingId(null);
+      }
+    },
+    [fetchPacks]
+  );
+
+  const handleDelete = useCallback(
+    async (packId: string) => {
+      if (!confirm(t("packTemplates.confirmDelete"))) return;
+      const res = await fetch(`/api/packs/${packId}`, { method: "DELETE" });
+      if (res.ok) await fetchPacks();
+    },
+    [fetchPacks, t]
+  );
+
+  const handleCreatePack = useCallback(async () => {
+    if (!shopId || !formName.trim() || !formType) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/packs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shopId,
+          name: formName.trim(),
+          disputeType: formType,
+        }),
+      });
+      if (res.ok) {
+        setCreateModalOpen(false);
+        setFormName("");
+        setFormType(DISPUTE_TYPES[0]);
+        await fetchPacks();
+      }
+    } finally {
+      setCreating(false);
+    }
+  }, [shopId, formName, formType, fetchPacks]);
+
+  const tabs = [
+    { id: "all", content: t("packTemplates.filterAll"), panelID: "packs-all" },
+    { id: "active", content: t("packTemplates.filterActive"), panelID: "packs-active" },
+    { id: "draft", content: t("packTemplates.filterDraft"), panelID: "packs-draft" },
+    { id: "archived", content: t("packTemplates.filterArchived"), panelID: "packs-archived" },
+  ];
+  const selectedTab = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.id === statusTab)
+  );
+
   const displayPacks =
     queryValue.trim() === ""
       ? packs
-      : packs.filter((p) => {
+      : packs.filter((pack) => {
           const q = queryValue.toLowerCase().trim();
-          return p.name.toLowerCase().includes(q) || p.dispute_type.toLowerCase().includes(q);
+          return (
+            pack.name.toLowerCase().includes(q) ||
+            pack.dispute_type.toLowerCase().includes(q)
+          );
         });
 
-  const filters = [
-    {
-      key: "status",
-      label: t("table.status"),
-      filter: (
-        <ChoiceList
-          title={t("table.status")}
-          titleHidden
-          choices={[
-            { label: t("packTemplates.filterAll"), value: "all" },
-            { label: t("packTemplates.filterActive"), value: "active" },
-            { label: t("packTemplates.filterDraft"), value: "draft" },
-            { label: t("packTemplates.filterArchived"), value: "archived" },
-          ]}
-          selected={statusFilter}
-          onChange={setStatusFilter}
-          allowMultiple={false}
-        />
-      ),
-      shortcut: true,
-    },
-  ];
+  const showEmpty = !loading && displayPacks.length === 0;
+  const missingShop = !shopId;
 
   return (
     <>
@@ -187,136 +301,293 @@ export default function PacksListPage() {
         primaryAction={{
           content: t("packTemplates.startFromTemplate"),
           onAction: () => setTemplateModalOpen(true),
+          disabled: missingShop,
         }}
+        secondaryActions={[
+          {
+            content: t("packTemplates.createPack"),
+            onAction: () => setCreateModalOpen(true),
+            disabled: missingShop,
+          },
+        ]}
       >
-        <Layout>
-          {/* Search & filter bar */}
-          <Layout.Section>
-            <Card padding="0">
-              <Filters
-                queryValue={queryValue}
-                filters={filters}
-                onQueryChange={setQueryValue}
-                onQueryClear={() => setQueryValue("")}
-                onClearAll={() => { setStatusFilter([]); setQueryValue(""); }}
-                queryPlaceholder={t("packTemplates.searchPlaceholder")}
-              />
-            </Card>
-          </Layout.Section>
+        <BlockStack gap="400">
+          {!loading && packs.length > 0 && showTemplateBanner && (
+            <Banner
+              title={t("packTemplates.exploreMoreTemplates")}
+              tone="info"
+              onDismiss={() => setShowTemplateBanner(false)}
+            >
+              <p>
+                <button
+                  type="button"
+                  onClick={() => setTemplateModalOpen(true)}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    color: "var(--p-color-text-link)",
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                    fontWeight: 600,
+                  }}
+                >
+                  {t("packTemplates.browseTemplates")}
+                </button>
+              </p>
+            </Banner>
+          )}
 
-          {/* Packs grid — one card per pack (Figma card layout) */}
-          <Layout.Section>
-            {loading ? (
-              <div style={{ padding: "2rem", textAlign: "center" }}>
-                <Spinner size="large" />
+          <Card padding="0">
+            <BlockStack gap="0">
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--p-color-border)" }}>
+                <InlineStack gap="300" align="space-between" wrap>
+                  <div style={{ minWidth: 260, flex: 1 }}>
+                    <TextField
+                      label=""
+                      labelHidden
+                      autoComplete="off"
+                      placeholder={t("packTemplates.searchPlaceholder")}
+                      value={queryValue}
+                      onChange={setQueryValue}
+                      prefix={<span aria-hidden><svg viewBox="0 0 20 20" width="16" height="16"><path fill="currentColor" d="M8.5 2a6.5 6.5 0 0 1 5.147 10.472l3.94 3.94a.75.75 0 1 1-1.06 1.06l-3.94-3.94A6.5 6.5 0 1 1 8.5 2m0 1.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10"/></svg></span>}
+                    />
+                  </div>
+                  <Button
+                    icon={SearchIcon}
+                    variant="tertiary"
+                    accessibilityLabel={t("packTemplates.searchPlaceholder")}
+                  />
+                </InlineStack>
               </div>
-            ) : displayPacks.length === 0 ? (
-              <EmptyState
-                heading={packs.length === 0 ? t("packTemplates.setupTitle") : t("packTemplates.emptyTitle")}
-                action={{ content: t("packTemplates.startFromTemplate"), onAction: () => setTemplateModalOpen(true) }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-              >
-                <p>{packs.length === 0 ? t("packTemplates.setupDescription") : t("packTemplates.emptyDescription")}</p>
-              </EmptyState>
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "16px",
-                }}
-              >
-                {displayPacks.map((pack) => (
-                  <button
-                    key={pack.id}
-                    onClick={() => router.push(`/app/packs/${pack.id}`)}
-                    style={{
-                      all: "unset",
-                      display: "block",
-                      cursor: "pointer",
-                      width: "100%",
-                      boxSizing: "border-box",
-                    }}
+
+              <Tabs
+                tabs={tabs}
+                selected={selectedTab}
+                onSelect={(index) => setStatusTab(tabs[index].id as StatusTab)}
+              />
+
+              {loading ? (
+                <div style={{ padding: "3rem", textAlign: "center" }}>
+                  <Spinner size="large" />
+                </div>
+              ) : showEmpty ? (
+                <div style={{ padding: "1rem" }}>
+                  <EmptyState
+                    heading={
+                      missingShop
+                        ? t("packTemplates.emptyTitle")
+                        : packs.length === 0
+                          ? t("packTemplates.setupTitle")
+                          : t("packTemplates.emptyTitle")
+                    }
+                    action={
+                      missingShop
+                        ? undefined
+                        : {
+                            content: t("packTemplates.startFromTemplate"),
+                            onAction: () => setTemplateModalOpen(true),
+                          }
+                    }
+                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
-                    <Card>
-                      <BlockStack gap="300">
-                        {/* Card header: icon + name + status badge */}
-                        <InlineStack align="space-between" blockAlign="start" wrap={false}>
-                          <InlineStack gap="300" blockAlign="center" wrap={false}>
+                    <p>
+                      {missingShop
+                        ? t("packTemplates.emptyDescription")
+                        : packs.length === 0
+                          ? t("packTemplates.setupDescription")
+                          : t("packTemplates.emptyDescription")}
+                    </p>
+                  </EmptyState>
+
+                  {!missingShop && packs.length === 0 && queryValue.trim() === "" && (
+                    <div style={{ marginTop: 18 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--p-text-subdued)" }}>
+                        {t("packTemplates.recommendedTemplates")}
+                      </div>
+
+                      {recommendedLoading ? (
+                        <div style={{ padding: "1rem 0", display: "flex", justifyContent: "center" }}>
+                          <Spinner size="small" />
+                        </div>
+                      ) : recommendedTemplates.length === 0 ? null : (
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                            gap: 12,
+                            marginTop: 12,
+                          }}
+                        >
+                          {recommendedTemplates.map((tmpl) => (
                             <div
+                              key={tmpl.id}
                               style={{
-                                width: 40,
-                                height: 40,
-                                background: "var(--p-color-bg-fill-info-secondary)",
+                                border: "1px solid var(--p-color-border)",
                                 borderRadius: 8,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 18,
-                                flexShrink: 0,
+                                padding: 12,
+                                background: "var(--p-color-bg)",
                               }}
                             >
-                              📄
+                              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                {tmpl.name}
+                              </Text>
+                              <div style={{ marginTop: 8 }}>
+                                <Badge>
+                                  {TYPE_LABELS[tmpl.dispute_type]
+                                    ? t(`packTemplates.${TYPE_LABELS[tmpl.dispute_type]}`)
+                                    : tmpl.dispute_type}
+                                </Badge>
+                              </div>
+                              {tmpl.short_description ? (
+                                <Text as="p" variant="bodySm" tone="subdued">
+                                  {tmpl.short_description}
+                                </Text>
+                              ) : null}
+                              <div style={{ marginTop: 12 }}>
+                                <Button
+                                  variant="primary"
+                                  size="slim"
+                                  fullWidth
+                                  disabled={installingId !== null}
+                                  loading={installingId === tmpl.id}
+                                  onClick={() => handleInstallTemplate(tmpl.id)}
+                                >
+                                  {t("packTemplates.installTemplate")}
+                                </Button>
+                              </div>
                             </div>
-                            <BlockStack gap="050">
-                              <Text as="span" variant="bodyMd" fontWeight="semibold">
-                                {pack.name}
-                              </Text>
-                              <Text as="span" variant="bodySm" tone="subdued">
-                                {pack.code ?? pack.id.slice(0, 8)}
-                              </Text>
-                            </BlockStack>
-                          </InlineStack>
-                          <Badge tone={statusTone(pack.status)}>
-                            {pack.status === "ACTIVE"
-                              ? t("packTemplates.filterActive")
-                              : pack.status === "DRAFT"
-                                ? t("packTemplates.filterDraft")
-                                : t("packTemplates.filterArchived")}
-                          </Badge>
-                        </InlineStack>
-
-                        {/* Stats row: usage, documents, last used, type */}
-                        <InlineStack gap="400" wrap>
-                          <BlockStack gap="050">
-                            <Text as="span" variant="bodySm" tone="subdued">{t("packTemplates.usageCount")}</Text>
-                            <Text as="span" variant="bodyMd" fontWeight="semibold">{pack.usage_count}</Text>
-                          </BlockStack>
-                          <BlockStack gap="050">
-                            <Text as="span" variant="bodySm" tone="subdued">{t("packTemplates.documents")}</Text>
-                            <Text as="span" variant="bodySm">{pack.documents_count ?? 0}</Text>
-                          </BlockStack>
-                          <BlockStack gap="050">
-                            <Text as="span" variant="bodySm" tone="subdued">{t("packTemplates.lastUsed")}</Text>
-                            <Text as="span" variant="bodySm">{formatDate(pack.last_used_at)}</Text>
-                          </BlockStack>
-                          <BlockStack gap="050">
-                            <Text as="span" variant="bodySm" tone="subdued">{t("packTemplates.type")}</Text>
-                            <Text as="span" variant="bodySm">
-                              {TYPE_LABELS[pack.dispute_type]
-                                ? t(`packTemplates.${TYPE_LABELS[pack.dispute_type]}`)
-                                : pack.dispute_type}
-                            </Text>
-                          </BlockStack>
-                        </InlineStack>
-
-                        {/* Footer */}
-                        <div style={{ borderTop: "1px solid var(--p-color-border)", paddingTop: 12, marginTop: 4 }}>
-                          <InlineStack align="space-between" blockAlign="center">
-                            <Text as="span" variant="bodyMd" tone="magic">
-                              {t("common.viewAll")}
-                            </Text>
-                            <span style={{ color: "var(--p-color-bg-fill-info)" }}>›</span>
-                          </InlineStack>
+                          ))}
                         </div>
-                      </BlockStack>
-                    </Card>
-                  </button>
-                ))}
-              </div>
-            )}
-          </Layout.Section>
-        </Layout>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderTop: "1px solid var(--p-color-border)", borderBottom: "1px solid var(--p-color-border)" }}>
+                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("packTemplates.packName")}
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("packTemplates.type")}
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("packTemplates.source")}
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("packTemplates.usageCount")}
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("packTemplates.lastUsed")}
+                        </th>
+                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("table.status")}
+                        </th>
+                        <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
+                          {t("table.actions")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayPacks.map((pack) => {
+                        const typeLabelKey = TYPE_LABELS[pack.dispute_type];
+                        return (
+                          <tr key={pack.id} style={{ borderBottom: "1px solid var(--p-color-border)" }}>
+                            <td style={{ padding: "12px 16px", minWidth: 240 }}>
+                              <button
+                                type="button"
+                                onClick={() => router.push(`/app/packs/${pack.id}`)}
+                                style={{
+                                  border: 0,
+                                  background: "transparent",
+                                  padding: 0,
+                                  margin: 0,
+                                  width: "100%",
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <BlockStack gap="050">
+                                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                    {pack.name}
+                                  </Text>
+                                  <Text as="p" variant="bodySm" tone="subdued">
+                                    {pack.code ?? pack.id.slice(0, 8)}
+                                  </Text>
+                                </BlockStack>
+                              </button>
+                            </td>
+                            <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                              <Text as="p" variant="bodySm">
+                                {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
+                              </Text>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <Badge tone="info">
+                                {pack.source === "TEMPLATE"
+                                  ? t("packTemplates.sourceTemplate")
+                                  : t("packTemplates.sourceManual")}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <Text as="p" variant="bodySm">
+                                {pack.usage_count}
+                              </Text>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <Text as="p" variant="bodySm" tone="subdued">
+                                {formatDate(pack.last_used_at, locale, t("packTemplates.never"))}
+                              </Text>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              {pack.status === "DRAFT" ? (
+                                <Button
+                                  variant="plain"
+                                  loading={activatingId === pack.id}
+                                  disabled={activatingId !== null}
+                                  onClick={() => handleActivate(pack.id)}
+                                >
+                                  {t("packTemplates.activate")}
+                                </Button>
+                              ) : (
+                                <Badge tone={statusTone(pack.status)}>
+                                  {pack.status === "ACTIVE"
+                                    ? t("packTemplates.filterActive")
+                                    : pack.status === "ARCHIVED"
+                                      ? t("packTemplates.filterArchived")
+                                      : t("packTemplates.filterDraft")}
+                                </Badge>
+                              )}
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <InlineStack gap="100" align="end">
+                                <Button
+                                  icon={EditIcon}
+                                  variant="tertiary"
+                                  accessibilityLabel={t("packTemplates.editPack")}
+                                  onClick={() => router.push(`/app/packs/${pack.id}`)}
+                                />
+                                <Button
+                                  icon={DeleteIcon}
+                                  variant="tertiary"
+                                  accessibilityLabel={t("packTemplates.deletePack")}
+                                  onClick={() => handleDelete(pack.id)}
+                                />
+                              </InlineStack>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </BlockStack>
+          </Card>
+        </BlockStack>
       </Page>
 
       <Modal
@@ -329,51 +600,81 @@ export default function PacksListPage() {
             <div style={{ padding: "2rem", textAlign: "center" }}>
               <Spinner size="large" />
             </div>
+          ) : templates.length === 0 ? (
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {t("packTemplates.emptyDescription")}
+            </Text>
           ) : (
-            <BlockStack gap="400">
+            <BlockStack gap="300">
               <Text as="p" variant="bodyMd" tone="subdued">
                 {t("templateLibrary.subtitle")}
               </Text>
-              {templates.length === 0 ? (
-                <Text as="p" variant="bodyMd">{t("packTemplates.emptyTitle")}</Text>
-              ) : (
-                <BlockStack gap="300">
-                  {templates.map((tmpl) => (
-                    <div
-                      key={tmpl.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "12px 0",
-                        borderBottom: "1px solid var(--p-color-border)",
-                      }}
-                    >
-                      <BlockStack gap="100">
-                        <Text as="span" variant="bodyMd" fontWeight="semibold">{tmpl.name}</Text>
-                        {tmpl.short_description && (
-                          <Text as="span" variant="bodySm" tone="subdued">{tmpl.short_description}</Text>
-                        )}
-                        <Text as="span" variant="bodySm" tone="subdued">
-                          {tmpl.dispute_type.replace(/_/g, " ")}
-                        </Text>
-                      </BlockStack>
-                      <Button
-                        variant="primary"
-                        size="slim"
-                        loading={installingId === tmpl.id}
-                        onClick={() => handleInstallTemplate(tmpl.id)}
-                      >
-                        {installingId === tmpl.id
-                          ? t("templateLibrary.installing")
-                          : t("packTemplates.installTemplate")}
-                      </Button>
-                    </div>
-                  ))}
-                </BlockStack>
-              )}
+              {templates.map((template) => (
+                <InlineStack key={template.id} align="space-between" blockAlign="center" wrap={false}>
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">
+                      {template.name}
+                    </Text>
+                    {template.short_description ? (
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        {template.short_description}
+                      </Text>
+                    ) : null}
+                  </BlockStack>
+                  <Button
+                    size="slim"
+                    variant="primary"
+                    loading={installingId === template.id}
+                    onClick={() => handleInstallTemplate(template.id)}
+                  >
+                    {t("packTemplates.installTemplate")}
+                  </Button>
+                </InlineStack>
+              ))}
             </BlockStack>
           )}
+        </Modal.Section>
+      </Modal>
+
+      <Modal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title={t("packTemplates.modalTitle")}
+        primaryAction={{
+          content: t("packTemplates.create"),
+          onAction: handleCreatePack,
+          loading: creating,
+          disabled: !formName.trim() || missingShop,
+        }}
+        secondaryActions={[
+          {
+            content: t("packTemplates.cancel"),
+            onAction: () => setCreateModalOpen(false),
+          },
+        ]}
+      >
+        <Modal.Section>
+          <BlockStack gap="300">
+            <TextField
+              label={t("packTemplates.nameLabel")}
+              autoComplete="off"
+              value={formName}
+              onChange={setFormName}
+              placeholder={t("packTemplates.namePlaceholder")}
+            />
+            <Select
+              label={t("packTemplates.typeLabel")}
+              options={DISPUTE_TYPES.map((type) => ({
+                label: TYPE_LABELS[type] ? t(`packTemplates.${TYPE_LABELS[type]}`) : type,
+                value: type,
+              }))}
+              value={formType}
+              onChange={setFormType}
+            />
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("packTemplates.nextSteps")}
+            </Text>
+          </BlockStack>
         </Modal.Section>
       </Modal>
     </>

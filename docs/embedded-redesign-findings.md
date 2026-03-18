@@ -54,3 +54,17 @@ Figma Make does not use frame/node IDs in the same way as Figma Design. For desi
 1. **Confirm with stakeholder**: Proceed with **Admin-only** "Open in Admin" step (no theme extension). If you prefer a different label (e.g. "Pin the app"), confirm copy.
 2. **Implementation order**: Dashboard + configuration guide (with "Open in Admin" step) → dev/live banner → billing page → setup wizard → disputes list/detail → remaining screens. Use Polaris where possible; add custom CSS only where necessary.
 3. **App Bridge**: All external navigation (e.g. to Admin) must use **App Bridge `Redirect.dispatch`**, not `window.open` or plain `<a href>`.
+
+---
+
+## Update (2026-03-18): Evidence Packs page parity
+
+- Updated `app/(embedded)/app/packs/page.tsx` to match the website/portal Evidence Packs library layout:
+  - Header CTAs: `Start from template` + `Create Pack`
+  - Dismissible info banner
+  - Search + status tabs (All/Active/Draft/Archived)
+  - Table rows with row actions (`Activate` for drafts, `Edit`, `Delete`)
+  - Empty state includes a `Recommended Templates` block with install actions
+  - Template install uses the existing `POST /api/templates/:id/install` flow and routes to the installed pack detail.
+
+- Template wizard integration on embedded is still pending (future work after packs page parity).
