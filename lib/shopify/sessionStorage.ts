@@ -19,6 +19,11 @@ export interface StoredSession {
   expiresAt: string | null;
 }
 
+function isLikelyMyShopifyDomain(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(value.trim());
+}
+
 /**
  * Upsert a Shopify session (online or offline) into shop_sessions.
  * Access token is encrypted at rest with key version tracking.
@@ -44,6 +49,7 @@ export async function storeSession(session: {
     shop_id: session.shopInternalId,
     session_type: session.sessionType,
     user_id: session.userId ?? null,
+    shop_domain: session.shopDomain,
     access_token_encrypted: tokenStr,
     key_version: encrypted.keyVersion,
     scopes: session.scopes,
@@ -95,12 +101,26 @@ export async function loadSession(
   const encrypted = deserializeEncrypted(data.access_token_encrypted);
   const accessToken = decrypt(encrypted);
 
+  let shopDomain = (data.shop_domain ?? "").trim();
+  if (!isLikelyMyShopifyDomain(shopDomain)) {
+    // Backward-compatibility for old rows missing/invalid shop_domain.
+    const { data: shopRow } = await db
+      .from("shops")
+      .select("shop_domain")
+      .eq("id", data.shop_id)
+      .maybeSingle();
+    const fallbackDomain = (shopRow?.shop_domain ?? "").trim();
+    if (isLikelyMyShopifyDomain(fallbackDomain)) {
+      shopDomain = fallbackDomain;
+    }
+  }
+
   return {
     id: data.id,
     shopId: data.shop_id,
     sessionType: data.session_type,
     userId: data.user_id,
-    shopDomain: data.shop_domain ?? "",
+    shopDomain,
     accessToken,
     scopes: data.scopes,
     expiresAt: data.expires_at,

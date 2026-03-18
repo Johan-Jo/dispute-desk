@@ -58,6 +58,13 @@ interface ShopQueryData {
 export async function fetchShopDetails(shopInternalId: string): Promise<ShopDetails | null> {
   const session = await loadSession(shopInternalId, "offline");
   if (!session) return null;
+  if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(session.shopDomain)) {
+    console.warn("[shopDetails] invalid shop domain on session", {
+      shopInternalId,
+      shopDomain: session.shopDomain,
+    });
+    return null;
+  }
 
   const result = await requestShopifyGraphQL<ShopQueryData>({
     session: { shopDomain: session.shopDomain, accessToken: session.accessToken },

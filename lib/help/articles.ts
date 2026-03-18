@@ -158,6 +158,8 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "required",
       "optional",
       "back to options",
+      "template failed to load",
+      "shop reconnect",
     ],
   },
 

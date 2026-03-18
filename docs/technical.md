@@ -905,6 +905,15 @@ Policy setup UI is aligned to the onboarding-wizard template-screen variant:
 Preview (or when saving step selections). They are not pre-fetched on initial
 render of the template list.
 
+**Runtime hardening (2026-03-18):**
+- `GET /api/policy-templates/[type]/content` now treats Shopify placeholder
+  substitution as best-effort only. If shop/session/network lookup fails, the
+  endpoint still returns the base Markdown template content.
+- `GET /api/shop/details` now validates/guards Shopify session domain usage and
+  returns controlled non-500 responses when upstream lookup fails.
+- Session loading now falls back to `shops.shop_domain` when legacy or malformed
+  `shop_sessions.shop_domain` values are encountered (e.g. invalid host values).
+
 **Key files:**
 - `components/setup/steps/BusinessPoliciesStep.tsx` — step component
 - `content/policy-templates/` — Markdown template bodies
