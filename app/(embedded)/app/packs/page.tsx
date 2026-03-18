@@ -445,7 +445,13 @@ export default function PacksListPage() {
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
-                      <tr style={{ borderTop: "1px solid var(--p-color-border)", borderBottom: "1px solid var(--p-color-border)" }}>
+                      <tr
+                        style={{
+                          background: "#F7F8FA",
+                          borderTop: "1px solid var(--p-color-border)",
+                          borderBottom: "1px solid var(--p-color-border)",
+                        }}
+                      >
                         <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
                           {t("packTemplates.packName")}
                         </th>
@@ -474,7 +480,7 @@ export default function PacksListPage() {
                         const typeLabelKey = TYPE_LABELS[pack.dispute_type];
                         return (
                           <tr key={pack.id} style={{ borderBottom: "1px solid var(--p-color-border)" }}>
-                            <td style={{ padding: "12px 16px", minWidth: 240 }}>
+                            <td style={{ padding: "16px 16px", minWidth: 240 }}>
                               <button
                                 type="button"
                                 onClick={() => router.push(`/app/packs/${pack.id}`)}
@@ -488,8 +494,8 @@ export default function PacksListPage() {
                                   cursor: "pointer",
                                 }}
                               >
-                                <BlockStack gap="050">
-                                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                <BlockStack gap="025">
+                                  <Text as="p" variant="bodySm" fontWeight="semibold">
                                     {pack.name}
                                   </Text>
                                   <Text as="p" variant="bodySm" tone="subdued">
@@ -498,32 +504,33 @@ export default function PacksListPage() {
                                 </BlockStack>
                               </button>
                             </td>
-                            <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                            <td style={{ padding: "16px 16px", whiteSpace: "nowrap" }}>
                               <Text as="p" variant="bodySm">
                                 {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
                               </Text>
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td style={{ padding: "16px 16px" }}>
                               <Badge tone="info">
                                 {pack.source === "TEMPLATE"
                                   ? t("packTemplates.sourceTemplate")
                                   : t("packTemplates.sourceManual")}
                               </Badge>
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td style={{ padding: "16px 16px" }}>
                               <Text as="p" variant="bodySm">
                                 {pack.usage_count}
                               </Text>
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td style={{ padding: "16px 16px" }}>
                               <Text as="p" variant="bodySm" tone="subdued">
                                 {formatDate(pack.last_used_at, locale, t("packTemplates.never"))}
                               </Text>
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td style={{ padding: "16px 16px" }}>
                               {pack.status === "DRAFT" ? (
                                 <Button
                                   variant="plain"
+                                  size="slim"
                                   loading={activatingId === pack.id}
                                   disabled={activatingId !== null}
                                   onClick={() => handleActivate(pack.id)}
@@ -540,17 +547,19 @@ export default function PacksListPage() {
                                 </Badge>
                               )}
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <InlineStack gap="100" align="end">
+                            <td style={{ padding: "16px 16px" }}>
+                              <InlineStack gap="050" align="end">
                                 <Button
                                   icon={EditIcon}
                                   variant="tertiary"
+                                  size="micro"
                                   accessibilityLabel={t("packTemplates.editPack")}
                                   onClick={() => router.push(`/app/packs/${pack.id}`)}
                                 />
                                 <Button
                                   icon={DeleteIcon}
                                   variant="tertiary"
+                                  size="micro"
                                   accessibilityLabel={t("packTemplates.deletePack")}
                                   onClick={() => handleDelete(pack.id)}
                                 />
