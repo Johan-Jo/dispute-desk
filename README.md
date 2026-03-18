@@ -129,6 +129,10 @@ This is a Shopify Admin permission, not an OAuth scope.
 2. Verify app has `write_shopify_payments_dispute_evidences` scope.
 3. Ensure user has an active online session (re-open app from Shopify Admin).
 
+**Troubleshooting blank Embedded Packs page:**
+- Re-open DisputeDesk from **Shopify Admin** (Apps > DisputeDesk) so the embedded shop session is established.
+- DisputeDesk resolves the shop identity server-side (httpOnly cookies + middleware), so the UI cannot rely on reading it directly in the browser.
+
 ## Project Structure
 
 ```
