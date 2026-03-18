@@ -18,6 +18,18 @@ const FILE_MAP: Record<PolicyTemplateType, string> = {
 /** Languages that have a content subfolder. English uses root. */
 const TRANSLATED_LANGS = ["de", "fr", "es", "pt", "sv"] as const;
 
+function applyDomainFallbackPlaceholders(content: string, shopDomain: string): string {
+  const safeDomain = shopDomain.trim().toLowerCase();
+  const storeName = safeDomain.replace(/\.myshopify\.com$/i, "").replace(/[-_]/g, " ");
+  const supportEmail = `support@${safeDomain}`;
+  return content
+    .replace(/\[Store Name\]/g, storeName || "[Store Name]")
+    .replace(/\[Legal Company Name\]/g, storeName || "[Legal Company Name]")
+    .replace(/\[Support Email\]/g, supportEmail)
+    .replace(/\[Privacy Email \/ Support Email\]/g, supportEmail)
+    .replace(/\[Privacy Email\]/g, supportEmail);
+}
+
 /**
  * GET /api/policy-templates/[type]/content
  * Query: shop_id (optional). If present, uses shop's policy_template_lang to serve
@@ -74,6 +86,16 @@ export async function GET(
         const shopDetails = await fetchShopDetails(shopId);
         if (shopDetails) {
           body = applyShopPlaceholders(body, shopDetails);
+        } else {
+          const sb = getServiceClient();
+          const { data: shop } = await sb
+            .from("shops")
+            .select("shop_domain")
+            .eq("id", shopId)
+            .maybeSingle();
+          if (shop?.shop_domain && /\.myshopify\.com$/i.test(shop.shop_domain)) {
+            body = applyDomainFallbackPlaceholders(body, shop.shop_domain);
+          }
         }
       } catch (shopErr) {
         console.warn("[policy-templates/content] placeholder substitution skipped", {

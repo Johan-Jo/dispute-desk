@@ -33,6 +33,7 @@ function getShopOriginFallback(): string | null {
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
+  const tCommon = useTranslations("common");
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
 
@@ -51,7 +52,10 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
   const [previewKey, setPreviewKey] = useState<PolicyKey | null>(null);
   const [previewContent, setPreviewContent] = useState("");
+  const [previewOriginal, setPreviewOriginal] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewEditing, setPreviewEditing] = useState(false);
+  const [templateDrafts, setTemplateDrafts] = useState<Partial<Record<PolicyKey, string>>>({});
 
   useEffect(() => {
     const fallbackOrigin = getShopOriginFallback();
@@ -88,23 +92,31 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   const openPreview = useCallback(
     async (key: PolicyKey) => {
       setPreviewKey(key);
+      setPreviewEditing(false);
       setPreviewContent("");
+      setPreviewOriginal("");
       setPreviewLoading(true);
       try {
         const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
         const res = await fetch(`/api/policy-templates/${key}/content${qs}`);
         if (res.ok) {
           const { body } = (await res.json()) as { body?: string };
-          setPreviewContent(body ?? "");
+          const resolvedBody = templateDrafts[key] ?? (body ?? "");
+          setPreviewContent(resolvedBody);
+          setPreviewOriginal(resolvedBody);
         } else {
-          setPreviewContent(t("templateLoadError"));
+          const fallback = templateDrafts[key] ?? t("templateLoadError");
+          setPreviewContent(fallback);
+          setPreviewOriginal(fallback);
         }
       } catch {
-        setPreviewContent(t("templateLoadError"));
+        const fallback = templateDrafts[key] ?? t("templateLoadError");
+        setPreviewContent(fallback);
+        setPreviewOriginal(fallback);
       }
       setPreviewLoading(false);
     },
-    [resolvedShopId, t]
+    [resolvedShopId, t, templateDrafts]
   );
 
   const handleFileUpload = useCallback(
@@ -138,10 +150,14 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           : [];
 
       for (const key of templateKeys) {
-        const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
-        const contentRes = await fetch(`/api/policy-templates/${key}/content${qs}`);
-        if (!contentRes.ok) return false;
-        const { body } = (await contentRes.json()) as { body?: string };
+        let body = templateDrafts[key] ?? "";
+        if (!body) {
+          const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
+          const contentRes = await fetch(`/api/policy-templates/${key}/content${qs}`);
+          if (!contentRes.ok) return false;
+          const contentJson = (await contentRes.json()) as { body?: string };
+          body = contentJson.body ?? "";
+        }
         const applyRes = await fetch("/api/policies/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -160,7 +176,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, selectedFlow, ownUrls, mixedOptions, mixedUrls, uploadedFiles, resolvedShopId]);
+  }, [stepId, onSaveRef, selectedFlow, ownUrls, mixedOptions, mixedUrls, uploadedFiles, resolvedShopId, templateDrafts]);
 
   const meta: Record<PolicyKey, { title: string; desc: string }> = {
     shipping: { title: t("shippingTitle"), desc: t("shippingDesc") },
@@ -456,6 +472,12 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 <div className="flex items-center justify-center h-32 text-sm text-[#6D7175]">
                   Loading template…
                 </div>
+              ) : previewEditing ? (
+                <textarea
+                  value={previewContent}
+                  onChange={(e) => setPreviewContent(e.target.value)}
+                  className="w-full min-h-[50vh] p-4 border border-[#E1E3E5] rounded-lg text-sm text-[#202223] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent resize-y"
+                />
               ) : (
                 <div className="prose prose-sm max-w-none">
                   <div className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap">
@@ -468,6 +490,38 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             <div className="flex items-center justify-between px-6 py-4 border-t border-[#E1E3E5] bg-[#F7F8FA]">
               <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("previewEditNote")}</p>
               <div className="flex gap-3">
+                {previewEditing ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setPreviewContent(previewOriginal);
+                        setPreviewEditing(false);
+                      }}
+                      className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
+                    >
+                      {tCommon("cancel")}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (previewKey) {
+                          setTemplateDrafts((prev) => ({ ...prev, [previewKey]: previewContent }));
+                          setPreviewOriginal(previewContent);
+                        }
+                        setPreviewEditing(false);
+                      }}
+                      className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {tCommon("save")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setPreviewEditing(true)}
+                    className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
+                  >
+                    {t("editTemplateBtn")}
+                  </button>
+                )}
                 <button
                   onClick={() => setPreviewKey(null)}
                   className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
