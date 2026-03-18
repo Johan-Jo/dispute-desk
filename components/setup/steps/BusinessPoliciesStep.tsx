@@ -96,11 +96,15 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         if (res.ok) {
           const { body } = (await res.json()) as { body?: string };
           setPreviewContent(body ?? "");
+        } else {
+          setPreviewContent(t("templateLoadError"));
         }
-      } catch {}
+      } catch {
+        setPreviewContent(t("templateLoadError"));
+      }
       setPreviewLoading(false);
     },
-    [resolvedShopId]
+    [resolvedShopId, t]
   );
 
   const handleFileUpload = useCallback(

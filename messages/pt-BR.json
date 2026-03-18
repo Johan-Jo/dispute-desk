@@ -1716,6 +1716,7 @@
       "requiredLabel": "Obrigatório",
       "optionalLabel": "Opcional",
       "previewTemplateBtn": "Visualizar modelo",
+      "templateLoadError": "Falha ao carregar o modelo. Tente novamente.",
       "customizeAfterGenerationTitle": "Personalize após gerar",
       "customizeAfterGenerationDesc": "Os modelos serão gerados e publicados na sua loja. Você pode editá-los a qualquer momento no Shopify Admin ou nas configurações do DisputeDesk.",
       "editorTitle": "Editar {policyTitle}",

@@ -1716,6 +1716,7 @@
       "requiredLabel": "Requerido",
       "optionalLabel": "Opcional",
       "previewTemplateBtn": "Vista previa de plantilla",
+      "templateLoadError": "No se pudo cargar la plantilla. Inténtalo de nuevo.",
       "customizeAfterGenerationTitle": "Personaliza después de generar",
       "customizeAfterGenerationDesc": "Las plantillas se generarán y publicarán en tu tienda. Puedes editarlas en cualquier momento desde Shopify Admin o la configuración de DisputeDesk.",
       "editorTitle": "Editar {policyTitle}",

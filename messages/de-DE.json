@@ -1716,6 +1716,7 @@
       "requiredLabel": "Erforderlich",
       "optionalLabel": "Optional",
       "previewTemplateBtn": "Vorlage ansehen",
+      "templateLoadError": "Vorlage konnte nicht geladen werden. Bitte versuche es erneut.",
       "customizeAfterGenerationTitle": "Nach der Generierung anpassen",
       "customizeAfterGenerationDesc": "Vorlagen werden erstellt und in deinem Shop veröffentlicht. Du kannst sie jederzeit in Shopify Admin oder den DisputeDesk-Einstellungen bearbeiten.",
       "editorTitle": "{policyTitle} bearbeiten",

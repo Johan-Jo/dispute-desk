@@ -16,10 +16,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
-  const details = await fetchShopDetails(shopId);
-  if (!details) {
-    return NextResponse.json({ error: "Shop not found or no session" }, { status: 404 });
+  try {
+    const details = await fetchShopDetails(shopId);
+    if (!details) {
+      return NextResponse.json({ error: "Shop not found or no session" }, { status: 404 });
+    }
+    return NextResponse.json(details);
+  } catch (err) {
+    console.error("[shop/details] failed", {
+      shopId,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json(
+      { error: "Unable to fetch shop details right now" },
+      { status: 503 }
+    );
   }
-
-  return NextResponse.json(details);
 }

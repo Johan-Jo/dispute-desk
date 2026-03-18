@@ -67,11 +67,19 @@ export async function GET(
   try {
     let body = await readFile(path, "utf-8");
 
-    // Substitute real shop data into placeholders when shop_id is provided
+    // Best-effort placeholder substitution. Never block template loading if
+    // Shopify/session lookup fails; return raw template instead.
     if (shopId) {
-      const shopDetails = await fetchShopDetails(shopId);
-      if (shopDetails) {
-        body = applyShopPlaceholders(body, shopDetails);
+      try {
+        const shopDetails = await fetchShopDetails(shopId);
+        if (shopDetails) {
+          body = applyShopPlaceholders(body, shopDetails);
+        }
+      } catch (shopErr) {
+        console.warn("[policy-templates/content] placeholder substitution skipped", {
+          shopId,
+          reason: shopErr instanceof Error ? shopErr.message : String(shopErr),
+        });
       }
     }
 

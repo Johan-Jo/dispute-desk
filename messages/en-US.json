@@ -1716,6 +1716,7 @@
       "requiredLabel": "Required",
       "optionalLabel": "Optional",
       "previewTemplateBtn": "Preview Template",
+      "templateLoadError": "Template failed to load. Please try again.",
       "customizeAfterGenerationTitle": "Customize after generation",
       "customizeAfterGenerationDesc": "Templates will be generated and published to your store. You can edit them anytime from your Shopify admin or DisputeDesk settings.",
       "editorTitle": "Edit {policyTitle}",

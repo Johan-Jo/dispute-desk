@@ -1581,6 +1581,7 @@
       "requiredLabel": "Obligatorisk",
       "optionalLabel": "Valfri",
       "previewTemplateBtn": "Förhandsgranska mall",
+      "templateLoadError": "Mallen kunde inte läsas in. Försök igen.",
       "customizeAfterGenerationTitle": "Anpassa efter generering",
       "customizeAfterGenerationDesc": "Mallar genereras och publiceras i din butik. Du kan redigera dem när som helst i Shopify Admin eller DisputeDesk-inställningar.",
       "editorTitle": "Redigera {policyTitle}",
