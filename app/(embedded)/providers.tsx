@@ -2,7 +2,7 @@
 
 import { AppProvider } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
-import "./polaris-layer.css";
+import "@shopify/polaris/build/esm/styles.css";
 import { NextIntlClientProvider } from "next-intl";
 import { HelpGuideProvider } from "@/components/help/help-guide-provider";
 import { EmbeddedHelpGuideTour } from "@/components/help/embedded-help-guide-tour";

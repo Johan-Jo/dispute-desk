@@ -175,8 +175,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
               <FileText className="w-7 h-7 text-white" />
             </div>
-            <h2 className="text-[26px] leading-[34px] font-bold text-[#202223] mb-2">{t("title")}</h2>
-            <p className="text-[15px] leading-[24px] text-[#6D7175]">{t("flowSelectSubtitle")}</p>
+            <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>{t("title")}</h2>
+            <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-8">
@@ -187,8 +187,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
                 <Link className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1.5">{t("ownFlowTitle")}</h3>
-              <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("ownFlowShortDesc")}</p>
+              <h3 className="leading-[24px] text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 16 }}>{t("ownFlowTitle")}</h3>
+              <p className="leading-[20px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("ownFlowShortDesc")}</p>
             </button>
 
             <button
@@ -198,8 +198,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
                 <Zap className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1.5">{t("templateFlowTitle")}</h3>
-              <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("templateFlowShortDesc")}</p>
+              <h3 className="leading-[24px] text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 16 }}>{t("templateFlowTitle")}</h3>
+              <p className="leading-[20px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("templateFlowShortDesc")}</p>
             </button>
 
             <button
@@ -209,16 +209,16 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
               <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
                 <Layers className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
               </div>
-              <h3 className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1.5">{t("mixedFlowTitle")}</h3>
-              <p className="text-[14px] leading-[20px] text-[#6D7175]">{t("mixedFlowShortDesc")}</p>
+              <h3 className="leading-[24px] text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 16 }}>{t("mixedFlowTitle")}</h3>
+              <p className="leading-[20px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("mixedFlowShortDesc")}</p>
             </button>
           </div>
 
           <div className="flex items-start gap-3 p-6 border border-[#E5E7EB] rounded-[12px] bg-[#F3F4F6]">
             <Info className="w-5 h-5 text-[#8C9196] flex-shrink-0 mt-[1px]" />
             <div>
-              <p className="text-[16px] leading-[24px] font-bold text-[#202223] mb-1">{t("whyPoliciesTitle")}</p>
-              <p className="text-[14px] leading-[22px] text-[#6D7175]">{t("whyPoliciesDesc")}</p>
+              <p className="leading-[24px] text-[#202223] mb-1" style={{ fontWeight: 700, fontSize: 16 }}>{t("whyPoliciesTitle")}</p>
+              <p className="leading-[22px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("whyPoliciesDesc")}</p>
             </div>
           </div>
         </div>
@@ -236,8 +236,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           </button>
 
           <div className="bg-white rounded-xl border border-[#E1E3E5] p-6">
-            <h3 className="text-base font-semibold text-[#202223] mb-1">{t("ownFlowTitle")}</h3>
-            <p className="text-sm text-[#6D7175] mb-6">{t("ownFlowDesc")}</p>
+            <h3 className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("ownFlowTitle")}</h3>
+            <p className="text-[#6D7175] mb-6" style={{ fontSize: 14 }}>{t("ownFlowDesc")}</p>
             <div className="space-y-4">
               {POLICY_KEYS.map((key) => (
                 <div key={key}>
@@ -272,8 +272,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           <div className="bg-white rounded-xl border border-[#E1E3E5] p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h3 className="text-base font-semibold text-[#202223] mb-1">{t("templateSelectedTitle")}</h3>
-                <p className="text-sm text-[#6D7175]">{t("templateSelectedDesc")}</p>
+                <h3 className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("templateSelectedTitle")}</h3>
+                <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{t("templateSelectedDesc")}</p>
               </div>
               <CheckCircle2 className="w-6 h-6 text-[#22C55E] flex-shrink-0" />
             </div>
@@ -287,8 +287,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-[#1D4ED8] flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-[#202223]">{meta[key].title}</p>
-                      <p className="text-xs text-[#6D7175]">{meta[key].desc}</p>
+                      <p className="text-[#202223]" style={{ fontWeight: 500, fontSize: 14 }}>{meta[key].title}</p>
+                      <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{meta[key].desc}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -325,8 +325,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
           {POLICY_KEYS.map((key) => (
             <div key={key} className="bg-white rounded-xl border border-[#E1E3E5] p-6">
-              <h3 className="text-base font-semibold text-[#202223] mb-1">{meta[key].title}</h3>
-              <p className="text-sm text-[#6D7175] mb-4">{t("mixedChooseSource")}</p>
+              <h3 className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{meta[key].title}</h3>
+              <p className="text-[#6D7175] mb-4" style={{ fontSize: 14 }}>{t("mixedChooseSource")}</p>
 
               <div className="flex items-center gap-2 mb-4">
                 {(["url", "upload", "template"] as MixedOption[]).map((opt) => (
@@ -361,7 +361,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 uploadedFiles[key] ? (
                   <div className="flex items-center gap-3 p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg">
                     <CheckCircle2 className="w-5 h-5 text-[#22C55E] flex-shrink-0" />
-                    <p className="text-sm text-[#15803D] flex-1 truncate">
+                    <p className="text-[#15803D] flex-1 truncate" style={{ fontSize: 14 }}>
                       {uploadedFiles[key]!.url.split("/").pop()}
                     </p>
                     <button
@@ -374,10 +374,10 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 ) : (
                   <label className="block border-2 border-dashed border-[#C9CCCF] rounded-lg p-6 text-center hover:border-[#1D4ED8] hover:bg-[#F7F8FA] transition-all cursor-pointer">
                     <Upload className="w-8 h-8 text-[#6D7175] mx-auto mb-2" />
-                    <p className="text-sm font-medium text-[#202223] mb-1">{t("uploadCta")}</p>
-                    <p className="text-xs text-[#6D7175]">{t("uploadHint")}</p>
+                    <p className="text-[#202223] mb-1" style={{ fontWeight: 500, fontSize: 14 }}>{t("uploadCta")}</p>
+                    <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("uploadHint")}</p>
                     {uploadLoading[key] && (
-                      <p className="text-xs text-[#1D4ED8] mt-2">Uploading…</p>
+                      <p className="text-[#1D4ED8] mt-2" style={{ fontSize: 12 }}>Uploading…</p>
                     )}
                     <input
                       type="file"
@@ -424,8 +424,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E3E5]">
               <div>
-                <h3 className="text-lg font-semibold text-[#202223]">{meta[previewKey].title}</h3>
-                <p className="text-xs text-[#6D7175] mt-0.5">{t("templatePreviewTitle")}</p>
+                <h3 className="text-[#202223]" style={{ fontWeight: 600, fontSize: 18 }}>{meta[previewKey].title}</h3>
+                <p className="text-[#6D7175] mt-0.5" style={{ fontSize: 12 }}>{t("templatePreviewTitle")}</p>
               </div>
               <button
                 onClick={() => setPreviewKey(null)}
@@ -448,7 +448,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             </div>
 
             <div className="flex items-center justify-between px-6 py-4 border-t border-[#E1E3E5] bg-[#F7F8FA]">
-              <p className="text-xs text-[#6D7175]">{t("previewEditNote")}</p>
+              <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("previewEditNote")}</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setPreviewKey(null)}
@@ -477,8 +477,8 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       {showTemplateEditorNotice && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-[#202223] mb-2">{t("editTemplateBtn")}</h3>
-            <p className="text-sm text-[#6D7175] mb-5">{t("templateEditorComingSoon")}</p>
+            <h3 className="text-[#202223] mb-2" style={{ fontWeight: 600, fontSize: 18 }}>{t("editTemplateBtn")}</h3>
+            <p className="text-[#6D7175] mb-5" style={{ fontSize: 14 }}>{t("templateEditorComingSoon")}</p>
             <div className="flex justify-end">
               <button
                 onClick={() => setShowTemplateEditorNotice(false)}
