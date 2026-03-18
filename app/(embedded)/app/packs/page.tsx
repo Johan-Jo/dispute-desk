@@ -112,27 +112,18 @@ export default function PacksListPage() {
   const [showTemplateBanner, setShowTemplateBanner] = useState(true);
   const [recommendedTemplates, setRecommendedTemplates] = useState<TemplateItem[]>([]);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
-  const [recommendedFetchedForShopId, setRecommendedFetchedForShopId] = useState<string | null>(null);
-
-  const shopId =
-    typeof window !== "undefined"
-      ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-      : "";
+  const [recommendedFetched, setRecommendedFetched] = useState(false);
 
   const fetchPacks = useCallback(async () => {
-    if (!shopId) {
-      setLoading(false);
-      setPacks([]);
-      return;
-    }
-
     setLoading(true);
-    const params = new URLSearchParams({ shopId });
+    const params = new URLSearchParams();
     if (statusTab !== "all") params.set("status", statusTab.toUpperCase());
     if (queryValue.trim()) params.set("q", queryValue.trim());
 
     try {
-      const res = await fetch(`/api/packs?${params.toString()}`);
+      const qs = params.toString();
+      const url = qs ? `/api/packs?${qs}` : "/api/packs";
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setPacks(data.packs ?? []);
@@ -142,7 +133,7 @@ export default function PacksListPage() {
     } finally {
       setLoading(false);
     }
-  }, [shopId, statusTab, queryValue]);
+  }, [statusTab, queryValue]);
 
   useEffect(() => {
     fetchPacks();
@@ -164,7 +155,6 @@ export default function PacksListPage() {
   }, []);
 
   const fetchRecommendedTemplates = useCallback(async () => {
-    if (!shopId) return;
     setRecommendedLoading(true);
     try {
       const res = await fetch(`/api/templates?locale=${encodeURIComponent(locale)}`);
@@ -178,33 +168,37 @@ export default function PacksListPage() {
     } finally {
       setRecommendedLoading(false);
     }
-  }, [locale, shopId]);
+  }, [locale]);
 
   useEffect(() => {
     if (templateModalOpen) fetchTemplates();
   }, [templateModalOpen, fetchTemplates]);
 
   useEffect(() => {
-    if (!shopId) return;
     if (loading) return;
     if (packs.length !== 0) return;
-    if (recommendedFetchedForShopId === shopId) return;
-    setRecommendedFetchedForShopId(shopId);
+    if (queryValue.trim() !== "") return;
+    if (recommendedFetched) return;
+    setRecommendedFetched(true);
     fetchRecommendedTemplates().catch(() => {
       setRecommendedTemplates([]);
       setRecommendedLoading(false);
     });
-  }, [fetchRecommendedTemplates, loading, packs.length, recommendedFetchedForShopId, shopId]);
+  }, [fetchRecommendedTemplates, loading, packs.length, queryValue, recommendedFetched]);
+
+  useEffect(() => {
+    // Empty-state recommendations depend on the current filter/search.
+    setRecommendedFetched(false);
+  }, [statusTab, queryValue]);
 
   const handleInstallTemplate = useCallback(
     async (templateId: string) => {
-      if (!shopId) return;
       setInstallingId(templateId);
       try {
         const res = await fetch(`/api/templates/${templateId}/install`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shopId }),
+          body: JSON.stringify({}),
         });
         if (res.ok) {
           const pack = await res.json();
@@ -215,7 +209,7 @@ export default function PacksListPage() {
         setInstallingId(null);
       }
     },
-    [shopId, router]
+    [router]
   );
 
   const handleActivate = useCallback(
@@ -245,14 +239,13 @@ export default function PacksListPage() {
   );
 
   const handleCreatePack = useCallback(async () => {
-    if (!shopId || !formName.trim() || !formType) return;
+    if (!formName.trim() || !formType) return;
     setCreating(true);
     try {
       const res = await fetch("/api/packs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          shopId,
           name: formName.trim(),
           disputeType: formType,
         }),
@@ -266,7 +259,7 @@ export default function PacksListPage() {
     } finally {
       setCreating(false);
     }
-  }, [shopId, formName, formType, fetchPacks]);
+  }, [formName, formType, fetchPacks]);
 
   const tabs = [
     { id: "all", content: t("packTemplates.filterAll"), panelID: "packs-all" },
@@ -291,7 +284,6 @@ export default function PacksListPage() {
         });
 
   const showEmpty = !loading && displayPacks.length === 0;
-  const missingShop = !shopId;
 
   return (
     <>
@@ -301,13 +293,11 @@ export default function PacksListPage() {
         primaryAction={{
           content: t("packTemplates.startFromTemplate"),
           onAction: () => setTemplateModalOpen(true),
-          disabled: missingShop,
         }}
         secondaryActions={[
           {
             content: t("packTemplates.createPack"),
             onAction: () => setCreateModalOpen(true),
-            disabled: missingShop,
           },
         ]}
       >
@@ -374,33 +364,21 @@ export default function PacksListPage() {
               ) : showEmpty ? (
                 <div style={{ padding: "1rem" }}>
                   <EmptyState
-                    heading={
-                      missingShop
-                        ? t("packTemplates.emptyTitle")
-                        : packs.length === 0
-                          ? t("packTemplates.setupTitle")
-                          : t("packTemplates.emptyTitle")
-                    }
+                    heading={packs.length === 0 ? t("packTemplates.setupTitle") : t("packTemplates.emptyTitle")}
                     action={
-                      missingShop
-                        ? undefined
-                        : {
-                            content: t("packTemplates.startFromTemplate"),
-                            onAction: () => setTemplateModalOpen(true),
-                          }
+                      {
+                        content: t("packTemplates.startFromTemplate"),
+                        onAction: () => setTemplateModalOpen(true),
+                      }
                     }
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>
-                      {missingShop
-                        ? t("packTemplates.emptyDescription")
-                        : packs.length === 0
-                          ? t("packTemplates.setupDescription")
-                          : t("packTemplates.emptyDescription")}
+                      {packs.length === 0 ? t("packTemplates.setupDescription") : t("packTemplates.emptyDescription")}
                     </p>
                   </EmptyState>
 
-                  {!missingShop && packs.length === 0 && queryValue.trim() === "" && (
+                  {packs.length === 0 && queryValue.trim() === "" && (
                     <div style={{ marginTop: 18 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--p-text-subdued)" }}>
                         {t("packTemplates.recommendedTemplates")}
@@ -644,7 +622,7 @@ export default function PacksListPage() {
           content: t("packTemplates.create"),
           onAction: handleCreatePack,
           loading: creating,
-          disabled: !formName.trim() || missingShop,
+          disabled: !formName.trim(),
         }}
         secondaryActions={[
           {

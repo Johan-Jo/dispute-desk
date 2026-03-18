@@ -385,6 +385,8 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 **Portal client and active shop:** The active-shop cookie is httpOnly, so client components cannot read it. The server layout reads the cookie and passes `activeShopId` into `PortalShell`, which provides it via `ActiveShopProvider` / `useActiveShopId()` (`lib/portal/activeShopContext.tsx`). Portal pages such as the disputes list use `useActiveShopId()` to get the current shop and pass it as `shop_id` in API calls (e.g. `GET /api/disputes?shop_id=...`, `POST /api/disputes/sync` with body `{ shop_id }`). Sync Now shows an in-progress state (Loader icon, "Syncing...", `aria-busy`) and surfaces sync errors or a success message (e.g. "No disputes in Shopify" or "Synced N dispute(s)").
 
+**Embedded client and shopId:** `shopify_shop` / `shopify_shop_id` are HTTP-only cookies, so client components should not read them via `document.cookie`. Middleware resolves the shop and forwards it as `x-shop-id` / `x-shop-domain` headers; embedded UI should rely on those server-derived values (e.g. packs list + template install).
+
 ### Portal demo mode & test stores
 - **Demo mode** (`isDemo`): true when no real shop is selected (no `active_shop_id` cookie or cookie not in user's linked shops). Portal shows a demo store label and some actions are disabled.
 - **Demo data** (`useDemoData`): when true, dispute list, dashboard, rules, and billing show hardcoded demo/placeholder data instead of calling the API. True when `isDemo` is true **or** the active shop's domain is in `TEST_STORE_DOMAINS` (see `lib/demo-mode.tsx`).
@@ -430,6 +432,8 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
 - `GET /api/disputes/:id/packs` → list packs for a dispute
 - `GET /api/packs/:packId` → full pack: items, checklist, audit log, active jobs. If the id is not in `evidence_packs`, falls back to the library `packs` table (e.g. template-installed packs) and returns a compatible shape with empty evidence/jobs.
+- `GET /api/packs?status=&q=` — list packs for the current shop (shopId resolved via middleware `x-shop-id`)
+- `POST /api/packs` — create a manual pack for the current shop (client no longer needs to send `shopId`; server resolves from `x-shop-id`)
 - `POST /api/packs/:packId/upload` → multipart file upload (10 MB, creates evidence_item)
 - `POST /api/packs/:packId/render-pdf` → 202 + jobId
 - `POST /api/packs/:packId/save-to-shopify` (online session required)
@@ -461,6 +465,7 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/setup/step` — mark a step done with payload
 - `POST /api/setup/skip` — skip a step with reason
 - `POST /api/setup/undo-skip` — undo a skip (reset to todo)
+- `progress.total` / `doneCount` count all 8 onboarding steps (`permissions` + `open_in_admin` included); `nextStepId` is the next actionable `todo` step based on prerequisites.
 
 ### Integrations (Shopify session required)
 - `GET /api/integrations/status` — list integration statuses for a shop

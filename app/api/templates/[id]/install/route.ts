@@ -20,7 +20,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const shopId = body.shopId;
+  // Embedded UI calls this without relying on reading httpOnly cookies in the browser.
+  // The embedded middleware forwards the per-request shop id via `x-shop-id`.
+  const shopId =
+    body.shopId ??
+    req.headers.get("x-shop-id") ??
+    req.cookies.get("shopify_shop_id")?.value ??
+    null;
   if (!shopId) {
     return NextResponse.json({ error: "shopId is required" }, { status: 400 });
   }

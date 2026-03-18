@@ -13,10 +13,6 @@ interface Template {
   is_recommended: boolean;
 }
 
-function getShopId(): string | null {
-  return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
-}
-
 interface PacksStepProps {
   stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
@@ -40,14 +36,13 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
 
   useEffect(() => {
     onSaveRef.current = async () => {
-      const shopId = getShopId();
       const selectedIds = Array.from(selected);
 
       for (const id of selectedIds) {
         const res = await fetch(`/api/templates/${id}/install`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shopId }),
+          body: JSON.stringify({}),
         });
         if (!res.ok) return false;
       }

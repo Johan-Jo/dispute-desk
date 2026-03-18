@@ -8,7 +8,13 @@ import { listPacks, createPack } from "@/lib/db/packs";
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const shopId = searchParams.get("shopId");
+  // Embedded UI calls this without relying on reading httpOnly cookies in the browser.
+  // The embedded middleware forwards the per-request shop id via `x-shop-id`.
+  const shopId =
+    searchParams.get("shopId") ??
+    req.headers.get("x-shop-id") ??
+    req.cookies.get("shopify_shop_id")?.value ??
+    null;
 
   if (!shopId) {
     return NextResponse.json({ error: "shopId required" }, { status: 400 });
@@ -37,14 +43,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.shopId || !body.name || !body.disputeType) {
+  const shopId =
+    body.shopId ??
+    req.headers.get("x-shop-id") ??
+    req.cookies.get("shopify_shop_id")?.value ??
+    null;
+
+  if (!shopId || !body.name || !body.disputeType) {
     return NextResponse.json(
       { error: "shopId, name, and disputeType are required" },
       { status: 400 }
     );
   }
 
-  const pack = await createPack(body.shopId, {
+  const pack = await createPack(shopId, {
     name: body.name,
     disputeType: body.disputeType,
     code: body.code,

@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   STEP_IDS,
-  WIZARD_STEP_IDS,
-  TOTAL_WIZARD_STEPS,
-  getNextWizardStep,
+  TOTAL_STEPS,
   LEGACY_STEP_ID_MAP,
+  getNextActionableStep,
 } from "@/lib/setup/constants";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
 
@@ -60,21 +59,19 @@ export async function GET(req: NextRequest) {
     fullSteps[id] = stepsMap[id] ?? { ...defaultState };
   }
 
-  const nextStepId = getNextWizardStep(fullSteps);
+  const nextStepId = getNextActionableStep(fullSteps);
 
-  // Progress and allDone based on wizard steps only (excludes auto-steps like permissions/open_in_admin)
-  let wizardDoneCount = 0;
-  for (const id of WIZARD_STEP_IDS) {
-    if (fullSteps[id]?.status === "done" || fullSteps[id]?.status === "skipped") {
-      wizardDoneCount++;
-    }
+  // Progress and allDone based on all onboarding steps (including permissions/open_in_admin).
+  let doneCount = 0;
+  for (const id of STEP_IDS) {
+    if (fullSteps[id]?.status === "done" || fullSteps[id]?.status === "skipped") doneCount++;
   }
 
   const response: SetupStateResponse = {
     steps: fullSteps,
-    progress: { doneCount: wizardDoneCount, total: TOTAL_WIZARD_STEPS },
+    progress: { doneCount, total: TOTAL_STEPS },
     nextStepId,
-    allDone: wizardDoneCount === TOTAL_WIZARD_STEPS,
+    allDone: doneCount === TOTAL_STEPS,
     shopId,
   };
 
