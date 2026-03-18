@@ -1622,6 +1622,16 @@
     "packs": {
       "title": "Generera bevispaket",
       "subtitle": "Välj vilka mallar som ska installeras för din butik.",
+      "figmaTitle": "Skapa ditt första bevispaket",
+      "figmaSubtitle": "Bevispaket är mallar som hjälper dig att organisera och skicka in tvistbevis på ett effektivt sätt.",
+      "optionFraudTitle": "Auto-pack vid bedrägeritvister",
+      "optionFraudDesc": "När en bedrägeritvist kommer in skapas automatiskt ett bevispaket med orderbekräftelse, spårning och kundkommunikation.",
+      "optionPnrTitle": "Skicka \"Ej mottagen\" till granskningskön",
+      "optionPnrDesc": "När en tvist om Produkt ej mottagen kommer in skickas den till granskningskön för manuell kontroll innan ett paket skapas.",
+      "optionAllAutoTitle": "Auto-pack för alla tvister",
+      "optionAllAutoDesc": "Skapa automatiskt bevispaket för alla tvisttyper. Du kan granska och förbättra paketen innan de skickas in.",
+      "changeLaterTitle": "Du kan ändra detta senare",
+      "changeLaterDesc": "Skapa obegränsat med regler på sidan Regler. Första matchande regel vinner.",
       "recommended": "Rekommenderad",
       "empty": "Inga mallar tillgängliga. Du kan lägga till packs senare under Packs."
     },

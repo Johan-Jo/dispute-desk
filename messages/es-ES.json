@@ -1757,6 +1757,16 @@
     "packs": {
       "title": "Generar paquetes de evidencia",
       "subtitle": "Elige qué plantillas instalar para tu tienda.",
+      "figmaTitle": "Crea tu primer paquete de evidencia",
+      "figmaSubtitle": "Los paquetes de evidencia son plantillas que te ayudan a organizar y enviar evidencia de disputas de forma eficiente.",
+      "optionFraudTitle": "Auto-pack de disputas fraudulentas",
+      "optionFraudDesc": "Cuando llegue una disputa Fraudulenta, crea automáticamente un paquete de evidencia con confirmación del pedido, seguimiento y comunicación con el cliente.",
+      "optionPnrTitle": "Enviar \"No recibido\" a la cola de revisión",
+      "optionPnrDesc": "Cuando llegue una disputa de Producto no recibido, envíala a la cola de revisión para inspección manual antes de crear un paquete.",
+      "optionAllAutoTitle": "Auto-pack de todas las disputas",
+      "optionAllAutoDesc": "Crea automáticamente paquetes de evidencia para todos los tipos de disputa. Puedes revisar y perfeccionar los paquetes antes de enviar.",
+      "changeLaterTitle": "Puedes cambiar esto después",
+      "changeLaterDesc": "Crea reglas ilimitadas desde la página de Reglas. La primera regla que coincida gana.",
       "recommended": "Recomendado",
       "empty": "No hay plantillas disponibles. Puedes añadir packs más tarde en la sección Packs."
     },

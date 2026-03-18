@@ -1757,6 +1757,16 @@
     "packs": {
       "title": "Générer des dossiers de preuves",
       "subtitle": "Choisissez les modèles à installer pour votre boutique.",
+      "figmaTitle": "Créez votre premier dossier de preuves",
+      "figmaSubtitle": "Les dossiers de preuves sont des modèles qui vous aident à organiser et soumettre efficacement les preuves de litige.",
+      "optionFraudTitle": "Auto-pack des litiges frauduleux",
+      "optionFraudDesc": "Lorsqu'un litige Frauduleux arrive, créez automatiquement un dossier de preuves avec confirmation de commande, suivi et communication client.",
+      "optionPnrTitle": "Envoyer \"Non reçu\" en file de revue",
+      "optionPnrDesc": "Lorsqu'un litige Produit non reçu arrive, envoyez-le en file de revue pour inspection manuelle avant de créer un dossier.",
+      "optionAllAutoTitle": "Auto-pack de tous les litiges",
+      "optionAllAutoDesc": "Créez automatiquement des dossiers de preuves pour tous les types de litige. Vous pouvez les revoir et les affiner avant soumission.",
+      "changeLaterTitle": "Vous pouvez modifier cela plus tard",
+      "changeLaterDesc": "Créez des règles illimitées depuis la page Règles. La première règle correspondante s'applique.",
       "recommended": "Recommandé",
       "empty": "Aucun modèle disponible. Vous pouvez ajouter des packs plus tard dans la section Packs."
     },

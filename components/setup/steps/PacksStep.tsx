@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BlockStack, Text, InlineStack, Spinner } from "@shopify/polaris";
+import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 
@@ -24,30 +24,19 @@ interface PacksStepProps {
 
 export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const t = useTranslations("setup.packs");
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedPackMode, setSelectedPackMode] = useState<"fraud_auto" | "pnr_review" | "all_auto">("fraud_auto");
 
   useEffect(() => {
     fetch("/api/templates?locale=en-US")
       .then((r) => r.json())
       .then((data: { templates: Template[] }) => {
         const list = data.templates ?? [];
-        setTemplates(list);
         setSelected(new Set(list.filter((t) => t.is_recommended).map((t) => t.id)));
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {});
   }, []);
-
-  function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   useEffect(() => {
     onSaveRef.current = async () => {
@@ -66,116 +55,83 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stepId, payload: { installedTemplates: Array.from(selected) } }),
+        body: JSON.stringify({
+          stepId,
+          payload: {
+            installedTemplates: Array.from(selected),
+            selectedPackMode,
+          },
+        }),
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, selected]);
+  }, [stepId, onSaveRef, selected, selectedPackMode]);
 
   return (
-    <BlockStack gap="400">
-      <Text as="h2" variant="headingLg">
-        {t("title")}
-      </Text>
-      <Text as="p" variant="bodyMd" tone="subdued">
-        {t("subtitle")}
-      </Text>
+    <div className="max-w-3xl mx-auto">
+      <div className="flex flex-col items-center text-center mb-10">
+        <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
+          <FileText className="w-7 h-7 text-white" />
+        </div>
+        <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>
+          {t("figmaTitle")}
+        </h2>
+        <p className="leading-[24px] text-[#6D7175] max-w-[720px]" style={{ fontSize: 15 }}>
+          {t("figmaSubtitle")}
+        </p>
+      </div>
 
-      {loading ? (
-        <InlineStack align="center">
-          <Spinner size="small" />
-        </InlineStack>
-      ) : templates.length === 0 ? (
-        <Text as="p" variant="bodySm" tone="subdued">
-          {t("empty")}
-        </Text>
-      ) : (
-        <BlockStack gap="300">
-          {templates.map((tpl) => {
-            const isChecked = selected.has(tpl.id);
-
-            return (
-              <div
-                key={tpl.id}
-                role="checkbox"
-                aria-checked={isChecked}
-                tabIndex={0}
-                onClick={() => toggle(tpl.id)}
-                onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") toggle(tpl.id); }}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  padding: "14px 16px",
-                  borderRadius: 8,
-                  border: isChecked ? "2px solid #2C6ECB" : "1px solid #C9CCCF",
-                  background: isChecked ? "#F2F7FE" : "#FFFFFF",
-                  cursor: "pointer",
-                  transition: "border-color 0.15s, background 0.15s",
-                  userSelect: "none",
-                }}
-              >
-                {/* Checkbox */}
-                <div style={{ marginTop: 2, flexShrink: 0 }}>
-                  <div
+      <div className="space-y-4">
+        {([
+          { id: "fraud_auto", title: t("optionFraudTitle"), desc: t("optionFraudDesc") },
+          { id: "pnr_review", title: t("optionPnrTitle"), desc: t("optionPnrDesc") },
+          { id: "all_auto", title: t("optionAllAutoTitle"), desc: t("optionAllAutoDesc") },
+        ] as const).map((option) => {
+          const active = selectedPackMode === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setSelectedPackMode(option.id)}
+              className="w-full text-left border rounded-[14px] px-6 py-6 transition-colors bg-white"
+              style={{ borderColor: active ? "#1D4ED8" : "#E1E3E5" }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="mt-0.5">
+                  <span
+                    className="inline-flex items-center justify-center rounded-full border"
                     style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      border: isChecked ? "none" : "2px solid #8C9196",
-                      background: isChecked ? "#2C6ECB" : "transparent",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      width: 22,
+                      height: 22,
+                      borderColor: active ? "#1D4ED8" : "#C9CCCF",
+                      background: active ? "#EFF6FF" : "#FFFFFF",
                     }}
                   >
-                    {isChecked && (
-                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                        <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </div>
+                    {active && <span className="w-2.5 h-2.5 rounded-full bg-[#1D4ED8]" />}
+                  </span>
                 </div>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#202223", lineHeight: "20px" }}>
-                      {tpl.name}
-                    </span>
-                    {tpl.is_recommended && (
-                      <span
-                        style={{
-                          flexShrink: 0,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          lineHeight: "16px",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          background: "#E3F1DF",
-                          color: "#1A6A30",
-                        }}
-                      >
-                        {t("recommended")}
-                      </span>
-                    )}
-                  </div>
-                  {tpl.short_description && (
-                    <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6D7175", lineHeight: "18px" }}>
-                      {tpl.short_description}
-                    </p>
-                  )}
-                  {tpl.dispute_type && (
-                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#8C9196", lineHeight: "16px" }}>
-                      {tpl.dispute_type}
-                    </p>
-                  )}
+                <div>
+                  <p className="text-[#202223] mb-2 leading-[28px]" style={{ fontWeight: 700, fontSize: 31 }}>
+                    {option.title}
+                  </p>
+                  <p className="text-[#6D7175] leading-[22px]" style={{ fontSize: 14 }}>
+                    {option.desc}
+                  </p>
                 </div>
               </div>
-            );
-          })}
-        </BlockStack>
-      )}
-    </BlockStack>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 bg-[#FFF7ED] border border-[#FCD9A4] rounded-[14px] p-5">
+        <p className="text-[#7C2D12] mb-1" style={{ fontWeight: 700, fontSize: 16 }}>
+          {t("changeLaterTitle")}
+        </p>
+        <p className="text-[#9A3412]" style={{ fontSize: 14 }}>
+          {t("changeLaterDesc")}
+        </p>
+      </div>
+    </div>
   );
 }

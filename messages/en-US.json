@@ -1757,6 +1757,16 @@
     "packs": {
       "title": "Generate Evidence Packs",
       "subtitle": "Choose which evidence pack templates to install for your store. Recommended templates are pre-selected.",
+      "figmaTitle": "Create your first evidence pack",
+      "figmaSubtitle": "Evidence packs are templates that help you organize and submit dispute evidence efficiently.",
+      "optionFraudTitle": "Auto-pack fraudulent disputes",
+      "optionFraudDesc": "When a Fraudulent dispute arrives, automatically create an evidence pack with order confirmation, tracking, and customer communication.",
+      "optionPnrTitle": "Route \"Not Received\" to Review Queue",
+      "optionPnrDesc": "When a Product not received dispute arrives, send it to the review queue for manual inspection before creating a pack.",
+      "optionAllAutoTitle": "Auto-pack all disputes",
+      "optionAllAutoDesc": "Automatically create evidence packs for all dispute types. You can review and refine packs before submitting.",
+      "changeLaterTitle": "You can change this later",
+      "changeLaterDesc": "Create unlimited rules from the Rules page. First matching rule wins.",
       "recommended": "Recommended",
       "empty": "No templates available. You can add packs later from the Packs section."
     },

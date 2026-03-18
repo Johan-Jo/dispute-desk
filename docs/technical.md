@@ -813,16 +813,19 @@ dashboard via a Setup Checklist card with a ring progress indicator.
 
 Legacy step ids (`welcome_goals`, `sync_disputes`, etc.) are migrated to the new ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
 
-### Step 5: Evidence Sources (V1)
+### Step 5: Generate Packs
 
-Four integration tiles:
-- **Tracking Carrier**: Shopify Tracking (built-in). Shows as AVAILABLE/CONNECTED. Does NOT count toward step completion.
-- **Helpdesk (Gorgias)**: Full connect flow with subdomain, email, API key. Credentials encrypted (AES-256-GCM via `lib/security/encryption.ts`). Server-side connection test (`GET /api/tickets?limit=1`). Manage/disconnect support.
-- **Email**: Coming soon (info modal).
-- **Warehouse / 3PL**: Coming soon (info modal).
-- **Sample Files**: Upload via Polaris DropZone (PDF/JPG/PNG). Stored in Supabase Storage `evidence-samples/{shop_id}/samples/`. Metadata in `evidence_files`.
+**Current state (as of 2026-03-18):** The setup step is aligned to the Figma onboarding-wizard pack-selection variant:
+- Centered hero (icon + title/subtitle)
+- Three radio-style starter options:
+  - Auto-pack fraudulent disputes
+  - Route "Not Received" to Review Queue
+  - Auto-pack all disputes
+- Bottom warning/info panel: "You can change this later" / "First matching rule wins"
 
-Completion rule: DONE if (Gorgias connected) OR (≥1 sample file uploaded) OR (skipped with reason).
+**Behavior note:** `PacksStep` still installs recommended pack templates via
+`/api/templates/:id/install` on save, and now also stores the selected UI mode
+in `shop_setup.steps.packs.payload.selectedPackMode` for future rule bootstrap.
 
 ### State Machine
 

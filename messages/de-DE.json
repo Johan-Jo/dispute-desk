@@ -1757,6 +1757,16 @@
     "packs": {
       "title": "Beweispackets generieren",
       "subtitle": "Wähle, welche Vorlagen für deinen Shop installiert werden sollen.",
+      "figmaTitle": "Erstelle dein erstes Beweispaket",
+      "figmaSubtitle": "Beweispakete sind Vorlagen, die dir helfen, Streitfall-Beweise effizient zu organisieren und einzureichen.",
+      "optionFraudTitle": "Auto-Pack bei betrügerischen Streitfällen",
+      "optionFraudDesc": "Wenn ein betrügerischer Streitfall eintrifft, wird automatisch ein Beweispaket mit Bestellbestätigung, Tracking und Kundenkommunikation erstellt.",
+      "optionPnrTitle": "\"Nicht erhalten\" in die Review-Queue",
+      "optionPnrDesc": "Wenn ein Streitfall \"Produkt nicht erhalten\" eintrifft, sende ihn vor dem Erstellen eines Pakets zur manuellen Prüfung in die Review-Queue.",
+      "optionAllAutoTitle": "Alle Streitfälle automatisch packen",
+      "optionAllAutoDesc": "Erstelle automatisch Beweispakete für alle Streitfalltypen. Du kannst Pakete vor dem Einreichen überprüfen und verfeinern.",
+      "changeLaterTitle": "Du kannst das später ändern",
+      "changeLaterDesc": "Erstelle unbegrenzt Regeln auf der Regeln-Seite. Die erste passende Regel gewinnt.",
       "recommended": "Empfohlen",
       "empty": "Keine Vorlagen verfügbar. Du kannst Packs später im Bereich Packs hinzufügen."
     },

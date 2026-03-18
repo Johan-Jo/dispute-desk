@@ -1757,6 +1757,16 @@
     "packs": {
       "title": "Gerar pacotes de evidências",
       "subtitle": "Escolha quais modelos instalar para sua loja.",
+      "figmaTitle": "Crie seu primeiro pacote de evidências",
+      "figmaSubtitle": "Pacotes de evidências são modelos que ajudam você a organizar e enviar evidências de disputa com eficiência.",
+      "optionFraudTitle": "Auto-pack de disputas fraudulentas",
+      "optionFraudDesc": "Quando uma disputa Fraudulenta chegar, crie automaticamente um pacote de evidências com confirmação do pedido, rastreamento e comunicação com o cliente.",
+      "optionPnrTitle": "Enviar \"Não Recebido\" para a Fila de Revisão",
+      "optionPnrDesc": "Quando uma disputa de Produto não recebido chegar, envie para a fila de revisão para inspeção manual antes de criar um pacote.",
+      "optionAllAutoTitle": "Auto-pack de todas as disputas",
+      "optionAllAutoDesc": "Crie automaticamente pacotes de evidências para todos os tipos de disputa. Você pode revisar e ajustar os pacotes antes do envio.",
+      "changeLaterTitle": "Você pode alterar isso depois",
+      "changeLaterDesc": "Crie regras ilimitadas na página de Regras. A primeira regra correspondente vence.",
       "recommended": "Recomendado",
       "empty": "Nenhum modelo disponível. Você pode adicionar packs depois na seção Packs."
     },
