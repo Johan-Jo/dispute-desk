@@ -5,6 +5,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "text/plain",
+  "text/markdown",
 ]);
 const VALID_POLICY_TYPES = ["refunds", "shipping", "terms", "privacy", "contact"] as const;
 
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   if (!ALLOWED_TYPES.has(file.type)) {
     return NextResponse.json(
-      { error: "Only PDF and DOCX files are allowed" },
+      { error: "Only PDF, DOCX, DOC, TXT, and Markdown files are allowed" },
       { status: 400 }
     );
   }
