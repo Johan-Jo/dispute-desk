@@ -863,27 +863,44 @@ All wizard links preserve `shop` and `host` query parameters via
 
 ### Step 7: Business Policies (`BusinessPoliciesStep`)
 
-**Current state (as of 2026-03-17):** The step implements a 3-flow selection UX
-(own policies / use templates / mix & match) built from a React component the
-owner provided. It is functional and i18n-complete across all 6 locales.
+**Current state (as of 2026-03-18):** The step implements a 3-flow selection UX
+(own policies / use templates / mix & match). It is functional, i18n-complete
+across all 6 locales, and the flow-selection screen is visually aligned to the
+Figma Make design (3-card horizontal grid, centered header, info banner).
 
-**What is NOT done — Figma alignment:**
-The step has not been matched to the Figma Make design. An attempt was made to
-align it during the session ending 2026-03-17 but failed due to a tooling
-blocker and an incorrect intermediate implementation:
+**Polaris / Tailwind v4 CSS cascade conflict (resolved 2026-03-18):**
+Shopify Polaris `styles.css` applies un-layered element resets on `h1`–`h6` and
+`p` (`font-weight: var(--p-font-weight-regular)` = 450, `font-size: 1em`).
+Tailwind v4 emits all utilities inside `@layer utilities`. Per the CSS cascade
+spec, un-layered styles always beat layered styles — so Tailwind classes like
+`font-bold` and `text-[26px]` on semantic elements were silently ignored.
 
-1. `get_metadata` (Figma MCP) does not support Make files — it returned
-   `"This tool is not supported for Make files"` when called against the
-   Make file key `5o2yOdPqVmvwjaK8eTeUUx`.
-2. `get_design_context` requires a specific `nodeId`. Without access to the
-   file tree the policies screen node ID was unknown and was not provided.
-3. Before attempting the MCP, the working implementation was incorrectly
-   replaced with a horizontal 3-card grid layout based on a misread screenshot
-   (commit `ee0f619`). That was reverted in commit `8e241c4`.
+Two `@layer`-based fixes were attempted and reverted:
+- Wrapping Polaris in `@layer polaris` via `@import ... layer(polaris)` —
+  this broke all Polaris component styling because Tailwind's `@layer base`
+  resets (`border: 0 solid`, `background: transparent` on buttons) gained
+  higher priority than Polaris class selectors.
+- Declaring `@layer polaris;` before `@import "tailwindcss"` in `globals.css`
+  — same problem; the entire Polaris stylesheet was demoted below Tailwind
+  base resets.
 
-**To resume Figma alignment:** Open the Figma Make file, navigate to the
-policies wizard step, and share the URL (including `node-id` query param)
-with the agent. Then call `get_design_context` with that node ID.
+**Working fix:** Inline `style={{ fontWeight, fontSize }}` on every `h2`, `h3`,
+and `p` element in `BusinessPoliciesStep`. Inline styles have highest CSS
+specificity, beating both Polaris un-layered resets and Tailwind layered
+utilities. This is surgical — only affects this component, zero risk to Polaris
+components or other pages. Any future embedded component using Tailwind
+`font-bold` / `font-semibold` / `text-*` on `h1`–`h6` or `p` will need the
+same treatment (or switch to `<div>`/`<span>` which Polaris does not reset).
+
+**Alignment status (2026-03-18):**
+All policy screens are aligned to the Figma Make source:
+- Flow-selection screen (3-card grid, centered header, info banner)
+- Own flow (URL inputs per policy)
+- Template flow (template list with Preview + Edit buttons)
+- Mixed flow (segmented control per policy)
+- Preview modal (dark overlay, prose body, footer with Select button)
+- Edit template modal (full editor with sidebar sections, preview/edit toggle,
+  word count, reset, and Save Changes — replaces former "coming soon" stub)
 
 **Key files:**
 - `components/setup/steps/BusinessPoliciesStep.tsx` — step component

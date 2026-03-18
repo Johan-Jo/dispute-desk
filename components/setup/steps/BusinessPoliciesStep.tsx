@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info } from "lucide-react";
+import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info, Save, Eye, EyeOff, RotateCcw, AlertCircle } from "lucide-react";
 import type { StepId } from "@/lib/setup/types";
 
 type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
@@ -16,6 +16,20 @@ const POLICY_PATHS: Record<PolicyKey, string> = {
   refunds: "/policies/refund-policy",
   terms: "/policies/terms-of-service",
   privacy: "/policies/privacy-policy",
+};
+
+const POLICY_COLORS: Record<PolicyKey, string> = {
+  shipping: "#1D4ED8",
+  refunds: "#9333EA",
+  terms: "#EA580C",
+  privacy: "#22C55E",
+};
+
+const POLICY_ICONS: Record<PolicyKey, string> = {
+  shipping: "📦",
+  refunds: "↩️",
+  terms: "📋",
+  privacy: "🔒",
 };
 
 interface BusinessPoliciesStepProps {
@@ -33,7 +47,11 @@ function getShopOriginFallback(): string | null {
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
-  const [showTemplateEditorNotice, setShowTemplateEditorNotice] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PolicyKey | null>(null);
+  const [editorContent, setEditorContent] = useState("");
+  const [editorOriginal, setEditorOriginal] = useState("");
+  const [editorShowPreview, setEditorShowPreview] = useState(false);
+  const [editorLoading, setEditorLoading] = useState(false);
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
 
@@ -103,6 +121,37 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     },
     [resolvedShopId]
   );
+
+  const openEditor = useCallback(
+    async (key: PolicyKey) => {
+      setEditingTemplate(key);
+      setEditorContent("");
+      setEditorOriginal("");
+      setEditorShowPreview(false);
+      setEditorLoading(true);
+      try {
+        const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
+        const res = await fetch(`/api/policy-templates/${key}/content${qs}`);
+        if (res.ok) {
+          const { body } = (await res.json()) as { body?: string };
+          setEditorContent(body ?? "");
+          setEditorOriginal(body ?? "");
+        }
+      } catch {}
+      setEditorLoading(false);
+    },
+    [resolvedShopId]
+  );
+
+  const saveEditorContent = useCallback(async () => {
+    if (!editingTemplate) return;
+    const res = await fetch("/api/policies/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shop_id: resolvedShopId, policy_type: editingTemplate, content: editorContent }),
+    });
+    if (res.ok) setEditingTemplate(null);
+  }, [editingTemplate, editorContent, resolvedShopId]);
 
   const handleFileUpload = useCallback(
     async (key: PolicyKey, file: File) => {
@@ -299,7 +348,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                       {t("previewBtn")}
                     </button>
                     <button
-                      onClick={() => setShowTemplateEditorNotice(true)}
+                      onClick={() => openEditor(key)}
                       className="px-3 py-1.5 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-xs font-medium text-[#202223] rounded-lg transition-colors"
                     >
                       {t("editTemplateBtn")}
@@ -405,7 +454,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                       {t("previewBtn")}
                     </button>
                     <button
-                      onClick={() => setShowTemplateEditorNotice(true)}
+                      onClick={() => openEditor(key)}
                       className="flex-1 px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#E1E3E5] text-sm font-medium text-[#202223] rounded-lg transition-colors"
                     >
                       {t("editTemplateBtn")}
@@ -420,7 +469,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
       {/* ── Preview modal ── */}
       {previewKey && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[#0B1220]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E3E5]">
               <div>
@@ -441,9 +490,11 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   Loading template…
                 </div>
               ) : (
-                <pre className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap font-sans">
-                  {previewContent}
-                </pre>
+                <div className="prose prose-sm max-w-none">
+                  <div className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap">
+                    {previewContent}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -474,18 +525,134 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         </div>
       )}
 
-      {showTemplateEditorNotice && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-[#202223] mb-2" style={{ fontWeight: 600, fontSize: 18 }}>{t("editTemplateBtn")}</h3>
-            <p className="text-[#6D7175] mb-5" style={{ fontSize: 14 }}>{t("templateEditorComingSoon")}</p>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowTemplateEditorNotice(false)}
-                className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                {t("closeBtn")}
+      {editingTemplate && (
+        <div className="fixed inset-0 bg-[#0B1220]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E3E5]">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                  style={{ backgroundColor: `${POLICY_COLORS[editingTemplate]}15` }}
+                >
+                  {POLICY_ICONS[editingTemplate]}
+                </div>
+                <div>
+                  <h2 className="text-[#202223]" style={{ fontWeight: 600, fontSize: 18 }}>
+                    {t("editorTitle", { policyTitle: meta[editingTemplate].title })}
+                  </h2>
+                  <p className="text-[#6D7175] mt-0.5" style={{ fontSize: 12 }}>{t("editorSubtitle")}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingTemplate(null)} className="p-2 hover:bg-[#F7F8FA] rounded-lg transition-colors">
+                <X className="w-5 h-5 text-[#6D7175]" />
               </button>
+            </div>
+
+            <div className="flex-1 overflow-hidden flex">
+              <div className="w-64 border-r border-[#E1E3E5] bg-[#F7F8FA] p-4 overflow-y-auto hidden md:block">
+                <h3 className="text-[#202223] mb-3 uppercase tracking-wide" style={{ fontWeight: 600, fontSize: 11 }}>
+                  {t("editorRequiredSections")}
+                </h3>
+                <div className="space-y-2">
+                  {t(`${editingTemplate}Sections`).split(",").map((section, i) => (
+                    <div key={section} className="flex items-start gap-2 p-2 bg-white rounded-lg border border-[#E1E3E5]">
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-white mt-0.5"
+                        style={{ backgroundColor: POLICY_COLORS[editingTemplate], fontSize: 10, fontWeight: 700 }}
+                      >
+                        {i + 1}
+                      </div>
+                      <p className="text-[#202223]" style={{ fontSize: 12, fontWeight: 500 }}>{section.trim()}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-6 p-3 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-[#1D4ED8] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[#1D4ED8] mb-1" style={{ fontSize: 12, fontWeight: 500 }}>{t("editorLegalNote")}</p>
+                      <p className="text-[#1e40af] leading-relaxed" style={{ fontSize: 12 }}>{t("editorLegalDesc")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-3 border-b border-[#E1E3E5] bg-[#F7F8FA]">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setEditorShowPreview(!editorShowPreview)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                        editorShowPreview ? "bg-[#1D4ED8] text-white" : "bg-white text-[#202223] border border-[#E1E3E5] hover:bg-[#F7F8FA]"
+                      }`}
+                    >
+                      {editorShowPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {editorShowPreview ? t("editorEdit") : t("editorPreview")}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(t("editorResetConfirm"))) {
+                          setEditorContent(editorOriginal);
+                        }
+                      }}
+                      disabled={editorContent === editorOriginal}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 bg-white text-[#202223] border border-[#E1E3E5] hover:bg-[#F7F8FA] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      {t("editorReset")}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-[#6D7175]">
+                    <span className="flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" />
+                      {t("editorWordCount", { count: editorContent.split(/\s+/).filter((w) => w.length > 0).length })}
+                    </span>
+                    {editorContent !== editorOriginal && (
+                      <span className="px-2 py-1 bg-[#FEF3C7] text-[#92400E] rounded-md font-medium">
+                        {t("editorUnsaved")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6">
+                  {editorLoading ? (
+                    <div className="flex items-center justify-center h-32 text-sm text-[#6D7175]">Loading…</div>
+                  ) : editorShowPreview ? (
+                    <div className="max-w-3xl mx-auto prose prose-sm">
+                      <div className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap">{editorContent}</div>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={editorContent}
+                      onChange={(e) => setEditorContent(e.target.value)}
+                      className="w-full h-full min-h-[500px] p-6 border border-[#E1E3E5] rounded-lg text-sm text-[#202223] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent resize-none"
+                      placeholder={t("editorPlaceholder")}
+                      style={{ fontFamily: 'ui-monospace, Monaco, "Cascadia Code", "Segoe UI Mono", monospace' }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-4 border-t border-[#E1E3E5] bg-[#F7F8FA]">
+              <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("editorMarkdownHint")}</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setEditingTemplate(null)}
+                  className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
+                >
+                  {t("closeBtn")}
+                </button>
+                <button
+                  onClick={saveEditorContent}
+                  disabled={editorContent === editorOriginal}
+                  className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" />
+                  {t("editorSaveChanges")}
+                </button>
+              </div>
             </div>
           </div>
         </div>
