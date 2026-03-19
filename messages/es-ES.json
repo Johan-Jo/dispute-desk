@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Suscripción",
       "REFUND": "Reembolso no procesado",
       "DUPLICATE": "Cargo duplicado",
+      "DIGITAL": "Bienes digitales o servicio",
       "GENERAL": "General"
     }
   },
@@ -922,7 +923,7 @@
       },
       "automationOverview": {
         "title": "Cómo funciona la automatización",
-        "body": "DisputeDesk prioriza la automatización:\n\n1. Una nueva disputa aparece en Shopify.\n2. DisputeDesk la detecta.\n3. Se evalúan sus reglas.\n4. Si auto-paquete: se crea un paquete automáticamente.\n5. Se calcula la puntuación de completitud.\n6. Si requiere revisión: el paquete va a la cola de revisión.\n\nUsted controla cada paso a través de su configuración y reglas."
+        "body": "DisputeDesk prioriza la automatización:\n\n1. Una nueva disputa aparece en Shopify.\n2. DisputeDesk la detecta.\n3. Se evalúan sus reglas.\n4. Si auto-paquete: se crea un paquete automáticamente.\n5. Se calcula la puntuación de completitud.\n6. Si requiere revisión: el paquete va a la cola de revisión.\n\n**Biblioteca de paquetes vs reglas de enrutamiento:** Las plantillas que instala en Paquetes forman su biblioteca de pruebas (secciones y narrativas editables). **Las reglas de automatización** solo deciden si una disputa nueva ejecuta el flujo estándar de generación automática o va primero a la cola de revisión—no eligen una plantilla de biblioteca para esa generación. La generación automática usa recolectores de pedido, seguimiento y políticas.\n\nUsted controla cada paso a través de su configuración y reglas."
       },
       "viewingFilteringDisputes": {
         "title": "Ver y filtrar disputas",
@@ -942,7 +943,7 @@
       },
       "howPacksBuilt": {
         "title": "Cómo se crean los paquetes automáticamente",
-        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n\nEl paquete se estructura según el motivo de la disputa."
+        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
       },
       "generatingPackManually": {
         "title": "Crear un paquete manualmente",
@@ -966,7 +967,7 @@
       },
       "evidencePackTemplates": {
         "title": "Usar plantillas de paquetes de evidencia",
-        "body": "La página Packs te ayuda a empezar con plantillas de paquetes de evidencia.\n\nSin paquetes aún, verás plantillas recomendadas — paquetes predefinidos para tipos de disputa comunes (ej. Fraude, Producto no recibido). Cada tarjeta de plantilla tiene un botón «Instalar»: al hacer clic se crea un paquete nuevo a partir de esa plantilla para tu tienda. Tras instalar, vas a la página del paquete; también puedes abrirlo desde la lista de paquetes. Usa «Volver a paquetes» en la página del paquete para volver a la biblioteca.\n\n«Explorar todas las plantillas» abre la biblioteca completa para previsualizar e instalar cualquier plantilla. «Crear desde cero» inicia un paquete vacío.\n\nCon al menos un paquete, puede aparecer un banner sugiriendo explorar más plantillas; puedes cerrarlo o hacer clic en «Explorar plantillas» para abrir la biblioteca de nuevo.\n\nLas plantillas son una forma rápida de obtener paquetes de evidencia según buenas prácticas; siempre puedes editar documentos y ajustes tras instalar."
+        "body": "La página Packs te ayuda a empezar con plantillas de paquetes de evidencia.\n\nSin paquetes aún, verás plantillas recomendadas — paquetes predefinidos para tipos de disputa comunes (ej. Fraude, Producto no recibido). Cada tarjeta de plantilla tiene un botón «Instalar»: al hacer clic se crea un paquete nuevo a partir de esa plantilla para tu tienda. Tras instalar, vas a la página del paquete; también puedes abrirlo desde la lista de paquetes. Usa «Volver a paquetes» en la página del paquete para volver a la biblioteca.\n\n«Explorar todas las plantillas» abre la biblioteca completa para previsualizar e instalar cualquier plantilla. «Crear desde cero» inicia un paquete vacío.\n\nCon al menos un paquete, puede aparecer un banner sugiriendo explorar más plantillas; puedes cerrarlo o hacer clic en «Explorar plantillas» para abrir la biblioteca de nuevo.\n\nLas plantillas son una forma rápida de obtener paquetes de evidencia según buenas prácticas; siempre puedes editar documentos y ajustes tras instalar.\n\n**Relacionado:** las **reglas de automatización** (página Reglas o asistente de configuración) controlan si las disputas nuevas se generan automáticamente o van primero a la cola de revisión. No sustituyen una plantilla concreta de la biblioteca en cada generación automática — consulte «Cómo funciona la automatización» y «Cómo se crean los paquetes automáticamente»."
       },
       "definingStorePolicies": {
         "title": "Definir las políticas de tu tienda",
@@ -978,7 +979,7 @@
       },
       "creatingFirstRule": {
         "title": "Crear su primera regla",
-        "body": "Las reglas controlan el enrutamiento de disputas.\n\nPara crear una regla:\n1. Vaya a la página de Reglas.\n2. Haga clic en \"Agregar regla\".\n3. Complete: nombre, motivos, rango de monto y acción.\n4. Haga clic en \"Crear regla\".\n\nLas reglas están disponibles desde el plan Starter."
+        "body": "Las reglas controlan el enrutamiento de disputas.\n\nPara crear una regla:\n1. Vaya a la página de Reglas.\n2. Haga clic en \"Agregar regla\".\n3. Complete: nombre, motivos, rango de monto y acción.\n4. Haga clic en \"Crear regla\".\n\n**« Auto-paquete »:** para una disputa coincidente puede ejecutarse la recopilación de pruebas **estándar** en la primera sincronización. No significa «usar una plantilla concreta de la biblioteca»—las plantillas se gestionan aparte en Paquetes.\n\nLas reglas están disponibles desde el plan Starter."
       },
       "rulePriority": {
         "title": "Prioridad y orden de evaluación de reglas",
@@ -990,7 +991,7 @@
       },
       "rulePresets": {
         "title": "Valores predeterminados y reglas sugeridas",
-        "body": "La página Reglas ofrece valores predeterminados sugeridos para automatizar rápidamente el flujo de disputas.\n\nSin reglas (y si tu plan lo permite), verás un estado vacío con tarjetas de predeterminados, p. ej.: auto-pack para fraude, auto-pack para producto no recibido, enviar disputas de alto valor a revisión y una regla de revisión general. Haz clic en «Instalar reglas sugeridas» para añadirlas todas de una vez (o elige predeterminados concretos si la interfaz lo permite). Los predeterminados son idempotentes: reinstalar no crea duplicados.\n\nCon reglas creadas, puede aparecer un banner «Ver predeterminados» — abre una sección para instalar las mismas reglas sugeridas o crear reglas personalizadas. Las reglas se evalúan por prioridad; puedes reordenarlas en la página Reglas.\n\nLos predeterminados son un buen punto de partida; puedes editar o eliminar cualquier regla tras la instalación. Las reglas requieren un plan Starter o Pro."
+        "body": "La página Reglas ofrece valores predeterminados sugeridos para automatizar rápidamente el flujo de disputas.\n\nEn la app integrada, el asistente de **configuración** puede instalar valores similares en el paso **Automatización y cola de revisión** (después de **Paquetes**). Ese paso explica cómo las reglas de enrutamiento se relacionan con las plantillas que instaló y puede mostrar sus nombres.\n\nSin reglas (y si tu plan lo permite), verás un estado vacío con tarjetas de predeterminados, p. ej.: auto-pack para fraude, auto-pack para producto no recibido, enviar disputas de alto valor a revisión y una regla de revisión general. Haz clic en «Instalar reglas sugeridas» para añadirlas todas de una vez (o elige predeterminados concretos si la interfaz lo permite). Los predeterminados son idempotentes: reinstalar no crea duplicados.\n\nCon reglas creadas, puede aparecer un banner «Ver predeterminados» — abre una sección para instalar las mismas reglas sugeridas o crear reglas personalizadas. Las reglas se evalúan por prioridad; puedes reordenarlas en la página Reglas.\n\nLos predeterminados son un buen punto de partida; puedes editar o eliminar cualquier regla tras la instalación. Las reglas requieren un plan Starter o Pro."
       },
       "planComparison": {
         "title": "Comparar Free, Starter y Pro",
@@ -1792,7 +1793,7 @@
       "statusAvailable": "Disponible",
       "reviewIntro": "Así es como DisputeDesk manejará las disputas que coincidan con esta plantilla.",
       "reviewDetectionTitle": "Detección de Disputa",
-      "reviewDetectionDesc": "Cuando llega una nueva disputa, DisputeDesk comprueba si coincide con el tipo de plantilla {templateType}.",
+      "reviewDetectionDesc": "Las plantillas se agrupan por categoría de disputa ({templateType}) para adaptar listas de verificación y narrativas.",
       "reviewCollectionTitle": "Recopilación de Evidencia",
       "reviewCollectionDesc": "DisputeDesk recopila automáticamente la evidencia seleccionada:",
       "reviewPackTitle": "Creación del Paquete de Evidencia",
@@ -1800,7 +1801,7 @@
       "reviewNotifyTitle": "Notificación y Revisión",
       "reviewNotifyDesc": "Serás notificado cuando el paquete esté listo. Revisa, haz cambios finales y guarda en Shopify con un clic.",
       "andMore": "y {count} más",
-      "activateDesc": "Revisa la configuración de la plantilla y actívala para comenzar a automatizar las respuestas de disputas.",
+      "activateDesc": "Revisa la configuración de la plantilla y actívala para añadir este diseño a tu biblioteca de paquetes de evidencia.",
       "summaryTitle": "Resumen de la Plantilla",
       "summaryType": "Tipo de plantilla",
       "summaryEvidenceCount": "Tipos de evidencia",
@@ -1808,12 +1809,16 @@
       "summaryManual": "Recopilación manual",
       "types": "tipos",
       "readyTitle": "Listo para activar",
-      "readyDesc": "Una vez activada, esta plantilla procesará automáticamente todas las nuevas disputas de tipo {templateType}. Puedes pausar o editar en cualquier momento."
+      "readyDesc": "Tras activarla, gestiona este paquete en Packs. Las reglas de automatización (siguiente paso) deciden si las nuevas disputas generan primero evidencia automática o van a la cola de revisión."
     },
     "rules": {
-      "title": "Reglas de automatización",
-      "subtitle": "Elige qué reglas instalar. Las reglas preseleccionadas cubren los tipos de disputas más comunes.",
-      "badgeAutoPack": "Auto-pack",
+      "title": "Automatización y cola de revisión",
+      "subtitle": "Instala reglas iniciales para nuevas disputas: permitir la generación automática de evidencia o enviar primero a la cola de revisión. Es independiente de las plantillas de paquete en tu biblioteca.",
+      "packsRelationTitle": "Relación con las plantillas de paquete",
+      "packsRelationBody": "Las plantillas instaladas definen secciones y narrativas en tu biblioteca de paquetes de evidencia. Las reglas siguientes solo controlan si DisputeDesk ejecuta la generación automática estándar al sincronizar o marca la disputa para revisión manual.",
+      "packsLinkLabel": "Ver tus Packs",
+      "installedTemplatesSummary": "Plantillas de paquete guardadas en esta configuración: {list}",
+      "badgeAutoPack": "Generación auto",
       "badgeReview": "Revisión"
     },
     "teamNotifications": {
@@ -1840,7 +1845,7 @@
       "disputes": "Sincronizar",
       "policies": "Políticas",
       "packs": "Packs",
-      "rules": "Reglas",
+      "rules": "Auto y revisión",
       "team": "Equipo"
     },
     "welcome": {

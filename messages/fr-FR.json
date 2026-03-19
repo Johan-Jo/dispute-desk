@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Abonnement",
       "REFUND": "Remboursement non traité",
       "DUPLICATE": "Double facturation",
+      "DIGITAL": "Biens numériques ou service",
       "GENERAL": "Général"
     }
   },
@@ -922,7 +923,7 @@
       },
       "automationOverview": {
         "title": "Comment fonctionne l'automatisation",
-        "body": "DisputeDesk est conçu pour l'automatisation :\n\n1. Un nouveau litige apparaît dans Shopify.\n2. DisputeDesk le détecte.\n3. Vos règles sont évaluées.\n4. Si auto-dossier : un dossier est créé automatiquement.\n5. Le score de complétude est calculé.\n6. Si examen requis : le dossier va en file d'attente.\n\nVous contrôlez chaque étape via vos paramètres et règles."
+        "body": "DisputeDesk est conçu pour l'automatisation :\n\n1. Un nouveau litige apparaît dans Shopify.\n2. DisputeDesk le détecte.\n3. Vos règles sont évaluées.\n4. Si auto-dossier : un dossier est créé automatiquement.\n5. Le score de complétude est calculé.\n6. Si examen requis : le dossier va en file d'attente.\n\n**Bibliothèque de packs vs règles de routage :** Les modèles installés sous Packs constituent votre bibliothèque de preuves (sections et textes modifiables). **Les règles d'automatisation** décident seulement si un nouveau litige exécute le pipeline standard de génération automatique ou est envoyé d'abord en file d'examen—elles ne sélectionnent pas un modèle de bibliothèque pour cette génération. La génération auto utilise les collecteurs de commande, de suivi et de politiques.\n\nVous contrôlez chaque étape via vos paramètres et règles."
       },
       "viewingFilteringDisputes": {
         "title": "Afficher et filtrer les litiges",
@@ -942,7 +943,7 @@
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
-        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n\nLe dossier est structuré selon le motif du litige."
+        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
       },
       "generatingPackManually": {
         "title": "Créer un dossier manuellement",
@@ -966,7 +967,7 @@
       },
       "evidencePackTemplates": {
         "title": "Utiliser les modèles de packs de preuves",
-        "body": "La page Packs vous aide à démarrer avec des modèles de packs de preuves.\n\nSans packs, vous voyez des modèles recommandés — des packs prédéfinis pour des types de litiges courants (ex. Fraude, Produit non reçu). Chaque carte de modèle a un bouton « Installer » : en cliquant, un nouveau pack est créé à partir du modèle pour votre boutique. Après l'installation, vous êtes redirigé vers la page du pack ; vous pouvez l'ouvrir à tout moment depuis la liste des packs. Utilisez « Retour aux packs » sur la page du pack pour revenir à la bibliothèque.\n\n« Parcourir tous les modèles » ouvre la bibliothèque complète pour prévisualiser et installer tout modèle. « Créer de zéro » démarre un pack vide.\n\nUne fois au moins un pack créé, une bannière peut suggérer d'explorer d'autres modèles ; vous pouvez la fermer ou cliquer « Parcourir les modèles » pour rouvrir la bibliothèque.\n\nLes modèles permettent d'obtenir rapidement des packs de preuves conformes aux bonnes pratiques ; vous pouvez modifier les documents et paramètres après l'installation."
+        "body": "La page Packs vous aide à démarrer avec des modèles de packs de preuves.\n\nSans packs, vous voyez des modèles recommandés — des packs prédéfinis pour des types de litiges courants (ex. Fraude, Produit non reçu). Chaque carte de modèle a un bouton « Installer » : en cliquant, un nouveau pack est créé à partir du modèle pour votre boutique. Après l'installation, vous êtes redirigé vers la page du pack ; vous pouvez l'ouvrir à tout moment depuis la liste des packs. Utilisez « Retour aux packs » sur la page du pack pour revenir à la bibliothèque.\n\n« Parcourir tous les modèles » ouvre la bibliothèque complète pour prévisualiser et installer tout modèle. « Créer de zéro » démarre un pack vide.\n\nUne fois au moins un pack créé, une bannière peut suggérer d'explorer d'autres modèles ; vous pouvez la fermer ou cliquer « Parcourir les modèles » pour rouvrir la bibliothèque.\n\nLes modèles permettent d'obtenir rapidement des packs de preuves conformes aux bonnes pratiques ; vous pouvez modifier les documents et paramètres après l'installation.\n\n**À noter :** les **règles d'automatisation** (page Règles ou assistant de configuration) déterminent si les nouveaux litiges sont générés automatiquement ou envoyés d'abord en file d'examen. Elles ne choisissent pas un modèle de bibliothèque précis pour chaque génération automatique — voir « Comment fonctionne l'automatisation » et « Comment les dossiers sont créés automatiquement »."
       },
       "definingStorePolicies": {
         "title": "Définir les politiques de votre boutique",
@@ -978,7 +979,7 @@
       },
       "creatingFirstRule": {
         "title": "Créer votre première règle",
-        "body": "Les règles contrôlent le routage des litiges.\n\nPour créer une règle :\n1. Allez à la page Règles.\n2. Cliquez \"Ajouter une règle\".\n3. Remplissez : nom, motifs, montant et action.\n4. Cliquez \"Créer la règle\".\n\nLes règles sont disponibles à partir du plan Starter."
+        "body": "Les règles contrôlent le routage des litiges.\n\nPour créer une règle :\n1. Allez à la page Règles.\n2. Cliquez \"Ajouter une règle\".\n3. Remplissez : nom, motifs, montant et action.\n4. Cliquez \"Créer la règle\".\n\n**« Auto-pack » :** pour un litige correspondant, la collecte de preuves **standard** peut s'exécuter à la première synchronisation. Cela ne signifie pas « utiliser un modèle précis de la bibliothèque » — les modèles se gèrent séparément sous Packs.\n\nLes règles sont disponibles à partir du plan Starter."
       },
       "rulePriority": {
         "title": "Priorité et ordre d'évaluation des règles",
@@ -990,7 +991,7 @@
       },
       "rulePresets": {
         "title": "Préréglages et règles suggérées",
-        "body": "La page Règles propose des préréglages pour automatiser rapidement le workflow des litiges.\n\nSans règles (et si votre plan le permet), vous voyez un état vide avec des cartes de préréglages, ex. : auto-pack pour fraude, auto-pack pour produit non reçu, envoyer les litiges à fort montant en révision, et une règle de révision globale. Cliquez « Installer les règles suggérées » pour toutes les ajouter d'un coup (ou choisir des préréglages précis si l'interface le permet). Les préréglages sont idempotents : réinstaller ne crée pas de doublons.\n\nUne fois des règles en place, une bannière « Voir les préréglages » peut apparaître — elle ouvre une section pour installer les mêmes règles suggérées ou créer des règles personnalisées. Les règles sont évaluées par priorité ; vous pouvez les réordonner sur la page Règles.\n\nLes préréglages sont un bon point de départ ; vous pouvez modifier ou supprimer toute règle après l'installation. Les règles nécessitent un plan Starter ou Pro."
+        "body": "La page Règles propose des préréglages pour automatiser rapidement le workflow des litiges.\n\nDans l'application intégrée, l'assistant de **configuration** peut installer des préréglages similaires à l'étape **Automatisation et file d'examen** (après **Packs**). Cette étape explique le lien avec les modèles de pack installés et peut afficher leurs noms.\n\nSans règles (et si votre plan le permet), vous voyez un état vide avec des cartes de préréglages, ex. : auto-pack pour fraude, auto-pack pour produit non reçu, envoyer les litiges à fort montant en révision, et une règle de révision globale. Cliquez « Installer les règles suggérées » pour toutes les ajouter d'un coup (ou choisir des préréglages précis si l'interface le permet). Les préréglages sont idempotents : réinstaller ne crée pas de doublons.\n\nUne fois des règles en place, une bannière « Voir les préréglages » peut apparaître — elle ouvre une section pour installer les mêmes règles suggérées ou créer des règles personnalisées. Les règles sont évaluées par priorité ; vous pouvez les réordonner sur la page Règles.\n\nLes préréglages sont un bon point de départ ; vous pouvez modifier ou supprimer toute règle après l'installation. Les règles nécessitent un plan Starter ou Pro."
       },
       "planComparison": {
         "title": "Comparer Free, Starter et Pro",
@@ -1792,7 +1793,7 @@
       "statusAvailable": "Disponible",
       "reviewIntro": "Voici comment DisputeDesk traitera les litiges correspondant à ce modèle.",
       "reviewDetectionTitle": "Détection de litige",
-      "reviewDetectionDesc": "Lorsqu'un nouveau litige arrive, DisputeDesk vérifie s'il correspond au type de modèle {templateType}.",
+      "reviewDetectionDesc": "Les modèles sont regroupés par catégorie de litige ({templateType}) pour adapter listes de contrôle et récits.",
       "reviewCollectionTitle": "Collecte de preuves",
       "reviewCollectionDesc": "DisputeDesk collecte automatiquement les preuves sélectionnées :",
       "reviewPackTitle": "Création du dossier de preuves",
@@ -1800,7 +1801,7 @@
       "reviewNotifyTitle": "Notification et vérification",
       "reviewNotifyDesc": "Vous serez notifié lorsque le dossier sera prêt. Vérifiez, apportez les modifications finales et sauvegardez sur Shopify en un clic.",
       "andMore": "et {count} de plus",
-      "activateDesc": "Vérifiez la configuration du modèle et activez-le pour commencer à automatiser les réponses aux litiges.",
+      "activateDesc": "Vérifiez la configuration du modèle et activez-le pour ajouter cette mise en page à votre bibliothèque de dossiers de preuves.",
       "summaryTitle": "Résumé du modèle",
       "summaryType": "Type de modèle",
       "summaryEvidenceCount": "Types de preuves",
@@ -1808,12 +1809,16 @@
       "summaryManual": "Collecte manuelle",
       "types": "types",
       "readyTitle": "Prêt à activer",
-      "readyDesc": "Une fois activé, ce modèle traitera automatiquement tous les nouveaux litiges de type {templateType}. Vous pouvez le mettre en pause ou le modifier à tout moment."
+      "readyDesc": "Une fois activé, gérez ce dossier sous Packs. Les règles d'automatisation (étape suivante) déterminent si les nouveaux litiges lancent d'abord la collecte automatique de preuves ou la file d'examen."
     },
     "rules": {
-      "title": "Règles d'automatisation",
-      "subtitle": "Choisissez les règles à installer. Les règles présélectionnées couvrent les types de litiges les plus courants.",
-      "badgeAutoPack": "Auto-pack",
+      "title": "Automatisation et file d'examen",
+      "subtitle": "Installez des règles de départ pour les nouveaux litiges : autoriser la génération automatique de preuves ou envoyer d'abord vers la file d'examen. Indépendant des modèles de pack dans votre bibliothèque.",
+      "packsRelationTitle": "Lien avec les modèles de pack",
+      "packsRelationBody": "Les modèles installés définissent les sections et textes dans votre bibliothèque de dossiers de preuves. Les règles ci-dessous contrôlent uniquement si DisputeDesk lance la génération automatique standard à la première synchronisation ou marque le litige pour examen manuel.",
+      "packsLinkLabel": "Voir vos Packs",
+      "installedTemplatesSummary": "Modèles de pack enregistrés dans cette configuration : {list}",
+      "badgeAutoPack": "Génération auto",
       "badgeReview": "Révision"
     },
     "teamNotifications": {
@@ -1840,7 +1845,7 @@
       "disputes": "Synchroniser",
       "policies": "Politiques",
       "packs": "Packs",
-      "rules": "Règles",
+      "rules": "Auto et examen",
       "team": "Équipe"
     },
     "welcome": {

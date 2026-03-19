@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Abonnement",
       "REFUND": "Rückerstattung nicht bearbeitet",
       "DUPLICATE": "Doppelte Belastung",
+      "DIGITAL": "Digitale Güter oder Dienstleistung",
       "GENERAL": "Allgemein"
     }
   },
@@ -922,7 +923,7 @@
       },
       "automationOverview": {
         "title": "Wie Automatisierung funktioniert",
-        "body": "DisputeDesk ist automatisierungsorientiert:\n\n1. Ein neuer Streitfall erscheint in Shopify.\n2. DisputeDesk erkennt ihn.\n3. Ihre Regeln werden ausgewertet.\n4. Bei Auto-Paket: ein Beweispaket wird automatisch erstellt.\n5. Die Vollständigkeitspunktzahl wird berechnet.\n6. Bei erforderlicher Prüfung: das Paket erscheint in der Warteschlange.\n\nSie kontrollieren jeden Schritt über Ihre Einstellungen und Regeln."
+        "body": "DisputeDesk ist automatisierungsorientiert:\n\n1. Ein neuer Streitfall erscheint in Shopify.\n2. DisputeDesk erkennt ihn.\n3. Ihre Regeln werden ausgewertet.\n4. Bei Auto-Paket: ein Beweispaket wird automatisch erstellt.\n5. Die Vollständigkeitspunktzahl wird berechnet.\n6. Bei erforderlicher Prüfung: das Paket erscheint in der Warteschlange.\n\n**Paketbibliothek vs. Weiterleitungsregeln:** Unter „Packs“ installierte Vorlagen landen in Ihrer Beweisbibliothek (Abschnitte und Texte zum Bearbeiten). **Automatisierungsregeln** entscheiden nur, ob ein neuer Streitfall die Standard-Pipeline für den automatischen Aufbau durchläuft oder zuerst in die Prüfwarteschlange geht—sie wählen keine Bibliotheksvorlage für diesen automatischen Build. Der Auto-Build nutzt Sammler für Bestellung, Tracking und Richtlinien.\n\nSie kontrollieren jeden Schritt über Ihre Einstellungen und Regeln."
       },
       "viewingFilteringDisputes": {
         "title": "Streitfälle anzeigen und filtern",
@@ -942,7 +943,7 @@
       },
       "howPacksBuilt": {
         "title": "Wie Bewispakete automatisch erstellt werden",
-        "body": "DisputeDesk sammelt automatisch Beweise aus mehreren Quellen:\n\n- Bestelldaten: Positionen, Beträge, Adresse (nur Stadtebene).\n- Versand & Tracking: Spediteur, Sendungsnummern, Lieferstatus.\n- Shop-Richtlinien: Versand-, Rückgabe- und Stornierungsrichtlinien.\n\nDas Paket wird nach Streitfallgrund strukturiert."
+        "body": "DisputeDesk sammelt automatisch Beweise aus mehreren Quellen:\n\n- Bestelldaten: Positionen, Beträge, Adresse (nur Stadtebene).\n- Versand & Tracking: Spediteur, Sendungsnummern, Lieferstatus.\n- Shop-Richtlinien: Versand-, Rückgabe- und Stornierungsrichtlinien.\n\nDas Paket wird nach Streitfallgrund strukturiert.\n\n**Bibliotheksvorlagen:** Eine unter „Packs“ installierte Vorlage ergänzt Ihre **Bibliothek** mit Abschnitten und Texten. Das ist getrennt vom **automatischen Aufbau pro Streitfall**, der die Sammler-Pipeline nutzt und Ihre Bibliotheksstruktur derzeit nicht automatisch übernimmt."
       },
       "generatingPackManually": {
         "title": "Ein Paket manuell erstellen",
@@ -966,7 +967,7 @@
       },
       "evidencePackTemplates": {
         "title": "Bewispaket-Vorlagen verwenden",
-        "body": "Die Paketseite hilft Ihnen, Beweispakete mit Vorlagen zu erstellen.\n\nWenn Sie noch keine Pakete haben, sehen Sie empfohlene Vorlagen — vorgefertigte Pakete für häufige Streitfalltypen (z. B. Betrug, Produkt nicht erhalten). Jede Vorlagenkarte hat einen „Installieren“-Button: Klicken Sie darauf, um ein neues Paket aus dieser Vorlage für Ihren Shop zu erstellen. Nach der Installation gelangen Sie zur Detailseite des Pakets; Sie können es jederzeit über die Paketliste öffnen. Nutzen Sie „Zurück zu Paketen“ auf der Paketseite, um zur Bibliothek zurückzukehren.\n\n„Alle Vorlagen durchsuchen“ öffnet die vollständige Vorlagenbibliothek, damit Sie jede Vorlage ansehen und installieren können. „Von Grund auf erstellen“ startet ein leeres Paket.\n\nWenn Sie mindestens ein Paket haben, erscheint ggf. ein kurzer Banner mit dem Hinweis, weitere Vorlagen zu erkunden; Sie können ihn schließen oder auf „Vorlagen durchsuchen“ klicken, um die Bibliothek erneut zu öffnen.\n\nVorlagen sind eine schnelle Möglichkeit, Beweispakete nach Best Practices zu erstellen; Sie können Dokumente und Einstellungen nach der Installation jederzeit bearbeiten."
+        "body": "Die Paketseite hilft Ihnen, Beweispakete mit Vorlagen zu erstellen.\n\nWenn Sie noch keine Pakete haben, sehen Sie empfohlene Vorlagen — vorgefertigte Pakete für häufige Streitfalltypen (z. B. Betrug, Produkt nicht erhalten). Jede Vorlagenkarte hat einen „Installieren“-Button: Klicken Sie darauf, um ein neues Paket aus dieser Vorlage für Ihren Shop zu erstellen. Nach der Installation gelangen Sie zur Detailseite des Pakets; Sie können es jederzeit über die Paketliste öffnen. Nutzen Sie „Zurück zu Paketen“ auf der Paketseite, um zur Bibliothek zurückzukehren.\n\n„Alle Vorlagen durchsuchen“ öffnet die vollständige Vorlagenbibliothek, damit Sie jede Vorlage ansehen und installieren können. „Von Grund auf erstellen“ startet ein leeres Paket.\n\nWenn Sie mindestens ein Paket haben, erscheint ggf. ein kurzer Banner mit dem Hinweis, weitere Vorlagen zu erkunden; Sie können ihn schließen oder auf „Vorlagen durchsuchen“ klicken, um die Bibliothek erneut zu öffnen.\n\nVorlagen sind eine schnelle Möglichkeit, Beweispakete nach Best Practices zu erstellen; Sie können Dokumente und Einstellungen nach der Installation jederzeit bearbeiten.\n\n**Hinweis:** **Automatisierungsregeln** (Regelseite oder Einrichtung) steuern, ob neue Streitfälle automatisch gebaut oder zuerst in die Prüfwarteschlange gehen. Sie legen nicht pro automatischem Build eine bestimmte Bibliotheksvorlage fest — siehe „Wie Automatisierung funktioniert“ und „Wie Bewispakete automatisch erstellt werden“."
       },
       "definingStorePolicies": {
         "title": "Shop-Richtlinien definieren",
@@ -978,7 +979,7 @@
       },
       "creatingFirstRule": {
         "title": "Ihre erste Regel erstellen",
-        "body": "Regeln steuern das Routing von Streitfällen.\n\nSo erstellen Sie eine Regel:\n1. Gehen Sie zur Regelseite.\n2. Klicken Sie \"Regel hinzufügen\".\n3. Name, Gründe, Betragsbereich und Aktion festlegen.\n4. Klicken Sie \"Regel erstellen\".\n\nRegeln sind ab dem Starter-Plan verfügbar."
+        "body": "Regeln steuern das Routing von Streitfällen.\n\nSo erstellen Sie eine Regel:\n1. Gehen Sie zur Regelseite.\n2. Klicken Sie \"Regel hinzufügen\".\n3. Name, Gründe, Betragsbereich und Aktion festlegen.\n4. Klicken Sie \"Regel erstellen\".\n\n**„Auto-Pack“:** Bei einem passenden Streitfall kann die **Standard**-Beweissammlung beim ersten Sync laufen. Das bedeutet nicht „ein bestimmtes Bibliotheks-Paket verwenden“—Vorlagen verwalten Sie separat unter Packs.\n\nRegeln sind ab dem Starter-Plan verfügbar."
       },
       "rulePriority": {
         "title": "Regelpriorität und Auswertungsreihenfolge",
@@ -990,7 +991,7 @@
       },
       "rulePresets": {
         "title": "Regelvoreinstellungen und vorgeschlagene Regeln",
-        "body": "Die Regelseite bietet vorgeschlagene Regelvoreinstellungen, um Ihren Streitfall-Workflow schnell zu automatisieren.\n\nWenn Sie noch keine Regeln haben (und Ihr Plan Regeln unterstützt), sehen Sie einen leeren Zustand mit Voreinstellungskarten, z. B.: Auto-Paket für Betrugsstreitfälle, Auto-Paket für Produkt nicht erhalten, hochwertige Streitfälle zur Prüfung senden und eine Auffangregel zur Prüfung. Klicken Sie auf „Vorgeschlagene Regeln installieren“, um alle auf einmal hinzuzufügen (oder wählen Sie spezifische Voreinstellungen, falls die Oberfläche es erlaubt). Voreinstellungen sind idempotent: erneutes Installieren erstellt keine Duplikate.\n\nSobald Sie Regeln haben, kann ein Banner mit „Voreinstellungen anzeigen“ erscheinen — hier können Sie dieselben vorgeschlagenen Regeln installieren oder eigene Regeln erstellen. Regeln werden in Prioritätsreihenfolge ausgewertet; Sie können sie auf der Regelseite neu anordnen.\n\nRegelvoreinstellungen sind ein guter Ausgangspunkt; Sie können jede Regel nach der Installation bearbeiten oder löschen. Regeln erfordern einen Starter- oder Pro-Plan."
+        "body": "Die Regelseite bietet vorgeschlagene Regelvoreinstellungen, um Ihren Streitfall-Workflow schnell zu automatisieren.\n\nIn der eingebetteten App kann der **Einrichtungs**-Assistent ähnliche Voreinstellungen im Schritt **Automatisierung & Prüfwarteschlange** (nach **Packs**) installieren. Dort wird erklärt, wie Routing-Regeln zu Ihren installierten Paketvorlagen passen; gespeicherte Vorlagennamen können angezeigt werden.\n\nWenn Sie noch keine Regeln haben (und Ihr Plan Regeln unterstützt), sehen Sie einen leeren Zustand mit Voreinstellungskarten, z. B.: Auto-Paket für Betrugsstreitfälle, Auto-Paket für Produkt nicht erhalten, hochwertige Streitfälle zur Prüfung senden und eine Auffangregel zur Prüfung. Klicken Sie auf „Vorgeschlagene Regeln installieren“, um alle auf einmal hinzuzufügen (oder wählen Sie spezifische Voreinstellungen, falls die Oberfläche es erlaubt). Voreinstellungen sind idempotent: erneutes Installieren erstellt keine Duplikate.\n\nSobald Sie Regeln haben, kann ein Banner mit „Voreinstellungen anzeigen“ erscheinen — hier können Sie dieselben vorgeschlagenen Regeln installieren oder eigene Regeln erstellen. Regeln werden in Prioritätsreihenfolge ausgewertet; Sie können sie auf der Regelseite neu anordnen.\n\nRegelvoreinstellungen sind ein guter Ausgangspunkt; Sie können jede Regel nach der Installation bearbeiten oder löschen. Regeln erfordern einen Starter- oder Pro-Plan."
       },
       "planComparison": {
         "title": "Free, Starter und Pro vergleichen",
@@ -1792,7 +1793,7 @@
       "statusAvailable": "Verfügbar",
       "reviewIntro": "So wird DisputeDesk Streitfälle behandeln, die dieser Vorlage entsprechen.",
       "reviewDetectionTitle": "Streitfall-Erkennung",
-      "reviewDetectionDesc": "Wenn ein neuer Streitfall eintrifft, prüft DisputeDesk, ob er dem Vorlagentyp {templateType} entspricht.",
+      "reviewDetectionDesc": "Vorlagen sind nach Streitkategorie ({templateType}) gruppiert, damit du Checklisten und Erzählungen anpassen kannst.",
       "reviewCollectionTitle": "Beweissammlung",
       "reviewCollectionDesc": "DisputeDesk sammelt automatisch die ausgewählten Beweise:",
       "reviewPackTitle": "Beweispaket-Erstellung",
@@ -1800,7 +1801,7 @@
       "reviewNotifyTitle": "Benachrichtigung & Überprüfung",
       "reviewNotifyDesc": "Du wirst benachrichtigt, wenn das Paket bereit ist. Überprüfe, nimm letzte Änderungen vor und speichere mit einem Klick bei Shopify.",
       "andMore": "und {count} weitere",
-      "activateDesc": "Überprüfe die Vorlagenkonfiguration und aktiviere sie, um die Automatisierung von Streitfall-Antworten zu starten.",
+      "activateDesc": "Überprüfe die Vorlagenkonfiguration und aktiviere sie, um dieses Layout deiner Beweispaket-Bibliothek hinzuzufügen.",
       "summaryTitle": "Vorlagen-Zusammenfassung",
       "summaryType": "Vorlagentyp",
       "summaryEvidenceCount": "Beweistypen",
@@ -1808,12 +1809,16 @@
       "summaryManual": "Manuelle Sammlung",
       "types": "Typen",
       "readyTitle": "Bereit zur Aktivierung",
-      "readyDesc": "Nach der Aktivierung wird diese Vorlage automatisch alle neuen {templateType}-Streitfälle verarbeiten. Du kannst jederzeit pausieren oder bearbeiten."
+      "readyDesc": "Nach der Aktivierung verwaltest du dieses Paket unter Pakete. Automatisierungsregeln (nächster Schritt) legen fest, ob neue Streitfälle zuerst automatisch belegt werden oder in die Prüfwarteschlange gehen."
     },
     "rules": {
-      "title": "Automatisierungsregeln",
-      "subtitle": "Wähle aus, welche Regeln installiert werden sollen. Vorausgewählte Regeln decken die häufigsten Streitigkeitstypen ab.",
-      "badgeAutoPack": "Auto-Pack",
+      "title": "Automatisierung & Prüfwarteschlange",
+      "subtitle": "Installiere Starterregeln für neue Streitfälle: automatische Beweiserstellung zulassen oder zuerst in die Prüfwarteschlange senden. Das ist unabhängig von Paketvorlagen in deiner Bibliothek.",
+      "packsRelationTitle": "Zusammenhang mit Paketvorlagen",
+      "packsRelationBody": "Installierte Vorlagen definieren Abschnitte und Texte in deiner Beweispaket-Bibliothek. Die Regeln unten steuern nur, ob DisputeDesk beim ersten Sync den Standard-Auto-Build ausführt oder den Streitfall zur manuellen Prüfung markiert.",
+      "packsLinkLabel": "Pakete anzeigen",
+      "installedTemplatesSummary": "In diesem Setup gespeicherte Paketvorlagen: {list}",
+      "badgeAutoPack": "Auto-Build",
       "badgeReview": "Prüfung"
     },
     "teamNotifications": {
@@ -1840,7 +1845,7 @@
       "disputes": "Synchronisieren",
       "policies": "Richtlinien",
       "packs": "Pakete",
-      "rules": "Regeln",
+      "rules": "Auto & Prüfung",
       "team": "Team"
     },
     "welcome": {

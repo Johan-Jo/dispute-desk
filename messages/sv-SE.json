@@ -352,6 +352,7 @@
       "SUBSCRIPTION": "Prenumeration",
       "REFUND": "Återbetalning ej genomförd",
       "DUPLICATE": "Dubbel debitering",
+      "DIGITAL": "Digitala varor eller tjänst",
       "GENERAL": "Allmänt"
     }
   },
@@ -923,7 +924,7 @@
       },
       "automationOverview": {
         "title": "Hur automation fungerar",
-        "body": "DisputeDesk är automationsföst. Så här fungerar flödet:\n\n1. En ny tvist uppstår i Shopify.\n2. DisputeDesk upptäcker den (via webhook eller schemalagd synk).\n3. Dina regler utvärderas för att avgöra: autopaket eller granskningskö.\n4. Om autopaket: ett bevispaket byggs automatiskt från orderdata, spårningsinfo och butikspolicyer.\n5. Fullständighetspoängen beräknas. Om den uppfyller ditt tröskelvärde och det inte finns några blockeringar, sparas beviset automatiskt till Shopify.\n6. Om granskning krävs: paketet visas i din granskningskö för manuellt godkännande.\n\nDu kontrollerar varje steg genom dina automationsinställningar och regler."
+        "body": "DisputeDesk är automationsföst. Så här fungerar flödet:\n\n1. En ny tvist uppstår i Shopify.\n2. DisputeDesk upptäcker den (via webhook eller schemalagd synk).\n3. Dina regler utvärderas för att avgöra: autopaket eller granskningskö.\n4. Om autopaket: ett bevispaket byggs automatiskt från orderdata, spårningsinfo och butikspolicyer.\n5. Fullständighetspoängen beräknas. Om den uppfyller ditt tröskelvärde och det inte finns några blockeringar, sparas beviset automatiskt till Shopify.\n6. Om granskning krävs: paketet visas i din granskningskö för manuellt godkännande.\n\n**Paketbibliotek vs styrningsregler:** Mallar du installerar under Paket hamnar i ditt bevisbibliotek (avsnitt och texter att redigera). **Automatiseringsregler** avgör bara om en ny tvist kör standardflödet för autobygg eller skickas till granskningskö först—de väljer inte en biblioteksmall för just det automatiska bygget. Autobygg använder insamlare för order, spårning och policyer.\n\nDu kontrollerar varje steg genom dina automationsinställningar och regler."
       },
       "viewingFilteringDisputes": {
         "title": "Visa och filtrera tvister",
@@ -943,7 +944,7 @@
       },
       "howPacksBuilt": {
         "title": "Hur bevispaket byggs automatiskt",
-        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis."
+        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis.\n\n**Biblioteksmallar:** Att installera en mall under Paket lägger till ett paket i ditt **bibliotek** (texter och avsnitt). Det är skilt från varje **automatisk per-tvist-byggnad**, som använder insamlarpipelinen ovan; bibliotekets layout slås ännu inte automatiskt in i bygget."
       },
       "generatingPackManually": {
         "title": "Skapa ett paket manuellt",
@@ -967,7 +968,7 @@
       },
       "evidencePackTemplates": {
         "title": "Använda bevispaketmallar",
-        "body": "Paketsidan hjälper dig att komma igång med bevispaketmallar.\n\nUtan paket ser du rekommenderade mallar — färdiga paket för vanliga tvisttyper (t.ex. Bedrägeri, Produkt inte mottagen). Varje mallkort har en «Installera»-knapp: klicka för att skapa ett nytt paket från den mallen för din butik. Efter installation kommer du till paketets sida; du kan också öppna det när som helst från paketlistan. Använd «Tillbaka till paket» på paketsidan för att återgå till biblioteket.\n\n«Bläddra i alla mallar» öppnar hela mallbiblioteket så att du kan förhandsgranska och installera valfri mall. «Skapa från scratch» startar ett tomt paket.\n\nMed minst ett paket kan en kort banderoll dyka upp som föreslår att utforska fler mallar; du kan stänga den eller klicka «Bläddra i mallar» för att öppna biblioteket igen.\n\nMallar är ett snabbt sätt att få bevispaket enligt bästa praxis; du kan alltid redigera dokument och inställningar efter installation."
+        "body": "Paketsidan hjälper dig att komma igång med bevispaketmallar.\n\nUtan paket ser du rekommenderade mallar — färdiga paket för vanliga tvisttyper (t.ex. Bedrägeri, Produkt inte mottagen). Varje mallkort har en «Installera»-knapp: klicka för att skapa ett nytt paket från den mallen för din butik. Efter installation kommer du till paketets sida; du kan också öppna det när som helst från paketlistan. Använd «Tillbaka till paket» på paketsidan för att återgå till biblioteket.\n\n«Bläddra i alla mallar» öppnar hela mallbiblioteket så att du kan förhandsgranska och installera valfri mall. «Skapa från scratch» startar ett tomt paket.\n\nMed minst ett paket kan en kort banderoll dyka upp som föreslår att utforska fler mallar; du kan stänga den eller klicka «Bläddra i mallar» för att öppna biblioteket igen.\n\nMallar är ett snabbt sätt att få bevispaket enligt bästa praxis; du kan alltid redigera dokument och inställningar efter installation.\n\n**Relaterat:** **Automatiseringsregler** (Regler-sidan eller installationsguiden) styr om nya tvister autobyggs eller skickas till granskningskö först. De väljer inte en specifik biblioteksmall för varje automatiskt bygge — se «Hur automation fungerar» och «Hur bevispaket byggs automatiskt»."
       },
       "definingStorePolicies": {
         "title": "Definiera dina butikspolicyer",
@@ -979,7 +980,7 @@
       },
       "creatingFirstRule": {
         "title": "Skapa din första regel",
-        "body": "Regler låter dig styra hur tvister dirigeras — till autopaket eller granskningskö.\n\nFör att skapa en regel:\n1. Gå till Regelsidan.\n2. Klicka \"Lägg till regel\".\n3. Fyll i detaljerna: namn, matchande orsaker, beloppsintervall och åtgärd.\n4. Klicka \"Skapa regel\".\n\nExempel: skapa en regel som skickar alla tvister över 5000 kr till granskning.\n\nRegler finns på Starter- och Pro-planer."
+        "body": "Regler låter dig styra hur tvister dirigeras — till autopaket eller granskningskö.\n\nFör att skapa en regel:\n1. Gå till Regelsidan.\n2. Klicka \"Lägg till regel\".\n3. Fyll i detaljerna: namn, matchande orsaker, beloppsintervall och åtgärd.\n4. Klicka \"Skapa regel\".\n\nExempel: skapa en regel som skickar alla tvister över 5000 kr till granskning.\n\n**Vad \"Autopaket\" betyder:** För en matchande tvist kan **standardflödet** för bevisinsamling köras vid första synk. Det betyder inte \"använd en viss mall från biblioteket\"—mallar hanteras separat under Paket.\n\nRegler finns på Starter- och Pro-planer."
       },
       "rulePriority": {
         "title": "Regelprioritet och utvärderingsordning",
@@ -991,7 +992,7 @@
       },
       "rulePresets": {
         "title": "Regelinställningar och föreslagna regler",
-        "body": "Regelsidan erbjuder föreslagna regelinställningar för att automatisera din tvistarbetsflöde snabbt.\n\nUtan regler (och om din plan stöder regler) ser du ett tomt tillstånd med inställningskort, t.ex.: auto-paket för bedrägeritvister, auto-paket för produkt inte mottagen, skicka högvärdiga tvister till granskning och en fångst-all-granskningsregel. Klicka «Installera föreslagna regler» för att lägga till alla på en gång (eller välj specifika inställningar om gränssnittet tillåter). Inställningar är idempotenta: ominstallation skapar inte duplicat.\n\nMed regler kan en banderoll dyka upp med «Visa inställningar» — detta öppnar en sektion där du kan installera samma föreslagna regler eller skapa anpassade regler. Regler utvärderas i prioritetsordning; du kan ändra ordning på dem på Regelsidan.\n\nRegelinställningar är en bra utgångspunkt; du kan redigera eller ta bort valfri regel efter installation. Regler kräver en Starter- eller Pro-plan."
+        "body": "Regelsidan erbjuder föreslagna regelinställningar för att automatisera din tvistarbetsflöde snabbt.\n\nI den inbäddade appen kan **installationsguiden** installera liknande förval på steget **Automatisering och granskningskö** (efter **Paket**). Där förklaras hur styrningsregler hänger ihop med dina installerade paketmallar och sparade mallnamn kan visas.\n\nUtan regler (och om din plan stöder regler) ser du ett tomt tillstånd med inställningskort, t.ex.: auto-paket för bedrägeritvister, auto-paket för produkt inte mottagen, skicka högvärdiga tvister till granskning och en fångst-all-granskningsregel. Klicka «Installera föreslagna regler» för att lägga till alla på en gång (eller välj specifika inställningar om gränssnittet tillåter). Inställningar är idempotenta: ominstallation skapar inte duplicat.\n\nMed regler kan en banderoll dyka upp med «Visa inställningar» — detta öppnar en sektion där du kan installera samma föreslagna regler eller skapa anpassade regler. Regler utvärderas i prioritetsordning; du kan ändra ordning på dem på Regelsidan.\n\nRegelinställningar är en bra utgångspunkt; du kan redigera eller ta bort valfri regel efter installation. Regler kräver en Starter- eller Pro-plan."
       },
       "planComparison": {
         "title": "Jämför Free, Starter och Pro",
@@ -1657,7 +1658,7 @@
       "statusAvailable": "Tillgänglig",
       "reviewIntro": "Så här kommer DisputeDesk att hantera tvister som matchar denna mall.",
       "reviewDetectionTitle": "Tvistdetektering",
-      "reviewDetectionDesc": "När en ny tvist kommer in kontrollerar DisputeDesk om den matchar malltypen {templateType}.",
+      "reviewDetectionDesc": "Mallar grupperas efter tvistkategori ({templateType}) så att du kan anpassa checklistor och berättelser.",
       "reviewCollectionTitle": "Bevisinsamling",
       "reviewCollectionDesc": "DisputeDesk samlar automatiskt in de valda bevisen:",
       "reviewPackTitle": "Skapande av bevispaket",
@@ -1665,7 +1666,7 @@
       "reviewNotifyTitle": "Avisering och granskning",
       "reviewNotifyDesc": "Du meddelas när paketet är klart. Granska, gör sista ändringar och spara till Shopify med ett klick.",
       "andMore": "och {count} till",
-      "activateDesc": "Granska mallkonfigurationen och aktivera den för att börja automatisera tvistsvar.",
+      "activateDesc": "Granska mallkonfigurationen och aktivera den för att lägga till denna layout i ditt bevispaketsbibliotek.",
       "summaryTitle": "Mallöversikt",
       "summaryType": "Malltyp",
       "summaryEvidenceCount": "Bevistyper",
@@ -1673,12 +1674,16 @@
       "summaryManual": "Manuell insamling",
       "types": "typer",
       "readyTitle": "Redo att aktivera",
-      "readyDesc": "När den aktiverats kommer denna mall automatiskt att behandla alla nya {templateType}-tvister. Du kan pausa eller redigera när som helst."
+      "readyDesc": "Efter aktivering hanterar du paketet under Paket. Automatiseringsregler (nästa steg) avgör om nya tvister först får automatisk bevisinsamling eller granskningskö."
     },
     "rules": {
-      "title": "Automatiseringsregler",
-      "subtitle": "Välj vilka regler som ska installeras. Förvalda regler täcker de vanligaste tvisttyperna.",
-      "badgeAutoPack": "Auto-pack",
+      "title": "Automatisering och granskningskö",
+      "subtitle": "Installera startregler för nya tvister: tillåt automatisk bevisgenerering eller skicka först till granskningskö. Detta är separat från packmallar i ditt bibliotek.",
+      "packsRelationTitle": "Hur det hänger ihop med packmallar",
+      "packsRelationBody": "Mallar du installerat definierar avsnitt och texter i ditt bevispaketsbibliotek. Reglerna nedan styr bara om DisputeDesk kör standardbygget vid första synk eller markerar tvisten för manuell granskning.",
+      "packsLinkLabel": "Visa dina Paket",
+      "installedTemplatesSummary": "Packmallar sparade i denna installation: {list}",
+      "badgeAutoPack": "Autobygg",
       "badgeReview": "Granskning"
     },
     "teamNotifications": {
@@ -1705,7 +1710,7 @@
       "disputes": "Synkronisera",
       "policies": "Policyer",
       "packs": "Paket",
-      "rules": "Regler",
+      "rules": "Auto och granskning",
       "team": "Team"
     },
     "welcome": {

@@ -262,7 +262,13 @@ Portal always deep-links to Shopify Admin for final submission.
 
 ## Setup Wizard & Onboarding
 
-DisputeDesk includes a 7-step guided setup wizard (`/app/setup/[step]`): connect store → goals → disputes → packs → rules → policies → team. Billing, settings, and help are app sections only (not part of the onboarding checklist). The wizard is embedded within Shopify Admin using Polaris and preserves `shop`/`host` query params for App Bridge compatibility.
+DisputeDesk includes a guided setup wizard (`/app/setup/[step]`). After optional steps (permissions, open in admin) and welcome/goals, the main wizard flow is: **sync disputes → policies → pack templates → automation & review queue → team**. Billing, settings, and help are app sections only (not part of the onboarding checklist). The wizard is embedded within Shopify Admin using Polaris and preserves `shop`/`host` query params for App Bridge compatibility.
+
+### Packs step vs Rules step (product model)
+
+- **Packs:** Installing a template creates the shop’s **pack library** (`packs`, sections, narratives). IDs are stored in `shop_setup.steps.packs.payload.installedTemplates` when the step completes.
+- **Rules:** Starter rules in the `rules` table are evaluated when a **new** dispute syncs (`auto_pack` → automation pipeline; `review` → `needs_review`). This is **routing**, not “pick library template X for the build.”
+- **Build:** `buildPack` uses source collectors; it does not currently merge library template structure into automated per-dispute builds. See [`docs/technical.md`](technical.md) (*Rules vs library packs*).
 
 ### Dashboard Integration
 

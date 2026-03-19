@@ -467,6 +467,13 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/setup/undo-skip` — undo a skip (reset to todo)
 - `progress.total` / `doneCount` count all 8 onboarding steps (`permissions` + `open_in_admin` included); `nextStepId` is the next actionable `todo` step based on prerequisites.
 
+#### Rules vs library packs (mental model)
+
+- **Pack templates** (`POST /api/templates/:id/install`): Creates shop **library** rows in `packs`, `pack_sections`, narratives, etc. (`installTemplate` in `lib/db/packs.ts`). When the Packs wizard step completes, installed template IDs are stored in `shop_setup.steps.packs.payload.installedTemplates`.
+- **Automation rules** (`POST /api/rules/install-preset`): Inserts `rules` rows. On **new dispute** sync, `evaluateRules()` in `lib/disputes/syncDisputes.ts` returns `auto_pack` → `runAutomationPipeline()` / `build_pack` job, or `review` → `needs_review` on the dispute.
+- **Important:** `lib/packs/buildPack.ts` assembles evidence via **collectors** (order, fulfillment, policy, manual). It does **not** currently apply library `packs` template structure to automated per-dispute builds. The setup template wizard UI does not persist evidence selections to the install API (`PacksStep` posts an empty JSON body to install).
+- **Future (optional):** Extend rule `action` JSON with `library_pack_id` / `template_id`, teach `buildPack` to merge library expectations with collectors, and persist wizard selections on install if they should affect behavior.
+
 ### Integrations (Shopify session required)
 - `GET /api/integrations/status` — list integration statuses for a shop
 - `POST /api/integrations/gorgias/connect` — connect Gorgias (subdomain, email, API key → encrypted)

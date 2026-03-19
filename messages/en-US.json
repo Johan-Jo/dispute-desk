@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Subscription",
       "REFUND": "Refund not processed",
       "DUPLICATE": "Duplicate charge",
+      "DIGITAL": "Digital goods or service",
       "GENERAL": "General"
     }
   },
@@ -922,7 +923,7 @@
       },
       "automationOverview": {
         "title": "How automation works",
-        "body": "DisputeDesk is automation-first. Here's the flow:\n\n1. A new dispute appears in Shopify.\n2. DisputeDesk detects it (via webhook or scheduled sync).\n3. Your rules are evaluated to decide: auto-pack or send to review queue.\n4. If auto-pack: an evidence pack is built automatically from your order data, tracking info, and store policies.\n5. The completeness score is calculated. If it meets your threshold and there are no blockers, the evidence is saved to Shopify automatically.\n6. If review is required: the pack appears in your Review Queue for manual approval.\n\nYou control every step through your automation settings and rules. Automation can be fully enabled, partially enabled (auto-build but manual save), or disabled entirely."
+        "body": "DisputeDesk is automation-first. Here's the flow:\n\n1. A new dispute appears in Shopify.\n2. DisputeDesk detects it (via webhook or scheduled sync).\n3. Your rules are evaluated to decide: auto-pack or send to review queue.\n4. If auto-pack: an evidence pack is built automatically from your order data, tracking info, and store policies.\n5. The completeness score is calculated. If it meets your threshold and there are no blockers, the evidence is saved to Shopify automatically.\n6. If review is required: the pack appears in your Review Queue for manual approval.\n\n**Pack library vs routing rules:** Templates you install under Packs live in your evidence library (sections and narratives you can edit). **Automation rules** only decide whether a new dispute runs the standard auto-build pipeline or is sent to the review queue first—they do not select a library template for that automated build. Auto-build uses order, tracking, and policy collectors.\n\nYou control every step through your automation settings and rules. Automation can be fully enabled, partially enabled (auto-build but manual save), or disabled entirely."
       },
       "viewingFilteringDisputes": {
         "title": "Viewing and filtering disputes",
@@ -942,7 +943,7 @@
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
-        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack."
+        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack.\n\n**Library pack templates:** Installing a template from the Packs page adds a pack to your **library** for narratives, sections, and editing. That is separate from each **automated per-dispute build**, which uses the collectors pipeline above. The automated build does not currently merge your library template structure into the pack automatically."
       },
       "generatingPackManually": {
         "title": "Generating a pack manually",
@@ -966,7 +967,7 @@
       },
       "evidencePackTemplates": {
         "title": "Using evidence pack templates",
-        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\nIn the embedded app (inside Shopify Admin), Evidence Packs shows these templates in a table with row actions (Activate/Edit/Delete). Use \"Start from template\" to install templates, then activate draft packs from the table.\n\nTip: If the Packs page looks blank or you can't install templates, reopen DisputeDesk from Shopify Admin (Apps > DisputeDesk) so the embedded shop session is established. DisputeDesk relies on server-side shop identity (httpOnly cookies + middleware) and can't read it from the browser.\n\n**Template Setup Wizard:** In the portal you can use the Template Setup Wizard (Packs > customize or /portal/packs/customize) to configure a new template in four steps: choose evidence types to collect, set evidence sources (where each type comes from — auto, reusable, or manual), review how automation works and choose auto-submit or email-to-review, and activate. See \"Template setup wizard\" for details.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
+        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\nIn the embedded app (inside Shopify Admin), Evidence Packs shows these templates in a table with row actions (Activate/Edit/Delete). Use \"Start from template\" to install templates, then activate draft packs from the table.\n\nTip: If the Packs page looks blank or you can't install templates, reopen DisputeDesk from Shopify Admin (Apps > DisputeDesk) so the embedded shop session is established. DisputeDesk relies on server-side shop identity (httpOnly cookies + middleware) and can't read it from the browser.\n\n**Template Setup Wizard:** In the portal you can use the Template Setup Wizard (Packs > customize or /portal/packs/customize) to configure a new template in four steps: choose evidence types to collect, set evidence sources (where each type comes from — auto, reusable, or manual), review how automation works and choose auto-submit or email-to-review, and activate. See \"Template setup wizard\" for details.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing.\n\n**Related:** **Automation rules** (Rules page or Setup wizard) control whether new disputes are auto-built or sent to the review queue first. They do not swap in a specific library template for each automated build—see \"How automation works\" and \"How evidence packs are built automatically.\""
       },
       "templateSetupWizard": {
         "title": "Template setup wizard",
@@ -982,7 +983,7 @@
       },
       "creatingFirstRule": {
         "title": "Creating your first rule",
-        "body": "Rules let you control how disputes are routed — either to auto-pack or to the review queue.\n\nTo create a rule:\n1. Go to the Rules page.\n2. Click \"Add Rule.\"\n3. Fill in the details:\n   - Name: a label for your reference (e.g. \"High-value review\").\n   - Match Reasons: select which dispute reasons this rule applies to (leave empty to match all).\n   - Amount range: set a minimum and/or maximum dispute amount.\n   - Action: choose \"Auto-Pack\" (automatic processing) or \"Send to Review\" (manual queue).\n4. Click \"Create Rule.\"\n\nExample: create a rule that sends all disputes over $500 to review:\n- Name: \"High-value review\"\n- Min Amount: 500\n- Action: Send to Review\n\nRules are available on Starter and Pro plans. Free plan users can upgrade from the Billing page."
+        "body": "Rules let you control how disputes are routed — either to auto-pack or to the review queue.\n\nTo create a rule:\n1. Go to the Rules page.\n2. Click \"Add Rule.\"\n3. Fill in the details:\n   - Name: a label for your reference (e.g. \"High-value review\").\n   - Match Reasons: select which dispute reasons this rule applies to (leave empty to match all).\n   - Amount range: set a minimum and/or maximum dispute amount.\n   - Action: choose \"Auto-Pack\" (automatic processing) or \"Send to Review\" (manual queue).\n4. Click \"Create Rule.\"\n\nExample: create a rule that sends all disputes over $500 to review:\n- Name: \"High-value review\"\n- Min Amount: 500\n- Action: Send to Review\n\n**What \"Auto-Pack\" means:** For a matching dispute, DisputeDesk may run the **standard** evidence collection pipeline when the dispute first syncs. It does **not** mean \"use a specific pack template from your library\"—those templates are managed under Packs separately.\n\nRules are available on Starter and Pro plans. Free plan users can upgrade from the Billing page."
       },
       "rulePriority": {
         "title": "Rule priority and evaluation order",
@@ -994,7 +995,7 @@
       },
       "rulePresets": {
         "title": "Rule presets and suggested rules",
-        "body": "The Rules page offers suggested rule presets so you can automate your dispute workflow quickly.\n\nWhen you have no rules (and your plan supports rules), you'll see an empty state with preset cards, for example: auto-pack for fraud disputes, auto-pack for product-not-received, send high-value disputes to review, and a catch-all review rule. Click \"Install Suggested Rules\" to add all of them at once (or choose specific presets if the UI allows). Presets are idempotent: installing again won't create duplicates.\n\nOnce you have rules, a banner may appear with \"View Presets\" — this opens a section where you can install the same suggested rules or create custom rules. Rules are evaluated in priority order; you can reorder them on the Rules page.\n\nRule presets are a good starting point; you can edit or delete any rule after installation. Rules require a Starter or Pro plan."
+        "body": "The Rules page offers suggested rule presets so you can automate your dispute workflow quickly.\n\nIn the embedded app, the **Setup** wizard can install the same kinds of presets on the **Automation & review queue** step (after **Packs**). That step explains how routing rules relate to pack templates you installed and may list those template names for context.\n\nWhen you have no rules (and your plan supports rules), you'll see an empty state with preset cards, for example: auto-pack for fraud disputes, auto-pack for product-not-received, send high-value disputes to review, and a catch-all review rule. Click \"Install Suggested Rules\" to add all of them at once (or choose specific presets if the UI allows). Presets are idempotent: installing again won't create duplicates.\n\nOnce you have rules, a banner may appear with \"View Presets\" — this opens a section where you can install the same suggested rules or create custom rules. Rules are evaluated in priority order; you can reorder them on the Rules page.\n\nRule presets are a good starting point; you can edit or delete any rule after installation. Rules require a Starter or Pro plan."
       },
       "planComparison": {
         "title": "Comparing Free, Starter, and Pro plans",
@@ -1792,7 +1793,7 @@
       "statusAvailable": "Available",
       "reviewIntro": "Here's how DisputeDesk will handle disputes matching this template.",
       "reviewDetectionTitle": "Dispute Detection",
-      "reviewDetectionDesc": "When a new dispute arrives, DisputeDesk checks if it matches the {templateType} template type.",
+      "reviewDetectionDesc": "Templates are grouped by dispute category ({templateType}) so you can tailor evidence checklists and narratives.",
       "reviewCollectionTitle": "Evidence Collection",
       "reviewCollectionDesc": "DisputeDesk automatically collects the selected evidence:",
       "reviewPackTitle": "Evidence Pack Creation",
@@ -1800,7 +1801,7 @@
       "reviewNotifyTitle": "Notification & Review",
       "reviewNotifyDesc": "You'll be notified when the pack is ready. Review, make any final changes, and save to Shopify with one click.",
       "andMore": "and {count} more",
-      "activateDesc": "Review your template configuration and activate it to start automating dispute responses.",
+      "activateDesc": "Review your template configuration and activate it to add this layout to your Evidence Packs library.",
       "summaryTitle": "Template Summary",
       "summaryType": "Template type",
       "summaryEvidenceCount": "Evidence types",
@@ -1808,12 +1809,16 @@
       "summaryManual": "Manual collection",
       "types": "types",
       "readyTitle": "Ready to activate",
-      "readyDesc": "Once activated, this template will automatically process all new {templateType} disputes. You can pause or edit it at any time."
+      "readyDesc": "Once activated, manage this pack under Packs. Automation rules (next step) control whether new disputes run automated evidence collection first or go to your review queue."
     },
     "rules": {
-      "title": "Automation Rules",
-      "subtitle": "Choose which rules to install. Pre-selected rules cover the most common dispute types.",
-      "badgeAutoPack": "Auto-pack",
+      "title": "Automation & review queue",
+      "subtitle": "Install starter rules that route new disputes: allow automated evidence building, or send to the review queue first. This is separate from pack templates in your library.",
+      "packsRelationTitle": "How this relates to pack templates",
+      "packsRelationBody": "Templates you installed define sections and narratives in your Evidence Packs library. The rules below only control whether DisputeDesk runs the standard auto-build when a dispute first syncs, or flags it for manual review.",
+      "packsLinkLabel": "View your Packs",
+      "installedTemplatesSummary": "Pack templates saved in this setup: {list}",
+      "badgeAutoPack": "Auto-build",
       "badgeReview": "Review"
     },
     "teamNotifications": {
@@ -1863,7 +1868,7 @@
       "disputes": "Sync disputes",
       "policies": "Set policies",
       "packs": "Generate packs",
-      "rules": "Add rules",
+      "rules": "Auto & review",
       "team": "Add team"
     }
   },

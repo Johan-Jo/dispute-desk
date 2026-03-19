@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BlockStack, Text } from "@shopify/polaris";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { BlockStack, Text, Banner } from "@shopify/polaris";
+import { useLocale, useTranslations } from "next-intl";
 import { RULE_PRESETS } from "@/lib/rules/presets";
-import type { StepId } from "@/lib/setup/types";
+import type { StepId, SetupStateResponse } from "@/lib/setup/types";
+import { withShopParams } from "@/lib/withShopParams";
 
 const DEFAULT_SELECTED = new Set(["preset-fraud-auto", "preset-pnr-auto"]);
 
@@ -25,7 +27,45 @@ function getShopId(): string | null {
 export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepProps) {
   const t = useTranslations("setup.rules");
   const tRules = useTranslations("rules");
+  const locale = useLocale();
+  const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Set<string>>(new Set(DEFAULT_SELECTED));
+  const [installedTemplateLabels, setInstalledTemplateLabels] = useState<string[]>([]);
+
+  const packsHref = useMemo(
+    () => withShopParams("/app/packs", searchParams),
+    [searchParams]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stateRes = await fetch("/api/setup/state");
+        if (!stateRes.ok || cancelled) return;
+        const data = (await stateRes.json()) as SetupStateResponse;
+        const raw = data.steps?.packs?.payload?.installedTemplates;
+        const ids = Array.isArray(raw)
+          ? raw.filter((x): x is string => typeof x === "string")
+          : [];
+        if (ids.length === 0 || cancelled) return;
+
+        const tplRes = await fetch(`/api/templates?locale=${encodeURIComponent(locale)}`);
+        if (!tplRes.ok || cancelled) return;
+        const body = (await tplRes.json()) as {
+          templates?: Array<{ id: string; name: string }>;
+        };
+        const byId = new Map((body.templates ?? []).map((x) => [x.id, x.name]));
+        const labels = ids.map((id) => byId.get(id) ?? id);
+        if (!cancelled) setInstalledTemplateLabels(labels);
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -83,6 +123,31 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       <Text as="p" variant="bodyMd" tone="subdued">
         {t("subtitle")}
       </Text>
+
+      <Banner tone="info">
+        <BlockStack gap="200">
+          <Text as="p" variant="bodyMd">
+            {t("packsRelationTitle")}
+          </Text>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {t("packsRelationBody")}
+          </Text>
+          <Text as="p" variant="bodySm">
+            <a
+              href={packsHref}
+              style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}
+            >
+              {t("packsLinkLabel")}
+            </a>
+          </Text>
+        </BlockStack>
+      </Banner>
+
+      {installedTemplateLabels.length > 0 && (
+        <Text as="p" variant="bodySm" tone="subdued">
+          {t("installedTemplatesSummary", { list: installedTemplateLabels.join(", ") })}
+        </Text>
+      )}
 
       <BlockStack gap="300">
         {RULE_PRESETS.map((preset) => {

@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Assinatura",
       "REFUND": "Reembolso não processado",
       "DUPLICATE": "Cobrança duplicada",
+      "DIGITAL": "Bens digitais ou serviço",
       "GENERAL": "Geral"
     }
   },
@@ -922,7 +923,7 @@
       },
       "automationOverview": {
         "title": "Como a automação funciona",
-        "body": "O DisputeDesk é focado em automação. Veja o fluxo:\n\n1. Uma nova disputa aparece no Shopify.\n2. O DisputeDesk a detecta (via webhook ou sincronização agendada).\n3. Suas regras são avaliadas para decidir: pacote automático ou enviar para fila de revisão.\n4. Se pacote automático: um pacote de evidências é gerado automaticamente a partir dos dados do pedido, informações de rastreamento e políticas da loja.\n5. A pontuação de completude é calculada. Se atingir o limite configurado e não houver bloqueios, as evidências são salvas no Shopify automaticamente.\n6. Se revisão for necessária: o pacote aparece na sua Fila de Revisão para aprovação manual.\n\nVocê controla cada etapa através das configurações de automação e regras. A automação pode ser totalmente ativada, parcialmente ativada (geração automática mas salvamento manual) ou totalmente desativada."
+        "body": "O DisputeDesk é focado em automação. Veja o fluxo:\n\n1. Uma nova disputa aparece no Shopify.\n2. O DisputeDesk a detecta (via webhook ou sincronização agendada).\n3. Suas regras são avaliadas para decidir: pacote automático ou enviar para fila de revisão.\n4. Se pacote automático: um pacote de evidências é gerado automaticamente a partir dos dados do pedido, informações de rastreamento e políticas da loja.\n5. A pontuação de completude é calculada. Se atingir o limite configurado e não houver bloqueios, as evidências são salvas no Shopify automaticamente.\n6. Se revisão for necessária: o pacote aparece na sua Fila de Revisão para aprovação manual.\n\n**Biblioteca de pacotes vs regras de roteamento:** Os modelos que você instala em Pacotes ficam na sua biblioteca de evidências (seções e narrativas editáveis). **As regras de automação** só decidem se uma disputa nova passa pelo fluxo padrão de geração automática ou vai primeiro para a fila de revisão—não escolhem um modelo da biblioteca para essa geração automática. A geração automática usa coletores de pedido, rastreamento e políticas.\n\nVocê controla cada etapa através das configurações de automação e regras. A automação pode ser totalmente ativada, parcialmente ativada (geração automática mas salvamento manual) ou totalmente desativada."
       },
       "viewingFilteringDisputes": {
         "title": "Visualizando e filtrando disputas",
@@ -942,7 +943,7 @@
       },
       "howPacksBuilt": {
         "title": "Como os pacotes de evidências são gerados automaticamente",
-        "body": "Quando o DisputeDesk gera um pacote de evidências, ele coleta evidências automaticamente de múltiplas fontes:\n\n- Dados do pedido: itens, valores, endereço de cobrança (apenas cidade — dados pessoais são removidos), tempo de cadastro do cliente e histórico de reembolsos.\n- Entrega e rastreamento: transportadora, números de rastreamento, URLs de rastreamento e status de entrega.\n- Políticas da loja: cópias das suas políticas de envio, reembolso, termos e cancelamento.\n\nO pacote é estruturado conforme o motivo da disputa. Por exemplo, uma disputa por \"Produto não recebido\" priorizará evidências de envio e rastreamento, enquanto uma disputa por \"Fraude\" enfatizará verificação do pedido e do cliente.\n\nApós a coleta, o DisputeDesk calcula uma pontuação de completude e identifica bloqueios (evidências obrigatórias ausentes). Você pode então enviar arquivos adicionais para fortalecer o pacote."
+        "body": "Quando o DisputeDesk gera um pacote de evidências, ele coleta evidências automaticamente de múltiplas fontes:\n\n- Dados do pedido: itens, valores, endereço de cobrança (apenas cidade — dados pessoais são removidos), tempo de cadastro do cliente e histórico de reembolsos.\n- Entrega e rastreamento: transportadora, números de rastreamento, URLs de rastreamento e status de entrega.\n- Políticas da loja: cópias das suas políticas de envio, reembolso, termos e cancelamento.\n\nO pacote é estruturado conforme o motivo da disputa. Por exemplo, uma disputa por \"Produto não recebido\" priorizará evidências de envio e rastreamento, enquanto uma disputa por \"Fraude\" enfatizará verificação do pedido e do cliente.\n\nApós a coleta, o DisputeDesk calcula uma pontuação de completude e identifica bloqueios (evidências obrigatórias ausentes). Você pode então enviar arquivos adicionais para fortalecer o pacote.\n\n**Modelos na biblioteca:** Instalar um modelo na página Pacotes adiciona um pacote à sua **biblioteca** (narrativas, seções e edição). Isso é separado de cada **geração automática por disputa**, que usa o pipeline de coletores acima. A geração automática ainda não incorpora automaticamente o layout do modelo da sua biblioteca."
       },
       "generatingPackManually": {
         "title": "Gerando um pacote manualmente",
@@ -966,7 +967,7 @@
       },
       "evidencePackTemplates": {
         "title": "Usar modelos de pacotes de evidência",
-        "body": "A página Pacotes ajuda-o a começar com modelos de pacotes de evidência.\n\nSem pacotes ainda, verá modelos recomendados — pacotes pré-definidos para tipos de disputa comuns (ex. Fraude, Produto não recebido). Cada cartão de modelo tem um botão «Instalar»: ao clicar cria um novo pacote a partir desse modelo para a sua loja. Após instalar, é redirecionado para a página do pacote; pode abri-lo a qualquer momento na lista de pacotes. Use «Voltar aos pacotes» na página do pacote para regressar à biblioteca.\n\n«Explorar todos os modelos» abre a biblioteca completa para pré-visualizar e instalar qualquer modelo. «Criar do zero» inicia um pacote vazio.\n\nCom pelo menos um pacote, pode aparecer um banner sugerindo explorar mais modelos; pode fechá-lo ou clicar «Explorar modelos» para abrir a biblioteca novamente.\n\nOs modelos são uma forma rápida de obter pacotes de evidência conforme as melhores práticas; pode sempre editar documentos e definições após a instalação."
+        "body": "A página Pacotes ajuda-o a começar com modelos de pacotes de evidência.\n\nSem pacotes ainda, verá modelos recomendados — pacotes pré-definidos para tipos de disputa comuns (ex. Fraude, Produto não recebido). Cada cartão de modelo tem um botão «Instalar»: ao clicar cria um novo pacote a partir desse modelo para a sua loja. Após instalar, é redirecionado para a página do pacote; pode abri-lo a qualquer momento na lista de pacotes. Use «Voltar aos pacotes» na página do pacote para regressar à biblioteca.\n\n«Explorar todos os modelos» abre a biblioteca completa para pré-visualizar e instalar qualquer modelo. «Criar do zero» inicia um pacote vazio.\n\nCom pelo menos um pacote, pode aparecer um banner sugerindo explorar mais modelos; pode fechá-lo ou clicar «Explorar modelos» para abrir a biblioteca novamente.\n\nOs modelos são uma forma rápida de obter pacotes de evidência conforme as melhores práticas; pode sempre editar documentos e definições após a instalação.\n\n**Relacionado:** As **regras de automação** (página Regras ou assistente de configuração) controlam se novas disputas são geradas automaticamente ou enviadas primeiro para a fila de revisão. Não substituem um modelo específico da biblioteca em cada geração automática—veja «Como a automação funciona» e «Como os pacotes de evidências são gerados automaticamente.»"
       },
       "definingStorePolicies": {
         "title": "Definir as políticas da sua loja",
@@ -978,7 +979,7 @@
       },
       "creatingFirstRule": {
         "title": "Criando sua primeira regra",
-        "body": "Regras permitem controlar como as disputas são encaminhadas — para pacote automático ou para a fila de revisão.\n\nPara criar uma regra:\n1. Vá à página de Regras.\n2. Clique em \"Adicionar Regra\".\n3. Preencha os detalhes:\n   - Nome: um rótulo para sua referência (ex.: \"Revisão de alto valor\").\n   - Motivos Correspondentes: selecione a quais motivos de disputa esta regra se aplica (deixe vazio para corresponder a todos).\n   - Faixa de valor: defina um valor mínimo e/ou máximo da disputa.\n   - Ação: escolha \"Pacote Automático\" (processamento automático) ou \"Enviar para Revisão\" (fila manual).\n4. Clique em \"Criar Regra\".\n\nExemplo: crie uma regra que envia todas as disputas acima de $500 para revisão:\n- Nome: \"Revisão de alto valor\"\n- Valor Mínimo: 500\n- Ação: Enviar para Revisão\n\nRegras estão disponíveis nos planos Starter e Pro. Usuários do plano Free podem fazer upgrade na página de Cobrança."
+        "body": "Regras permitem controlar como as disputas são encaminhadas — para pacote automático ou para a fila de revisão.\n\nPara criar uma regra:\n1. Vá à página de Regras.\n2. Clique em \"Adicionar Regra\".\n3. Preencha os detalhes:\n   - Nome: um rótulo para sua referência (ex.: \"Revisão de alto valor\").\n   - Motivos Correspondentes: selecione a quais motivos de disputa esta regra se aplica (deixe vazio para corresponder a todos).\n   - Faixa de valor: defina um valor mínimo e/ou máximo da disputa.\n   - Ação: escolha \"Pacote Automático\" (processamento automático) ou \"Enviar para Revisão\" (fila manual).\n4. Clique em \"Criar Regra\".\n\nExemplo: crie uma regra que envia todas as disputas acima de $500 para revisão:\n- Nome: \"Revisão de alto valor\"\n- Valor Mínimo: 500\n- Ação: Enviar para Revisão\n\n**O que significa \"Pacote automático\":** Para uma disputa correspondente, o DisputeDesk pode executar o pipeline **padrão** de coleta de evidências na primeira sincronização. **Não** significa \"usar um modelo específico da biblioteca\"—esses modelos são geridos em Pacotes separadamente.\n\nRegras estão disponíveis nos planos Starter e Pro. Usuários do plano Free podem fazer upgrade na página de Cobrança."
       },
       "rulePriority": {
         "title": "Prioridade e ordem de avaliação das regras",
@@ -990,7 +991,7 @@
       },
       "rulePresets": {
         "title": "Predefinições e regras sugeridas",
-        "body": "A página Regras oferece predefinições sugeridas para automatizar rapidamente o fluxo de disputas.\n\nSem regras (e se o seu plano permitir), verá um estado vazio com cartões de predefinições, ex.: auto-pacote para fraude, auto-pacote para produto não recebido, enviar disputas de alto valor para revisão e uma regra de revisão geral. Clique «Instalar regras sugeridas» para adicionar todas de uma vez (ou escolher predefinições específicas se a interface permitir). As predefinições são idempotentes: reinstalar não cria duplicados.\n\nCom regras criadas, pode aparecer um banner «Ver predefinições» — abre uma secção para instalar as mesmas regras sugeridas ou criar regras personalizadas. As regras são avaliadas por prioridade; pode reordená-las na página Regras.\n\nAs predefinições são um bom ponto de partida; pode editar ou eliminar qualquer regra após a instalação. As regras requerem um plano Starter ou Pro."
+        "body": "A página Regras oferece predefinições sugeridas para automatizar rapidamente o fluxo de disputas.\n\nNa app incorporada, o assistente de **Configuração** pode instalar o mesmo tipo de predefinições no passo **Automação e fila de revisão** (depois de **Packs**). Esse passo explica como as regras de roteamento se relacionam com os modelos de pacote que instalou e pode listar esses nomes para contexto.\n\nSem regras (e se o seu plano permitir), verá um estado vazio com cartões de predefinições, ex.: auto-pacote para fraude, auto-pacote para produto não recebido, enviar disputas de alto valor para revisão e uma regra de revisão geral. Clique «Instalar regras sugeridas» para adicionar todas de uma vez (ou escolher predefinições específicas se a interface permitir). As predefinições são idempotentes: reinstalar não cria duplicados.\n\nCom regras criadas, pode aparecer um banner «Ver predefinições» — abre uma secção para instalar as mesmas regras sugeridas ou criar regras personalizadas. As regras são avaliadas por prioridade; pode reordená-las na página Regras.\n\nAs predefinições são um bom ponto de partida; pode editar ou eliminar qualquer regra após a instalação. As regras requerem um plano Starter ou Pro."
       },
       "planComparison": {
         "title": "Comparando os planos Free, Starter e Pro",
@@ -1792,7 +1793,7 @@
       "statusAvailable": "Disponível",
       "reviewIntro": "Veja como o DisputeDesk tratará as disputas correspondentes a este modelo.",
       "reviewDetectionTitle": "Detecção de Disputa",
-      "reviewDetectionDesc": "Quando uma nova disputa chegar, o DisputeDesk verifica se corresponde ao tipo de modelo {templateType}.",
+      "reviewDetectionDesc": "Os modelos são agrupados por categoria de disputa ({templateType}) para você ajustar listas de verificação e narrativas.",
       "reviewCollectionTitle": "Coleta de Evidências",
       "reviewCollectionDesc": "O DisputeDesk coleta automaticamente as evidências selecionadas:",
       "reviewPackTitle": "Criação do Pacote de Evidências",
@@ -1800,7 +1801,7 @@
       "reviewNotifyTitle": "Notificação e Revisão",
       "reviewNotifyDesc": "Você será notificado quando o pacote estiver pronto. Revise, faça alterações finais e salve no Shopify com um clique.",
       "andMore": "e mais {count}",
-      "activateDesc": "Revise a configuração do modelo e ative-o para começar a automatizar respostas de disputas.",
+      "activateDesc": "Revise a configuração do modelo e ative para adicionar este layout à sua biblioteca de Pacotes de evidência.",
       "summaryTitle": "Resumo do Modelo",
       "summaryType": "Tipo de modelo",
       "summaryEvidenceCount": "Tipos de evidência",
@@ -1808,12 +1809,16 @@
       "summaryManual": "Coleta manual",
       "types": "tipos",
       "readyTitle": "Pronto para ativar",
-      "readyDesc": "Uma vez ativado, este modelo processará automaticamente todas as novas disputas do tipo {templateType}. Você pode pausar ou editar a qualquer momento."
+      "readyDesc": "Depois de ativado, gerencie este pacote em Packs. As regras de automação (próximo passo) definem se novas disputas passam primeiro pela coleta automática de evidências ou pela fila de revisão."
     },
     "rules": {
-      "title": "Regras de automação",
-      "subtitle": "Escolha quais regras instalar. As regras pré-selecionadas cobrem os tipos de disputas mais comuns.",
-      "badgeAutoPack": "Auto-pack",
+      "title": "Automação e fila de revisão",
+      "subtitle": "Instale regras iniciais para novas disputas: permitir a geração automática de evidências ou enviar primeiro para a fila de revisão. Isso é independente dos modelos de pacote na sua biblioteca.",
+      "packsRelationTitle": "Como isso se relaciona aos modelos de pacote",
+      "packsRelationBody": "Os modelos que você instalou definem seções e narrativas na biblioteca de Pacotes de evidência. As regras abaixo só controlam se o DisputeDesk executa a geração automática padrão quando a disputa sincroniza ou a marca para revisão manual.",
+      "packsLinkLabel": "Ver seus Packs",
+      "installedTemplatesSummary": "Modelos de pacote salvos nesta configuração: {list}",
+      "badgeAutoPack": "Geração automática",
       "badgeReview": "Revisão"
     },
     "teamNotifications": {
@@ -1840,7 +1845,7 @@
       "disputes": "Sincronizar",
       "policies": "Políticas",
       "packs": "Packs",
-      "rules": "Regras",
+      "rules": "Auto e revisão",
       "team": "Equipe"
     },
     "welcome": {
