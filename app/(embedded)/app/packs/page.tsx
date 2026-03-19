@@ -25,7 +25,9 @@ import {
   Tabs,
   TextField,
   Select,
+  IndexTable,
 } from "@shopify/polaris";
+import { FileText } from "lucide-react";
 import { SearchIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
 
 interface PackRow {
@@ -442,135 +444,141 @@ export default function PacksListPage() {
                   )}
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr
-                        style={{
-                          background: "#F7F8FA",
-                          borderTop: "1px solid var(--p-color-border)",
-                          borderBottom: "1px solid var(--p-color-border)",
-                        }}
+                <IndexTable
+                  resourceName={{ singular: "pack", plural: "packs" }}
+                  itemCount={displayPacks.length}
+                  headings={[
+                    { title: t("packTemplates.packName") },
+                    { title: t("packTemplates.type") },
+                    { title: t("packTemplates.source") },
+                    { title: t("packTemplates.usageCount") },
+                    { title: t("packTemplates.lastUsed") },
+                    { title: t("table.status") },
+                    { title: t("table.actions") },
+                  ]}
+                  selectable={false}
+                >
+                  {displayPacks.map((pack, idx) => {
+                    const typeLabelKey = TYPE_LABELS[pack.dispute_type];
+                    return (
+                      <IndexTable.Row
+                        key={pack.id}
+                        id={pack.id}
+                        position={idx}
                       >
-                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("packTemplates.packName")}
-                        </th>
-                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("packTemplates.type")}
-                        </th>
-                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("packTemplates.source")}
-                        </th>
-                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("packTemplates.usageCount")}
-                        </th>
-                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("packTemplates.lastUsed")}
-                        </th>
-                        <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("table.status")}
-                        </th>
-                        <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 12, color: "var(--p-color-text-subdued)", textTransform: "uppercase" }}>
-                          {t("table.actions")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayPacks.map((pack) => {
-                        const typeLabelKey = TYPE_LABELS[pack.dispute_type];
-                        return (
-                          <tr key={pack.id} style={{ borderBottom: "1px solid var(--p-color-border)" }}>
-                            <td style={{ padding: "16px 16px", minWidth: 240 }}>
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/app/packs/${pack.id}`)}
+                        <IndexTable.Cell>
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/app/packs/${pack.id}`)}
+                            style={{
+                              border: 0,
+                              background: "transparent",
+                              padding: 0,
+                              margin: 0,
+                              width: "100%",
+                              textAlign: "left",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <InlineStack gap="200" blockAlign="center">
+                              <div
                                 style={{
-                                  border: 0,
-                                  background: "transparent",
-                                  padding: 0,
-                                  margin: 0,
-                                  width: "100%",
-                                  textAlign: "left",
-                                  cursor: "pointer",
+                                  width: 32,
+                                  height: 32,
+                                  background: "#EFF6FF",
+                                  borderRadius: 8,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
                                 }}
                               >
-                                <BlockStack gap="025">
+                                <FileText size={16} style={{ color: "#4F46E5" }} />
+                              </div>
+                              <BlockStack gap="025">
+                                <div
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
                                   <Text as="p" variant="bodySm" fontWeight="semibold">
                                     {pack.name}
                                   </Text>
-                                  <Text as="p" variant="bodySm" tone="subdued">
-                                    {pack.code ?? pack.id.slice(0, 8)}
-                                  </Text>
-                                </BlockStack>
-                              </button>
-                            </td>
-                            <td style={{ padding: "16px 16px", whiteSpace: "nowrap" }}>
-                              <Text as="p" variant="bodySm">
-                                {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
-                              </Text>
-                            </td>
-                            <td style={{ padding: "16px 16px" }}>
-                              <Badge tone="info">
-                                {pack.source === "TEMPLATE"
-                                  ? t("packTemplates.sourceTemplate")
-                                  : t("packTemplates.sourceManual")}
-                              </Badge>
-                            </td>
-                            <td style={{ padding: "16px 16px" }}>
-                              <Text as="p" variant="bodySm">
-                                {pack.usage_count}
-                              </Text>
-                            </td>
-                            <td style={{ padding: "16px 16px" }}>
-                              <Text as="p" variant="bodySm" tone="subdued">
-                                {formatDate(pack.last_used_at, locale, t("packTemplates.never"))}
-                              </Text>
-                            </td>
-                            <td style={{ padding: "16px 16px" }}>
-                              {pack.status === "DRAFT" ? (
-                                <Button
-                                  variant="plain"
-                                  size="slim"
-                                  loading={activatingId === pack.id}
-                                  disabled={activatingId !== null}
-                                  onClick={() => handleActivate(pack.id)}
-                                >
-                                  {t("packTemplates.activate")}
-                                </Button>
-                              ) : (
-                                <Badge tone={statusTone(pack.status)}>
-                                  {pack.status === "ACTIVE"
-                                    ? t("packTemplates.filterActive")
-                                    : pack.status === "ARCHIVED"
-                                      ? t("packTemplates.filterArchived")
-                                      : t("packTemplates.filterDraft")}
-                                </Badge>
-                              )}
-                            </td>
-                            <td style={{ padding: "16px 16px" }}>
-                              <InlineStack gap="050" align="end">
-                                <Button
-                                  icon={EditIcon}
-                                  variant="tertiary"
-                                  size="micro"
-                                  accessibilityLabel={t("packTemplates.editPack")}
-                                  onClick={() => router.push(`/app/packs/${pack.id}`)}
-                                />
-                                <Button
-                                  icon={DeleteIcon}
-                                  variant="tertiary"
-                                  size="micro"
-                                  accessibilityLabel={t("packTemplates.deletePack")}
-                                  onClick={() => handleDelete(pack.id)}
-                                />
-                              </InlineStack>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                                </div>
+                                <Text as="p" variant="bodySm" tone="subdued">
+                                  {pack.code ?? pack.id.slice(0, 8)}
+                                </Text>
+                              </BlockStack>
+                            </InlineStack>
+                          </button>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <Text as="p" variant="bodySm">
+                            {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
+                          </Text>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <Badge tone={pack.source === "TEMPLATE" ? "info" : undefined}>
+                            {pack.source === "TEMPLATE"
+                              ? t("packTemplates.sourceTemplate")
+                              : t("packTemplates.sourceManual")}
+                          </Badge>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <Text as="p" variant="bodySm">
+                            {pack.usage_count}
+                          </Text>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {formatDate(pack.last_used_at, locale, t("packTemplates.never"))}
+                          </Text>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          {pack.status === "DRAFT" ? (
+                            <Button
+                              variant="plain"
+                              size="slim"
+                              loading={activatingId === pack.id}
+                              disabled={activatingId !== null}
+                              onClick={() => handleActivate(pack.id)}
+                            >
+                              {t("packTemplates.activate")}
+                            </Button>
+                          ) : (
+                            <Badge tone={statusTone(pack.status)}>
+                              {pack.status === "ACTIVE"
+                                ? t("packTemplates.filterActive")
+                                : pack.status === "ARCHIVED"
+                                  ? t("packTemplates.filterArchived")
+                                  : t("packTemplates.filterDraft")}
+                            </Badge>
+                          )}
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <InlineStack gap="050" align="end">
+                            <Button
+                              icon={EditIcon}
+                              variant="tertiary"
+                              size="micro"
+                              accessibilityLabel={t("packTemplates.editPack")}
+                              onClick={() => router.push(`/app/packs/${pack.id}`)}
+                            />
+                            <Button
+                              icon={DeleteIcon}
+                              variant="tertiary"
+                              size="micro"
+                              accessibilityLabel={t("packTemplates.deletePack")}
+                              onClick={() => handleDelete(pack.id)}
+                            />
+                          </InlineStack>
+                        </IndexTable.Cell>
+                      </IndexTable.Row>
+                    );
+                  })}
+                </IndexTable>
               )}
             </BlockStack>
           </Card>
