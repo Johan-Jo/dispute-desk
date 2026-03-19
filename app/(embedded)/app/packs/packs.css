@@ -1,0 +1,87 @@
+/* Embedded Evidence Packs – Figma-aligned styling
+ * Scoped to the packs page to avoid leaking into other embedded screens.
+ */
+
+.embeddedPacksRoot .Polaris-Card {
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.embeddedPacksRoot .embeddedPacksCardHeader {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--p-color-border);
+}
+
+.embeddedPacksRoot .embeddedPacksSearchRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.embeddedPacksRoot .embeddedPacksSearchField {
+  flex: 1;
+}
+
+.embeddedPacksRoot .embeddedPacksSearchFilterButton {
+  min-width: 36px;
+  padding-inline: 0;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Wrapper {
+  padding-inline: 16px;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.embeddedPacksRoot .Polaris-IndexTable__Table {
+  border-top: 1px solid var(--p-color-border);
+}
+
+.embeddedPacksRoot .Polaris-IndexTable__Table thead tr {
+  background: #f7f8fa;
+}
+
+.embeddedPacksRoot .Polaris-IndexTable__Table th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.embeddedPacksRoot .Polaris-IndexTable__Table th,
+.embeddedPacksRoot .Polaris-IndexTable__Table td {
+  padding-block: 10px;
+}
+
+.embeddedPacksRoot .embeddedPacksNameCellIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.embeddedPacksRoot .embeddedPacksNameTextPrimary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.embeddedPacksRoot .embeddedPacksEmptyRecommendations {
+  margin-top: 18px;
+}
+
+.embeddedPacksRoot .embeddedPacksEmptyRecommendationsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+

@@ -7,6 +7,8 @@
  */
 "use client";
 
+import "./packs.css";
+
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -303,6 +305,7 @@ export default function PacksListPage() {
           },
         ]}
       >
+        <div className="embeddedPacksRoot">
         <BlockStack gap="400">
           {!loading && packs.length > 0 && showTemplateBanner && (
             <Banner
@@ -332,9 +335,10 @@ export default function PacksListPage() {
 
           <Card padding="0">
             <BlockStack gap="0">
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--p-color-border)" }}>
-                <InlineStack gap="300" align="space-between" wrap>
-                  <div style={{ minWidth: 260, flex: 1 }}>
+              <div className="embeddedPacksCardHeader">
+                <div className="embeddedPacksSearchRow">
+                <InlineStack align="space-between" wrap>
+                  <div className="embeddedPacksSearchField" style={{ minWidth: 260 }}>
                     <TextField
                       label=""
                       labelHidden
@@ -345,12 +349,15 @@ export default function PacksListPage() {
                       prefix={<span aria-hidden><svg viewBox="0 0 20 20" width="16" height="16"><path fill="currentColor" d="M8.5 2a6.5 6.5 0 0 1 5.147 10.472l3.94 3.94a.75.75 0 1 1-1.06 1.06l-3.94-3.94A6.5 6.5 0 1 1 8.5 2m0 1.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10"/></svg></span>}
                     />
                   </div>
-                  <Button
-                    icon={SearchIcon}
-                    variant="tertiary"
-                    accessibilityLabel={t("packTemplates.searchPlaceholder")}
-                  />
+                  <div className="embeddedPacksSearchFilterButton">
+                    <Button
+                      icon={SearchIcon}
+                      variant="tertiary"
+                      accessibilityLabel={t("packTemplates.searchPlaceholder")}
+                    />
+                  </div>
                 </InlineStack>
+                </div>
               </div>
 
               <Tabs
@@ -391,14 +398,7 @@ export default function PacksListPage() {
                           <Spinner size="small" />
                         </div>
                       ) : recommendedTemplates.length === 0 ? null : (
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                            gap: 12,
-                            marginTop: 12,
-                          }}
-                        >
+                        <div className="embeddedPacksEmptyRecommendationsGrid">
                           {recommendedTemplates.map((tmpl) => (
                             <div
                               key={tmpl.id}
@@ -481,28 +481,11 @@ export default function PacksListPage() {
                             }}
                           >
                             <InlineStack gap="200" blockAlign="center">
-                              <div
-                                style={{
-                                  width: 32,
-                                  height: 32,
-                                  background: "#EFF6FF",
-                                  borderRadius: 8,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  flexShrink: 0,
-                                }}
-                              >
+                              <div className="embeddedPacksNameCellIcon">
                                 <FileText size={16} style={{ color: "#4F46E5" }} />
                               </div>
                               <BlockStack gap="025">
-                                <div
-                                  style={{
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
+                                <div className="embeddedPacksNameTextPrimary">
                                   <Text as="p" variant="bodySm" fontWeight="semibold">
                                     {pack.name}
                                   </Text>
@@ -583,6 +566,7 @@ export default function PacksListPage() {
             </BlockStack>
           </Card>
         </BlockStack>
+        </div>
       </Page>
 
       <Modal
