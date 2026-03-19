@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Assinatura",
       "REFUND": "Reembolso não processado",
       "DUPLICATE": "Cobrança duplicada",
+      "DIGITAL": "Bens digitais ou serviço",
       "GENERAL": "Geral"
     }
   },

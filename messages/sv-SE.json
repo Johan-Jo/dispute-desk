@@ -352,6 +352,7 @@
       "SUBSCRIPTION": "Prenumeration",
       "REFUND": "Återbetalning ej genomförd",
       "DUPLICATE": "Dubbel debitering",
+      "DIGITAL": "Digitala varor eller tjänst",
       "GENERAL": "Allmänt"
     }
   },

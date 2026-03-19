@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Abonnement",
       "REFUND": "Rückerstattung nicht bearbeitet",
       "DUPLICATE": "Doppelte Belastung",
+      "DIGITAL": "Digitale Güter oder Dienstleistung",
       "GENERAL": "Allgemein"
     }
   },
