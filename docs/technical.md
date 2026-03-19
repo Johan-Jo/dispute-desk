@@ -820,17 +820,16 @@ Legacy step ids (`welcome_goals`, `sync_disputes`, etc.) are migrated to the new
 
 ### Step 5: Generate Packs
 
-**Current state (as of 2026-03-18):** The setup step is aligned to the Figma onboarding-wizard pack-selection variant:
-- Centered hero (icon + title/subtitle)
-- Three radio-style starter options:
-  - Auto-pack fraudulent disputes
-  - Route "Not Received" to Review Queue
-  - Auto-pack all disputes
-- Bottom warning/info panel: "You can change this later" / "First matching rule wins"
+**Current state (as of 2026-03-18):** The setup step displays a **template catalog** fetched from `GET /api/templates`. Each template appears as a card with name, dispute type badge, recommended badge, and an **Install** button. Clicking Install opens a 4-step **Template Setup Wizard** modal (`TemplateSetupWizardModal`):
 
-**Behavior note:** `PacksStep` still installs recommended pack templates via
-`/api/templates/:id/install` on save, and now also stores the selected UI mode
-in `shop_setup.steps.packs.payload.selectedPackMode` for future rule bootstrap.
+1. **Choose Evidence** — Select from 8 evidence types (Order Details, Customer Info, Shipping, Product, Policies, Communication, Payment Proof, Custom Fields). Types are grouped as auto-collected vs manual. Recommended types are pre-selected.
+2. **Set Sources** — Displays available data sources per selected evidence type with status badges (Connected / Setup Required / Available).
+3. **Review** — Shows the 4-step automation flow: Detection → Collection → Pack Creation → Notification.
+4. **Activate** — Summary of evidence configuration + green activation banner.
+
+On wizard completion the template is installed via `POST /api/templates/:id/install`. The card flips to a green "Installed" state with a checkmark. On "Save & Continue", all installed template IDs are recorded in `shop_setup.steps.packs.payload.installedTemplates`.
+
+Evidence type definitions and source mappings live in `lib/setup/evidenceTypes.ts`. The wizard is client-side only (no new API routes). i18n keys: `setup.packs.*` and `setup.templateWizard.*` in `messages/en-US.json`.
 
 ### State Machine
 
@@ -859,6 +858,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | ConnectGorgiasModal | `components/setup/modals/ConnectGorgiasModal.tsx` | Gorgias credential entry |
 | UploadSampleFilesModal | `components/setup/modals/UploadSampleFilesModal.tsx` | Sample file upload |
 | ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
+| TemplateSetupWizardModal | `components/setup/modals/TemplateSetupWizardModal.tsx` | 4-step template configuration wizard (evidence, sources, review, activate) |
 
 ### Shared Utilities
 
@@ -866,6 +866,7 @@ All wizard links preserve `shop` and `host` query parameters via
 |--------|------|---------|
 | Types | `lib/setup/types.ts` | StepStatus, StepState, ShopSetupRow, etc. |
 | Constants | `lib/setup/constants.ts` | SETUP_STEPS, prerequisite logic, helpers |
+| Evidence Types | `lib/setup/evidenceTypes.ts` | 8 evidence type definitions + source mappings |
 | Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
 | withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |
 

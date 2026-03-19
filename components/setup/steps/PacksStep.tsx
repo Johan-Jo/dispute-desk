@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileText } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  BlockStack,
+  InlineStack,
+  Text,
+  Badge,
+  Button,
+  Spinner,
+  Banner,
+} from "@shopify/polaris";
+import { FileText, CheckCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
+import { TemplateSetupWizardModal } from "@/components/setup/modals/TemplateSetupWizardModal";
 
 interface Template {
   id: string;
@@ -20,113 +30,231 @@ interface PacksStepProps {
 
 export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const t = useTranslations("setup.packs");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [selectedPackMode, setSelectedPackMode] = useState<"fraud_auto" | "pnr_review" | "all_auto">("fraud_auto");
+
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Wizard modal state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardTemplate, setWizardTemplate] = useState<Template | null>(null);
 
   useEffect(() => {
     fetch("/api/templates?locale=en-US")
       .then((r) => r.json())
       .then((data: { templates: Template[] }) => {
-        const list = data.templates ?? [];
-        setSelected(new Set(list.filter((t) => t.is_recommended).map((t) => t.id)));
+        setTemplates(data.templates ?? []);
       })
-      .catch(() => {})
-      .finally(() => {});
+      .catch(() => setError(t("fetchError")))
+      .finally(() => setLoading(false));
+  }, [t]);
+
+  const handleInstallClick = useCallback((tpl: Template) => {
+    setWizardTemplate(tpl);
+    setWizardOpen(true);
   }, []);
 
-  useEffect(() => {
-    onSaveRef.current = async () => {
-      const selectedIds = Array.from(selected);
+  const handleWizardComplete = useCallback(async () => {
+    if (!wizardTemplate) return;
 
-      for (const id of selectedIds) {
-        const res = await fetch(`/api/templates/${id}/install`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        if (!res.ok) return false;
+    setWizardOpen(false);
+    setInstalling(wizardTemplate.id);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/templates/${wizardTemplate.id}/install`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      if (!res.ok) {
+        setError(t("installError"));
+        return;
       }
 
+      setInstalledIds((prev) => new Set(prev).add(wizardTemplate.id));
+    } catch {
+      setError(t("installError"));
+    } finally {
+      setInstalling(null);
+      setWizardTemplate(null);
+    }
+  }, [wizardTemplate, t]);
+
+  const handleWizardClose = useCallback(() => {
+    setWizardOpen(false);
+    setWizardTemplate(null);
+  }, []);
+
+  // Register save handler for the setup wizard shell
+  useEffect(() => {
+    onSaveRef.current = async () => {
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId,
-          payload: {
-            installedTemplates: Array.from(selected),
-            selectedPackMode,
-          },
+          payload: { installedTemplates: Array.from(installedIds) },
         }),
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, selected, selectedPackMode]);
+  }, [stepId, onSaveRef, installedIds]);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          padding: "60px 0",
+        }}
+      >
+        <Spinner size="large" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex flex-col items-center text-center mb-10">
-        <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
-          <FileText className="w-7 h-7 text-white" />
+    <div style={{ maxWidth: 720, margin: "0 auto" }}>
+      <BlockStack gap="600">
+        {/* Hero header */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 14,
+              background: "#D89A2B",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 20,
+            }}
+          >
+            <FileText size={28} color="#fff" />
+          </div>
+          <Text as="h2" variant="headingLg">
+            {t("title")}
+          </Text>
+          <div style={{ marginTop: 8, maxWidth: 600 }}>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {t("subtitle")}
+            </Text>
+          </div>
         </div>
-        <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>
-          {t("figmaTitle")}
-        </h2>
-        <p className="leading-[24px] text-[#6D7175] max-w-[720px]" style={{ fontSize: 15 }}>
-          {t("figmaSubtitle")}
-        </p>
-      </div>
 
-      <div className="space-y-4">
-        {([
-          { id: "fraud_auto", title: t("optionFraudTitle"), desc: t("optionFraudDesc") },
-          { id: "pnr_review", title: t("optionPnrTitle"), desc: t("optionPnrDesc") },
-          { id: "all_auto", title: t("optionAllAutoTitle"), desc: t("optionAllAutoDesc") },
-        ] as const).map((option) => {
-          const active = selectedPackMode === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setSelectedPackMode(option.id)}
-              className="w-full text-left border rounded-[14px] px-6 py-6 transition-colors bg-white"
-              style={{ borderColor: active ? "#1D4ED8" : "#E1E3E5" }}
-            >
-              <div className="flex items-start gap-4">
-                <div className="mt-0.5">
-                  <span
-                    className="inline-flex items-center justify-center rounded-full border"
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderColor: active ? "#1D4ED8" : "#C9CCCF",
-                      background: active ? "#EFF6FF" : "#FFFFFF",
-                    }}
-                  >
-                    {active && <span className="w-2.5 h-2.5 rounded-full bg-[#1D4ED8]" />}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-[#202223] mb-2 leading-[28px]" style={{ fontWeight: 700, fontSize: 31 }}>
-                    {option.title}
-                  </p>
-                  <p className="text-[#6D7175] leading-[22px]" style={{ fontSize: 14 }}>
-                    {option.desc}
-                  </p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+        {error && (
+          <Banner tone="critical" onDismiss={() => setError(null)}>
+            <Text as="p" variant="bodyMd">
+              {error}
+            </Text>
+          </Banner>
+        )}
 
-      <div className="mt-6 bg-[#FFF7ED] border border-[#FCD9A4] rounded-[14px] p-5">
-        <p className="text-[#7C2D12] mb-1" style={{ fontWeight: 700, fontSize: 16 }}>
-          {t("changeLaterTitle")}
-        </p>
-        <p className="text-[#9A3412]" style={{ fontSize: 14 }}>
-          {t("changeLaterDesc")}
-        </p>
-      </div>
+        {/* Template cards */}
+        {templates.length === 0 ? (
+          <Banner tone="info">
+            <Text as="p" variant="bodyMd">
+              {t("empty")}
+            </Text>
+          </Banner>
+        ) : (
+          <BlockStack gap="300">
+            {templates.map((tpl) => {
+              const isInstalled = installedIds.has(tpl.id);
+              const isInstalling = installing === tpl.id;
+
+              return (
+                <div
+                  key={tpl.id}
+                  style={{
+                    border: `1px solid ${isInstalled ? "#22C55E" : "#E1E3E5"}`,
+                    borderLeft: isInstalled
+                      ? "4px solid #22C55E"
+                      : "1px solid #E1E3E5",
+                    borderRadius: 12,
+                    padding: "16px 20px",
+                    background: isInstalled ? "#F0FDF4" : "#FFFFFF",
+                    transition: "border-color 150ms, background 150ms",
+                  }}
+                >
+                  <InlineStack align="space-between" blockAlign="center" wrap={false}>
+                    <BlockStack gap="100">
+                      <InlineStack gap="200" blockAlign="center">
+                        <Text as="h3" variant="headingSm">
+                          {tpl.name}
+                        </Text>
+                        {tpl.dispute_type && (
+                          <Badge>{tpl.dispute_type}</Badge>
+                        )}
+                        {tpl.is_recommended && (
+                          <Badge tone="warning">{t("recommended")}</Badge>
+                        )}
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        {tpl.short_description}
+                      </Text>
+                    </BlockStack>
+
+                    <div style={{ flexShrink: 0, marginLeft: 16 }}>
+                      {isInstalled ? (
+                        <InlineStack gap="100" blockAlign="center">
+                          <CheckCircle size={18} color="#22C55E" />
+                          <Text as="span" variant="bodySm" fontWeight="semibold">
+                            {t("installedBtn")}
+                          </Text>
+                        </InlineStack>
+                      ) : (
+                        <Button
+                          onClick={() => handleInstallClick(tpl)}
+                          loading={isInstalling}
+                          disabled={isInstalling}
+                        >
+                          {t("installBtn")}
+                        </Button>
+                      )}
+                    </div>
+                  </InlineStack>
+                </div>
+              );
+            })}
+          </BlockStack>
+        )}
+
+        {/* Info note */}
+        <div
+          style={{
+            background: "#FFF7ED",
+            border: "1px solid #FCD9A4",
+            borderRadius: 14,
+            padding: 20,
+          }}
+        >
+          <Text as="p" variant="bodyMd" fontWeight="bold">
+            {t("changeLaterTitle")}
+          </Text>
+          <div style={{ marginTop: 4 }}>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("changeLaterDesc")}
+            </Text>
+          </div>
+        </div>
+      </BlockStack>
+
+      {/* Wizard modal */}
+      {wizardTemplate && (
+        <TemplateSetupWizardModal
+          open={wizardOpen}
+          onClose={handleWizardClose}
+          onComplete={handleWizardComplete}
+          templateName={wizardTemplate.name}
+          templateType={wizardTemplate.dispute_type ?? "General"}
+        />
+      )}
     </div>
   );
 }
