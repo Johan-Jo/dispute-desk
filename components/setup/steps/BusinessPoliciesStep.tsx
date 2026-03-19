@@ -60,6 +60,12 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewEditing, setPreviewEditing] = useState(false);
   const [templateDrafts, setTemplateDrafts] = useState<Partial<Record<PolicyKey, string>>>({});
+  const [templateSelections, setTemplateSelections] = useState<Record<PolicyKey, boolean>>({
+    shipping: true,
+    refunds: true,
+    terms: false,
+    privacy: false,
+  });
 
   useEffect(() => {
     const fallbackOrigin = getShopOriginFallback();
@@ -148,7 +154,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
       const templateKeys: PolicyKey[] =
         selectedFlow === "template"
-          ? POLICY_KEYS
+          ? POLICY_KEYS.filter((k) => templateSelections[k])
           : selectedFlow === "mixed"
           ? POLICY_KEYS.filter((k) => mixedOptions[k] === "template")
           : [];
@@ -175,12 +181,12 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId,
-          payload: { flow: selectedFlow, ownOptions, ownUrls, mixedOptions, mixedUrls, uploadedFiles },
+          payload: { flow: selectedFlow, ownOptions, ownUrls, mixedOptions, mixedUrls, uploadedFiles, templateSelections },
         }),
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, selectedFlow, ownOptions, ownUrls, mixedOptions, mixedUrls, uploadedFiles, resolvedShopId, templateDrafts]);
+  }, [stepId, onSaveRef, selectedFlow, ownOptions, ownUrls, mixedOptions, mixedUrls, uploadedFiles, resolvedShopId, templateDrafts, templateSelections]);
 
   const meta: Record<PolicyKey, { title: string; desc: string }> = {
     shipping: { title: t("shippingTitle"), desc: t("shippingDesc") },
@@ -431,13 +437,32 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                   </span>
                 </div>
 
-                <button
-                  onClick={() => openPreview(key)}
-                  className="w-full px-4 py-2 bg-[#F7F8FA] hover:bg-[#E1E3E5] border border-[#E1E3E5] text-sm text-[#202223] rounded-lg transition-colors"
-                  style={{ fontWeight: 600 }}
-                >
-                  {t("previewTemplateBtn")}
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => openPreview(key)}
+                    className="w-full px-4 py-2 bg-[#F7F8FA] hover:bg-[#E1E3E5] border border-[#E1E3E5] text-sm text-[#202223] rounded-lg transition-colors"
+                    style={{ fontWeight: 600 }}
+                  >
+                    {t("previewTemplateBtn")}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setTemplateSelections((prev) => ({
+                        ...prev,
+                        [key]: !prev[key],
+                      }))
+                    }
+                    className={`w-full px-4 py-2 border text-sm rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                      templateSelections[key]
+                        ? "bg-[#22C55E] border-[#22C55E] text-white"
+                        : "bg-[#1D4ED8] border-[#1D4ED8] text-white hover:bg-[#1e40af]"
+                    }`}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    {templateSelections[key] ? `${t("applied")} ✓` : t("useTemplate")}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -668,10 +693,14 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 >
                   {t("closeBtn")}
                 </button>
-                {selectedFlow === "mixed" && (
+                {(selectedFlow === "mixed" || selectedFlow === "template") && previewKey && (
                   <button
                     onClick={() => {
-                      setMixedOptions((prev) => ({ ...prev, [previewKey]: "template" }));
+                      if (selectedFlow === "mixed") {
+                        setMixedOptions((prev) => ({ ...prev, [previewKey]: "template" }));
+                      } else {
+                        setTemplateSelections((prev) => ({ ...prev, [previewKey]: true }));
+                      }
                       setPreviewKey(null);
                     }}
                     className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"

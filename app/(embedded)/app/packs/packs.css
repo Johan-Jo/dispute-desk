@@ -2,6 +2,11 @@
  * Scoped to the packs page to avoid leaking into other embedded screens.
  */
 
+.embeddedPacksRoot {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
 .embeddedPacksRoot .Polaris-Card {
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
