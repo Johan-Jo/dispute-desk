@@ -11,7 +11,7 @@ import {
   Banner,
 } from "@shopify/polaris";
 import { FileText, CheckCircle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import { TemplateSetupWizardModal } from "@/components/setup/modals/TemplateSetupWizardModal";
 
@@ -30,6 +30,8 @@ interface PacksStepProps {
 
 export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const t = useTranslations("setup.packs");
+  const tPacks = useTranslations("packs");
+  const locale = useLocale();
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +44,14 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const [wizardTemplate, setWizardTemplate] = useState<Template | null>(null);
 
   useEffect(() => {
-    fetch("/api/templates?locale=en-US")
+    fetch(`/api/templates?locale=${encodeURIComponent(locale)}`)
       .then((r) => r.json())
       .then((data: { templates: Template[] }) => {
         setTemplates(data.templates ?? []);
       })
       .catch(() => setError(t("fetchError")))
       .finally(() => setLoading(false));
-  }, [t]);
+  }, [t, locale]);
 
   const handleInstallClick = useCallback((tpl: Template) => {
     setWizardTemplate(tpl);
@@ -189,7 +191,11 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
                           {tpl.name}
                         </Text>
                         {tpl.dispute_type && (
-                          <Badge>{tpl.dispute_type}</Badge>
+                          <Badge>
+                            {(tPacks as (k: string) => string)(
+                              `disputeTypeLabel.${tpl.dispute_type.toUpperCase().replace(/\s+/g, "_")}`
+                            ) || tpl.dispute_type}
+                          </Badge>
                         )}
                         {tpl.is_recommended && (
                           <Badge tone="warning">{t("recommended")}</Badge>
@@ -252,7 +258,11 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
           onClose={handleWizardClose}
           onComplete={handleWizardComplete}
           templateName={wizardTemplate.name}
-          templateType={wizardTemplate.dispute_type ?? "General"}
+          templateType={
+            (tPacks as (k: string) => string)(
+              `disputeTypeLabel.${(wizardTemplate.dispute_type ?? "GENERAL").toUpperCase().replace(/\s+/g, "_")}`
+            ) || (wizardTemplate.dispute_type ?? "General")
+          }
         />
       )}
     </div>

@@ -344,15 +344,15 @@
     "suggestedMetadata": "Device / IP / address metadata if available",
     "suggestedRefundPolicy": "Refund or cancellation policy",
     "disputeTypeLabel": {
-      "FRAUD": "Fraudulent transaction",
-      "FRAUDULENT": "Fraudulent transaction",
-      "PNR": "Product not received",
-      "PRODUCT_NOT_RECEIVED": "Product not received",
-      "NOT_AS_DESCRIBED": "Product not as described",
-      "SUBSCRIPTION": "Subscription",
-      "REFUND": "Refund not processed",
-      "DUPLICATE": "Duplicate charge",
-      "GENERAL": "General"
+      "FRAUD": "Bedräglig transaktion",
+      "FRAUDULENT": "Bedräglig transaktion",
+      "PNR": "Produkt ej mottagen",
+      "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
+      "NOT_AS_DESCRIBED": "Produkt inte som beskrivet",
+      "SUBSCRIPTION": "Prenumeration",
+      "REFUND": "Återbetalning ej genomförd",
+      "DUPLICATE": "Dubbel debitering",
+      "GENERAL": "Allmänt"
     }
   },
   "analytics": {

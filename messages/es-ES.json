@@ -343,14 +343,14 @@
     "suggestedMetadata": "Device / IP / address metadata if available",
     "suggestedRefundPolicy": "Refund or cancellation policy",
     "disputeTypeLabel": {
-      "FRAUD": "Fraudulent transaction",
-      "FRAUDULENT": "Fraudulent transaction",
-      "PNR": "Product not received",
-      "PRODUCT_NOT_RECEIVED": "Product not received",
-      "NOT_AS_DESCRIBED": "Product not as described",
-      "SUBSCRIPTION": "Subscription",
-      "REFUND": "Refund not processed",
-      "DUPLICATE": "Duplicate charge",
+      "FRAUD": "Transacción fraudulenta",
+      "FRAUDULENT": "Transacción fraudulenta",
+      "PNR": "Producto no recibido",
+      "PRODUCT_NOT_RECEIVED": "Producto no recibido",
+      "NOT_AS_DESCRIBED": "Producto no como se describe",
+      "SUBSCRIPTION": "Suscripción",
+      "REFUND": "Reembolso no procesado",
+      "DUPLICATE": "Cargo duplicado",
       "GENERAL": "General"
     }
   },
