@@ -10,7 +10,6 @@ import {
   Banner,
   ProgressBar,
   Checkbox,
-  Box,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import {
@@ -132,7 +131,6 @@ export function TemplateSetupWizardModal({
       title={`${templateName} — ${stepTitles[currentStep]}`}
       primaryAction={primaryAction}
       secondaryActions={secondaryActions}
-      large
     >
       <Modal.Section>
         <BlockStack gap="400">
