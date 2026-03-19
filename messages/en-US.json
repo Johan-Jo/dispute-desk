@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Subscription",
       "REFUND": "Refund not processed",
       "DUPLICATE": "Duplicate charge",
+      "DIGITAL": "Digital goods or service",
       "GENERAL": "General"
     }
   },

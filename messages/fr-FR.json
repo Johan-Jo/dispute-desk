@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Abonnement",
       "REFUND": "Remboursement non traité",
       "DUPLICATE": "Double facturation",
+      "DIGITAL": "Biens numériques ou service",
       "GENERAL": "Général"
     }
   },

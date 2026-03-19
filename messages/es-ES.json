@@ -351,6 +351,7 @@
       "SUBSCRIPTION": "Suscripción",
       "REFUND": "Reembolso no procesado",
       "DUPLICATE": "Cargo duplicado",
+      "DIGITAL": "Bienes digitales o servicio",
       "GENERAL": "General"
     }
   },
