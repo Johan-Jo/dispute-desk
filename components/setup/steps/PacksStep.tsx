@@ -1,15 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  BlockStack,
-  InlineStack,
-  Text,
-  Badge,
-  Button,
-  Spinner,
-  Banner,
-} from "@shopify/polaris";
+import { BlockStack, Text, Badge, Spinner, Banner } from "@shopify/polaris";
 import { FileText, CheckCircle } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
@@ -28,6 +20,10 @@ interface PacksStepProps {
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
+function normalizeDisputeTypeKey(disputeType: string | null): string {
+  return (disputeType ?? "GENERAL").toUpperCase().replace(/\s+/g, "_");
+}
+
 export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const t = useTranslations("setup.packs");
   const tPacks = useTranslations("packs");
@@ -39,9 +35,23 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const [installing, setInstalling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Wizard modal state
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardTemplate, setWizardTemplate] = useState<Template | null>(null);
+
+  const disputeLabel = useCallback(
+    (disputeType: string | null) => {
+      const key = `disputeTypeLabel.${normalizeDisputeTypeKey(disputeType)}`;
+      const label = (tPacks as (k: string) => string)(key);
+      if (
+        typeof label === "string" &&
+        (label.includes("disputeTypeLabel.") || label.startsWith("packs."))
+      ) {
+        return normalizeDisputeTypeKey(disputeType).replace(/_/g, " ");
+      }
+      return label;
+    },
+    [tPacks]
+  );
 
   useEffect(() => {
     fetch(`/api/templates?locale=${encodeURIComponent(locale)}`)
@@ -91,7 +101,6 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
     setWizardTemplate(null);
   }, []);
 
-  // Register save handler for the setup wizard shell
   useEffect(() => {
     onSaveRef.current = async () => {
       const res = await fetch("/api/setup/step", {
@@ -123,8 +132,14 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   return (
     <div style={{ maxWidth: 720, margin: "0 auto" }}>
       <BlockStack gap="600">
-        {/* Hero header */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
           <div
             style={{
               width: 64,
@@ -157,7 +172,6 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
           </Banner>
         )}
 
-        {/* Template cards */}
         {templates.length === 0 ? (
           <Banner tone="info">
             <Text as="p" variant="bodyMd">
@@ -165,73 +179,121 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
             </Text>
           </Banner>
         ) : (
-          <BlockStack gap="300">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {templates.map((tpl) => {
               const isInstalled = installedIds.has(tpl.id);
               const isInstalling = installing === tpl.id;
+              const typeLabel = disputeLabel(tpl.dispute_type);
 
               return (
                 <div
                   key={tpl.id}
                   style={{
-                    border: `1px solid ${isInstalled ? "#22C55E" : "#E1E3E5"}`,
-                    borderLeft: isInstalled
-                      ? "4px solid #22C55E"
-                      : "1px solid #E1E3E5",
-                    borderRadius: 12,
-                    padding: "16px 20px",
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 16,
+                    padding: "18px 20px",
+                    borderRadius: 8,
+                    border: "1px solid #E1E3E5",
+                    borderLeft: isInstalled ? "3px solid #22C55E" : "1px solid #E1E3E5",
                     background: isInstalled ? "#F0FDF4" : "#FFFFFF",
                     transition: "border-color 150ms, background 150ms",
                   }}
                 >
-                  <InlineStack align="space-between" blockAlign="center" wrap={false}>
-                    <BlockStack gap="100">
-                      <InlineStack gap="200" blockAlign="center">
-                        <Text as="h3" variant="headingSm">
-                          {tpl.name}
-                        </Text>
-                        {tpl.dispute_type && (
-                          <Badge>
-                            {(tPacks as (k: string) => string)(
-                              `disputeTypeLabel.${tpl.dispute_type.toUpperCase().replace(/\s+/g, "_")}`
-                            ) || tpl.dispute_type}
-                          </Badge>
-                        )}
-                        {tpl.is_recommended && (
-                          <Badge tone="warning">{t("recommended")}</Badge>
-                        )}
-                      </InlineStack>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {tpl.short_description}
-                      </Text>
-                    </BlockStack>
-
-                    <div style={{ flexShrink: 0, marginLeft: 16 }}>
-                      {isInstalled ? (
-                        <InlineStack gap="100" blockAlign="center">
-                          <CheckCircle size={18} color="#22C55E" />
-                          <Text as="span" variant="bodySm" fontWeight="semibold">
-                            {t("installedBtn")}
-                          </Text>
-                        </InlineStack>
-                      ) : (
-                        <Button
-                          onClick={() => handleInstallClick(tpl)}
-                          loading={isInstalling}
-                          disabled={isInstalling}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: 16,
+                          color: "#202223",
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {tpl.name}
+                      </div>
+                      {(tpl.dispute_type || tpl.is_recommended) && (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
                         >
-                          {t("installBtn")}
-                        </Button>
+                          {tpl.dispute_type && (
+                            <Badge tone="info">{typeLabel}</Badge>
+                          )}
+                          {tpl.is_recommended && (
+                            <Badge tone="warning">{t("recommended")}</Badge>
+                          )}
+                        </div>
                       )}
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#6D7175",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {tpl.short_description}
+                      </div>
                     </div>
-                  </InlineStack>
+                  </div>
+
+                  <div style={{ flexShrink: 0, alignSelf: "center" }}>
+                    {isInstalled ? (
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "10px 16px",
+                          borderRadius: 8,
+                          background: "#22C55E",
+                          color: "#FFFFFF",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <CheckCircle size={18} color="#FFFFFF" strokeWidth={2.5} />
+                        <span>{t("installedBtn")}</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleInstallClick(tpl)}
+                        disabled={isInstalling}
+                        style={{
+                          padding: "10px 18px",
+                          borderRadius: 8,
+                          border: "none",
+                          background: isInstalling ? "#9CA3AF" : "#1F2937",
+                          color: "#FFFFFF",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          cursor: isInstalling ? "not-allowed" : "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isInstalling ? `${t("installBtn")}…` : t("installBtn")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
-          </BlockStack>
+          </div>
         )}
 
-        {/* Info note */}
         <div
           style={{
             background: "#FFF7ED",
@@ -251,7 +313,6 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
         </div>
       </BlockStack>
 
-      {/* Wizard modal */}
       {wizardTemplate && (
         <TemplateSetupWizardModal
           open={wizardOpen}
@@ -259,9 +320,8 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
           onComplete={handleWizardComplete}
           templateName={wizardTemplate.name}
           templateType={
-            (tPacks as (k: string) => string)(
-              `disputeTypeLabel.${(wizardTemplate.dispute_type ?? "GENERAL").toUpperCase().replace(/\s+/g, "_")}`
-            ) || (wizardTemplate.dispute_type ?? "General")
+            disputeLabel(wizardTemplate.dispute_type) ||
+            (wizardTemplate.dispute_type ?? "General")
           }
         />
       )}
