@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   BlockStack,
@@ -117,6 +117,11 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     [searchParams]
   );
 
+  const packsSetupHref = useMemo(
+    () => withShopParams("/app/setup/packs", searchParams),
+    [searchParams]
+  );
+
   const rulesHref = useMemo(
     () => withShopParams("/app/rules", searchParams),
     [searchParams]
@@ -129,6 +134,9 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     }
     return m;
   }, [catalog]);
+
+  const hasInstalledPacks = installedTemplateIds.length > 0;
+  const packsPrereqBannerId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -414,11 +422,34 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
         </Banner>
       )}
 
+      {!hasInstalledPacks && (
+        <div id={packsPrereqBannerId}>
+          <Banner tone="warning">
+            <BlockStack gap="200">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                {t("packsPrereqTitle")}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t("packsPrereqBody")}{" "}
+                <a
+                  href={packsSetupHref}
+                  style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}
+                >
+                  {t("packsPrereqSetupLink")}
+                </a>
+              </Text>
+            </BlockStack>
+          </Banner>
+        </div>
+      )}
+
       <InlineStack align="space-between" blockAlign="center" wrap>
         <Text as="h3" variant="headingMd">
           {t("sectionByReason")}
         </Text>
-        <Button onClick={applyRecommended}>{t("recommendedButton")}</Button>
+        <Button onClick={applyRecommended} disabled={!hasInstalledPacks}>
+          {t("recommendedButton")}
+        </Button>
       </InlineStack>
 
       <Text as="p" variant="bodySm" tone="subdued">
@@ -429,78 +460,97 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       </Text>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(100px,1fr) minmax(140px,1.3fr) minmax(120px,1fr)",
-          gap: 8,
-          padding: "4px 4px 8px",
-          fontSize: 12,
-          fontWeight: 600,
-          color: "#6D7175",
-        }}
+        role={!hasInstalledPacks ? "group" : undefined}
+        aria-describedby={!hasInstalledPacks ? packsPrereqBannerId : undefined}
+        aria-label={!hasInstalledPacks ? t("rulesTableLockedAria") : undefined}
+        style={
+          !hasInstalledPacks
+            ? {
+                opacity: 0.58,
+                background: "#F6F6F7",
+                borderRadius: 12,
+                padding: "8px 4px 12px",
+                transition: "opacity 0.15s ease",
+              }
+            : undefined
+        }
       >
-        <span>{t("colReason")}</span>
-        <span>{t("colTemplate")}</span>
-        <span>{t("colHandling")}</span>
-      </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(100px,1fr) minmax(140px,1.3fr) minmax(120px,1fr)",
+            gap: 8,
+            padding: "4px 4px 8px",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#6D7175",
+          }}
+        >
+          <span>{t("colReason")}</span>
+          <span>{t("colTemplate")}</span>
+          <span>{t("colHandling")}</span>
+        </div>
 
-      <BlockStack gap="300">
-        {payload.reason_rows.map((row) => (
-          <div
-            key={row.reason}
-            style={{
-              border: "1px solid #E1E3E5",
-              borderRadius: 12,
-              padding: "14px 16px",
-              background: "#FFFFFF",
-              boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
-            }}
-          >
+        <BlockStack gap="300">
+          {payload.reason_rows.map((row) => (
             <div
+              key={row.reason}
               style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(100px,1fr) minmax(140px,1.3fr) minmax(120px,1fr)",
-                gap: 12,
-                alignItems: "start",
+                border: "1px solid #E1E3E5",
+                borderRadius: 12,
+                padding: "14px 16px",
+                background: "#FFFFFF",
+                boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)",
               }}
             >
-              <Text as="span" variant="bodyMd" fontWeight="semibold">
-                {reasonLabel(row.reason)}
-              </Text>
-              {row.mode === "manual" ? (
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("templateNoneDash")}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(100px,1fr) minmax(140px,1.3fr) minmax(120px,1fr)",
+                  gap: 12,
+                  alignItems: "start",
+                }}
+              >
+                <Text as="span" variant="bodyMd" fontWeight="semibold">
+                  {reasonLabel(row.reason)}
                 </Text>
-              ) : (
+                {row.mode === "manual" ? (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("templateNoneDash")}
+                  </Text>
+                ) : (
+                  <Select
+                    label={t("colTemplate")}
+                    labelHidden
+                    options={templateChoicesForRow(row.mode)}
+                    value={row.pack_template_id ?? ""}
+                    disabled={!hasInstalledPacks}
+                    onChange={(value) => {
+                      updateRow(row.reason, {
+                        pack_template_id: value || null,
+                      });
+                    }}
+                  />
+                )}
                 <Select
-                  label={t("colTemplate")}
+                  label={t("colHandling")}
                   labelHidden
-                  options={templateChoicesForRow(row.mode)}
-                  value={row.pack_template_id ?? ""}
+                  options={modeOptions}
+                  value={row.mode}
+                  disabled={!hasInstalledPacks}
                   onChange={(value) => {
+                    const mode = value as HandlingModeUi;
                     updateRow(row.reason, {
-                      pack_template_id: value || null,
+                      mode,
+                      pack_template_id: mode === "manual" ? null : row.pack_template_id,
                     });
                   }}
                 />
-              )}
-              <Select
-                label={t("colHandling")}
-                labelHidden
-                options={modeOptions}
-                value={row.mode}
-                onChange={(value) => {
-                  const mode = value as HandlingModeUi;
-                  updateRow(row.reason, {
-                    mode,
-                    pack_template_id: mode === "manual" ? null : row.pack_template_id,
-                  });
-                }}
-              />
+              </div>
             </div>
-          </div>
-        ))}
-      </BlockStack>
+          ))}
+        </BlockStack>
+      </div>
 
       <Divider />
 
