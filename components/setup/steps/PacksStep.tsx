@@ -54,13 +54,42 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   );
 
   useEffect(() => {
-    fetch(`/api/templates?locale=${encodeURIComponent(locale)}`)
-      .then((r) => r.json())
-      .then((data: { templates: Template[] }) => {
-        setTemplates(data.templates ?? []);
-      })
-      .catch(() => setError(t("fetchError")))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [tplRes, autoRes] = await Promise.all([
+          fetch(`/api/templates?locale=${encodeURIComponent(locale)}`),
+          fetch("/api/setup/automation"),
+        ]);
+        if (cancelled) return;
+
+        if (tplRes.ok) {
+          const data = (await tplRes.json()) as { templates: Template[] };
+          setTemplates(data.templates ?? []);
+        } else {
+          setTemplates([]);
+          setError(t("fetchError"));
+        }
+
+        if (autoRes.ok) {
+          const autoBody = (await autoRes.json()) as {
+            installedTemplateIds?: string[];
+          };
+          setInstalledIds(new Set(autoBody.installedTemplateIds ?? []));
+        } else {
+          setInstalledIds(new Set());
+        }
+      } catch {
+        if (!cancelled) setError(t("fetchError"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [t, locale]);
 
   const handleInstallClick = useCallback((tpl: Template) => {
