@@ -29,7 +29,11 @@ interface Rule {
   name: string | null;
   enabled: boolean;
   match: { reason?: string[]; status?: string[]; amount_range?: { min?: number; max?: number } };
-  action: { mode: "auto_pack" | "review"; require_fields?: string[] };
+  action: {
+    mode: "auto_pack" | "review" | "manual";
+    pack_template_id?: string | null;
+    require_fields?: string[];
+  };
   priority: number;
 }
 
@@ -185,7 +189,11 @@ export default function EmbeddedRulesPage() {
                               {tr("action")}:
                             </Text>
                             <Text as="span" variant="bodySm">
-                              {rule.action?.mode === "auto_pack" ? tr("autoPack") : tr("review")}
+                              {rule.action?.mode === "auto_pack"
+                                ? tr("autoPack")
+                                : rule.action?.mode === "manual"
+                                  ? tr("manual")
+                                  : tr("review")}
                             </Text>
                           </InlineStack>
                         </BlockStack>

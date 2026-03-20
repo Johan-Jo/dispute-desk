@@ -193,6 +193,30 @@ export async function getPackById(packId: string): Promise<(Pack & { shop_domain
 }
 
 /** Fetch all packs for a shop with optional status filter. */
+/** Distinct global template IDs the shop has installed as library packs. */
+export async function listInstalledTemplateIdsForShop(
+  shopId: string
+): Promise<string[]> {
+  const sb = getServiceClient();
+  const { data, error } = await sb
+    .from("packs")
+    .select("template_id")
+    .eq("shop_id", shopId)
+    .not("template_id", "is", null);
+
+  if (error) {
+    console.error("[listInstalledTemplateIdsForShop]", error.message);
+    return [];
+  }
+
+  const ids = new Set<string>();
+  for (const row of data ?? []) {
+    const tid = (row as { template_id?: string | null }).template_id;
+    if (tid) ids.add(tid);
+  }
+  return [...ids];
+}
+
 export async function listPacks(
   shopId: string,
   opts?: { status?: string; search?: string }

@@ -187,13 +187,15 @@ export async function syncDisputes(
                 .from("disputes")
                 .update({ needs_review: true, updated_at: new Date().toISOString() })
                 .eq("id", upserted.id);
-            } else {
+            } else if (evalResult.action.mode === "auto_pack") {
               await runAutomationPipeline({
                 id: upserted.id,
                 shop_id: shopId,
                 reason: d.reasonDetails?.reason ?? null,
+                pack_template_id: evalResult.packTemplateId ?? evalResult.action.pack_template_id ?? null,
               });
             }
+            // manual: no needs_review, no pipeline
           } catch (err) {
             result.errors.push(
               `automation(${d.id}): ${err instanceof Error ? err.message : String(err)}`

@@ -1,33 +1,14 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { pickAutomationAction } from "./pickAutomationAction";
+import type { Rule, RuleEvalResult } from "./types";
 
-export interface RuleMatch {
-  reason?: string[];
-  status?: string[];
-  amount_range?: { min?: number; max?: number };
-}
-
-export interface RuleAction {
-  mode: "auto_pack" | "review";
-  require_fields?: string[];
-}
-
-export interface Rule {
-  id: string;
-  shop_id: string;
-  enabled: boolean;
-  match: RuleMatch;
-  action: RuleAction;
-  priority: number;
-  name?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface RuleEvalResult {
-  matchedRule: Rule | null;
-  action: RuleAction;
-}
+export type {
+  Rule,
+  RuleMatch,
+  RuleAction,
+  RuleEvalResult,
+} from "./types";
 
 interface DisputeContext {
   id: string;
@@ -37,30 +18,15 @@ interface DisputeContext {
   amount: number | null;
 }
 
-function matchesRule(dispute: DisputeContext, match: RuleMatch): boolean {
-  if (match.reason?.length) {
-    if (!dispute.reason || !match.reason.includes(dispute.reason)) return false;
-  }
-
-  if (match.status?.length) {
-    if (!dispute.status || !match.status.includes(dispute.status)) return false;
-  }
-
-  if (match.amount_range) {
-    if (dispute.amount == null) return false;
-    const { min, max } = match.amount_range;
-    if (min != null && dispute.amount < min) return false;
-    if (max != null && dispute.amount > max) return false;
-  }
-
-  return true;
-}
-
-const DEFAULT_ACTION: RuleAction = { mode: "review" };
+const DEFAULT_ACTION: RuleEvalResult["action"] = {
+  mode: "manual",
+  pack_template_id: null,
+};
 
 /**
- * Evaluate shop rules against a dispute. First match wins (ordered by priority).
- * Default action (no match) = review.
+ * Evaluate shop rules against a dispute using tiered precedence:
+ * amount safeguards → per-reason rules → catch-all.
+ * Default when no rule matches: manual (no auto-build, no review flag from rules).
  */
 export async function evaluateRules(
   dispute: DisputeContext
@@ -75,26 +41,29 @@ export async function evaluateRules(
     .order("priority", { ascending: true });
 
   if (!rules?.length) {
-    return { matchedRule: null, action: DEFAULT_ACTION };
+    return {
+      matchedRule: null,
+      action: DEFAULT_ACTION,
+      packTemplateId: null,
+    };
   }
 
-  for (const rule of rules as Rule[]) {
-    if (matchesRule(dispute, rule.match)) {
-      await logAuditEvent({
-        shopId: dispute.shop_id,
-        disputeId: dispute.id,
-        actorType: "system",
-        eventType: "rule_applied",
-        eventPayload: {
-          rule_id: rule.id,
-          match_conditions: rule.match,
-          resulting_action: rule.action,
-        },
-      });
+  const result = pickAutomationAction(rules as Rule[], dispute);
 
-      return { matchedRule: rule, action: rule.action };
-    }
+  if (result.matchedRule) {
+    await logAuditEvent({
+      shopId: dispute.shop_id,
+      disputeId: dispute.id,
+      actorType: "system",
+      eventType: "rule_applied",
+      eventPayload: {
+        rule_id: result.matchedRule.id,
+        match_conditions: result.matchedRule.match,
+        resulting_action: result.action,
+        pack_template_id: result.packTemplateId,
+      },
+    });
   }
 
-  return { matchedRule: null, action: DEFAULT_ACTION };
+  return result;
 }

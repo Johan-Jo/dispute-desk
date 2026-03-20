@@ -15,6 +15,8 @@ interface Dispute {
   id: string;
   shop_id: string;
   reason: string | null;
+  /** Global pack_templates.id when auto-build was triggered by a reason rule */
+  pack_template_id?: string | null;
 }
 
 /**
@@ -61,6 +63,7 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
       dispute_id: dispute.id,
       status: "queued",
       created_by: "automation",
+      pack_template_id: dispute.pack_template_id ?? null,
     })
     .select("id")
     .single();
