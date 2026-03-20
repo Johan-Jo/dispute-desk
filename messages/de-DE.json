@@ -1775,7 +1775,7 @@
     },
     "templateWizard": {
       "stepEvidence": "Beweise wählen",
-      "stepSources": "Quellen festlegen",
+      "stepSources": "Datenquellen",
       "stepReview": "Überprüfen",
       "stepActivate": "Aktivieren",
       "stepOf": "Schritt {current} von {total}",
@@ -1790,7 +1790,55 @@
       "manualDesc": "Diese Beweistypen erfordern manuellen Upload oder Konfiguration.",
       "selected": "ausgewählt",
       "recommended": "Empfohlen",
-      "sourcesDesc": "Konfiguriere, woher jeder Beweistyp stammt.",
+      "sourcesDesc": "Für jeden gewählten Beweistyp siehst du, wie er befüllt werden kann—über Shopify und angeschlossene Integrationen oder bei Bedarf per manuellem Upload.",
+      "sourcesNote": "Die Badges zeigen, was für deinen Shop aktuell verbunden ist. Auf diesem Schritt änderst du keine Einstellungen—tippe auf „Weiter“, wenn du bereit bist.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Bestelldetails",
+          "description": "Bestellnummer, Datum, Betrag, Status"
+        },
+        "customer-info": {
+          "title": "Kundeninformationen",
+          "description": "Name, E-Mail, Rechnungsadresse, Verlauf"
+        },
+        "shipping-info": {
+          "title": "Versandinformationen",
+          "description": "Sendungsverfolgung, Versanddienst, Zustellbestätigung"
+        },
+        "product-info": {
+          "title": "Produktinformationen",
+          "description": "Produktname, SKU, Beschreibung, Bilder"
+        },
+        "policies": {
+          "title": "Shop-Richtlinien",
+          "description": "Versand, Rückgabe, Erstattung, Nutzungsbedingungen"
+        },
+        "communication": {
+          "title": "Kundenkommunikation",
+          "description": "E-Mail-Austausch und Support-Tickets"
+        },
+        "payment-proof": {
+          "title": "Zahlungsnachweis",
+          "description": "Transaktions-ID, Zahlungsmethode, Autorisierung"
+        },
+        "custom-fields": {
+          "title": "Benutzerdefinierte Felder",
+          "description": "Zusätzliche Belege für dein Unternehmen"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "Shopify Order API",
+        "manualUpload": "Manueller Upload",
+        "shopifyCustomerApi": "Shopify Customer API",
+        "shopifyFulfillmentApi": "Shopify Fulfillment API",
+        "carrierIntegration": "Versanddienst-Integration",
+        "shopifyProductApi": "Shopify Product API",
+        "policyUrls": "Richtlinien-URLs",
+        "uploadedDocuments": "Hochgeladene Dokumente",
+        "emailArchive": "E-Mail-Archiv",
+        "supportTicketExport": "Support-Ticket-Export",
+        "shopifyPaymentApi": "Shopify Payment API"
+      },
       "sourceAutomatic": "Automatisch",
       "sourceManual": "Manuell",
       "statusConnected": "Verbunden",

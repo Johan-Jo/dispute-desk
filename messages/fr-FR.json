@@ -1775,7 +1775,7 @@
     },
     "templateWizard": {
       "stepEvidence": "Choisir les preuves",
-      "stepSources": "Définir les sources",
+      "stepSources": "Sources de données",
       "stepReview": "Vérifier",
       "stepActivate": "Activer",
       "stepOf": "Étape {current} sur {total}",
@@ -1790,7 +1790,55 @@
       "manualDesc": "Ces types de preuves nécessitent un téléchargement manuel ou une configuration.",
       "selected": "sélectionnés",
       "recommended": "Recommandé",
-      "sourcesDesc": "Configurez d'où provient chaque type de preuve.",
+      "sourcesDesc": "Pour chaque type de preuve sélectionné, voici comment il peut être fourni : via Shopify et les intégrations connectées, ou par téléversement manuel si nécessaire.",
+      "sourcesNote": "Les badges indiquent ce qui est connecté pour votre boutique. Vous ne modifiez aucun réglage à cette étape — appuyez sur Continuer lorsque vous êtes prêt.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Détails de la commande",
+          "description": "Numéro, date, montant, statut"
+        },
+        "customer-info": {
+          "title": "Informations client",
+          "description": "Nom, e-mail, adresse de facturation, historique"
+        },
+        "shipping-info": {
+          "title": "Informations d’expédition",
+          "description": "Suivi, transporteur, confirmation de livraison"
+        },
+        "product-info": {
+          "title": "Informations produit",
+          "description": "Nom, SKU, description, images"
+        },
+        "policies": {
+          "title": "Politiques de la boutique",
+          "description": "Livraison, retours, remboursement, conditions d’utilisation"
+        },
+        "communication": {
+          "title": "Communication client",
+          "description": "Échanges par e-mail et tickets d’assistance"
+        },
+        "payment-proof": {
+          "title": "Preuve de paiement",
+          "description": "ID de transaction, moyen de paiement, autorisation"
+        },
+        "custom-fields": {
+          "title": "Champs personnalisés",
+          "description": "Preuves supplémentaires pour votre activité"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "API Commandes Shopify",
+        "manualUpload": "Téléversement manuel",
+        "shopifyCustomerApi": "API Clients Shopify",
+        "shopifyFulfillmentApi": "API Fulfillment Shopify",
+        "carrierIntegration": "Intégration transporteur",
+        "shopifyProductApi": "API Produits Shopify",
+        "policyUrls": "URL des politiques",
+        "uploadedDocuments": "Documents téléversés",
+        "emailArchive": "Archive e-mails",
+        "supportTicketExport": "Export tickets d’assistance",
+        "shopifyPaymentApi": "API Paiements Shopify"
+      },
       "sourceAutomatic": "Automatique",
       "sourceManual": "Manuel",
       "statusConnected": "Connecté",

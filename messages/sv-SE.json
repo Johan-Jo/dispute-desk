@@ -1640,7 +1640,7 @@
     },
     "templateWizard": {
       "stepEvidence": "Välj bevis",
-      "stepSources": "Ange källor",
+      "stepSources": "Datakällor",
       "stepReview": "Granska",
       "stepActivate": "Aktivera",
       "stepOf": "Steg {current} av {total}",
@@ -1655,7 +1655,55 @@
       "manualDesc": "Dessa bevistyper kräver manuell uppladdning eller konfiguration.",
       "selected": "valda",
       "recommended": "Rekommenderad",
-      "sourcesDesc": "Konfigurera varifrån varje bevistyp kommer.",
+      "sourcesDesc": "För varje bevistyp du valt visas hur den kan fyllas—via Shopify och anslutna integrationer, eller manuellt vid behov.",
+      "sourcesNote": "Märken visar vad som är anslutet för din butik just nu. Du ändrar inga inställningar här—välj Fortsätt när du är redo.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Orderdetaljer",
+          "description": "Ordernummer, datum, belopp, status"
+        },
+        "customer-info": {
+          "title": "Kundinformation",
+          "description": "Namn, e-post, fakturaadress, historik"
+        },
+        "shipping-info": {
+          "title": "Fraktinformation",
+          "description": "Spårning, transportör, leveransbekräftelse"
+        },
+        "product-info": {
+          "title": "Produktinformation",
+          "description": "Produktnamn, SKU, beskrivning, bilder"
+        },
+        "policies": {
+          "title": "Butikspolicyer",
+          "description": "Frakt, retur, återbetalning, användarvillkor"
+        },
+        "communication": {
+          "title": "Kundkommunikation",
+          "description": "E-post och supportärenden"
+        },
+        "payment-proof": {
+          "title": "Betalningsbevis",
+          "description": "Transaktions-ID, betalningsmetod, auktorisering"
+        },
+        "custom-fields": {
+          "title": "Anpassade fält",
+          "description": "Ytterligare bevis för din verksamhet"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "Shopify Order API",
+        "manualUpload": "Manuell uppladdning",
+        "shopifyCustomerApi": "Shopify Customer API",
+        "shopifyFulfillmentApi": "Shopify Fulfillment API",
+        "carrierIntegration": "Fraktbolagsintegration",
+        "shopifyProductApi": "Shopify Product API",
+        "policyUrls": "Policy-URL:er",
+        "uploadedDocuments": "Uppladdade dokument",
+        "emailArchive": "E-postarkiv",
+        "supportTicketExport": "Export av supportärenden",
+        "shopifyPaymentApi": "Shopify Payment API"
+      },
       "sourceAutomatic": "Automatisk",
       "sourceManual": "Manuell",
       "statusConnected": "Ansluten",

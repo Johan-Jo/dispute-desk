@@ -1775,7 +1775,7 @@
     },
     "templateWizard": {
       "stepEvidence": "Escolher Evidências",
-      "stepSources": "Definir Fontes",
+      "stepSources": "Fontes de dados",
       "stepReview": "Revisar",
       "stepActivate": "Ativar",
       "stepOf": "Etapa {current} de {total}",
@@ -1790,7 +1790,55 @@
       "manualDesc": "Esses tipos de evidência requerem envio manual ou configuração.",
       "selected": "selecionados",
       "recommended": "Recomendado",
-      "sourcesDesc": "Configure de onde virá cada tipo de evidência.",
+      "sourcesDesc": "Para cada tipo de evidência selecionado, veja como ele pode ser preenchido—pelo Shopify e integrações conectadas, ou por envio manual quando necessário.",
+      "sourcesNote": "Os selos mostram o que já está conectado à sua loja. Nada é alterado nesta etapa—toque em Continuar quando quiser avançar.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Detalhes do pedido",
+          "description": "Número do pedido, data, valor, status"
+        },
+        "customer-info": {
+          "title": "Informações do cliente",
+          "description": "Nome, e-mail, endereço de cobrança, histórico"
+        },
+        "shipping-info": {
+          "title": "Informações de envio",
+          "description": "Rastreamento, transportadora, confirmação de entrega"
+        },
+        "product-info": {
+          "title": "Informações do produto",
+          "description": "Nome do produto, SKU, descrição, imagens"
+        },
+        "policies": {
+          "title": "Políticas da loja",
+          "description": "Envio, devolução, reembolso, termos de serviço"
+        },
+        "communication": {
+          "title": "Comunicação com o cliente",
+          "description": "E-mails e tickets de suporte"
+        },
+        "payment-proof": {
+          "title": "Comprovante de pagamento",
+          "description": "ID da transação, método de pagamento, autorização"
+        },
+        "custom-fields": {
+          "title": "Campos personalizados",
+          "description": "Evidências adicionais para o seu negócio"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "API de pedidos Shopify",
+        "manualUpload": "Envio manual",
+        "shopifyCustomerApi": "API de clientes Shopify",
+        "shopifyFulfillmentApi": "API de fulfillment Shopify",
+        "carrierIntegration": "Integração com transportadora",
+        "shopifyProductApi": "API de produtos Shopify",
+        "policyUrls": "URLs de políticas",
+        "uploadedDocuments": "Documentos enviados",
+        "emailArchive": "Arquivo de e-mails",
+        "supportTicketExport": "Exportação de tickets de suporte",
+        "shopifyPaymentApi": "API de pagamentos Shopify"
+      },
       "sourceAutomatic": "Automático",
       "sourceManual": "Manual",
       "statusConnected": "Conectado",

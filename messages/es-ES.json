@@ -1775,7 +1775,7 @@
     },
     "templateWizard": {
       "stepEvidence": "Elegir Evidencia",
-      "stepSources": "Definir Fuentes",
+      "stepSources": "Fuentes de datos",
       "stepReview": "Revisar",
       "stepActivate": "Activar",
       "stepOf": "Paso {current} de {total}",
@@ -1790,7 +1790,55 @@
       "manualDesc": "Estos tipos de evidencia requieren carga manual o configuración.",
       "selected": "seleccionados",
       "recommended": "Recomendado",
-      "sourcesDesc": "Configura de dónde vendrá cada tipo de evidencia.",
+      "sourcesDesc": "Para cada tipo de evidencia seleccionado, aquí se muestra cómo puede obtenerse: mediante Shopify e integraciones conectadas, o con carga manual si hace falta.",
+      "sourcesNote": "Las etiquetas reflejan lo conectado en tu tienda ahora. No cambias ajustes en este paso; pulsa Continuar cuando quieras seguir.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Detalles del pedido",
+          "description": "Número, fecha, importe, estado"
+        },
+        "customer-info": {
+          "title": "Información del cliente",
+          "description": "Nombre, correo, dirección de facturación, historial"
+        },
+        "shipping-info": {
+          "title": "Información de envío",
+          "description": "Seguimiento, transportista, confirmación de entrega"
+        },
+        "product-info": {
+          "title": "Información del producto",
+          "description": "Nombre, SKU, descripción, imágenes"
+        },
+        "policies": {
+          "title": "Políticas de la tienda",
+          "description": "Envío, devolución, reembolso, términos del servicio"
+        },
+        "communication": {
+          "title": "Comunicación con el cliente",
+          "description": "Correos e incidencias de soporte"
+        },
+        "payment-proof": {
+          "title": "Prueba de pago",
+          "description": "ID de transacción, método de pago, autorización"
+        },
+        "custom-fields": {
+          "title": "Campos personalizados",
+          "description": "Pruebas adicionales para tu negocio"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "API de pedidos Shopify",
+        "manualUpload": "Carga manual",
+        "shopifyCustomerApi": "API de clientes Shopify",
+        "shopifyFulfillmentApi": "API de fulfillment Shopify",
+        "carrierIntegration": "Integración con transportista",
+        "shopifyProductApi": "API de productos Shopify",
+        "policyUrls": "URL de políticas",
+        "uploadedDocuments": "Documentos subidos",
+        "emailArchive": "Archivo de correo",
+        "supportTicketExport": "Exportación de tickets de soporte",
+        "shopifyPaymentApi": "API de pagos Shopify"
+      },
       "sourceAutomatic": "Automático",
       "sourceManual": "Manual",
       "statusConnected": "Conectado",

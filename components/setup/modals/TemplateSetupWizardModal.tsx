@@ -291,14 +291,14 @@ function EvidenceCard({
         <BlockStack gap="100">
           <InlineStack gap="200" blockAlign="center">
             <Text as="span" variant="bodyMd" fontWeight="semibold">
-              {evidence.title}
+              {t(`evidenceTypes.${evidence.id}.title` as never)}
             </Text>
             {evidence.recommended && (
               <Badge tone="warning">{t("recommended")}</Badge>
             )}
           </InlineStack>
           <Text as="p" variant="bodySm" tone="subdued">
-            {evidence.description}
+            {t(`evidenceTypes.${evidence.id}.description` as never)}
           </Text>
         </BlockStack>
       </InlineStack>
@@ -319,9 +319,14 @@ function SourcesStep({
 
   return (
     <BlockStack gap="500">
-      <Text as="p" variant="bodyMd" tone="subdued">
-        {t("sourcesDesc")}
-      </Text>
+      <BlockStack gap="200">
+        <Text as="p" variant="bodyMd" tone="subdued">
+          {t("sourcesDesc")}
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {t("sourcesNote")}
+        </Text>
+      </BlockStack>
 
       {Array.from(selectedEvidence).map((evidenceId) => {
         const ev = EVIDENCE_TYPES.find((e) => e.id === evidenceId);
@@ -332,7 +337,7 @@ function SourcesStep({
         return (
           <BlockStack key={evidenceId} gap="200">
             <Text as="h3" variant="headingSm">
-              {ev.title}
+              {t(`evidenceTypes.${evidenceId}.title` as never)}
             </Text>
             {sources.map((src, idx) => (
               <div
@@ -348,7 +353,7 @@ function SourcesStep({
               >
                 <BlockStack gap="050">
                   <Text as="span" variant="bodyMd" fontWeight="medium">
-                    {src.name}
+                    {t(`sourceLabels.${src.sourceKey}` as never)}
                   </Text>
                   <Text as="span" variant="bodySm" tone="subdued">
                     {src.type === "auto"
@@ -471,7 +476,7 @@ function ReviewStep({
                     const ev = EVIDENCE_TYPES.find((e) => e.id === id);
                     return ev ? (
                       <Text key={id} as="span" variant="bodySm">
-                        ✓ {ev.title}
+                        ✓ {t(`evidenceTypes.${id}.title` as never)}
                       </Text>
                     ) : null;
                   })}

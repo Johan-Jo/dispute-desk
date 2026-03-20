@@ -1775,7 +1775,7 @@
     },
     "templateWizard": {
       "stepEvidence": "Choose Evidence",
-      "stepSources": "Set Sources",
+      "stepSources": "Data sources",
       "stepReview": "Review",
       "stepActivate": "Activate",
       "stepOf": "Step {current} of {total}",
@@ -1790,7 +1790,55 @@
       "manualDesc": "These evidence types require manual upload or configuration.",
       "selected": "selected",
       "recommended": "Recommended",
-      "sourcesDesc": "Configure where each type of evidence will come from.",
+      "sourcesDesc": "For each evidence type you selected, here’s how it can be supplied—through Shopify and connected integrations, or by manual upload when needed.",
+      "sourcesNote": "Badges show what’s connected for your store right now. You don’t change any settings on this step—click Continue when you’re ready.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Order details",
+          "description": "Order number, date, amount, status"
+        },
+        "customer-info": {
+          "title": "Customer information",
+          "description": "Name, email, billing address, history"
+        },
+        "shipping-info": {
+          "title": "Shipping information",
+          "description": "Tracking, carrier, delivery confirmation"
+        },
+        "product-info": {
+          "title": "Product information",
+          "description": "Product name, SKU, description, images"
+        },
+        "policies": {
+          "title": "Store policies",
+          "description": "Shipping, return, refund, terms of service"
+        },
+        "communication": {
+          "title": "Customer communication",
+          "description": "Email exchanges and support tickets"
+        },
+        "payment-proof": {
+          "title": "Payment proof",
+          "description": "Transaction ID, payment method, authorization"
+        },
+        "custom-fields": {
+          "title": "Custom fields",
+          "description": "Additional evidence for your business"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "Shopify Order API",
+        "manualUpload": "Manual upload",
+        "shopifyCustomerApi": "Shopify Customer API",
+        "shopifyFulfillmentApi": "Shopify Fulfillment API",
+        "carrierIntegration": "Carrier integration",
+        "shopifyProductApi": "Shopify Product API",
+        "policyUrls": "Policy URLs",
+        "uploadedDocuments": "Uploaded documents",
+        "emailArchive": "Email archive",
+        "supportTicketExport": "Support ticket export",
+        "shopifyPaymentApi": "Shopify Payment API"
+      },
       "sourceAutomatic": "Automatic",
       "sourceManual": "Manual",
       "statusConnected": "Connected",
