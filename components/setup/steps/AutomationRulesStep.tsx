@@ -24,6 +24,9 @@ import type {
 } from "@/lib/rules/setupAutomation";
 import type { TemplateListItem } from "@/lib/types/templates";
 
+/** Same inner width as `PacksStep` so the card content aligns with the previous wizard step */
+const SETUP_STEP_CONTENT_MAX_WIDTH_PX = 720;
+
 interface AutomationRulesStepProps {
   stepId: StepId;
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
@@ -294,15 +297,31 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
 
   if (loadError) {
     return (
-      <Banner tone="critical">
-        <Text as="p">{t(loadError)}</Text>
-      </Banner>
+      <div
+        style={{
+          maxWidth: SETUP_STEP_CONTENT_MAX_WIDTH_PX,
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        <Banner tone="critical">
+          <Text as="p">{t(loadError)}</Text>
+        </Banner>
+      </div>
     );
   }
 
   if (!payload) {
     return (
-      <div style={{ padding: "48px 0", textAlign: "center" }}>
+      <div
+        style={{
+          maxWidth: SETUP_STEP_CONTENT_MAX_WIDTH_PX,
+          margin: "0 auto",
+          width: "100%",
+          padding: "48px 0",
+          textAlign: "center",
+        }}
+      >
         <Spinner accessibilityLabel={t("loading")} />
         <div style={{ marginTop: 12 }}>
           <Text as="p" variant="bodySm" tone="subdued">
@@ -314,6 +333,13 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   }
 
   return (
+    <div
+      style={{
+        maxWidth: SETUP_STEP_CONTENT_MAX_WIDTH_PX,
+        margin: "0 auto",
+        width: "100%",
+      }}
+    >
     <BlockStack gap="500">
       {/* Figma: centered hero + lightning icon */}
       <div style={{ textAlign: "center" }}>
@@ -551,5 +577,6 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
         linkLabel={t("changeLaterRulesLink")}
       />
     </BlockStack>
+    </div>
   );
 }
