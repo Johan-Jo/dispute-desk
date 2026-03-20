@@ -268,6 +268,7 @@ DisputeDesk includes a guided setup wizard (`/app/setup/[step]`). After optional
 
 - **Packs:** Installing a template creates the shop’s **pack library** (`packs`, sections, narratives). IDs are stored in `shop_setup.steps.packs.payload.installedTemplates` when the step completes.
 - **Rules:** Starter rules in the `rules` table are evaluated when a **new** dispute syncs (`auto_pack` → automation pipeline; `review` → `needs_review`). This is **routing**, not “pick library template X for the build.”
+- **Onboarding UI (Automation & review step):** The setup wizard presents routing as **presets → default (General) → optional per-reason cards → safeguards → live summary**, so first-time merchants see a decision flow instead of a single settings table. At least one installed pack template is required before template assignment and the full **Automatic** preset is enabled. See [`docs/technical.md`](technical.md) § *Step 6: Automation Rules*.
 - **Build:** `buildPack` uses source collectors; it does not currently merge library template structure into automated per-dispute builds. See [`docs/technical.md`](technical.md) (*Rules vs library packs*).
 
 ### Dashboard Integration

@@ -838,6 +838,23 @@ On wizard completion the template is installed via `POST /api/templates/:id/inst
 
 Evidence type definitions and source mappings live in `lib/setup/evidenceTypes.ts`. The wizard is client-side only (no new API routes). i18n keys: `setup.packs.*` and `setup.templateWizard.*` in `messages/en-US.json`.
 
+### Step 6: Automation Rules (`AutomationRulesStep`)
+
+**Purpose:** Onboarding-first screen for **what happens when a new dispute syncs** — not a dense admin table. Implemented in `components/setup/steps/AutomationRulesStep.tsx`. Copy lives under `setup.rules` in locale files.
+
+**UX structure (merchant mental model):**
+
+1. **Header** — Title + short subtitle: default first, then optional exceptions; safeguards apply on top.
+2. **Recommended starting point** — Three selectable preset cards: **Manual**, **Review first**, **Automatic**. Manual is visually marked as suggested for first-time users. **Automatic** is disabled until at least one pack template is installed (same prerequisite as template pickers).
+3. **Default rule (General)** — Presented as the **fallback** when no per-reason override applies: pack template (when mode is review/auto-build) + handling mode (Manual / Review first / Auto-build). Not a row inside a large table.
+4. **Exceptions by dispute reason** — One card per Shopify reason (fraud, product not received, etc.): title, one-line helper, template `Select`, handling `Select`. Optional to customize; easy to scan.
+5. **Safeguards** — Visually separated “safety” block: **switch-style** controls (not plain checkboxes) for high-value review threshold and catch-all review. Helper copy states these **override** the default and per-reason rules when conditions match.
+6. **Live summary** — Read-only recap of effective configuration (default line, per-reason lines, safeguard lines).
+
+**Data & API:** Loads and saves via `GET` / `POST /api/setup/automation` (wizard-managed `__dd_setup__:` rules — see § *Rules vs library packs* above). Choosing presets mutates the same `reason_rows` payload client-side.
+
+**Evaluation order** (unchanged; see `lib/rules/pickAutomationAction.ts`): amount safeguards → per-reason rule → default (General) → catch-all. Merchant-facing help article: `help.articles.configuringAutomation`.
+
 ### State Machine
 
 Per-shop state persisted in `shop_setup` table:
@@ -866,6 +883,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | UploadSampleFilesModal | `components/setup/modals/UploadSampleFilesModal.tsx` | Sample file upload |
 | ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
 | TemplateSetupWizardModal | `components/setup/modals/TemplateSetupWizardModal.tsx` | 4-step template configuration wizard (evidence, sources, review, activate) |
+| AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Automation & review onboarding: presets, General default, per-reason cards, safeguards, live summary |
 
 ### Shared Utilities
 

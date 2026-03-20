@@ -224,11 +224,18 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
                     gap: 16,
                     padding: "18px 20px",
                     borderRadius: 8,
-                    border: "1px solid #E1E3E5",
-                    borderLeft: isInstalled ? "3px solid #22C55E" : "1px solid #E1E3E5",
-                    background: isInstalled ? "#F0FDF4" : "#FFFFFF",
+                    border: isInstalled
+                      ? "1px solid #BBF7D0"
+                      : "1px solid #D3D4D6",
+                    borderLeft: isInstalled ? "3px solid #22C55E" : "3px solid #C4CDD5",
+                    background: isInstalled ? "#F0FDF4" : "#F4F5F6",
                     transition: "border-color 150ms, background 150ms",
                   }}
+                  aria-label={
+                    isInstalled
+                      ? `${tpl.name} — ${t("installedBtn")}`
+                      : `${tpl.name} — ${t("notInstalledLabel")}`
+                  }
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
@@ -240,13 +247,39 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
                     >
                       <div
                         style={{
-                          fontWeight: 600,
-                          fontSize: 16,
-                          color: "#202223",
-                          lineHeight: 1.35,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems: "center",
+                          gap: 8,
                         }}
                       >
-                        {tpl.name}
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 16,
+                            color: isInstalled ? "#202223" : "#5C5F62",
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {tpl.name}
+                        </div>
+                        {!isInstalled && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              letterSpacing: "0.02em",
+                              textTransform: "uppercase",
+                              color: "#6D7175",
+                              background: "#E4E5E7",
+                              padding: "3px 8px",
+                              borderRadius: 4,
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {t("notInstalledLabel")}
+                          </span>
+                        )}
                       </div>
                       {(tpl.dispute_type || tpl.is_recommended) && (
                         <div
@@ -268,7 +301,7 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
                       <div
                         style={{
                           fontSize: 14,
-                          color: "#6D7175",
+                          color: isInstalled ? "#6D7175" : "#8C9196",
                           lineHeight: 1.5,
                         }}
                       >
@@ -304,13 +337,14 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
                         style={{
                           padding: "10px 18px",
                           borderRadius: 8,
-                          border: "none",
-                          background: isInstalling ? "#9CA3AF" : "#1F2937",
-                          color: "#FFFFFF",
+                          border: "1px solid #BABFC3",
+                          background: isInstalling ? "#E4E5E7" : "#FFFFFF",
+                          color: isInstalling ? "#8C9196" : "#374151",
                           fontSize: 14,
                           fontWeight: 600,
                           cursor: isInstalling ? "not-allowed" : "pointer",
                           whiteSpace: "nowrap",
+                          boxShadow: "0 1px 0 rgba(0, 0, 0, 0.05)",
                         }}
                       >
                         {isInstalling ? `${t("installBtn")}…` : t("installBtn")}
