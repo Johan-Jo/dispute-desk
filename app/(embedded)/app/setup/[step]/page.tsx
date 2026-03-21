@@ -6,6 +6,9 @@
  */
 "use client";
 
+/** Avoid stale HTML shell from CDNs when merchants refresh mid-wizard after a deploy. */
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
 import { useParams } from "next/navigation";
 import { Page, Layout, Card, BlockStack, Spinner, Text } from "@shopify/polaris";

@@ -673,7 +673,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           </div>
         )}
 
-        {/* Presets — segmented control: Manual · Review · Automatic */}
+        {/* Presets — three large cards (Manual · Review first · Automatic), Figma-style */}
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">
             {t("presetSectionTitle")}
@@ -682,16 +682,12 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
             role="group"
             aria-label={t("presetSectionTitle")}
             style={{
-              display: "flex",
-              width: "100%",
-              borderRadius: 12,
-              border: "1px solid #C9CCCF",
-              overflow: "hidden",
-              background: "#FFFFFF",
-              boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(168px, 1fr))",
+              gap: 12,
             }}
           >
-            {presetCards.map((pc, index) => {
+            {presetCards.map((pc) => {
               const selected = highlightedPreset === pc.id;
               const disabled = pc.id === "auto" && !hasInstalledPacks;
               const showSuggestedBadge =
@@ -705,30 +701,40 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                   title={disabled ? t("noTemplatesInstalled") : undefined}
                   onClick={pc.onClick}
                   style={{
-                    flex: 1,
-                    minWidth: 0,
                     textAlign: "left",
-                    padding: "14px 12px",
-                    border: "none",
-                    borderRight: index < presetCards.length - 1 ? "1px solid #C9CCCF" : undefined,
-                    background: selected ? "#EAF4FF" : "#FFFFFF",
+                    padding: 16,
+                    minHeight: 120,
+                    borderRadius: 12,
+                    border: selected ? "2px solid #2C6ECB" : "1px solid #E8EAED",
+                    background: selected ? "#F0F6FF" : "#FDFDFE",
+                    boxShadow: selected
+                      ? "0 0 0 1px rgba(44, 110, 203, 0.12)"
+                      : "0 1px 2px rgba(15, 23, 42, 0.04)",
                     cursor: disabled ? "not-allowed" : "pointer",
-                    opacity: disabled ? 0.5 : 1,
-                    transition: "background 0.15s ease",
+                    opacity: disabled ? 0.55 : 1,
+                    transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
                   }}
                 >
-                  <BlockStack gap="100">
-                    <InlineStack gap="150" blockAlign="center" wrap={false}>
-                      <Text
-                        as="span"
-                        variant="bodyMd"
-                        fontWeight={selected ? "semibold" : "medium"}
-                        tone={selected ? undefined : "subdued"}
-                      >
+                  <BlockStack gap="150">
+                    <InlineStack gap="200" blockAlign="center" wrap>
+                      <Text as="span" variant="bodyMd" fontWeight="bold">
                         {t(pc.titleKey as "presetManualTitle")}
                       </Text>
-                      {showSuggestedBadge && pc.id === "manual" && (
-                        <Badge tone="info">{t("presetBadgeSuggested")}</Badge>
+                      {showSuggestedBadge && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                            color: "#2C6ECB",
+                            background: "#DBEAFE",
+                            padding: "3px 8px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          {t("presetBadgeSuggested")}
+                        </span>
                       )}
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
