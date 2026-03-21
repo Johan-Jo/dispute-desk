@@ -7,12 +7,13 @@ import {
   Text,
   Banner,
   Button,
+  Collapsible,
   Select,
   TextField,
   InlineStack,
   Spinner,
 } from "@shopify/polaris";
-import { Info } from "lucide-react";
+import { Info, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
@@ -24,7 +25,7 @@ import type {
 import type { TemplateListItem } from "@/lib/types/templates";
 import { DISPUTE_REASONS_ORDER } from "@/lib/rules/disputeReasons";
 
-const CONTENT_MAX_WIDTH_PX = 640;
+const CONTENT_MAX_WIDTH_PX = 560;
 
 /** Reasons shown under “exceptions” — default (GENERAL) is separate */
 const EXCEPTION_REASONS = DISPUTE_REASONS_ORDER.filter((r) => r !== "GENERAL");
@@ -115,10 +116,11 @@ function ChangeLaterCallout({
 
 function sectionCardStyle(): React.CSSProperties {
   return {
-    border: "1px solid #E3E5E8",
-    borderRadius: 12,
+    border: "1px solid #E8EAED",
+    borderRadius: 14,
     padding: 20,
     background: "#FFFFFF",
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.05)",
   };
 }
 
@@ -198,6 +200,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   const [loadError, setLoadError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<PresetId | null>(null);
+  const [exceptionsOpen, setExceptionsOpen] = useState(false);
 
   const packsHref = useMemo(
     () => withShopParams("/app/packs", searchParams),
@@ -224,6 +227,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   const packsPrereqBannerId = useId();
   const safeguardHighValueId = useId();
   const safeguardCatchAllId = useId();
+  const exceptionsCollapsibleId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -532,28 +536,38 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       }}
     >
       <BlockStack gap="600">
-        <BlockStack gap="200">
-          <Text as="h1" variant="headingXl">
-            {t("title")}
-          </Text>
-          <Text as="p" variant="bodyMd" tone="subdued">
-            {t("subtitle")}
-          </Text>
-        </BlockStack>
-
-        <Banner tone="info">
-          <BlockStack gap="100">
-            <Text as="p" variant="bodySm" fontWeight="semibold">
-              {t("packsRelationTitle")}
+        <BlockStack gap="300">
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                background: "linear-gradient(145deg, #FB923C 0%, #EA580C 100%)",
+                boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
+              }}
+            >
+              <Zap size={28} color="#FFFFFF" strokeWidth={2.25} aria-hidden />
+            </div>
+          </div>
+          <BlockStack gap="200">
+            <Text as="h1" variant="headingXl">
+              {t("title")}
+            </Text>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {t("subtitle")}
             </Text>
             <Text as="p" variant="bodySm" tone="subdued">
-              {t("packsRelationBody")}{" "}
-              <a href={packsHref} style={{ color: "#2C6ECB", fontWeight: 600 }}>
+              {t("introOneLiner")}{" "}
+              <a href={packsHref} style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}>
                 {t("packsLinkLabel")}
               </a>
             </Text>
           </BlockStack>
-        </Banner>
+        </BlockStack>
 
         {validationError && (
           <Banner tone="critical" onDismiss={() => setValidationError(null)}>
@@ -593,6 +607,9 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           >
             {presetCards.map((pc) => {
               const selected = activePreset === pc.id;
+              const showSuggestedBadge =
+                Boolean(pc.suggested) &&
+                (activePreset === null || activePreset === "manual");
               return (
                 <button
                   key={pc.id}
@@ -605,11 +622,12 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                     borderRadius: 12,
                     border: selected
                       ? "2px solid #2C6ECB"
-                      : "1px solid #E3E5E8",
-                    background: selected ? "#F4F9FF" : "#FAFBFB",
+                      : "1px solid #E8EAED",
+                    background: selected ? "#F0F6FF" : "#FDFDFE",
+                    boxShadow: selected ? "0 0 0 1px rgba(44, 110, 203, 0.12)" : "0 1px 2px rgba(15, 23, 42, 0.04)",
                     cursor: pc.id === "auto" && !hasInstalledPacks ? "not-allowed" : "pointer",
                     opacity: pc.id === "auto" && !hasInstalledPacks ? 0.55 : 1,
-                    transition: "border-color 0.15s, background 0.15s",
+                    transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
                   }}
                 >
                   <BlockStack gap="150">
@@ -617,15 +635,15 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                       <Text as="span" variant="bodyMd" fontWeight="bold">
                         {t(pc.titleKey as "presetManualTitle")}
                       </Text>
-                      {pc.suggested && (
+                      {showSuggestedBadge && (
                         <span
                           style={{
                             fontSize: 10,
                             fontWeight: 700,
                             textTransform: "uppercase",
                             letterSpacing: "0.04em",
-                            color: "#0369A1",
-                            background: "#E0F2FE",
+                            color: "#64748B",
+                            background: "#F1F5F9",
                             padding: "2px 6px",
                             borderRadius: 4,
                           }}
@@ -647,9 +665,24 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
         {/* Default rule GENERAL */}
         <BlockStack gap="300">
           <BlockStack gap="100">
-            <Text as="h2" variant="headingMd">
-              {t("defaultSectionTitle")}
-            </Text>
+            <InlineStack gap="200" blockAlign="center" wrap>
+              <Text as="h2" variant="headingMd">
+                {t("defaultSectionTitle")}
+              </Text>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#64748B",
+                  background: "#F1F5F9",
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {t("defaultFallbackBadge")}
+              </span>
+            </InlineStack>
             <Text as="p" variant="bodySm" tone="subdued">
               {t("defaultSectionSubtitle")}
             </Text>
@@ -709,7 +742,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           </div>
         </BlockStack>
 
-        {/* Exceptions */}
+        {/* Exceptions — progressive disclosure */}
         <BlockStack gap="300">
           <BlockStack gap="100">
             <Text as="h2" variant="headingMd">
@@ -718,73 +751,92 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
             <Text as="p" variant="bodySm" tone="subdued">
               {t("exceptionsSectionSubtitle")}
             </Text>
+            <div>
+              <Button
+                variant="plain"
+                disclosure={exceptionsOpen ? "up" : "down"}
+                onClick={() => setExceptionsOpen((o) => !o)}
+                ariaExpanded={exceptionsOpen}
+                ariaControls={exceptionsCollapsibleId}
+              >
+                {exceptionsOpen ? t("exceptionsToggleHide") : t("exceptionsToggleShow")}
+              </Button>
+            </div>
           </BlockStack>
-          <BlockStack gap="300">
-            {EXCEPTION_REASONS.map((reason) => {
-              const row = payload.reason_rows.find((r) => r.reason === reason);
-              if (!row) return null;
-              return (
-                <div
-                  key={reason}
-                  style={{
-                    ...sectionCardStyle(),
-                    ...(controlsLocked
-                      ? { opacity: 0.58, background: "#F6F6F7" }
-                      : {}),
-                  }}
-                >
-                  <BlockStack gap="300">
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      {reasonLabel(reason)}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {reasonHelp(reason)}
-                    </Text>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 12,
-                      }}
-                    >
-                      {row.mode === "manual" ? (
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          {t("templateNoneDash")}
-                        </Text>
-                      ) : (
-                        <Select
-                          label={t("colTemplate")}
-                          options={templateChoicesForRow(row.mode)}
-                          value={row.pack_template_id ?? ""}
-                          disabled={controlsLocked}
-                          onChange={(value) =>
-                            updateRow(reason, { pack_template_id: value || null })
-                          }
-                        />
-                      )}
-                      <Select
-                        label={t("colHandling")}
-                        options={modeOptions}
-                        value={row.mode}
-                        disabled={controlsLocked}
-                        onChange={(value) => {
-                          const mode = value as HandlingModeUi;
-                          updateRow(reason, {
-                            mode,
-                            pack_template_id: mode === "manual" ? null : row.pack_template_id,
-                          });
+          <Collapsible id={exceptionsCollapsibleId} open={exceptionsOpen}>
+            <BlockStack gap="300">
+              {EXCEPTION_REASONS.map((reason) => {
+                const row = payload.reason_rows.find((r) => r.reason === reason);
+                if (!row) return null;
+                return (
+                  <div
+                    key={reason}
+                    style={{
+                      ...sectionCardStyle(),
+                      ...(controlsLocked
+                        ? { opacity: 0.58, background: "#F6F6F7" }
+                        : {}),
+                    }}
+                  >
+                    <BlockStack gap="300">
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">
+                        {reasonLabel(reason)}
+                      </Text>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        {reasonHelp(reason)}
+                      </Text>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 12,
                         }}
-                      />
-                    </div>
-                  </BlockStack>
-                </div>
-              );
-            })}
-          </BlockStack>
+                      >
+                        {row.mode === "manual" ? (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {t("templateNoneDash")}
+                          </Text>
+                        ) : (
+                          <Select
+                            label={t("colTemplate")}
+                            options={templateChoicesForRow(row.mode)}
+                            value={row.pack_template_id ?? ""}
+                            disabled={controlsLocked}
+                            onChange={(value) =>
+                              updateRow(reason, { pack_template_id: value || null })
+                            }
+                          />
+                        )}
+                        <Select
+                          label={t("colHandling")}
+                          options={modeOptions}
+                          value={row.mode}
+                          disabled={controlsLocked}
+                          onChange={(value) => {
+                            const mode = value as HandlingModeUi;
+                            updateRow(reason, {
+                              mode,
+                              pack_template_id: mode === "manual" ? null : row.pack_template_id,
+                            });
+                          }}
+                        />
+                      </div>
+                    </BlockStack>
+                  </div>
+                );
+              })}
+            </BlockStack>
+          </Collapsible>
         </BlockStack>
 
         {/* Safeguards */}
-        <div style={sectionCardStyle()}>
+        <div
+          style={{
+            ...sectionCardStyle(),
+            borderColor: "#E2E8F0",
+            background: "#FAFBFC",
+          }}
+        >
           <BlockStack gap="400">
             <BlockStack gap="100">
               <Text as="h2" variant="headingMd">
