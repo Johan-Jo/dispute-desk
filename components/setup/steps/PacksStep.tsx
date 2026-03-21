@@ -20,6 +20,10 @@ interface PacksStepProps {
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
+function getShopId(): string | null {
+  return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
+}
+
 function normalizeDisputeTypeKey(disputeType: string | null): string {
   return (disputeType ?? "GENERAL").toUpperCase().replace(/\s+/g, "_");
 }
@@ -37,6 +41,7 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardTemplate, setWizardTemplate] = useState<Template | null>(null);
+  const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
 
   const disputeLabel = useCallback(
     (disputeType: string | null) => {
@@ -81,6 +86,23 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
         } else {
           setInstalledIds(new Set());
         }
+
+        const shopId = getShopId();
+        if (shopId) {
+          const packsRes = await fetch(
+            `/api/packs?shopId=${encodeURIComponent(shopId)}&status=ACTIVE`
+          );
+          if (packsRes.ok && !cancelled) {
+            const packsBody = (await packsRes.json()) as {
+              packs?: { id: string; name: string }[];
+            };
+            setActivatedPacks(
+              (packsBody.packs ?? []).map((p) => ({ id: p.id, name: p.name }))
+            );
+          }
+        } else if (!cancelled) {
+          setActivatedPacks([]);
+        }
       } catch {
         if (!cancelled) setError(t("fetchError"));
       } finally {
@@ -108,7 +130,7 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
       const res = await fetch(`/api/templates/${wizardTemplate.id}/install`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ activate: true }),
       });
 
       if (!res.ok) {
@@ -117,6 +139,21 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
       }
 
       setInstalledIds((prev) => new Set(prev).add(wizardTemplate.id));
+
+      const sid = getShopId();
+      if (sid) {
+        const packsRes = await fetch(
+          `/api/packs?shopId=${encodeURIComponent(sid)}&status=ACTIVE`
+        );
+        if (packsRes.ok) {
+          const packsBody = (await packsRes.json()) as {
+            packs?: { id: string; name: string }[];
+          };
+          setActivatedPacks(
+            (packsBody.packs ?? []).map((p) => ({ id: p.id, name: p.name }))
+          );
+        }
+      }
     } catch {
       setError(t("installError"));
     } finally {
@@ -199,6 +236,34 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
               {error}
             </Text>
           </Banner>
+        )}
+
+        {activatedPacks.length > 0 && (
+          <div
+            style={{
+              borderRadius: 8,
+              border: "1px solid #BBF7D0",
+              background: "#F0FDF4",
+              padding: "16px 18px",
+            }}
+          >
+            <Text as="p" variant="bodySm" fontWeight="semibold">
+              {t("activatedInLibrary")}
+            </Text>
+            <ul
+              style={{
+                margin: "8px 0 0 0",
+                paddingLeft: 20,
+                fontSize: 14,
+                color: "#166534",
+                lineHeight: 1.5,
+              }}
+            >
+              {activatedPacks.map((p) => (
+                <li key={p.id}>{p.name}</li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {templates.length === 0 ? (

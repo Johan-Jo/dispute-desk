@@ -201,6 +201,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   const [validationError, setValidationError] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<PresetId | null>(null);
   const [exceptionsOpen, setExceptionsOpen] = useState(false);
+  const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
 
   const packsHref = useMemo(
     () => withShopParams("/app/packs", searchParams),
@@ -260,6 +261,33 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       cancelled = true;
     };
   }, [locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const shopId = getShopId();
+    if (!shopId) {
+      setActivatedPacks([]);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/packs?shopId=${encodeURIComponent(shopId)}&status=ACTIVE`
+        );
+        if (!res.ok || cancelled) return;
+        const body = (await res.json()) as { packs?: { id: string; name: string }[] };
+        if (cancelled) return;
+        setActivatedPacks(
+          (body.packs ?? []).map((p) => ({ id: p.id, name: p.name }))
+        );
+      } catch {
+        if (!cancelled) setActivatedPacks([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const generalRow = useMemo(
     () => payload?.reason_rows.find((r) => r.reason === "GENERAL"),
@@ -568,6 +596,34 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
             </Text>
           </BlockStack>
         </BlockStack>
+
+        <div
+          style={{
+            ...sectionCardStyle(),
+            borderColor: "#E2E8F0",
+            background: "#F8FAFC",
+          }}
+        >
+          <BlockStack gap="200">
+            <Text as="h2" variant="headingSm">
+              {t("activatedPackagesTitle")}
+            </Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("activatedPackagesListIntro")}
+            </Text>
+            {activatedPacks.length === 0 ? (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t("activatedPackagesEmpty")}
+              </Text>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#374151", fontSize: 14, lineHeight: 1.6 }}>
+                {activatedPacks.map((p) => (
+                  <li key={p.id}>{p.name}</li>
+                ))}
+              </ul>
+            )}
+          </BlockStack>
+        </div>
 
         {validationError && (
           <Banner tone="critical" onDismiss={() => setValidationError(null)}>

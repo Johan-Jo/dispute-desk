@@ -21,9 +21,10 @@ const DISPUTE_TYPE_LABELS: Record<string, string> = {
 export async function installTemplate(
   templateId: string,
   shopId: string,
-  overrides?: { name?: string }
+  options?: { name?: string; activate?: boolean }
 ): Promise<Pack | null> {
   const sb = getServiceClient();
+  const activate = options?.activate === true;
 
   // 1. Fetch template + i18n for default name
   const { data: tpl, error: tplErr } = await sb
@@ -42,7 +43,7 @@ export async function installTemplate(
     name: string;
   }>;
   const enRow = i18nRows.find((r) => r.locale === "en-US") ?? i18nRows[0];
-  const packName = overrides?.name ?? enRow?.name ?? tpl.slug;
+  const packName = options?.name ?? enRow?.name ?? tpl.slug;
 
   // 2. Create pack
   const { data: pack, error: packErr } = await sb
@@ -51,7 +52,7 @@ export async function installTemplate(
       shop_id: shopId,
       name: packName,
       dispute_type: tpl.dispute_type,
-      status: "DRAFT",
+      status: activate ? "ACTIVE" : "DRAFT",
       source: "TEMPLATE",
       template_id: templateId,
     })
@@ -68,7 +69,7 @@ export async function installTemplate(
     id: pack.id,
     shop_id: pack.shop_id,
     dispute_id: null,
-    status: "draft",
+    status: activate ? "ready" : "draft",
   });
   if (epErr) {
     console.error("[installTemplate] evidence_packs insert", epErr?.message);

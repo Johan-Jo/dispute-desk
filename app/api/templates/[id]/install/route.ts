@@ -6,14 +6,16 @@ type Ctx = { params: Promise<{ id: string }> };
 /**
  * POST /api/templates/:id/install
  *
- * Body: { shopId: string, overrides?: { name?: string } }
+ * Body: { shopId: string, overrides?: { name?: string }, activate?: boolean }
  *
  * Creates a new pack from the global template for the given shop.
+ * Set `activate: true` when the user finished the setup “Activate” step (e.g. onboarding wizard)
+ * so the library pack is ACTIVE instead of DRAFT.
  */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
 
-  let body: { shopId?: string; overrides?: { name?: string } };
+  let body: { shopId?: string; overrides?: { name?: string }; activate?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -31,7 +33,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: "shopId is required" }, { status: 400 });
   }
 
-  const pack = await installTemplate(id, shopId, body.overrides);
+  const pack = await installTemplate(id, shopId, {
+    ...body.overrides,
+    activate: body.activate === true,
+  });
 
   if (!pack) {
     return NextResponse.json(
