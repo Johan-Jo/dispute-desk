@@ -9,6 +9,8 @@ import { WIZARD_STEP_IDS, STEP_BY_ID } from "@/lib/setup/constants";
 import type { StepId, StepsMap, SetupStateResponse } from "@/lib/setup/types";
 import { WizardStepper } from "./WizardStepper";
 import { SkipReasonModal } from "./modals/SkipReasonModal";
+import { agentLogClient } from "@/lib/debug/agentLogClient";
+import { useDdDebug } from "@/lib/setup/useDdDebug";
 
 interface SetupWizardShellProps {
   stepId: StepId;
@@ -25,6 +27,9 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
   const [stepperLoading, setStepperLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [skipModalOpen, setSkipModalOpen] = useState(false);
+  /** On-page diagnostics: `?dd_debug=1` or `localStorage dd_debug=1` in the iframe. */
+  const showDebug = useDdDebug();
+  const [setupStateHttp, setSetupStateHttp] = useState<number | null>(null);
 
   const stepDef = STEP_BY_ID[stepId];
   const wizardIndex = WIZARD_STEP_IDS.indexOf(stepId);
@@ -35,11 +40,18 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
   const fetchState = useCallback(async () => {
     try {
       const res = await fetch("/api/setup/state");
+      setSetupStateHttp(res.status);
+      agentLogClient({
+        hypothesisId: "H1",
+        location: "SetupWizardShell.fetchState",
+        message: "setup_state_response",
+        data: { httpStatus: res.status, stepId },
+      });
       if (res.ok) setState(await res.json());
     } finally {
       setStepperLoading(false);
     }
-  }, []);
+  }, [stepId]);
 
   useEffect(() => { fetchState(); }, [fetchState]);
 
@@ -156,6 +168,34 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
         onClose={() => setSkipModalOpen(false)}
         onConfirm={handleSkipConfirm}
       />
+
+      {showDebug ? (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            right: 8,
+            bottom: 8,
+            zIndex: 9999,
+            maxWidth: 360,
+            padding: "10px 12px",
+            fontSize: 11,
+            fontFamily: "ui-monospace, monospace",
+            lineHeight: 1.4,
+            background: "#111827",
+            color: "#E5E7EB",
+            borderRadius: 8,
+            border: "1px solid #374151",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+            pointerEvents: "none",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 6, color: "#93C5FD" }}>dd_debug</div>
+          <div>step: {stepId}</div>
+          <div>GET /api/setup/state → HTTP {setupStateHttp ?? "…"}</div>
+          <div>stepperLoading: {String(stepperLoading)}</div>
+        </div>
+      ) : null}
     </Page>
   );
 }

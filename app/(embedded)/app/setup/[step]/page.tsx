@@ -14,6 +14,7 @@ import { useParams } from "next/navigation";
 import { Page, Layout, Card, BlockStack, Spinner, Text } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { STEP_IDS } from "@/lib/setup/constants";
+import { normalizeSetupStepParam } from "@/lib/setup/normalizeStepParam";
 import type { StepId } from "@/lib/setup/types";
 import { SetupWizardShell } from "@/components/setup/SetupWizardShell";
 import { WelcomeGoalsStep } from "@/components/setup/steps/WelcomeGoalsStep";
@@ -31,7 +32,7 @@ type StepComponentType = React.ComponentType<typeof stepComponentProps>;
 function StepPageInner() {
   const t = useTranslations("setup");
   const params = useParams<{ step: string }>();
-  const stepId = params.step as StepId;
+  const stepId = normalizeSetupStepParam(params.step) as StepId;
 
   if (!STEP_IDS.includes(stepId)) {
     return (

@@ -25,8 +25,51 @@ import type {
 } from "@/lib/rules/setupAutomation";
 import type { TemplateListItem } from "@/lib/types/templates";
 import { DISPUTE_REASONS_ORDER } from "@/lib/rules/disputeReasons";
+import { agentLogClient } from "@/lib/debug/agentLogClient";
+import { useDdDebug } from "@/lib/setup/useDdDebug";
 
 const CONTENT_MAX_WIDTH_PX = 640;
+
+type RulesDebugSnap = {
+  autoHttp: number | null;
+  tplHttp: number | null;
+  reasonRows: number | null;
+  hasGeneral: boolean | null;
+  loadError: string | null;
+  shopIdCookieLen: number | null;
+};
+
+function AutomationRulesDebugHud({ snap }: { snap: RulesDebugSnap }) {
+  return (
+    <div
+      role="status"
+      style={{
+        position: "fixed",
+        left: 8,
+        bottom: 8,
+        zIndex: 9999,
+        maxWidth: 380,
+        padding: "10px 12px",
+        fontSize: 11,
+        fontFamily: "ui-monospace, monospace",
+        lineHeight: 1.4,
+        background: "#1e293b",
+        color: "#E2E8F0",
+        borderRadius: 8,
+        border: "1px solid #475569",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+        pointerEvents: "none",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 6, color: "#7DD3FC" }}>dd_debug · automation step</div>
+      <div>GET /api/setup/automation → HTTP {snap.autoHttp ?? "…"}</div>
+      <div>GET /api/templates → HTTP {snap.tplHttp ?? "…"}</div>
+      <div>reason_rows: {snap.reasonRows ?? "…"} · has GENERAL: {String(snap.hasGeneral)}</div>
+      <div>loadError: {snap.loadError ?? "—"}</div>
+      <div>shopify_shop_id cookie len: {snap.shopIdCookieLen ?? "…"}</div>
+    </div>
+  );
+}
 
 /** Reasons shown under “exceptions” — default (GENERAL) is separate */
 const EXCEPTION_REASONS = DISPUTE_REASONS_ORDER.filter((r) => r !== "GENERAL");
@@ -214,6 +257,15 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   const [activePreset, setActivePreset] = useState<PresetId | null>(null);
   const [exceptionsOpen, setExceptionsOpen] = useState(false);
   const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
+  const showDebug = useDdDebug();
+  const [debugSnap, setDebugSnap] = useState<RulesDebugSnap>({
+    autoHttp: null,
+    tplHttp: null,
+    reasonRows: null,
+    hasGeneral: null,
+    loadError: null,
+    shopIdCookieLen: null,
+  });
 
   const packsHref = useMemo(
     () => withShopParams("/app/packs", searchParams),
@@ -251,8 +303,25 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           fetch(`/api/templates?locale=${encodeURIComponent(locale)}`),
         ]);
         if (cancelled) return;
+        const sidLen = getShopId()?.length ?? 0;
+        setDebugSnap((d) => ({
+          ...d,
+          autoHttp: autoRes.status,
+          tplHttp: tplRes.status,
+          shopIdCookieLen: sidLen,
+        }));
+        agentLogClient({
+          hypothesisId: "H2",
+          location: "AutomationRulesStep.load",
+          message: "automation_fetch",
+          data: {
+            autoStatus: autoRes.status,
+            tplStatus: tplRes.status,
+          },
+        });
         if (!autoRes.ok) {
           setLoadError("load_failed");
+          setDebugSnap((d) => ({ ...d, loadError: "load_failed" }));
           return;
         }
         const autoBody = (await autoRes.json()) as AutomationSetupPayload & {
@@ -265,8 +334,29 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
         });
         setInstalledTemplateIds(autoBody.installedTemplateIds ?? []);
         setCatalog(tplBody.templates ?? []);
+        const hasGeneral = Boolean(
+          autoBody.reason_rows?.some((r) => r.reason === "GENERAL")
+        );
+        agentLogClient({
+          hypothesisId: "H4",
+          location: "AutomationRulesStep.load",
+          message: "payload_ready",
+          data: {
+            reasonRows: autoBody.reason_rows?.length ?? 0,
+            hasGeneral,
+          },
+        });
+        setDebugSnap((d) => ({
+          ...d,
+          reasonRows: autoBody.reason_rows?.length ?? 0,
+          hasGeneral,
+          loadError: null,
+        }));
       } catch {
-        if (!cancelled) setLoadError("load_failed");
+        if (!cancelled) {
+          setLoadError("load_failed");
+          setDebugSnap((d) => ({ ...d, loadError: "exception" }));
+        }
       }
     })();
     return () => {
@@ -531,38 +621,44 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
 
   if (loadError) {
     return (
-      <div
-        style={{
-          maxWidth: CONTENT_MAX_WIDTH_PX,
-          margin: "0 auto",
-          width: "100%",
-        }}
-      >
-        <Banner tone="critical">
-          <Text as="p">{t(loadError)}</Text>
-        </Banner>
-      </div>
+      <>
+        <div
+          style={{
+            maxWidth: CONTENT_MAX_WIDTH_PX,
+            margin: "0 auto",
+            width: "100%",
+          }}
+        >
+          <Banner tone="critical">
+            <Text as="p">{t(loadError)}</Text>
+          </Banner>
+        </div>
+        {showDebug ? <AutomationRulesDebugHud snap={debugSnap} /> : null}
+      </>
     );
   }
 
   if (!payload || !generalRow) {
     return (
-      <div
-        style={{
-          maxWidth: CONTENT_MAX_WIDTH_PX,
-          margin: "0 auto",
-          width: "100%",
-          padding: "48px 0",
-          textAlign: "center",
-        }}
-      >
-        <Spinner accessibilityLabel={t("loading")} />
-        <div style={{ marginTop: 12 }}>
-          <Text as="p" variant="bodySm" tone="subdued">
-            {t("loading")}
-          </Text>
+      <>
+        <div
+          style={{
+            maxWidth: CONTENT_MAX_WIDTH_PX,
+            margin: "0 auto",
+            width: "100%",
+            padding: "48px 0",
+            textAlign: "center",
+          }}
+        >
+          <Spinner accessibilityLabel={t("loading")} />
+          <div style={{ marginTop: 12 }}>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("loading")}
+            </Text>
+          </div>
         </div>
-      </div>
+        {showDebug ? <AutomationRulesDebugHud snap={debugSnap} /> : null}
+      </>
     );
   }
 
@@ -573,6 +669,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   ];
 
   return (
+    <>
     <div
       style={{
         maxWidth: CONTENT_MAX_WIDTH_PX,
@@ -1021,5 +1118,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
         />
       </BlockStack>
     </div>
+    {showDebug ? <AutomationRulesDebugHud snap={debugSnap} /> : null}
+    </>
   );
 }
