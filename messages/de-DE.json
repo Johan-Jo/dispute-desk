@@ -1772,7 +1772,9 @@
       "fetchError": "Vorlagen konnten nicht geladen werden. Bitte versuche es erneut.",
       "installError": "Vorlage konnte nicht installiert werden. Bitte versuche es erneut.",
       "changeLaterTitle": "Du kannst das später ändern",
-      "changeLaterDesc": "Du kannst jederzeit weitere Vorlagen installieren oder bestehende auf der Packs-Seite ändern."
+      "changeLaterDesc": "Du kannst jederzeit weitere Vorlagen installieren oder bestehende auf der Packs-Seite ändern.",
+      "activatedInLibrary": "In deiner Bibliothek aktiviert",
+      "activatedPacksEmptyHint": "Noch keine — installiere unten eine Vorlage und aktiviere sie, um sie hier zu sehen."
     },
     "templateWizard": {
       "stepEvidence": "Beweise wählen",
@@ -1935,7 +1937,10 @@
       "changeLaterRulesLink": "Regeln öffnen →",
       "installedTemplatesSummary": "In diesem Setup installierte Vorlagen: {list}",
       "badgeAutoPack": "Auto-Build",
-      "badgeReview": "Prüfung"
+      "badgeReview": "Prüfung",
+      "activatedPackagesTitle": "Aktivierte Pakete",
+      "activatedPackagesListIntro": "Diese Beweispakete sind in deiner Bibliothek AKTIV (Schritt Beweispakete).",
+      "activatedPackagesEmpty": "Noch keine aktivierten Pakete. Installiere im Paket-Schritt eine Vorlage und aktiviere sie."
     },
     "teamNotifications": {
       "title": "Team & Benachrichtigungen",

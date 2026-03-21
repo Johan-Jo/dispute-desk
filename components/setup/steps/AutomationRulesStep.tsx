@@ -12,6 +12,7 @@ import {
   TextField,
   InlineStack,
   Spinner,
+  Badge,
 } from "@shopify/polaris";
 import { Info, Zap } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -574,56 +575,56 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                 width: 56,
                 height: 56,
                 borderRadius: 12,
-                background: "linear-gradient(145deg, #FB923C 0%, #EA580C 100%)",
+                background: "linear-gradient(145deg, #1D4ED8 0%, #3B82F6 100%)",
                 boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
               }}
             >
               <Zap size={28} color="#FFFFFF" strokeWidth={2.25} aria-hidden />
             </div>
           </div>
-          <BlockStack gap="200">
-            <Text as="h1" variant="headingXl">
-              {t("title")}
-            </Text>
-            <Text as="p" variant="bodyMd" tone="subdued">
-              {t("subtitle")}
-            </Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("introOneLiner")}{" "}
-              <a href={packsHref} style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}>
-                {t("packsLinkLabel")}
-              </a>
-            </Text>
+          <BlockStack gap="400">
+            <BlockStack gap="200">
+              <Text as="h1" variant="headingXl">
+                {t("title")}
+              </Text>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                {t("subtitle")}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t("introOneLiner")}{" "}
+                <a href={packsHref} style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}>
+                  {t("packsLinkLabel")}
+                </a>
+              </Text>
+            </BlockStack>
+
+            <div
+              style={{
+                paddingTop: 4,
+                borderTop: "1px solid #E3E5E8",
+              }}
+            >
+              <BlockStack gap="300">
+                <Text as="p" variant="bodySm" fontWeight="semibold">
+                  {t("activatedPackagesTitle")}
+                </Text>
+                {activatedPacks.length === 0 ? (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("activatedPackagesEmpty")}
+                  </Text>
+                ) : (
+                  <InlineStack gap="200" wrap blockAlign="center">
+                    {activatedPacks.map((p) => (
+                      <Badge key={p.id} tone="success">
+                        {p.name}
+                      </Badge>
+                    ))}
+                  </InlineStack>
+                )}
+              </BlockStack>
+            </div>
           </BlockStack>
         </BlockStack>
-
-        <div
-          style={{
-            ...sectionCardStyle(),
-            borderColor: "#E2E8F0",
-            background: "#F8FAFC",
-          }}
-        >
-          <BlockStack gap="200">
-            <Text as="h2" variant="headingSm">
-              {t("activatedPackagesTitle")}
-            </Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("activatedPackagesListIntro")}
-            </Text>
-            {activatedPacks.length === 0 ? (
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("activatedPackagesEmpty")}
-              </Text>
-            ) : (
-              <ul style={{ margin: 0, paddingLeft: 20, color: "#374151", fontSize: 14, lineHeight: 1.6 }}>
-                {activatedPacks.map((p) => (
-                  <li key={p.id}>{p.name}</li>
-                ))}
-              </ul>
-            )}
-          </BlockStack>
-        </div>
 
         {validationError && (
           <Banner tone="critical" onDismiss={() => setValidationError(null)}>

@@ -1772,7 +1772,9 @@
       "fetchError": "Échec du chargement des modèles. Veuillez réessayer.",
       "installError": "Échec de l'installation du modèle. Veuillez réessayer.",
       "changeLaterTitle": "Vous pouvez modifier cela plus tard",
-      "changeLaterDesc": "Vous pouvez installer d'autres modèles ou modifier les existants depuis la page Packs à tout moment."
+      "changeLaterDesc": "Vous pouvez installer d'autres modèles ou modifier les existants depuis la page Packs à tout moment.",
+      "activatedInLibrary": "Activés dans votre bibliothèque",
+      "activatedPacksEmptyHint": "Aucun pour l'instant — installez un modèle ci-dessous et activez-le pour le voir ici."
     },
     "templateWizard": {
       "stepEvidence": "Choisir les preuves",
@@ -1935,7 +1937,10 @@
       "changeLaterRulesLink": "Ouvrir les Règles →",
       "installedTemplatesSummary": "Modèles installés dans cette configuration : {list}",
       "badgeAutoPack": "Génération auto",
-      "badgeReview": "Révision"
+      "badgeReview": "Révision",
+      "activatedPackagesTitle": "Packs activés",
+      "activatedPackagesListIntro": "Ces packs de preuves sont ACTIFS dans votre bibliothèque (étape Packs de preuves).",
+      "activatedPackagesEmpty": "Aucun pack activé pour l'instant. Installez un modèle à l'étape Packs et activez-le pour le voir ici."
     },
     "teamNotifications": {
       "title": "Équipe & Notifications",

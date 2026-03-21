@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BlockStack, Text, Badge, Spinner, Banner } from "@shopify/polaris";
+import { BlockStack, Text, Badge, Spinner, Banner, InlineStack } from "@shopify/polaris";
 import { FileText, CheckCircle } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
@@ -228,6 +228,36 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
               {t("subtitle")}
             </Text>
           </div>
+
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 640,
+              marginTop: 20,
+              paddingTop: 20,
+              borderTop: "1px solid #E3E5E8",
+              textAlign: "left",
+            }}
+          >
+            <BlockStack gap="300">
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                {t("activatedInLibrary")}
+              </Text>
+              {activatedPacks.length === 0 ? (
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("activatedPacksEmptyHint")}
+                </Text>
+              ) : (
+                <InlineStack gap="200" wrap blockAlign="center">
+                  {activatedPacks.map((p) => (
+                    <Badge key={p.id} tone="success">
+                      {p.name}
+                    </Badge>
+                  ))}
+                </InlineStack>
+              )}
+            </BlockStack>
+          </div>
         </div>
 
         {error && (
@@ -236,34 +266,6 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
               {error}
             </Text>
           </Banner>
-        )}
-
-        {activatedPacks.length > 0 && (
-          <div
-            style={{
-              borderRadius: 8,
-              border: "1px solid #BBF7D0",
-              background: "#F0FDF4",
-              padding: "16px 18px",
-            }}
-          >
-            <Text as="p" variant="bodySm" fontWeight="semibold">
-              {t("activatedInLibrary")}
-            </Text>
-            <ul
-              style={{
-                margin: "8px 0 0 0",
-                paddingLeft: 20,
-                fontSize: 14,
-                color: "#166534",
-                lineHeight: 1.5,
-              }}
-            >
-              {activatedPacks.map((p) => (
-                <li key={p.id}>{p.name}</li>
-              ))}
-            </ul>
-          </div>
         )}
 
         {templates.length === 0 ? (

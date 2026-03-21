@@ -1772,7 +1772,9 @@
       "fetchError": "Error al cargar las plantillas. Inténtalo de nuevo.",
       "installError": "Error al instalar la plantilla. Inténtalo de nuevo.",
       "changeLaterTitle": "Puedes cambiar esto después",
-      "changeLaterDesc": "Puedes instalar más plantillas o modificar las existentes desde la página de Packs en cualquier momento."
+      "changeLaterDesc": "Puedes instalar más plantillas o modificar las existentes desde la página de Packs en cualquier momento.",
+      "activatedInLibrary": "Activados en tu biblioteca",
+      "activatedPacksEmptyHint": "Ninguno aún — instala una plantilla abajo y actívala para verla aquí."
     },
     "templateWizard": {
       "stepEvidence": "Elegir Evidencia",
@@ -1935,7 +1937,10 @@
       "changeLaterRulesLink": "Abrir Reglas →",
       "installedTemplatesSummary": "Plantillas instaladas en esta configuración: {list}",
       "badgeAutoPack": "Generación auto",
-      "badgeReview": "Revisión"
+      "badgeReview": "Revisión",
+      "activatedPackagesTitle": "Packs activados",
+      "activatedPackagesListIntro": "Estos packs de pruebas están ACTIVOS en tu biblioteca (paso Packs de pruebas).",
+      "activatedPackagesEmpty": "Aún no hay packs activados. Instala una plantilla en el paso de packs y actívala para verla aquí."
     },
     "teamNotifications": {
       "title": "Equipo y notificaciones",

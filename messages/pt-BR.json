@@ -1772,7 +1772,9 @@
       "fetchError": "Falha ao carregar modelos. Tente novamente.",
       "installError": "Falha ao instalar modelo. Tente novamente.",
       "changeLaterTitle": "Você pode alterar isso depois",
-      "changeLaterDesc": "Você pode instalar mais modelos ou modificar os existentes na página de Packs a qualquer momento."
+      "changeLaterDesc": "Você pode instalar mais modelos ou modificar os existentes na página de Packs a qualquer momento.",
+      "activatedInLibrary": "Ativados na sua biblioteca",
+      "activatedPacksEmptyHint": "Nenhum ainda — instale um modelo abaixo e ative para ver aqui."
     },
     "templateWizard": {
       "stepEvidence": "Escolher Evidências",
@@ -1935,7 +1937,10 @@
       "changeLaterRulesLink": "Abrir Regras →",
       "installedTemplatesSummary": "Modelos instalados nesta configuração: {list}",
       "badgeAutoPack": "Geração automática",
-      "badgeReview": "Revisão"
+      "badgeReview": "Revisão",
+      "activatedPackagesTitle": "Pacotes ativados",
+      "activatedPackagesListIntro": "Estes pacotes de evidências estão ATIVOS na sua biblioteca (etapa Pacotes de evidências).",
+      "activatedPackagesEmpty": "Nenhum pacote ativado ainda. Instale um modelo na etapa de pacotes e ative-o para vê-lo aqui."
     },
     "teamNotifications": {
       "title": "Equipe e notificações",

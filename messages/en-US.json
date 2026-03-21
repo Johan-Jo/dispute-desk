@@ -1781,7 +1781,8 @@
       "installError": "Failed to install template. Please try again.",
       "changeLaterTitle": "You can change this later",
       "changeLaterDesc": "You can install more templates or modify existing ones from the Packs page at any time.",
-      "activatedInLibrary": "Activated in your library (ACTIVE)"
+      "activatedInLibrary": "Activated in your library",
+      "activatedPacksEmptyHint": "None yet — install a template below and activate it to see it here."
     },
     "templateWizard": {
       "stepEvidence": "Choose Evidence",

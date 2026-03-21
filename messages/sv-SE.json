@@ -1637,7 +1637,9 @@
       "fetchError": "Kunde inte ladda mallar. Försök igen.",
       "installError": "Kunde inte installera mall. Försök igen.",
       "changeLaterTitle": "Du kan ändra detta senare",
-      "changeLaterDesc": "Du kan installera fler mallar eller ändra befintliga från Packs-sidan när som helst."
+      "changeLaterDesc": "Du kan installera fler mallar eller ändra befintliga från Packs-sidan när som helst.",
+      "activatedInLibrary": "Aktiverade i ditt bibliotek",
+      "activatedPacksEmptyHint": "Inga ännu — installera en mall nedan och aktivera den för att se den här."
     },
     "templateWizard": {
       "stepEvidence": "Välj bevis",
@@ -1800,7 +1802,10 @@
       "changeLaterRulesLink": "Öppna Regler →",
       "installedTemplatesSummary": "Mallar installerade i denna konfiguration: {list}",
       "badgeAutoPack": "Autobygg",
-      "badgeReview": "Granskning"
+      "badgeReview": "Granskning",
+      "activatedPackagesTitle": "Aktiverade paket",
+      "activatedPackagesListIntro": "Dessa bevispaket är AKTIVA i ditt bibliotek (steget Bevispaket).",
+      "activatedPackagesEmpty": "Inga aktiverade paket ännu. Installera en mall i paketsteget och aktivera den för att se den här."
     },
     "teamNotifications": {
       "title": "Team och aviseringar",
