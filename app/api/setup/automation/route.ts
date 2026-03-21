@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { listInstalledTemplateIdsForShop } from "@/lib/db/packs";
 import {
-  mergeLegacyPresetRulesIntoPayload,
-  parseAutomationFromRules,
+  listActivePacksOrderedForAutomation,
+  listInstalledTemplateIdsForShop,
+} from "@/lib/db/packs";
+import {
+  buildAutomationPayloadFromPackModes,
+  parsePackModesFromRules,
+  validatePackModes,
+  type PackHandlingUiMode,
+} from "@/lib/rules/packHandlingAutomation";
+import { replacePackBasedAutomationRules } from "@/lib/rules/replacePackAutomationRules";
+import {
   replaceSetupAutomationRules,
   type AutomationSetupPayload,
 } from "@/lib/rules/setupAutomation";
@@ -45,17 +53,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  let payload = parseAutomationFromRules((rules ?? []) as Rule[]);
-  payload = mergeLegacyPresetRulesIntoPayload(
-    (rules ?? []) as Rule[],
-    payload
+  const installedTemplateIds = await listInstalledTemplateIdsForShop(shopId);
+  const activePacks = await listActivePacksOrderedForAutomation(shopId);
+  const fromRules = parsePackModesFromRules((rules ?? []) as Rule[]);
+  const pack_modes: Record<string, PackHandlingUiMode> = {};
+  for (const p of activePacks) {
+    pack_modes[p.id] = fromRules[p.id] ?? "manual";
+  }
+
+  const payloadFromPacks = buildAutomationPayloadFromPackModes(
+    activePacks,
+    pack_modes,
+    new Set(installedTemplateIds)
   );
 
-  const installedTemplateIds = await listInstalledTemplateIdsForShop(shopId);
-
   return NextResponse.json({
-    ...payload,
+    ...payloadFromPacks,
     installedTemplateIds,
+    activePacks,
+    pack_modes,
+    packAutomation: true,
   });
 }
 
@@ -73,6 +90,7 @@ export async function POST(req: NextRequest) {
 
   const rec = body as {
     shop_id?: string;
+    pack_modes?: Record<string, PackHandlingUiMode>;
     reason_rows?: AutomationSetupPayload["reason_rows"];
     safeguards?: AutomationSetupPayload["safeguards"];
   };
@@ -90,6 +108,33 @@ export async function POST(req: NextRequest) {
       { error: access.reason, upgrade_required: true },
       { status: 403 }
     );
+  }
+
+  if (rec.pack_modes && typeof rec.pack_modes === "object") {
+    const packs = await listActivePacksOrderedForAutomation(shopId);
+    const packModes = rec.pack_modes;
+    const validIds = new Set(packs.map((p) => p.id));
+    for (const key of Object.keys(packModes)) {
+      if (!validIds.has(key)) {
+        return NextResponse.json({ error: "unknown_pack_id" }, { status: 400 });
+      }
+    }
+    const installedTemplateIds = await listInstalledTemplateIdsForShop(shopId);
+    const vErr = validatePackModes(
+      packs,
+      packModes,
+      new Set(installedTemplateIds)
+    );
+    if (vErr) {
+      return NextResponse.json({ error: vErr }, { status: 400 });
+    }
+    try {
+      await replacePackBasedAutomationRules(shopId, packs, packModes);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
   }
 
   const payload: AutomationSetupPayload = {

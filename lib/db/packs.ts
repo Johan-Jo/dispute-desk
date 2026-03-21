@@ -250,6 +250,25 @@ export async function listPacks(
   return (data ?? []) as Pack[];
 }
 
+/** Active packs in stable priority order (oldest first = higher priority). */
+export async function listActivePacksOrderedForAutomation(
+  shopId: string
+): Promise<Pack[]> {
+  const sb = getServiceClient();
+  const { data, error } = await sb
+    .from("packs")
+    .select("*")
+    .eq("shop_id", shopId)
+    .eq("status", "ACTIVE")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[listActivePacksOrderedForAutomation]", error.message);
+    return [];
+  }
+  return (data ?? []) as Pack[];
+}
+
 /** Create a manual (non-template) pack. */
 export async function createPack(
   shopId: string,

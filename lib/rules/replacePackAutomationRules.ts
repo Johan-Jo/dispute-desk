@@ -1,0 +1,99 @@
+import { getServiceClient } from "@/lib/supabase/server";
+import { RULE_PRESETS } from "@/lib/rules/presets";
+import type { Pack } from "@/lib/types/packs";
+import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
+import type { Rule } from "@/lib/rules/types";
+import {
+  disputeTypeToPrimaryReason,
+  packRuleName,
+  type PackHandlingUiMode,
+} from "@/lib/rules/packHandlingAutomation";
+
+const LEGACY_PRESET_NAMES = new Set(RULE_PRESETS.map((p) => p.name));
+
+const FALLBACK_RULE_NAME = `${SETUP_RULE_PREFIX}fallback:default`;
+
+function buildPackAndFallbackRules(
+  shopId: string,
+  packsOrdered: Pack[],
+  packModes: Record<string, PackHandlingUiMode>
+): Array<Omit<Rule, "id" | "created_at" | "updated_at">> {
+  const rows: Array<Omit<Rule, "id" | "created_at" | "updated_at">> = [];
+  for (let i = 0; i < packsOrdered.length; i++) {
+    const pack = packsOrdered[i];
+    const mode = packModes[pack.id] ?? "manual";
+    const reason = disputeTypeToPrimaryReason(pack.dispute_type);
+    const priority = 20 + i * 5;
+    const useAuto = mode === "auto" && pack.template_id;
+    if (useAuto) {
+      rows.push({
+        shop_id: shopId,
+        enabled: true,
+        name: packRuleName(pack.id),
+        match: { reason: [reason] },
+        action: {
+          mode: "auto_pack",
+          pack_template_id: pack.template_id!,
+        },
+        priority,
+      });
+    } else {
+      rows.push({
+        shop_id: shopId,
+        enabled: true,
+        name: packRuleName(pack.id),
+        match: { reason: [reason] },
+        action: { mode: "review", pack_template_id: null },
+        priority,
+      });
+    }
+  }
+  rows.push({
+    shop_id: shopId,
+    enabled: true,
+    name: FALLBACK_RULE_NAME,
+    match: {},
+    action: { mode: "manual", pack_template_id: null },
+    priority: 100_000,
+  });
+  return rows;
+}
+
+/**
+ * Replaces all setup-prefixed rules with pack-based rules + default fallback.
+ */
+export async function replacePackBasedAutomationRules(
+  shopId: string,
+  packsOrdered: Pack[],
+  packModes: Record<string, PackHandlingUiMode>
+): Promise<void> {
+  const sb = getServiceClient();
+
+  await sb
+    .from("rules")
+    .delete()
+    .eq("shop_id", shopId)
+    .like("name", `${SETUP_RULE_PREFIX}%`);
+
+  await sb
+    .from("rules")
+    .delete()
+    .eq("shop_id", shopId)
+    .in("name", [...LEGACY_PRESET_NAMES]);
+
+  const rows = buildPackAndFallbackRules(shopId, packsOrdered, packModes);
+  if (rows.length === 0) return;
+
+  const { error } = await sb.from("rules").insert(
+    rows.map((r) => ({
+      shop_id: r.shop_id,
+      enabled: r.enabled,
+      name: r.name,
+      match: r.match,
+      action: r.action,
+      priority: r.priority,
+    }))
+  );
+
+  if (error) throw new Error(error.message);
+}

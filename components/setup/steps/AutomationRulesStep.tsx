@@ -1,37 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  BlockStack,
-  Text,
-  Banner,
-  Card,
-  Spinner,
-} from "@shopify/polaris";
+import { BlockStack, Text, Banner, Spinner, Button, Badge, InlineStack } from "@shopify/polaris";
 import { Info } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
-import type { AutomationSetupPayload } from "@/lib/rules/setupAutomation";
-import type { TemplateListItem } from "@/lib/types/templates";
-import { RULE_PRESETS } from "@/lib/rules/presets";
+import type { Pack } from "@/lib/types/packs";
 import {
-  applyStarterModeChange,
-  coerceFraudPnrAutoWhenNoTemplates,
-  starterModesFromPayload,
-} from "@/lib/rules/starterAutomationMapping";
-import { EmbeddedStarterRulesWorkflow } from "@/components/rules/EmbeddedStarterRulesWorkflow";
+  validatePackModes,
+  type PackHandlingUiMode,
+} from "@/lib/rules/packHandlingAutomation";
+import { PackModeSegmentedControl } from "@/components/setup/PackModeSegmentedControl";
 import { agentLogClient } from "@/lib/debug/agentLogClient";
 import { useDdDebug } from "@/lib/setup/useDdDebug";
 
-const CONTENT_MAX_WIDTH_PX = 640;
+const CONTENT_MAX_WIDTH_PX = 720;
 
 type RulesDebugSnap = {
   autoHttp: number | null;
-  tplHttp: number | null;
-  reasonRows: number | null;
-  hasGeneral: boolean | null;
+  packCount: number | null;
   loadError: string | null;
   shopIdCookieLen: number | null;
 };
@@ -62,11 +51,7 @@ function AutomationRulesDebugHud({ snap }: { snap: RulesDebugSnap }) {
         dd_debug · automation step
       </div>
       <div>GET /api/setup/automation → HTTP {snap.autoHttp ?? "…"}</div>
-      <div>GET /api/templates → HTTP {snap.tplHttp ?? "…"}</div>
-      <div>
-        reason_rows: {snap.reasonRows ?? "…"} · has GENERAL:{" "}
-        {String(snap.hasGeneral)}
-      </div>
+      <div>active packs: {snap.packCount ?? "…"}</div>
       <div>loadError: {snap.loadError ?? "—"}</div>
       <div>shopify_shop_id cookie len: {snap.shopIdCookieLen ?? "…"}</div>
     </div>
@@ -82,90 +67,29 @@ function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
 }
 
-function ChangeLaterCallout({
-  title,
-  body,
-  rulesHref,
-  linkLabel,
-}: {
-  title: string;
-  body: string;
-  rulesHref: string;
-  linkLabel: string;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        alignItems: "flex-start",
-        padding: "14px 16px",
-        borderRadius: 12,
-        border: "1px solid #FCD34D",
-        background: "#FFFBEB",
-      }}
-    >
-      <div
-        style={{
-          flexShrink: 0,
-          width: 28,
-          height: 28,
-          borderRadius: "50%",
-          background: "#FFF7ED",
-          border: "1px solid #FDBA74",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Info size={16} color="#EA580C" strokeWidth={2.5} aria-hidden />
-      </div>
-      <BlockStack gap="100">
-        <Text as="p" variant="bodyMd" fontWeight="semibold">
-          {title}
-        </Text>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {body}{" "}
-          <a
-            href={rulesHref}
-            style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}
-          >
-            {linkLabel}
-          </a>
-        </Text>
-      </BlockStack>
-    </div>
-  );
+function normalizeDisputeTypeKey(disputeType: string | null): string {
+  return (disputeType ?? "GENERAL").toUpperCase().replace(/\s+/g, "_");
 }
 
 export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepProps) {
   const t = useTranslations("setup.rules");
-  const tRules = useTranslations("rules");
-  const locale = useLocale();
+  const tPacks = useTranslations("packs");
   const searchParams = useSearchParams();
 
-  const [payload, setPayload] = useState<AutomationSetupPayload | null>(null);
+  const [activePacks, setActivePacks] = useState<Pack[]>([]);
+  const [packModes, setPackModes] = useState<Record<string, PackHandlingUiMode>>({});
   const [installedTemplateIds, setInstalledTemplateIds] = useState<string[]>([]);
-  const [catalog, setCatalog] = useState<TemplateListItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>(
-    []
-  );
+  const [loading, setLoading] = useState(true);
   const showDebug = useDdDebug();
   const [debugSnap, setDebugSnap] = useState<RulesDebugSnap>({
     autoHttp: null,
-    tplHttp: null,
-    reasonRows: null,
-    hasGeneral: null,
+    packCount: null,
     loadError: null,
     shopIdCookieLen: null,
   });
 
-  const packsHref = useMemo(
-    () => withShopParams("/app/packs", searchParams),
-    [searchParams]
-  );
   const packsSetupHref = useMemo(
     () => withShopParams("/app/setup/packs", searchParams),
     [searchParams]
@@ -175,68 +99,68 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     [searchParams]
   );
 
-  const hasInstalledPacks = installedTemplateIds.length > 0;
-  const packsPrereqBannerId = useId();
+  const installedSet = useMemo(
+    () => new Set(installedTemplateIds),
+    [installedTemplateIds]
+  );
+
+  const disputeLabel = useCallback(
+    (disputeType: string | null) => {
+      const key = `disputeTypeLabel.${normalizeDisputeTypeKey(disputeType)}`;
+      const label = (tPacks as (k: string) => string)(key);
+      if (
+        typeof label === "string" &&
+        (label.includes("disputeTypeLabel.") || label.startsWith("packs."))
+      ) {
+        return normalizeDisputeTypeKey(disputeType).replace(/_/g, " ");
+      }
+      return label;
+    },
+    [tPacks]
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLoading(true);
+      setLoadError(null);
       try {
-        const [autoRes, tplRes] = await Promise.all([
-          fetch("/api/setup/automation"),
-          fetch(`/api/templates?locale=${encodeURIComponent(locale)}`),
-        ]);
+        const autoRes = await fetch("/api/setup/automation");
         if (cancelled) return;
         const sidLen = getShopId()?.length ?? 0;
         setDebugSnap((d) => ({
           ...d,
           autoHttp: autoRes.status,
-          tplHttp: tplRes.status,
           shopIdCookieLen: sidLen,
         }));
         agentLogClient({
           hypothesisId: "H2",
           location: "AutomationRulesStep.load",
           message: "automation_fetch",
-          data: {
-            autoStatus: autoRes.status,
-            tplStatus: tplRes.status,
-          },
+          data: { autoStatus: autoRes.status },
         });
         if (!autoRes.ok) {
           setLoadError("load_failed");
           setDebugSnap((d) => ({ ...d, loadError: "load_failed" }));
           return;
         }
-        const autoBody = (await autoRes.json()) as AutomationSetupPayload & {
+        const body = (await autoRes.json()) as {
+          activePacks?: Pack[];
+          pack_modes?: Record<string, PackHandlingUiMode>;
           installedTemplateIds?: string[];
         };
-        const tplBody = (await tplRes.json()) as { templates?: TemplateListItem[] };
-        const installed = autoBody.installedTemplateIds ?? [];
-        const raw: AutomationSetupPayload = {
-          reason_rows: autoBody.reason_rows,
-          safeguards: autoBody.safeguards,
-        };
-        const coerced = coerceFraudPnrAutoWhenNoTemplates(raw, installed);
-        setPayload(coerced);
-        setInstalledTemplateIds(installed);
-        setCatalog(tplBody.templates ?? []);
-        const hasGeneral = Boolean(
-          autoBody.reason_rows?.some((r) => r.reason === "GENERAL")
-        );
-        agentLogClient({
-          hypothesisId: "H4",
-          location: "AutomationRulesStep.load",
-          message: "payload_ready",
-          data: {
-            reasonRows: autoBody.reason_rows?.length ?? 0,
-            hasGeneral,
-          },
-        });
+        const packs = body.activePacks ?? [];
+        const modes: Record<string, PackHandlingUiMode> = { ...(body.pack_modes ?? {}) };
+        for (const p of packs) {
+          if (modes[p.id] === undefined) modes[p.id] = "manual";
+        }
+        if (cancelled) return;
+        setActivePacks(packs);
+        setPackModes(modes);
+        setInstalledTemplateIds(body.installedTemplateIds ?? []);
         setDebugSnap((d) => ({
           ...d,
-          reasonRows: autoBody.reason_rows?.length ?? 0,
-          hasGeneral,
+          packCount: packs.length,
           loadError: null,
         }));
       } catch {
@@ -244,33 +168,8 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           setLoadError("load_failed");
           setDebugSnap((d) => ({ ...d, loadError: "exception" }));
         }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [locale]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const shopId = getShopId();
-    if (!shopId) {
-      setActivatedPacks([]);
-      return;
-    }
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/packs?shopId=${encodeURIComponent(shopId)}&status=ACTIVE`
-        );
-        if (!res.ok || cancelled) return;
-        const body = (await res.json()) as { packs?: { id: string; name: string }[] };
-        if (cancelled) return;
-        setActivatedPacks(
-          (body.packs ?? []).map((p) => ({ id: p.id, name: p.name }))
-        );
-      } catch {
-        if (!cancelled) setActivatedPacks([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -278,52 +177,33 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     };
   }, []);
 
-  const validatePayload = useCallback(
-    (p: AutomationSetupPayload): string | null => {
-      const installed = new Set(installedTemplateIds);
-      for (const row of p.reason_rows) {
-        if (row.mode === "auto_build") {
-          if (!row.pack_template_id) return "validationAutoBuildTemplate";
-          if (!installed.has(row.pack_template_id)) return "validationTemplateInstalled";
-        }
-        if (row.pack_template_id && !installed.has(row.pack_template_id)) {
-          return "validationTemplateInstalled";
+  useEffect(() => {
+    setPackModes((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const p of activePacks) {
+        const can =
+          p.template_id != null && installedSet.has(p.template_id);
+        if (next[p.id] === "auto" && !can) {
+          next[p.id] = "manual";
+          changed = true;
         }
       }
-      return null;
-    },
-    [installedTemplateIds]
-  );
+      return changed ? next : prev;
+    });
+  }, [activePacks, installedSet]);
 
-  const starterModes = useMemo(
-    () => (payload ? starterModesFromPayload(payload) : {}),
-    [payload]
-  );
-
-  const handleStarterModeChange = useCallback(
-    (presetId: string, mode: "auto_pack" | "review") => {
-      const preset = RULE_PRESETS.find((p) => p.id === presetId);
-      if (!preset || !payload) return;
-      setPayload((prev) => {
-        if (!prev) return prev;
-        let next = applyStarterModeChange(prev, preset, mode, {
-          installedTemplateIds,
-          catalog,
-        });
-        next = coerceFraudPnrAutoWhenNoTemplates(next, installedTemplateIds);
-        return next;
-      });
-    },
-    [payload, installedTemplateIds, catalog]
-  );
+  const setMode = useCallback((packId: string, mode: PackHandlingUiMode) => {
+    setPackModes((prev) => ({ ...prev, [packId]: mode }));
+  }, []);
 
   useEffect(() => {
     onSaveRef.current = async () => {
       setValidationError(null);
       const shopId = getShopId();
-      if (!shopId || !payload) return false;
+      if (!shopId) return false;
 
-      const err = validatePayload(payload);
+      const err = validatePackModes(activePacks, packModes, installedSet);
       if (err) {
         setValidationError(err);
         return false;
@@ -332,32 +212,29 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       const autoRes = await fetch("/api/setup/automation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop_id: shopId, ...payload }),
+        body: JSON.stringify({ shop_id: shopId, pack_modes: packModes }),
       });
-      if (!autoRes.ok) return false;
+      if (!autoRes.ok) {
+        setValidationError("saveErrorGeneric");
+        return false;
+      }
 
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId,
-          payload: { automationVersion: 2 },
+          payload: { automationVersion: 3 },
         }),
       });
       return res.ok;
     };
-  }, [stepId, onSaveRef, payload, validatePayload]);
+  }, [stepId, onSaveRef, activePacks, packModes, installedSet]);
 
   if (loadError) {
     return (
       <>
-        <div
-          style={{
-            maxWidth: CONTENT_MAX_WIDTH_PX,
-            margin: "0 auto",
-            width: "100%",
-          }}
-        >
+        <div style={{ maxWidth: CONTENT_MAX_WIDTH_PX, margin: "0 auto", width: "100%" }}>
           <Banner tone="critical">
             <Text as="p">{t(loadError)}</Text>
           </Banner>
@@ -367,7 +244,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     );
   }
 
-  if (!payload) {
+  if (loading) {
     return (
       <>
         <div
@@ -375,7 +252,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
             maxWidth: CONTENT_MAX_WIDTH_PX,
             margin: "0 auto",
             width: "100%",
-            padding: "48px 0",
+            padding: "40px 0",
             textAlign: "center",
           }}
         >
@@ -391,6 +268,8 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     );
   }
 
+  const hasPacks = activePacks.length > 0;
+
   return (
     <>
       <div
@@ -398,81 +277,219 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           maxWidth: CONTENT_MAX_WIDTH_PX,
           margin: "0 auto",
           width: "100%",
-          paddingBottom: 24,
+          padding: "8px 0 24px",
         }}
       >
         <BlockStack gap="600">
-          <BlockStack gap="300">
+          <BlockStack gap="400" inlineAlign="center">
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 14,
+                background: "linear-gradient(145deg, #1D4ED8 0%, #3B82F6 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)",
+              }}
+              aria-hidden
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
             <Text as="h1" variant="headingXl">
               {t("title")}
             </Text>
-            <Text as="p" variant="bodyMd" tone="subdued">
-              {t("subtitle")}
-            </Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("introOneLiner")}{" "}
-              <a
-                href={packsHref}
-                style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}
-              >
-                {t("packsLinkLabel")}
-              </a>
-            </Text>
+            <div style={{ maxWidth: 520, textAlign: "center" }}>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                {t("packHandlingIntro")}
+              </Text>
+            </div>
+            <div style={{ maxWidth: 560, textAlign: "center" }}>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                {t("packHandlingHelper")}
+              </Text>
+            </div>
           </BlockStack>
 
           {validationError && (
             <Banner tone="critical" onDismiss={() => setValidationError(null)}>
-              <Text as="p">{t(validationError)}</Text>
+              <Text as="p">
+                {validationError === "saveErrorGeneric"
+                  ? t("saveErrorGeneric")
+                  : t(validationError as "validationTemplateInstalled")}
+              </Text>
             </Banner>
           )}
 
-          {!hasInstalledPacks && (
-            <div id={packsPrereqBannerId}>
-              <Banner tone="warning">
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    {t("packsPrereqTitle")}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("packsPrereqBody")}{" "}
-                    <a href={packsSetupHref} style={{ color: "#2C6ECB", fontWeight: 600 }}>
-                      {t("packsPrereqSetupLink")}
-                    </a>
-                  </Text>
-                </BlockStack>
-              </Banner>
+          <div
+            style={{
+              height: 1,
+              background: "linear-gradient(90deg, transparent, #E2E8F0 15%, #E2E8F0 85%, transparent)",
+              margin: "8px 0",
+            }}
+            aria-hidden
+          />
+
+          {!hasPacks ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "32px 20px",
+                borderRadius: 16,
+                border: "1px solid #E8EAED",
+                background: "#FAFBFC",
+              }}
+            >
+              <BlockStack gap="300" inlineAlign="center">
+                <Text as="h2" variant="headingMd">
+                  {t("emptyPacksTitle")}
+                </Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  {t("emptyPacksBody")}
+                </Text>
+                <Button url={packsSetupHref}>{t("backToPacksCta")}</Button>
+              </BlockStack>
             </div>
+          ) : (
+            <BlockStack gap="500">
+              <BlockStack gap="200">
+                <Text as="h2" variant="headingMd">
+                  {t("packHandlingSectionTitle")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("packHandlingPriorityHint")}
+                </Text>
+              </BlockStack>
+
+              <BlockStack gap="400">
+                {activePacks.map((pack, index) => {
+                  const mode = packModes[pack.id] ?? "manual";
+                  const canAuto =
+                    pack.template_id != null &&
+                    installedSet.has(pack.template_id);
+                  return (
+                    <div
+                      key={pack.id}
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "stretch",
+                        gap: 20,
+                        minHeight: 112,
+                        padding: "20px 22px",
+                        borderRadius: 16,
+                        border: "1px solid #E8EAED",
+                        background: "#FFFFFF",
+                        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          flexShrink: 0,
+                          borderRadius: 12,
+                          background: "linear-gradient(135deg, #2563EB, #60A5FA)",
+                          color: "#fff",
+                          fontWeight: 700,
+                          fontSize: 15,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        aria-hidden
+                      >
+                        {index + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <BlockStack gap="200">
+                          <InlineStack gap="200" wrap blockAlign="center">
+                            <Text as="h3" variant="headingSm">
+                              {pack.name}
+                            </Text>
+                            <Badge tone="success">{t("badgeActiveRow")}</Badge>
+                            {index === 0 ? (
+                              <Badge tone="info">{t("badgeRecommendedRow")}</Badge>
+                            ) : null}
+                          </InlineStack>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {disputeLabel(pack.dispute_type)}
+                          </Text>
+                        </BlockStack>
+                      </div>
+                      <div style={{ flexShrink: 0, alignSelf: "center" }}>
+                        <PackModeSegmentedControl
+                          value={mode === "auto" && !canAuto ? "manual" : mode}
+                          onChange={(next) => {
+                            if (next === "auto" && !canAuto) return;
+                            setMode(pack.id, next);
+                          }}
+                          disabled={false}
+                          disabledAuto={!canAuto}
+                          manualLabel={t("segmentManual")}
+                          autoLabel={t("segmentAuto")}
+                          manualHint={t("segmentManualHint")}
+                          autoHint={t("segmentAutoHint")}
+                          autoDisabledReason={t("packAutoDisabledHint")}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </BlockStack>
+            </BlockStack>
           )}
 
-          <Card>
-            <EmbeddedStarterRulesWorkflow
-              tr={tRules}
-              starterModes={starterModes}
-              onStarterModeChange={handleStarterModeChange}
-              activatedPacks={activatedPacks}
-              allowAutoPackForFraudAndPnr={hasInstalledPacks}
-              highValueMin={payload.safeguards.high_value_min}
-              onHighValueMinChange={(value) =>
-                setPayload((p) =>
-                  p
-                    ? {
-                        ...p,
-                        safeguards: { ...p.safeguards, high_value_min: value },
-                      }
-                    : p
-                )
-              }
-              highValueReviewEnabled={payload.safeguards.high_value_review_enabled}
-              highValueMinLabel={t("highValueMinLabel")}
-            />
-          </Card>
-
-          <ChangeLaterCallout
-            title={t("changeLaterTitle")}
-            body={t("changeLaterBody")}
-            rulesHref={rulesHref}
-            linkLabel={t("changeLaterRulesLink")}
-          />
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "flex-start",
+              padding: "16px 18px",
+              borderRadius: 14,
+              border: "1px solid #E2E8F0",
+              background: "#F8FAFC",
+            }}
+          >
+            <div
+              style={{
+                flexShrink: 0,
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "#EFF6FF",
+                border: "1px solid #BFDBFE",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Info size={15} color="#2563EB" strokeWidth={2.5} aria-hidden />
+            </div>
+            <BlockStack gap="100">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                {t("changeLaterTitle")}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t("changeLaterBody")}{" "}
+                <a href={rulesHref} style={{ color: "#2563EB", fontWeight: 600, textDecoration: "none" }}>
+                  {t("changeLaterRulesLink")}
+                </a>
+              </Text>
+            </BlockStack>
+          </div>
         </BlockStack>
       </div>
       {showDebug ? <AutomationRulesDebugHud snap={debugSnap} /> : null}
