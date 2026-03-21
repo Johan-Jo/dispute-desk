@@ -21,7 +21,8 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<SetupStateResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  /** Step progress for the stepper; never block step body on this fetch. */
+  const [stepperLoading, setStepperLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [skipModalOpen, setSkipModalOpen] = useState(false);
 
@@ -36,7 +37,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
       const res = await fetch("/api/setup/state");
       if (res.ok) setState(await res.json());
     } finally {
-      setLoading(false);
+      setStepperLoading(false);
     }
   }, []);
 
@@ -99,24 +100,24 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
     [stepId, getAdjacentWizardStep, navigateToStep, router, searchParams]
   );
 
-  if (loading) {
-    return (
-      <Page>
-        <Card>
-          <BlockStack gap="400" inlineAlign="center">
-            <Spinner />
-          </BlockStack>
-        </Card>
-      </Page>
-    );
-  }
-
   const stepsMap: StepsMap = state?.steps ?? {};
 
   return (
     <Page>
       <div style={{ padding: "0 24px" }}>
-        <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
+        {stepperLoading ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              padding: "16px 0",
+            }}
+          >
+            <Spinner size="small" />
+          </div>
+        ) : (
+          <WizardStepper currentStepId={stepId} stepsMap={stepsMap} />
+        )}
 
         <div style={{ marginTop: 16 }}>
           <Card>
