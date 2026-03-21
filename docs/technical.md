@@ -454,7 +454,7 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 ### Portal Template Library (Packs) & Policy APIs
 - `GET /api/templates?locale=&category=` — list pack templates (portal Packs page; filter `is_recommended` for suggested)
 - `GET /api/templates/:id/preview?locale=` — template preview
-- `POST /api/templates/:id/install` — install template for shop (creates pack from template)
+- `POST /api/templates/:id/install` — install template for shop (creates pack from template). Body: `{ shopId, overrides?: { name? }, activate?: boolean }`. When `activate: true` (e.g. after the embedded Template Setup Wizard “Activate” step), the new library pack is created as **ACTIVE** and `evidence_packs` is **ready**; otherwise defaults to **DRAFT** / **draft**.
 - `GET /api/policy-templates` — list policy template types (refund, shipping, terms-of-service)
 - `GET /api/policy-templates/[type]/content` — Markdown body for a policy template
 - `GET /api/policies?shop_id=` — list policy snapshots for shop
@@ -469,7 +469,7 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 
 #### Rules vs library packs (mental model)
 
-- **Pack templates** (`POST /api/templates/:id/install`): Creates shop **library** rows in `packs`, `pack_sections`, narratives, etc. (`installTemplate` in `lib/db/packs.ts`). When the Packs wizard step completes, installed template IDs are stored in `shop_setup.steps.packs.payload.installedTemplates`.
+- **Pack templates** (`POST /api/templates/:id/install`): Creates shop **library** rows in `packs`, `pack_sections`, narratives, etc. (`installTemplate` in `lib/db/packs.ts`). When the Packs wizard step completes, installed template IDs are stored in `shop_setup.steps.packs.payload.installedTemplates`. The Packs and Automation wizard steps list **`packs` with `status = ACTIVE`** (same notion as the “activated” library on the Packs page) for quick visibility.
 - **Setup automation** (`GET` / `POST /api/setup/automation`): Reads/writes wizard-managed `rules` rows named with prefix `__dd_setup__:` (see `lib/rules/setupAutomation.ts`). Per-dispute-reason rows store `action.mode` as `auto_pack`, `review`, or `manual`, plus optional `pack_template_id` (global `pack_templates.id` / installed library). Saving replaces setup-managed rules and removes legacy `install-preset` rows with the old fixed names.
 - **Evaluation** (`pickAutomationAction` in `lib/rules/pickAutomationAction.ts`, used by `evaluateRules`): Tier order is **amount safeguards → per-reason rules → catch-all** `match: {}`. Default when nothing matches: **manual** (no pipeline, no `needs_review`). Within the same tier and priority, **review** sorts before **auto_pack**. On **new dispute** sync (`syncDisputes.ts`), `review` sets `needs_review`; `auto_pack` runs `runAutomationPipeline` and stores `pack_template_id` on the new `evidence_packs` row (`029_evidence_packs_pack_template.sql`); `manual` does neither.
 - **Important:** `lib/packs/buildPack.ts` still assembles evidence via **collectors** only; `evidence_packs.pack_template_id` records which catalog template the merchant chose for that automation path. Teaching `buildPack` to merge library checklist/sections from that template is a follow-up.
@@ -578,7 +578,7 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 | `/api/rules/install-preset` | POST | Bulk install rule presets (body: `shop_id`, optional `preset_ids[]`). Idempotent by preset name. Plan-gated. |
 | `/api/disputes/:id/approve` | POST | Approve from review queue |
 
-Rule presets are defined in `lib/rules/presets.ts` (e.g. fraud auto-pack, PNR auto-pack, high-value review, catch-all review). Portal Rules page offers "Install Suggested Rules" and empty-state preset cards.
+Rule presets are defined in `lib/rules/presets.ts` (e.g. fraud auto-pack, PNR auto-pack, high-value review, catch-all review). Portal Rules page offers "Install Suggested Rules" and empty-state preset cards. The **embedded** Rules page (`app/(embedded)/app/rules/page.tsx`) always shows these four as **Suggested Starter Rules** with a **routing** control per row (Auto-Pack vs Send to Review) and **Save starter rules** (creates or updates `rules` rows by preset name). It also lists **ACTIVE** library packs from `GET /api/packs?status=ACTIVE`.
 
 ## Save Evidence to Shopify
 

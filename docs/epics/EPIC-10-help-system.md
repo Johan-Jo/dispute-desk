@@ -35,6 +35,7 @@ Knowledge-base-style help center available on both the external portal (`/portal
 
 ## Content Highlights
 
+- Help articles in `messages/en-US.json` and `messages/en.json` are updated when product UX changes (e.g. embedded Rules starter rows + **Save starter rules**, activated packs in the setup wizard, template install `activate`); portal Help and embedded Help resolve the same `help.articles.*` keys for shared articles.
 - Compliance-critical article: **"DisputeDesk does NOT submit to card networks"** clearly explains the save-vs-submit distinction in all 5 languages.
 - Plan comparison article covers Free/Starter/Pro feature and limit breakdown.
 - Completeness score article explains thresholds and auto-save behavior.
