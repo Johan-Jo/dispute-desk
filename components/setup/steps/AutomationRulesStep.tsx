@@ -26,7 +26,7 @@ import type {
 import type { TemplateListItem } from "@/lib/types/templates";
 import { DISPUTE_REASONS_ORDER } from "@/lib/rules/disputeReasons";
 
-const CONTENT_MAX_WIDTH_PX = 560;
+const CONTENT_MAX_WIDTH_PX = 640;
 
 /** Reasons shown under “exceptions” — default (GENERAL) is separate */
 const EXCEPTION_REASONS = DISPUTE_REASONS_ORDER.filter((r) => r !== "GENERAL");
@@ -61,6 +61,17 @@ const REASON_HELP_KEY: Record<string, string> = {
 };
 
 type PresetId = "manual" | "review" | "auto";
+
+/** Best-effort match so the segmented control shows the active mode after reload or edits. */
+function inferPresetFromPayload(p: AutomationSetupPayload): PresetId | null {
+  const rows = p.reason_rows;
+  if (rows.length === 0) return null;
+  if (rows.every((r) => r.mode === "manual")) return "manual";
+  if (rows.every((r) => r.mode === "review")) return "review";
+  const autoish = rows.filter((r) => r.mode === "auto_build").length;
+  if (autoish > 0) return "auto";
+  return null;
+}
 
 function ChangeLaterCallout({
   title,
@@ -510,6 +521,12 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     return lines;
   }, [payload, generalRow, t, modeSummaryLabel]);
 
+  const highlightedPreset = useMemo((): PresetId | null => {
+    if (activePreset !== null) return activePreset;
+    if (!payload) return null;
+    return inferPresetFromPayload(payload);
+  }, [activePreset, payload]);
+
   const controlsLocked = !hasInstalledPacks;
 
   if (loadError) {
@@ -565,7 +582,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       }}
     >
       <BlockStack gap="600">
-        <BlockStack gap="300">
+        <BlockStack gap="500">
           <div style={{ textAlign: "center" }}>
             <div
               style={{
@@ -575,7 +592,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                 width: 56,
                 height: 56,
                 borderRadius: 12,
-                background: "linear-gradient(145deg, #1D4ED8 0%, #3B82F6 100%)",
+                background: "linear-gradient(145deg, #FB923C 0%, #EA580C 100%)",
                 boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
               }}
             >
@@ -600,13 +617,19 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
 
             <div
               style={{
-                paddingTop: 4,
-                borderTop: "1px solid #E3E5E8",
+                borderRadius: 12,
+                border: "1px solid #E1E3E5",
+                background: "#F6F6F7",
+                padding: "16px 18px",
+                textAlign: "left",
               }}
             >
-              <BlockStack gap="300">
+              <BlockStack gap="200">
                 <Text as="p" variant="bodySm" fontWeight="semibold">
                   {t("activatedPackagesTitle")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("activatedPackagesListIntro")}
                 </Text>
                 {activatedPacks.length === 0 ? (
                   <Text as="p" variant="bodySm" tone="subdued">
@@ -650,63 +673,62 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           </div>
         )}
 
-        {/* Presets */}
+        {/* Presets — segmented control: Manual · Review · Automatic */}
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">
             {t("presetSectionTitle")}
           </Text>
           <div
+            role="group"
+            aria-label={t("presetSectionTitle")}
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: 12,
+              display: "flex",
+              width: "100%",
+              borderRadius: 12,
+              border: "1px solid #C9CCCF",
+              overflow: "hidden",
+              background: "#FFFFFF",
+              boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
             }}
           >
-            {presetCards.map((pc) => {
-              const selected = activePreset === pc.id;
+            {presetCards.map((pc, index) => {
+              const selected = highlightedPreset === pc.id;
+              const disabled = pc.id === "auto" && !hasInstalledPacks;
               const showSuggestedBadge =
                 Boolean(pc.suggested) &&
-                (activePreset === null || activePreset === "manual");
+                (highlightedPreset === null || highlightedPreset === "manual");
               return (
                 <button
                   key={pc.id}
                   type="button"
+                  disabled={disabled}
+                  title={disabled ? t("noTemplatesInstalled") : undefined}
                   onClick={pc.onClick}
-                  disabled={pc.id === "auto" && !hasInstalledPacks}
                   style={{
+                    flex: 1,
+                    minWidth: 0,
                     textAlign: "left",
-                    padding: 16,
-                    borderRadius: 12,
-                    border: selected
-                      ? "2px solid #2C6ECB"
-                      : "1px solid #E8EAED",
-                    background: selected ? "#F0F6FF" : "#FDFDFE",
-                    boxShadow: selected ? "0 0 0 1px rgba(44, 110, 203, 0.12)" : "0 1px 2px rgba(15, 23, 42, 0.04)",
-                    cursor: pc.id === "auto" && !hasInstalledPacks ? "not-allowed" : "pointer",
-                    opacity: pc.id === "auto" && !hasInstalledPacks ? 0.55 : 1,
-                    transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
+                    padding: "14px 12px",
+                    border: "none",
+                    borderRight: index < presetCards.length - 1 ? "1px solid #C9CCCF" : undefined,
+                    background: selected ? "#EAF4FF" : "#FFFFFF",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    opacity: disabled ? 0.5 : 1,
+                    transition: "background 0.15s ease",
                   }}
                 >
-                  <BlockStack gap="150">
-                    <InlineStack gap="200" blockAlign="center" wrap>
-                      <Text as="span" variant="bodyMd" fontWeight="bold">
+                  <BlockStack gap="100">
+                    <InlineStack gap="150" blockAlign="center" wrap={false}>
+                      <Text
+                        as="span"
+                        variant="bodyMd"
+                        fontWeight={selected ? "semibold" : "medium"}
+                        tone={selected ? undefined : "subdued"}
+                      >
                         {t(pc.titleKey as "presetManualTitle")}
                       </Text>
-                      {showSuggestedBadge && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.04em",
-                            color: "#64748B",
-                            background: "#F1F5F9",
-                            padding: "2px 6px",
-                            borderRadius: 4,
-                          }}
-                        >
-                          {t("presetBadgeSuggested")}
-                        </span>
+                      {showSuggestedBadge && pc.id === "manual" && (
+                        <Badge tone="info">{t("presetBadgeSuggested")}</Badge>
                       )}
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
