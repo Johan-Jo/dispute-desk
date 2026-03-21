@@ -250,8 +250,12 @@ export async function listPacks(
   return (data ?? []) as Pack[];
 }
 
-/** Active packs in stable priority order (oldest first = higher priority). */
-export async function listActivePacksOrderedForAutomation(
+/**
+ * Template-backed library packs for automation setup: **DRAFT and ACTIVE** (excludes ARCHIVED).
+ * Oldest first = rule priority. Aligns with “installed templates” on the Packs step; many installs
+ * stay DRAFT until explicitly activated, so filtering only ACTIVE hid most packs on Auto e revisão.
+ */
+export async function listLibraryPacksForAutomationRules(
   shopId: string
 ): Promise<Pack[]> {
   const sb = getServiceClient();
@@ -259,11 +263,12 @@ export async function listActivePacksOrderedForAutomation(
     .from("packs")
     .select("*")
     .eq("shop_id", shopId)
-    .eq("status", "ACTIVE")
+    .neq("status", "ARCHIVED")
+    .not("template_id", "is", null)
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("[listActivePacksOrderedForAutomation]", error.message);
+    console.error("[listLibraryPacksForAutomationRules]", error.message);
     return [];
   }
   return (data ?? []) as Pack[];

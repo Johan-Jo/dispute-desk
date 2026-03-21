@@ -419,7 +419,11 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                             <Text as="h3" variant="headingSm">
                               {pack.name}
                             </Text>
-                            <Badge tone="success">{t("badgeActiveRow")}</Badge>
+                            {pack.status === "ACTIVE" ? (
+                              <Badge tone="success">{t("badgeActiveRow")}</Badge>
+                            ) : (
+                              <Badge tone="attention">{t("badgeDraftRow")}</Badge>
+                            )}
                             {index === 0 ? (
                               <Badge tone="info">{t("badgeRecommendedRow")}</Badge>
                             ) : null}

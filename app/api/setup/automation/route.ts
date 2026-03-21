@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
-  listActivePacksOrderedForAutomation,
+  listLibraryPacksForAutomationRules,
   listInstalledTemplateIdsForShop,
 } from "@/lib/db/packs";
 import {
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   }
 
   const installedTemplateIds = await listInstalledTemplateIdsForShop(shopId);
-  const activePacks = await listActivePacksOrderedForAutomation(shopId);
+  const activePacks = await listLibraryPacksForAutomationRules(shopId);
   const fromRules = parsePackModesFromRules((rules ?? []) as Rule[]);
   const pack_modes: Record<string, PackHandlingUiMode> = {};
   for (const p of activePacks) {
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (rec.pack_modes && typeof rec.pack_modes === "object") {
-    const packs = await listActivePacksOrderedForAutomation(shopId);
+    const packs = await listLibraryPacksForAutomationRules(shopId);
     const packModes = rec.pack_modes;
     const validIds = new Set(packs.map((p) => p.id));
     for (const key of Object.keys(packModes)) {
