@@ -15,8 +15,10 @@ export function withShopParams(
   const params = new URLSearchParams();
   const shop = sp.get("shop");
   const host = sp.get("host");
+  const ddDebug = sp.get("dd_debug");
   if (shop) params.set("shop", shop);
   if (host) params.set("host", host);
+  if (ddDebug) params.set("dd_debug", ddDebug);
 
   const qs = params.toString();
   return qs ? `${pathname}?${qs}` : pathname;

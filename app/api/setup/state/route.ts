@@ -7,6 +7,7 @@ import {
   getNextActionableStep,
 } from "@/lib/setup/constants";
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
+import { agentLogRuntime } from "@/lib/debug/agentLogRuntime";
 
 /** Migrate legacy step keys to new step ids when reading shop_setup.steps */
 function migrateStepsMap(raw: Record<string, unknown> | null): Partial<Record<StepId, StepState>> {
@@ -22,6 +23,7 @@ function migrateStepsMap(raw: Record<string, unknown> | null): Partial<Record<St
 }
 
 export async function GET(req: NextRequest) {
+  const t0 = Date.now();
   const url =
     "nextUrl" in req && req.nextUrl
       ? req.nextUrl
@@ -32,6 +34,15 @@ export async function GET(req: NextRequest) {
     req.cookies?.get?.("dd_active_shop")?.value ??
     req.cookies?.get?.("active_shop_id")?.value;
   if (!shopId) {
+    agentLogRuntime({
+      hypothesisId: "H1",
+      location: "api/setup/state",
+      message: "missing_shop_id",
+      data: {
+        hasHeaderShopId: Boolean(req.headers.get("x-shop-id")),
+        ms: Date.now() - t0,
+      },
+    });
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
@@ -74,6 +85,17 @@ export async function GET(req: NextRequest) {
     allDone: doneCount === TOTAL_STEPS,
     shopId,
   };
+
+  agentLogRuntime({
+    hypothesisId: "H1",
+    location: "api/setup/state",
+    message: "ok",
+    data: {
+      shopIdLen: shopId.length,
+      ms: Date.now() - t0,
+      doneCount,
+    },
+  });
 
   return NextResponse.json(response);
 }

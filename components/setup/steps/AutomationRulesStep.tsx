@@ -6,25 +6,22 @@ import {
   BlockStack,
   Text,
   Banner,
-  Button,
-  Collapsible,
-  Select,
-  TextField,
-  InlineStack,
+  Card,
   Spinner,
-  Badge,
 } from "@shopify/polaris";
-import { Info, Zap } from "lucide-react";
+import { Info } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
-import type {
-  AutomationSetupPayload,
-  HandlingModeUi,
-  ReasonRowState,
-} from "@/lib/rules/setupAutomation";
+import type { AutomationSetupPayload } from "@/lib/rules/setupAutomation";
 import type { TemplateListItem } from "@/lib/types/templates";
-import { DISPUTE_REASONS_ORDER } from "@/lib/rules/disputeReasons";
+import { RULE_PRESETS } from "@/lib/rules/presets";
+import {
+  applyStarterModeChange,
+  coerceFraudPnrAutoWhenNoTemplates,
+  starterModesFromPayload,
+} from "@/lib/rules/starterAutomationMapping";
+import { EmbeddedStarterRulesWorkflow } from "@/components/rules/EmbeddedStarterRulesWorkflow";
 import { agentLogClient } from "@/lib/debug/agentLogClient";
 import { useDdDebug } from "@/lib/setup/useDdDebug";
 
@@ -61,18 +58,20 @@ function AutomationRulesDebugHud({ snap }: { snap: RulesDebugSnap }) {
         pointerEvents: "none",
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 6, color: "#7DD3FC" }}>dd_debug · automation step</div>
+      <div style={{ fontWeight: 700, marginBottom: 6, color: "#7DD3FC" }}>
+        dd_debug · automation step
+      </div>
       <div>GET /api/setup/automation → HTTP {snap.autoHttp ?? "…"}</div>
       <div>GET /api/templates → HTTP {snap.tplHttp ?? "…"}</div>
-      <div>reason_rows: {snap.reasonRows ?? "…"} · has GENERAL: {String(snap.hasGeneral)}</div>
+      <div>
+        reason_rows: {snap.reasonRows ?? "…"} · has GENERAL:{" "}
+        {String(snap.hasGeneral)}
+      </div>
       <div>loadError: {snap.loadError ?? "—"}</div>
       <div>shopify_shop_id cookie len: {snap.shopIdCookieLen ?? "…"}</div>
     </div>
   );
 }
-
-/** Reasons shown under “exceptions” — default (GENERAL) is separate */
-const EXCEPTION_REASONS = DISPUTE_REASONS_ORDER.filter((r) => r !== "GENERAL");
 
 interface AutomationRulesStepProps {
   stepId: StepId;
@@ -81,39 +80,6 @@ interface AutomationRulesStepProps {
 
 function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
-}
-
-const REASON_LABEL_KEY: Record<string, string> = {
-  FRAUDULENT: "reasonFraudulent",
-  PRODUCT_NOT_RECEIVED: "reasonProductNotReceived",
-  SUBSCRIPTION_CANCELED: "reasonSubscriptionCanceled",
-  PRODUCT_UNACCEPTABLE: "reasonProductUnacceptable",
-  CREDIT_NOT_PROCESSED: "reasonCreditNotProcessed",
-  DUPLICATE: "reasonDuplicate",
-  GENERAL: "reasonGeneral",
-};
-
-const REASON_HELP_KEY: Record<string, string> = {
-  FRAUDULENT: "reasonHelpFraudulent",
-  PRODUCT_NOT_RECEIVED: "reasonHelpPnr",
-  SUBSCRIPTION_CANCELED: "reasonHelpSub",
-  PRODUCT_UNACCEPTABLE: "reasonHelpUnacceptable",
-  CREDIT_NOT_PROCESSED: "reasonHelpCredit",
-  DUPLICATE: "reasonHelpDuplicate",
-  GENERAL: "reasonHelpGeneral",
-};
-
-type PresetId = "manual" | "review" | "auto";
-
-/** Best-effort match so the segmented control shows the active mode after reload or edits. */
-function inferPresetFromPayload(p: AutomationSetupPayload): PresetId | null {
-  const rows = p.reason_rows;
-  if (rows.length === 0) return null;
-  if (rows.every((r) => r.mode === "manual")) return "manual";
-  if (rows.every((r) => r.mode === "review")) return "review";
-  const autoish = rows.filter((r) => r.mode === "auto_build").length;
-  if (autoish > 0) return "auto";
-  return null;
 }
 
 function ChangeLaterCallout({
@@ -160,85 +126,14 @@ function ChangeLaterCallout({
         </Text>
         <Text as="p" variant="bodySm" tone="subdued">
           {body}{" "}
-          <a href={rulesHref} style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}>
+          <a
+            href={rulesHref}
+            style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}
+          >
             {linkLabel}
           </a>
         </Text>
       </BlockStack>
-    </div>
-  );
-}
-
-function sectionCardStyle(): React.CSSProperties {
-  return {
-    border: "1px solid #E8EAED",
-    borderRadius: 14,
-    padding: 20,
-    background: "#FFFFFF",
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.05)",
-  };
-}
-
-function SafeguardSwitch({
-  id,
-  label,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-        padding: "4px 0",
-      }}
-    >
-      <label htmlFor={id} style={{ flex: 1, cursor: "pointer" }}>
-        <Text as="span" variant="bodyMd">
-          {label}
-        </Text>
-      </label>
-      <button
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        style={{
-          width: 44,
-          height: 26,
-          borderRadius: 13,
-          border: "none",
-          padding: 0,
-          background: checked ? "#2C6ECB" : "#D2D5D8",
-          position: "relative",
-          cursor: "pointer",
-          flexShrink: 0,
-          transition: "background 0.2s ease",
-        }}
-      >
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: 3,
-            left: checked ? 21 : 3,
-            width: 20,
-            height: 20,
-            borderRadius: "50%",
-            background: "#fff",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
-            transition: "left 0.2s ease",
-          }}
-        />
-      </button>
     </div>
   );
 }
@@ -254,9 +149,9 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   const [catalog, setCatalog] = useState<TemplateListItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [activePreset, setActivePreset] = useState<PresetId | null>(null);
-  const [exceptionsOpen, setExceptionsOpen] = useState(false);
-  const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
+  const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>(
+    []
+  );
   const showDebug = useDdDebug();
   const [debugSnap, setDebugSnap] = useState<RulesDebugSnap>({
     autoHttp: null,
@@ -280,19 +175,8 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     [searchParams]
   );
 
-  const templateNameById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const tpl of catalog) {
-      m.set(tpl.id, tpl.name);
-    }
-    return m;
-  }, [catalog]);
-
   const hasInstalledPacks = installedTemplateIds.length > 0;
   const packsPrereqBannerId = useId();
-  const safeguardHighValueId = useId();
-  const safeguardCatchAllId = useId();
-  const exceptionsCollapsibleId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -328,11 +212,14 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           installedTemplateIds?: string[];
         };
         const tplBody = (await tplRes.json()) as { templates?: TemplateListItem[] };
-        setPayload({
+        const installed = autoBody.installedTemplateIds ?? [];
+        const raw: AutomationSetupPayload = {
           reason_rows: autoBody.reason_rows,
           safeguards: autoBody.safeguards,
-        });
-        setInstalledTemplateIds(autoBody.installedTemplateIds ?? []);
+        };
+        const coerced = coerceFraudPnrAutoWhenNoTemplates(raw, installed);
+        setPayload(coerced);
+        setInstalledTemplateIds(installed);
         setCatalog(tplBody.templates ?? []);
         const hasGeneral = Boolean(
           autoBody.reason_rows?.some((r) => r.reason === "GENERAL")
@@ -391,11 +278,6 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     };
   }, []);
 
-  const generalRow = useMemo(
-    () => payload?.reason_rows.find((r) => r.reason === "GENERAL"),
-    [payload]
-  );
-
   const validatePayload = useCallback(
     (p: AutomationSetupPayload): string | null => {
       const installed = new Set(installedTemplateIds);
@@ -413,95 +295,26 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     [installedTemplateIds]
   );
 
-  const applyRecommended = useCallback(() => {
-    setPayload((prev) => {
-      if (!prev) return prev;
-      const installed = new Set(installedTemplateIds);
-      const byType = (dt: string) =>
-        catalog
-          .filter((x) => installed.has(x.id) && x.dispute_type === dt)
-          .sort((a, b) => Number(b.is_recommended) - Number(a.is_recommended))[0]
-            ?.id ?? null;
+  const starterModes = useMemo(
+    () => (payload ? starterModesFromPayload(payload) : {}),
+    [payload]
+  );
 
-      const fraudTpl = byType("FRAUD");
-      const pnrTpl = byType("PNR");
-
-      const reason_rows = prev.reason_rows.map((row) => {
-        if (row.reason === "FRAUDULENT" && fraudTpl) {
-          return {
-            ...row,
-            mode: "auto_build" as const,
-            pack_template_id: fraudTpl,
-          };
-        }
-        if (row.reason === "PRODUCT_NOT_RECEIVED" && pnrTpl) {
-          return {
-            ...row,
-            mode: "auto_build" as const,
-            pack_template_id: pnrTpl,
-          };
-        }
-        if (row.reason === "SUBSCRIPTION_CANCELED") {
-          return { ...row, mode: "review" as const, pack_template_id: null };
-        }
-        return { ...row, mode: "manual" as const, pack_template_id: null };
-      });
-
-      return { ...prev, reason_rows };
-    });
-  }, [catalog, installedTemplateIds]);
-
-  const applyManualPreset = useCallback(() => {
-    setActivePreset("manual");
-    setPayload((prev) =>
-      prev
-        ? {
-            ...prev,
-            reason_rows: prev.reason_rows.map((row) => ({
-              ...row,
-              mode: "manual" as const,
-              pack_template_id: null,
-            })),
-          }
-        : prev
-    );
-  }, []);
-
-  const applyReviewPreset = useCallback(() => {
-    setActivePreset("review");
-    setPayload((prev) =>
-      prev
-        ? {
-            ...prev,
-            reason_rows: prev.reason_rows.map((row) => ({
-              ...row,
-              mode: "review" as const,
-              pack_template_id: null,
-            })),
-          }
-        : prev
-    );
-  }, []);
-
-  const applyAutoPreset = useCallback(() => {
-    setActivePreset("auto");
-    applyRecommended();
-  }, [applyRecommended]);
-
-  const updateRow = useCallback(
-    (reason: string, patch: Partial<ReasonRowState>) => {
-      setActivePreset(null);
+  const handleStarterModeChange = useCallback(
+    (presetId: string, mode: "auto_pack" | "review") => {
+      const preset = RULE_PRESETS.find((p) => p.id === presetId);
+      if (!preset || !payload) return;
       setPayload((prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
-          reason_rows: prev.reason_rows.map((row) =>
-            row.reason === reason ? { ...row, ...patch } : row
-          ),
-        };
+        let next = applyStarterModeChange(prev, preset, mode, {
+          installedTemplateIds,
+          catalog,
+        });
+        next = coerceFraudPnrAutoWhenNoTemplates(next, installedTemplateIds);
+        return next;
       });
     },
-    []
+    [payload, installedTemplateIds, catalog]
   );
 
   useEffect(() => {
@@ -535,90 +348,6 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     };
   }, [stepId, onSaveRef, payload, validatePayload]);
 
-  const modeOptions = useMemo(
-    () => [
-      { label: t("modeAutoBuild"), value: "auto_build" },
-      { label: t("modeReviewFirst"), value: "review" },
-      { label: t("modeManual"), value: "manual" },
-    ],
-    [t]
-  );
-
-  const templateChoicesForRow = useCallback(
-    (mode: HandlingModeUi) => {
-      const opts: { label: string; value: string }[] = [];
-      if (mode === "review") {
-        opts.push({ label: t("templateNoneOptional"), value: "" });
-      }
-      for (const id of installedTemplateIds) {
-        const name = templateNameById.get(id) ?? id;
-        opts.push({ label: name, value: id });
-      }
-      if (mode === "auto_build" && installedTemplateIds.length === 0) {
-        opts.push({ label: t("noTemplatesInstalled"), value: "" });
-      }
-      return opts;
-    },
-    [installedTemplateIds, templateNameById, t]
-  );
-
-  function reasonLabel(reason: string): string {
-    const key = REASON_LABEL_KEY[reason];
-    return key ? tRules(key) : reason.replace(/_/g, " ");
-  }
-
-  function reasonHelp(reason: string): string {
-    const key = REASON_HELP_KEY[reason];
-    return key ? t(key as "reasonHelpFraudulent") : "";
-  }
-
-  const modeSummaryLabel = useCallback(
-    (row: ReasonRowState): string => {
-      if (row.mode === "manual") return t("modeManual");
-      if (row.mode === "review") return t("modeReviewFirst");
-      const tn = row.pack_template_id
-        ? templateNameById.get(row.pack_template_id) ?? ""
-        : "";
-      return tn ? `${t("modeAutoBuild")} (${tn})` : t("modeAutoBuild");
-    },
-    [t, templateNameById]
-  );
-
-  const summaryLines = useMemo(() => {
-    if (!payload || !generalRow) return [];
-    const lines: string[] = [];
-    lines.push(
-      t("summaryDefault", { mode: modeSummaryLabel(generalRow) })
-    );
-    for (const r of payload.reason_rows.filter((x) => x.reason !== "GENERAL")) {
-      lines.push(
-        t("summaryReason", {
-          reason: reasonLabel(r.reason),
-          mode: modeSummaryLabel(r),
-        })
-      );
-    }
-    if (payload.safeguards.high_value_review_enabled) {
-      lines.push(
-        t("summaryHighValue", {
-          amount: String(payload.safeguards.high_value_min),
-        })
-      );
-    }
-    if (payload.safeguards.catch_all_review_enabled) {
-      lines.push(t("summaryCatchAll"));
-    }
-    return lines;
-  }, [payload, generalRow, t, modeSummaryLabel]);
-
-  const highlightedPreset = useMemo((): PresetId | null => {
-    if (activePreset !== null) return activePreset;
-    if (!payload) return null;
-    return inferPresetFromPayload(payload);
-  }, [activePreset, payload]);
-
-  const controlsLocked = !hasInstalledPacks;
-
   if (loadError) {
     return (
       <>
@@ -638,7 +367,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     );
   }
 
-  if (!payload || !generalRow) {
+  if (!payload) {
     return (
       <>
         <div
@@ -662,463 +391,91 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
     );
   }
 
-  const presetCards: { id: PresetId; titleKey: string; lineKey: string; onClick: () => void; suggested?: boolean }[] = [
-    { id: "manual", titleKey: "presetManualTitle", lineKey: "presetManualLine", onClick: applyManualPreset, suggested: true },
-    { id: "review", titleKey: "presetReviewTitle", lineKey: "presetReviewLine", onClick: applyReviewPreset },
-    { id: "auto", titleKey: "presetAutoTitle", lineKey: "presetAutoLine", onClick: applyAutoPreset },
-  ];
-
   return (
     <>
-    <div
-      style={{
-        maxWidth: CONTENT_MAX_WIDTH_PX,
-        margin: "0 auto",
-        width: "100%",
-        paddingBottom: 24,
-      }}
-    >
-      <BlockStack gap="600">
-        <BlockStack gap="500">
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 56,
-                height: 56,
-                borderRadius: 12,
-                background: "linear-gradient(145deg, #FB923C 0%, #EA580C 100%)",
-                boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
-              }}
-            >
-              <Zap size={28} color="#FFFFFF" strokeWidth={2.25} aria-hidden />
-            </div>
-          </div>
-          <BlockStack gap="400">
-            <BlockStack gap="200">
-              <Text as="h1" variant="headingXl">
-                {t("title")}
-              </Text>
-              <Text as="p" variant="bodyMd" tone="subdued">
-                {t("subtitle")}
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("introOneLiner")}{" "}
-                <a href={packsHref} style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}>
-                  {t("packsLinkLabel")}
-                </a>
-              </Text>
-            </BlockStack>
-
-            <div
-              style={{
-                borderRadius: 12,
-                border: "1px solid #E1E3E5",
-                background: "#F6F6F7",
-                padding: "16px 18px",
-                textAlign: "left",
-              }}
-            >
-              <BlockStack gap="200">
-                <Text as="p" variant="bodySm" fontWeight="semibold">
-                  {t("activatedPackagesTitle")}
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("activatedPackagesListIntro")}
-                </Text>
-                {activatedPacks.length === 0 ? (
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("activatedPackagesEmpty")}
-                  </Text>
-                ) : (
-                  <InlineStack gap="200" wrap blockAlign="center">
-                    {activatedPacks.map((p) => (
-                      <Badge key={p.id} tone="success">
-                        {p.name}
-                      </Badge>
-                    ))}
-                  </InlineStack>
-                )}
-              </BlockStack>
-            </div>
+      <div
+        style={{
+          maxWidth: CONTENT_MAX_WIDTH_PX,
+          margin: "0 auto",
+          width: "100%",
+          paddingBottom: 24,
+        }}
+      >
+        <BlockStack gap="600">
+          <BlockStack gap="300">
+            <Text as="h1" variant="headingXl">
+              {t("title")}
+            </Text>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {t("subtitle")}
+            </Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("introOneLiner")}{" "}
+              <a
+                href={packsHref}
+                style={{ color: "#2C6ECB", fontWeight: 600, textDecoration: "none" }}
+              >
+                {t("packsLinkLabel")}
+              </a>
+            </Text>
           </BlockStack>
-        </BlockStack>
 
-        {validationError && (
-          <Banner tone="critical" onDismiss={() => setValidationError(null)}>
-            <Text as="p">{t(validationError)}</Text>
-          </Banner>
-        )}
-
-        {!hasInstalledPacks && (
-          <div id={packsPrereqBannerId}>
-            <Banner tone="warning">
-              <BlockStack gap="200">
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {t("packsPrereqTitle")}
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("packsPrereqBody")}{" "}
-                  <a href={packsSetupHref} style={{ color: "#2C6ECB", fontWeight: 600 }}>
-                    {t("packsPrereqSetupLink")}
-                  </a>
-                </Text>
-              </BlockStack>
+          {validationError && (
+            <Banner tone="critical" onDismiss={() => setValidationError(null)}>
+              <Text as="p">{t(validationError)}</Text>
             </Banner>
-          </div>
-        )}
+          )}
 
-        {/* Presets — three large cards (Manual · Review first · Automatic), Figma-style */}
-        <BlockStack gap="300">
-          <Text as="h2" variant="headingMd">
-            {t("presetSectionTitle")}
-          </Text>
-          <div
-            role="group"
-            aria-label={t("presetSectionTitle")}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(168px, 1fr))",
-              gap: 12,
-            }}
-          >
-            {presetCards.map((pc) => {
-              const selected = highlightedPreset === pc.id;
-              const disabled = pc.id === "auto" && !hasInstalledPacks;
-              const showSuggestedBadge =
-                Boolean(pc.suggested) &&
-                (highlightedPreset === null || highlightedPreset === "manual");
-              return (
-                <button
-                  key={pc.id}
-                  type="button"
-                  disabled={disabled}
-                  title={disabled ? t("noTemplatesInstalled") : undefined}
-                  onClick={pc.onClick}
-                  style={{
-                    textAlign: "left",
-                    padding: 16,
-                    minHeight: 120,
-                    borderRadius: 12,
-                    border: selected ? "2px solid #2C6ECB" : "1px solid #E8EAED",
-                    background: selected ? "#F0F6FF" : "#FDFDFE",
-                    boxShadow: selected
-                      ? "0 0 0 1px rgba(44, 110, 203, 0.12)"
-                      : "0 1px 2px rgba(15, 23, 42, 0.04)",
-                    cursor: disabled ? "not-allowed" : "pointer",
-                    opacity: disabled ? 0.55 : 1,
-                    transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
-                  }}
-                >
-                  <BlockStack gap="150">
-                    <InlineStack gap="200" blockAlign="center" wrap>
-                      <Text as="span" variant="bodyMd" fontWeight="bold">
-                        {t(pc.titleKey as "presetManualTitle")}
-                      </Text>
-                      {showSuggestedBadge && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.04em",
-                            color: "#2C6ECB",
-                            background: "#DBEAFE",
-                            padding: "3px 8px",
-                            borderRadius: 4,
-                          }}
-                        >
-                          {t("presetBadgeSuggested")}
-                        </span>
-                      )}
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {t(pc.lineKey as "presetManualLine")}
-                    </Text>
-                  </BlockStack>
-                </button>
-              );
-            })}
-          </div>
-        </BlockStack>
-
-        {/* Default rule GENERAL */}
-        <BlockStack gap="300">
-          <BlockStack gap="100">
-            <InlineStack gap="200" blockAlign="center" wrap>
-              <Text as="h2" variant="headingMd">
-                {t("defaultSectionTitle")}
-              </Text>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#64748B",
-                  background: "#F1F5F9",
-                  padding: "4px 8px",
-                  borderRadius: 6,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {t("defaultFallbackBadge")}
-              </span>
-            </InlineStack>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("defaultSectionSubtitle")}
-            </Text>
-          </BlockStack>
-          <div
-            style={{
-              ...sectionCardStyle(),
-              ...(controlsLocked
-                ? { opacity: 0.58, background: "#F6F6F7" }
-                : {}),
-            }}
-            role={controlsLocked ? "group" : undefined}
-            aria-describedby={controlsLocked ? packsPrereqBannerId : undefined}
-            aria-label={controlsLocked ? t("rulesTableLockedAria") : undefined}
-          >
-            <BlockStack gap="300">
-              <Text as="p" variant="bodySm" tone="subdued">
-                {reasonHelp("GENERAL")}
-              </Text>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                {generalRow.mode === "manual" ? (
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("templateNoneDash")}
+          {!hasInstalledPacks && (
+            <div id={packsPrereqBannerId}>
+              <Banner tone="warning">
+                <BlockStack gap="200">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {t("packsPrereqTitle")}
                   </Text>
-                ) : (
-                  <Select
-                    label={t("colTemplate")}
-                    options={templateChoicesForRow(generalRow.mode)}
-                    value={generalRow.pack_template_id ?? ""}
-                    disabled={controlsLocked}
-                    onChange={(value) =>
-                      updateRow("GENERAL", { pack_template_id: value || null })
-                    }
-                  />
-                )}
-                <Select
-                  label={t("colHandling")}
-                  options={modeOptions}
-                  value={generalRow.mode}
-                  disabled={controlsLocked}
-                  onChange={(value) => {
-                    const mode = value as HandlingModeUi;
-                    updateRow("GENERAL", {
-                      mode,
-                      pack_template_id: mode === "manual" ? null : generalRow.pack_template_id,
-                    });
-                  }}
-                />
-              </div>
-            </BlockStack>
-          </div>
-        </BlockStack>
-
-        {/* Exceptions — progressive disclosure */}
-        <BlockStack gap="300">
-          <BlockStack gap="100">
-            <Text as="h2" variant="headingMd">
-              {t("exceptionsSectionTitle")}
-            </Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("exceptionsSectionSubtitle")}
-            </Text>
-            <div>
-              <Button
-                variant="plain"
-                disclosure={exceptionsOpen ? "up" : "down"}
-                onClick={() => setExceptionsOpen((o) => !o)}
-                ariaExpanded={exceptionsOpen}
-                ariaControls={exceptionsCollapsibleId}
-              >
-                {exceptionsOpen ? t("exceptionsToggleHide") : t("exceptionsToggleShow")}
-              </Button>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("packsPrereqBody")}{" "}
+                    <a href={packsSetupHref} style={{ color: "#2C6ECB", fontWeight: 600 }}>
+                      {t("packsPrereqSetupLink")}
+                    </a>
+                  </Text>
+                </BlockStack>
+              </Banner>
             </div>
-          </BlockStack>
-          <Collapsible id={exceptionsCollapsibleId} open={exceptionsOpen}>
-            <BlockStack gap="300">
-              {EXCEPTION_REASONS.map((reason) => {
-                const row = payload.reason_rows.find((r) => r.reason === reason);
-                if (!row) return null;
-                return (
-                  <div
-                    key={reason}
-                    style={{
-                      ...sectionCardStyle(),
-                      ...(controlsLocked
-                        ? { opacity: 0.58, background: "#F6F6F7" }
-                        : {}),
-                    }}
-                  >
-                    <BlockStack gap="300">
-                      <Text as="p" variant="bodyMd" fontWeight="semibold">
-                        {reasonLabel(reason)}
-                      </Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {reasonHelp(reason)}
-                      </Text>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 12,
-                        }}
-                      >
-                        {row.mode === "manual" ? (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {t("templateNoneDash")}
-                          </Text>
-                        ) : (
-                          <Select
-                            label={t("colTemplate")}
-                            options={templateChoicesForRow(row.mode)}
-                            value={row.pack_template_id ?? ""}
-                            disabled={controlsLocked}
-                            onChange={(value) =>
-                              updateRow(reason, { pack_template_id: value || null })
-                            }
-                          />
-                        )}
-                        <Select
-                          label={t("colHandling")}
-                          options={modeOptions}
-                          value={row.mode}
-                          disabled={controlsLocked}
-                          onChange={(value) => {
-                            const mode = value as HandlingModeUi;
-                            updateRow(reason, {
-                              mode,
-                              pack_template_id: mode === "manual" ? null : row.pack_template_id,
-                            });
-                          }}
-                        />
-                      </div>
-                    </BlockStack>
-                  </div>
-                );
-              })}
-            </BlockStack>
-          </Collapsible>
+          )}
+
+          <Card>
+            <EmbeddedStarterRulesWorkflow
+              tr={tRules}
+              starterModes={starterModes}
+              onStarterModeChange={handleStarterModeChange}
+              activatedPacks={activatedPacks}
+              allowAutoPackForFraudAndPnr={hasInstalledPacks}
+              highValueMin={payload.safeguards.high_value_min}
+              onHighValueMinChange={(value) =>
+                setPayload((p) =>
+                  p
+                    ? {
+                        ...p,
+                        safeguards: { ...p.safeguards, high_value_min: value },
+                      }
+                    : p
+                )
+              }
+              highValueReviewEnabled={payload.safeguards.high_value_review_enabled}
+              highValueMinLabel={t("highValueMinLabel")}
+            />
+          </Card>
+
+          <ChangeLaterCallout
+            title={t("changeLaterTitle")}
+            body={t("changeLaterBody")}
+            rulesHref={rulesHref}
+            linkLabel={t("changeLaterRulesLink")}
+          />
         </BlockStack>
-
-        {/* Safeguards */}
-        <div
-          style={{
-            ...sectionCardStyle(),
-            borderColor: "#E2E8F0",
-            background: "#FAFBFC",
-          }}
-        >
-          <BlockStack gap="400">
-            <BlockStack gap="100">
-              <Text as="h2" variant="headingMd">
-                {t("safeguardsSectionTitle")}
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("safeguardsOverrideNote")}
-              </Text>
-            </BlockStack>
-            <SafeguardSwitch
-              id={safeguardHighValueId}
-              label={t("highValueLabel")}
-              checked={payload.safeguards.high_value_review_enabled}
-              onChange={(checked) =>
-                setPayload((p) =>
-                  p
-                    ? {
-                        ...p,
-                        safeguards: {
-                          ...p.safeguards,
-                          high_value_review_enabled: checked,
-                        },
-                      }
-                    : p
-                )
-              }
-            />
-            {payload.safeguards.high_value_review_enabled && (
-              <div style={{ maxWidth: 240 }}>
-                <TextField
-                  label={t("highValueMinLabel")}
-                  type="number"
-                  autoComplete="off"
-                  value={String(payload.safeguards.high_value_min)}
-                  onChange={(v) =>
-                    setPayload((p) =>
-                      p
-                        ? {
-                            ...p,
-                            safeguards: {
-                              ...p.safeguards,
-                              high_value_min: Math.max(0, Number.parseFloat(v) || 0),
-                            },
-                          }
-                        : p
-                    )
-                  }
-                />
-              </div>
-            )}
-            <SafeguardSwitch
-              id={safeguardCatchAllId}
-              label={t("catchAllLabel")}
-              checked={payload.safeguards.catch_all_review_enabled}
-              onChange={(checked) =>
-                setPayload((p) =>
-                  p
-                    ? {
-                        ...p,
-                        safeguards: {
-                          ...p.safeguards,
-                          catch_all_review_enabled: checked,
-                        },
-                      }
-                    : p
-                )
-              }
-            />
-          </BlockStack>
-        </div>
-
-        {/* Summary */}
-        <div
-          style={{
-            ...sectionCardStyle(),
-            background: "#F6F7F8",
-            borderStyle: "dashed",
-          }}
-        >
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingSm">
-              {t("summarySectionTitle")}
-            </Text>
-            <ul style={{ margin: 0, paddingLeft: 20, color: "#374151", fontSize: 14, lineHeight: 1.6 }}>
-              {summaryLines.map((line, idx) => (
-                <li key={`summary-${idx}`}>{line}</li>
-              ))}
-            </ul>
-          </BlockStack>
-        </div>
-
-        <ChangeLaterCallout
-          title={t("changeLaterTitle")}
-          body={t("changeLaterBody")}
-          rulesHref={rulesHref}
-          linkLabel={t("changeLaterRulesLink")}
-        />
-      </BlockStack>
-    </div>
-    {showDebug ? <AutomationRulesDebugHud snap={debugSnap} /> : null}
+      </div>
+      {showDebug ? <AutomationRulesDebugHud snap={debugSnap} /> : null}
     </>
   );
 }

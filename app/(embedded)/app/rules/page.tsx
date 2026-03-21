@@ -20,10 +20,10 @@ import {
   InlineStack,
   BlockStack,
   Banner,
-  Select,
 } from "@shopify/polaris";
 
 import { RULE_PRESETS } from "@/lib/rules/presets";
+import { EmbeddedStarterRulesWorkflow } from "@/components/rules/EmbeddedStarterRulesWorkflow";
 
 interface Rule {
   id: string;
@@ -132,14 +132,6 @@ export default function EmbeddedRulesPage() {
     [rules]
   );
 
-  const actionChoices = useMemo(
-    () => [
-      { label: tr("autoPack"), value: "auto_pack" },
-      { label: tr("review"), value: "review" },
-    ],
-    [tr]
-  );
-
   const saveStarterRules = useCallback(async () => {
     if (!shopId) return;
     setSavingStarters(true);
@@ -232,28 +224,6 @@ export default function EmbeddedRulesPage() {
             </Card>
           ) : (
             <BlockStack gap="400">
-              {activatedPacks.length > 0 && (
-                <Card>
-                  <BlockStack gap="200">
-                    <Text as="h2" variant="headingSm">
-                      {tr("activatedPackagesTitle")}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {tr("activatedPackagesHint")}
-                    </Text>
-                    <ul style={{ margin: 0, paddingLeft: 20 }}>
-                      {activatedPacks.map((p) => (
-                        <li key={p.id}>
-                          <Text as="span" variant="bodyMd">
-                            {p.name}
-                          </Text>
-                        </li>
-                      ))}
-                    </ul>
-                  </BlockStack>
-                </Card>
-              )}
-
               {starterSavedBanner && (
                 <Banner tone="success" onDismiss={() => setStarterSavedBanner(false)}>
                   <p>{tr("starterRulesSaved")}</p>
@@ -266,112 +236,14 @@ export default function EmbeddedRulesPage() {
               )}
 
               <Card>
-                <BlockStack gap="500">
-                  <BlockStack gap="400" inlineAlign="center">
-                    <div
-                      style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 12,
-                        background: "linear-gradient(145deg, #1D4ED8 0%, #3B82F6 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.12)",
-                      }}
-                      aria-hidden
-                    >
-                      <svg
-                        width="28"
-                        height="28"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                      </svg>
-                    </div>
-                    <Text as="h2" variant="headingLg">
-                      {tr("setupTitle")}
-                    </Text>
-                    <div style={{ maxWidth: 520, textAlign: "center" }}>
-                      <Text as="p" variant="bodyMd" tone="subdued">
-                        {tr("setupDescription")}
-                      </Text>
-                    </div>
-                    <Text
-                      as="p"
-                      variant="bodySm"
-                      tone="subdued"
-                      fontWeight="semibold"
-                    >
-                      {tr("suggestedRules")}
-                    </Text>
-                  </BlockStack>
-
-                  <BlockStack gap="300">
-                    {RULE_PRESETS.map((preset, index) => (
-                      <div
-                        key={preset.id}
-                        style={{
-                          display: "flex",
-                          flexDirection: "row",
-                          alignItems: "flex-start",
-                          gap: 16,
-                          padding: "16px 18px",
-                          borderRadius: 10,
-                          border: "1px solid #E3E5E8",
-                          background: "#FAFBFB",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 32,
-                            height: 32,
-                            background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
-                            borderRadius: 8,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "white",
-                            fontWeight: 700,
-                            fontSize: 14,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {index + 1}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <BlockStack gap="100">
-                            <Text as="h3" variant="bodyMd" fontWeight="semibold">
-                              {tr(preset.nameKey as "presetFraudAuto")}
-                            </Text>
-                            <Text as="p" variant="bodySm" tone="subdued">
-                              {tr(preset.descriptionKey as "presetFraudAutoDesc")}
-                            </Text>
-                          </BlockStack>
-                        </div>
-                        <div style={{ width: 200, flexShrink: 0 }}>
-                          <Select
-                            label={tr("actionRouting")}
-                            options={actionChoices}
-                            value={starterModes[preset.id] ?? preset.action.mode}
-                            onChange={(value) =>
-                              setStarterModes((prev) => ({
-                                ...prev,
-                                [preset.id]: value as "auto_pack" | "review",
-                              }))
-                            }
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </BlockStack>
-
-                  <InlineStack align="end">
+                <EmbeddedStarterRulesWorkflow
+                  tr={tr}
+                  starterModes={starterModes}
+                  onStarterModeChange={(presetId, mode) =>
+                    setStarterModes((prev) => ({ ...prev, [presetId]: mode }))
+                  }
+                  activatedPacks={activatedPacks}
+                  primaryFooter={
                     <Button
                       variant="primary"
                       loading={savingStarters}
@@ -380,8 +252,8 @@ export default function EmbeddedRulesPage() {
                     >
                       {tr("saveStarterRules")}
                     </Button>
-                  </InlineStack>
-                </BlockStack>
+                  }
+                />
               </Card>
 
               {customRules.length > 0 && (

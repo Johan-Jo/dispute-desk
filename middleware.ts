@@ -47,7 +47,8 @@ export async function middleware(req: NextRequest) {
       pathname === "/api/health" ||
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/") ||
-      pathname === "/api/portal/clear-shop"
+      pathname === "/api/portal/clear-shop" ||
+      (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log")
     ) {
       return NextResponse.next();
     }
