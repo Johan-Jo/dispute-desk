@@ -303,9 +303,9 @@ Info blue:          #EFF6FF / #BFDBFE
 
 ---
 
-# EPIC CH-3 — Dashboard + Content List
+# EPIC CH-3 — Dashboard + Content List ✅
 
-> **Status:** Active
+> **Status:** Done
 > **Dependencies:** CH-2
 > **Delivery:** Two complete admin screens — operational dashboard and content management table
 
@@ -387,18 +387,18 @@ New page at `/admin/resources/list`:
 
 ## Acceptance Criteria
 
-- [ ] Dashboard shows real-time KPIs pulled from database.
-- [ ] Upcoming scheduled posts show with correct locale flags.
-- [ ] Translation gaps widget identifies items with missing locales by priority.
-- [ ] Queue health reflects actual publish queue status.
-- [ ] Recently edited table shows last 4+ items with correct status badges.
-- [ ] Content list supports tab filtering by status with accurate counts.
-- [ ] Search filters content by title, author, keyword in real time.
-- [ ] Extended filters (content type, topic) narrow results correctly.
-- [ ] Multi-select with bulk actions (edit, archive) works.
-- [ ] Locale indicators per row correctly reflect localization completeness.
-- [ ] Pagination works for large content sets.
-- [ ] Both screens use the admin shell from CH-2.3.
+- [x] Dashboard shows real-time KPIs pulled from database.
+- [x] Upcoming scheduled posts show with correct locale flags.
+- [x] Translation gaps widget identifies items with missing locales by priority.
+- [x] Queue health reflects actual publish queue status.
+- [x] Recently edited table shows last 4+ items with correct status badges.
+- [x] Content list supports tab filtering by status with accurate counts.
+- [x] Search filters content by title, author, keyword in real time.
+- [x] Extended filters (content type, topic) narrow results correctly.
+- [x] Multi-select with bulk actions (edit, archive) works.
+- [x] Locale indicators per row correctly reflect localization completeness.
+- [x] Pagination works for large content sets.
+- [x] Both screens use the admin shell from CH-2.3.
 
 ## Risks
 
@@ -409,7 +409,7 @@ New page at `/admin/resources/list`:
 
 # EPIC CH-4 — Block Editor + Locale Editing
 
-> **Status:** Planned
+> **Status:** Active
 > **Dependencies:** CH-3
 > **Delivery:** Full content editor with block-based editing, locale switching, and publishing workflow
 

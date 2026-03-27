@@ -160,7 +160,7 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 |------|--------|--------|
 | Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
 | Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
-| Admin | `/admin/resources/*` | Phase 1: JSON-focused editor; see `docs/resources-hub-editor-guide.md` |
+| Admin | `/admin/resources/*` | Dashboard, content list, calendar, queue, backlog, settings. Figma-based redesign (CH-2+). |
 | In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
 
 ### Embedded app guard
@@ -174,6 +174,9 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Admin queries:** `lib/resources/admin-queries.ts` — stats, scheduled posts, translation gaps, content list (paginated + filterable), queue items, backlog, editor detail, workflow transitions, CMS settings.
 - **Admin components:** `components/admin/resources/` — `WorkflowStatusBadge`, `ContentTypeBadge`, `PriorityBadge`, `LocaleStatusIndicator`, `LocaleCompletenessBadge`, `ValidationChecklist`, `SchedulePicker`.
 - **Admin shell:** `app/admin/layout.tsx` — left sidebar with Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings), top bar, mobile responsive.
+- **Admin dashboard:** `app/admin/resources/page.tsx` + `dashboard-client.tsx` — 4 KPI cards, upcoming scheduled, translation gaps, queue health, recently edited table.
+- **Admin content list:** `app/admin/resources/list/page.tsx` + `list-client.tsx` — status tabs with counts, search + filter (type, topic), multi-select with bulk actions, locale indicators, pagination.
+- **Admin API:** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI.
 - **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
 - **Queries (public):** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
 
@@ -185,8 +188,8 @@ Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See *
 |-------|-------------|--------|
 | **CH-1** | Public hub + admin queue + JSON inspector + publish cron | Done |
 | **CH-2** | Admin shell + component system + workflow migration + query layer | Done |
-| **CH-3** | Dashboard + Content List (first 2 operational screens) | **Active** |
-| **CH-4** | Block editor + locale editing (rich content editor) | Planned |
+| **CH-3** | Dashboard + Content List (first 2 operational screens) | Done |
+| **CH-4** | Block editor + locale editing (rich content editor) | **Active** |
 | **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Planned |
 | **CH-6** | Settings + polish + mobile editor | Planned |
 | **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
