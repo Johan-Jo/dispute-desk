@@ -82,7 +82,7 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 | **CH-3** | Dashboard + Content List (first 2 operational screens) | Done |
 | **CH-4** | Block editor + locale editing (rich content editor) | Done |
 | **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Done |
-| **CH-6** | Settings + polish + mobile editor | **Active** |
+| **CH-6** | Settings + polish + mobile editor | Done |
 | **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
 
 **Operator guide:** [`docs/resources-hub-editor-guide.md`](resources-hub-editor-guide.md)  

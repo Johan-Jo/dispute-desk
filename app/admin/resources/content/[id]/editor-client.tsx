@@ -10,8 +10,14 @@ import {
   Send,
   Plus,
   Loader2,
+  FileText,
+  Settings,
+  CheckSquare,
+  Globe,
+  X,
 } from "lucide-react";
 import { BlockRenderer } from "@/components/admin/editor/BlockRenderer";
+import { useToast } from "@/components/admin/Toast";
 import {
   WorkflowStatusBadge,
   LocaleCompletenessBadge,
@@ -102,6 +108,9 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAddBlock, setShowAddBlock] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"content" | "metadata" | "checklist">("content");
+  const [showLocalePicker, setShowLocalePicker] = useState(false);
+  const { toast } = useToast();
 
   const activeLoc = useMemo(
     () => localizations.find((l) => l.locale === activeLocale),
@@ -233,7 +242,12 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
 
       if (res.ok) {
         setLastSaved(new Date().toLocaleTimeString());
+        toast("success", "Draft saved successfully");
+      } else {
+        toast("error", "Failed to save draft");
       }
+    } catch {
+      toast("error", "Network error while saving");
     } finally {
       setSaving(false);
     }
@@ -256,7 +270,12 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
       });
       if (res.ok) {
         setItem((prev) => ({ ...prev, workflow_status: newStatus }));
+        toast("success", `Status changed to ${newStatus.replace(/_/g, " ")}`);
+      } else {
+        toast("error", "Failed to change status");
       }
+    } catch {
+      toast("error", "Network error during status change");
     } finally {
       setSaving(false);
     }
@@ -356,13 +375,51 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
         </div>
       </header>
 
+      {/* Mobile tab bar */}
+      <div className="lg:hidden flex items-center border-b border-[#E5E7EB] bg-white sticky top-[57px] z-20">
+        <button
+          onClick={() => setShowLocalePicker(true)}
+          className="flex items-center gap-1.5 px-4 py-3 border-r border-[#E5E7EB] text-sm"
+        >
+          <Globe className="w-4 h-4 text-[#64748B]" />
+          <span className="font-medium text-[#0B1220]">
+            {ADMIN_LOCALES.find((l) => l.dbLocale === activeLocale)?.flag ?? "🌐"}
+          </span>
+          <span className="text-xs text-[#64748B]">
+            {Math.round(localeCompleteness(localizations.find((l) => l.locale === activeLocale)))}%
+          </span>
+        </button>
+        {([
+          { key: "content" as const, label: "Content", icon: FileText },
+          { key: "metadata" as const, label: "Metadata", icon: Settings },
+          { key: "checklist" as const, label: "Checklist", icon: CheckSquare, dot: checklist.some((c) => c.required && !c.completed) },
+        ]).map((tab) => {
+          const TabIcon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setMobileTab(tab.key)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors relative ${
+                mobileTab === tab.key ? "text-[#1D4ED8] border-b-2 border-[#1D4ED8]" : "text-[#64748B]"
+              }`}
+            >
+              <TabIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              {tab.dot && (
+                <span className="w-2 h-2 rounded-full bg-[#EF4444] absolute top-2 right-1/4" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Main content */}
-      <div className="flex-1 p-4 sm:p-6 max-w-[1400px] mx-auto w-full">
+      <div className="flex-1 p-4 sm:p-6 max-w-[1400px] mx-auto w-full pb-20 lg:pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column — editor (2/3) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Locale tabs */}
-            <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className={`lg:col-span-2 space-y-6 ${mobileTab !== "content" ? "hidden lg:block" : ""}`}>
+            {/* Locale tabs (desktop) */}
+            <div className="hidden lg:flex gap-3 overflow-x-auto pb-1">
               {ADMIN_LOCALES.map((loc) => {
                 const locData = localizations.find((l) => l.locale === loc.dbLocale);
                 const pct = localeCompleteness(locData);
@@ -467,9 +524,11 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
           </div>
 
           {/* Right column — sidebar (1/3) */}
-          <div className="space-y-6">
+          <div className={`space-y-6 ${mobileTab === "content" ? "hidden lg:block" : ""}`}>
             {/* Validation Checklist */}
-            <ValidationChecklist items={checklist} />
+            <div className={mobileTab === "metadata" ? "hidden lg:block" : ""}>
+              <ValidationChecklist items={checklist} />
+            </div>
 
             {/* Workflow Status */}
             <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
@@ -512,7 +571,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             </div>
 
             {/* Metadata */}
-            <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+            <div className={`bg-white border border-[#E5E7EB] rounded-xl p-5 ${mobileTab === "checklist" ? "hidden lg:block" : ""}`}>
               <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Metadata</h3>
               <div className="space-y-3">
                 <div>
@@ -599,6 +658,91 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
           </div>
         </div>
       </div>
+
+      {/* Mobile bottom action bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] px-4 py-3 flex items-center gap-3 z-30">
+        {canTransition(item.workflow_status as WorkflowStatus, "scheduled") && (
+          <button
+            onClick={() => setShowSchedule(true)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium border border-[#E5E7EB] rounded-lg hover:bg-[#F8FAFC]"
+          >
+            <CalendarIcon className="w-4 h-4" />
+            Schedule
+          </button>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium border border-[#E5E7EB] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Save
+        </button>
+        {canTransition(item.workflow_status as WorkflowStatus, "published") && (
+          <button
+            onClick={handlePublish}
+            disabled={saving || checklist.some((c) => c.required && !c.completed)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-[#1D4ED8] text-white rounded-lg hover:bg-[#1E40AF] disabled:opacity-50"
+          >
+            <Send className="w-4 h-4" />
+            Publish
+          </button>
+        )}
+      </div>
+
+      {/* Locale picker modal (mobile) */}
+      {showLocalePicker && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowLocalePicker(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
+              <h3 className="text-base font-semibold text-[#0B1220]">Select Language</h3>
+              <button onClick={() => setShowLocalePicker(false)} className="p-1 hover:bg-[#F1F5F9] rounded-lg">
+                <X className="w-5 h-5 text-[#64748B]" />
+              </button>
+            </div>
+            <div className="divide-y divide-[#E5E7EB]">
+              {ADMIN_LOCALES.map((loc) => {
+                const locData = localizations.find((l) => l.locale === loc.dbLocale);
+                const pct = localeCompleteness(locData);
+                const isActive = activeLocale === loc.dbLocale;
+                return (
+                  <button
+                    key={loc.dbLocale}
+                    onClick={() => {
+                      switchLocale(loc.dbLocale);
+                      setShowLocalePicker(false);
+                    }}
+                    className={`w-full flex items-center gap-4 px-5 py-4 text-left transition-colors ${
+                      isActive ? "bg-[#EFF6FF]" : "hover:bg-[#F8FAFC]"
+                    }`}
+                  >
+                    <span className="text-2xl">{loc.flag}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[#0B1220]">{loc.nativeName}</p>
+                      <p className="text-xs text-[#64748B]">{loc.dbLocale}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-medium ${pct === 100 ? "text-[#22C55E]" : "text-[#64748B]"}`}>
+                        {pct}%
+                      </p>
+                      <div className="w-16 h-1.5 bg-[#E5E7EB] rounded-full mt-1">
+                        <div
+                          className={`h-full rounded-full ${pct === 100 ? "bg-[#22C55E]" : pct > 50 ? "bg-[#3B82F6]" : "bg-[#F59E0B]"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                    {isActive && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#1D4ED8]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Schedule modal */}
       {showSchedule && (

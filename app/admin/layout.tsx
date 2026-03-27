@@ -16,6 +16,7 @@ import {
   Settings,
   X,
 } from "lucide-react";
+import { ToastProvider } from "@/components/admin/Toast";
 
 /* ── Resources Hub sub-navigation ───────────────────────────────────── */
 
@@ -56,6 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
+    <ToastProvider>
     <div className="h-screen flex bg-[#F6F8FB]">
       {/* Mobile overlay */}
       {mobileOpen && (
@@ -195,5 +197,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

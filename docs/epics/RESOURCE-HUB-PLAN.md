@@ -657,9 +657,9 @@ New or rewrite `/admin/resources/queue`:
 
 ---
 
-# EPIC CH-6 — Settings + Polish + Mobile
+# EPIC CH-6 — Settings + Polish + Mobile ✅
 
-> **Status:** Active
+> **Status:** Done
 > **Dependencies:** CH-5
 > **Delivery:** Settings page, mobile editor, cross-screen polish, documentation update
 
@@ -751,14 +751,14 @@ Adapt editor for mobile screens matching Figma `resources-editor-mobile.tsx`:
 
 ## Acceptance Criteria
 
-- [ ] Settings page saves and applies all configuration options.
-- [ ] Settings persist to database and take effect immediately for new content.
-- [ ] Mobile editor responsive with tab layout, locale picker modal, bottom action bar.
-- [ ] Mobile editor usable for text editing and metadata on small screens.
-- [ ] All admin screens have loading, error, and empty states.
-- [ ] Toast notifications for save/publish/schedule/error.
-- [ ] Documentation updated: editor guide, technical spec, roadmap.
-- [ ] No regressions on desktop layouts when mobile styles added.
+- [x] Settings page saves and applies all configuration options.
+- [x] Settings persist to database and take effect immediately for new content.
+- [x] Mobile editor responsive with tab layout, locale picker modal, bottom action bar.
+- [x] Mobile editor usable for text editing and metadata on small screens.
+- [x] All admin screens have loading, error, and empty states.
+- [x] Toast notifications for save/publish/schedule/error.
+- [x] Documentation updated: editor guide, technical spec, roadmap.
+- [x] No regressions on desktop layouts when mobile styles added.
 
 ## Risks
 

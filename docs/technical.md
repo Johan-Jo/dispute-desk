@@ -184,6 +184,9 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Backlog page:** `app/admin/resources/backlog/` — ideas pipeline with 4 KPI cards, search/filter (priority, status), reorderable table, convert-to-draft action.
 - **Calendar page:** `app/admin/resources/calendar/` — agenda view (posts grouped by date), calendar grid view (7-col Mon–Sun with dot indicators), month navigation, queue health panel.
 - **Queue page:** `app/admin/resources/queue/` — 4 status stat cards, filter tabs (all/pending/processing/succeeded/failed), card-based item list with error display, retry actions, system status panel.
+- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email). Auto-saves via debounced PUT to `/api/admin/resources/settings`.
+- **Mobile editor:** Responsive editor with Content/Metadata/Checklist tab bar, locale picker bottom sheet, fixed bottom action bar (Save/Schedule/Publish).
+- **Toast system:** `components/admin/Toast.tsx` — `ToastProvider` + `useToast()` hook for success/error/info notifications across admin.
 - **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
 - **Queries (public):** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
 
@@ -198,7 +201,7 @@ Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See *
 | **CH-3** | Dashboard + Content List (first 2 operational screens) | Done |
 | **CH-4** | Block editor + locale editing (rich content editor) | Done |
 | **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Done |
-| **CH-6** | Settings + polish + mobile editor | **Active** |
+| **CH-6** | Settings + polish + mobile editor | Done |
 | **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
 
 ## Async Jobs

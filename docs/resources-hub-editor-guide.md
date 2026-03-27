@@ -1,50 +1,92 @@
-# DisputeDesk Resources Hub — Editor guide
+# Resources Hub — Editor Guide
 
-## Prerequisites
+## Overview
 
-- Admin access (`ADMIN_SECRET` login at `/admin/login`).
-- Migration `030_resources_hub.sql` applied to Supabase.
-- Optional: run `npm run seed:resources` (requires service role in `.env.local`) to load demo content.
+The Resources Hub admin provides a full editorial CMS for managing articles, templates, case studies, and other content across 6 locales. Access it at `/admin/resources`.
 
-## Creating content
+## Admin Screens
 
-1. Open **Admin → Resources** (`/admin/resources`).
-2. Content is stored in Supabase tables `content_items` (global) and `content_localizations` (per locale).
-3. Phase 1 admin UI for `/admin/resources/content/[id]` is a **JSON inspector** — use Supabase Table Editor for bulk edits until the full block editor ships.
+| Screen | Path | Purpose |
+|--------|------|---------|
+| Dashboard | `/admin/resources` | KPI cards, upcoming scheduled, translation gaps, queue health, recently edited |
+| Content List | `/admin/resources/list` | All content with status tabs, search, filters, multi-select |
+| Editor | `/admin/resources/content/[id]` | Block editor, locale switching, metadata, validation, publishing |
+| Backlog | `/admin/resources/backlog` | Ideas pipeline with priority scoring and convert-to-draft |
+| Calendar | `/admin/resources/calendar` | Agenda + grid views of scheduled publications |
+| Queue | `/admin/resources/queue` | Publishing queue monitor with retry for failed items |
+| Settings | `/admin/resources/settings` | Publishing, translation, workflow, and legal configuration |
 
-## Localizing content
+## Block Editor
 
-Supported DB locales: `en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-PT`, `sv-SE`.
+The content editor uses a custom block system. Content is stored in `content_localizations.body_json` as `{ mainHtml, keyTakeaways, faq, disclaimer, updateLog }`.
 
-Each `content_localizations` row must have: `title`, `slug`, `excerpt`, `body_json`, `meta_title`, `meta_description`, `og_title`, `og_description` before publish validation passes.
+### Available Block Types
 
-Set `translation_status` to `complete` when a locale is ready.
+| Block | Purpose |
+|-------|---------|
+| Rich HTML | Legacy HTML content (migrated from existing articles) |
+| Paragraph | Plain text paragraph |
+| Heading | H2/H3/H4 section headings |
+| List | Bullet or numbered lists |
+| Callout | Important notes, tips, warnings |
+| Code | Code snippets with language tag |
+| Quote | Blockquotes with optional citation |
+| Divider | Horizontal rule separator |
+| Image | Image with URL, alt text, caption |
+| Key Takeaways | Bullet points rendered in the blue gradient card |
+| FAQ | Question/answer pairs |
+| Disclaimer | Legal disclaimer text (red left-border card) |
+| Update Log | Article revision history entries |
 
-## Scheduling publishing
+### Editing Workflow
 
-1. Insert a row into `content_publish_queue` with `content_localization_id`, `scheduled_for`, `status = pending`.
-2. Cron calls `GET /api/cron/publish-content?secret=CRON_SECRET` (or `POST` with `x-cron-secret`).
-3. Worker runs `publishLocalization` — validates tags (≥3), author, primary CTA, body, metadata — then sets `is_published` and `workflow_status = published`.
+1. **Navigate** to Content List → click title or Edit.
+2. **Switch locale** using the tabs (desktop) or globe button (mobile).
+3. **Edit fields**: title, slug (auto-generated), excerpt, content blocks.
+4. **Add blocks** using the "Add Content Block" button.
+5. **Reorder** blocks with up/down arrows.
+6. **Check sidebar**: validation checklist, workflow status, metadata, SEO.
+7. **Save Draft** to persist without publishing.
+8. **Schedule** or **Publish** when ready.
 
-## Converting archive to draft
+### Locale Completeness
 
-1. Find a row in `content_archive_items` (Admin → Resources → Archive).
-2. Create a new `content_items` row and copy fields; link `created_from_archive_to_content_item_id` on the archive row.
+Each locale shows a completion percentage based on:
+- Title filled
+- Excerpt filled
+- Content present (body_json non-empty)
+- Slug set
 
-## Publishing failures
+### Publishing Requirements
 
-- Check **Admin → Resources → Calendar** (queue table) for `last_error` and `attempts`.
-- Fix data in `content_localizations` / `content_items`, then re-queue or reset status to `pending`.
+The validation checklist must be satisfied before publishing:
+- English title (required)
+- English excerpt (required)
+- English content (required)
+- Slug set (required)
+- Content type set (required)
+- Author assigned (optional)
+- Meta title (optional)
+- Meta description (optional)
 
-## Locale completeness
+## Workflow Statuses
 
-Launch items should have **all six** locales with `translation_status = complete` before treating the launch as done. The admin JSON view lists all localizations per item.
+Content moves through: `idea` → `backlog` → `brief_ready` → `drafting` → `in_translation` → `in_editorial_review` → `in_legal_review` → `approved` → `scheduled` → `published` → `archived`.
 
-## Public URLs
+Transitions are validated server-side. The editor shows available transitions based on the current status.
 
-- Hub: `/resources` (default), `/sv/resources`, `/de/resources`, etc.
-- Article: `/resources/{pillar}/{slug}`.
+## Settings
 
-## Next step (product)
+Settings auto-save as you edit. Configuration options:
+- **Publishing**: default publish time (UTC), weekend publishing, auto-save drafts.
+- **Translation**: skip incomplete translations, locale priority order.
+- **Workflow**: require reviewer, archive health threshold, default CTA.
+- **Legal**: default disclaimer text, legal review team email.
 
-**CH-2 — Editorial Operations Admin** — Replace the CH-1 JSON inspector with a full 8-screen editorial admin (dashboard, list, block editor, backlog, calendar, queue, settings) per Figma design. **CH-3 — Article Generation Pipeline** runs in parallel. **Canonical plan:** **`docs/epics/RESOURCE-HUB-PLAN.md`**. Also **`docs/roadmap.md` § Content Hub** and **`docs/technical.md` § Resources Hub**.
+## Mobile Editor
+
+On screens below `lg` breakpoint:
+- Tab bar switches between Content, Metadata, and Checklist views.
+- Locale picker opens as a bottom sheet modal.
+- Bottom action bar provides Save, Schedule, and Publish buttons.
+- Block reordering available via up/down buttons (drag disabled on mobile).
