@@ -13,7 +13,10 @@ import {
   InboxIcon,
   FileCheck,
   AlertTriangle,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 import { PriorityBadge, WorkflowStatusBadge } from "@/components/admin/resources";
 import type { Priority, WorkflowStatus } from "@/lib/resources/workflow";
 
@@ -59,6 +62,30 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  async function handleGenerate(itemId: string) {
+    setGeneratingId(itemId);
+    try {
+      const res = await fetch("/api/admin/resources/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archiveItemId: itemId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.contentItemId) {
+        toast("success", `Draft generated! Redirecting to editor...`);
+        window.location.href = `/admin/resources/content/${data.contentItemId}`;
+      } else {
+        toast("error", data.error ?? "Generation failed");
+      }
+    } catch {
+      toast("error", "Network error during generation");
+    } finally {
+      setGeneratingId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     let list = items;
@@ -294,9 +321,23 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                     <WorkflowStatusBadge status={item.status as WorkflowStatus} />
                   </td>
                   <td className="px-4 py-3">
-                    <button className="text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium whitespace-nowrap">
-                      Convert to Draft
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleGenerate(item.id)}
+                        disabled={!!generatingId}
+                        className="inline-flex items-center gap-1 text-sm text-[#8B5CF6] hover:text-[#7C3AED] font-medium whitespace-nowrap disabled:opacity-50"
+                      >
+                        {generatingId === item.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        Generate
+                      </button>
+                      <button className="text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium whitespace-nowrap">
+                        Draft
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

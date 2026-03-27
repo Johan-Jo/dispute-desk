@@ -202,7 +202,31 @@ Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See *
 | **CH-4** | Block editor + locale editing (rich content editor) | Done |
 | **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Done |
 | **CH-6** | Settings + polish + mobile editor | Done |
-| **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
+| **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Done |
+
+### CH-7 — Article Generation Pipeline
+
+AI-powered pipeline that converts archive items into multilingual article drafts. Feature-flagged via `GENERATION_ENABLED` + `OPENAI_API_KEY`.
+
+**Generation Library** (`lib/resources/generation/`):
+- `prompts.ts` — System prompt, per-locale tone/style rules, content-type instructions, user prompt builder.
+- `generate.ts` — OpenAI API integration (GPT-4o default, configurable). `generateForLocale()` calls model per locale; `generateAllLocales()` runs all in parallel. Returns `GenerationResult[]` with content, errors, and token counts.
+- `pipeline.ts` — Orchestrator: `buildBriefFromArchive()` reads archive item → `runGenerationPipeline()` generates all locales → creates `content_items` (status `drafting` or `in_legal_review`) + `content_localizations` + `content_revisions` row → links archive item back.
+
+**API Routes**:
+- `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled, 207 on partial success, 200 on full success.
+- `POST /api/admin/resources/ai-assist` — In-editor AI tools: `improve_readability`, `generate_meta`, `suggest_related`. Each calls OpenAI with task-specific system prompts.
+
+**Editor Integration**:
+- `AIAssistantPanel` component (`components/admin/editor/AIAssistantPanel.tsx`) — Sidebar panel with three AI actions. Results can be applied directly to editor state.
+
+**Backlog Integration**:
+- "Generate" button on each backlog item triggers `POST /api/admin/resources/generate`, then redirects to editor for the newly created draft.
+
+**Analytics** (migration `032_generation_analytics.sql`):
+- `content_items`: `generated_at`, `generation_tokens`, `rejection_reason`, `time_to_publish`.
+- `content_revisions`: `change_summary`, `edit_distance`, `tokens_used`.
+- `getGenerationStats()` query in `admin-queries.ts`.
 
 ## Async Jobs
 

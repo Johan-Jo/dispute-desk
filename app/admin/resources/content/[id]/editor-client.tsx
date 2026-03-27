@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { BlockRenderer } from "@/components/admin/editor/BlockRenderer";
+import { AIAssistantPanel } from "@/components/admin/editor/AIAssistantPanel";
 import { useToast } from "@/components/admin/Toast";
 import {
   WorkflowStatusBadge,
@@ -655,6 +656,25 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                 </div>
               </div>
             </div>
+
+            {/* AI Assistant */}
+            <AIAssistantPanel
+              contentHtml={blocks.map((b) => (b.data.html as string) ?? (b.data.text as string) ?? "").join(" ")}
+              onApplyReadability={(html) => {
+                setBlocks((prev) => {
+                  const htmlBlock = prev.find((b) => b.type === "html");
+                  if (htmlBlock) {
+                    return prev.map((b) => b.id === htmlBlock.id ? { ...b, data: { html } } : b);
+                  }
+                  return prev;
+                });
+                toast("success", "Readability improvements applied");
+              }}
+              onApplyMeta={(meta) => {
+                setMetaDesc(meta.slice(0, 160));
+                toast("success", "Meta description updated");
+              }}
+            />
           </div>
         </div>
       </div>

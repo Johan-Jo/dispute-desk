@@ -116,12 +116,12 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 through CH-7**
 | ID | Name | Status |
 |----|------|--------|
 | **CH-1** | Foundation | Done |
-| **CH-2** | Admin Shell + Component System | Next |
-| **CH-3** | Dashboard + Content List | Planned |
-| **CH-4** | Block Editor + Locale Editing | Planned |
-| **CH-5** | Backlog + Calendar + Queue | Planned |
-| **CH-6** | Settings + Polish + Mobile | Planned |
-| **CH-7** | Generation Pipeline | Active (parallel) |
+| **CH-2** | Admin Shell + Component System | Done |
+| **CH-3** | Dashboard + Content List | Done |
+| **CH-4** | Block Editor + Locale Editing | Done |
+| **CH-5** | Backlog + Calendar + Queue | Done |
+| **CH-6** | Settings + Polish + Mobile | Done |
+| **CH-7** | Generation Pipeline | Done |
 
 **Embedded Shopify app:** Content Hub pages are **not** in `/app/*`. In-app help is `/app/help`. Middleware redirects hub URLs loaded with embedded `?host=` to `/app/help`.
 
@@ -137,7 +137,7 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 through CH-7**
 | **CH-4** | Content Hub | ~~Block Editor + Locale Editing~~ **Done.** |
 | **CH-5** | Content Hub | ~~Backlog + Calendar + Queue~~ **Done.** |
 | **CH-6** | Content Hub | ~~Settings + Polish + Mobile~~ **Done.** |
-| **CH-7** | Content Hub | Generation pipeline (parallel track); see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
+| **CH-7** | Content Hub | ~~Generation pipeline~~ **Done.** |
 
 ---
 

@@ -769,7 +769,7 @@ Adapt editor for mobile screens matching Figma `resources-editor-mobile.tsx`:
 
 # EPIC CH-7 — Article Generation Pipeline
 
-> **Status:** Active (parallel with CH-2+)
+> **Status:** Done
 > **Dependencies:** CH-1, CH-4 (editor for reviewing generated drafts)
 
 ## Goal
@@ -829,14 +829,14 @@ Turn archive material into reviewable, localized drafts with human approval befo
 
 ## Acceptance Criteria
 
-- [ ] Spec complete: stub PRD replaced with agreed flows, model/policy, and review states.
-- [ ] Archive items can be converted to briefs and queued for generation.
-- [ ] Generated drafts appear as `content_items` with `workflow_status = drafting` and revision history.
-- [ ] AI assistant panel functional in editor (readability, meta description, related topics).
-- [ ] Legal review enforced for applicable content types.
-- [ ] Approved generated drafts publish through existing queue/cron with same validation.
-- [ ] Analytics track edit distance, rejection reasons, time-to-publish.
-- [ ] Backlog "Generate Draft" action triggers pipeline.
+- [x] Spec complete: stub PRD replaced with agreed flows, model/policy, and review states.
+- [x] Archive items can be converted to briefs and queued for generation.
+- [x] Generated drafts appear as `content_items` with `workflow_status = drafting` and revision history.
+- [x] AI assistant panel functional in editor (readability, meta description, related topics).
+- [x] Legal review enforced for applicable content types.
+- [x] Approved generated drafts publish through existing queue/cron with same validation.
+- [x] Analytics track edit distance, rejection reasons, time-to-publish.
+- [x] Backlog "Generate Draft" action triggers pipeline.
 
 ## Risks
 
@@ -865,7 +865,7 @@ Turn archive material into reviewable, localized drafts with human approval befo
 | **CH-4** | Block Editor + Locale Editing | Full content editor with blocks, locales, publishing | Planned |
 | **CH-5** | Backlog + Calendar + Queue | 3 screens: ideas pipeline, calendar, queue monitor | Planned |
 | **CH-6** | Settings + Polish + Mobile | Settings page, mobile editor, docs update | Planned |
-| **CH-7** | Generation Pipeline | AI draft generation with human review | Active (parallel) |
+| **CH-7** | Generation Pipeline | AI draft generation with human review | Done |
 
 Each epic has clear acceptance criteria and a defined set of files to create or modify. Epics are sequenced so that each builds on the foundation of the previous one, with CH-7 running in parallel once CH-4 provides the editor for reviewing generated content.
 

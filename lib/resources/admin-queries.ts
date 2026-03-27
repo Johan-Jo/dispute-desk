@@ -309,3 +309,30 @@ export async function updateCmsSettings(settings: Record<string, unknown>) {
 
   if (error) throw error;
 }
+
+/* ── Generation analytics ────────────────────────────────────────── */
+
+export async function getGenerationStats() {
+  const { data: items } = await sb()
+    .from("content_items")
+    .select("id, generated_at, generation_tokens, workflow_status, rejection_reason, time_to_publish")
+    .not("generated_at", "is", null);
+
+  const generated = items ?? [];
+  const totalGenerated = generated.length;
+  const published = generated.filter((i) => i.workflow_status === "published").length;
+  const rejected = generated.filter((i) => !!i.rejection_reason).length;
+  const totalTokens = generated.reduce((sum, i) => sum + ((i.generation_tokens as number) ?? 0), 0);
+
+  return {
+    totalGenerated,
+    published,
+    rejected,
+    inReview: generated.filter((i) =>
+      i.workflow_status === "in_editorial_review" || i.workflow_status === "in_legal_review"
+    ).length,
+    drafting: generated.filter((i) => i.workflow_status === "drafting").length,
+    totalTokens,
+    acceptanceRate: totalGenerated > 0 ? Math.round((published / totalGenerated) * 100) : 0,
+  };
+}
