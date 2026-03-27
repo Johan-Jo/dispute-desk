@@ -1,0 +1,121 @@
+import { NextRequest, NextResponse } from "next/server";
+import { hasAdminSession } from "@/lib/admin/auth";
+import { getContentForEditor, updateWorkflowStatus } from "@/lib/resources/admin-queries";
+import { getServiceClient } from "@/lib/supabase/server";
+import { isWorkflowStatus } from "@/lib/resources/workflow";
+import type { WorkflowStatus } from "@/lib/resources/workflow";
+
+export const dynamic = "force-dynamic";
+
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_req: NextRequest, ctx: Ctx) {
+  if (!(await hasAdminSession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+
+  try {
+    const data = await getContentForEditor(id);
+    if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(data);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(req: NextRequest, ctx: Ctx) {
+  if (!(await hasAdminSession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const body = await req.json();
+  const sb = getServiceClient();
+
+  try {
+    // Update content_items fields
+    if (body.item) {
+      const allowedFields = [
+        "content_type", "primary_pillar", "topic", "target_keyword",
+        "search_intent", "priority", "author_id", "reviewer_id",
+      ];
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      for (const key of allowedFields) {
+        if (key in body.item) updates[key] = body.item[key];
+      }
+      const { error } = await sb.from("content_items").update(updates).eq("id", id);
+      if (error) throw error;
+    }
+
+    // Update workflow status with state machine validation
+    if (body.workflowTransition) {
+      const { from, to } = body.workflowTransition as { from: string; to: string };
+      if (!isWorkflowStatus(from) || !isWorkflowStatus(to)) {
+        return NextResponse.json({ error: "Invalid workflow status" }, { status: 400 });
+      }
+      await updateWorkflowStatus(id, from as WorkflowStatus, to as WorkflowStatus);
+    }
+
+    // Upsert localization for a specific locale
+    if (body.localization) {
+      const loc = body.localization as {
+        locale: string;
+        title?: string;
+        excerpt?: string;
+        slug?: string;
+        body_json?: Record<string, unknown>;
+        meta_title?: string;
+        meta_description?: string;
+        translation_status?: string;
+      };
+
+      const upsertData: Record<string, unknown> = {
+        content_item_id: id,
+        locale: loc.locale,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (loc.title !== undefined) upsertData.title = loc.title;
+      if (loc.excerpt !== undefined) upsertData.excerpt = loc.excerpt;
+      if (loc.slug !== undefined) upsertData.slug = loc.slug;
+      if (loc.body_json !== undefined) upsertData.body_json = loc.body_json;
+      if (loc.meta_title !== undefined) upsertData.meta_title = loc.meta_title;
+      if (loc.meta_description !== undefined) upsertData.meta_description = loc.meta_description;
+      if (loc.translation_status !== undefined) upsertData.translation_status = loc.translation_status;
+
+      const { error } = await sb
+        .from("content_localizations")
+        .upsert(upsertData, { onConflict: "content_item_id,locale" });
+      if (error) throw error;
+    }
+
+    // Schedule publish
+    if (body.schedule) {
+      const { localizationId, scheduledFor } = body.schedule as {
+        localizationId: string;
+        scheduledFor: string;
+      };
+      const { error } = await sb.from("content_publish_queue").upsert(
+        {
+          localization_id: localizationId,
+          scheduled_for: scheduledFor,
+          status: "pending",
+        },
+        { onConflict: "localization_id" }
+      );
+      if (error) throw error;
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}

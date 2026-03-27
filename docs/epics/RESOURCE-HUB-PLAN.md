@@ -407,9 +407,9 @@ New page at `/admin/resources/list`:
 
 ---
 
-# EPIC CH-4 — Block Editor + Locale Editing
+# EPIC CH-4 — Block Editor + Locale Editing ✅
 
-> **Status:** Active
+> **Status:** Done
 > **Dependencies:** CH-3
 > **Delivery:** Full content editor with block-based editing, locale switching, and publishing workflow
 
@@ -506,17 +506,17 @@ Each block: drag-to-reorder (desktop), add/remove, type indicator.
 
 ## Acceptance Criteria
 
-- [ ] Editor opens existing content with all fields populated (no data loss from body_json).
-- [ ] All 8 block types functional: add, edit, remove, reorder (desktop).
-- [ ] Locale switching loads correct per-locale data; completeness badges update live.
-- [ ] Validation checklist reflects real field state; publish blocked if required items incomplete.
-- [ ] Save Draft persists without status change; Schedule sets datetime; Publish goes live.
-- [ ] Slug auto-generated from title but editable.
-- [ ] CTA configuration preview reflects selected CTA type.
-- [ ] Related content picker adds/removes related items.
-- [ ] Tags editable inline with add/remove.
-- [ ] Preview renders content matching public hub output.
-- [ ] No data loss: existing `body_json` content round-trips through block editor.
+- [x] Editor opens existing content with all fields populated (no data loss from body_json).
+- [x] All 8+ block types functional: add, edit, remove, reorder (desktop).
+- [x] Locale switching loads correct per-locale data; completeness badges update live.
+- [x] Validation checklist reflects real field state; publish blocked if required items incomplete.
+- [x] Save Draft persists without status change; Schedule sets datetime; Publish goes live.
+- [x] Slug auto-generated from title but editable.
+- [ ] CTA configuration preview reflects selected CTA type. (deferred to CH-6)
+- [ ] Related content picker adds/removes related items. (deferred to CH-6)
+- [ ] Tags editable inline with add/remove. (deferred to CH-6)
+- [ ] Preview renders content matching public hub output. (deferred to CH-6)
+- [x] No data loss: existing `body_json` content round-trips through block editor.
 
 ## Risks
 
@@ -528,7 +528,7 @@ Each block: drag-to-reorder (desktop), add/remove, type indicator.
 
 # EPIC CH-5 — Backlog + Calendar + Queue
 
-> **Status:** Planned
+> **Status:** Active
 > **Dependencies:** CH-4
 > **Delivery:** Three operational screens for editorial planning and publish monitoring
 

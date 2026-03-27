@@ -176,7 +176,11 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Admin shell:** `app/admin/layout.tsx` — left sidebar with Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings), top bar, mobile responsive.
 - **Admin dashboard:** `app/admin/resources/page.tsx` + `dashboard-client.tsx` — 4 KPI cards, upcoming scheduled, translation gaps, queue health, recently edited table.
 - **Admin content list:** `app/admin/resources/list/page.tsx` + `list-client.tsx` — status tabs with counts, search + filter (type, topic), multi-select with bulk actions, locale indicators, pagination.
-- **Admin API:** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI.
+- **Admin API (list):** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI.
+- **Admin API (editor):** `GET/PUT /api/admin/resources/content/[id]` — load full content item for editor (item + localizations + tags + revisions), save item fields + per-locale data + workflow transitions + schedule.
+- **Block editor:** `app/admin/resources/content/[id]/editor-client.tsx` — custom block editor with 13 block types (html, paragraph, heading, list, callout, code, quote, divider, image, key-takeaways, faq, disclaimer, update-log). Blocks reorderable, add/remove. Locale tabs with completeness badges.
+- **Body adapter:** `lib/resources/body-adapter.ts` — bidirectional `bodyJsonToBlocks` / `blocksToBodyJson` converting legacy `{mainHtml, keyTakeaways, faq, disclaimer, updateLog}` ↔ `EditorBlock[]`.
+- **Block renderer:** `components/admin/editor/BlockRenderer.tsx` — per-type inline editors for all 13 block types with type indicators and drag controls.
 - **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
 - **Queries (public):** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
 
@@ -189,8 +193,8 @@ Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See *
 | **CH-1** | Public hub + admin queue + JSON inspector + publish cron | Done |
 | **CH-2** | Admin shell + component system + workflow migration + query layer | Done |
 | **CH-3** | Dashboard + Content List (first 2 operational screens) | Done |
-| **CH-4** | Block editor + locale editing (rich content editor) | **Active** |
-| **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Planned |
+| **CH-4** | Block editor + locale editing (rich content editor) | Done |
+| **CH-5** | Backlog + Calendar + Queue (3 operational screens) | **Active** |
 | **CH-6** | Settings + polish + mobile editor | Planned |
 | **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
 

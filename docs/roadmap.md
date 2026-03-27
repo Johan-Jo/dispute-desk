@@ -80,8 +80,8 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 | **CH-1** | Public hub routes, Supabase content tables, admin tools, publish cron, hub shell + i18n | Done |
 | **CH-2** | Admin shell + component system + workflow migration + query layer | Done |
 | **CH-3** | Dashboard + Content List (first 2 operational screens) | Done |
-| **CH-4** | Block editor + locale editing (rich content editor) | **Active** |
-| **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Planned |
+| **CH-4** | Block editor + locale editing (rich content editor) | Done |
+| **CH-5** | Backlog + Calendar + Queue (3 operational screens) | **Active** |
 | **CH-6** | Settings + polish + mobile editor | Planned |
 | **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
 

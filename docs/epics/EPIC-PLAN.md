@@ -134,7 +134,8 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 through CH-7**
 | **EPIC A1** | Core epic | Still "In progress" on roadmap — finish automation pipeline scope per [EPIC-A1](EPIC-A1-automation-pipeline.md). |
 | **CH-2** | Content Hub | ~~Admin shell + component system~~ **Done.** |
 | **CH-3** | Content Hub | ~~Dashboard + Content List~~ **Done.** |
-| **CH-4** | Content Hub | Block Editor + Locale Editing; see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). **Next.** |
+| **CH-4** | Content Hub | ~~Block Editor + Locale Editing~~ **Done.** |
+| **CH-5** | Content Hub | Backlog + Calendar + Queue; see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). **Next.** |
 | **CH-7** | Content Hub | Generation pipeline (parallel track); see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
 
 ---
