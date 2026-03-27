@@ -152,10 +152,6 @@ export default function DisputeDetailPage() {
 
   const isSynthetic = dispute.dispute_gid?.includes("/seed-") ?? false;
   const orderNum = dispute.order_gid?.split("/").pop();
-  const shopDomainForOrder =
-    typeof window !== "undefined"
-      ? document.cookie.match(/shopify_shop=([^;]+)/)?.[1]
-      : null;
   const disputeUrl =
     shopDomain && dispute.dispute_gid
       ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
@@ -242,10 +238,10 @@ export default function DisputeDetailPage() {
               <BlockStack gap="200">
                 <Text as="h2" variant="headingMd">{t("disputes.linkedOrder")}</Text>
                 <Text as="p" variant="bodyMd">{t("disputes.order")} #{orderNum}</Text>
-                {shopDomainForOrder && (
+                {shopDomain && (
                   <Button
                     variant="plain"
-                    url={`https://${shopDomainForOrder}/admin/orders/${orderNum}`}
+                    url={`https://${shopDomain}/admin/orders/${orderNum}`}
                     target="_blank"
                   >
                     {t("disputes.openInShopify")}

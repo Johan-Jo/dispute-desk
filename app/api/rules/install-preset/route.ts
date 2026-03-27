@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const shopId = body.shop_id;
+  const shopId = body.shop_id ?? req.headers?.get("x-shop-id") ?? null;
   if (!shopId) {
     return NextResponse.json({ error: "shop_id is required" }, { status: 400 });
   }

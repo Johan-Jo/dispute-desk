@@ -26,7 +26,11 @@ function decryptToken(encrypted: string): string {
  * Creates a Shopify recurring subscription and returns the approval URL.
  */
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const raw = await req.json();
+  const body = {
+    ...raw,
+    shop_id: raw?.shop_id ?? req.headers.get("x-shop-id") ?? undefined,
+  };
   const validated = await validateBody(body, billingSubscribeSchema);
   if ("error" in validated) return validated.error;
   const { shop_id, plan_id } = validated.data;

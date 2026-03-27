@@ -9,7 +9,8 @@ import {
  * Returns automation settings for a shop.
  */
 export async function GET(req: NextRequest) {
-  const shopId = req.nextUrl.searchParams.get("shop_id");
+  const shopId =
+    req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
   if (!shopId) {
     return NextResponse.json(
       { error: "shop_id required" },
@@ -32,7 +33,8 @@ export async function GET(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { shop_id, ...updates } = body;
+  const { shop_id: bodyShopId, ...updates } = body;
+  const shop_id = bodyShopId ?? req.headers.get("x-shop-id");
 
   if (!shop_id) {
     return NextResponse.json(

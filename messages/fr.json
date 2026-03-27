@@ -1076,7 +1076,8 @@
     "startFromTemplate": "Commencer à partir d'un modèle",
     "source": "Source",
     "sourceTemplate": "Modèle",
-    "sourceManual": "Manuel"
+    "sourceManual": "Manuel",
+    "badgeActivated": "Activé"
   },
   "templateLibrary": {
     "title": "Bibliothèque de modèles",

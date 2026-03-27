@@ -11,7 +11,8 @@ export const runtime = "nodejs";
  * Returns current plan, usage, and quota info.
  */
 export async function GET(req: NextRequest) {
-  const shopId = req.nextUrl.searchParams.get("shop_id");
+  const shopId =
+    req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }

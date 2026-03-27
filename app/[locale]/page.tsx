@@ -46,7 +46,7 @@ export default function MarketingLandingPage() {
             <div className="w-8 h-8 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-[#0B1220]">DisputeDesk</h1>
+            <span className="text-xl font-bold text-[#0B1220]">DisputeDesk</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
@@ -88,56 +88,87 @@ export default function MarketingLandingPage() {
         )}
       </header>
 
-      {/* Hero */}
-      <section className="py-12 sm:py-20 lg:py-28" style={{ background: "linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 60%)" }}>
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8">
+      {/* Hero — palette + layout from Figma Make (DisputeDesk Shopify App Design) */}
+      <section
+        className="relative py-12 sm:py-20 lg:py-28 overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
+        }}
+      >
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          <div
+            className="absolute top-20 left-4 sm:left-10 w-72 sm:w-96 h-72 sm:h-96 rounded-full mix-blend-screen filter blur-3xl opacity-[0.15] dd-hero-blob"
+            style={{ backgroundColor: "var(--dd-hero-blob-a)" }}
+          />
+          <div
+            className="absolute top-40 right-4 sm:right-10 w-72 sm:w-96 h-72 sm:h-96 rounded-full mix-blend-screen filter blur-3xl opacity-[0.12] dd-hero-blob dd-hero-blob-delay-2s"
+            style={{ backgroundColor: "var(--dd-hero-blob-b)" }}
+          />
+          <div
+            className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-72 sm:w-96 h-72 sm:h-96 rounded-full mix-blend-screen filter blur-3xl opacity-[0.1] dd-hero-blob dd-hero-blob-delay-4s"
+            style={{ backgroundColor: "var(--dd-hero-blob-c)" }}
+          />
+        </div>
+
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div>
-              <p className="text-sm uppercase tracking-wide text-[#1D4ED8] font-medium mb-3">
+              <p className="text-sm uppercase tracking-wide text-[#93C5FD] font-medium mb-3">
                 {t("hero.tagline")}
               </p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-[#0B1220] mb-4 sm:mb-6 leading-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 leading-tight tracking-tight bg-gradient-to-r from-[var(--dd-hero-gradient-from)] via-[var(--dd-hero-gradient-via)] to-[var(--dd-hero-gradient-to)] bg-clip-text text-transparent">
                 {t("hero.headline")}
               </h1>
-              <p className="text-lg sm:text-xl text-[#64748B] mb-6 sm:mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-slate-300 mb-6 sm:mb-8 leading-relaxed">
                 {t("hero.subheadline")}
               </p>
 
               <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                 <div className="flex items-start gap-3">
                   <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
-                  <p className="text-sm sm:text-base text-[#0B1220]">{t("hero.bullet1")}</p>
+                  <p className="text-sm sm:text-base text-slate-200">{t("hero.bullet1")}</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <Check className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
-                  <p className="text-sm sm:text-base text-[#0B1220]">{t("hero.bullet2")}</p>
+                  <p className="text-sm sm:text-base text-slate-200">{t("hero.bullet2")}</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
-                  <p className="text-sm sm:text-base text-[#0B1220]">{t("hero.bullet3")}</p>
+                  <p className="text-sm sm:text-base text-slate-200">{t("hero.bullet3")}</p>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <a href="/portal/connect-shopify">
-                  <Button variant="primary" size="lg" className="w-full sm:w-auto">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full sm:w-auto bg-white text-[#0B1220] hover:bg-slate-100 border-2 border-white shadow-xl shadow-black/25 focus:ring-white/60 [&_svg]:text-[#0B1220]"
+                  >
                     {t("hero.installFree")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </a>
                 <a href="#pricing">
-                  <Button variant="secondary" size="lg" className="w-full sm:w-auto">{t("hero.viewPricing")}</Button>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white hover:bg-white/20 hover:border-white/50 shadow-lg focus:ring-white/40"
+                  >
+                    {t("hero.viewPricing")}
+                  </Button>
                 </a>
               </div>
 
-              <p className="text-xs sm:text-sm text-[#64748B] mt-4 sm:mt-6 border-t border-[#E5E7EB] pt-4 sm:pt-6">
+              <p className="text-xs sm:text-sm text-slate-400 mt-4 sm:mt-6 border-t border-white/15 pt-4 sm:pt-6">
                 {t("hero.disclaimer")}
               </p>
             </div>
 
             {/* Product preview card — visible on all screens */}
             <div className="relative mt-8 lg:mt-0">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#1D4ED8]/20 to-[#22C55E]/20 rounded-3xl blur-xl" />
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#3B82F6]/30 via-[#60A5FA]/20 to-[#3B82F6]/30 rounded-3xl blur-3xl" />
 
               <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] p-6 overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#1D4ED8]/5 to-transparent rounded-full -mr-32 -mt-32" />
@@ -201,7 +232,7 @@ export default function MarketingLandingPage() {
                       <span className="text-sm font-semibold text-[#0B1220]">{t("hero.completenessScore")}</span>
                       <div className="flex items-center gap-2">
                         <div className="w-20 h-2 bg-white/50 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-[#1D4ED8] to-[#0EA5E9] rounded-full" style={{ width: "67%" }} />
+                          <div className="h-full bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] rounded-full" style={{ width: "67%" }} />
                         </div>
                         <span className="text-lg font-bold text-[#1D4ED8]">67%</span>
                       </div>

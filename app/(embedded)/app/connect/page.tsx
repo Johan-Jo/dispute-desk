@@ -59,11 +59,6 @@ function getShopDomain(): string | null {
   return null;
 }
 
-function getShopId(): string | null {
-  if (typeof document === "undefined") return null;
-  return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
-}
-
 export default function ConnectPage() {
   const t = useTranslations("connect");
   const router = useRouter();
@@ -72,16 +67,10 @@ export default function ConnectPage() {
 
   useEffect(() => {
     const domain = getShopDomain();
-    const shopId = getShopId();
     setShopDomain(domain);
 
-    if (!shopId) {
-      setConnected(false);
-      return;
-    }
-
-    fetch(`/api/setup/state?shop_id=${shopId}`)
-      .then((r) => r.json())
+    fetch("/api/setup/state")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
         const permStatus = data?.steps?.permissions?.status;
         setConnected(permStatus === "done");

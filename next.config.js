@@ -63,6 +63,24 @@ const nextConfig = {
       ],
     },
     {
+      // Locale-prefixed marketing paths: same CSP as "/" (Shopify may load application_url in iframe).
+      source: "/:locale(de|es|fr|pt|sv)/:path*",
+      headers: [
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
+            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            "connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com",
+            "font-src 'self' https://cdn.shopify.com",
+          ].join("; "),
+        },
+      ],
+    },
+    {
       // Auth route in iframe: allow framing + App Bridge so breakout redirect works. MUST come after deny.
       source: "/api/auth/shopify",
       headers: [

@@ -46,18 +46,12 @@ export default function EmbeddedSettingsPage() {
   const [notifBeforeDue, setNotifBeforeDue] = useState(true);
   const [notifEvidenceReady, setNotifEvidenceReady] = useState(false);
 
-  const shopId =
-    typeof window !== "undefined"
-      ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-      : "";
-
   const fetchInfo = useCallback(async () => {
-    if (!shopId) { setLoading(false); return; }
     setLoading(true);
     try {
       const [usageRes, prefsRes] = await Promise.all([
-        fetch(`/api/billing/usage?shop_id=${shopId}`),
-        fetch(`/api/shop/preferences?shop_id=${shopId}`),
+        fetch("/api/billing/usage"),
+        fetch("/api/shop/preferences"),
       ]);
       if (usageRes.ok) {
         const data = await usageRes.json();
@@ -78,18 +72,17 @@ export default function EmbeddedSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [shopId]);
+  }, []);
 
   const persistNotification = useCallback(
     async (key: keyof NotificationPrefs, value: boolean) => {
-      if (!shopId) return;
       await fetch("/api/shop/preferences", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop_id: shopId, notifications: { [key]: value } }),
+        body: JSON.stringify({ notifications: { [key]: value } }),
       });
     },
-    [shopId]
+    []
   );
 
   useEffect(() => { fetchInfo(); }, [fetchInfo]);

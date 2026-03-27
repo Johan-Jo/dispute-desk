@@ -78,23 +78,21 @@ export default function DisputesListPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
 
-  const shopId =
-    typeof window !== "undefined"
-      ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-      : "";
-
+  // Shop is resolved server-side: middleware forwards session cookies and sets x-shop-id on /api/* (shopify_shop_id is httpOnly — not readable from document.cookie).
   const fetchDisputes = useCallback(async () => {
-    if (!shopId) return;
     setLoading(true);
-    const params = new URLSearchParams({ shop_id: shopId, page: String(page), per_page: "25" });
-    if (tab === "review") params.set("needs_review", "true");
-    if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
-    const res = await fetch(`/api/disputes?${params}`);
-    const json: DisputesResponse = await res.json();
-    setDisputes(json.disputes ?? []);
-    setPagination(json.pagination ?? { total: 0, total_pages: 0 });
-    setLoading(false);
-  }, [shopId, page, statusFilter, tab]);
+    try {
+      const params = new URLSearchParams({ page: String(page), per_page: "25" });
+      if (tab === "review") params.set("needs_review", "true");
+      if (statusFilter.length > 0) params.set("status", statusFilter.join(","));
+      const res = await fetch(`/api/disputes?${params}`);
+      const json: DisputesResponse = await res.json();
+      setDisputes(json.disputes ?? []);
+      setPagination(json.pagination ?? { total: 0, total_pages: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [page, statusFilter, tab]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
@@ -103,7 +101,7 @@ export default function DisputesListPage() {
     await fetch("/api/disputes/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shop_id: shopId }),
+      body: JSON.stringify({}),
     });
     await fetchDisputes();
     setSyncing(false);

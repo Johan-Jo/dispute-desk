@@ -10,8 +10,11 @@ import { syncDisputes } from "@/lib/disputes/syncDisputes";
  * For async/background sync, enqueue a sync_disputes job instead.
  */
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const shopId = body.shop_id;
+  const body = await req.json().catch(() => ({}));
+  const shopId =
+    (body && typeof body === "object" && "shop_id" in body
+      ? (body as { shop_id?: string }).shop_id
+      : undefined) ?? req.headers.get("x-shop-id");
 
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });

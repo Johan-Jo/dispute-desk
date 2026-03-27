@@ -1064,6 +1064,12 @@
       "signIn": "Sign in",
       "installOnShopify": "Install on Shopify"
     },
+    "seo": {
+      "title": "DisputeDesk — Shopify chargeback evidence & dispute automation",
+      "description": "Build Shopify chargeback evidence packs in minutes. Review queue, completeness scoring, audit trail, and predictable pricing. Install from the Shopify App Store.",
+      "keywords": "Shopify chargeback, chargeback evidence, dispute automation, Shopify Payments disputes, evidence pack, chargeback software, Shopify app",
+      "jsonLdDescription": "DisputeDesk helps Shopify merchants build chargeback evidence packs, enforce completeness, and maintain an audit trail with merchant-controlled workflows."
+    },
     "hero": {
       "tagline": "Dispute operations for Shopify",
       "headline": "Run chargebacks like an ops team \u2014 not a 25% success-fee tax.",
@@ -1248,7 +1254,8 @@
     "startFromTemplate": "Start from template",
     "source": "Source",
     "sourceTemplate": "Template",
-    "sourceManual": "Manual"
+    "sourceManual": "Manual",
+    "badgeActivated": "Activated"
   },
   "templateCustomize": {
     "banner": "Template Setup Wizard — Complete these steps to activate your template",

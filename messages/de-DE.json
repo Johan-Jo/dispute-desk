@@ -1100,6 +1100,12 @@
       "signIn": "Anmelden",
       "installOnShopify": "Auf Shopify installieren"
     },
+    "seo": {
+      "title": "DisputeDesk — Chargeback-Beweise & Streitautomatisierung für Shopify",
+      "description": "Erstellen Sie Shopify-Chargeback-Beweispakete in wenigen Minuten. Prüfwarteschlange, Vollständigkeits-Scoring, Audit-Trail und planbare Preise. App im Shopify App Store installieren.",
+      "keywords": "Shopify Chargeback, Chargeback Beweise, Streitautomatisierung, Shopify Payments Streitfälle, Beweispaket, Chargeback Software, Shopify App",
+      "jsonLdDescription": "DisputeDesk hilft Shopify-Händlern, Chargeback-Beweispakete zu erstellen, Vollständigkeit durchzusetzen und einen Audit-Trail mit händlergesteuerten Workflows zu führen."
+    },
     "hero": {
       "tagline": "Dispute-Operations für Shopify",
       "headline": "Chargebacks wie ein Ops-Team managen — nicht als 25% Erfolgsgebühr.",
@@ -1284,7 +1290,8 @@
     "source": "Quelle",
     "sourceTemplate": "Vorlage",
     "sourceManual": "Manuell",
-    "activate": "Activate"
+    "activate": "Activate",
+    "badgeActivated": "Aktiviert"
   },
   "templateLibrary": {
     "title": "Vorlagenbibliothek",

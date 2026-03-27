@@ -1,15 +1,29 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { LOCALES, isLocale, type Locale } from "@/lib/i18n/locales";
+import {
+  DEFAULT_PATH_LOCALE,
+  isPathLocale,
+  messagesLocaleToPath,
+  pathLocaleToMessages,
+  type PathLocale,
+} from "@/lib/i18n/pathLocales";
 import { Globe } from "lucide-react";
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const rawLocale = useLocale();
-  const locale: Locale = isLocale(rawLocale) ? rawLocale : "en-US";
+  const locale: Locale = isLocale(rawLocale)
+    ? rawLocale
+    : isPathLocale(rawLocale)
+      ? pathLocaleToMessages[rawLocale as PathLocale]
+      : "en-US";
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -19,11 +33,44 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const switchLocale = useCallback((next: Locale) => {
-    document.cookie = `dd_locale=${next};path=/;max-age=31536000;samesite=lax`;
-    setOpen(false);
-    window.location.reload();
-  }, []);
+  const switchLocale = useCallback(
+    (next: Locale) => {
+      const nextPath = messagesLocaleToPath(next);
+      document.cookie = `dd_locale=${next};path=/;max-age=31536000;samesite=lax`;
+
+      const segments = pathname.split("/").filter(Boolean);
+      const first = segments[0];
+
+      if (first && isPathLocale(first)) {
+        const rest = segments.slice(1).join("/");
+        const prefix =
+          nextPath === DEFAULT_PATH_LOCALE ? "" : `/${nextPath}`;
+        const href = rest ? `${prefix}/${rest}` : prefix || "/";
+        router.push(href);
+        setOpen(false);
+        return;
+      }
+
+      if (first && isLocale(first)) {
+        const rest = segments.slice(1).join("/");
+        const prefix =
+          nextPath === DEFAULT_PATH_LOCALE ? "" : `/${nextPath}`;
+        const href = rest ? `${prefix}/${rest}` : prefix || "/";
+        router.push(href);
+        setOpen(false);
+        return;
+      }
+
+      const isMarketingHome = !first || pathname === "/";
+      if (isMarketingHome) {
+        router.push(nextPath === DEFAULT_PATH_LOCALE ? "/" : `/${nextPath}`);
+      } else {
+        router.refresh();
+      }
+      setOpen(false);
+    },
+    [pathname, router]
+  );
 
   const current = LOCALES.find((l) => l.locale === locale) ?? LOCALES[0];
 

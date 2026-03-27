@@ -1045,7 +1045,8 @@
     "startFromTemplate": "Comenzar desde plantilla",
     "source": "Origen",
     "sourceTemplate": "Plantilla",
-    "sourceManual": "Manual"
+    "sourceManual": "Manual",
+    "badgeActivated": "Activado"
   },
   "templateLibrary": {
     "title": "Biblioteca de plantillas",

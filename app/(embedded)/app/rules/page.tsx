@@ -78,21 +78,12 @@ export default function EmbeddedRulesPage() {
   const [starterError, setStarterError] = useState<string | null>(null);
   const [starterSavedBanner, setStarterSavedBanner] = useState(false);
 
-  const shopId =
-    typeof window !== "undefined"
-      ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-      : "";
-
   const fetchRules = useCallback(async () => {
-    if (!shopId) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const [rulesRes, packsRes] = await Promise.all([
-        fetch(`/api/rules?shop_id=${shopId}`),
-        fetch(`/api/packs?shopId=${encodeURIComponent(shopId)}&status=ACTIVE`),
+        fetch("/api/rules"),
+        fetch("/api/packs?status=ACTIVE"),
       ]);
       if (rulesRes.ok) {
         const data = await rulesRes.json();
@@ -107,7 +98,7 @@ export default function EmbeddedRulesPage() {
     } finally {
       setLoading(false);
     }
-  }, [shopId]);
+  }, []);
 
   useEffect(() => {
     fetchRules();
@@ -133,7 +124,6 @@ export default function EmbeddedRulesPage() {
   );
 
   const saveStarterRules = useCallback(async () => {
-    if (!shopId) return;
     setSavingStarters(true);
     setStarterError(null);
     setStarterSavedBanner(false);
@@ -158,7 +148,6 @@ export default function EmbeddedRulesPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              shop_id: shopId,
               name: preset.name,
               match: preset.match,
               action: { mode },
@@ -181,7 +170,7 @@ export default function EmbeddedRulesPage() {
     } finally {
       setSavingStarters(false);
     }
-  }, [shopId, starterModes, rules, fetchRules]);
+  }, [starterModes, rules, fetchRules]);
 
   function matchSummary(match: Rule["match"]): string {
     const parts: string[] = [];
@@ -247,7 +236,7 @@ export default function EmbeddedRulesPage() {
                     <Button
                       variant="primary"
                       loading={savingStarters}
-                      disabled={!shopId || savingStarters}
+                      disabled={savingStarters}
                       onClick={saveStarterRules}
                     >
                       {tr("saveStarterRules")}

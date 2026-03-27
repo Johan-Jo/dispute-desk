@@ -10,7 +10,8 @@ export const runtime = "nodejs";
  * List all rules for a shop, ordered by priority.
  */
 export async function GET(req: NextRequest) {
-  const shopId = req.nextUrl.searchParams.get("shop_id");
+  const shopId =
+    req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
@@ -34,7 +35,17 @@ export async function GET(req: NextRequest) {
  * Create a new rule. Requires Starter or Pro plan.
  */
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const raw = await req.json();
+  const body =
+    raw && typeof raw === "object"
+      ? {
+          ...(raw as Record<string, unknown>),
+          shop_id:
+            (raw as { shop_id?: string }).shop_id ??
+            req.headers.get("x-shop-id") ??
+            undefined,
+        }
+      : raw;
   const validated = await validateBody(body, ruleCreateSchema);
   if ("error" in validated) return validated.error;
   const { shop_id, name, match, action, enabled, priority } = validated.data;

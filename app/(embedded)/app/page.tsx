@@ -114,12 +114,7 @@ function RecentDisputesTable() {
 
   useEffect(() => {
     let cancelled = false;
-    const shopId = document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1];
-    if (!shopId) {
-      setLoading(false);
-      return;
-    }
-    fetch(`/api/disputes?shop_id=${shopId}&per_page=5`)
+    fetch("/api/disputes?per_page=5")
       .then((res) => (res.ok ? res.json() : { disputes: [] }))
       .then((data: { disputes?: Array<{ id: string; order_gid?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; status?: string | null; due_at?: string | null }> }) => {
         if (cancelled) return;
@@ -208,12 +203,7 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
 
   useEffect(() => {
     let cancelled = false;
-    const shopId = document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1];
-    if (!shopId) {
-      setLoading(false);
-      return;
-    }
-    fetch(`/api/dashboard/stats?shop_id=${shopId}&period=${period}`)
+    fetch(`/api/dashboard/stats?period=${period}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data) setStats(data);
@@ -290,12 +280,7 @@ function DashboardCharts({ period }: { period: PeriodKey }) {
 
   useEffect(() => {
     let cancelled = false;
-    const shopId = document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1];
-    if (!shopId) {
-      setLoading(false);
-      return;
-    }
-    fetch(`/api/dashboard/stats?shop_id=${shopId}&period=${period}`)
+    fetch(`/api/dashboard/stats?period=${period}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data) setStats(data);
@@ -365,9 +350,7 @@ function AutomationStatusCard() {
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
 
   useEffect(() => {
-    const shopId = document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1];
-    if (!shopId) return;
-    fetch(`/api/automation/settings?shop_id=${shopId}`)
+    fetch("/api/automation/settings")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => { if (data) setSettings(data); });
   }, []);

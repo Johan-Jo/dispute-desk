@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import createNextIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
+import { routing } from "@/i18n/routing";
+import {
+  DEFAULT_PATH_LOCALE,
+  PATH_LOCALE_PREFIX_PATTERN,
+  messagesLocaleToPath,
+} from "@/lib/i18n/pathLocales";
+import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
+
+const intlMiddleware = createNextIntlMiddleware(routing);
+const localePathRegex = new RegExp(
+  `^\\/(${PATH_LOCALE_PREFIX_PATTERN})(\\/.*)?$`
+);
 
 /**
  * Multi-surface middleware.
@@ -21,9 +34,28 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(appUrl);
   }
 
-  // --- Public routes: marketing, auth, static assets ---
+  // --- Legacy BCP-47 marketing URLs → two-letter paths ---
+  const legacyMatch = pathname.match(
+    /^\/(en-US|de-DE|fr-FR|es-ES|pt-BR|sv-SE)(\/?.*)?$/
+  );
+  if (legacyMatch) {
+    const messagesLocale = legacyMatch[1] as Locale;
+    if (isLocale(messagesLocale)) {
+      const seg = messagesLocaleToPath(messagesLocale);
+      const rest = (legacyMatch[2] ?? "").replace(/^\//, "");
+      const base = seg === DEFAULT_PATH_LOCALE ? "" : `/${seg}`;
+      const targetPath = rest ? `${base}/${rest}` : base || "/";
+      return NextResponse.redirect(new URL(targetPath + req.nextUrl.search, req.url));
+    }
+  }
+
+  // --- Marketing: `/` (default English) + /de, /es, … → next-intl ---
+  if (pathname === "/" || localePathRegex.test(pathname)) {
+    return intlMiddleware(req);
+  }
+
+  // --- Public routes: auth, static assets ---
   if (
-    pathname === "/" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"

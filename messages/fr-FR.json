@@ -1100,6 +1100,12 @@
       "signIn": "Connexion",
       "installOnShopify": "Installer sur Shopify"
     },
+    "seo": {
+      "title": "DisputeDesk — Preuves de rétrofacturation Shopify et automatisation des litiges",
+      "description": "Créez des dossiers de preuves pour rétrofacturations Shopify en quelques minutes. File d'attente, score de complétude, piste d'audit et tarification prévisible. Installez l'app depuis le Shopify App Store.",
+      "keywords": "rétrofacturation Shopify, preuve chargeback, automatisation litiges, litiges Shopify Payments, dossier de preuves, logiciel chargeback, application Shopify",
+      "jsonLdDescription": "DisputeDesk aide les marchands Shopify à constituer des dossiers de preuves pour les rétrofacturations, à imposer la complétude et à garder une piste d'audit avec des flux contrôlés par le marchand."
+    },
     "hero": {
       "tagline": "Gestion des litiges pour Shopify",
       "headline": "Gérez les chargebacks comme une équipe ops — pas comme une taxe de 25%.",
@@ -1284,7 +1290,8 @@
     "source": "Source",
     "sourceTemplate": "Modèle",
     "sourceManual": "Manuel",
-    "activate": "Activate"
+    "activate": "Activate",
+    "badgeActivated": "Activé"
   },
   "templateLibrary": {
     "title": "Bibliothèque de modèles",

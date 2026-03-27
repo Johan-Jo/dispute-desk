@@ -69,19 +69,14 @@ export default function BillingPage() {
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const [showAllPlans, setShowAllPlans] = useState(true);
 
-  const shopId = typeof window !== "undefined"
-    ? document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? ""
-    : "";
-
   const fetchUsage = useCallback(async () => {
-    if (!shopId) return;
     setLoading(true);
-    const res = await fetch(`/api/billing/usage?shop_id=${shopId}`);
+    const res = await fetch("/api/billing/usage");
     const data = await res.json();
     setPlan(data.plan);
     setUsage(data.usage);
     setLoading(false);
-  }, [shopId]);
+  }, []);
 
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
@@ -92,7 +87,7 @@ export default function BillingPage() {
       const res = await fetch("/api/billing/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop_id: shopId, plan_id: planId }),
+        body: JSON.stringify({ plan_id: planId }),
       });
       const data = await res.json();
       if (data.confirmationUrl) {
@@ -256,7 +251,7 @@ export default function BillingPage() {
                       const res = await fetch("/api/billing/topup", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ shop_id: shopId, sku: topUp.sku }),
+                        body: JSON.stringify({ sku: topUp.sku }),
                       });
                       const data = await res.json();
                       if (data.confirmationUrl) window.top!.location.href = data.confirmationUrl;

@@ -522,19 +522,24 @@ export default function PacksListPage() {
                         </IndexTable.Cell>
                         <IndexTable.Cell>
                           {pack.status === "DRAFT" ? (
-                            <Button
-                              variant="plain"
-                              size="slim"
-                              loading={activatingId === pack.id}
-                              disabled={activatingId !== null}
-                              onClick={() => handleActivate(pack.id)}
-                            >
-                              {t("packTemplates.activate")}
-                            </Button>
+                            <InlineStack gap="200" blockAlign="center" wrap={false}>
+                              <Badge tone="attention">
+                                {t("packTemplates.filterDraft")}
+                              </Badge>
+                              <Button
+                                variant="plain"
+                                size="slim"
+                                loading={activatingId === pack.id}
+                                disabled={activatingId !== null}
+                                onClick={() => handleActivate(pack.id)}
+                              >
+                                {t("packTemplates.activate")}
+                              </Button>
+                            </InlineStack>
                           ) : (
                             <Badge tone={statusTone(pack.status)}>
                               {pack.status === "ACTIVE"
-                                ? t("packTemplates.filterActive")
+                                ? t("packTemplates.badgeActivated")
                                 : pack.status === "ARCHIVED"
                                   ? t("packTemplates.filterArchived")
                                   : t("packTemplates.filterDraft")}

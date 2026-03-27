@@ -1053,7 +1053,8 @@
     "startFromTemplate": "Börja från mall",
     "source": "Källa",
     "sourceTemplate": "Mall",
-    "sourceManual": "Manuell"
+    "sourceManual": "Manuell",
+    "badgeActivated": "Aktiverad"
   },
   "templateLibrary": {
     "title": "Mallbibliotek",

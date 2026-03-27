@@ -370,7 +370,7 @@ export default function PacksLibraryPage() {
                     <td className="px-4 sm:px-6 py-4">
                       <Badge variant={statusBadgeVariant(pack.status)}>
                         {pack.status === "ACTIVE"
-                          ? t("filterActive")
+                          ? t("badgeActivated")
                           : pack.status === "DRAFT"
                             ? t("filterDraft")
                             : t("filterArchived")}

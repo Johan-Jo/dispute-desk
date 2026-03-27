@@ -1077,7 +1077,8 @@
     "startFromTemplate": "Aus Vorlage starten",
     "source": "Quelle",
     "sourceTemplate": "Vorlage",
-    "sourceManual": "Manuell"
+    "sourceManual": "Manuell",
+    "badgeActivated": "Aktiviert"
   },
   "templateLibrary": {
     "title": "Vorlagenbibliothek",

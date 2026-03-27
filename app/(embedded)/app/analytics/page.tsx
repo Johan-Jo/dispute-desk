@@ -58,12 +58,7 @@ function AnalyticsContent({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    const shopId = document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1];
-    if (!shopId) {
-      setLoading(false);
-      return;
-    }
-    fetch(`/api/dashboard/stats?shop_id=${shopId}&period=${period}`)
+    fetch(`/api/dashboard/stats?period=${period}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((d) => { if (!cancelled && d) setData(d); })
       .finally(() => { if (!cancelled) setLoading(false); });
