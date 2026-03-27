@@ -10,10 +10,10 @@
 | Pattern | Meaning | Example |
 |---------|---------|---------|
 | **0, 1, 2, …** | Main product epics in rough build order | EPIC-1 Dispute Sync |
-| **P0** | “Parallel track 0” — portal + marketing (not “phase zero” of something else) | EPIC-P0 |
-| **A1** | “Automation track” — pipeline that other epics sit on | EPIC-A1 |
+| **P0** | "Parallel track 0" — portal + marketing (not "phase zero" of something else) | EPIC-P0 |
+| **A1** | "Automation track" — pipeline that other epics sit on | EPIC-A1 |
 | **10b** | Add-on epic that extends EPIC-10 | Help guides |
-| **CH-1, CH-2, CH-3** | **Content Hub** phases (marketing CMS). **Not** the same as EPIC-P0. | CH-2 = rich editor next |
+| **CH-1 … CH-7** | **Content Hub** epics (marketing CMS). **Not** the same as EPIC-P0. | CH-2 = admin shell + components |
 
 ---
 
@@ -111,7 +111,17 @@ flowchart TB
 
 ## 5. Content Hub (marketing CMS) — separate track
 
-This is **not** a numbered epic **0–11**. Full epics for **CH-1 / CH-2 / CH-3** live in **[`RESOURCE-HUB-PLAN.md`](RESOURCE-HUB-PLAN.md)** (canonical). Here: **CH-1** done, **CH-2** active (editorial operations admin per Figma design), **CH-3** active (generation pipeline, parallel with CH-2).
+This is **not** a numbered epic **0–11**. Full epics for **CH-1 through CH-7** live in **[`RESOURCE-HUB-PLAN.md`](RESOURCE-HUB-PLAN.md)** (canonical).
+
+| ID | Name | Status |
+|----|------|--------|
+| **CH-1** | Foundation | Done |
+| **CH-2** | Admin Shell + Component System | Next |
+| **CH-3** | Dashboard + Content List | Planned |
+| **CH-4** | Block Editor + Locale Editing | Planned |
+| **CH-5** | Backlog + Calendar + Queue | Planned |
+| **CH-6** | Settings + Polish + Mobile | Planned |
+| **CH-7** | Generation Pipeline | Active (parallel) |
 
 **Embedded Shopify app:** Content Hub pages are **not** in `/app/*`. In-app help is `/app/help`. Middleware redirects hub URLs loaded with embedded `?host=` to `/app/help`.
 
@@ -121,9 +131,10 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 / CH-2 / CH-3*
 
 | Item | Type | Note |
 |------|------|------|
-| **EPIC A1** | Core epic | Still “In progress” on roadmap — finish automation pipeline scope per [EPIC-A1](EPIC-A1-automation-pipeline.md). |
-| **CH-2** | Content Hub | Editorial operations admin (8 screens per Figma); see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
-| **CH-3** | Content Hub | Article generation pipeline (active, parallel with CH-2); [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
+| **EPIC A1** | Core epic | Still "In progress" on roadmap — finish automation pipeline scope per [EPIC-A1](EPIC-A1-automation-pipeline.md). |
+| **CH-2** | Content Hub | Admin shell + component system (foundation for 8 admin screens); see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
+| **CH-3** | Content Hub | Dashboard + Content List (first 2 operational screens); see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
+| **CH-7** | Content Hub | Generation pipeline (parallel track); see [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md). |
 
 ---
 
@@ -132,7 +143,7 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 / CH-2 / CH-3*
 | File |
 |------|
 | [EPIC-PLAN.md](EPIC-PLAN.md) — **this file** |
-| [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md) — Content Hub (CH-1/2/3) only |
+| [RESOURCE-HUB-PLAN.md](RESOURCE-HUB-PLAN.md) — Content Hub (CH-1 through CH-7) |
 | [EPIC-0-foundations.md](EPIC-0-foundations.md) |
 | [EPIC-P0-portal-marketing.md](EPIC-P0-portal-marketing.md) |
 | [EPIC-A1-automation-pipeline.md](EPIC-A1-automation-pipeline.md) |
@@ -146,8 +157,3 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 / CH-2 / CH-3*
 | [EPIC-8-admin-panel.md](EPIC-8-admin-panel.md) |
 | [EPIC-9-i18n.md](EPIC-9-i18n.md) |
 | [EPIC-10-help-system.md](EPIC-10-help-system.md) |
-</think>
-
-
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-StrReplace
