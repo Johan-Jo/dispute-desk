@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Menu, X, Info } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { DEFAULT_PATH_LOCALE } from "@/lib/i18n/pathLocales";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
@@ -34,8 +35,11 @@ const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean
 
 export default function MarketingLandingPage() {
   const t = useTranslations("marketing");
+  const pathLocale = useLocale();
   const [mobileNav, setMobileNav] = useState(false);
   const [roiMode, setRoiMode] = useState<RoiMode>("base");
+  const resourcesHref =
+    pathLocale === DEFAULT_PATH_LOCALE ? "/resources" : `/${pathLocale}/resources`;
 
   return (
     <div className="min-h-screen bg-white">
@@ -50,6 +54,9 @@ export default function MarketingLandingPage() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
+            <a href={resourcesHref} className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">
+              {t("nav.resources")}
+            </a>
             <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.product")}</a>
             <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.howItWorks")}</a>
             <a href="#security" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.security")}</a>
@@ -76,6 +83,13 @@ export default function MarketingLandingPage() {
         {/* Mobile nav dropdown */}
         {mobileNav && (
           <div className="md:hidden border-t border-[#E5E7EB] bg-white px-4 py-4 space-y-3">
+            <a
+              href={resourcesHref}
+              onClick={() => setMobileNav(false)}
+              className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
+            >
+              {t("nav.resources")}
+            </a>
             <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.product")}</a>
             <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.howItWorks")}</a>
             <a href="#security" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.security")}</a>

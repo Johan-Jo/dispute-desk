@@ -1093,6 +1093,7 @@
   },
   "marketing": {
     "nav": {
+      "resources": "Ressourcen",
       "product": "Produkt",
       "howItWorks": "So funktioniert's",
       "security": "Sicherheit",
@@ -2005,5 +2006,40 @@
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
     "cta": "Open in Shopify Admin",
     "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "DisputeDesk Ressourcen",
+    "hubSubtitle": "Leitfäden, Vorlagen und Einblicke zu Chargebacks und Streitbeilegung.",
+    "searchPlaceholder": "Artikel, Vorlagen und Leitfäden durchsuchen…",
+    "noResults": "Keine Inhalte zu diesen Filtern.",
+    "filterPillar": "Thema",
+    "filterType": "Typ",
+    "filterLanguage": "Sprache",
+    "breadcrumbHome": "Start",
+    "breadcrumbResources": "Ressourcen",
+    "reviewedBy": "Geprüft von",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "disclaimer": "Haftungsausschluss",
+    "readTime": "{minutes} Min. Lesezeit",
+    "ctaPrimary": "Loslegen",
+    "ctaDownload": "Herunterladen",
+    "ctaDemo": "Demo anfragen",
+    "ctaNewsletter": "Updates abonnieren",
+    "types": {
+      "pillar_page": "Pillar",
+      "cluster_article": "Artikel",
+      "template": "Vorlage",
+      "case_study": "Fallstudie",
+      "legal_update": "Policy-Update",
+      "glossary_entry": "Glossar",
+      "faq_entry": "FAQ"
+    },
+    "pillars": {
+      "chargebacks": "Chargebacks",
+      "dispute-resolution": "Streitbeilegung",
+      "small-claims": "Bagatellverfahren",
+      "mediation-arbitration": "Mediation & Schiedsverfahren",
+      "dispute-management-software": "Dispute-Management-Software"
+    }
   }
 }

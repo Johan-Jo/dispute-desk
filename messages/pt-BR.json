@@ -1093,6 +1093,7 @@
   },
   "marketing": {
     "nav": {
+      "resources": "Recursos",
       "product": "Produto",
       "howItWorks": "Como funciona",
       "security": "Segurança",
@@ -2022,5 +2023,40 @@
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
     "cta": "Open in Shopify Admin",
     "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "Recursos DisputeDesk",
+    "hubSubtitle": "Guias, modelos e insights sobre chargebacks e resolução de disputas.",
+    "searchPlaceholder": "Buscar artigos, modelos e guias…",
+    "noResults": "Nenhum conteúdo corresponde aos filtros.",
+    "filterPillar": "Tema",
+    "filterType": "Tipo",
+    "filterLanguage": "Idioma",
+    "breadcrumbHome": "Início",
+    "breadcrumbResources": "Recursos",
+    "reviewedBy": "Revisado por",
+    "lastUpdated": "Última atualização",
+    "disclaimer": "Aviso legal",
+    "readTime": "{minutes} min de leitura",
+    "ctaPrimary": "Começar",
+    "ctaDownload": "Baixar",
+    "ctaDemo": "Solicitar demo",
+    "ctaNewsletter": "Assinar atualizações",
+    "types": {
+      "pillar_page": "pilar",
+      "cluster_article": "artigo",
+      "template": "modelo",
+      "case_study": "estudo de caso",
+      "legal_update": "atualização jurídica",
+      "glossary_entry": "glossário",
+      "faq_entry": "FAQ"
+    },
+    "pillars": {
+      "chargebacks": "Chargebacks",
+      "dispute-resolution": "Resolução de disputas",
+      "small-claims": "Pequenas causas",
+      "mediation-arbitration": "Mediação e arbitragem",
+      "dispute-management-software": "Software de gestão de disputas"
+    }
   }
 }

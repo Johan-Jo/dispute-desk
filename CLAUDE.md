@@ -28,11 +28,14 @@ Automation-first Shopify chargeback evidence app. Connects to Shopify, auto-sync
 ```bash
 npm run dev              # Start dev server
 npx shopify app dev      # Start Shopify tunnel (separate terminal)
+npm run db:migrate       # Supabase CLI: push pending migrations (same as `npx supabase db push`; one-time `supabase login` + `supabase link` per machine)
 npx vitest run           # Unit + API route tests
 npm run test:e2e         # Playwright E2E
 node scripts/smoke-test.mjs  # E2E smoke test (requires live Supabase)
 npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
 ```
+
+**Migrations:** When you add or change schema, run `npm run db:migrate` yourself (`npx supabase db push`). Requires Supabase CLI linked to the project (`npx supabase link --project-ref …`). Do not tell the user to run migrations. Fallback without CLI: `npm run db:migrate:script` (uses `scripts/run-migration.mjs` + `SUPABASE_URL_POSTGRES` or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`).
 
 ## Key Directories
 ```
@@ -50,7 +53,7 @@ lib/
   packs/             → Pack builder + source collectors
   jobs/              → Job dispatcher + handlers
   security/          → AES-256-GCM encryption
-supabase/migrations/ → SQL migrations (001–023)
+supabase/migrations/ → SQL migrations (apply via Supabase CLI: `npm run db:migrate`)
 docs/                → Architecture, technical spec, epics, roadmap
 ```
 

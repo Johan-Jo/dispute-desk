@@ -1101,6 +1101,7 @@
   },
   "marketing": {
     "nav": {
+      "resources": "Resources",
       "product": "Product",
       "howItWorks": "How it works",
       "security": "Security",
@@ -2030,5 +2031,40 @@
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
     "cta": "Open in Shopify Admin",
     "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "DisputeDesk Resources",
+    "hubSubtitle": "Guides, templates, and insights for chargebacks and dispute resolution.",
+    "searchPlaceholder": "Search articles, templates, and guides…",
+    "noResults": "No content matches your filters.",
+    "filterPillar": "Topic",
+    "filterType": "Type",
+    "filterLanguage": "Language",
+    "breadcrumbHome": "Home",
+    "breadcrumbResources": "Resources",
+    "reviewedBy": "Reviewed by",
+    "lastUpdated": "Last updated",
+    "disclaimer": "Disclaimer",
+    "readTime": "{minutes} min read",
+    "ctaPrimary": "Get started",
+    "ctaDownload": "Download",
+    "ctaDemo": "Request a demo",
+    "ctaNewsletter": "Subscribe for updates",
+    "types": {
+      "pillar_page": "pillar",
+      "cluster_article": "article",
+      "template": "template",
+      "case_study": "case study",
+      "legal_update": "policy update",
+      "glossary_entry": "glossary",
+      "faq_entry": "FAQ"
+    },
+    "pillars": {
+      "chargebacks": "Chargebacks",
+      "dispute-resolution": "Dispute resolution",
+      "small-claims": "Small claims",
+      "mediation-arbitration": "Mediation & arbitration",
+      "dispute-management-software": "Dispute management software"
+    }
   }
 }

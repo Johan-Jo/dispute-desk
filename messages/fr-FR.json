@@ -1093,6 +1093,7 @@
   },
   "marketing": {
     "nav": {
+      "resources": "Ressources",
       "product": "Produit",
       "howItWorks": "Comment ça marche",
       "security": "Sécurité",
@@ -2005,5 +2006,40 @@
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
     "cta": "Open in Shopify Admin",
     "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "Ressources DisputeDesk",
+    "hubSubtitle": "Guides, modèles et analyses sur les rétrofacturations et le règlement des litiges.",
+    "searchPlaceholder": "Rechercher articles, modèles et guides…",
+    "noResults": "Aucun contenu ne correspond à ces filtres.",
+    "filterPillar": "Sujet",
+    "filterType": "Type",
+    "filterLanguage": "Langue",
+    "breadcrumbHome": "Accueil",
+    "breadcrumbResources": "Ressources",
+    "reviewedBy": "Relu par",
+    "lastUpdated": "Dernière mise à jour",
+    "disclaimer": "Avertissement",
+    "readTime": "{minutes} min de lecture",
+    "ctaPrimary": "Commencer",
+    "ctaDownload": "Télécharger",
+    "ctaDemo": "Demander une démo",
+    "ctaNewsletter": "S’abonner aux mises à jour",
+    "types": {
+      "pillar_page": "pilier",
+      "cluster_article": "article",
+      "template": "modèle",
+      "case_study": "étude de cas",
+      "legal_update": "mise à jour juridique",
+      "glossary_entry": "glossaire",
+      "faq_entry": "FAQ"
+    },
+    "pillars": {
+      "chargebacks": "Rétrofacturations",
+      "dispute-resolution": "Règlement des litiges",
+      "small-claims": "Petites créances",
+      "mediation-arbitration": "Médiation et arbitrage",
+      "dispute-management-software": "Logiciel de gestion des litiges"
+    }
   }
 }

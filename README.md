@@ -77,16 +77,11 @@ npm install
 cp .env.example .env.local
 # Fill in all values (see .env.example for descriptions)
 
-# 3. Run Supabase migrations
-npx supabase db push
-# One-time setup (credentials are saved for future use):
-#   npx supabase login
-#   npx supabase link --project-ref sddzuglxdnkhcnjmcpbj
-# Enter your database password when prompted. Then `db push` applies new migrations.
-# If the DB was already set up (e.g. via run-migration.mjs), sync history without re-running SQL:
-#   npx supabase migration repair 001 002 003 ... 023 --status applied
-# Alternative without CLI link (requires SUPABASE_URL_POSTGRES in .env.local):
-#   node scripts/run-migration.mjs
+# 3. Apply Supabase migrations (Supabase CLI — same as in docs/technical.md)
+npx supabase login   # one-time
+npx supabase link --project-ref sddzuglxdnkhcnjmcpbj   # one-time per clone (database password from dashboard)
+npm run db:migrate   # alias for `npx supabase db push`
+# Edge case without CLI link: `npm run db:migrate:script` (needs Postgres URI in .env.local — see .env.example)
 
 # 4. Start dev server
 npm run dev

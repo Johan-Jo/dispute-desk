@@ -1093,6 +1093,7 @@
   },
   "marketing": {
     "nav": {
+      "resources": "Recursos",
       "product": "Producto",
       "howItWorks": "Cómo funciona",
       "security": "Seguridad",
@@ -2005,5 +2006,40 @@
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
     "cta": "Open in Shopify Admin",
     "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "Recursos de DisputeDesk",
+    "hubSubtitle": "Guías, plantillas e información sobre contracargos y resolución de disputas.",
+    "searchPlaceholder": "Buscar artículos, plantillas y guías…",
+    "noResults": "Ningún contenido coincide con los filtros.",
+    "filterPillar": "Tema",
+    "filterType": "Tipo",
+    "filterLanguage": "Idioma",
+    "breadcrumbHome": "Inicio",
+    "breadcrumbResources": "Recursos",
+    "reviewedBy": "Revisado por",
+    "lastUpdated": "Última actualización",
+    "disclaimer": "Aviso legal",
+    "readTime": "{minutes} min de lectura",
+    "ctaPrimary": "Empezar",
+    "ctaDownload": "Descargar",
+    "ctaDemo": "Solicitar demo",
+    "ctaNewsletter": "Suscribirse a novedades",
+    "types": {
+      "pillar_page": "pilar",
+      "cluster_article": "artículo",
+      "template": "plantilla",
+      "case_study": "caso de estudio",
+      "legal_update": "actualización legal",
+      "glossary_entry": "glosario",
+      "faq_entry": "FAQ"
+    },
+    "pillars": {
+      "chargebacks": "Contracargos",
+      "dispute-resolution": "Resolución de disputas",
+      "small-claims": "Reclamaciones menores",
+      "mediation-arbitration": "Mediación y arbitraje",
+      "dispute-management-software": "Software de gestión de disputas"
+    }
   }
 }

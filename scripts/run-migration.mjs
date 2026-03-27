@@ -1,37 +1,62 @@
 import pg from "pg";
-import { readFileSync, readdirSync, existsSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
+import { config } from "dotenv";
 
 const { Client } = pg;
 
-function loadEnv() {
-  const envPath = join(process.cwd(), ".env.local");
-  if (!existsSync(envPath)) return {};
-  const vars = {};
-  for (const line of readFileSync(envPath, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    vars[trimmed.slice(0, idx)] = trimmed.slice(idx + 1);
-  }
-  return vars;
+config({ path: join(process.cwd(), ".env.local") });
+config({ path: join(process.cwd(), ".env") });
+
+/**
+ * SUPABASE_URL is the API URL (https://<ref>.supabase.co), not Postgres.
+ * Either set SUPABASE_URL_POSTGRES (full URI), or SUPABASE_URL + SUPABASE_DB_PASSWORD.
+ */
+function resolvePostgresUrl() {
+  const direct = process.env.SUPABASE_URL_POSTGRES;
+  if (direct) return direct;
+
+  const apiUrl =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  if (!apiUrl || !dbPassword) return null;
+
+  const m = apiUrl.trim().match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/i);
+  if (!m) return null;
+  const ref = m[1];
+  const user = "postgres";
+  const host = `db.${ref}.supabase.co`;
+  const port = 5432;
+  const database = "postgres";
+  const encoded = encodeURIComponent(dbPassword);
+  return `postgresql://${user}:${encoded}@${host}:${port}/${database}`;
 }
 
-const env = loadEnv();
-const pgUrl = env.SUPABASE_URL_POSTGRES;
+const pgUrl = resolvePostgresUrl();
 if (!pgUrl) {
-  console.error("SUPABASE_URL_POSTGRES not found in .env.local");
+  console.error(
+    "Database URL not configured. Use one of:\n" +
+      "  • SUPABASE_URL_POSTGRES=postgresql://… (URI from Supabase → Database → Connection string), or\n" +
+      "  • SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) + SUPABASE_DB_PASSWORD (database password from the same page).\n" +
+      "See .env.example.",
+  );
   process.exit(1);
 }
 
 // Parse the connection string manually to handle special characters in password
 const match = pgUrl.match(
-  /postgresql:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)/
+  /^postgresql:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)$/,
 );
 if (!match) {
-  console.error("Could not parse SUPABASE_URL_POSTGRES");
+  console.error("Could not parse Postgres connection string");
   process.exit(1);
+}
+
+let rawPassword = match[2];
+try {
+  rawPassword = decodeURIComponent(match[2]);
+} catch {
+  rawPassword = match[2];
 }
 
 const client = new Client({
@@ -39,7 +64,7 @@ const client = new Client({
   port: parseInt(match[4], 10),
   database: match[5],
   user: match[1],
-  password: match[2],
+  password: rawPassword,
   ssl: { rejectUnauthorized: false },
 });
 

@@ -16,6 +16,10 @@ const localePathRegex = new RegExp(
   `^\\/(${PATH_LOCALE_PREFIX_PATTERN})(\\/.*)?$`
 );
 
+/** Unprefixed public paths that must use next-intl (default locale = en). */
+const hubPublicPathRegex =
+  /^\/(resources|templates|case-studies|glossary|blog)(\/.*)?$/;
+
 /**
  * Multi-surface middleware.
  *
@@ -49,8 +53,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // --- Marketing: `/` (default English) + /de, /es, … → next-intl ---
-  if (pathname === "/" || localePathRegex.test(pathname)) {
+  // --- Marketing + Resources Hub: `/`, hub paths, + /de, /es, … → next-intl ---
+  if (
+    pathname === "/" ||
+    localePathRegex.test(pathname) ||
+    hubPublicPathRegex.test(pathname)
+  ) {
     return intlMiddleware(req);
   }
 

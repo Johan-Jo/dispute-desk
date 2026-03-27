@@ -177,13 +177,14 @@ worker endpoint (`/api/jobs/worker`).
 
 ## Database Migrations
 
-Migrations live in `supabase/migrations/`. Apply with `npx supabase db push` when the project is linked, or `node scripts/run-migration.mjs` using `SUPABASE_URL_POSTGRES` from `.env.local`.
+Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabase CLI** (tracks migrations in the remote `supabase_migrations` history — this is what the project uses day to day).
 
 ### Supabase CLI (recommended)
 
-- **One-time:** `npx supabase login` then `npx supabase link --project-ref <ref>` (ref from Dashboard or project URL, e.g. `sddzuglxdnkhcnjmcpbj`). Credentials are stored locally for future use.
-- **Apply migrations:** `npx supabase db push` (only runs migrations not yet applied).
-- **Existing DB:** If the database was created outside the CLI (e.g. `run-migration.mjs` or Dashboard), the CLI has no applied history. Run `npx supabase migration repair 001 002 ... 023 --status applied` once to mark them applied without re-running SQL; then `db push` works for new migrations only.
+- **One-time:** `npx supabase login` then `npx supabase link --project-ref <ref>` (ref from `SUPABASE_URL` / Dashboard, e.g. `sddzuglxdnkhcnjmcpbj`). Enter the database password when prompted; link state stays local (see `.gitignore` for `supabase/.temp/`).
+- **Apply migrations:** `npm run db:migrate` (alias for `npx supabase db push`) to push any new SQL files not yet applied remotely.
+- **Existing DB:** If the database was created outside the CLI (e.g. Dashboard SQL or an old script), the CLI may have no migration history. Run `npx supabase migration repair <001> <002> … --status applied` once to mark already-applied files without re-running SQL; then `db push` applies only new migrations.
+- **Without CLI link:** `npm run db:migrate:script` runs `scripts/run-migration.mjs`, which uses a local `_migrations` table and requires `SUPABASE_URL_POSTGRES` (or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`). Prefer the CLI when possible so there is a single source of truth with hosted Supabase.
 
 | File | Contents |
 |------|----------|

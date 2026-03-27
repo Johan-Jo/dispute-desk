@@ -1094,6 +1094,7 @@
   },
   "marketing": {
     "nav": {
+      "resources": "Resurser",
       "product": "Produkt",
       "howItWorks": "Så fungerar det",
       "security": "Säkerhet",
@@ -2006,5 +2007,40 @@
     "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
     "cta": "Open in Shopify Admin",
     "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "DisputeDesk resurser",
+    "hubSubtitle": "Guider, mallar och insikter om chargebacks och tvistlösning.",
+    "searchPlaceholder": "Sök artiklar, mallar och guider…",
+    "noResults": "Inget innehåll matchar filtren.",
+    "filterPillar": "Ämne",
+    "filterType": "Typ",
+    "filterLanguage": "Språk",
+    "breadcrumbHome": "Hem",
+    "breadcrumbResources": "Resurser",
+    "reviewedBy": "Granskad av",
+    "lastUpdated": "Senast uppdaterad",
+    "disclaimer": "Ansvarsfriskrivning",
+    "readTime": "{minutes} min läsning",
+    "ctaPrimary": "Kom igång",
+    "ctaDownload": "Ladda ner",
+    "ctaDemo": "Boka demo",
+    "ctaNewsletter": "Prenumerera på uppdateringar",
+    "types": {
+      "pillar_page": "pelare",
+      "cluster_article": "artikel",
+      "template": "mall",
+      "case_study": "fallstudie",
+      "legal_update": "policyuppdatering",
+      "glossary_entry": "ordlista",
+      "faq_entry": "FAQ"
+    },
+    "pillars": {
+      "chargebacks": "Chargebacks",
+      "dispute-resolution": "Tvistlösning",
+      "small-claims": "Småmål",
+      "mediation-arbitration": "Medling och skiljedom",
+      "dispute-management-software": "Programvara för ärendehantering"
+    }
   }
 }

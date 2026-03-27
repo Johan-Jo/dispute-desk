@@ -15,7 +15,11 @@
     "test:e2e:ui": "playwright test --ui",
     "seed:shopify": "node scripts/shopify/seed-teststore.mjs",
     "seed:synthetic-disputes": "node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --ensure-shop --count 20",
-    "seed:real-disputes": "node scripts/seed-real-disputes.mjs"
+    "seed:real-disputes": "node scripts/seed-real-disputes.mjs",
+    "seed:resources": "node scripts/seed-resources-hub.mjs",
+    "seed:resources:force": "node scripts/seed-resources-hub.mjs --force",
+    "db:migrate": "npx supabase db push",
+    "db:migrate:script": "node scripts/run-migration.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.0.0",
