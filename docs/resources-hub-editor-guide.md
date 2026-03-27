@@ -44,3 +44,7 @@ Launch items should have **all six** locales with `translation_status = complete
 
 - Hub: `/resources` (default), `/sv/resources`, `/de/resources`, etc.
 - Article: `/resources/{pillar}/{slug}`.
+
+## Next step (product)
+
+**CH-2 — Editorial Operations Admin** — Replace the CH-1 JSON inspector with a full 8-screen editorial admin (dashboard, list, block editor, backlog, calendar, queue, settings) per Figma design. **CH-3 — Article Generation Pipeline** runs in parallel. **Canonical plan:** **`docs/epics/RESOURCE-HUB-PLAN.md`**. Also **`docs/roadmap.md` § Content Hub** and **`docs/technical.md` § Resources Hub**.

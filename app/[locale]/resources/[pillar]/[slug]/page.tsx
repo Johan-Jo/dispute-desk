@@ -7,6 +7,7 @@ import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { getPublishedLocalizationBySlug } from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
+import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { BodyBlocks } from "@/components/resources/BodyBlocks";
 import { CtaBlock } from "@/components/resources/CtaBlock";
@@ -101,7 +102,9 @@ export default async function ResourceArticlePage({ params }: Props) {
   );
 
   return (
-    <article className="max-w-[800px] mx-auto px-4 sm:px-8 py-12">
+    <>
+      <MarketingSiteHeader />
+      <article className="max-w-[800px] mx-auto px-4 sm:px-8 py-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
@@ -167,5 +170,6 @@ export default async function ResourceArticlePage({ params }: Props) {
         />
       </div>
     </article>
+    </>
   );
 }

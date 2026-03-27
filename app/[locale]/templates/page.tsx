@@ -7,6 +7,7 @@ import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { listPublishedByRoute } from "@/lib/resources/queries";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { HubSectionNav } from "@/components/resources/HubSectionNav";
+import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -27,7 +28,7 @@ export default async function TemplatesHubPage({ params }: Props) {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
+    <div className={`${MARKETING_PAGE_CONTAINER_CLASS} py-12`}>
       <ResourceBreadcrumbs
         items={[
           { label: t("breadcrumbHome"), href: `${basePath}/` },

@@ -6,7 +6,9 @@ import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { listPublishedByRoute } from "@/lib/resources/queries";
+import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
+import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 const PILLARS = [
   "chargebacks",
@@ -35,7 +37,9 @@ export default async function PillarPage({ params }: Props) {
   });
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
+    <>
+      <MarketingSiteHeader />
+      <div className={`${MARKETING_PAGE_CONTAINER_CLASS} py-12`}>
       <ResourceBreadcrumbs
         items={[
           { label: t("breadcrumbHome"), href: `${basePath}/` },
@@ -58,5 +62,6 @@ export default async function PillarPage({ params }: Props) {
         ))}
       </ul>
     </div>
+    </>
   );
 }

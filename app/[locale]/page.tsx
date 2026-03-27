@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Menu, X, Info } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { DEFAULT_PATH_LOCALE } from "@/lib/i18n/pathLocales";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
+import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 type RoiMode = "conservative" | "base" | "aggressive";
 
@@ -35,72 +35,11 @@ const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean
 
 export default function MarketingLandingPage() {
   const t = useTranslations("marketing");
-  const pathLocale = useLocale();
-  const [mobileNav, setMobileNav] = useState(false);
   const [roiMode, setRoiMode] = useState<RoiMode>("base");
-  const resourcesHref =
-    pathLocale === DEFAULT_PATH_LOCALE ? "/resources" : `/${pathLocale}/resources`;
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-[#E5E7EB] sticky top-0 bg-white z-50">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-[#0B1220]">DisputeDesk</span>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-8">
-            <a href={resourcesHref} className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">
-              {t("nav.resources")}
-            </a>
-            <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.product")}</a>
-            <a href="#how-it-works" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.howItWorks")}</a>
-            <a href="#security" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.security")}</a>
-            <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors">{t("nav.pricing")}</a>
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <LanguageSwitcher />
-            <a href="/auth/sign-in" className="hidden sm:block">
-              <Button variant="ghost" size="sm">{t("nav.signIn")}</Button>
-            </a>
-            <a href="/portal/connect-shopify" className="hidden sm:block">
-              <Button variant="primary" size="sm">{t("nav.installOnShopify")}</Button>
-            </a>
-            <button
-              onClick={() => setMobileNav(!mobileNav)}
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] text-[#64748B]"
-            >
-              {mobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile nav dropdown */}
-        {mobileNav && (
-          <div className="md:hidden border-t border-[#E5E7EB] bg-white px-4 py-4 space-y-3">
-            <a
-              href={resourcesHref}
-              onClick={() => setMobileNav(false)}
-              className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
-            >
-              {t("nav.resources")}
-            </a>
-            <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.product")}</a>
-            <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.howItWorks")}</a>
-            <a href="#security" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.security")}</a>
-            <a href="#pricing" onClick={() => setMobileNav(false)} className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2">{t("nav.pricing")}</a>
-            <div className="pt-3 border-t border-[#E5E7EB] flex flex-col gap-2">
-              <a href="/auth/sign-in"><Button variant="ghost" size="sm" className="w-full">{t("nav.signIn")}</Button></a>
-              <a href="/portal/connect-shopify"><Button variant="primary" size="sm" className="w-full">{t("nav.installOnShopify")}</Button></a>
-            </div>
-          </div>
-        )}
-      </header>
+      <MarketingSiteHeader />
 
       {/* Hero — palette + layout from Figma Make (DisputeDesk Shopify App Design) */}
       <section
@@ -125,7 +64,7 @@ export default function MarketingLandingPage() {
           />
         </div>
 
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 relative z-10">
+        <div className={`${MARKETING_PAGE_CONTAINER_CLASS} relative z-10`}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div>
               <p className="text-sm uppercase tracking-wide text-[#93C5FD] font-medium mb-3">
@@ -261,7 +200,7 @@ export default function MarketingLandingPage() {
 
       {/* How It Works */}
       <section id="how-it-works" className="py-12 sm:py-16 lg:py-20">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <div className={MARKETING_PAGE_CONTAINER_CLASS}>
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-4">{t("howItWorks.title")}</h2>
             <p className="text-lg sm:text-xl text-[#64748B]">{t("howItWorks.subtitle")}</p>
@@ -294,7 +233,7 @@ export default function MarketingLandingPage() {
 
       {/* Security */}
       <section id="security" className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <div className={MARKETING_PAGE_CONTAINER_CLASS}>
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-4">{t("security.title")}</h2>
             <p className="text-lg sm:text-xl text-[#64748B]">{t("security.subtitle")}</p>
@@ -321,7 +260,7 @@ export default function MarketingLandingPage() {
 
       {/* Pricing */}
       <section id="pricing" className="py-12 sm:py-16 lg:py-20">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <div className={MARKETING_PAGE_CONTAINER_CLASS}>
           <div className="text-center mb-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-4">{t("pricing.title")}</h2>
             <p className="text-lg sm:text-xl text-[#64748B] max-w-2xl mx-auto">{t("pricing.subtitle")}</p>
@@ -390,7 +329,7 @@ export default function MarketingLandingPage() {
 
       {/* ROI Snapshot */}
       <section className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <div className={MARKETING_PAGE_CONTAINER_CLASS}>
           <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden">
             {/* Header */}
             <div className="p-6 sm:p-8 pb-0">
@@ -481,7 +420,7 @@ export default function MarketingLandingPage() {
 
       {/* Footer */}
       <footer className="bg-[#0B1220] text-white py-8 sm:py-12">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <div className={MARKETING_PAGE_CONTAINER_CLASS}>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">

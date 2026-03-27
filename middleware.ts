@@ -10,15 +10,15 @@ import {
 import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
+import {
+  hubPublicPathRegex,
+  isMarketingHubPath,
+} from "@/lib/middleware/marketingHubPaths";
 
 const intlMiddleware = createNextIntlMiddleware(routing);
 const localePathRegex = new RegExp(
   `^\\/(${PATH_LOCALE_PREFIX_PATTERN})(\\/.*)?$`
 );
-
-/** Unprefixed public paths that must use next-intl (default locale = en). */
-const hubPublicPathRegex =
-  /^\/(resources|templates|case-studies|glossary|blog)(\/.*)?$/;
 
 /**
  * Multi-surface middleware.
@@ -51,6 +51,15 @@ export async function middleware(req: NextRequest) {
       const targetPath = rest ? `${base}/${rest}` : base || "/";
       return NextResponse.redirect(new URL(targetPath + req.nextUrl.search, req.url));
     }
+  }
+
+  // --- Marketing hub: do not render in Shopify Admin embedded iframe (App Bridge sends ?host=...) ---
+  if (isMarketingHubPath(pathname) && req.nextUrl.searchParams.has("host")) {
+    const target = new URL("/app/help", req.url);
+    req.nextUrl.searchParams.forEach((value, key) => {
+      target.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(target);
   }
 
   // --- Marketing + Resources Hub: `/`, hub paths, + /de, /es, … → next-intl ---

@@ -150,6 +150,39 @@ minimize spam classification.
   2. User links their first shop via Shopify OAuth (callback sends server-side).
 - Idempotency keys (`welcome/{email}` or `welcome/{userId}`) avoid duplicates.
 
+## Resources Hub (public marketing)
+
+The **Resources Hub** is the localized **marketing / SEO** surface for long-form content (articles, templates, case studies, glossary, blog). It is **not** part of the embedded Shopify app.
+
+### Surfaces
+
+| Area | Routes | Notes |
+|------|--------|--------|
+| Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
+| Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
+| Admin | `/admin/resources/*` | Phase 1: JSON-focused editor; see `docs/resources-hub-editor-guide.md` |
+| In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
+
+### Embedded app guard
+
+Merchants must not browse the public hub **inside** Shopify Admin’s iframe. When a hub path is requested with the App Bridge **`host`** query parameter, `middleware.ts` **redirects to `/app/help`** and preserves `shop`, `host`, `locale`, and other params. Path matching lives in `lib/middleware/marketingHubPaths.ts` (see `tests/unit/marketingHubPaths.test.ts`).
+
+### Content model and publishing
+
+- **DB:** `content_items`, `content_localizations`, `content_publish_queue`, archive tables — migration `030_resources_hub.sql` (see editor guide).
+- **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
+- **Queries:** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
+
+### Phased roadmap (hub-specific)
+
+Phase codes **CH-1 / CH-2 / CH-3** are the Content Hub track (not EPIC P0). See **`docs/epics/RESOURCE-HUB-PLAN.md`**.
+
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
+| **CH-1** | Public hub + admin queue + JSON inspector + publish cron | Shipped |
+| **CH-2** | **Editorial operations admin** (dashboard, list, block editor, backlog, calendar, queue, settings) | **Active** |
+| **CH-3** | Article generation pipeline (archive → briefs → drafts → review) | **Active** (parallel with CH-2) |
+
 ## Async Jobs
 
 ### Architecture
