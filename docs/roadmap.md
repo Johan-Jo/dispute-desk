@@ -73,13 +73,17 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 
 ## Content Hub (marketing CMS)
 
-**Not** EPIC **P0** (portal track). Use phase codes **CH-1 / CH-2 / CH-3** so nothing collides with “P0”. **Canonical plan:** [`docs/epics/RESOURCE-HUB-PLAN.md`](epics/RESOURCE-HUB-PLAN.md). Overview in [`docs/epics/EPIC-PLAN.md` §5](epics/EPIC-PLAN.md#5-content-hub-marketing-cms--separate-track). Technical detail: **`docs/technical.md` § Resources Hub**.
+**Not** EPIC **P0** (portal track). Use phase codes **CH-1 through CH-7** so nothing collides with "P0". **Canonical plan:** [`docs/epics/RESOURCE-HUB-PLAN.md`](epics/RESOURCE-HUB-PLAN.md). Overview in [`docs/epics/EPIC-PLAN.md` §5](epics/EPIC-PLAN.md#5-content-hub-marketing-cms--separate-track). Technical detail: **`docs/technical.md` § Resources Hub**.
 
 | Phase | Focus | Status |
 |-------|--------|--------|
 | **CH-1** | Public hub routes, Supabase content tables, admin tools, publish cron, hub shell + i18n | Done |
-| **CH-2** | **Editorial operations admin** (8 screens per Figma: dashboard, list, block editor, backlog, calendar, queue, settings) | **Active** |
-| **CH-3** | Article generation pipeline (archive → briefs → drafts → review) | **Active** (parallel with CH-2) |
+| **CH-2** | Admin shell + component system + workflow migration + query layer | Done |
+| **CH-3** | Dashboard + Content List (first 2 operational screens) | **Active** |
+| **CH-4** | Block editor + locale editing (rich content editor) | Planned |
+| **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Planned |
+| **CH-6** | Settings + polish + mobile editor | Planned |
+| **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
 
 **Operator guide:** [`docs/resources-hub-editor-guide.md`](resources-hub-editor-guide.md)  
 **Embedded app:** Hub is not linked from `/app/*`; iframe navigations to hub URLs with `?host=` redirect to `/app/help` (see middleware).

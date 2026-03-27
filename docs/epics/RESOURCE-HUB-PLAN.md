@@ -184,9 +184,9 @@ Stand up the public hub, content model, publish pipeline, and first admin toolin
 
 ---
 
-# EPIC CH-2 — Admin Shell + Component System
+# EPIC CH-2 — Admin Shell + Component System ✅
 
-> **Status:** Next
+> **Status:** Done
 > **Dependencies:** CH-1
 > **Delivery:** Admin shell layout, workflow model migration, reusable component library
 
@@ -288,13 +288,13 @@ Info blue:          #EFF6FF / #BFDBFE
 
 ## Acceptance Criteria
 
-- [ ] Migration applied: `workflow_status`, `content_type`, `topic`, `target_keyword`, `search_intent`, `priority` columns exist.
-- [ ] Existing content backfilled with correct workflow status and content type.
-- [ ] State machine prevents invalid workflow transitions server-side.
-- [ ] Admin shell matches Figma: left sidebar, top bar, mobile responsive, correct nav items and active states.
-- [ ] All 12+ reusable components built and storybook/visually verified against Figma.
-- [ ] Query layer returns correct data for all admin operations.
-- [ ] No regression to existing admin pages (audit, billing, jobs, shops).
+- [x] Migration applied: `workflow_status`, `content_type`, `topic`, `target_keyword`, `search_intent`, `priority` columns exist.
+- [x] Existing content backfilled with correct workflow status and content type.
+- [x] State machine prevents invalid workflow transitions server-side.
+- [x] Admin shell matches Figma: left sidebar, top bar, mobile responsive, correct nav items and active states.
+- [x] All 12+ reusable components built and storybook/visually verified against Figma.
+- [x] Query layer returns correct data for all admin operations.
+- [x] No regression to existing admin pages (audit, billing, jobs, shops).
 
 ## Risks
 
@@ -305,7 +305,7 @@ Info blue:          #EFF6FF / #BFDBFE
 
 # EPIC CH-3 — Dashboard + Content List
 
-> **Status:** Active (next after CH-2)
+> **Status:** Active
 > **Dependencies:** CH-2
 > **Delivery:** Two complete admin screens — operational dashboard and content management table
 

@@ -169,19 +169,27 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 
 ### Content model and publishing
 
-- **DB:** `content_items`, `content_localizations`, `content_publish_queue`, archive tables — migration `030_resources_hub.sql` (see editor guide).
+- **DB:** `content_items`, `content_localizations`, `content_publish_queue`, archive tables — migration `030_resources_hub.sql`. Planning columns (`topic`, `target_keyword`, `search_intent`, `priority`) added in `031_content_items_planning_columns.sql`.
+- **Workflow:** `lib/resources/workflow.ts` — 11-status state machine with validated transitions (`idea` → `backlog` → … → `published` → `archived`). Display helpers for status/type/priority badges and locale flags.
+- **Admin queries:** `lib/resources/admin-queries.ts` — stats, scheduled posts, translation gaps, content list (paginated + filterable), queue items, backlog, editor detail, workflow transitions, CMS settings.
+- **Admin components:** `components/admin/resources/` — `WorkflowStatusBadge`, `ContentTypeBadge`, `PriorityBadge`, `LocaleStatusIndicator`, `LocaleCompletenessBadge`, `ValidationChecklist`, `SchedulePicker`.
+- **Admin shell:** `app/admin/layout.tsx` — left sidebar with Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings), top bar, mobile responsive.
 - **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
-- **Queries:** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
+- **Queries (public):** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
 
 ### Phased roadmap (hub-specific)
 
-Phase codes **CH-1 / CH-2 / CH-3** are the Content Hub track (not EPIC P0). See **`docs/epics/RESOURCE-HUB-PLAN.md`**.
+Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See **`docs/epics/RESOURCE-HUB-PLAN.md`**.
 
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
-| **CH-1** | Public hub + admin queue + JSON inspector + publish cron | Shipped |
-| **CH-2** | **Editorial operations admin** (dashboard, list, block editor, backlog, calendar, queue, settings) | **Active** |
-| **CH-3** | Article generation pipeline (archive → briefs → drafts → review) | **Active** (parallel with CH-2) |
+| **CH-1** | Public hub + admin queue + JSON inspector + publish cron | Done |
+| **CH-2** | Admin shell + component system + workflow migration + query layer | Done |
+| **CH-3** | Dashboard + Content List (first 2 operational screens) | **Active** |
+| **CH-4** | Block editor + locale editing (rich content editor) | Planned |
+| **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Planned |
+| **CH-6** | Settings + polish + mobile editor | Planned |
+| **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Active (parallel) |
 
 ## Async Jobs
 
