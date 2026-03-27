@@ -21,7 +21,7 @@ public landing page for acquisition.
 
 | Surface | Route group | Auth | UI toolkit |
 |---------|-------------|------|------------|
-| Marketing | `(marketing)` — `/` | None | Tailwind |
+| Marketing | `[locale]` — `/` (en), `/de`, `/es`, `/fr`, `/pt`, `/sv` | None | Tailwind |
 | Portal | `(portal)` — `/portal/*` | Supabase Auth | Tailwind / shadcn |
 | Portal Auth | `(auth)` — `/auth/*` | None (public) | Tailwind |
 | Embedded App | `(embedded)` — `/app/*` | Shopify session | Polaris + App Bridge |
@@ -29,7 +29,7 @@ public landing page for acquisition.
 ## Scope (V1)
 
 ### P0.1 — Marketing Landing
-- Hero section at `/` with headline, subhead, CTA buttons.
+- Hero section at `/` (English) and localized paths `/de`, `/es`, `/fr`, `/pt`, `/sv` with headline, subhead, CTA buttons.
 - "Install on Shopify" + "Sign in" CTAs.
 - Compliance footer: "Evidence saved via API. Submission happens in Shopify Admin."
 - No Polaris or App Bridge loaded.
@@ -95,7 +95,7 @@ public landing page for acquisition.
 - `portal_user_shops`: user reads own rows; service role full access.
 
 ## Key Files
-- `app/(marketing)/layout.tsx`, `app/(marketing)/page.tsx`
+- `app/[locale]/layout.tsx`, `app/[locale]/page.tsx`, `i18n/routing.ts`, `lib/i18n/pathLocales.ts`
 - `app/(auth)/layout.tsx`, `app/(auth)/auth/*/page.tsx`
 - `app/(portal)/layout.tsx`, `app/(portal)/portal/*/page.tsx`
 - `app/(embedded)/layout.tsx` (moved from `app/layout.tsx`)

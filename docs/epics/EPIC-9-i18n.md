@@ -30,7 +30,7 @@ Keys organized by feature: `common.*`, `status.*`, `dashboard.*`, `disputes.*`, 
 ### 9.3 — Provider Integration
 - **Embedded app** (`app/(embedded)/providers.tsx`): Wraps children with `NextIntlClientProvider` + accepts `locale`, `messages`, and `polarisTranslations` props. Polaris AppProvider receives locale-specific translations. The embedded layout reads `dd_locale` cookie and loads Polaris translations dynamically.
 - **Portal** (`app/(portal)/layout.tsx`): Wraps PortalShell with `NextIntlClientProvider`, resolving locale from Accept-Language header.
-- **Marketing** (`app/(marketing)/layout.tsx`): Wraps content with `NextIntlClientProvider`, resolving locale from Accept-Language header.
+- **Marketing** (`app/[locale]/layout.tsx`): Wraps content with `NextIntlClientProvider`; URL segment (`en`…`sv` via `next-intl` routing) maps to BCP-47 message files (`lib/i18n/pathLocales.ts`). Default English is served at `/` without an `/en` prefix.
 
 ### 9.8 — Embedded App i18n Parity
 All embedded app pages now use `useTranslations()` instead of hardcoded English strings:

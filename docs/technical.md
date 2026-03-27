@@ -762,6 +762,18 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 - BCP-47 locale tags: `en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE`.
 - Message files at `messages/{locale}.json` (e.g. `en-US.json`, `sv-SE.json`).
 
+### Marketing URLs and SEO (public landing)
+The public marketing site uses **short path segments** via `next-intl` (`i18n/routing.ts`, `localePrefix: 'as-needed'`). Message files stay **BCP-47**; URL segments map through `lib/i18n/pathLocales.ts`.
+
+| URL path | Messages loaded | Notes |
+|----------|-----------------|--------|
+| `/` | `en-US` | Default English; **no** `/en` prefix. |
+| `/de`, `/es`, `/fr`, `/pt`, `/sv` | `de-DE`, `es-ES`, … | Two-letter language codes. |
+
+- **Legacy URLs** (`/en-US`, `/de-DE`, …) are **redirected** in `middleware.ts` to the paths above.
+- **Hreflang / alternates:** `app/[locale]/layout.tsx` sets `metadata.alternates.languages` using BCP-47 keys (`en-US`, `de-DE`, …) pointing to the correct path for each language, plus `x-default` → `/`. Canonical URLs follow the same paths (English home is `/`, not `/en`).
+- **Crawlers (e.g. Googlebot):** Each language is a **distinct, indexable URL** with reciprocal `hreflang`-style annotations in the document head. That is what Google recommends for multilingual pages: separate URLs per language version and consistent `link rel="alternate" hreflang="…"` (exposed here via Next.js `metadata.alternates`). Ensure pages are not blocked by `robots.txt` and return `200` for each locale URL. A **sitemap** listing `/`, `/de`, `/es`, … is optional but can help discovery; the repo does not yet ship a locale-aware sitemap generator.
+
 ### Locale Registry (`lib/i18n/locales.ts`)
 Single source of truth for all locale data. Exports:
 - `Locale` type — union of supported BCP-47 tags.
@@ -796,7 +808,8 @@ Single source of truth for all locale data. Exports:
 ### Adding a Language
 1. Create `messages/{locale}.json` (BCP-47 filename, e.g. `ja-JP.json`).
 2. Add entry to `LOCALES` array in `lib/i18n/locales.ts`.
-3. Add dynamic import in `lib/i18n/polarisLocales.ts`.
+3. For **marketing**, add the URL segment and `pathLocaleToMessages` mapping in `lib/i18n/pathLocales.ts`, extend `i18n/routing.ts` `locales`, update middleware locale regex / legacy redirect list, and `next.config.js` CSP locale `source` if needed.
+4. Add dynamic import in `lib/i18n/polarisLocales.ts`.
 
 ### CI
 - Forbidden-copy check scans both `.ts/.tsx` source files and `messages/*.json` translation files.

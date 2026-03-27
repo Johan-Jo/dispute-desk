@@ -32,7 +32,7 @@ DisputeDesk ships as two web surfaces from one codebase:
 
 | Surface | URL | Auth | Description |
 |---------|-----|------|-------------|
-| Marketing | `/` | Public | Landing page, hero, CTAs |
+| Marketing | `/` (en), `/de`, `/es`, `/fr`, `/pt`, `/sv` | Public | Localized landing (SEO paths; messages use BCP-47 files) |
 | Portal Auth | `/auth/*` | Public | Sign in, sign up, password reset |
 | Portal App | `/portal/*` | Supabase Auth | SaaS web: disputes, packs, settings |
 | Embedded App | `/app/*` | Shopify session | Inside Shopify Admin (Polaris) |

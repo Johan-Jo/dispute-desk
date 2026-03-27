@@ -13,7 +13,7 @@ Both share the same Next.js codebase, Supabase database, and API routes.
 
 | Surface | Route group | Auth model | UI toolkit | Purpose |
 |---------|-------------|------------|------------|---------|
-| Marketing | `(marketing)` — `/` | None (public) | Tailwind | Acquisition landing page |
+| Marketing | `[locale]` — `/` (default English), `/de`, `/es`, … | None (public) | Tailwind | Acquisition landing page (locale-aware SEO URLs) |
 | Portal Auth | `(auth)` — `/auth/*` | None (public) | Tailwind | Sign in / sign up / reset |
 | Portal App | `(portal)` — `/portal/*` | Supabase Auth | Tailwind | SaaS web for merchants + team |
 | Embedded App | `(embedded)` — `/app/*` | Shopify session | Polaris + App Bridge | Inside Shopify Admin |
