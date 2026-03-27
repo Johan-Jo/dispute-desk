@@ -11,6 +11,7 @@ import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 import {
+  enPrefixedHubPathRegex,
   hubPublicPathRegex,
   isMarketingHubPath,
 } from "@/lib/middleware/marketingHubPaths";
@@ -62,11 +63,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(target);
   }
 
-  // --- Marketing + Resources Hub: `/`, hub paths, + /de, /es, … → next-intl ---
+  // --- Marketing + Resources Hub: `/`, hub paths, + /de, /es, … + /en/resources/… → next-intl ---
   if (
     pathname === "/" ||
     localePathRegex.test(pathname) ||
-    hubPublicPathRegex.test(pathname)
+    hubPublicPathRegex.test(pathname) ||
+    enPrefixedHubPathRegex.test(pathname)
   ) {
     return intlMiddleware(req);
   }
@@ -93,6 +95,7 @@ export async function middleware(req: NextRequest) {
 
     if (
       pathname.startsWith("/api/auth") ||
+      pathname.startsWith("/api/admin/") ||
       pathname === "/api/health" ||
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/") ||

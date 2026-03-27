@@ -8,9 +8,14 @@ const localePrefixedHubPathRegex = new RegExp(
   `^\\/(${PATH_LOCALE_PREFIX_PATTERN})\\/(resources|templates|case-studies|glossary|blog)(\\/.*)?$`,
 );
 
+/** Explicit `/en/...` hub URLs: `localePrefix: "as-needed"` omits `en`, but users may still open /en/resources/... */
+export const enPrefixedHubPathRegex =
+  /^\/en\/(resources|templates|case-studies|glossary|blog)(\/.*)?$/;
+
 export function isMarketingHubPath(pathname: string): boolean {
   return (
     hubPublicPathRegex.test(pathname) ||
-    localePrefixedHubPathRegex.test(pathname)
+    localePrefixedHubPathRegex.test(pathname) ||
+    enPrefixedHubPathRegex.test(pathname)
   );
 }

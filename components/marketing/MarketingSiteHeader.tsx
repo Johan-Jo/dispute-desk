@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, Shield, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,25 @@ function useMarketingHomeHref(): string {
   return marketingHomePath(pathLocaleToMessages[pathLocale]);
 }
 
+const NAV_BASE = "text-sm transition-colors";
+const NAV_IDLE = `${NAV_BASE} text-[#64748B] hover:text-[#0B1220]`;
+const NAV_ACTIVE = `${NAV_BASE} text-[#1D4ED8] font-semibold`;
+
+function useActiveSection(): string | null {
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+  const stripped = isPathLocale(segments[0]) ? segments.slice(1) : segments;
+  if (stripped[0] === "resources" || stripped[0] === "templates" || stripped[0] === "case-studies" || stripped[0] === "glossary") {
+    return "resources";
+  }
+  return null;
+}
+
 export function MarketingSiteHeader() {
   const t = useTranslations("marketing");
   const [mobileNav, setMobileNav] = useState(false);
   const home = useMarketingHomeHref();
+  const activeSection = useActiveSection();
 
   return (
     <header className="border-b border-[#E5E7EB] sticky top-0 bg-white z-50">
@@ -40,32 +56,20 @@ export function MarketingSiteHeader() {
         <nav className="hidden md:flex items-center gap-8">
           <Link
             href="/resources"
-            className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors"
+            className={activeSection === "resources" ? NAV_ACTIVE : NAV_IDLE}
           >
             {t("nav.resources")}
           </Link>
-          <a
-            href={`${home}#how-it-works`}
-            className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors"
-          >
+          <a href={`${home}#how-it-works`} className={NAV_IDLE}>
             {t("nav.product")}
           </a>
-          <a
-            href={`${home}#how-it-works`}
-            className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors"
-          >
+          <a href={`${home}#how-it-works`} className={NAV_IDLE}>
             {t("nav.howItWorks")}
           </a>
-          <a
-            href={`${home}#security`}
-            className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors"
-          >
+          <a href={`${home}#security`} className={NAV_IDLE}>
             {t("nav.security")}
           </a>
-          <a
-            href={`${home}#pricing`}
-            className="text-sm text-[#64748B] hover:text-[#0B1220] transition-colors"
-          >
+          <a href={`${home}#pricing`} className={NAV_IDLE}>
             {t("nav.pricing")}
           </a>
         </nav>
@@ -99,35 +103,35 @@ export function MarketingSiteHeader() {
           <Link
             href="/resources"
             onClick={() => setMobileNav(false)}
-            className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
+            className={`block py-2 ${activeSection === "resources" ? NAV_ACTIVE : NAV_IDLE}`}
           >
             {t("nav.resources")}
           </Link>
           <a
             href={`${home}#how-it-works`}
             onClick={() => setMobileNav(false)}
-            className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
+            className={`block py-2 ${NAV_IDLE}`}
           >
             {t("nav.product")}
           </a>
           <a
             href={`${home}#how-it-works`}
             onClick={() => setMobileNav(false)}
-            className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
+            className={`block py-2 ${NAV_IDLE}`}
           >
             {t("nav.howItWorks")}
           </a>
           <a
             href={`${home}#security`}
             onClick={() => setMobileNav(false)}
-            className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
+            className={`block py-2 ${NAV_IDLE}`}
           >
             {t("nav.security")}
           </a>
           <a
             href={`${home}#pricing`}
             onClick={() => setMobileNav(false)}
-            className="block text-sm text-[#64748B] hover:text-[#0B1220] py-2"
+            className={`block py-2 ${NAV_IDLE}`}
           >
             {t("nav.pricing")}
           </a>

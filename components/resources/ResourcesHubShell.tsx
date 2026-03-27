@@ -10,8 +10,6 @@ import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToMessages } from "@/lib/i18n/pathLocales";
 import type { ContentLocalizationRow, ContentItemRow } from "@/lib/resources/queries";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
-import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
-import { HubSectionNav } from "@/components/resources/HubSectionNav";
 import { contentTypeBadgeClass } from "@/components/resources/resourcesHubStyles";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
@@ -89,26 +87,9 @@ export async function ResourcesHubShell({
   const featured = !isFiltered && rows.length > 0 ? rows[0] : null;
   const gridRows = featured ? rows.slice(1) : rows;
 
-  const hubNavLabels = {
-    resources: t("hubNav.resources"),
-    templates: t("hubNav.templates"),
-    caseStudies: t("hubNav.caseStudies"),
-    glossary: t("hubNav.glossary"),
-  };
-
   return (
     <div className="min-h-screen bg-white">
       <MarketingSiteHeader />
-      <div className={`${HUB_CONTAINER} pt-8`}>
-        <ResourceBreadcrumbs
-          items={[
-            { label: t("breadcrumbHome"), href: `${base}/` },
-            { label: t("breadcrumbResources") },
-          ]}
-        />
-        <HubSectionNav basePath={base} active="resources" labels={hubNavLabels} />
-      </div>
-
       {/* Hero — Figma Make: gradient + search + topic chips */}
       <section className="bg-gradient-to-br from-[#0B1220] via-[#1D4ED8] to-[#0B1220] text-white">
         <div className={`${HUB_CONTAINER} py-12 sm:py-16`}>

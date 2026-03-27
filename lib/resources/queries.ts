@@ -122,3 +122,48 @@ export async function getPublishedLocalizationBySlug(args: {
 
   return { item: item as ContentItemRow, localization: loc as ContentLocalizationRow };
 }
+
+export async function getRelatedResources(args: {
+  routeKind: string;
+  locale: HubContentLocale;
+  pillar: string;
+  excludeItemId: string;
+  limit?: number;
+}) {
+  const sb = getServiceClient();
+  const cap = args.limit ?? 2;
+
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select(
+      "id, content_item_id, title, slug, excerpt, reading_time_minutes, content_items!inner(id, content_type, primary_pillar, workflow_status)"
+    )
+    .eq("route_kind", args.routeKind)
+    .eq("locale", args.locale)
+    .eq("is_published", true)
+    .eq("content_items.workflow_status", "published")
+    .eq("content_items.primary_pillar", args.pillar)
+    .neq("content_item_id", args.excludeItemId)
+    .order("publish_at", { ascending: false, nullsFirst: false })
+    .limit(cap);
+
+  if (error) throw new Error(error.message);
+
+  type RelatedRow = {
+    id: string;
+    content_item_id: string;
+    title: string;
+    slug: string;
+    excerpt: string;
+    reading_time_minutes: number | null;
+    content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string } | { id: string; content_type: string; primary_pillar: string; workflow_status: string }[];
+  };
+
+  return (data ?? []).map((raw: unknown) => {
+    const r = raw as RelatedRow;
+    const item = Array.isArray(r.content_items) ? r.content_items[0] : r.content_items;
+    return { ...r, content_items: item } as RelatedRow & {
+      content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string };
+    };
+  });
+}
