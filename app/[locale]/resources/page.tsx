@@ -7,6 +7,7 @@ import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { listPublishedByRoute } from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
+import { HubSectionNav } from "@/components/resources/HubSectionNav";
 import {
   hubLocaleToPathSegment,
   pathLocaleToHubLocale,
@@ -85,6 +86,16 @@ export default async function ResourcesHubPage({ params, searchParams }: Props) 
           { label: t("breadcrumbHome"), href: `${base}/` },
           { label: t("breadcrumbResources") },
         ]}
+      />
+      <HubSectionNav
+        basePath={base}
+        active="resources"
+        labels={{
+          resources: t("hubNav.resources"),
+          templates: t("hubNav.templates"),
+          caseStudies: t("hubNav.caseStudies"),
+          glossary: t("hubNav.glossary"),
+        }}
       />
       <header className="mb-10">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#0B1220] mb-3">{t("hubTitle")}</h1>

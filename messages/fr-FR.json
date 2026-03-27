@@ -2010,6 +2010,12 @@
   "resources": {
     "hubTitle": "Ressources DisputeDesk",
     "hubSubtitle": "Guides, modèles et analyses sur les rétrofacturations et le règlement des litiges.",
+    "hubNav": {
+      "resources": "Articles",
+      "templates": "Modèles",
+      "caseStudies": "Études de cas",
+      "glossary": "Glossaire"
+    },
     "searchPlaceholder": "Rechercher articles, modèles et guides…",
     "noResults": "Aucun contenu ne correspond à ces filtres.",
     "filterPillar": "Sujet",

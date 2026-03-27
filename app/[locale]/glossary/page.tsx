@@ -6,6 +6,7 @@ import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { listPublishedByRoute } from "@/lib/resources/queries";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
+import { HubSectionNav } from "@/components/resources/HubSectionNav";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -25,12 +26,22 @@ export default async function GlossaryPage({ params }: Props) {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 py-12">
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
       <ResourceBreadcrumbs
         items={[
           { label: t("breadcrumbHome"), href: `${basePath}/` },
           { label: t("types.glossary_entry") },
         ]}
+      />
+      <HubSectionNav
+        basePath={basePath}
+        active="glossary"
+        labels={{
+          resources: t("hubNav.resources"),
+          templates: t("hubNav.templates"),
+          caseStudies: t("hubNav.caseStudies"),
+          glossary: t("hubNav.glossary"),
+        }}
       />
       <h1 className="text-3xl font-bold mb-8">{t("types.glossary_entry")}</h1>
       <ul className="space-y-2">

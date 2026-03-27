@@ -6,6 +6,7 @@ import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { listPublishedByRoute } from "@/lib/resources/queries";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
+import { HubSectionNav } from "@/components/resources/HubSectionNav";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -31,6 +32,16 @@ export default async function CaseStudiesPage({ params }: Props) {
           { label: t("breadcrumbHome"), href: `${basePath}/` },
           { label: t("types.case_study") },
         ]}
+      />
+      <HubSectionNav
+        basePath={basePath}
+        active="case-studies"
+        labels={{
+          resources: t("hubNav.resources"),
+          templates: t("hubNav.templates"),
+          caseStudies: t("hubNav.caseStudies"),
+          glossary: t("hubNav.glossary"),
+        }}
       />
       <h1 className="text-3xl font-bold mb-8">{t("types.case_study")}</h1>
       <ul className="grid gap-4">

@@ -2035,6 +2035,12 @@
   "resources": {
     "hubTitle": "DisputeDesk Resources",
     "hubSubtitle": "Guides, templates, and insights for chargebacks and dispute resolution.",
+    "hubNav": {
+      "resources": "Articles",
+      "templates": "Templates",
+      "caseStudies": "Case studies",
+      "glossary": "Glossary"
+    },
     "searchPlaceholder": "Search articles, templates, and guides…",
     "noResults": "No content matches your filters.",
     "filterPillar": "Topic",

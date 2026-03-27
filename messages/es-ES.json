@@ -2010,6 +2010,12 @@
   "resources": {
     "hubTitle": "Recursos de DisputeDesk",
     "hubSubtitle": "Guías, plantillas e información sobre contracargos y resolución de disputas.",
+    "hubNav": {
+      "resources": "Artículos",
+      "templates": "Plantillas",
+      "caseStudies": "Casos de estudio",
+      "glossary": "Glosario"
+    },
     "searchPlaceholder": "Buscar artículos, plantillas y guías…",
     "noResults": "Ningún contenido coincide con los filtros.",
     "filterPillar": "Tema",

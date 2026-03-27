@@ -2011,6 +2011,12 @@
   "resources": {
     "hubTitle": "DisputeDesk resurser",
     "hubSubtitle": "Guider, mallar och insikter om chargebacks och tvistlösning.",
+    "hubNav": {
+      "resources": "Artiklar",
+      "templates": "Mallar",
+      "caseStudies": "Fallstudier",
+      "glossary": "Ordlista"
+    },
     "searchPlaceholder": "Sök artiklar, mallar och guider…",
     "noResults": "Inget innehåll matchar filtren.",
     "filterPillar": "Ämne",

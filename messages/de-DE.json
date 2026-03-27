@@ -2010,6 +2010,12 @@
   "resources": {
     "hubTitle": "DisputeDesk Ressourcen",
     "hubSubtitle": "Leitfäden, Vorlagen und Einblicke zu Chargebacks und Streitbeilegung.",
+    "hubNav": {
+      "resources": "Artikel",
+      "templates": "Vorlagen",
+      "caseStudies": "Fallstudien",
+      "glossary": "Glossar"
+    },
     "searchPlaceholder": "Artikel, Vorlagen und Leitfäden durchsuchen…",
     "noResults": "Keine Inhalte zu diesen Filtern.",
     "filterPillar": "Thema",
