@@ -40,6 +40,7 @@ export const LOCALE_INSTRUCTIONS: Record<string, string> = {
 export const CONTENT_TYPE_INSTRUCTIONS: Record<string, string> = {
   cluster_article: "Write a focused, in-depth article (1500-2500 words). Include practical examples and step-by-step guidance where appropriate.",
   pillar_page: "Write a comprehensive guide (3000-5000 words). Cover the topic exhaustively with multiple sections, tables, and cross-references. This should be the definitive resource on this topic.",
+  template: "Write a practical, ready-to-use template or playbook (800-1500 words). Structure it with clear sections: Overview, When to Use, Step-by-Step Instructions, and a fill-in template section using HTML tables or formatted lists. Include placeholder text in [BRACKETS] that merchants can replace with their own data. Make it immediately actionable.",
   legal_update: "Write a precise legal/regulatory update (800-1500 words). Focus on what changed, effective dates, merchant impact, and required actions. CRITICAL: accuracy is paramount.",
   glossary_entry: "Write a clear, concise definition (200-400 words). Include context, examples, and related terms.",
   faq_entry: "Write 5-8 FAQ pairs. Each answer should be 2-4 sentences. Cover the most common merchant questions on this topic.",

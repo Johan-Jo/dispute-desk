@@ -77,6 +77,10 @@ export async function sendPublishNotification(
       subject,
       html,
       text,
+      headers: {
+        "X-Entity-Ref-ID": `publish-${options.articleSlug}-${options.locale}`,
+      },
+      tags: [{ name: "category", value: "autopilot-publish" }],
     });
 
     if (error) {

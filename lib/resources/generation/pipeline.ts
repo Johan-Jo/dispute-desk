@@ -97,19 +97,29 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     })
     .eq("id", archiveItemId);
 
+  // Map content_type → route_kind for public hub routing
+  const ROUTE_KIND_MAP: Record<string, string> = {
+    template: "templates",
+    case_study: "case-studies",
+    glossary_entry: "glossary",
+    faq_entry: "glossary",
+  };
+  const routeKind = ROUTE_KIND_MAP[brief.contentType] ?? "resources";
+
   // Insert localizations for each successful result
   const localizationInserts = successfulResults
     .filter((r): r is GenerationResult & { content: NonNullable<GenerationResult["content"]> } => r.content !== null)
     .map((r) => ({
       content_item_id: contentItemId,
       locale: r.locale,
+      route_kind: routeKind,
       title: r.content.title,
       slug: r.content.slug,
       excerpt: r.content.excerpt,
       body_json: r.content.body_json,
       meta_title: r.content.meta_title,
       meta_description: r.content.meta_description,
-      translation_status: r.locale === "en-US" ? "source" : "complete",
+      translation_status: "complete",
     }));
 
   if (localizationInserts.length > 0) {
