@@ -159,9 +159,7 @@ export async function getContentList(filters: ContentListFilters = {}) {
   }
 
   if (search) {
-    query = query.or(
-      `content_localizations.title.ilike.%${search}%`
-    );
+    query = query.or(`topic.ilike.%${search}%,primary_pillar.ilike.%${search}%,target_keyword.ilike.%${search}%`);
   }
 
   const from = (page - 1) * pageSize;
