@@ -39,7 +39,11 @@ export async function buildBriefFromArchive(archiveItemId: string): Promise<Gene
   };
 }
 
-export async function runGenerationPipeline(archiveItemId: string): Promise<PipelineResult> {
+export interface PipelineOptions {
+  autopilot?: boolean;
+}
+
+export async function runGenerationPipeline(archiveItemId: string, options: PipelineOptions = {}): Promise<PipelineResult> {
   if (!isGenerationEnabled()) {
     return { contentItemId: null, results: [], error: "Generation is not enabled. Set GENERATION_ENABLED=true and OPENAI_API_KEY." };
   }
@@ -58,9 +62,8 @@ export async function runGenerationPipeline(archiveItemId: string): Promise<Pipe
     return { contentItemId: null, results, error: `All locale generations failed: ${errors}` };
   }
 
-  // Determine workflow status based on content type
-  const needsLegalReview = brief.contentType === "legal_update";
-  const initialStatus = needsLegalReview ? "in_legal_review" : "drafting";
+  // Determine workflow status based on content type and autopilot mode
+  const initialStatus = options.autopilot ? "published" : (brief.contentType === "legal_update" ? "in_legal_review" : "drafting");
 
   // Create content_items row
   const { data: newItem, error: itemError } = await sb
@@ -136,6 +139,25 @@ export async function runGenerationPipeline(archiveItemId: string): Promise<Pipe
       generation_tokens: totalTokens,
     })
     .eq("id", contentItemId);
+
+  // Autopilot: enqueue all localizations for immediate publish
+  if (options.autopilot && localizationInserts.length > 0) {
+    const { data: locs } = await sb
+      .from("content_localizations")
+      .select("id")
+      .eq("content_item_id", contentItemId);
+
+    if (locs) {
+      const now = new Date().toISOString();
+      await sb.from("content_publish_queue").insert(
+        locs.map((l) => ({
+          content_localization_id: l.id,
+          scheduled_for: now,
+          status: "pending",
+        }))
+      );
+    }
+  }
 
   return { contentItemId, results, error: null };
 }

@@ -1093,3 +1093,70 @@ that walk merchants through key features with step-by-step overlays.
 
 Guides are launchable from both the embedded and portal help pages via
 search-param-driven navigation (`?guide=<guideId>`).
+
+## Autopilot Content Generation (CH-8)
+
+### Architecture
+
+The autopilot system extends the existing AI generation pipeline (CH-7) with automated scheduling, publishing, and notification.
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| Settings UI | `app/admin/resources/settings/settings-client.tsx` | Autopilot toggle, articles/day, email config |
+| Pipeline | `lib/resources/generation/pipeline.ts` | `PipelineOptions.autopilot` flag — auto-publishes, enqueues |
+| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks highest-priority backlog items, calls pipeline |
+| Publish Email | `lib/email/sendPublishNotification.ts` | Resend-based email with article link |
+
+**Settings** are stored in `cms_settings.settings_json` (existing pattern). New fields: `autopilotEnabled`, `autopilotArticlesPerDay`, `autopilotNotifyEmail`, `autopilotStartedAt`.
+
+**5-day burst:** When autopilot is first enabled, `autopilotStartedAt` is recorded. The cron checks how many articles have been auto-published since that timestamp. If fewer than 5, it generates 1/day until the burst is complete.
+
+**Pipeline autopilot flag:** When `options.autopilot = true`, the pipeline sets `workflow_status = "published"` and auto-enqueues all localizations in `content_publish_queue` for immediate processing.
+
+### Cron Schedule
+
+Added to `vercel.json`:
+```json
+{ "path": "/api/cron/autopilot-generate", "schedule": "0 8 * * *" }
+```
+Runs daily at 08:00 UTC. Requires `CRON_SECRET` header.
+
+## SEO & Search Engine Indexing (CH-8)
+
+### Sitemap
+
+`app/sitemap.ts` (Next.js metadata API) generates a dynamic XML sitemap:
+- All published `content_localizations` with `hreflang` alternates per locale.
+- Static pages: root, resources, glossary, templates, case studies.
+- Locale URL prefixes: en-US = root, de-DE = `/de`, fr-FR = `/fr`, es-ES = `/es`, pt-BR = `/pt`, sv-SE = `/sv`.
+
+### Robots.txt
+
+`app/robots.ts` serves a robots.txt that allows all crawlers on public routes and disallows `/admin/`, `/api/`, `/app/`, `/portal/`, `/auth/`.
+
+### IndexNow
+
+`lib/seo/indexnow.ts` implements:
+- **IndexNow API call** (`POST https://api.indexnow.org/indexnow`) — instant indexing on Bing, Yandex, Seznam, Naver.
+- **Google sitemap ping** (`GET https://www.google.com/ping?sitemap={url}`) — notify Google of sitemap changes.
+- **Key verification endpoint** at `/api/indexnow?key={key}`.
+
+Called from the publish cron (`app/api/cron/publish-content/route.ts`) via `notifySearchEngines(slug, locale)` after each successful publish. Non-blocking — failures are logged but don't affect publish status.
+
+**Required env:** `INDEXNOW_KEY` (random 8-128 char string).
+
+## In-Admin Help Section (CH-8)
+
+### Architecture
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| Server Page | `app/admin/help/page.tsx` | Auth check, renders `HelpClient` |
+| Client Component | `app/admin/help/help-client.tsx` | Full help content with sidebar nav |
+
+The help page renders the same content as `docs/admin-guide.md` as React components with:
+- Left sidebar with 13 section links and search/filter.
+- `IntersectionObserver`-based scroll-spy to highlight the active section.
+- Sections: Login, Dashboard, Shops, Jobs, Billing, Audit, Resources Hub, Editor, AI Generator, Autopilot, SEO, Settings, Workflow Reference.
+
+Added "Help" to `ADMIN_NAV` in `app/admin/layout.tsx`.

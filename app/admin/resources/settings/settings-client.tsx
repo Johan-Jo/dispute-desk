@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Info, GripVertical } from "lucide-react";
+import { Info, GripVertical, Sparkles, AlertTriangle } from "lucide-react";
 import { ADMIN_LOCALES } from "@/lib/resources/workflow";
 
 interface SettingsClientProps {
@@ -19,6 +19,10 @@ interface Settings {
   defaultCta: string;
   defaultDisclaimer: string;
   legalReviewEmail: string;
+  autopilotEnabled: boolean;
+  autopilotArticlesPerDay: number;
+  autopilotNotifyEmail: string;
+  autopilotStartedAt: string | null;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +36,10 @@ const DEFAULT_SETTINGS: Settings = {
   defaultCta: "none",
   defaultDisclaimer: "",
   legalReviewEmail: "",
+  autopilotEnabled: false,
+  autopilotArticlesPerDay: 1,
+  autopilotNotifyEmail: "oi@johan.com.br",
+  autopilotStartedAt: null,
 };
 
 function mergeSettings(raw: Record<string, unknown>): Settings {
@@ -235,6 +243,68 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 ))}
               </select>
             </div>
+          </div>
+        </section>
+
+        {/* AI Autopilot */}
+        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-[#8B5CF6]" />
+            <h2 className="text-lg font-semibold text-[#0B1220]">AI Autopilot</h2>
+          </div>
+          <div className="space-y-5">
+            <Toggle
+              label="Enable autopilot mode"
+              description="Automatically generate and publish articles from the backlog without manual approval"
+              checked={settings.autopilotEnabled}
+              onChange={(v) => {
+                update("autopilotEnabled", v);
+                if (v && !settings.autopilotStartedAt) {
+                  update("autopilotStartedAt", new Date().toISOString());
+                }
+              }}
+            />
+            {settings.autopilotEnabled && (
+              <>
+                <div className="flex items-start gap-3 px-4 py-3 bg-[#FEF3C7] border border-[#FDE68A] rounded-xl">
+                  <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
+                  <p className="text-sm text-[#92400E]">
+                    Autopilot bypasses editorial and legal review. Generated articles are published directly. The first 5 articles are published one per day as an initial burst.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0B1220] mb-1">
+                    Articles per day (after initial 5-day burst)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={settings.autopilotArticlesPerDay}
+                      onChange={(e) => update("autopilotArticlesPerDay", Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                      className="w-24 px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                    />
+                    <span className="text-sm text-[#64748B]">articles / day</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0B1220] mb-1">
+                    Notification email
+                  </label>
+                  <input
+                    type="email"
+                    value={settings.autopilotNotifyEmail}
+                    onChange={(e) => update("autopilotNotifyEmail", e.target.value)}
+                    placeholder="oi@johan.com.br"
+                    className="w-full max-w-sm px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                  />
+                  <p className="text-xs text-[#64748B] mt-1">
+                    Receive an email with the article link each time autopilot publishes
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </section>
 

@@ -483,6 +483,65 @@ idea → backlog → brief_ready → drafting → in_translation
 
 ---
 
+## Autopilot Mode
+
+Autopilot generates and publishes articles automatically without manual approval. Configure in **Settings > AI Autopilot**.
+
+| Setting | Description |
+|---------|-------------|
+| **Enable autopilot** | Master toggle — when on, the cron job runs daily at 08:00 UTC |
+| **Articles per day** | How many articles to generate daily (after initial 5-day burst) |
+| **Notification email** | Receive an email with the article link after each publish |
+
+### 5-Day Initial Burst
+
+When first enabled, autopilot publishes 1 article per day for 5 consecutive days. After the burst completes, it continues at the configured rate.
+
+### How It Works
+
+1. Daily cron (`/api/cron/autopilot-generate`) picks the highest-priority backlog item.
+2. AI generates content for all 6 locales in parallel.
+3. Content is created with `published` status (bypasses editorial and legal review).
+4. All localizations are enqueued in the publish queue.
+5. The publish cron processes them within 15 minutes.
+6. Email notification sent with article link.
+7. Search engines notified via IndexNow + Google sitemap ping.
+
+> **Warning:** Autopilot bypasses editorial and legal review. Review generated content regularly to maintain quality.
+
+---
+
+## SEO & Search Engine Indexing
+
+After each article is published, search engines are automatically notified:
+
+| Method | Search Engines | Speed |
+|--------|---------------|-------|
+| **IndexNow** | Bing, Yandex, Seznam, Naver | Instant (minutes) |
+| **Sitemap ping** | Google | Hours to days |
+
+Requires `INDEXNOW_KEY` environment variable (any random 8-128 character string).
+
+### Sitemap
+
+A dynamic sitemap at `/sitemap.xml` lists all published articles with `hreflang` alternates for each locale. It also includes static pages (resources, glossary, templates, case studies).
+
+### Robots.txt
+
+Served at `/robots.txt`. Allows all crawlers on public pages and blocks admin, API, app, portal, and auth routes.
+
+---
+
+## In-Admin Help
+
+The full admin guide is available at `/admin/help` (also accessible via the "Help" link in the admin navigation sidebar). It provides the same content as this document in a searchable, navigable UI with:
+
+- Left sidebar with section links
+- Scroll-spy highlighting the current section
+- Search/filter to jump to sections
+
+---
+
 ## Keyboard Shortcuts & Tips
 
 - **Cmd/Ctrl + S** in the editor area triggers Save Draft (browser form behavior).

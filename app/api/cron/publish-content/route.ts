@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { publishLocalization } from "@/lib/resources/publish";
+import { sendPublishNotification } from "@/lib/email/sendPublishNotification";
+import { notifySearchEngines } from "@/lib/seo/indexnow";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -30,6 +32,15 @@ async function runPublish(req: NextRequest) {
 
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
 
+  // Load CMS settings for autopilot email
+  const { data: settingsRow } = await sb
+    .from("cms_settings")
+    .select("settings_json")
+    .eq("id", "singleton")
+    .maybeSingle();
+  const cmsSettings = (settingsRow?.settings_json ?? {}) as Record<string, unknown>;
+  const notifyEmail = (cmsSettings.autopilotNotifyEmail as string) || "";
+
   for (const row of due ?? []) {
     await sb
       .from("content_publish_queue")
@@ -44,6 +55,42 @@ async function runPublish(req: NextRequest) {
         .update({ status: "succeeded", last_error: null })
         .eq("id", row.id);
       results.push({ id: row.id, ok: true });
+
+      // Post-publish: email notification + SEO ping
+      try {
+        const { data: loc } = await sb
+          .from("content_localizations")
+          .select("title, slug, locale, content_item_id")
+          .eq("id", row.content_localization_id)
+          .maybeSingle();
+
+        if (loc) {
+          // SEO notification (IndexNow + Google sitemap ping)
+          if (loc.slug) {
+            notifySearchEngines(loc.slug, loc.locale).catch(() => {});
+          }
+
+          // Email notification for AI-generated content
+          if (notifyEmail && loc.title) {
+            const { data: item } = await sb
+              .from("content_items")
+              .select("generated_at")
+              .eq("id", loc.content_item_id)
+              .maybeSingle();
+
+            if (item?.generated_at) {
+              sendPublishNotification({
+                to: notifyEmail,
+                articleTitle: loc.title,
+                articleSlug: loc.slug ?? loc.content_item_id,
+                locale: loc.locale,
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch {
+        // Non-blocking — publish already succeeded
+      }
     } else {
       await sb
         .from("content_publish_queue")

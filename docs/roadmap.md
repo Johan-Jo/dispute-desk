@@ -73,7 +73,7 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 
 ## Content Hub (marketing CMS)
 
-**Not** EPIC **P0** (portal track). Use phase codes **CH-1 through CH-7** so nothing collides with "P0". **Canonical plan:** [`docs/epics/RESOURCE-HUB-PLAN.md`](epics/RESOURCE-HUB-PLAN.md). Overview in [`docs/epics/EPIC-PLAN.md` §5](epics/EPIC-PLAN.md#5-content-hub-marketing-cms--separate-track). Technical detail: **`docs/technical.md` § Resources Hub**.
+**Not** EPIC **P0** (portal track). Use phase codes **CH-1 through CH-8** so nothing collides with "P0". **Canonical plan:** [`docs/epics/RESOURCE-HUB-PLAN.md`](epics/RESOURCE-HUB-PLAN.md). Overview in [`docs/epics/EPIC-PLAN.md` §5](epics/EPIC-PLAN.md#5-content-hub-marketing-cms--separate-track). Technical detail: **`docs/technical.md` § Resources Hub**.
 
 | Phase | Focus | Status |
 |-------|--------|--------|
@@ -84,8 +84,9 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 | **CH-5** | Backlog + Calendar + Queue (3 operational screens) | Done |
 | **CH-6** | Settings + polish + mobile editor | Done |
 | **CH-7** | Article generation pipeline (archive → briefs → drafts → review) | Done |
+| **CH-8** | Autopilot publishing, SEO indexing (IndexNow + sitemap), in-admin help | Done |
 
-**Operator guide:** [`docs/resources-hub-editor-guide.md`](resources-hub-editor-guide.md)  
+**Operator guide:** [`docs/resources-hub-editor-guide.md`](resources-hub-editor-guide.md) + in-admin at `/admin/help`  
 **Embedded app:** Hub is not linked from `/app/*`; iframe navigations to hub URLs with `?host=` redirect to `/app/help` (see middleware).
 
 ## Notes

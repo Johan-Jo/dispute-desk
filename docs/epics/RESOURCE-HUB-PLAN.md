@@ -847,11 +847,72 @@ Turn archive material into reviewable, localized drafts with human approval befo
 
 ---
 
+## CH-8 — Autopilot, SEO Push, & Admin Help
+
+**Status: ✅ Done**
+
+### CH-8.1 — Autopilot Content Generation
+
+- Settings UI: autopilot toggle, articles/day, notification email in Settings page.
+- Pipeline updated with `autopilot` flag — when enabled, articles bypass review and go straight to `published`.
+- Daily cron job (`/api/cron/autopilot-generate`) runs at 08:00 UTC.
+- 5-day initial burst: 1 article/day for first 5 articles after autopilot is enabled.
+- `autopilotStartedAt` timestamp tracked in `cms_settings` for burst logic.
+
+### CH-8.2 — Publish Email Notification
+
+- `lib/email/sendPublishNotification.ts` sends email via Resend when AI-generated content is published.
+- Integrated into the existing publish cron — fires after successful publish for items with `generated_at` set.
+- Email includes article title, locale, and direct link.
+
+### CH-8.3 — SEO & Search Engine Indexing
+
+- Dynamic sitemap at `/sitemap.xml` (Next.js metadata API) — all published articles with hreflang alternates + static pages.
+- `robots.txt` at `/robots.txt` — allows all crawlers, blocks admin/API/app/portal/auth routes.
+- **IndexNow** (`lib/seo/indexnow.ts`): instant notification to Bing, Yandex, Seznam, Naver on publish.
+- **Google sitemap ping**: notifies Google the sitemap has changed after each publish.
+- Verification endpoint at `/api/indexnow?key={key}` for IndexNow domain ownership.
+- Integrated into publish cron — `notifySearchEngines()` called after each successful publish.
+- Requires `INDEXNOW_KEY` environment variable.
+
+### CH-8.4 — In-Admin Help Section
+
+- `/admin/help` page with full admin guide content rendered as React components.
+- Left sidebar with section links, scroll-spy highlighting, and search filter.
+- Covers: Login, Dashboard, Shops, Jobs, Billing, Audit, Resources Hub, Editor, AI Generator, Autopilot, SEO, Settings, Workflow Reference.
+- "Help" link added to admin navigation sidebar.
+
+### Key Files
+
+- `app/admin/resources/settings/settings-client.tsx` — autopilot settings UI.
+- `lib/resources/generation/pipeline.ts` — `PipelineOptions.autopilot` flag.
+- `app/api/cron/autopilot-generate/route.ts` — daily autopilot cron.
+- `lib/email/sendPublishNotification.ts` — publish notification email.
+- `app/sitemap.ts`, `app/robots.ts` — SEO metadata.
+- `lib/seo/indexnow.ts` — IndexNow + Google sitemap ping.
+- `app/api/indexnow/route.ts` — IndexNow key verification.
+- `app/admin/help/page.tsx`, `app/admin/help/help-client.tsx` — in-admin help.
+- `vercel.json` — autopilot cron schedule added.
+
+### Acceptance Criteria
+
+- [x] Autopilot toggle in Settings with articles/day and notification email.
+- [x] Daily cron generates and auto-publishes articles from backlog.
+- [x] 5-day initial burst logic functional.
+- [x] Email notification sent on publish for AI-generated content.
+- [x] Dynamic sitemap includes all published articles with hreflang.
+- [x] robots.txt blocks sensitive routes.
+- [x] IndexNow integration for instant Bing/Yandex indexing.
+- [x] Google sitemap ping on publish.
+- [x] In-admin help page at /admin/help with navigation and search.
+- [x] Documentation updated (admin-guide.md, technical.md, .env.example).
+
+---
+
 ## Non-goals
 
 - Replace **EPIC-P0**: hub work uses public marketing routes and admin built under prior epics.
 - Replace **embedded help**: `/app/help` remains the in-admin experience.
-- Auto-publish generated content without human approval (explicitly out of scope).
 
 ---
 
@@ -860,14 +921,15 @@ Turn archive material into reviewable, localized drafts with human approval befo
 | Epic | Name | Delivers | Status |
 |---|---|---|---|
 | **CH-1** | Foundation | Content model, public hub, pipeline, Phase-1 admin | ✅ Done |
-| **CH-2** | Admin Shell + Components | Shell layout, workflow model, component library, query layer | Next |
-| **CH-3** | Dashboard + Content List | 2 screens: operations dashboard, content table | Planned |
-| **CH-4** | Block Editor + Locale Editing | Full content editor with blocks, locales, publishing | Planned |
-| **CH-5** | Backlog + Calendar + Queue | 3 screens: ideas pipeline, calendar, queue monitor | Planned |
-| **CH-6** | Settings + Polish + Mobile | Settings page, mobile editor, docs update | Planned |
-| **CH-7** | Generation Pipeline | AI draft generation with human review | Done |
+| **CH-2** | Admin Shell + Components | Shell layout, workflow model, component library, query layer | ✅ Done |
+| **CH-3** | Dashboard + Content List | 2 screens: operations dashboard, content table | ✅ Done |
+| **CH-4** | Block Editor + Locale Editing | Full content editor with blocks, locales, publishing | ✅ Done |
+| **CH-5** | Backlog + Calendar + Queue | 3 screens: ideas pipeline, calendar, queue monitor | ✅ Done |
+| **CH-6** | Settings + Polish + Mobile | Settings page, mobile editor, docs update | ✅ Done |
+| **CH-7** | Generation Pipeline | AI draft generation with human review | ✅ Done |
+| **CH-8** | Autopilot + SEO + Help | Autopilot publishing, SEO indexing, in-admin help | ✅ Done |
 
-Each epic has clear acceptance criteria and a defined set of files to create or modify. Epics are sequenced so that each builds on the foundation of the previous one, with CH-7 running in parallel once CH-4 provides the editor for reviewing generated content.
+Each epic has clear acceptance criteria and a defined set of files to create or modify. Epics are sequenced so that each builds on the foundation of the previous one.
 
 ---
 
