@@ -1115,10 +1115,14 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 |-----------|------|---------|
 | Settings UI | `app/admin/resources/settings/settings-client.tsx` | Autopilot toggle, articles/day, email config |
 | Pipeline | `lib/resources/generation/pipeline.ts` | `PipelineOptions.autopilot` flag — auto-publishes, enqueues |
+| Publish prerequisites | `lib/resources/generation/publishPrerequisites.ts` | Ensures author, primary CTA, ≥3 tags so `publishLocalization` succeeds |
 | Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks highest-priority backlog items, calls pipeline |
+| Publish Cron | `app/api/cron/publish-content/route.ts` | Drains `content_publish_queue`, sends autopilot email after successful publish |
 | Publish Email | `lib/email/sendPublishNotification.ts` | Resend-based email with article link |
 
-**Settings** are stored in `cms_settings.settings_json` (existing pattern). New fields: `autopilotEnabled`, `autopilotArticlesPerDay`, `autopilotNotifyEmail`, `autopilotStartedAt`.
+**Settings** are stored in `cms_settings.settings_json` (existing pattern). New fields: `autopilotEnabled`, `autopilotArticlesPerDay`, `autopilotNotifyEmail`, `autopilotStartedAt`, and `defaultCta` (e.g. `free_trial` — matches `content_ctas.event_name`).
+
+**Publish prerequisites (generation):** Before inserting `content_items`, `ensurePublishPrerequisites()` loads or creates default `authors`, `content_tags` (three stable keys: `chargebacks`, `shopify`, `merchant-resources`), and resolves **primary CTA**: prefers `content_ctas` where `event_name` equals **Settings → Default CTA** (`defaultCta`), otherwise first CTA row, otherwise a generic external CTA. Migration `20260328123100_seed_hub_content_ctas_presets.sql` seeds preset CTAs (`free_trial`, `demo_request`, `newsletter`, `download`) so the admin dropdown resolves to real rows.
 
 **5-day burst:** When autopilot is first enabled, `autopilotStartedAt` is recorded. The cron checks how many articles have been auto-published since that timestamp. If fewer than 5, it generates 1/day until the burst is complete.
 
@@ -1126,11 +1130,15 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 
 ### Cron Schedule
 
-Added to `vercel.json`:
+In `vercel.json`:
 ```json
-{ "path": "/api/cron/autopilot-generate", "schedule": "0 8 * * *" }
+{ "path": "/api/cron/autopilot-generate", "schedule": "0 8 * * *" },
+{ "path": "/api/cron/publish-content", "schedule": "0 9 * * *" }
 ```
-Runs daily at 08:00 UTC. Requires `CRON_SECRET` header.
+- **08:00 UTC** — autopilot generation (`/api/cron/autopilot-generate`). Requires `CRON_SECRET` (Vercel injects `Authorization: Bearer` when the env var is set).
+- **09:00 UTC** — publish queue + email (`/api/cron/publish-content`). Same secret.
+
+**Manual test:** `GET` or `POST` the route with header `Authorization: Bearer <CRON_SECRET>` (or `x-cron-secret: <CRON_SECRET>`). Example: `curl -H "Authorization: Bearer $CRON_SECRET" "https://<deployment>/api/cron/autopilot-generate"`.
 
 ## SEO & Search Engine Indexing (CH-8)
 

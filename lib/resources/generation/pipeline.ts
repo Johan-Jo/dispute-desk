@@ -5,6 +5,7 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { resolvePrimaryPillarForGeneration } from "@/lib/resources/pillars";
+import { ensurePublishPrerequisites } from "./publishPrerequisites";
 import { generateAllLocales, isGenerationEnabled } from "./generate";
 import type { GenerationBrief } from "./prompts";
 import type { GenerationResult } from "./generate";
@@ -70,10 +71,18 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     summary: brief.summary,
   });
 
+  let publishPrereq: Awaited<ReturnType<typeof ensurePublishPrerequisites>>;
+  try {
+    publishPrereq = await ensurePublishPrerequisites();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { contentItemId: null, results, error: `Publish prerequisites failed: ${msg}` };
+  }
+
   // Determine workflow status based on content type and autopilot mode
   const initialStatus = options.autopilot ? "published" : (brief.contentType === "legal_update" ? "in_legal_review" : "drafting");
 
-  // Create content_items row
+  // Create content_items row (author + CTA + tags satisfy publishLocalization)
   const { data: newItem, error: itemError } = await sb
     .from("content_items")
     .insert({
@@ -85,6 +94,8 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
       priority: "medium",
       workflow_status: initialStatus,
       generated_at: new Date().toISOString(),
+      author_id: publishPrereq.authorId,
+      primary_cta_id: publishPrereq.primaryCtaId,
     })
     .select("id")
     .single();
@@ -94,6 +105,13 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
   }
 
   const contentItemId = newItem.id;
+
+  const tagRows = publishPrereq.tagIds.map((tag_id) => ({ content_item_id: contentItemId, tag_id }));
+  const { error: tagErr } = await sb.from("content_item_tags").insert(tagRows);
+  if (tagErr) {
+    await sb.from("content_items").delete().eq("id", contentItemId);
+    return { contentItemId: null, results, error: `Failed to attach tags for publish: ${tagErr.message}` };
+  }
 
   // Link archive item to new content item
   await sb

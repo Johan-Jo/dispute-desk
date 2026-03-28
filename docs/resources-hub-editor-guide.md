@@ -10,7 +10,7 @@ The full **Admin Guide** lives at **`/admin/help`** (also linked from the Resour
 
 **AI generation from backlog:** Use **Backlog** → **Generate** on an archive row (requires `OPENAI_API_KEY` and `GENERATION_ENABLED=true`). See the Admin Guide section *AI Content Generator*.
 
-**Autopilot:** Configure under **Settings** → **AI Autopilot** (master toggle, articles per day, notification email). Autopilot runs the daily generation cron and can publish without manual review—see *Autopilot Mode* in the Admin Guide for risks and behavior.
+**Autopilot:** Configure under **Settings** → **AI Autopilot** (master toggle, articles per day, notification email) and **Workflow** → **Default CTA** (must match a `content_ctas` row, e.g. Free Trial → `free_trial`). Production also needs `CRON_SECRET` on Vercel and `RESEND_API_KEY` for email. See *Autopilot Mode* in the Admin Guide for prerequisites, schedule (08:00 / 09:00 UTC), and manual cron tests.
 
 ## Admin Screens
 

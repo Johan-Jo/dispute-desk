@@ -485,13 +485,25 @@ idea → backlog → brief_ready → drafting → in_translation
 
 ## Autopilot Mode
 
-Autopilot generates and publishes articles automatically without manual approval. Configure in **Settings > AI Autopilot**.
+Autopilot generates and publishes articles automatically without manual approval. Configure in **Settings** → **AI Autopilot** and **Workflow** (Default CTA).
+
+### Prerequisites (production)
+
+| Requirement | Notes |
+|-------------|--------|
+| **`CRON_SECRET`** | Set in Vercel project env; Vercel Cron sends it on cron requests. Without it, `/api/cron/*` returns 401. Redeploy after adding. |
+| **`GENERATION_ENABLED=true`** and **`OPENAI_API_KEY`** | Required for AI generation. |
+| **`RESEND_API_KEY`** | Required for the post-publish notification email. |
+| **Settings saved** | Toggle autopilot on and set notification email; wait for auto-save (or confirm `cms_settings.settings_json` includes `autopilotEnabled`, `autopilotNotifyEmail`). |
+| **Default CTA** | **Workflow → Default CTA** (e.g. Free Trial) maps to `content_ctas.event_name` (`free_trial`, etc.). Preset CTAs are seeded by migration `20260328123100_seed_hub_content_ctas_presets.sql`. |
+| **Publish prerequisites** | Server-side `ensurePublishPrerequisites` attaches default author, primary CTA, and three tags so the publish step can succeed. |
 
 | Setting | Description |
 |---------|-------------|
 | **Enable autopilot** | Master toggle — when on, the cron job runs daily at 08:00 UTC |
 | **Articles per day** | How many articles to generate daily (after initial 5-day burst) |
-| **Notification email** | Receive an email with the article link after each publish |
+| **Notification email** | Receive an email with the article link after each successful publish (via Resend) |
+| **Default CTA** | Which `content_ctas` row is linked to new AI-generated items (`event_name` must match, e.g. `free_trial`) |
 
 ### 5-Day Initial Burst
 
@@ -499,13 +511,15 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 
 ### How It Works
 
-1. Daily cron (`/api/cron/autopilot-generate`) picks the highest-priority backlog item.
-2. AI generates content for all 6 locales in parallel.
-3. Content is created with `published` status (bypasses editorial and legal review).
-4. All localizations are enqueued in the publish queue.
-5. The publish cron processes them within 15 minutes.
-6. Email notification sent with article link.
-7. Search engines notified via IndexNow + Google sitemap ping.
+1. Daily cron (`/api/cron/autopilot-generate`, **08:00 UTC**) picks the highest-priority backlog item.
+2. AI generates content for all configured locales in parallel.
+3. Content is created with `published` workflow status (bypasses editorial and legal review); author, CTA, and tags are applied for publish validation.
+4. All localizations are enqueued in `content_publish_queue`.
+5. Publish cron (`/api/cron/publish-content`, **09:00 UTC**) processes the queue and sets `is_published`.
+6. Email notification sent with article link (if `autopilotNotifyEmail` is set and generation metadata is present).
+7. Search engines notified via IndexNow + Google sitemap ping (when configured).
+
+**Manual cron test:** Call the same routes with `Authorization: Bearer <CRON_SECRET>` after deploy.
 
 > **Warning:** Autopilot bypasses editorial and legal review. Review generated content regularly to maintain quality.
 
