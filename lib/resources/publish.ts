@@ -66,6 +66,7 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
     .from("content_localizations")
     .update({
       is_published: true,
+      publish_at: (loc.publish_at as string | null) ?? now,
       last_updated_at: now,
       updated_at: now,
     })

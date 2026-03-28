@@ -13,6 +13,7 @@ import type { GenerationBrief, GenerationContext } from "./prompts";
 import type { GenerationResult } from "./generate";
 import { routeKindForContentType } from "./contentRouteKind";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
+import { executePublishQueueTick } from "@/lib/resources/cron/publishQueueTick";
 
 export interface PipelineResult {
   contentItemId: string | null;
@@ -215,15 +216,25 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
   if (options.autopilot && localizationInserts.length > 0) {
     const { data: locs } = await sb.from("content_localizations").select("id").eq("content_item_id", contentItemId);
 
-    if (locs) {
+    if (locs?.length) {
       const now = new Date().toISOString();
-      await sb.from("content_publish_queue").insert(
+      const { error: qErr } = await sb.from("content_publish_queue").insert(
         locs.map((l) => ({
           content_localization_id: l.id,
           scheduled_for: now,
           status: "pending",
         }))
       );
+      if (qErr) {
+        console.error("[generation] Failed to enqueue publish queue:", qErr.message);
+      } else {
+        // Autopilot used to rely on the next Vercel publish cron; without it, workflow_status is
+        // "published" but is_published stays false and published_at stays null — invisible on the hub.
+        const tick = await executePublishQueueTick();
+        if (!tick.ok) {
+          console.error("[generation] Immediate publish-queue tick failed:", tick.error);
+        }
+      }
     }
   }
 

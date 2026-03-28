@@ -1143,7 +1143,7 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 
 **5-day burst:** When autopilot is first enabled, `autopilotStartedAt` is recorded. The cron checks how many articles have been auto-published since that timestamp. If fewer than 5, it generates 1/day until the burst is complete.
 
-**Pipeline autopilot flag:** When `options.autopilot = true`, the pipeline sets `workflow_status = "published"` and auto-enqueues all localizations in `content_publish_queue` for immediate processing.
+**Pipeline autopilot flag:** When `options.autopilot = true`, the pipeline sets `workflow_status = "published"` on the new `content_items` row, enqueues each localization on `content_publish_queue` with `scheduled_for = now()`, then **runs `executePublishQueueTick()` once in-process** so `publishLocalization` sets `content_localizations.is_published`, `publish_at`, and `content_items.published_at` without waiting for Vercel’s publish cron. (Previously, skipping the tick left items “Published” in admin with a blank date and invisible on the public hub.)
 
 ### Cron Schedule
 
