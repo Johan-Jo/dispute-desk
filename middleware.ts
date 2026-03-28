@@ -97,6 +97,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/auth") ||
       pathname.startsWith("/api/admin/") ||
       pathname === "/api/health" ||
+      pathname === "/api/indexnow" ||
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/") ||
       pathname === "/api/portal/clear-shop" ||
