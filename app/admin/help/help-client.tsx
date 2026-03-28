@@ -226,7 +226,7 @@ export function HelpClient() {
           {/* AUTOPILOT */}
           <Section id="autopilot" title="Autopilot Mode">
             <P>Autopilot generates and publishes articles automatically without manual approval. Configure in <Strong>Settings</Strong> (AI Autopilot + Workflow Default CTA).</P>
-            <P className="text-sm text-[#64748B]">Production needs <Code>CRON_SECRET</Code> on Vercel, <Code>GENERATION_ENABLED</Code> + <Code>OPENAI_API_KEY</Code>, and <Code>RESEND_API_KEY</Code> for the notification email. Default CTA (e.g. Free Trial) must match a <Code>content_ctas</Code> row (<Code>event_name</Code>).</P>
+            <p className="text-sm text-[#64748B] leading-relaxed mb-3">Production needs <Code>CRON_SECRET</Code> on Vercel, <Code>GENERATION_ENABLED</Code> + <Code>OPENAI_API_KEY</Code>, and <Code>RESEND_API_KEY</Code> for the notification email. Default CTA (e.g. Free Trial) must match a <Code>content_ctas</Code> row (<Code>event_name</Code>).</p>
             <Table headers={["Setting", "Description"]} rows={[
               ["Enable autopilot", "Master toggle — when on, generation cron runs daily at 08:00 UTC"],
               ["Articles per day", "How many articles to generate daily (after initial burst)"],
