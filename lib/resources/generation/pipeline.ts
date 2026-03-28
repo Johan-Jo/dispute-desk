@@ -9,8 +9,10 @@ import { resolvePrimaryPillarForGeneration } from "@/lib/resources/pillars";
 import { ensurePublishPrerequisites } from "./publishPrerequisites";
 import { generateAllLocales, isGenerationEnabled } from "./generate";
 import { resolveGenerationPrompts } from "./prompts";
-import type { GenerationBrief } from "./prompts";
+import type { GenerationBrief, GenerationContext } from "./prompts";
 import type { GenerationResult } from "./generate";
+import { routeKindForContentType } from "./contentRouteKind";
+import { fetchSimilarPublishedArticles } from "./similarArticles";
 
 export interface PipelineResult {
   contentItemId: string | null;
@@ -18,29 +20,46 @@ export interface PipelineResult {
   error: string | null;
 }
 
-export async function buildBriefFromArchive(archiveItemId: string): Promise<GenerationBrief | null> {
-  const sb = getServiceClient();
-  const { data, error } = await sb
-    .from("content_archive_items")
-    .select("*")
-    .eq("id", archiveItemId)
-    .maybeSingle();
+export type ArchiveLoadResult =
+  | { ok: true; brief: GenerationBrief }
+  | { ok: false; error: string; linkedContentItemId: string | null };
 
-  if (error || !data) return null;
-
+function archiveRowToBrief(data: Record<string, unknown>): GenerationBrief {
+  const locs = data.target_locale_set as string[] | undefined;
   return {
-    archiveItemId: data.id,
-    proposedTitle: data.proposed_title,
-    contentType: data.content_type,
-    primaryPillar: data.primary_pillar,
-    targetKeyword: data.target_keyword,
-    searchIntent: data.search_intent,
-    summary: data.summary,
-    notes: data.notes,
-    targetLocales: data.target_locale_set?.length > 0
-      ? data.target_locale_set
-      : ["en-US", "de-DE", "fr-FR", "es-ES", "pt-BR", "sv-SE"],
+    archiveItemId: data.id as string,
+    proposedTitle: data.proposed_title as string,
+    contentType: data.content_type as string,
+    primaryPillar: data.primary_pillar as string,
+    targetKeyword: (data.target_keyword as string | null) ?? null,
+    searchIntent: (data.search_intent as string | null) ?? null,
+    summary: (data.summary as string | null) ?? null,
+    notes: (data.notes as string | null) ?? null,
+    targetLocales: locs && locs.length > 0 ? locs : ["en-US", "de-DE", "fr-FR", "es-ES", "pt-BR", "sv-SE"],
   };
+}
+
+/** Single fetch: not found, already linked to content, or OK brief. */
+export async function loadArchiveForGeneration(archiveItemId: string): Promise<ArchiveLoadResult> {
+  const sb = getServiceClient();
+  const { data, error } = await sb.from("content_archive_items").select("*").eq("id", archiveItemId).maybeSingle();
+
+  if (error || !data) {
+    return { ok: false, error: `Archive item ${archiveItemId} not found`, linkedContentItemId: null };
+  }
+  if (data.created_from_archive_to_content_item_id) {
+    return {
+      ok: false,
+      error: `Archive item already converted to content item ${data.created_from_archive_to_content_item_id}.`,
+      linkedContentItemId: data.created_from_archive_to_content_item_id as string,
+    };
+  }
+  return { ok: true, brief: archiveRowToBrief(data as Record<string, unknown>) };
+}
+
+export async function buildBriefFromArchive(archiveItemId: string): Promise<GenerationBrief | null> {
+  const r = await loadArchiveForGeneration(archiveItemId);
+  return r.ok ? r.brief : null;
 }
 
 export interface PipelineOptions {
@@ -52,15 +71,45 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results: [], error: "Generation is not enabled. Set GENERATION_ENABLED=true and OPENAI_API_KEY." };
   }
 
-  const brief = await buildBriefFromArchive(archiveItemId);
-  if (!brief) {
-    return { contentItemId: null, results: [], error: `Archive item ${archiveItemId} not found` };
+  const loaded = await loadArchiveForGeneration(archiveItemId);
+  if (!loaded.ok) {
+    return {
+      contentItemId: loaded.linkedContentItemId,
+      results: [],
+      error: loaded.error,
+    };
   }
 
+  const brief = loaded.brief;
+  const routeKind = routeKindForContentType(brief.contentType);
   const cmsSettings = await getCmsSettings();
   const resolvedPrompts = resolveGenerationPrompts(cmsSettings);
-  const results = await generateAllLocales(brief, resolvedPrompts);
+
+  const contextByLocale: Record<string, GenerationContext> = {};
+  for (const loc of brief.targetLocales) {
+    const similarArticles = await fetchSimilarPublishedArticles(brief, loc, routeKind);
+    contextByLocale[loc] = { similarArticles };
+  }
+
   const sb = getServiceClient();
+
+  const isSlugTaken = async (locale: string, slug: string): Promise<boolean> => {
+    const s = slug.trim();
+    if (!s) return true;
+    const { data } = await sb
+      .from("content_localizations")
+      .select("id")
+      .eq("locale", locale)
+      .eq("route_kind", routeKind)
+      .eq("slug", s)
+      .limit(1);
+    return (data?.length ?? 0) > 0;
+  };
+
+  const results = await generateAllLocales(brief, resolvedPrompts, {
+    contextByLocale,
+    isSlugTaken,
+  });
 
   const successfulResults = results.filter((r) => r.content !== null);
   if (successfulResults.length === 0) {
@@ -83,10 +132,8 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results, error: `Publish prerequisites failed: ${msg}` };
   }
 
-  // Determine workflow status based on content type and autopilot mode
-  const initialStatus = options.autopilot ? "published" : (brief.contentType === "legal_update" ? "in_legal_review" : "drafting");
+  const initialStatus = options.autopilot ? "published" : brief.contentType === "legal_update" ? "in_legal_review" : "drafting";
 
-  // Create content_items row (author + CTA + tags satisfy publishLocalization)
   const { data: newItem, error: itemError } = await sb
     .from("content_items")
     .insert({
@@ -117,7 +164,6 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results, error: `Failed to attach tags for publish: ${tagErr.message}` };
   }
 
-  // Link archive item to new content item
   await sb
     .from("content_archive_items")
     .update({
@@ -127,16 +173,6 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     })
     .eq("id", archiveItemId);
 
-  // Map content_type → route_kind for public hub routing
-  const ROUTE_KIND_MAP: Record<string, string> = {
-    template: "templates",
-    case_study: "case-studies",
-    glossary_entry: "glossary",
-    faq_entry: "glossary",
-  };
-  const routeKind = ROUTE_KIND_MAP[brief.contentType] ?? "resources";
-
-  // Insert localizations for each successful result
   const localizationInserts = successfulResults
     .filter((r): r is GenerationResult & { content: NonNullable<GenerationResult["content"]> } => r.content !== null)
     .map((r) => ({
@@ -153,15 +189,12 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     }));
 
   if (localizationInserts.length > 0) {
-    const { error: locError } = await sb
-      .from("content_localizations")
-      .insert(localizationInserts);
+    const { error: locError } = await sb.from("content_localizations").insert(localizationInserts);
     if (locError) {
       console.error("[generation] Failed to insert localizations:", locError.message);
     }
   }
 
-  // Record revision for generation
   const totalTokens = results.reduce((sum, r) => sum + r.tokensUsed, 0);
   await sb.from("content_revisions").insert({
     content_item_id: contentItemId,
@@ -171,7 +204,6 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     tokens_used: totalTokens,
   });
 
-  // Update content_items with generation metadata
   await sb
     .from("content_items")
     .update({
@@ -180,12 +212,8 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     })
     .eq("id", contentItemId);
 
-  // Autopilot: enqueue all localizations for immediate publish
   if (options.autopilot && localizationInserts.length > 0) {
-    const { data: locs } = await sb
-      .from("content_localizations")
-      .select("id")
-      .eq("content_item_id", contentItemId);
+    const { data: locs } = await sb.from("content_localizations").select("id").eq("content_item_id", contentItemId);
 
     if (locs) {
       const now = new Date().toISOString();

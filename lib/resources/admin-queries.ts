@@ -253,6 +253,10 @@ export async function getContentForEditor(id: string) {
   if (itemRes.error) throw itemRes.error;
   if (!itemRes.data) return null;
 
+  if (locsRes.error) throw locsRes.error;
+  if (tagsRes.error) throw tagsRes.error;
+  if (revisionsRes.error) throw revisionsRes.error;
+
   return {
     item: itemRes.data,
     localizations: locsRes.data ?? [],

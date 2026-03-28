@@ -35,6 +35,7 @@ const nextConfig = {
           value: [
             "frame-ancestors 'none'",
             "default-src 'self'",
+            "frame-src 'self' https://vercel.live",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: https://*.supabase.co",

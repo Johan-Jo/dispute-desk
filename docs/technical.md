@@ -220,18 +220,22 @@ Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See *
 AI-powered pipeline that converts archive items into multilingual article drafts. Feature-flagged via `GENERATION_ENABLED` + `OPENAI_API_KEY`.
 
 **Generation Library** (`lib/resources/generation/`):
-- `prompts.ts` — Default system prompt, per-locale tone/style rules, content-type instructions, and `buildUserPrompt()`. `resolveGenerationPrompts(cmsSettings)` merges optional overrides from `cms_settings.settings_json` with those defaults (empty string = use built-in default for system prompt; per-locale / per-content-type overrides ignore empty strings).
-- `generate.ts` — OpenAI API integration (GPT-4o default, configurable). `generateForLocale()` calls model per locale; `generateAllLocales()` runs all in parallel. Returns `GenerationResult[]` with content, errors, and token counts.
-- `pipeline.ts` — Orchestrator: loads CMS settings → `buildBriefFromArchive()` reads archive item → `runGenerationPipeline()` generates all locales → creates `content_items` (status `drafting` or `in_legal_review`) + `content_localizations` + `content_revisions` row → links archive item back.
+- `prompts.ts` — Built-in **system prompt** (SEO, domain, originality) and **default user suffix** (anti-repetition). Per-locale tone lines and content-type lines. `buildUserPrompt(brief, locale, resolved, context)` injects **similar published articles** into the user message (titles, slugs, excerpts, headings, intro snippets). *Prompt-only “don’t repeat” rules are insufficient without this peer list.* `resolveGenerationPrompts(cmsSettings)` merges `cms_settings.settings_json`: non-empty `generationSystemPrompt` overrides the built-in system prompt; `generationUserPromptSuffix` overrides the built-in suffix **only if the key is present** in JSON (empty string = no extra suffix block). If the key is **omitted**, the built-in anti-repetition suffix applies. Per-locale / per-content-type maps still ignore empty override values.
+- `similarArticles.ts` — `fetchSimilarPublishedArticles(brief, locale, routeKind)` returns up to ~10 scored peers (published, same locale/route, heuristic match on type/pillar/keyword/title).
+- `similarity.ts` — Deterministic post-check: slug collision (DB or peer list), title Jaccard overlap, title+excerpt overlap. Failed check → **one** model retry with an explicit “too similar” instruction → second failure returns a clear error (no `content_items` insert).
+- `htmlSnippet.ts` — Extracts headings / intro snippet from `mainHtml` for the overlap block.
+- `contentRouteKind.ts` — `routeKindForContentType()` maps `content_type` → `content_localizations.route_kind` (slug scope + similar-article query).
+- `generate.ts` — OpenAI Chat Completions (`generateForLocale` per locale with `GenerationContext`; `generateAllLocales` runs locales in parallel with similarity guard + retry). Temperature: `0.3` for `legal_update`, else `0.4`.
+- `pipeline.ts` — `loadArchiveForGeneration()` / `runGenerationPipeline()`: **idempotency** — if `content_archive_items.created_from_archive_to_content_item_id` is already set, returns an error and the existing `content_item` id (no second draft). Loads CMS settings → fetches similar articles per target locale → generates → creates `content_items` + `content_localizations` + `content_revisions` → links archive row. `buildBriefFromArchive()` remains for callers that only need a brief (returns `null` if archive missing or already converted).
 
 **Admin-editable prompts** (stored in `cms_settings.settings_json`, edited at **Admin → Resources → Settings → AI generation prompts**):
-- `generationSystemPrompt` — Full system message (optional; if blank, built-in default from `prompts.ts` is used).
-- `generationUserPromptSuffix` — Appended to every generation user message before the final JSON instruction (e.g. stricter editorial rules, deduplication).
+- `generationSystemPrompt` — Full system message (optional; if blank, built-in default from `prompts.ts` is used). UI toggle shows the built-in text read-only when using defaults.
+- `generationUserPromptSuffix` — Appended under “Additional instructions” before the final JSON instruction. **Omit this key** in saved JSON (admin saves blank field without key) to use the built-in anti-repetition block; set to `""` explicitly to disable the extra block.
 - `generationLocaleInstructions` — Partial map of locale → style line; non-empty values override defaults.
 - `generationContentTypeInstructions` — Partial map of `content_type` → instruction line; non-empty values override defaults.
 
 **API Routes**:
-- `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled, 207 on partial success, 200 on full success.
+- `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled; **207** if `error` is set but `contentItemId` is present (e.g. archive already converted); 500 on hard failure; 200 on success.
 - `POST /api/admin/resources/cron/autopilot` — Manual run of the autopilot cron (admin session). Same behavior as `GET /api/cron/autopilot-generate` with `CRON_SECRET`.
 - `POST /api/admin/resources/cron/publish` — Manual run of the publish-queue cron (admin session). Same behavior as `GET /api/cron/publish-content` with `CRON_SECRET`.
 - `POST /api/admin/resources/ai-assist` — In-editor AI tools: `improve_readability`, `generate_meta`, `suggest_related`. Each calls OpenAI with task-specific system prompts.

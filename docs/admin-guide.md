@@ -247,12 +247,14 @@ If either `OPENAI_API_KEY` or `GENERATION_ENABLED=true` is missing, generation f
 1. Navigate to **Backlog** (`/admin/resources/backlog`).
 2. Find the archive item you want to generate content from.
 3. Click the **Generate** button (purple sparkle icon) on that row.
-4. Wait ~15-20 seconds. The system:
+4. Wait ~20–60 seconds (varies by model latency). The system:
    - Reads the archive item metadata (title, keyword, content type, pillar).
-   - Calls GPT-4o once per locale (6 calls in parallel).
+   - Loads **similar published articles** per locale and adds them to the prompt (to reduce duplicate titles/intros).
+   - Calls GPT-4o once per locale in parallel (up to **one extra call per locale** if output is too similar to existing content or slug collides — then either succeeds or returns an error).
+   - Skips creation if this archive item was **already converted** (linked `content_item` exists).
    - Creates a new `content_items` entry with status `drafting`.
-   - Inserts localized content for all 6 locales.
-   - Records a revision entry with token usage.
+   - Inserts localized content for successful locales.
+   - Records a revision entry with token usage (includes any retry calls).
 5. You're automatically redirected to the editor with the generated draft.
 
 ### What Gets Generated
@@ -320,9 +322,15 @@ The editor sidebar includes three AI-powered tools:
 
 ### Cost Awareness
 
-- Each article generation uses ~1,200-1,600 tokens per locale (~8,000-10,000 total for 6 locales).
-- Generation only happens on explicit "Generate" clicks — never automatically.
+- Each article generation typically uses roughly **1,200–2,500+ input+output tokens per locale** depending on prompt size (similar-articles context + long default suffix). **Similarity retries** can add up to **one extra full call per locale** when the first output is rejected.
+- Manual generation runs only when you click **Generate**. **Autopilot** (Settings + cron) can generate on a schedule when enabled.
 - Token usage is recorded per revision for cost tracking.
+
+### AI generation prompts (Settings)
+
+Under **Admin → Resources → Settings → AI generation prompts**:
+- **Use built-in system prompt** — When on, the shipped system prompt is shown read-only; the model uses it unless you override with custom text.
+- **Additional instructions** — Leave blank and save so the key is **omitted** from CMS JSON to apply the **built-in anti-repetition** block. If you save an **empty** field explicitly as empty string, that disables the extra block (advanced). Custom text always replaces the built-in suffix for that key.
 
 ### Troubleshooting
 
@@ -331,6 +339,8 @@ The editor sidebar includes three AI-powered tools:
 | "Generation not enabled" | Set `GENERATION_ENABLED=true` and `OPENAI_API_KEY` in `.env.local` |
 | "OpenAI API error 401" | Check that `OPENAI_API_KEY` is valid (starts with `sk-`) |
 | Partial locale failures | The system continues with successful locales. Check the response for error details per locale. |
+| "Similarity guard" / "too similar" / slug collision after retry | The model output was too close to existing published titles or reused a slug. Edit the archive brief (angle, keyword, notes) and generate again, or adjust **AI generation prompts** in Settings. |
+| "Already converted" | This backlog row already produced a `content_item`. Open the linked article from the content list instead of generating again. |
 | Generated content quality | Edit the generated draft manually. Use the AI Assistant to improve readability. Add source citations where the AI was too general. |
 
 ---

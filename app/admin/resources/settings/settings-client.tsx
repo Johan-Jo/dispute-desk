@@ -113,10 +113,17 @@ export function SettingsClient({ initial }: SettingsClientProps) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
+        const payload: Record<string, unknown> = { ...next };
+        if (
+          typeof next.generationUserPromptSuffix === "string" &&
+          !next.generationUserPromptSuffix.trim()
+        ) {
+          delete payload.generationUserPromptSuffix;
+        }
         const res = await fetch("/api/admin/resources/settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(next),
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           setSaved(true);
@@ -189,6 +196,24 @@ export function SettingsClient({ initial }: SettingsClientProps) {
   function insertBuiltinSystemPrompt() {
     setSettings((prev) => {
       const next = { ...prev, generationSystemPrompt: DEFAULT_SYSTEM_PROMPT };
+      autoSave(next);
+      return next;
+    });
+  }
+
+  const usesBuiltinSystemPrompt = settings.generationSystemPrompt.trim() === "";
+
+  function setUseBuiltinSystemPrompt(useBuiltin: boolean) {
+    if (useBuiltin) {
+      update("generationSystemPrompt", "");
+      return;
+    }
+    setSettings((prev) => {
+      const next: Settings = {
+        ...prev,
+        generationSystemPrompt:
+          prev.generationSystemPrompt.trim() === "" ? DEFAULT_SYSTEM_PROMPT : prev.generationSystemPrompt,
+      };
       autoSave(next);
       return next;
     });
@@ -456,29 +481,50 @@ export function SettingsClient({ initial }: SettingsClientProps) {
             </button>
           </div>
           <p className="text-sm text-[#64748B] mb-5">
-            Overrides are stored with other CMS settings. Leave the system prompt empty to use the built-in
-            default from the codebase. Use “Additional instructions” for strict editorial rules (e.g. avoid
+            Overrides are stored with other CMS settings. Use the toggle to preview the built-in system prompt
+            or switch to a custom one. Use “Additional instructions” for strict editorial rules (e.g. avoid
             duplicate openings across articles).
           </p>
           <div className="space-y-6">
             <div>
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                <label className="block text-sm font-medium text-[#0B1220]">System prompt</label>
-                <button
-                  type="button"
-                  onClick={insertBuiltinSystemPrompt}
-                  className="text-xs font-medium text-[#1D4ED8] hover:underline"
-                >
-                  Insert built-in default (for editing)
-                </button>
-              </div>
-              <textarea
-                value={settings.generationSystemPrompt}
-                onChange={(e) => update("generationSystemPrompt", e.target.value)}
-                placeholder="Leave empty to use the built-in DisputeDesk system prompt…"
-                rows={10}
-                className="w-full px-3 py-2 text-xs font-mono border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+              <Toggle
+                label="Use built-in system prompt"
+                description="On: same text the app ships with (read-only below). Off: edit and save your own system message."
+                checked={usesBuiltinSystemPrompt}
+                onChange={setUseBuiltinSystemPrompt}
               />
+              <div className="mt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <label className="block text-sm font-medium text-[#0B1220]">
+                    {usesBuiltinSystemPrompt ? "Built-in system prompt (what the model receives)" : "Custom system prompt"}
+                  </label>
+                  {!usesBuiltinSystemPrompt ? (
+                    <button
+                      type="button"
+                      onClick={insertBuiltinSystemPrompt}
+                      className="text-xs font-medium text-[#1D4ED8] hover:underline"
+                    >
+                      Replace with built-in default
+                    </button>
+                  ) : null}
+                </div>
+                {usesBuiltinSystemPrompt ? (
+                  <pre
+                    className="w-full max-h-[min(28rem,55vh)] overflow-auto px-3 py-2 text-xs font-mono whitespace-pre-wrap break-words border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] text-[#334155]"
+                    tabIndex={0}
+                  >
+                    {DEFAULT_SYSTEM_PROMPT}
+                  </pre>
+                ) : (
+                  <textarea
+                    value={settings.generationSystemPrompt}
+                    onChange={(e) => update("generationSystemPrompt", e.target.value)}
+                    placeholder="System prompt sent as the model’s system role…"
+                    rows={10}
+                    className="w-full px-3 py-2 text-xs font-mono border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                  />
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-[#0B1220] mb-1">

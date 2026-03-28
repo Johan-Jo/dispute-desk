@@ -1,66 +1,65 @@
-import { describe, expect, it } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
-  inferResourceHubPillarFromText,
+  isResourceHubPillar,
   normalizeResourceHubPillar,
+  inferResourceHubPillarFromText,
   resolvePrimaryPillarForGeneration,
-} from "../pillars";
+} from "@/lib/resources/pillars";
+
+describe("isResourceHubPillar", () => {
+  it("accepts canonical slugs", () => {
+    expect(isResourceHubPillar("chargebacks")).toBe(true);
+    expect(isResourceHubPillar("dispute-resolution")).toBe(true);
+  });
+
+  it("rejects unknown values", () => {
+    expect(isResourceHubPillar("unknown")).toBe(false);
+  });
+});
 
 describe("normalizeResourceHubPillar", () => {
-  it("accepts canonical slugs", () => {
-    expect(normalizeResourceHubPillar("chargebacks")).toBe("chargebacks");
-    expect(normalizeResourceHubPillar("dispute-resolution")).toBe("dispute-resolution");
-  });
-
-  it("trims and lowercases", () => {
-    expect(normalizeResourceHubPillar("  Chargebacks  ")).toBe("chargebacks");
-  });
-
-  it("maps common aliases", () => {
+  it("maps aliases to canonical pillars", () => {
     expect(normalizeResourceHubPillar("chargeback")).toBe("chargebacks");
-    expect(normalizeResourceHubPillar("mediation")).toBe("mediation-arbitration");
+    expect(normalizeResourceHubPillar("  CHARGEBACKS  ")).toBe("chargebacks");
   });
 
-  it("returns null for garbage", () => {
-    expect(normalizeResourceHubPillar("not-a-pillar")).toBeNull();
-    expect(normalizeResourceHubPillar("")).toBeNull();
+  it("returns null for unmapped input", () => {
+    expect(normalizeResourceHubPillar("")).toBe(null);
+    expect(normalizeResourceHubPillar(null)).toBe(null);
   });
 });
 
 describe("inferResourceHubPillarFromText", () => {
-  it("infers chargebacks from chargeback vocabulary", () => {
-    expect(
-      inferResourceHubPillarFromText("Complete Guide to Chargeback Response Time")
-    ).toBe("chargebacks");
+  it("infers chargebacks from keywords", () => {
+    expect(inferResourceHubPillarFromText("Card network chargeback rules")).toBe("chargebacks");
+  });
+
+  it("returns null when no rule matches", () => {
+    expect(inferResourceHubPillarFromText("hello world")).toBe(null);
   });
 });
 
 describe("resolvePrimaryPillarForGeneration", () => {
-  it("uses normalized archive pillar when valid", () => {
-    expect(
-      resolvePrimaryPillarForGeneration({
-        primaryPillar: "chargebacks",
-        proposedTitle: "x",
-      })
-    ).toBe("chargebacks");
+  it("returns normalized pillar when primaryPillar is valid", () => {
+    const p = resolvePrimaryPillarForGeneration({
+      primaryPillar: "chargebacks",
+    });
+    expect(p).toBe("chargebacks");
   });
 
-  it("infers when archive value is invalid but text matches", () => {
-    expect(
-      resolvePrimaryPillarForGeneration({
-        primaryPillar: "typo-pillar",
-        proposedTitle: "Chargeback deadlines and issuer rules",
-        targetKeyword: "chargeback",
-      })
-    ).toBe("chargebacks");
+  it("infers from title when primaryPillar is invalid", () => {
+    const p = resolvePrimaryPillarForGeneration({
+      primaryPillar: "garbage",
+      proposedTitle: "Understanding chargeback representment",
+    });
+    expect(p).toBe("chargebacks");
   });
 
   it("defaults to chargebacks when nothing matches", () => {
-    expect(
-      resolvePrimaryPillarForGeneration({
-        primaryPillar: "???",
-        proposedTitle: "zzz",
-        targetKeyword: "zzz",
-      })
-    ).toBe("chargebacks");
+    const p = resolvePrimaryPillarForGeneration({
+      primaryPillar: "garbage",
+      proposedTitle: "xyz",
+    });
+    expect(p).toBe("chargebacks");
   });
 });
