@@ -164,7 +164,7 @@ export default async function ResourceArticlePage({ params }: Props) {
   return (
     <div className="min-h-screen bg-[#F6F8FB]">
       <MarketingSiteHeader />
-      <ArticleStickyBar slug={slug} />
+      <ArticleStickyBar />
 
       <script
         type="application/ld+json"

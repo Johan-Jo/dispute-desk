@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Bookmark, Share2 } from "lucide-react";
+import { ArrowLeft, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { useSavedArticles } from "@/lib/resources/useSavedArticles";
 
-type Props = { slug: string };
-
-export function ArticleStickyBar({ slug }: Props) {
+export function ArticleStickyBar() {
   const t = useTranslations("resources");
-  const { isSaved, toggle } = useSavedArticles();
-  const saved = isSaved(slug);
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -20,11 +15,6 @@ export function ArticleStickyBar({ slug }: Props) {
     const id = setTimeout(() => setToast(null), 2500);
     return () => clearTimeout(id);
   }, [toast]);
-
-  function handleSave() {
-    const nowSaved = toggle(slug);
-    setToast(nowSaved ? t("articleSaved") : t("articleUnsaved"));
-  }
 
   async function handleShare() {
     const url = window.location.href;
@@ -56,21 +46,6 @@ export function ArticleStickyBar({ slug }: Props) {
           </Link>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              className={`hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                saved
-                  ? "text-[#1D4ED8] bg-[#EFF6FF] hover:bg-[#DBEAFE]"
-                  : "text-[#64748B] hover:text-[#0B1220] hover:bg-[#F1F5F9]"
-              }`}
-            >
-              <Bookmark
-                className="w-4 h-4"
-                fill={saved ? "currentColor" : "none"}
-              />
-              {saved ? t("saved") : t("save")}
-            </button>
             <button
               type="button"
               onClick={handleShare}

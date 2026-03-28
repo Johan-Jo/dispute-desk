@@ -12,6 +12,10 @@ The full **Admin Guide** lives at **`/admin/help`** (also linked from the Resour
 
 **Autopilot:** Configure under **Settings** → **AI Autopilot** (master toggle, articles per day, notification email) and **Workflow** → **Default CTA** (must match a `content_ctas` row, e.g. Free Trial → `free_trial`). Production also needs `CRON_SECRET` on Vercel and `RESEND_API_KEY` for email. See *Autopilot Mode* in the Admin Guide for prerequisites, schedule (08:00 / 09:00 UTC), and manual cron tests.
 
+## Public article pages (readers)
+
+Published items appear on the marketing site (for example `/resources/{pillar}/{slug}` and locale-prefixed paths such as `/sv/resources/...`). The sticky bar on each article has **Back to resources** and **Share** (native share where available, otherwise copy link). There is no DisputeDesk “saved articles” library or account-backed reading list for visitors; keeping a link is via the browser, **Share**, or bookmarks outside the app.
+
 ## Admin Screens
 
 | Screen | Path | Purpose |
