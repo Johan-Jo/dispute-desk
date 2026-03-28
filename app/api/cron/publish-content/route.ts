@@ -60,32 +60,35 @@ async function runPublish(req: NextRequest) {
       try {
         const { data: loc } = await sb
           .from("content_localizations")
-          .select("title, slug, locale, content_item_id")
+          .select("title, slug, locale, route_kind, content_item_id")
           .eq("id", row.content_localization_id)
           .maybeSingle();
 
         if (loc) {
+          const routeKind = loc.route_kind ?? "resources";
+
+          const { data: contentItem } = await sb
+            .from("content_items")
+            .select("generated_at, primary_pillar")
+            .eq("id", loc.content_item_id)
+            .maybeSingle();
+          const pillar = contentItem?.primary_pillar ?? "";
+
           // SEO notification (IndexNow + Google sitemap ping)
           if (loc.slug) {
-            notifySearchEngines(loc.slug, loc.locale).catch(() => {});
+            notifySearchEngines(loc.slug, loc.locale, routeKind, pillar).catch(() => {});
           }
 
           // Email notification for AI-generated content
-          if (notifyEmail && loc.title) {
-            const { data: item } = await sb
-              .from("content_items")
-              .select("generated_at")
-              .eq("id", loc.content_item_id)
-              .maybeSingle();
-
-            if (item?.generated_at) {
-              sendPublishNotification({
-                to: notifyEmail,
-                articleTitle: loc.title,
-                articleSlug: loc.slug ?? loc.content_item_id,
-                locale: loc.locale,
-              }).catch(() => {});
-            }
+          if (notifyEmail && loc.title && contentItem?.generated_at) {
+            sendPublishNotification({
+              to: notifyEmail,
+              articleTitle: loc.title,
+              articleSlug: loc.slug ?? loc.content_item_id,
+              routeKind,
+              pillar,
+              locale: loc.locale,
+            }).catch(() => {});
           }
         }
       } catch {

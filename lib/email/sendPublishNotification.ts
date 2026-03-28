@@ -22,6 +22,8 @@ export interface PublishNotificationOptions {
   to: string;
   articleTitle: string;
   articleSlug: string;
+  routeKind: string;
+  pillar: string;
   locale: string;
 }
 
@@ -34,7 +36,9 @@ export async function sendPublishNotification(
   }
 
   const baseUrl = getBaseUrl();
-  const articleUrl = `${baseUrl}/resources/${options.articleSlug}`;
+  const routeBase = options.routeKind || "resources";
+  const pillarSegment = routeBase === "resources" && options.pillar ? `/${options.pillar}` : "";
+  const articleUrl = `${baseUrl}/${routeBase}${pillarSegment}/${options.articleSlug}`;
 
   const subject = `New article published: ${options.articleTitle}`;
 

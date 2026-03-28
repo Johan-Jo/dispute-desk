@@ -16,9 +16,15 @@ const LOCALE_PREFIXES: Record<string, string> = {
   "sv-SE": "/sv",
 };
 
-function buildArticleUrl(slug: string, locale: string): string {
+function buildArticleUrl(
+  slug: string,
+  locale: string,
+  routeKind = "resources",
+  pillar = ""
+): string {
   const prefix = LOCALE_PREFIXES[locale] ?? "";
-  return `${BASE_URL}${prefix}/resources/${slug}`;
+  const pillarSegment = routeKind === "resources" && pillar ? `/${pillar}` : "";
+  return `${BASE_URL}${prefix}/${routeKind}${pillarSegment}/${slug}`;
 }
 
 async function pingIndexNow(url: string): Promise<void> {
@@ -56,8 +62,13 @@ async function pingGoogleSitemap(): Promise<void> {
  * Notify search engines about a newly published article.
  * Non-blocking — failures are logged but don't propagate.
  */
-export async function notifySearchEngines(slug: string, locale: string = "en-US"): Promise<void> {
-  const url = buildArticleUrl(slug, locale);
+export async function notifySearchEngines(
+  slug: string,
+  locale: string = "en-US",
+  routeKind = "resources",
+  pillar = ""
+): Promise<void> {
+  const url = buildArticleUrl(slug, locale, routeKind, pillar);
 
   await Promise.allSettled([
     pingIndexNow(url),
