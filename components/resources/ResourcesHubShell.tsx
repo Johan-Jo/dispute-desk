@@ -11,6 +11,7 @@ import { pathLocaleToMessages } from "@/lib/i18n/pathLocales";
 import type { ContentLocalizationRow, ContentItemRow } from "@/lib/resources/queries";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { contentTypeBadgeClass } from "@/components/resources/resourcesHubStyles";
+import { ResourcesFilterBar } from "@/components/resources/ResourcesFilterBar";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 type Row = ContentLocalizationRow & { content_items: ContentItemRow };
@@ -30,13 +31,19 @@ const BROWSE_PILLARS = [
   "dispute-management-software",
 ] as const;
 
-const TYPE_FILTER_PARAMS = [
-  "",
-  "cluster_article",
-  "template",
-  "case_study",
-  "legal_update",
-  "pillar_page",
+const FILTER_LABEL_KEYS = [
+  "typeAll",
+  "types.cluster_article",
+  "types.template",
+  "types.case_study",
+  "types.legal_update",
+  "types.pillar_page",
+  "types.checklist",
+  "types.glossary_entry",
+  "types.faq_entry",
+  "moreFilters",
+  "clearFilters",
+  "additionalTypes",
 ] as const;
 
 /** Same width + horizontal padding as MarketingSiteHeader so hero and body align with the logo. */
@@ -86,6 +93,11 @@ export async function ResourcesHubShell({
   const isFiltered = !!(pillar || contentType || search);
   const featured = !isFiltered && rows.length > 0 ? rows[0] : null;
   const gridRows = featured ? rows.slice(1) : rows;
+
+  const filterLabels: Record<string, string> = {};
+  for (const key of FILTER_LABEL_KEYS) {
+    filterLabels[key] = t(key as never);
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -210,42 +222,16 @@ export async function ResourcesHubShell({
           </div>
         </div>
 
-        {/* Type filters */}
-        <div className="bg-white rounded-lg border border-[#E1E3E5] p-4 mb-8">
-          <div className="flex flex-wrap gap-2 items-center">
-            {TYPE_FILTER_PARAMS.map((param) => {
-              const active = param === "" ? !contentType : contentType === param;
-              const href = buildHref(base, {
-                q: search,
-                pillar,
-                type: param === "" ? undefined : param,
-              });
-              const label =
-                param === "" ? t("typeAll") : t(`types.${param}` as never);
-              return (
-                <Link
-                  key={param || "all"}
-                  href={href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    active
-                      ? "bg-[#0B1220] text-white"
-                      : "bg-[#F6F8FB] text-[#0B1220] hover:bg-[#E1E3E5]"
-                  }`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-            {isFiltered && (
-              <Link
-                href={`${base}/resources`}
-                className="text-sm text-[#667085] hover:text-[#0B1220] font-medium ml-2"
-              >
-                {t("clearFilters")}
-              </Link>
-            )}
-          </div>
-        </div>
+        {/* Type filters — Figma filter bar with icons, More Filters toggle, language picker */}
+        <ResourcesFilterBar
+          base={base}
+          pathLocale={pathLocale}
+          pillar={pillar}
+          contentType={contentType}
+          search={search}
+          isFiltered={isFiltered}
+          labels={filterLabels}
+        />
 
         <p className="text-sm text-[#667085] mb-6">
           {t("resultsCount", { count: rows.length })}

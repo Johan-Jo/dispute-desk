@@ -2056,6 +2056,8 @@
     "emptyTitle": "Nenhum recurso encontrado",
     "emptyHint": "Ajuste os filtros ou a busca.",
     "clearFilters": "Limpar filtros",
+    "moreFilters": "Mais filtros",
+    "additionalTypes": "Tipos adicionais:",
     "ctaDemoTitle": "Precisa de ajuda com uma disputa?",
     "ctaDemoBody": "Conecte sua loja Shopify e use o DisputeDesk para pacotes de evidências e disputas em um só lugar.",
     "ctaDemoButton": "Começar",
@@ -2083,7 +2085,8 @@
       "case_study": "Estudo de caso",
       "legal_update": "Atualização de políticas",
       "glossary_entry": "Glossário",
-      "faq_entry": "FAQ"
+      "faq_entry": "FAQ",
+      "checklist": "Checklist"
     },
     "topicBlurbs": {
       "chargebacks": "Evidências, prazos e estratégias.",

@@ -2040,6 +2040,8 @@
     "emptyTitle": "Inga resurser hittades",
     "emptyHint": "Justera filter eller sökning.",
     "clearFilters": "Rensa filter",
+    "moreFilters": "Fler filter",
+    "additionalTypes": "Ytterligare typer:",
     "ctaDemoTitle": "Behöver du hjälp med ett ärende?",
     "ctaDemoBody": "Anslut din Shopify-butik och använd DisputeDesk för bevispaket och tvister på ett ställe.",
     "ctaDemoButton": "Kom igång",
@@ -2067,7 +2069,8 @@
       "case_study": "Fallstudie",
       "legal_update": "Policyuppdatering",
       "glossary_entry": "Ordlista",
-      "faq_entry": "FAQ"
+      "faq_entry": "FAQ",
+      "checklist": "Checklista"
     },
     "topicBlurbs": {
       "chargebacks": "Bevis, tidslinjer och strategier.",

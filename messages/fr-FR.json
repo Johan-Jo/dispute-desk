@@ -2038,7 +2038,9 @@
     "resultsCount": "{count, plural, one {Affichage de # ressource} other {Affichage de # ressources}}",
     "emptyTitle": "Aucune ressource trouvée",
     "emptyHint": "Modifiez les filtres ou la recherche.",
-    "clearFilters": "Réinitialiser les filtres",
+    "clearFilters": "R\u00e9initialiser les filtres",
+    "moreFilters": "Plus de filtres",
+    "additionalTypes": "Types suppl\u00e9mentaires :",
     "ctaDemoTitle": "Besoin d’aide sur un litige ?",
     "ctaDemoBody": "Connectez votre boutique Shopify et centralisez preuves et litiges avec DisputeDesk.",
     "ctaDemoButton": "Commencer",
@@ -2066,7 +2068,8 @@
       "case_study": "Étude de cas",
       "legal_update": "Mise à jour des politiques",
       "glossary_entry": "Glossaire",
-      "faq_entry": "FAQ"
+      "faq_entry": "FAQ",
+      "checklist": "Checklist"
     },
     "topicBlurbs": {
       "chargebacks": "Preuves, délais et stratégies.",

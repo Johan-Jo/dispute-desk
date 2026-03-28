@@ -2064,6 +2064,8 @@
     "emptyTitle": "No resources found",
     "emptyHint": "Try adjusting filters or your search query.",
     "clearFilters": "Clear filters",
+    "moreFilters": "More Filters",
+    "additionalTypes": "Additional types:",
     "ctaDemoTitle": "Need help with a specific dispute?",
     "ctaDemoBody": "Connect your Shopify store and use DisputeDesk to build evidence packs and manage disputes in one place.",
     "ctaDemoButton": "Get started",
@@ -2098,7 +2100,8 @@
       "case_study": "Case study",
       "legal_update": "Policy update",
       "glossary_entry": "Glossary",
-      "faq_entry": "FAQ"
+      "faq_entry": "FAQ",
+      "checklist": "Checklist"
     },
     "topicBlurbs": {
       "chargebacks": "Evidence, timelines, and response strategies.",

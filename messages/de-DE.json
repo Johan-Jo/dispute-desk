@@ -2038,7 +2038,9 @@
     "resultsCount": "{count, plural, one {Zeige # Ressource} other {Zeige # Ressourcen}}",
     "emptyTitle": "Keine Ressourcen gefunden",
     "emptyHint": "Filter oder Suchbegriff anpassen.",
-    "clearFilters": "Filter zurücksetzen",
+    "clearFilters": "Filter zur\u00fccksetzen",
+    "moreFilters": "Mehr Filter",
+    "additionalTypes": "Weitere Typen:",
     "ctaDemoTitle": "Hilfe bei einem konkreten Fall?",
     "ctaDemoBody": "Verbinde deinen Shopify-Shop und nutze DisputeDesk für Evidenzen und Dispute-Management an einem Ort.",
     "ctaDemoButton": "Loslegen",
@@ -2073,7 +2075,8 @@
       "case_study": "Fallstudie",
       "legal_update": "Policy-Update",
       "glossary_entry": "Glossar",
-      "faq_entry": "FAQ"
+      "faq_entry": "FAQ",
+      "checklist": "Checkliste"
     },
     "topicBlurbs": {
       "chargebacks": "Evidenz, Fristen und Antwortstrategien.",
