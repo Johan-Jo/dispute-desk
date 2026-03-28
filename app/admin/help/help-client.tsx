@@ -225,22 +225,24 @@ export function HelpClient() {
 
           {/* AUTOPILOT */}
           <Section id="autopilot" title="Autopilot Mode">
-            <P>Autopilot generates and publishes articles automatically without manual approval. Configure in <Strong>Settings</Strong>.</P>
+            <P>Autopilot generates and publishes articles automatically without manual approval. Configure in <Strong>Settings</Strong> (AI Autopilot + Workflow Default CTA).</P>
+            <P className="text-sm text-[#64748B]">Production needs <Code>CRON_SECRET</Code> on Vercel, <Code>GENERATION_ENABLED</Code> + <Code>OPENAI_API_KEY</Code>, and <Code>RESEND_API_KEY</Code> for the notification email. Default CTA (e.g. Free Trial) must match a <Code>content_ctas</Code> row (<Code>event_name</Code>).</P>
             <Table headers={["Setting", "Description"]} rows={[
-              ["Enable autopilot", "Master toggle — when on, the cron job runs daily at 08:00 UTC"],
+              ["Enable autopilot", "Master toggle — when on, generation cron runs daily at 08:00 UTC"],
               ["Articles per day", "How many articles to generate daily (after initial burst)"],
-              ["Notification email", "Receive an email with the article link after each publish"],
+              ["Notification email", "Receive an email with the article link after each successful publish"],
+              ["Default CTA", "Links generated items to a CTA preset (e.g. free_trial)"],
             ]} />
             <H3>5-day initial burst</H3>
             <P>When first enabled, autopilot publishes 1 article per day for 5 consecutive days. After the burst completes, it continues at the configured rate.</P>
             <H3>How it works</H3>
             <Ol items={[
-              "Daily cron picks the highest-priority backlog item.",
-              "AI generates content for all 6 locales.",
-              "Content is created with 'published' status (bypasses review).",
+              "Generation cron (08:00 UTC) picks the highest-priority backlog item.",
+              "AI generates content for configured locales; author, CTA, and tags are set for publish validation.",
+              "Content is created with 'published' workflow status (bypasses review).",
               "All localizations are enqueued in the publish queue.",
-              "The publish cron processes them within 15 minutes.",
-              "Email notification sent with article link.",
+              "Publish cron (09:00 UTC) processes the queue and sets articles live.",
+              "Email notification sent with article link (Resend).",
               "Search engines notified via IndexNow + Google sitemap ping.",
             ]} />
             <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-xl px-4 py-3 mt-3">
