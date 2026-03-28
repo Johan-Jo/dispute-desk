@@ -4,9 +4,11 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { getCmsSettings } from "@/lib/resources/admin-queries";
 import { resolvePrimaryPillarForGeneration } from "@/lib/resources/pillars";
 import { ensurePublishPrerequisites } from "./publishPrerequisites";
 import { generateAllLocales, isGenerationEnabled } from "./generate";
+import { resolveGenerationPrompts } from "./prompts";
 import type { GenerationBrief } from "./prompts";
 import type { GenerationResult } from "./generate";
 
@@ -55,7 +57,9 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results: [], error: `Archive item ${archiveItemId} not found` };
   }
 
-  const results = await generateAllLocales(brief);
+  const cmsSettings = await getCmsSettings();
+  const resolvedPrompts = resolveGenerationPrompts(cmsSettings);
+  const results = await generateAllLocales(brief, resolvedPrompts);
   const sb = getServiceClient();
 
   const successfulResults = results.filter((r) => r.content !== null);

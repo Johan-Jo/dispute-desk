@@ -220,9 +220,15 @@ Phase codes **CH-1 through CH-7** are the Content Hub track (not EPIC P0). See *
 AI-powered pipeline that converts archive items into multilingual article drafts. Feature-flagged via `GENERATION_ENABLED` + `OPENAI_API_KEY`.
 
 **Generation Library** (`lib/resources/generation/`):
-- `prompts.ts` — System prompt, per-locale tone/style rules, content-type instructions, user prompt builder.
+- `prompts.ts` — Default system prompt, per-locale tone/style rules, content-type instructions, and `buildUserPrompt()`. `resolveGenerationPrompts(cmsSettings)` merges optional overrides from `cms_settings.settings_json` with those defaults (empty string = use built-in default for system prompt; per-locale / per-content-type overrides ignore empty strings).
 - `generate.ts` — OpenAI API integration (GPT-4o default, configurable). `generateForLocale()` calls model per locale; `generateAllLocales()` runs all in parallel. Returns `GenerationResult[]` with content, errors, and token counts.
-- `pipeline.ts` — Orchestrator: `buildBriefFromArchive()` reads archive item → `runGenerationPipeline()` generates all locales → creates `content_items` (status `drafting` or `in_legal_review`) + `content_localizations` + `content_revisions` row → links archive item back.
+- `pipeline.ts` — Orchestrator: loads CMS settings → `buildBriefFromArchive()` reads archive item → `runGenerationPipeline()` generates all locales → creates `content_items` (status `drafting` or `in_legal_review`) + `content_localizations` + `content_revisions` row → links archive item back.
+
+**Admin-editable prompts** (stored in `cms_settings.settings_json`, edited at **Admin → Resources → Settings → AI generation prompts**):
+- `generationSystemPrompt` — Full system message (optional; if blank, built-in default from `prompts.ts` is used).
+- `generationUserPromptSuffix` — Appended to every generation user message before the final JSON instruction (e.g. stricter editorial rules, deduplication).
+- `generationLocaleInstructions` — Partial map of locale → style line; non-empty values override defaults.
+- `generationContentTypeInstructions` — Partial map of `content_type` → instruction line; non-empty values override defaults.
 
 **API Routes**:
 - `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled, 207 on partial success, 200 on full success.

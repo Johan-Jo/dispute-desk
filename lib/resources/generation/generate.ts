@@ -2,8 +2,8 @@
  * Core generation engine — calls OpenAI to produce article body_json per locale.
  */
 
-import { SYSTEM_PROMPT, buildUserPrompt } from "./prompts";
-import type { GenerationBrief } from "./prompts";
+import { buildUserPrompt } from "./prompts";
+import type { GenerationBrief, ResolvedGenerationPrompts } from "./prompts";
 
 const MODEL = process.env.GENERATION_MODEL ?? "gpt-4o";
 
@@ -34,14 +34,15 @@ export function isGenerationEnabled(): boolean {
 
 export async function generateForLocale(
   brief: GenerationBrief,
-  locale: string
+  locale: string,
+  resolvedPrompts: ResolvedGenerationPrompts
 ): Promise<GenerationResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return { locale, content: null, error: "OPENAI_API_KEY not configured", tokensUsed: 0 };
   }
 
-  const userPrompt = buildUserPrompt(brief, locale);
+  const userPrompt = buildUserPrompt(brief, locale, resolvedPrompts);
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -53,7 +54,7 @@ export async function generateForLocale(
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: resolvedPrompts.systemPrompt },
           { role: "user", content: userPrompt },
         ],
         temperature: brief.contentType === "legal_update" ? 0.3 : 0.4,
@@ -93,10 +94,11 @@ export async function generateForLocale(
 }
 
 export async function generateAllLocales(
-  brief: GenerationBrief
+  brief: GenerationBrief,
+  resolvedPrompts: ResolvedGenerationPrompts
 ): Promise<GenerationResult[]> {
   const results = await Promise.allSettled(
-    brief.targetLocales.map((locale) => generateForLocale(brief, locale))
+    brief.targetLocales.map((locale) => generateForLocale(brief, locale, resolvedPrompts))
   );
 
   return results.map((r) =>

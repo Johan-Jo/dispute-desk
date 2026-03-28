@@ -4,6 +4,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Info, GripVertical, Sparkles, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
 import { ADMIN_LOCALES } from "@/lib/resources/workflow";
+import {
+  DEFAULT_CONTENT_TYPE_INSTRUCTIONS,
+  DEFAULT_LOCALE_INSTRUCTIONS,
+  DEFAULT_SYSTEM_PROMPT,
+} from "@/lib/resources/generation/prompts";
 
 interface SettingsClientProps {
   initial: Record<string, unknown>;
@@ -24,6 +29,12 @@ interface Settings {
   autopilotArticlesPerDay: number;
   autopilotNotifyEmail: string;
   autopilotStartedAt: string | null;
+  /** Empty string = server uses built-in default system prompt */
+  generationSystemPrompt: string;
+  /** Appended to every generation user message (stringent / policy directions) */
+  generationUserPromptSuffix: string;
+  generationLocaleInstructions: Record<string, string>;
+  generationContentTypeInstructions: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -41,10 +52,46 @@ const DEFAULT_SETTINGS: Settings = {
   autopilotArticlesPerDay: 1,
   autopilotNotifyEmail: "oi@johan.com.br",
   autopilotStartedAt: null,
+  generationSystemPrompt: "",
+  generationUserPromptSuffix: "",
+  generationLocaleInstructions: { ...DEFAULT_LOCALE_INSTRUCTIONS },
+  generationContentTypeInstructions: { ...DEFAULT_CONTENT_TYPE_INSTRUCTIONS },
 };
 
+const CONTENT_TYPE_PROMPT_KEYS = [
+  { key: "cluster_article", label: "Cluster article" },
+  { key: "pillar_page", label: "Pillar page" },
+  { key: "template", label: "Template" },
+  { key: "legal_update", label: "Legal update" },
+  { key: "glossary_entry", label: "Glossary entry" },
+  { key: "faq_entry", label: "FAQ entry" },
+] as const;
+
 function mergeSettings(raw: Record<string, unknown>): Settings {
-  return { ...DEFAULT_SETTINGS, ...raw } as Settings;
+  const genLoc = {
+    ...DEFAULT_LOCALE_INSTRUCTIONS,
+    ...(typeof raw.generationLocaleInstructions === "object" && raw.generationLocaleInstructions !== null
+      ? (raw.generationLocaleInstructions as Record<string, string>)
+      : {}),
+  };
+  const genCt = {
+    ...DEFAULT_CONTENT_TYPE_INSTRUCTIONS,
+    ...(typeof raw.generationContentTypeInstructions === "object" && raw.generationContentTypeInstructions !== null
+      ? (raw.generationContentTypeInstructions as Record<string, string>)
+      : {}),
+  };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...raw,
+    generationLocaleInstructions: genLoc,
+    generationContentTypeInstructions: genCt,
+    generationSystemPrompt:
+      typeof raw.generationSystemPrompt === "string" ? raw.generationSystemPrompt : DEFAULT_SETTINGS.generationSystemPrompt,
+    generationUserPromptSuffix:
+      typeof raw.generationUserPromptSuffix === "string"
+        ? raw.generationUserPromptSuffix
+        : DEFAULT_SETTINGS.generationUserPromptSuffix,
+  } as Settings;
 }
 
 const CTA_OPTIONS = [
@@ -101,6 +148,50 @@ export function SettingsClient({ initial }: SettingsClientProps) {
     const next = [...settings.localePriority];
     [next[index], next[to]] = [next[to], next[index]];
     update("localePriority", next);
+  }
+
+  function updateLocaleInstr(locale: string, value: string) {
+    setSettings((prev) => {
+      const next: Settings = {
+        ...prev,
+        generationLocaleInstructions: { ...prev.generationLocaleInstructions, [locale]: value },
+      };
+      autoSave(next);
+      return next;
+    });
+  }
+
+  function updateContentTypeInstr(key: string, value: string) {
+    setSettings((prev) => {
+      const next: Settings = {
+        ...prev,
+        generationContentTypeInstructions: { ...prev.generationContentTypeInstructions, [key]: value },
+      };
+      autoSave(next);
+      return next;
+    });
+  }
+
+  function resetGenerationPrompts() {
+    setSettings((prev) => {
+      const next: Settings = {
+        ...prev,
+        generationSystemPrompt: "",
+        generationUserPromptSuffix: "",
+        generationLocaleInstructions: { ...DEFAULT_LOCALE_INSTRUCTIONS },
+        generationContentTypeInstructions: { ...DEFAULT_CONTENT_TYPE_INSTRUCTIONS },
+      };
+      autoSave(next);
+      return next;
+    });
+  }
+
+  function insertBuiltinSystemPrompt() {
+    setSettings((prev) => {
+      const next = { ...prev, generationSystemPrompt: DEFAULT_SYSTEM_PROMPT };
+      autoSave(next);
+      return next;
+    });
   }
 
   async function runCron(kind: "autopilot" | "publish") {
@@ -346,6 +437,103 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 </div>
               </>
             )}
+          </div>
+        </section>
+
+        {/* AI generation prompts (OpenAI) */}
+        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#0EA5E9]" />
+              <h2 className="text-lg font-semibold text-[#0B1220]">AI generation prompts</h2>
+            </div>
+            <button
+              type="button"
+              onClick={resetGenerationPrompts}
+              className="text-sm font-medium text-[#64748B] hover:text-[#0B1220] underline"
+            >
+              Reset prompts to defaults
+            </button>
+          </div>
+          <p className="text-sm text-[#64748B] mb-5">
+            Overrides are stored with other CMS settings. Leave the system prompt empty to use the built-in
+            default from the codebase. Use “Additional instructions” for strict editorial rules (e.g. avoid
+            duplicate openings across articles).
+          </p>
+          <div className="space-y-6">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                <label className="block text-sm font-medium text-[#0B1220]">System prompt</label>
+                <button
+                  type="button"
+                  onClick={insertBuiltinSystemPrompt}
+                  className="text-xs font-medium text-[#1D4ED8] hover:underline"
+                >
+                  Insert built-in default (for editing)
+                </button>
+              </div>
+              <textarea
+                value={settings.generationSystemPrompt}
+                onChange={(e) => update("generationSystemPrompt", e.target.value)}
+                placeholder="Leave empty to use the built-in DisputeDesk system prompt…"
+                rows={10}
+                className="w-full px-3 py-2 text-xs font-mono border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+                Additional instructions (every generation)
+              </label>
+              <textarea
+                value={settings.generationUserPromptSuffix}
+                onChange={(e) => update("generationUserPromptSuffix", e.target.value)}
+                placeholder="e.g. Vary titles and excerpts so two articles on a similar topic do not read like duplicates…"
+                rows={4}
+                className="w-full px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+              />
+              <p className="text-xs text-[#64748B] mt-1">
+                Appended to the user message before the model is asked to return JSON.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Locale style lines</h3>
+              <p className="text-xs text-[#64748B] mb-3">
+                Shown for every locale in the backlog generator. If you clear a locale to an empty string and
+                save, the server falls back to the built-in line for that locale.
+              </p>
+              <div className="space-y-3">
+                {ADMIN_LOCALES.map((loc) => (
+                  <div key={loc.dbLocale}>
+                    <label className="block text-xs font-medium text-[#64748B] mb-1">
+                      {loc.flag} {loc.nativeName}{" "}
+                      <span className="text-[#94A3B8]">({loc.dbLocale})</span>
+                    </label>
+                    <textarea
+                      value={settings.generationLocaleInstructions[loc.dbLocale] ?? ""}
+                      onChange={(e) => updateLocaleInstr(loc.dbLocale, e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 text-xs border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Content-type instructions</h3>
+              <div className="space-y-3">
+                {CONTENT_TYPE_PROMPT_KEYS.map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="block text-xs font-medium text-[#64748B] mb-1">{label}</label>
+                    <textarea
+                      value={settings.generationContentTypeInstructions[key] ?? ""}
+                      onChange={(e) => updateContentTypeInstr(key, e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 text-xs border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

@@ -171,7 +171,7 @@ export function HelpClient() {
               ["Backlog", "/admin/resources/backlog", "Ideas pipeline with priority scoring"],
               ["Calendar", "/admin/resources/calendar", "Agenda + grid views of scheduled publications"],
               ["Queue", "/admin/resources/queue", "Publishing queue monitor with retry"],
-              ["Settings", "/admin/resources/settings", "Publishing, translation, workflow, autopilot config"],
+              ["Settings", "/admin/resources/settings", "Publishing, translation, workflow, autopilot, AI generation prompts"],
             ]} />
           </Section>
 
@@ -223,6 +223,8 @@ export function HelpClient() {
               "Suggest Related Topics — recommends 3-5 complementary article ideas.",
             ]} />
             <P>Each generation uses ~8,000-10,000 tokens for all 6 locales (~$0.03-0.05 with GPT-4o).</P>
+            <H3>Generation prompts (Settings)</H3>
+            <P>At <Code>/admin/resources/settings</Code>, open <Strong>AI generation prompts</Strong> to override the default system prompt, add global &quot;Additional instructions&quot; (appended to every user message), and edit per-locale or per-content-type lines. Empty system prompt uses the built-in default; empty locale or type fields fall back to defaults server-side. Changes are stored in CMS settings and auto-save with the rest of the page.</P>
           </Section>
 
           {/* AUTOPILOT */}
@@ -274,6 +276,7 @@ export function HelpClient() {
               ["Translation", "Skip incomplete translations, locale priority order"],
               ["Workflow", "Require reviewer, archive health threshold, default CTA"],
               ["AI Autopilot", "Enable/disable, articles per day, notification email"],
+              ["AI generation prompts", "System prompt, additional instructions, per-locale and per-content-type overrides (OpenAI backlog/autopilot)"],
               ["Legal", "Default disclaimer, legal review team email"],
             ]} />
           </Section>
