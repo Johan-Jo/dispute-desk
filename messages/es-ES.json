@@ -2081,6 +2081,13 @@
       "small-claims": "Reclamaciones menores",
       "mediation-arbitration": "Mediación y arbitraje",
       "dispute-management-software": "Software de gestión de disputas"
-    }
+    },
+    "templateHeroTitle": "Plantillas y playbooks",
+    "templateHeroSubtitle": "Plantillas, checklists y guías prácticas listas para usar en tus contracargos.",
+    "templateEmptyHint": "Nuevas plantillas se publican regularmente — vuelve pronto.",
+    "viewTemplate": "Ver plantilla",
+    "ctaResourcesTitle": "Explorar todos los recursos",
+    "ctaResourcesBody": "Artículos, casos de estudio y guías de expertos sobre contracargos y resolución de disputas.",
+    "ctaResourcesButton": "Ver recursos"
   }
 }

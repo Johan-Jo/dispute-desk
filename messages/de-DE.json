@@ -2059,6 +2059,13 @@
     "ctaLearnMore": "Mehr erfahren",
     "relatedResources": "Verwandte Ressourcen",
     "keyTakeaways": "Wichtigste Erkenntnisse",
+    "templateHeroTitle": "Vorlagen & Playbooks",
+    "templateHeroSubtitle": "Sofort einsetzbare Vorlagen, Checklisten und Playbooks für Ihren Chargeback-Prozess.",
+    "templateEmptyHint": "Neue Vorlagen werden regelmäßig veröffentlicht — schauen Sie bald wieder vorbei.",
+    "viewTemplate": "Vorlage ansehen",
+    "ctaResourcesTitle": "Alle Ressourcen entdecken",
+    "ctaResourcesBody": "Artikel, Fallstudien und Experten-Leitfäden zu Chargebacks und Streitbeilegung.",
+    "ctaResourcesButton": "Ressourcen durchsuchen",
     "types": {
       "pillar_page": "Pillar-Seite",
       "cluster_article": "Artikel",

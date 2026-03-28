@@ -2082,6 +2082,13 @@
       "small-claims": "Småmål",
       "mediation-arbitration": "Medling och skiljedom",
       "dispute-management-software": "Programvara för ärendehantering"
-    }
+    },
+    "templateHeroTitle": "Mallar & playbooks",
+    "templateHeroSubtitle": "Färdiga mallar, checklistor och playbooks för din chargeback-process.",
+    "templateEmptyHint": "Nya mallar publiceras regelbundet — kom tillbaka snart.",
+    "viewTemplate": "Visa mall",
+    "ctaResourcesTitle": "Utforska alla resurser",
+    "ctaResourcesBody": "Artiklar, fallstudier och expertguider om chargebacks och tvistlösning.",
+    "ctaResourcesButton": "Bläddra bland resurser"
   }
 }

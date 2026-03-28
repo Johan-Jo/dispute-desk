@@ -2084,6 +2084,13 @@
     "ctaLearnMore": "Learn More",
     "relatedResources": "Related Resources",
     "keyTakeaways": "Key Takeaways",
+    "templateHeroTitle": "Templates & playbooks",
+    "templateHeroSubtitle": "Ready-to-use templates, checklists, and playbooks to streamline your chargeback response process.",
+    "templateEmptyHint": "New templates are published regularly — check back soon or browse our articles.",
+    "viewTemplate": "View template",
+    "ctaResourcesTitle": "Explore all resources",
+    "ctaResourcesBody": "Browse articles, case studies, and expert guides on chargebacks and dispute resolution.",
+    "ctaResourcesButton": "Browse resources",
     "types": {
       "pillar_page": "Pillar page",
       "cluster_article": "Article",

@@ -2081,6 +2081,13 @@
       "small-claims": "Petites créances",
       "mediation-arbitration": "Médiation et arbitrage",
       "dispute-management-software": "Logiciel de gestion des litiges"
-    }
+    },
+    "templateHeroTitle": "Modèles & playbooks",
+    "templateHeroSubtitle": "Modèles, checklists et playbooks prêts à l’emploi pour vos rétrofacturations.",
+    "templateEmptyHint": "De nouveaux modèles sont publiés régulièrement — revenez bientôt.",
+    "viewTemplate": "Voir le modèle",
+    "ctaResourcesTitle": "Explorer toutes les ressources",
+    "ctaResourcesBody": "Articles, études de cas et guides sur les rétrofacturations et le règlement des litiges.",
+    "ctaResourcesButton": "Parcourir les ressources"
   }
 }

@@ -2098,6 +2098,13 @@
       "small-claims": "Pequenas causas",
       "mediation-arbitration": "Mediação e arbitragem",
       "dispute-management-software": "Software de gestão de disputas"
-    }
+    },
+    "templateHeroTitle": "Modelos e playbooks",
+    "templateHeroSubtitle": "Modelos, checklists e playbooks prontos para usar no seu processo de chargebacks.",
+    "templateEmptyHint": "Novos modelos são publicados regularmente — volte em breve.",
+    "viewTemplate": "Ver modelo",
+    "ctaResourcesTitle": "Explorar todos os recursos",
+    "ctaResourcesBody": "Artigos, estudos de caso e guias sobre chargebacks e resolução de disputas.",
+    "ctaResourcesButton": "Ver recursos"
   }
 }
