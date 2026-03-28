@@ -161,7 +161,7 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 | Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
 | Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
 | Hub filter bar | `components/resources/ResourcesFilterBar.tsx` | Client component: content-type filters with icons, **More Filters** for additional types, language picker, clear filters — embedded in `ResourcesHubShell`. |
-| Public article chrome | `components/resources/ArticleStickyBar.tsx` | Sticky bar on article pages: back to resources, **Save** (bookmark list in `localStorage` via `lib/resources/useSavedArticles.ts`), share. |
+| Public article chrome | `components/resources/ArticleStickyBar.tsx` | Sticky bar on article pages: back to resources, **Save** (bookmark list in `localStorage` via `lib/resources/useSavedArticles.ts`), share. `useSyncExternalStore` snapshots must use **stable array references** when storage is unchanged (never `return []` per call) or React can hit max update depth (#185). |
 | Admin | `/admin/resources/*` | Dashboard, content list, calendar, queue, backlog, settings. Figma-based redesign (CH-2+). |
 | In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
 
