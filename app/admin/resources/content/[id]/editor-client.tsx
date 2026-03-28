@@ -158,7 +158,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
   function localeCompleteness(loc: Localization | undefined): number {
     if (!loc) return 0;
     let filled = 0;
-    let total = 4;
+    const total = 4;
     if (loc.title) filled++;
     if (loc.excerpt) filled++;
     if (loc.body_json && Object.keys(loc.body_json).length > 0) filled++;

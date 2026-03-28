@@ -39,6 +39,8 @@ export default async function RootLayout({
     <html lang={locale}>
       <head>
         {apiKey && loadAppBridge && (
+          // App Bridge must load synchronously in <head> for embedded Shopify; next/script is deferred.
+          // eslint-disable-next-line @next/next/no-sync-scripts -- required by Shopify App Bridge
           <script
             src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
             data-api-key={apiKey}

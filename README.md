@@ -56,6 +56,19 @@ DisputeDesk ships as two web surfaces from one codebase:
 - **Deployment:** Vercel + Vercel Cron
 - **CI:** GitHub Actions
 
+## Database migrations (every environment)
+
+New SQL lives under `supabase/migrations/`. **Any machine or deploy target that uses the app database** (local dev, CI, preview, production) must apply pending migrations or the app and cron jobs will fail in inconsistent ways.
+
+1. Install Supabase CLI (`npx supabase`) and log in: `npx supabase login`.
+2. Link the project once per clone: `npx supabase link --project-ref <your-ref>` (password from Supabase dashboard).
+3. Push migrations: `npm run db:migrate` (same as `npx supabase db push`).
+4. If a new migration file is dated **before** the latest migration already on the remote, use `npx supabase db push --include-all` so it is not skipped.
+
+If you cannot use the CLI, use `npm run db:migrate:script` with direct Postgres credentials (see `.env.example`).
+
+---
+
 ## Local Setup
 
 ### Prerequisites

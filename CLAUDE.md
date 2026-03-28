@@ -22,7 +22,7 @@ Automation-first Shopify chargeback evidence app. Connects to Shopify, auto-sync
 - **Storage:** Supabase Storage (private buckets, PDFs + uploads)
 - **PDF:** @react-pdf/renderer
 - **Deployment:** Vercel + Vercel Cron
-- **CI:** GitHub Actions
+- **CI:** GitHub Actions (typecheck, lint, vitest, audit — run `workflow_dispatch` manually; lint no longer masked with `|| true`)
 
 ## Dev Commands
 ```bash
@@ -30,6 +30,8 @@ npm run dev              # Start dev server
 npx shopify app dev      # Start Shopify tunnel (separate terminal)
 npm run db:migrate       # Supabase CLI: push pending migrations (same as `npx supabase db push`; one-time `supabase login` + `supabase link` per machine)
 npx vitest run           # Unit + API route tests
+npm run lint             # ESLint (eslint.config.mjs; see README Database migrations for Supabase)
+npm run build            # Production build
 npm run test:e2e         # Playwright E2E
 node scripts/smoke-test.mjs  # E2E smoke test (requires live Supabase)
 npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
