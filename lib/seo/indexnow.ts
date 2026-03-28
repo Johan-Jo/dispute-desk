@@ -38,23 +38,13 @@ async function pingIndexNow(url: string): Promise<void> {
       body: JSON.stringify({
         host,
         key: INDEXNOW_KEY,
-        keyLocation: `${BASE_URL}/api/indexnow?key=${INDEXNOW_KEY}`,
+        keyLocation: `${BASE_URL}/${INDEXNOW_KEY}.txt`,
         urlList: [url],
       }),
     });
     console.log(`[seo] IndexNow pinged for ${url}`);
   } catch (err) {
     console.warn("[seo] IndexNow ping failed:", err instanceof Error ? err.message : err);
-  }
-}
-
-async function pingGoogleSitemap(): Promise<void> {
-  try {
-    const sitemapUrl = encodeURIComponent(`${BASE_URL}/sitemap.xml`);
-    await fetch(`https://www.google.com/ping?sitemap=${sitemapUrl}`);
-    console.log("[seo] Google sitemap ping sent");
-  } catch (err) {
-    console.warn("[seo] Google sitemap ping failed:", err instanceof Error ? err.message : err);
   }
 }
 
@@ -69,9 +59,5 @@ export async function notifySearchEngines(
   pillar = ""
 ): Promise<void> {
   const url = buildArticleUrl(slug, locale, routeKind, pillar);
-
-  await Promise.allSettled([
-    pingIndexNow(url),
-    pingGoogleSitemap(),
-  ]);
+  await pingIndexNow(url);
 }
