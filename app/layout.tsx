@@ -27,6 +27,10 @@ export default async function RootLayout({
     (intlHeaderLocale && isLocale(intlHeaderLocale) ? intlHeaderLocale : null) ??
     resolveLocale({ userLocale: cookieLocale, shopifyLocale: headerLocale });
 
+  // App Bridge only on `/app/*` (see middleware `x-dd-load-app-bridge`). Loading it on
+  // marketing pages breaks App Bridge Next (missing `shop`) and can crash React (#185).
+  const loadAppBridge = headerStore.get("x-dd-load-app-bridge") === "1";
+
   // App Bridge must be a synchronous blocking script (no defer/async/type=module)
   // and must be first. React hoists <script src> from nested components and adds
   // async/defer — the only safe place is the explicit <head> in the root layout.
@@ -34,7 +38,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
-        {apiKey && (
+        {apiKey && loadAppBridge && (
           <script
             src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
             data-api-key={apiKey}

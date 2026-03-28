@@ -21,6 +21,21 @@ const localePathRegex = new RegExp(
   `^\\/(${PATH_LOCALE_PREFIX_PATTERN})(\\/.*)?$`
 );
 
+/** Forwarded to root layout: only `/app/*` should load `app-bridge.js` (avoids App Bridge on marketing). */
+const APP_BRIDGE_HEADER = "x-dd-load-app-bridge";
+
+function requestWithAppBridge(req: NextRequest, load: "0" | "1"): NextRequest {
+  const h = new Headers(req.headers);
+  h.set(APP_BRIDGE_HEADER, load);
+  return new NextRequest(req, { headers: h });
+}
+
+function nextWithAppBridge(req: NextRequest, load: "0" | "1"): NextResponse {
+  const h = new Headers(req.headers);
+  h.set(APP_BRIDGE_HEADER, load);
+  return NextResponse.next({ request: { headers: h } });
+}
+
 /**
  * Multi-surface middleware.
  *
@@ -70,7 +85,7 @@ export async function middleware(req: NextRequest) {
     hubPublicPathRegex.test(pathname) ||
     enPrefixedHubPathRegex.test(pathname)
   ) {
-    return intlMiddleware(req);
+    return intlMiddleware(requestWithAppBridge(req, "0"));
   }
 
   // --- Public routes: auth, static assets ---
@@ -79,7 +94,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
   ) {
-    return NextResponse.next();
+    return nextWithAppBridge(req, "0");
   }
 
   // --- API routes ---
@@ -90,7 +105,7 @@ export async function middleware(req: NextRequest) {
       if (!rl.allowed) {
         return NextResponse.json({ error: "Too many requests" }, { status: 429 });
       }
-      return NextResponse.next();
+      return nextWithAppBridge(req, "0");
     }
 
     if (
@@ -103,7 +118,7 @@ export async function middleware(req: NextRequest) {
       pathname === "/api/portal/clear-shop" ||
       (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log")
     ) {
-      return NextResponse.next();
+      return nextWithAppBridge(req, "0");
     }
 
     let shopDomain = req.cookies.get("shopify_shop")?.value;
@@ -177,6 +192,7 @@ export async function middleware(req: NextRequest) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-shop-domain", shopDomain);
     requestHeaders.set("x-shop-id", shopId);
+    requestHeaders.set(APP_BRIDGE_HEADER, "0");
     return NextResponse.next({
       request: { headers: requestHeaders },
     });
@@ -184,7 +200,7 @@ export async function middleware(req: NextRequest) {
 
   // --- Portal routes: require Supabase Auth ---
   if (pathname.startsWith("/portal")) {
-    const res = NextResponse.next();
+    const res = nextWithAppBridge(req, "0");
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -219,12 +235,12 @@ export async function middleware(req: NextRequest) {
 
   // --- Admin routes: require admin session cookie ---
   if (pathname.startsWith("/admin")) {
-    if (pathname === "/admin/login") return NextResponse.next();
+    if (pathname === "/admin/login") return nextWithAppBridge(req, "0");
     const adminCookie = req.cookies.get("dd_admin_session")?.value;
     if (adminCookie !== "authenticated") {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
-    return NextResponse.next();
+    return nextWithAppBridge(req, "0");
   }
 
   // --- Embedded app routes (/app/*): require Shopify session ---
@@ -232,6 +248,7 @@ export async function middleware(req: NextRequest) {
     const hostParam = req.nextUrl.searchParams.get("host") ?? "";
     const localeParam = req.nextUrl.searchParams.get("locale")?.trim() ?? "";
     const requestHeaders = new Headers(req.headers);
+    requestHeaders.set(APP_BRIDGE_HEADER, "1");
     requestHeaders.set("x-shopify-host", hostParam);
     // Forward locale param as header so embedded layout can use it on the first
     // request (cookie is set in the response and isn't available until next request).
@@ -275,7 +292,7 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  return NextResponse.next();
+  return nextWithAppBridge(req, "0");
 }
 
 export const config = {
