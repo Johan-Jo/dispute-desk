@@ -246,6 +246,11 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 **Backlog Integration**:
 - "Generate" button on each backlog item triggers `POST /api/admin/resources/generate`, then redirects to editor for the newly created draft.
 
+**Shopify chargeback launch cluster (content briefs in DB):**
+- Editorial spec + linking plan: `docs/content-briefs/shopify-chargeback-cluster-launch.md`.
+- Seed eight `content_archive_items` rows (idempotent by `proposed_slug`): `npm run seed:shopify-chargeback-cluster` (`scripts/seed-shopify-chargeback-cluster.mjs`). Pillar uses `content_type = pillar_page` and highest `priority_score` so autopilot picks it first.
+- Run **one** autopilot cron tick (temporarily forces `autopilotArticlesPerDay = 1` and restores prior `cms_settings`): `npm run run:autopilot-once` (`scripts/run-autopilot-once.mjs`). Requires reachable app URL (`CRON_TRIGGER_URL` / `NEXT_PUBLIC_APP_URL`), `CRON_SECRET`, and server-side `GENERATION_ENABLED` + `OPENAI_API_KEY`.
+
 **Analytics** (migration `032_generation_analytics.sql`):
 - `content_items`: `generated_at`, `generation_tokens`, `rejection_reason`, `time_to_publish`.
 - `content_revisions`: `change_summary`, `edit_distance`, `tokens_used`.
