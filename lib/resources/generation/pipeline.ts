@@ -4,6 +4,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { resolvePrimaryPillarForGeneration } from "@/lib/resources/pillars";
 import { generateAllLocales, isGenerationEnabled } from "./generate";
 import type { GenerationBrief } from "./prompts";
 import type { GenerationResult } from "./generate";
@@ -62,6 +63,13 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results, error: `All locale generations failed: ${errors}` };
   }
 
+  const primaryPillar = resolvePrimaryPillarForGeneration({
+    primaryPillar: brief.primaryPillar,
+    proposedTitle: brief.proposedTitle,
+    targetKeyword: brief.targetKeyword,
+    summary: brief.summary,
+  });
+
   // Determine workflow status based on content type and autopilot mode
   const initialStatus = options.autopilot ? "published" : (brief.contentType === "legal_update" ? "in_legal_review" : "drafting");
 
@@ -70,7 +78,7 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     .from("content_items")
     .insert({
       content_type: brief.contentType,
-      primary_pillar: brief.primaryPillar,
+      primary_pillar: primaryPillar,
       topic: brief.targetKeyword,
       target_keyword: brief.targetKeyword,
       search_intent: brief.searchIntent,

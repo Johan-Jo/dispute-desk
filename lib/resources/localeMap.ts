@@ -3,11 +3,9 @@ import { pathLocaleToMessages } from "@/lib/i18n/pathLocales";
 import type { HubContentLocale } from "./constants";
 
 /**
- * Map next-intl path segment → Resources Hub DB locale.
- * Portuguese path `pt` uses pt-PT in CMS (per product spec); app i18n may still use pt-BR messages.
+ * Map next-intl path segment → Resources Hub DB locale (same BCP-47 tags as `pathLocaleToMessages`).
  */
 export function pathLocaleToHubLocale(pathLocale: PathLocale): HubContentLocale {
-  if (pathLocale === "pt") return "pt-PT";
   return pathLocaleToMessages[pathLocale] as HubContentLocale;
 }
 
@@ -17,7 +15,7 @@ export function hubLocaleToPathSegment(locale: HubContentLocale): PathLocale {
     "de-DE": "de",
     "fr-FR": "fr",
     "es-ES": "es",
-    "pt-PT": "pt",
+    "pt-BR": "pt",
     "sv-SE": "sv",
   };
   return map[locale];

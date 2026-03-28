@@ -4,7 +4,7 @@ export const HUB_CONTENT_LOCALES = [
   "de-DE",
   "fr-FR",
   "es-ES",
-  "pt-PT",
+  "pt-BR",
   "sv-SE",
 ] as const;
 

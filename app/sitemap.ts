@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getServiceClient } from "@/lib/supabase/server";
+import {
+  normalizeResourceHubPillar,
+  RESOURCE_HUB_PILLARS,
+} from "@/lib/resources/pillars";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://disputedesk.app";
 
@@ -67,7 +71,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const enLoc = locs?.find((l) => l.locale === "en-US");
         if (!enLoc?.slug) continue;
 
-        const pillar = item.primary_pillar ?? "guides";
+        const pillar =
+          normalizeResourceHubPillar(item.primary_pillar) ?? RESOURCE_HUB_PILLARS[0];
         const path = `/resources/${pillar}/${enLoc.slug}`;
 
         const languages: Record<string, string> = {};

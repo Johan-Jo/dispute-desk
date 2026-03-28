@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { getContentForEditor, updateWorkflowStatus } from "@/lib/resources/admin-queries";
 import { getServiceClient } from "@/lib/supabase/server";
+import { isResourceHubPillar } from "@/lib/resources/pillars";
 import { isWorkflowStatus } from "@/lib/resources/workflow";
 import type { WorkflowStatus } from "@/lib/resources/workflow";
 
@@ -40,6 +41,13 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   try {
     // Update content_items fields
     if (body.item) {
+      if (
+        body.item.primary_pillar !== undefined &&
+        (typeof body.item.primary_pillar !== "string" ||
+          !isResourceHubPillar(body.item.primary_pillar))
+      ) {
+        return NextResponse.json({ error: "Invalid primary_pillar" }, { status: 400 });
+      }
       const allowedFields = [
         "content_type", "primary_pillar", "topic", "target_keyword",
         "search_intent", "priority", "author_id", "reviewer_id",

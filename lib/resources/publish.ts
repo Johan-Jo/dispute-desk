@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { isResourceHubPillar } from "@/lib/resources/pillars";
 import type { HubContentLocale } from "./constants";
 import { HUB_CONTENT_LOCALES } from "./constants";
 
@@ -37,6 +38,10 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
   const rawItem = loc.content_items as Record<string, unknown> | Record<string, unknown>[] | null;
   const item = (Array.isArray(rawItem) ? rawItem[0] : rawItem) as Record<string, unknown> | undefined;
   if (!item) return { ok: false, error: "missing_content_item" };
+  const pillar = item.primary_pillar;
+  if (typeof pillar !== "string" || !isResourceHubPillar(pillar)) {
+    return { ok: false, error: "invalid_primary_pillar" };
+  }
   const v = validateLocalizationForPublish({
     title: loc.title,
     slug: loc.slug,

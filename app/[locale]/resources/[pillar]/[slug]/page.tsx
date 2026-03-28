@@ -152,7 +152,7 @@ export default async function ResourceArticlePage({ params }: Props) {
       "de-DE": "Deutsch",
       "fr-FR": "Français",
       "es-ES": "Español",
-      "pt-PT": "Português",
+      "pt-BR": "Português",
       "sv-SE": "Svenska",
     }[hubLocale] ?? hubLocale;
 

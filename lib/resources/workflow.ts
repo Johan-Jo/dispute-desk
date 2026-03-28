@@ -145,7 +145,7 @@ export const ADMIN_LOCALES = [
   { code: "de", dbLocale: "de-DE", label: "Deutsch", flag: "🇩🇪", nativeName: "Deutsch" },
   { code: "fr", dbLocale: "fr-FR", label: "Français", flag: "🇫🇷", nativeName: "Français" },
   { code: "es", dbLocale: "es-ES", label: "Español", flag: "🇪🇸", nativeName: "Español" },
-  { code: "pt", dbLocale: "pt-PT", label: "Português", flag: "🇵🇹", nativeName: "Português" },
+  { code: "pt", dbLocale: "pt-BR", label: "Português", flag: "🇧🇷", nativeName: "Português" },
   { code: "sv", dbLocale: "sv-SE", label: "Svenska", flag: "🇸🇪", nativeName: "Svenska" },
 ] as const;
 

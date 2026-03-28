@@ -65,7 +65,7 @@ export async function getTranslationGaps(limit = 5) {
 
   if (error) throw error;
 
-  const ALL_LOCALES = ["en-US", "de-DE", "fr-FR", "es-ES", "pt-PT", "sv-SE"];
+  const ALL_LOCALES = ["en-US", "de-DE", "fr-FR", "es-ES", "pt-BR", "sv-SE"];
   const gaps: Array<{
     contentItemId: string;
     title: string;

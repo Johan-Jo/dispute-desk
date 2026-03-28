@@ -3,6 +3,8 @@
  */
 
 import { Resend } from "resend";
+import { messagesLocaleToPath } from "@/lib/i18n/pathLocales";
+import { isLocale, type Locale } from "@/lib/i18n/locales";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
@@ -36,9 +38,13 @@ export async function sendPublishNotification(
   }
 
   const baseUrl = getBaseUrl();
+  const hubLocale = isLocale(options.locale) ? options.locale : ("en-US" satisfies Locale);
+  const pathLocale = messagesLocaleToPath(hubLocale);
+  const pathPrefix = pathLocale === "en" ? "" : `/${pathLocale}`;
   const routeBase = options.routeKind || "resources";
-  const pillarSegment = routeBase === "resources" && options.pillar ? `/${options.pillar}` : "";
-  const articleUrl = `${baseUrl}/${routeBase}${pillarSegment}/${options.articleSlug}`;
+  const pillarSeg =
+    routeBase === "resources" && options.pillar ? `${options.pillar}/` : "";
+  const articleUrl = `${baseUrl}${pathPrefix}/${routeBase}/${pillarSeg}${options.articleSlug}`;
 
   const subject = `New article published: ${options.articleTitle}`;
 

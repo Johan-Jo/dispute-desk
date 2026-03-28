@@ -1,35 +1,42 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
-import { listPublishedByRoute } from "@/lib/resources/queries";
+import { isResourceHubPillar } from "@/lib/resources/pillars";
+import { getPublishedLocalizationBySlug, listPublishedByRoute } from "@/lib/resources/queries";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
-
-const PILLARS = [
-  "chargebacks",
-  "dispute-resolution",
-  "small-claims",
-  "mediation-arbitration",
-  "dispute-management-software",
-] as const;
 
 type Props = { params: Promise<{ locale: string; pillar: string }> };
 
 export default async function PillarPage({ params }: Props) {
   const { locale: loc, pillar } = await params;
   if (!hasLocale(routing.locales, loc)) notFound();
-  if (!PILLARS.includes(pillar as (typeof PILLARS)[number])) notFound();
 
-  setRequestLocale(loc);
   const pathLocale = loc as PathLocale;
   const hubLocale = pathLocaleToHubLocale(pathLocale);
-  const t = await getTranslations({ locale: pathLocale, namespace: "resources" });
   const basePath = pathLocale === "en" ? "" : `/${pathLocale}`;
+
+  if (!isResourceHubPillar(pillar)) {
+    const bySlug = await getPublishedLocalizationBySlug({
+      routeKind: "resources",
+      locale: hubLocale,
+      slug: pillar,
+    });
+    if (bySlug?.item.primary_pillar) {
+      redirect(
+        `${basePath}/resources/${bySlug.item.primary_pillar}/${bySlug.localization.slug}`
+      );
+    }
+    notFound();
+  }
+
+  setRequestLocale(loc);
+  const t = await getTranslations({ locale: pathLocale, namespace: "resources" });
 
   const rows = await listPublishedByRoute("resources", hubLocale, {
     pillar,

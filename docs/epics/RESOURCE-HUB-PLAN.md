@@ -100,7 +100,7 @@ Status badges use the design system defined in the Figma component library. Each
 | `de` / `de-DE` | Deutsch | 🇩🇪 |
 | `fr` / `fr-FR` | Français | 🇫🇷 |
 | `es` / `es-ES` | Español | 🇪🇸 |
-| `pt` / `pt-PT` | Português | 🇵🇹 |
+| `pt` / `pt-BR` | Português | 🇧🇷 |
 | `sv` / `sv-SE` | Svenska | 🇸🇪 |
 
 ---
@@ -131,7 +131,7 @@ Stand up the public hub, content model, publish pipeline, and first admin toolin
 
 ### CH-1.3 — Locale Strategy
 
-- `lib/resources/localeMap.ts` — maps DB locales (`en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-PT`, `sv-SE`) to next-intl.
+- `lib/resources/localeMap.ts` — maps DB locales (`en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE`) to next-intl.
 - 6 supported locales aligned with `resources-hub-editor-guide.md`.
 
 ### CH-1.4 — Content Queries + URL Helpers

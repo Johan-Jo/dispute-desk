@@ -56,23 +56,27 @@ async function runPublish(req: NextRequest) {
         .eq("id", row.id);
       results.push({ id: row.id, ok: true });
 
-      // Post-publish: email notification + SEO ping
+      // Post-publish: email notification + SEO ping (single query so pillar + slug stay in sync)
       try {
         const { data: loc } = await sb
           .from("content_localizations")
-          .select("title, slug, locale, route_kind, content_item_id")
+          .select(
+            "title, slug, locale, route_kind, content_item_id, content_items(generated_at, primary_pillar)"
+          )
           .eq("id", row.content_localization_id)
           .maybeSingle();
 
         if (loc) {
           const routeKind = loc.route_kind ?? "resources";
-
-          const { data: contentItem } = await sb
-            .from("content_items")
-            .select("generated_at, primary_pillar")
-            .eq("id", loc.content_item_id)
-            .maybeSingle();
-          const pillar = contentItem?.primary_pillar ?? "";
+          const rawCi = loc.content_items as
+            | { generated_at: string | null; primary_pillar: string }
+            | { generated_at: string | null; primary_pillar: string }[]
+            | null;
+          const contentItem = Array.isArray(rawCi) ? rawCi[0] : rawCi;
+          const pillar =
+            typeof contentItem?.primary_pillar === "string"
+              ? contentItem.primary_pillar.trim()
+              : "";
 
           // SEO notification (IndexNow + Google sitemap ping)
           if (loc.slug) {
