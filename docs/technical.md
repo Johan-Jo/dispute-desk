@@ -175,7 +175,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Workflow:** `lib/resources/workflow.ts` — 11-status state machine with validated transitions (`idea` → `backlog` → … → `published` → `archived`). Display helpers for status/type/priority badges and locale flags.
 - **Admin queries:** `lib/resources/admin-queries.ts` — stats, scheduled posts, translation gaps, content list (paginated + filterable), queue items, backlog, editor detail, workflow transitions, CMS settings.
 - **Admin components:** `components/admin/resources/` — `WorkflowStatusBadge`, `ContentTypeBadge`, `PriorityBadge`, `LocaleStatusIndicator`, `LocaleCompletenessBadge`, `ValidationChecklist`, `SchedulePicker`.
-- **Admin shell:** `app/admin/layout.tsx` — left sidebar with Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings, **Help** → `/admin/help`), top bar, mobile responsive. Top-level Admin nav also includes Help.
+- **Admin shell:** `app/admin/layout.tsx` — under `/admin/resources/*`, the left sidebar shows Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings, **Help** → `/admin/help`). Elsewhere (including **`/admin/help`**), the sidebar shows top-level Admin nav (Resources, Shops, Jobs, Audit Log, Billing, Help) so the guide is not nested under Resources Hub (avoids duplicate labels like “Dashboard”). Top bar, mobile responsive.
 - **Admin dashboard:** `app/admin/resources/page.tsx` + `dashboard-client.tsx` — 4 KPI cards, upcoming scheduled, translation gaps, queue health, recently edited table.
 - **Admin content list:** `app/admin/resources/list/page.tsx` + `list-client.tsx` — status tabs with counts, search + filter (type, topic), multi-select with bulk actions, locale indicators, pagination.
 - **Admin API (list):** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI.
@@ -186,7 +186,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Backlog page:** `app/admin/resources/backlog/` — ideas pipeline with 4 KPI cards, search/filter (priority, status), reorderable table, convert-to-draft action.
 - **Calendar page:** `app/admin/resources/calendar/` — agenda view (posts grouped by date), calendar grid view (7-col Mon–Sun with dot indicators), month navigation, queue health panel.
 - **Queue page:** `app/admin/resources/queue/` — 4 status stat cards, filter tabs (all/pending/processing/succeeded/failed), card-based item list with error display, retry actions, system status panel.
-- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email). Auto-saves via debounced PUT to `/api/admin/resources/settings`.
+- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email), AI autopilot, and **Run scheduled tasks now** (manual autopilot + publish-queue triggers). Auto-saves via debounced PUT to `/api/admin/resources/settings`.
 - **Mobile editor:** Responsive editor with Content/Metadata/Checklist tab bar, locale picker bottom sheet, fixed bottom action bar (Save/Schedule/Publish).
 - **Toast system:** `components/admin/Toast.tsx` — `ToastProvider` + `useToast()` hook for success/error/info notifications across admin.
 - **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
@@ -226,6 +226,8 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 
 **API Routes**:
 - `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled, 207 on partial success, 200 on full success.
+- `POST /api/admin/resources/cron/autopilot` — Manual run of the autopilot cron (admin session). Same behavior as `GET /api/cron/autopilot-generate` with `CRON_SECRET`.
+- `POST /api/admin/resources/cron/publish` — Manual run of the publish-queue cron (admin session). Same behavior as `GET /api/cron/publish-content` with `CRON_SECRET`.
 - `POST /api/admin/resources/ai-assist` — In-editor AI tools: `improve_readability`, `generate_meta`, `suggest_related`. Each calls OpenAI with task-specific system prompts.
 
 **Editor Integration**:
@@ -1170,11 +1172,11 @@ Called from the publish cron (`app/api/cron/publish-content/route.ts`) via `noti
 | Component | Path | Purpose |
 |-----------|------|---------|
 | Server Page | `app/admin/help/page.tsx` | Auth check, renders `HelpClient` |
-| Client Component | `app/admin/help/help-client.tsx` | Full help content with sidebar nav |
+| Client Component | `app/admin/help/help-client.tsx` | Full help content with sticky header (filter + horizontal section pills) |
 
 The help page renders the same content as `docs/admin-guide.md` as React components with:
-- Left sidebar with 13 section links and search/filter.
-- `IntersectionObserver`-based scroll-spy to highlight the active section.
+- Sticky doc header: title, section filter input, horizontal scrollable pills (13 sections with icons).
+- `IntersectionObserver`-based scroll-spy to highlight the active section; section anchors use `scroll-mt-*` so headings clear the sticky bar.
 - Sections: Login, Dashboard, Shops, Jobs, Billing, Audit, Resources Hub, Editor, AI Generator, Autopilot, SEO, Settings, Workflow Reference.
 
-**Navigation:** "Help" is in both `ADMIN_NAV` and `RESOURCES_NAV` in `app/admin/layout.tsx` so the guide stays reachable while editing in the Resources Hub. Contextual links: Backlog → AI Generator section, Settings (Autopilot) → Autopilot section, `AIAssistantPanel` → Editor section (`#help-editor`).
+**Navigation:** "Help" is in both `ADMIN_NAV` and `RESOURCES_NAV` in `app/admin/layout.tsx` so the guide stays reachable from the main admin shell and while editing in the Resources Hub; `/admin/help` itself uses the top-level Admin nav. Contextual links: Backlog → AI Generator section, Settings (Autopilot) → Autopilot section, `AIAssistantPanel` → Editor section (`#help-editor`).

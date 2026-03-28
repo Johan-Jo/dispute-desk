@@ -50,9 +50,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
-  /** Resources Hub nav + Help page (operators stay in one sidebar when opening the guide). */
-  const isResourcesSection =
-    pathname.startsWith("/admin/resources") || pathname === "/admin/help";
+  /** Resources Hub sub-nav only under /admin/resources — Help uses top-level Admin nav to avoid duplicate “Dashboard” etc. */
+  const isResourcesSection = pathname.startsWith("/admin/resources");
 
   function isActive(href: string) {
     if (href === "/admin/resources" && isResourcesSection) {

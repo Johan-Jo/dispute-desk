@@ -548,11 +548,11 @@ Served at `/robots.txt`. Allows all crawlers on public pages and blocks admin, A
 
 ## In-Admin Help
 
-The full admin guide is available at `/admin/help` (accessible via **Help** in both the top-level admin navigation and the **Resources Hub** sidebar, so it stays easy to reach while editing content). Opening `/admin/help` keeps the Resources Hub sidebar when you navigated from that section. It provides the same content as this document in a searchable, navigable UI with:
+The full admin guide is available at `/admin/help` (accessible via **Help** in both the top-level admin navigation and the **Resources Hub** sidebar, so it stays easy to reach while editing content). The `/admin/help` screen uses the **top-level Admin** sidebar (Resources, Shops, Jobs, …) — not the Resources Hub sub-menu — so documentation labels (e.g. “Dashboard”) are not confused with CMS screens. It provides the same content as this document in a searchable, navigable UI with:
 
-- Left sidebar with section links
+- Sticky header with a section filter and horizontal section links (pills)
 - Scroll-spy highlighting the current section
-- Search/filter to jump to sections
+- Reading area in a single main column
 
 Contextual shortcuts in the CMS: **Backlog** links to the AI Generator section, **Settings** (Autopilot) links to Autopilot, and the editor **AI Assistant** panel links to the Content Editor section.
 

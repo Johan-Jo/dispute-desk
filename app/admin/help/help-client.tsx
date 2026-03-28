@@ -68,52 +68,54 @@ export function HelpClient() {
     : SECTIONS;
 
   return (
-    <div className="flex h-[calc(100vh-57px)]">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-[#E5E7EB] bg-white overflow-y-auto shrink-0 hidden lg:block">
-        <div className="p-4 border-b border-[#E5E7EB]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
-            <input
-              type="text"
-              placeholder="Search help..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
-            />
-          </div>
-        </div>
-        <nav className="p-2">
-          {filteredSections.map((s) => {
-            const Icon = s.icon;
-            return (
-              <button
-                key={s.id}
-                onClick={() => scrollToSection(s.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
-                  activeSection === s.id
-                    ? "bg-[#EFF6FF] text-[#1D4ED8] font-medium"
-                    : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0B1220]"
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {s.label}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-[800px] mx-auto p-6 lg:p-8">
-          <div className="mb-8">
+    <div ref={contentRef} className="min-h-full bg-[#F6F8FB]">
+      <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-[#F6F8FB]/95 backdrop-blur-sm">
+        <div className="max-w-[880px] mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <div className="mb-4">
             <h1 className="text-2xl font-bold text-[#0B1220]">Admin Guide</h1>
             <p className="text-sm text-[#64748B] mt-1">
               Complete reference for the DisputeDesk admin panel
             </p>
           </div>
+          <div className="relative mb-3">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+            <input
+              type="text"
+              placeholder="Filter sections…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Filter help sections"
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-[#E5E7EB] rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+            />
+          </div>
+          <nav
+            className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:thin]"
+            aria-label="Help sections"
+          >
+            {filteredSections.map((s) => {
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => scrollToSection(s.id)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    activeSection === s.id
+                      ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
+                      : "border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#CBD5E1] hover:text-[#0B1220]"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  {s.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
 
+      <div className="max-w-[880px] mx-auto px-4 py-6 sm:px-6 lg:px-8 pb-16">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-8 shadow-sm">
           {/* LOGIN */}
           <Section id="login" title="Login">
             <P>Navigate to <Code>/admin/login</Code> and enter the admin secret (configured as <Code>ADMIN_SECRET</Code> in your environment). Your session persists across browser tabs via the <Code>dd_admin_session</Code> cookie.</P>
@@ -310,7 +312,7 @@ export function HelpClient() {
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={`help-${id}`} className="mb-12 scroll-mt-6">
+    <section id={`help-${id}`} className="mb-12 scroll-mt-44">
       <h2 className="text-xl font-bold text-[#0B1220] mb-4 pb-2 border-b border-[#E5E7EB]">{title}</h2>
       {children}
     </section>

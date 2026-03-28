@@ -6,7 +6,7 @@ The Resources Hub admin provides a full editorial CMS for managing articles, tem
 
 ### In-admin help (operators)
 
-The full **Admin Guide** lives at **`/admin/help`** (also linked from the Resources Hub sidebar as **Help**). It covers login, platform dashboards, the Resources Hub screens, the block editor, **AI Content Generator** (backlog generation, env vars, editor AI assistant tools), **Autopilot Mode** (cron, burst, warnings), SEO/Indexing, CMS settings, and the workflow state machine. For a printable Markdown version of the same material, see [`docs/admin-guide.md`](admin-guide.md).
+The full **Admin Guide** lives at **`/admin/help`** (also linked from the Resources Hub sidebar as **Help**). That page uses the main Admin navigation shell; the guide itself uses a sticky filter bar and horizontal section pills instead of a second sidebar. It covers login, platform dashboards, the Resources Hub screens, the block editor, **AI Content Generator** (backlog generation, env vars, editor AI assistant tools), **Autopilot Mode** (cron, burst, warnings), SEO/Indexing, CMS settings, and the workflow state machine. For a printable Markdown version of the same material, see [`docs/admin-guide.md`](admin-guide.md).
 
 **AI generation from backlog:** Use **Backlog** → **Generate** on an archive row (requires `OPENAI_API_KEY` and `GENERATION_ENABLED=true`). See the Admin Guide section *AI Content Generator*.
 
@@ -23,7 +23,7 @@ The full **Admin Guide** lives at **`/admin/help`** (also linked from the Resour
 | Calendar | `/admin/resources/calendar` | Agenda + grid views of scheduled publications |
 | Queue | `/admin/resources/queue` | Publishing queue monitor with retry for failed items |
 | Settings | `/admin/resources/settings` | Publishing, translation, workflow, **AI autopilot**, and legal configuration |
-| Help | `/admin/help` | Searchable in-app guide (Resources Hub sidebar + top-level Admin nav) |
+| Help | `/admin/help` | Searchable in-app guide (linked from Resources Hub sidebar and top-level Admin nav; page uses Admin shell + sticky section nav) |
 
 ## Block Editor
 

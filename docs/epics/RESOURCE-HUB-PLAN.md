@@ -878,7 +878,7 @@ Turn archive material into reviewable, localized drafts with human approval befo
 ### CH-8.4 — In-Admin Help Section
 
 - `/admin/help` page with full admin guide content rendered as React components.
-- Left sidebar with section links, scroll-spy highlighting, and search filter.
+- Sticky header with section filter and horizontal section pills; scroll-spy highlighting (no second left sidebar). `/admin/help` uses top-level Admin nav in `layout.tsx` (Resources Hub sub-nav only under `/admin/resources/*`).
 - Covers: Login, Dashboard, Shops, Jobs, Billing, Audit, Resources Hub, Editor, AI Generator, Autopilot, SEO, Settings, Workflow Reference.
 - "Help" link added to admin navigation sidebar.
 
