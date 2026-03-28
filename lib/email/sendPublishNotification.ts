@@ -6,19 +6,11 @@ import { Resend } from "resend";
 import { messagesLocaleToPath } from "@/lib/i18n/pathLocales";
 import { isLocale, type Locale } from "@/lib/i18n/locales";
 
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
   process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-
-function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return "http://localhost:3000";
-}
 
 export interface PublishNotificationOptions {
   to: string;
@@ -37,7 +29,7 @@ export async function sendPublishNotification(
     return { ok: false, error: "Email service not configured" };
   }
 
-  const baseUrl = getBaseUrl();
+  const baseUrl = getPublicSiteBaseUrl();
   const hubLocale = isLocale(options.locale) ? options.locale : ("en-US" satisfies Locale);
   const pathLocale = messagesLocaleToPath(hubLocale);
   const pathPrefix = pathLocale === "en" ? "" : `/${pathLocale}`;

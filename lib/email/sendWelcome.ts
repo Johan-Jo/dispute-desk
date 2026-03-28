@@ -4,6 +4,7 @@
  */
 
 import { Resend } from "resend";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 import {
   generateWelcomeEmailHTML,
   generateWelcomeEmailText,
@@ -20,13 +21,7 @@ const REPLY_TO =
   process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
 
 function getDashboardUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/portal/dashboard`;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}/portal/dashboard`;
-  }
-  return "http://localhost:3000/portal/dashboard";
+  return `${getPublicSiteBaseUrl()}/portal/dashboard`;
 }
 
 export interface SendWelcomeOptions {

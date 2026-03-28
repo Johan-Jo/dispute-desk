@@ -19,7 +19,8 @@
     "seed:resources": "node scripts/seed-resources-hub.mjs",
     "seed:resources:force": "node scripts/seed-resources-hub.mjs --force",
     "db:migrate": "npx supabase db push",
-    "db:migrate:script": "node scripts/run-migration.mjs"
+    "db:migrate:script": "node scripts/run-migration.mjs",
+    "cron:resources": "node scripts/trigger-resources-crons.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.0.0",

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Info, GripVertical, Sparkles, AlertTriangle, HelpCircle } from "lucide-react";
+import { Info, GripVertical, Sparkles, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
 import { ADMIN_LOCALES } from "@/lib/resources/workflow";
 
 interface SettingsClientProps {
@@ -58,6 +58,8 @@ const CTA_OPTIONS = [
 export function SettingsClient({ initial }: SettingsClientProps) {
   const [settings, setSettings] = useState<Settings>(() => mergeSettings(initial));
   const [saved, setSaved] = useState(false);
+  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish">(null);
+  const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const autoSave = useCallback((next: Settings) => {
@@ -99,6 +101,35 @@ export function SettingsClient({ initial }: SettingsClientProps) {
     const next = [...settings.localePriority];
     [next[index], next[to]] = [next[to], next[index]];
     update("localePriority", next);
+  }
+
+  async function runCron(kind: "autopilot" | "publish") {
+    setCronLoading(kind);
+    setCronFeedback(null);
+    try {
+      const path =
+        kind === "autopilot"
+          ? "/api/admin/resources/cron/autopilot"
+          : "/api/admin/resources/cron/publish";
+      const res = await fetch(path, { method: "POST" });
+      const data: unknown = await res.json().catch(() => ({}));
+      const text =
+        typeof data === "object" && data !== null
+          ? JSON.stringify(data, null, 2)
+          : String(data);
+      if (!res.ok) {
+        setCronFeedback({ ok: false, text: text || res.statusText });
+      } else {
+        setCronFeedback({ ok: true, text });
+      }
+    } catch (e) {
+      setCronFeedback({
+        ok: false,
+        text: e instanceof Error ? e.message : "Request failed",
+      });
+    } finally {
+      setCronLoading(null);
+    }
   }
 
   return (
@@ -316,6 +347,60 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               </>
             )}
           </div>
+        </section>
+
+        {/* Manual cron triggers */}
+        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#0B1220] mb-1">Run scheduled tasks now</h2>
+          <p className="text-sm text-[#64748B] mb-4">
+            Same logic as Vercel Cron (autopilot generate, then publish queue with email and SEO
+            pings). Autopilot respects the toggle above and server{" "}
+            <code className="text-xs bg-[#F1F5F9] px-1 rounded">GENERATION_ENABLED</code> / OpenAI
+            settings.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={cronLoading !== null}
+              onClick={() => runCron("autopilot")}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-[#0B1220] text-white hover:bg-[#1E293B] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading === "autopilot" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Running…
+                </>
+              ) : (
+                "Run autopilot now"
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={cronLoading !== null}
+              onClick={() => runCron("publish")}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading === "publish" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Running…
+                </>
+              ) : (
+                "Process publish queue now"
+              )}
+            </button>
+          </div>
+          {cronFeedback && (
+            <pre
+              className={`mt-4 text-xs p-3 rounded-lg overflow-x-auto max-h-64 overflow-y-auto font-mono border ${
+                cronFeedback.ok
+                  ? "bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]"
+                  : "bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]"
+              }`}
+            >
+              {cronFeedback.text}
+            </pre>
+          )}
         </section>
 
         {/* Legal & Disclaimer */}
