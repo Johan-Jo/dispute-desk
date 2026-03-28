@@ -1,7 +1,11 @@
+import type { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const ADMIN_COOKIE = "dd_admin_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+/** Cookie path must be `/` so the browser sends `dd_admin_session` on `/api/admin/*` fetches, not only `/admin/*`. */
+const ADMIN_COOKIE_PATH = "/";
 
 /**
  * Validate admin credentials. V1 uses env-based secret.
@@ -23,7 +27,7 @@ export async function createAdminSession() {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    path: "/admin",
+    path: ADMIN_COOKIE_PATH,
     expires,
   });
 }
@@ -37,9 +41,15 @@ export async function hasAdminSession(): Promise<boolean> {
 }
 
 /**
- * Clear the admin session.
+ * Append Set-Cookie headers to clear `dd_admin_session` for both current (`Path=/`)
+ * and legacy (`Path=/admin`) cookies. Uses `NextResponse.headers.append` so two
+ * `Set-Cookie` lines are emitted; `cookies().set` cannot reliably do same-name
+ * clears for different paths in Route Handlers.
  */
-export async function clearAdminSession() {
-  const cookieStore = await cookies();
-  cookieStore.delete(ADMIN_COOKIE);
+export function clearAdminSessionOnResponse(res: NextResponse) {
+  const secure = process.env.NODE_ENV === "production";
+  const tail = secure ? "; Secure" : "";
+  const base = `${ADMIN_COOKIE}=; HttpOnly; Max-Age=0; SameSite=Lax`;
+  res.headers.append("Set-Cookie", `${base}; Path=/${tail}`);
+  res.headers.append("Set-Cookie", `${base}; Path=/admin${tail}`);
 }

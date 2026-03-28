@@ -821,7 +821,7 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 
 ### Auth
 - V1: env-based `ADMIN_SECRET` validated against a password input.
-- HTTP-only session cookie (`dd_admin_session`, 8h TTL).
+- HTTP-only session cookie (`dd_admin_session`, 8h TTL, path `/` so it is sent to both `/admin/*` pages and `/api/admin/*` routes).
 - Middleware redirects unauthenticated `/admin/*` requests to `/admin/login`.
 
 ### Pages
