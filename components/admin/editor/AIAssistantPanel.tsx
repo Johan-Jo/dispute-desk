@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2, Wand2, FileSearch, Link2 } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Loader2, Wand2, FileSearch, Link2, HelpCircle } from "lucide-react";
 
 interface AIAssistantPanelProps {
   contentHtml: string;
@@ -90,9 +91,18 @@ export function AIAssistantPanel({
 
   return (
     <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-4 h-4 text-[#8B5CF6]" />
-        <h3 className="text-sm font-semibold text-[#0B1220]">AI Assistant</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#8B5CF6]" />
+          <h3 className="text-sm font-semibold text-[#0B1220]">AI Assistant</h3>
+        </div>
+        <Link
+          href="/admin/help#help-editor"
+          className="inline-flex items-center gap-1 text-xs font-medium text-[#1D4ED8] hover:underline shrink-0"
+        >
+          <HelpCircle className="w-3.5 h-3.5" aria-hidden />
+          Editor guide
+        </Link>
       </div>
 
       <div className="space-y-2">

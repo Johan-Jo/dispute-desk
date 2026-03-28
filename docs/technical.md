@@ -160,6 +160,8 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 |------|--------|--------|
 | Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
 | Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
+| Hub filter bar | `components/resources/ResourcesFilterBar.tsx` | Client component: content-type filters with icons, **More Filters** for additional types, language picker, clear filters — embedded in `ResourcesHubShell`. |
+| Public article chrome | `components/resources/ArticleStickyBar.tsx` | Sticky bar on article pages: back to resources, **Save** (bookmark list in `localStorage` via `lib/resources/useSavedArticles.ts`), share. |
 | Admin | `/admin/resources/*` | Dashboard, content list, calendar, queue, backlog, settings. Figma-based redesign (CH-2+). |
 | In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
 
@@ -173,7 +175,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Workflow:** `lib/resources/workflow.ts` — 11-status state machine with validated transitions (`idea` → `backlog` → … → `published` → `archived`). Display helpers for status/type/priority badges and locale flags.
 - **Admin queries:** `lib/resources/admin-queries.ts` — stats, scheduled posts, translation gaps, content list (paginated + filterable), queue items, backlog, editor detail, workflow transitions, CMS settings.
 - **Admin components:** `components/admin/resources/` — `WorkflowStatusBadge`, `ContentTypeBadge`, `PriorityBadge`, `LocaleStatusIndicator`, `LocaleCompletenessBadge`, `ValidationChecklist`, `SchedulePicker`.
-- **Admin shell:** `app/admin/layout.tsx` — left sidebar with Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings), top bar, mobile responsive.
+- **Admin shell:** `app/admin/layout.tsx` — left sidebar with Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings, **Help** → `/admin/help`), top bar, mobile responsive. Top-level Admin nav also includes Help.
 - **Admin dashboard:** `app/admin/resources/page.tsx` + `dashboard-client.tsx` — 4 KPI cards, upcoming scheduled, translation gaps, queue health, recently edited table.
 - **Admin content list:** `app/admin/resources/list/page.tsx` + `list-client.tsx` — status tabs with counts, search + filter (type, topic), multi-select with bulk actions, locale indicators, pagination.
 - **Admin API (list):** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI.
@@ -1138,10 +1140,9 @@ Runs daily at 08:00 UTC. Requires `CRON_SECRET` header.
 
 `lib/seo/indexnow.ts` implements:
 - **IndexNow API call** (`POST https://api.indexnow.org/indexnow`) — instant indexing on Bing, Yandex, Seznam, Naver.
-- **Google sitemap ping** (`GET https://www.google.com/ping?sitemap={url}`) — notify Google of sitemap changes.
-- **Key verification endpoint** at `/api/indexnow?key={key}`.
+- **Key verification:** `keyLocation` points to `https://{host}/{INDEXNOW_KEY}.txt`; the key file is served from `public/{INDEXNOW_KEY}.txt` at the site root.
 
-Called from the publish cron (`app/api/cron/publish-content/route.ts`) via `notifySearchEngines(slug, locale)` after each successful publish. Non-blocking — failures are logged but don't affect publish status.
+Called from the publish cron (`app/api/cron/publish-content/route.ts`) via `notifySearchEngines(slug, locale, routeKind, pillar)` after each successful publish. Article URLs include the resources pillar segment when applicable. Non-blocking — failures are logged but don't affect publish status.
 
 **Required env:** `INDEXNOW_KEY` (random 8-128 char string).
 
@@ -1159,4 +1160,4 @@ The help page renders the same content as `docs/admin-guide.md` as React compone
 - `IntersectionObserver`-based scroll-spy to highlight the active section.
 - Sections: Login, Dashboard, Shops, Jobs, Billing, Audit, Resources Hub, Editor, AI Generator, Autopilot, SEO, Settings, Workflow Reference.
 
-Added "Help" to `ADMIN_NAV` in `app/admin/layout.tsx`.
+**Navigation:** "Help" is in both `ADMIN_NAV` and `RESOURCES_NAV` in `app/admin/layout.tsx` so the guide stays reachable while editing in the Resources Hub. Contextual links: Backlog → AI Generator section, Settings (Autopilot) → Autopilot section, `AIAssistantPanel` → Editor section (`#help-editor`).

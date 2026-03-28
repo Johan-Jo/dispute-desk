@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Info, GripVertical, Sparkles, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Info, GripVertical, Sparkles, AlertTriangle, HelpCircle } from "lucide-react";
 import { ADMIN_LOCALES } from "@/lib/resources/workflow";
 
 interface SettingsClientProps {
@@ -248,9 +249,18 @@ export function SettingsClient({ initial }: SettingsClientProps) {
 
         {/* AI Autopilot */}
         <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-[#8B5CF6]" />
-            <h2 className="text-lg font-semibold text-[#0B1220]">AI Autopilot</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#8B5CF6]" />
+              <h2 className="text-lg font-semibold text-[#0B1220]">AI Autopilot</h2>
+            </div>
+            <Link
+              href="/admin/help#help-autopilot"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1D4ED8] hover:underline"
+            >
+              <HelpCircle className="w-4 h-4 shrink-0" aria-hidden />
+              Learn how autopilot works
+            </Link>
           </div>
           <div className="space-y-5">
             <Toggle

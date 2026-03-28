@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Sparkles,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import { useToast } from "@/components/admin/Toast";
 import { PriorityBadge, WorkflowStatusBadge } from "@/components/admin/resources";
@@ -146,6 +147,13 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
           <p className="text-sm text-[#64748B] mt-1">
             Editorial planning and content ideas pipeline
           </p>
+          <Link
+            href="/admin/help#help-ai-generator"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1D4ED8] hover:underline mt-2"
+          >
+            <HelpCircle className="w-4 h-4 shrink-0" aria-hidden />
+            How AI generation works
+          </Link>
         </div>
         <div className="flex items-center gap-3">
           <Link

@@ -14,6 +14,7 @@ import {
   Clock,
   ListTodo,
   Settings,
+  HelpCircle,
   X,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
@@ -27,6 +28,7 @@ const RESOURCES_NAV = [
   { label: "Queue", href: "/admin/resources/queue", icon: Clock },
   { label: "Backlog", href: "/admin/resources/backlog", icon: ListTodo },
   { label: "Settings", href: "/admin/resources/settings", icon: Settings },
+  { label: "Help", href: "/admin/help", icon: HelpCircle },
 ];
 
 /* ── Top-level admin navigation ─────────────────────────────────────── */
@@ -48,7 +50,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
-  const isResourcesSection = pathname.startsWith("/admin/resources");
+  /** Resources Hub nav + Help page (operators stay in one sidebar when opening the guide). */
+  const isResourcesSection =
+    pathname.startsWith("/admin/resources") || pathname === "/admin/help";
 
   function isActive(href: string) {
     if (href === "/admin/resources" && isResourcesSection) {
