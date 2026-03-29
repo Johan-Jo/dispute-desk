@@ -4,6 +4,7 @@ import {
   normalizeSearchIntent,
   inferPageRoleFromContentType,
   isNarrowOrComparativePageRole,
+  formatLengthGuidance,
 } from "@/lib/resources/generation/targetWordRange";
 
 describe("resolveTargetWordRange", () => {
@@ -107,5 +108,18 @@ describe("helpers", () => {
   it("isNarrowOrComparativePageRole excludes pillar", () => {
     expect(isNarrowOrComparativePageRole("pillar")).toBe(false);
     expect(isNarrowOrComparativePageRole("support")).toBe(true);
+  });
+});
+
+describe("formatLengthGuidance", () => {
+  it("does not append non-English supplement for en-US", () => {
+    const s = formatLengthGuidance("1100–1500 words", "en-US");
+    expect(s).not.toContain("Non-English locale");
+  });
+
+  it("appends non-English supplement for pt-BR", () => {
+    const s = formatLengthGuidance("1100–1500 words", "pt-BR");
+    expect(s).toContain("Non-English locale");
+    expect(s).toContain("1100–1500 words");
   });
 });

@@ -262,7 +262,7 @@ If either `OPENAI_API_KEY` or `GENERATION_ENABLED=true` is missing, generation f
 For each locale, the AI produces:
 - **Title** — Localized article title
 - **Excerpt** — 1-2 sentence summary (max 300 chars)
-- **Slug** — URL-friendly identifier
+- **Slug** — URL-friendly identifier (for non-English locales, **native-language words** transliterated to ASCII — not English slugs on `/pt`, `/de`, etc.)
 - **Meta title** — SEO title (max 60 chars)
 - **Meta description** — SEO description (max 160 chars)
 - **Body content** — Full article with HTML structure, key takeaways, FAQ, and disclaimer
@@ -279,7 +279,11 @@ For each locale, the AI produces:
 | Template | No | Manual creation only |
 | Case Study | No | Requires real merchant data |
 
-**Length guidance in the model prompt:** The generator is instructed to **meet search intent with the shortest adequate article**, not to pad to a word count. The prompt includes a **target range** for the page type; finishing **below** that range is acceptable when the topic is fully covered. Implementation: `lib/resources/generation/targetWordRange.ts` and `buildUserPrompt` in `prompts.ts` (see **`docs/technical.md`** — CH-7).
+**Length guidance in the model prompt:** The generator is instructed to **meet search intent with the shortest adequate article**, not to pad to a word count. The prompt includes a **target range** for the page type; finishing **below** that range is acceptable when the topic is fully covered. For **non-English locales**, the prompt also asks for **full depth** comparable to a strong English article so translations are not systematically shorter. Implementation: `lib/resources/generation/targetWordRange.ts` and `buildUserPrompt` in `prompts.ts` (see **`docs/technical.md`** — CH-7).
+
+### Verifying one article before bulk regeneration
+
+After changing generation prompts or deploying generation fixes, **generate one archive row from Backlog** and inspect every locale: non-English **slugs** should read in the target language, and **body length** should feel complete—not a thin translation. Only then use **Reset & rebuild** or backlog workflows to redo many items.
 
 ### Per-Locale Writing Style
 

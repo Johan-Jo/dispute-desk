@@ -47,7 +47,7 @@ SEO rules:
 - use the primary keyword naturally in the title, opening, one subheading, and conclusion only where it genuinely fits
 - include semantically related terms naturally, not as a list
 - write a compelling meta_description focused on usefulness and click value, not hype
-- create a descriptive slug in the locale language
+- create a descriptive slug in the locale language (CRITICAL: for non-English articles the slug must use native-language words transliterated to ASCII — never English words in the slug when the article is not English)
 
 Conversion rules:
 - the article should help the reader do something
@@ -71,7 +71,7 @@ Return valid JSON with this exact structure. Map on-page title intent to "title"
 {
   "title": "Article title",
   "excerpt": "Brief 1-2 sentence summary for SEO and listings (max 300 chars)",
-  "slug": "url-friendly-slug-max-80-chars",
+  "slug": "url-friendly-slug-max-80-chars-in-article-language-ascii-only",
   "meta_title": "SEO title (max 60 chars)",
   "meta_description": "SEO description (max 160 chars)",
   "body_json": {
@@ -340,14 +340,23 @@ export function buildUserPrompt(
   const searchNorm = normalizeSearchIntent(brief.searchIntent);
   const complexityNorm = normalizeComplexity(brief.complexity);
   const targetWordRange = resolveTargetWordRange(brief);
-  const lengthBlock = formatLengthGuidance(targetWordRange);
+  const lengthBlock = formatLengthGuidance(targetWordRange, locale);
+
+  const slugRequirement =
+    locale === "en-US"
+      ? ""
+      : `
+
+SLUG (required for LOCALE ${locale}):
+- The JSON "slug" field must be written entirely in the **same language as the article body** (not English). Use native words only, lowercase, ASCII letters/digits/hyphens (e.g. for pt-BR: "reducao-tempo-tratamento-disputas-estudo", not "dispute-handling-time-case-study").
+`;
 
   return `${typeInstr}
 
 ${lengthBlock}
 
 LOCALE: ${locale}
-${localeInstr}
+${localeInstr}${slugRequirement}
 
 TOPIC: ${brief.proposedTitle}
 PILLAR: ${brief.primaryPillar}

@@ -120,6 +120,20 @@ export const LENGTH_GUIDANCE_BLOCK = `Length guidance:
 - Target range for this page type: {{targetWordRange}}
 - It is acceptable to finish below the range if the topic is fully covered clearly and specifically.`;
 
-export function formatLengthGuidance(targetWordRange: string): string {
-  return LENGTH_GUIDANCE_BLOCK.replace("{{targetWordRange}}", targetWordRange);
+/** Appended for non-English locales so translations are not systematically shorter than English. */
+export const NON_ENGLISH_LENGTH_SUPPLEMENT = `
+
+Non-English locale (this request):
+- Match the substantive depth, number of sections, and practical detail of a strong English article on the same topic. Do not shorten the article because the language is not English.
+- Non-English prose often needs more words than English for the same ideas; that is expected. Prefer covering the topic fully over aggressive brevity.`;
+
+/**
+ * @param locale When not `en-US`, appends depth guidance so non-English outputs are not systematically shorter.
+ */
+export function formatLengthGuidance(targetWordRange: string, locale?: string): string {
+  const base = LENGTH_GUIDANCE_BLOCK.replace("{{targetWordRange}}", targetWordRange);
+  if (locale && locale !== "en-US") {
+    return `${base}${NON_ENGLISH_LENGTH_SUPPLEMENT}`;
+  }
+  return base;
 }
