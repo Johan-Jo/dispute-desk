@@ -529,7 +529,7 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 2. AI generates content for all configured locales in parallel.
 3. Content is created with `published` workflow status (bypasses editorial and legal review); author, CTA, and tags are applied for publish validation.
 4. All localizations are enqueued in `content_publish_queue`.
-5. The generation run also processes the publish queue once immediately; the **09:00 UTC** publish cron drains any remaining rows and sets `is_published`. (The server claims due queue rows in scheduled order using a select-then-update pattern so the cron stays reliable with PostgREST.)
+5. **Scheduled** autopilot (`/api/cron/autopilot-generate`): after enqueue, the server publishes this article’s locales and may **drain other due backlog rows** in the same request so the queue stays healthy. **Manual “Run autopilot now”** (admin session) only publishes **that run’s article** (all its locales), not the global backlog—remaining pending rows are handled by the **09:00 UTC** publish cron (`/api/cron/publish-content`). Queue claims use a select-then-update pattern for PostgREST reliability.
 6. Email notification sent with article link (if `autopilotNotifyEmail` is set and Resend is configured).
 7. Search engines notified via IndexNow + Google sitemap ping (when configured).
 
@@ -537,9 +537,9 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 
 ### Run autopilot now (Settings)
 
-Under **Settings** → **Run scheduled tasks now**, **Run autopilot now** calls the server directly (admin session). It **does not** use `CRON_SECRET`; it **bypasses** the cron daily article cap so you can drain the backlog without waiting until 08:00 UTC.
+Under **Settings** → **Run scheduled tasks now**, **Run autopilot now** calls the server directly (admin session). It **does not** use `CRON_SECRET`; it **bypasses** the cron daily article cap so you can generate without waiting until 08:00 UTC. **Only the article(s) generated in that request** are published through the queue in that request (all locales per article)—not the rest of the publish backlog, which is still processed by the scheduled publish cron or **Process publish queue** actions.
 
-- **Articles this run** (1–50, default **1**) controls how many backlog items are processed in **one** request. Each item still generates **all target locales** in parallel (heavy OpenAI work), so **keep the default at 1** unless you understand timeout risk.
+- **Articles this run** (1–50, default **1**) controls how many **archive items** are turned into content in **one** request. Each item still generates **all target locales** in parallel (heavy OpenAI work), so **keep the default at 1** unless you understand timeout risk.
 - If the browser shows **504 Gateway Timeout**, the run exceeded the hosting time limit (one multi-locale article can take minutes). Retry with **Articles this run = 1**; on Vercel, **Pro** allows longer serverless duration than Hobby.
 - To process more items, click again or raise the number cautiously.
 

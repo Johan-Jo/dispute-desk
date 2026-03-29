@@ -24,7 +24,7 @@ export interface PipelineResult {
   contentItemId: string | null;
   results: GenerationResult[];
   error: string | null;
-  /** Autopilot only: multi-round publish-queue drain after enqueue (see `drainPublishQueueAfterAutopilotEnqueue`). */
+  /** Autopilot only: priority publish + optional backlog drain (see `publishQueuedRowsForLocalizationIds` / `drainPublishQueueAfterAutopilotEnqueue`). */
   publishQueueDrain?: PublishQueueTickResult;
 }
 
@@ -100,6 +100,11 @@ export async function buildBriefFromArchive(archiveItemId: string): Promise<Gene
 
 export interface PipelineOptions {
   autopilot?: boolean;
+  /**
+   * When `autopilot` is true: after enqueue, also run global FIFO backlog drain (`drainPublishQueueAfterAutopilotEnqueue`).
+   * Default `true` (scheduled cron). Manual admin runs pass `false` so only this article’s locales publish in-request.
+   */
+  autopilotDrainBacklog?: boolean;
 }
 
 export async function runGenerationPipeline(archiveItemId: string, options: PipelineOptions = {}): Promise<PipelineResult> {
@@ -278,17 +283,20 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
         const locIds = locs.map((l) => l.id);
         // Publish this article’s locales first; otherwise FIFO tick may never reach them behind a backlog.
         const priority = await publishQueuedRowsForLocalizationIds(locIds);
-        const tail = await drainPublishQueueAfterAutopilotEnqueue();
+        const drainBacklog = options.autopilotDrainBacklog !== false;
+        const tail = drainBacklog ? await drainPublishQueueAfterAutopilotEnqueue() : null;
         const tick: PublishQueueTickResult =
           !priority.ok
             ? priority
-            : !tail.ok
+            : tail && !tail.ok
               ? tail
-              : {
-                  ok: true,
-                  processed: priority.processed + tail.processed,
-                  results: [...priority.results, ...tail.results],
-                };
+              : !tail
+                ? priority
+                : {
+                    ok: true,
+                    processed: priority.processed + tail.processed,
+                    results: [...priority.results, ...tail.results],
+                  };
         if (!tick.ok) {
           console.error("[generation] Autopilot publish-queue drain failed:", tick.error);
         } else {

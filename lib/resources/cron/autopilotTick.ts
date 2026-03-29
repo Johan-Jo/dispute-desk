@@ -46,7 +46,7 @@ export type AutopilotArticleResult = {
   archiveItemId: string;
   contentItemId: string | null;
   error: string | null;
-  /** Present after successful enqueue from autopilot pipeline (multi-round publish drain). */
+  /** Present after successful enqueue from autopilot pipeline (priority publish; backlog drain when cron). */
   publishQueueDrain?: PublishQueueTickResult;
 };
 
@@ -112,7 +112,11 @@ export async function executeAutopilotTick(opts: AutopilotTickOptions = {}): Pro
     triedThisTick.add(archiveItemId);
     attempts += 1;
 
-    const result = await runGenerationPipeline(archiveItemId, { autopilot: true });
+    const result = await runGenerationPipeline(archiveItemId, {
+      autopilot: true,
+      /** Manual admin (`bypassRateLimit`) should only publish this article’s locales; cron drains backlog. */
+      autopilotDrainBacklog: !opts.bypassRateLimit,
+    });
     generated.push({
       archiveItemId,
       contentItemId: result.contentItemId,
