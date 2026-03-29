@@ -181,13 +181,30 @@ export async function executePublishQueueTick(
   const now = new Date().toISOString();
   const claimLimit = resolveClaimLimit(opts);
 
-  const { data: due, error } = await sb
+  // Two-phase claim: PostgREST returns 42703 on UPDATE when `.order("scheduled_for")` is chained on
+  // the same builder; SELECT … ORDER BY works. Pick ids in FIFO order, then update by id.
+  const { data: picked, error: pickErr } = await sb
     .from("content_publish_queue")
-    .update({ status: "processing" })
+    .select("id")
     .eq("status", "pending")
     .lte("scheduled_for", now)
     .order("scheduled_for", { ascending: true })
-    .limit(claimLimit)
+    .limit(claimLimit);
+
+  if (pickErr) {
+    return { ok: false, error: pickErr.message };
+  }
+
+  const ids = (picked ?? []).map((r) => r.id).filter(Boolean);
+  if (ids.length === 0) {
+    return { ok: true, processed: 0, results: [] };
+  }
+
+  const { data: due, error } = await sb
+    .from("content_publish_queue")
+    .update({ status: "processing" })
+    .in("id", ids)
+    .eq("status", "pending")
     .select("id, content_localization_id, attempts");
 
   if (error) {
@@ -210,7 +227,9 @@ const AUTOPILOT_DRAIN_MAX_ROUNDS = 10;
 export async function drainPublishQueueAfterAutopilotEnqueue(): Promise<PublishQueueTickResult> {
   let combined: PublishQueueTickResult = { ok: true, processed: 0, results: [] };
   for (let round = 0; round < AUTOPILOT_DRAIN_MAX_ROUNDS; round++) {
-    const tick = await executePublishQueueTick({ claimLimit: AUTOPILOT_DRAIN_ROUND_CLAIM });
+    const tick = await executePublishQueueTick({
+      claimLimit: AUTOPILOT_DRAIN_ROUND_CLAIM,
+    });
     if (!tick.ok) return tick;
     combined = mergeTickResults(combined, tick);
     if (tick.processed === 0) break;

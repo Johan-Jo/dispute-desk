@@ -15,6 +15,7 @@ out/
 
 # debug
 npm-debug.log*
+debug-*.log
 
 # playwright
 /test-results/

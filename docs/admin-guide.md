@@ -529,7 +529,7 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 2. AI generates content for all configured locales in parallel.
 3. Content is created with `published` workflow status (bypasses editorial and legal review); author, CTA, and tags are applied for publish validation.
 4. All localizations are enqueued in `content_publish_queue`.
-5. The generation run also processes the publish queue once immediately; the **09:00 UTC** publish cron drains any remaining rows and sets `is_published`.
+5. The generation run also processes the publish queue once immediately; the **09:00 UTC** publish cron drains any remaining rows and sets `is_published`. (The server claims due queue rows in scheduled order using a select-then-update pattern so the cron stays reliable with PostgREST.)
 6. Email notification sent with article link (if `autopilotNotifyEmail` is set and Resend is configured).
 7. Search engines notified via IndexNow + Google sitemap ping (when configured).
 
