@@ -126,19 +126,28 @@ async function rewriteLegacyResourceLinks(
     }
   }
 
-  return mainHtml.replace(hrefRegex, (full, quote: string, href: string) => {
+  let rewritten = mainHtml.replace(hrefRegex, (full, quote: string, href: string) => {
     const parsed = matchMeta.get(href);
     if (!parsed) return full;
-    const pillar = pillarBySlug.get(parsed.slug) ?? currentPillar;
-    const looksLikeTrialOrSignup =
-      /(?:^|-)trial(?:-|$)|sign-?up/.test(parsed.slug);
-    if (!pillarBySlug.has(parsed.slug) && looksLikeTrialOrSignup) {
-      const rewrittenCta = `${basePath}/portal/connect-shopify${parsed.suffix}`;
-      return `href=${quote}${rewrittenCta}${quote}`;
+    const resolvedPillar = pillarBySlug.get(parsed.slug);
+
+    // Slug resolved to a real published article — rewrite to canonical URL.
+    if (resolvedPillar) {
+      return `href=${quote}${basePath}/resources/${resolvedPillar}/${parsed.slug}${parsed.suffix}${quote}`;
     }
-    const rewritten = `${basePath}/resources/${pillar}/${parsed.slug}${parsed.suffix}`;
-    return `href=${quote}${rewritten}${quote}`;
+
+    // Slug did not resolve — mark for stripping so the second pass can remove
+    // the <a> tag while preserving the visible link text.
+    return `data-dd-strip-link="1" href=${quote}${href}${quote}`;
   });
+
+  // Second pass: unwrap <a data-dd-strip-link="1" ...>text</a> → text
+  rewritten = rewritten.replace(
+    /<a\s[^>]*data-dd-strip-link="1"[^>]*>([\s\S]*?)<\/a>/gi,
+    "$1"
+  );
+
+  return rewritten;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
