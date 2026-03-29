@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
 vi.mock("@/lib/admin/auth", () => ({
   hasAdminSession: vi.fn(),
@@ -29,15 +30,33 @@ describe("POST /api/admin/resources/cron/autopilot", () => {
 
   it("returns 401 when not authenticated", async () => {
     mockHasAdmin.mockResolvedValue(false);
-    const res = await POSTAutopilot();
+    const req = new NextRequest("http://localhost/api/admin/resources/cron/autopilot");
+    const res = await POSTAutopilot(req);
     expect(res.status).toBe(401);
   });
 
   it("returns 200 with tick result when authenticated", async () => {
     mockHasAdmin.mockResolvedValue(true);
-    mockAutopilot.mockResolvedValue({ ok: true, processed: 1 } as never);
-    const res = await POSTAutopilot();
+    mockAutopilot.mockResolvedValue({ autopilot: true, articlesGenerated: 0, results: [] } as never);
+    const req = new NextRequest("http://localhost/api/admin/resources/cron/autopilot");
+    const res = await POSTAutopilot(req);
     expect(res.status).toBe(200);
+    expect(mockAutopilot).toHaveBeenCalledWith({ bypassRateLimit: true, overrideCount: 1 });
+  });
+
+  it("passes overrideCount from limit query (capped)", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    mockAutopilot.mockResolvedValue({ autopilot: true, articlesGenerated: 1, results: [] } as never);
+    const req = new NextRequest("http://localhost/api/admin/resources/cron/autopilot?limit=12");
+    await POSTAutopilot(req);
+    expect(mockAutopilot).toHaveBeenCalledWith({ bypassRateLimit: true, overrideCount: 12 });
+  });
+
+  it("caps limit query at 50", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    mockAutopilot.mockResolvedValue({ autopilot: true, articlesGenerated: 0, results: [] } as never);
+    await POSTAutopilot(new NextRequest("http://localhost/api/admin/resources/cron/autopilot?limit=999"));
+    expect(mockAutopilot).toHaveBeenCalledWith({ bypassRateLimit: true, overrideCount: 50 });
   });
 });
 

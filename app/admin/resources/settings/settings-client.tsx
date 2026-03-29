@@ -109,6 +109,8 @@ export function SettingsClient({ initial }: SettingsClientProps) {
     null | "autopilot" | "publish" | "repair" | "resetRebuildDry" | "resetRebuild"
   >(null);
   const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  /** Articles per manual autopilot run (query `limit`); keep low to avoid gateway timeouts. */
+  const [autopilotBatchLimit, setAutopilotBatchLimit] = useState(1);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -229,7 +231,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
     try {
       const path =
         kind === "autopilot"
-          ? "/api/admin/resources/cron/autopilot"
+          ? `/api/admin/resources/cron/autopilot?limit=${Math.min(50, Math.max(1, autopilotBatchLimit))}`
           : "/api/admin/resources/cron/publish";
       const res = await fetch(path, { method: "POST" });
       const data: unknown = await res.json().catch(() => ({}));
@@ -689,10 +691,27 @@ export function SettingsClient({ initial }: SettingsClientProps) {
           <h2 className="text-lg font-semibold text-[#0B1220] mb-1">Run scheduled tasks now</h2>
           <p className="text-sm text-[#64748B] mb-4">
             Same logic as Vercel Cron (autopilot generate, then publish queue with email and SEO
-            pings). Manual <strong>Run autopilot now</strong> bypasses the daily cap so you can drain the backlog.
-            Autopilot respects the toggle above and{" "}
+            pings). Manual <strong>Run autopilot now</strong> bypasses the daily cap. Each request generates up
+            to the number below (default 1) so the run finishes within server time limits; repeat the button to
+            drain a large backlog. Autopilot respects the toggle above and{" "}
             <code className="text-xs bg-[#F1F5F9] px-1 rounded">GENERATION_ENABLED</code> / OpenAI.
           </p>
+          <div className="flex flex-wrap items-center gap-3 mb-3">
+            <label className="flex items-center gap-2 text-sm text-[#0B1220]">
+              <span className="text-[#64748B]">Articles this run</span>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={autopilotBatchLimit}
+                onChange={(e) =>
+                  setAutopilotBatchLimit(Math.min(50, Math.max(1, parseInt(e.target.value, 10) || 1)))
+                }
+                className="w-16 px-2 py-1.5 text-sm border border-[#E5E7EB] rounded-lg"
+              />
+            </label>
+            <span className="text-xs text-[#64748B]">Higher values may hit 504 timeouts on Vercel.</span>
+          </div>
           <div className="flex flex-wrap gap-3">
             <button
               type="button"

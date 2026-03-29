@@ -61,7 +61,7 @@ export interface AutopilotTickOptions {
    * up to `overrideCount` articles in a single tick. Defaults to false (cron behavior).
    */
   bypassRateLimit?: boolean;
-  /** Max articles to generate when bypassing rate limit. Default: 20. */
+  /** Max articles to generate when bypassing rate limit. Admin route passes this explicitly (default 1). */
   overrideCount?: number;
 }
 
@@ -82,7 +82,7 @@ export async function executeAutopilotTick(opts: AutopilotTickOptions = {}): Pro
   let articlesToGenerate: number;
 
   if (opts.bypassRateLimit) {
-    articlesToGenerate = opts.overrideCount ?? 20;
+    articlesToGenerate = opts.overrideCount ?? 1;
   } else {
     articlesToGenerate = articlesPerDay;
     if (startedAt) {
