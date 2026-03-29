@@ -210,6 +210,7 @@ export async function getBacklogItems(filters: BacklogFilters = {}) {
   let query = sb()
     .from("content_archive_items")
     .select("*")
+    .neq("status", "converted")
     .order("priority_score", { ascending: false });
 
   if (priority && priority !== "all") {
@@ -283,13 +284,17 @@ export async function updateWorkflowStatus(
     updates.published_at = new Date().toISOString();
   }
 
-  const { error } = await sb()
+  const { data: updated, error } = await sb()
     .from("content_items")
     .update(updates)
     .eq("id", id)
-    .eq("workflow_status", currentStatus);
+    .eq("workflow_status", currentStatus)
+    .select("id");
 
   if (error) throw error;
+  if (!updated || updated.length === 0) {
+    throw new Error(`Workflow transition failed: item ${id} is no longer in "${currentStatus}" status`);
+  }
 }
 
 /* ── CMS settings ───────────────────────────────────────────────────── */
@@ -333,7 +338,7 @@ export async function getGenerationStats() {
     published,
     rejected,
     inReview: generated.filter((i) =>
-      i.workflow_status === "in_editorial_review" || i.workflow_status === "in_legal_review"
+      i.workflow_status === "in-editorial-review" || i.workflow_status === "in-legal-review"
     ).length,
     drafting: generated.filter((i) => i.workflow_status === "drafting").length,
     totalTokens,

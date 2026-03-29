@@ -85,6 +85,10 @@ const STATUS_DISPLAY: Record<WorkflowStatus, StatusDisplay> = {
   archived: { label: "Archived", color: "#667085", bgColor: "#F6F8FB", borderColor: "#E1E3E5" },
 };
 
+/**
+ * For `content_items.workflow_status` only (kebab-case e.g. `brief-ready`).
+ * Archive rows use `content_archive_items.status` (`brief_ready`) — use `getArchiveItemStatusDisplay` instead.
+ */
 export function getStatusDisplay(status: WorkflowStatus): StatusDisplay {
   return STATUS_DISPLAY[status] ?? STATUS_DISPLAY.idea;
 }

@@ -18,9 +18,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.json();
-  const archiveItemId = body.archiveItemId as string;
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
+  const archiveItemId = typeof body.archiveItemId === "string" ? body.archiveItemId : "";
   if (!archiveItemId) {
     return NextResponse.json({ error: "archiveItemId is required" }, { status: 400 });
   }

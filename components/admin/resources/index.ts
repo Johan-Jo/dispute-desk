@@ -1,3 +1,4 @@
+export { ArchiveItemStatusBadge } from "./ArchiveItemStatusBadge";
 export { WorkflowStatusBadge } from "./WorkflowStatusBadge";
 export { ContentTypeBadge } from "./ContentTypeBadge";
 export { PriorityBadge } from "./PriorityBadge";

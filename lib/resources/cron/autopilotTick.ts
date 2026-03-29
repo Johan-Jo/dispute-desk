@@ -25,6 +25,7 @@ async function countAutopilotPublishedSince(since: string): Promise<number> {
   return count ?? 0;
 }
 
+/** Only backlog / brief_ready — `idea` stays editorial-only until promoted. */
 async function pickNextArchiveItem(): Promise<string | null> {
   const sb = getServiceClient();
   const { data } = await sb

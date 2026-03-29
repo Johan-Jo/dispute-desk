@@ -14,11 +14,8 @@ export async function GET(req: NextRequest) {
   const contentType = url.searchParams.get("contentType") ?? undefined;
   const topic = url.searchParams.get("topic") ?? undefined;
   const search = url.searchParams.get("search") ?? undefined;
-  const page = parseInt(url.searchParams.get("page") ?? "1", 10);
-  const pageSize = Math.min(
-    parseInt(url.searchParams.get("pageSize") ?? "20", 10),
-    100
-  );
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.max(1, Math.min(parseInt(url.searchParams.get("pageSize") ?? "20", 10) || 20, 100));
 
   try {
     const result = await getContentList({ status, contentType, topic, search, page, pageSize });

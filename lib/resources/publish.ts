@@ -62,7 +62,7 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
   if ((tagCount ?? 0) < 3) return { ok: false, error: "min_3_tags" };
 
   const now = new Date().toISOString();
-  await sb
+  const { error: locUpdateErr } = await sb
     .from("content_localizations")
     .update({
       is_published: true,
@@ -72,7 +72,9 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
     })
     .eq("id", id);
 
-  await sb
+  if (locUpdateErr) return { ok: false, error: `localization_update: ${locUpdateErr.message}` };
+
+  const { error: itemUpdateErr } = await sb
     .from("content_items")
     .update({
       workflow_status: "published",
@@ -81,12 +83,18 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
     })
     .eq("id", loc.content_item_id);
 
-  await sb.from("content_revisions").insert({
+  if (itemUpdateErr) return { ok: false, error: `item_update: ${itemUpdateErr.message}` };
+
+  const { error: revErr } = await sb.from("content_revisions").insert({
     content_item_id: loc.content_item_id,
     locale: loc.locale,
     snapshot_json: loc as unknown as Record<string, unknown>,
     created_by: "cron",
   });
+
+  if (revErr) {
+    console.error("[publish] Revision insert failed (publish still succeeded):", revErr.message);
+  }
 
   return { ok: true };
 }

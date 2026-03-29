@@ -18,8 +18,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useToast } from "@/components/admin/Toast";
-import { PriorityBadge, WorkflowStatusBadge } from "@/components/admin/resources";
-import type { Priority, WorkflowStatus } from "@/lib/resources/workflow";
+import { ArchiveItemStatusBadge, PriorityBadge } from "@/components/admin/resources";
+import type { Priority } from "@/lib/resources/workflow";
 
 interface BacklogItem {
   id: string;
@@ -326,7 +326,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                     <PriorityBadge priority={scoreToPriority(item.priority_score)} />
                   </td>
                   <td className="px-4 py-3">
-                    <WorkflowStatusBadge status={item.status as WorkflowStatus} />
+                    <ArchiveItemStatusBadge status={item.status} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

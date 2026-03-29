@@ -35,7 +35,12 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   }
 
   const { id } = await ctx.params;
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const sb = getServiceClient();
 
   try {
@@ -60,13 +65,17 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       if (error) throw error;
     }
 
-    // Update workflow status with state machine validation
     if (body.workflowTransition) {
       const { from, to } = body.workflowTransition as { from: string; to: string };
       if (!isWorkflowStatus(from) || !isWorkflowStatus(to)) {
         return NextResponse.json({ error: "Invalid workflow status" }, { status: 400 });
       }
-      await updateWorkflowStatus(id, from as WorkflowStatus, to as WorkflowStatus);
+      try {
+        await updateWorkflowStatus(id, from as WorkflowStatus, to as WorkflowStatus);
+      } catch (wfErr) {
+        const msg = wfErr instanceof Error ? wfErr.message : "Workflow transition failed";
+        return NextResponse.json({ error: msg }, { status: 400 });
+      }
     }
 
     // Upsert localization for a specific locale
@@ -102,19 +111,33 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       if (error) throw error;
     }
 
-    // Schedule publish
     if (body.schedule) {
       const { localizationId, scheduledFor } = body.schedule as {
         localizationId: string;
         scheduledFor: string;
       };
+
+      if (!localizationId || !scheduledFor) {
+        return NextResponse.json({ error: "localizationId and scheduledFor are required" }, { status: 400 });
+      }
+
+      const { data: ownerCheck } = await sb
+        .from("content_localizations")
+        .select("id")
+        .eq("id", localizationId)
+        .eq("content_item_id", id)
+        .maybeSingle();
+      if (!ownerCheck) {
+        return NextResponse.json({ error: "Localization does not belong to this content item" }, { status: 400 });
+      }
+
       const { error } = await sb.from("content_publish_queue").upsert(
         {
-          localization_id: localizationId,
+          content_localization_id: localizationId,
           scheduled_for: scheduledFor,
           status: "pending",
         },
-        { onConflict: "localization_id" }
+        { onConflict: "content_localization_id" }
       );
       if (error) throw error;
     }

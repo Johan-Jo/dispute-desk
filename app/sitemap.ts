@@ -4,8 +4,9 @@ import {
   normalizeResourceHubPillar,
   RESOURCE_HUB_PILLARS,
 } from "@/lib/resources/pillars";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://disputedesk.app";
+const BASE_URL = getPublicSiteBaseUrl();
 
 const LOCALES = ["en-US", "de-DE", "fr-FR", "es-ES", "pt-BR", "sv-SE"];
 const LOCALE_PREFIXES: Record<string, string> = {
@@ -25,7 +26,7 @@ function localeUrl(path: string, locale: string): string {
 function alternates(path: string) {
   const languages: Record<string, string> = {};
   for (const locale of LOCALES) {
-    const tag = locale.toLowerCase().replace("-", "-");
+    const tag = locale.toLowerCase();
     languages[tag] = localeUrl(path, locale);
   }
   return { languages };
@@ -78,7 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const languages: Record<string, string> = {};
         for (const loc of locs ?? []) {
           if (!loc.slug) continue;
-          const tag = loc.locale.toLowerCase().replace("-", "-");
+          const tag = loc.locale.toLowerCase();
           const prefix = LOCALE_PREFIXES[loc.locale] ?? "";
           languages[tag] = `${BASE_URL}${prefix}/resources/${pillar}/${loc.slug}`;
         }

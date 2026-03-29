@@ -19,13 +19,45 @@ export async function GET() {
   }
 }
 
+const ALLOWED_CMS_KEYS = new Set([
+  "defaultPublishTimeUtc",
+  "weekendsEnabled",
+  "skipIfTranslationIncomplete",
+  "minScheduledDaysWarning",
+  "requireReviewerBeforePublish",
+  "autopilotEnabled",
+  "autopilotArticlesPerDay",
+  "autopilotNotifyEmail",
+  "autopilotStartedAt",
+  "defaultCta",
+  "generationSystemPrompt",
+  "generationUserPromptSuffix",
+  "generationLocaleInstructions",
+  "generationContentTypeInstructions",
+]);
+
 export async function PUT(req: NextRequest) {
   if (!(await hasAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const body = await req.json();
-    await updateCmsSettings(body);
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return NextResponse.json({ error: "Body must be a JSON object" }, { status: 400 });
+    }
+
+    const sanitized: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(body)) {
+      if (ALLOWED_CMS_KEYS.has(k)) sanitized[k] = v;
+    }
+
+    await updateCmsSettings(sanitized);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(

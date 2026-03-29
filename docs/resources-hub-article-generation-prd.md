@@ -2,7 +2,7 @@
 
 ## Overview
 
-AI-powered pipeline that turns archive items into reviewable, localized drafts. Generated content enters the same editorial workflow as manually created content. **Manual “Generate”** produces drafts (`drafting` / `in_legal_review` for legal updates). **Autopilot** (when enabled in CMS + cron) may create items as **published** and enqueue the publish pipeline — see `docs/technical.md` (Resources Hub autopilot).
+AI-powered pipeline that turns archive items into reviewable, localized drafts. Generated content enters the same editorial workflow as manually created content. **Manual “Generate”** produces drafts (`drafting` / `in-legal-review` for legal updates — values match `content_items.workflow_status` / `lib/resources/workflow.ts`). **Autopilot** (when enabled in CMS + cron) may create items as **published** and enqueue the publish pipeline — see `docs/technical.md` (Resources Hub autopilot).
 
 ## Architecture
 

@@ -50,7 +50,7 @@ const DEFAULT_SETTINGS: Settings = {
   legalReviewEmail: "",
   autopilotEnabled: false,
   autopilotArticlesPerDay: 1,
-  autopilotNotifyEmail: "oi@johan.com.br",
+  autopilotNotifyEmail: "",
   autopilotStartedAt: null,
   generationSystemPrompt: "",
   generationUserPromptSuffix: "",
@@ -415,9 +415,14 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               description="Automatically generate and publish articles from the backlog without manual approval"
               checked={settings.autopilotEnabled}
               onChange={(v) => {
-                update("autopilotEnabled", v);
                 if (v && !settings.autopilotStartedAt) {
-                  update("autopilotStartedAt", new Date().toISOString());
+                  setSettings((prev) => {
+                    const next = { ...prev, autopilotEnabled: true, autopilotStartedAt: new Date().toISOString() };
+                    autoSave(next);
+                    return next;
+                  });
+                } else {
+                  update("autopilotEnabled", v);
                 }
               }}
             />

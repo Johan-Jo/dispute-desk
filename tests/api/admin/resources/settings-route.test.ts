@@ -66,10 +66,23 @@ describe("PUT /api/admin/resources/settings", () => {
     const req = new Request("http://localhost", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ foo: "bar" }),
+      body: JSON.stringify({ autopilotEnabled: true, weekendsEnabled: false }),
     });
     const res = await PUT(req as never);
     expect(res.status).toBe(200);
-    expect(mockUpdateCms).toHaveBeenCalledWith({ foo: "bar" });
+    expect(mockUpdateCms).toHaveBeenCalledWith({ autopilotEnabled: true, weekendsEnabled: false });
+  });
+
+  it("strips unknown keys from payload", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    mockUpdateCms.mockResolvedValue(undefined);
+    const req = new Request("http://localhost", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autopilotEnabled: true, unknownKey: "evil" }),
+    });
+    const res = await PUT(req as never);
+    expect(res.status).toBe(200);
+    expect(mockUpdateCms).toHaveBeenCalledWith({ autopilotEnabled: true });
   });
 });

@@ -56,6 +56,10 @@ export async function listPublishedByRoute(
     q = q.eq("content_items.content_type", opts.contentType);
   }
 
+  if (opts?.search) {
+    q = q.or(`title.ilike.%${opts.search}%,excerpt.ilike.%${opts.search}%,slug.ilike.%${opts.search}%`);
+  }
+
   const limit = opts?.limit ?? 24;
   const offset = opts?.offset ?? 0;
   q = q
@@ -69,7 +73,7 @@ export async function listPublishedByRoute(
     content_items: ContentItemRow | ContentItemRow[];
   };
 
-  let rows = (data ?? []).map((raw: unknown) => {
+  return (data ?? []).map((raw: unknown) => {
     const r = raw as Row;
     const item = Array.isArray(r.content_items)
       ? r.content_items[0]
@@ -78,18 +82,6 @@ export async function listPublishedByRoute(
       content_items: ContentItemRow;
     };
   });
-
-  if (opts?.search) {
-    const s = opts.search.toLowerCase();
-    rows = rows.filter(
-      (r) =>
-        r.title.toLowerCase().includes(s) ||
-        r.excerpt.toLowerCase().includes(s) ||
-        r.slug.toLowerCase().includes(s)
-    );
-  }
-
-  return rows;
 }
 
 export async function getPublishedLocalizationBySlug(args: {

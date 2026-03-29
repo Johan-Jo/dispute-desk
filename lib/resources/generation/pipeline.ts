@@ -133,7 +133,7 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results, error: `Publish prerequisites failed: ${msg}` };
   }
 
-  const initialStatus = options.autopilot ? "published" : brief.contentType === "legal_update" ? "in_legal_review" : "drafting";
+  const initialStatus = options.autopilot ? "published" : brief.contentType === "legal_update" ? "in-legal-review" : "drafting";
 
   const { data: newItem, error: itemError } = await sb
     .from("content_items")
@@ -165,7 +165,7 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results, error: `Failed to attach tags for publish: ${tagErr.message}` };
   }
 
-  await sb
+  const { error: archiveErr } = await sb
     .from("content_archive_items")
     .update({
       created_from_archive_to_content_item_id: contentItemId,
@@ -173,6 +173,10 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
       updated_at: new Date().toISOString(),
     })
     .eq("id", archiveItemId);
+
+  if (archiveErr) {
+    console.error("[generation] Failed to mark archive as converted:", archiveErr.message);
+  }
 
   const localizationInserts = successfulResults
     .filter((r): r is GenerationResult & { content: NonNullable<GenerationResult["content"]> } => r.content !== null)
@@ -193,6 +197,7 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     const { error: locError } = await sb.from("content_localizations").insert(localizationInserts);
     if (locError) {
       console.error("[generation] Failed to insert localizations:", locError.message);
+      return { contentItemId, results, error: `Failed to insert localizations: ${locError.message}` };
     }
   }
 

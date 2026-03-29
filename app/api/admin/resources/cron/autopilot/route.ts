@@ -10,6 +10,13 @@ export async function POST() {
   if (!(await hasAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const result = await executeAutopilotTick();
-  return NextResponse.json(result);
+  try {
+    const result = await executeAutopilotTick();
+    return NextResponse.json(result);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Autopilot tick failed" },
+      { status: 500 }
+    );
+  }
 }

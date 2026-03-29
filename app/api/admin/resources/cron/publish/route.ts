@@ -10,12 +10,19 @@ export async function POST() {
   if (!(await hasAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const result = await executePublishQueueTick();
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 500 });
+  try {
+    const result = await executePublishQueueTick();
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
+    return NextResponse.json({
+      processed: result.processed,
+      results: result.results,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Publish queue tick failed" },
+      { status: 500 }
+    );
   }
-  return NextResponse.json({
-    processed: result.processed,
-    results: result.results,
-  });
 }

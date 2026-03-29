@@ -470,22 +470,24 @@ Configure CMS behavior. All changes auto-save (debounced 800ms).
 Content follows a defined state machine. Only valid transitions are allowed:
 
 ```
-idea → backlog → brief_ready → drafting → in_translation
+idea → backlog → brief-ready → drafting → in-translation
                                     ↓
-                            in_editorial_review → in_legal_review → approved
+                            in-editorial-review → in-legal-review → approved
                                                                        ↓
                                                               scheduled → published → archived
 ```
+
+Values are **`content_items.workflow_status`** (kebab-case in the database). The **backlog** table shows **`content_archive_items.status`** separately (snake_case such as `brief_ready`); see `docs/technical.md` (Resources Hub).
 
 | Status | Meaning |
 |--------|---------|
 | `idea` | Initial concept, no content yet |
 | `backlog` | Accepted idea, waiting for brief |
-| `brief_ready` | Brief written, ready for drafting |
+| `brief-ready` | Brief written, ready for drafting |
 | `drafting` | Content being written or generated |
-| `in_translation` | English done, translations in progress |
-| `in_editorial_review` | Content ready for editor review |
-| `in_legal_review` | Requires legal team sign-off (mandatory for legal_update content) |
+| `in-translation` | English done, translations in progress |
+| `in-editorial-review` | Content ready for editor review |
+| `in-legal-review` | Requires legal team sign-off (mandatory for legal_update content) |
 | `approved` | All reviews passed, ready to schedule |
 | `scheduled` | Queued for future publication |
 | `published` | Live on the public site |
@@ -504,7 +506,7 @@ Autopilot generates and publishes articles automatically without manual approval
 | **`CRON_SECRET`** | Set in Vercel project env; Vercel Cron sends it on cron requests. Without it, `/api/cron/*` returns 401. Redeploy after adding. |
 | **`GENERATION_ENABLED=true`** and **`OPENAI_API_KEY`** | Required for AI generation. |
 | **`RESEND_API_KEY`** | Required for the post-publish notification email. |
-| **Settings saved** | Toggle autopilot on and set notification email; wait for auto-save (or confirm `cms_settings.settings_json` includes `autopilotEnabled`, `autopilotNotifyEmail`). |
+| **Settings saved** | Toggle autopilot on and **enter a notification email**; wait for auto-save (or confirm `cms_settings.settings_json` includes `autopilotEnabled`, `autopilotNotifyEmail`). The UI does **not** ship with a default recipient — the field starts empty until you save an address. |
 | **Default CTA** | **Workflow → Default CTA** (e.g. Free Trial) maps to `content_ctas.event_name` (`free_trial`, etc.). Preset CTAs are seeded by migration `20260328123100_seed_hub_content_ctas_presets.sql`. |
 | **Publish prerequisites** | Server-side `ensurePublishPrerequisites` attaches default author, primary CTA, and three tags so the publish step can succeed. |
 
@@ -512,7 +514,7 @@ Autopilot generates and publishes articles automatically without manual approval
 |---------|-------------|
 | **Enable autopilot** | Master toggle — when on, the cron job runs daily at 08:00 UTC |
 | **Articles per day** | How many articles to generate daily (after initial 5-day burst) |
-| **Notification email** | Receive an email with the article link after each successful publish (via Resend) |
+| **Notification email** | Receive an email with the article link after each successful publish (via Resend). Stored in CMS only — not an environment variable. |
 | **Default CTA** | Which `content_ctas` row is linked to new AI-generated items (`event_name` must match, e.g. `free_trial`) |
 
 ### 5-Day Initial Burst
@@ -521,12 +523,12 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 
 ### How It Works
 
-1. Daily cron (`/api/cron/autopilot-generate`, **08:00 UTC**) picks the highest-priority backlog item.
+1. Daily cron (`/api/cron/autopilot-generate`, **08:00 UTC**) picks the highest-priority archive item in **backlog** or **brief ready** (not **idea** — promote ideas in the backlog table before autopilot can pick them).
 2. AI generates content for all configured locales in parallel.
 3. Content is created with `published` workflow status (bypasses editorial and legal review); author, CTA, and tags are applied for publish validation.
 4. All localizations are enqueued in `content_publish_queue`.
-5. Publish cron (`/api/cron/publish-content`, **09:00 UTC**) processes the queue and sets `is_published`.
-6. Email notification sent with article link (if `autopilotNotifyEmail` is set and generation metadata is present).
+5. The generation run also processes the publish queue once immediately; the **09:00 UTC** publish cron drains any remaining rows and sets `is_published`.
+6. Email notification sent with article link (if `autopilotNotifyEmail` is set and Resend is configured).
 7. Search engines notified via IndexNow + Google sitemap ping (when configured).
 
 **Manual cron test:** Call the same routes with `Authorization: Bearer <CRON_SECRET>` after deploy.

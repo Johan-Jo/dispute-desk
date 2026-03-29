@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://disputedesk.app";
+const BASE_URL = getPublicSiteBaseUrl();
 
 export default function robots(): MetadataRoute.Robots {
   return {

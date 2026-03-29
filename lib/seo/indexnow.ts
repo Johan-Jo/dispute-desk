@@ -4,7 +4,9 @@
  * - Google: sitemap ping to trigger re-crawl.
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://disputedesk.app";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+
+const BASE_URL = getPublicSiteBaseUrl();
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY;
 
 const LOCALE_PREFIXES: Record<string, string> = {
@@ -32,7 +34,7 @@ async function pingIndexNow(url: string): Promise<void> {
 
   try {
     const host = new URL(BASE_URL).host;
-    await fetch("https://api.indexnow.org/indexnow", {
+    const res = await fetch("https://api.indexnow.org/indexnow", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -42,7 +44,11 @@ async function pingIndexNow(url: string): Promise<void> {
         urlList: [url],
       }),
     });
-    console.log(`[seo] IndexNow pinged for ${url}`);
+    if (!res.ok) {
+      console.warn(`[seo] IndexNow returned ${res.status} for ${url}`);
+    } else {
+      console.log(`[seo] IndexNow pinged for ${url}`);
+    }
   } catch (err) {
     console.warn("[seo] IndexNow ping failed:", err instanceof Error ? err.message : err);
   }

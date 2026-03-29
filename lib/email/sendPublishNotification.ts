@@ -29,6 +29,7 @@ export async function sendPublishNotification(
     return { ok: false, error: "Email service not configured" };
   }
 
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const baseUrl = getPublicSiteBaseUrl();
   const hubLocale = isLocale(options.locale) ? options.locale : ("en-US" satisfies Locale);
   const pathLocale = messagesLocaleToPath(hubLocale);
@@ -53,7 +54,7 @@ export async function sendPublishNotification(
   <p style="font-size: 16px; line-height: 1.6;">A new article has been automatically generated and published:</p>
 
   <div style="background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin: 20px 0;">
-    <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">${options.articleTitle}</p>
+    <p style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">${esc(options.articleTitle)}</p>
     <p style="margin: 0; font-size: 14px; color: #64748B;">Locale: ${options.locale}</p>
   </div>
 

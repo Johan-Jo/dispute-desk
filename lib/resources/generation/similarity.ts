@@ -21,7 +21,7 @@ export function getSimilarityRetryInstruction(): string {
   return SIMILARITY_RETRY_INSTRUCTION;
 }
 
-/** Deterministic word-level overlap; good enough for v1 without embeddings. */
+/** Deterministic word-level Jaccard index; good enough for v1 without embeddings. */
 function normalizeWords(s: string): string[] {
   return s
     .toLowerCase()

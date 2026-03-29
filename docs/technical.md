@@ -137,10 +137,11 @@ Transactional email is sent via **Resend**. Layout is minimal string-based
 HTML (single link, no big CTA buttons or "copy this link" blocks) to
 minimize spam classification.
 
-- **Env:** `RESEND_API_KEY` (required). `EMAIL_FROM` defaults to
+- **Env:** `RESEND_API_KEY` (required for sending). `EMAIL_FROM` defaults to
   `DisputeDesk <notifications@mail.disputedesk.app>` (sending subdomain). The
   domain must be verified in Resend (resend.com/domains). `EMAIL_REPLY_TO` sets
   Reply-To (defaults to same as FROM; avoid no-reply for deliverability).
+  **Resources Hub autopilot** publish notifications (`lib/email/sendPublishNotification.ts`) use the same Resend client and env vars.
 - **Deliverability (inbox vs spam):** (1) Add DMARC (Resend: resend.com/docs/dashboard/domains/dmarc). (2) **Links in the email must use your sending domain** — set `NEXT_PUBLIC_APP_URL=https://disputedesk.app` so the dashboard link is not localhost. (3) Sending subdomain `mail.disputedesk.app` is the default; keep `EMAIL_FROM`/`EMAIL_REPLY_TO` on that subdomain so root domain reputation stays separate. (4) In Resend dashboard, turn off click/open tracking for the domain if enabled.
 - **Templates:** `lib/email/templates.ts` (welcome HTML/text).
 - **Send:** `lib/email/sendWelcome.ts`; `POST /api/emails/welcome` (body:
@@ -178,7 +179,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Admin shell:** `app/admin/layout.tsx` — under `/admin/resources/*`, the left sidebar shows Resources Hub sub-navigation (Dashboard, Content List, Calendar, Queue, Backlog, Settings, **Help** → `/admin/help`). Elsewhere (including **`/admin/help`**), the sidebar shows top-level Admin nav (Resources, Shops, Jobs, Audit Log, Billing, Help) so the guide is not nested under Resources Hub (avoids duplicate labels like “Dashboard”). Top bar, mobile responsive.
 - **Admin dashboard:** `app/admin/resources/page.tsx` + `dashboard-client.tsx` — 4 KPI cards, upcoming scheduled, translation gaps, queue health, recently edited table.
 - **Admin content list:** `app/admin/resources/list/page.tsx` + `list-client.tsx` — status tabs with counts, search + filter (type, topic), multi-select with bulk actions, locale indicators, pagination.
-- **Admin API (list):** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI.
+- **Admin API (list):** `GET /api/admin/resources/content?status=&contentType=&topic=&search=&page=&pageSize=` — paginated, filterable content list for the admin UI. Query params `page` and `pageSize` are clamped (`page` ≥ 1, `pageSize` 1–100, NaN-safe).
 - **Admin API (editor):** `GET/PUT /api/admin/resources/content/[id]` — load full content item for editor (item + localizations + tags + revisions), save item fields + per-locale data + workflow transitions + schedule.
 - **Block editor:** `app/admin/resources/content/[id]/editor-client.tsx` — custom block editor with 13 block types (html, paragraph, heading, list, callout, code, quote, divider, image, key-takeaways, faq, disclaimer, update-log). Blocks reorderable, add/remove. Locale tabs with completeness badges.
 - **Body adapter:** `lib/resources/body-adapter.ts` — bidirectional `bodyJsonToBlocks` / `blocksToBodyJson` converting legacy `{mainHtml, keyTakeaways, faq, disclaimer, updateLog}` ↔ `EditorBlock[]`.
@@ -186,11 +187,13 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Backlog page:** `app/admin/resources/backlog/` — ideas pipeline with 4 KPI cards, search/filter (priority, status), reorderable table, convert-to-draft action.
 - **Calendar page:** `app/admin/resources/calendar/` — agenda view (posts grouped by date), calendar grid view (7-col Mon–Sun with dot indicators), month navigation, queue health panel.
 - **Queue page:** `app/admin/resources/queue/` — 4 status stat cards, filter tabs (all/pending/processing/succeeded/failed), card-based item list with error display, retry actions, system status panel.
-- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email), AI autopilot, and **Run scheduled tasks now** (manual autopilot + publish-queue triggers). Auto-saves via debounced PUT to `/api/admin/resources/settings`.
+- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email), AI autopilot, and **Run scheduled tasks now** (manual autopilot + publish-queue triggers). Auto-saves via debounced PUT to `/api/admin/resources/settings`. **PUT body allowlist:** only known CMS keys are persisted (see `ALLOWED_CMS_KEYS` in `app/api/admin/resources/settings/route.ts`); unknown keys are stripped so arbitrary JSON cannot overwrite the singleton row.
 - **Mobile editor:** Responsive editor with Content/Metadata/Checklist tab bar, locale picker bottom sheet, fixed bottom action bar (Save/Schedule/Publish).
 - **Toast system:** `components/admin/Toast.tsx` — `ToastProvider` + `useToast()` hook for success/error/info notifications across admin.
-- **Cron:** `GET` or `POST` `/api/cron/publish-content` runs `publishLocalization` from `lib/resources/publish` after validation.
-- **Queries (public):** `lib/resources/queries.ts`, locale mapping `lib/resources/localeMap.ts`.
+- **Publish queue:** `lib/resources/cron/publishQueueTick.ts` — `executePublishQueueTick()` claims due rows **atomically** (`UPDATE … WHERE status = 'pending'` returning rows), runs `publishLocalization` per row, then post-publish hooks (Resend notify, IndexNow). **Stale recovery:** rows stuck in `processing` longer than ~10 minutes are reset to `pending` so a crashed worker does not block the queue forever. Vercel cron `GET`/`POST` `/api/cron/publish-content` invokes the same tick.
+- **Publish (`publishLocalization`):** `lib/resources/publish.ts` — validates pillar, fields, tags; updates localization + content item; returns `{ ok: false }` if any required Supabase write fails (so the queue does not mark success on partial failure).
+- **Queries (public):** `lib/resources/queries.ts` — `listPublishedByRoute` applies `search` in the Supabase query (title/excerpt/slug `ilike`) **before** `range`, so hub search is not limited to the first page of results. Locale mapping: `lib/resources/localeMap.ts`.
+- **Backlog list:** `getBacklogItems` excludes `content_archive_items.status = 'converted'` so finished archive rows do not clutter the default backlog table.
 
 ### Public URLs, hub locales, and pillars
 
@@ -244,6 +247,7 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 - `AIAssistantPanel` component (`components/admin/editor/AIAssistantPanel.tsx`) — Sidebar panel with three AI actions. Results can be applied directly to editor state.
 
 **Backlog Integration**:
+- Status column uses `ArchiveItemStatusBadge` + `getArchiveItemStatusDisplay` (`lib/resources/archiveItemStatus.ts`) because `content_archive_items.status` is snake_case (`brief_ready`), not the content workflow’s kebab-case (`brief-ready`). Feeding archive status into `WorkflowStatusBadge` mislabeled **Brief ready** rows as **Idea**.
 - "Generate" button on each backlog item triggers `POST /api/admin/resources/generate`, then redirects to editor for the newly created draft.
 
 **Shopify chargeback launch cluster (content briefs in DB):**
@@ -1133,7 +1137,7 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 | Settings UI | `app/admin/resources/settings/settings-client.tsx` | Autopilot toggle, articles/day, email config |
 | Pipeline | `lib/resources/generation/pipeline.ts` | `PipelineOptions.autopilot` flag — auto-publishes, enqueues |
 | Publish prerequisites | `lib/resources/generation/publishPrerequisites.ts` | Ensures author, primary CTA, ≥3 tags so `publishLocalization` succeeds |
-| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks highest-priority backlog items, calls pipeline |
+| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks highest-priority archive row in `backlog` or `brief_ready` (not `idea`), calls pipeline |
 | Publish Cron | `app/api/cron/publish-content/route.ts` | Drains `content_publish_queue`, sends autopilot email after successful publish |
 | Publish Email | `lib/email/sendPublishNotification.ts` | Resend-based email with article link |
 
@@ -1144,6 +1148,8 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 **5-day burst:** When autopilot is first enabled, `autopilotStartedAt` is recorded. The cron checks how many articles have been auto-published since that timestamp. If fewer than 5, it generates 1/day until the burst is complete.
 
 **Pipeline autopilot flag:** When `options.autopilot = true`, the pipeline sets `workflow_status = "published"` on the new `content_items` row, enqueues each localization on `content_publish_queue` with `scheduled_for = now()`, then **runs `executePublishQueueTick()` once in-process** so `publishLocalization` sets `content_localizations.is_published`, `publish_at`, and `content_items.published_at` without waiting for Vercel’s publish cron. (Previously, skipping the tick left items “Published” in admin with a blank date and invisible on the public hub.)
+
+**Publish notification email:** After each successful queue row, `executePublishQueueTick` calls `sendPublishNotification` when `cms_settings.settings_json.autopilotNotifyEmail` is non-empty (trimmed) and the localization has `title` and `slug`. There is **no default recipient in application code** — operators must enter an address under **Admin → Resources → Settings → AI Autopilot → Notification email** and let settings auto-save. Production needs `RESEND_API_KEY` (and optional `EMAIL_FROM`); without Resend, the helper returns failure and the tick logs it. If publish never ran (queue stuck or failed), no email is sent. HTML body escapes the article title for safe interpolation.
 
 ### Cron Schedule
 
@@ -1173,8 +1179,9 @@ In `vercel.json`:
 ### IndexNow
 
 `lib/seo/indexnow.ts` implements:
-- **IndexNow API call** (`POST https://api.indexnow.org/indexnow`) — instant indexing on Bing, Yandex, Seznam, Naver.
+- **IndexNow API call** (`POST https://api.indexnow.org/indexnow`) — instant indexing on Bing, Yandex, Seznam, Naver. Non-OK HTTP responses are logged; network errors are logged in `catch`.
 - **Key verification:** `keyLocation` points to `https://{host}/{INDEXNOW_KEY}.txt`; the key file is served from `public/{INDEXNOW_KEY}.txt` at the site root.
+- **Canonical site origin:** article URLs and IndexNow `host` use `getPublicSiteBaseUrl()` from `lib/email/publicSiteUrl.ts` (same resolution as `app/robots.ts` and `app/sitemap.ts`: `NEXT_PUBLIC_APP_URL`, then `PUBLIC_CANONICAL_URL`, else `https://disputedesk.app`).
 
 Called from the publish cron (`app/api/cron/publish-content/route.ts`) via `notifySearchEngines(slug, locale, routeKind, pillar)` after each successful publish. Article URLs include the resources pillar segment when applicable. Non-blocking — failures are logged but don't affect publish status.
 
