@@ -447,13 +447,25 @@ export function ContentListClient({
                       <LocaleStatusIndicator locales={localeMap} />
                     </td>
                     <td className="px-4 py-3 text-[#64748B] whitespace-nowrap">
-                      {item.published_at
-                        ? new Date(item.published_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })
-                        : "—"}
+                      <div className="flex flex-col gap-1 items-start">
+                        <span>
+                          {item.published_at
+                            ? new Date(item.published_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "—"}
+                        </span>
+                        {item.workflow_status === "published" && !item.published_at && (
+                          <span
+                            className="text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded"
+                            title="Workflow is Published but go-live never completed. Use Settings → Repair stuck publishes, or fix the queue row and Process publish queue."
+                          >
+                            Not on public hub
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-[#64748B]">
                       {(() => {

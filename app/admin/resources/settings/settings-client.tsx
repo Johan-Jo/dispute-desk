@@ -105,7 +105,7 @@ const CTA_OPTIONS = [
 export function SettingsClient({ initial }: SettingsClientProps) {
   const [settings, setSettings] = useState<Settings>(() => mergeSettings(initial));
   const [saved, setSaved] = useState(false);
-  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish">(null);
+  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair">(null);
   const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -228,6 +228,31 @@ export function SettingsClient({ initial }: SettingsClientProps) {
           ? "/api/admin/resources/cron/autopilot"
           : "/api/admin/resources/cron/publish";
       const res = await fetch(path, { method: "POST" });
+      const data: unknown = await res.json().catch(() => ({}));
+      const text =
+        typeof data === "object" && data !== null
+          ? JSON.stringify(data, null, 2)
+          : String(data);
+      if (!res.ok) {
+        setCronFeedback({ ok: false, text: text || res.statusText });
+      } else {
+        setCronFeedback({ ok: true, text });
+      }
+    } catch (e) {
+      setCronFeedback({
+        ok: false,
+        text: e instanceof Error ? e.message : "Request failed",
+      });
+    } finally {
+      setCronLoading(null);
+    }
+  }
+
+  async function runPublishRepair() {
+    setCronLoading("repair");
+    setCronFeedback(null);
+    try {
+      const res = await fetch("/api/admin/resources/publish-repair", { method: "POST" });
       const data: unknown = await res.json().catch(() => ({}));
       const text =
         typeof data === "object" && data !== null
@@ -628,7 +653,27 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 "Process publish queue now"
               )}
             </button>
+            <button
+              type="button"
+              disabled={cronLoading !== null}
+              onClick={() => runPublishRepair()}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading === "repair" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Running…
+                </>
+              ) : (
+                "Repair stuck publishes"
+              )}
+            </button>
           </div>
+          <p className="text-xs text-[#64748B] mt-3">
+            If the content list shows <strong>Published</strong> but no date and articles are missing on the hub, click{" "}
+            <strong>Repair stuck publishes</strong> (runs real publish for those rows). Also retry failed rows on the{" "}
+            <strong>Queue</strong> page, then process the queue again.
+          </p>
           {cronFeedback && (
             <pre
               className={`mt-4 text-xs p-3 rounded-lg overflow-x-auto max-h-64 overflow-y-auto font-mono border ${

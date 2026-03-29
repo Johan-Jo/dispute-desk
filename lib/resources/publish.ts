@@ -99,6 +99,63 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
   return { ok: true };
 }
 
+const REPAIR_PUBLISH_MAX_LOCALIZATIONS = 48;
+
+/**
+ * Finds content rows stuck as workflow `published` with no `published_at` (autopilot bug / failed queue)
+ * and runs `publishLocalization` on each localization that is still `is_published = false`.
+ */
+export async function repairStuckPublishedWorkflow(): Promise<{
+  contentItemsScanned: number;
+  localizationAttempts: number;
+  succeeded: number;
+  failures: { localizationId: string; error: string }[];
+}> {
+  const sb = getServiceClient();
+  const { data: items, error } = await sb
+    .from("content_items")
+    .select("id")
+    .eq("workflow_status", "published")
+    .is("published_at", null)
+    .limit(30);
+
+  if (error) throw error;
+
+  const failures: { localizationId: string; error: string }[] = [];
+  let localizationAttempts = 0;
+  let succeeded = 0;
+
+  for (const row of items ?? []) {
+    const { data: locs } = await sb
+      .from("content_localizations")
+      .select("id")
+      .eq("content_item_id", row.id)
+      .eq("is_published", false);
+
+    for (const loc of locs ?? []) {
+      if (localizationAttempts >= REPAIR_PUBLISH_MAX_LOCALIZATIONS) {
+        return {
+          contentItemsScanned: items?.length ?? 0,
+          localizationAttempts,
+          succeeded,
+          failures,
+        };
+      }
+      localizationAttempts += 1;
+      const r = await publishLocalization(loc.id);
+      if (r.ok) succeeded += 1;
+      else failures.push({ localizationId: loc.id, error: r.error ?? "unknown" });
+    }
+  }
+
+  return {
+    contentItemsScanned: items?.length ?? 0,
+    localizationAttempts,
+    succeeded,
+    failures,
+  };
+}
+
 export async function isLaunchCompleteForItem(contentItemId: string): Promise<boolean> {
   const sb = getServiceClient();
   const { data } = await sb

@@ -133,7 +133,13 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     return { contentItemId: null, results, error: `Publish prerequisites failed: ${msg}` };
   }
 
-  const initialStatus = options.autopilot ? "published" : brief.contentType === "legal_update" ? "in-legal-review" : "drafting";
+  // Autopilot must not set "published" until publishLocalization runs; otherwise the admin list
+  // shows Published with no date and the hub stays empty if the queue tick fails.
+  const initialStatus = options.autopilot
+    ? "scheduled"
+    : brief.contentType === "legal_update"
+      ? "in-legal-review"
+      : "drafting";
 
   const { data: newItem, error: itemError } = await sb
     .from("content_items")

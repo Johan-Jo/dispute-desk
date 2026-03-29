@@ -78,6 +78,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [publishRunning, setPublishRunning] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (activeTab === "all") return initialItems;
@@ -108,6 +109,26 @@ export function QueueClient({ initialItems }: QueueClientProps) {
       setPublishMessage("Network error");
     } finally {
       setPublishRunning(false);
+    }
+  }
+
+  async function retryQueueRow(queueId: string) {
+    setRetryingId(queueId);
+    try {
+      const res = await fetch(`/api/admin/resources/publish-queue/${queueId}/retry`, {
+        method: "POST",
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setPublishMessage(data.error ?? "Retry failed");
+        return;
+      }
+      setPublishMessage("Row reset to pending. Run Process publish queue or wait for cron.");
+      router.refresh();
+    } catch {
+      setPublishMessage("Network error");
+    } finally {
+      setRetryingId(null);
     }
   }
 
@@ -293,8 +314,17 @@ export function QueueClient({ initialItems }: QueueClientProps) {
                     <span className="text-sm text-[#94A3B8]">View</span>
                   )}
                   {item.status === "failed" && (
-                    <button className="inline-flex items-center gap-1 text-sm text-[#F59E0B] hover:text-[#D97706] font-medium">
-                      <RotateCcw className="w-3.5 h-3.5" />
+                    <button
+                      type="button"
+                      disabled={retryingId !== null}
+                      onClick={() => retryQueueRow(item.id)}
+                      className="inline-flex items-center gap-1 text-sm text-[#F59E0B] hover:text-[#D97706] font-medium disabled:opacity-50"
+                    >
+                      {retryingId === item.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+                      ) : (
+                        <RotateCcw className="w-3.5 h-3.5" aria-hidden />
+                      )}
                       Retry
                     </button>
                   )}
