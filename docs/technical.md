@@ -199,6 +199,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 
 - **Article path (resources):** `/{localePrefix}/resources/{primary_pillar}/{slug}`. Default English omits the locale segment (`/resources/chargebacks/my-article`). Other marketing locales use the short prefix from `lib/i18n/pathLocales.ts` (e.g. `/pt/resources/...` for `pt-BR`).
 - **Legacy internal links in article HTML:** Public resource article rendering normalizes old root-slug links (for example `https://disputedesk.app/my-slug` or `/resources/my-slug`) to canonical resource URLs when the slug resolves to a published resource row (`/resources/{pillar}/{slug}`, locale-prefixed where applicable).
+- **Bad CTA-like internal links in generated HTML:** If a legacy internal link slug looks like a trial/signup intent but does not resolve to a published resource slug, rendering rewrites it to `/portal/connect-shopify` instead of leaving a broken URL.
 - **Pillar segment:** Required. Allowed values match `content_items.primary_pillar` and `lib/resources/pillars.ts` (`chargebacks`, `dispute-resolution`, `small-claims`, `mediation-arbitration`, `dispute-management-software`). Generation resolves/normalizes pillar from archive data; publish rejects invalid pillars.
 - **Legacy slug-only URLs:** A single segment after `/resources/` that is not a pillar name is treated as a **slug**: `app/[locale]/resources/[pillar]/page.tsx` looks up a published localization and **redirects** to `/resources/{pillar}/{slug}`.
 - **Hub DB locales (`content_localizations.locale`):** `en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE` — see `lib/resources/constants.ts` (`HUB_CONTENT_LOCALES`). Portuguese uses **`pt-BR`** (aligned with app `LOCALE_LIST` and `/pt` paths); migration `20260328144057_hub_locale_pt_br.sql` migrated existing `pt-PT` rows.
@@ -244,6 +245,7 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 - `POST /api/admin/resources/cron/publish` — Manual run of the publish-queue cron (admin session). Same behavior as `GET /api/cron/publish-content` with `CRON_SECRET`.
 - `POST /api/admin/resources/publish-repair` — Admin repair action for rows stuck as `workflow_status='published'` with `published_at IS NULL`; calls `repairStuckPublishedWorkflow()` to run real localization publish for affected rows.
 - `POST /api/admin/resources/publish-queue/[id]/retry` — Admin retry endpoint that resets a failed publish-queue row to `pending`, sets `scheduled_for=now`, and clears `last_error`.
+- `POST /api/admin/resources/reading-time-backfill` — Admin utility to populate `content_localizations.reading_time_minutes` for rows where it is null, using an HTML word-count estimate.
 - `POST /api/admin/resources/ai-assist` — In-editor AI tools: `improve_readability`, `generate_meta`, `suggest_related`. Each calls OpenAI with task-specific system prompts.
 
 **Editor Integration**:

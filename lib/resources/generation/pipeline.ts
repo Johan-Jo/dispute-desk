@@ -14,6 +14,7 @@ import type { GenerationResult } from "./generate";
 import { routeKindForContentType } from "./contentRouteKind";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
 import { executePublishQueueTick } from "@/lib/resources/cron/publishQueueTick";
+import { estimateReadingTimeMinutes } from "@/lib/resources/readingTime";
 
 export interface PipelineResult {
   contentItemId: string | null;
@@ -196,6 +197,7 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
       body_json: r.content.body_json,
       meta_title: r.content.meta_title,
       meta_description: r.content.meta_description,
+      reading_time_minutes: estimateReadingTimeMinutes(r.content.body_json?.mainHtml),
       translation_status: "complete",
     }));
 

@@ -90,6 +90,10 @@ When adding links to other Resources articles, use canonical URLs in this format
 
 Avoid root-slug links like `https://disputedesk.app/{slug}` — they are non-canonical and can break navigation.
 
+### Missing read time on cards
+
+If older/newly generated rows show no read-time label, go to **Settings** and run **Backfill read time**. This computes `reading_time_minutes` from each localization HTML body where the field is currently null.
+
 ## Workflow Statuses
 
 Content moves through: `idea` → `backlog` → `brief_ready` → `drafting` → `in_translation` → `in_editorial_review` → `in_legal_review` → `approved` → `scheduled` → `published` → `archived`.

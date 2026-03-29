@@ -130,6 +130,12 @@ async function rewriteLegacyResourceLinks(
     const parsed = matchMeta.get(href);
     if (!parsed) return full;
     const pillar = pillarBySlug.get(parsed.slug) ?? currentPillar;
+    const looksLikeTrialOrSignup =
+      /(?:^|-)trial(?:-|$)|sign-?up/.test(parsed.slug);
+    if (!pillarBySlug.has(parsed.slug) && looksLikeTrialOrSignup) {
+      const rewrittenCta = `${basePath}/portal/connect-shopify${parsed.suffix}`;
+      return `href=${quote}${rewrittenCta}${quote}`;
+    }
     const rewritten = `${basePath}/resources/${pillar}/${parsed.slug}${parsed.suffix}`;
     return `href=${quote}${rewritten}${quote}`;
   });
