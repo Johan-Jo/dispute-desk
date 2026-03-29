@@ -1137,7 +1137,7 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 | Settings UI | `app/admin/resources/settings/settings-client.tsx` | Autopilot toggle, articles/day, email config |
 | Pipeline | `lib/resources/generation/pipeline.ts` | `PipelineOptions.autopilot` flag — auto-publishes, enqueues |
 | Publish prerequisites | `lib/resources/generation/publishPrerequisites.ts` | Ensures author, primary CTA, ≥3 tags so `publishLocalization` succeeds |
-| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks highest-priority archive row in `backlog` or `brief_ready` (not `idea`), calls pipeline |
+| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks eligible archive rows by `priority_score` DESC (`backlog` / `brief_ready`, not linked). If a run fails, the tick continues to the **next** row (capped) so one broken or stuck top item does not block lower-priority `cluster_article` rows forever. |
 | Publish Cron | `app/api/cron/publish-content/route.ts` | Drains `content_publish_queue`, sends autopilot email after successful publish |
 | Publish Email | `lib/email/sendPublishNotification.ts` | Resend-based email with article link |
 

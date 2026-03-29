@@ -25,8 +25,10 @@ async function countAutopilotPublishedSince(since: string): Promise<number> {
   return count ?? 0;
 }
 
+const PICK_BATCH = 50;
+
 /** Only backlog / brief_ready — `idea` stays editorial-only until promoted. */
-async function pickNextArchiveItem(): Promise<string | null> {
+async function pickNextArchiveItem(excludeIds: ReadonlySet<string>): Promise<string | null> {
   const sb = getServiceClient();
   const { data } = await sb
     .from("content_archive_items")
@@ -34,9 +36,9 @@ async function pickNextArchiveItem(): Promise<string | null> {
     .in("status", ["backlog", "brief_ready"])
     .is("created_from_archive_to_content_item_id", null)
     .order("priority_score", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.id ?? null;
+    .limit(PICK_BATCH);
+  const row = data?.find((r) => r.id && !excludeIds.has(r.id));
+  return row?.id ?? null;
 }
 
 export type AutopilotArticleResult = {
@@ -77,12 +79,20 @@ export async function executeAutopilotTick(): Promise<AutopilotTickResult> {
   }
 
   const generated: AutopilotArticleResult[] = [];
+  const triedThisTick = new Set<string>();
+  /** If the top-priority row fails (e.g. pillar), try the next row instead of blocking all lower-priority items forever. */
+  const maxAttempts = Math.min(PICK_BATCH, Math.max(articlesToGenerate * 8, articlesToGenerate + 15));
+  let attempts = 0;
 
-  for (let i = 0; i < articlesToGenerate; i++) {
-    const archiveItemId = await pickNextArchiveItem();
-    if (!archiveItemId) {
-      break;
-    }
+  while (attempts < maxAttempts) {
+    const successes = generated.filter((r) => !r.error).length;
+    if (successes >= articlesToGenerate) break;
+
+    const archiveItemId = await pickNextArchiveItem(triedThisTick);
+    if (!archiveItemId) break;
+
+    triedThisTick.add(archiveItemId);
+    attempts += 1;
 
     const result = await runGenerationPipeline(archiveItemId, { autopilot: true });
     generated.push({
@@ -90,13 +100,13 @@ export async function executeAutopilotTick(): Promise<AutopilotTickResult> {
       contentItemId: result.contentItemId,
       error: result.error,
     });
-
-    if (result.error) break;
   }
+
+  const articlesGenerated = generated.filter((r) => !r.error).length;
 
   return {
     autopilot: true,
-    articlesGenerated: generated.length,
+    articlesGenerated,
     results: generated,
   };
 }
