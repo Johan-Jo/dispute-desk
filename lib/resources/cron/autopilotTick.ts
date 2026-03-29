@@ -55,7 +55,17 @@ export type AutopilotTickResult =
  * One autopilot cron tick: generate from backlog per settings (same rules as
  * `/api/cron/autopilot-generate`).
  */
-export async function executeAutopilotTick(): Promise<AutopilotTickResult> {
+export interface AutopilotTickOptions {
+  /**
+   * When true (admin manual trigger), bypass the daily rate limit and generate
+   * up to `overrideCount` articles in a single tick. Defaults to false (cron behavior).
+   */
+  bypassRateLimit?: boolean;
+  /** Max articles to generate when bypassing rate limit. Default: 20. */
+  overrideCount?: number;
+}
+
+export async function executeAutopilotTick(opts: AutopilotTickOptions = {}): Promise<AutopilotTickResult> {
   if (!isGenerationEnabled()) {
     return { skipped: true, reason: "Generation not enabled" };
   }
@@ -69,12 +79,17 @@ export async function executeAutopilotTick(): Promise<AutopilotTickResult> {
   const startedAt = settings.autopilotStartedAt as string | null;
   const articlesPerDay = (settings.autopilotArticlesPerDay as number) ?? 1;
 
-  let articlesToGenerate = articlesPerDay;
+  let articlesToGenerate: number;
 
-  if (startedAt) {
-    const published = await countAutopilotPublishedSince(startedAt);
-    if (published < INITIAL_BURST_COUNT) {
-      articlesToGenerate = 1;
+  if (opts.bypassRateLimit) {
+    articlesToGenerate = opts.overrideCount ?? 20;
+  } else {
+    articlesToGenerate = articlesPerDay;
+    if (startedAt) {
+      const published = await countAutopilotPublishedSince(startedAt);
+      if (published < INITIAL_BURST_COUNT) {
+        articlesToGenerate = 1;
+      }
     }
   }
 
