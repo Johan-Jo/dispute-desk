@@ -1146,6 +1146,7 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 | Pipeline | `lib/resources/generation/pipeline.ts` | `PipelineOptions.autopilot` flag — auto-publishes, enqueues |
 | Publish prerequisites | `lib/resources/generation/publishPrerequisites.ts` | Ensures author, primary CTA, ≥3 tags so `publishLocalization` succeeds |
 | Manual admin POST | `app/api/admin/resources/cron/autopilot/route.ts` | `executeAutopilotTick({ bypassRateLimit: true, overrideCount })`; query **`limit`** (1–50, default **1**). `maxDuration` **300s**. |
+| Publish queue tick | `lib/resources/cron/publishQueueTick.ts` | After autopilot enqueue, **`publishQueuedRowsForLocalizationIds`** claims the new article’s rows first (not only FIFO), then **`drainPublishQueueAfterAutopilotEnqueue`** runs bounded FIFO rounds (`claimLimit` 80 × 10). Cron/manual “publish queue” still uses default claim **20**. |
 | Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Same tick **without** bypass; respects `autopilotArticlesPerDay` / burst. `maxDuration` **300s**. Picks eligible archive rows by `priority_score` DESC (`backlog` / `brief_ready`, not linked). If a run fails, the tick continues to the **next** row (capped) so one broken or stuck top item does not block lower-priority `cluster_article` rows forever. |
 | Publish Cron | `app/api/cron/publish-content/route.ts` | Drains `content_publish_queue`, sends autopilot email after successful publish |
 | Publish Email | `lib/email/sendPublishNotification.ts` | Resend-based email with article link |

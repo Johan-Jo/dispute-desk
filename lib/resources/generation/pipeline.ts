@@ -13,13 +13,19 @@ import type { GenerationBrief, GenerationContext } from "./prompts";
 import type { GenerationResult } from "./generate";
 import { routeKindForContentType } from "./contentRouteKind";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
-import { executePublishQueueTick } from "@/lib/resources/cron/publishQueueTick";
+import {
+  drainPublishQueueAfterAutopilotEnqueue,
+  publishQueuedRowsForLocalizationIds,
+  type PublishQueueTickResult,
+} from "@/lib/resources/cron/publishQueueTick";
 import { estimateReadingTimeMinutes } from "@/lib/resources/readingTime";
 
 export interface PipelineResult {
   contentItemId: string | null;
   results: GenerationResult[];
   error: string | null;
+  /** Autopilot only: multi-round publish-queue drain after enqueue (see `drainPublishQueueAfterAutopilotEnqueue`). */
+  publishQueueDrain?: PublishQueueTickResult;
 }
 
 export type ArchiveLoadResult =
@@ -269,12 +275,32 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
       if (qErr) {
         console.error("[generation] Failed to enqueue publish queue:", qErr.message);
       } else {
-        // Autopilot used to rely on the next Vercel publish cron; without it, workflow_status is
-        // "published" but is_published stays false and published_at stays null — invisible on the hub.
-        const tick = await executePublishQueueTick();
+        const locIds = locs.map((l) => l.id);
+        // Publish this article’s locales first; otherwise FIFO tick may never reach them behind a backlog.
+        const priority = await publishQueuedRowsForLocalizationIds(locIds);
+        const tail = await drainPublishQueueAfterAutopilotEnqueue();
+        const tick: PublishQueueTickResult =
+          !priority.ok
+            ? priority
+            : !tail.ok
+              ? tail
+              : {
+                  ok: true,
+                  processed: priority.processed + tail.processed,
+                  results: [...priority.results, ...tail.results],
+                };
         if (!tick.ok) {
-          console.error("[generation] Immediate publish-queue tick failed:", tick.error);
+          console.error("[generation] Autopilot publish-queue drain failed:", tick.error);
+        } else {
+          const failed = tick.results.filter((r) => !r.ok);
+          if (failed.length > 0) {
+            console.error(
+              "[generation] Some publish queue rows failed (first errors):",
+              failed.slice(0, 8).map((r) => `${r.id}:${r.error ?? "unknown"}`)
+            );
+          }
         }
+        return { contentItemId, results, error: null, publishQueueDrain: tick };
       }
     }
   }

@@ -1,6 +1,7 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { runGenerationPipeline } from "@/lib/resources/generation/pipeline";
 import { isGenerationEnabled } from "@/lib/resources/generation/generate";
+import type { PublishQueueTickResult } from "@/lib/resources/cron/publishQueueTick";
 
 const INITIAL_BURST_COUNT = 5;
 
@@ -45,6 +46,8 @@ export type AutopilotArticleResult = {
   archiveItemId: string;
   contentItemId: string | null;
   error: string | null;
+  /** Present after successful enqueue from autopilot pipeline (multi-round publish drain). */
+  publishQueueDrain?: PublishQueueTickResult;
 };
 
 export type AutopilotTickResult =
@@ -114,6 +117,7 @@ export async function executeAutopilotTick(opts: AutopilotTickOptions = {}): Pro
       archiveItemId,
       contentItemId: result.contentItemId,
       error: result.error,
+      publishQueueDrain: result.publishQueueDrain,
     });
   }
 
