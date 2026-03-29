@@ -249,6 +249,10 @@ export function HelpClient() {
               "Email notification sent with article link (Resend).",
               "Search engines notified via IndexNow + Google sitemap ping.",
             ]} />
+            <H3>Run scheduled tasks now (Settings)</H3>
+            <P>
+              At the bottom of <Strong>Settings</Strong>, <Strong>Run autopilot now</Strong> runs the same generation logic immediately and <Strong>bypasses</Strong> the cron daily cap (no <Code>CRON_SECRET</Code> — you must be logged into admin). Use <Strong>Articles this run</Strong> (1–50, default <Strong>1</Strong>): each backlog item still generates <Strong>all</Strong> target locales in one go, which can take minutes. Keep the default at 1 to avoid gateway timeouts (504); click again to process more items, or raise the number only if you accept timeout risk. Vercel Pro allows longer server runs than Hobby.
+            </P>
             <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-xl px-4 py-3 mt-3">
               <p className="text-sm text-[#92400E]"><strong>Warning:</strong> Autopilot bypasses editorial and legal review. Review generated content regularly to maintain quality.</p>
             </div>
@@ -276,6 +280,7 @@ export function HelpClient() {
               ["Translation", "Skip incomplete translations, locale priority order"],
               ["Workflow", "Require reviewer, archive health threshold, default CTA"],
               ["AI Autopilot", "Enable/disable, articles per day, notification email"],
+              ["Run scheduled tasks now", "Manual autopilot (Articles this run), publish queue, repair stuck publishes, reset/rebuild tools"],
               ["AI generation prompts", "System prompt, additional instructions, per-locale and per-content-type overrides (OpenAI backlog/autopilot)"],
               ["Legal", "Default disclaimer, legal review team email"],
             ]} />

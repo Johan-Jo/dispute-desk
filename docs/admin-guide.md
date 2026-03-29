@@ -535,6 +535,14 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 
 **Manual cron test:** Call the same routes with `Authorization: Bearer <CRON_SECRET>` after deploy.
 
+### Run autopilot now (Settings)
+
+Under **Settings** → **Run scheduled tasks now**, **Run autopilot now** calls the server directly (admin session). It **does not** use `CRON_SECRET`; it **bypasses** the cron daily article cap so you can drain the backlog without waiting until 08:00 UTC.
+
+- **Articles this run** (1–50, default **1**) controls how many backlog items are processed in **one** request. Each item still generates **all target locales** in parallel (heavy OpenAI work), so **keep the default at 1** unless you understand timeout risk.
+- If the browser shows **504 Gateway Timeout**, the run exceeded the hosting time limit (one multi-locale article can take minutes). Retry with **Articles this run = 1**; on Vercel, **Pro** allows longer serverless duration than Hobby.
+- To process more items, click again or raise the number cautiously.
+
 > **Warning:** Autopilot bypasses editorial and legal review. Review generated content regularly to maintain quality.
 
 ---

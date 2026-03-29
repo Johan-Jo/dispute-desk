@@ -187,7 +187,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Backlog page:** `app/admin/resources/backlog/` — ideas pipeline with 4 KPI cards, search/filter (priority, status), reorderable table, convert-to-draft action.
 - **Calendar page:** `app/admin/resources/calendar/` — agenda view (posts grouped by date), calendar grid view (7-col Mon–Sun with dot indicators), month navigation, queue health panel.
 - **Queue page:** `app/admin/resources/queue/` — 4 status stat cards, filter tabs (all/pending/processing/succeeded/failed), card-based item list with error display, retry actions, system status panel.
-- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email), AI autopilot, and **Run scheduled tasks now** (manual autopilot + publish-queue triggers). Auto-saves via debounced PUT to `/api/admin/resources/settings`. **PUT body allowlist:** only known CMS keys are persisted (see `ALLOWED_CMS_KEYS` in `app/api/admin/resources/settings/route.ts`); unknown keys are stripped so arbitrary JSON cannot overwrite the singleton row.
+- **Settings page:** `app/admin/resources/settings/` — publishing (time, weekend, auto-save), translation (skip incomplete, locale priority), workflow (reviewer, archive threshold, CTA), legal (disclaimer, review email), AI autopilot, and **Run scheduled tasks now** (manual autopilot + publish-queue triggers). Manual autopilot uses **Articles this run** (1–50, default **1**) → query `limit` on `POST /api/admin/resources/cron/autopilot` so one HTTP request does not run many full multi-locale generations (avoids **504** timeouts). Auto-saves via debounced PUT to `/api/admin/resources/settings`. **PUT body allowlist:** only known CMS keys are persisted (see `ALLOWED_CMS_KEYS` in `app/api/admin/resources/settings/route.ts`); unknown keys are stripped so arbitrary JSON cannot overwrite the singleton row.
 - **Mobile editor:** Responsive editor with Content/Metadata/Checklist tab bar, locale picker bottom sheet, fixed bottom action bar (Save/Schedule/Publish).
 - **Toast system:** `components/admin/Toast.tsx` — `ToastProvider` + `useToast()` hook for success/error/info notifications across admin.
 - **Publish queue:** `lib/resources/cron/publishQueueTick.ts` — `executePublishQueueTick()` claims due rows **atomically** (`UPDATE … WHERE status = 'pending'` returning rows), runs `publishLocalization` per row, then post-publish hooks (Resend notify, IndexNow). **Stale recovery:** rows stuck in `processing` longer than ~10 minutes are reset to `pending` so a crashed worker does not block the queue forever. Vercel cron `GET`/`POST` `/api/cron/publish-content` invokes the same tick.
@@ -243,7 +243,7 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 
 **API Routes**:
 - `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled; **207** if `error` is set but `contentItemId` is present (e.g. archive already converted); 500 on hard failure; 200 on success.
-- `POST /api/admin/resources/cron/autopilot` — Manual run of the autopilot cron (admin session). Same behavior as `GET /api/cron/autopilot-generate` with `CRON_SECRET`.
+- `POST /api/admin/resources/cron/autopilot` — Manual autopilot tick (admin session). Calls `executeAutopilotTick({ bypassRateLimit: true, overrideCount })` — **bypasses the cron daily cap** (unlike `GET/POST /api/cron/autopilot-generate`). Optional query: **`limit`** = max articles this request (integer **1–50**, default **1**). Each article still runs **all target locales** in parallel with similarity guards, so a single item can take minutes; keep default **1** unless you accept timeout risk. Route `maxDuration` = **300s** (Vercel **Pro+**; Hobby’s lower cap may still 504 on slow OpenAI). The Vercel cron route uses the same tick **without** `bypassRateLimit` and respects `autopilotArticlesPerDay` / burst rules.
 - `POST /api/admin/resources/cron/publish` — Manual run of the publish-queue cron (admin session). Same behavior as `GET /api/cron/publish-content` with `CRON_SECRET`.
 - `POST /api/admin/resources/publish-repair` — Admin repair action for rows stuck as `workflow_status='published'` with `published_at IS NULL`; calls `repairStuckPublishedWorkflow()` to run real localization publish for affected rows.
 - `POST /api/admin/resources/publish-queue/[id]/retry` — Admin retry endpoint that resets a failed publish-queue row to `pending`, sets `scheduled_for=now`, and clears `last_error`.
@@ -1142,10 +1142,11 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 
 | Component | Path | Purpose |
 |-----------|------|---------|
-| Settings UI | `app/admin/resources/settings/settings-client.tsx` | Autopilot toggle, articles/day, email config |
+| Settings UI | `app/admin/resources/settings/settings-client.tsx` | Autopilot toggle, articles/day, email config; **Run scheduled tasks now** → manual autopilot with **Articles this run** (`limit` query) |
 | Pipeline | `lib/resources/generation/pipeline.ts` | `PipelineOptions.autopilot` flag — auto-publishes, enqueues |
 | Publish prerequisites | `lib/resources/generation/publishPrerequisites.ts` | Ensures author, primary CTA, ≥3 tags so `publishLocalization` succeeds |
-| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Picks eligible archive rows by `priority_score` DESC (`backlog` / `brief_ready`, not linked). If a run fails, the tick continues to the **next** row (capped) so one broken or stuck top item does not block lower-priority `cluster_article` rows forever. |
+| Manual admin POST | `app/api/admin/resources/cron/autopilot/route.ts` | `executeAutopilotTick({ bypassRateLimit: true, overrideCount })`; query **`limit`** (1–50, default **1**). `maxDuration` **300s**. |
+| Daily Cron | `app/api/cron/autopilot-generate/route.ts` | Same tick **without** bypass; respects `autopilotArticlesPerDay` / burst. `maxDuration` **300s**. Picks eligible archive rows by `priority_score` DESC (`backlog` / `brief_ready`, not linked). If a run fails, the tick continues to the **next** row (capped) so one broken or stuck top item does not block lower-priority `cluster_article` rows forever. |
 | Publish Cron | `app/api/cron/publish-content/route.ts` | Drains `content_publish_queue`, sends autopilot email after successful publish |
 | Publish Email | `lib/email/sendPublishNotification.ts` | Resend-based email with article link |
 
@@ -1169,7 +1170,9 @@ In `vercel.json`:
 - **08:00 UTC** — autopilot generation (`/api/cron/autopilot-generate`). Requires `CRON_SECRET` (Vercel injects `Authorization: Bearer` when the env var is set).
 - **09:00 UTC** — publish queue + email (`/api/cron/publish-content`). Same secret.
 
-**Manual test:** `GET` or `POST` the route with header `Authorization: Bearer <CRON_SECRET>` (or `x-cron-secret: <CRON_SECRET>`). Example: `curl -H "Authorization: Bearer $CRON_SECRET" "https://<deployment>/api/cron/autopilot-generate"`.
+**Manual test (cron):** `GET` or `POST` the route with header `Authorization: Bearer <CRON_SECRET>` (or `x-cron-secret: <CRON_SECRET>`). Example: `curl -H "Authorization: Bearer $CRON_SECRET" "https://<deployment>/api/cron/autopilot-generate"`.
+
+**Manual test (admin UI / session):** `POST /api/admin/resources/cron/autopilot?limit=1` while signed into admin (same tick as cron but **bypasses daily cap**; `limit` optional, default **1**).
 
 ## SEO & Search Engine Indexing (CH-8)
 
