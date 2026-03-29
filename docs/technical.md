@@ -241,6 +241,8 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 - `POST /api/admin/resources/generate` — Triggers pipeline for an archive item. Returns 503 if disabled; **207** if `error` is set but `contentItemId` is present (e.g. archive already converted); 500 on hard failure; 200 on success.
 - `POST /api/admin/resources/cron/autopilot` — Manual run of the autopilot cron (admin session). Same behavior as `GET /api/cron/autopilot-generate` with `CRON_SECRET`.
 - `POST /api/admin/resources/cron/publish` — Manual run of the publish-queue cron (admin session). Same behavior as `GET /api/cron/publish-content` with `CRON_SECRET`.
+- `POST /api/admin/resources/publish-repair` — Admin repair action for rows stuck as `workflow_status='published'` with `published_at IS NULL`; calls `repairStuckPublishedWorkflow()` to run real localization publish for affected rows.
+- `POST /api/admin/resources/publish-queue/[id]/retry` — Admin retry endpoint that resets a failed publish-queue row to `pending`, sets `scheduled_for=now`, and clears `last_error`.
 - `POST /api/admin/resources/ai-assist` — In-editor AI tools: `improve_readability`, `generate_meta`, `suggest_related`. Each calls OpenAI with task-specific system prompts.
 
 **Editor Integration**:
@@ -1147,7 +1149,7 @@ The autopilot system extends the existing AI generation pipeline (CH-7) with aut
 
 **5-day burst:** When autopilot is first enabled, `autopilotStartedAt` is recorded. The cron checks how many articles have been auto-published since that timestamp. If fewer than 5, it generates 1/day until the burst is complete.
 
-**Pipeline autopilot flag:** When `options.autopilot = true`, the pipeline sets `workflow_status = "published"` on the new `content_items` row, enqueues each localization on `content_publish_queue` with `scheduled_for = now()`, then **runs `executePublishQueueTick()` once in-process** so `publishLocalization` sets `content_localizations.is_published`, `publish_at`, and `content_items.published_at` without waiting for Vercel’s publish cron. (Previously, skipping the tick left items “Published” in admin with a blank date and invisible on the public hub.)
+**Pipeline autopilot flag:** When `options.autopilot = true`, the pipeline creates new `content_items` with `workflow_status = "scheduled"` (not `published`), enqueues each localization on `content_publish_queue` with `scheduled_for = now()`, then **runs `executePublishQueueTick()` once in-process**. A row becomes truly published only when `publishLocalization` succeeds and sets `content_localizations.is_published` and `content_items.published_at`. This avoids the false-published state (Published badge + blank date + missing from public hub). For historical rows already stuck in that state, use `POST /api/admin/resources/publish-repair` from Settings and retry failed queue rows from Queue.
 
 **Publish notification email:** After each successful queue row, `executePublishQueueTick` calls `sendPublishNotification` when `cms_settings.settings_json.autopilotNotifyEmail` is non-empty (trimmed) and the localization has `title` and `slug`. There is **no default recipient in application code** — operators must enter an address under **Admin → Resources → Settings → AI Autopilot → Notification email** and let settings auto-save. Production needs `RESEND_API_KEY` (and optional `EMAIL_FROM`); without Resend, the helper returns failure and the tick logs it. If publish never ran (queue stuck or failed), no email is sent. HTML body escapes the article title for safe interpolation.
 

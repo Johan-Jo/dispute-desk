@@ -88,6 +88,13 @@ Content moves through: `idea` → `backlog` → `brief_ready` → `drafting` →
 
 Transitions are validated server-side. The editor shows available transitions based on the current status.
 
+### Publish troubleshooting (important)
+
+If Content List shows **Published** but the **Published** date is `—` and the article is missing from the public hub:
+- Go to **Settings** and click **Repair stuck publishes**.
+- Go to **Queue**, click **Retry** on failed rows, then run **Process publish queue now**.
+- Recheck the content row: a real publish sets `published_at`; only then will the article appear on public pages.
+
 ## Settings
 
 Settings auto-save as you edit. Configuration options:
