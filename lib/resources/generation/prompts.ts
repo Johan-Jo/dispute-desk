@@ -283,6 +283,24 @@ export interface GenerationBrief {
  * Formats peer articles for the model. Prompt-only anti-sameness is not enough unless real published
  * neighbors (titles, slugs, headings, intros) are included; the pipeline fetches these via fetchSimilarPublishedArticles.
  */
+/** Concrete examples reduce English slugs on non-English hub paths (slug is model output, not derived in code). */
+export function localeSlugGoodBad(locale: string): string {
+  switch (locale) {
+    case "sv-SE":
+      return `Example for Swedish: GOOD "medling-vs-skiljedom-vs-smamals" or "hantera-chargebacks-bevis-policy" — BAD "mediation-vs-arbitration-vs-small-claims" (English words forbidden for sv-SE).`;
+    case "pt-BR":
+      return `Example for Brazilian Portuguese: GOOD "entendendo-claim-emissor-shopify-verificar" — BAD "understanding-issuer-claim-shopify" (English forbidden for pt-BR).`;
+    case "de-DE":
+      return `Example for German: GOOD "rueckbuchungen-shopify-beweise" — BAD "chargebacks-shopify-evidence" (English forbidden for de-DE).`;
+    case "fr-FR":
+      return `Example for French: GOOD "retrofacturation-preuve-livraison" — BAD "chargeback-proof-delivery" (English forbidden for fr-FR).`;
+    case "es-ES":
+      return `Example for Spanish: GOOD "contracargo-prueba-entrega" — BAD "chargeback-proof-delivery" (English forbidden for es-ES).`;
+    default:
+      return `Never use English words in the slug when LOCALE is not en-US.`;
+  }
+}
+
 function formatSimilarArticlesBlock(similar: SimilarContentReference[]): string {
   if (!similar.length) return "";
 
@@ -348,7 +366,8 @@ export function buildUserPrompt(
       : `
 
 SLUG (required for LOCALE ${locale}):
-- The JSON "slug" field must be written entirely in the **same language as the article body** (not English). Use native words only, lowercase, ASCII letters/digits/hyphens (e.g. for pt-BR: "reducao-tempo-tratamento-disputas-estudo", not "dispute-handling-time-case-study").
+- The JSON "slug" field must be written entirely in the **same language as the article body** (not English). Use native words only, lowercase, ASCII letters/digits/hyphens.
+- ${localeSlugGoodBad(locale)}
 `;
 
   return `${typeInstr}

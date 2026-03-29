@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildUserPrompt, resolveGenerationPrompts } from "@/lib/resources/generation/prompts";
+import {
+  buildUserPrompt,
+  resolveGenerationPrompts,
+  localeSlugGoodBad,
+} from "@/lib/resources/generation/prompts";
 
 describe("buildUserPrompt", () => {
   const brief = {
@@ -28,7 +32,11 @@ describe("buildUserPrompt", () => {
     );
     expect(prompt).toContain("SLUG (required");
     expect(prompt).toContain("not English");
-    expect(prompt).toContain("dispute-handling-time-case-study");
+    expect(prompt).toContain(localeSlugGoodBad("pt-BR"));
+  });
+
+  it("localeSlugGoodBad names Swedish bad English slug pattern", () => {
+    expect(localeSlugGoodBad("sv-SE")).toContain("mediation-vs-arbitration-vs-small-claims");
   });
 
   it("does not include separate slug requirement block for en-US", () => {
