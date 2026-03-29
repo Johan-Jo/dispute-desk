@@ -107,6 +107,8 @@ export function SettingsClient({ initial }: SettingsClientProps) {
   const [saved, setSaved] = useState(false);
   const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair" | "readingTimeBackfill">(null);
   const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const autoSave = useCallback((next: Settings) => {
@@ -295,6 +297,30 @@ export function SettingsClient({ initial }: SettingsClientProps) {
       });
     } finally {
       setCronLoading(null);
+    }
+  }
+
+  async function sendTestEmail() {
+    if (!settings.autopilotNotifyEmail.trim()) return;
+    setTestEmailLoading(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch("/api/admin/resources/send-test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: settings.autopilotNotifyEmail.trim() }),
+      });
+      const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+      if (res.ok) {
+        setTestEmailResult({ ok: true, message: "Test email sent — check your inbox (and spam folder)." });
+      } else {
+        const err = typeof data.error === "string" ? data.error : res.statusText;
+        setTestEmailResult({ ok: false, message: `Failed: ${err}` });
+      }
+    } catch (e) {
+      setTestEmailResult({ ok: false, message: e instanceof Error ? e.message : "Request failed" });
+    } finally {
+      setTestEmailLoading(false);
     }
   }
 
@@ -500,23 +526,38 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                     <span className="text-sm text-[#64748B]">articles / day</span>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#0B1220] mb-1">
-                    Notification email
-                  </label>
-                  <input
-                    type="email"
-                    value={settings.autopilotNotifyEmail}
-                    onChange={(e) => update("autopilotNotifyEmail", e.target.value)}
-                    placeholder="oi@johan.com.br"
-                    className="w-full max-w-sm px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
-                  />
-                  <p className="text-xs text-[#64748B] mt-1">
-                    Receive an email with the article link each time autopilot publishes
-                  </p>
-                </div>
               </>
             )}
+            <div>
+              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+                Publish notification email
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  value={settings.autopilotNotifyEmail}
+                  onChange={(e) => update("autopilotNotifyEmail", e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full max-w-sm px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                />
+                <button
+                  type="button"
+                  disabled={!settings.autopilotNotifyEmail.trim() || testEmailLoading}
+                  onClick={sendTestEmail}
+                  className="shrink-0 px-3 py-2 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {testEmailLoading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : "Send test"}
+                </button>
+              </div>
+              <p className="text-xs text-[#64748B] mt-1">
+                Receive an email each time an article is published via the queue. Use &ldquo;Send test&rdquo; to verify delivery.
+              </p>
+              {testEmailResult && (
+                <p className={`text-xs mt-1 font-medium ${testEmailResult.ok ? "text-green-700" : "text-red-700"}`}>
+                  {testEmailResult.message}
+                </p>
+              )}
+            </div>
           </div>
         </section>
 
