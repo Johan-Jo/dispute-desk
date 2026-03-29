@@ -44,12 +44,12 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   const sb = getServiceClient();
 
   try {
-    // Update content_items fields
     if (body.item) {
+      const item = body.item as Record<string, unknown>;
       if (
-        body.item.primary_pillar !== undefined &&
-        (typeof body.item.primary_pillar !== "string" ||
-          !isResourceHubPillar(body.item.primary_pillar))
+        item.primary_pillar !== undefined &&
+        (typeof item.primary_pillar !== "string" ||
+          !isResourceHubPillar(item.primary_pillar))
       ) {
         return NextResponse.json({ error: "Invalid primary_pillar" }, { status: 400 });
       }
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       ];
       const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
       for (const key of allowedFields) {
-        if (key in body.item) updates[key] = body.item[key];
+        if (key in item) updates[key] = item[key];
       }
       const { error } = await sb.from("content_items").update(updates).eq("id", id);
       if (error) throw error;
