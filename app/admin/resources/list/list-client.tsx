@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Filter,
@@ -9,10 +10,11 @@ import {
   ListTodo,
   ChevronLeft,
   ChevronRight,
-  Archive,
   Pencil,
   MoreHorizontal,
   X,
+  Loader2,
+  RotateCcw,
 } from "lucide-react";
 import {
   WorkflowStatusBadge,
@@ -75,6 +77,7 @@ export function ContentListClient({
   initialTotal,
   stats,
 }: ContentListClientProps) {
+  const router = useRouter();
   const [items, setItems] = useState<ContentRow[]>(initialItems);
   const [total, setTotal] = useState(initialTotal);
   const [activeTab, setActiveTab] = useState<StatusTabKey>("all");
@@ -85,6 +88,12 @@ export function ContentListClient({
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [bulkResetLoading, setBulkResetLoading] = useState(false);
+
+  useEffect(() => {
+    setItems(initialItems);
+    setTotal(initialTotal);
+  }, [initialItems, initialTotal]);
 
   const pageSize = 20;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -140,6 +149,42 @@ export function ContentListClient({
     },
     [activeTab, search, contentTypeFilter, topicFilter, page]
   );
+
+  async function runResetRebuildSelected() {
+    const ids = Array.from(selectedIds);
+    const ok = confirm(
+      `Reset & rebuild ${ids.length} selected item(s)? AI-generated rows will be archived, publish-queue rows cleared, and linked archive topics returned to the backlog. Then use Settings → Run autopilot now to regenerate.`
+    );
+    if (!ok) return;
+    setBulkResetLoading(true);
+    try {
+      const res = await fetch("/api/admin/resources/reset-and-rebuild", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) {
+        const err =
+          typeof data.error === "string" ? data.error : JSON.stringify(data);
+        alert(err);
+        return;
+      }
+      const skipped = Array.isArray(data.skippedRequestedIds)
+        ? data.skippedRequestedIds.length
+        : 0;
+      if (skipped > 0) {
+        alert(
+          `Done. ${skipped} selected row(s) were skipped (not AI-generated or already archived).`
+        );
+      }
+      setSelectedIds(new Set());
+      router.refresh();
+      await fetchData({});
+    } finally {
+      setBulkResetLoading(false);
+    }
+  }
 
   function onTabChange(tab: StatusTabKey) {
     setActiveTab(tab);
@@ -290,13 +335,18 @@ export function ContentListClient({
             <span className="text-sm font-medium text-[#1D4ED8]">
               {selectedIds.size} selected
             </span>
-            <button className="inline-flex items-center gap-1.5 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium">
-              <Pencil className="w-3.5 h-3.5" />
-              Bulk Edit
-            </button>
-            <button className="inline-flex items-center gap-1.5 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium">
-              <Archive className="w-3.5 h-3.5" />
-              Archive
+            <button
+              type="button"
+              disabled={bulkResetLoading || loading}
+              onClick={() => void runResetRebuildSelected()}
+              className="inline-flex items-center gap-1.5 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkResetLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+              ) : (
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden />
+              )}
+              Reset &amp; rebuild
             </button>
             <button
               onClick={() => setSelectedIds(new Set())}

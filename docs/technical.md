@@ -246,7 +246,8 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 - `POST /api/admin/resources/cron/publish` — Manual run of the publish-queue cron (admin session). Same behavior as `GET /api/cron/publish-content` with `CRON_SECRET`.
 - `POST /api/admin/resources/publish-repair` — Admin repair action for rows stuck as `workflow_status='published'` with `published_at IS NULL`; calls `repairStuckPublishedWorkflow()` to run real localization publish for affected rows.
 - `POST /api/admin/resources/publish-queue/[id]/retry` — Admin retry endpoint that resets a failed publish-queue row to `pending`, sets `scheduled_for=now`, and clears `last_error`.
-- `POST /api/admin/resources/reading-time-backfill` — Admin utility to populate `content_localizations.reading_time_minutes` for rows where it is null, using an HTML word-count estimate.
+- `POST /api/admin/resources/reading-time-backfill` — Admin utility to populate `content_localizations.reading_time_minutes` for rows where it is null, using an HTML word-count estimate (call from API client / curl; not exposed as a Settings button).
+- `POST /api/admin/resources/reset-and-rebuild` — Archives AI-generated content (`generated_at` set), deletes matching `content_publish_queue` rows, sets `workflow_status` to `archived`, and resets linked `content_archive_items` to `backlog` with high `priority_score` so autopilot can regenerate. Body: `{ ids: string[] }` for selected items, or `{ all: true }` for every AI item in live workflows; optional `{ dryRun: true }` returns counts without writing. **Content List** bulk bar and **Settings** (dry-run + execute-all) call this route; it supersedes the removed `archive-ai-articles` and `regenerate-with-inline-links` endpoints.
 - `POST /api/admin/resources/ai-assist` — In-editor AI tools: `improve_readability`, `generate_meta`, `suggest_related`. Each calls OpenAI with task-specific system prompts.
 
 **Editor Integration**:

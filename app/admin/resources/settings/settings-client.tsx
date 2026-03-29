@@ -105,7 +105,9 @@ const CTA_OPTIONS = [
 export function SettingsClient({ initial }: SettingsClientProps) {
   const [settings, setSettings] = useState<Settings>(() => mergeSettings(initial));
   const [saved, setSaved] = useState(false);
-  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair" | "readingTimeBackfill" | "regenerateInlineLinks" | "archiveAllAi">(null);
+  const [cronLoading, setCronLoading] = useState<
+    null | "autopilot" | "publish" | "repair" | "resetRebuildDry" | "resetRebuild"
+  >(null);
   const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -275,61 +277,21 @@ export function SettingsClient({ initial }: SettingsClientProps) {
     }
   }
 
-  async function runReadingTimeBackfill() {
-    setCronLoading("readingTimeBackfill");
-    setCronFeedback(null);
-    try {
-      const res = await fetch("/api/admin/resources/reading-time-backfill", { method: "POST" });
-      const data: unknown = await res.json().catch(() => ({}));
-      const text =
-        typeof data === "object" && data !== null
-          ? JSON.stringify(data, null, 2)
-          : String(data);
-      if (!res.ok) {
-        setCronFeedback({ ok: false, text: text || res.statusText });
-      } else {
-        setCronFeedback({ ok: true, text });
-      }
-    } catch (e) {
-      setCronFeedback({
-        ok: false,
-        text: e instanceof Error ? e.message : "Request failed",
-      });
-    } finally {
-      setCronLoading(null);
+  async function runResetRebuildAll(dryRun: boolean) {
+    if (!dryRun) {
+      const ok = confirm(
+        "This archives every AI-generated article in a live workflow, clears publish-queue rows, and puts their archive topics back on the backlog (high priority).\n\nRun a dry-run first. Proceed with reset?"
+      );
+      if (!ok) return;
     }
-  }
-
-  async function runArchiveAllAi(dryRun = false) {
-    if (!dryRun && !confirm(
-      "This will archive ALL AI-generated articles so autopilot can regenerate them.\n\nRun a dry-run first to see what would be affected. Proceed?"
-    )) return;
-    setCronLoading("archiveAllAi");
+    setCronLoading(dryRun ? "resetRebuildDry" : "resetRebuild");
     setCronFeedback(null);
     try {
-      const res = await fetch("/api/admin/resources/archive-ai-articles", {
+      const res = await fetch("/api/admin/resources/reset-and-rebuild", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dryRun }),
+        body: JSON.stringify(dryRun ? { all: true, dryRun: true } : { all: true }),
       });
-      const data: unknown = await res.json().catch(() => ({}));
-      const text =
-        typeof data === "object" && data !== null
-          ? JSON.stringify(data, null, 2)
-          : String(data);
-      setCronFeedback({ ok: res.ok, text: res.ok ? text : text || res.statusText });
-    } catch (e) {
-      setCronFeedback({ ok: false, text: e instanceof Error ? e.message : "Request failed" });
-    } finally {
-      setCronLoading(null);
-    }
-  }
-
-  async function runRegenerateInlineLinks() {
-    setCronLoading("regenerateInlineLinks");
-    setCronFeedback(null);
-    try {
-      const res = await fetch("/api/admin/resources/regenerate-with-inline-links", { method: "POST" });
       const data: unknown = await res.json().catch(() => ({}));
       const text =
         typeof data === "object" && data !== null
@@ -727,9 +689,9 @@ export function SettingsClient({ initial }: SettingsClientProps) {
           <h2 className="text-lg font-semibold text-[#0B1220] mb-1">Run scheduled tasks now</h2>
           <p className="text-sm text-[#64748B] mb-4">
             Same logic as Vercel Cron (autopilot generate, then publish queue with email and SEO
-            pings). Autopilot respects the toggle above and server{" "}
-            <code className="text-xs bg-[#F1F5F9] px-1 rounded">GENERATION_ENABLED</code> / OpenAI
-            settings.
+            pings). Manual <strong>Run autopilot now</strong> bypasses the daily cap so you can drain the backlog.
+            Autopilot respects the toggle above and{" "}
+            <code className="text-xs bg-[#F1F5F9] px-1 rounded">GENERATION_ENABLED</code> / OpenAI.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
@@ -780,69 +742,39 @@ export function SettingsClient({ initial }: SettingsClientProps) {
             <button
               type="button"
               disabled={cronLoading !== null}
-              onClick={() => runReadingTimeBackfill()}
+              onClick={() => runResetRebuildAll(true)}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cronLoading === "readingTimeBackfill" ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                  Running…
-                </>
-              ) : (
-                "Backfill read time"
-              )}
-            </button>
-            <button
-              type="button"
-              disabled={cronLoading !== null}
-              onClick={() => runRegenerateInlineLinks()}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-red-200 bg-red-50 text-red-900 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {cronLoading === "regenerateInlineLinks" ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                  Scanning…
-                </>
-              ) : (
-                "Archive articles with inline links"
-              )}
-            </button>
-            <button
-              type="button"
-              disabled={cronLoading !== null}
-              onClick={() => runArchiveAllAi(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {cronLoading === "archiveAllAi" ? (
+              {cronLoading === "resetRebuildDry" ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
                   Checking…
                 </>
               ) : (
-                "Dry-run: archive all AI articles"
+                "Dry-run: reset all AI articles"
               )}
             </button>
             <button
               type="button"
               disabled={cronLoading !== null}
-              onClick={() => runArchiveAllAi(false)}
+              onClick={() => runResetRebuildAll(false)}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-red-300 bg-red-100 text-red-900 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cronLoading === "archiveAllAi" ? (
+              {cronLoading === "resetRebuild" ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                  Archiving…
+                  Resetting…
                 </>
               ) : (
-                "Archive ALL AI articles"
+                "Reset & rebuild ALL AI articles"
               )}
             </button>
           </div>
           <p className="text-xs text-[#64748B] mt-3">
-            If the content list shows <strong>Published</strong> but no date and articles are missing on the hub, click{" "}
-            <strong>Repair stuck publishes</strong>. If new cards are missing read time, run{" "}
-            <strong>Backfill read time</strong>. To regenerate all AI articles (e.g. after a prompt or token limit fix),
-            dry-run first to see counts, then click <strong>Archive ALL AI articles</strong> — autopilot will regenerate them.
+            <strong>Published</strong> but no date on the list? Use <strong>Repair stuck publishes</strong>.
+            To fix a few articles only, use <strong>All Content</strong> → select rows → <strong>Reset & rebuild</strong>.
+            For a full redo: dry-run, then <strong>Reset & rebuild ALL</strong>, then <strong>Run autopilot now</strong>.
+            Reading time backfill: <code className="text-[10px] bg-[#F1F5F9] px-1 rounded">POST /api/admin/resources/reading-time-backfill</code>.
           </p>
           {cronFeedback && (
             <pre

@@ -21,7 +21,7 @@ Published items appear on the marketing site (for example `/resources/{pillar}/{
 | Screen | Path | Purpose |
 |--------|------|---------|
 | Dashboard | `/admin/resources` | KPI cards, upcoming scheduled, translation gaps, queue health, recently edited |
-| Content List | `/admin/resources/list` | All content with status tabs, search, filters, multi-select |
+| Content List | `/admin/resources/list` | All content with status tabs, search, filters, multi-select; **Reset & rebuild** on selected rows (AI-generated only) archives items, clears publish queue, and returns linked archive topics to backlog — then run autopilot in Settings to regenerate |
 | Editor | `/admin/resources/content/[id]` | Block editor, locale switching, metadata, validation, publishing |
 | Backlog | `/admin/resources/backlog` | Ideas pipeline with priority scoring and convert-to-draft |
 | Calendar | `/admin/resources/calendar` | Agenda + grid views of scheduled publications |
@@ -92,7 +92,7 @@ Avoid root-slug links like `https://disputedesk.app/{slug}` — they are non-can
 
 ### Missing read time on cards
 
-If older/newly generated rows show no read-time label, go to **Settings** and run **Backfill read time**. This computes `reading_time_minutes` from each localization HTML body where the field is currently null.
+If older/newly generated rows show no read-time label, call `POST /api/admin/resources/reading-time-backfill` (admin session) to compute `reading_time_minutes` from each localization HTML body where the field is currently null. There is no Settings UI for this; use your API client or curl against the deployed app.
 
 ## Workflow Statuses
 
