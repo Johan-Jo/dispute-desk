@@ -24,7 +24,7 @@ content_archive_items  →  Brief Builder  →  Generation Queue
 - **Provider:** OpenAI (GPT-4o default, configurable via `GENERATION_MODEL`)
 - **API key:** `OPENAI_API_KEY` environment variable
 - **Fallback:** Returns graceful error if key not configured
-- **Token limits:** ~4000 output tokens per locale; larger system + user prompts (SEO + anti-repetition + optional peer list)
+- **Token limits:** Large output budget per locale (`max_tokens` = **12000** in `generate.ts`) so long non-English articles are not truncated; actual length is guided by brief metadata (see below), not by max tokens alone.
 - **Temperature:** `0.3` for `legal_update`, `0.4` for other content types (see `lib/resources/generation/generate.ts`)
 
 ## Prompt Architecture
@@ -37,6 +37,16 @@ Contains (built-in default in `lib/resources/generation/prompts.ts`; overridable
 
 ### User message — similar published articles
 Before each generation, the pipeline loads **up to ~10 published** localizations (same locale and `route_kind`, scored by content type / pillar / keyword / title overlap) and adds a compact **“Existing DisputeDesk articles with topical overlap”** block (title, slug, excerpt, headings, intro snippet). This is required for meaningful deduplication; system-prompt-only guidance is not enough.
+
+### Brief metadata and target length
+The structured brief (`GenerationBrief` from `loadArchiveForGeneration`) includes:
+- **`contentType`** — CMS `content_type` (e.g. `cluster_article`, `pillar_page`).
+- **`pageRole`** — Editorial shape for length heuristics: `pillar` \| `support` \| `checklist` \| `template` \| `faq` \| `case_study`. Stored on **`content_archive_items.page_role`** when set; otherwise inferred from `content_type` (e.g. `pillar_page` → `pillar`, `cluster_article` → `support`, `faq_entry` → `faq`).
+- **`searchIntent`** — Archive `search_intent`; normalized to `informational` \| `commercial` \| `transactional` for range modifiers.
+- **`complexity`** — `low` \| `medium` \| `high`; optional column **`content_archive_items.complexity`** (default inference: `medium`).
+- **`targetWordRange`** — Optional override string; when **`content_archive_items.target_word_range`** (or the same key in parsed **`notes`** JSON) is non-empty, it is passed through verbatim and **skips** automatic range calculation.
+
+`resolveTargetWordRange` in `lib/resources/generation/targetWordRange.ts` turns role + complexity + intent into a range string (base bands per role, light modifiers, clamp **700–2600** words). `buildUserPrompt` adds a **length guidance** block: satisfy intent with the shortest adequate article, do not pad, and treat the range as non-binding if the topic is already fully covered.
 
 ### Default user suffix (anti-repetition)
 When `generationUserPromptSuffix` is **omitted** from `cms_settings.settings_json`, a long built-in **Originality and anti-repetition** block is appended. If the key is present as an empty string, that block is skipped (advanced override).
@@ -80,19 +90,19 @@ Model returns JSON:
 
 | Type | Auto-generation | Notes |
 |------|----------------|-------|
-| `cluster_article` | Yes | Primary use case |
-| `pillar_page` | Yes (with review) | Long-form, requires extra editorial review |
+| `cluster_article` | Yes | Primary use case; typical length follows **`page_role`** (often `support` unless overridden) |
+| `pillar_page` | Yes (with review) | Hub-style guide; typical length follows **`page_role`** `pillar` when set or inferred |
 | `template` | No | Manual creation only |
 | `case_study` | No | Requires real merchant data |
 | `legal_update` | Yes | **Mandatory legal review** |
-| `glossary_entry` | Yes | Short definitions |
-| `faq_entry` | Yes | Q&A pairs |
+| `glossary_entry` | Yes | Short definitions (role defaults support compact range) |
+| `faq_entry` | Yes | Q&A pairs (role defaults `faq`) |
 
 ## Generation Flow
 
 1. **Trigger:** Admin clicks "Generate Draft" from backlog or archive item (or autopilot cron).
 2. **Idempotency check:** If archive row already has `created_from_archive_to_content_item_id`, abort with error (linked id returned for diagnostics).
-3. **Brief creation:** System builds structured brief from archive item metadata.
+3. **Brief creation:** System builds structured brief from archive row columns (`content_type`, `search_intent`, `page_role`, `complexity`, `target_word_range`, etc.) plus optional keys in **`notes`** JSON when columns are empty.
 4. **Similar peers:** For each target locale, fetch similar published articles; pass into `buildUserPrompt`.
 5. **Processing:** API calls OpenAI once per locale (plus up to **one extra call per locale** if similarity guard fails the first time).
 6. **Draft creation:** New `content_items` row with `workflow_status = "drafting"` (or `in_legal_review` / `published` per mode), linked back to archive item via `created_from_archive_to_content_item_id`.
@@ -131,7 +141,7 @@ GENERATION_ENABLED=true            # Feature flag, defaults to false
 
 ## Integration Points
 
-- `content_archive_items` → source material and metadata
+- `content_archive_items` → source material and metadata (including optional `page_role`, `complexity`, `target_word_range`; migration `033_archive_brief_generation_fields.sql`)
 - `content_items` + `content_localizations` → output destination
 - `content_revisions` → generation history
 - `content_publish_queue` → publish after approval (existing cron)

@@ -248,7 +248,7 @@ If either `OPENAI_API_KEY` or `GENERATION_ENABLED=true` is missing, generation f
 2. Find the archive item you want to generate content from.
 3. Click the **Generate** button (purple sparkle icon) on that row.
 4. Wait ~20–60 seconds (varies by model latency). The system:
-   - Reads the archive item metadata (title, keyword, content type, pillar).
+   - Reads the archive item metadata (title, keyword, content type, pillar, **search intent**, and optional **`page_role`**, **`complexity`**, **`target_word_range`** when present on the row).
    - Loads **similar published articles** per locale and adds them to the prompt (to reduce duplicate titles/intros).
    - Calls GPT-4o once per locale in parallel (up to **one extra call per locale** if output is too similar to existing content or slug collides — then either succeeds or returns an error).
    - Skips creation if this archive item was **already converted** (linked `content_item` exists).
@@ -271,13 +271,15 @@ For each locale, the AI produces:
 
 | Content Type | AI-Generated? | Notes |
 |-------------|---------------|-------|
-| Cluster Article | Yes | Primary use case, 1500-2500 words |
-| Pillar Page | Yes | Comprehensive guide, 3000-5000 words. Extra editorial review recommended. |
+| Cluster Article | Yes | Primary use case. **Target length** is computed from **`page_role`** / **`complexity`** / **search intent** (or an explicit **`target_word_range`** on the archive row), not from fixed per-type word counts. |
+| Pillar Page | Yes | Hub-style comprehensive guide when **`page_role`** is `pillar` (or inferred from `pillar_page`). Extra editorial review recommended. |
 | Legal Update | Yes | **Mandatory legal review.** Auto-routed to `in_legal_review` status. |
-| Glossary Entry | Yes | Short definitions, 200-400 words |
+| Glossary Entry | Yes | Short definitions; length still follows the resolved range for the brief (typically compact). |
 | FAQ Entry | Yes | 5-8 question/answer pairs |
 | Template | No | Manual creation only |
 | Case Study | No | Requires real merchant data |
+
+**Length guidance in the model prompt:** The generator is instructed to **meet search intent with the shortest adequate article**, not to pad to a word count. The prompt includes a **target range** for the page type; finishing **below** that range is acceptable when the topic is fully covered. Implementation: `lib/resources/generation/targetWordRange.ts` and `buildUserPrompt` in `prompts.ts` (see **`docs/technical.md`** — CH-7).
 
 ### Per-Locale Writing Style
 

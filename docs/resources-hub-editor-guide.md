@@ -8,7 +8,7 @@ The Resources Hub admin provides a full editorial CMS for managing articles, tem
 
 The full **Admin Guide** lives at **`/admin/help`** (also linked from the Resources Hub sidebar as **Help**). That page uses the main Admin navigation shell; the guide itself uses a sticky filter bar and horizontal section pills instead of a second sidebar. It covers login, platform dashboards, the Resources Hub screens, the block editor, **AI Content Generator** (backlog generation, env vars, editor AI assistant tools), **Autopilot Mode** (cron, burst, warnings), SEO/Indexing, CMS settings, and the workflow state machine. For a printable Markdown version of the same material, see [`docs/admin-guide.md`](admin-guide.md).
 
-**AI generation from backlog:** Use **Backlog** → **Generate** on an archive row (requires `OPENAI_API_KEY` and `GENERATION_ENABLED=true`). See the Admin Guide section *AI Content Generator*.
+**AI generation from backlog:** Use **Backlog** → **Generate** on an archive row (requires `OPENAI_API_KEY` and `GENERATION_ENABLED=true`). Target article length comes from archive **`page_role`**, **`complexity`**, **search intent**, and optional **`target_word_range`** (see **`docs/technical.md`** CH-7). See the Admin Guide section *AI Content Generator*.
 
 **Autopilot:** Configure under **Settings** → **AI Autopilot** (master toggle, articles per day, notification email) and **Workflow** → **Default CTA** (must match a `content_ctas` row, e.g. Free Trial → `free_trial`). Production also needs `CRON_SECRET` on Vercel and `RESEND_API_KEY` for email. See *Autopilot Mode* in the Admin Guide for prerequisites, schedule (08:00 / 09:00 UTC), and manual cron tests.
 

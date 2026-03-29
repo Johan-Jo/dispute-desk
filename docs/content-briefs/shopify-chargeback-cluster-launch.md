@@ -33,7 +33,7 @@ Focused **Shopify** chargeback authority cluster. No mediation, arbitration, sma
 | 7 | Visa Compelling Evidence 3.0 for Shopify Merchants | cluster_article | Visa compelling evidence 3.0 Shopify |
 | 8 | Shopify Chargeback Evidence Checklist | cluster_article | Shopify chargeback evidence checklist |
 
-Full structured fields live in **`notes`** JSON on each `content_archive_items` row (see seed script) and in summaries below.
+Structured editorial detail lives in **`notes`** JSON on each `content_archive_items` row (see seed script). **Generation metadata** for target length uses database columns **`page_role`**, **`complexity`**, and optional **`target_word_range`** (migration `033`); the seed script sets **`page_role` / `complexity`** per row (pillar + high; support articles + medium; evidence checklist + checklist + medium). The same keys can be supplied inside **`notes`** JSON if columns are empty. Summaries below remain the editorial reference.
 
 ---
 
@@ -90,7 +90,7 @@ Anchor text: use **specific phrases** (e.g. “issuer claim deadline in Shopify 
 
 ## System integration
 
-- Rows are created in **`content_archive_items`** with **`proposed_slug`**, **`priority_score`** (pillar highest), **`status` = `backlog`**, **`primary_pillar` = `chargebacks`**.  
+- Rows are created in **`content_archive_items`** with **`proposed_slug`**, **`priority_score`** (pillar highest), **`status` = `backlog`**, **`primary_pillar` = `chargebacks`**, plus **`page_role`** and **`complexity`** for scalable **target word range** in generation (see `docs/technical.md` CH-7).  
 - **One** article generation uses **`executeAutopilotTick`** / **`GET /api/cron/autopilot-generate`** with **`autopilotArticlesPerDay: 1`** so a single tick processes **one** archive row (highest priority).
 
 ---
