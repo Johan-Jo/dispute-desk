@@ -81,11 +81,13 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. Reset archive items so autopilot can pick them up again.
+  //    Bump priority_score high so they're picked before other backlog items.
   const { data: resetRows, error: resetErr } = await sb
     .from("content_archive_items")
     .update({
       created_from_archive_to_content_item_id: null,
       status: "backlog",
+      priority_score: 9999,
       updated_at: now,
     })
     .in("created_from_archive_to_content_item_id", ids)

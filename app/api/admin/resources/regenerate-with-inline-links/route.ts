@@ -75,9 +75,15 @@ export async function POST() {
   }
 
   // 4. Clear the back-pointer on archive items so autopilot can regenerate them.
+  //    Bump priority_score high so they're picked before other backlog items.
   const { data: resetRows, error: resetErr } = await sb
     .from("content_archive_items")
-    .update({ created_from_archive_to_content_item_id: null, updated_at: now })
+    .update({
+      created_from_archive_to_content_item_id: null,
+      status: "backlog",
+      priority_score: 9999,
+      updated_at: now,
+    })
     .in("created_from_archive_to_content_item_id", candidates)
     .select("id");
 
