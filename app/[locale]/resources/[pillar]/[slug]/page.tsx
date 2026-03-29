@@ -29,6 +29,112 @@ type Props = {
   params: Promise<{ locale: string; pillar: string; slug: string }>;
 };
 
+function parseInternalResourceSlugFromHref(href: string, locale: string): {
+  slug: string;
+  suffix: string;
+} | null {
+  if (!href || href.startsWith("#")) return null;
+  if (href.startsWith("mailto:") || href.startsWith("tel:")) return null;
+
+  const lower = href.toLowerCase();
+  const isAbsolute = lower.startsWith("http://") || lower.startsWith("https://");
+  let path = "";
+  let suffix = "";
+
+  if (isAbsolute) {
+    let u: URL;
+    try {
+      u = new URL(href);
+    } catch {
+      return null;
+    }
+    const host = u.hostname.toLowerCase();
+    if (!host.endsWith("disputedesk.app")) return null;
+    path = u.pathname;
+    suffix = `${u.search}${u.hash}`;
+  } else if (href.startsWith("/")) {
+    const hashIdx = href.indexOf("#");
+    const qIdx = href.indexOf("?");
+    const cut =
+      hashIdx === -1
+        ? qIdx === -1
+          ? href.length
+          : qIdx
+        : qIdx === -1
+          ? hashIdx
+          : Math.min(hashIdx, qIdx);
+    path = href.slice(0, cut);
+    suffix = href.slice(cut);
+  } else {
+    return null;
+  }
+
+  const localePrefix = locale === "en" ? "" : `/${locale}`;
+  const normalized = localePrefix && path.startsWith(`${localePrefix}/`)
+    ? path.slice(localePrefix.length)
+    : path;
+
+  const parts = normalized.split("/").filter(Boolean);
+  const slugPattern = /^[a-z0-9][a-z0-9-]{1,120}$/;
+
+  if (parts.length === 1 && slugPattern.test(parts[0])) {
+    return { slug: parts[0], suffix };
+  }
+  if (parts.length === 2 && parts[0] === "resources" && slugPattern.test(parts[1])) {
+    return { slug: parts[1], suffix };
+  }
+  return null;
+}
+
+async function rewriteLegacyResourceLinks(
+  mainHtml: string,
+  locale: string,
+  basePath: string,
+  currentPillar: string
+): Promise<string> {
+  const hrefRegex = /href\s*=\s*(['"])([^'"]+)\1/gi;
+  const candidates = new Set<string>();
+  const matchMeta = new Map<string, { slug: string; suffix: string }>();
+
+  for (const m of mainHtml.matchAll(hrefRegex)) {
+    const href = m[2];
+    const parsed = parseInternalResourceSlugFromHref(href, locale);
+    if (!parsed) continue;
+    candidates.add(parsed.slug);
+    matchMeta.set(href, parsed);
+  }
+
+  if (candidates.size === 0) return mainHtml;
+
+  const sb = getServiceClient();
+  const { data: rows } = await sb
+    .from("content_localizations")
+    .select("slug, content_items!inner(primary_pillar, workflow_status)")
+    .eq("locale", pathLocaleToHubLocale(locale as PathLocale))
+    .eq("route_kind", "resources")
+    .eq("is_published", true)
+    .in("slug", Array.from(candidates))
+    .eq("content_items.workflow_status", "published");
+
+  const pillarBySlug = new Map<string, string>();
+  for (const row of rows ?? []) {
+    const itemRaw = row.content_items as { primary_pillar?: string } | { primary_pillar?: string }[] | null;
+    const item = Array.isArray(itemRaw) ? itemRaw[0] : itemRaw;
+    const pillar = typeof item?.primary_pillar === "string" ? item.primary_pillar : currentPillar;
+    if (typeof row.slug === "string" && row.slug) {
+      pillarBySlug.set(row.slug, pillar);
+    }
+  }
+
+  return mainHtml.replace(hrefRegex, (full, quote: string, href: string) => {
+    const parsed = matchMeta.get(href);
+    if (!parsed) return full;
+    const pillar = pillarBySlug.get(parsed.slug) ?? currentPillar;
+    const rewritten = `${basePath}/resources/${pillar}/${parsed.slug}${parsed.suffix}`;
+    return `href=${quote}${rewritten}${quote}`;
+  });
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale: loc, pillar, slug } = await params;
   if (!hasLocale(routing.locales, loc)) return {};
@@ -93,6 +199,14 @@ export default async function ResourceArticlePage({ params }: Props) {
   const basePath = pathLocale === "en" ? "" : `/${pathLocale}`;
   const origin = getPublicBaseUrl();
   const path = `${basePath}/resources/${pillar}/${slug}`;
+  const body = ((L.body_json as Record<string, unknown>) ?? {}) as Record<string, unknown>;
+  const rawMainHtml = typeof body.mainHtml === "string" ? body.mainHtml : "";
+  const normalizedMainHtml = rawMainHtml
+    ? await rewriteLegacyResourceLinks(rawMainHtml, pathLocale, basePath, pillar)
+    : rawMainHtml;
+  const renderedBody = normalizedMainHtml
+    ? { ...body, mainHtml: normalizedMainHtml }
+    : body;
 
   let authorName: string | undefined;
   let authorRole: string | undefined;
@@ -247,7 +361,7 @@ export default async function ResourceArticlePage({ params }: Props) {
 
         {/* Article Body */}
         <BodyBlocks
-          body={(L.body_json as Record<string, unknown>) ?? {}}
+          body={renderedBody}
           takeawaysLabel={t("keyTakeaways")}
         />
 

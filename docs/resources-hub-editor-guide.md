@@ -82,6 +82,14 @@ The validation checklist must be satisfied before publishing:
 - Meta title (optional)
 - Meta description (optional)
 
+### Internal links inside article body
+
+When adding links to other Resources articles, use canonical URLs in this format:
+- English: `/resources/{pillar}/{slug}`
+- Other locales: `/{locale}/resources/{pillar}/{slug}`
+
+Avoid root-slug links like `https://disputedesk.app/{slug}` — they are non-canonical and can break navigation.
+
 ## Workflow Statuses
 
 Content moves through: `idea` → `backlog` → `brief_ready` → `drafting` → `in_translation` → `in_editorial_review` → `in_legal_review` → `approved` → `scheduled` → `published` → `archived`.

@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { isResourceHubPillar } from "@/lib/resources/pillars";
+import { sendPublishNotification } from "@/lib/email/sendPublishNotification";
+import { notifySearchEngines } from "@/lib/seo/indexnow";
 import type { HubContentLocale } from "./constants";
 import { HUB_CONTENT_LOCALES } from "./constants";
 
@@ -109,6 +111,9 @@ export async function repairStuckPublishedWorkflow(): Promise<{
   contentItemsScanned: number;
   localizationAttempts: number;
   succeeded: number;
+  backfilledPublishedAt: number;
+  emailSent: number;
+  emailFailed: number;
   failures: { localizationId: string; error: string }[];
 }> {
   const sb = getServiceClient();
@@ -124,27 +129,129 @@ export async function repairStuckPublishedWorkflow(): Promise<{
   const failures: { localizationId: string; error: string }[] = [];
   let localizationAttempts = 0;
   let succeeded = 0;
+  let backfilledPublishedAt = 0;
+  let emailSent = 0;
+  let emailFailed = 0;
+  const { data: settingsRow } = await sb
+    .from("cms_settings")
+    .select("settings_json")
+    .eq("id", "singleton")
+    .maybeSingle();
+  const settings = (settingsRow?.settings_json ?? {}) as Record<string, unknown>;
+  const notifyEmail = typeof settings.autopilotNotifyEmail === "string"
+    ? settings.autopilotNotifyEmail.trim()
+    : "";
 
   for (const row of items ?? []) {
-    const { data: locs } = await sb
+    const { data: locs, error: locErr } = await sb
       .from("content_localizations")
-      .select("id")
-      .eq("content_item_id", row.id)
-      .eq("is_published", false);
+      .select("id, is_published, publish_at")
+      .eq("content_item_id", row.id);
 
-    for (const loc of locs ?? []) {
+    if (locErr) {
+      failures.push({ localizationId: `item:${row.id}`, error: `load_localizations: ${locErr.message}` });
+      continue;
+    }
+
+    const publishedLocs = (locs ?? []).filter((loc) => loc.is_published);
+    if (publishedLocs.length > 0) {
+      const publishedAt =
+        publishedLocs
+          .map((loc) => loc.publish_at)
+          .filter((v): v is string => typeof v === "string")
+          .sort()[0] ?? new Date().toISOString();
+
+      const { error: itemBackfillErr } = await sb
+        .from("content_items")
+        .update({ published_at: publishedAt, updated_at: new Date().toISOString() })
+        .eq("id", row.id)
+        .is("published_at", null);
+
+      if (itemBackfillErr) {
+        failures.push({ localizationId: `item:${row.id}`, error: `item_backfill: ${itemBackfillErr.message}` });
+      } else {
+        backfilledPublishedAt += 1;
+      }
+      continue;
+    }
+
+    const unpublishedLocs = (locs ?? []).filter((loc) => !loc.is_published);
+    for (const loc of unpublishedLocs) {
       if (localizationAttempts >= REPAIR_PUBLISH_MAX_LOCALIZATIONS) {
         return {
           contentItemsScanned: items?.length ?? 0,
           localizationAttempts,
           succeeded,
+          backfilledPublishedAt,
+          emailSent,
+          emailFailed,
           failures,
         };
       }
       localizationAttempts += 1;
       const r = await publishLocalization(loc.id);
-      if (r.ok) succeeded += 1;
-      else failures.push({ localizationId: loc.id, error: r.error ?? "unknown" });
+      if (r.ok) {
+        succeeded += 1;
+        try {
+          const { data: publishedLoc } = await sb
+            .from("content_localizations")
+            .select("title, slug, locale, route_kind, content_items(primary_pillar)")
+            .eq("id", loc.id)
+            .maybeSingle();
+
+          if (publishedLoc) {
+            const routeKind = publishedLoc.route_kind ?? "resources";
+            const rawItem = publishedLoc.content_items as
+              | { primary_pillar: string }
+              | { primary_pillar: string }[]
+              | null;
+            const contentItem = Array.isArray(rawItem) ? rawItem[0] : rawItem;
+            const pillar =
+              typeof contentItem?.primary_pillar === "string"
+                ? contentItem.primary_pillar.trim()
+                : "";
+
+            if (publishedLoc.slug) {
+              notifySearchEngines(
+                publishedLoc.slug,
+                publishedLoc.locale,
+                routeKind,
+                pillar
+              ).catch((err) => {
+                console.error("[publish-repair] notifySearchEngines error:", err);
+              });
+            }
+
+            if (notifyEmail && publishedLoc.title?.trim() && publishedLoc.slug?.trim()) {
+              const sent = await sendPublishNotification({
+                to: notifyEmail,
+                articleTitle: publishedLoc.title,
+                articleSlug: publishedLoc.slug,
+                routeKind,
+                pillar,
+                locale: publishedLoc.locale,
+              });
+              if (sent.ok) emailSent += 1;
+              else {
+                emailFailed += 1;
+                failures.push({
+                  localizationId: loc.id,
+                  error: `email: ${sent.error}`,
+                });
+              }
+            }
+          }
+        } catch (hookErr) {
+          failures.push({
+            localizationId: loc.id,
+            error: `post_publish_hooks: ${
+              hookErr instanceof Error ? hookErr.message : "unknown"
+            }`,
+          });
+        }
+      } else {
+        failures.push({ localizationId: loc.id, error: r.error ?? "unknown" });
+      }
     }
   }
 
@@ -152,6 +259,9 @@ export async function repairStuckPublishedWorkflow(): Promise<{
     contentItemsScanned: items?.length ?? 0,
     localizationAttempts,
     succeeded,
+    backfilledPublishedAt,
+    emailSent,
+    emailFailed,
     failures,
   };
 }

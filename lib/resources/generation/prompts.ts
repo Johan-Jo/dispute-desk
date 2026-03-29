@@ -38,6 +38,7 @@ Conversion rules:
 - the CTA should fit the article intent
 - transactional intent articles may have stronger product tie-ins
 - informational articles should build trust first and sell lightly
+- for internal DisputeDesk article links in HTML, always use canonical resources paths like /resources/<pillar>/<slug> (or locale-prefixed equivalent), never root-level /<slug>
 
 Originality and anti-repetition rules:
 - when related existing DisputeDesk articles are provided in the prompt context, treat them as duplication constraints
