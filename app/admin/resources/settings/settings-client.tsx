@@ -105,7 +105,7 @@ const CTA_OPTIONS = [
 export function SettingsClient({ initial }: SettingsClientProps) {
   const [settings, setSettings] = useState<Settings>(() => mergeSettings(initial));
   const [saved, setSaved] = useState(false);
-  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair" | "readingTimeBackfill" | "regenerateInlineLinks">(null);
+  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair" | "readingTimeBackfill" | "regenerateInlineLinks" | "archiveAllAi">(null);
   const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -295,6 +295,31 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         ok: false,
         text: e instanceof Error ? e.message : "Request failed",
       });
+    } finally {
+      setCronLoading(null);
+    }
+  }
+
+  async function runArchiveAllAi(dryRun = false) {
+    if (!dryRun && !confirm(
+      "This will archive ALL AI-generated articles so autopilot can regenerate them.\n\nRun a dry-run first to see what would be affected. Proceed?"
+    )) return;
+    setCronLoading("archiveAllAi");
+    setCronFeedback(null);
+    try {
+      const res = await fetch("/api/admin/resources/archive-ai-articles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun }),
+      });
+      const data: unknown = await res.json().catch(() => ({}));
+      const text =
+        typeof data === "object" && data !== null
+          ? JSON.stringify(data, null, 2)
+          : String(data);
+      setCronFeedback({ ok: res.ok, text: res.ok ? text : text || res.statusText });
+    } catch (e) {
+      setCronFeedback({ ok: false, text: e instanceof Error ? e.message : "Request failed" });
     } finally {
       setCronLoading(null);
     }
@@ -782,12 +807,42 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 "Archive articles with inline links"
               )}
             </button>
+            <button
+              type="button"
+              disabled={cronLoading !== null}
+              onClick={() => runArchiveAllAi(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading === "archiveAllAi" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Checking…
+                </>
+              ) : (
+                "Dry-run: archive all AI articles"
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={cronLoading !== null}
+              onClick={() => runArchiveAllAi(false)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-red-300 bg-red-100 text-red-900 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading === "archiveAllAi" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Archiving…
+                </>
+              ) : (
+                "Archive ALL AI articles"
+              )}
+            </button>
           </div>
           <p className="text-xs text-[#64748B] mt-3">
             If the content list shows <strong>Published</strong> but no date and articles are missing on the hub, click{" "}
             <strong>Repair stuck publishes</strong>. If new cards are missing read time, run{" "}
-            <strong>Backfill read time</strong>. To archive AI articles that contain broken inline link text and let autopilot
-            regenerate them cleanly, click <strong>Archive articles with inline links</strong> — then run autopilot.
+            <strong>Backfill read time</strong>. To regenerate all AI articles (e.g. after a prompt or token limit fix),
+            dry-run first to see counts, then click <strong>Archive ALL AI articles</strong> — autopilot will regenerate them.
           </p>
           {cronFeedback && (
             <pre
