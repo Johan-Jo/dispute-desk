@@ -37,7 +37,7 @@ node scripts/smoke-test.mjs  # E2E smoke test (requires live Supabase)
 npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
 ```
 
-**Migrations:** When you add or change schema, run `npm run db:migrate` yourself (`npx supabase db push`). Requires Supabase CLI linked to the project (`npx supabase link --project-ref …`). Do not tell the user to run migrations. Fallback without CLI: `npm run db:migrate:script` (uses `scripts/run-migration.mjs` + `SUPABASE_URL_POSTGRES` or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`).
+**Migrations (mandatory for agents):** When you add or change anything under `supabase/migrations/`, you **must** run `npm run db:migrate` in this repo before you consider the task done (`npx supabase db push` to the linked project). Do not only commit SQL and skip apply. Do not tell the user to run migrations instead. Requires Supabase CLI linked (`npx supabase link --project-ref …`). If `db push` is not possible in this environment, use `npm run db:migrate:script` (see `scripts/run-migration.mjs` + `SUPABASE_URL_POSTGRES` or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`) and note that in the PR/summary.
 
 ## Key Directories
 ```
@@ -72,6 +72,7 @@ write_shopify_payments_dispute_evidences
 ```
 
 ## Important Rules
+- **Database:** After any new/edited migration file, **always** run `npm run db:migrate` (or the script fallback) against the linked Supabase project — same session as the code change.
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only — never expose to client
 - Saving evidence requires merchant to have "Manage orders information" in Shopify Admin
 - CI runs: typecheck + lint + build → vitest → forbidden copy grep (no "submit response" language in UI) → npm audit
