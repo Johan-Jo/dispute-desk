@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   RefreshCw,
   Clock,
@@ -9,7 +10,6 @@ import {
   CheckCircle,
   AlertCircle,
   Inbox,
-  Activity,
   Globe,
   RotateCcw,
 } from "lucide-react";
@@ -33,7 +33,7 @@ const STATUS_TABS = [
   { key: "all", label: "All Items" },
   { key: "pending", label: "Pending" },
   { key: "processing", label: "Processing" },
-  { key: "published", label: "Succeeded" },
+  { key: "succeeded", label: "Succeeded" },
   { key: "failed", label: "Failed" },
 ] as const;
 
@@ -42,7 +42,7 @@ type TabKey = (typeof STATUS_TABS)[number]["key"];
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; animate?: boolean }> = {
   pending: { icon: Clock, color: "text-[#64748B]", bg: "bg-[#F1F5F9]" },
   processing: { icon: Loader2, color: "text-[#3B82F6]", bg: "bg-[#EFF6FF]", animate: true },
-  published: { icon: CheckCircle, color: "text-[#22C55E]", bg: "bg-[#F0FDF4]" },
+  succeeded: { icon: CheckCircle, color: "text-[#22C55E]", bg: "bg-[#F0FDF4]" },
   failed: { icon: AlertCircle, color: "text-[#EF4444]", bg: "bg-[#FEF2F2]" },
 };
 
@@ -66,8 +66,18 @@ function getContentType(item: QueueItem): string | undefined {
   return (ciArr as Record<string, unknown>)?.content_type as string | undefined;
 }
 
+function getContentItemId(item: QueueItem): string | undefined {
+  const raw = item.content_localizations;
+  const loc = Array.isArray(raw) ? raw[0] : raw;
+  const id = (loc as Record<string, unknown>)?.content_item_id;
+  return typeof id === "string" ? id : undefined;
+}
+
 export function QueueClient({ initialItems }: QueueClientProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [publishRunning, setPublishRunning] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (activeTab === "all") return initialItems;
@@ -78,9 +88,28 @@ export function QueueClient({ initialItems }: QueueClientProps) {
     all: initialItems.length,
     pending: initialItems.filter((i) => i.status === "pending").length,
     processing: initialItems.filter((i) => i.status === "processing").length,
-    published: initialItems.filter((i) => i.status === "published").length,
+    succeeded: initialItems.filter((i) => i.status === "succeeded").length,
     failed: initialItems.filter((i) => i.status === "failed").length,
   }), [initialItems]);
+
+  async function processPublishQueueNow() {
+    setPublishRunning(true);
+    setPublishMessage(null);
+    try {
+      const res = await fetch("/api/admin/resources/cron/publish", { method: "POST" });
+      const data = (await res.json()) as { error?: string; processed?: number };
+      if (!res.ok) {
+        setPublishMessage(data.error ?? "Publish queue run failed");
+        return;
+      }
+      setPublishMessage(`Processed ${data.processed ?? 0} row(s). Only items whose scheduled time has passed (UTC) are published.`);
+      router.refresh();
+    } catch {
+      setPublishMessage("Network error");
+    } finally {
+      setPublishRunning(false);
+    }
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
@@ -92,14 +121,33 @@ export function QueueClient({ initialItems }: QueueClientProps) {
             Monitor and manage scheduled content publishing
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={publishRunning}
+            onClick={() => processPublishQueueNow()}
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg bg-[#0B1220] text-white hover:bg-[#1E293B] disabled:opacity-50 transition-colors"
+          >
+            {publishRunning ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing…
+              </>
+            ) : (
+              "Process publish queue now"
+            )}
+          </button>
           <Link
             href="/admin/resources/calendar"
             className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
           >
             View Calendar
           </Link>
-          <button className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors">
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
+          >
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
@@ -111,7 +159,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
         {[
           { label: "Pending", count: counts.pending, icon: Clock, color: "text-[#64748B]", bg: "bg-[#F1F5F9]" },
           { label: "Processing", count: counts.processing, icon: Loader2, color: "text-[#3B82F6]", bg: "bg-[#EFF6FF]" },
-          { label: "Succeeded", count: counts.published, icon: CheckCircle, color: "text-[#22C55E]", bg: "bg-[#F0FDF4]" },
+          { label: "Succeeded", count: counts.succeeded, icon: CheckCircle, color: "text-[#22C55E]", bg: "bg-[#F0FDF4]" },
           { label: "Failed", count: counts.failed, icon: AlertCircle, color: "text-[#EF4444]", bg: "bg-[#FEF2F2]" },
         ].map((s) => {
           const Icon = s.icon;
@@ -147,6 +195,20 @@ export function QueueClient({ initialItems }: QueueClientProps) {
         ))}
       </div>
 
+      {publishMessage && (
+        <p className="text-sm text-[#64748B] mb-4" role="status">
+          {publishMessage}
+        </p>
+      )}
+      <p className="text-xs text-[#64748B] mb-4">
+        Pending rows run only when their <strong>scheduled</strong> time is in the past (server UTC). After 7:20 PM on that date (in UTC), click{" "}
+        <strong>Process publish queue now</strong> or use{" "}
+        <Link href="/admin/resources/settings" className="text-[#1D4ED8] underline">
+          Settings → Process publish queue now
+        </Link>
+        . The daily cron does the same at 09:00 UTC.
+      </p>
+
       {/* Queue items */}
       <div className="space-y-3">
         {filtered.length === 0 && (
@@ -160,6 +222,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
           const Icon = cfg.icon;
           const locale = getLocale(item);
           const ct = getContentType(item);
+          const contentItemId = getContentItemId(item);
           return (
             <div
               key={item.id}
@@ -219,12 +282,16 @@ export function QueueClient({ initialItems }: QueueClientProps) {
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href={`/admin/resources/content/${item.id}`}
-                    className="text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium"
-                  >
-                    View
-                  </Link>
+                  {contentItemId ? (
+                    <Link
+                      href={`/admin/resources/content/${contentItemId}`}
+                      className="text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium"
+                    >
+                      View
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-[#94A3B8]">View</span>
+                  )}
                   {item.status === "failed" && (
                     <button className="inline-flex items-center gap-1 text-sm text-[#F59E0B] hover:text-[#D97706] font-medium">
                       <RotateCcw className="w-3.5 h-3.5" />

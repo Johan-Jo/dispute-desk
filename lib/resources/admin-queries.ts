@@ -180,7 +180,7 @@ export async function getQueueItems(statusFilter?: string) {
     .select(
       `id, scheduled_for, status, last_error, attempts, created_at,
        content_localizations!inner(
-         locale, title,
+         id, content_item_id, locale, title,
          content_items!inner(content_type)
        )`
     )
