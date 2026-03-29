@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   GripVertical,
   Trash2,
@@ -107,6 +108,79 @@ export function BlockRenderer({
   );
 }
 
+/* ── Rich HTML: code + readable preview (admin trust boundary for innerHTML) ─ */
+
+function HtmlBlockEditor({
+  html,
+  updateData,
+}: {
+  html: string;
+  updateData: (patch: Record<string, unknown>) => void;
+}) {
+  const [mode, setMode] = useState<"split" | "code" | "preview">("split");
+
+  const preview =
+    html.trim().length > 0 ? (
+      <div
+        className="prose prose-slate prose-sm max-w-none border border-[#E5E7EB] rounded-lg p-4 bg-white text-[#0B1220] max-h-[min(60vh,560px)] overflow-y-auto prose-headings:text-[#0B1220] prose-p:text-[#0B1220] prose-p:leading-relaxed prose-li:text-[#0B1220] prose-a:text-[#1D4ED8] prose-strong:text-[#0B1220]"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    ) : (
+      <div className="border border-dashed border-[#E5E7EB] rounded-lg p-8 text-center text-sm text-[#94A3B8] max-h-[min(60vh,560px)]">
+        Nothing to preview yet — add HTML in the editor.
+      </div>
+    );
+
+  const editor = (
+    <textarea
+      value={html}
+      onChange={(e) => updateData({ html: e.target.value })}
+      placeholder="HTML content..."
+      className="w-full min-h-[200px] lg:min-h-[280px] p-3 text-sm font-mono bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] resize-y"
+    />
+  );
+
+  const modeBtn = (m: typeof mode, label: string) => (
+    <button
+      key={m}
+      type="button"
+      onClick={() => setMode(m)}
+      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+        mode === m
+          ? "bg-[#0B1220] text-white"
+          : "bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-[#64748B] mr-1">View:</span>
+        {modeBtn("split", "Split")}
+        {modeBtn("code", "HTML only")}
+        {modeBtn("preview", "Preview only")}
+      </div>
+      {mode === "split" && (
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 min-w-0 space-y-1">
+            <span className="text-xs text-[#64748B]">Source</span>
+            {editor}
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <span className="text-xs text-[#64748B]">Preview (read-only)</span>
+            {preview}
+          </div>
+        </div>
+      )}
+      {mode === "code" && editor}
+      {mode === "preview" && preview}
+    </div>
+  );
+}
+
 /* ── Per-type content editors ─────────────────────────────────────── */
 
 function BlockContent({
@@ -119,12 +193,7 @@ function BlockContent({
   switch (block.type) {
     case "html":
       return (
-        <textarea
-          value={(block.data.html as string) ?? ""}
-          onChange={(e) => updateData({ html: e.target.value })}
-          placeholder="HTML content..."
-          className="w-full min-h-[200px] p-3 text-sm font-mono bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] resize-y"
-        />
+        <HtmlBlockEditor html={(block.data.html as string) ?? ""} updateData={updateData} />
       );
 
     case "paragraph":
