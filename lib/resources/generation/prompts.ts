@@ -3,6 +3,22 @@
  * Defaults are merged with `cms_settings.settings_json` overrides (see `resolveGenerationPrompts`).
  */
 
+import {
+  formatLengthGuidance,
+  normalizeComplexity,
+  normalizePageRole,
+  normalizeSearchIntent,
+  resolveTargetWordRange,
+} from "./targetWordRange";
+
+export { resolveTargetWordRange } from "./targetWordRange";
+export type {
+  PageRole,
+  NormalizedSearchIntent,
+  NormalizedComplexity,
+  TargetWordRangeBriefInput,
+} from "./targetWordRange";
+
 /** Built-in default; used when admin leaves "System prompt" empty. */
 export const DEFAULT_SYSTEM_PROMPT = `You are an expert B2B ecommerce content strategist and chargeback operations writer.
 
@@ -179,11 +195,15 @@ export const DEFAULT_LOCALE_INSTRUCTIONS: Record<string, string> = {
 export const LOCALE_INSTRUCTIONS = DEFAULT_LOCALE_INSTRUCTIONS;
 
 export const DEFAULT_CONTENT_TYPE_INSTRUCTIONS: Record<string, string> = {
-  cluster_article: "Write a focused, in-depth article (1500-2500 words). Include practical examples and step-by-step guidance where appropriate.",
-  pillar_page: "Write a comprehensive guide (3000-5000 words). Cover the topic exhaustively with multiple sections, tables, and cross-references. This should be the definitive resource on this topic.",
-  template: "Write a practical, ready-to-use template or playbook (800-1500 words). Structure it with clear sections: Overview, When to Use, Step-by-Step Instructions, and a fill-in template section using HTML tables or formatted lists. Include placeholder text in [BRACKETS] that merchants can replace with their own data. Make it immediately actionable.",
-  legal_update: "Write a precise legal/regulatory update (800-1500 words). Focus on what changed, effective dates, merchant impact, and required actions. CRITICAL: accuracy is paramount.",
-  glossary_entry: "Write a clear, concise definition (200-400 words). Include context, examples, and related terms.",
+  cluster_article:
+    "Write a focused, in-depth cluster article. Include practical examples and step-by-step guidance where appropriate. Length is guided separately below — do not pad to a word count.",
+  pillar_page:
+    "Write a comprehensive pillar-style guide: multiple sections, scannable structure, and clear pointers to deeper articles where relevant. Length is guided separately below — depth should match the topic, not an arbitrary word goal.",
+  template:
+    "Write a practical, ready-to-use template or playbook. Structure it with clear sections: Overview, When to Use, Step-by-Step Instructions, and a fill-in template section using HTML tables or formatted lists. Include placeholder text in [BRACKETS] that merchants can replace with their own data. Make it immediately actionable.",
+  legal_update:
+    "Write a precise legal/regulatory update. Focus on what changed, effective dates, merchant impact, and required actions. CRITICAL: accuracy is paramount.",
+  glossary_entry: "Write a clear, concise definition. Include context, examples, and related terms.",
   faq_entry: "Write 5-8 FAQ pairs. Each answer should be 2-4 sentences. Cover the most common merchant questions on this topic.",
 };
 
@@ -243,10 +263,17 @@ export function resolveGenerationPrompts(settings?: Record<string, unknown> | nu
 export interface GenerationBrief {
   archiveItemId: string;
   proposedTitle: string;
+  /** CMS content type (e.g. cluster_article, pillar_page). */
   contentType: string;
+  /** Editorial page shape for length heuristics: pillar, support, checklist, template, faq, case_study. */
+  pageRole?: string | null;
+  /** informational | commercial | transactional (stored value may vary; normalized when resolving range). */
+  searchIntent: string | null;
+  complexity?: string | null;
+  /** When set, used verbatim in prompts and skips automatic range calculation. */
+  targetWordRange?: string | null;
   primaryPillar: string;
   targetKeyword: string | null;
-  searchIntent: string | null;
   summary: string | null;
   notes: string | null;
   targetLocales: string[];
@@ -309,15 +336,27 @@ export function buildUserPrompt(
     ? `\n\nAdditional instructions:\n${resolved.userPromptSuffix.trim()}\n`
     : "";
 
+  const pageRoleNorm = normalizePageRole(brief.pageRole, brief.contentType);
+  const searchNorm = normalizeSearchIntent(brief.searchIntent);
+  const complexityNorm = normalizeComplexity(brief.complexity);
+  const targetWordRange = resolveTargetWordRange(brief);
+  const lengthBlock = formatLengthGuidance(targetWordRange);
+
   return `${typeInstr}
+
+${lengthBlock}
 
 LOCALE: ${locale}
 ${localeInstr}
 
 TOPIC: ${brief.proposedTitle}
 PILLAR: ${brief.primaryPillar}
+CONTENT TYPE: ${brief.contentType}
+PAGE ROLE: ${pageRoleNorm}
+SEARCH INTENT: ${searchNorm}
+COMPLEXITY: ${complexityNorm}
+TARGET WORD RANGE (guidance): ${targetWordRange}
 ${brief.targetKeyword ? `TARGET KEYWORD: ${brief.targetKeyword}` : ""}
-${brief.searchIntent ? `SEARCH INTENT: ${brief.searchIntent}` : ""}
 ${brief.summary ? `CONTEXT: ${brief.summary}` : ""}
 ${brief.notes ? `ADDITIONAL NOTES: ${brief.notes}` : ""}${overlapBlock}${suffixBlock}
 Generate the article now. Return ONLY valid JSON matching the specified output format.`;

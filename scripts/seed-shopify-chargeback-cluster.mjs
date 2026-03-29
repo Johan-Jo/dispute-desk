@@ -57,6 +57,8 @@ function briefNotes(b) {
 const PAGES = [
   {
     priority_score: 1000,
+    page_role: "pillar",
+    complexity: "high",
     proposed_title: "Shopify Chargebacks: The Practical Merchant Guide",
     proposed_slug: "shopify-chargebacks-practical-merchant-guide",
     content_type: "pillar_page",
@@ -105,6 +107,8 @@ const PAGES = [
   },
   {
     priority_score: 999,
+    page_role: "support",
+    complexity: "medium",
     proposed_title: "Chargeback Inquiry vs Chargeback on Shopify",
     proposed_slug: "shopify-chargeback-inquiry-vs-chargeback",
     content_type: "cluster_article",
@@ -142,6 +146,8 @@ const PAGES = [
   },
   {
     priority_score: 998,
+    page_role: "support",
+    complexity: "medium",
     proposed_title: "Issuer Claim in Shopify: What It Means and What to Check",
     proposed_slug: "shopify-issuer-claim-what-to-check",
     content_type: "cluster_article",
@@ -177,6 +183,8 @@ const PAGES = [
   },
   {
     priority_score: 997,
+    page_role: "support",
+    complexity: "medium",
     proposed_title: "Issuer Response in Shopify: Why You Won or Lost",
     proposed_slug: "shopify-issuer-response-won-or-lost",
     content_type: "cluster_article",
@@ -213,6 +221,8 @@ const PAGES = [
   },
   {
     priority_score: 996,
+    page_role: "support",
+    complexity: "medium",
     proposed_title: "Shopify Protect: What It Covers and What It Doesn’t",
     proposed_slug: "shopify-protect-coverage-limits",
     content_type: "cluster_article",
@@ -248,6 +258,8 @@ const PAGES = [
   },
   {
     priority_score: 995,
+    page_role: "support",
+    complexity: "medium",
     proposed_title: "Proof of Delivery Isn’t Always Enough in a Chargeback",
     proposed_slug: "shopify-chargeback-proof-delivery-not-enough",
     content_type: "cluster_article",
@@ -285,6 +297,8 @@ const PAGES = [
   },
   {
     priority_score: 994,
+    page_role: "support",
+    complexity: "medium",
     proposed_title: "Visa Compelling Evidence 3.0 for Shopify Merchants",
     proposed_slug: "visa-compelling-evidence-3-shopify-merchants",
     content_type: "cluster_article",
@@ -321,6 +335,8 @@ const PAGES = [
   },
   {
     priority_score: 993,
+    page_role: "checklist",
+    complexity: "medium",
     proposed_title: "Shopify Chargeback Evidence Checklist",
     proposed_slug: "shopify-chargeback-evidence-checklist",
     content_type: "cluster_article",
@@ -394,6 +410,8 @@ async function main() {
       summary: p.summary,
       notes: briefNotes(p.brief),
       status: "backlog",
+      page_role: p.page_role,
+      complexity: p.complexity,
     };
 
     const { data, error } = await sb.from("content_archive_items").insert(row).select("id").single();

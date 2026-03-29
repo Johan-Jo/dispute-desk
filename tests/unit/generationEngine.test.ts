@@ -13,6 +13,9 @@ const brief: GenerationBrief = {
   summary: null,
   notes: null,
   targetLocales: ["en-US"],
+  pageRole: null,
+  complexity: null,
+  targetWordRange: null,
 };
 
 function jsonResponse(obj: unknown, tokens = 100) {

@@ -56,6 +56,9 @@ describe("buildUserPrompt", () => {
     summary: "sum",
     notes: null,
     targetLocales: ["en-US"],
+    pageRole: null,
+    complexity: null,
+    targetWordRange: null,
   };
 
   const emptyCtx = { similarArticles: [] as SimilarContentReference[] };
@@ -67,12 +70,28 @@ describe("buildUserPrompt", () => {
     const p = buildUserPrompt(brief, "en-US", resolved, emptyCtx);
     expect(p).toContain("Vary headline structure.");
     expect(p).toContain("TARGET KEYWORD: kw");
+    expect(p).toContain("Length guidance:");
+    expect(p).toContain("1100–1500 words");
+    expect(p).toContain("SEARCH INTENT: informational");
+    expect(p).toContain("PAGE ROLE: support");
   });
 
   it("omits overlap section when similar list is empty", () => {
     const resolved = resolveGenerationPrompts({});
     const p = buildUserPrompt(brief, "en-US", resolved, { similarArticles: [] });
     expect(p).not.toContain("Existing DisputeDesk articles with topical overlap:");
+  });
+
+  it("uses explicit targetWordRange in length guidance when set", () => {
+    const resolved = resolveGenerationPrompts({ generationUserPromptSuffix: "" });
+    const p = buildUserPrompt(
+      { ...brief, targetWordRange: "500–800 words (override)" },
+      "en-US",
+      resolved,
+      emptyCtx
+    );
+    expect(p).toContain("500–800 words (override)");
+    expect(p).not.toContain("1100–1500 words");
   });
 
   it("includes compact similar-article context when provided", () => {

@@ -26,15 +26,43 @@ export type ArchiveLoadResult =
   | { ok: true; brief: GenerationBrief }
   | { ok: false; error: string; linkedContentItemId: string | null };
 
+function parseArchiveNotesBriefFields(notes: string | null | undefined): Partial<
+  Pick<GenerationBrief, "pageRole" | "complexity" | "targetWordRange">
+> {
+  if (!notes?.trim()) return {};
+  try {
+    const j = JSON.parse(notes) as Record<string, unknown>;
+    if (!j || typeof j !== "object") return {};
+    const pr = j.page_role ?? j.pageRole;
+    const cx = j.complexity;
+    const tw = j.target_word_range ?? j.targetWordRange;
+    return {
+      pageRole: typeof pr === "string" ? pr : undefined,
+      complexity: typeof cx === "string" ? cx : undefined,
+      targetWordRange: typeof tw === "string" ? tw : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function archiveRowToBrief(data: Record<string, unknown>): GenerationBrief {
   const locs = data.target_locale_set as string[] | undefined;
+  const fromNotes = parseArchiveNotesBriefFields((data.notes as string | null) ?? null);
+  const pageRoleCol = data.page_role as string | null | undefined;
+  const complexityCol = data.complexity as string | null | undefined;
+  const targetWordRangeCol = data.target_word_range as string | null | undefined;
+
   return {
     archiveItemId: data.id as string,
     proposedTitle: data.proposed_title as string,
     contentType: data.content_type as string,
+    pageRole: pageRoleCol ?? fromNotes.pageRole ?? null,
     primaryPillar: data.primary_pillar as string,
     targetKeyword: (data.target_keyword as string | null) ?? null,
     searchIntent: (data.search_intent as string | null) ?? null,
+    complexity: complexityCol ?? fromNotes.complexity ?? null,
+    targetWordRange: targetWordRangeCol ?? fromNotes.targetWordRange ?? null,
     summary: (data.summary as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
     targetLocales: locs && locs.length > 0 ? locs : ["en-US", "de-DE", "fr-FR", "es-ES", "pt-BR", "sv-SE"],
