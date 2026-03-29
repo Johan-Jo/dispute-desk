@@ -64,7 +64,10 @@ export async function generateForLocale(
           { role: "user", content: userPrompt },
         ],
         temperature: brief.contentType === "legal_update" ? 0.3 : 0.4,
-        max_tokens: 4096,
+        // Non-English locales need ~40-60% more tokens than English for the same word count.
+        // 4096 caused self-truncation in DE/FR/ES/PT/SV, producing shorter articles.
+        // gpt-4o supports 16 384 output tokens; stay comfortably below that.
+        max_tokens: 12000,
         response_format: { type: "json_object" },
       }),
     });
