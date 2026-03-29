@@ -38,7 +38,7 @@ Conversion rules:
 - the CTA should fit the article intent
 - transactional intent articles may have stronger product tie-ins
 - informational articles should build trust first and sell lightly
-- NEVER invent internal DisputeDesk article links in the HTML body; do NOT add <a href="..."> tags pointing to DisputeDesk URLs unless the target slug appears verbatim in the "Existing DisputeDesk articles" list provided in this prompt — if no matching article is listed, mention the topic as plain text only, with no anchor tag
+- NEVER add <a href="..."> links to other DisputeDesk articles anywhere in the HTML body — not even if the slug is real; cross-article navigation is handled exclusively by the "Related resources" section rendered below the article, so mention related topics as plain prose only with no anchor tag
 
 Originality and anti-repetition rules:
 - when related existing DisputeDesk articles are provided in the prompt context, treat them as duplication constraints

@@ -86,68 +86,38 @@ function parseInternalResourceSlugFromHref(href: string, locale: string): {
   return null;
 }
 
-async function rewriteLegacyResourceLinks(
-  mainHtml: string,
-  locale: string,
-  basePath: string,
-  currentPillar: string
-): Promise<string> {
+/**
+ * Strip all internal DisputeDesk article links from body HTML, leaving plain text.
+ * Cross-article navigation is handled by the "Related resources" section below the article,
+ * so inline `<a>` tags pointing to other DisputeDesk pages are always unwrapped to prose.
+ * External links (docs, gov sites, etc.) are left untouched.
+ */
+function stripInternalResourceLinks(mainHtml: string, locale: string): string {
   const hrefRegex = /href\s*=\s*(['"])([^'"]+)\1/gi;
-  const candidates = new Set<string>();
-  const matchMeta = new Map<string, { slug: string; suffix: string }>();
+  const internalHrefs = new Set<string>();
 
   for (const m of mainHtml.matchAll(hrefRegex)) {
     const href = m[2];
-    const parsed = parseInternalResourceSlugFromHref(href, locale);
-    if (!parsed) continue;
-    candidates.add(parsed.slug);
-    matchMeta.set(href, parsed);
-  }
-
-  if (candidates.size === 0) return mainHtml;
-
-  const sb = getServiceClient();
-  const { data: rows } = await sb
-    .from("content_localizations")
-    .select("slug, content_items!inner(primary_pillar, workflow_status)")
-    .eq("locale", pathLocaleToHubLocale(locale as PathLocale))
-    .eq("route_kind", "resources")
-    .eq("is_published", true)
-    .in("slug", Array.from(candidates))
-    .eq("content_items.workflow_status", "published");
-
-  const pillarBySlug = new Map<string, string>();
-  for (const row of rows ?? []) {
-    const itemRaw = row.content_items as { primary_pillar?: string } | { primary_pillar?: string }[] | null;
-    const item = Array.isArray(itemRaw) ? itemRaw[0] : itemRaw;
-    const pillar = typeof item?.primary_pillar === "string" ? item.primary_pillar : currentPillar;
-    if (typeof row.slug === "string" && row.slug) {
-      pillarBySlug.set(row.slug, pillar);
+    if (parseInternalResourceSlugFromHref(href, locale)) {
+      internalHrefs.add(href);
     }
   }
 
-  let rewritten = mainHtml.replace(hrefRegex, (full, quote: string, href: string) => {
-    const parsed = matchMeta.get(href);
-    if (!parsed) return full;
-    const resolvedPillar = pillarBySlug.get(parsed.slug);
+  if (internalHrefs.size === 0) return mainHtml;
 
-    // Slug resolved to a real published article — rewrite to canonical URL.
-    if (resolvedPillar) {
-      return `href=${quote}${basePath}/resources/${resolvedPillar}/${parsed.slug}${parsed.suffix}${quote}`;
-    }
-
-    // Slug did not resolve — mark for stripping so the second pass can remove
-    // the <a> tag while preserving the visible link text.
+  // Mark all internal hrefs so the second pass can unwrap their <a> tags.
+  let result = mainHtml.replace(hrefRegex, (full, quote: string, href: string) => {
+    if (!internalHrefs.has(href)) return full;
     return `data-dd-strip-link="1" href=${quote}${href}${quote}`;
   });
 
-  // Second pass: unwrap <a data-dd-strip-link="1" ...>text</a> → text
-  rewritten = rewritten.replace(
+  // Unwrap <a data-dd-strip-link="1" ...>text</a> → text
+  result = result.replace(
     /<a\s[^>]*data-dd-strip-link="1"[^>]*>([\s\S]*?)<\/a>/gi,
     "$1"
   );
 
-  return rewritten;
+  return result;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -216,11 +186,11 @@ export default async function ResourceArticlePage({ params }: Props) {
   const path = `${basePath}/resources/${pillar}/${slug}`;
   const body = ((L.body_json as Record<string, unknown>) ?? {}) as Record<string, unknown>;
   const rawMainHtml = typeof body.mainHtml === "string" ? body.mainHtml : "";
-  const normalizedMainHtml = rawMainHtml
-    ? await rewriteLegacyResourceLinks(rawMainHtml, pathLocale, basePath, pillar)
+  const strippedMainHtml = rawMainHtml
+    ? stripInternalResourceLinks(rawMainHtml, pathLocale)
     : rawMainHtml;
-  const renderedBody = normalizedMainHtml
-    ? { ...body, mainHtml: normalizedMainHtml }
+  const renderedBody = strippedMainHtml
+    ? { ...body, mainHtml: strippedMainHtml }
     : body;
 
   let authorName: string | undefined;

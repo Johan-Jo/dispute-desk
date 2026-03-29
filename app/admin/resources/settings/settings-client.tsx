@@ -105,7 +105,7 @@ const CTA_OPTIONS = [
 export function SettingsClient({ initial }: SettingsClientProps) {
   const [settings, setSettings] = useState<Settings>(() => mergeSettings(initial));
   const [saved, setSaved] = useState(false);
-  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair" | "readingTimeBackfill">(null);
+  const [cronLoading, setCronLoading] = useState<null | "autopilot" | "publish" | "repair" | "readingTimeBackfill" | "regenerateInlineLinks">(null);
   const [cronFeedback, setCronFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -295,6 +295,24 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         ok: false,
         text: e instanceof Error ? e.message : "Request failed",
       });
+    } finally {
+      setCronLoading(null);
+    }
+  }
+
+  async function runRegenerateInlineLinks() {
+    setCronLoading("regenerateInlineLinks");
+    setCronFeedback(null);
+    try {
+      const res = await fetch("/api/admin/resources/regenerate-with-inline-links", { method: "POST" });
+      const data: unknown = await res.json().catch(() => ({}));
+      const text =
+        typeof data === "object" && data !== null
+          ? JSON.stringify(data, null, 2)
+          : String(data);
+      setCronFeedback({ ok: res.ok, text: res.ok ? text : text || res.statusText });
+    } catch (e) {
+      setCronFeedback({ ok: false, text: e instanceof Error ? e.message : "Request failed" });
     } finally {
       setCronLoading(null);
     }
@@ -749,12 +767,27 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 "Backfill read time"
               )}
             </button>
+            <button
+              type="button"
+              disabled={cronLoading !== null}
+              onClick={() => runRegenerateInlineLinks()}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-red-200 bg-red-50 text-red-900 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading === "regenerateInlineLinks" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Scanning…
+                </>
+              ) : (
+                "Archive articles with inline links"
+              )}
+            </button>
           </div>
           <p className="text-xs text-[#64748B] mt-3">
             If the content list shows <strong>Published</strong> but no date and articles are missing on the hub, click{" "}
-            <strong>Repair stuck publishes</strong> (runs real publish for those rows). Also retry failed rows on the{" "}
-            <strong>Queue</strong> page, then process the queue again. If new cards are missing read time, run{" "}
-            <strong>Backfill read time</strong>.
+            <strong>Repair stuck publishes</strong>. If new cards are missing read time, run{" "}
+            <strong>Backfill read time</strong>. To archive AI articles that contain broken inline link text and let autopilot
+            regenerate them cleanly, click <strong>Archive articles with inline links</strong> — then run autopilot.
           </p>
           {cronFeedback && (
             <pre
