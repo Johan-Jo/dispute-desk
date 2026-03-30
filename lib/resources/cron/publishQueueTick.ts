@@ -97,8 +97,11 @@ async function runClaimedQueueRows(
             });
           }
 
+          // Only email for en-US: non-English locales share the same article and their
+          // per-locale slugs can occasionally differ from the English canonical URL,
+          // causing 404 links. One email per article is also less noisy.
           const emailTo = typeof notifyEmail === "string" ? notifyEmail.trim() : "";
-          if (emailTo && loc.title?.trim() && loc.slug?.trim()) {
+          if (emailTo && loc.locale === "en-US" && loc.title?.trim() && loc.slug?.trim()) {
             const sent = await sendPublishNotification({
               to: emailTo,
               articleTitle: loc.title,

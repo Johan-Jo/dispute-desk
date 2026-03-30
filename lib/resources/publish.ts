@@ -222,7 +222,9 @@ export async function repairStuckPublishedWorkflow(): Promise<{
               });
             }
 
-            if (notifyEmail && publishedLoc.title?.trim() && publishedLoc.slug?.trim()) {
+            // Only email for en-US — same reason as publishQueueTick: non-English slugs
+            // can differ from the canonical English URL; one email per article is sufficient.
+            if (notifyEmail && publishedLoc.locale === "en-US" && publishedLoc.title?.trim() && publishedLoc.slug?.trim()) {
               const sent = await sendPublishNotification({
                 to: notifyEmail,
                 articleTitle: publishedLoc.title,
