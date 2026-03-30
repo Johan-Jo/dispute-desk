@@ -277,7 +277,14 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
         setItem((prev) => ({ ...prev, workflow_status: newStatus }));
         toast("success", `Status changed to ${newStatus.replace(/_/g, " ")}`);
       } else {
-        toast("error", "Failed to change status");
+        let msg = "Failed to change status";
+        try {
+          const j = (await res.json()) as { error?: string };
+          if (typeof j?.error === "string" && j.error.trim()) msg = j.error.trim();
+        } catch {
+          /* ignore */
+        }
+        toast("error", msg);
       }
     } catch {
       toast("error", "Network error during status change");

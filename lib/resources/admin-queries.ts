@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/server";
+import { publishContentItemThroughQueue } from "@/lib/resources/cron/publishQueueTick";
 import { isBacklogRankUnavailableError } from "@/lib/resources/isBacklogRankUnavailableError";
 import type { WorkflowStatus } from "./workflow";
 import { assertTransition } from "./workflow";
@@ -299,7 +300,7 @@ export async function getBacklogItems(filters: BacklogFilters = {}) {
     return q;
   }
 
-  let query = withFilters()
+  const query = withFilters()
     .order("backlog_rank", { ascending: true })
     .order("priority_score", { ascending: false });
 
@@ -356,14 +357,37 @@ export async function updateWorkflowStatus(
 ) {
   assertTransition(currentStatus, newStatus);
 
+  if (newStatus === "published") {
+    const { data: row, error: rowErr } = await sb()
+      .from("content_items")
+      .select("id")
+      .eq("id", id)
+      .eq("workflow_status", currentStatus)
+      .maybeSingle();
+
+    if (rowErr) throw rowErr;
+    if (!row) {
+      throw new Error(`Workflow transition failed: item ${id} is no longer in "${currentStatus}" status`);
+    }
+
+    const tick = await publishContentItemThroughQueue(id);
+    if (!tick.ok) {
+      throw new Error(tick.error ?? "Publish failed: could not run publish queue");
+    }
+    const failed = tick.results.filter((r) => !r.ok);
+    if (failed.length > 0) {
+      const first = failed[0]?.error ?? "unknown";
+      throw new Error(
+        `Publish failed: ${first}${failed.length > 1 ? ` (+${failed.length - 1} more locales)` : ""}`
+      );
+    }
+    return;
+  }
+
   const updates: Record<string, unknown> = {
     workflow_status: newStatus,
     updated_at: new Date().toISOString(),
   };
-
-  if (newStatus === "published") {
-    updates.published_at = new Date().toISOString();
-  }
 
   const { data: updated, error } = await sb()
     .from("content_items")

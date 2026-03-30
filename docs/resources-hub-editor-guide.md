@@ -102,10 +102,10 @@ Transitions are validated server-side. The editor shows available transitions ba
 
 ### Publish troubleshooting (important)
 
-If Content List shows **Published** but the **Published** date is `—` and the article is missing from the public hub:
-- Go to **Settings** and click **Repair stuck publishes**.
+If Content List shows **Published** but the article is missing from the public hub (or **Published** date looks set but the hub still hides it):
+- Go to **Settings** and click **Repair stuck publishes** (fixes missing `published_at` *and* workflow-published rows whose locales never got `is_published`).
 - Go to **Queue**, click **Retry** on failed rows, then run **Process publish queue now**.
-- Recheck the content row: a real publish sets `published_at`; only then will the article appear on public pages.
+- Recheck the content row and the live URL: a real publish sets **`is_published`** on localizations and keeps the item consistent.
 
 ## Settings
 

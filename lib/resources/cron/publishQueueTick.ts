@@ -174,6 +174,107 @@ export async function publishQueuedRowsForLocalizationIds(
 }
 
 /**
+ * Upsert pending queue rows for every localization (scheduled now) and run the priority publish
+ * pass. Used when workflow moves to `published` from the editor so `is_published` and post-publish
+ * hooks match the autopilot path.
+ */
+export async function publishContentItemThroughQueue(
+  contentItemId: string
+): Promise<PublishQueueTickResult> {
+  const sb = getServiceClient();
+  const { data: locs, error: locErr } = await sb
+    .from("content_localizations")
+    .select("id")
+    .eq("content_item_id", contentItemId);
+
+  if (locErr) {
+    return { ok: false, error: locErr.message };
+  }
+  if (!locs?.length) {
+    return { ok: false, error: "no_localizations" };
+  }
+
+  const now = new Date().toISOString();
+  const { error: upErr } = await sb.from("content_publish_queue").upsert(
+    locs.map((l) => ({
+      content_localization_id: l.id,
+      scheduled_for: now,
+      status: "pending" as const,
+      last_error: null,
+    })),
+    { onConflict: "content_localization_id" }
+  );
+
+  if (upErr) {
+    return { ok: false, error: upErr.message };
+  }
+
+  return publishQueuedRowsForLocalizationIds(locs.map((l) => l.id));
+}
+
+/**
+ * Workflow `published` but at least one localization still `is_published = false` (false-positive
+ * publish from older editor behavior). Re-enqueue and process those items.
+ */
+export async function repairPublishedItemsWithUnpublishedLocales(): Promise<{
+  contentItemsScanned: number;
+  itemsAttempted: number;
+  succeeded: number;
+  failures: { contentItemId: string; error: string }[];
+}> {
+  const sb = getServiceClient();
+  const { data: items, error } = await sb
+    .from("content_items")
+    .select("id")
+    .eq("workflow_status", "published")
+    .limit(40);
+
+  if (error) throw error;
+
+  const failures: { contentItemId: string; error: string }[] = [];
+  let itemsAttempted = 0;
+  let succeeded = 0;
+
+  for (const row of items ?? []) {
+    const { data: locs, error: le } = await sb
+      .from("content_localizations")
+      .select("id, is_published")
+      .eq("content_item_id", row.id);
+
+    if (le) {
+      failures.push({ contentItemId: row.id, error: le.message });
+      continue;
+    }
+    if (!locs?.length || !locs.some((l) => !l.is_published)) {
+      continue;
+    }
+
+    itemsAttempted += 1;
+    const tick = await publishContentItemThroughQueue(row.id);
+    if (!tick.ok) {
+      failures.push({ contentItemId: row.id, error: tick.error ?? "tick_failed" });
+      continue;
+    }
+    const failed = tick.results.filter((r) => !r.ok);
+    if (failed.length > 0) {
+      failures.push({
+        contentItemId: row.id,
+        error: failed[0]?.error ?? "publish_partial_failure",
+      });
+      continue;
+    }
+    succeeded += 1;
+  }
+
+  return {
+    contentItemsScanned: items?.length ?? 0,
+    itemsAttempted,
+    succeeded,
+    failures,
+  };
+}
+
+/**
  * Process due rows in `content_publish_queue` (same logic as `/api/cron/publish-content`).
  */
 export async function executePublishQueueTick(
