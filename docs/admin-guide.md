@@ -574,6 +574,10 @@ A dynamic sitemap at `/sitemap.xml` lists all published articles with `hreflang`
 
 Served at `/robots.txt`. Allows all crawlers on public pages and blocks admin, API, app, portal, and auth routes.
 
+### Marketing copy for SEO (homepage & hub index)
+
+Public **landing** titles, descriptions, and keywords are translated under **`marketing.seo`** in each `messages/{locale}.json` file (not edited in the CMS). The **resources hub index** (`/resources` and locale-prefixed paths) uses **`resources.hubTitle`**, **`resources.heroSubtitle`** (meta description), and **`resources.hubKeywords`**. Per-article SEO remains in the editor (**Meta title**, **Meta description**, OG fields). Implementation detail: `docs/technical.md` § *Marketing URLs and SEO* and § *Resources Hub*.
+
 ---
 
 ## In-Admin Help

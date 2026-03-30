@@ -206,6 +206,7 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Hub DB locales (`content_localizations.locale`):** `en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE` — see `lib/resources/constants.ts` (`HUB_CONTENT_LOCALES`). Portuguese uses **`pt-BR`** (aligned with app `LOCALE_LIST` and `/pt` paths); migration `20260328144057_hub_locale_pt_br.sql` migrated existing `pt-PT` rows.
 - **Autopilot / email:** `lib/email/sendPublishNotification.ts` builds “View article” links with locale prefix + `/resources/{pillar}/{slug}`. Post-publish hooks in `publish-content` cron load `primary_pillar` via a joined `content_items` select.
 - **Sitemap / IndexNow:** `app/sitemap.ts` and `lib/seo/indexnow.ts` use the same locale prefixes and include the pillar segment for resources URLs.
+- **Resources listing (`/resources`) — metadata & JSON-LD:** `app/[locale]/resources/page.tsx` exports `generateMetadata`: title from `resources.hubTitle`, description from `resources.heroSubtitle`, keywords from `resources.hubKeywords`, plus Open Graph and Twitter cards; canonical and `alternates.languages` (BCP-47 → path, `x-default` → `/resources`) when `getPublicBaseUrl()` resolves. **Filtered** hub URLs (`?pillar=`, `?type=`, `?q=`) use `robots: { index: false, follow: true }` and omit `alternates.languages` to avoid faceted/search URLs competing with the main hub. **Structured data:** `resourcesHubCollectionJsonLd()` in `lib/resources/schema/jsonLd.ts` emits `CollectionPage` + `ItemList` (up to 24 article URLs) for the **unfiltered** hub when origin is known; `isPartOf` references the same-locale `WebSite` `@id` (`{origin}{marketingHomePath}#website`) already output by `app/[locale]/layout.tsx`.
 
 ### Phased roadmap (hub-specific)
 
@@ -900,8 +901,10 @@ The public marketing site uses **short path segments** via `next-intl` (`i18n/ro
 | `/de`, `/es`, `/fr`, `/pt`, `/sv` | `de-DE`, `es-ES`, … | Two-letter language codes. |
 
 - **Legacy URLs** (`/en-US`, `/de-DE`, …) are **redirected** in `middleware.ts` to the paths above.
-- **Hreflang / alternates:** `app/[locale]/layout.tsx` sets `metadata.alternates.languages` using BCP-47 keys (`en-US`, `de-DE`, …) pointing to the correct path for each language, plus `x-default` → `/`. Canonical URLs follow the same paths (English home is `/`, not `/en`).
-- **Crawlers (e.g. Googlebot):** Each language is a **distinct, indexable URL** with reciprocal `hreflang`-style annotations in the document head. That is what Google recommends for multilingual pages: separate URLs per language version and consistent `link rel="alternate" hreflang="…"` (exposed here via Next.js `metadata.alternates`). Ensure pages are not blocked by `robots.txt` and return `200` for each locale URL. A **sitemap** listing `/`, `/de`, `/es`, … is optional but can help discovery; the repo does not yet ship a locale-aware sitemap generator.
+- **Homepage metadata:** `lib/marketing/homeMetadata.ts` exports `buildMarketingHomeMetadata(pathLocale)`. `app/[locale]/layout.tsx` calls it from `generateMetadata` so all locale-marketing routes inherit a baseline (child pages such as `/resources` override per route). Strings come from `messages/*.{locale}.json` → **`marketing.seo`** (`title`, `description`, `keywords`). When `getPublicBaseUrl()` resolves (`NEXT_PUBLIC_APP_URL`, `SHOPIFY_APP_URL`, or `VERCEL_URL`), Next.js sets `metadataBase`, **canonical** path via `marketingHomePath()`, **Open Graph** (`type: website`, `siteName`, `locale`, `alternateLocale`, `url`), and **Twitter** (`summary_large_image`).
+- **Homepage structured data:** `app/[locale]/page.tsx` is a Server Component that wraps `components/marketing/MarketingLandingPageClient.tsx` and, when origin is known, injects a second JSON-LD script: **`marketingHomeWebPageJsonLd()`** in `lib/marketing/jsonLd.ts` — a `WebPage` node with `@id` `{pageUrl}#webpage`, `isPartOf` → `{pageUrl}#website`, `publisher` → `{origin}/#organization`. The layout’s `MarketingJsonLd` component (same file) already emits **`Organization`** + **`WebSite`** in one graph; the homepage adds an explicit **WebPage** for the landing URL.
+- **Hreflang / alternates:** Same layout metadata sets `metadata.alternates.languages` using BCP-47 keys (`en-US`, `de-DE`, …) pointing to the correct path for each language, plus `x-default` → `/`. Canonical URLs follow the same paths (English home is `/`, not `/en`).
+- **Crawlers (e.g. Googlebot):** Each language is a **distinct, indexable URL** with reciprocal `hreflang`-style annotations in the document head (Next.js `metadata.alternates`). Ensure pages are not blocked by `robots.txt` and return `200` for each locale URL. **Sitemap:** `app/sitemap.ts` lists localized marketing URLs and published content (see § SEO & Search Engine Indexing below).
 
 ### Locale Registry (`lib/i18n/locales.ts`)
 Single source of truth for all locale data. Exports:
@@ -1186,6 +1189,8 @@ In `vercel.json`:
 **Manual test (admin UI / session):** `POST /api/admin/resources/cron/autopilot?limit=1` while signed into admin (same tick as cron but **bypasses daily cap**; `limit` optional, default **1**).
 
 ## SEO & Search Engine Indexing (CH-8)
+
+**On-page metadata & JSON-LD (marketing):** In addition to sitemap and IndexNow, the **homepage** uses `marketing.seo` strings + WebPage JSON-LD (see § *Marketing URLs and SEO*). The **resources hub index** uses `resources.hubTitle` / `heroSubtitle` / `hubKeywords` + CollectionPage JSON-LD (see § *Resources Hub* → public URLs). Per-article meta comes from the editor (`meta_title`, `meta_description`, …) via `app/[locale]/resources/[pillar]/[slug]/page.tsx` and existing `articleJsonLd` / breadcrumb helpers in `lib/resources/schema/jsonLd.ts`.
 
 ### Sitemap
 
