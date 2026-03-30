@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { LOCALE_LIST } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
 import { routing } from "@/i18n/routing";
 import {
@@ -11,26 +10,7 @@ import {
   marketingHomePath,
   pathLocaleToMessages,
 } from "@/lib/i18n/pathLocales";
-
-function publicSiteOrigin(): string | undefined {
-  const raw = process.env.NEXT_PUBLIC_APP_URL ?? process.env.SHOPIFY_APP_URL;
-  if (raw) {
-    try {
-      const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
-      return u.origin;
-    } catch {
-      /* ignore */
-    }
-  }
-  if (process.env.VERCEL_URL) {
-    try {
-      return new URL(`https://${process.env.VERCEL_URL}`).origin;
-    } catch {
-      /* ignore */
-    }
-  }
-  return undefined;
-}
+import { buildMarketingHomeMetadata } from "@/lib/marketing/homeMetadata";
 
 export function generateStaticParams() {
   return PATH_LOCALE_LIST.map((locale) => ({ locale }));
@@ -50,58 +30,27 @@ export async function generateMetadata({
   if (!hasLocale(routing.locales, localeParam)) {
     return {};
   }
-  const pathLocale = localeParam as PathLocale;
-  const messagesLocale = pathLocaleToMessages[pathLocale];
+  return buildMarketingHomeMetadata(localeParam as PathLocale);
+}
 
-  const t = await getTranslations({ locale: pathLocale, namespace: "marketing" });
-  const title = t("seo.title");
-  const description = t("seo.description");
-  const keywords = t("seo.keywords")
-    .split(",")
-    .map((k) => k.trim())
-    .filter(Boolean);
-  const origin = publicSiteOrigin();
-
-  const languageAlternates = Object.fromEntries(
-    LOCALE_LIST.map((l) => [l, marketingHomePath(l)])
-  ) as Record<string, string>;
-  languageAlternates["x-default"] = "/";
-
-  const canonicalPath = marketingHomePath(messagesLocale);
-
-  const metadata: Metadata = {
-    title,
-    description,
-    keywords,
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      siteName: "DisputeDesk",
-      locale: messagesLocale,
-      alternateLocale: LOCALE_LIST.filter((l) => l !== messagesLocale),
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
-    robots: { index: true, follow: true },
-  };
-
-  if (origin) {
-    metadata.metadataBase = new URL(origin);
-    metadata.alternates = {
-      canonical: canonicalPath,
-      languages: languageAlternates,
-    };
-    metadata.openGraph = {
-      ...metadata.openGraph,
-      url: canonicalPath,
-    };
+function publicSiteOrigin(): string | undefined {
+  const raw = process.env.NEXT_PUBLIC_APP_URL ?? process.env.SHOPIFY_APP_URL;
+  if (raw) {
+    try {
+      const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+      return u.origin;
+    } catch {
+      /* ignore */
+    }
   }
-
-  return metadata;
+  if (process.env.VERCEL_URL) {
+    try {
+      return new URL(`https://${process.env.VERCEL_URL}`).origin;
+    } catch {
+      /* ignore */
+    }
+  }
+  return undefined;
 }
 
 async function MarketingJsonLd({ pathLocale }: { pathLocale: PathLocale }) {

@@ -1102,9 +1102,9 @@
       "installOnShopify": "Instalar no Shopify"
     },
     "seo": {
-      "title": "DisputeDesk — Evidência de chargeback Shopify e automação de disputas",
-      "description": "Monte pacotes de evidência de chargeback da Shopify em minutos. Fila de revisão, pontuação de completude, trilha de auditoria e preços previsíveis. Instale na Shopify App Store.",
-      "keywords": "chargeback Shopify, evidência chargeback, automação disputas, disputas Shopify Payments, pacote evidência, software chargeback, app Shopify",
+      "title": "DisputeDesk — Pacotes de evidência de chargeback Shopify e automação",
+      "description": "Monte pacotes de evidência de chargeback da Shopify em minutos: fila de revisão, completude, trilha de auditoria imutável, preços previsíveis. Instale grátis na Shopify App Store.",
+      "keywords": "chargeback Shopify, pacote evidência chargeback, automação disputas, Shopify Payments, software chargeback, app Shopify, lojista",
       "jsonLdDescription": "DisputeDesk ajuda lojistas Shopify a montar pacotes de evidência de chargeback, garantir completude e manter auditoria com fluxos controlados pelo comerciante."
     },
     "hero": {
@@ -2027,6 +2027,7 @@
   "resources": {
     "hubTitle": "Recursos DisputeDesk",
     "hubSubtitle": "Guias, modelos e insights sobre chargebacks e resolução de disputas.",
+    "hubKeywords": "chargebacks Shopify, evidências, resolução de disputas, modelos, guias, mediação, juizado especial",
     "heroTitle": "Insights, modelos e guias práticos",
     "heroSubtitle": "Orientações, modelos e estratégias para chargebacks e operações de disputas.",
     "hubNav": {

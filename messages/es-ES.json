@@ -1102,9 +1102,9 @@
       "installOnShopify": "Instalar en Shopify"
     },
     "seo": {
-      "title": "DisputeDesk — Evidencia de contracargos Shopify y automatización de disputas",
-      "description": "Crea paquetes de evidencia para contracargos de Shopify en minutos. Cola de revisión, puntuación de integridad, auditoría y precios predecibles. Instala desde la Shopify App Store.",
-      "keywords": "contracargo Shopify, evidencia contracargo, automatización disputas, disputas Shopify Payments, paquete evidencia, software contracargo, app Shopify",
+      "title": "DisputeDesk — Paquetes de evidencia de contracargos Shopify y automatización",
+      "description": "Crea paquetes de evidencia para contracargos de Shopify en minutos: cola de revisión, integridad, auditoría inmutable, precios predecibles. Instalación gratuita desde la Shopify App Store.",
+      "keywords": "contracargo Shopify, paquete evidencia contracargo, automatización disputas, Shopify Payments, software contracargo, app Shopify, comercio",
       "jsonLdDescription": "DisputeDesk ayuda a comercios Shopify a crear paquetes de evidencia para contracargos, exigir integridad y mantener un rastro de auditoría con flujos controlados por el comercio."
     },
     "hero": {
@@ -2010,6 +2010,7 @@
   "resources": {
     "hubTitle": "Recursos de DisputeDesk",
     "hubSubtitle": "Guías, plantillas e información sobre contracargos y resolución de disputas.",
+    "hubKeywords": "contracargos Shopify, evidencias, resolución de disputas, plantillas, guías, mediación, demandas menores",
     "heroTitle": "Ideas, plantillas y guías prácticas",
     "heroSubtitle": "Contenido experto, plantillas y estrategias para mejorar contracargos y la gestión de disputas.",
     "hubNav": {

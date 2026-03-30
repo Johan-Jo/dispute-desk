@@ -51,3 +51,38 @@ export function faqPageJsonLd(items: { q: string; a: string }[]) {
     })),
   };
 }
+
+/** Resources hub listing — CollectionPage + ItemList for rich results context. */
+export function resourcesHubCollectionJsonLd(args: {
+  pageUrl: string;
+  siteHomeUrl: string;
+  name: string;
+  description: string;
+  inLanguage: string;
+  items: { name: string; url: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${args.pageUrl}#webpage`,
+        name: args.name,
+        description: args.description,
+        url: args.pageUrl,
+        inLanguage: args.inLanguage,
+        isPartOf: { "@id": `${args.siteHomeUrl}#website` },
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: args.items.length,
+          itemListElement: args.items.map((it, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: it.name,
+            url: it.url,
+          })),
+        },
+      },
+    ],
+  };
+}

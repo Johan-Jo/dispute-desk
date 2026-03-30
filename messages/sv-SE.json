@@ -1103,9 +1103,9 @@
       "installOnShopify": "Installera på Shopify"
     },
     "seo": {
-      "title": "DisputeDesk — Chargeback-bevis för Shopify och automatisering av tvister",
-      "description": "Bygg bevispaket för Shopifys chargebacks på några minuter. Granskningskö, kompletthetspoäng, revisionsspår och förutsägbar prissättning. Installera från Shopify App Store.",
-      "keywords": "Shopify chargeback, chargeback-bevis, automation tvister, Shopify Payments-tvister, bevispaket, chargeback-programvara, Shopify-app",
+      "title": "DisputeDesk — Shopify chargeback-bevispaket och tvistautomatisering",
+      "description": "Bygg bevispaket för Shopifys chargebacks på minuter: granskningskö, kompletthet, oföränderligt revisionsspår, förutsägbar prissättning. Installera gratis från Shopify App Store.",
+      "keywords": "Shopify chargeback, bevispaket chargeback, tvistautomatisering, Shopify Payments, chargeback-programvara, Shopify-app, handlare",
       "jsonLdDescription": "DisputeDesk hjälper Shopify-handlare att bygga chargeback-bevispaket, säkerställa fullständighet och behålla revisionsspår med handlarkontrollerade arbetsflöden."
     },
     "hero": {
@@ -2011,6 +2011,7 @@
   "resources": {
     "hubTitle": "DisputeDesk resurser",
     "hubSubtitle": "Guider, mallar och insikter om chargebacks och tvistlösning.",
+    "hubKeywords": "Shopify chargebacks, tvister, skiljeförfarande, mallar, bevis, småmål, handlarguider",
     "heroTitle": "Insikter, mallar och guider",
     "heroSubtitle": "Praktiska råd, mallar och strategier för chargebacks och tvisthantering.",
     "hubNav": {

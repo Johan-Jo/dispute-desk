@@ -1110,9 +1110,9 @@
       "installOnShopify": "Install on Shopify"
     },
     "seo": {
-      "title": "DisputeDesk — Shopify chargeback evidence & dispute automation",
-      "description": "Build Shopify chargeback evidence packs in minutes. Review queue, completeness scoring, audit trail, and predictable pricing. Install from the Shopify App Store.",
-      "keywords": "Shopify chargeback, chargeback evidence, dispute automation, Shopify Payments disputes, evidence pack, chargeback software, Shopify app",
+      "title": "DisputeDesk — Shopify chargeback evidence packs & dispute automation",
+      "description": "Build Shopify chargeback evidence packs in minutes: review queue, completeness scoring, immutable audit trail, predictable pricing. Install free from the Shopify App Store.",
+      "keywords": "Shopify chargeback, chargeback evidence pack, dispute automation, Shopify Payments disputes, evidence pack, chargeback software, Shopify app, merchant",
       "jsonLdDescription": "DisputeDesk helps Shopify merchants build chargeback evidence packs, enforce completeness, and maintain an audit trail with merchant-controlled workflows."
     },
     "hero": {
@@ -2035,6 +2035,7 @@
   "resources": {
     "hubTitle": "DisputeDesk Resources",
     "hubSubtitle": "Guides, templates, and insights for chargebacks and dispute resolution.",
+    "hubKeywords": "Shopify chargebacks, chargeback evidence, dispute resolution, merchant guides, templates, mediation, small claims",
     "heroTitle": "Insights, templates & playbooks",
     "heroSubtitle": "Expert guidance, templates, and strategies to improve chargeback outcomes and dispute operations.",
     "hubNav": {
