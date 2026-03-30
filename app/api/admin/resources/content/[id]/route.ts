@@ -3,6 +3,8 @@ import { hasAdminSession } from "@/lib/admin/auth";
 import { getContentForEditor, updateWorkflowStatus } from "@/lib/resources/admin-queries";
 import { getServiceClient } from "@/lib/supabase/server";
 import { isResourceHubPillar } from "@/lib/resources/pillars";
+import { HUB_CONTENT_LOCALES } from "@/lib/resources/constants";
+import type { HubContentLocale } from "@/lib/resources/constants";
 import { isWorkflowStatus } from "@/lib/resources/workflow";
 import type { WorkflowStatus } from "@/lib/resources/workflow";
 
@@ -53,9 +55,17 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       ) {
         return NextResponse.json({ error: "Invalid primary_pillar" }, { status: 400 });
       }
+      if (item.source_locale !== undefined && item.source_locale !== null) {
+        if (
+          typeof item.source_locale !== "string" ||
+          !HUB_CONTENT_LOCALES.includes(item.source_locale as HubContentLocale)
+        ) {
+          return NextResponse.json({ error: "Invalid source_locale" }, { status: 400 });
+        }
+      }
       const allowedFields = [
         "content_type", "primary_pillar", "topic", "target_keyword",
-        "search_intent", "priority", "author_id", "reviewer_id",
+        "search_intent", "priority", "author_id", "reviewer_id", "source_locale",
       ];
       const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
       for (const key of allowedFields) {

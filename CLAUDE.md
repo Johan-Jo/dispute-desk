@@ -37,6 +37,8 @@ node scripts/smoke-test.mjs  # E2E smoke test (requires live Supabase)
 npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
 ```
 
+**Before declaring a task done (agents):** Run **`npm test`** (`vitest run`) and **`npx tsc --noEmit`**; for UI/routes/schema changes also **`npm run build`**. Fix failures before saying the work is complete—do not rely on “should be fine” without a green run.
+
 **Migrations (mandatory for agents):** When you add or change anything under `supabase/migrations/`, you **must** run `npm run db:migrate` in this repo before you consider the task done (`npx supabase db push` to the linked project). Do not only commit SQL and skip apply. Do not tell the user to run migrations instead. Requires Supabase CLI linked (`npx supabase link --project-ref …`). If `db push` is not possible in this environment, use `npm run db:migrate:script` (see `scripts/run-migration.mjs` + `SUPABASE_URL_POSTGRES` or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`) and note that in the PR/summary.
 
 ## Key Directories

@@ -150,7 +150,7 @@ Browse and manage all content:
 
 - **Status Tabs** — Filter by workflow status (All Content, Published, Scheduled, In Review, Draft).
 - **Search** — Find content by topic, pillar, or keyword.
-- **Filters** — Expand **Filters** to set **Content type**, **Topic**, and **Language**. **Language** defaults to **English** (`en-US`): only rows that include an English localization are listed. Choose **All languages** to see every item regardless of locale coverage. The title column prefers the selected language (falls back to English, then any available). **Clear filters** resets type and topic to “all” and language back to **English**.
+- **Filters** — Below the search bar, **Content type**, **Topic**, and **Article language** are always visible (no separate “Filters” toggle). **Article language** defaults to **English** (`en-US`): the list shows items whose stored **article language** (`source_locale`) is English—not merely “has an English translation row.” Choose **All languages** to disable this filter. The title column uses the title for `source_locale` when set, then English, then any available. **Clear filters** resets type and topic to “all” and article language back to **English**.
 - **Multi-select** — Select multiple items for bulk actions.
 - **Pagination** — Navigate through large content libraries.
 
@@ -161,6 +161,8 @@ Click any row to open the content in the editor.
 **Path:** `/admin/resources/content/[id]`
 
 The full block-based editor for creating and editing content.
+
+- **Metadata → Article language** — Sets the editorial **source language** for this item (`source_locale`), stored on the content item. This is separate from locale tabs (each locale’s title/body). Use it so the content list filter “English” / “Deutsch” matches how the piece was written.
 
 #### Locale Switching
 

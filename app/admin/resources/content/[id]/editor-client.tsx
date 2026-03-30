@@ -63,6 +63,8 @@ interface ContentItem {
   target_keyword: string | null;
   search_intent: string | null;
   priority: string;
+  /** Editorial authoring language (hub locale). */
+  source_locale?: string | null;
   workflow_status: string;
   published_at: string | null;
   updated_at: string;
@@ -226,6 +228,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             target_keyword: item.target_keyword,
             search_intent: item.search_intent,
             priority: item.priority,
+            source_locale: item.source_locale ?? "en-US",
             author_id: item.author_id,
             reviewer_id: item.reviewer_id,
           },
@@ -585,6 +588,22 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     {["pillar_page", "cluster_article", "template", "case_study", "legal_update", "glossary_entry", "faq_entry"].map((ct) => (
                       <option key={ct} value={ct}>
                         {getContentTypeLabel(ct as ContentType)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#64748B] mb-1">Article language</label>
+                  <select
+                    value={item.source_locale ?? "en-US"}
+                    onChange={(e) =>
+                      setItem((prev) => ({ ...prev, source_locale: e.target.value }))
+                    }
+                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                  >
+                    {ADMIN_LOCALES.map((loc) => (
+                      <option key={loc.dbLocale} value={loc.dbLocale}>
+                        {loc.label}
                       </option>
                     ))}
                   </select>

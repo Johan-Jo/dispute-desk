@@ -121,15 +121,16 @@ export interface ContentListFilters {
   contentType?: string;
   topic?: string;
   search?: string;
-  /** BCP-47 hub locale (e.g. en-US). Omit or `"all"` = no locale filter. */
+  /** Article language (`content_items.source_locale`). Omit or `"all"` = no filter. */
   locale?: string;
   page?: number;
   pageSize?: number;
 }
 
-/** Row shape for admin content list (Supabase select + optional localization merge). */
+/** Row shape for admin content list. */
 export type ContentListItem = Record<string, unknown> & {
   id: string;
+  source_locale?: string | null;
   content_localizations?: Array<{
     locale: string;
     title: string;
@@ -140,19 +141,16 @@ export type ContentListItem = Record<string, unknown> & {
 export async function getContentList(filters: ContentListFilters = {}) {
   const { status, contentType, topic, search, locale, page = 1, pageSize = 20 } = filters;
 
-  const localeFilterActive = Boolean(locale && locale !== "all");
-  const localizationSelect = localeFilterActive
-    ? "content_localizations!inner(locale, title, translation_status)"
-    : "content_localizations(locale, title, translation_status)";
+  const articleLangFilterActive = Boolean(locale && locale !== "all");
 
   let query = sb()
     .from("content_items")
     .select(
       `id, content_type, primary_pillar, topic, workflow_status, priority,
-       updated_at, published_at,
+       updated_at, published_at, source_locale,
        authors(name),
        reviewers(name),
-       ${localizationSelect}`,
+       content_localizations(locale, title, translation_status)`,
       { count: "exact" }
     )
     .order("updated_at", { ascending: false });
@@ -179,8 +177,8 @@ export async function getContentList(filters: ContentListFilters = {}) {
     query = query.or(`topic.ilike.%${search}%,primary_pillar.ilike.%${search}%,target_keyword.ilike.%${search}%`);
   }
 
-  if (localeFilterActive) {
-    query = query.eq("content_localizations.locale", locale!);
+  if (articleLangFilterActive) {
+    query = query.eq("source_locale", locale!);
   }
 
   const from = (page - 1) * pageSize;
@@ -190,36 +188,7 @@ export async function getContentList(filters: ContentListFilters = {}) {
   const { data, count, error } = await query;
   if (error) throw error;
 
-  let items: ContentListItem[] = (data ?? []) as ContentListItem[];
-
-  if (localeFilterActive && items.length > 0) {
-    const ids = items.map((row) => row.id);
-    const { data: locRows, error: locErr } = await sb()
-      .from("content_localizations")
-      .select("content_item_id, locale, title, translation_status")
-      .in("content_item_id", ids);
-    if (locErr) throw locErr;
-
-    const byItem = new Map<
-      string,
-      Array<{ locale: string; title: string; translation_status: string }>
-    >();
-    for (const row of locRows ?? []) {
-      const cid = row.content_item_id as string;
-      const list = byItem.get(cid) ?? [];
-      list.push({
-        locale: row.locale as string,
-        title: row.title as string,
-        translation_status: row.translation_status as string,
-      });
-      byItem.set(cid, list);
-    }
-
-    items = items.map((row): ContentListItem => ({
-      ...row,
-      content_localizations: byItem.get(row.id) ?? row.content_localizations ?? [],
-    }));
-  }
+  const items: ContentListItem[] = (data ?? []) as ContentListItem[];
 
   return { items, total: count ?? 0, page, pageSize };
 }

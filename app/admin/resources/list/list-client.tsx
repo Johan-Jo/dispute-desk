@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Filter,
   Plus,
   ListTodo,
   ChevronLeft,
@@ -28,13 +27,15 @@ import {
   getContentTypeLabel,
 } from "@/lib/resources/workflow";
 
-/** Default list filter: show rows that include this hub locale (matches server SSR). */
+/** Default list filter: article language `source_locale` (matches server SSR). */
 const DEFAULT_LIST_LOCALE = "en-US";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 interface ContentRow {
   id: string;
+  /** Editorial authoring language (`content_items.source_locale`). */
+  source_locale?: string | null;
   content_type: string;
   primary_pillar: string;
   topic: string | null;
@@ -89,7 +90,6 @@ export function ContentListClient({
   const [total, setTotal] = useState(initialTotal);
   const [activeTab, setActiveTab] = useState<StatusTabKey>("all");
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [topicFilter, setTopicFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState(DEFAULT_LIST_LOCALE);
@@ -321,10 +321,10 @@ export function ContentListClient({
         ))}
       </div>
 
-      {/* Search + Filters */}
+      {/* Search + filters (always visible — no toggle) */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] mb-4">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="relative flex-1">
+        <div className="px-4 py-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
             <input
               type="text"
@@ -334,20 +334,6 @@ export function ContentListClient({
               className="w-full pl-10 pr-4 py-2 text-sm border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] transition-colors"
             />
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-              showFilters || hasActiveFilters
-                ? "border-[#1D4ED8] text-[#1D4ED8] bg-[#EFF6FF]"
-                : "border-[#E5E7EB] text-[#64748B] hover:bg-[#F8FAFC]"
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-            {hasActiveFilters && (
-              <span className="w-2 h-2 rounded-full bg-[#1D4ED8]" />
-            )}
-          </button>
         </div>
 
         {/* Bulk actions bar */}
@@ -378,71 +364,69 @@ export function ContentListClient({
           </div>
         )}
 
-        {/* Extended filters */}
-        {showFilters && (
-          <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-t border-[#E5E7EB] bg-[#F8FAFC]">
-            <div>
-              <label className="block text-xs font-medium text-[#64748B] mb-1">
-                Content Type
-              </label>
-              <select
-                value={contentTypeFilter}
-                onChange={(e) => onContentTypeChange(e.target.value)}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
-              >
-                <option value="all">All types</option>
-                {CONTENT_TYPES.map((ct) => (
-                  <option key={ct} value={ct}>
-                    {getContentTypeLabel(ct)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#64748B] mb-1">
-                Topic
-              </label>
-              <select
-                value={topicFilter}
-                onChange={(e) => onTopicChange(e.target.value)}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
-              >
-                <option value="all">All topics</option>
-                {topics.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#64748B] mb-1">
-                Language
-              </label>
-              <select
-                value={languageFilter}
-                onChange={(e) => onLanguageChange(e.target.value)}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
-              >
-                <option value="all">All languages</option>
-                {ADMIN_LOCALES.map((loc) => (
-                  <option key={loc.dbLocale} value={loc.dbLocale}>
-                    {loc.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium mt-4"
-              >
-                <X className="w-3.5 h-3.5" />
-                Clear filters
-              </button>
-            )}
+        <div className="flex flex-wrap sm:flex-nowrap items-end gap-4 px-4 py-3 border-t border-[#E5E7EB] bg-[#F8FAFC] overflow-x-auto">
+          <div className="shrink-0 min-w-[9rem]">
+            <label className="block text-xs font-medium text-[#64748B] mb-1">
+              Content Type
+            </label>
+            <select
+              value={contentTypeFilter}
+              onChange={(e) => onContentTypeChange(e.target.value)}
+              className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+            >
+              <option value="all">All types</option>
+              {CONTENT_TYPES.map((ct) => (
+                <option key={ct} value={ct}>
+                  {getContentTypeLabel(ct)}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+          <div className="shrink-0 min-w-[9rem]">
+            <label className="block text-xs font-medium text-[#64748B] mb-1">
+              Topic
+            </label>
+            <select
+              value={topicFilter}
+              onChange={(e) => onTopicChange(e.target.value)}
+              className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+            >
+              <option value="all">All topics</option>
+              {topics.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="shrink-0 min-w-[10rem]">
+            <label className="block text-xs font-medium text-[#64748B] mb-1">
+              Article language
+            </label>
+            <select
+              value={languageFilter}
+              onChange={(e) => onLanguageChange(e.target.value)}
+              className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+            >
+              <option value="all">All languages</option>
+              {ADMIN_LOCALES.map((loc) => (
+                <option key={loc.dbLocale} value={loc.dbLocale}>
+                  {loc.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium shrink-0 pb-1.5"
+            >
+              <X className="w-3.5 h-3.5" />
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content Table */}
@@ -487,10 +471,10 @@ export function ContentListClient({
               )}
               {items.map((item) => {
                 const locs = item.content_localizations ?? [];
-                const titleLocale =
-                  languageFilter === "all" ? "en-US" : languageFilter;
                 const titleLoc =
-                  locs.find((l) => l.locale === titleLocale) ??
+                  (item.source_locale
+                    ? locs.find((l) => l.locale === item.source_locale)
+                    : undefined) ??
                   locs.find((l) => l.locale === "en-US") ??
                   locs[0];
 

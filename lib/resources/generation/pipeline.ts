@@ -93,6 +93,21 @@ export async function loadArchiveForGeneration(archiveItemId: string): Promise<A
   return { ok: true, brief: archiveRowToBrief(data as Record<string, unknown>) };
 }
 
+/** First target locale that was generated successfully; else first successful locale. */
+function resolveSourceLocale(
+  brief: GenerationBrief,
+  successfulResults: GenerationResult[]
+): string | undefined {
+  const ok = new Set(
+    successfulResults.filter((r) => r.content !== null).map((r) => r.locale)
+  );
+  for (const loc of brief.targetLocales) {
+    if (ok.has(loc)) return loc;
+  }
+  const first = successfulResults.find((r) => r.content !== null);
+  return first?.locale;
+}
+
 export async function buildBriefFromArchive(archiveItemId: string): Promise<GenerationBrief | null> {
   const r = await loadArchiveForGeneration(archiveItemId);
   return r.ok ? r.brief : null;
@@ -249,6 +264,8 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
   }
 
   const totalTokens = results.reduce((sum, r) => sum + r.tokensUsed, 0);
+  const sourceLocale = resolveSourceLocale(brief, successfulResults);
+
   await sb.from("content_revisions").insert({
     content_item_id: contentItemId,
     locale: "en-US",
@@ -262,6 +279,7 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     .update({
       generated_at: new Date().toISOString(),
       generation_tokens: totalTokens,
+      ...(sourceLocale ? { source_locale: sourceLocale } : {}),
     })
     .eq("id", contentItemId);
 

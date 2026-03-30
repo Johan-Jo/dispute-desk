@@ -84,6 +84,19 @@ describe("PUT /api/admin/resources/content/[id]", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 400 for invalid source_locale", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    const req = new Request("http://localhost", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item: { source_locale: "xx-XX" } }),
+    });
+    const res = await PUT(req as never, { params: Promise.resolve({ id }) });
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: string };
+    expect(json.error).toContain("source_locale");
+  });
+
   it("returns 400 for invalid primary_pillar", async () => {
     mockHasAdmin.mockResolvedValue(true);
     const req = new Request("http://localhost", {

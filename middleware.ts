@@ -47,6 +47,12 @@ function nextWithAppBridge(req: NextRequest, load: "0" | "1"): NextResponse {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Next.js chunks, HMR, and build internals must bypass all logic below. If any matcher
+  // edge-case runs middleware for these paths, auth/i18n can break chunk loading (ChunkLoadError).
+  if (pathname.startsWith("/_next/")) {
+    return NextResponse.next();
+  }
+
   // --- Embedded app entry: Shopify loads application_url (/) in iframe; redirect to /app with same query ---
   if (pathname === "/" && req.nextUrl.searchParams.has("shop")) {
     const appUrl = new URL("/app", req.url);

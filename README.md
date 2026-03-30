@@ -103,6 +103,10 @@ npm run dev
 npx shopify app dev
 ```
 
+### Stale JS chunks (ChunkLoadError) in dev
+
+If the browser shows **ChunkLoadError** or **400** on `/_next/static/chunks/...` after switching branches or a bad build: stop the dev server, clear **`.next`** (or run **`npm run dev:clean`**, which removes `.next` and starts `next dev`), then open the page again with a **hard refresh** so HTML matches the new chunk names. See **`docs/technical.md`** (Next.js middleware & local dev) for why **`/_next/*`** must bypass middleware.
+
 ### Environment Variables
 
 See [`.env.example`](.env.example) for the full list. Key variables:
