@@ -1,5 +1,10 @@
 # DisputeDesk — Claude Code Context
 
+## Non-negotiables for AI agents
+
+1. **Supabase migrations — you run them, every time.** If you create or edit any file under `supabase/migrations/`, you **must** run `npm run db:migrate` in this repo in the **same working session** before you mark the task done or push. Do **not** only commit SQL. Do **not** tell the maintainer to run migrations instead of doing it yourself when the environment has network + shell (use `npm run db:migrate:script` only when CLI link is impossible — document that in the summary).
+2. **Verify before “done”:** `npm test` and `npx tsc --noEmit` (and `npm run build` when touching UI/routes/schema).
+
 ## What It Is
 Automation-first Shopify chargeback evidence app. Connects to Shopify, auto-syncs disputes, auto-builds evidence packs, and auto-saves them back to Shopify. Merchants submit via Shopify Admin — DisputeDesk does NOT programmatically submit to card networks.
 
@@ -39,7 +44,7 @@ npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
 
 **Before declaring a task done (agents):** Run **`npm test`** (`vitest run`) and **`npx tsc --noEmit`**; for UI/routes/schema changes also **`npm run build`**. Fix failures before saying the work is complete—do not rely on “should be fine” without a green run.
 
-**Migrations (mandatory for agents):** When you add or change anything under `supabase/migrations/`, you **must** run `npm run db:migrate` in this repo before you consider the task done (`npx supabase db push` to the linked project). Do not only commit SQL and skip apply. Do not tell the user to run migrations instead. Requires Supabase CLI linked (`npx supabase link --project-ref …`). If `db push` is not possible in this environment, use `npm run db:migrate:script` (see `scripts/run-migration.mjs` + `SUPABASE_URL_POSTGRES` or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`) and note that in the PR/summary.
+**Migrations (mandatory for agents):** Same as **Non-negotiables** above — **the agent executes** `npm run db:migrate` after any migration file change; never substitute with “the user should run db push.” Requires Supabase CLI linked (`npx supabase link --project-ref …`). If `db push` is not possible in this environment, use `npm run db:migrate:script` (see `scripts/run-migration.mjs` + `SUPABASE_URL_POSTGRES` or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`) and state that explicitly in the PR/summary.
 
 ## Key Directories
 ```
@@ -74,7 +79,7 @@ write_shopify_payments_dispute_evidences
 ```
 
 ## Important Rules
-- **Database:** After any new/edited migration file, **always** run `npm run db:migrate` (or the script fallback) against the linked Supabase project — same session as the code change.
+- **Database / migrations:** The agent runs `npm run db:migrate` (or script fallback) after any new/edited migration — same session, no handoff to the user for apply.
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only — never expose to client
 - Saving evidence requires merchant to have "Manage orders information" in Shopify Admin
 - CI runs: typecheck + lint + build → vitest → forbidden copy grep (no "submit response" language in UI) → npm audit

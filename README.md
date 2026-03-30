@@ -60,6 +60,8 @@ DisputeDesk ships as two web surfaces from one codebase:
 
 New SQL lives under `supabase/migrations/`. **Any machine or deploy target that uses the app database** (local dev, CI, preview, production) must apply pending migrations or the app and cron jobs will fail in inconsistent ways.
 
+**AI / Cursor agents:** When you add or change migration files, **you run `npm run db:migrate` in this repo in the same session** before closing out the task; do not ask the human to apply migrations on your behalf unless the environment truly cannot run the CLI (then use `npm run db:migrate:script` and document it). See `CLAUDE.md` (Non-negotiables) and `.cursor/rules/supabase-migrations.mdc`.
+
 1. Install Supabase CLI (`npx supabase`) and log in: `npx supabase login`.
 2. Link the project once per clone: `npx supabase link --project-ref <your-ref>` (password from Supabase dashboard).
 3. Push migrations: `npm run db:migrate` (same as `npx supabase db push`).

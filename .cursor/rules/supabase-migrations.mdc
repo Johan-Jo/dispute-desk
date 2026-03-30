@@ -1,0 +1,11 @@
+---
+description: Agent must apply Supabase migrations in-repo; never defer apply to the user when SQL changes.
+globs: supabase/migrations/**/*.sql
+alwaysApply: true
+---
+
+# Supabase migrations (agents)
+
+- **After any add or edit under `supabase/migrations/`, run `npm run db:migrate`** in this repository in the **same session** before finishing the task or pushing. The agent executes the command; do not only commit SQL and do not instruct the maintainer to run migrations instead when shell + network are available.
+- If Supabase CLI link/`db push` is impossible here, use **`npm run db:migrate:script`** (see `scripts/run-migration.mjs` and `.env.example`) and say so in the summary.
+- Project context: see **`CLAUDE.md`** → **Non-negotiables for AI agents** and **Migrations (mandatory for agents)**.
