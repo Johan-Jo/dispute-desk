@@ -127,6 +127,16 @@ export interface ContentListFilters {
   pageSize?: number;
 }
 
+/** Row shape for admin content list (Supabase select + optional localization merge). */
+export type ContentListItem = Record<string, unknown> & {
+  id: string;
+  content_localizations?: Array<{
+    locale: string;
+    title: string;
+    translation_status: string;
+  }>;
+};
+
 export async function getContentList(filters: ContentListFilters = {}) {
   const { status, contentType, topic, search, locale, page = 1, pageSize = 20 } = filters;
 
@@ -180,10 +190,10 @@ export async function getContentList(filters: ContentListFilters = {}) {
   const { data, count, error } = await query;
   if (error) throw error;
 
-  let items = data ?? [];
+  let items: ContentListItem[] = (data ?? []) as ContentListItem[];
 
   if (localeFilterActive && items.length > 0) {
-    const ids = items.map((row) => (row as { id: string }).id);
+    const ids = items.map((row) => row.id);
     const { data: locRows, error: locErr } = await sb()
       .from("content_localizations")
       .select("content_item_id, locale, title, translation_status")
@@ -205,13 +215,10 @@ export async function getContentList(filters: ContentListFilters = {}) {
       byItem.set(cid, list);
     }
 
-    items = items.map((row) => {
-      const item = row as { id: string; content_localizations?: unknown };
-      return {
-        ...item,
-        content_localizations: byItem.get(item.id) ?? item.content_localizations ?? [],
-      };
-    });
+    items = items.map((row): ContentListItem => ({
+      ...row,
+      content_localizations: byItem.get(row.id) ?? row.content_localizations ?? [],
+    }));
   }
 
   return { items, total: count ?? 0, page, pageSize };
