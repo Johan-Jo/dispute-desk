@@ -19,6 +19,8 @@ import {
   type PublishQueueTickResult,
 } from "@/lib/resources/cron/publishQueueTick";
 import { estimateReadingTimeMinutes } from "@/lib/resources/readingTime";
+import { sendPartialGenerationAlert } from "@/lib/email/sendPartialGenerationAlert";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 
 export interface PipelineResult {
   contentItemId: string | null;
@@ -171,6 +173,21 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
   if (successfulResults.length === 0) {
     const errors = results.map((r) => `${r.locale}: ${r.error}`).join("; ");
     return { contentItemId: null, results, error: `All locale generations failed: ${errors}` };
+  }
+
+  const failedResults = results.filter((r) => r.content === null);
+  if (failedResults.length > 0) {
+    const notifyEmail = (cmsSettings.settings_json as Record<string, unknown> | null)?.autopilotNotifyEmail;
+    if (typeof notifyEmail === "string" && notifyEmail.trim()) {
+      void sendPartialGenerationAlert({
+        to: notifyEmail.trim(),
+        contentItemId: "pending",
+        proposedTitle: brief.proposedTitle,
+        succeededLocales: successfulResults.map((r) => r.locale),
+        failedLocales: failedResults.map((r) => ({ locale: r.locale, error: r.error ?? null })),
+        adminBaseUrl: getPublicSiteBaseUrl(),
+      });
+    }
   }
 
   const primaryPillar = resolvePrimaryPillarForGeneration({

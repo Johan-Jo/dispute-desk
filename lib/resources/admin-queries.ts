@@ -131,6 +131,7 @@ export interface ContentListFilters {
 export type ContentListItem = Record<string, unknown> & {
   id: string;
   source_locale?: string | null;
+  generated_at?: string | null;
   content_localizations?: Array<{
     locale: string;
     title: string;
@@ -138,16 +139,34 @@ export type ContentListItem = Record<string, unknown> & {
   }>;
 };
 
-export async function getContentList(filters: ContentListFilters = {}) {
-  const { status, contentType, topic, search, locale, page = 1, pageSize = 20 } = filters;
+function isMissingGeneratedAtColumnError(error: { message?: string }): boolean {
+  const m = (error.message ?? "").toLowerCase();
+  if (!m.includes("generated_at")) return false;
+  return (
+    m.includes("column") ||
+    m.includes("does not exist") ||
+    m.includes("schema cache") ||
+    m.includes("could not find")
+  );
+}
 
+async function queryContentListPage(
+  filters: ContentListFilters,
+  includeGeneratedAt: boolean
+): Promise<{
+  data: Record<string, unknown>[] | null;
+  count: number | null;
+  error: { message: string } | null;
+}> {
+  const { status, contentType, topic, search, locale, page = 1, pageSize = 20 } = filters;
   const articleLangFilterActive = Boolean(locale && locale !== "all");
+  const genFrag = includeGeneratedAt ? ", generated_at" : "";
 
   let query = sb()
     .from("content_items")
     .select(
       `id, content_type, primary_pillar, topic, workflow_status, priority,
-       updated_at, published_at, source_locale,
+       updated_at, published_at, source_locale${genFrag},
        authors(name),
        reviewers(name),
        content_localizations(locale, title, translation_status)`,
@@ -186,11 +205,31 @@ export async function getContentList(filters: ContentListFilters = {}) {
   query = query.range(from, to);
 
   const { data, count, error } = await query;
-  if (error) throw error;
+  return {
+    data: data as Record<string, unknown>[] | null,
+    count,
+    error: error ? { message: error.message } : null,
+  };
+}
 
-  const items: ContentListItem[] = (data ?? []) as ContentListItem[];
+export async function getContentList(filters: ContentListFilters = {}) {
+  const { page = 1, pageSize = 20 } = filters;
 
-  return { items, total: count ?? 0, page, pageSize };
+  let result = await queryContentListPage(filters, true);
+  if (result.error && isMissingGeneratedAtColumnError(result.error)) {
+    result = await queryContentListPage(filters, false);
+  }
+  if (result.error) throw result.error;
+
+  const items: ContentListItem[] = (result.data ?? []).map((row) => ({
+    ...row,
+    generated_at:
+      row.generated_at === undefined || row.generated_at === null
+        ? null
+        : (row.generated_at as string),
+  })) as ContentListItem[];
+
+  return { items, total: result.count ?? 0, page, pageSize };
 }
 
 /* ── Queue items ────────────────────────────────────────────────────── */

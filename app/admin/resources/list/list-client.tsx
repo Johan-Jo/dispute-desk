@@ -34,6 +34,8 @@ const DEFAULT_LIST_LOCALE = "en-US";
 
 interface ContentRow {
   id: string;
+  /** Set when the row was created by the AI generation pipeline; required for Reset & rebuild. */
+  generated_at?: string | null;
   /** Editorial authoring language (`content_items.source_locale`). */
   source_locale?: string | null;
   content_type: string;
@@ -97,11 +99,31 @@ export function ContentListClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [bulkResetLoading, setBulkResetLoading] = useState(false);
+  const [bulkActionMessage, setBulkActionMessage] = useState<
+    { variant: "success" | "error"; text: string } | null
+  >(null);
+
+  const rowEligibleForReset = useCallback((row: ContentRow) => {
+    if (row.workflow_status === "archived") return false;
+    return Boolean(row.generated_at);
+  }, []);
+
+  const selectedEligibleCount = useMemo(() => {
+    const byId = new Map(items.map((i) => [i.id, i] as const));
+    return Array.from(selectedIds).filter((id) => {
+      const row = byId.get(id);
+      return row ? rowEligibleForReset(row) : false;
+    }).length;
+  }, [items, selectedIds, rowEligibleForReset]);
 
   useEffect(() => {
     setItems(initialItems);
     setTotal(initialTotal);
   }, [initialItems, initialTotal]);
+
+  useEffect(() => {
+    setBulkActionMessage(null);
+  }, [selectedIds]);
 
   const pageSize = 20;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -164,10 +186,11 @@ export function ContentListClient({
   async function runResetRebuildSelected() {
     const ids = Array.from(selectedIds);
     const ok = confirm(
-      `Reset & rebuild ${ids.length} selected item(s)? AI-generated rows will be archived, publish-queue rows cleared, and linked archive topics returned to the backlog. Then use Settings → Run autopilot now to regenerate.`
+      `Reset & rebuild ${ids.length} selected item(s)? Rows with an AI tracking timestamp will be archived, publish-queue rows cleared, and linked archive topics returned to the backlog. Then use Settings → Run autopilot now to regenerate.`
     );
     if (!ok) return;
     setBulkResetLoading(true);
+    setBulkActionMessage(null);
     try {
       const res = await fetch("/api/admin/resources/reset-and-rebuild", {
         method: "POST",
@@ -176,18 +199,29 @@ export function ContentListClient({
       });
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) {
-        const err =
+        const base =
           typeof data.error === "string" ? data.error : JSON.stringify(data);
-        alert(err);
+        const skipped = Array.isArray(data.skippedRequestedIds)
+          ? data.skippedRequestedIds.length
+          : 0;
+        const hint =
+          skipped > 0
+            ? ` (${skipped} row(s) not eligible: missing AI tracking timestamp in the database, or already archived.)`
+            : "";
+        setBulkActionMessage({
+          variant: "error",
+          text: `${base}${hint}`,
+        });
         return;
       }
       const skipped = Array.isArray(data.skippedRequestedIds)
         ? data.skippedRequestedIds.length
         : 0;
       if (skipped > 0) {
-        alert(
-          `Done. ${skipped} selected row(s) were skipped (not AI-generated or already archived).`
-        );
+        setBulkActionMessage({
+          variant: "success",
+          text: `Done. ${skipped} selected row(s) were skipped (no AI tracking timestamp or already archived). Eligible rows were processed.`,
+        });
       }
       setSelectedIds(new Set());
       router.refresh();
@@ -338,29 +372,59 @@ export function ContentListClient({
 
         {/* Bulk actions bar */}
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-4 px-4 py-2 bg-[#EFF6FF] border-t border-[#BFDBFE]">
-            <span className="text-sm font-medium text-[#1D4ED8]">
-              {selectedIds.size} selected
-            </span>
-            <button
-              type="button"
-              disabled={bulkResetLoading || loading}
-              onClick={() => void runResetRebuildSelected()}
-              className="inline-flex items-center gap-1.5 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {bulkResetLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
-              ) : (
-                <RotateCcw className="w-3.5 h-3.5" aria-hidden />
-              )}
-              Reset &amp; rebuild
-            </button>
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              className="ml-auto text-sm text-[#64748B] hover:text-[#0B1220]"
-            >
-              Clear selection
-            </button>
+          <div className="flex flex-col gap-0 border-t border-[#BFDBFE] bg-[#EFF6FF]">
+            <div className="flex items-center gap-4 px-4 py-2">
+              <span className="text-sm font-medium text-[#1D4ED8]">
+                {selectedIds.size} selected
+                {selectedEligibleCount < selectedIds.size && (
+                  <span className="font-normal text-[#64748B]">
+                    {" "}
+                    ({selectedEligibleCount} eligible for reset)
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                disabled={
+                  bulkResetLoading ||
+                  loading ||
+                  selectedEligibleCount === 0
+                }
+                title={
+                  selectedEligibleCount === 0
+                    ? "Need an AI tracking timestamp (generated_at) and status other than Archived"
+                    : undefined
+                }
+                onClick={() => void runResetRebuildSelected()}
+                className="inline-flex items-center gap-1.5 text-sm text-[#1D4ED8] hover:text-[#1E40AF] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkResetLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden />
+                )}
+                Reset &amp; rebuild
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="ml-auto text-sm text-[#64748B] hover:text-[#0B1220]"
+              >
+                Clear selection
+              </button>
+            </div>
+            {bulkActionMessage && (
+              <div
+                className={`px-4 py-2 text-sm border-t ${
+                  bulkActionMessage.variant === "error"
+                    ? "bg-red-50 border-red-200 text-red-900"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-900"
+                }`}
+                role="alert"
+              >
+                {bulkActionMessage.text}
+              </div>
+            )}
           </div>
         )}
 
@@ -447,6 +511,7 @@ export function ContentListClient({
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Topic</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">AI track</th>
                 <th className="px-4 py-3 font-medium text-center">Locales</th>
                 <th className="px-4 py-3 font-medium">Published</th>
                 <th className="px-4 py-3 font-medium">Author</th>
@@ -457,14 +522,14 @@ export function ContentListClient({
             <tbody className="divide-y divide-[#E5E7EB]">
               {loading && items.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-[#64748B]">
+                  <td colSpan={11} className="px-4 py-12 text-center text-[#64748B]">
                     Loading...
                   </td>
                 </tr>
               )}
               {!loading && items.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-[#64748B]">
+                  <td colSpan={11} className="px-4 py-12 text-center text-[#64748B]">
                     No content found
                   </td>
                 </tr>
@@ -519,6 +584,27 @@ export function ContentListClient({
                     </td>
                     <td className="px-4 py-3">
                       <WorkflowStatusBadge status={item.workflow_status as WorkflowStatus} />
+                    </td>
+                    <td className="px-4 py-3">
+                      {rowEligibleForReset(item) ? (
+                        <span
+                          className="inline-flex text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded"
+                          title="Has an AI tracking timestamp; eligible for Reset & rebuild"
+                        >
+                          Yes
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded"
+                          title={
+                            item.workflow_status === "archived"
+                              ? "Archived rows cannot be reset from this list"
+                              : "Missing generated_at in the database — reset is blocked until this is set (e.g. after migration backfill)"
+                          }
+                        >
+                          {item.workflow_status === "archived" ? "Archived" : "No flag"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <LocaleStatusIndicator locales={localeMap} />

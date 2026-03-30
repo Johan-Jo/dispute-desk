@@ -23,7 +23,8 @@
     "db:migrate": "npx supabase db push",
     "db:migrate:script": "node scripts/run-migration.mjs",
     "cron:resources": "node scripts/trigger-resources-crons.mjs",
-    "smoke:resources-hub": "node scripts/smoke-resources-hub.mjs"
+    "smoke:resources-hub": "node scripts/smoke-resources-hub.mjs",
+    "puppeteer:admin": "node scripts/puppeteer-admin-login.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.0.0",
