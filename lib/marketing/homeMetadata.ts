@@ -50,7 +50,6 @@ export async function buildMarketingHomeMetadata(
   };
 
   if (origin) {
-    metadata.metadataBase = new URL(origin);
     metadata.alternates = {
       canonical: canonicalPath,
       languages: languageAlternates,

@@ -10,7 +10,7 @@ import {
   marketingHomePath,
   pathLocaleToMessages,
 } from "@/lib/i18n/pathLocales";
-import { buildMarketingHomeMetadata } from "@/lib/marketing/homeMetadata";
+import { getPublicBaseUrl } from "@/lib/resources/url";
 
 export function generateStaticParams() {
   return PATH_LOCALE_LIST.map((locale) => ({ locale }));
@@ -21,6 +21,11 @@ type LayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
+/**
+ * Only shared absolute URL base for `[locale]/*` — do not set homepage title/description
+ * here or they shallow-merge onto `/resources`, `/templates`, etc. Homepage meta lives in
+ * `app/[locale]/page.tsx` via `buildMarketingHomeMetadata`.
+ */
 export async function generateMetadata({
   params,
 }: {
@@ -30,7 +35,8 @@ export async function generateMetadata({
   if (!hasLocale(routing.locales, localeParam)) {
     return {};
   }
-  return buildMarketingHomeMetadata(localeParam as PathLocale);
+  const origin = getPublicBaseUrl();
+  return origin ? { metadataBase: new URL(origin) } : {};
 }
 
 function publicSiteOrigin(): string | undefined {
