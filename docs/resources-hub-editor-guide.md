@@ -77,7 +77,7 @@ The validation checklist must be satisfied before publishing:
 - English excerpt (required)
 - English content (required)
 - Slug set (required)
-- Content type set (required)
+- Content type set (required) — includes **Checklist** as a hub type (same editor as other articles; DB constraint `20260330123000_content_type_checklist.sql`).
 - Author assigned (optional)
 - Meta title (optional)
 - Meta description (optional)

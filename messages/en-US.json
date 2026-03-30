@@ -1541,6 +1541,7 @@
     "connectCTA": "Connect store",
     "stepsLocked": "Complete store connection to unlock remaining steps",
     "done": "Done",
+    "completeCta": "Complete",
     "edit": "Edit",
     "complete": {
       "title": "You're all set!",

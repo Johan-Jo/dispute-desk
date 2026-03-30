@@ -370,12 +370,11 @@ Manage content ideas before they become articles.
 
 ### Features
 
-- **Search** by title, keyword, summary, pillar, or notes.
+- **Search** by **title** or **target keyword** (substring match).
 - **Filters** by priority (High/Medium/Low) and status (Idea/Backlog/Brief Ready).
-- **Brief** column — shows the editorial summary (`summary`) when it is substantive; long internal notes otherwise; em dash when empty. (Generic seed placeholder text is hidden.)
-- **Queue order** — Drag the **grip** handle on a row to move it. Order is saved to the database and is what **autopilot** follows first (then **priority score**). Reordering works only when **search is empty** and both filters are **All**; otherwise clear filters to drag.
-- **Clear backlog** — Removes every archive row that is not yet **converted** (already-generated drafts stay linked). Confirms before deleting.
-- **Generate** — Trigger AI draft generation from this item (see AI Content Generator above).
+- **Table** — **Title** shows the proposed title and optional notes; columns for type, keyword, intent, priority, and status. Hover **up/down** on the index column changes row order **in the page only** (refresh restores server order from **`backlog_rank`**).
+- **Generate** — Trigger AI draft generation from this item (see AI Content Generator above). There is no separate “Draft” action in this table.
+- **Persisted queue & bulk ops** — To change **`backlog_rank`** (what **autopilot** and the backlog list use), use **`POST /api/admin/resources/archive-items/reorder`** (admin session), **`DELETE /api/admin/resources/archive-items`** to clear non-converted rows, **`POST /api/admin/resources/archive-items`** to append rows, or locally **`npm run import:backlog`** with a JSON file (see `docs/technical.md`).
 
 ---
 

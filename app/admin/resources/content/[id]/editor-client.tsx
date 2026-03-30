@@ -35,6 +35,7 @@ import {
 } from "@/lib/resources/body-adapter";
 import {
   ADMIN_LOCALES,
+  CONTENT_TYPES,
   getContentTypeLabel,
   canTransition,
   getAllowedTransitions,
@@ -585,9 +586,9 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     onChange={(e) => setItem((prev) => ({ ...prev, content_type: e.target.value }))}
                     className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   >
-                    {["pillar_page", "cluster_article", "template", "case_study", "legal_update", "glossary_entry", "faq_entry"].map((ct) => (
+                    {CONTENT_TYPES.map((ct) => (
                       <option key={ct} value={ct}>
-                        {getContentTypeLabel(ct as ContentType)}
+                        {getContentTypeLabel(ct)}
                       </option>
                     ))}
                   </select>

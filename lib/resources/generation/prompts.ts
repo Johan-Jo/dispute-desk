@@ -205,6 +205,8 @@ export const DEFAULT_CONTENT_TYPE_INSTRUCTIONS: Record<string, string> = {
     "Write a precise legal/regulatory update. Focus on what changed, effective dates, merchant impact, and required actions. CRITICAL: accuracy is paramount.",
   glossary_entry: "Write a clear, concise definition. Include context, examples, and related terms.",
   faq_entry: "Write 5-8 FAQ pairs. Each answer should be 2-4 sentences. Cover the most common merchant questions on this topic.",
+  checklist:
+    "Write an actionable checklist for merchants: scannable numbered or bulleted steps, prerequisites, common mistakes to avoid, and when to revisit the list.",
 };
 
 /** @deprecated Use DEFAULT_CONTENT_TYPE_INSTRUCTIONS */

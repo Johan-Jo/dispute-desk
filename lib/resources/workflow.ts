@@ -95,26 +95,30 @@ export function getStatusDisplay(status: WorkflowStatus): StatusDisplay {
 
 /* ── Content type helpers ───────────────────────────────────────────── */
 
+/** Order matches public hub primary + secondary filters (see ResourcesFilterBar). */
 export const CONTENT_TYPES = [
-  "pillar_page",
   "cluster_article",
   "template",
   "case_study",
   "legal_update",
+  "pillar_page",
+  "checklist",
   "glossary_entry",
   "faq_entry",
 ] as const;
 
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
+/** Display strings aligned with per-locale `resources.types` message keys (marketing hub). */
 const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  pillar_page: "Pillar Page",
+  pillar_page: "Pillar page",
   cluster_article: "Article",
   template: "Template",
-  case_study: "Case Study",
-  legal_update: "Legal Update",
+  case_study: "Case study",
+  legal_update: "Policy update",
   glossary_entry: "Glossary",
   faq_entry: "FAQ",
+  checklist: "Checklist",
 };
 
 export function getContentTypeLabel(type: ContentType): string {
@@ -155,5 +159,5 @@ export const ADMIN_LOCALES = [
 
 export function getLocaleFlag(code: string): string {
   const locale = ADMIN_LOCALES.find((l) => l.code === code || l.dbLocale === code);
-  return locale?.flag ?? "🌐";
+  return locale?.flag ?? String.fromCodePoint(0x1f310);
 }

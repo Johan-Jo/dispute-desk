@@ -59,6 +59,7 @@ export function inferPageRoleFromContentType(contentType: string): PageRole {
   if (t === "faq_entry") return "faq";
   if (t === "glossary_entry") return "support";
   if (t === "legal_update") return "case_study";
+  if (t === "checklist") return "checklist";
   return "support";
 }
 

@@ -1398,6 +1398,7 @@
     "connectCTA": "Anslut butik",
     "stepsLocked": "Slutför butiksanslutningen för att låsa upp återstående steg",
     "done": "Klar",
+    "completeCta": "Slutför",
     "edit": "Redigera",
     "complete": {
       "title": "Allt är klart!",

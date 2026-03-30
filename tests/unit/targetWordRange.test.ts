@@ -105,6 +105,10 @@ describe("helpers", () => {
     expect(inferPageRoleFromContentType("pillar_page")).toBe("pillar");
   });
 
+  it("inferPageRoleFromContentType maps checklist", () => {
+    expect(inferPageRoleFromContentType("checklist")).toBe("checklist");
+  });
+
   it("isNarrowOrComparativePageRole excludes pillar", () => {
     expect(isNarrowOrComparativePageRole("pillar")).toBe(false);
     expect(isNarrowOrComparativePageRole("support")).toBe(true);

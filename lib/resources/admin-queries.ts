@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/server";
+import { isBacklogRankUnavailableError } from "@/lib/resources/isBacklogRankUnavailableError";
 import type { WorkflowStatus } from "./workflow";
 import { assertTransition } from "./workflow";
 
@@ -278,27 +279,36 @@ export interface BacklogFilters {
 export async function getBacklogItems(filters: BacklogFilters = {}) {
   const { priority, status, search } = filters;
 
-  let query = sb()
-    .from("content_archive_items")
-    .select("*")
-    .neq("status", "converted")
+  function withFilters() {
+    let q = sb().from("content_archive_items").select("*").neq("status", "converted");
+
+    if (priority && priority !== "all") {
+      if (priority === "high") q = q.gte("priority_score", 70);
+      else if (priority === "medium") q = q.gte("priority_score", 40).lt("priority_score", 70);
+      else q = q.lt("priority_score", 40);
+    }
+
+    if (status && status !== "all") {
+      q = q.eq("status", status);
+    }
+
+    if (search) {
+      q = q.or(`proposed_title.ilike.%${search}%,target_keyword.ilike.%${search}%`);
+    }
+
+    return q;
+  }
+
+  let query = withFilters()
+    .order("backlog_rank", { ascending: true })
     .order("priority_score", { ascending: false });
 
-  if (priority && priority !== "all") {
-    if (priority === "high") query = query.gte("priority_score", 70);
-    else if (priority === "medium") query = query.gte("priority_score", 40).lt("priority_score", 70);
-    else query = query.lt("priority_score", 40);
+  let { data, error } = await query.limit(200);
+  if (error && isBacklogRankUnavailableError(error)) {
+    const retry = await withFilters().order("priority_score", { ascending: false }).limit(200);
+    data = retry.data;
+    error = retry.error;
   }
-
-  if (status && status !== "all") {
-    query = query.eq("status", status);
-  }
-
-  if (search) {
-    query = query.or(`proposed_title.ilike.%${search}%,target_keyword.ilike.%${search}%`);
-  }
-
-  const { data, error } = await query.limit(200);
   if (error) throw error;
   return data ?? [];
 }

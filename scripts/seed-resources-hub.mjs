@@ -1907,16 +1907,20 @@ async function main() {
     for (let i = 0; i < 100; i++) {
       const pillar = archivePillars[i] ?? "chargebacks";
       const p = i < 30 ? 80 : i < 60 ? 55 : 35;
+      const kw = `${pillar} dispute`;
+      const pillarLabel = pillar.replace(/-/g, " ");
+      const proposedTitle = `${pillarLabel.replace(/\b\w/g, (c) => c.toUpperCase())} cluster: ${kw.replace(/\b\w/g, (c) => c.toUpperCase())}`;
+      const summary = `Informational cluster article on “${kw}” for the ${pillarLabel} pillar. Aim: merchant-facing explanation, practical framing, and alignment with the resources hub—not generic filler. Priority tier ${i < 30 ? "high" : i < 60 ? "medium" : "standard"} in this seed batch.`;
       await sb.from("content_archive_items").insert({
-        proposed_title: `Archive idea ${i + 1}: ${pillar} topic`,
+        proposed_title: proposedTitle,
         proposed_slug: `archive-${i + 1}`,
         target_locale_set: LOCALES,
         content_type: "cluster_article",
         primary_pillar: pillar,
         priority_score: p,
-        target_keyword: `${pillar} dispute`,
+        target_keyword: kw,
         search_intent: "informational",
-        summary: "Seed backlog entry for editorial prioritization.",
+        summary,
         status: "backlog",
       });
     }

@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/server";
+import { isBacklogRankUnavailableError } from "@/lib/resources/isBacklogRankUnavailableError";
 import { runGenerationPipeline } from "@/lib/resources/generation/pipeline";
 import { isGenerationEnabled } from "@/lib/resources/generation/generate";
 import type { PublishQueueTickResult } from "@/lib/resources/cron/publishQueueTick";
@@ -30,15 +31,24 @@ const PICK_BATCH = 50;
 
 /** Only backlog / brief_ready — `idea` stays editorial-only until promoted. */
 async function pickNextArchiveItem(excludeIds: ReadonlySet<string>): Promise<string | null> {
-  const sb = getServiceClient();
-  const { data } = await sb
-    .from("content_archive_items")
-    .select("id")
-    .in("status", ["backlog", "brief_ready"])
-    .is("created_from_archive_to_content_item_id", null)
+  const client = getServiceClient();
+  const base = () =>
+    client
+      .from("content_archive_items")
+      .select("id")
+      .in("status", ["backlog", "brief_ready"])
+      .is("created_from_archive_to_content_item_id", null);
+
+  let first = await base()
+    .order("backlog_rank", { ascending: true })
     .order("priority_score", { ascending: false })
     .limit(PICK_BATCH);
-  const row = data?.find((r) => r.id && !excludeIds.has(r.id));
+
+  if (first.error && isBacklogRankUnavailableError(first.error)) {
+    first = await base().order("priority_score", { ascending: false }).limit(PICK_BATCH);
+  }
+
+  const row = first.data?.find((r) => r.id && !excludeIds.has(r.id));
   return row?.id ?? null;
 }
 

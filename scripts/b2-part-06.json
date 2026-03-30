@@ -1,0 +1,122 @@
+[
+  {
+    "proposed_title": "Chargeback Software for Agencies Managing Multiple Shopify Stores",
+    "target_keyword": "chargeback software for agencies",
+    "search_intent": "commercial",
+    "primary_pillar": "dispute-management-software",
+    "content_type": "cluster_article",
+    "summary": "Frame the category for agencies and operator groups handling disputes across several client stores. Cover permissions, standardized workflows, reporting, and client-facing transparency.",
+    "priority_score": 73,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Forecast Chargeback Losses in Ecommerce",
+    "target_keyword": "chargeback loss forecasting",
+    "search_intent": "informational",
+    "primary_pillar": "dispute-management-software",
+    "content_type": "cluster_article",
+    "summary": "Teach finance and ops teams how to estimate dispute exposure using volume, average order value, fees, labor, and historical rates. The output should be a planning framework.",
+    "priority_score": 76,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Chargeback Prevention for Luxury and High-Value Goods",
+    "target_keyword": "luxury goods chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "A vertical guide for merchants selling expensive items where every dispute is painful. Cover signature requirements, high-touch communication, proof capture, and verification tradeoffs.",
+    "priority_score": 83,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Chargeback Prevention for Fashion and Apparel Ecommerce",
+    "target_keyword": "fashion ecommerce chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Address sizing issues, returns friction, delivery pressure, and promotion-driven confusion that commonly lead to disputes in apparel. Keep it merchant-actionable.",
+    "priority_score": 73,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Chargeback Prevention for Online Courses and Memberships",
+    "target_keyword": "online course chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Tailor guidance to education and membership sellers. Cover enrollment proof, content access logs, progress history, cancellation terms, and the evidence story for digital fulfillment.",
+    "priority_score": 78,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Chargeback Prevention for Beauty and Skincare Merchants on Shopify",
+    "target_keyword": "beauty ecommerce chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Explore dispute drivers common in beauty, such as expectation mismatch, subscription confusion, repeat orders, and campaign-driven demand spikes. The aim is a merchant-actionable playbook.",
+    "priority_score": 71,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Chargeback Prevention for B2B Ecommerce on Shopify",
+    "target_keyword": "b2b ecommerce chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Tailor dispute prevention advice to B2B sellers using Shopify. Cover PO references, invoice workflows, authorized buyers, partial shipments, and documentation habits that differ from DTC.",
+    "priority_score": 75,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Chargeback Prevention for Supplement and Wellness Stores",
+    "target_keyword": "supplement chargebacks ecommerce",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Focus on continuity billing, product-expectation claims, and customer service patterns that can drive disputes in wellness verticals. Keep the tone compliance-aware and operational.",
+    "priority_score": 72,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Small Claims Court for Ecommerce Merchants: When Is It Worth It?",
+    "target_keyword": "small claims court ecommerce",
+    "search_intent": "informational",
+    "primary_pillar": "small-claims",
+    "content_type": "cluster_article",
+    "summary": "A merchant-focused guide to deciding whether small claims is a rational path after a dispute or unpaid obligation. Cover cost, evidence readiness, geography, and effort versus recovery.",
+    "priority_score": 72,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Can a Merchant Sue Over a Chargeback?",
+    "target_keyword": "can a merchant sue over a chargeback",
+    "search_intent": "informational",
+    "primary_pillar": "small-claims",
+    "content_type": "faq_entry",
+    "summary": "Answer the common merchant question without oversimplifying. Cover practical considerations, facts that matter, cost-benefit tradeoffs, and why legal viability depends heavily on jurisdiction.",
+    "priority_score": 69,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Mediation vs Chargeback: Different Tools for Different Problems",
+    "target_keyword": "mediation vs chargeback",
+    "search_intent": "informational",
+    "primary_pillar": "mediation-arbitration",
+    "content_type": "cluster_article",
+    "summary": "Clarify why mediation and chargebacks solve different types of disputes. Help merchants avoid trying to use card-network procedures for problems that belong in direct negotiation or ADR.",
+    "priority_score": 63,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "Arbitration vs Small Claims for Merchant Contract Disputes",
+    "target_keyword": "arbitration vs small claims",
+    "search_intent": "informational",
+    "primary_pillar": "mediation-arbitration",
+    "content_type": "cluster_article",
+    "summary": "Compare the two routes for merchants dealing with contract conflicts outside routine refunds. Focus on cost, speed, evidence burden, and practical fit rather than legal theory.",
+    "priority_score": 62,
+    "status": "backlog"
+  }
+]

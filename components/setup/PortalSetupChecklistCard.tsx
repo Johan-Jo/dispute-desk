@@ -257,7 +257,7 @@ function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
                 </Button>
               )}
               {!isDone && !isSkipped && (
-                <span className="text-xs text-[#64748B] mt-1">{t("complete")}</span>
+                <span className="text-xs text-[#64748B] mt-1">{t("completeCta")}</span>
               )}
             </div>
           );

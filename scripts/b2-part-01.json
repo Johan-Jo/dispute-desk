@@ -1,0 +1,152 @@
+[
+  {
+    "proposed_title": "How to Evaluate Chargeback Software for Auditability and Control",
+    "target_keyword": "chargeback software audit log",
+    "search_intent": "commercial",
+    "primary_pillar": "dispute-management-software",
+    "content_type": "cluster_article",
+    "summary": "Help Shopify merchants evaluate dispute tools based on auditability, human review controls, case history, and workflow transparency. The piece should steer buyers away from black-box promises and toward operational control.",
+    "priority_score": 91,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Make Chargeback Evidence Easier for Issuers to Review",
+    "target_keyword": "chargeback evidence best practices",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Show merchants how to assemble evidence in a way that is easy to follow under time pressure. Cover ordering, labeling, narrative references, and why clarity often matters more than volume.",
+    "priority_score": 92,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Write Better Shopify Refund Policies That Lower Disputes",
+    "target_keyword": "shopify refund policy chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "dispute-resolution",
+    "content_type": "cluster_article",
+    "summary": "Explain how refund and return policy wording influences both dispute prevention and evidence quality later. Keep the guidance practical for merchant operators updating live store policies.",
+    "priority_score": 94,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Build a Chargeback SOP for Your Shopify Support Team",
+    "target_keyword": "chargeback sop shopify",
+    "search_intent": "informational",
+    "primary_pillar": "dispute-management-software",
+    "content_type": "template",
+    "summary": "Provide a standard operating procedure framework for support or ops teams that handle disputes repeatedly. Cover intake, triage, evidence gathering, QA, deadlines, and loss review.",
+    "priority_score": 91,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Build a Better Order Timeline for Shopify Disputes",
+    "target_keyword": "shopify dispute timeline",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "checklist",
+    "summary": "Teach merchants how to assemble a clean order-to-delivery timeline that helps a reviewer understand the case fast. Cover timestamps, communication records, shipment events, and refund actions.",
+    "priority_score": 93,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Compare Chargeback Vendors Without Falling for Win-Rate Claims",
+    "target_keyword": "chargeback vendor comparison",
+    "search_intent": "commercial",
+    "primary_pillar": "dispute-management-software",
+    "content_type": "checklist",
+    "summary": "Help merchants compare vendors with a sharper lens than headline recovery claims. Cover case mix, fee structure, workflow control, auditability, and reporting depth.",
+    "priority_score": 88,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Handle a Chargeback When a Return Was Started but Not Completed",
+    "target_keyword": "return started chargeback",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Cover the common situation where a merchant issued a label or approved a return but the item never came back before the dispute hit. Show what records matter and how to explain the sequence clearly.",
+    "priority_score": 79,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Turn a Shopify Support Team Into a First-Line Chargeback Prevention Team",
+    "target_keyword": "chargeback prevention support team",
+    "search_intent": "informational",
+    "primary_pillar": "dispute-resolution",
+    "content_type": "cluster_article",
+    "summary": "Show how support teams can prevent disputes before banks get involved. Cover tone, refund latitude, escalation paths, and record quality that later doubles as evidence.",
+    "priority_score": 87,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Use Customer Account History in Chargeback Defense",
+    "target_keyword": "customer account history chargeback",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Explain how prior successful purchases, delivery history, and consistent account behavior can strengthen authorization arguments. Keep the treatment factual and evidence-led.",
+    "priority_score": 87,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Use Login and Access Logs in Digital Chargeback Responses",
+    "target_keyword": "login logs chargeback evidence",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Tailor evidence guidance to digital products, memberships, and SaaS. Cover what access logs are persuasive, how to connect them to the buyer, and how to present them clearly.",
+    "priority_score": 84,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Talk to Your Payment Provider After a Chargeback Spike",
+    "target_keyword": "chargeback spike payment processor",
+    "search_intent": "informational",
+    "primary_pillar": "dispute-resolution",
+    "content_type": "template",
+    "summary": "Give merchants a practical communication template for banks, processors, or PSP contacts after a dispute spike. Cover metrics, remediation actions, and the right operating tone.",
+    "priority_score": 83,
+    "status": "backlog"
+  },
+  {
+    "proposed_title": "How to Turn Chargeback Data Into Store Improvements",
+    "target_keyword": "chargeback root causes shopify",
+    "search_intent": "informational",
+    "primary_pillar": "dispute-resolution",
+    "content_type": "cluster_article",
+    "summary": "Show merchants how to use dispute patterns to improve product pages, shipping promises, support, and fraud review. The goal is fewer repeat causes, not just prettier dashboards.",
+    "priority_score": 90,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Win Chargebacks on High-Risk Shopify Orders",
+    "target_keyword": "high risk shopify chargebacks",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Explain how to document and review risky orders before and after fulfillment so later disputes are more defensible. Cover fraud signals, proof preservation, and workflow discipline.",
+    "priority_score": 91,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Organize Customer Communication for Stronger Chargeback Responses",
+    "target_keyword": "customer communication chargeback evidence",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "cluster_article",
+    "summary": "Show merchants how to convert scattered chats, tickets, and emails into a cleaner evidence timeline. Focus on chronology, relevance, and avoiding document overload.",
+    "priority_score": 91,
+    "status": "brief_ready"
+  },
+  {
+    "proposed_title": "How to Prepare for Holiday Season Chargebacks on Shopify",
+    "target_keyword": "holiday chargebacks shopify",
+    "search_intent": "informational",
+    "primary_pillar": "chargebacks",
+    "content_type": "checklist",
+    "summary": "A seasonal operations checklist for merchants heading into their highest-risk period. Cover staffing, shipping cutoffs, policy visibility, fraud rules, and evidence readiness.",
+    "priority_score": 91,
+    "status": "brief_ready"
+  }
+]
