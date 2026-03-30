@@ -115,6 +115,44 @@ export async function getPublishedLocalizationBySlug(args: {
   return { item: item as ContentItemRow, localization: loc as ContentLocalizationRow };
 }
 
+/**
+ * Same published article in another hub locale (per-locale slug). Used by marketing language switcher.
+ */
+export async function getAlternatePublishedResourceSlug(args: {
+  fromLocale: HubContentLocale;
+  slug: string;
+  pillar: string;
+  toLocale: HubContentLocale;
+}): Promise<{ slug: string; pillar: string } | null> {
+  const row = await getPublishedLocalizationBySlug({
+    routeKind: "resources",
+    locale: args.fromLocale,
+    slug: args.slug,
+  });
+  if (!row || row.item.primary_pillar !== args.pillar) return null;
+
+  const sb = getServiceClient();
+  const { data: target, error } = await sb
+    .from("content_localizations")
+    .select("slug, content_items!inner(primary_pillar, workflow_status)")
+    .eq("content_item_id", row.item.id)
+    .eq("locale", args.toLocale)
+    .eq("route_kind", "resources")
+    .eq("is_published", true)
+    .maybeSingle();
+
+  if (error || !target) return null;
+  const rawItem = target.content_items as
+    | { primary_pillar: string; workflow_status: string }
+    | { primary_pillar: string; workflow_status: string }[];
+  const item = Array.isArray(rawItem) ? rawItem[0] : rawItem;
+  if (!item || item.workflow_status !== "published" || item.primary_pillar !== args.pillar) {
+    return null;
+  }
+
+  return { slug: target.slug, pillar: item.primary_pillar };
+}
+
 export async function getRelatedResources(args: {
   routeKind: string;
   locale: HubContentLocale;

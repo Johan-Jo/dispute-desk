@@ -11,6 +11,8 @@ import {
   type PathLocale,
 } from "@/lib/i18n/pathLocales";
 import { usePathname as useLocalizedPathname, useRouter as useIntlRouter } from "@/i18n/navigation";
+import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
+import { isResourceHubPillar } from "@/lib/resources/pillars";
 import { Globe } from "lucide-react";
 
 const HUB_PREFIXES = [
@@ -39,6 +41,35 @@ function isMarketingIntlRoute(pathname: string): boolean {
   return (HUB_PREFIXES as readonly string[]).includes(seg);
 }
 
+/**
+ * `/resources/{pillar}/{slug}` or `/{pathLocale}/resources/{pillar}/{slug}` for published hub articles.
+ */
+function parseResourceArticlePath(pathname: string): {
+  pathLocale: PathLocale;
+  pillar: string;
+  slug: string;
+} | null {
+  const parts = pathname.split("/").filter(Boolean);
+  if (
+    parts.length === 3 &&
+    parts[0] === "resources" &&
+    isResourceHubPillar(parts[1]) &&
+    parts[2].length > 0
+  ) {
+    return { pathLocale: "en", pillar: parts[1], slug: parts[2] };
+  }
+  if (
+    parts.length === 4 &&
+    isPathLocale(parts[0]) &&
+    parts[1] === "resources" &&
+    isResourceHubPillar(parts[2]) &&
+    parts[3].length > 0
+  ) {
+    return { pathLocale: parts[0], pillar: parts[2], slug: parts[3] };
+  }
+  return null;
+}
+
 export function LanguageSwitcher({ className }: { className?: string }) {
   const rawLocale = useLocale();
   const locale: Locale = isLocale(rawLocale)
@@ -62,7 +93,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   }, []);
 
   const switchLocale = useCallback(
-    (next: Locale) => {
+    async (next: Locale) => {
       document.cookie = `dd_locale=${next};path=/;max-age=31536000;samesite=lax`;
 
       if (!isMarketingIntlRoute(fullPathname)) {
@@ -73,8 +104,43 @@ export function LanguageSwitcher({ className }: { className?: string }) {
 
       const search =
         typeof window !== "undefined" ? window.location.search : "";
+      const nextPathLocale = messagesLocaleToPath(next);
+
+      const resourceArticle = parseResourceArticlePath(fullPathname);
+      if (resourceArticle) {
+        const fromHub = pathLocaleToHubLocale(resourceArticle.pathLocale);
+        const toHub = pathLocaleToHubLocale(nextPathLocale);
+        if (fromHub !== toHub) {
+          const qs = new URLSearchParams({
+            pillar: resourceArticle.pillar,
+            slug: resourceArticle.slug,
+            from: fromHub,
+            to: toHub,
+          });
+          try {
+            const res = await fetch(
+              `/api/public/resources/alternate-locale-slug?${qs.toString()}`
+            );
+            if (res.ok) {
+              const body = (await res.json()) as { pillar: string; slug: string };
+              intlRouter.replace(
+                `/resources/${body.pillar}/${body.slug}${search}`,
+                { locale: nextPathLocale }
+              );
+              setOpen(false);
+              return;
+            }
+          } catch {
+            /* fall through */
+          }
+          intlRouter.replace(`/resources${search}`, { locale: nextPathLocale });
+          setOpen(false);
+          return;
+        }
+      }
+
       const href = `${localizedPathname}${search}`;
-      intlRouter.replace(href, { locale: messagesLocaleToPath(next) });
+      intlRouter.replace(href, { locale: nextPathLocale });
       setOpen(false);
     },
     [fullPathname, intlRouter, localizedPathname, router]
