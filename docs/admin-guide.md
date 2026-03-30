@@ -215,7 +215,7 @@ The right sidebar contains:
 
 - **Save Draft** — Saves all changes without changing workflow status.
 - **Schedule** — Opens a date/time picker to schedule future publication.
-- **Publish** — Moves content to "published" status (available when workflow allows it).
+- **Publish** — When workflow allows (typically from **Approved**), the server enqueues **all locales** on `content_publish_queue` (due immediately) and runs the same **priority publish** pass as autopilot: each locale gets `is_published`, the hub can list the article, and post-publish hooks (IndexNow, notification email when configured) can run. If validation fails (e.g. fewer than three tags, missing author/CTA), the transition is rejected and the toast shows the API error.
 
 All actions validate against the workflow state machine. Only valid transitions are shown.
 
@@ -449,6 +449,16 @@ Configure CMS behavior. All changes auto-save (debounced 800ms).
 | **Weekend publishing** | Allow/disallow Saturday and Sunday publishing |
 | **Auto-save drafts** | Automatically save editor changes every 30 seconds |
 
+### Run scheduled tasks now (manual)
+
+**Path:** same **Settings** page, section **Run scheduled tasks now**.
+
+| Control | Description |
+|---------|-------------|
+| **Run autopilot now** | Runs the autopilot tick (respects toggle and env); optional **Articles this run** (1–50). |
+| **Process publish queue now** | Drains due `content_publish_queue` rows (same logic as Vercel cron). |
+| **Repair stuck publishes** | Calls `POST /api/admin/resources/publish-repair`: (1) items **Published** with **`published_at` empty**; (2) items **Published** but any locale still **`is_published = false`** (re-enqueues and publishes). Response JSON has **`stuckPublishedAt`** and **`unpublishedLocales`** (counts and failures). Use when the content list shows **Published** but the hub does not show the article, or **Published** with no date. |
+
 ### Translation Settings
 
 | Setting | Description |
@@ -498,7 +508,7 @@ Values are **`content_items.workflow_status`** (kebab-case in the database). The
 | `in-legal-review` | Requires legal team sign-off (mandatory for legal_update content) |
 | `approved` | All reviews passed, ready to schedule |
 | `scheduled` | Queued for future publication |
-| `published` | Live on the public site |
+| `published` | Intended live state; the public hub lists an article only after **`publishLocalization`** sets **`is_published`** on its locale rows (editor **Publish** and autopilot both go through the publish queue). |
 | `archived` | Removed from public view, preserved for reference |
 
 ---
