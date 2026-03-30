@@ -23,7 +23,7 @@ Published items appear on the marketing site (for example `/resources/{pillar}/{
 | Dashboard | `/admin/resources` | KPI cards, upcoming scheduled, translation gaps, queue health, recently edited |
 | Content List | `/admin/resources/list` | All content with status tabs, search, filters, multi-select; **Reset & rebuild** on selected rows (AI-generated only) archives items, clears publish queue, and returns linked archive topics to backlog — then run autopilot in Settings to regenerate |
 | Editor | `/admin/resources/content/[id]` | Block editor, locale switching, metadata (**Article language** → `source_locale`), validation, publishing |
-| Backlog | `/admin/resources/backlog` | Ideas pipeline: Brief column, drag-to-reorder queue (saved order + priority for autopilot), clear backlog, generate draft |
+| Backlog | `/admin/resources/backlog` | Ideas pipeline: Brief column, drag-to-reorder queue (saved order + priority for autopilot), clear backlog, **Generate** (AI) |
 | Calendar | `/admin/resources/calendar` | Agenda + grid views of scheduled publications |
 | Queue | `/admin/resources/queue` | Publishing queue monitor with retry for failed items |
 | Settings | `/admin/resources/settings` | Publishing, translation, workflow, **AI autopilot**, and legal configuration |

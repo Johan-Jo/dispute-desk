@@ -376,7 +376,6 @@ Manage content ideas before they become articles.
 - **Queue order** — Drag the **grip** handle on a row to move it. Order is saved to the database and is what **autopilot** follows first (then **priority score**). Reordering works only when **search is empty** and both filters are **All**; otherwise clear filters to drag.
 - **Clear backlog** — Removes every archive row that is not yet **converted** (already-generated drafts stay linked). Confirms before deleting.
 - **Generate** — Trigger AI draft generation from this item (see AI Content Generator above).
-- **Draft** — Manually convert to a content item for hand-writing.
 
 ---
 
