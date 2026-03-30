@@ -44,6 +44,33 @@ describe("GET /api/admin/resources/content", () => {
     expect(mockGetContentList).toHaveBeenCalled();
   });
 
+  it("passes locale to getContentList when provided", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    mockGetContentList.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    } as never);
+    const req = new NextRequest(
+      "http://localhost/api/admin/resources/content?locale=en-US&page=1"
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    expect(mockGetContentList).toHaveBeenCalledWith(
+      expect.objectContaining({ locale: "en-US" })
+    );
+  });
+
+  it("returns 400 for invalid locale", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    const req = new NextRequest(
+      "http://localhost/api/admin/resources/content?locale=xx-XX"
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+  });
+
   it("returns 500 when getContentList throws", async () => {
     mockHasAdmin.mockResolvedValue(true);
     mockGetContentList.mockRejectedValue(new Error("list failed"));

@@ -22,7 +22,14 @@ import {
   LocaleStatusIndicator,
 } from "@/components/admin/resources";
 import type { ContentType, WorkflowStatus } from "@/lib/resources/workflow";
-import { ADMIN_LOCALES, CONTENT_TYPES, getContentTypeLabel } from "@/lib/resources/workflow";
+import {
+  ADMIN_LOCALES,
+  CONTENT_TYPES,
+  getContentTypeLabel,
+} from "@/lib/resources/workflow";
+
+/** Default list filter: show rows that include this hub locale (matches server SSR). */
+const DEFAULT_LIST_LOCALE = "en-US";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -85,6 +92,7 @@ export function ContentListClient({
   const [showFilters, setShowFilters] = useState(false);
   const [contentTypeFilter, setContentTypeFilter] = useState("all");
   const [topicFilter, setTopicFilter] = useState("all");
+  const [languageFilter, setLanguageFilter] = useState(DEFAULT_LIST_LOCALE);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -118,6 +126,7 @@ export function ContentListClient({
       q?: string;
       ct?: string;
       tp?: string;
+      lg?: string;
       p?: number;
     }) => {
       setLoading(true);
@@ -127,12 +136,14 @@ export function ContentListClient({
         const q = params.q ?? search;
         const ct = params.ct ?? contentTypeFilter;
         const tp = params.tp ?? topicFilter;
+        const lg = params.lg ?? languageFilter;
         const pg = params.p ?? page;
 
         if (tab !== "all") query.set("status", tab);
         if (q) query.set("search", q);
         if (ct !== "all") query.set("contentType", ct);
         if (tp !== "all") query.set("topic", tp);
+        query.set("locale", lg === "all" ? "all" : lg);
         query.set("page", String(pg));
         query.set("pageSize", String(pageSize));
 
@@ -147,7 +158,7 @@ export function ContentListClient({
         setLoading(false);
       }
     },
-    [activeTab, search, contentTypeFilter, topicFilter, page]
+    [activeTab, search, contentTypeFilter, topicFilter, languageFilter, page]
   );
 
   async function runResetRebuildSelected() {
@@ -211,6 +222,12 @@ export function ContentListClient({
     fetchData({ tp, p: 1 });
   }
 
+  function onLanguageChange(lg: string) {
+    setLanguageFilter(lg);
+    setPage(1);
+    fetchData({ lg, p: 1 });
+  }
+
   function onPageChange(p: number) {
     setPage(p);
     fetchData({ p });
@@ -219,9 +236,10 @@ export function ContentListClient({
   function clearFilters() {
     setContentTypeFilter("all");
     setTopicFilter("all");
+    setLanguageFilter(DEFAULT_LIST_LOCALE);
     setSearch("");
     setPage(1);
-    fetchData({ ct: "all", tp: "all", q: "", p: 1 });
+    fetchData({ ct: "all", tp: "all", lg: DEFAULT_LIST_LOCALE, q: "", p: 1 });
   }
 
   function toggleSelect(id: string) {
@@ -241,7 +259,10 @@ export function ContentListClient({
     }
   }
 
-  const hasActiveFilters = contentTypeFilter !== "all" || topicFilter !== "all";
+  const hasActiveFilters =
+    contentTypeFilter !== "all" ||
+    topicFilter !== "all" ||
+    languageFilter !== DEFAULT_LIST_LOCALE;
 
   return (
     <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
@@ -394,6 +415,23 @@ export function ContentListClient({
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-medium text-[#64748B] mb-1">
+                Language
+              </label>
+              <select
+                value={languageFilter}
+                onChange={(e) => onLanguageChange(e.target.value)}
+                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+              >
+                <option value="all">All languages</option>
+                {ADMIN_LOCALES.map((loc) => (
+                  <option key={loc.dbLocale} value={loc.dbLocale}>
+                    {loc.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
@@ -449,7 +487,12 @@ export function ContentListClient({
               )}
               {items.map((item) => {
                 const locs = item.content_localizations ?? [];
-                const enLoc = locs.find((l) => l.locale === "en-US") ?? locs[0];
+                const titleLocale =
+                  languageFilter === "all" ? "en-US" : languageFilter;
+                const titleLoc =
+                  locs.find((l) => l.locale === titleLocale) ??
+                  locs.find((l) => l.locale === "en-US") ??
+                  locs[0];
 
                 const localeMap: Record<string, string> = {};
                 for (const al of ADMIN_LOCALES) {
@@ -481,7 +524,7 @@ export function ContentListClient({
                         href={`/admin/resources/content/${item.id}`}
                         className="font-medium text-[#0B1220] hover:text-[#1D4ED8] truncate block max-w-[260px]"
                       >
-                        {enLoc?.title ?? "(untitled)"}
+                        {titleLoc?.title ?? "(untitled)"}
                       </Link>
                     </td>
                     <td className="px-4 py-3">

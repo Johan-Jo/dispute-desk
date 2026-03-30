@@ -121,12 +121,19 @@ export interface ContentListFilters {
   contentType?: string;
   topic?: string;
   search?: string;
+  /** BCP-47 hub locale (e.g. en-US). Omit or `"all"` = no locale filter. */
+  locale?: string;
   page?: number;
   pageSize?: number;
 }
 
 export async function getContentList(filters: ContentListFilters = {}) {
-  const { status, contentType, topic, search, page = 1, pageSize = 20 } = filters;
+  const { status, contentType, topic, search, locale, page = 1, pageSize = 20 } = filters;
+
+  const localeFilterActive = Boolean(locale && locale !== "all");
+  const localizationSelect = localeFilterActive
+    ? "content_localizations!inner(locale, title, translation_status)"
+    : "content_localizations(locale, title, translation_status)";
 
   let query = sb()
     .from("content_items")
@@ -135,7 +142,7 @@ export async function getContentList(filters: ContentListFilters = {}) {
        updated_at, published_at,
        authors(name),
        reviewers(name),
-       content_localizations(locale, title, translation_status)`,
+       ${localizationSelect}`,
       { count: "exact" }
     )
     .order("updated_at", { ascending: false });
@@ -162,6 +169,10 @@ export async function getContentList(filters: ContentListFilters = {}) {
     query = query.or(`topic.ilike.%${search}%,primary_pillar.ilike.%${search}%,target_keyword.ilike.%${search}%`);
   }
 
+  if (localeFilterActive) {
+    query = query.eq("content_localizations.locale", locale!);
+  }
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   query = query.range(from, to);
@@ -169,7 +180,41 @@ export async function getContentList(filters: ContentListFilters = {}) {
   const { data, count, error } = await query;
   if (error) throw error;
 
-  return { items: data ?? [], total: count ?? 0, page, pageSize };
+  let items = data ?? [];
+
+  if (localeFilterActive && items.length > 0) {
+    const ids = items.map((row) => (row as { id: string }).id);
+    const { data: locRows, error: locErr } = await sb()
+      .from("content_localizations")
+      .select("content_item_id, locale, title, translation_status")
+      .in("content_item_id", ids);
+    if (locErr) throw locErr;
+
+    const byItem = new Map<
+      string,
+      Array<{ locale: string; title: string; translation_status: string }>
+    >();
+    for (const row of locRows ?? []) {
+      const cid = row.content_item_id as string;
+      const list = byItem.get(cid) ?? [];
+      list.push({
+        locale: row.locale as string,
+        title: row.title as string,
+        translation_status: row.translation_status as string,
+      });
+      byItem.set(cid, list);
+    }
+
+    items = items.map((row) => {
+      const item = row as { id: string; content_localizations?: unknown };
+      return {
+        ...item,
+        content_localizations: byItem.get(item.id) ?? item.content_localizations ?? [],
+      };
+    });
+  }
+
+  return { items, total: count ?? 0, page, pageSize };
 }
 
 /* ── Queue items ────────────────────────────────────────────────────── */

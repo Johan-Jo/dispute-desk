@@ -148,9 +148,9 @@ Your editorial operations center:
 
 Browse and manage all content:
 
-- **Status Tabs** — Filter by workflow status (All, Drafting, In Review, Scheduled, Published, Archived).
+- **Status Tabs** — Filter by workflow status (All Content, Published, Scheduled, In Review, Draft).
 - **Search** — Find content by topic, pillar, or keyword.
-- **Filters** — Filter by content type and topic.
+- **Filters** — Expand **Filters** to set **Content type**, **Topic**, and **Language**. **Language** defaults to **English** (`en-US`): only rows that include an English localization are listed. Choose **All languages** to see every item regardless of locale coverage. The title column prefers the selected language (falls back to English, then any available). **Clear filters** resets type and topic to “all” and language back to **English**.
 - **Multi-select** — Select multiple items for bulk actions.
 - **Pagination** — Navigate through large content libraries.
 

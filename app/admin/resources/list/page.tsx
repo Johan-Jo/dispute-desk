@@ -12,7 +12,7 @@ export default async function AdminContentListPage() {
 
   const [stats, initialData] = await Promise.all([
     getContentStats(),
-    getContentList({ page: 1, pageSize: 20 }),
+    getContentList({ page: 1, pageSize: 20, locale: "en-US" }),
   ]);
 
   return (
