@@ -370,9 +370,11 @@ Manage content ideas before they become articles.
 
 ### Features
 
-- **Search** by title or keyword.
+- **Search** by title, keyword, summary, pillar, or notes.
 - **Filters** by priority (High/Medium/Low) and status (Idea/Backlog/Brief Ready).
-- **Reorder** items with up/down arrows to adjust priority visually.
+- **Brief** column — shows the editorial summary (`summary`) when it is substantive; long internal notes otherwise; em dash when empty. (Generic seed placeholder text is hidden.)
+- **Queue order** — Drag the **grip** handle on a row to move it. Order is saved to the database and is what **autopilot** follows first (then **priority score**). Reordering works only when **search is empty** and both filters are **All**; otherwise clear filters to drag.
+- **Clear backlog** — Removes every archive row that is not yet **converted** (already-generated drafts stay linked). Confirms before deleting.
 - **Generate** — Trigger AI draft generation from this item (see AI Content Generator above).
 - **Draft** — Manually convert to a content item for hand-writing.
 
@@ -531,7 +533,7 @@ When first enabled, autopilot publishes 1 article per day for 5 consecutive days
 
 ### How It Works
 
-1. Daily cron (`/api/cron/autopilot-generate`, **08:00 UTC**) picks the highest-priority archive item in **backlog** or **brief ready** (not **idea** — promote ideas in the backlog table before autopilot can pick them).
+1. Daily cron (`/api/cron/autopilot-generate`, **08:00 UTC**) picks the next eligible archive item in **backlog** or **brief ready** (not **idea** — promote ideas in the backlog table before autopilot can pick them). Order is **queue position** (backlog drag order), then **priority score** within ties.
 2. AI generates content for all configured locales in parallel.
 3. Content is created with `published` workflow status (bypasses editorial and legal review); author, CTA, and tags are applied for publish validation.
 4. All localizations are enqueued in `content_publish_queue`.
