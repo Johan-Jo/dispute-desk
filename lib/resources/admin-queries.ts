@@ -150,6 +150,14 @@ function isMissingGeneratedAtColumnError(error: { message?: string }): boolean {
   );
 }
 
+/** PostgREST 416 — offset beyond result set (PGRST103). Treat as empty page. */
+function isRangeNotSatisfiableError(error: { code?: string; message?: string }): boolean {
+  if (error.code === "PGRST103") return true;
+  // Some client versions store the raw JSON body in message
+  const m = error.message ?? "";
+  return m.includes("PGRST103") || m.includes("Requested range not satisfiable");
+}
+
 async function queryContentListPage(
   filters: ContentListFilters,
   includeGeneratedAt: boolean
@@ -218,6 +226,9 @@ export async function getContentList(filters: ContentListFilters = {}) {
   let result = await queryContentListPage(filters, true);
   if (result.error && isMissingGeneratedAtColumnError(result.error)) {
     result = await queryContentListPage(filters, false);
+  }
+  if (result.error && isRangeNotSatisfiableError(result.error)) {
+    return { items: [], total: 0, page, pageSize };
   }
   if (result.error) throw result.error;
 
