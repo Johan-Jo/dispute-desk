@@ -259,6 +259,17 @@ If either `OPENAI_API_KEY` or `GENERATION_ENABLED=true` is missing, generation f
    - Records a revision entry with token usage (includes any retry calls).
 5. You're automatically redirected to the editor with the generated draft.
 
+### Auto Pilot from the Backlog (one item)
+
+Use **Auto Pilot** on the same row when you want the **autopilot** path for a **specific** item without opening the editor first.
+
+1. Turn on **AI Autopilot** in **Settings** (Resources Hub). If it is off, Auto Pilot returns an error.
+2. Click **Auto Pilot** (bolt icon) next to **Generate** on the backlog row.
+3. The server runs the same pipeline as scheduled autopilot for that archive item: all target locales, **scheduled** workflow, publish queue, and in-request publish for those locales (other pending queue rows are **not** bulk-drained in this request — same as **Run autopilot now**).
+4. You are redirected to the **content item** when the run completes (large articles can take several minutes).
+
+This does **not** replace the daily cron quota; it only processes the row you chose.
+
 ### What Gets Generated
 
 For each locale, the AI produces:
@@ -302,7 +313,7 @@ The AI adapts its output per locale:
 
 ### Reviewing Generated Content
 
-Generated drafts are **never auto-published**. After generation:
+Content created with **Generate** is **not** auto-published. (**Auto Pilot** follows the autopilot publish path instead; see **Autopilot Mode** and **Auto Pilot from the Backlog** above.) After **Generate**:
 
 1. The draft appears in the editor with `drafting` status.
 2. Review and edit the generated content in each locale.
@@ -373,7 +384,8 @@ Manage content ideas before they become articles.
 - **Search** by **title** or **target keyword** (substring match).
 - **Filters** by priority (High/Medium/Low) and status (Idea/Backlog/Brief Ready).
 - **Table** — **Title** shows the proposed title and optional notes; columns for type, keyword, intent, priority, and status. Hover **up/down** on the index column changes row order **in the page only** (refresh restores server order from **`backlog_rank`**).
-- **Generate** — Trigger AI draft generation from this item (see AI Content Generator above). There is no separate “Draft” action in this table.
+- **Generate** — Editorial AI flow: creates a **draft** (or legal-review for legal content types) and opens the **editor** so you can revise before scheduling or publishing. See **AI Content Generator** above.
+- **Auto Pilot** — One-click **autopilot** for **this row only**: same pipeline as **Run autopilot now** (generate all target locales, enqueue publish, process that article’s queue rows in the request). Skips the editor-first path. Requires **Settings → AI Autopilot** to be **enabled**; if it is off, the UI shows an error. After success you are sent to the **content item** (often **Scheduled** while publish finishes). This does **not** change the daily cron cap; it only processes the item you clicked.
 - **Persisted queue & bulk ops** — To change **`backlog_rank`** (what **autopilot** and the backlog list use), use **`POST /api/admin/resources/archive-items/reorder`** (admin session), **`DELETE /api/admin/resources/archive-items`** to clear non-converted rows, **`POST /api/admin/resources/archive-items`** to append rows, or locally **`npm run import:backlog`** with a JSON file (see `docs/technical.md`).
 
 ---

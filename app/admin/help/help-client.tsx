@@ -211,9 +211,10 @@ export function HelpClient() {
             <H3>Generating from backlog</H3>
             <Ol items={[
               "Go to Backlog (/admin/resources/backlog).",
-              "Click the Generate button (purple sparkle) on an archive item.",
-              "Wait ~15-20 seconds — the AI generates content for all 6 locales in parallel.",
-              "You're redirected to the editor with the generated draft.",
+              "Choose an action on the row:",
+              "— **Generate** (sparkle icon): editorial draft — AI writes all target locales, then you land in the **editor** to review and publish on your schedule.",
+              "— **Auto Pilot** (bolt icon): autopilot path for **that item only** — same behavior as automated autopilot (scheduled workflow, publish queue, in-request publish for those locales). Enable **AI Autopilot** in Settings first, or Auto Pilot returns an error. You are redirected to the **content item** when the run finishes (large items can take several minutes).",
+              "Typical Generate wait is on the order of 15–20 seconds per item; Auto Pilot can take longer because it includes publishing.",
             ]} />
             <H3>AI Writing Assistant</H3>
             <P>In the editor sidebar, three tools are available:</P>
@@ -241,14 +242,15 @@ export function HelpClient() {
             <P>When first enabled, autopilot publishes 1 article per day for 5 consecutive days. After the burst completes, it continues at the configured rate.</P>
             <H3>How it works</H3>
             <Ol items={[
-              "Generation cron (08:00 UTC) picks the highest-priority backlog item.",
+              "Generation cron (08:00 UTC) picks the next eligible backlog item (queue order, then priority).",
               "AI generates content for configured locales; author, CTA, and tags are set for publish validation.",
-              "Content is created with 'published' workflow status (bypasses review).",
-              "All localizations are enqueued in the publish queue.",
-              "Publish cron (09:00 UTC) processes the queue and sets articles live.",
-              "Email notification sent with article link (Resend).",
-              "Search engines notified via IndexNow + Google sitemap ping.",
+              "Content is created in **scheduled** workflow state, localizations are enqueued on the publish queue, and the server publishes them (cron may also drain other due queue rows).",
+              "Publish cron (09:00 UTC) processes remaining queue work and sets articles live when due.",
+              "Email notification sent with article link (Resend), when configured.",
+              "Search engines notified via IndexNow + Google sitemap ping after publish.",
             ]} />
+            <H3>Auto Pilot from Backlog</H3>
+            <P>On <Code>/admin/resources/backlog</Code>, <Strong>Auto Pilot</Strong> next to <Strong>Generate</Strong> runs the autopilot pipeline for <Strong>that row only</Strong> immediately (no need to use <Strong>Run autopilot now</Strong> and wait for the next queue pick). Autopilot must be enabled in Settings.</P>
             <H3>Run scheduled tasks now (Settings)</H3>
             <P>
               At the bottom of <Strong>Settings</Strong>, <Strong>Run autopilot now</Strong> runs the same generation logic immediately and <Strong>bypasses</Strong> the cron daily cap (no <Code>CRON_SECRET</Code> — you must be logged into admin). Use <Strong>Articles this run</Strong> (1–50, default <Strong>1</Strong>): each backlog item still generates <Strong>all</Strong> target locales in one go, which can take minutes. Keep the default at 1 to avoid gateway timeouts (504); click again to process more items, or raise the number only if you accept timeout risk. Vercel Pro allows longer server runs than Hobby.

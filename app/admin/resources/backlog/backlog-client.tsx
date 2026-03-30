@@ -16,6 +16,7 @@ import {
   Sparkles,
   Loader2,
   HelpCircle,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/components/admin/Toast";
 import { ArchiveItemStatusBadge, PriorityBadge } from "@/components/admin/resources";
@@ -64,7 +65,10 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [autopilotId, setAutopilotId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const actionBusy = generatingId !== null || autopilotId !== null;
 
   async function handleGenerate(itemId: string) {
     setGeneratingId(itemId);
@@ -85,6 +89,33 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
       toast("error", "Network error during generation");
     } finally {
       setGeneratingId(null);
+    }
+  }
+
+  async function handleAutopilot(itemId: string) {
+    setAutopilotId(itemId);
+    try {
+      const res = await fetch("/api/admin/resources/generate-autopilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archiveItemId: itemId }),
+      });
+      const data = await res.json();
+      if ((res.ok || res.status === 207) && data.contentItemId) {
+        toast(
+          "success",
+          res.status === 207
+            ? "Autopilot finished with warnings — opening content item."
+            : "Autopilot queued publish for this item. Redirecting…"
+        );
+        window.location.href = `/admin/resources/content/${data.contentItemId}`;
+      } else {
+        toast("error", data.error ?? "Autopilot failed");
+      }
+    } catch {
+      toast("error", "Network error during autopilot");
+    } finally {
+      setAutopilotId(null);
     }
   }
 
@@ -329,10 +360,11 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                     <ArchiveItemStatusBadge status={item.status} />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
+                        type="button"
                         onClick={() => handleGenerate(item.id)}
-                        disabled={!!generatingId}
+                        disabled={actionBusy}
                         className="inline-flex items-center gap-1 text-sm text-[#8B5CF6] hover:text-[#7C3AED] font-medium whitespace-nowrap disabled:opacity-50"
                       >
                         {generatingId === item.id ? (
@@ -341,6 +373,23 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                           <Sparkles className="w-3.5 h-3.5" />
                         )}
                         Generate
+                      </button>
+                      <span className="text-[#CBD5E1] select-none" aria-hidden>
+                        |
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAutopilot(item.id)}
+                        disabled={actionBusy}
+                        title="Generate and enqueue publish like autopilot (enable AI Autopilot in Settings)"
+                        className="inline-flex items-center gap-1 text-sm text-[#8B5CF6] hover:text-[#7C3AED] font-medium whitespace-nowrap disabled:opacity-50"
+                      >
+                        {autopilotId === item.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Zap className="w-3.5 h-3.5" />
+                        )}
+                        Auto Pilot
                       </button>
                     </div>
                   </td>
