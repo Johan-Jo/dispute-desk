@@ -870,14 +870,19 @@ Requires `.env.local` with `SUPABASE_URL_POSTGRES` configured.
 A standalone operator dashboard at `/admin/*`, separate from the merchant-facing app.
 
 ### Auth
-- V1: env-based `ADMIN_SECRET` validated against a password input.
-- HTTP-only session cookie (`dd_admin_session`, 8h TTL, path `/` so it is sent to both `/admin/*` pages and `/api/admin/*` routes).
-- Middleware redirects unauthenticated `/admin/*` requests to `/admin/login`.
+Admin accounts are stored in the `admin_users` table (email, bcrypt password hash, name, is_active, last_login_at, created_by).
+
+- **Login:** `POST /api/admin/login` accepts `{ email, password }`, bcrypt-verifies against `admin_users`, sets the `dd_admin_session` cookie (8h TTL, path `/`, HTTP-only).
+- **Cookie format:** `{userId}:{HMAC-SHA256(ADMIN_SECRET, userId)}` — cryptographically tied to the specific user; cannot be forged or reused after deactivation.
+- **Middleware:** sync HMAC verification (no DB) on every `/admin/*` request; full `is_active` DB check in API route handlers via `hasAdminSession()`.
+- **Bootstrap fallback:** when `admin_users` has zero active users, email `admin@bootstrap` + `ADMIN_SECRET` value is accepted as a one-time login so the first real account can be created. Closed automatically once any active user exists.
+- **Helpers** in `lib/admin/auth.ts`: `validateAdminCredentials`, `buildAdminCookieToken`, `verifyAdminCookieToken`, `hasAdminSession`, `getAdminSessionUser`, `hashPassword`, `verifyPassword`, `clearAdminSessionOnResponse`.
 
 ### Pages
 | Route | Purpose |
 |-------|---------|
 | `/admin` | Dashboard — active shops, disputes, packs, job queue, plan distribution |
+| `/admin/team` | Admin user management — add, deactivate, delete operator accounts |
 | `/admin/shops` | Searchable shop list with plan/status filters |
 | `/admin/shops/[id]` | Shop detail + admin overrides (plan, pack limit, notes) |
 | `/admin/jobs` | Job monitor with status filters, stale detection, retry/cancel actions |
@@ -885,9 +890,13 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 | `/admin/billing` | MRR, plan distribution, per-shop monthly usage |
 
 ### API Routes
-- `POST /api/admin/login` — authenticate with admin secret; sets `dd_admin_session` cookie directly on the `NextResponse` (not via `cookies().set()`, which is read-only in Route Handlers in Next.js 15)
+- `POST /api/admin/login` — authenticate (email + password); sets `dd_admin_session` cookie on `NextResponse` (not via `cookies().set()` — read-only in Route Handlers in Next.js 15)
 - `GET /api/admin/logout` — clear session
 - `GET /api/admin/metrics` — aggregated dashboard data
+- `GET /api/admin/team` — list admin users (no password_hash)
+- `POST /api/admin/team` — create admin user (bcrypt hash, created_by tracked)
+- `PATCH /api/admin/team/[id]` — toggle is_active; rejects self-deactivation
+- `DELETE /api/admin/team/[id]` — delete user; rejects self-deletion
 - `GET /api/admin/shops` — list shops (search, plan, status filters)
 - `GET/PATCH /api/admin/shops/[id]` — shop detail + admin overrides
 - `GET /api/admin/jobs` — list jobs with stale enrichment
