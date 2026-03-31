@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { AuthCard } from "@/components/ui/auth-card";
 import { TextField } from "@/components/ui/text-field";
@@ -16,7 +17,15 @@ function getSupabase() {
   );
 }
 
-export default function SignInPage() {
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function SignInForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const continueUrl = searchParams.get("continue") ?? "/portal/dashboard";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,41 +33,54 @@ export default function SignInPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (!password) {
+      setError("Password is required.");
+      return;
+    }
     setError(null);
     setLoading(true);
 
     const supabase = getSupabase();
-    const { error: err } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
 
     if (err) {
       setError(err.message);
       setLoading(false);
     } else {
-      window.location.href = "/portal/dashboard";
+      router.push(continueUrl);
     }
   };
 
   const handleMagicLink = async () => {
-    if (!email) return;
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address first.");
+      return;
+    }
     setError(null);
     setLoading(true);
+
+    const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
+    confirmUrl.searchParams.set("redirect", continueUrl);
+    confirmUrl.searchParams.set("type", "magiclink");
 
     const supabase = getSupabase();
     const { error: err } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/portal/dashboard`,
-      },
+      options: { emailRedirectTo: confirmUrl.toString() },
     });
 
     if (err) {
       setError(err.message);
       setLoading(false);
     } else {
-      window.location.href = "/auth/magic-link-sent";
+      const sentUrl = new URL("/auth/magic-link-sent", window.location.origin);
+      sentUrl.searchParams.set("email", email);
+      if (continueUrl !== "/portal/dashboard") sentUrl.searchParams.set("continue", continueUrl);
+      router.push(sentUrl.pathname + sentUrl.search);
     }
   };
 
@@ -116,12 +138,20 @@ export default function SignInPage() {
       <div className="text-center">
         <button
           onClick={handleMagicLink}
-          disabled={!email || loading}
+          disabled={loading}
           className="text-sm text-[#4F46E5] hover:underline disabled:opacity-50"
         >
           Send magic link instead
         </button>
       </div>
     </AuthCard>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   );
 }

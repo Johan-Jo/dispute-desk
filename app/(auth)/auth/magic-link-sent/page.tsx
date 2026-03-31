@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Mail } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { AuthCard } from "@/components/ui/auth-card";
+import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
 
 function getSupabase() {
@@ -13,18 +15,27 @@ function getSupabase() {
   );
 }
 
-export default function MagicLinkSentPage() {
-  const [email, setEmail] = useState("");
+function MagicLinkSentContent() {
+  const searchParams = useSearchParams();
+  const initialEmail = searchParams.get("email") ?? "";
+  const continueUrl = searchParams.get("continue") ?? "/portal/dashboard";
+
+  const [email, setEmail] = useState(initialEmail);
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleResend = async () => {
     if (!email) return;
     setError(null);
+
+    const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
+    confirmUrl.searchParams.set("redirect", continueUrl);
+    confirmUrl.searchParams.set("type", "magiclink");
+
     const supabase = getSupabase();
     const { error: err } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/portal/dashboard` },
+      options: { emailRedirectTo: confirmUrl.toString() },
     });
     if (err) setError(err.message);
     else setResent(true);
@@ -42,12 +53,12 @@ export default function MagicLinkSentPage() {
       </div>
 
       <div className="space-y-3">
-        <input
+        <TextField
           type="email"
+          label="Email"
           placeholder="you@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
         />
         <Button variant="secondary" className="w-full" onClick={handleResend} disabled={!email}>
           {resent ? "Sent again!" : "Resend email"}
@@ -58,5 +69,13 @@ export default function MagicLinkSentPage() {
         </a>
       </div>
     </AuthCard>
+  );
+}
+
+export default function MagicLinkSentPage() {
+  return (
+    <Suspense>
+      <MagicLinkSentContent />
+    </Suspense>
   );
 }

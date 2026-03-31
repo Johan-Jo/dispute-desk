@@ -5,6 +5,7 @@
 
 import { Resend } from "resend";
 import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import type { Locale } from "@/lib/i18n/locales";
 import {
   generateWelcomeEmailHTML,
   generateWelcomeEmailText,
@@ -28,6 +29,7 @@ export interface SendWelcomeOptions {
   to: string;
   fullName?: string;
   idempotencyKey: string;
+  locale?: Locale;
 }
 
 /**
@@ -50,11 +52,12 @@ export async function sendWelcomeEmail(
   const variables: WelcomeEmailVariables = {
     firstName,
     dashboardUrl,
+    locale: options.locale,
   };
 
   const html = generateWelcomeEmailHTML(variables);
   const text = generateWelcomeEmailText(variables);
-  const subject = getWelcomeSubject();
+  const subject = getWelcomeSubject(options.locale);
 
   const resend = new Resend(RESEND_API_KEY);
   const { data, error } = await resend.emails.send(

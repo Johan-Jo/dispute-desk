@@ -133,23 +133,29 @@ prevents cross-shop data leakage.
 
 ## Email (Resend)
 
-Transactional email is sent via **Resend**. Layout is minimal string-based
-HTML (single link, no big CTA buttons or "copy this link" blocks) to
-minimize spam classification.
+Transactional email is sent via **Resend**. The welcome email uses a branded
+table-based HTML template (indigo header, CTA button, footer) with full
+plain-text fallback. All six app locales are supported (`en-US`, `de-DE`,
+`fr-FR`, `es-ES`, `pt-BR`, `sv-SE`) — the locale is resolved from the
+`dd_locale` cookie, then `Accept-Language` header, then `en-US`.
 
 - **Env:** `RESEND_API_KEY` (required for sending). `EMAIL_FROM` defaults to
   `DisputeDesk <notifications@mail.disputedesk.app>` (sending subdomain). The
   domain must be verified in Resend (resend.com/domains). `EMAIL_REPLY_TO` sets
   Reply-To (defaults to same as FROM; avoid no-reply for deliverability).
+  `ADMIN_NOTIFY_EMAIL` overrides the admin notification recipient (default: `oi@johan.com.br`).
   **Resources Hub autopilot** publish notifications (`lib/email/sendPublishNotification.ts`) use the same Resend client and env vars.
 - **Deliverability (inbox vs spam):** (1) Add DMARC (Resend: resend.com/docs/dashboard/domains/dmarc). (2) **Links in the email must use your sending domain** — set `NEXT_PUBLIC_APP_URL=https://disputedesk.app` so the dashboard link is not localhost. (3) Sending subdomain `mail.disputedesk.app` is the default; keep `EMAIL_FROM`/`EMAIL_REPLY_TO` on that subdomain so root domain reputation stays separate. (4) In Resend dashboard, turn off click/open tracking for the domain if enabled.
-- **Templates:** `lib/email/templates.ts` (welcome HTML/text).
-- **Send:** `lib/email/sendWelcome.ts`; `POST /api/emails/welcome` (body:
-  `email`, optional `fullName`).
-- **Welcome email** is sent when:
-  1. User completes email/password sign-up (client calls API after success).
-  2. User links their first shop via Shopify OAuth (callback sends server-side).
-- Idempotency keys (`welcome/{email}` or `welcome/{userId}`) avoid duplicates.
+- **Templates:** `lib/email/templates.ts` — locale-aware welcome HTML/text (all 6 locales).
+- **Send helpers:**
+  - `lib/email/sendWelcome.ts` — sends the branded welcome email; accepts `locale?: Locale`.
+  - `lib/email/sendAdminNotification.ts` — sends a plain admin alert to `ADMIN_NOTIFY_EMAIL` on every confirmed sign-up.
+- **Welcome email trigger points:**
+  1. Email/password sign-up: user clicks confirmation link → `GET /api/auth/confirm?type=signup` exchanges the PKCE code and sends welcome + admin notification server-side.
+  2. Shopify OAuth sign-up (new user): `GET /api/auth/shopify/callback` calls `sendWelcomeEmail` + `sendAdminSignupNotification` after creating the Supabase user.
+  3. Shopify OAuth — first store linked (existing signed-in user): callback sends welcome + admin notification on the first `portal_user_shops` row only.
+- **Idempotency keys** prevent duplicates: `welcome-confirm/{email}` (email flow), `welcome-shopify/{userId}` (Shopify flow), `welcome/{userId}` (signed-in connect).
+- **Admin notification** (`lib/email/sendAdminNotification.ts`): fired alongside every welcome email; non-blocking, failure is logged only.
 
 ## Resources Hub (public marketing)
 
@@ -498,6 +504,7 @@ Store policies are included in evidence packs. Five policy types are supported: 
 - `POST /api/webhooks/disputes-update` (HMAC verified) — enqueues sync_disputes for the shop
 
 ### Portal Auth
+- `GET /api/auth/confirm?code=…&type=signup|magiclink&redirect=/path` — PKCE code exchange for email confirmation and magic-link sign-in. On `type=signup` sends welcome email (locale-aware) + admin notification, then redirects to `redirect` param (default `/portal/dashboard`). Open redirect guard: only relative paths accepted.
 - `POST /api/auth/portal/sign-out` — sign out portal user
 - `GET /api/portal/clear-shop` — no Shopify session required (exempt in middleware). Clears active-shop cookies and redirects to `/portal/connect-shopify` so the user can reconnect. Used by the portal sidebar link "Clear shop & reconnect".
 

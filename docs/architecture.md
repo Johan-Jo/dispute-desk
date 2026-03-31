@@ -103,7 +103,7 @@ See [`docs/technical.md`](technical.md) for the full component catalog.
 
 ### Supabase Auth (External Portal)
 
-- Portal users authenticate via Supabase Auth (email/password or magic link).
+- Portal users authenticate via Supabase Auth (email/password, magic link, or Shopify OAuth).
 - Session is stored as an HTTP-only cookie by Supabase SSR helpers.
 - Portal users connect Shopify stores via OAuth. This creates:
   - A `shops` row (or finds existing).
@@ -122,17 +122,35 @@ Next.js API routes using the service role key.
 
 ### Portal → Shop Access Flow
 
-1. Portal user signs up / signs in (Supabase Auth).
-2. User clicks "Connect Shopify Store" → triggers Shopify OAuth with `source=portal`.
-3. OAuth callback creates shop + offline session + `portal_user_shops` row.
-4. Callback sets `active_shop_id` cookie on the redirect response and sends
-   the user to `/portal/dashboard` — no manual store selection needed.
-5. All portal data queries scope to `active_shop_id` via the user's linked shops.
-6. For multi-store users, the sidebar store selector links to
-   `/portal/select-store` where they can switch between connected shops.
-7. **Clear shop & reconnect**: In the sidebar, under the store name, a "Clear shop & reconnect" link calls `GET /api/portal/clear-shop`. This route is exempt from the API middleware's Shopify-session requirement so portal-only users (who may have no Shopify cookies) can use it. It clears the active-shop cookies and redirects to `/portal/connect-shopify` for a fresh connect flow.
-8. **Portal APIs**: The middleware allows certain API prefixes without Shopify session cookies when the user has Supabase Auth and a valid `active_shop_id` in `portal_user_shops`: `/api/setup/`, `/api/integrations/`, `/api/files/samples`, and `/api/disputes`. So the portal disputes page (list, Sync Now, dispute detail) and setup/integrations/sample-files flows work with Supabase + active-shop only. See `docs/technical.md` § API middleware — shop identity and portal fallback.
-9. **Demo vs real data**: When no shop is selected, the portal runs in demo mode (placeholder UI). Only the store domain `demo.myshopify.com` is treated as a demo-data store; all other connected stores (including development stores) get live dispute data and sync. See `docs/technical.md` § Portal demo mode & test stores.
+#### Email / password sign-up
+
+1. User fills the sign-up form → Supabase sends a confirmation email.
+2. User clicks the confirmation link → browser hits `GET /api/auth/confirm?code=…&type=signup`.
+3. Confirm route exchanges the PKCE code for a session, sends a welcome email (locale-aware) and an admin notification, then redirects to `/portal/dashboard`.
+4. User connects a Shopify store separately via the portal.
+
+#### "Continue with Shopify" (sign-up or sign-in)
+
+This is a single-step flow — the user clicks one button and lands on the dashboard fully signed in with their store already connected.
+
+1. User clicks **Continue with Shopify** on the sign-in or sign-up page.
+2. Browser is sent to `GET /api/auth/shopify?source=portal&return_to=/portal/dashboard`.
+3. Shopify OAuth completes → callback at `GET /api/auth/shopify/callback`.
+4. Callback creates/updates the `shops` row, stores an offline session, registers webhooks.
+5. **Already signed in** (Supabase session cookie present): shop is linked to the current user; welcome email + admin notification sent on first shop only.
+6. **Not signed in** — callback fetches the shop owner's email from Shopify GraphQL, then:
+   - **New user**: `admin.generateLink({ type: 'signup' })` creates an auto-confirmed Supabase user, returns an `action_link`.
+   - **Existing user**: `admin.generateLink({ type: 'magiclink' })` returns an `action_link` for the existing account.
+   - In both cases the shop is linked immediately and the browser is redirected to `action_link` → Supabase sets the session → user lands on `/portal/dashboard`. No email confirmation step, no extra clicks.
+7. `active_shop_id` and `dd_active_shop` cookies are set on the redirect response so the portal immediately scopes to the connected shop.
+
+For multi-store users, the sidebar store selector links to `/portal/select-store` where they can switch between connected shops.
+
+**Clear shop & reconnect**: In the sidebar, under the store name, a "Clear shop & reconnect" link calls `GET /api/portal/clear-shop`. This route is exempt from the API middleware's Shopify-session requirement so portal-only users (who may have no Shopify cookies) can use it. It clears the active-shop cookies and redirects to `/portal/connect-shopify` for a fresh connect flow.
+
+**Portal APIs**: The middleware allows certain API prefixes without Shopify session cookies when the user has Supabase Auth and a valid `active_shop_id` in `portal_user_shops`: `/api/setup/`, `/api/integrations/`, `/api/files/samples`, and `/api/disputes`. So the portal disputes page (list, Sync Now, dispute detail) and setup/integrations/sample-files flows work with Supabase + active-shop only. See `docs/technical.md` § API middleware — shop identity and portal fallback.
+
+**Demo vs real data**: When no shop is selected, the portal runs in demo mode (placeholder UI). Only the store domain `demo.myshopify.com` is treated as a demo-data store; all other connected stores (including development stores) get live dispute data and sync. See `docs/technical.md` § Portal demo mode & test stores.
 
 ### Cookieless OAuth State
 

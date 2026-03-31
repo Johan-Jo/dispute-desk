@@ -16,6 +16,10 @@ function getSupabase() {
   );
 }
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,8 +30,26 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      setError("Full name is required.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
     setError(null);
     setLoading(true);
+
+    // emailRedirectTo points to our confirm route which exchanges the code,
+    // sends the welcome email, and redirects to the dashboard.
+    const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
+    confirmUrl.searchParams.set("redirect", "/portal/dashboard");
+    confirmUrl.searchParams.set("type", "signup");
 
     const supabase = getSupabase();
     const { error: err } = await supabase.auth.signUp({
@@ -35,7 +57,7 @@ export default function SignUpPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/portal/dashboard`,
+        emailRedirectTo: confirmUrl.toString(),
       },
     });
 
@@ -43,12 +65,6 @@ export default function SignUpPage() {
       setError(err.message);
     } else {
       setSuccess(true);
-      // Fire-and-forget welcome email (do not block UX)
-      fetch("/api/emails/welcome", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, fullName: fullName.trim() || undefined }),
-      }).catch(() => {});
     }
     setLoading(false);
   };
@@ -106,7 +122,7 @@ export default function SignUpPage() {
         />
         <PasswordField
           label="Password"
-          placeholder="Create a strong password"
+          placeholder="Create a strong password (min. 8 characters)"
           showStrength
           required
           onChange={(e) => setPassword(e.target.value)}
