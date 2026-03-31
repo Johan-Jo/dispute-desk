@@ -59,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const sb = getServiceClient();
     const { data: items } = await sb
       .from("content_items")
-      .select("id, updated_at, primary_pillar")
+      .select("id, updated_at, primary_pillar, is_hub_article")
       .eq("workflow_status", "published");
 
     if (items) {
@@ -67,7 +67,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const { data: locs } = await sb
           .from("content_localizations")
           .select("locale, slug")
-          .eq("content_item_id", item.id);
+          .eq("content_item_id", item.id)
+          .eq("is_published", true);
 
         const enLoc = locs?.find((l) => l.locale === "en-US");
         if (!enLoc?.slug) continue;
@@ -84,11 +85,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           languages[tag] = `${BASE_URL}${prefix}/resources/${pillar}/${loc.slug}`;
         }
 
+        const isHub = (item as Record<string, unknown>).is_hub_article === true;
         entries.push({
           url: localeUrl(path, "en-US"),
           lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
-          changeFrequency: "monthly",
-          priority: 0.8,
+          changeFrequency: isHub ? "weekly" : "monthly",
+          priority: isHub ? 0.9 : 0.8,
           alternates: { languages },
         });
       }

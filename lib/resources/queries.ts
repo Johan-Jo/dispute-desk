@@ -12,6 +12,10 @@ export type ContentItemRow = {
   author_id: string | null;
   reviewer_id: string | null;
   published_at: string | null;
+  publish_priority: number;
+  is_hub_article: boolean;
+  curated_related_ids: string[];
+  target_keyword: string | null;
 };
 
 export type ContentLocalizationRow = {
@@ -42,7 +46,7 @@ export async function listPublishedByRoute(
   let q = sb
     .from("content_localizations")
     .select(
-      "id, content_item_id, locale, route_kind, title, slug, excerpt, body_json, meta_title, meta_description, og_title, og_description, reading_time_minutes, is_published, publish_at, last_updated_at, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, author_id, reviewer_id, published_at)"
+      "id, content_item_id, locale, route_kind, title, slug, excerpt, body_json, meta_title, meta_description, og_title, og_description, reading_time_minutes, is_published, publish_at, last_updated_at, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, author_id, reviewer_id, published_at, publish_priority, is_hub_article, curated_related_ids, target_keyword)"
     )
     .eq("route_kind", routeKind)
     .eq("locale", locale)
@@ -63,6 +67,7 @@ export async function listPublishedByRoute(
   const limit = opts?.limit ?? 24;
   const offset = opts?.offset ?? 0;
   q = q
+    .order("publish_priority", { referencedTable: "content_items", ascending: false, nullsFirst: false })
     .order("publish_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
@@ -153,47 +158,89 @@ export async function getAlternatePublishedResourceSlug(args: {
   return { slug: target.slug, pillar: item.primary_pillar };
 }
 
+type RelatedRow = {
+  id: string;
+  content_item_id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  reading_time_minutes: number | null;
+  content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string } | { id: string; content_type: string; primary_pillar: string; workflow_status: string }[];
+};
+
+function normalizeRelatedRows(data: unknown[]): (RelatedRow & {
+  content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string };
+})[] {
+  return data.map((raw) => {
+    const r = raw as RelatedRow;
+    const item = Array.isArray(r.content_items) ? r.content_items[0] : r.content_items;
+    return { ...r, content_items: item };
+  });
+}
+
 export async function getRelatedResources(args: {
   routeKind: string;
   locale: HubContentLocale;
   pillar: string;
   excludeItemId: string;
   limit?: number;
+  /** Curated content_item IDs from the article's curated_related_ids field.
+   *  Each ID is validated against published content before inclusion.
+   *  Unresolved IDs are silently dropped. Falls back to pillar-based recency
+   *  if curated results are fewer than limit. */
+  curatedIds?: string[];
 }) {
   const sb = getServiceClient();
-  const cap = args.limit ?? 2;
+  const cap = args.limit ?? 3;
+  const SELECT = "id, content_item_id, title, slug, excerpt, reading_time_minutes, content_items!inner(id, content_type, primary_pillar, workflow_status)";
 
-  const { data, error } = await sb
-    .from("content_localizations")
-    .select(
-      "id, content_item_id, title, slug, excerpt, reading_time_minutes, content_items!inner(id, content_type, primary_pillar, workflow_status)"
-    )
-    .eq("route_kind", args.routeKind)
-    .eq("locale", args.locale)
-    .eq("is_published", true)
-    .eq("content_items.workflow_status", "published")
-    .eq("content_items.primary_pillar", args.pillar)
-    .neq("content_item_id", args.excludeItemId)
-    .order("publish_at", { ascending: false, nullsFirst: false })
-    .limit(cap);
+  const curated = (args.curatedIds ?? []).filter((id) => id && id !== args.excludeItemId);
 
-  if (error) throw new Error(error.message);
+  let results: ReturnType<typeof normalizeRelatedRows> = [];
 
-  type RelatedRow = {
-    id: string;
-    content_item_id: string;
-    title: string;
-    slug: string;
-    excerpt: string;
-    reading_time_minutes: number | null;
-    content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string } | { id: string; content_type: string; primary_pillar: string; workflow_status: string }[];
-  };
+  // Phase 1: resolve curated IDs against published content
+  if (curated.length > 0) {
+    const { data: curatedData } = await sb
+      .from("content_localizations")
+      .select(SELECT)
+      .eq("route_kind", args.routeKind)
+      .eq("locale", args.locale)
+      .eq("is_published", true)
+      .eq("content_items.workflow_status", "published")
+      .in("content_item_id", curated);
 
-  return (data ?? []).map((raw: unknown) => {
-    const r = raw as RelatedRow;
-    const item = Array.isArray(r.content_items) ? r.content_items[0] : r.content_items;
-    return { ...r, content_items: item } as RelatedRow & {
-      content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string };
-    };
-  });
+    if (curatedData && curatedData.length > 0) {
+      // Preserve the curated order from curated_related_ids
+      const byItemId = new Map(
+        normalizeRelatedRows(curatedData).map((r) => [r.content_item_id, r])
+      );
+      results = curated
+        .map((id) => byItemId.get(id))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined)
+        .slice(0, cap);
+    }
+  }
+
+  // Phase 2: pad with pillar-based recency if curated didn't fill the cap
+  if (results.length < cap) {
+    const excludeIds = [args.excludeItemId, ...results.map((r) => r.content_item_id)];
+    const remaining = cap - results.length;
+
+    const { data: fallbackData, error } = await sb
+      .from("content_localizations")
+      .select(SELECT)
+      .eq("route_kind", args.routeKind)
+      .eq("locale", args.locale)
+      .eq("is_published", true)
+      .eq("content_items.workflow_status", "published")
+      .eq("content_items.primary_pillar", args.pillar)
+      .not("content_item_id", "in", `(${excludeIds.map((id) => `"${id}"`).join(",")})`)
+      .order("publish_at", { ascending: false, nullsFirst: false })
+      .limit(remaining);
+
+    if (error) throw new Error(error.message);
+    results = [...results, ...normalizeRelatedRows(fallbackData ?? [])];
+  }
+
+  return results;
 }

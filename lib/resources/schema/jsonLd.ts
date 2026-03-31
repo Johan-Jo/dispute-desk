@@ -13,6 +13,12 @@ export function breadcrumbJsonLd(items: { name: string; url: string }[]) {
   };
 }
 
+const PUBLISHER = {
+  "@type": "Organization",
+  name: "DisputeDesk",
+  url: "https://disputedesk.app",
+} as const;
+
 export function articleJsonLd(args: {
   headline: string;
   description: string;
@@ -21,6 +27,8 @@ export function articleJsonLd(args: {
   datePublished?: string;
   locale: HubContentLocale;
   authorName?: string;
+  image?: string;
+  keywords?: string;
 }) {
   return {
     "@context": "https://schema.org",
@@ -29,11 +37,14 @@ export function articleJsonLd(args: {
     description: args.description,
     url: args.url,
     inLanguage: args.locale,
-    dateModified: args.dateModified,
     datePublished: args.datePublished,
+    dateModified: args.dateModified,
+    publisher: PUBLISHER,
     author: args.authorName
       ? { "@type": "Person", name: args.authorName }
-      : undefined,
+      : PUBLISHER,
+    ...(args.image ? { image: { "@type": "ImageObject", url: args.image } } : {}),
+    ...(args.keywords ? { keywords: args.keywords } : {}),
   };
 }
 

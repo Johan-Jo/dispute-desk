@@ -211,7 +211,8 @@ export default async function ResourceArticlePage({ params }: Props) {
     locale: hubLocale,
     pillar,
     excludeItemId: item.id,
-    limit: 2,
+    limit: item.is_hub_article ? 4 : 3,
+    curatedIds: item.curated_related_ids,
   });
 
   const faq = (L.body_json as { faq?: { q: string; a: string }[] })?.faq;
@@ -220,8 +221,11 @@ export default async function ResourceArticlePage({ params }: Props) {
     description: L.excerpt,
     url: origin ? `${origin}${path}` : path,
     locale: hubLocale,
+    datePublished: item.published_at ?? undefined,
     dateModified: L.last_updated_at ?? undefined,
     authorName,
+    image: item.featured_image_url ?? undefined,
+    keywords: item.target_keyword ?? undefined,
   });
 
   const crumbs = breadcrumbJsonLd(
