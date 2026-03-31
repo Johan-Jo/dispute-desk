@@ -878,7 +878,7 @@ A standalone operator dashboard at `/admin/*`, separate from the merchant-facing
 | `/admin/billing` | MRR, plan distribution, per-shop monthly usage |
 
 ### API Routes
-- `POST /api/admin/login` — authenticate with admin secret
+- `POST /api/admin/login` — authenticate with admin secret; sets `dd_admin_session` cookie directly on the `NextResponse` (not via `cookies().set()`, which is read-only in Route Handlers in Next.js 15)
 - `GET /api/admin/logout` — clear session
 - `GET /api/admin/metrics` — aggregated dashboard data
 - `GET /api/admin/shops` — list shops (search, plan, status filters)
