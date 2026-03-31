@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import createNextIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
@@ -243,7 +244,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") return nextWithAppBridge(req, "0");
     const adminCookie = req.cookies.get("dd_admin_session")?.value;
-    if (adminCookie !== "authenticated") {
+    if (!verifyAdminCookieToken(adminCookie)) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
     return nextWithAppBridge(req, "0");
@@ -299,6 +300,32 @@ export async function middleware(req: NextRequest) {
   }
 
   return nextWithAppBridge(req, "0");
+}
+
+/**
+ * Verify the HMAC signature on the admin session cookie — synchronous, no DB.
+ * Full is_active check is deferred to hasAdminSession() in API route handlers.
+ */
+function verifyAdminCookieToken(value: string | undefined): boolean {
+  if (!value) return false;
+  const colon = value.indexOf(":");
+  if (colon === -1) return false;
+  const userId = value.slice(0, colon);
+  const sig = value.slice(colon + 1);
+  if (!userId || !sig) return false;
+  const sec = process.env.ADMIN_SECRET ?? "";
+  const expected = crypto
+    .createHmac("sha256", sec)
+    .update(userId)
+    .digest("hex");
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(sig, "hex"),
+      Buffer.from(expected, "hex")
+    );
+  } catch {
+    return false;
+  }
 }
 
 export const config = {

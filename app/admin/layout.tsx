@@ -39,6 +39,7 @@ const ADMIN_NAV = [
   { label: "Jobs", href: "/admin/jobs" },
   { label: "Audit Log", href: "/admin/audit" },
   { label: "Billing", href: "/admin/billing" },
+  { label: "Team", href: "/admin/team" },
   { label: "Help", href: "/admin/help" },
 ];
 

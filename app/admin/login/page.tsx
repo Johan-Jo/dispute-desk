@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export default function AdminLoginPage() {
     const res = await fetch("/api/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email, password }),
     });
     if (res.ok) {
       router.refresh();
@@ -32,16 +33,25 @@ export default function AdminLoginPage() {
       <div className="bg-white rounded-lg border border-[#E5E7EB] p-8 w-full max-w-sm">
         <h1 className="text-xl font-bold text-[#0B1220] mb-1">DisputeDesk Admin</h1>
         <p className="text-sm text-[#667085] mb-6">Internal operator panel</p>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+            autoFocus
+            className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+          />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Admin secret"
-            className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-            autoFocus
+            placeholder="Password"
+            required
+            className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
           />
-          {error && <p className="text-sm text-[#EF4444] mb-3">{error}</p>}
+          {error && <p className="text-sm text-[#EF4444]">{error}</p>}
           <button
             type="submit"
             disabled={loading}
