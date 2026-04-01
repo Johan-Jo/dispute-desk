@@ -27,13 +27,17 @@ const BAR_COLORS = [
   "bg-[#10B981]",
 ];
 
-export function PasswordField({ showStrength, ...props }: PasswordFieldProps) {
+export function PasswordField({ showStrength, label, ...props }: PasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const strength = showStrength ? calculateStrength(password) : null;
 
   return (
     <div>
+      {/* Render label outside the relative wrapper so top-[50%] spans only the input */}
+      {label && (
+        <label className="block text-sm font-medium text-[#0B1220] mb-2">{label}</label>
+      )}
       <div className="relative">
         <TextField
           {...props}

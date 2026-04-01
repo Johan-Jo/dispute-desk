@@ -33,19 +33,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Hook not configured" }, { status: 500 });
   }
 
-  // Read raw body for signature verification.
-  const rawBody = await req.text();
-
-  // Verify Supabase hook signature: x-supabase-signature: t=<ts>,v1=<hmac>
-  const sigHeader = req.headers.get("x-supabase-signature") ?? "";
-  if (!verifyHookSignature(sigHeader, rawBody, hookSecret)) {
-    console.warn("[email-hook] Signature verification failed");
+  // Supabase HTTP auth hooks send: Authorization: Bearer <HS256 JWT>
+  // The JWT is signed with the raw bytes of the base64-decoded whsec_ secret.
+  const authHeader = req.headers.get("authorization");
+  if (!verifyHookJWT(authHeader, hookSecret)) {
+    console.warn("[email-hook] JWT verification failed — header:", authHeader?.slice(0, 20));
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let payload: HookPayload;
   try {
-    payload = JSON.parse(rawBody) as HookPayload;
+    payload = (await req.json()) as HookPayload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -117,50 +115,42 @@ interface HookPayload {
   };
 }
 
-// ─── Signature verification ───────────────────────────────────────────────
+// ─── JWT verification ────────────────────────────────────────────────────
 
 /**
- * Verify the HMAC-SHA256 signature Supabase attaches to every hook request.
- * Header format: "t=<unix_ts>,v1=<hex_hmac>"
- * Signed payload: "<timestamp>.<rawBody>"
- * Rejects requests older than 5 minutes.
- *
- * Supabase generates secrets in the format "v1,whsec_<base64>" — strip
- * the prefix and base64-decode to get the raw HMAC key bytes.
+ * Verify the HS256 JWT Bearer token Supabase sends with every HTTP auth hook.
+ * The JWT is signed with the raw bytes obtained by base64-decoding the
+ * "whsec_<base64>" part of the hook secret (stripping the "v1," prefix).
  */
-function verifyHookSignature(
-  sigHeader: string,
-  rawBody: string,
-  secret: string
-): boolean {
+function verifyHookJWT(authHeader: string | null, secret: string): boolean {
   try {
-    const parts = Object.fromEntries(
-      sigHeader.split(",").map((p) => {
-        const idx = p.indexOf("=");
-        return [p.slice(0, idx), p.slice(idx + 1)] as [string, string];
-      })
-    );
-    const ts = parts["t"];
-    const v1 = parts["v1"];
-    if (!ts || !v1) return false;
+    if (!authHeader?.startsWith("Bearer ")) return false;
+    const token = authHeader.slice(7);
 
-    // Reject stale requests (>5 min).
-    const age = Math.abs(Date.now() / 1000 - parseInt(ts, 10));
-    if (age > 300) return false;
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const [headerB64, payloadB64, sigB64] = parts;
 
-    // Strip optional "v1,whsec_" prefix from secret, then base64-decode.
+    // Decode and check expiry.
+    const payloadJson = Buffer.from(payloadB64, "base64url").toString("utf8");
+    const { exp } = JSON.parse(payloadJson) as { exp?: number };
+    if (exp && exp < Date.now() / 1000) return false;
+
+    // Strip "v1,whsec_" prefix, base64-decode to get raw key bytes.
     const rawSecret = secret.replace(/^v\d+,whsec_/, "");
     const keyBytes = Buffer.from(rawSecret, "base64");
 
+    // Recompute signature over "<header>.<payload>".
     const expected = crypto
       .createHmac("sha256", keyBytes)
-      .update(`${ts}.${rawBody}`)
-      .digest("hex");
+      .update(`${headerB64}.${payloadB64}`)
+      .digest("base64url");
 
-    return crypto.timingSafeEqual(
-      Buffer.from(v1, "hex"),
-      Buffer.from(expected, "hex")
-    );
+    // Constant-time comparison.
+    const sigBuf = Buffer.from(sigB64);
+    const expBuf = Buffer.from(expected);
+    if (sigBuf.length !== expBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   } catch {
     return false;
   }
