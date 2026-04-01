@@ -10,6 +10,19 @@ import { Button } from "@/components/ui/button";
 import { OAuthButton } from "@/components/ui/oauth-button";
 import { Divider } from "@/components/ui/divider";
 
+function normalizeShopDomain(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  // Accept "mystore" or "mystore.myshopify.com"
+  const domain = trimmed.endsWith(".myshopify.com")
+    ? trimmed
+    : `${trimmed}.myshopify.com`;
+  // Basic sanity check: subdomain is alphanumeric + hyphens
+  const [subdomain] = domain.split(".");
+  if (!/^[a-z0-9-]+$/.test(subdomain)) return null;
+  return domain;
+}
+
 function getSupabase() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,6 +43,9 @@ function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shopStep, setShopStep] = useState(false);
+  const [shopInput, setShopInput] = useState("");
+  const [shopError, setShopError] = useState<string | null>(null);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,11 +113,48 @@ function SignInForm() {
         </p>
       }
     >
-      <OAuthButton provider="shopify" onClick={() => {
-        window.location.href = "/api/auth/shopify?source=portal&return_to=/portal/select-store";
-      }}>
-        Continue with Shopify
-      </OAuthButton>
+      {shopStep ? (
+        <div className="space-y-2">
+          <TextField
+            type="text"
+            label="Your Shopify store"
+            placeholder="yourstore.myshopify.com"
+            value={shopInput}
+            onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
+            autoFocus
+          />
+          {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="primary"
+              className="flex-1"
+              onClick={() => {
+                const domain = normalizeShopDomain(shopInput);
+                if (!domain) {
+                  setShopError("Enter a valid store name, e.g. yourstore or yourstore.myshopify.com");
+                  return;
+                }
+                window.location.href =
+                  `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=/portal/select-store`;
+              }}
+            >
+              Continue
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setShopStep(false); setShopInput(""); setShopError(null); }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <OAuthButton provider="shopify" onClick={() => setShopStep(true)}>
+          Continue with Shopify
+        </OAuthButton>
+      )}
 
       <Divider label="or" />
 
