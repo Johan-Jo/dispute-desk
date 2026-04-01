@@ -18,9 +18,7 @@ describe("getMarketingShopifyAppInstallUrl", () => {
     expect(getMarketingShopifyAppInstallUrl()).toBe("https://apps.shopify.com/disputedesk");
   });
 
-  it("falls back to App Store search when unset", () => {
-    expect(getMarketingShopifyAppInstallUrl()).toBe(
-      "https://apps.shopify.com/search?q=DisputeDesk"
-    );
+  it("falls back to canonical App Store listing when unset", () => {
+    expect(getMarketingShopifyAppInstallUrl()).toBe("https://apps.shopify.com/disputedesk");
   });
 });
