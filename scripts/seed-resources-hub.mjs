@@ -8,8 +8,15 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
+import {
+  getTopChargebackManagementToolsArticleEntry,
+  TOP_CHARGEBACK_LEGACY_SLUG,
+  TOP_CHARGEBACK_SLUG,
+} from "./hub-content/top-chargeback-management-tools-shopify-merchants/article.mjs";
 
 config({ path: ".env.local" });
+
+const TOP_CHARGEBACK_ARTICLE = getTopChargebackManagementToolsArticleEntry();
 
 const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -1056,21 +1063,8 @@ const ARTICLES = [
       "sv-SE": { title: "Skriv ett kravbrev som får svar", excerpt: "Ett kravbrev är ofta det första formella steget. Lär dig skriva ett som tas på allvar.", body: { mainHtml: `<h2>Vad är ett kravbrev?</h2><p>Ett kravbrev är ett formellt skriftligt meddelande som skickas före rättsliga åtgärder. Det anger ditt krav, stödjande bevis och vad du kräver.</p><h2>Väsentliga element</h2><ul><li>Tydlig identifiering av båda parter</li><li>Redogörelse för fakta i kronologisk ordning</li><li>Rättslig grund (valfritt)</li><li>Specifikt krav med exakt belopp</li><li>Tidsfrist (14–30 dagar) och konsekvenser</li></ul><h2>Tonen spelar roll</h2><p>Professionell, bestämd och saklig. Aldrig hotfull eller emotionell.</p>`, keyTakeaways: ["Ett kravbrev är ofta det första formella steget", "Identifiering, fakta, krav, tidsfrist", "Professionell och saklig ton", "14–30 dagars tidsfrist"], faq: [{ q: "Behöver jag en advokat?", a: "Nej, men en advokats granskning ökar trovärdigheten." }], disclaimer: "Detta innehåll utgör inte juridisk rådgivning." } }
     }
   },
-  {
-    slug: "dispute-handling-time-case-study",
-    pillar: "dispute-management-software",
-    type: "case_study",
-    readingTime: 7,
-    tags: ["merchants", "disputes"],
-    content: {
-      "en-US": { title: "How a Team Cut Dispute Handling Time by 60%", excerpt: "A real-world case study of how one e-commerce team reduced their average dispute handling time from 4 hours to 90 minutes using automated evidence packs.", body: { mainHtml: `<h2>The problem</h2><p>A mid-size Shopify merchant processing 2,000 orders/month was spending an average of 4 hours per chargeback — manually gathering order details, tracking info, email logs, and policy screenshots. With 15–20 chargebacks monthly, that was 60–80 hours of staff time dedicated solely to dispute response.</p><h2>The approach</h2><p>The team implemented automated evidence collection that pulls directly from their Shopify store, email provider, and shipping carrier APIs. Instead of manually assembling documents, each chargeback generates a pre-built evidence pack within minutes.</p><h2>The results</h2><ul><li><strong>Handling time:</strong> Reduced from ~4 hours to ~90 minutes per dispute (62% reduction).</li><li><strong>Win rate:</strong> Improved from 35% to 58% — better-organized evidence led to more favorable outcomes.</li><li><strong>Staff hours recovered:</strong> ~45 hours/month redirected to customer service and prevention.</li><li><strong>Cost savings:</strong> Estimated $2,400/month in reduced labor costs.</li></ul><h2>Key takeaway</h2><p>The biggest gain wasn't speed — it was consistency. Every dispute now receives the same structured, thorough evidence pack instead of depending on which team member happened to handle it.</p>`, keyTakeaways: ["Automated evidence collection cut handling time by 62%", "Win rate improved from 35% to 58% with better-organized evidence", "45 hours/month freed for prevention instead of response", "Consistency matters more than speed — every dispute gets the same quality"], faq: [{ q: "Does automation work for all dispute types?", a: "It handles the evidence-gathering portion. Complex disputes still need human judgment for the rebuttal strategy, but the data collection is automated." }, { q: "What about stores with fewer disputes?", a: "Even at 5 disputes/month, automation saves 12+ hours. The win rate improvement alone often pays for the tooling." }], disclaimer: "Results are illustrative. Actual outcomes depend on dispute volume, evidence quality, and card network decisions." } },
-      "de-DE": { title: "Wie ein Team die Bearbeitungszeit um 60 % senkte", excerpt: "Wie ein E-Commerce-Team seine durchschnittliche Bearbeitungszeit für Streitfälle von 4 Stunden auf 90 Minuten reduzierte.", body: { mainHtml: `<h2>Das Problem</h2><p>Ein mittelgroßer Shopify-Händler mit 2.000 Bestellungen/Monat verbrachte durchschnittlich 4 Stunden pro Chargeback. Bei 15–20 Chargebacks monatlich waren das 60–80 Stunden Personalzeit.</p><h2>Der Ansatz</h2><p>Das Team implementierte automatisierte Beweissammlung, die direkt aus dem Shopify-Store, E-Mail-Anbieter und Versand-APIs zieht.</p><h2>Die Ergebnisse</h2><ul><li><strong>Bearbeitungszeit:</strong> Von ~4 Stunden auf ~90 Minuten (62 % Reduktion)</li><li><strong>Gewinnquote:</strong> Von 35 % auf 58 % verbessert</li><li><strong>Personalstunden:</strong> ~45 Stunden/Monat für Prävention freigesetzt</li><li><strong>Kosteneinsparung:</strong> ~2.400 €/Monat</li></ul>`, keyTakeaways: ["Automatisierte Beweissammlung senkte die Bearbeitungszeit um 62 %", "Gewinnquote stieg von 35 % auf 58 %", "45 Stunden/Monat für Prävention freigesetzt", "Konsistenz zählt mehr als Geschwindigkeit"], faq: [{ q: "Funktioniert Automatisierung bei allen Streitfällen?", a: "Sie deckt die Beweissammlung ab. Komplexe Fälle brauchen weiterhin menschliches Urteilsvermögen." }], disclaimer: "Ergebnisse sind illustrativ." } },
-      "fr-FR": { title: "Comment une équipe a réduit de 60 % le temps de traitement", excerpt: "Comment une équipe e-commerce a réduit son temps de traitement moyen des litiges de 4 heures à 90 minutes.", body: { mainHtml: `<h2>Le problème</h2><p>Un marchand Shopify traitant 2 000 commandes/mois consacrait en moyenne 4 heures par rétrofacturation. Avec 15–20 rétrofacturations mensuelles, cela représentait 60–80 heures de travail.</p><h2>L'approche</h2><p>L'équipe a mis en place une collecte automatisée de preuves tirant directement de Shopify, du fournisseur e-mail et des API des transporteurs.</p><h2>Les résultats</h2><ul><li><strong>Temps de traitement :</strong> De ~4 heures à ~90 minutes (réduction de 62 %)</li><li><strong>Taux de victoire :</strong> De 35 % à 58 %</li><li><strong>Heures libérées :</strong> ~45 heures/mois pour la prévention</li><li><strong>Économies :</strong> ~2 400 €/mois</li></ul>`, keyTakeaways: ["La collecte automatisée a réduit le temps de 62 %", "Taux de victoire amélioré de 35 % à 58 %", "45 heures/mois libérées pour la prévention", "La cohérence compte plus que la vitesse"], faq: [{ q: "L'automatisation fonctionne-t-elle pour tous les types ?", a: "Elle couvre la collecte de preuves. Les cas complexes nécessitent un jugement humain." }], disclaimer: "Résultats illustratifs." } },
-      "es-ES": { title: "Cómo un equipo redujo un 60 % el tiempo de gestión de disputas", excerpt: "Cómo un equipo de e-commerce redujo su tiempo medio de gestión de disputas de 4 horas a 90 minutos.", body: { mainHtml: `<h2>El problema</h2><p>Un comerciante Shopify con 2.000 pedidos/mes dedicaba una media de 4 horas por contracargo. Con 15–20 contracargos mensuales, eran 60–80 horas de personal.</p><h2>El enfoque</h2><p>El equipo implementó recopilación automatizada de evidencia conectada directamente a Shopify, el proveedor de email y las APIs de envío.</p><h2>Los resultados</h2><ul><li><strong>Tiempo:</strong> De ~4 horas a ~90 minutos (reducción del 62 %)</li><li><strong>Tasa de éxito:</strong> Del 35 % al 58 %</li><li><strong>Horas liberadas:</strong> ~45 horas/mes</li><li><strong>Ahorro:</strong> ~2.400 €/mes</li></ul>`, keyTakeaways: ["La recopilación automatizada redujo el tiempo un 62 %", "Tasa de éxito mejorada del 35 % al 58 %", "45 horas/mes liberadas para prevención", "La consistencia importa más que la velocidad"], faq: [{ q: "¿Funciona la automatización para todos los tipos?", a: "Cubre la recopilación de pruebas. Los casos complejos necesitan juicio humano." }], disclaimer: "Resultados ilustrativos." } },
-      "pt-BR": { title: "Como uma equipe reduziu 60% do tempo de tratamento de disputas", excerpt: "Como uma equipe de e-commerce reduziu o tempo médio de tratamento de disputas de 4 horas para 90 minutos.", body: { mainHtml: `<h2>O problema</h2><p>Um comerciante Shopify com 2.000 pedidos/mês gastava em média 4 horas por chargeback. Com 15–20 chargebacks mensais, eram 60–80 horas de pessoal.</p><h2>A abordagem</h2><p>A equipe implementou coleta automatizada de evidências conectada diretamente ao Shopify, provedor de e-mail e APIs de frete.</p><h2>Os resultados</h2><ul><li><strong>Tempo:</strong> De ~4 horas para ~90 minutos (redução de 62%)</li><li><strong>Taxa de sucesso:</strong> De 35% para 58%</li><li><strong>Horas liberadas:</strong> ~45 horas/mês</li><li><strong>Economia:</strong> ~R$ 12.000/mês</li></ul>`, keyTakeaways: ["Coleta automatizada reduziu o tempo em 62%", "Taxa de sucesso melhorou de 35% para 58%", "45 horas/mês liberadas para prevenção", "Consistência importa mais que velocidade"], faq: [{ q: "Automação funciona para todos os tipos?", a: "Cobre a coleta de evidências. Casos complexos precisam de julgamento humano." }], disclaimer: "Resultados ilustrativos." } },
-      "sv-SE": { title: "Hur ett team minskade handläggningstiden med 60 %", excerpt: "Hur ett e-handelsteam minskade sin genomsnittliga handläggningstid för tvister från 4 timmar till 90 minuter.", body: { mainHtml: `<h2>Problemet</h2><p>En medelstor Shopify-handlare med 2 000 beställningar/månad lade i snitt 4 timmar per chargeback. Med 15–20 chargebacks månatligen blev det 60–80 timmars arbetstid.</p><h2>Angreppssättet</h2><p>Teamet implementerade automatiserad bevisinsamling kopplad direkt till Shopify, e-postleverantör och fraktbolag-API:er.</p><h2>Resultaten</h2><ul><li><strong>Tid:</strong> Från ~4 timmar till ~90 minuter (62 % minskning)</li><li><strong>Vinstkvot:</strong> Från 35 % till 58 %</li><li><strong>Frigjorda timmar:</strong> ~45 timmar/månad</li><li><strong>Besparingar:</strong> ~24 000 kr/månad</li></ul>`, keyTakeaways: ["Automatiserad insamling minskade tiden med 62 %", "Vinstkvoten förbättrades från 35 % till 58 %", "45 timmar/månad frigjorda för prevention", "Konsekvens är viktigare än snabbhet"], faq: [{ q: "Fungerar automatisering för alla tvisttyper?", a: "Den täcker bevisinsamlingen. Komplexa fall kräver fortfarande mänskligt omdöme." }], disclaimer: "Resultaten är illustrativa." } }
-    }
-  },
+  TOP_CHARGEBACK_ARTICLE,
+
   {
     slug: "policy-update-roundup",
     pillar: "dispute-resolution",
@@ -1816,6 +1810,114 @@ async function getOrCreateTagIds() {
   return tagIds;
 }
 
+/**
+ * Idempotent: updates existing hub row that used the legacy case-study slug or the new slug,
+ * so production DBs get the new article without `--force` full reseed.
+ */
+async function syncTopChargebackManagementToolsArticle(author, cta, tagIds) {
+  const entry = TOP_CHARGEBACK_ARTICLE;
+  const { data: locRows, error: locErr } = await sb
+    .from("content_localizations")
+    .select("content_item_id")
+    .eq("route_kind", "resources")
+    .in("slug", [TOP_CHARGEBACK_SLUG, TOP_CHARGEBACK_LEGACY_SLUG])
+    .limit(1);
+  if (locErr) throw locErr;
+
+  let itemId = locRows?.[0]?.content_item_id;
+
+  const insertLocalizations = async (item) => {
+    for (const locale of LOCALES) {
+      const localeContent = entry.content[locale];
+      if (!localeContent) continue;
+      const metaTitle =
+        localeContent.metaTitle ?? `${localeContent.title} | DisputeDesk`;
+      const metaDesc = (localeContent.metaDescription ?? localeContent.excerpt).slice(0, 160);
+      const ogTitle = localeContent.ogTitle ?? localeContent.metaTitle ?? localeContent.title;
+      const ogDesc = (
+        localeContent.ogDescription ??
+        localeContent.metaDescription ??
+        localeContent.excerpt
+      ).slice(0, 200);
+      await sb.from("content_localizations").upsert(
+        {
+          content_item_id: item.id,
+          locale,
+          route_kind: "resources",
+          title: localeContent.title,
+          slug: entry.slug,
+          excerpt: localeContent.excerpt,
+          body_json: localeContent.body,
+          meta_title: metaTitle,
+          meta_description: metaDesc,
+          og_title: ogTitle,
+          og_description: ogDesc,
+          reading_time_minutes: entry.readingTime || 8,
+          is_published: true,
+          translation_status: "complete",
+          last_updated_at: new Date().toISOString(),
+        },
+        { onConflict: "content_item_id,locale" }
+      );
+    }
+  };
+
+  if (itemId) {
+    const { error: upErr } = await sb
+      .from("content_items")
+      .update({
+        content_type: entry.type,
+        primary_pillar: entry.pillar,
+        workflow_status: "published",
+        author_id: author?.id,
+        primary_cta_id: cta?.id,
+        published_at: new Date().toISOString(),
+      })
+      .eq("id", itemId);
+    if (upErr) throw upErr;
+
+    await sb.from("content_item_tags").delete().eq("content_item_id", itemId);
+    for (const tagKey of entry.tags || []) {
+      if (tagIds[tagKey]) {
+        await sb.from("content_item_tags").insert({ content_item_id: itemId, tag_id: tagIds[tagKey] });
+      }
+    }
+
+    const { data: itemRow, error: itemErr } = await sb
+      .from("content_items")
+      .select("id")
+      .eq("id", itemId)
+      .single();
+    if (itemErr) throw itemErr;
+    await insertLocalizations(itemRow);
+    console.log(`  ✓ synced ${TOP_CHARGEBACK_SLUG} (upsert existing item)`);
+    return;
+  }
+
+  const { data: newItem, error: ie } = await sb
+    .from("content_items")
+    .insert({
+      content_type: entry.type,
+      primary_pillar: entry.pillar,
+      audience: "merchant",
+      funnel_stage: "awareness",
+      workflow_status: "published",
+      author_id: author?.id,
+      primary_cta_id: cta?.id,
+      published_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (ie) throw ie;
+  for (const tagKey of entry.tags || []) {
+    if (tagIds[tagKey]) {
+      await sb.from("content_item_tags").insert({ content_item_id: newItem.id, tag_id: tagIds[tagKey] });
+    }
+  }
+  await insertLocalizations(newItem);
+  console.log(`  ✓ synced ${TOP_CHARGEBACK_SLUG} (insert new item)`);
+}
+
 async function main() {
   const force =
     process.argv.includes("--force") || process.env.FORCE_RESOURCES_SEED === "1";
@@ -1865,6 +1967,16 @@ async function main() {
         const localeContent = entry.content[locale];
         if (!localeContent) continue;
 
+        const metaTitle =
+          localeContent.metaTitle ?? `${localeContent.title} | DisputeDesk`;
+        const metaDesc = (localeContent.metaDescription ?? localeContent.excerpt).slice(0, 160);
+        const ogTitle = localeContent.ogTitle ?? localeContent.metaTitle ?? localeContent.title;
+        const ogDesc = (
+          localeContent.ogDescription ??
+          localeContent.metaDescription ??
+          localeContent.excerpt
+        ).slice(0, 200);
+
         await sb.from("content_localizations").insert({
           content_item_id: item.id,
           locale,
@@ -1873,10 +1985,10 @@ async function main() {
           slug: entry.slug,
           excerpt: localeContent.excerpt,
           body_json: localeContent.body,
-          meta_title: `${localeContent.title} | DisputeDesk`,
-          meta_description: localeContent.excerpt.slice(0, 160),
-          og_title: localeContent.title,
-          og_description: localeContent.excerpt.slice(0, 200),
+          meta_title: metaTitle,
+          meta_description: metaDesc,
+          og_title: ogTitle,
+          og_description: ogDesc,
           reading_time_minutes: entry.readingTime || 8,
           is_published: true,
           translation_status: "complete",
@@ -1886,6 +1998,8 @@ async function main() {
       console.log(`  ✓ ${entry.slug}`);
     }
   }
+
+  await syncTopChargebackManagementToolsArticle(author, cta, tagIds);
 
   const { count: archCount } = await sb
     .from("content_archive_items")

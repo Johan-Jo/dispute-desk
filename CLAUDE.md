@@ -63,6 +63,8 @@ lib/
   jobs/              → Job dispatcher + handlers
   security/          → AES-256-GCM encryption
 supabase/migrations/ → SQL migrations (apply via Supabase CLI: `npm run db:migrate`)
+scripts/hub-content/ → Code-first multi-locale Resources Hub articles (HTML + `article.mjs`; see `docs/technical.md` § *Code-first hub articles*)
+scripts/seed-resources-hub.mjs → Hub seed + idempotent sync for those articles
 docs/                → Architecture, technical spec, epics, roadmap
 ```
 

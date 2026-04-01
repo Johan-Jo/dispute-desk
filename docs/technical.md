@@ -203,6 +203,22 @@ Merchants must not browse the public hub **inside** Shopify Admin’s iframe. Wh
 - **Queries (public):** `lib/resources/queries.ts` — `listPublishedByRoute` applies `search` in the Supabase query (title/excerpt/slug `ilike`) **before** `range`, so hub search is not limited to the first page of results. Locale mapping: `lib/resources/localeMap.ts`.
 - **Backlog list:** `getBacklogItems` excludes `content_archive_items.status = 'converted'` and orders by **`backlog_rank` ascending**, then **`priority_score` descending**.
 
+### Code-first hub articles (multi-locale seed + HTML)
+
+Use this pattern when shipping **approved master copy** in all hub locales without authoring the initial payload only in the admin UI (e.g. long comparison pages with fixed pricing tables, competitor lists, or compliance-sensitive wording that must match across languages).
+
+| Step | What to do |
+|------|------------|
+| **1. Folder** | Create `scripts/hub-content/<stable-slug>/` with one fragment per hub locale: `main-en-US.html`, `main-de-DE.html`, `main-fr-FR.html`, `main-es-ES.html`, `main-pt-BR.html`, `main-sv-SE.html`. Each file is an HTML fragment (paragraphs, headings, lists, tables). Public rendering injects `mainHtml` via `dangerouslySetInnerHTML` — **not** Markdown. |
+| **2. `article.mjs`** | In the same folder, export `TOP_CHARGEBACK_META`-style **per-locale** fields: `title` (on-page H1), `excerpt`, `metaTitle`, `metaDescription` (SEO). Export a factory such as `getXxxArticleEntry()` returning a single **`ARTICLES[]` entry**: `{ slug, pillar, type: content_type, readingTime, tags, content: { "en-US": { title, excerpt, body: { mainHtml }, metaTitle?, metaDescription? }, … } }`. Load each `main-*.html` with `readFileSync` (see `scripts/hub-content/top-chargeback-management-tools-shopify-merchants/article.mjs`). |
+| **3. Seed** | In `scripts/seed-resources-hub.mjs`, import the factory, call it once (e.g. `const MY_ARTICLE = getXxxArticleEntry()`), and **push the object into the `ARTICLES` array**. The insert loop honors optional **`metaTitle`** / **`metaDescription`** per locale; if omitted, behavior is unchanged (`meta_title` = `` `${title} \| DisputeDesk` ``, description from excerpt). |
+| **4. Idempotent sync (optional)** | For **replacing** an existing published article (e.g. legacy slug → new slug) without `--force` full reseed, follow **`syncTopChargebackManagementToolsArticle`**: query `content_localizations` by `route_kind = resources` and slug(s), `upsert` all six locales on `content_item_id,locale`, update `content_items` + tags. Run the sync at the end of `main()` so every `node scripts/seed-resources-hub.mjs` run applies CMS updates when `SUPABASE_*` credentials are present. |
+| **5. Apply** | `npm run seed:resources` or `node scripts/seed-resources-hub.mjs` (requires `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`). |
+
+**Editorial rules for agents:** English is the master; other locales are faithful translations with **unchanged** product names, USD amounts, and numeric table cells where the brief requires it. Do **not** add citations or fake internal `<a href>` to other DisputeDesk articles in body HTML (related navigation is UI-only; see *AI generation prompt rule* above). Prefer one folder per article slug so future updates stay localized and reviewable in git.
+
+**Reference implementation:** `scripts/hub-content/top-chargeback-management-tools-shopify-merchants/`.
+
 ### Public URLs, hub locales, and pillars
 
 - **Article path (resources):** `/{localePrefix}/resources/{primary_pillar}/{slug}`. Default English omits the locale segment (`/resources/chargebacks/my-article`). Other marketing locales use the short prefix from `lib/i18n/pathLocales.ts` (e.g. `/pt/resources/...` for `pt-BR`). **Slugs are per locale** (`content_localizations.slug`); the marketing **`LanguageSwitcher`** resolves the sibling slug via **`GET /api/public/resources/alternate-locale-slug`** (`pillar`, `slug`, `from`, `to` BCP-47 hub locales) so changing language on an article navigates to the correct URL instead of reusing the previous locale’s slug (which would 404).
