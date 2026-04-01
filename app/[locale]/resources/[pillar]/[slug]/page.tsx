@@ -25,6 +25,7 @@ import {
 } from "@/lib/resources/schema/jsonLd";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getMarketingShopifyAppInstallUrl } from "@/lib/marketing/shopifyInstallUrl";
+import { marketingHomePath } from "@/lib/i18n/pathLocales";
 
 type Props = {
   params: Promise<{ locale: string; pillar: string; slug: string }>;
@@ -370,6 +371,8 @@ export default async function ResourceArticlePage({ params }: Props) {
           body={t("ctaCardBody")}
           ctaLabel={t("ctaDownloadAppTryFree")}
           ctaHref={getMarketingShopifyAppInstallUrl()}
+          secondaryCtaLabel={t("ctaSeePlans")}
+          secondaryCtaHref={`${marketingHomePath(hubLocale)}#pricing`}
           locale={hubLocale}
           contentId={item.id}
         />
