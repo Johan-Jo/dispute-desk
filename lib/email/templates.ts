@@ -209,6 +209,158 @@ export function getWelcomeSubject(locale?: Locale): string {
   return getTranslation(locale).subject;
 }
 
+// ─── Magic link email ─────────────────────────────────────────────────────
+
+interface MagicLinkTranslation {
+  subject: string;
+  heading: string;
+  content: string;
+  ctaText: string;
+  preheader: string;
+  expiry: string;
+  footerNote: string;
+  copyright: string;
+}
+
+const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
+  "en-US": {
+    subject: "Your DisputeDesk sign-in link",
+    heading: "Sign in to DisputeDesk",
+    content: "Click the button below to sign in instantly. This link expires in 1 hour and can only be used once.",
+    ctaText: "Sign In",
+    preheader: "Your one-click sign-in link for DisputeDesk.",
+    expiry: "This link expires in 1 hour.",
+    footerNote: "You're receiving this because you requested a sign-in link at DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. All rights reserved.",
+  },
+  "de-DE": {
+    subject: "Dein DisputeDesk-Anmeldelink",
+    heading: "Bei DisputeDesk anmelden",
+    content: "Klicke auf die Schaltfläche unten, um dich sofort anzumelden. Dieser Link läuft in 1 Stunde ab und kann nur einmal verwendet werden.",
+    ctaText: "Anmelden",
+    preheader: "Dein Einmal-Anmeldelink für DisputeDesk.",
+    expiry: "Dieser Link läuft in 1 Stunde ab.",
+    footerNote: "Du erhältst diese E-Mail, weil du einen Anmeldelink bei DisputeDesk angefordert hast.",
+    copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
+  },
+  "fr-FR": {
+    subject: "Votre lien de connexion DisputeDesk",
+    heading: "Se connecter à DisputeDesk",
+    content: "Cliquez sur le bouton ci-dessous pour vous connecter instantanément. Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois.",
+    ctaText: "Se connecter",
+    preheader: "Votre lien de connexion en un clic pour DisputeDesk.",
+    expiry: "Ce lien expire dans 1 heure.",
+    footerNote: "Vous recevez cet e-mail car vous avez demandé un lien de connexion sur DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Tous droits réservés.",
+  },
+  "es-ES": {
+    subject: "Tu enlace de acceso a DisputeDesk",
+    heading: "Iniciar sesión en DisputeDesk",
+    content: "Haz clic en el botón de abajo para iniciar sesión al instante. Este enlace caduca en 1 hora y solo puede usarse una vez.",
+    ctaText: "Iniciar sesión",
+    preheader: "Tu enlace de acceso rápido a DisputeDesk.",
+    expiry: "Este enlace caduca en 1 hora.",
+    footerNote: "Recibes este correo porque solicitaste un enlace de acceso en DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
+  },
+  "pt-BR": {
+    subject: "Seu link de acesso ao DisputeDesk",
+    heading: "Entrar no DisputeDesk",
+    content: "Clique no botão abaixo para entrar instantaneamente. Este link expira em 1 hora e só pode ser usado uma vez.",
+    ctaText: "Entrar",
+    preheader: "Seu link de acesso rápido ao DisputeDesk.",
+    expiry: "Este link expira em 1 hora.",
+    footerNote: "Você está recebendo este e-mail porque solicitou um link de acesso no DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
+  },
+  "sv-SE": {
+    subject: "Din inloggningslänk till DisputeDesk",
+    heading: "Logga in på DisputeDesk",
+    content: "Klicka på knappen nedan för att logga in direkt. Den här länken går ut om 1 timme och kan bara användas en gång.",
+    ctaText: "Logga in",
+    preheader: "Din snabba inloggningslänk till DisputeDesk.",
+    expiry: "Den här länken går ut om 1 timme.",
+    footerNote: "Du får detta e-postmeddelande eftersom du begärde en inloggningslänk på DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Alla rättigheter förbehållna.",
+  },
+};
+
+export interface MagicLinkEmailVariables {
+  actionLink: string;
+  locale?: Locale;
+}
+
+function getMagicLinkTranslation(locale?: Locale): MagicLinkTranslation {
+  return MAGIC_LINK_TRANSLATIONS[locale ?? DEFAULT_LOCALE] ?? MAGIC_LINK_TRANSLATIONS[DEFAULT_LOCALE];
+}
+
+export function getMagicLinkSubject(locale?: Locale): string {
+  return getMagicLinkTranslation(locale).subject;
+}
+
+export function generateMagicLinkEmailHTML(variables: MagicLinkEmailVariables): string {
+  const t = getMagicLinkTranslation(variables.locale);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${t.subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F1F5F9;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#111827;">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:0;color:transparent;">${t.preheader}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F5F9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;overflow:hidden;">
+
+          <tr>
+            <td style="background-color:#4F46E5;padding:24px 40px;">
+              <p style="margin:0;font-size:20px;font-weight:700;color:#FFFFFF;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">DisputeDesk</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3;font-family:Arial,Helvetica,sans-serif;">${t.heading}</p>
+              <p style="margin:0 0 28px 0;font-size:15px;color:#374151;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">${t.content}</p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background-color:#4F46E5;border-radius:8px;">
+                    <a href="${variables.actionLink}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">${t.ctaText}</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:13px;color:#9CA3AF;font-family:Arial,Helvetica,sans-serif;">${t.expiry}</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#F9FAFB;padding:16px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0;font-size:12px;color:#9CA3AF;text-align:center;line-height:1.5;font-family:Arial,Helvetica,sans-serif;">
+                ${t.footerNote}<br>
+                ${t.copyright}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function generateMagicLinkEmailText(variables: MagicLinkEmailVariables): string {
+  const t = getMagicLinkTranslation(variables.locale);
+  return `${t.heading}\n\n${t.content}\n\n${t.ctaText}: ${variables.actionLink}\n\n${t.expiry}`;
+}
+
 /**
  * Generate plain-text version of the welcome email.
  */

@@ -79,25 +79,32 @@ function SignInForm() {
     setError(null);
     setLoading(true);
 
-    const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
-    confirmUrl.searchParams.set("redirect", continueUrl);
-    confirmUrl.searchParams.set("type", "magiclink");
+    // Detect locale from cookie or browser language — sent to server so the
+    // email is rendered in the user's language.
+    const ddLocale =
+      document.cookie.match(/(?:^|;\s*)dd_locale=([^;]+)/)?.[1] ??
+      navigator.language;
 
-    const supabase = getSupabase();
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: confirmUrl.toString() },
+    const res = await fetch("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        locale: ddLocale,
+        redirectTo: continueUrl !== "/portal/dashboard" ? continueUrl : undefined,
+      }),
     });
 
-    if (err) {
-      setError(err.message);
+    if (!res.ok) {
+      setError("Failed to send magic link. Please try again.");
       setLoading(false);
-    } else {
-      const sentUrl = new URL("/auth/magic-link-sent", window.location.origin);
-      sentUrl.searchParams.set("email", email);
-      if (continueUrl !== "/portal/dashboard") sentUrl.searchParams.set("continue", continueUrl);
-      router.push(sentUrl.pathname + sentUrl.search);
+      return;
     }
+
+    const sentUrl = new URL("/auth/magic-link-sent", window.location.origin);
+    sentUrl.searchParams.set("email", email);
+    if (continueUrl !== "/portal/dashboard") sentUrl.searchParams.set("continue", continueUrl);
+    router.push(sentUrl.pathname + sentUrl.search);
   };
 
   return (
