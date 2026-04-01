@@ -124,6 +124,9 @@ interface HookPayload {
  * Header format: "t=<unix_ts>,v1=<hex_hmac>"
  * Signed payload: "<timestamp>.<rawBody>"
  * Rejects requests older than 5 minutes.
+ *
+ * Supabase generates secrets in the format "v1,whsec_<base64>" — strip
+ * the prefix and base64-decode to get the raw HMAC key bytes.
  */
 function verifyHookSignature(
   sigHeader: string,
@@ -132,7 +135,10 @@ function verifyHookSignature(
 ): boolean {
   try {
     const parts = Object.fromEntries(
-      sigHeader.split(",").map((p) => p.split("=") as [string, string])
+      sigHeader.split(",").map((p) => {
+        const idx = p.indexOf("=");
+        return [p.slice(0, idx), p.slice(idx + 1)] as [string, string];
+      })
     );
     const ts = parts["t"];
     const v1 = parts["v1"];
@@ -142,8 +148,12 @@ function verifyHookSignature(
     const age = Math.abs(Date.now() / 1000 - parseInt(ts, 10));
     if (age > 300) return false;
 
+    // Strip optional "v1,whsec_" prefix from secret, then base64-decode.
+    const rawSecret = secret.replace(/^v\d+,whsec_/, "");
+    const keyBytes = Buffer.from(rawSecret, "base64");
+
     const expected = crypto
-      .createHmac("sha256", secret)
+      .createHmac("sha256", keyBytes)
       .update(`${ts}.${rawBody}`)
       .digest("hex");
 
