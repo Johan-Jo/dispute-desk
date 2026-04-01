@@ -173,6 +173,13 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 | Admin | `/admin/resources/*` | Dashboard, content list, calendar, queue, backlog, settings. Figma-based redesign (CH-2+). |
 | In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
 
+### Shopify App Store link (marketing CTA)
+
+- **Code:** [`lib/marketing/shopifyInstallUrl.ts`](lib/marketing/shopifyInstallUrl.ts) — `getMarketingShopifyAppInstallUrl()` reads **`NEXT_PUBLIC_SHOPIFY_APP_STORE_URL`**. When set, Resources article CTAs (e.g. [`app/[locale]/resources/[pillar]/[slug]/page.tsx`](app/[locale]/resources/[pillar]/[slug]/page.tsx)) use that URL for the primary button.
+- **When unset:** the same button links to **`{getPublicSiteBaseUrl()}/auth/sign-up`** with UTM params (`marketing` / `install_cta` / `app_store_fallback`) so merchants never hit a missing `https://apps.shopify.com/...` page (typical before App Store approval). Do **not** guess the listing handle; it may differ from `shopify.app.toml` `name`.
+- **Production / Vercel:** After the app is published, set **`NEXT_PUBLIC_SHOPIFY_APP_STORE_URL`** in the Vercel project (Production and Preview if needed) to the URL shown in **Shopify Partners → App → Distribution**, then redeploy so the marketing site picks it up.
+- **Optional check:** `npm run verify:app-store-url` — HTTP GET the env URL; exits 0 if unset, 0 if 2xx, 1 if the listing returns an error (run before releases once a listing exists).
+
 ### Embedded app guard
 
 Merchants must not browse the public hub **inside** Shopify Admin’s iframe. When a hub path is requested with the App Bridge **`host`** query parameter, `middleware.ts` **redirects to `/app/help`** and preserves `shop`, `host`, `locale`, and other params. Path matching lives in `lib/middleware/marketingHubPaths.ts` (see `tests/unit/marketingHubPaths.test.ts`).
