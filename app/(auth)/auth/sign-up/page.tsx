@@ -99,7 +99,7 @@ export default function SignUpPage() {
   return (
     <AuthCard
       title="Create your account"
-      subtitle="Start managing disputes more effectively"
+      subtitle="Connect your store — we’ll open Shopify Admin so you can finish setup in the embedded app."
       footer={
         <p>
           Already have an account?{" "}
@@ -119,6 +119,9 @@ export default function SignUpPage() {
             onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
             autoFocus
           />
+          <p className="text-xs text-[#667085]">
+            After you authorize DisputeDesk, you’ll land in the app inside Shopify Admin. You can always use the web portal later.
+          </p>
           {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
           <div className="flex gap-2">
             <Button
@@ -132,7 +135,7 @@ export default function SignUpPage() {
                   return;
                 }
                 window.location.href =
-                  `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=/portal/select-store`;
+                  `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=${encodeURIComponent("/auth/open-in-shopify")}`;
               }}
             >
               Continue

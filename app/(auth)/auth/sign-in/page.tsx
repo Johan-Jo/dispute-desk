@@ -110,7 +110,7 @@ function SignInForm() {
   return (
     <AuthCard
       title="Sign in"
-      subtitle="Enter your credentials to access your account"
+      subtitle="Continue with Shopify opens your store in Shopify Admin after you authorize. Or sign in with email below."
       footer={
         <p>
           Don&apos;t have an account?{" "}
@@ -130,6 +130,9 @@ function SignInForm() {
             onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
             autoFocus
           />
+          <p className="text-xs text-[#667085]">
+            After authorization you’ll continue in the embedded app in Shopify Admin.
+          </p>
           {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
           <div className="flex gap-2">
             <Button
@@ -143,7 +146,7 @@ function SignInForm() {
                   return;
                 }
                 window.location.href =
-                  `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=/portal/select-store`;
+                  `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=${encodeURIComponent("/auth/open-in-shopify")}`;
               }}
             >
               Continue

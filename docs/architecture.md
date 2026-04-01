@@ -131,18 +131,19 @@ Next.js API routes using the service role key.
 
 #### "Continue with Shopify" (sign-up or sign-in)
 
-This is a single-step flow — the user clicks one button and lands on the dashboard fully signed in with their store already connected.
+This flow connects the store, signs the user into the portal (if needed), then sends them to the **embedded app in Shopify Admin** to continue setup there.
 
-1. User clicks **Continue with Shopify** on the sign-in or sign-up page.
-2. Browser is sent to `GET /api/auth/shopify?source=portal&return_to=/portal/dashboard`.
+1. User clicks **Continue with Shopify** on the sign-in or sign-up page and enters their store domain.
+2. Browser is sent to `GET /api/auth/shopify?source=portal&return_to=/auth/open-in-shopify`.
 3. Shopify OAuth completes → callback at `GET /api/auth/shopify/callback`.
 4. Callback creates/updates the `shops` row, stores an offline session, registers webhooks.
 5. **Already signed in** (Supabase session cookie present): shop is linked to the current user; welcome email + admin notification sent on first shop only.
 6. **Not signed in** — callback fetches the shop owner's email from Shopify GraphQL, then:
    - **New user**: `admin.generateLink({ type: 'signup' })` creates an auto-confirmed Supabase user, returns an `action_link`.
    - **Existing user**: `admin.generateLink({ type: 'magiclink' })` returns an `action_link` for the existing account.
-   - In both cases the shop is linked immediately and the browser is redirected to `action_link` → Supabase sets the session → user lands on `/portal/dashboard`. No email confirmation step, no extra clicks.
-7. `active_shop_id` and `dd_active_shop` cookies are set on the redirect response so the portal immediately scopes to the connected shop.
+   - In both cases the shop is linked immediately and the browser is redirected to `action_link` → Supabase sets the session → user lands on **`/auth/open-in-shopify`** (same-origin redirect URL required by Supabase). No email confirmation step, no extra clicks.
+7. `active_shop_id` and `dd_active_shop` cookies are set on the redirect response so the portal scopes to the connected shop.
+8. **`/auth/open-in-shopify`** verifies the session and active shop, then redirects to `https://{shop}/admin/apps/{SHOPIFY_API_KEY}` so the merchant continues in the embedded app. **Supabase Auth** must allowlist `{APP_URL}/auth/open-in-shopify` as a redirect URL.
 
 For multi-store users, the sidebar store selector links to `/portal/select-store` where they can switch between connected shops and the demo store.
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildAuthUrl, generateNonce, encodeOAuthState } from "@/lib/shopify/auth";
 
 /**
- * GET /api/auth/shopify?shop=xxx.myshopify.com[&source=portal&return_to=/portal/select-store]
+ * GET /api/auth/shopify?shop=xxx.myshopify.com[&source=portal&return_to=/auth/open-in-shopify]
  *
  * Initiates Shopify OAuth. Encodes phase/source/return_to in a signed state
  * token so the callback can recover them without cookies (which are unreliable
