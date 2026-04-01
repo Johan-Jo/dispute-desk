@@ -12,8 +12,13 @@ function loadHtml(locale) {
   return readFileSync(join(dir, `main-${locale}.html`), "utf8");
 }
 
-export const TOP_CHARGEBACK_SLUG = "top-chargeback-management-tools-shopify-merchants";
-export const TOP_CHARGEBACK_LEGACY_SLUG = "dispute-handling-time-case-study";
+/** Canonical URL segment (must match marketing hub paths, e.g. /resources/.../top-chargeback-management-tools-shopify). */
+export const TOP_CHARGEBACK_SLUG = "top-chargeback-management-tools-shopify";
+/** DB rows that should merge into the canonical article when syncing. */
+export const TOP_CHARGEBACK_LEGACY_SLUGS = [
+  "dispute-handling-time-case-study",
+  "top-chargeback-management-tools-shopify-merchants",
+];
 
 /** @type {Record<string, { title: string; excerpt: string; metaTitle: string; metaDescription: string }>} */
 export const TOP_CHARGEBACK_META = {

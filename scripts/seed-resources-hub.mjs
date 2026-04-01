@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import {
   getTopChargebackManagementToolsArticleEntry,
-  TOP_CHARGEBACK_LEGACY_SLUG,
+  TOP_CHARGEBACK_LEGACY_SLUGS,
   TOP_CHARGEBACK_SLUG,
 } from "./hub-content/top-chargeback-management-tools-shopify-merchants/article.mjs";
 
@@ -1816,15 +1816,28 @@ async function getOrCreateTagIds() {
  */
 async function syncTopChargebackManagementToolsArticle(author, cta, tagIds) {
   const entry = TOP_CHARGEBACK_ARTICLE;
-  const { data: locRows, error: locErr } = await sb
+
+  /** Prefer the row already using the canonical public URL slug (production). */
+  let itemId = undefined;
+  const { data: canonicalRows, error: canonErr } = await sb
     .from("content_localizations")
     .select("content_item_id")
     .eq("route_kind", "resources")
-    .in("slug", [TOP_CHARGEBACK_SLUG, TOP_CHARGEBACK_LEGACY_SLUG])
+    .eq("slug", TOP_CHARGEBACK_SLUG)
     .limit(1);
-  if (locErr) throw locErr;
-
-  let itemId = locRows?.[0]?.content_item_id;
+  if (canonErr) throw canonErr;
+  if (canonicalRows?.[0]?.content_item_id) {
+    itemId = canonicalRows[0].content_item_id;
+  } else {
+    const { data: locRows, error: locErr } = await sb
+      .from("content_localizations")
+      .select("content_item_id")
+      .eq("route_kind", "resources")
+      .in("slug", TOP_CHARGEBACK_LEGACY_SLUGS)
+      .limit(1);
+    if (locErr) throw locErr;
+    itemId = locRows?.[0]?.content_item_id;
+  }
 
   const insertLocalizations = async (item) => {
     for (const locale of LOCALES) {
