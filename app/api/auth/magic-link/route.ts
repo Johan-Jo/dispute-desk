@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { sendMagicLinkEmail } from "@/lib/email/sendMagicLink";
 import { normalizeLocale } from "@/lib/i18n/locales";
 import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 import type { Locale } from "@/lib/i18n/locales";
@@ -10,9 +9,10 @@ export const runtime = "nodejs";
 /**
  * POST /api/auth/magic-link
  *
- * Generates a Supabase magic-link server-side (so the redirectTo uses the
- * production APP URL, never localhost) and sends our branded Resend email
- * rather than Supabase's default template.
+ * Initiates a magic-link sign-in server-side so the redirectTo URL always
+ * uses NEXT_PUBLIC_APP_URL (never localhost). The locale is encoded in the
+ * redirectTo URL so the Supabase "Send Email" hook (/api/auth/email-hook)
+ * can pick it up and send the correct branded Resend email.
  *
  * Body: { email: string; locale?: string; redirectTo?: string }
  */
@@ -28,31 +28,29 @@ export async function POST(req: NextRequest) {
     normalizeLocale(req.headers.get("accept-language")?.split(",")[0]) ??
     "en-US";
 
-  // Resolve redirect URL using the server-side env var — never trust the client's origin.
+  // Build the confirm URL with locale encoded so the email hook can read it.
   const base = getPublicSiteBaseUrl();
-  let redirectTo = base + "/portal/dashboard";
-  if (rawRedirect && typeof rawRedirect === "string" && rawRedirect.startsWith("/")) {
-    redirectTo = base + rawRedirect;
-  }
+  const destination =
+    rawRedirect && typeof rawRedirect === "string" && rawRedirect.startsWith("/")
+      ? rawRedirect
+      : "/portal/dashboard";
+
+  const confirmUrl = new URL(`${base}/api/auth/confirm`);
+  confirmUrl.searchParams.set("type", "magiclink");
+  confirmUrl.searchParams.set("redirect", destination);
+  confirmUrl.searchParams.set("locale", locale);
 
   const db = getServiceClient();
-  const { data, error } = await db.auth.admin.generateLink({
+  const { error } = await db.auth.admin.generateLink({
     type: "magiclink",
     email: email.trim().toLowerCase(),
-    options: { redirectTo },
+    options: { redirectTo: confirmUrl.toString() },
   });
 
-  if (error || !data?.properties?.action_link) {
-    console.error("[magic-link] generateLink failed:", error?.message);
-    // Return generic success to avoid leaking whether an account exists.
-    return NextResponse.json({ ok: true });
+  if (error) {
+    console.error("[magic-link] generateLink failed:", error.message);
   }
 
-  await sendMagicLinkEmail({
-    to: email.trim(),
-    actionLink: data.properties.action_link,
-    locale,
-  });
-
+  // Always return success — prevents email enumeration.
   return NextResponse.json({ ok: true });
 }

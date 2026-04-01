@@ -361,6 +361,323 @@ export function generateMagicLinkEmailText(variables: MagicLinkEmailVariables): 
   return `${t.heading}\n\n${t.content}\n\n${t.ctaText}: ${variables.actionLink}\n\n${t.expiry}`;
 }
 
+// ─── Signup confirmation email ────────────────────────────────────────────
+
+interface ConfirmationTranslation {
+  subject: string;
+  heading: string;
+  greeting: string; // may contain {firstName}
+  content: string;
+  ctaText: string;
+  preheader: string;
+  expiry: string;
+  footerNote: string;
+  copyright: string;
+}
+
+const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
+  "en-US": {
+    subject: "Confirm your DisputeDesk account",
+    heading: "You're almost there",
+    greeting: "Hi {firstName},",
+    content: "Click the button below to confirm your email address and activate your DisputeDesk account.",
+    ctaText: "Confirm Email",
+    preheader: "Confirm your email to activate your DisputeDesk account.",
+    expiry: "This link expires in 24 hours.",
+    footerNote: "You're receiving this because you created an account at DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. All rights reserved.",
+  },
+  "de-DE": {
+    subject: "Bestätige dein DisputeDesk-Konto",
+    heading: "Fast geschafft",
+    greeting: "Hallo {firstName},",
+    content: "Klicke auf die Schaltfläche unten, um deine E-Mail-Adresse zu bestätigen und dein DisputeDesk-Konto zu aktivieren.",
+    ctaText: "E-Mail bestätigen",
+    preheader: "Bestätige deine E-Mail, um dein DisputeDesk-Konto zu aktivieren.",
+    expiry: "Dieser Link läuft in 24 Stunden ab.",
+    footerNote: "Du erhältst diese E-Mail, weil du ein Konto bei DisputeDesk erstellt hast.",
+    copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
+  },
+  "fr-FR": {
+    subject: "Confirmez votre compte DisputeDesk",
+    heading: "Vous y êtes presque",
+    greeting: "Bonjour {firstName},",
+    content: "Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail et activer votre compte DisputeDesk.",
+    ctaText: "Confirmer l'e-mail",
+    preheader: "Confirmez votre e-mail pour activer votre compte DisputeDesk.",
+    expiry: "Ce lien expire dans 24 heures.",
+    footerNote: "Vous recevez cet e-mail car vous avez créé un compte sur DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Tous droits réservés.",
+  },
+  "es-ES": {
+    subject: "Confirma tu cuenta de DisputeDesk",
+    heading: "Ya casi está",
+    greeting: "Hola {firstName},",
+    content: "Haz clic en el botón de abajo para confirmar tu dirección de correo electrónico y activar tu cuenta de DisputeDesk.",
+    ctaText: "Confirmar correo",
+    preheader: "Confirma tu correo para activar tu cuenta de DisputeDesk.",
+    expiry: "Este enlace caduca en 24 horas.",
+    footerNote: "Recibes este correo porque creaste una cuenta en DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
+  },
+  "pt-BR": {
+    subject: "Confirme sua conta DisputeDesk",
+    heading: "Quase lá",
+    greeting: "Olá {firstName},",
+    content: "Clique no botão abaixo para confirmar seu endereço de e-mail e ativar sua conta DisputeDesk.",
+    ctaText: "Confirmar e-mail",
+    preheader: "Confirme seu e-mail para ativar sua conta DisputeDesk.",
+    expiry: "Este link expira em 24 horas.",
+    footerNote: "Você está recebendo este e-mail porque criou uma conta no DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
+  },
+  "sv-SE": {
+    subject: "Bekräfta ditt DisputeDesk-konto",
+    heading: "Du är nästan klar",
+    greeting: "Hej {firstName},",
+    content: "Klicka på knappen nedan för att bekräfta din e-postadress och aktivera ditt DisputeDesk-konto.",
+    ctaText: "Bekräfta e-post",
+    preheader: "Bekräfta din e-post för att aktivera ditt DisputeDesk-konto.",
+    expiry: "Den här länken går ut om 24 timmar.",
+    footerNote: "Du får detta e-postmeddelande eftersom du skapade ett konto på DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Alla rättigheter förbehållna.",
+  },
+};
+
+export interface ConfirmationEmailVariables {
+  actionLink: string;
+  locale?: Locale;
+  fullName?: string;
+}
+
+function getConfirmationTranslation(locale?: Locale): ConfirmationTranslation {
+  return CONFIRMATION_TRANSLATIONS[locale ?? DEFAULT_LOCALE] ?? CONFIRMATION_TRANSLATIONS[DEFAULT_LOCALE];
+}
+
+export function getConfirmationSubject(locale?: Locale): string {
+  return getConfirmationTranslation(locale).subject;
+}
+
+export function generateConfirmationEmailHTML(variables: ConfirmationEmailVariables): string {
+  const t = getConfirmationTranslation(variables.locale);
+  const firstName = variables.fullName?.trim().split(/\s+/)[0] || "there";
+  const greeting = t.greeting.replace("{firstName}", firstName);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${t.subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F1F5F9;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#111827;">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:0;color:transparent;">${t.preheader}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F5F9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;overflow:hidden;">
+
+          <tr>
+            <td style="background-color:#4F46E5;padding:24px 40px;">
+              <p style="margin:0;font-size:20px;font-weight:700;color:#FFFFFF;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">DisputeDesk</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3;font-family:Arial,Helvetica,sans-serif;">${t.heading}</p>
+              <p style="margin:0 0 4px 0;font-size:15px;color:#374151;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
+              <p style="margin:0 0 28px 0;font-size:15px;color:#374151;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">${t.content}</p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background-color:#4F46E5;border-radius:8px;">
+                    <a href="${variables.actionLink}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">${t.ctaText}</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:13px;color:#9CA3AF;font-family:Arial,Helvetica,sans-serif;">${t.expiry}</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#F9FAFB;padding:16px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0;font-size:12px;color:#9CA3AF;text-align:center;line-height:1.5;font-family:Arial,Helvetica,sans-serif;">
+                ${t.footerNote}<br>
+                ${t.copyright}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function generateConfirmationEmailText(variables: ConfirmationEmailVariables): string {
+  const t = getConfirmationTranslation(variables.locale);
+  const firstName = variables.fullName?.trim().split(/\s+/)[0] || "there";
+  const greeting = t.greeting.replace("{firstName}", firstName);
+  return `${t.heading}\n\n${greeting}\n\n${t.content}\n\n${t.ctaText}: ${variables.actionLink}\n\n${t.expiry}`;
+}
+
+// ─── Password reset email ─────────────────────────────────────────────────
+
+interface PasswordResetTranslation {
+  subject: string;
+  heading: string;
+  content: string;
+  ctaText: string;
+  preheader: string;
+  expiry: string;
+  footerNote: string;
+  copyright: string;
+}
+
+const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
+  "en-US": {
+    subject: "Reset your DisputeDesk password",
+    heading: "Reset your password",
+    content: "We received a request to reset your password. Click the button below to choose a new one. If you didn't request this, you can safely ignore this email.",
+    ctaText: "Reset Password",
+    preheader: "Reset your DisputeDesk password.",
+    expiry: "This link expires in 1 hour.",
+    footerNote: "You're receiving this because a password reset was requested for your DisputeDesk account.",
+    copyright: "© 2026 DisputeDesk. All rights reserved.",
+  },
+  "de-DE": {
+    subject: "DisputeDesk-Passwort zurücksetzen",
+    heading: "Passwort zurücksetzen",
+    content: "Wir haben eine Anfrage zum Zurücksetzen deines Passworts erhalten. Klicke auf die Schaltfläche unten, um ein neues zu wählen. Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.",
+    ctaText: "Passwort zurücksetzen",
+    preheader: "Setze dein DisputeDesk-Passwort zurück.",
+    expiry: "Dieser Link läuft in 1 Stunde ab.",
+    footerNote: "Du erhältst diese E-Mail, weil ein Passwortreset für dein DisputeDesk-Konto angefordert wurde.",
+    copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
+  },
+  "fr-FR": {
+    subject: "Réinitialiser votre mot de passe DisputeDesk",
+    heading: "Réinitialisez votre mot de passe",
+    content: "Nous avons reçu une demande de réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau. Si vous n'avez pas fait cette demande, ignorez cet e-mail.",
+    ctaText: "Réinitialiser le mot de passe",
+    preheader: "Réinitialisez votre mot de passe DisputeDesk.",
+    expiry: "Ce lien expire dans 1 heure.",
+    footerNote: "Vous recevez cet e-mail car une réinitialisation de mot de passe a été demandée pour votre compte DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Tous droits réservés.",
+  },
+  "es-ES": {
+    subject: "Restablecer tu contraseña de DisputeDesk",
+    heading: "Restablece tu contraseña",
+    content: "Recibimos una solicitud para restablecer tu contraseña. Haz clic en el botón de abajo para elegir una nueva. Si no solicitaste esto, puedes ignorar este correo.",
+    ctaText: "Restablecer contraseña",
+    preheader: "Restablece tu contraseña de DisputeDesk.",
+    expiry: "Este enlace caduca en 1 hora.",
+    footerNote: "Recibes este correo porque se solicitó un restablecimiento de contraseña para tu cuenta de DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
+  },
+  "pt-BR": {
+    subject: "Redefinir sua senha do DisputeDesk",
+    heading: "Redefina sua senha",
+    content: "Recebemos uma solicitação para redefinir sua senha. Clique no botão abaixo para escolher uma nova. Se não foi você, pode ignorar este e-mail com segurança.",
+    ctaText: "Redefinir senha",
+    preheader: "Redefina sua senha do DisputeDesk.",
+    expiry: "Este link expira em 1 hora.",
+    footerNote: "Você está recebendo este e-mail porque foi solicitada uma redefinição de senha para sua conta DisputeDesk.",
+    copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
+  },
+  "sv-SE": {
+    subject: "Återställ ditt DisputeDesk-lösenord",
+    heading: "Återställ ditt lösenord",
+    content: "Vi fick en begäran om att återställa ditt lösenord. Klicka på knappen nedan för att välja ett nytt. Om du inte begärde detta kan du ignorera det här e-postmeddelandet.",
+    ctaText: "Återställ lösenord",
+    preheader: "Återställ ditt DisputeDesk-lösenord.",
+    expiry: "Den här länken går ut om 1 timme.",
+    footerNote: "Du får detta e-postmeddelande eftersom en lösenordsåterställning begärdes för ditt DisputeDesk-konto.",
+    copyright: "© 2026 DisputeDesk. Alla rättigheter förbehållna.",
+  },
+};
+
+export interface PasswordResetEmailVariables {
+  actionLink: string;
+  locale?: Locale;
+}
+
+function getPasswordResetTranslation(locale?: Locale): PasswordResetTranslation {
+  return PASSWORD_RESET_TRANSLATIONS[locale ?? DEFAULT_LOCALE] ?? PASSWORD_RESET_TRANSLATIONS[DEFAULT_LOCALE];
+}
+
+export function getPasswordResetSubject(locale?: Locale): string {
+  return getPasswordResetTranslation(locale).subject;
+}
+
+export function generatePasswordResetEmailHTML(variables: PasswordResetEmailVariables): string {
+  const t = getPasswordResetTranslation(variables.locale);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${t.subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F1F5F9;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#111827;">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:0;color:transparent;">${t.preheader}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F5F9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#FFFFFF;border-radius:12px;border:1px solid #E5E7EB;overflow:hidden;">
+
+          <tr>
+            <td style="background-color:#4F46E5;padding:24px 40px;">
+              <p style="margin:0;font-size:20px;font-weight:700;color:#FFFFFF;letter-spacing:-0.3px;font-family:Arial,Helvetica,sans-serif;">DisputeDesk</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3;font-family:Arial,Helvetica,sans-serif;">${t.heading}</p>
+              <p style="margin:0 0 28px 0;font-size:15px;color:#374151;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">${t.content}</p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background-color:#4F46E5;border-radius:8px;">
+                    <a href="${variables.actionLink}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">${t.ctaText}</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:13px;color:#9CA3AF;font-family:Arial,Helvetica,sans-serif;">${t.expiry}</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#F9FAFB;padding:16px 40px;border-top:1px solid #E5E7EB;">
+              <p style="margin:0;font-size:12px;color:#9CA3AF;text-align:center;line-height:1.5;font-family:Arial,Helvetica,sans-serif;">
+                ${t.footerNote}<br>
+                ${t.copyright}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function generatePasswordResetEmailText(variables: PasswordResetEmailVariables): string {
+  const t = getPasswordResetTranslation(variables.locale);
+  return `${t.heading}\n\n${t.content}\n\n${t.ctaText}: ${variables.actionLink}\n\n${t.expiry}`;
+}
+
 /**
  * Generate plain-text version of the welcome email.
  */

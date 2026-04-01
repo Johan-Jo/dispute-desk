@@ -3,17 +3,9 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Mail } from "lucide-react";
-import { createBrowserClient } from "@supabase/ssr";
 import { AuthCard } from "@/components/ui/auth-card";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
-
-function getSupabase() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
 
 function MagicLinkSentContent() {
   const searchParams = useSearchParams();
@@ -28,16 +20,21 @@ function MagicLinkSentContent() {
     if (!email) return;
     setError(null);
 
-    const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
-    confirmUrl.searchParams.set("redirect", continueUrl);
-    confirmUrl.searchParams.set("type", "magiclink");
+    const ddLocale =
+      document.cookie.match(/(?:^|;\s*)dd_locale=([^;]+)/)?.[1] ??
+      navigator.language;
 
-    const supabase = getSupabase();
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: confirmUrl.toString() },
+    const res = await fetch("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        locale: ddLocale,
+        redirectTo: continueUrl !== "/portal/dashboard" ? continueUrl : undefined,
+      }),
     });
-    if (err) setError(err.message);
+
+    if (!res.ok) setError("Failed to resend. Please try again.");
     else setResent(true);
   };
 
