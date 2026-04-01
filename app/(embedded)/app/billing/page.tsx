@@ -3,10 +3,14 @@
  * Route: app/(embedded)/app/billing/page.tsx
  * Figma Make source: src/app/pages/shopify/shopify-plan-management.tsx
  * Reference: plan cards, 14-day free trial copy, upgrade CTAs. Reuse existing /api/billing/* (no backend changes).
+ *
+ * Marketing links may open `/app/billing?plan=free|starter|growth|scale` — after load, scrolls to free
+ * or starts Shopify subscription approval for an upgrade (embedded session required).
  */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Page,
@@ -48,6 +52,13 @@ const PLAN_FEATURE_KEYS: Record<string, string[]> = {
 
 const PLAN_IDS = ["free", "starter", "growth", "scale"] as const;
 
+const PLAN_TIER: Record<string, number> = {
+  free: 0,
+  starter: 1,
+  growth: 2,
+  scale: 3,
+};
+
 const PLAN_PRICES: Record<string, { price: number; label: string }> = {
   free: { price: 0, label: "$0" },
   starter: { price: 29, label: "$29/mo" },
@@ -60,8 +71,25 @@ const TOP_UPS = [
   { sku: "topup_100", labelKey: "billing.topUp100", price: "$59" },
 ];
 
-export default function BillingPage() {
+type PlanQuery = (typeof PLAN_IDS)[number];
+
+function parsePlanQuery(value: string | null): PlanQuery | null {
+  if (!value) return null;
+  const v = value.toLowerCase().trim();
+  return (PLAN_IDS as readonly string[]).includes(v) ? (v as PlanQuery) : null;
+}
+
+function sessionPlanKey(plan: string): string {
+  return `dd_billing_plan_query_${plan}`;
+}
+
+function BillingPageInner() {
   const t = useTranslations();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const planParam = parsePlanQuery(searchParams.get("plan"));
+
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,30 +106,74 @@ export default function BillingPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchUsage(); }, [fetchUsage]);
+  useEffect(() => {
+    void fetchUsage();
+  }, [fetchUsage]);
 
-  const handleUpgrade = async (planId: string) => {
-    setUpgradeError(null);
-    setUpgrading(planId);
-    try {
-      const res = await fetch("/api/billing/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: planId }),
-      });
-      const data = await res.json();
-      if (data.confirmationUrl) {
-        window.top!.location.href = data.confirmationUrl;
-        return;
+  const handleUpgrade = useCallback(
+    async (planId: string) => {
+      setUpgradeError(null);
+      setUpgrading(planId);
+      try {
+        const res = await fetch("/api/billing/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan_id: planId }),
+        });
+        const data = await res.json();
+        if (data.confirmationUrl) {
+          window.top!.location.href = data.confirmationUrl;
+          return;
+        }
+        const message = typeof data.error === "string" ? data.error : t("billing.upgradeFailed");
+        setUpgradeError(message);
+      } catch {
+        setUpgradeError(t("billing.upgradeFailed"));
+      } finally {
+        setUpgrading(null);
       }
-      const message = typeof data.error === "string" ? data.error : t("billing.upgradeFailed");
-      setUpgradeError(message);
-    } catch {
-      setUpgradeError(t("billing.upgradeFailed"));
-    } finally {
-      setUpgrading(null);
+    },
+    [t]
+  );
+
+  /** Deep link from marketing: `/app/billing?plan=…` */
+  useEffect(() => {
+    if (loading || !plan || !planParam) return;
+
+    const sk = sessionPlanKey(planParam);
+    if (typeof window !== "undefined" && sessionStorage.getItem(sk)) {
+      if (searchParams.get("plan")) router.replace(pathname, { scroll: false });
+      return;
     }
-  };
+    if (typeof window !== "undefined") sessionStorage.setItem(sk, "1");
+
+    const stripPlanQuery = () => {
+      router.replace(pathname, { scroll: false });
+    };
+
+    if (planParam === "free") {
+      setShowAllPlans(true);
+      requestAnimationFrame(() => {
+        document.getElementById("billing-plan-free")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+      stripPlanQuery();
+      return;
+    }
+
+    const currentTier = PLAN_TIER[plan.id] ?? 0;
+    const targetTier = PLAN_TIER[planParam] ?? 0;
+    if (currentTier >= targetTier) {
+      stripPlanQuery();
+      return;
+    }
+
+    void handleUpgrade(planParam).finally(() => {
+      stripPlanQuery();
+    });
+  }, [loading, plan, planParam, handleUpgrade, pathname, router, searchParams]);
 
   if (loading) {
     return (
@@ -196,42 +268,44 @@ export default function BillingPage() {
           const featureKeys = PLAN_FEATURE_KEYS[planId];
           return (
             <Layout.Section key={planId} variant="oneThird">
-              <Card>
-                <BlockStack gap="300">
-                  <InlineStack align="space-between" wrap>
-                    <Text as="h3" variant="headingMd">{t(planNameKeys[planId])}</Text>
-                    <InlineStack gap="200">
-                      {planId === "growth" && <Badge tone="attention">{t("billing.mostPopular")}</Badge>}
-                      {plan?.id === planId && <Badge tone="success">{t("billing.yourCurrentPlan")}</Badge>}
+              <div id={planId === "free" ? "billing-plan-free" : undefined}>
+                <Card>
+                  <BlockStack gap="300">
+                    <InlineStack align="space-between" wrap>
+                      <Text as="h3" variant="headingMd">{t(planNameKeys[planId])}</Text>
+                      <InlineStack gap="200">
+                        {planId === "growth" && <Badge tone="attention">{t("billing.mostPopular")}</Badge>}
+                        {plan?.id === planId && <Badge tone="success">{t("billing.yourCurrentPlan")}</Badge>}
+                      </InlineStack>
                     </InlineStack>
-                  </InlineStack>
-                  <Text as="p" variant="headingLg">{priceInfo.label}</Text>
-                  <Divider />
-                  <BlockStack gap="100">
-                    {featureKeys.map((key) => (
-                      <Text key={key} as="p" variant="bodySm">✓ {t(key)}</Text>
-                    ))}
+                    <Text as="p" variant="headingLg">{priceInfo.label}</Text>
+                    <Divider />
+                    <BlockStack gap="100">
+                      {featureKeys.map((key) => (
+                        <Text key={key} as="p" variant="bodySm">✓ {t(key)}</Text>
+                      ))}
+                    </BlockStack>
+                    {plan?.id !== planId && priceInfo.price > (plan?.price ?? 0) && (
+                      <Button
+                        variant="primary"
+                        loading={upgrading === planId}
+                        onClick={() => handleUpgrade(planId)}
+                      >
+                        {planId === "starter" && priceInfo.price > 0
+                          ? t("billing.startTrial", { plan: t(planNameKeys[planId]) })
+                          : priceInfo.price > 0
+                            ? t("billing.upgradeTo", { plan: t(planNameKeys[planId]) })
+                            : t(planNameKeys[planId])}
+                      </Button>
+                    )}
+                    {plan?.id === planId && (
+                      <Banner tone="info">
+                        {t("billing.yourCurrentPlan")}
+                      </Banner>
+                    )}
                   </BlockStack>
-                  {plan?.id !== planId && priceInfo.price > (plan?.price ?? 0) && (
-                    <Button
-                      variant="primary"
-                      loading={upgrading === planId}
-                      onClick={() => handleUpgrade(planId)}
-                    >
-                      {planId === "starter" && priceInfo.price > 0
-                        ? t("billing.startTrial", { plan: t(planNameKeys[planId]) })
-                        : priceInfo.price > 0
-                          ? t("billing.upgradeTo", { plan: t(planNameKeys[planId]) })
-                          : t(planNameKeys[planId])}
-                    </Button>
-                  )}
-                  {plan?.id === planId && (
-                    <Banner tone="info">
-                      {t("billing.yourCurrentPlan")}
-                    </Banner>
-                  )}
-                </BlockStack>
-              </Card>
+                </Card>
+              </div>
             </Layout.Section>
           );
         })}
@@ -272,5 +346,22 @@ export default function BillingPage() {
         </Text>
       </div>
     </Page>
+  );
+}
+
+export default function BillingPage() {
+  const t = useTranslations();
+  return (
+    <Suspense
+      fallback={
+        <Page title={t("billing.title")}>
+          <div style={{ padding: "3rem", textAlign: "center" }}>
+            <Spinner size="large" />
+          </div>
+        </Page>
+      }
+    >
+      <BillingPageInner />
+    </Suspense>
   );
 }

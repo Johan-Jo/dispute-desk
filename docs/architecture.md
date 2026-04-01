@@ -28,6 +28,8 @@ Shopify App Store. The external portal serves:
 - Multi-store operators who want a single dashboard across shops.
 - Public marketing and acquisition (hero landing page).
 
+**Marketing → embedded billing:** The public landing page **Pricing** section links to `/app/billing?plan=free|starter|growth|scale` so merchants who already use the embedded app land on Billing with the correct tier selected or upgrade flow started. Unauthenticated visitors are handled by existing `/app/*` session rules (see `docs/technical.md` § *Billing deep link*).
+
 ### Route group isolation
 
 Next.js App Router route groups ensure:

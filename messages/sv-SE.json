@@ -1007,7 +1007,7 @@
       },
       "upgradingPlan": {
         "title": "Hur du uppgraderar din plan",
-        "body": "För att uppgradera:\n\n1. Gå till Faktureringssidan.\n2. Granska planjämförelsetabellen.\n3. Klicka \"Uppgradera till [Plan]\".\n4. Du omdirigeras till Shopify för att godkänna debiteringen.\n5. Efter godkännande aktiveras din plan omedelbart.\n\nBetalplaner inkluderar 7 dagars gratis provperiod."
+        "body": "För att uppgradera:\n\n1. Gå till Faktureringssidan.\n2. Granska planjämförelsetabellen.\n3. Klicka \"Uppgradera till [Plan]\".\n4. Du omdirigeras till Shopify för att godkänna debiteringen.\n5. Efter godkännande aktiveras din plan omedelbart.\n\nBetalplaner inkluderar 7 dagars gratis provperiod.\n\n**Från marknadssidan:** Knappar i prissektionen länkar till Fakturering med `?plan=…` så rätt nivå väljs eller uppgraderingsflödet startar. Öppna DisputeDesk från **Shopify Admin → Appar → DisputeDesk** så att butikssessionen är giltig; annars kan du behöva öppna appen därifrån först."
       },
       "packLimits": {
         "title": "Förstå paketgränser och kvoter",

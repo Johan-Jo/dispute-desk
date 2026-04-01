@@ -1006,7 +1006,7 @@
       },
       "upgradingPlan": {
         "title": "Comment mettre à niveau votre plan",
-        "body": "Pour mettre à niveau :\n\n1. Allez à la page Facturation.\n2. Choisissez le plan souhaité.\n3. Cliquez \"Mettre à niveau\".\n4. Approuvez dans Shopify.\n\nLes plans payants incluent 7 jours d'essai gratuit."
+        "body": "Pour mettre à niveau :\n\n1. Allez à la page Facturation.\n2. Choisissez le plan souhaité.\n3. Cliquez \"Mettre à niveau\".\n4. Approuvez dans Shopify.\n\nLes plans payants incluent 7 jours d'essai gratuit.\n\n**Depuis le site marketing :** les boutons de la section tarifs ouvrent la facturation avec `?plan=…` pour préselectionner le palier ou lancer la mise à niveau. Ouvrez DisputeDesk depuis **Shopify Admin → Applications → DisputeDesk** pour une session valide ; sinon vous devrez peut-être ouvrir l’application depuis l’admin d’abord."
       },
       "packLimits": {
         "title": "Comprendre les limites de dossiers",

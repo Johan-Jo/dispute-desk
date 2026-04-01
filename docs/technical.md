@@ -774,6 +774,19 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
 
+### Billing deep link (`/app/billing?plan=…`)
+
+The embedded Billing page (`app/(embedded)/app/billing/page.tsx`) accepts an optional query parameter **`plan`**: `free` \| `starter` \| `growth` \| `scale` (aligned with `lib/billing/plans.ts`).
+
+| Value | Behavior |
+|-------|----------|
+| `free` | Expands the plan comparison, scrolls to the Free tier (`#billing-plan-free`). |
+| `starter`, `growth`, `scale` | If the shop’s current plan tier is **below** the target tier, triggers the same upgrade path as **Upgrade** on the page (`POST /api/billing/subscribe`). If already on that tier or higher, the query is stripped only. |
+
+Implementation uses `sessionStorage` keys `dd_billing_plan_query_{plan}` so React Strict Mode does not double-invoke subscription; the URL is cleaned with `router.replace` after handling.
+
+**Marketing site:** The homepage pricing grid (`components/marketing/MarketingLandingPageClient.tsx`) links each CTA to `/app/billing?plan=…` for the matching tier. Merchants need a **Shopify embedded session** (app opened from Admin) for billing to apply; without it, middleware may redirect to `/app/session-required` with a return URL—same as any other `/app/*` request without session cookies.
+
 ## Hardening
 
 ### Rate Limiting

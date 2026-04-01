@@ -1006,7 +1006,7 @@
       },
       "upgradingPlan": {
         "title": "So upgraden Sie Ihren Plan",
-        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase."
+        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase.\n\n**Von der Marketing-Website:** Schaltflächen im Preisbereich verlinken auf die Abrechnung mit `?plan=…`, damit die passende Stufe gewählt oder das Upgrade gestartet wird. Öffnen Sie DisputeDesk über **Shopify Admin → Apps → DisputeDesk**, damit Ihre Shopsitzung gültig ist; andernfalls werden Sie ggf. aufgefordert, die App zuerst im Admin zu öffnen."
       },
       "packLimits": {
         "title": "Paketlimits und Kontingente verstehen",

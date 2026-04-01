@@ -278,7 +278,7 @@ export function MarketingLandingPageClient() {
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF3")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF4")}</li>
               </ul>
-              <a href="/auth/sign-up"><Button variant="secondary" className="w-full">{t("pricing.getStarted")}</Button></a>
+              <a href="/app/billing?plan=free"><Button variant="secondary" className="w-full">{t("pricing.getStarted")}</Button></a>
             </div>
 
             {/* Starter */}
@@ -292,7 +292,7 @@ export function MarketingLandingPageClient() {
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF4")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF5")}</li>
               </ul>
-              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
+              <a href="/app/billing?plan=starter"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
             </div>
 
             {/* Growth */}
@@ -307,7 +307,7 @@ export function MarketingLandingPageClient() {
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF4")}</li>
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF5")}</li>
               </ul>
-              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">{t("pricing.startTrial")}</Button></a>
+              <a href="/app/billing?plan=growth"><Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">{t("pricing.startTrial")}</Button></a>
             </div>
 
             {/* Scale */}
@@ -321,7 +321,7 @@ export function MarketingLandingPageClient() {
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF4")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF5")}</li>
               </ul>
-              <a href="/portal/connect-shopify"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
+              <a href="/app/billing?plan=scale"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
             </div>
           </div>
         </div>
