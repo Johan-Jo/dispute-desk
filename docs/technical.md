@@ -11,7 +11,7 @@
 | Auth (Embedded)    | Shopify OAuth (offline + online sessions)          |
 | Database           | Supabase Postgres with RLS                         |
 | Storage            | Supabase Storage (private buckets)                 |
-| Email              | Resend (transactional; welcome email)               |
+| Email              | Resend (transactional; welcome + magic link — Supabase email disabled) |
 | PDF                | @react-pdf/renderer (deterministic, no browser)    |
 | Deployment         | Vercel (serverless + cron)                         |
 | CI/CD              | GitHub Actions                                     |
@@ -133,29 +133,30 @@ prevents cross-shop data leakage.
 
 ## Email (Resend)
 
-Transactional email is sent via **Resend**. The welcome email uses a branded
-table-based HTML template (indigo header, CTA button, footer) with full
-plain-text fallback. All six app locales are supported (`en-US`, `de-DE`,
-`fr-FR`, `es-ES`, `pt-BR`, `sv-SE`) — the locale is resolved from the
-`dd_locale` cookie, then `Accept-Language` header, then `en-US`.
+All transactional email is sent via **Resend** using branded table-based HTML templates (indigo header, CTA button, footer) with plain-text fallbacks. Supabase's built-in email is **not used** — every auth email goes through our own routes. All six app locales are supported (`en-US`, `de-DE`, `fr-FR`, `es-ES`, `pt-BR`, `sv-SE`); locale is resolved from the `dd_locale` cookie, then `Accept-Language` header, then `en-US`.
 
 - **Env:** `RESEND_API_KEY` (required for sending). `EMAIL_FROM` defaults to
   `DisputeDesk <notifications@mail.disputedesk.app>` (sending subdomain). The
-  domain must be verified in Resend (resend.com/domains). `EMAIL_REPLY_TO` sets
-  Reply-To (defaults to same as FROM; avoid no-reply for deliverability).
-  `ADMIN_NOTIFY_EMAIL` overrides the admin notification recipient (default: `oi@johan.com.br`).
-  **Resources Hub autopilot** publish notifications (`lib/email/sendPublishNotification.ts`) use the same Resend client and env vars.
-- **Deliverability (inbox vs spam):** (1) Add DMARC (Resend: resend.com/docs/dashboard/domains/dmarc). (2) **Links in the email must use your sending domain** — set `NEXT_PUBLIC_APP_URL=https://disputedesk.app` so the dashboard link is not localhost. (3) Sending subdomain `mail.disputedesk.app` is the default; keep `EMAIL_FROM`/`EMAIL_REPLY_TO` on that subdomain so root domain reputation stays separate. (4) In Resend dashboard, turn off click/open tracking for the domain if enabled.
-- **Templates:** `lib/email/templates.ts` — locale-aware welcome HTML/text (all 6 locales).
+  domain must be verified in Resend. `EMAIL_REPLY_TO` sets Reply-To (defaults
+  to same as FROM). `ADMIN_NOTIFY_EMAIL` overrides the admin notification
+  recipient (default: `oi@johan.com.br`). **Resources Hub autopilot** publish
+  notifications (`lib/email/sendPublishNotification.ts`) use the same env vars.
+- **Deliverability:** Set `NEXT_PUBLIC_APP_URL=https://disputedesk.app` so all
+  email links point to production (never localhost). Add DMARC. Keep
+  `EMAIL_FROM`/`EMAIL_REPLY_TO` on the `mail.disputedesk.app` subdomain.
+- **Templates:** `lib/email/templates.ts` — all locale-aware HTML/text generators:
+  - `generateWelcomeEmailHTML/Text` + `getWelcomeSubject` — post-signup welcome
+  - `generateMagicLinkEmailHTML/Text` + `getMagicLinkSubject` — sign-in magic link
 - **Send helpers:**
-  - `lib/email/sendWelcome.ts` — sends the branded welcome email; accepts `locale?: Locale`.
-  - `lib/email/sendAdminNotification.ts` — sends a plain admin alert to `ADMIN_NOTIFY_EMAIL` on every confirmed sign-up.
-- **Welcome email trigger points:**
-  1. Email/password sign-up: user clicks confirmation link → `GET /api/auth/confirm?type=signup` exchanges the PKCE code and sends welcome + admin notification server-side.
-  2. Shopify OAuth sign-up (new user): `GET /api/auth/shopify/callback` calls `sendWelcomeEmail` + `sendAdminSignupNotification` after creating the Supabase user.
-  3. Shopify OAuth — first store linked (existing signed-in user): callback sends welcome + admin notification on the first `portal_user_shops` row only.
-- **Idempotency keys** prevent duplicates: `welcome-confirm/{email}` (email flow), `welcome-shopify/{userId}` (Shopify flow), `welcome/{userId}` (signed-in connect).
-- **Admin notification** (`lib/email/sendAdminNotification.ts`): fired alongside every welcome email; non-blocking, failure is logged only.
+  - `lib/email/sendWelcome.ts` — branded welcome email; accepts `locale?: Locale`.
+  - `lib/email/sendMagicLink.ts` — branded magic link email; accepts `locale?: Locale`.
+  - `lib/email/sendAdminNotification.ts` — plain admin alert to `ADMIN_NOTIFY_EMAIL` on every confirmed sign-up.
+- **Email trigger points:**
+  1. **Welcome — email/password sign-up:** user clicks confirmation link → `GET /api/auth/confirm?type=signup` exchanges the PKCE code and sends welcome + admin notification server-side.
+  2. **Welcome — Shopify OAuth new user:** `GET /api/auth/shopify/callback` calls `sendWelcomeEmail` + `sendAdminSignupNotification` after creating the Supabase user.
+  3. **Welcome — Shopify OAuth first store (signed-in):** callback sends welcome + admin notification on the first `portal_user_shops` row only.
+  4. **Magic link sign-in:** `POST /api/auth/magic-link` calls `admin.generateLink` server-side (redirect URL from `NEXT_PUBLIC_APP_URL`, never client origin) then sends our branded magic-link email via Resend. The sign-in page calls this route — Supabase's own OTP email is never triggered.
+- **Idempotency keys** prevent duplicate welcome sends: `welcome-confirm/{email}` (email flow), `welcome-shopify/{userId}` (Shopify flow), `welcome/{userId}` (signed-in connect).
 
 ## Resources Hub (public marketing)
 
@@ -505,6 +506,7 @@ Store policies are included in evidence packs. Five policy types are supported: 
 
 ### Portal Auth
 - `GET /api/auth/confirm?code=…&type=signup|magiclink&redirect=/path` — PKCE code exchange for email confirmation and magic-link sign-in. On `type=signup` sends welcome email (locale-aware) + admin notification, then redirects to `redirect` param (default `/portal/dashboard`). Open redirect guard: only relative paths accepted.
+- `POST /api/auth/magic-link` — accepts `{ email, locale?, redirectTo? }`. Calls `admin.generateLink({ type: 'magiclink' })` server-side so the redirect URL is always built from `NEXT_PUBLIC_APP_URL` (never the client's origin), then sends a branded locale-aware magic link email via Resend. Returns `{ ok: true }` regardless of whether the account exists (prevents email enumeration). Used by the sign-in page instead of `supabase.auth.signInWithOtp`.
 - `POST /api/auth/portal/sign-out` — sign out portal user
 - `GET /api/portal/clear-shop` — no Shopify session required (exempt in middleware). Clears active-shop cookies and redirects to `/portal/connect-shopify` so the user can reconnect. Used by the portal sidebar link "Clear shop & reconnect".
 
@@ -534,14 +536,19 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - **OAuth in iframe:** `GET /api/auth/shopify` always returns a 302 redirect to Shopify’s OAuth URL. No HTML breakout page is used. Session cookies (`shopify_shop`, `shopify_shop_id`) are set by the callback with `sameSite: "none"` and `secure: true` so the browser sends them in the cross-origin iframe on subsequent requests; without this, the middleware would not see the session and would redirect to auth again (redirect loop).
 
 ### Shopify OAuth
-- `GET /api/auth/shopify` — start OAuth (accepts `source=portal` + `return_to`).
+- `GET /api/auth/shopify?shop=xxx.myshopify.com` — start OAuth (accepts `source=portal` + `return_to`).
   Always responds with 302 redirect to Shopify’s authorize URL. State is encoded
-  as a signed token (not a cookie) via `encodeOAuthState()`.
+  as a signed token (not a cookie) via `encodeOAuthState()`. The `shop` param is
+  required and must end in `.myshopify.com`. The sign-in and sign-up pages prompt
+  users for their store domain before redirecting here (inline input field that
+  accepts `mystore` or `mystore.myshopify.com` and normalizes to the full domain).
 - `GET /api/auth/shopify/callback` — verify HMAC + signed state token, exchange
   code for access token, store session. Sets `shopify_shop` and `shopify_shop_id`
   cookies with `sameSite: "none"` so they are sent when the app is loaded in
   Shopify Admin’s iframe. For `source=portal`: links the portal user to the shop,
-  sets `active_shop_id` cookie, and redirects to `/portal/dashboard`.
+  sets `active_shop_id` cookie. Unauthenticated users are instantly signed in via
+  `admin.generateLink` → `action_link` redirect (no email sent); authenticated
+  users skip straight to the destination.
 
 ### Dashboard Stats (Embedded)
 - `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns real KPIs for the embedded dashboard: `totalDisputes`, `winRate`, `revenueRecovered`, `avgResponseTime`, `winRateTrend` (6 buckets), `disputeCategories` (by reason). Period filters disputes by `created_at`.
