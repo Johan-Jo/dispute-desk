@@ -12,7 +12,8 @@
     "help": "Aide",
     "signOut": "Déconnexion",
     "connectStore": "Connecter votre vraie boutique",
-    "demoStore": "Boutique démo"
+    "demoStore": "Boutique démo",
+    "switchToDemo": "Passer à la démo"
   },
   "common": {
     "loading": "Chargement...",

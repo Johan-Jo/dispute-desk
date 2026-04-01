@@ -144,9 +144,13 @@ This is a single-step flow — the user clicks one button and lands on the dashb
    - In both cases the shop is linked immediately and the browser is redirected to `action_link` → Supabase sets the session → user lands on `/portal/dashboard`. No email confirmation step, no extra clicks.
 7. `active_shop_id` and `dd_active_shop` cookies are set on the redirect response so the portal immediately scopes to the connected shop.
 
-For multi-store users, the sidebar store selector links to `/portal/select-store` where they can switch between connected shops.
+For multi-store users, the sidebar store selector links to `/portal/select-store` where they can switch between connected shops and the demo store.
 
-**Clear shop & reconnect**: In the sidebar, under the store name, a "Clear shop & reconnect" link calls `GET /api/portal/clear-shop`. This route is exempt from the API middleware's Shopify-session requirement so portal-only users (who may have no Shopify cookies) can use it. It clears the active-shop cookies and redirects to `/portal/connect-shopify` for a fresh connect flow.
+**Portal sidebar links (under the store row):** Behavior depends on whether a **real** linked shop is active (the active-shop cookie matches a `portal_user_shops` row for the user):
+
+- **Real shop active:** Shows **Switch to demo store** → `/portal/select-store?shop_id=demo` → `GET /api/portal/switch-demo` (sample data, same as choosing Demo on the store picker).
+- **Demo active but the user has linked shops:** Shows **Connect your real store** → `/portal/connect-shopify`.
+- **At least one linked shop:** **Clear shop & reconnect** → `GET /api/portal/clear-shop` (always available in that case). This route is exempt from the API middleware's Shopify-session requirement so portal-only users (who may have no Shopify cookies) can use it. It clears the active-shop cookies and redirects to `/portal/connect-shopify` for a fresh connect flow.
 
 **Portal APIs**: The middleware allows certain API prefixes without Shopify session cookies when the user has Supabase Auth and a valid `active_shop_id` in `portal_user_shops`: `/api/setup/`, `/api/integrations/`, `/api/files/samples`, and `/api/disputes`. So the portal disputes page (list, Sync Now, dispute detail) and setup/integrations/sample-files flows work with Supabase + active-shop only. See `docs/technical.md` § API middleware — shop identity and portal fallback.
 

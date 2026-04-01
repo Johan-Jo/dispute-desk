@@ -121,13 +121,23 @@ export function PortalShell({
                   <ChevronDown className="w-4 h-4 text-[#64748B]" />
                 )}
               </a>
-              <a
-                href="/portal/connect-shopify"
-                className="block text-center text-xs text-[#1D4ED8] hover:underline"
-                data-onboarding="connect-store"
-              >
-                {t("connectStore")}
-              </a>
+              {!hasRealShopActive && (
+                <a
+                  href="/portal/connect-shopify"
+                  className="block text-center text-xs text-[#1D4ED8] hover:underline"
+                  data-onboarding="connect-store"
+                >
+                  {t("connectStore")}
+                </a>
+              )}
+              {hasRealShopActive && (
+                <a
+                  href="/portal/select-store?shop_id=demo"
+                  className="block text-center text-xs text-[#1D4ED8] hover:underline"
+                >
+                  {t("switchToDemo")}
+                </a>
+              )}
               <a
                 href="/api/portal/clear-shop"
                 className="block text-center text-xs text-[#64748B] hover:underline"

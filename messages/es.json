@@ -12,7 +12,8 @@
     "help": "Ayuda",
     "signOut": "Cerrar sesión",
     "connectStore": "Conectar tu tienda real",
-    "demoStore": "Tienda demo"
+    "demoStore": "Tienda demo",
+    "switchToDemo": "Cambiar a la tienda demo"
   },
   "common": {
     "loading": "Cargando...",

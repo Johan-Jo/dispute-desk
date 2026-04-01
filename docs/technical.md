@@ -509,6 +509,9 @@ Store policies are included in evidence packs. Five policy types are supported: 
 - `POST /api/auth/magic-link` — accepts `{ email, locale?, redirectTo? }`. Calls `admin.generateLink({ type: 'magiclink' })` server-side so the redirect URL is always built from `NEXT_PUBLIC_APP_URL` (never the client's origin), then sends a branded locale-aware magic link email via Resend. Returns `{ ok: true }` regardless of whether the account exists (prevents email enumeration). Used by the sign-in page instead of `supabase.auth.signInWithOtp`.
 - `POST /api/auth/portal/sign-out` — sign out portal user
 - `GET /api/portal/clear-shop` — no Shopify session required (exempt in middleware). Clears active-shop cookies and redirects to `/portal/connect-shopify` so the user can reconnect. Used by the portal sidebar link "Clear shop & reconnect".
+- `GET /api/portal/switch-demo` — clears active-shop cookies and redirects to `/portal/dashboard` (demo mode). Used when the user chooses the demo store from `/portal/select-store?shop_id=demo` or the sidebar **Switch to demo store** link while a real shop is active. See `GET /api/portal/switch-shop?shop_id=…` for switching to a linked shop.
+
+**Portal shell sidebar** (`app/(portal)/portal-shell.tsx`): Secondary links use `hasRealShopActive` (active shop id matches a linked shop). **Connect your real store** (`nav.connectStore`) is shown only when the user has linked shops but demo is active. **Switch to demo store** (`nav.switchToDemo`) is shown only when a real linked shop is active. i18n: `messages/*.json` under `nav.*`.
 
 ### API middleware — shop identity and portal fallback
 

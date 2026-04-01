@@ -14,7 +14,8 @@
     "signOut": "Logga ut",
     "connectStore": "Anslut din riktiga butik",
     "demoStore": "Demobutik",
-    "clearShopReconnect": "Rensa butik och återanslut"
+    "clearShopReconnect": "Rensa butik och återanslut",
+    "switchToDemo": "Byt till demobutik"
   },
   "common": {
     "loading": "Laddar...",

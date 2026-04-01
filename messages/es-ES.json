@@ -14,7 +14,8 @@
     "signOut": "Cerrar sesión",
     "connectStore": "Conectar tu tienda real",
     "demoStore": "Tienda demo",
-    "clearShopReconnect": "Clear shop & reconnect"
+    "clearShopReconnect": "Clear shop & reconnect",
+    "switchToDemo": "Cambiar a la tienda demo"
   },
   "common": {
     "loading": "Cargando...",
