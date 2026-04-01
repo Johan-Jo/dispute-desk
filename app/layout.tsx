@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { isLocale, resolveLocale } from "@/lib/i18n/locales";
 
@@ -48,6 +49,7 @@ export default async function RootLayout({
         )}
       </head>
       <body className={inter.className}>{children}</body>
+      <GoogleAnalytics gaId="G-MN5KDFQMMX" />
     </html>
   );
 }

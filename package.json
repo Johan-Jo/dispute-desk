@@ -30,6 +30,7 @@
     "puppeteer:reset-rebuild": "node scripts/puppeteer-reset-rebuild.mjs"
   },
   "dependencies": {
+    "@next/third-parties": "^16.2.2",
     "@react-pdf/renderer": "^4.0.0",
     "@shopify/polaris": "^13.0.0",
     "@shopify/shopify-api": "^11.0.0",
