@@ -368,10 +368,8 @@ export default async function ResourceArticlePage({ params }: Props) {
         <CtaCard
           title={t("ctaCardTitle")}
           body={t("ctaCardBody")}
-          primaryLabel={t("ctaStartTrial")}
-          primaryHref="/portal/connect-shopify"
-          secondaryLabel={t("ctaDownloadApp")}
-          secondaryHref={getMarketingShopifyAppInstallUrl()}
+          ctaLabel={t("ctaDownloadAppTryFree")}
+          ctaHref={getMarketingShopifyAppInstallUrl()}
           locale={hubLocale}
           contentId={item.id}
         />
