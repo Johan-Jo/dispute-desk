@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { AuthCard } from "@/components/ui/auth-card";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("auth.forgotPassword");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,16 +24,16 @@ export default function ForgotPasswordPage() {
       body: JSON.stringify({ email }),
     });
 
-    if (!res.ok) setError("Something went wrong. Please try again.");
+    if (!res.ok) setError(t("errGeneric"));
     else setSent(true);
     setLoading(false);
   };
 
   if (sent) {
     return (
-      <AuthCard title="Check your email" subtitle={`If an account exists for ${email}, we sent a reset link.`}>
+      <AuthCard title={t("titleCheck")} subtitle={t("subtitleSent", { email })}>
         <a href="/auth/sign-in" className="block text-center text-sm text-[#4F46E5] hover:underline mt-4">
-          Back to sign in
+          {t("backToSignIn")}
         </a>
       </AuthCard>
     );
@@ -39,27 +41,29 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthCard
-      title="Reset your password"
-      subtitle="Enter your email to receive a password reset link"
+      title={t("title")}
+      subtitle={t("subtitle")}
       footer={
         <p>
-          Remember your password?{" "}
-          <a href="/auth/sign-in" className="text-[#4F46E5] font-medium hover:underline">Sign in</a>
+          {t("footerRemember")}{" "}
+          <a href="/auth/sign-in" className="text-[#4F46E5] font-medium hover:underline">
+            {t("signIn")}
+          </a>
         </p>
       }
     >
       <form onSubmit={handleReset} className="space-y-4">
         <TextField
           type="email"
-          label="Email"
-          placeholder="you@company.com"
+          label={t("email")}
+          placeholder={t("emailPlaceholder")}
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         {error && <p className="text-sm text-[#EF4444]">{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? "Sending..." : "Send reset link"}
+          {loading ? t("sending") : t("sendLink")}
         </Button>
       </form>
     </AuthCard>

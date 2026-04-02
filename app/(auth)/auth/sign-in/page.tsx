@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
 import { AuthCard } from "@/components/ui/auth-card";
 import { TextField } from "@/components/ui/text-field";
@@ -13,11 +14,9 @@ import { Divider } from "@/components/ui/divider";
 function normalizeShopDomain(value: string): string | null {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return null;
-  // Accept "mystore" or "mystore.myshopify.com"
   const domain = trimmed.endsWith(".myshopify.com")
     ? trimmed
     : `${trimmed}.myshopify.com`;
-  // Basic sanity check: subdomain is alphanumeric + hyphens
   const [subdomain] = domain.split(".");
   if (!/^[a-z0-9-]+$/.test(subdomain)) return null;
   return domain;
@@ -35,6 +34,7 @@ function isValidEmail(value: string) {
 }
 
 function SignInForm() {
+  const t = useTranslations("auth.signIn");
   const router = useRouter();
   const searchParams = useSearchParams();
   const continueUrl = searchParams.get("continue") ?? "/portal/dashboard";
@@ -50,11 +50,11 @@ function SignInForm() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidEmail(email)) {
-      setError("Enter a valid email address.");
+      setError(t("errValidEmail"));
       return;
     }
     if (!password) {
-      setError("Password is required.");
+      setError(t("errPasswordRequired"));
       return;
     }
     setError(null);
@@ -73,14 +73,12 @@ function SignInForm() {
 
   const handleMagicLink = async () => {
     if (!isValidEmail(email)) {
-      setError("Enter a valid email address first.");
+      setError(t("errValidEmailFirst"));
       return;
     }
     setError(null);
     setLoading(true);
 
-    // Detect locale from cookie or browser language — sent to server so the
-    // email is rendered in the user's language.
     const ddLocale =
       document.cookie.match(/(?:^|;\s*)dd_locale=([^;]+)/)?.[1] ??
       navigator.language;
@@ -96,7 +94,7 @@ function SignInForm() {
     });
 
     if (!res.ok) {
-      setError("Failed to send magic link. Please try again.");
+      setError(t("errMagicLinkFailed"));
       setLoading(false);
       return;
     }
@@ -109,13 +107,13 @@ function SignInForm() {
 
   return (
     <AuthCard
-      title="Sign in"
-      subtitle="Continue with Shopify opens your store in Shopify Admin after you authorize. Or sign in with email below."
+      title={t("title")}
+      subtitle={t("subtitle")}
       footer={
         <p>
-          Don&apos;t have an account?{" "}
+          {t("footerNoAccount")}{" "}
           <a href="/auth/sign-up" className="text-[#4F46E5] font-medium hover:underline">
-            Create one
+            {t("createOne")}
           </a>
         </p>
       }
@@ -124,15 +122,16 @@ function SignInForm() {
         <div className="space-y-2">
           <TextField
             type="text"
-            label="Your Shopify store"
-            placeholder="yourstore.myshopify.com"
+            label={t("shopLabel")}
+            placeholder={t("shopPlaceholder")}
             value={shopInput}
-            onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
+            onChange={(e) => {
+              setShopInput(e.target.value);
+              setShopError(null);
+            }}
             autoFocus
           />
-          <p className="text-xs text-[#667085]">
-            After authorization you’ll continue in the embedded app in Shopify Admin.
-          </p>
+          <p className="text-xs text-[#667085]">{t("shopHint")}</p>
           {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
           <div className="flex gap-2">
             <Button
@@ -142,59 +141,63 @@ function SignInForm() {
               onClick={() => {
                 const domain = normalizeShopDomain(shopInput);
                 if (!domain) {
-                  setShopError("Enter a valid store name, e.g. yourstore or yourstore.myshopify.com");
+                  setShopError(t("shopErrorInvalid"));
                   return;
                 }
                 window.location.href =
                   `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=${encodeURIComponent("/auth/open-in-shopify")}`;
               }}
             >
-              Continue
+              {t("continue")}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => { setShopStep(false); setShopInput(""); setShopError(null); }}
+              onClick={() => {
+                setShopStep(false);
+                setShopInput("");
+                setShopError(null);
+              }}
             >
-              Cancel
+              {t("cancel")}
             </Button>
           </div>
         </div>
       ) : (
         <OAuthButton provider="shopify" onClick={() => setShopStep(true)}>
-          Continue with Shopify
+          {t("continueWithShopify")}
         </OAuthButton>
       )}
 
-      <Divider label="or" />
+      <Divider label={t("or")} />
 
       <form onSubmit={handleSignIn} className="space-y-4">
         <TextField
           type="email"
-          label="Email"
-          placeholder="you@company.com"
+          label={t("email")}
+          placeholder={t("emailPlaceholder")}
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <PasswordField
-          label="Password"
-          placeholder="Enter your password"
+          label={t("password")}
+          placeholder={t("passwordPlaceholder")}
           required
           onChange={(e) => setPassword(e.target.value)}
         />
 
         <div className="text-right">
           <a href="/auth/forgot-password" className="text-sm text-[#4F46E5] hover:underline">
-            Forgot password?
+            {t("forgotPassword")}
           </a>
         </div>
 
         {error && <p className="text-sm text-[#EF4444]" data-testid="sign-in-error">{error}</p>}
 
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? t("signingIn") : t("submit")}
         </Button>
       </form>
 
@@ -204,7 +207,7 @@ function SignInForm() {
           disabled={loading}
           className="text-sm text-[#4F46E5] hover:underline disabled:opacity-50"
         >
-          Send magic link instead
+          {t("sendMagicLink")}
         </button>
       </div>
     </AuthCard>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
 import { AuthCard } from "@/components/ui/auth-card";
 import { TextField } from "@/components/ui/text-field";
@@ -32,6 +33,7 @@ function isValidEmail(value: string) {
 }
 
 export default function SignUpPage() {
+  const t = useTranslations("auth.signUp");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,21 +47,20 @@ export default function SignUpPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
-      setError("Full name is required.");
+      setError(t("errFullName"));
       return;
     }
     if (!isValidEmail(email)) {
-      setError("Enter a valid email address.");
+      setError(t("errValidEmail"));
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("errPasswordLen"));
       return;
     }
     setError(null);
     setLoading(true);
 
-    // emailRedirectTo is echoed in the Send Email hook; the link uses token_hash → /api/auth/confirm.
     const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
     confirmUrl.searchParams.set("redirect", "/portal/dashboard");
     confirmUrl.searchParams.set("type", "signup");
@@ -84,12 +85,15 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <AuthCard title="Check your email" subtitle={`We sent a confirmation link to ${email}`}>
+      <AuthCard
+        title={t("successTitle")}
+        subtitle={t("successSubtitle", { email })}
+      >
         <div className="text-center py-4">
-          <p className="text-sm text-[#667085]">Click the link in the email to activate your account.</p>
+          <p className="text-sm text-[#667085]">{t("successBody")}</p>
         </div>
         <a href="/auth/sign-in" className="block text-center text-sm text-[#4F46E5] hover:underline">
-          Back to sign in
+          {t("backToSignIn")}
         </a>
       </AuthCard>
     );
@@ -97,13 +101,13 @@ export default function SignUpPage() {
 
   return (
     <AuthCard
-      title="Create your account"
-      subtitle="Connect your store — we’ll open Shopify Admin so you can finish setup in the embedded app."
+      title={t("title")}
+      subtitle={t("subtitle")}
       footer={
         <p>
-          Already have an account?{" "}
+          {t("footerHasAccount")}{" "}
           <a href="/auth/sign-in" className="text-[#4F46E5] font-medium hover:underline">
-            Sign in
+            {t("signInLink")}
           </a>
         </p>
       }
@@ -112,15 +116,16 @@ export default function SignUpPage() {
         <div className="space-y-2">
           <TextField
             type="text"
-            label="Your Shopify store"
-            placeholder="yourstore.myshopify.com"
+            label={t("shopLabel")}
+            placeholder={t("shopPlaceholder")}
             value={shopInput}
-            onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
+            onChange={(e) => {
+              setShopInput(e.target.value);
+              setShopError(null);
+            }}
             autoFocus
           />
-          <p className="text-xs text-[#667085]">
-            After you authorize DisputeDesk, you’ll land in the app inside Shopify Admin. You can always use the web portal later.
-          </p>
+          <p className="text-xs text-[#667085]">{t("shopHint")}</p>
           {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
           <div className="flex gap-2">
             <Button
@@ -130,52 +135,56 @@ export default function SignUpPage() {
               onClick={() => {
                 const domain = normalizeShopDomain(shopInput);
                 if (!domain) {
-                  setShopError("Enter a valid store name, e.g. yourstore or yourstore.myshopify.com");
+                  setShopError(t("shopErrorInvalid"));
                   return;
                 }
                 window.location.href =
                   `/api/auth/shopify?shop=${encodeURIComponent(domain)}&source=portal&return_to=${encodeURIComponent("/auth/open-in-shopify")}`;
               }}
             >
-              Continue
+              {t("continue")}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => { setShopStep(false); setShopInput(""); setShopError(null); }}
+              onClick={() => {
+                setShopStep(false);
+                setShopInput("");
+                setShopError(null);
+              }}
             >
-              Cancel
+              {t("cancel")}
             </Button>
           </div>
         </div>
       ) : (
         <OAuthButton provider="shopify" onClick={() => setShopStep(true)}>
-          Continue with Shopify
+          {t("continueWithShopify")}
         </OAuthButton>
       )}
 
-      <Divider label="or" />
+      <Divider label={t("or")} />
 
       <form onSubmit={handleSignUp} className="space-y-4">
         <TextField
           type="text"
-          label="Full Name"
-          placeholder="John Doe"
+          label={t("fullName")}
+          placeholder={t("fullNamePlaceholder")}
           required
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
         <TextField
           type="email"
-          label="Email"
-          placeholder="you@company.com"
+          label={t("email")}
+          placeholder={t("emailPlaceholder")}
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <PasswordField
-          label="Password"
-          placeholder="Create a strong password (min. 8 characters)"
+          label={t("password")}
+          placeholder={t("passwordPlaceholder")}
           showStrength
           required
           onChange={(e) => setPassword(e.target.value)}
@@ -184,7 +193,7 @@ export default function SignUpPage() {
         {error && <p className="text-sm text-[#EF4444]">{error}</p>}
 
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? "Creating account..." : "Create account"}
+          {loading ? t("creating") : t("createAccount")}
         </Button>
       </form>
     </AuthCard>

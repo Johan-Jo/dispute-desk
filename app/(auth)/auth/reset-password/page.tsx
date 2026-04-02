@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
 import { AuthCard } from "@/components/ui/auth-card";
 import { PasswordField } from "@/components/ui/password-field";
@@ -14,6 +15,7 @@ function getSupabase() {
 }
 
 export default function ResetPasswordPage() {
+  const t = useTranslations("auth.resetPassword");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,27 +36,29 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthCard title="Password updated" subtitle="Your password has been reset. You can now sign in.">
+      <AuthCard title={t("titleDone")} subtitle={t("subtitleDone")}>
         <a href="/auth/sign-in">
-          <Button variant="primary" className="w-full">Sign in</Button>
+          <Button variant="primary" className="w-full">
+            {t("signIn")}
+          </Button>
         </a>
       </AuthCard>
     );
   }
 
   return (
-    <AuthCard title="Set new password" subtitle="Choose a strong password for your account">
+    <AuthCard title={t("title")} subtitle={t("subtitle")}>
       <form onSubmit={handleReset} className="space-y-4">
         <PasswordField
-          label="New password"
-          placeholder="Enter new password"
+          label={t("newPassword")}
+          placeholder={t("newPasswordPlaceholder")}
           showStrength
           required
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <p className="text-sm text-[#EF4444]">{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? "Updating..." : "Update password"}
+          {loading ? t("updating") : t("updatePassword")}
         </Button>
       </form>
     </AuthCard>
