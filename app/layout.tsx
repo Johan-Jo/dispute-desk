@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 import "./globals.css";
 import { isLocale, resolveLocale } from "@/lib/i18n/locales";
+import { gtagConsentBootstrapScript } from "@/lib/consent/ga-bootstrap";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -36,6 +37,7 @@ export default async function RootLayout({
   // and must be first. React hoists <script src> from nested components and adds
   // async/defer — the only safe place is the explicit <head> in the root layout.
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
+  const gaId = process.env.NEXT_PUBLIC_GA_ID ?? "G-MN5KDFQMMX";
   return (
     <html lang={locale}>
       <head>
@@ -49,7 +51,15 @@ export default async function RootLayout({
         )}
       </head>
       <body className={inter.className}>{children}</body>
-      <GoogleAnalytics gaId="G-MN5KDFQMMX" />
+      <Script
+        id="ga-consent-bootstrap"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: gtagConsentBootstrapScript(gaId) }}
+      />
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}`}
+        strategy="afterInteractive"
+      />
     </html>
   );
 }

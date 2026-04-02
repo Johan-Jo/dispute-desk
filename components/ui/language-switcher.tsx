@@ -13,33 +13,8 @@ import {
 import { usePathname as useLocalizedPathname, useRouter as useIntlRouter } from "@/i18n/navigation";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { isResourceHubPillar } from "@/lib/resources/pillars";
+import { isMarketingIntlRoute } from "@/lib/i18n/marketingRoutes";
 import { Globe } from "lucide-react";
-
-const HUB_PREFIXES = [
-  "resources",
-  "templates",
-  "case-studies",
-  "glossary",
-  "blog",
-] as const;
-
-/** Routes that use next-intl locale prefixes (`/`, `/resources`, `/sv`, …). */
-function isMarketingIntlRoute(pathname: string): boolean {
-  if (
-    pathname.startsWith("/portal") ||
-    pathname.startsWith("/app") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/auth")
-  ) {
-    return false;
-  }
-  if (pathname.startsWith("/api")) return false;
-  if (pathname === "/") return true;
-  const seg = pathname.split("/").filter(Boolean)[0];
-  if (!seg) return true;
-  if (isPathLocale(seg)) return true;
-  return (HUB_PREFIXES as readonly string[]).includes(seg);
-}
 
 /**
  * `/resources/{pillar}/{slug}` or `/{pathLocale}/resources/{pillar}/{slug}` for published hub articles.

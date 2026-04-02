@@ -85,9 +85,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(target);
   }
 
-  // --- Marketing + Resources Hub: `/`, hub paths, + /de, /es, … + /en/resources/… → next-intl ---
+  // --- Marketing + Resources Hub: `/`, `/privacy`, hub paths, + /de, /es, … + /en/resources/… → next-intl ---
   if (
     pathname === "/" ||
+    pathname === "/privacy" ||
     localePathRegex.test(pathname) ||
     hubPublicPathRegex.test(pathname) ||
     enPrefixedHubPathRegex.test(pathname)

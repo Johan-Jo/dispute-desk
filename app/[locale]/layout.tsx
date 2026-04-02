@@ -11,6 +11,7 @@ import {
   pathLocaleToMessages,
 } from "@/lib/i18n/pathLocales";
 import { getPublicBaseUrl } from "@/lib/resources/url";
+import { CookieConsentBar } from "@/components/consent/cookie-consent-bar";
 
 export function generateStaticParams() {
   return PATH_LOCALE_LIST.map((locale) => ({ locale }));
@@ -113,6 +114,7 @@ export default async function LocaleMarketingLayout({
   return (
     <NextIntlClientProvider locale={pathLocale} messages={messages} timeZone="UTC">
       <MarketingJsonLd pathLocale={pathLocale} />
+      <CookieConsentBar />
       {children}
     </NextIntlClientProvider>
   );

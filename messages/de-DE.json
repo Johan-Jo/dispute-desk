@@ -46,6 +46,18 @@
     "demoNotice": "You're viewing sample data. Connect your Shopify store to manage real data.",
     "connectStoreCTA": "Connect store"
   },
+  "consent": {
+    "ariaLabel": "Cookie- und Datenschutzeinstellungen",
+    "message": "Wir verwenden Cookies für den Betrieb der Website und zur Reichweitenmessung. Sie können Analyse akzeptieren oder nur notwendige Cookies nutzen.",
+    "accept": "Akzeptieren",
+    "essentialOnly": "Nur notwendige",
+    "privacy": "Datenschutzerklärung",
+    "privacyPageTitle": "Datenschutzerklärung",
+    "privacyPageUpdated": "Stand: April 2026",
+    "privacyPageLead": "DisputeDesk verarbeitet personenbezogene Daten zur Erbringung des auf unserer Website beschriebenen Dienstes. Diese Seite fasst zusammen, wie wir Cookies und ähnliche Technologien auf der Marketing-Website einsetzen.",
+    "privacyPageCookies": "Analyse (Google Analytics) wird nur geladen, wenn Sie im Cookie-Banner „Akzeptieren“ wählen. Notwendige Cookies sind für Grundfunktionen, Sicherheit und Ihre Einstellungen (z. B. Sprache) erforderlich.",
+    "privacyPageContact": "Bei Fragen zum Datenschutz oder zur Ausübung Ihrer Rechte erreichen Sie uns über die auf der Website angegebenen Kontaktwege."
+  },
   "status": {
     "needsResponse": "Antwort erforderlich",
     "underReview": "In Prüfung",
