@@ -59,8 +59,7 @@ export default function SignUpPage() {
     setError(null);
     setLoading(true);
 
-    // emailRedirectTo points to our confirm route which exchanges the code,
-    // sends the welcome email, and redirects to the dashboard.
+    // emailRedirectTo is echoed in the Send Email hook; the link uses token_hash → /api/auth/confirm.
     const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
     confirmUrl.searchParams.set("redirect", "/portal/dashboard");
     confirmUrl.searchParams.set("type", "signup");

@@ -5,40 +5,84 @@ import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
 import { normalizeLocale } from "@/lib/i18n/locales";
 import type { Locale } from "@/lib/i18n/locales";
+import { isEmailOtpTypeParam } from "@/lib/auth/confirmEmailLink";
 
 /**
  * GET /api/auth/confirm
  *
  * Landing route for Supabase email confirmation and magic-link clicks.
- * Receives the PKCE `code` from Supabase, exchanges it for a session,
- * then fires post-signup emails (welcome + admin) for sign-up confirmations only.
+ *
+ * Preferred: `token_hash` + `type` from our Send Email hook — calls `verifyOtp`
+ * (no PKCE; works when the link is opened outside the original browser).
+ *
+ * Legacy: PKCE `code` from Supabase-hosted verify redirects — `exchangeCodeForSession`.
  *
  * Query params:
- *   code     – PKCE auth code from Supabase (required)
- *   redirect – destination path after auth (default: /portal/dashboard)
- *   type     – "signup" | "magiclink" — controls whether emails are sent
+ *   token_hash + type – verifyOtp (EmailOtpType)
+ *   code              – exchangeCodeForSession
+ *   redirect          – destination path after auth (default: /portal/dashboard)
+ *   type              – also selects welcome/admin emails when "signup"
+ *   locale            – optional; overrides cookie for transactional emails
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const type = url.searchParams.get("type"); // "signup" | "magiclink"
+  const token_hash = url.searchParams.get("token_hash");
+  const type = url.searchParams.get("type");
   const rawRedirect = url.searchParams.get("redirect") ?? "/portal/dashboard";
+  const localeParam = url.searchParams.get("locale");
 
-  // Only allow relative redirect paths — prevent open redirect
   const redirectPath = rawRedirect.startsWith("/") ? rawRedirect : "/portal/dashboard";
 
-  // Resolve locale: dd_locale cookie → Accept-Language header → en-US fallback
   const cookieStore = await cookies();
   const ddLocale = cookieStore.get("dd_locale")?.value;
   const acceptLanguage = request.headers.get("accept-language")?.split(",")[0];
   const locale: Locale =
-    normalizeLocale(ddLocale) ?? normalizeLocale(acceptLanguage) ?? "en-US";
+    normalizeLocale(localeParam) ??
+    normalizeLocale(ddLocale) ??
+    normalizeLocale(acceptLanguage) ??
+    "en-US";
+
+  const supabase = await createPortalClient();
+
+  if (token_hash && type && isEmailOtpTypeParam(type)) {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.verifyOtp({
+      type,
+      token_hash,
+    });
+
+    if (error || !user) {
+      console.error("[confirm] verifyOtp failed:", error?.message);
+      return NextResponse.redirect(
+        new URL("/auth/sign-in?error=invalid_code", url.origin)
+      );
+    }
+
+    if (type === "signup") {
+      const email = user.email!;
+      const fullName = user.user_metadata?.full_name as string | undefined;
+
+      await Promise.allSettled([
+        sendWelcomeEmail({
+          to: email,
+          fullName,
+          idempotencyKey: `welcome-confirm/${email}`,
+          locale,
+        }),
+        sendAdminSignupNotification({ email, fullName }),
+      ]);
+    }
+
+    return NextResponse.redirect(new URL(redirectPath, url.origin));
+  }
 
   if (!code) {
     return NextResponse.redirect(new URL("/auth/sign-in?error=no_code", url.origin));
   }
 
-  const supabase = await createPortalClient();
   const {
     data: { user },
     error,
@@ -51,12 +95,10 @@ export async function GET(request: Request) {
     );
   }
 
-  // Send emails only on sign-up confirmation (not magic-link logins)
   if (type === "signup") {
     const email = user.email!;
     const fullName = user.user_metadata?.full_name as string | undefined;
 
-    // Await both so they complete before the serverless function terminates
     await Promise.allSettled([
       sendWelcomeEmail({
         to: email,

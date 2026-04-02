@@ -5,6 +5,12 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      // Bookmarks / misconfigured dashboards may use /sign-in; app lives at /auth/sign-in
+      { source: "/sign-in", destination: "/auth/sign-in", permanent: true },
+    ];
+  },
   async rewrites() {
     return [{ source: "/favicon.ico", destination: "/favicon.svg" }];
   },

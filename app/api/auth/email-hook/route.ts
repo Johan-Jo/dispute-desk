@@ -1,10 +1,15 @@
-import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { Webhook } from "standardwebhooks";
 import { normalizeLocale } from "@/lib/i18n/locales";
 import type { Locale } from "@/lib/i18n/locales";
 import { sendMagicLinkEmail } from "@/lib/email/sendMagicLink";
 import { sendConfirmationEmail } from "@/lib/email/sendConfirmationEmail";
 import { sendPasswordResetEmail } from "@/lib/email/sendPasswordResetEmail";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import {
+  mapActionTypeToOtpType,
+  parseConfirmParamsFromRedirectTo,
+} from "@/lib/auth/confirmEmailLink";
 
 export const runtime = "nodejs";
 
@@ -13,18 +18,15 @@ export const runtime = "nodejs";
  *
  * Supabase "Send Email" Auth Hook. When registered in the Supabase dashboard
  * (Authentication → Hooks → Send Email), Supabase calls this endpoint instead
- * of sending its own default email. We verify the HMAC signature and send a
- * branded Resend email instead.
+ * of sending its own default email. Requests use the **Standard Webhooks** spec
+ * (webhook-id, webhook-timestamp, webhook-signature); verify with the same
+ * secret shown in the dashboard (`v1,whsec_…`).
  *
  * Required env var: SUPABASE_AUTH_HOOK_SECRET
  * Dashboard setup: Authentication → Hooks → Send Email → HTTP POST →
  *   https://disputedesk.app/api/auth/email-hook
  *
- * Hook payload:
- *   user.email, user.user_metadata.full_name
- *   email_data.token_hash, email_data.redirect_to, email_data.email_action_type
- *
- * Action link: ${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify?token_hash=…&type=…&redirect_to=…
+ * @see https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook
  */
 export async function POST(req: NextRequest) {
   const hookSecret = process.env.SUPABASE_AUTH_HOOK_SECRET;
@@ -33,19 +35,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Hook not configured" }, { status: 500 });
   }
 
-  // Supabase HTTP auth hooks send: Authorization: Bearer <HS256 JWT>
-  // The JWT is signed with the raw bytes of the base64-decoded whsec_ secret.
-  const authHeader = req.headers.get("authorization");
-  if (!verifyHookJWT(authHeader, hookSecret)) {
-    console.warn("[email-hook] JWT verification failed — header:", authHeader?.slice(0, 20));
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const rawBody = await req.text();
+  const headerRecord = Object.fromEntries(req.headers);
+
+  // Same as Supabase docs: base64 key material after stripping v{n},whsec_
+  const secretKey = hookSecret.replace(/^v\d+,whsec_/, "");
+  const wh = new Webhook(secretKey);
 
   let payload: HookPayload;
   try {
-    payload = (await req.json()) as HookPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    payload = wh.verify(rawBody, headerRecord) as HookPayload;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "verify failed";
+    console.warn("[email-hook] Webhook verify failed:", msg);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const email = payload.user?.email;
@@ -58,41 +61,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Construct the action link Supabase would normally embed in its email.
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const actionLink = `${supabaseUrl}/auth/v1/verify?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(actionType)}&redirect_to=${encodeURIComponent(redirectTo)}`;
-
-  // Resolve locale: encoded in redirectTo as ?locale=xx-XX by our magic-link route.
-  let locale: Locale = "en-US";
-  try {
-    const redirectUrl = new URL(redirectTo, "https://x");
-    const localeParam = redirectUrl.searchParams.get("locale");
-    locale = normalizeLocale(localeParam) ?? "en-US";
-  } catch {
-    // ignore malformed redirect_to
+  const otpType = mapActionTypeToOtpType(actionType);
+  if (!otpType) {
+    console.warn("[email-hook] Unsupported email_action_type:", actionType);
+    return NextResponse.json({ error: "Unsupported action" }, { status: 500 });
   }
+
+  // App-hosted confirm avoids PKCE (`code` exchange) when the link is opened in another app/device.
+  const base = getPublicSiteBaseUrl();
+  const { redirectPath, localeParam } = parseConfirmParamsFromRedirectTo(redirectTo);
+  const confirmParams = new URLSearchParams({
+    token_hash: tokenHash,
+    type: otpType,
+    redirect: redirectPath,
+  });
+  if (localeParam) {
+    confirmParams.set("locale", localeParam);
+  }
+  const actionLink = `${base}/api/auth/confirm?${confirmParams.toString()}`;
+
+  let locale: Locale = normalizeLocale(localeParam) ?? "en-US";
+  if (!localeParam && redirectTo) {
+    try {
+      const redirectUrl = new URL(redirectTo, "https://x");
+      const lp = redirectUrl.searchParams.get("locale");
+      locale = normalizeLocale(lp) ?? locale;
+    } catch {
+      // ignore malformed redirect_to
+    }
+  }
+
+  type SendOutcome = { ok: true } | { ok: false; error: string };
+
+  let sendResult: SendOutcome = { ok: true };
 
   switch (actionType) {
     case "magiclink":
-      await sendMagicLinkEmail({ to: email, actionLink, locale });
+      sendResult = await sendMagicLinkEmail({ to: email, actionLink, locale });
       break;
 
     case "signup":
     case "email_change_new":
-      await sendConfirmationEmail({ to: email, actionLink, locale, fullName });
+      sendResult = await sendConfirmationEmail({ to: email, actionLink, locale, fullName });
       break;
 
     case "recovery":
-      await sendPasswordResetEmail({ to: email, actionLink, locale });
+      sendResult = await sendPasswordResetEmail({ to: email, actionLink, locale });
       break;
 
     case "email_change_current":
-      // Notify the old address that an email change was initiated.
-      await sendConfirmationEmail({ to: email, actionLink, locale });
+      sendResult = await sendConfirmationEmail({ to: email, actionLink, locale });
       break;
 
     default:
       console.warn("[email-hook] Unknown email_action_type:", actionType);
+  }
+
+  if (!sendResult.ok) {
+    console.error("[email-hook] Resend failed:", sendResult.error);
+    return NextResponse.json({ error: "Email delivery failed" }, { status: 500 });
   }
 
   // Return empty object — Supabase treats any 2xx as success.
@@ -113,45 +140,4 @@ interface HookPayload {
     email_action_type?: string;
     site_url?: string;
   };
-}
-
-// ─── JWT verification ────────────────────────────────────────────────────
-
-/**
- * Verify the HS256 JWT Bearer token Supabase sends with every HTTP auth hook.
- * The JWT is signed with the raw bytes obtained by base64-decoding the
- * "whsec_<base64>" part of the hook secret (stripping the "v1," prefix).
- */
-function verifyHookJWT(authHeader: string | null, secret: string): boolean {
-  try {
-    if (!authHeader?.startsWith("Bearer ")) return false;
-    const token = authHeader.slice(7);
-
-    const parts = token.split(".");
-    if (parts.length !== 3) return false;
-    const [headerB64, payloadB64, sigB64] = parts;
-
-    // Decode and check expiry.
-    const payloadJson = Buffer.from(payloadB64, "base64url").toString("utf8");
-    const { exp } = JSON.parse(payloadJson) as { exp?: number };
-    if (exp && exp < Date.now() / 1000) return false;
-
-    // Strip "v1,whsec_" prefix, base64-decode to get raw key bytes.
-    const rawSecret = secret.replace(/^v\d+,whsec_/, "");
-    const keyBytes = Buffer.from(rawSecret, "base64");
-
-    // Recompute signature over "<header>.<payload>".
-    const expected = crypto
-      .createHmac("sha256", keyBytes)
-      .update(`${headerB64}.${payloadB64}`)
-      .digest("base64url");
-
-    // Constant-time comparison.
-    const sigBuf = Buffer.from(sigB64);
-    const expBuf = Buffer.from(expected);
-    if (sigBuf.length !== expBuf.length) return false;
-    return crypto.timingSafeEqual(sigBuf, expBuf);
-  } catch {
-    return false;
-  }
 }
