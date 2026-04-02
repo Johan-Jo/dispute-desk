@@ -934,7 +934,7 @@ Admin accounts are stored in the `admin_users` table (email, bcrypt password has
 
 - **Login:** `POST /api/admin/login` accepts `{ email, password }`, bcrypt-verifies against `admin_users`, sets the `dd_admin_session` cookie (8h TTL, path `/`, HTTP-only).
 - **Cookie format:** `{userId}:{HMAC-SHA256(ADMIN_SECRET, userId)}` — cryptographically tied to the specific user; cannot be forged or reused after deactivation.
-- **Middleware:** sync HMAC verification (no DB) on every `/admin/*` request; full `is_active` DB check in API route handlers via `hasAdminSession()`.
+- **Middleware:** async HMAC verification via Web Crypto API (`crypto.subtle`) — no DB, works in Edge runtime. Full `is_active` DB check in API route handlers via `hasAdminSession()`. (Node.js `crypto.createHmac` must not be used in middleware — it is unavailable in Vercel's Edge runtime and causes `MIDDLEWARE_INVOCATION_FAILED`.)
 - **Bootstrap fallback:** when `admin_users` has zero active users, email `admin@bootstrap` + `ADMIN_SECRET` value is accepted as a one-time login so the first real account can be created. Closed automatically once any active user exists.
 - **Helpers** in `lib/admin/auth.ts`: `validateAdminCredentials`, `buildAdminCookieToken`, `verifyAdminCookieToken`, `hasAdminSession`, `getAdminSessionUser`, `hashPassword`, `verifyPassword`, `clearAdminSessionOnResponse`.
 

@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import createNextIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
@@ -245,7 +244,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") return nextWithAppBridge(req, "0");
     const adminCookie = req.cookies.get("dd_admin_session")?.value;
-    if (!verifyAdminCookieToken(adminCookie)) {
+    if (!(await verifyAdminCookieToken(adminCookie))) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
     return nextWithAppBridge(req, "0");
@@ -304,26 +303,37 @@ export async function middleware(req: NextRequest) {
 }
 
 /**
- * Verify the HMAC signature on the admin session cookie — synchronous, no DB.
+ * Verify the HMAC signature on the admin session cookie — async, no DB.
+ * Uses Web Crypto API (crypto.subtle) so it works in Edge runtime (Vercel middleware).
  * Full is_active check is deferred to hasAdminSession() in API route handlers.
  */
-function verifyAdminCookieToken(value: string | undefined): boolean {
+async function verifyAdminCookieToken(value: string | undefined): Promise<boolean> {
   if (!value) return false;
   const colon = value.indexOf(":");
   if (colon === -1) return false;
   const userId = value.slice(0, colon);
   const sig = value.slice(colon + 1);
   if (!userId || !sig) return false;
-  const sec = process.env.ADMIN_SECRET ?? "";
-  const expected = crypto
-    .createHmac("sha256", sec)
-    .update(userId)
-    .digest("hex");
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(sig, "hex"),
-      Buffer.from(expected, "hex")
+    const sec = process.env.ADMIN_SECRET ?? "";
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(sec),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
     );
+    const expectedBuf = await crypto.subtle.sign("HMAC", key, enc.encode(userId));
+    const expectedHex = Array.from(new Uint8Array(expectedBuf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    if (sig.length !== expectedHex.length) return false;
+    let diff = 0;
+    for (let i = 0; i < sig.length; i++) {
+      diff |= sig.charCodeAt(i) ^ expectedHex.charCodeAt(i);
+    }
+    return diff === 0;
   } catch {
     return false;
   }
