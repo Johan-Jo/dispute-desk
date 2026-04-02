@@ -37,7 +37,8 @@ export default async function RootLayout({
   // and must be first. React hoists <script src> from nested components and adds
   // async/defer — the only safe place is the explicit <head> in the root layout.
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
-  const gaId = process.env.NEXT_PUBLIC_GA_ID ?? "G-MN5KDFQMMX";
+  // Match GA property Measurement ID; empty env must not override (Vercel sometimes sets "").
+  const gaId = (process.env.NEXT_PUBLIC_GA_ID ?? "").trim() || "G-MN5KDFQMMX";
   return (
     <html lang={locale}>
       <head>
