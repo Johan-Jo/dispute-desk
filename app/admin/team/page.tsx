@@ -29,15 +29,11 @@ export default function AdminTeamPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Add-user form
   const [showForm, setShowForm] = useState(false);
   const [newEmail, setNewEmail] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
-  // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -48,7 +44,9 @@ export default function AdminTeamPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,15 +55,15 @@ export default function AdminTeamPage() {
     const res = await fetch("/api/admin/team", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: newEmail, password: newPassword, name: newName }),
+      body: JSON.stringify({ email: newEmail.trim() }),
     });
     if (res.ok) {
-      setNewEmail(""); setNewName(""); setNewPassword("");
+      setNewEmail("");
       setShowForm(false);
       fetchUsers();
     } else {
       const d = await res.json();
-      setFormError(d.error ?? "Failed to create user");
+      setFormError(d.error ?? "Failed to grant access");
     }
     setFormLoading(false);
   };
@@ -95,7 +93,10 @@ export default function AdminTeamPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#0B1220]">Admin Team</h1>
         <button
-          onClick={() => { setShowForm(true); setFormError(null); }}
+          onClick={() => {
+            setShowForm(true);
+            setFormError(null);
+          }}
           className="flex items-center gap-2 h-9 px-4 bg-[#0B1220] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B]"
         >
           <UserPlus className="w-4 h-4" />
@@ -103,36 +104,22 @@ export default function AdminTeamPage() {
         </button>
       </div>
 
-      {error && (
-        <p className="text-sm text-[#EF4444] mb-4">{error}</p>
-      )}
+      {error && <p className="text-sm text-[#EF4444] mb-4">{error}</p>}
 
-      {/* Add user form */}
       {showForm && (
         <div className="bg-white border border-[#E5E7EB] rounded-lg p-6 mb-6">
-          <h2 className="font-semibold text-[#0B1220] mb-4">New admin user</h2>
+          <h2 className="font-semibold text-[#0B1220] mb-2">Grant admin access</h2>
+          <p className="text-sm text-[#667085] mb-4">
+            Enter the email they use to sign in to DisputeDesk (portal). They must already have an
+            account — if not, they should sign up first at <code className="text-xs">/auth/sign-up</code>.
+          </p>
           <form onSubmit={handleAdd} className="space-y-3 max-w-sm">
-            <input
-              type="text"
-              placeholder="Full name (optional)"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-            />
             <input
               type="email"
               placeholder="Email"
               required
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-            />
-            <input
-              type="password"
-              placeholder="Password (min. 8 characters)"
-              required
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
               className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
             />
             {formError && <p className="text-sm text-[#EF4444]">{formError}</p>}
@@ -142,7 +129,7 @@ export default function AdminTeamPage() {
                 disabled={formLoading}
                 className="h-9 px-4 bg-[#0B1220] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] disabled:opacity-50"
               >
-                {formLoading ? "Creating..." : "Create user"}
+                {formLoading ? "Saving..." : "Grant access"}
               </button>
               <button
                 type="button"
@@ -156,7 +143,6 @@ export default function AdminTeamPage() {
         </div>
       )}
 
-      {/* Users table */}
       <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
         {loading ? (
           <p className="text-[#667085] text-sm p-6">Loading...</p>
@@ -168,7 +154,7 @@ export default function AdminTeamPage() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-[#374151]">Name / Email</th>
                 <th className="text-left px-4 py-3 font-medium text-[#374151]">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-[#374151]">Last login</th>
+                <th className="text-left px-4 py-3 font-medium text-[#374151]">Last activity</th>
                 <th className="text-left px-4 py-3 font-medium text-[#374151]">Created</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -181,11 +167,13 @@ export default function AdminTeamPage() {
                     <p className="text-[#667085]">{user.email}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      user.is_active
-                        ? "bg-[#ECFDF5] text-[#065F46]"
-                        : "bg-[#F3F4F6] text-[#6B7280]"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        user.is_active
+                          ? "bg-[#ECFDF5] text-[#065F46]"
+                          : "bg-[#F3F4F6] text-[#6B7280]"
+                      }`}
+                    >
                       {user.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
@@ -203,10 +191,11 @@ export default function AdminTeamPage() {
                         title={user.is_active ? "Deactivate" : "Activate"}
                         className="text-[#667085] hover:text-[#0B1220]"
                       >
-                        {user.is_active
-                          ? <ToggleRight className="w-5 h-5 text-[#10B981]" />
-                          : <ToggleLeft className="w-5 h-5" />
-                        }
+                        {user.is_active ? (
+                          <ToggleRight className="w-5 h-5 text-[#10B981]" />
+                        ) : (
+                          <ToggleLeft className="w-5 h-5" />
+                        )}
                       </button>
                       {confirmDelete === user.id ? (
                         <span className="flex items-center gap-1">
@@ -226,7 +215,7 @@ export default function AdminTeamPage() {
                       ) : (
                         <button
                           onClick={() => setConfirmDelete(user.id)}
-                          title="Delete user"
+                          title="Revoke admin"
                           className="text-[#667085] hover:text-[#EF4444]"
                         >
                           <Trash2 className="w-4 h-4" />

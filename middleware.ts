@@ -240,14 +240,52 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // --- Admin routes: require admin session cookie ---
+  // --- Admin routes: Supabase session + internal_admin_grants (same creds as portal) ---
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") return nextWithAppBridge(req, "0");
-    const adminCookie = req.cookies.get("dd_admin_session")?.value;
-    if (!(await verifyAdminCookieToken(adminCookie))) {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
+
+    const res = nextWithAppBridge(req, "0");
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => req.cookies.getAll(),
+          setAll(cookiesToSet) {
+            for (const { name, value, options } of cookiesToSet) {
+              res.cookies.set(name, value, options);
+            }
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const signInUrl = new URL("/auth/sign-in", req.url);
+      signInUrl.searchParams.set("continue", pathname + req.nextUrl.search);
+      return NextResponse.redirect(signInUrl);
     }
-    return nextWithAppBridge(req, "0");
+
+    const { getServiceClient } = await import("@/lib/supabase/server");
+    const db = getServiceClient();
+    const { data: grant } = await db
+      .from("internal_admin_grants")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!grant) {
+      return NextResponse.redirect(new URL("/admin/login?reason=no_access", req.url));
+    }
+
+    await db.rpc("dd_admin_touch_last_login", { p_user_id: user.id });
+
+    return res;
   }
 
   // --- Embedded app routes (/app/*): require Shopify session ---
@@ -300,43 +338,6 @@ export async function middleware(req: NextRequest) {
   }
 
   return nextWithAppBridge(req, "0");
-}
-
-/**
- * Verify the HMAC signature on the admin session cookie — async, no DB.
- * Uses Web Crypto API (crypto.subtle) so it works in Edge runtime (Vercel middleware).
- * Full is_active check is deferred to hasAdminSession() in API route handlers.
- */
-async function verifyAdminCookieToken(value: string | undefined): Promise<boolean> {
-  if (!value) return false;
-  const colon = value.indexOf(":");
-  if (colon === -1) return false;
-  const userId = value.slice(0, colon);
-  const sig = value.slice(colon + 1);
-  if (!userId || !sig) return false;
-  try {
-    const sec = process.env.ADMIN_SECRET ?? "";
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(sec),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    const expectedBuf = await crypto.subtle.sign("HMAC", key, enc.encode(userId));
-    const expectedHex = Array.from(new Uint8Array(expectedBuf))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    if (sig.length !== expectedHex.length) return false;
-    let diff = 0;
-    for (let i = 0; i < sig.length; i++) {
-      diff |= sig.charCodeAt(i) ^ expectedHex.charCodeAt(i);
-    }
-    return diff === 0;
-  } catch {
-    return false;
-  }
 }
 
 export const config = {

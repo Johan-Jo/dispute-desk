@@ -45,7 +45,7 @@ Then fill in values below. Optional vars can be left empty if you don’t use th
 | **TOKEN_ENCRYPTION_KEY_V1** | Generate 32 bytes, hex-encode (e.g. `openssl rand -hex 32`) | Yes (for auth tokens) |
 | **TOKEN_ENCRYPTION_KEY** | Set to same value as TOKEN_ENCRYPTION_KEY_V1 | Yes |
 | **CRON_SECRET** | Any long random string (for cron/auth) | Yes (if using cron) |
-| **ADMIN_SECRET** | Your chosen password for /admin login | Optional |
+| **ADMIN_SMOKE_EMAIL** / **ADMIN_SMOKE_PASSWORD** | Portal user with `internal_admin_grants` — for Puppeteer smoke scripts and optional API smoke tests | Optional (dev only) |
 | **RESEND_API_KEY** | Resend.com API key (for emails) | Optional |
 | **EMAIL_FROM** | Verified sender (e.g. DisputeDesk &lt;...@mail.disputedesk.app&gt;) | Optional |
 | **NEXT_PUBLIC_APP_URL** | Same as SHOPIFY_APP_URL for email links | Optional |

@@ -120,22 +120,35 @@ export function HelpClient() {
         <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-8 shadow-sm">
           {/* LOGIN */}
           <Section id="login" title="Login">
-            <P>Navigate to <Code>/admin/login</Code> and sign in with your <Strong>email</Strong> and <Strong>password</Strong>. Admin accounts are managed under <Strong>Team</Strong> — there is no shared secret.</P>
-            <H3>First-time bootstrap</H3>
-            <P>When the admin user table is empty (fresh deployment), sign in with email <Code>admin@bootstrap</Code> and the value of the <Code>ADMIN_SECRET</Code> environment variable as the password. This creates a temporary session so you can open <Strong>Team</Strong> and create a real named account. The bootstrap path is automatically closed once one active admin user exists.</P>
-            <P>Your session is stored in the <Code>dd_admin_session</Code> HTTP-only cookie (8-hour TTL). The cookie is cryptographically tied to your account — it cannot be reused if your account is deactivated.</P>
+            <P>
+              Admin uses the <Strong>same DisputeDesk account</Strong> as the merchant portal. Open{" "}
+              <Code>/admin</Code> (or <Code>/admin/login</Code>) — if you are not signed in, you are
+              redirected to <Code>/auth/sign-in?continue=/admin</Code>. After you sign in with your
+              usual email and password, you can access admin only if your user has a row in{" "}
+              <Code>internal_admin_grants</Code> (managed under <Strong>Team</Strong>).
+            </P>
+            <H3>First admin on a new project</H3>
+            <P>
+              Someone with database access runs <Code>npm run add:admin-user -- &lt;email&gt;</Code>{" "}
+              (or inserts into <Code>internal_admin_grants</Code>) for a user who already exists in{" "}
+              <Code>auth.users</Code> (they must have signed up at <Code>/auth/sign-up</Code> first).
+            </P>
+            <P>
+              Your session is the standard Supabase Auth cookie (HTTP-only), shared with the portal —
+              signing out from admin uses the same sign-out as the portal.
+            </P>
           </Section>
 
           {/* TEAM */}
           <Section id="team" title="Team">
             <P>At <Code>/admin/team</Code>, manage who has access to the admin panel.</P>
             <Table headers={["Action", "How"]} rows={[
-              ["Add user", "Click Add user — enter name (optional), email, and password. The password is hashed (bcrypt) and never stored in plain text."],
-              ["Deactivate / reactivate", "Click the toggle on the right. Deactivated accounts cannot sign in and existing sessions are rejected on the next API call."],
-              ["Delete", "Click the trash icon, then confirm. Deleted accounts cannot be recovered."],
+              ["Grant access", "Click Add user — enter the email they use for DisputeDesk sign-in. They must already have an account; this only adds the admin grant."],
+              ["Deactivate / reactivate", "Click the toggle on the right. Deactivated grants cannot access admin; the portal account is unchanged."],
+              ["Revoke", "Click the trash icon, then confirm. Removes admin access only — it does not delete their portal user."],
             ]} />
-            <P><Strong>You cannot deactivate or delete your own account</Strong> while signed in as that user.</P>
-            <P>The <Strong>Last login</Strong> column updates each time the user successfully authenticates. <Strong>Created by</Strong> shows the email of the admin who added the account.</P>
+            <P><Strong>You cannot deactivate or delete your own grant</Strong> while signed in as that user.</P>
+            <P>The <Strong>Last activity</Strong> column is updated periodically while using admin (throttled). <Strong>Created by</Strong> shows the email of the admin who granted access.</P>
           </Section>
 
           {/* DASHBOARD */}

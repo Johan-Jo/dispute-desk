@@ -1,65 +1,62 @@
-"use client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createPortalClient } from "@/lib/supabase/portal";
+import { getServiceClient } from "@/lib/supabase/server";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reason?: string }>;
+}) {
+  const sp = await searchParams;
+  const supabase = await createPortalClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  if (!user) {
+    redirect("/auth/sign-in?continue=/admin");
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (res.ok) {
-      router.refresh();
-      router.push("/admin");
-    } else {
-      setError("Invalid credentials");
-    }
-    setLoading(false);
-  };
+  const db = getServiceClient();
+  const { data: grant } = await db
+    .from("internal_admin_grants")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (grant) {
+    redirect("/admin");
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
-      <div className="bg-white rounded-lg border border-[#E5E7EB] p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-[#0B1220] mb-1">DisputeDesk Admin</h1>
-        <p className="text-sm text-[#667085] mb-6">Internal operator panel</p>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            required
-            autoFocus
-            className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-          />
-          {error && <p className="text-sm text-[#EF4444]">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-10 bg-[#0B1220] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] disabled:opacity-50"
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA] px-4">
+      <div className="bg-white rounded-lg border border-[#E5E7EB] p-8 w-full max-w-md text-center">
+        <h1 className="text-xl font-bold text-[#0B1220] mb-2">DisputeDesk Admin</h1>
+        <p className="text-sm text-[#667085] mb-4">Internal operator panel</p>
+        {sp.reason === "no_access" && (
+          <p className="text-sm text-[#B45309] bg-[#FFFBEB] border border-[#FDE68A] rounded-lg px-3 py-2 mb-4">
+            This account does not have internal admin access. Ask an existing admin to add your email
+            in <strong className="font-medium">Admin → Team</strong> (you must use the same email as your
+            DisputeDesk sign-in).
+          </p>
+        )}
+        <p className="text-sm text-[#667085] mb-6">
+          Signed in as{" "}
+          <span className="font-medium text-[#0B1220]">{user.email}</span>.
+        </p>
+        <div className="flex flex-col gap-2 text-sm">
+          <Link
+            href="/portal/dashboard"
+            className="text-[#1D4ED8] hover:underline"
           >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
+            Go to merchant portal
+          </Link>
+          <a href="/api/admin/logout" className="text-[#64748B] hover:text-[#0B1220]">
+            Sign out
+          </a>
+        </div>
       </div>
     </div>
   );

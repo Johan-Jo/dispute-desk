@@ -930,13 +930,12 @@ Requires `.env.local` with `SUPABASE_URL_POSTGRES` configured.
 A standalone operator dashboard at `/admin/*`, separate from the merchant-facing app.
 
 ### Auth
-Admin accounts are stored in the `admin_users` table (email, bcrypt password hash, name, is_active, last_login_at, created_by).
+Internal admins use the **same Supabase Auth session** as the marketing/portal sign-in (`/auth/sign-in`). Authorization is a row in `internal_admin_grants` (`user_id` → `auth.users`, optional denormalized `email`, `is_active`, `last_login_at`, `created_at`, `created_by`).
 
-- **Login:** `POST /api/admin/login` accepts `{ email, password }`, bcrypt-verifies against `admin_users`, sets the `dd_admin_session` cookie (8h TTL, path `/`, HTTP-only).
-- **Cookie format:** `{userId}:{HMAC-SHA256(ADMIN_SECRET, userId)}` — cryptographically tied to the specific user; cannot be forged or reused after deactivation.
-- **Middleware:** async HMAC verification via Web Crypto API (`crypto.subtle`) — no DB, works in Edge runtime. Full `is_active` DB check in API route handlers via `hasAdminSession()`. (Node.js `crypto.createHmac` must not be used in middleware — it is unavailable in Vercel's Edge runtime and causes `MIDDLEWARE_INVOCATION_FAILED`.)
-- **Bootstrap fallback:** when `admin_users` has zero active users, email `admin@bootstrap` + `ADMIN_SECRET` value is accepted as a one-time login so the first real account can be created. Closed automatically once any active user exists.
-- **Helpers** in `lib/admin/auth.ts`: `validateAdminCredentials`, `buildAdminCookieToken`, `verifyAdminCookieToken`, `hasAdminSession`, `getAdminSessionUser`, `hashPassword`, `verifyPassword`, `clearAdminSessionOnResponse`.
+- **Login:** Visiting `/admin` or `/admin/login` requires a portal session. Unauthenticated users are redirected to `/auth/sign-in?continue=/admin`. After sign-in, middleware checks `internal_admin_grants` for the current `auth.uid()`. Users without a grant see `/admin/login?reason=no_access`.
+- **Middleware:** Validates the Supabase session cookie (with refresh via `@supabase/ssr`) and loads the grant with the service-role client. `dd_admin_touch_last_login` throttles `last_login_at` updates (about every 30 minutes).
+- **Helpers** in `lib/admin/auth.ts`: `hasAdminSession`, `getAdminSessionUser`.
+- **First admin:** Grant access with `npm run add:admin-user -- <email>` (requires an existing `auth.users` row) or insert into `internal_admin_grants` via SQL.
 
 ### Pages
 | Route | Purpose |
@@ -950,11 +949,10 @@ Admin accounts are stored in the `admin_users` table (email, bcrypt password has
 | `/admin/billing` | MRR, plan distribution, per-shop monthly usage |
 
 ### API Routes
-- `POST /api/admin/login` — authenticate (email + password); sets `dd_admin_session` cookie on `NextResponse` (not via `cookies().set()` — read-only in Route Handlers in Next.js 15)
-- `GET /api/admin/logout` — clear session
+- `GET /api/admin/logout` — signs out the Supabase session (same as portal)
 - `GET /api/admin/metrics` — aggregated dashboard data
 - `GET /api/admin/team` — list admin users (no password_hash)
-- `POST /api/admin/team` — create admin user (bcrypt hash, created_by tracked)
+- `POST /api/admin/team` — grant admin by email (must match an existing portal `auth.users` row; `created_by` tracked)
 - `PATCH /api/admin/team/[id]` — toggle is_active; rejects self-deactivation
 - `DELETE /api/admin/team/[id]` — delete user; rejects self-deletion
 - `GET /api/admin/shops` — list shops (search, plan, status filters)

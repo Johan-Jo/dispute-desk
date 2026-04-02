@@ -1,8 +1,9 @@
 /**
- * Browser smoke: open /admin/login, submit ADMIN_SECRET, confirm redirect to /admin.
+ * Browser smoke: sign in via /auth/sign-in (portal), continue=/admin, confirm dashboard.
  *
  * Requires a running app, e.g. `npx next dev -p 3099`
- * Env: ADMIN_SECRET in .env.local; optional PUPPETEER_BASE_URL / SMOKE_BASE_URL (default http://localhost:3099)
+ * Env: ADMIN_SMOKE_EMAIL, ADMIN_SMOKE_PASSWORD in .env.local (user must have internal_admin_grants)
+ * Optional: PUPPETEER_BASE_URL / SMOKE_BASE_URL (default http://localhost:3099)
  *
  * Usage: node scripts/puppeteer-admin-login.mjs
  */
@@ -19,11 +20,12 @@ const baseUrl = (
   "http://localhost:3099"
 ).replace(/\/$/, "");
 
-const secret = process.env.ADMIN_SECRET;
+const email = process.env.ADMIN_SMOKE_EMAIL;
+const password = process.env.ADMIN_SMOKE_PASSWORD;
 
 async function main() {
-  if (!secret) {
-    console.error("ADMIN_SECRET missing — set it in .env.local");
+  if (!email || !password) {
+    console.error("ADMIN_SMOKE_EMAIL and ADMIN_SMOKE_PASSWORD required in .env.local");
     process.exit(1);
   }
 
@@ -35,16 +37,16 @@ async function main() {
   page.setDefaultNavigationTimeout(120_000);
   page.setDefaultTimeout(120_000);
 
-  await page.goto(`${baseUrl}/admin/login`, {
+  await page.goto(`${baseUrl}/auth/sign-in?continue=/admin`, {
     waitUntil: "domcontentloaded",
     timeout: 120_000,
   });
-  await page.waitForSelector('input[type="password"]');
-  await page.type('input[type="password"]', secret, { delay: 10 });
+  await page.waitForSelector('input[type="email"]');
+  await page.type('input[type="email"]', email, { delay: 10 });
+  await page.type('input[type="password"]', password, { delay: 10 });
   await Promise.all([
     page.waitForFunction(() => {
       const p = window.location.pathname;
-      if (p === "/admin/login") return false;
       return p === "/admin" || (p.startsWith("/admin/") && !p.endsWith("/login"));
     }, { timeout: 120_000 }),
     page.click('button[type="submit"]'),

@@ -35,12 +35,14 @@ DisputeDesk ships as two web surfaces from one codebase:
 | Marketing | `/` (en), `/de`, `/es`, `/fr`, `/pt`, `/sv` | Public | Localized landing (SEO paths; messages use BCP-47 files) |
 | Portal Auth | `/auth/*` | Public | Sign in, sign up, password reset |
 | Portal App | `/portal/*` | Supabase Auth | SaaS web: disputes, packs, settings |
+| Internal Admin | `/admin/*` | Supabase Auth + DB grant | Operator dashboard (shops, jobs, billing, Resources Hub CMS); same login as portal, authorized via `internal_admin_grants` |
 | Embedded App | `/app/*` | Shopify session | Inside Shopify Admin (Polaris) |
 | API | `/api/*` | Mixed | Backend routes |
 
 - **Embedded app** is the primary surface for merchants who install from Shopify.
 - **Portal** serves team members without Shopify Admin access, multi-store
   operators, and merchants who prefer a standalone web experience.
+- **Internal admin** (`/admin`) uses the **same Supabase credentials** as the portal; access is gated by a row in `internal_admin_grants` (see **Internal Admin Panel** in [`docs/technical.md`](docs/technical.md)). First grant: `npm run add:admin-user -- <email>` (user must already exist in `auth.users`), or insert in SQL; additional operators: **Admin → Team** while signed in.
 
 ## Tech Stack
 
@@ -123,6 +125,7 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only key (never expose to client) |
 | `TOKEN_ENCRYPTION_KEY_V1` | AES-256-GCM key for token encryption (64 hex chars) |
 | `CRON_SECRET` | Shared secret for cron → worker endpoint auth |
+| `ADMIN_SMOKE_EMAIL` / `ADMIN_SMOKE_PASSWORD` | Optional — portal user **with** `internal_admin_grants` for Puppeteer/smoke scripts and admin E2E (see `.env.example`) |
 
 ### Shopify Scopes
 

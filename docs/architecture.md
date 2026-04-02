@@ -112,6 +112,14 @@ See [`docs/technical.md`](technical.md) for the full component catalog.
   - An offline session (same as embedded).
   - A `portal_user_shops` row linking the portal user to the shop.
 
+### Internal Admin (`/admin`)
+
+- Uses the **same Supabase Auth session** as the portal (single sign-on cookie).
+- Authorization is **not** implied by portal membership: a separate table,
+  `internal_admin_grants`, maps `auth.users.id` to allowed operators (`is_active`, audit fields).
+- Middleware requires a valid session **and** an active grant; API routes re-check via `hasAdminSession()`.
+- Granting the first operator is done with a service-role script (`npm run add:admin-user`) or SQL; subsequent grants use **Admin → Team** in the UI.
+
 ### Supabase DB Access
 
 Supabase is **server-only** for data access. All database queries go through

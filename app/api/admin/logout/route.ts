@@ -1,11 +1,33 @@
-import { NextResponse } from "next/server";
-import { clearAdminSessionOnResponse } from "@/lib/admin/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-/** Use request URL as redirect base so logout works on any host (local, preview, prod) without `NEXT_PUBLIC_APP_URL`. */
-export async function GET(request: Request) {
-  const res = NextResponse.redirect(new URL("/admin/login", request.url));
-  clearAdminSessionOnResponse(res);
+/** Ends Supabase session (same as portal sign-out). */
+export async function GET(req: NextRequest) {
+  const res = NextResponse.redirect(new URL("/auth/sign-in?continue=/admin", req.url));
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value, options } of cookiesToSet) {
+            res.cookies.set(name, value, options);
+          }
+        },
+      },
+    }
+  );
+
+  await supabase.auth.signOut();
+
+  res.cookies.delete("active_shop_id");
+  res.cookies.delete("dd_active_shop");
+
   return res;
 }

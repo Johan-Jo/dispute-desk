@@ -2,7 +2,10 @@ import { test, expect } from "@playwright/test";
 
 test.setTimeout(60_000);
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const ADMIN_SMOKE_EMAIL =
+  process.env.ADMIN_SMOKE_EMAIL ?? process.env.E2E_TEST_EMAIL;
+const ADMIN_SMOKE_PASSWORD =
+  process.env.ADMIN_SMOKE_PASSWORD ?? process.env.E2E_TEST_PASSWORD;
 
 /** Pages that do not require a dynamic content id. */
 const RESOURCES_HUB_PATHS = [
@@ -16,18 +19,18 @@ const RESOURCES_HUB_PATHS = [
 ];
 
 async function adminLogin(page: import("@playwright/test").Page) {
-  const res = await page.request.post("/api/admin/login", {
-    data: { password: ADMIN_SECRET },
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!res.ok()) {
-    const body = await res.text();
-    throw new Error(`Admin login failed: ${res.status()} ${body}`);
-  }
+  await page.goto("/auth/sign-in?continue=/admin");
+  await page.locator('input[type="email"]').fill(ADMIN_SMOKE_EMAIL!);
+  await page.locator('input[type="password"]').first().fill(ADMIN_SMOKE_PASSWORD!);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.waitForURL(/\/admin/, { timeout: 60_000 });
 }
 
 test.describe("Admin Resources Hub smoke", () => {
-  test.skip(!ADMIN_SECRET, "Set ADMIN_SECRET in .env.local to run these tests.");
+  test.skip(
+    !ADMIN_SMOKE_EMAIL || !ADMIN_SMOKE_PASSWORD,
+    "Set ADMIN_SMOKE_EMAIL / ADMIN_SMOKE_PASSWORD (or E2E_TEST_*) in .env.local; user must have internal_admin_grants.",
+  );
 
   test("authenticated navigation returns 200 for hub pages", async ({ page }) => {
     await adminLogin(page);

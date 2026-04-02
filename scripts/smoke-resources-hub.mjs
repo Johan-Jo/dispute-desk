@@ -1,8 +1,9 @@
 /**
  * Optional smoke check for Resources Hub admin APIs.
  *
- * Requires a running app (e.g. `npx next dev -p 3099`) and valid credentials in .env.local:
- *   ADMIN_SECRET
+ * Requires a running app (e.g. `npx next dev -p 3099`) and in .env.local:
+ *   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+ *   ADMIN_SMOKE_EMAIL, ADMIN_SMOKE_PASSWORD — portal user with internal_admin_grants
  *   Optional: SMOKE_BASE_URL (default http://localhost:3099)
  *
  * Usage:
@@ -14,6 +15,7 @@
 
 import { readFileSync } from "fs";
 import { join } from "path";
+import { createServerClient } from "@supabase/ssr";
 
 function loadEnvLocal() {
   const envPath = join(process.cwd(), ".env.local");
@@ -42,40 +44,55 @@ function loadEnvLocal() {
 
 const env = { ...loadEnvLocal(), ...process.env };
 const baseUrl = (env.SMOKE_BASE_URL || "http://localhost:3099").replace(/\/$/, "");
-const secret = env.ADMIN_SECRET;
+const url = env.NEXT_PUBLIC_SUPABASE_URL;
+const anon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const email = env.ADMIN_SMOKE_EMAIL;
+const password = env.ADMIN_SMOKE_PASSWORD;
 
 const ok = "\x1b[32m✓\x1b[0m";
 const fail = "\x1b[31m✗\x1b[0m";
 
+function cookieHeaderFromJar(jar) {
+  return Array.from(jar.entries())
+    .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+    .join("; ");
+}
+
 async function run() {
   console.log("\n=== Resources Hub API smoke ===\n");
 
-  if (!secret) {
-    console.log(`  ${fail} ADMIN_SECRET missing (set in .env.local)`);
+  if (!url || !anon) {
+    console.log(`  ${fail} NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY missing`);
+    process.exit(1);
+  }
+  if (!email || !password) {
+    console.log(`  ${fail} ADMIN_SMOKE_EMAIL / ADMIN_SMOKE_PASSWORD missing (portal user with admin grant)`);
     process.exit(1);
   }
 
-  const loginRes = await fetch(`${baseUrl}/api/admin/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: secret }),
+  const jar = new Map();
+  const supabase = createServerClient(url, anon, {
+    cookies: {
+      getAll() {
+        return Array.from(jar.entries()).map(([name, value]) => ({ name, value }));
+      },
+      setAll(cookiesToSet) {
+        for (const { name, value } of cookiesToSet) {
+          jar.set(name, value);
+        }
+      },
+    },
   });
 
-  if (!loginRes.ok) {
-    console.log(`  ${fail} POST /api/admin/login → ${loginRes.status}`);
+  const { error: signErr } = await supabase.auth.signInWithPassword({ email, password });
+  if (signErr) {
+    console.log(`  ${fail} Supabase sign-in: ${signErr.message}`);
     process.exit(1);
   }
-  console.log(`  ${ok} Admin login`);
-
-  let cookie = "";
-  if (typeof loginRes.headers.getSetCookie === "function") {
-    cookie = loginRes.headers.getSetCookie().join("; ");
-  } else {
-    cookie = loginRes.headers.get("set-cookie") ?? "";
-  }
+  console.log(`  ${ok} Supabase session (admin grant required for /api/admin/*)`);
 
   const headers = {
-    Cookie: cookie,
+    Cookie: cookieHeaderFromJar(jar),
   };
 
   const listRes = await fetch(`${baseUrl}/api/admin/resources/content?pageSize=5`, {

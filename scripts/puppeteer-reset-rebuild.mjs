@@ -7,7 +7,7 @@
  * 5. Click reset-and-rebuild dry-run via the API (avoids actually archiving)
  * 6. Assert the route returns ok:true
  *
- * Env: ADMIN_SECRET in .env.local
+ * Env: ADMIN_SMOKE_EMAIL, ADMIN_SMOKE_PASSWORD in .env.local (user with internal_admin_grants)
  * PUPPETEER_BASE_URL / SMOKE_BASE_URL (default http://localhost:3000)
  *
  * Usage: node scripts/puppeteer-reset-rebuild.mjs
@@ -25,11 +25,12 @@ const baseUrl = (
   "http://localhost:3000"
 ).replace(/\/$/, "");
 
-const secret = process.env.ADMIN_SECRET;
+const email = process.env.ADMIN_SMOKE_EMAIL;
+const password = process.env.ADMIN_SMOKE_PASSWORD;
 
 async function main() {
-  if (!secret) {
-    console.error("ADMIN_SECRET missing — set it in .env.local");
+  if (!email || !password) {
+    console.error("ADMIN_SMOKE_EMAIL and ADMIN_SMOKE_PASSWORD required in .env.local");
     process.exit(1);
   }
 
@@ -45,9 +46,10 @@ async function main() {
 
     // Step 1: Login
     console.log("1. Logging in...");
-    await page.goto(`${baseUrl}/admin/login`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector('input[type="password"]');
-    await page.type('input[type="password"]', secret, { delay: 10 });
+    await page.goto(`${baseUrl}/auth/sign-in?continue=/admin`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('input[type="email"]');
+    await page.type('input[type="email"]', email, { delay: 10 });
+    await page.type('input[type="password"]', password, { delay: 10 });
     await Promise.all([
       page.waitForFunction(() => {
         const p = window.location.pathname;

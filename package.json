@@ -26,6 +26,7 @@
     "cron:resources": "node scripts/trigger-resources-crons.mjs",
     "smoke:resources-hub": "node scripts/smoke-resources-hub.mjs",
     "verify:app-store-url": "node scripts/verify-app-store-url.mjs",
+    "add:admin-user": "node scripts/add-admin-user.mjs",
     "puppeteer:admin": "node scripts/puppeteer-admin-login.mjs",
     "puppeteer:reset-rebuild": "node scripts/puppeteer-reset-rebuild.mjs"
   },
@@ -37,8 +38,6 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.45.0",
     "@tailwindcss/typography": "^0.5.19",
-    "@types/bcryptjs": "^3.0.0",
-    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",

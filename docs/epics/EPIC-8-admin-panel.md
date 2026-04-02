@@ -11,11 +11,10 @@ Provide an internal operator dashboard for monitoring shops, jobs, billing, and 
 ## Implementation Summary
 
 ### 8.1 — Admin Auth
-- **V1 approach:** env-based `ADMIN_SECRET` with HTTP-only cookie session (8h TTL).
-- `lib/admin/auth.ts` — `validateAdminCredentials`, `createAdminSession`, `hasAdminSession`, `clearAdminSessionOnResponse`.
-- `app/api/admin/login/route.ts` — POST endpoint for login.
-- `app/api/admin/logout/route.ts` — GET endpoint clears session and redirects.
-- `middleware.ts` — extended to protect `/admin/*` routes (redirects unauthenticated to `/admin/login`).
+- **Current:** Supabase Auth (same session as `/auth/sign-in`) plus `internal_admin_grants` (`user_id` → `auth.users`).
+- `lib/admin/auth.ts` — `hasAdminSession`, `getAdminSessionUser`.
+- `app/api/admin/logout/route.ts` — GET signs out Supabase session and redirects.
+- `middleware.ts` — protects `/admin/*` (redirect unauthenticated to sign-in; no grant → `/admin/login?reason=no_access`).
 
 ### 8.2 — Admin Layout & Dashboard
 - `app/admin/layout.tsx` — dark sidebar shell with nav links (Dashboard, Shops, Jobs, Audit Log, Billing). Login page bypasses layout.

@@ -1,6 +1,6 @@
 # DisputeDesk — Admin Guide
 
-This guide covers every section of the internal admin panel at `/admin`. The panel is protected by a shared secret — only internal operators should have access.
+This guide covers every section of the internal admin panel at `/admin`. Access requires a DisputeDesk portal account **and** an internal admin grant (`internal_admin_grants`).
 
 ---
 
@@ -8,11 +8,11 @@ This guide covers every section of the internal admin panel at `/admin`. The pan
 
 ### Login
 
-1. Navigate to `/admin/login`.
-2. Enter the admin secret (configured as `ADMIN_SECRET` in your environment).
-3. Click **Sign In**. You'll be redirected to the Dashboard.
+1. Navigate to `/admin` or `/admin/login`.
+2. If prompted, sign in at `/auth/sign-in` with your DisputeDesk email and password (same account as the merchant portal). Your user must have an admin grant in **Admin → Team** (or in `internal_admin_grants`).
+3. You land on the Dashboard when your session is authorized.
 
-Your session is stored in a cookie (`dd_admin_session`) and persists across browser tabs.
+Your session is the Supabase Auth cookie (shared with the merchant portal).
 
 ---
 
