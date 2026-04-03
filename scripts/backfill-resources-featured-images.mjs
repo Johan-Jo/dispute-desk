@@ -5,8 +5,9 @@
  * Uses the Pexels API (https://www.pexels.com/api/) — images served from images.pexels.com
  * (allowed in next.config.js images.remotePatterns + CSP).
  *
- * Per pillar we search once, cache photo URLs, then assign `pool[i % pool.length]` where `i`
- * is the item's index among published Resources rows in that pillar (sorted by id).
+ * Per pillar we merge several Pexels searches (diverse queries; avoids one “credit card + laptop” look),
+ * dedupe URLs, deprioritize cliché alt text, then assign `pool[i % pool.length]` where `i` is the
+ * item's index among published Resources rows in that pillar (sorted by id).
  *
  * Requires:
  *   SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL
@@ -39,24 +40,100 @@ if (!pexelsKey) {
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
 
-/** Pexels search query per pillar (English). */
-const PILLAR_SEARCH = {
-  chargebacks: "credit card payment ecommerce",
-  "dispute-resolution": "business meeting handshake",
-  "small-claims": "legal documents desk",
-  "mediation-arbitration": "team discussion office",
-  "dispute-management-software": "data dashboard laptop",
+/**
+ * Several English queries per pillar — variety beats a single “credit card ecommerce” search.
+ * Order is interleaved when merging so adjacent pool indices tend to differ in subject.
+ */
+const PILLAR_QUERIES = {
+  chargebacks: [
+    "retail store interior shopping",
+    "warehouse shipping boxes",
+    "customer service representative office",
+    "small business storefront",
+    "paperwork folder desk organized",
+    "delivery package doorstep",
+    "bank building architecture",
+    "calendar deadline planning",
+  ],
+  "dispute-resolution": [
+    "business handshake agreement",
+    "two professionals meeting coffee",
+    "negotiation office window light",
+    "signing document pen desk",
+    "team collaboration table",
+    "listening conversation",
+    "handshake silhouette sunset",
+    "sticky notes planning wall",
+  ],
+  "small-claims": [
+    "courthouse building exterior",
+    "law books shelf library",
+    "wooden gavel justice",
+    "organized files cabinet",
+    "community town hall",
+    "legal consultation office",
+    "paper stack organized",
+    "scales justice bronze",
+  ],
+  "mediation-arbitration": [
+    "round table meeting discussion",
+    "mediation calm office",
+    "whiteboard team brainstorming",
+    "people talking sofa office",
+    "facilitator meeting",
+    "conflict resolution teamwork",
+    "neutral office plants",
+    "group discussion diverse",
+  ],
+  "dispute-management-software": [
+    "abstract technology network blue",
+    "automation workflow diagram",
+    "cloud computing abstract",
+    "minimal desk plant workspace",
+    "data chart printout paper",
+    "server room blue lights",
+    "productivity organization desk",
+    "digital transformation abstract",
+  ],
 };
 
-const DEFAULT_SEARCH = "professional office workspace";
+const DEFAULT_QUERIES = [
+  "professional workspace natural light",
+  "business team diverse office",
+  "modern office plants",
+  "entrepreneur planning notebook",
+];
 
 /** @type {Map<string, { url: string; alt: string }[]>} */
 const pexelsCache = new Map();
 
-async function fetchPexelsPool(searchQuery) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Higher = more “credit card / laptop / dashboard screen” cliché — sort these last. */
+function clichéPenalty(alt) {
+  const a = String(alt ?? "").toLowerCase();
+  let n = 0;
+  if (/\b(credit card|debit card|visa card|mastercard|amex|holding card)\b/.test(a)) n += 5;
+  if (/\b(laptop|macbook|notebook computer|typing on keyboard|computer keyboard)\b/.test(a)) n += 4;
+  if (/\b(shopping online|ecommerce|online payment terminal)\b/.test(a)) n += 2;
+  if (/\b(dashboard|analytics screen|looking at screen|monitor displaying)\b/.test(a)) n += 2;
+  return n;
+}
+
+function photoToHero(p) {
+  const src = p.src?.large || p.src?.original || p.src?.medium;
+  const alt =
+    (p.alt && String(p.alt).trim()) ||
+    (p.photographer ? `Photo by ${p.photographer} on Pexels` : "Stock photo");
+  if (!src || !String(src).startsWith("https://images.pexels.com")) return null;
+  return { url: src, alt };
+}
+
+async function fetchPexelsPage(query, page) {
   const u = new URL("https://api.pexels.com/v1/search");
-  u.searchParams.set("query", searchQuery);
-  u.searchParams.set("per_page", "40");
+  u.searchParams.set("query", query);
+  u.searchParams.set("per_page", "20");
+  u.searchParams.set("page", String(page));
 
   const res = await fetch(u.toString(), {
     headers: { Authorization: pexelsKey },
@@ -67,24 +144,68 @@ async function fetchPexelsPool(searchQuery) {
   }
   const data = await res.json();
   const photos = data.photos ?? [];
-  return photos.map((p) => {
-    const src = p.src?.large || p.src?.original || p.src?.medium;
-    const alt =
-      (p.alt && String(p.alt).trim()) ||
-      (p.photographer ? `Photo by ${p.photographer} on Pexels` : "Stock photo");
-    return { url: src, alt };
-  }).filter((x) => x.url && x.url.startsWith("https://images.pexels.com"));
+  const out = [];
+  for (const p of photos) {
+    const h = photoToHero(p);
+    if (h) out.push(h);
+  }
+  return out;
+}
+
+/**
+ * Merge multiple queries × pages, dedupe by URL, interleave then deprioritize cliché alts.
+ */
+async function buildDiversePool(queries) {
+  const seen = new Set();
+  const buckets = [];
+
+  for (const q of queries) {
+    const bucket = [];
+    const batch = await fetchPexelsPage(q, 1);
+    for (const item of batch) {
+      if (seen.has(item.url)) continue;
+      seen.add(item.url);
+      bucket.push(item);
+    }
+    if (bucket.length) buckets.push(bucket);
+    await sleep(320);
+  }
+
+  /** Interleave bucket[0] from each query, then bucket[1], … */
+  const interleaved = [];
+  let round = 0;
+  let added = true;
+  while (added) {
+    added = false;
+    for (const b of buckets) {
+      if (round < b.length) {
+        interleaved.push(b[round]);
+        added = true;
+      }
+    }
+    round += 1;
+  }
+
+  if (interleaved.length === 0) {
+    throw new Error(`Pexels returned no photos for queries: ${queries.join("; ")}`);
+  }
+
+  interleaved.sort((a, b) => {
+    const pa = clichéPenalty(a.alt);
+    const pb = clichéPenalty(b.alt);
+    if (pa !== pb) return pa - pb;
+    return 0;
+  });
+
+  return interleaved;
 }
 
 async function getPoolForPillar(primaryPillar) {
   const key = primaryPillar == null ? "" : String(primaryPillar);
   if (pexelsCache.has(key)) return pexelsCache.get(key);
 
-  const q = PILLAR_SEARCH[primaryPillar] ?? DEFAULT_SEARCH;
-  const pool = await fetchPexelsPool(q);
-  if (pool.length === 0) {
-    throw new Error(`Pexels returned no photos for query: ${q}`);
-  }
+  const queries = PILLAR_QUERIES[primaryPillar] ?? DEFAULT_QUERIES;
+  const pool = await buildDiversePool(queries);
   pexelsCache.set(key, pool);
   return pool;
 }
