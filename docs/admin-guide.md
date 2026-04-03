@@ -211,6 +211,12 @@ The right sidebar contains:
 | **SEO** | Meta title (60 char limit), meta description (160 char limit) with live character counts. |
 | **AI Assistant** | AI-powered tools (see below). |
 
+#### Featured images (public hub)
+
+In **Metadata**, **Featured image URL** and **Featured image alt** drive the Resources hub listing (cards, featured slots), related-article cards, and the full-width hero on the public article page. Use an absolute `https://` URL (Supabase Storage or other allowed hosts — see `next.config.js`) or a site path such as `/images/...` for files in `public/`. Alt text is recommended for accessibility.
+
+For **bulk default hero images** on published items that still lack a URL, operators with repository access can run `npm run backfill:resources-images:dry` (preview) then `npm run backfill:resources-images` locally with `SUPABASE_SERVICE_ROLE_KEY` set; see `docs/technical.md` (Resources Hub) and `README.md`.
+
 #### Saving and Publishing
 
 - **Save Draft** — Saves all changes without changing workflow status.

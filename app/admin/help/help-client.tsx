@@ -235,6 +235,9 @@ export function HelpClient() {
             <P>
               In <Strong>Metadata</Strong>, <Strong>Featured image URL</Strong> and <Strong>Featured image alt</Strong> apply to the marketing Resources hub: card thumbnails, featured slots, related-article cards, and the full-width hero on the article page. Use an absolute <Code>https://</Code> URL (for example Supabase Storage) or a path served from the site such as <Code>/images/...</Code>. Alt text is recommended for accessibility.
             </P>
+            <P>
+              <Strong>Bulk backfill (operators):</Strong> To assign default pillar images for published articles that still have no featured URL, clone the repo, set <Code>SUPABASE_SERVICE_ROLE_KEY</Code>, then run <Code>npm run backfill:resources-images:dry</Code> (preview) and <Code>npm run backfill:resources-images</Code>. Details: <Code>README.md</Code> and <Code>docs/technical.md</Code>.
+            </P>
             <H3>Mobile editor</H3>
             <P>Tab bar switches between Content, Metadata, and Checklist. Locale picker opens as a bottom sheet. Bottom action bar provides Save/Schedule/Publish.</P>
           </Section>
