@@ -42,6 +42,11 @@ import {
 } from "@/lib/resources/workflow";
 import type { WorkflowStatus, ContentType, Priority } from "@/lib/resources/workflow";
 
+/** Compare hub title/meta strings for “still English” checks (whitespace-insensitive). */
+function normalizedHubText(s: string): string {
+  return s.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 /* ── Types ─────────────────────────────────────────────────────────── */
 
 interface Localization {
@@ -216,6 +221,30 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
     setSaving(true);
     saveLocaleState();
     const bodyJson = blocksToBodyJson(blocks);
+
+    if (activeLocale !== "en-US") {
+      const enLoc = localizations.find((l) => l.locale === "en-US");
+      if (enLoc) {
+        const titleMatch =
+          title.trim() !== "" &&
+          normalizedHubText(title) === normalizedHubText(enLoc.title ?? "");
+        const enMeta = (enLoc.meta_title ?? "").trim();
+        const metaMatch =
+          metaTitle.trim() !== "" &&
+          enMeta !== "" &&
+          normalizedHubText(metaTitle) === normalizedHubText(enMeta);
+        if (titleMatch || metaMatch) {
+          const parts: string[] = [];
+          if (titleMatch) parts.push("Title matches the English (en-US) baseline.");
+          if (metaMatch) parts.push("Meta title matches the English (en-US) baseline.");
+          const ok = window.confirm(`${parts.join(" ")} Save anyway?`);
+          if (!ok) {
+            setSaving(false);
+            return;
+          }
+        }
+      }
+    }
 
     try {
       const res = await fetch(`/api/admin/resources/content/${contentId}`, {
