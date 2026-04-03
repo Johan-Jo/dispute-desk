@@ -28,7 +28,8 @@ export function hubListRange(args: {
   if (page === 1) {
     return { limit: feat + grid, offset: 0 };
   }
-  return { limit: grid, offset: feat + (page - 2) * grid };
+  /** Page 1 consumes `feat + grid` rows; later pages only add grid-sized windows. */
+  return { limit: grid, offset: feat + grid * (page - 1) };
 }
 
 /** Total hub pages for the latest grid (unfiltered hub only). */

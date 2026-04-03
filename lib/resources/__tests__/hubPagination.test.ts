@@ -39,14 +39,14 @@ describe("hubListRange", () => {
     });
   });
 
-  it("unfiltered page 2+ skips featured slots", () => {
+  it("unfiltered page 2+ starts after page-1 window (featured + first grid)", () => {
     expect(hubListRange({ isFiltered: false, page: 2 })).toEqual({
       limit: HUB_GRID_PAGE_SIZE,
-      offset: HUB_FEATURED_COUNT,
+      offset: HUB_FEATURED_COUNT + HUB_GRID_PAGE_SIZE,
     });
     expect(hubListRange({ isFiltered: false, page: 3 })).toEqual({
       limit: HUB_GRID_PAGE_SIZE,
-      offset: HUB_FEATURED_COUNT + HUB_GRID_PAGE_SIZE,
+      offset: HUB_FEATURED_COUNT + 2 * HUB_GRID_PAGE_SIZE,
     });
   });
 });
