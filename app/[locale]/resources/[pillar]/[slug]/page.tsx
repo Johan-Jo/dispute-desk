@@ -16,6 +16,8 @@ import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader"
 import { ArticleStickyBar } from "@/components/resources/ArticleStickyBar";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { BodyBlocks } from "@/components/resources/BodyBlocks";
+import { ArticleHeroImage } from "@/components/resources/ArticleHeroImage";
+import { ResourceCardImage } from "@/components/resources/ResourceCardImage";
 import { CtaCard } from "@/components/resources/CtaBlock";
 import { contentTypeBadgeClass } from "@/components/resources/resourcesHubStyles";
 import {
@@ -266,10 +268,19 @@ export default async function ResourceArticlePage({ params }: Props) {
     authorName &&
     !authorName.toLowerCase().trim().endsWith(authorRole.toLowerCase().trim());
 
+  const heroUrl = item.featured_image_url;
+  const showHero =
+    typeof heroUrl === "string" &&
+    heroUrl.length > 0 &&
+    (heroUrl.startsWith("/") || heroUrl.startsWith("https://"));
+  const heroAlt = item.featured_image_alt?.trim() || L.title;
+
   return (
     <div className="min-h-screen bg-[#F6F8FB]">
       <MarketingSiteHeader />
       <ArticleStickyBar />
+
+      {showHero ? <ArticleHeroImage url={heroUrl} alt={heroAlt} fullBleed /> : null}
 
       <script
         type="application/ld+json"
@@ -388,18 +399,25 @@ export default async function ResourceArticlePage({ params }: Props) {
                 <Link
                   key={r.id}
                   href={`${basePath}/resources/${r.content_items.primary_pillar}/${r.slug}`}
-                  className="bg-white border border-[#E5E7EB] rounded-lg p-6 hover:border-[#1D4ED8] transition-all block"
+                  className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden hover:border-[#0066FF] transition-all block"
                 >
-                  <div className="text-xs font-medium text-[#64748B] mb-2">
-                    {t(`types.${r.content_items.content_type}` as never)}
-                  </div>
-                  <h4 className="font-bold text-[#0B1220] mb-2">{r.title}</h4>
-                  {r.reading_time_minutes != null && (
-                    <div className="flex items-center gap-2 text-sm text-[#64748B]">
-                      <Clock className="w-3.5 h-3.5" />
-                      {t("readTime", { minutes: r.reading_time_minutes })}
+                  <ResourceCardImage
+                    url={r.content_items.featured_image_url}
+                    alt={r.content_items.featured_image_alt ?? r.title}
+                    variant="default"
+                  />
+                  <div className="p-5">
+                    <div className="text-xs font-medium text-[#64748B] mb-2">
+                      {t(`types.${r.content_items.content_type}` as never)}
                     </div>
-                  )}
+                    <h4 className="font-bold text-[#0B1220] mb-2 line-clamp-2">{r.title}</h4>
+                    {r.reading_time_minutes != null && (
+                      <div className="flex items-center gap-2 text-sm text-[#64748B]">
+                        <Clock className="w-3.5 h-3.5" />
+                        {t("readTime", { minutes: r.reading_time_minutes })}
+                      </div>
+                    )}
+                  </div>
                 </Link>
               ))}
             </div>

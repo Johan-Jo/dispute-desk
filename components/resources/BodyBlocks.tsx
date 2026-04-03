@@ -23,7 +23,7 @@ export function BodyBlocks({
     nodes.push(
       <div
         key="main"
-        className="prose prose-slate max-w-none mb-10 prose-headings:text-[#0B1220] prose-p:text-[#0B1220] prose-p:leading-relaxed prose-li:text-[#0B1220] prose-a:text-[#1D4ED8] prose-strong:text-[#0B1220] prose-table:border-collapse prose-th:bg-[#F6F8FB] prose-th:text-left prose-th:px-4 prose-th:py-2 prose-td:px-4 prose-td:py-2 prose-td:border-t prose-td:border-[#E5E7EB]"
+        className="prose prose-slate max-w-none mb-10 prose-headings:text-[#0B1220] prose-p:text-[#0B1220] prose-p:leading-relaxed prose-li:text-[#0B1220] prose-a:text-[#1D4ED8] prose-strong:text-[#0B1220] prose-img:max-w-full prose-img:rounded-xl prose-table:border-collapse prose-th:bg-[#F6F8FB] prose-th:text-left prose-th:px-4 prose-th:py-2 prose-td:px-4 prose-td:py-2 prose-td:border-t prose-td:border-[#E5E7EB]"
         dangerouslySetInnerHTML={{ __html: b.mainHtml }}
       />
     );

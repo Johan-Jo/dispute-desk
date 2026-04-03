@@ -235,6 +235,8 @@ Use this pattern when shipping **approved master copy** in all hub locales witho
 
 **Reference implementation:** `scripts/hub-content/top-chargeback-management-tools-shopify-merchants/`.
 
+**Featured images (hub cards + article hero):** Set `content_items.featured_image_url` to a public **`https://`** URL (Supabase Storage and hosts allowed in `next.config.js` `images.remotePatterns`, e.g. `*.supabase.co`, Pexels/Unsplash) or a **path** under the site such as `/images/resources/...` for static files in `public/`. Optional **`featured_image_alt`** (migration `20260402140000_content_items_featured_image_alt.sql`) is used for accessible alt text and in the admin editor. Public UI: `ResourceCardImage` / `ArticleHeroImage` (`components/resources/`). Inline `<img>` in `main-*.html` fragments inherit prose image classes via `BodyBlocks`.
+
 ### Public URLs, hub locales, and pillars
 
 - **Article path (resources):** `/{localePrefix}/resources/{primary_pillar}/{slug}`. Default English omits the locale segment (`/resources/chargebacks/my-article`). Other marketing locales use the short prefix from `lib/i18n/pathLocales.ts` (e.g. `/pt/resources/...` for `pt-BR`). **Slugs are per locale** (`content_localizations.slug`); the marketing **`LanguageSwitcher`** resolves the sibling slug via **`GET /api/public/resources/alternate-locale-slug`** (`pillar`, `slug`, `from`, `to` BCP-47 hub locales) so changing language on an article navigates to the correct URL instead of reusing the previous locale’s slug (which would 404).

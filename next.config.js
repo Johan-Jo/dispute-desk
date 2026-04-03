@@ -12,9 +12,20 @@ const GA_CONNECT_SRC = [
   "https://www.googletagmanager.com",
 ].join(" ");
 
+/** Hub hero / cards: Supabase Storage + common stock CDNs (next/image remotePatterns). */
+const IMG_SRC_HUB =
+  "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co https://images.pexels.com https://images.unsplash.com";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/**" },
+      { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+    ],
+  },
   async redirects() {
     return [
       // Bookmarks / misconfigured dashboards may use /sign-in; app lives at /auth/sign-in
@@ -54,7 +65,7 @@ const nextConfig = {
             "frame-src 'self' https://vercel.live",
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live ${GA_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: https://*.supabase.co",
+            IMG_SRC_HUB,
             `connect-src 'self' https://*.supabase.co ${GA_CONNECT_SRC}`,
             "font-src 'self'",
           ].join("; "),
@@ -72,7 +83,7 @@ const nextConfig = {
             "default-src 'self'",
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            IMG_SRC_HUB,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC}`,
             "font-src 'self' https://cdn.shopify.com",
           ].join("; "),
@@ -90,7 +101,7 @@ const nextConfig = {
             "default-src 'self'",
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            IMG_SRC_HUB,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC}`,
             "font-src 'self' https://cdn.shopify.com",
           ].join("; "),
@@ -108,7 +119,7 @@ const nextConfig = {
             "default-src 'self'",
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            IMG_SRC_HUB,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC}`,
             "font-src 'self' https://cdn.shopify.com",
           ].join("; "),
@@ -144,7 +155,7 @@ const nextConfig = {
             "default-src 'self'",
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co",
+            IMG_SRC_HUB,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC}`,
             "font-src 'self' https://cdn.shopify.com",
           ].join("; "),

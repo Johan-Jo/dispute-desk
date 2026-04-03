@@ -9,6 +9,7 @@ export type ContentItemRow = {
   primary_pillar: string;
   workflow_status: string;
   featured_image_url: string | null;
+  featured_image_alt: string | null;
   author_id: string | null;
   reviewer_id: string | null;
   published_at: string | null;
@@ -46,7 +47,7 @@ export async function listPublishedByRoute(
   let q = sb
     .from("content_localizations")
     .select(
-      "id, content_item_id, locale, route_kind, title, slug, excerpt, body_json, meta_title, meta_description, og_title, og_description, reading_time_minutes, is_published, publish_at, last_updated_at, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, author_id, reviewer_id, published_at, publish_priority, is_hub_article, curated_related_ids, target_keyword)"
+      "id, content_item_id, locale, route_kind, title, slug, excerpt, body_json, meta_title, meta_description, og_title, og_description, reading_time_minutes, is_published, publish_at, last_updated_at, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, featured_image_alt, author_id, reviewer_id, published_at, publish_priority, is_hub_article, curated_related_ids, target_keyword)"
     )
     .eq("route_kind", routeKind)
     .eq("locale", locale)
@@ -165,11 +166,34 @@ type RelatedRow = {
   slug: string;
   excerpt: string;
   reading_time_minutes: number | null;
-  content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string } | { id: string; content_type: string; primary_pillar: string; workflow_status: string }[];
+  content_items:
+    | {
+        id: string;
+        content_type: string;
+        primary_pillar: string;
+        workflow_status: string;
+        featured_image_url: string | null;
+        featured_image_alt: string | null;
+      }
+    | {
+        id: string;
+        content_type: string;
+        primary_pillar: string;
+        workflow_status: string;
+        featured_image_url: string | null;
+        featured_image_alt: string | null;
+      }[];
 };
 
 function normalizeRelatedRows(data: unknown[]): (RelatedRow & {
-  content_items: { id: string; content_type: string; primary_pillar: string; workflow_status: string };
+  content_items: {
+    id: string;
+    content_type: string;
+    primary_pillar: string;
+    workflow_status: string;
+    featured_image_url: string | null;
+    featured_image_alt: string | null;
+  };
 })[] {
   return data.map((raw) => {
     const r = raw as RelatedRow;
@@ -192,7 +216,8 @@ export async function getRelatedResources(args: {
 }) {
   const sb = getServiceClient();
   const cap = args.limit ?? 3;
-  const SELECT = "id, content_item_id, title, slug, excerpt, reading_time_minutes, content_items!inner(id, content_type, primary_pillar, workflow_status)";
+  const SELECT =
+    "id, content_item_id, title, slug, excerpt, reading_time_minutes, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, featured_image_alt)";
 
   const curated = (args.curatedIds ?? []).filter((id) => id && id !== args.excludeItemId);
 
@@ -243,4 +268,30 @@ export async function getRelatedResources(args: {
   }
 
   return results;
+}
+
+/** Published article counts per pillar for the hub index sticky row (current locale). */
+export async function countPublishedByPillar(
+  routeKind: string,
+  locale: HubContentLocale
+): Promise<Record<string, number>> {
+  const sb = getServiceClient();
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select("content_items!inner(primary_pillar)")
+    .eq("route_kind", routeKind)
+    .eq("locale", locale)
+    .eq("is_published", true)
+    .eq("content_items.workflow_status", "published");
+
+  if (error) throw new Error(error.message);
+
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const raw = (row as { content_items: { primary_pillar: string } | { primary_pillar: string }[] })
+      .content_items;
+    const pillar = Array.isArray(raw) ? raw[0]?.primary_pillar : raw?.primary_pillar;
+    if (pillar) counts[pillar] = (counts[pillar] ?? 0) + 1;
+  }
+  return counts;
 }

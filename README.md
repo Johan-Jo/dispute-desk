@@ -193,6 +193,10 @@ and data flow.
 See [`docs/technical.md`](docs/technical.md) for the design system
 reference, component catalog, API surface, and CI pipeline.
 
+### Public Resources Hub (marketing SEO)
+
+Published articles at `/resources` (and localized paths) use a **BlogView-style** hub UI: featured slots, topic row with counts, card thumbnails, and a full-width **article hero** when a featured image is set. In the admin content editor (**Metadata**), set **Featured image URL** and **Featured image alt** (stored on `content_items`; migration `featured_image_alt`). URLs may be absolute (`https://…`, e.g. Supabase Storage) or site paths such as `/images/...` under `public/`. Details: [`docs/technical.md`](docs/technical.md) (Resources Hub, code-first hub articles).
+
 ## Development
 
 ### Running Tests

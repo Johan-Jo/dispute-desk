@@ -228,9 +228,13 @@ export function HelpClient() {
               "Navigate to Content List and click a title.",
               "Switch locale using tabs (desktop) or globe button (mobile).",
               "Edit title, slug, excerpt, and content blocks.",
-              "Check the sidebar: validation checklist, metadata, SEO, AI assistant.",
+              "Check the sidebar: validation checklist, metadata (including Featured image URL and Featured image alt for the public hub listing and article hero), SEO, AI assistant.",
               "Save Draft, Schedule, or Publish when ready.",
             ]} />
+            <H3>Featured images (public hub)</H3>
+            <P>
+              In <Strong>Metadata</Strong>, <Strong>Featured image URL</Strong> and <Strong>Featured image alt</Strong> apply to the marketing Resources hub: card thumbnails, featured slots, related-article cards, and the full-width hero on the article page. Use an absolute <Code>https://</Code> URL (for example Supabase Storage) or a path served from the site such as <Code>/images/...</Code>. Alt text is recommended for accessibility.
+            </P>
             <H3>Mobile editor</H3>
             <P>Tab bar switches between Content, Metadata, and Checklist. Locale picker opens as a bottom sheet. Bottom action bar provides Save/Schedule/Publish.</P>
           </Section>

@@ -6,7 +6,7 @@ import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { marketingHomePath } from "@/lib/i18n/pathLocales";
 import type { Locale } from "@/lib/i18n/locales";
-import { listPublishedByRoute } from "@/lib/resources/queries";
+import { countPublishedByPillar, listPublishedByRoute } from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { ResourcesHubShell } from "@/components/resources/ResourcesHubShell";
 import {
@@ -138,6 +138,12 @@ export default async function ResourcesHubPage({ params, searchParams }: Props) 
   } catch {
     rows = [];
   }
+  let pillarCounts: Record<string, number> = {};
+  try {
+    pillarCounts = await countPublishedByPillar("resources", hubLocale);
+  } catch {
+    pillarCounts = {};
+  }
 
   const base = pathLocale === "en" ? "" : `/${pathLocale}`;
   const origin = getPublicBaseUrl();
@@ -173,6 +179,7 @@ export default async function ResourcesHubPage({ params, searchParams }: Props) 
         contentType={contentType}
         search={search}
         rows={rows}
+        pillarCounts={pillarCounts}
       />
     </>
   );

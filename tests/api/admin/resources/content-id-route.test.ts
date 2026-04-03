@@ -162,4 +162,50 @@ describe("PUT /api/admin/resources/content/[id]", () => {
     expect(res.status).toBe(200);
     expect(eq).toHaveBeenCalled();
   });
+
+  it("updates featured_image_url and featured_image_alt when strings are valid", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+    mockGetService.mockReturnValue({
+      from: vi.fn(() => ({ update })),
+    } as never);
+
+    const req = new Request("http://localhost", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item: {
+          featured_image_url: "https://example.com/a.jpg",
+          featured_image_alt: "Test alt",
+        },
+      }),
+    });
+    const res = await PUT(req as never, { params: Promise.resolve({ id }) });
+    expect(res.status).toBe(200);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        featured_image_url: "https://example.com/a.jpg",
+        featured_image_alt: "Test alt",
+      })
+    );
+  });
+
+  it("returns 400 when featured_image_url is not a string", async () => {
+    mockHasAdmin.mockResolvedValue(true);
+    mockGetService.mockReturnValue({
+      from: vi.fn(() => ({
+        update: vi.fn().mockReturnValue({ eq: vi.fn() }),
+      })),
+    } as never);
+
+    const req = new Request("http://localhost", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item: { featured_image_url: 123 },
+      }),
+    });
+    const res = await PUT(req as never, { params: Promise.resolve({ id }) });
+    expect(res.status).toBe(400);
+  });
 });

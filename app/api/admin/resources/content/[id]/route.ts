@@ -66,10 +66,20 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       const allowedFields = [
         "content_type", "primary_pillar", "topic", "target_keyword",
         "search_intent", "priority", "author_id", "reviewer_id", "source_locale",
+        "featured_image_url", "featured_image_alt",
       ];
       const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
       for (const key of allowedFields) {
-        if (key in item) updates[key] = item[key];
+        if (!(key in item)) continue;
+        const v = item[key];
+        if (key === "featured_image_url" || key === "featured_image_alt") {
+          if (v !== null && v !== undefined && typeof v !== "string") {
+            return NextResponse.json({ error: `Invalid ${key}` }, { status: 400 });
+          }
+          updates[key] = v === "" || v === undefined ? null : v;
+        } else {
+          updates[key] = v;
+        }
       }
       const { error } = await sb.from("content_items").update(updates).eq("id", id);
       if (error) throw error;

@@ -221,7 +221,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
       const res = await fetch(`/api/admin/resources/content/${contentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+          body: JSON.stringify({
           item: {
             content_type: item.content_type,
             primary_pillar: item.primary_pillar,
@@ -232,6 +232,8 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             source_locale: item.source_locale ?? "en-US",
             author_id: item.author_id,
             reviewer_id: item.reviewer_id,
+            featured_image_url: (item.featured_image_url as string | null | undefined) ?? null,
+            featured_image_alt: (item.featured_image_alt as string | null | undefined) ?? null,
           },
           localization: {
             locale: activeLocale,
@@ -649,6 +651,37 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#64748B] mb-1">Featured image URL</label>
+                  <input
+                    type="url"
+                    value={(item.featured_image_url as string | null | undefined) ?? ""}
+                    onChange={(e) =>
+                      setItem((prev) => ({
+                        ...prev,
+                        featured_image_url: e.target.value.trim() || null,
+                      }))
+                    }
+                    placeholder="https://… or /images/resources/…"
+                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                  />
+                  <p className="text-xs text-[#94A3B8] mt-1">Public hub card and article hero. Use absolute URL or site path.</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#64748B] mb-1">Featured image alt</label>
+                  <input
+                    type="text"
+                    value={(item.featured_image_alt as string | null | undefined) ?? ""}
+                    onChange={(e) =>
+                      setItem((prev) => ({
+                        ...prev,
+                        featured_image_alt: e.target.value.trim() || null,
+                      }))
+                    }
+                    placeholder="Short description for screen readers"
+                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                  />
                 </div>
               </div>
             </div>
