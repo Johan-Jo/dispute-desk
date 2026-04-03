@@ -5,12 +5,13 @@ import {
   Calendar,
   Clock,
   Search as SearchIcon,
-  TrendingUp,
+  Star,
 } from "lucide-react";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToMessages } from "@/lib/i18n/pathLocales";
 import type { ContentLocalizationRow, ContentItemRow } from "@/lib/resources/queries";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
+import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
 import { contentTypeBadgeClass } from "@/components/resources/resourcesHubStyles";
 import { ResourcesFilterBar } from "@/components/resources/ResourcesFilterBar";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
@@ -49,12 +50,13 @@ const blue = RESOURCES_HUB.actionBlue;
 
 function buildHref(
   base: string,
-  next: { q?: string; pillar?: string; type?: string },
+  next: { q?: string; pillar?: string; type?: string; page?: number },
 ) {
   const p = new URLSearchParams();
   if (next.q) p.set("q", next.q);
   if (next.pillar) p.set("pillar", next.pillar);
   if (next.type) p.set("type", next.type);
+  if (next.page != null && next.page > 1) p.set("page", String(next.page));
   const qs = p.toString();
   return `${base}/resources${qs ? `?${qs}` : ""}`;
 }
@@ -70,18 +72,17 @@ function formatDate(iso: string | null | undefined, pathLocale: PathLocale) {
   });
 }
 
-function splitHeroTitle(title: string): { before: string; accent: string } {
-  const idx = title.indexOf(" & ");
-  if (idx === -1) return { before: title, accent: "" };
-  return { before: title.slice(0, idx), accent: title.slice(idx) };
-}
-
 type Props = {
   base: string;
   pathLocale: PathLocale;
   pillar?: string;
   contentType?: string;
   search?: string;
+  /** Current hub index page (1-based). */
+  page: number;
+  totalPages: number;
+  /** Total published items matching current filters (all pages). */
+  totalItems: number;
   rows: Row[];
   /** Published article counts per `primary_pillar` for the sticky topic row. */
   pillarCounts: Record<string, number>;
@@ -93,6 +94,9 @@ export async function ResourcesHubShell({
   pillar,
   contentType,
   search,
+  page,
+  totalPages,
+  totalItems,
   rows,
   pillarCounts,
 }: Props) {
@@ -101,61 +105,61 @@ export async function ResourcesHubShell({
   const totalPublished = Object.values(pillarCounts).reduce((a, n) => a + n, 0);
 
   const featuredItems =
-    !isFiltered && rows.length > 0 ? rows.slice(0, 2) : [];
+    !isFiltered && page === 1 && rows.length > 0 ? rows.slice(0, 2) : [];
   const gridRows =
-    !isFiltered && rows.length > 2
-      ? rows.slice(2)
-      : isFiltered
-        ? rows
-        : rows.length === 1
+    isFiltered
+      ? rows
+      : page === 1 && rows.length > 2
+        ? rows.slice(2)
+        : page === 1 && rows.length <= 2
           ? []
-          : rows.length === 2
-            ? []
-            : rows.slice(2);
+          : page > 1
+            ? rows
+            : [];
 
   const filterLabels: Record<string, string> = {};
   for (const key of FILTER_LABEL_KEYS) {
     filterLabels[key] = t(key as never);
   }
 
-  const heroFull = t("heroTitle");
-  const { before: heroBefore, accent: heroAccent } = splitHeroTitle(heroFull);
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: RESOURCES_HUB.pageBg }}>
       <MarketingSiteHeader />
 
-      {/* Hero — Figma Make BlogView (black, lime + blue accents) */}
-      <section className="text-white" style={{ background: RESOURCES_HUB.heroBlogGradient }}>
-        <div className={`${HUB_CONTAINER} pt-10 pb-0 md:pt-14 md:pb-0`}>
-          <div className="max-w-3xl">
-            <div
-              className="inline-flex items-center gap-2 rounded-full border px-4 py-2 mb-4"
-              style={{
-                backgroundColor: `${lime}1a`,
-                borderColor: `${lime}4d`,
-              }}
-            >
-              <TrendingUp className="h-4 w-4 shrink-0" style={{ color: lime }} aria-hidden />
-              <span className="text-sm font-medium" style={{ color: lime }}>
-                {t("hubBadge")}
-              </span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-              {heroBefore}
-              {heroAccent ? (
-                <span style={{ color: lime }}>{heroAccent}</span>
-              ) : null}
-            </h1>
-            <p className="text-lg text-gray-300 mb-0 leading-relaxed">{t("heroSubtitle")}</p>
-          </div>
+      {/* Hero — Figma Make marketing shell (same gradient + blobs as home `MarketingLandingPageClient`) */}
+      <section
+        className="relative text-white overflow-hidden pt-10 pb-10 md:pt-14 md:pb-12"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
+        }}
+      >
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          <div
+            className="absolute top-20 left-4 sm:left-10 w-72 sm:w-96 h-72 sm:h-96 rounded-full mix-blend-screen filter blur-3xl opacity-[0.15] dd-hero-blob"
+            style={{ backgroundColor: "var(--dd-hero-blob-a)" }}
+          />
+          <div
+            className="absolute top-40 right-4 sm:right-10 w-72 sm:w-96 h-72 sm:h-96 rounded-full mix-blend-screen filter blur-3xl opacity-[0.12] dd-hero-blob dd-hero-blob-delay-2s"
+            style={{ backgroundColor: "var(--dd-hero-blob-b)" }}
+          />
+          <div
+            className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-72 sm:w-96 h-72 sm:h-96 rounded-full mix-blend-screen filter blur-3xl opacity-[0.1] dd-hero-blob dd-hero-blob-delay-4s"
+            style={{ backgroundColor: "var(--dd-hero-blob-c)" }}
+          />
         </div>
 
-        <div
-          className="border-t border-white/10 mt-10 md:mt-12"
-          style={{ backgroundColor: RESOURCES_HUB.searchStripBg }}
-        >
-          <div className={`${HUB_CONTAINER} py-6`}>
+        <div className={`${HUB_CONTAINER} relative z-10`}>
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 mb-4 backdrop-blur-sm">
+              <Star className="h-4 w-4 shrink-0 text-[#22C55E]" aria-hidden fill="#22C55E" />
+              <span className="text-sm font-medium text-white/95">{t("hubBadge")}</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 tracking-tight leading-tight bg-gradient-to-r from-[var(--dd-hero-gradient-from)] via-[var(--dd-hero-gradient-via)] to-[var(--dd-hero-gradient-to)] bg-clip-text text-transparent">
+              {t("heroTitle")}
+            </h1>
+            <p className="text-lg text-slate-300 mb-8 leading-relaxed">{t("heroSubtitle")}</p>
+
             <form
               action={`${base}/resources`}
               method="get"
@@ -173,14 +177,14 @@ export async function ResourcesHubShell({
                   defaultValue={search ?? ""}
                   type="search"
                   placeholder={t("searchPlaceholder")}
-                  className="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#c8ff00] text-white placeholder-gray-400"
+                  className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-full bg-white border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/40 text-gray-900 placeholder-gray-400"
                   aria-label={t("searchPlaceholder")}
                 />
               </div>
               <button
                 type="submit"
-                className="px-6 py-4 rounded-xl font-medium shrink-0 text-white shadow-sm transition-[filter] hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900"
-                style={{ backgroundColor: blue, boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)" }}
+                className="px-6 py-3.5 sm:py-4 rounded-full font-medium shrink-0 text-white shadow-md transition-[filter] hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-white/50"
+                style={{ backgroundColor: blue, boxShadow: "0 1px 2px rgba(0, 0, 0, 0.15)" }}
               >
                 {t("searchButton")}
               </button>
@@ -284,7 +288,7 @@ export async function ResourcesHubShell({
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#0066FF] transition-colors">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#1D4ED8] transition-colors">
                     {featured.title}
                   </h3>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-3">{featured.excerpt}</p>
@@ -320,13 +324,18 @@ export async function ResourcesHubShell({
 
           <p className="text-sm mb-6 text-gray-600">
             {isFiltered ? (
-              t("resultsCount", { count: rows.length })
+              t("resultsCountTotal", { count: gridRows.length, total: totalItems })
             ) : (
-              t("articlesCount", { count: gridRows.length })
+              t("listingMeta", {
+                page,
+                totalPages,
+                total: totalItems,
+                onPage: gridRows.length,
+              })
             )}
           </p>
 
-          {rows.length === 0 ? (
+          {totalItems === 0 ? (
             <div className="text-center py-16 rounded-xl border border-gray-200 bg-white">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <SearchIcon className="w-8 h-8 text-gray-400" aria-hidden />
@@ -362,7 +371,7 @@ export async function ResourcesHubShell({
                       >
                         {t(`types.${row.content_items.content_type}` as never)}
                       </span>
-                      <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-[#0066FF] transition-colors leading-snug line-clamp-2">
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-[#1D4ED8] transition-colors leading-snug line-clamp-2">
                         {row.title}
                       </h3>
                       <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-3">
@@ -394,6 +403,51 @@ export async function ResourcesHubShell({
             </ul>
           )}
 
+          {totalPages > 1 ? (
+            <nav
+              className="flex flex-wrap items-center justify-center gap-4 mb-12"
+              aria-label={t("paginationNav")}
+            >
+              {page > 1 ? (
+                <Link
+                  href={buildHref(base, {
+                    q: search,
+                    pillar,
+                    type: contentType,
+                    page: page - 1,
+                  })}
+                  className="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50"
+                >
+                  {t("paginationPrev")}
+                </Link>
+              ) : (
+                <span className="inline-flex items-center px-4 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400 cursor-not-allowed">
+                  {t("paginationPrev")}
+                </span>
+              )}
+              <span className="text-sm text-gray-600 tabular-nums">
+                {t("paginationStatus", { page, totalPages })}
+              </span>
+              {page < totalPages ? (
+                <Link
+                  href={buildHref(base, {
+                    q: search,
+                    pillar,
+                    type: contentType,
+                    page: page + 1,
+                  })}
+                  className="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50"
+                >
+                  {t("paginationNext")}
+                </Link>
+              ) : (
+                <span className="inline-flex items-center px-4 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400 cursor-not-allowed">
+                  {t("paginationNext")}
+                </span>
+              )}
+            </nav>
+          ) : null}
+
           {/* Gradient CTA stripe */}
           <div
             className="rounded-2xl p-8 md:p-10 mb-8 text-center text-white"
@@ -422,6 +476,8 @@ export async function ResourcesHubShell({
 
           <p className="text-xs text-gray-400 text-center">{t("designRef")}</p>
         </div>
+
+      <MarketingSiteFooter base={base} />
     </div>
   );
 }

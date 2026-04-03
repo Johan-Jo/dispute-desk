@@ -1,14 +1,12 @@
 /**
- * Public Resources hub (`/resources`) — Figma Make BlogView–aligned tokens.
- * Lime + blue accents on dark hero; gray page body (see sibling Estimate Pro `resurser-hub-tokens`).
+ * Public Resources hub (`/resources`) — body + cards; hero uses `globals.css` `--dd-hero-*` (Figma Make landing).
  */
 export const RESOURCES_HUB = {
-  heroBlogGradient: "#000000",
   limeAccent: "#c8ff00",
-  actionBlue: "#0066FF",
-  actionBlueDeep: "#0052CC",
-  actionBlueDarkest: "#003D99",
-  searchStripBg: "rgba(0, 0, 0, 0.3)",
+  /** Primary actions — align with marketing / Figma (#1D4ED8). */
+  actionBlue: "#1D4ED8",
+  actionBlueDeep: "#1e40af",
+  actionBlueDarkest: "#1e3a8a",
   pageBg: "#F9FAFB",
   cardBorder: "rgba(15, 23, 42, 0.06)",
 } as const;

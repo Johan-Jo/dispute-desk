@@ -2,9 +2,16 @@
  * Backfill content_items.featured_image_url (+ featured_image_alt) for published
  * Resources Hub articles that are missing images.
  *
- * Uses Unsplash hotlink URLs (allowed in next.config.js images.remotePatterns + CSP).
+ * Uses the Pexels API (https://www.pexels.com/api/) — images served from images.pexels.com
+ * (allowed in next.config.js images.remotePatterns + CSP).
  *
- * Requires: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY
+ * Per pillar we search once, cache photo URLs, then assign `pool[i % pool.length]` where `i`
+ * is the item's index among published Resources rows in that pillar (sorted by id).
+ *
+ * Requires:
+ *   SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
+ *   PEXELS_API_KEY
  *
  * Usage:
  *   node scripts/backfill-resources-featured-images.mjs           # apply updates
@@ -19,45 +26,105 @@ config({ path: ".env" });
 
 const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const pexelsKey = process.env.PEXELS_API_KEY;
 if (!url || !key) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  process.exit(1);
+}
+if (!pexelsKey) {
+  console.error("Missing PEXELS_API_KEY (required for Pexels image search)");
   process.exit(1);
 }
 
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
 
-/** Stable Unsplash URLs (w=1200, crop) — pillar-themed stock imagery. */
-const PILLAR_HERO = {
-  chargebacks: {
-    url: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&auto=format&fit=crop&q=80",
-    alt: "Retail payment terminal — chargebacks and card payments context",
-  },
-  "dispute-resolution": {
-    url: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=1200&auto=format&fit=crop&q=80",
-    alt: "Professional discussion — dispute resolution and collaboration",
-  },
-  "small-claims": {
-    url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&auto=format&fit=crop&q=80",
-    alt: "Legal documents and workspace — small claims context",
-  },
-  "mediation-arbitration": {
-    url: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1200&auto=format&fit=crop&q=80",
-    alt: "Mediation and conversation — alternative dispute resolution",
-  },
-  "dispute-management-software": {
-    url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80",
-    alt: "Business analytics dashboard — dispute operations software",
-  },
+/** Pexels search query per pillar (English). */
+const PILLAR_SEARCH = {
+  chargebacks: "credit card payment ecommerce",
+  "dispute-resolution": "business meeting handshake",
+  "small-claims": "legal documents desk",
+  "mediation-arbitration": "team discussion office",
+  "dispute-management-software": "data dashboard laptop",
 };
 
-const DEFAULT_HERO = {
-  url: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&auto=format&fit=crop&q=80",
-  alt: "Desk with documents — DisputeDesk resources",
-};
+const DEFAULT_SEARCH = "professional office workspace";
 
-function heroForPillar(primaryPillar) {
-  return PILLAR_HERO[primaryPillar] ?? DEFAULT_HERO;
+/** @type {Map<string, { url: string; alt: string }[]>} */
+const pexelsCache = new Map();
+
+async function fetchPexelsPool(searchQuery) {
+  const u = new URL("https://api.pexels.com/v1/search");
+  u.searchParams.set("query", searchQuery);
+  u.searchParams.set("per_page", "40");
+
+  const res = await fetch(u.toString(), {
+    headers: { Authorization: pexelsKey },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Pexels API ${res.status}: ${text.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const photos = data.photos ?? [];
+  return photos.map((p) => {
+    const src = p.src?.large || p.src?.original || p.src?.medium;
+    const alt =
+      (p.alt && String(p.alt).trim()) ||
+      (p.photographer ? `Photo by ${p.photographer} on Pexels` : "Stock photo");
+    return { url: src, alt };
+  }).filter((x) => x.url && x.url.startsWith("https://images.pexels.com"));
+}
+
+async function getPoolForPillar(primaryPillar) {
+  const key = primaryPillar == null ? "" : String(primaryPillar);
+  if (pexelsCache.has(key)) return pexelsCache.get(key);
+
+  const q = PILLAR_SEARCH[primaryPillar] ?? DEFAULT_SEARCH;
+  const pool = await fetchPexelsPool(q);
+  if (pool.length === 0) {
+    throw new Error(`Pexels returned no photos for query: ${q}`);
+  }
+  pexelsCache.set(key, pool);
+  return pool;
+}
+
+/**
+ * @param {import("@supabase/supabase-js").SupabaseClient} sb
+ * @param {Set<string>} resourceItemIds
+ */
+async function buildIndexInPillarById(sb, resourceItemIds) {
+  const { data: rows, error } = await sb
+    .from("content_items")
+    .select("id, primary_pillar")
+    .eq("workflow_status", "published");
+
+  if (error) throw error;
+
+  /** @type {Map<string, string[]>} */
+  const byPillar = new Map();
+  for (const row of rows ?? []) {
+    if (!resourceItemIds.has(row.id)) continue;
+    const k = row.primary_pillar == null ? "" : String(row.primary_pillar);
+    if (!byPillar.has(k)) byPillar.set(k, []);
+    byPillar.get(k).push(row.id);
+  }
+  for (const ids of byPillar.values()) {
+    ids.sort((a, b) => String(a).localeCompare(String(b)));
+  }
+
+  /** @type {Map<string, number>} */
+  const indexById = new Map();
+  for (const ids of byPillar.values()) {
+    ids.forEach((id, i) => indexById.set(id, i));
+  }
+  return indexById;
+}
+
+async function pickHero(primaryPillar, indexInPillar) {
+  const pool = await getPoolForPillar(primaryPillar);
+  const hero = pool[indexInPillar % pool.length];
+  return hero;
 }
 
 const sb = createClient(url, key);
@@ -85,13 +152,32 @@ async function main() {
     return !row.featured_image_url || String(row.featured_image_url).trim() === "";
   });
 
+  const indexInPillarById = await buildIndexInPillarById(sb, resourceItemIds);
+
+  candidates.sort((a, b) => {
+    const pa = String(a.primary_pillar ?? "");
+    const pb = String(b.primary_pillar ?? "");
+    if (pa !== pb) return pa.localeCompare(pb);
+    return String(a.id).localeCompare(String(b.id));
+  });
+
   console.log(
     `Published Resources items: ${resourceItemIds.size}, candidates to update: ${candidates.length}${force ? " (force: overwriting URLs)" : ""}${dryRun ? " (dry-run)" : ""}`
   );
 
+  /** Prefetch distinct pillars (rate-limit friendly) */
+  if (candidates.length > 0) {
+    const pillars = new Set(candidates.map((c) => c.primary_pillar));
+    for (const p of pillars) {
+      await getPoolForPillar(p);
+      await new Promise((r) => setTimeout(r, 350));
+    }
+  }
+
   let updated = 0;
   for (const row of candidates) {
-    const { url: imageUrl, alt } = heroForPillar(row.primary_pillar);
+    const idx = indexInPillarById.get(row.id) ?? 0;
+    const { url: imageUrl, alt } = await pickHero(row.primary_pillar, idx);
     const nextAlt = row.featured_image_alt?.trim() || alt;
 
     if (dryRun) {

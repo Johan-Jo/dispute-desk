@@ -38,9 +38,10 @@ export default async function PillarPage({ params }: Props) {
   setRequestLocale(loc);
   const t = await getTranslations({ locale: pathLocale, namespace: "resources" });
 
-  const rows = await listPublishedByRoute("resources", hubLocale, {
+  const { rows } = await listPublishedByRoute("resources", hubLocale, {
     pillar,
     limit: 48,
+    includeTotal: false,
   });
 
   return (

@@ -54,9 +54,13 @@ export default async function TemplatesHubPage({ params }: Props) {
   });
   const basePath = pathLocale === "en" ? "" : `/${pathLocale}`;
 
-  let rows: Awaited<ReturnType<typeof listPublishedByRoute>> = [];
+  let rows: Awaited<ReturnType<typeof listPublishedByRoute>>["rows"] = [];
   try {
-    rows = await listPublishedByRoute("templates", hubLocale, { limit: 48 });
+    const r = await listPublishedByRoute("templates", hubLocale, {
+      limit: 48,
+      includeTotal: false,
+    });
+    rows = r.rows;
   } catch {
     rows = [];
   }

@@ -19,9 +19,13 @@ export default async function GlossaryPage({ params }: Props) {
   const hubLocale = pathLocaleToHubLocale(pathLocale);
   const t = await getTranslations({ locale: pathLocale, namespace: "resources" });
   const basePath = pathLocale === "en" ? "" : `/${pathLocale}`;
-  let rows: Awaited<ReturnType<typeof listPublishedByRoute>> = [];
+  let rows: Awaited<ReturnType<typeof listPublishedByRoute>>["rows"] = [];
   try {
-    rows = await listPublishedByRoute("glossary", hubLocale, { limit: 200 });
+    const r = await listPublishedByRoute("glossary", hubLocale, {
+      limit: 200,
+      includeTotal: false,
+    });
+    rows = r.rows;
   } catch {
     rows = [];
   }

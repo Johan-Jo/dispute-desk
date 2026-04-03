@@ -215,7 +215,7 @@ The right sidebar contains:
 
 In **Metadata**, **Featured image URL** and **Featured image alt** drive the Resources hub listing (cards, featured slots), related-article cards, and the full-width hero on the public article page. Use an absolute `https://` URL (Supabase Storage or other allowed hosts — see `next.config.js`) or a site path such as `/images/...` for files in `public/`. Alt text is recommended for accessibility.
 
-For **bulk default hero images** on published items that still lack a URL, operators with repository access can run `npm run backfill:resources-images:dry` (preview) then `npm run backfill:resources-images` locally with `SUPABASE_SERVICE_ROLE_KEY` set; see `docs/technical.md` (Resources Hub) and `README.md`.
+For **bulk default hero images** on published items that still lack a URL, operators with repository access can run `npm run backfill:resources-images:dry` (preview) then `npm run backfill:resources-images` locally with `SUPABASE_SERVICE_ROLE_KEY` and **`PEXELS_API_KEY`** set. Images are fetched from the Pexels API into per-pillar pools; each item gets the next image in rotation among published articles in that pillar (by sorted id) so the hub does not show one repeated stock photo for every article. Add `--force` to the script to overwrite URLs already set (for example after the pool is updated). See `docs/technical.md` (Resources Hub) and `README.md`.
 
 #### Saving and Publishing
 

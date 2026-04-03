@@ -56,7 +56,9 @@ export default async function MarketingHomePage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageLd) }}
         />
       ) : null}
-      <MarketingLandingPageClient />
+      <MarketingLandingPageClient
+        base={pathLocale === "en" ? "" : `/${pathLocale}`}
+      />
     </>
   );
 }

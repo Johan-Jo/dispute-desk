@@ -38,16 +38,59 @@ export type ContentLocalizationRow = {
   last_updated_at: string | null;
 };
 
+/** Count published rows for the same filters as `listPublishedByRoute` (for hub pagination). */
+export async function countPublishedForRoute(
+  routeKind: string,
+  locale: HubContentLocale,
+  opts?: { pillar?: string; contentType?: string; search?: string },
+): Promise<number> {
+  const sb = getServiceClient();
+  let q = sb
+    .from("content_localizations")
+    .select("id, content_items!inner(id)", { count: "exact", head: true })
+    .eq("route_kind", routeKind)
+    .eq("locale", locale)
+    .eq("is_published", true)
+    .eq("content_items.workflow_status", "published");
+
+  if (opts?.pillar) {
+    q = q.eq("content_items.primary_pillar", opts.pillar);
+  }
+  if (opts?.contentType) {
+    q = q.eq("content_items.content_type", opts.contentType);
+  }
+  if (opts?.search) {
+    q = q.or(`title.ilike.%${opts.search}%,excerpt.ilike.%${opts.search}%,slug.ilike.%${opts.search}%`);
+  }
+
+  const { count, error } = await q;
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export type ListPublishedByRouteResult = {
+  rows: (ContentLocalizationRow & { content_items: ContentItemRow })[];
+  total: number;
+};
+
 export async function listPublishedByRoute(
   routeKind: string,
   locale: HubContentLocale,
-  opts?: { pillar?: string; contentType?: string; search?: string; limit?: number; offset?: number }
-) {
+  opts?: {
+    pillar?: string;
+    contentType?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+    /** When true (default), run a matching count query in parallel for pagination. Set false if you already counted. */
+    includeTotal?: boolean;
+  },
+): Promise<ListPublishedByRouteResult> {
   const sb = getServiceClient();
   let q = sb
     .from("content_localizations")
     .select(
-      "id, content_item_id, locale, route_kind, title, slug, excerpt, body_json, meta_title, meta_description, og_title, og_description, reading_time_minutes, is_published, publish_at, last_updated_at, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, featured_image_alt, author_id, reviewer_id, published_at, publish_priority, is_hub_article, curated_related_ids, target_keyword)"
+      "id, content_item_id, locale, route_kind, title, slug, excerpt, body_json, meta_title, meta_description, og_title, og_description, reading_time_minutes, is_published, publish_at, last_updated_at, content_items!inner(id, content_type, primary_pillar, workflow_status, featured_image_url, featured_image_alt, author_id, reviewer_id, published_at, publish_priority, is_hub_article, curated_related_ids, target_keyword)",
     )
     .eq("route_kind", routeKind)
     .eq("locale", locale)
@@ -72,14 +115,27 @@ export async function listPublishedByRoute(
     .order("publish_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
-  const { data, error } = await q;
+  const filterOpts = {
+    pillar: opts?.pillar,
+    contentType: opts?.contentType,
+    search: opts?.search,
+  };
+
+  const includeTotal = opts?.includeTotal !== false;
+
+  const [listResult, total] = await Promise.all([
+    q,
+    includeTotal ? countPublishedForRoute(routeKind, locale, filterOpts) : Promise.resolve(0),
+  ]);
+
+  const { data, error } = listResult;
   if (error) throw new Error(error.message);
 
   type Row = ContentLocalizationRow & {
     content_items: ContentItemRow | ContentItemRow[];
   };
 
-  return (data ?? []).map((raw: unknown) => {
+  const rows = (data ?? []).map((raw: unknown) => {
     const r = raw as Row;
     const item = Array.isArray(r.content_items)
       ? r.content_items[0]
@@ -88,6 +144,8 @@ export async function listPublishedByRoute(
       content_items: ContentItemRow;
     };
   });
+
+  return { rows, total };
 }
 
 export async function getPublishedLocalizationBySlug(args: {
