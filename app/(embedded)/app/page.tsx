@@ -23,7 +23,14 @@ import {
   Spinner,
   ProgressBar,
   Box,
+  Icon,
 } from "@shopify/polaris";
+import {
+  AlertCircleIcon,
+  ChartLineIcon,
+  CashDollarIcon,
+  ClockIcon,
+} from "@shopify/polaris-icons";
 import { useTranslations } from "next-intl";
 import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
 import type { SetupStateResponse } from "@/lib/setup/types";
@@ -307,52 +314,76 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
 
   const s = stats ?? DEFAULT_STATS;
 
+  const periodLabel = (key: PeriodKey) =>
+    t(`dashboard.period${key === "all" ? "All" : key}`);
+
+  const kpiCards = [
+    {
+      icon: AlertCircleIcon,
+      label: t("dashboard.totalDisputes"),
+      value: String(s.totalDisputes),
+      period: periodLabel(period),
+    },
+    {
+      icon: ChartLineIcon,
+      label: t("dashboard.winRate"),
+      value: `${s.winRate}%`,
+      period: periodLabel(period),
+    },
+    {
+      icon: CashDollarIcon,
+      label: t("dashboard.revenueRecovered"),
+      value: s.revenueRecovered,
+      period: periodLabel(period),
+    },
+    {
+      icon: ClockIcon,
+      label: t("dashboard.avgResponseTime"),
+      value: s.avgResponseTime,
+      period: periodLabel(period),
+    },
+  ];
+
   return (
-    <Card>
-      <BlockStack gap="400">
-        <InlineStack align="space-between" blockAlign="center" wrap>
-          <Text as="h2" variant="headingMd">{t("dashboard.overview")}</Text>
-          <ButtonGroup>
-            {(["24h", "7d", "30d", "all"] as const).map((key) => (
-              <Button
-                key={key}
-                variant={period === key ? "primary" : "plain"}
-                size="slim"
-                onClick={() => onPeriodChange(key)}
-              >
-                {t(`dashboard.period${key === "all" ? "All" : key}`)}
-              </Button>
-            ))}
-          </ButtonGroup>
-        </InlineStack>
-        <InlineStack gap="400" wrap>
-          <Box minWidth="140px">
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.totalDisputes")}</Text>
-              <Text as="p" variant="headingXl">{s.totalDisputes}</Text>
-            </BlockStack>
-          </Box>
-          <Box minWidth="140px">
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.winRate")}</Text>
-              <Text as="p" variant="headingXl">{s.winRate}%</Text>
-            </BlockStack>
-          </Box>
-          <Box minWidth="140px">
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.revenueRecovered")}</Text>
-              <Text as="p" variant="headingXl">{s.revenueRecovered}</Text>
-            </BlockStack>
-          </Box>
-          <Box minWidth="140px">
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.avgResponseTime")}</Text>
-              <Text as="p" variant="headingXl">{s.avgResponseTime}</Text>
-            </BlockStack>
-          </Box>
-        </InlineStack>
-      </BlockStack>
-    </Card>
+    <BlockStack gap="300">
+      <InlineStack align="space-between" blockAlign="center" wrap>
+        <Text as="h2" variant="headingMd">{t("dashboard.overview")}</Text>
+        <ButtonGroup>
+          {(["24h", "7d", "30d", "all"] as const).map((key) => (
+            <Button
+              key={key}
+              variant={period === key ? "primary" : "plain"}
+              size="slim"
+              onClick={() => onPeriodChange(key)}
+            >
+              {t(`dashboard.period${key === "all" ? "All" : key}`)}
+            </Button>
+          ))}
+        </ButtonGroup>
+      </InlineStack>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
+        {kpiCards.map((card) => (
+          <div
+            key={card.label}
+            style={{
+              background: "#fff",
+              borderRadius: "8px",
+              border: "1px solid #E5E7EB",
+              padding: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <div style={{ color: "#667085" }}>
+                <Icon source={card.icon} tone="subdued" />
+              </div>
+              <p style={{ fontSize: "12px", color: "#667085", margin: 0 }}>{card.label}</p>
+            </div>
+            <p style={{ fontSize: "24px", fontWeight: 700, color: "#0B1220", margin: 0 }}>{loading ? "—" : card.value}</p>
+            <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "4px" }}>{card.period}</p>
+          </div>
+        ))}
+      </div>
+    </BlockStack>
   );
 }
 

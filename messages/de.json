@@ -187,7 +187,9 @@
     "statusUnderReview": "In Prüfung",
     "statusWon": "Gewonnen",
     "statusLost": "Verloren",
-    "statusUnknown": "Unbekannt"
+    "statusUnknown": "Unbekannt",
+    "disputeInitiated": "Streitfall eingeleitet",
+    "evidenceSavedToShopify": "Beweise in Shopify gespeichert"
   },
   "packs": {
     "title": "Bewispakete",

@@ -221,7 +221,9 @@
     "statusUnderReview": "Under granskning",
     "statusWon": "Vunnen",
     "statusLost": "Förlorad",
-    "statusUnknown": "Okänd"
+    "statusUnknown": "Okänd",
+    "disputeInitiated": "Tvist initierad",
+    "evidenceSavedToShopify": "Bevis sparade i Shopify"
   },
   "packs": {
     "title": "Bevispaket",

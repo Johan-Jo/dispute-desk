@@ -187,7 +187,9 @@
     "statusUnderReview": "Em análise",
     "statusWon": "Ganho",
     "statusLost": "Perdido",
-    "statusUnknown": "Desconhecido"
+    "statusUnknown": "Desconhecido",
+    "disputeInitiated": "Disputa iniciada",
+    "evidenceSavedToShopify": "Evidência salva no Shopify"
   },
   "packs": {
     "title": "Pacotes de Evidências",
