@@ -7,8 +7,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import {
   Page,
@@ -234,6 +235,7 @@ function ProfileRow({ label, value }: { label: string; value: React.ReactNode })
 
 export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const t = useTranslations();
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
@@ -305,7 +307,7 @@ export default function DisputeDetailPage() {
     return (
       <Page
         title={t("disputes.title")}
-        backAction={{ content: t("disputes.title"), url: "/app/disputes" }}
+        backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       >
         <Banner tone="critical">{t("disputes.disputeNotFound")}</Banner>
       </Page>
@@ -324,7 +326,7 @@ export default function DisputeDetailPage() {
   return (
     <Page
       title={t("disputes.disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? "" })}
-      backAction={{ content: t("disputes.title"), url: "/app/disputes" }}
+      backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       titleMetadata={isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined}
       primaryAction={{
         content: generating ? t("disputes.generating") : t("disputes.generatePack"),

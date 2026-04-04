@@ -127,6 +127,7 @@ function shopifyOrderUrl(shopDomain: string | null, orderGid: string | null): st
 
 function RecentDisputesTable() {
   const t = useTranslations();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<DisputeRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -270,7 +271,7 @@ function RecentDisputesTable() {
                   </td>
                   <td style={tdStyle}>
                     <Link
-                      href={`/app/disputes/${r.id}`}
+                      href={withShopParams(`/app/disputes/${r.id}`, searchParams)}
                       style={{ color: "#4F46E5", fontSize: "13px", textDecoration: "none", whiteSpace: "nowrap" }}
                     >
                       {t("table.viewDetails")}

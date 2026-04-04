@@ -8,8 +8,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { withShopParams } from "@/lib/withShopParams";
 import {
   Page,
   Layout,
@@ -68,6 +69,7 @@ function formatDate(iso: string | null): string {
 
 export default function DisputesListPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +161,7 @@ export default function DisputesListPage() {
       id={d.id}
       key={d.id}
       position={idx}
-      onClick={() => router.push(`/app/disputes/${d.id}`)}
+      onClick={() => router.push(withShopParams(`/app/disputes/${d.id}`, searchParams))}
     >
       <IndexTable.Cell>
         <InlineStack gap="200" blockAlign="center">
