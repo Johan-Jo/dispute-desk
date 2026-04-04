@@ -4,7 +4,7 @@
 
 ---
 
-## Implementation status (2026-03-14, updated)
+## Implementation status (2026-03-14, updated 2026-04-04)
 
 **E1 — Shell and navigation ✅**
 - `s-link` children in `s-app-nav` per App Bridge web component spec (not `<a>` tags).
@@ -108,12 +108,12 @@ Figma **Make** files are code-based: they expose **source files** (React pages),
 
 ### 2.2 Gaps
 
-- Embedded billing page needs layout and copy aligned with Figma (e.g. "14-day free trial").
+- **Closed for V1:** Billing uses real APIs and trial copy in i18n (`app/(embedded)/app/billing/page.tsx`). Further Figma polish is optional.
 - No dev-store–specific flows required for this redesign.
 
 ### 2.3 Acceptance criteria
 
-- Billing page matches new layout and trial copy.
+- Billing page shows plan/trial copy from i18n with locale wired per §5.
 - All new copy in i18n with **locale wired per §5** so translations actually switch.
 
 ---
@@ -199,12 +199,17 @@ Theme app extension is **not** in scope. If product later requests storefront pr
 
 ### 5.3 Implementation checklist
 
-- [ ] **Wire locale first:** In embedded layout, resolve locale from Shopify (session JWT or locale query param on embed load).
-- [ ] Pass resolved `locale` and `messages` into the i18n provider so all embedded pages use it.
-- [ ] **Then** add/update keys: every new or changed string must exist in **all 6** `messages/*.json` files (en-US, de-DE, fr-FR, es-ES, pt-BR, sv-SE).
-- [ ] QA in multiple locales to confirm translations switch when Shopify locale changes.
+- [x] **Wire locale first:** Middleware forwards `?locale=` as `x-shopify-locale`; embedded layout `resolveLocale()` uses it (see §Implementation status E2).
+- [x] Pass resolved `locale` and `messages` into the i18n provider so all embedded pages use it.
+- [x] **Then** add/update keys: every new or changed string must exist in **all 6** `messages/*.json` files (en-US, de-DE, fr-FR, es-ES, pt-BR, sv-SE) — backfilled per E2.
+- [ ] QA in multiple locales when changing copy (ongoing; not a one-time gate).
 
-**Without this wiring, translations never switch.**
+**Locale wiring is required for translations to switch; the above is implemented.**
+
+### 5.4 Deferred (non-blocking)
+
+- **E1 homework:** Optional CSS to hide a duplicate in-iframe nav bar once a stable selector is known (see §E1 in Implementation status).
+- **Analytics route:** Figma `shopify-analytics.tsx` remains foldable into the dashboard or a later route — not required for App Store submission.
 
 ---
 
@@ -215,11 +220,11 @@ Theme app extension is **not** in scope. If product later requests storefront pr
 
 ---
 
-## 7. Suggested implementation order
+## 7. Suggested implementation order (completed)
 
-1. **Product decision** — Confirm second installation step (Open in Admin) per §3.1.
-2. **Locale/i18n wiring per §5** — Resolve locale from Shopify and plumb into embedded layout provider; then add/update keys in all 6 message files.
-3. **Figma + dashboard + config guide** — Implement shell, dashboard, and configuration guide with App Bridge Redirect per §3.3.
-4. **Setup step** — Add "Open in Admin" step to setup wizard.
-5. **Billing page trial copy** — New layout and trial copy.
-6. **Disputes and rest** — Disputes list/detail, packs, rules, settings; add strings to all 6 message files; QA in multiple locales.
+1. **Product decision** — Open in Admin per §3.1 (done).
+2. **Locale/i18n wiring per §5** — Done (E2).
+3. **Figma + dashboard + config guide** — Done (shell, dashboard, App Bridge Redirect).
+4. **Setup step** — Open in Admin integrated (E3).
+5. **Billing page trial copy** — Done (see §2.2).
+6. **Disputes and rest** — Done; ongoing locale QA per §5.3.

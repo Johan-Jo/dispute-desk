@@ -10,6 +10,7 @@ import { HELP_CATEGORIES, getCategoryBySlug, type HelpCategory } from "./categor
 /** Article slugs available in the embedded app (in this order for display). Portal-only articles (e.g. template-setup-wizard, portal flows) are excluded. */
 const EMBEDDED_ARTICLE_SLUGS: string[] = [
   "connect-shopify-store",
+  "shopify-app-store-install",
   "understanding-dashboard",
   "first-dispute-sync",
   "automation-overview",
@@ -49,6 +50,10 @@ export const EMBEDDED_ARTICLE_COPY_OVERRIDES: Record<
   "connect-shopify-store": {
     titleKey: "help.embedded.articles.connectShopifyStore.title",
     bodyKey: "help.embedded.articles.connectShopifyStore.body",
+  },
+  "shopify-app-store-install": {
+    titleKey: "help.embedded.articles.shopifyAppStoreInstall.title",
+    bodyKey: "help.embedded.articles.shopifyAppStoreInstall.body",
   },
   "understanding-dashboard": {
     titleKey: "help.embedded.articles.understandingDashboard.title",

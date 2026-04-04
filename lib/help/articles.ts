@@ -14,8 +14,16 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "getting-started",
     titleKey: "help.articles.connectShopifyStore.title",
     bodyKey: "help.articles.connectShopifyStore.body",
-    relatedSlugs: ["first-dispute-sync", "understanding-dashboard"],
+    relatedSlugs: ["shopify-app-store-install", "first-dispute-sync", "understanding-dashboard"],
     tags: ["connect", "install", "shopify", "oauth", "setup", "reconnect", "permissions", "reauthorize"],
+  },
+  {
+    slug: "shopify-app-store-install",
+    category: "getting-started",
+    titleKey: "help.articles.shopifyAppStoreInstall.title",
+    bodyKey: "help.articles.shopifyAppStoreInstall.body",
+    relatedSlugs: ["connect-shopify-store", "first-dispute-sync"],
+    tags: ["app store", "install", "shopify", "add app", "oauth"],
   },
   {
     slug: "understanding-dashboard",

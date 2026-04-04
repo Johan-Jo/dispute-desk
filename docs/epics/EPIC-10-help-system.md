@@ -11,7 +11,7 @@ Knowledge-base-style help center available on both the external portal (`/portal
 ### Data Layer
 
 - **`lib/help/categories.ts`** — 6 help categories (Getting Started, Disputes, Evidence Packs, Automation & Rules, Billing & Plans, Saving to Shopify) with icon references and i18n keys.
-- **`lib/help/articles.ts`** — 28 articles with slug, category, title/body i18n keys, related article cross-links, and search tags. Includes Evidence pack templates, Defining store policies, Rule presets.
+- **`lib/help/articles.ts`** — 29 articles with slug, category, title/body i18n keys, related article cross-links, and search tags. Includes Evidence pack templates, Defining store policies, Rule presets, and **Installing from the Shopify App Store** (`shopify-app-store-install`).
 
 ### Portal Surface
 
@@ -30,13 +30,14 @@ Knowledge-base-style help center available on both the external portal (`/portal
 
 ### i18n
 
-- Full `help.*` namespace added to `messages/en.json` (titles, bodies, UI strings for all 25 articles).
+- Full `help.*` namespace added to `messages/en.json` (titles, bodies, UI strings for all articles).
 - Translated into Swedish (`sv`), German (`de`), French (`fr`), and Spanish (`es`).
 
 ## Content Highlights
 
 - Help articles in `messages/en-US.json` and `messages/en.json` are updated when product UX changes (e.g. embedded Rules starter rows + **Save starter rules**, activated packs in the setup wizard, template install `activate`); portal Help and embedded Help resolve the same `help.articles.*` keys for shared articles.
 - Compliance-critical article: **"DisputeDesk does NOT submit to card networks"** clearly explains the save-vs-submit distinction in all 5 languages.
+- **Shopify App Store install** (`shopify-app-store-install`): merchant-facing steps for apps.shopify.com vs website onboarding; embedded override stresses opening the app from Admin.
 - Plan comparison article covers Free/Starter/Pro feature and limit breakdown.
 - Completeness score article explains thresholds and auto-save behavior.
 - Evidence checklist article explains required vs. recommended items per dispute reason.

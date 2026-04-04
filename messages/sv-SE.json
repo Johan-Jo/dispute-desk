@@ -929,6 +929,10 @@
       "savingToShopifyDesc": "Hur bevis sparas och vad som händer sedan"
     },
     "articles": {
+      "shopifyAppStoreInstall": {
+        "title": "Installation från Shopify App Store",
+        "body": "DisputeDesk finns i Shopify App Store. Det är det rekommenderade sättet att lägga till appen i en butik.\n\nFrån App Store:\n1. Gå till Shopify App Store (apps.shopify.com) och sök efter DisputeDesk.\n2. Klicka på Lägg till app och välj butik.\n3. Granska och godkänn behörigheterna som Shopify visar. DisputeDesk behöver åtkomst till ordrar, tvister, tvistbevis, leveranser och relaterad butiksdata för att bygga bevispaket.\n4. Efter installationen öppnar du Shopify-admin, sedan Appar och DisputeDesk för den inbäddade appen.\n\nFrån vår webbplats:\nOm du började på disputedesk.com eller en annan landningssida följer du stegen för registrering eller installation. Du slutför ändå OAuth i Shopify. Öppna sedan DisputeDesk från Appar i admin för fakturering, att spara bevis och hela den inbäddade upplevelsen.\n\nTips: Öppna appen från Shopify-admin (Appar, sedan DisputeDesk) så att butikssessionen blir stabil. Vid anslutnings- eller faktureringsfel: prova Rensa butik och återanslut i portalens sidofält eller öppna appen igen från admin. Se även hjälpartikeln om ogiltig butikssession.\n\nNästa steg: läs \"Din första tvistsynkronisering\" och \"Förstå instrumentpanelen\"."
+      },
       "connectShopifyStore": {
         "title": "Hur du ansluter din Shopify-butik",
         "body": "För att börja använda DisputeDesk behöver du ansluta din Shopify-butik. Så här gör du:\n\n1. Från portalen, klicka på \"Anslut Shopify-butik\" på butiksvalssidan.\n2. Ange din butiks domän (t.ex. min-butik.myshopify.com).\n3. Du omdirigeras till Shopify för att auktorisera DisputeDesk.\n4. Godkänn de begärda behörigheterna — DisputeDesk behöver åtkomst till ordrar, tvister, tvistbevis, leveranser och kunddata.\n5. Efter auktorisering omdirigeras du tillbaka och din butik visas i instrumentpanelen.\n\nÅteransluta en butik:\nOm DisputeDesk har uppdaterats med nya behörigheter (t.ex. efter en appuppdatering) kan du behöva återansluta din butik. På butiksvalssidan, klicka på \"Återanslut (uppdatera behörigheter)\" under ditt butiksnamn. Du omdirigeras till Shopify för att auktorisera igen. Dina befintliga data och inställningar bevaras — bara behörigheterna uppdateras.\n\nDin butiksdata är krypterad och delas aldrig med tredje part.\n\nEfter anslutning synkar DisputeDesk automatiskt dina öppna tvister. Det tar vanligtvis några sekunder."
@@ -1068,6 +1072,10 @@
         "connectShopifyStore": {
           "title": "Connecting your store in the Shopify app",
           "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.com) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
+        },
+        "shopifyAppStoreInstall": {
+          "title": "Använda DisputeDesk från Shopify App Store",
+          "body": "Du använder DisputeDesk i Shopify-admin. Det är det rekommenderade sättet.\n\nOm du inte har installerat än:\n1. Hitta DisputeDesk i Shopify App Store.\n2. Tryck på Lägg till app, godkänn behörigheter och slutför installationen.\n3. Öppna Appar och sedan DisputeDesk här i admin.\n\nOm du kom från vår webbplats: slutför OAuth-stegen i Shopify och öppna appen fortsatt från Appar (inte bara via ett bokmärke) så att sessionen gäller för fakturering och att spara bevis.\n\nEfter en uppdatering: se \"Ansluta din butik i Shopify-appen\"."
         },
         "understandingDashboard": {
           "title": "Understanding the dashboard in this app",

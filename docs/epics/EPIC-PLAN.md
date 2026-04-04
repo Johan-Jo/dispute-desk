@@ -19,13 +19,13 @@
 
 ## 2. All epics — one table
 
-Read this table top-to-bottom for historical order. **Status** is V1 intent (see `roadmap.md` for exceptions like A1).
+Read this table top-to-bottom for historical order. **Status** is V1 intent (see `roadmap.md`).
 
 | ID | Name | Status | Detail doc |
 |----|------|--------|------------|
 | **0** | Foundations | Done | [EPIC-0-foundations.md](EPIC-0-foundations.md) |
 | **P0** | External Portal + Marketing | Done | [EPIC-P0-portal-marketing.md](EPIC-P0-portal-marketing.md) |
-| **A1** | Automation Pipeline | In progress | [EPIC-A1-automation-pipeline.md](EPIC-A1-automation-pipeline.md) |
+| **A1** | Automation Pipeline | Done | [EPIC-A1-automation-pipeline.md](EPIC-A1-automation-pipeline.md) |
 | **1** | Dispute Sync | Done | [EPIC-1-dispute-sync.md](EPIC-1-dispute-sync.md) |
 | **2** | Evidence Pack Builder | Done | [EPIC-2-evidence-pack-builder.md](EPIC-2-evidence-pack-builder.md) |
 | **3** | PDF Rendering & Storage | Done | [EPIC-3-pdf-rendering.md](EPIC-3-pdf-rendering.md) |

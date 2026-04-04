@@ -188,6 +188,7 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 - **When unset:** the same button links to **`{getPublicSiteBaseUrl()}/auth/sign-up`** with UTM params (`marketing` / `install_cta` / `app_store_fallback`) so merchants never hit a missing `https://apps.shopify.com/...` page (typical before App Store approval). Do **not** guess the listing handle; it may differ from `shopify.app.toml` `name`.
 - **Production / Vercel:** After the app is published, set **`NEXT_PUBLIC_SHOPIFY_APP_STORE_URL`** in the Vercel project (Production and Preview if needed) to the URL shown in **Shopify Partners → App → Distribution**, then redeploy so the marketing site picks it up.
 - **Optional check:** `npm run verify:app-store-url` — HTTP GET the env URL; exits 0 if unset, 0 if 2xx, 1 if the listing returns an error (run before releases once a listing exists).
+- **Submission:** Pre-review checklist (Partners, PCD, dev store walkthrough) — [`docs/shopify-app-review-checklist.md`](shopify-app-review-checklist.md).
 
 ### Embedded app guard
 
@@ -603,6 +604,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 ### Shop Preferences (Embedded Settings)
 - `GET /api/shop/preferences?shop_id=...` — returns notification preferences from `shop_setup.steps.team.payload.notifications` (newDispute, beforeDue, evidenceReady). Used by embedded Settings page.
 - `PATCH /api/shop/preferences` — body `{ shop_id, notifications: { newDispute?, beforeDue?, evidenceReady? } }`. Merges into team step payload and upserts `shop_setup`. Used to persist notification toggles.
+- `POST /api/setup/invite` — body `{ email }`. Sends a teammate invite email via Resend pointing to the portal sign-up page. Used by the "Send invite" button in the Setup Wizard Team & Notifications step.
 
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings
@@ -1203,7 +1205,7 @@ includes `./content/policy-templates/**/*.md` for the
 
 ### Embedded app help (separate and adapted)
 - The **Shopify embedded app** (`/app/help`) uses a **separate** help surface so the in-app experience can be adapted for the Shopify Admin context.
-- **Data:** `lib/help/embedded.ts` defines which article slugs are available in the app (`EMBEDDED_ARTICLE_SLUGS`), ordered categories, and optional copy overrides. Portal-only articles (e.g. `template-setup-wizard`) are excluded from the embedded list.
+- **Data:** `lib/help/embedded.ts` defines which article slugs are available in the app (`EMBEDDED_ARTICLE_SLUGS`), ordered categories, and optional copy overrides. Portal-only articles (e.g. `template-setup-wizard`) are excluded from the embedded list. The slug `shopify-app-store-install` explains installing from the Shopify App Store vs website flows (merchant help for distribution).
 - **Copy:** Embedded UI strings (title, search, backToHelp, etc.) and selected article bodies use the `help.embedded` i18n namespace in `messages/{locale}.json`. Where `EMBEDDED_ARTICLE_COPY_OVERRIDES` is set, titles and bodies are taken from `help.embedded.articles.{slug}.title` / `.body`; otherwise the shared `help.articles.*` keys are used.
 - **Portal** (`/portal/help`) continues to use the full `HELP_ARTICLES` and `HELP_CATEGORIES` with the shared `help.*` namespace (Tailwind UI).
 

@@ -19,6 +19,9 @@ interface TeamNotificationsStepProps {
 
 export function TeamNotificationsStep({ stepId, onSaveRef }: TeamNotificationsStepProps) {
   const [teamEmail, setTeamEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [newDispute, setNewDispute] = useState(true);
   const [beforeDue, setBeforeDue] = useState(true);
   const [evidenceReady, setEvidenceReady] = useState(true);
@@ -64,8 +67,40 @@ export function TeamNotificationsStep({ stepId, onSaveRef }: TeamNotificationsSt
             autoComplete="off"
           />
         </div>
-        <Button disabled={!teamEmail}>Send invite</Button>
+        <Button
+          disabled={!teamEmail || inviteSending || inviteSent}
+          loading={inviteSending}
+          onClick={async () => {
+            setInviteSending(true);
+            setInviteError(null);
+            try {
+              const res = await fetch("/api/setup/invite", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: teamEmail }),
+              });
+              if (res.ok) {
+                setInviteSent(true);
+              } else {
+                const data = await res.json().catch(() => ({}));
+                setInviteError(data.error ?? "Failed to send invite");
+              }
+            } catch {
+              setInviteError("Network error — please try again");
+            } finally {
+              setInviteSending(false);
+            }
+          }}
+        >
+          {inviteSent ? "Invite sent!" : "Send invite"}
+        </Button>
       </InlineStack>
+
+      {inviteError && (
+        <Text as="p" variant="bodySm" tone="critical">
+          {inviteError}
+        </Text>
+      )}
 
       <Text as="h3" variant="headingMd">
         Email notifications

@@ -1,6 +1,6 @@
 # DisputeDesk V1 Roadmap
 
-> **Last updated:** 2026-03-27  
+> **Last updated:** 2026-04-04  
 > **Epic plan (single readable sheet):** [`docs/epics/EPIC-PLAN.md`](epics/EPIC-PLAN.md) — start there if the table + diagram below are hard to follow.
 
 ## Progress
@@ -9,7 +9,7 @@
 |------|------|--------|------|-----|
 | 0 | Foundations | DONE | 1 | [EPIC-0](epics/EPIC-0-foundations.md) |
 | P0 | External Portal + Marketing | DONE | 0-1 | [EPIC-P0](epics/EPIC-P0-portal-marketing.md) |
-| A1 | Automation Pipeline | In Progress | 1-3 | [EPIC-A1](epics/EPIC-A1-automation-pipeline.md) |
+| A1 | Automation Pipeline | Done | 1-3 | [EPIC-A1](epics/EPIC-A1-automation-pipeline.md) |
 | 1 | Dispute Sync | DONE | 1-2 | [EPIC-1](epics/EPIC-1-dispute-sync.md) |
 | 2 | Evidence Pack Builder | DONE | 2-3 | [EPIC-2](epics/EPIC-2-evidence-pack-builder.md) |
 | 3 | PDF Rendering & Storage | DONE | 3 | [EPIC-3](epics/EPIC-3-pdf-rendering.md) |
@@ -100,7 +100,11 @@ DisputeDesk does NOT submit responses to card networks on behalf of merchants.
 - **EPIC 11** adds the 7-step setup wizard with dashboard checklist card
   (connect → goals → disputes → packs → rules → policies → team; billing, settings, and help are app sections only), Evidence Sources V1 (Gorgias connect + sample files), and the onboarding state machine.
 - **Shopify App Store:** App registered in Shopify Partners. OAuth installs
-  working (cookieless state token). Dispute evidence write scopes
-  (`read_shopify_payments_dispute_evidences`,
-  `write_shopify_payments_dispute_evidences`) pending Shopify approval;
-  portal uses "Open in Shopify Admin" + copy-to-clipboard workaround.
+  working (cookieless state token). Dispute evidence scopes are listed in
+  [`shopify.app.toml`](../shopify.app.toml) (synced with Partners; see comment
+  there for App Review ticket history). **Protected Customer Data** may be
+  required for `disputes/create` and `disputes/update` webhooks registered at
+  runtime — confirm in Partners and follow
+  [`docs/shopify-app-review-checklist.md`](shopify-app-review-checklist.md).
+  Until a public listing URL exists, set marketing CTAs via
+  `NEXT_PUBLIC_SHOPIFY_APP_STORE_URL` after publish (see `docs/technical.md`).
