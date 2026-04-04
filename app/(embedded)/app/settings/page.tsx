@@ -144,7 +144,7 @@ export default function EmbeddedSettingsPage() {
                         {t("connectedViaOAuth")}
                       </Text>
                       <InlineStack gap="200">
-                        <Badge tone="success">Active</Badge>
+                        <Badge tone="success">{t("active")}</Badge>
                       </InlineStack>
                     </BlockStack>
                   </InlineStack>

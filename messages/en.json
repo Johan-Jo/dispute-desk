@@ -590,7 +590,8 @@
     "storesConnected": "Stores connected",
     "teamMembers": "Team members",
     "deleteWarning": "Once deleted, your account and all data cannot be recovered.",
-    "deleteAccount": "Delete account"
+    "deleteAccount": "Delete account",
+    "active": "Active"
   },
   "connect": {
     "title": "Connect your Shopify store",
@@ -1048,7 +1049,7 @@
     "previous": "Previous",
     "finish": "Finish",
     "stepOf": "Step {current} of {total}",
-    "welcomeTitle": "Welcome to DisputeDesk! \uD83D\uDC4B",
+    "welcomeTitle": "Welcome to DisputeDesk! 👋",
     "welcomeDesc": "Let's take a quick tour to help you get started with managing your Shopify chargebacks efficiently. This will only take 2 minutes.",
     "dashboardTitle": "Your Command Center",
     "dashboardDesc": "This is your dashboard where you can see all your key metrics at a glance: active disputes, win rate, evidence packs used, and upcoming deadlines.",
@@ -1060,7 +1061,7 @@
     "automationRulesDesc": "Set up automation rules to automatically attach evidence packs, send notifications, or flag urgent disputes based on custom conditions.",
     "policiesTitle": "Store Policy Documents",
     "policiesDesc": "Upload and manage your store policies (Terms of Service, Refund Policy, etc.) to quickly include them as evidence in disputes.",
-    "completeTitle": "Connect Your Store! \uD83D\uDE80",
+    "completeTitle": "Connect Your Store! 🚀",
     "completeDesc": "You've seen what DisputeDesk can do. Now connect your real Shopify store to start managing disputes, building evidence packs, and winning chargebacks automatically.",
     "connectStore": "Connect Store"
   },
@@ -1081,9 +1082,9 @@
     },
     "hero": {
       "tagline": "Dispute operations for Shopify",
-      "headline": "Run chargebacks like an ops team \u2014 not a 25% success-fee tax.",
-      "subheadline": "DisputeDesk helps you build evidence packs fast, enforce completeness, and keep a defensible audit trail \u2014 with merchant-controlled workflows and predictable pricing.",
-      "bullet1": "Evidence packs in minutes \u2014 drafts are unlimited, packs count only on export",
+      "headline": "Run chargebacks like an ops team — not a 25% success-fee tax.",
+      "subheadline": "DisputeDesk helps you build evidence packs fast, enforce completeness, and keep a defensible audit trail — with merchant-controlled workflows and predictable pricing.",
+      "bullet1": "Evidence packs in minutes — drafts are unlimited, packs count only on export",
       "bullet2": "Review queue + completeness gate to prevent weak submissions",
       "bullet3": "Immutable audit trail for every change, file, and decision",
       "installFree": "Install free",
@@ -1120,7 +1121,7 @@
     },
     "pricing": {
       "title": "Predictable pricing for dispute ops",
-      "subtitle": "Free is for evaluation. Paid plans are for running dispute operations \u2014 with clear pack limits and simple top-ups. No hidden percentage.",
+      "subtitle": "Free is for evaluation. Paid plans are for running dispute operations — with clear pack limits and simple top-ups. No hidden percentage.",
       "trialInfo": "Paid plans include a 14-day trial with 25 packs. Free includes 3 packs total (lifetime).",
       "freeName": "Free (Sandbox)",
       "freeF1": "Unlimited draft building",
@@ -1163,17 +1164,17 @@
       "legal": "Legal",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy",
-      "copyright": "\u00a9 2026 DisputeDesk. Not affiliated with Shopify Inc."
+      "copyright": "© 2026 DisputeDesk. Not affiliated with Shopify Inc."
     },
     "roi": {
       "title": "ROI snapshot",
-      "subtitle": "Illustrative monthly value by dispute volume \u2014 mapped to your plan packs",
+      "subtitle": "Illustrative monthly value by dispute volume — mapped to your plan packs",
       "modeConservative": "Conservative",
       "modeBase": "Base",
       "modeAggressive": "Aggressive",
       "calculateCta": "Calculate your ROI",
       "bannerBold": "Packs count only when you export or submit an evidence pack",
-      "bannerRest": "\u2014 drafts and review are unlimited.",
+      "bannerRest": "— drafts and review are unlimited.",
       "colSegment": "Segment",
       "colDisputes": "Disputes/mo",
       "colPlan": "Plan (packs/mo)",
@@ -1229,7 +1230,7 @@
     "cancel": "Cancel",
     "create": "Create Pack",
     "detailBack": "Back to Packs Library",
-    "detailCreated": "Created on {date} \u00b7 Used {count} times",
+    "detailCreated": "Created on {date} · Used {count} times",
     "editPack": "Edit Pack",
     "deletePack": "Delete",
     "packDetails": "Pack Details",

@@ -221,7 +221,7 @@
     "packNotFound": "Paket nicht gefunden.",
     "backToDisputes": "Zurück zu Streitfällen",
     "backToPacks": "Zurück zu Paketen",
-    "approveAndSave": "Genehmigen & Speichern",
+    "approveAndSave": "Genehmigen und speichern",
     "completenessScore": "Vollständigkeitsbewertung",
     "pageExplainerTitle": "Was Sie auf dieser Seite tun sollen",
     "pageExplainerStep1": "Laden Sie unterstützende Dateien (Belege, Sendungsverfolgung, Richtlinien) im Upload-Bereich hoch. Die Vollständigkeitsbewertung zeigt, wie aussagekräftig Ihre Beweise sind.",
@@ -235,13 +235,7 @@
     "completeness": "Vollständigkeit",
     "pdf": "PDF",
     "download": "Herunterladen",
-    "view": "Anzeigen",
-    "packNotFound": "Paket nicht gefunden.",
-    "backToDisputes": "Zurück zu Streitfällen",
-    "backToPacks": "Zurück zu Paketen",
-    "approveAndSave": "Genehmigen und speichern",
-    "completenessScore": "Vollständigkeitsbewertung",
-    "openInShopifyAdmin": "In Shopify Admin öffnen →"
+    "view": "Anzeigen"
   },
   "analytics": {
     "title": "Analysen",
@@ -390,7 +384,7 @@
   },
   "settings": {
     "title": "Einstellungen",
-    "subtitle": "Konto, Automatisierung und Einstellungen verwalten",
+    "subtitle": "Verwalte dein Konto, deine Automatisierung und Einstellungen",
     "automationSection": "Automatisierung",
     "profileSection": "Profil",
     "notificationsSection": "Benachrichtigungen",
@@ -458,7 +452,31 @@
     "storesConnected": "Verbundene Shops",
     "teamMembers": "Teammitglieder",
     "deleteWarning": "Nach dem Löschen können Ihr Konto und alle Daten nicht wiederhergestellt werden.",
-    "deleteAccount": "Konto löschen"
+    "deleteAccount": "Konto löschen",
+    "storeConnection": "Shop-Verbindung",
+    "connectedViaOAuth": "Verbunden über Shopify OAuth",
+    "reconnect": "Erneut verbinden",
+    "active": "Aktiv",
+    "notifications": "Benachrichtigungen",
+    "notifNewDispute": "Neue Streitfälle",
+    "notifNewDisputeDesc": "Benachrichtigung bei neuen Streitfällen",
+    "notifBeforeDue": "Vor Fälligkeit",
+    "notifBeforeDueDesc": "Erinnerung 24 Stunden vor dem Abgabetermin",
+    "notifEvidenceReady": "Beweise bereit",
+    "notifEvidenceReadyDesc": "Wenn das Beweispaket vollständig ist",
+    "inviteMember": "Mitglied einladen",
+    "teamManagedInPortal": "Die Teamverwaltung ist im Portal verfügbar.",
+    "manageTeam": "Team im Portal verwalten",
+    "billingPlan": "Plan & Abrechnung",
+    "billingDesc": "Verwalte deinen Plan und Verbrauch auf der Abrechnungsseite.",
+    "viewPricing": "Preise anzeigen",
+    "security": "Sicherheit & Datenschutz",
+    "dataEncryption": "Datenverschlüsselung",
+    "dataEncryptionDesc": "Alle Daten werden im Ruhezustand (AES-256) und bei der Übertragung (TLS 1.3) verschlüsselt",
+    "soc2": "SOC 2 Typ II zertifiziert",
+    "soc2Desc": "Jährliche Sicherheitsprüfungen durch Dritte",
+    "gdpr": "DSGVO & CCPA-konform",
+    "gdprDesc": "Vollständige Einhaltung der Datenschutzbestimmungen"
   },
   "connect": {
     "title": "Shopify-Shop verbinden",
@@ -749,7 +767,7 @@
       },
       "connectShopifyStore": {
         "title": "So verbinden Sie Ihren Shopify-Shop",
-        "body": "Um DisputeDesk zu nutzen, müssen Sie Ihren Shopify-Shop verbinden:\n\n1. Klicken Sie im Portal auf \"Shopify-Shop verbinden\".\n2. Geben Sie Ihre Shop-Domain ein.\n3. Sie werden zu Shopify weitergeleitet, um DisputeDesk zu autorisieren.\n4. Erteilen Sie die angeforderten Berechtigungen — DisputeDesk benötigt Zugriff auf Bestellungen, Streitfälle, Streitfall-Nachweise, Lieferungen und Kundendaten.\n5. Nach der Autorisierung wird Ihr Shop im Dashboard angezeigt.\n\nShop erneut verbinden:\nWenn DisputeDesk mit neuen Berechtigungen aktualisiert wurde (z.\u00a0B. nach einem App-Update), müssen Sie Ihren Shop möglicherweise erneut verbinden. Klicken Sie auf der Shop-Auswahlseite auf \"Erneut verbinden (Berechtigungen aktualisieren)\" unter Ihrem Shop-Namen. Sie werden zu Shopify weitergeleitet, um erneut zu autorisieren. Ihre vorhandenen Daten und Einstellungen bleiben erhalten — nur die Berechtigungen werden aktualisiert.\n\nIhre Daten sind verschlüsselt und werden nie an Dritte weitergegeben.\n\nNach dem Verbinden synchronisiert DisputeDesk automatisch Ihre offenen Streitfälle. Dies dauert in der Regel nur wenige Sekunden."
+        "body": "Um DisputeDesk zu nutzen, müssen Sie Ihren Shopify-Shop verbinden:\n\n1. Klicken Sie im Portal auf \"Shopify-Shop verbinden\".\n2. Geben Sie Ihre Shop-Domain ein.\n3. Sie werden zu Shopify weitergeleitet, um DisputeDesk zu autorisieren.\n4. Erteilen Sie die angeforderten Berechtigungen — DisputeDesk benötigt Zugriff auf Bestellungen, Streitfälle, Streitfall-Nachweise, Lieferungen und Kundendaten.\n5. Nach der Autorisierung wird Ihr Shop im Dashboard angezeigt.\n\nShop erneut verbinden:\nWenn DisputeDesk mit neuen Berechtigungen aktualisiert wurde (z. B. nach einem App-Update), müssen Sie Ihren Shop möglicherweise erneut verbinden. Klicken Sie auf der Shop-Auswahlseite auf \"Erneut verbinden (Berechtigungen aktualisieren)\" unter Ihrem Shop-Namen. Sie werden zu Shopify weitergeleitet, um erneut zu autorisieren. Ihre vorhandenen Daten und Einstellungen bleiben erhalten — nur die Berechtigungen werden aktualisiert.\n\nIhre Daten sind verschlüsselt und werden nie an Dritte weitergegeben.\n\nNach dem Verbinden synchronisiert DisputeDesk automatisch Ihre offenen Streitfälle. Dies dauert in der Regel nur wenige Sekunden."
       },
       "understandingDashboard": {
         "title": "Das Dashboard verstehen",
@@ -1049,7 +1067,7 @@
     "cancel": "Abbrechen",
     "create": "Paket erstellen",
     "detailBack": "Zurück zur Paket-Bibliothek",
-    "detailCreated": "Erstellt am {date} \u00b7 {count} Mal verwendet",
+    "detailCreated": "Erstellt am {date} · {count} Mal verwendet",
     "editPack": "Paket bearbeiten",
     "deletePack": "Löschen",
     "packDetails": "Paketdetails",

@@ -237,13 +237,7 @@
     "completeness": "Fullständighet",
     "pdf": "PDF",
     "download": "Ladda ner",
-    "view": "Visa",
-    "packNotFound": "Paketet hittades inte.",
-    "backToDisputes": "Tillbaka till tvister",
-    "backToPacks": "Tillbaka till paket",
-    "approveAndSave": "Godkänn och spara",
-    "completenessScore": "Fullständighetspoäng",
-    "openInShopifyAdmin": "Öppna i Shopify Admin →"
+    "view": "Visa"
   },
   "analytics": {
     "title": "Analyser",
@@ -392,7 +386,7 @@
   },
   "settings": {
     "title": "Inställningar",
-    "subtitle": "Hantera ditt konto, automation och preferenser",
+    "subtitle": "Hantera ditt konto, automatisering och inställningar",
     "automationSection": "Automation",
     "profileSection": "Profil",
     "notificationsSection": "Aviseringar",
@@ -460,7 +454,31 @@
     "storesConnected": "Anslutna butiker",
     "teamMembers": "Teammedlemmar",
     "deleteWarning": "Ditt konto och all data kan inte återställas efter radering.",
-    "deleteAccount": "Radera konto"
+    "deleteAccount": "Radera konto",
+    "storeConnection": "Butiksanslutning",
+    "connectedViaOAuth": "Ansluten via Shopify OAuth",
+    "reconnect": "Återanslut",
+    "active": "Aktiv",
+    "notifications": "Aviseringar",
+    "notifNewDispute": "Nya tvister",
+    "notifNewDisputeDesc": "Bli aviserad när en ny tvist inkommer",
+    "notifBeforeDue": "Innan förfallodatum",
+    "notifBeforeDueDesc": "Påminnelse 24 timmar innan tvisttiden löper ut",
+    "notifEvidenceReady": "Bevis klart",
+    "notifEvidenceReadyDesc": "När bevispaket är komplett och redo att skickas",
+    "inviteMember": "Bjud in medlem",
+    "teamManagedInPortal": "Teamhantering finns i portalen.",
+    "manageTeam": "Hantera team i portalen",
+    "billingPlan": "Plan och fakturering",
+    "billingDesc": "Hantera din plan och användning på faktureringssidan.",
+    "viewPricing": "Visa priser",
+    "security": "Säkerhet och integritet",
+    "dataEncryption": "Datakryptering",
+    "dataEncryptionDesc": "All data krypteras i vila (AES-256) och under överföring (TLS 1.3)",
+    "soc2": "SOC 2 Typ II-certifierad",
+    "soc2Desc": "Årliga säkerhetsgranskningar av tredje part",
+    "gdpr": "Redo för GDPR och CCPA",
+    "gdprDesc": "Fullständig efterlevnad av dataskyddsförordningar"
   },
   "connect": {
     "title": "Anslut din Shopify-butik",
@@ -616,12 +634,30 @@
       "createRule": "Skapa regel"
     },
     "tours": {
-      "reviewDispute": { "title": "Hantera en tvist från början till slut", "description": "Komplett genomgång från mottagande till bevisinlämning" },
-      "buildPack": { "title": "Skapa ditt första paket", "description": "Lär dig bygga ett bevispaket med alla nödvändiga dokument" },
-      "automationRules": { "title": "Ställ in regler för automatisk tilldelning", "description": "Automatisera pakettilldelning baserat på tvisttyp och orderdetaljer" },
-      "installTemplate": { "title": "Installera och anpassa mallar", "description": "Installera färdiga mallar och anpassa dem för din butik" },
-      "configurePolicies": { "title": "Konfigurera butikspolicyer", "description": "Lägg till dina frakt-, retur- och villkorspolicyer" },
-      "packBuilderAdvanced": { "title": "Avancerade paketbyggarfunktioner", "description": "Bemästra villkorlig logik, anpassade fält och berättelsemallar" }
+      "reviewDispute": {
+        "title": "Hantera en tvist från början till slut",
+        "description": "Komplett genomgång från mottagande till bevisinlämning"
+      },
+      "buildPack": {
+        "title": "Skapa ditt första paket",
+        "description": "Lär dig bygga ett bevispaket med alla nödvändiga dokument"
+      },
+      "automationRules": {
+        "title": "Ställ in regler för automatisk tilldelning",
+        "description": "Automatisera pakettilldelning baserat på tvisttyp och orderdetaljer"
+      },
+      "installTemplate": {
+        "title": "Installera och anpassa mallar",
+        "description": "Installera färdiga mallar och anpassa dem för din butik"
+      },
+      "configurePolicies": {
+        "title": "Konfigurera butikspolicyer",
+        "description": "Lägg till dina frakt-, retur- och villkorspolicyer"
+      },
+      "packBuilderAdvanced": {
+        "title": "Avancerade paketbyggarfunktioner",
+        "description": "Bemästra villkorlig logik, anpassade fält och berättelsemallar"
+      }
     },
     "resources": {
       "contactSupport": "Kontakta support",
@@ -634,8 +670,16 @@
       "apiDocsDesc": "Integrera DisputeDesk med dina anpassade arbetsflöden",
       "viewDocs": "Visa dokumentation"
     },
-    "status": { "operational": "Alla system fungerar normalt", "lastChecked": "Senast kontrollerat: för 2 minuter sedan" },
-    "fab": { "title": "Behöver du hjälp?", "helpCenter": "Hjälpcenter", "quickTour": "Snabbtur", "contactSupport": "Kontakta support" },
+    "status": {
+      "operational": "Alla system fungerar normalt",
+      "lastChecked": "Senast kontrollerat: för 2 minuter sedan"
+    },
+    "fab": {
+      "title": "Behöver du hjälp?",
+      "helpCenter": "Hjälpcenter",
+      "quickTour": "Snabbtur",
+      "contactSupport": "Kontakta support"
+    },
     "guides": {
       "reviewDispute": {
         "title": "Hantera en tvist",

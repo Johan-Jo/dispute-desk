@@ -384,7 +384,7 @@
   },
   "settings": {
     "title": "Configuración",
-    "subtitle": "Gestionar su cuenta, automatización y preferencias",
+    "subtitle": "Gestiona tu cuenta, automatización y preferencias",
     "automationSection": "Automatización",
     "profileSection": "Perfil",
     "notificationsSection": "Notificaciones",
@@ -452,7 +452,31 @@
     "storesConnected": "Tiendas conectadas",
     "teamMembers": "Miembros del equipo",
     "deleteWarning": "Una vez eliminada, su cuenta y todos los datos no podrán ser recuperados.",
-    "deleteAccount": "Eliminar cuenta"
+    "deleteAccount": "Eliminar cuenta",
+    "storeConnection": "Conexión con la tienda",
+    "connectedViaOAuth": "Conectado mediante Shopify OAuth",
+    "reconnect": "Volver a conectar",
+    "active": "Activo",
+    "notifications": "Notificaciones",
+    "notifNewDispute": "Nuevas disputas",
+    "notifNewDisputeDesc": "Recibe una notificación cuando llegue una nueva disputa",
+    "notifBeforeDue": "Antes del vencimiento",
+    "notifBeforeDueDesc": "Recordatorio 24 horas antes del plazo de la disputa",
+    "notifEvidenceReady": "Evidencia lista",
+    "notifEvidenceReadyDesc": "Cuando el paquete de evidencias esté completo",
+    "inviteMember": "Invitar miembro",
+    "teamManagedInPortal": "La gestión del equipo está disponible en el portal.",
+    "manageTeam": "Gestionar equipo en el portal",
+    "billingPlan": "Plan y Facturación",
+    "billingDesc": "Gestiona tu plan y uso desde la página de Facturación.",
+    "viewPricing": "Ver precios",
+    "security": "Seguridad y Privacidad",
+    "dataEncryption": "Cifrado de datos",
+    "dataEncryptionDesc": "Todos los datos están cifrados en reposo (AES-256) y en tránsito (TLS 1.3)",
+    "soc2": "Cumplimiento SOC 2 Tipo II",
+    "soc2Desc": "Auditorías de seguridad anuales por terceros",
+    "gdpr": "Listo para GDPR y CCPA",
+    "gdprDesc": "Pleno cumplimiento de la normativa de protección de datos"
   },
   "connect": {
     "title": "Conectar su tienda Shopify",
@@ -608,12 +632,30 @@
       "createRule": "Crear regla"
     },
     "tours": {
-      "reviewDispute": { "title": "Gestionar una disputa de principio a fin", "description": "Guía completa desde la recepción hasta el envío de pruebas" },
-      "buildPack": { "title": "Crear tu primer pack", "description": "Aprende a crear un pack de pruebas con todos los documentos necesarios" },
-      "automationRules": { "title": "Configurar reglas de asignación automática", "description": "Automatiza la asignación de packs según el tipo de disputa y detalles del pedido" },
-      "installTemplate": { "title": "Instalar y personalizar plantillas", "description": "Instala plantillas prediseñadas y personalízalas para tu tienda" },
-      "configurePolicies": { "title": "Configurar políticas de la tienda", "description": "Agrega tus políticas de envío, reembolso y términos y condiciones" },
-      "packBuilderAdvanced": { "title": "Funciones avanzadas del constructor de packs", "description": "Domina la lógica condicional, campos personalizados y plantillas narrativas" }
+      "reviewDispute": {
+        "title": "Gestionar una disputa de principio a fin",
+        "description": "Guía completa desde la recepción hasta el envío de pruebas"
+      },
+      "buildPack": {
+        "title": "Crear tu primer pack",
+        "description": "Aprende a crear un pack de pruebas con todos los documentos necesarios"
+      },
+      "automationRules": {
+        "title": "Configurar reglas de asignación automática",
+        "description": "Automatiza la asignación de packs según el tipo de disputa y detalles del pedido"
+      },
+      "installTemplate": {
+        "title": "Instalar y personalizar plantillas",
+        "description": "Instala plantillas prediseñadas y personalízalas para tu tienda"
+      },
+      "configurePolicies": {
+        "title": "Configurar políticas de la tienda",
+        "description": "Agrega tus políticas de envío, reembolso y términos y condiciones"
+      },
+      "packBuilderAdvanced": {
+        "title": "Funciones avanzadas del constructor de packs",
+        "description": "Domina la lógica condicional, campos personalizados y plantillas narrativas"
+      }
     },
     "resources": {
       "contactSupport": "Contactar soporte",
@@ -626,8 +668,16 @@
       "apiDocsDesc": "Integra DisputeDesk con tus flujos de trabajo personalizados",
       "viewDocs": "Ver documentación"
     },
-    "status": { "operational": "Todos los sistemas operativos", "lastChecked": "Última comprobación: hace 2 minutos" },
-    "fab": { "title": "¿Necesitas ayuda?", "helpCenter": "Centro de ayuda", "quickTour": "Visita rápida", "contactSupport": "Contactar soporte" },
+    "status": {
+      "operational": "Todos los sistemas operativos",
+      "lastChecked": "Última comprobación: hace 2 minutos"
+    },
+    "fab": {
+      "title": "¿Necesitas ayuda?",
+      "helpCenter": "Centro de ayuda",
+      "quickTour": "Visita rápida",
+      "contactSupport": "Contactar soporte"
+    },
     "guides": {
       "reviewDispute": {
         "title": "Gestionar una disputa",

@@ -642,7 +642,8 @@
     "memberSinceValue": "Jan 2026",
     "storesConnected": "Stores connected",
     "deleteWarning": "Once deleted, your account and all data cannot be recovered.",
-    "deleteAccount": "Delete account"
+    "deleteAccount": "Delete account",
+    "active": "Active"
   },
   "connect": {
     "title": "Authorize DisputeDesk",
