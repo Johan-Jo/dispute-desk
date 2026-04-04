@@ -77,6 +77,7 @@ interface DisputeProfile {
     trackingInfo: Array<{ number: string; url: string; company: string }>;
     createdAt: string;
   }>;
+  orderEvents: Array<{ id: string; createdAt: string; message: string; appTitle: string | null }>;
 }
 
 interface Pack {
@@ -165,25 +166,28 @@ function packStatusTone(status: string): "success" | "warning" | "critical" | "i
 }
 
 function buildTimeline(
-  dispute: Dispute,
   packs: Pack[],
+  orderEvents: DisputeProfile["orderEvents"],
   t: ReturnType<typeof useTranslations>
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
 
-  if (dispute.initiated_at) {
-    events.push({ date: dispute.initiated_at, label: t("disputes.disputeInitiated") });
+  // Real Shopify order events — message is pre-localized by Shopify to the store language
+  for (const e of orderEvents) {
+    events.push({
+      date: e.createdAt,
+      label: e.message,
+      sublabel: e.appTitle ?? undefined,
+    });
   }
-  // Pack events — most recent saved_to_shopify first, then created
+
+  // DisputeDesk-specific events not present in Shopify's order event feed
   const saved = packs.find((p) => p.saved_to_shopify_at);
   if (saved?.saved_to_shopify_at) {
     events.push({ date: saved.saved_to_shopify_at, label: t("disputes.evidenceSavedToShopify") });
   }
   if (packs.length > 0) {
     events.push({ date: packs[packs.length - 1].created_at, label: t("disputes.evidencePackGenerated") });
-  }
-  if (dispute.last_synced_at) {
-    events.push({ date: dispute.last_synced_at, label: t("disputes.lastSynced"), sublabel: formatDateTime(dispute.last_synced_at) });
   }
 
   // Sort descending (newest first)
@@ -315,7 +319,7 @@ export default function DisputeDetailPage() {
       ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
       : null;
   const deadline = daysUntilInfo(dispute.due_at);
-  const timeline = buildTimeline(dispute, packs, t);
+  const timeline = buildTimeline(packs, profile?.orderEvents ?? [], t);
 
   return (
     <Page

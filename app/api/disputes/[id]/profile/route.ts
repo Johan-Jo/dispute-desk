@@ -103,6 +103,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       billingAddress: ev?.billingAddress ?? null,
       displayAddress: ev?.shippingAddress ?? null,
       fulfillments: node.order?.fulfillments ?? [],
+      orderEvents: node.order?.events?.edges.map((e) => e.node) ?? [],
     },
   });
 }

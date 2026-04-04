@@ -204,6 +204,16 @@ export const DISPUTE_PROFILE_QUERY = `
           trackingInfo(first: 3) { number url company }
           createdAt
         }
+        events(first: 30, reverse: true) {
+          edges {
+            node {
+              id
+              createdAt
+              message
+              appTitle
+            }
+          }
+        }
       }
     }
   }
@@ -242,6 +252,16 @@ export interface DisputeProfileOrder {
     trackingInfo: Array<{ number: string; url: string; company: string }>;
     createdAt: string;
   }>;
+  events: {
+    edges: Array<{
+      node: {
+        id: string;
+        createdAt: string;
+        message: string;
+        appTitle: string | null;
+      };
+    }>;
+  } | null;
 }
 
 export interface DisputeProfileResponse {

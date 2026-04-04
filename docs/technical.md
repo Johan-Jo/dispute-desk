@@ -609,7 +609,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - **KPI strip:** 4 bordered cards — Amount (large bold), Status (colored Polaris Badge), Due Date, Time Left (red border + `AlertTriangleIcon` when urgent).
 - **Customer Info card:** Name, Email, Phone, Address from profile API (`disputeEvidence` fields).
 - **Order Details card:** Order name (clickable link to Shopify Admin order), order date, total, tracking numbers with links.
-- **Timeline section:** synthetic timeline built from dispute timestamps (initiated_at, pack created_at, saved_to_shopify_at, last_synced_at), sorted newest-first, rendered as a dot-and-line list.
+- **Timeline section:** real Shopify order events fetched via `Order.events(first: 30, reverse: true)` in `DISPUTE_PROFILE_QUERY`. Each event exposes `createdAt`, `message` (pre-localized by Shopify to the store language), and `appTitle`. DisputeDesk-specific events (evidence pack generated, evidence saved to Shopify) are appended from local pack data and merged into the same sorted list. Sorted newest-first.
 - **Evidence Packs table:** Pack ID (link to `/app/packs/:id`), Status badge, score (green ≥80 / amber ≥50 / red), blocker count, created date, View Details link or "Saved {date}" indicator.
 
 ### Shop Preferences (Embedded Settings)
