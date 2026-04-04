@@ -601,6 +601,8 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 ### Dashboard Stats (Embedded)
 - `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns real KPIs for the embedded dashboard: `totalDisputes`, `winRate`, `revenueRecovered`, `avgResponseTime`, `winRateTrend` (6 buckets), `disputeCategories` (by reason). Period filters disputes by `created_at`.
 
+**Recent Disputes table (embedded dashboard):** Fetches `/api/disputes?per_page=5` + `/api/billing/usage` in parallel. Columns: Order (links to Shopify Admin order), ID (plain short UUID), Customer, Amount, Reason, Status (colored badge), Deadline, View Details. Order URL is built from `order_gid` + `shop_domain`.
+
 ### Shop Preferences (Embedded Settings)
 - `GET /api/shop/preferences?shop_id=...` — returns notification preferences from `shop_setup.steps.team.payload.notifications` (newDispute, beforeDue, evidenceReady). Used by embedded Settings page.
 - `PATCH /api/shop/preferences` — body `{ shop_id, notifications: { newDispute?, beforeDue?, evidenceReady? } }`. Merges into team step payload and upserts `shop_setup`. Used to persist notification toggles.

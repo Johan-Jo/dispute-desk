@@ -43,6 +43,7 @@ interface DisputeRow {
   id: string;
   shortId: string;
   order: string;
+  orderUrl: string | null;
   customer: string | null;
   amount: string;
   reason: string | null;
@@ -109,6 +110,14 @@ function DashboardSetupBanner() {
   );
 }
 
+function shopifyOrderUrl(shopDomain: string | null, orderGid: string | null): string | null {
+  if (!shopDomain || !orderGid) return null;
+  // gid://shopify/Order/1234567890 → numeric id
+  const numericId = orderGid.split("/").pop();
+  if (!numericId) return null;
+  return `https://${shopDomain}/admin/orders/${numericId}`;
+}
+
 function RecentDisputesTable() {
   const t = useTranslations();
   const [rows, setRows] = useState<DisputeRow[]>([]);
@@ -116,16 +125,22 @@ function RecentDisputesTable() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/disputes?per_page=5")
-      .then((res) => (res.ok ? res.json() : { disputes: [] }))
-      .then((data: { disputes?: Array<{ id: string; order_gid?: string | null; order_name?: string | null; customer_display_name?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; status?: string | null; due_at?: string | null }> }) => {
+    Promise.all([
+      fetch("/api/disputes?per_page=5").then((r) => (r.ok ? r.json() : { disputes: [] })),
+      fetch("/api/billing/usage").then((r) => (r.ok ? r.json() : {})),
+    ]).then(([disputeData, usageData]: [
+      { disputes?: Array<{ id: string; order_gid?: string | null; order_name?: string | null; customer_display_name?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; status?: string | null; due_at?: string | null }> },
+      { shop_domain?: string | null }
+    ]) => {
         if (cancelled) return;
-        const list = data.disputes ?? [];
+        const shopDomain = usageData.shop_domain ?? null;
+        const list = disputeData.disputes ?? [];
         setRows(
           list.map((d) => ({
             id: d.id,
             shortId: d.id.slice(0, 8).toUpperCase(),
             order: d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—"),
+            orderUrl: shopifyOrderUrl(shopDomain, d.order_gid ?? null),
             customer: d.customer_display_name ?? null,
             amount: d.amount != null ? `$${Number(d.amount).toFixed(2)}` : "—",
             reason: d.reason ?? null,
@@ -198,8 +213,8 @@ function RecentDisputesTable() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
-                <th style={thStyle}>{t("table.id")}</th>
                 <th style={thStyle}>{t("table.order")}</th>
+                <th style={thStyle}>{t("table.id")}</th>
                 <th style={thStyle}>{t("table.customer")}</th>
                 <th style={thStyle}>{t("table.amount")}</th>
                 <th style={thStyle}>{t("table.reason")}</th>
@@ -215,15 +230,21 @@ function RecentDisputesTable() {
                   style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}
                 >
                   <td style={tdStyle}>
-                    <Link
-                      href={`/app/disputes/${r.id}`}
-                      style={{ fontWeight: 600, color: "#4F46E5", textDecoration: "none" }}
-                    >
-                      {r.shortId}
-                    </Link>
+                    {r.orderUrl ? (
+                      <a
+                        href={r.orderUrl}
+                        target="_top"
+                        rel="noopener noreferrer"
+                        style={{ fontWeight: 600, color: "#4F46E5", textDecoration: "none" }}
+                      >
+                        {r.order}
+                      </a>
+                    ) : (
+                      <Text as="span" variant="bodySm" fontWeight="semibold">{r.order}</Text>
+                    )}
                   </td>
                   <td style={tdStyle}>
-                    <Text as="span" variant="bodySm" fontWeight="semibold">{r.order}</Text>
+                    <Text as="span" variant="bodySm" tone="subdued">{r.shortId}</Text>
                   </td>
                   <td style={tdStyle}>
                     <Text as="span" variant="bodySm" tone={r.customer ? undefined : "subdued"}>

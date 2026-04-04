@@ -958,7 +958,7 @@
       },
       "understandingDashboard": {
         "title": "Understanding the dashboard",
-        "body": "The dashboard gives you an at-a-glance overview of your dispute operations.\n\nKey metrics displayed:\n- Open Disputes: chargebacks currently awaiting a response.\n- Win Rate: percentage of disputes resolved in your favor.\n- Auto-Saved: evidence packs automatically saved to Shopify this month.\n- Resolved: total disputes closed (won or lost).\n\nThe Automation Status card shows your current settings: whether auto-build and auto-save are enabled, the minimum completeness score, and whether the blocker gate is active.\n\nThe Recent Disputes table lists your latest chargebacks with their status, reason, amount, and deadline. Click any dispute to see full details and manage evidence."
+        "body": "The dashboard gives you an at-a-glance overview of your dispute operations.\n\nKey metrics displayed:\n- Open Disputes: chargebacks currently awaiting a response.\n- Win Rate: percentage of disputes resolved in your favor.\n- Auto-Saved: evidence packs automatically saved to Shopify this month.\n- Resolved: total disputes closed (won or lost).\n\nThe Automation Status card shows your current settings: whether auto-build and auto-save are enabled, the minimum completeness score, and whether the blocker gate is active.\n\nThe Recent Disputes table lists your latest chargebacks. The Order column links directly to the order in your Shopify Admin. Click View Details on any row to see full dispute details and manage evidence."
       },
       "firstDisputeSync": {
         "title": "Your first dispute sync",
@@ -1098,7 +1098,7 @@
         },
         "understandingDashboard": {
           "title": "Understanding the dashboard in this app",
-          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nKey metrics: Open Disputes, Win Rate, Auto-Saved count, and Resolved total.\n\nThe Automation Status card shows your current settings: auto-build, auto-save, minimum completeness score, and blocker gate.\n\nThe Recent Disputes table lists your latest chargebacks. Use the Disputes link in the app to view and filter all disputes, or click a row to see full details and manage evidence."
+          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nKey metrics: Open Disputes, Win Rate, Auto-Saved count, and Resolved total.\n\nThe Automation Status card shows your current settings: auto-build, auto-save, minimum completeness score, and blocker gate.\n\nThe Recent Disputes table lists your latest chargebacks. Click the Order number to go directly to that order in Shopify Admin, or click View Details to manage evidence for the dispute."
         },
         "afterSaving": {
           "title": "What happens after saving evidence",
