@@ -65,7 +65,9 @@ export async function POST(req: NextRequest) {
   }
 
   const accessToken = decryptToken(session.access_token_encrypted);
-  const isTest = process.env.NODE_ENV !== "production";
+  const isTest =
+    process.env.SHOPIFY_BILLING_TEST === "true" ||
+    process.env.NODE_ENV !== "production";
 
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const returnUrl = `${appUrl}/api/billing/callback?shop_id=${shop_id}&plan_id=${plan_id}`;
