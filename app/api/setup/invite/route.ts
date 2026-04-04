@@ -5,6 +5,7 @@ import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 
 const BodySchema = z.object({
   email: z.string().email(),
+  shopDomain: z.string().optional(),
 });
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -20,12 +21,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid body: email required" }, { status: 400 });
   }
 
+  // Resolve shop domain: prefer explicit body value, fall back to embedded session cookie
+  if (!body.shopDomain) {
+    const shopCookie = req.cookies.get("shopify_shop")?.value;
+    if (shopCookie) body = { ...body, shopDomain: shopCookie };
+  }
+
   if (!RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY not set — skipping invite email");
     return NextResponse.json({ error: "Email service not configured" }, { status: 503 });
   }
 
-  const signUpUrl = `${getPublicSiteBaseUrl()}/auth/sign-up`;
+  const base = getPublicSiteBaseUrl();
+  const signUpUrl = body.shopDomain
+    ? `${base}/auth/sign-up?invited_shop=${encodeURIComponent(body.shopDomain)}`
+    : `${base}/auth/sign-up`;
   const resend = new Resend(RESEND_API_KEY);
 
   const html = `<!DOCTYPE html>

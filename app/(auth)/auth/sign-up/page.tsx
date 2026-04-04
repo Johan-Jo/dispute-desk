@@ -34,6 +34,10 @@ function isValidEmail(value: string) {
 
 export default function SignUpPage() {
   const t = useTranslations("auth.signUp");
+  const invitedShop =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("invited_shop") ?? ""
+      : "";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +66,10 @@ export default function SignUpPage() {
     setLoading(true);
 
     const confirmUrl = new URL("/api/auth/confirm", window.location.origin);
-    confirmUrl.searchParams.set("redirect", "/portal/dashboard");
+    const redirectAfter = invitedShop
+      ? `/auth/open-in-shopify?shop=${encodeURIComponent(invitedShop)}`
+      : "/portal/dashboard";
+    confirmUrl.searchParams.set("redirect", redirectAfter);
     confirmUrl.searchParams.set("type", "signup");
 
     const supabase = getSupabase();

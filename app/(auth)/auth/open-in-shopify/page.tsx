@@ -6,9 +6,29 @@ import { getServiceClient } from "@/lib/supabase/server";
 /**
  * Post–Shopify OAuth hop for portal sign-in/sign-up: same-origin redirect target
  * for Supabase generateLink, then 302 to Shopify Admin embedded app URL.
+ *
+ * Also handles invited team members: if ?shop=<domain> is present and the user
+ * has no linked shop yet, redirect them directly to that store's Shopify Admin.
  */
-export default async function OpenInShopifyPage() {
+export default async function OpenInShopifyPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
   const user = await requirePortalUser();
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const params = await searchParams;
+  const shopParam = params.shop ?? null;
+
+  // Invited team member path: ?shop=<domain> provided, skip active-shop lookup
+  if (shopParam && apiKey) {
+    const domain = shopParam.endsWith(".myshopify.com")
+      ? shopParam
+      : `${shopParam}.myshopify.com`;
+    redirect(`https://${domain}/admin/apps/${apiKey}`);
+  }
+
+  // Normal OAuth path: resolve active shop from session
   const shopId = await getActiveShopId();
 
   if (!shopId) {
@@ -38,7 +58,6 @@ export default async function OpenInShopifyPage() {
     shopDomain = data?.shop_domain ?? null;
   }
 
-  const apiKey = process.env.SHOPIFY_API_KEY;
   if (!shopDomain || !apiKey) {
     redirect("/portal/dashboard");
   }
