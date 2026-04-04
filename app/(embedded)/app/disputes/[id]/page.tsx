@@ -177,7 +177,7 @@ function buildTimeline(
     events.push({
       date: e.createdAt,
       label: e.message,
-      sublabel: e.appTitle ?? undefined,
+      sublabel: e.appTitle ?? "Shopify",
     });
   }
 
