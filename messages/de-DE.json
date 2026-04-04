@@ -470,7 +470,12 @@
     "scaleFeature2": "Multi-Shop",
     "scaleFeature3": "Erweiterte Exporte",
     "scaleFeature4": "SLA-Optionen",
-    "scaleFeature5": "Prioritäts-Support"
+    "scaleFeature5": "Prioritäts-Support",
+    "downgradeTo": "Zu {plan} wechseln",
+    "downgradeConfirmTitle": "Zu {plan} wechseln?",
+    "downgradeConfirmBody": "Dein Plan wird am Ende des aktuellen Abrechnungszeitraums auf {plan} geändert. Du verlierst den Zugang zu Funktionen, die im niedrigeren Plan nicht enthalten sind.",
+    "downgradeConfirm": "Wechsel bestätigen",
+    "downgradeCancel": "Aktuellen Plan behalten"
   },
   "rules": {
     "title": "Regeln",

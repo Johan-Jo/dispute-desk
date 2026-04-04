@@ -26,6 +26,7 @@ import {
   Banner,
   Divider,
   Checkbox,
+  Modal,
 } from "@shopify/polaris";
 
 interface PlanInfo {
@@ -96,6 +97,7 @@ function BillingPageInner() {
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const [showAllPlans, setShowAllPlans] = useState(true);
+  const [downgradeTarget, setDowngradeTarget] = useState<string | null>(null);
 
   const fetchUsage = useCallback(async () => {
     setLoading(true);
@@ -303,6 +305,15 @@ function BillingPageInner() {
                             : t(planNameKeys[planId])}
                       </Button>
                     )}
+                    {plan?.id !== planId && priceInfo.price < (plan?.price ?? 0) && planId !== "free" && (
+                      <Button
+                        variant="secondary"
+                        loading={upgrading === planId}
+                        onClick={() => setDowngradeTarget(planId)}
+                      >
+                        {t("billing.downgradeTo", { plan: t(planNameKeys[planId]) })}
+                      </Button>
+                    )}
                     {plan?.id === planId && (
                       <Banner tone="info">
                         {t("billing.yourCurrentPlan")}
@@ -350,6 +361,36 @@ function BillingPageInner() {
           {t("billing.trialNote")}
         </Text>
       </div>
+
+      {downgradeTarget && (
+        <Modal
+          open
+          onClose={() => setDowngradeTarget(null)}
+          title={t("billing.downgradeConfirmTitle", { plan: t(planNameKeys[downgradeTarget] ?? "billing.free") })}
+          primaryAction={{
+            content: t("billing.downgradeConfirm"),
+            destructive: true,
+            loading: upgrading === downgradeTarget,
+            onAction: async () => {
+              const target = downgradeTarget;
+              setDowngradeTarget(null);
+              await handleUpgrade(target);
+            },
+          }}
+          secondaryActions={[
+            {
+              content: t("billing.downgradeCancel"),
+              onAction: () => setDowngradeTarget(null),
+            },
+          ]}
+        >
+          <Modal.Section>
+            <Text as="p" variant="bodyMd">
+              {t("billing.downgradeConfirmBody", { plan: t(planNameKeys[downgradeTarget] ?? "billing.free") })}
+            </Text>
+          </Modal.Section>
+        </Modal>
+      )}
     </Page>
   );
 }

@@ -337,7 +337,12 @@
     "scaleFeature2": "Multi-boutique",
     "scaleFeature3": "Exports avancés",
     "scaleFeature4": "Options SLA",
-    "scaleFeature5": "Support prioritaire"
+    "scaleFeature5": "Support prioritaire",
+    "downgradeTo": "Passer à {plan}",
+    "downgradeConfirmTitle": "Passer à {plan} ?",
+    "downgradeConfirmBody": "Votre plan passera à {plan} à la fin de votre cycle de facturation actuel. Vous perdrez l accès aux fonctionnalités non incluses dans le plan inférieur.",
+    "downgradeConfirm": "Confirmer le changement",
+    "downgradeCancel": "Conserver le plan actuel"
   },
   "rules": {
     "title": "Règles",

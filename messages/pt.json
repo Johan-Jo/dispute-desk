@@ -337,7 +337,12 @@
     "scaleFeature2": "Multi-loja",
     "scaleFeature3": "Exportações avançadas",
     "scaleFeature4": "Opções SLA",
-    "scaleFeature5": "Suporte prioritário"
+    "scaleFeature5": "Suporte prioritário",
+    "downgradeTo": "Rebaixar para {plan}",
+    "downgradeConfirmTitle": "Rebaixar para {plan}?",
+    "downgradeConfirmBody": "Seu plano será alterado para {plan} ao final do ciclo de faturamento atual. Você perderá acesso a recursos não incluídos no plano inferior.",
+    "downgradeConfirm": "Confirmar rebaixamento",
+    "downgradeCancel": "Manter plano atual"
   },
   "rules": {
     "title": "Regras",

@@ -470,7 +470,12 @@
     "scaleFeature2": "Multi-store",
     "scaleFeature3": "Advanced exports",
     "scaleFeature4": "SLA options",
-    "scaleFeature5": "Priority support"
+    "scaleFeature5": "Priority support",
+    "downgradeTo": "Downgrade to {plan}",
+    "downgradeConfirmTitle": "Downgrade to {plan}?",
+    "downgradeConfirmBody": "Your plan will change to {plan} at the end of your current billing cycle. You will lose access to features not included in the lower plan.",
+    "downgradeConfirm": "Confirm downgrade",
+    "downgradeCancel": "Keep current plan"
   },
   "rules": {
     "title": "Rules",

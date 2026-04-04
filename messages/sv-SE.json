@@ -471,7 +471,12 @@
     "scaleFeature2": "Flera butiker",
     "scaleFeature3": "Avancerade exporter",
     "scaleFeature4": "SLA-alternativ",
-    "scaleFeature5": "Prioriterad support"
+    "scaleFeature5": "Prioriterad support",
+    "downgradeTo": "Nedgradera till {plan}",
+    "downgradeConfirmTitle": "Nedgradera till {plan}?",
+    "downgradeConfirmBody": "Din plan ändras till {plan} i slutet av den aktuella faktureringsperioden. Du förlorar åtkomst till funktioner som inte ingår i det lägre planen.",
+    "downgradeConfirm": "Bekräfta nedgradering",
+    "downgradeCancel": "Behåll nuvarande plan"
   },
   "rules": {
     "title": "Regler",

@@ -337,7 +337,12 @@
     "scaleFeature2": "Multi-tienda",
     "scaleFeature3": "Exportaciones avanzadas",
     "scaleFeature4": "Opciones SLA",
-    "scaleFeature5": "Soporte prioritario"
+    "scaleFeature5": "Soporte prioritario",
+    "downgradeTo": "Cambiar a {plan}",
+    "downgradeConfirmTitle": "¿Cambiar a {plan}?",
+    "downgradeConfirmBody": "Tu plan cambiará a {plan} al final del ciclo de facturación actual. Perderás acceso a las funciones no incluidas en el plan inferior.",
+    "downgradeConfirm": "Confirmar cambio",
+    "downgradeCancel": "Mantener plan actual"
   },
   "rules": {
     "title": "Reglas",
