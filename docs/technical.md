@@ -601,7 +601,16 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 ### Dashboard Stats (Embedded)
 - `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns real KPIs for the embedded dashboard: `totalDisputes`, `winRate`, `revenueRecovered`, `avgResponseTime`, `winRateTrend` (6 buckets), `disputeCategories` (by reason). Period filters disputes by `created_at`.
 
+**Overview KPI cards (embedded dashboard):** 4 bordered cards with Polaris icons — Total Disputes (`AlertCircleIcon`), Win Rate (`ChartLineIcon`), Revenue Recovered (`CashDollarIcon`), Avg Response Time (`ClockIcon`). Each shows the selected period label below the value. Period selector (24h / 7d / 30d / All) sits above the cards and is shared with the charts section.
+
 **Recent Disputes table (embedded dashboard):** Fetches `/api/disputes?per_page=5` + `/api/billing/usage` in parallel. Columns: Order (links to Shopify Admin order), ID (plain short UUID), Customer, Amount, Reason, Status (colored badge), Deadline, View Details. Order URL is built from `order_gid` + `shop_domain`.
+
+**Dispute detail page (embedded):** `app/(embedded)/app/disputes/[id]/page.tsx`. Fetches `/api/disputes/:id` and `/api/disputes/:id/profile` in parallel.
+- **KPI strip:** 4 bordered cards — Amount (large bold), Status (colored Polaris Badge), Due Date, Time Left (red border + `AlertTriangleIcon` when urgent).
+- **Customer Info card:** Name, Email, Phone, Address from profile API (`disputeEvidence` fields).
+- **Order Details card:** Order name (clickable link to Shopify Admin order), order date, total, tracking numbers with links.
+- **Timeline section:** synthetic timeline built from dispute timestamps (initiated_at, pack created_at, saved_to_shopify_at, last_synced_at), sorted newest-first, rendered as a dot-and-line list.
+- **Evidence Packs table:** Pack ID (link to `/app/packs/:id`), Status badge, score (green ≥80 / amber ≥50 / red), blocker count, created date, View Details link or "Saved {date}" indicator.
 
 ### Shop Preferences (Embedded Settings)
 - `GET /api/shop/preferences?shop_id=...` — returns notification preferences from `shop_setup.steps.team.payload.notifications` (newDispute, beforeDue, evidenceReady). Used by embedded Settings page.

@@ -81,6 +81,7 @@ write_shopify_payments_dispute_evidences
 ```
 
 ## Important Rules
+- **Docs + help (mandatory):** After any feature, UI change, or API change, update `docs/technical.md` to reflect the new behaviour. If the change affects what merchants see or do (embedded UI, flows, settings), also update the relevant embedded help article in `lib/help/` or `messages/{locale}.json` (`help.embedded.*` namespace). Do this in the same commit — never defer doc updates to a follow-up.
 - **Database / migrations:** The agent runs `npm run db:migrate` (or script fallback) after any new/edited migration — same session, no handoff to the user for apply.
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only — never expose to client
 - Saving evidence requires merchant to have "Manage orders information" in Shopify Admin
