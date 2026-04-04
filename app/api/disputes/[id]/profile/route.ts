@@ -26,8 +26,9 @@ function decryptAccessToken(encryptedToken: string): string {
  * Returns customer and order profile for the dispute by fetching from Shopify.
  * Used by the dispute detail page to show name, contact, and address data.
  */
-export async function GET(_req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
+  const locale = req.nextUrl.searchParams.get("locale") ?? undefined;
   const sb = getServiceClient();
 
   const { data: dispute, error: dErr } = await sb
@@ -70,6 +71,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     query: DISPUTE_PROFILE_QUERY,
     variables: { id: dispute.dispute_gid },
     correlationId: `dispute-profile-${id}`,
+    locale,
   });
 
   const node = gqlResult.data?.dispute;

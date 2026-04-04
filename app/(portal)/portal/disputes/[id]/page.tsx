@@ -399,7 +399,7 @@ export default function DisputeDetailPage() {
     setLoading(true);
     const [res, profileRes] = await Promise.all([
       fetch(`/api/disputes/${id}`),
-      fetch(`/api/disputes/${id}/profile`),
+      fetch(`/api/disputes/${id}/profile?locale=${encodeURIComponent(locale)}`),
     ]);
     const json = await res.json();
     const profileJson = await profileRes.json();
@@ -610,7 +610,7 @@ export default function DisputeDetailPage() {
         if (savedPack?.saved_to_shopify_at) packEvents.push({ date: savedPack.saved_to_shopify_at, message: t("evidenceSavedToShopify"), appTitle: "DisputeDesk" });
         if (packs.length > 0) packEvents.push({ date: packs[packs.length - 1].created_at, message: t("evidencePackGenerated"), appTitle: "DisputeDesk" });
         const all = [
-          ...shopifyEvents.map((e) => ({ date: e.createdAt, message: e.message, appTitle: e.appTitle ?? "Shopify" })),
+          ...shopifyEvents.map((e) => ({ date: e.createdAt, message: e.message.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim(), appTitle: e.appTitle ?? "Shopify" })),
           ...packEvents,
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         if (all.length === 0) return null;

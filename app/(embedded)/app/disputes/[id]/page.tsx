@@ -166,6 +166,10 @@ function packStatusTone(status: string): "success" | "warning" | "critical" | "i
   }
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').trim();
+}
+
 function buildTimeline(
   packs: Pack[],
   orderEvents: DisputeProfile["orderEvents"],
@@ -177,7 +181,7 @@ function buildTimeline(
   for (const e of orderEvents) {
     events.push({
       date: e.createdAt,
-      label: e.message,
+      label: stripHtml(e.message),
       sublabel: e.appTitle ?? "Shopify",
     });
   }
@@ -258,9 +262,13 @@ export default function DisputeDetailPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const locale = searchParams.get("locale") ?? "";
+    const profileUrl = locale
+      ? `/api/disputes/${id}/profile?locale=${encodeURIComponent(locale)}`
+      : `/api/disputes/${id}/profile`;
     const [res, profileRes] = await Promise.all([
       fetch(`/api/disputes/${id}`),
-      fetch(`/api/disputes/${id}/profile`),
+      fetch(profileUrl),
     ]);
     const json = await res.json();
     const profileJson = await profileRes.json();

@@ -27,6 +27,8 @@ interface RequestOptions {
   variables?: Record<string, unknown>;
   correlationId?: string;
   maxRetries?: number;
+  /** BCP-47 locale for Accept-Language header — localizes event message strings */
+  locale?: string;
 }
 
 const DEFAULT_MAX_RETRIES = 3;
@@ -46,7 +48,7 @@ function jitter(base: number): number {
 export async function requestShopifyGraphQL<T = unknown>(
   opts: RequestOptions
 ): Promise<GraphQLResponse<T>> {
-  const { session, query, variables, correlationId, maxRetries = DEFAULT_MAX_RETRIES } = opts;
+  const { session, query, variables, correlationId, maxRetries = DEFAULT_MAX_RETRIES, locale } = opts;
   const url = shopifyGraphQLEndpoint(session.shopDomain);
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -56,6 +58,7 @@ export async function requestShopifyGraphQL<T = unknown>(
         "Content-Type": "application/json",
         "X-Shopify-Access-Token": session.accessToken,
         ...(correlationId ? { "X-Request-Id": correlationId } : {}),
+        ...(locale ? { "Accept-Language": locale } : {}),
       },
       body: JSON.stringify({ query, variables }),
     });
