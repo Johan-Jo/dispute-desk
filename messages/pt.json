@@ -182,7 +182,12 @@
     "underReview": "Em análise",
     "evidenceBeingReviewed": "Evidências sendo analisadas pela equipe",
     "customerClaimsNotReceived": "Cliente alega não ter recebido o produto",
-    "customerClaimsQualityIssues": "Cliente relata problemas de qualidade do produto"
+    "customerClaimsQualityIssues": "Cliente relata problemas de qualidade do produto",
+    "statusNeedsResponse": "Requer resposta",
+    "statusUnderReview": "Em análise",
+    "statusWon": "Ganho",
+    "statusLost": "Perdido",
+    "statusUnknown": "Desconhecido"
   },
   "packs": {
     "title": "Pacotes de Evidências",
@@ -608,7 +613,8 @@
     "actions": "Ações",
     "customer": "Cliente",
     "date": "Data",
-    "invoice": "Fatura"
+    "invoice": "Fatura",
+    "viewDetails": "Ver detalhes"
   },
   "help": {
     "title": "Central de Ajuda",

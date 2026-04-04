@@ -41,7 +41,9 @@ type PeriodKey = "24h" | "7d" | "30d" | "all";
 
 interface DisputeRow {
   id: string;
+  shortId: string;
   order: string;
+  customer: string | null;
   amount: string;
   reason: string | null;
   status: string | null;
@@ -116,13 +118,15 @@ function RecentDisputesTable() {
     let cancelled = false;
     fetch("/api/disputes?per_page=5")
       .then((res) => (res.ok ? res.json() : { disputes: [] }))
-      .then((data: { disputes?: Array<{ id: string; order_gid?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; status?: string | null; due_at?: string | null }> }) => {
+      .then((data: { disputes?: Array<{ id: string; order_gid?: string | null; order_name?: string | null; customer_display_name?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; status?: string | null; due_at?: string | null }> }) => {
         if (cancelled) return;
         const list = data.disputes ?? [];
         setRows(
           list.map((d) => ({
             id: d.id,
-            order: d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—",
+            shortId: d.id.slice(0, 8).toUpperCase(),
+            order: d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—"),
+            customer: d.customer_display_name ?? null,
             amount: d.amount != null ? `$${Number(d.amount).toFixed(2)}` : "—",
             reason: d.reason ?? null,
             status: d.status ?? null,
@@ -156,6 +160,33 @@ function RecentDisputesTable() {
     );
   }
 
+  const statusBadge = (status: string | null) => {
+    if (!status) return <Badge>{t("disputes.statusUnknown")}</Badge>;
+    switch (status) {
+      case "needs_response": return <Badge tone="warning">{t("disputes.statusNeedsResponse")}</Badge>;
+      case "under_review":   return <Badge tone="info">{t("disputes.statusUnderReview")}</Badge>;
+      case "charge_refunded":
+      case "won":            return <Badge tone="success">{t("disputes.statusWon")}</Badge>;
+      case "lost":           return <Badge tone="critical">{t("disputes.statusLost")}</Badge>;
+      default:               return <Badge>{status.replace(/_/g, " ")}</Badge>;
+    }
+  };
+
+  const formatReason = (reason: string | null) => {
+    if (!reason) return "—";
+    return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  const thStyle: React.CSSProperties = {
+    padding: "10px 16px",
+    fontWeight: 600,
+    fontSize: "12px",
+    color: "var(--p-color-text-secondary)",
+    textAlign: "left",
+    whiteSpace: "nowrap",
+  };
+  const tdStyle: React.CSSProperties = { padding: "14px 16px", verticalAlign: "middle" };
+
   return (
     <Card>
       <BlockStack gap="400">
@@ -163,34 +194,65 @@ function RecentDisputesTable() {
           <Text as="h2" variant="headingMd">{t("dashboard.recentDisputes")}</Text>
           <Button variant="plain" url="/app/disputes">{t("common.viewAll")}</Button>
         </InlineStack>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--p-color-border)", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px", fontWeight: 600, fontSize: "12px" }}>{t("table.id")}</th>
-              <th style={{ padding: "8px 12px", fontWeight: 600, fontSize: "12px" }}>{t("table.order")}</th>
-              <th style={{ padding: "8px 12px", fontWeight: 600, fontSize: "12px" }}>{t("table.amount")}</th>
-              <th style={{ padding: "8px 12px", fontWeight: 600, fontSize: "12px" }}>{t("table.reason")}</th>
-              <th style={{ padding: "8px 12px", fontWeight: 600, fontSize: "12px" }}>{t("table.status")}</th>
-              <th style={{ padding: "8px 12px", fontWeight: 600, fontSize: "12px" }}>{t("table.deadline")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}>
-                <td style={{ padding: "12px" }}>
-                  <Link href={`/app/disputes/${r.id}`} style={{ fontWeight: 500, color: "var(--p-color-bg-fill-info)" }}>
-                    {r.id}
-                  </Link>
-                </td>
-                <td style={{ padding: "12px" }}>{r.order}</td>
-                <td style={{ padding: "12px" }}>{r.amount}</td>
-                <td style={{ padding: "12px" }}>{r.reason ?? "—"}</td>
-                <td style={{ padding: "12px" }}>{r.status ?? "—"}</td>
-                <td style={{ padding: "12px" }}>{r.deadline ?? "—"}</td>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
+                <th style={thStyle}>{t("table.id")}</th>
+                <th style={thStyle}>{t("table.order")}</th>
+                <th style={thStyle}>{t("table.customer")}</th>
+                <th style={thStyle}>{t("table.amount")}</th>
+                <th style={thStyle}>{t("table.reason")}</th>
+                <th style={thStyle}>{t("table.status")}</th>
+                <th style={thStyle}>{t("table.deadline")}</th>
+                <th style={thStyle}>{t("table.actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr
+                  key={r.id}
+                  style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}
+                >
+                  <td style={tdStyle}>
+                    <Link
+                      href={`/app/disputes/${r.id}`}
+                      style={{ fontWeight: 600, color: "#4F46E5", textDecoration: "none" }}
+                    >
+                      {r.shortId}
+                    </Link>
+                  </td>
+                  <td style={tdStyle}>
+                    <Text as="span" variant="bodySm" fontWeight="semibold">{r.order}</Text>
+                  </td>
+                  <td style={tdStyle}>
+                    <Text as="span" variant="bodySm" tone={r.customer ? undefined : "subdued"}>
+                      {r.customer ?? "—"}
+                    </Text>
+                  </td>
+                  <td style={tdStyle}>
+                    <Text as="span" variant="bodySm" fontWeight="semibold">{r.amount}</Text>
+                  </td>
+                  <td style={tdStyle}>
+                    <Text as="span" variant="bodySm" tone="subdued">{formatReason(r.reason)}</Text>
+                  </td>
+                  <td style={tdStyle}>{statusBadge(r.status)}</td>
+                  <td style={tdStyle}>
+                    <Text as="span" variant="bodySm" tone="subdued">{r.deadline ?? "—"}</Text>
+                  </td>
+                  <td style={tdStyle}>
+                    <Link
+                      href={`/app/disputes/${r.id}`}
+                      style={{ color: "#4F46E5", fontSize: "13px", textDecoration: "none", whiteSpace: "nowrap" }}
+                    >
+                      {t("table.viewDetails")}
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </BlockStack>
     </Card>
   );

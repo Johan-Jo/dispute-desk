@@ -215,7 +215,12 @@
     "customerClaimsNotReceived": "Kunde gibt an, Produkt nicht erhalten zu haben",
     "customerClaimsQualityIssues": "Kunde meldet Qualitätsprobleme mit dem Produkt",
     "openDisputeInShopify": "Open dispute in Shopify",
-    "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now."
+    "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now.",
+    "statusNeedsResponse": "Antwort erforderlich",
+    "statusUnderReview": "In Prüfung",
+    "statusWon": "Gewonnen",
+    "statusLost": "Verloren",
+    "statusUnknown": "Unbekannt"
   },
   "packs": {
     "title": "Bewispakete",
@@ -776,7 +781,8 @@
     "actions": "Aktionen",
     "customer": "Kunde",
     "date": "Datum",
-    "invoice": "Rechnung"
+    "invoice": "Rechnung",
+    "viewDetails": "Details anzeigen"
   },
   "help": {
     "title": "Hilfe-Center",

@@ -204,7 +204,12 @@
     "underReview": "Under Review",
     "evidenceBeingReviewed": "Evidence being reviewed by team",
     "customerClaimsNotReceived": "Customer claims product not received",
-    "customerClaimsQualityIssues": "Customer claims product quality issues"
+    "customerClaimsQualityIssues": "Customer claims product quality issues",
+    "statusNeedsResponse": "Needs response",
+    "statusUnderReview": "Under review",
+    "statusWon": "Won",
+    "statusLost": "Lost",
+    "statusUnknown": "Unknown"
   },
   "packs": {
     "title": "Packs",
@@ -728,7 +733,8 @@
     "actions": "Actions",
     "customer": "Customer",
     "date": "Date",
-    "invoice": "Invoice"
+    "invoice": "Invoice",
+    "viewDetails": "View Details"
   },
   "help": {
     "title": "Help Center",

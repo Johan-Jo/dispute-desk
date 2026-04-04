@@ -184,7 +184,12 @@
     "underReview": "Under granskning",
     "evidenceBeingReviewed": "Bevisning granskas av teamet",
     "customerClaimsNotReceived": "Kund hävdar att produkten inte mottagits",
-    "customerClaimsQualityIssues": "Kund hävdar kvalitetsproblem med produkten"
+    "customerClaimsQualityIssues": "Kund hävdar kvalitetsproblem med produkten",
+    "statusNeedsResponse": "Kräver svar",
+    "statusUnderReview": "Under granskning",
+    "statusWon": "Vunnen",
+    "statusLost": "Förlorad",
+    "statusUnknown": "Okänd"
   },
   "packs": {
     "title": "Bevispaket",
@@ -610,7 +615,8 @@
     "actions": "Åtgärder",
     "customer": "Kund",
     "date": "Datum",
-    "invoice": "Faktura"
+    "invoice": "Faktura",
+    "viewDetails": "Visa detaljer"
   },
   "help": {
     "title": "Hjälpcenter",

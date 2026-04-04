@@ -215,7 +215,12 @@
     "customerClaimsNotReceived": "Cliente alega não ter recebido o produto",
     "customerClaimsQualityIssues": "Cliente relata problemas de qualidade do produto",
     "openDisputeInShopify": "Open dispute in Shopify",
-    "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now."
+    "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now.",
+    "statusNeedsResponse": "Requer resposta",
+    "statusUnderReview": "Em análise",
+    "statusWon": "Ganho",
+    "statusLost": "Perdido",
+    "statusUnknown": "Desconhecido"
   },
   "packs": {
     "title": "Pacotes de Evidências",
@@ -776,7 +781,8 @@
     "actions": "Ações",
     "customer": "Cliente",
     "date": "Data",
-    "invoice": "Fatura"
+    "invoice": "Fatura",
+    "viewDetails": "Ver detalhes"
   },
   "help": {
     "title": "Central de Ajuda",

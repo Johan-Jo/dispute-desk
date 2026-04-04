@@ -182,7 +182,12 @@
     "underReview": "In Prüfung",
     "evidenceBeingReviewed": "Beweise werden vom Team geprüft",
     "customerClaimsNotReceived": "Kunde gibt an, Produkt nicht erhalten zu haben",
-    "customerClaimsQualityIssues": "Kunde meldet Qualitätsprobleme mit dem Produkt"
+    "customerClaimsQualityIssues": "Kunde meldet Qualitätsprobleme mit dem Produkt",
+    "statusNeedsResponse": "Antwort erforderlich",
+    "statusUnderReview": "In Prüfung",
+    "statusWon": "Gewonnen",
+    "statusLost": "Verloren",
+    "statusUnknown": "Unbekannt"
   },
   "packs": {
     "title": "Bewispakete",
@@ -608,7 +613,8 @@
     "actions": "Aktionen",
     "customer": "Kunde",
     "date": "Datum",
-    "invoice": "Rechnung"
+    "invoice": "Rechnung",
+    "viewDetails": "Details anzeigen"
   },
   "help": {
     "title": "Hilfe-Center",

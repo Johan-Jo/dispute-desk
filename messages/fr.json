@@ -182,7 +182,12 @@
     "underReview": "En cours d'examen",
     "evidenceBeingReviewed": "Preuves en cours d'examen par l'équipe",
     "customerClaimsNotReceived": "Le client déclare ne pas avoir reçu le produit",
-    "customerClaimsQualityIssues": "Le client signale des problèmes de qualité du produit"
+    "customerClaimsQualityIssues": "Le client signale des problèmes de qualité du produit",
+    "statusNeedsResponse": "Réponse requise",
+    "statusUnderReview": "En cours d'examen",
+    "statusWon": "Gagné",
+    "statusLost": "Perdu",
+    "statusUnknown": "Inconnu"
   },
   "packs": {
     "title": "Dossiers de preuves",
@@ -608,7 +613,8 @@
     "actions": "Actions",
     "customer": "Client",
     "date": "Date",
-    "invoice": "Facture"
+    "invoice": "Facture",
+    "viewDetails": "Voir les détails"
   },
   "help": {
     "title": "Centre d'aide",
