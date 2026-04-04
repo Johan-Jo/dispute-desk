@@ -47,5 +47,12 @@ export async function GET(req: NextRequest) {
   }
 
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-  return NextResponse.redirect(`${appUrl}/app/billing`);
+
+  const host = sp.get("host") ?? "";
+  const shop = sp.get("shop") ?? "";
+  const billingUrl = new URL(`${appUrl}/app/billing`);
+  if (host) billingUrl.searchParams.set("host", host);
+  if (shop) billingUrl.searchParams.set("shop", shop);
+
+  return NextResponse.redirect(billingUrl.toString());
 }

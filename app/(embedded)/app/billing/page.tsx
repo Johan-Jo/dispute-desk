@@ -115,10 +115,15 @@ function BillingPageInner() {
       setUpgradeError(null);
       setUpgrading(planId);
       try {
+        const urlParams = new URLSearchParams(window.location.search);
         const res = await fetch("/api/billing/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan_id: planId }),
+          body: JSON.stringify({
+            plan_id: planId,
+            host: urlParams.get("host") ?? undefined,
+            shop: urlParams.get("shop") ?? undefined,
+          }),
         });
         const data = await res.json();
         if (data.confirmationUrl) {

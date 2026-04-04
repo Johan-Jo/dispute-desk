@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   };
   const validated = await validateBody(body, billingSubscribeSchema);
   if ("error" in validated) return validated.error;
-  const { shop_id, plan_id } = validated.data;
+  const { shop_id, plan_id, host, shop } = validated.data;
 
   const plan = getPlan(plan_id);
 
@@ -70,7 +70,12 @@ export async function POST(req: NextRequest) {
     process.env.NODE_ENV !== "production";
 
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const returnUrl = `${appUrl}/api/billing/callback?shop_id=${shop_id}&plan_id=${plan_id}`;
+  const callbackUrl = new URL(`${appUrl}/api/billing/callback`);
+  callbackUrl.searchParams.set("shop_id", shop_id);
+  callbackUrl.searchParams.set("plan_id", plan_id);
+  if (host) callbackUrl.searchParams.set("host", host);
+  if (shop) callbackUrl.searchParams.set("shop", shop);
+  const returnUrl = callbackUrl.toString();
 
   const result = await requestShopifyGraphQL<AppSubscriptionCreateResult>({
     session: { shopDomain, accessToken },

@@ -70,6 +70,8 @@ export const ruleUpdateSchema = z.object({
 export const billingSubscribeSchema = z.object({
   shop_id: shopIdParam,
   plan_id: z.enum(["starter", "growth", "scale"]),
+  host: z.string().optional(),
+  shop: z.string().optional(),
 });
 
 export const billingTopUpSchema = z.object({
