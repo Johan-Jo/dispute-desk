@@ -612,6 +612,8 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - **Timeline section:** real Shopify order events fetched via `Order.events(first: 30, reverse: true)` in `DISPUTE_PROFILE_QUERY`. Each event exposes `createdAt`, `message` (pre-localized by Shopify to the store language), and `appTitle`. DisputeDesk-specific events (evidence pack generated, evidence saved to Shopify) are appended from local pack data and merged into the same sorted list. Sorted newest-first.
 - **Evidence Packs table:** Pack ID (link to `/app/packs/:id`), Status badge, score (green ≥80 / amber ≥50 / red), blocker count, created date, View Details link or "Saved {date}" indicator.
 
+**Dispute detail page (portal):** `app/(portal)/portal/disputes/[id]/page.tsx`. Same data sources. Renders the same real Shopify order timeline section between the Details/Automation grid and the Evidence Packs table. Timeline is built inline from `profile?.orderEvents` (Shopify) merged with pack events (DisputeDesk), sorted newest-first. Demo mode still uses hardcoded demo timeline data.
+
 ### Shop Preferences (Embedded Settings)
 - `GET /api/shop/preferences?shop_id=...` — returns notification preferences from `shop_setup.steps.team.payload.notifications` (newDispute, beforeDue, evidenceReady). Used by embedded Settings page.
 - `PATCH /api/shop/preferences` — body `{ shop_id, notifications: { newDispute?, beforeDue?, evidenceReady? } }`. Merges into team step payload and upserts `shop_setup`. Used to persist notification toggles.

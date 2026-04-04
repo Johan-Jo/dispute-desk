@@ -55,6 +55,7 @@ interface DisputeProfile {
     trackingInfo: Array<{ number: string; url: string; company: string }>;
     createdAt: string;
   }>;
+  orderEvents: Array<{ id: string; createdAt: string; message: string; appTitle: string | null }>;
 }
 
 interface Pack {
@@ -600,6 +601,43 @@ export default function DisputeDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Timeline — real Shopify order events + DD pack events */}
+      {(() => {
+        const shopifyEvents = profile?.orderEvents ?? [];
+        const packEvents: { date: string; message: string; appTitle: string | null }[] = [];
+        const savedPack = packs.find((p) => p.saved_to_shopify_at);
+        if (savedPack?.saved_to_shopify_at) packEvents.push({ date: savedPack.saved_to_shopify_at, message: t("evidenceSavedToShopify"), appTitle: "DisputeDesk" });
+        if (packs.length > 0) packEvents.push({ date: packs[packs.length - 1].created_at, message: t("evidencePackGenerated"), appTitle: "DisputeDesk" });
+        const all = [
+          ...shopifyEvents.map((e) => ({ date: e.createdAt, message: e.message, appTitle: e.appTitle })),
+          ...packEvents,
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (all.length === 0) return null;
+        return (
+          <div className="bg-white rounded-lg border border-[#E5E7EB] p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-4 h-4 text-[#667085]" />
+              <h3 className="font-semibold text-[#0B1220]">{t("timeline")}</h3>
+            </div>
+            <div className="space-y-4">
+              {all.map((item, idx) => (
+                <div key={idx} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="w-3 h-3 bg-[#1D4ED8] rounded-full" />
+                    {idx < all.length - 1 && <div className="w-px flex-1 bg-[#E5E7EB] mt-1" />}
+                  </div>
+                  <div className="pb-4">
+                    <p className="text-xs text-[#667085]">{formatDate(item.date, locale)}</p>
+                    <p className="text-sm font-medium text-[#0B1220]">{item.message}</p>
+                    {item.appTitle && <p className="text-xs text-[#667085]">{item.appTitle}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {packError && (
         <div className="mb-6 p-4 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-sm text-[#B91C1C] flex items-start justify-between gap-3">
