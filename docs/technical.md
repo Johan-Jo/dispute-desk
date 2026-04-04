@@ -609,8 +609,10 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - **KPI strip:** 4 bordered cards — Amount (large bold), Status (colored Polaris Badge), Due Date, Time Left (red border + `AlertTriangleIcon` when urgent).
 - **Customer Info card:** Name, Email, Phone, Address from profile API (`disputeEvidence` fields).
 - **Order Details card:** Order name (clickable link to Shopify Admin order), order date, total, tracking numbers with links.
-- **Timeline section:** real Shopify order events fetched via `Order.events(first: 30, reverse: true)` in `DISPUTE_PROFILE_QUERY`. Each event exposes `createdAt`, `message` (pre-localized by Shopify to the store language), and `appTitle`. DisputeDesk-specific events (evidence pack generated, evidence saved to Shopify) are appended from local pack data and merged into the same sorted list. Sorted newest-first.
+- **Timeline section:** real Shopify order events fetched via `Order.events(first: 30, reverse: true)` in `DISPUTE_PROFILE_QUERY`. Each event exposes `createdAt`, `message` (pre-localized by Shopify to the store language), and `appTitle`. When `appTitle` is null (native Shopify action) it displays as "Shopify"; DisputeDesk-specific events display as "DisputeDesk". Sorted newest-first.
 - **Evidence Packs table:** Pack ID (link to `/app/packs/:id`), Status badge, score (green ≥80 / amber ≥50 / red), blocker count, created date, View Details link or "Saved {date}" indicator.
+- **Navigation:** all links to/from the detail page use `withShopParams` to preserve `?shop`, `?host`, and `?locale` params, ensuring the correct language is maintained across navigation.
+- **Open dispute in Shopify:** links to `https://admin.shopify.com/store/{handle}/finances/disputes/{id}` (note: `/finances/disputes/`, not the deprecated `/payments/disputes/`).
 
 **Dispute detail page (portal):** `app/(portal)/portal/disputes/[id]/page.tsx`. Same data sources. Renders the same real Shopify order timeline section between the Details/Automation grid and the Evidence Packs table. Timeline is built inline from `profile?.orderEvents` (Shopify) merged with pack events (DisputeDesk), sorted newest-first. Demo mode still uses hardcoded demo timeline data.
 
