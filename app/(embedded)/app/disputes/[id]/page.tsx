@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
@@ -241,6 +241,7 @@ function ProfileRow({ label, value }: { label: string; value: React.ReactNode })
 export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const t = useTranslations();
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
@@ -301,9 +302,38 @@ export default function DisputeDetailPage() {
       const data = await res.json();
       setQuotaError(data.error ?? t("disputes.planLimitMessage"));
     } else {
+      const data = await res.json();
+      if (data.packId) {
+        router.push(withShopParams(`/app/packs/${data.packId}`, searchParams));
+        return;
+      }
       await fetchData();
     }
     setGenerating(false);
+  };
+
+  const doGenerateFromTemplate = async (templateId: string) => {
+    setShowTemplateModal(false);
+    setGenerating(true);
+    setQuotaError(null);
+    const res = await fetch(`/api/disputes/${id}/packs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ template_id: templateId }),
+    });
+    if (res.status === 403) {
+      const data = await res.json();
+      setQuotaError(data.error ?? t("disputes.planLimitMessage"));
+      setGenerating(false);
+    } else {
+      const data = await res.json();
+      if (data.packId) {
+        router.push(withShopParams(`/app/packs/${data.packId}`, searchParams));
+      } else {
+        await fetchData();
+        setGenerating(false);
+      }
+    }
   };
 
   const handleGenerate = async () => {
@@ -628,16 +658,14 @@ export default function DisputeDetailPage() {
           matchedTemplate
             ? {
                 content: t("disputes.useTemplate"),
-                onAction: () => {
-                  setShowTemplateModal(false);
-                  window.location.href = withShopParams("/app/packs", searchParams);
-                },
+                onAction: () => doGenerateFromTemplate(matchedTemplate.id),
+                loading: generating,
               }
             : {
                 content: t("disputes.goToTemplateLibrary"),
                 onAction: () => {
                   setShowTemplateModal(false);
-                  window.location.href = withShopParams("/app/packs", searchParams);
+                  router.push(withShopParams("/app/packs", searchParams));
                 },
               }
         }

@@ -10,10 +10,11 @@ import { checkPackQuota } from "@/lib/billing/checkQuota";
  * Enforces monthly pack quota.
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: disputeId } = await params;
+  const body = await req.json().catch(() => ({})) as { template_id?: string };
   const db = getServiceClient();
 
   const { data: dispute } = await db
@@ -64,6 +65,7 @@ export async function POST(
       dispute_id: disputeId,
       status: "queued",
       created_by: "manual",
+      ...(body.template_id ? { pack_template_id: body.template_id } : {}),
     })
     .select("id")
     .single();
@@ -98,7 +100,7 @@ export async function POST(
     pack_id: pack.id,
     actor_type: "merchant",
     event_type: "job_queued",
-    event_payload: { jobId: job.id, trigger: "manual_generate" },
+    event_payload: { jobId: job.id, trigger: body.template_id ? "manual_template" : "manual_generate", template_id: body.template_id ?? null },
   });
 
   return NextResponse.json(
