@@ -177,7 +177,7 @@ function RecentDisputesTable() {
         <BlockStack gap="200">
           <Text as="h2" variant="headingMd">{t("dashboard.recentDisputes")}</Text>
           <Text as="p" variant="bodyMd" tone="subdued">{t("dashboard.noDisputesYetDesc")}</Text>
-          <Button url="/app/disputes">{t("dashboard.goToDisputes")}</Button>
+          <Button url={withShopParams("/app/disputes", searchParams)}>{t("dashboard.goToDisputes")}</Button>
         </BlockStack>
       </Card>
     );
@@ -215,7 +215,7 @@ function RecentDisputesTable() {
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingMd">{t("dashboard.recentDisputes")}</Text>
-          <Button variant="plain" url="/app/disputes">{t("common.viewAll")}</Button>
+          <Button variant="plain" url={withShopParams("/app/disputes", searchParams)}>{t("common.viewAll")}</Button>
         </InlineStack>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>

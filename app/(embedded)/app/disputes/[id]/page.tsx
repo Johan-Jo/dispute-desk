@@ -572,7 +572,7 @@ export default function DisputeDetailPage() {
                       {packs.map((p) => (
                         <tr key={p.id} style={{ borderTop: "1px solid #E5E7EB" }}>
                           <td style={{ padding: "12px 16px" }}>
-                            <a href={`/app/packs/${p.id}`} style={{ color: "#1D4ED8", fontWeight: 500, textDecoration: "none" }}>
+                            <a href={withShopParams(`/app/packs/${p.id}`, searchParams)} style={{ color: "#1D4ED8", fontWeight: 500, textDecoration: "none" }}>
                               {p.id.slice(0, 8)}
                             </a>
                           </td>
@@ -599,7 +599,7 @@ export default function DisputeDetailPage() {
                                 {t("disputes.saved", { date: formatDate(p.saved_to_shopify_at) })}
                               </span>
                             ) : (
-                              <a href={`/app/packs/${p.id}`} style={{ color: "#1D4ED8", textDecoration: "none", fontSize: "13px" }}>
+                              <a href={withShopParams(`/app/packs/${p.id}`, searchParams)} style={{ color: "#1D4ED8", textDecoration: "none", fontSize: "13px" }}>
                                 {t("table.viewDetails")}
                               </a>
                             )}

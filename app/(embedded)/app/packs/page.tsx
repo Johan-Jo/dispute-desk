@@ -10,8 +10,9 @@
 import "./packs.css";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { withShopParams } from "@/lib/withShopParams";
 import {
   Page,
   Card,
@@ -94,6 +95,7 @@ type StatusTab = "all" | "active" | "draft" | "archived";
 
 export default function PacksListPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations();
 
@@ -207,7 +209,7 @@ export default function PacksListPage() {
         if (res.ok) {
           const pack = await res.json();
           setTemplateModalOpen(false);
-          router.push(`/app/packs/${pack.id}`);
+          router.push(withShopParams(`/app/packs/${pack.id}`, searchParams));
         }
       } finally {
         setInstallingId(null);
@@ -470,7 +472,7 @@ export default function PacksListPage() {
                         <IndexTable.Cell>
                           <button
                             type="button"
-                            onClick={() => router.push(`/app/packs/${pack.id}`)}
+                            onClick={() => router.push(withShopParams(`/app/packs/${pack.id}`, searchParams))}
                             style={{
                               border: 0,
                               background: "transparent",
@@ -553,7 +555,7 @@ export default function PacksListPage() {
                               variant="tertiary"
                               size="micro"
                               accessibilityLabel={t("packTemplates.editPack")}
-                              onClick={() => router.push(`/app/packs/${pack.id}`)}
+                              onClick={() => router.push(withShopParams(`/app/packs/${pack.id}`, searchParams))}
                             />
                             <Button
                               icon={DeleteIcon}
