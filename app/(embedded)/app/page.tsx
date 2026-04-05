@@ -346,45 +346,74 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
   ];
 
   return (
-    <BlockStack gap="300">
-      <InlineStack align="space-between" blockAlign="center" wrap>
+    <div style={{
+      background: "#fff",
+      borderRadius: "12px",
+      border: "1px solid #E5E7EB",
+      padding: "20px",
+    }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
         <Text as="h2" variant="headingMd">{t("dashboard.overview")}</Text>
-        <ButtonGroup>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           {(["24h", "7d", "30d", "all"] as const).map((key) => (
-            <Button
+            <button
               key={key}
-              variant={period === key ? "primary" : "plain"}
-              size="slim"
               onClick={() => onPeriodChange(key)}
+              style={{
+                padding: "4px 12px",
+                borderRadius: "6px",
+                border: period === key ? "none" : "1px solid #E5E7EB",
+                background: period === key ? "#111827" : "transparent",
+                color: period === key ? "#fff" : "#374151",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
             >
               {t(`dashboard.period${key === "all" ? "All" : key}`)}
-            </Button>
+            </button>
           ))}
-        </ButtonGroup>
-      </InlineStack>
+        </div>
+      </div>
+
+      {/* KPI cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
         {kpiCards.map((card) => (
           <div
             key={card.label}
             style={{
               background: "#fff",
-              borderRadius: "8px",
+              borderRadius: "10px",
               border: "1px solid #E5E7EB",
               padding: "16px",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <div style={{ color: "#667085" }}>
-                <Icon source={card.icon} tone="subdued" />
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "#EDE9FE",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                color: "#7C3AED",
+              }}>
+                <Icon source={card.icon} />
               </div>
-              <p style={{ fontSize: "12px", color: "#667085", margin: 0 }}>{card.label}</p>
+              <p style={{ fontSize: "12px", fontWeight: 500, color: "#374151", margin: 0 }}>{card.label}</p>
             </div>
-            <p style={{ fontSize: "24px", fontWeight: 700, color: "#0B1220", margin: 0 }}>{loading ? "—" : card.value}</p>
-            <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "4px" }}>{card.period}</p>
+            <p style={{ fontSize: "24px", fontWeight: 700, color: "#111827", margin: 0 }}>{loading ? "—" : card.value}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "6px" }}>
+              <p style={{ fontSize: "12px", color: "#9CA3AF", margin: 0 }}>{card.period}</p>
+              <div style={{ flex: 1, height: "2px", background: "#7C3AED", borderRadius: "1px" }} />
+            </div>
           </div>
         ))}
       </div>
-    </BlockStack>
+    </div>
   );
 }
 
