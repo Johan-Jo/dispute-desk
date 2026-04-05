@@ -773,6 +773,20 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 - Lists missing required checklist items.
 - Guidance only — merchant can still proceed.
 
+### Generate Pack — Template Check
+
+When a merchant clicks "Generate Pack" on the dispute detail page, the UI first checks for a matching template before running the generate call:
+
+1. `GET /api/templates?reason=<dispute.reason>&locale=<locale>` — finds templates for the dispute's reason via `REASON_TO_CATEGORY` mapping (e.g. `FRAUDULENT` → `fraud`, `PRODUCT_NOT_RECEIVED` → `not_received`).
+2. A Polaris `Modal` is always shown:
+   - **Template found**: shows template name, primary "Use template" → navigates to `/app/packs`, secondary "Generate basic pack" → calls the generate API.
+   - **No template**: informs merchant, primary "Go to template library" → `/app/packs`, secondary "Generate basic pack" → calls the generate API.
+3. `GET /api/templates` accepts `?reason=` (Shopify reason code) in addition to `?category=` (explicit short code). Explicit `category` takes precedence.
+
+### Pack Page Locale Preservation
+
+The pack detail page (`app/(embedded)/app/packs/[packId]/page.tsx`) now reads `useSearchParams()` and wraps the back URL with `withShopParams()`, preserving `?shop`, `?host`, `?locale`, and `?dd_debug` when navigating back to the dispute. Pack links in the dispute detail Evidence Packs table also use `withShopParams`.
+
 ### Rules API
 
 | Endpoint | Method | Description |
@@ -803,6 +817,19 @@ Rule presets are defined in `lib/rules/presets.ts` (e.g. fraud auto-pack, PNR au
 2. Job handler loads pack sections + decrypted offline session token.
 3. Calls `disputeEvidenceUpdate` mutation with the dispute's `dispute_evidence_gid`.
 4. On success → `saved_to_shopify` status + timestamp. On error → `save_failed` + audit log.
+
+### Save Safeguards
+
+The API and the client enforce three gates before a save is allowed:
+
+| Condition | Server response | Client behaviour |
+|---|---|---|
+| `status === "blocked"` or `completeness_score === 0` | 422 `PACK_INCOMPLETE` | Critical banner shown; no API call made |
+| `completeness_score < 80` without `confirmLowCompleteness: true` | 422 `PACK_LOW_COMPLETENESS` (includes `score`) | Polaris `Modal` shown for merchant confirmation; on confirm, resends with `{ confirmLowCompleteness: true }` |
+| `status === "queued"` or `"building"` | — (client gate only) | Save button replaced by spinner + "Generating evidence…" label |
+| `completeness_score >= 80` | Proceeds normally | Button enabled, no modal |
+
+Server-side check is authoritative — the client guard is UX only. Both are required to prevent a merchant from bypassing the UI (e.g. direct API call) and saving an empty pack.
 
 ### UX Compliance
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Page,
@@ -19,7 +19,9 @@ import {
   Collapsible,
   Icon,
   DropZone,
+  Modal,
 } from "@shopify/polaris";
+import { withShopParams } from "@/lib/withShopParams";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -135,6 +137,7 @@ function getStatusBanner(
 
 export default function PackPreviewPage() {
   const { packId } = useParams<{ packId: string }>();
+  const searchParams = useSearchParams();
   const t = useTranslations();
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,6 +146,8 @@ export default function PackPreviewPage() {
   const [rendering, setRendering] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showSaveWarning, setShowSaveWarning] = useState(false);
+  const [saveBlocked, setSaveBlocked] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
@@ -221,6 +226,29 @@ export default function PackPreviewPage() {
     }
   };
 
+  const handleSave = async (confirmed = false) => {
+    if (!pack) return;
+    const currentScore = pack.completeness_score ?? 0;
+    if (pack.status === "blocked" || currentScore === 0) {
+      setSaveBlocked(true);
+      return;
+    }
+    if (currentScore < 80 && !confirmed) {
+      setShowSaveWarning(true);
+      return;
+    }
+    setSaving(true);
+    const body = currentScore < 80 ? { confirmLowCompleteness: true } : {};
+    await fetch(`/api/packs/${packId}/save-to-shopify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setShowSaveWarning(false);
+    await fetchPack();
+    setSaving(false);
+  };
+
   if (loading) {
     return (
       <Page title={t("packs.title")}>
@@ -251,7 +279,10 @@ export default function PackPreviewPage() {
   const suggestedLabels = suggestedKeys.map((key) => t(key));
   const statusBanner = getStatusBanner(pack, t, isLibraryPack);
 
-  const backUrl = isLibraryPack ? "/app/packs" : `/app/disputes/${pack.dispute_id}`;
+  const backUrl = withShopParams(
+    isLibraryPack ? "/app/packs" : `/app/disputes/${pack.dispute_id}`,
+    searchParams
+  );
   const backLabel = isLibraryPack ? t("packs.backToPacks") : t("disputes.backToDisputes");
 
   return (
@@ -500,19 +531,26 @@ export default function PackPreviewPage() {
                   </>
                 ) : (
                   <>
-                    <Button
-                      variant="primary"
-                      loading={saving || pack.status === "saving"}
-                      disabled={isBuilding}
-                      onClick={async () => {
-                        setSaving(true);
-                        await fetch(`/api/packs/${packId}/save-to-shopify`, { method: "POST" });
-                        await fetchPack();
-                        setSaving(false);
-                      }}
-                    >
-                      {pack.status === "saving" || saving ? t("packs.saving") : t("packs.saveToShopify")}
-                    </Button>
+                    {saveBlocked && (
+                      <Banner tone="critical">
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">{t("packs.saveBlockedTitle")}</Text>
+                        <Text as="p" variant="bodyMd">{t("packs.saveBlockedBody")}</Text>
+                      </Banner>
+                    )}
+                    {isBuilding ? (
+                      <InlineStack gap="200" blockAlign="center">
+                        <Spinner size="small" />
+                        <Text as="p" variant="bodyMd" tone="subdued">{t("packs.buildingInProgress")}</Text>
+                      </InlineStack>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        loading={saving || pack.status === "saving"}
+                        onClick={() => handleSave()}
+                      >
+                        {pack.status === "saving" || saving ? t("packs.saving") : t("packs.saveToShopify")}
+                      </Button>
+                    )}
                     {pack.status === "save_failed" && (
                       <Banner tone="critical">{t("packs.saveFailed")}</Banner>
                     )}
@@ -590,6 +628,27 @@ export default function PackPreviewPage() {
           <Banner tone="info">{t("packs.compliance")}</Banner>
         </Layout.Section>
       </Layout>
+
+      <Modal
+        open={showSaveWarning}
+        onClose={() => setShowSaveWarning(false)}
+        title={t("packs.confirmSaveTitle")}
+        primaryAction={{
+          content: t("packs.confirmSaveConfirm"),
+          onAction: () => handleSave(true),
+          destructive: true,
+        }}
+        secondaryActions={[{
+          content: t("packs.confirmSaveCancel"),
+          onAction: () => setShowSaveWarning(false),
+        }]}
+      >
+        <Modal.Section>
+          <Text as="p" variant="bodyMd">
+            {t("packs.confirmSaveBody", { score })}
+          </Text>
+        </Modal.Section>
+      </Modal>
     </Page>
   );
 }

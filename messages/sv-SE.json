@@ -223,7 +223,14 @@
     "statusLost": "Förlorad",
     "statusUnknown": "Okänd",
     "disputeInitiated": "Tvist initierad",
-    "evidenceSavedToShopify": "Bevis sparade i Shopify"
+    "evidenceSavedToShopify": "Bevis sparade i Shopify",
+    "templateFound": "Mall tillgänglig för den här tvisttypen",
+    "templateFoundBody": "En \"{name}\" bevismall finns för den här tvisttypen. Börja med mallen för ett starkare paket, eller generera ett enkelt automatiserat paket.",
+    "noTemplate": "Ingen mall för den här tvisttypen",
+    "noTemplateBody": "Ingen förinbyggd mall finns för den här tvisttypen. Vi rekommenderar att skapa en för konsekvent beviskvalitet.",
+    "useTemplate": "Använd mall",
+    "generateBasic": "Generera grundläggande paket",
+    "goToTemplateLibrary": "Gå till mallbiblioteket"
   },
   "packs": {
     "title": "Bevispaket",
@@ -363,6 +370,13 @@
     "suggestedFraudScreening": "Fraud screening or risk signals",
     "suggestedMetadata": "Device / IP / address metadata if available",
     "suggestedRefundPolicy": "Refund or cancellation policy",
+    "saveBlockedTitle": "Paketet är ofullständigt",
+    "saveBlockedBody": "Det här paketet har inga insamlade bevis. Lägg till bevis innan du sparar till Shopify.",
+    "confirmSaveTitle": "Spara ofullständigt paket?",
+    "confirmSaveBody": "Det här paketet är bara {score}% komplett. Att spara det till Shopify nu kan försvaga ditt svar på tvisten. Är du säker?",
+    "confirmSaveConfirm": "Spara ändå",
+    "confirmSaveCancel": "Gå tillbaka",
+    "buildingInProgress": "Genererar bevis…",
     "disputeTypeLabel": {
       "FRAUD": "Bedräglig transaktion",
       "FRAUDULENT": "Bedräglig transaktion",
@@ -1025,7 +1039,7 @@
       },
       "completenessBlockerGates": {
         "title": "Fullständighets- och blockeringsgränser",
-        "body": "Gränser är kvalitetskontroller som styr om ett bevispaket kan autosparas.\n\n1. Fullständighetsgräns: paketets poäng måste nå ditt konfigurerade minimum (standard 80%).\n2. Blockeringsgräns: om aktiverad, hindras paket med saknade obligatoriska bevis.\n\nBåda gränserna måste passera för autospara. Du kan alltid spara manuellt oavsett gränsstatus."
+        "body": "Kvalitetskontroller som styr om ett bevispaket kan sparas till Shopify.\n\n**Kontroller för automatisk sparning** (automatiseringspipeline):\n\n1. Fullständighetsgräns: paketets poäng måste nå ditt konfigurerade minimum (standard 80%).\n2. Blockeringsgräns: om aktiverad, hindras paket med saknade obligatoriska bevis.\n\nBåda måste passera för autospara.\n\n**Skydd för manuell sparning** (knappen Spara bevis):\n\n- Tomma paket (0% eller status \"blockerat\") kan inte sparas.\n- Paket under 80% visar en bekräftelsedialog — du kan spara ändå eller gå tillbaka.\n- Paket som håller på att byggas visar en laddningsindikator i stället för knappen."
       },
       "rulePresets": {
         "title": "Regelinställningar och föreslagna regler",

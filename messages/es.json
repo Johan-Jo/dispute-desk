@@ -189,7 +189,14 @@
     "statusLost": "Perdido",
     "statusUnknown": "Desconocido",
     "disputeInitiated": "Disputa iniciada",
-    "evidenceSavedToShopify": "Evidencia guardada en Shopify"
+    "evidenceSavedToShopify": "Evidencia guardada en Shopify",
+    "templateFound": "Plantilla disponible para este tipo de disputa",
+    "templateFoundBody": "Existe una plantilla de evidencia \"{name}\" para este tipo de disputa. Comience con la plantilla para un paquete más sólido, o genere un paquete básico automatizado.",
+    "noTemplate": "Sin plantilla para este tipo de disputa",
+    "noTemplateBody": "No existe ninguna plantilla predefinida para este tipo de disputa. Recomendamos crear una para una calidad de evidencia coherente.",
+    "useTemplate": "Usar plantilla",
+    "generateBasic": "Generar paquete básico",
+    "goToTemplateLibrary": "Ir a la biblioteca de plantillas"
   },
   "packs": {
     "title": "Paquetes de evidencia",
@@ -242,7 +249,14 @@
     "pageExplainerStep2": "Cuando esté listo, use \"Guardar pruebas en Shopify\" para enviar los datos a Shopify. El envío final a la red de tarjetas se hace en Shopify Admin (o Shopify envía automáticamente en la fecha de vencimiento).",
     "pageExplainerStep3": "Use \"Generar PDF\" para descargar un PDF del paquete para sus registros o envío manual.",
     "pageExplainerSuggestions": "Sugerencias: recibo de envío, prueba de seguimiento, política de la tienda o confirmación de pedido.",
-    "openInShopifyAdmin": "Abrir en Shopify Admin →"
+    "openInShopifyAdmin": "Abrir en Shopify Admin →",
+    "saveBlockedTitle": "El paquete está incompleto",
+    "saveBlockedBody": "Este paquete no tiene evidencia recopilada. Agregue evidencia antes de guardar en Shopify.",
+    "confirmSaveTitle": "¿Guardar paquete incompleto?",
+    "confirmSaveBody": "Este paquete está solo al {score}% completo. Guardarlo en Shopify ahora puede debilitar su respuesta a la disputa. ¿Está seguro?",
+    "confirmSaveConfirm": "Guardar de todos modos",
+    "confirmSaveCancel": "Volver",
+    "buildingInProgress": "Generando evidencia…"
   },
   "analytics": {
     "title": "Análisis",
@@ -856,7 +870,7 @@
       },
       "completenessBlockerGates": {
         "title": "Umbrales de completitud y bloqueo",
-        "body": "Dos controles de calidad:\n\n1. Umbral de completitud: puntuación mínima requerida (predeterminado: 80%).\n2. Umbral de bloqueo: sin evidencias obligatorias faltantes.\n\nAmbos deben pasar para el guardado automático. El guardado manual siempre es posible."
+        "body": "Controles de calidad que determinan si un paquete de evidencia puede guardarse en Shopify.\n\n**Verificaciones de guardado automático** (pipeline de automatización):\n\n1. Umbral de completitud: puntuación mínima requerida (predeterminado: 80%).\n2. Umbral de bloqueo: sin evidencias obligatorias faltantes.\n\nAmbos deben pasar para el guardado automático.\n\n**Protecciones de guardado manual** (botón Guardar evidencia):\n\n- Los paquetes vacíos (0% o estado \"bloqueado\") no se pueden guardar.\n- Los paquetes por debajo del 80% muestran un diálogo de confirmación — puede guardar de todos modos o volver.\n- Los paquetes en construcción muestran un indicador de carga en lugar del botón."
       },
       "rulePresets": {
         "title": "Valores predeterminados y reglas sugeridas",

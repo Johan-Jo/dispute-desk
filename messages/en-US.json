@@ -222,7 +222,14 @@
     "statusLost": "Lost",
     "statusUnknown": "Unknown",
     "disputeInitiated": "Dispute initiated",
-    "evidenceSavedToShopify": "Evidence saved to Shopify"
+    "evidenceSavedToShopify": "Evidence saved to Shopify",
+    "templateFound": "Template available for this dispute type",
+    "templateFoundBody": "A \"{name}\" evidence template exists for this type of dispute. Start from the template for a stronger pack, or generate a basic automated pack.",
+    "noTemplate": "No template for this dispute type",
+    "noTemplateBody": "No pre-built template exists for this dispute type. We recommend creating one for consistent evidence quality.",
+    "useTemplate": "Use template",
+    "generateBasic": "Generate basic pack",
+    "goToTemplateLibrary": "Go to template library"
   },
   "packs": {
     "title": "Packs",
@@ -362,6 +369,13 @@
     "suggestedFraudScreening": "Fraud screening or risk signals",
     "suggestedMetadata": "Device / IP / address metadata if available",
     "suggestedRefundPolicy": "Refund or cancellation policy",
+    "saveBlockedTitle": "Pack is incomplete",
+    "saveBlockedBody": "This pack has no evidence collected. Please add evidence before saving to Shopify.",
+    "confirmSaveTitle": "Save incomplete pack?",
+    "confirmSaveBody": "This pack is only {score}% complete. Saving it to Shopify now may weaken your dispute response. Are you sure?",
+    "confirmSaveConfirm": "Save anyway",
+    "confirmSaveCancel": "Go back",
+    "buildingInProgress": "Generating evidence…",
     "disputeTypeLabel": {
       "FRAUD": "Fraudulent transaction",
       "FRAUDULENT": "Fraudulent transaction",
@@ -1036,7 +1050,7 @@
       },
       "completenessBlockerGates": {
         "title": "Completeness and blocker gates",
-        "body": "Gates are quality checks that control whether an evidence pack can be auto-saved to Shopify.\n\nTwo gates are available:\n\n1. Completeness gate: the pack's completeness score must meet your configured minimum threshold (default: 80%). Packs below this score will not be auto-saved.\n\n2. Blocker gate: if \"Enforce zero blockers\" is enabled, any pack with missing required evidence items will not be auto-saved.\n\nBoth gates must pass for auto-save to proceed. If either gate fails, the pack stays in its current state and you can:\n- Upload additional evidence to improve the score.\n- Manually review and save the pack if you're satisfied with the evidence.\n- Adjust your gate thresholds in Settings > Automation.\n\nGates only affect auto-save. You can always save evidence to Shopify manually regardless of gate status."
+        "body": "Gates are quality checks that control whether an evidence pack can be saved to Shopify.\n\n**Automatic save gates** (automation pipeline):\n\n1. Completeness gate: the pack's completeness score must meet your configured minimum threshold (default: 80%). Packs below this score will not be auto-saved.\n\n2. Blocker gate: if \"Enforce zero blockers\" is enabled, any pack with missing required evidence items will not be auto-saved.\n\nBoth gates must pass for auto-save to proceed.\n\n**Manual save safeguards** (Save Evidence button on the pack page):\n\n- Empty packs (0% completeness or status \"blocked\") cannot be saved at all — a warning is shown and the save is blocked.\n- Packs below 80% completeness show a confirmation dialog before saving. You can choose to save anyway or go back and add more evidence.\n- Packs still building (\"queued\" or \"building\" status) show a spinner instead of the save button — wait until building completes.\n\nIf a gate or safeguard blocks you:\n- Upload additional evidence to improve the score.\n- Adjust your gate thresholds in Settings > Automation.\n- For manual saves below 80%, confirm the dialog if you're satisfied with what you have."
       },
       "rulePresets": {
         "title": "Rule presets and suggested rules",

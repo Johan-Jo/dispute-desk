@@ -189,7 +189,14 @@
     "statusLost": "Verloren",
     "statusUnknown": "Unbekannt",
     "disputeInitiated": "Streitfall eingeleitet",
-    "evidenceSavedToShopify": "Beweise in Shopify gespeichert"
+    "evidenceSavedToShopify": "Beweise in Shopify gespeichert",
+    "templateFound": "Vorlage für diesen Streitfall-Typ verfügbar",
+    "templateFoundBody": "Eine \"{name}\" Beleg-Vorlage ist für diesen Streitfall-Typ vorhanden. Beginnen Sie mit der Vorlage für ein stärkeres Paket oder erstellen Sie ein einfaches automatisches Paket.",
+    "noTemplate": "Keine Vorlage für diesen Streitfall-Typ",
+    "noTemplateBody": "Für diesen Streitfall-Typ gibt es keine vorgefertigte Vorlage. Wir empfehlen, eine für einheitliche Beleg-Qualität zu erstellen.",
+    "useTemplate": "Vorlage verwenden",
+    "generateBasic": "Einfaches Paket erstellen",
+    "goToTemplateLibrary": "Zur Vorlagenbibliothek"
   },
   "packs": {
     "title": "Bewispakete",
@@ -242,7 +249,14 @@
     "completeness": "Vollständigkeit",
     "pdf": "PDF",
     "download": "Herunterladen",
-    "view": "Anzeigen"
+    "view": "Anzeigen",
+    "saveBlockedTitle": "Paket ist unvollständig",
+    "saveBlockedBody": "Dieses Paket enthält keine gesammelten Belege. Bitte fügen Sie Belege hinzu, bevor Sie es in Shopify speichern.",
+    "confirmSaveTitle": "Unvollständiges Paket speichern?",
+    "confirmSaveBody": "Dieses Paket ist nur {score}% vollständig. Das Speichern in Shopify kann Ihre Reaktion auf den Einspruch schwächen. Sind Sie sicher?",
+    "confirmSaveConfirm": "Trotzdem speichern",
+    "confirmSaveCancel": "Zurück",
+    "buildingInProgress": "Belege werden generiert…"
   },
   "analytics": {
     "title": "Analysen",
@@ -856,7 +870,7 @@
       },
       "completenessBlockerGates": {
         "title": "Vollständigkeits- und Blockierungsschwellen",
-        "body": "Zwei Qualitätsprüfungen:\n\n1. Vollständigkeitsschwelle: Mindestpunktzahl erforderlich (Standard: 80%).\n2. Blockierungsschwelle: keine fehlenden Pflichtbeweise.\n\nBeide müssen bestanden werden für Auto-Speicherung. Manuelles Speichern ist immer möglich."
+        "body": "Qualitätsprüfungen steuern, ob ein Beweispaket in Shopify gespeichert werden kann.\n\n**Automatische Speicherprüfungen** (Automatisierungspipeline):\n\n1. Vollständigkeitsschwelle: Mindestpunktzahl erforderlich (Standard: 80%).\n2. Blockierungsschwelle: keine fehlenden Pflichtbeweise.\n\nBeide müssen für die Auto-Speicherung bestanden werden.\n\n**Manuelle Speicherschutzmechanismen** (Schaltfläche Beweise speichern):\n\n- Leere Pakete (0% oder Status „blockiert") können nicht gespeichert werden.\n- Pakete unter 80% zeigen einen Bestätigungsdialog — Sie können trotzdem speichern oder zurückgehen.\n- Pakete im Aufbau zeigen einen Ladeindikator statt der Schaltfläche."
       },
       "rulePresets": {
         "title": "Regelvoreinstellungen und vorgeschlagene Regeln",

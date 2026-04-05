@@ -189,7 +189,14 @@
     "statusLost": "Perdido",
     "statusUnknown": "Desconhecido",
     "disputeInitiated": "Disputa iniciada",
-    "evidenceSavedToShopify": "Evidência salva no Shopify"
+    "evidenceSavedToShopify": "Evidência salva no Shopify",
+    "templateFound": "Modelo disponível para este tipo de contestação",
+    "templateFoundBody": "Um modelo de evidência \"{name}\" existe para este tipo de contestação. Comece pelo modelo para um pack mais forte, ou gere um pack automatizado básico.",
+    "noTemplate": "Sem modelo para este tipo de contestação",
+    "noTemplateBody": "Não existe nenhum modelo predefinido para este tipo de contestação. Recomendamos criar um para qualidade de evidência consistente.",
+    "useTemplate": "Usar modelo",
+    "generateBasic": "Gerar pack básico",
+    "goToTemplateLibrary": "Ir para a biblioteca de modelos"
   },
   "packs": {
     "title": "Pacotes de Evidências",
@@ -242,7 +249,14 @@
     "pdf": "PDF",
     "download": "Baixar",
     "view": "Ver",
-    "backToPacks": "Voltar para pacotes"
+    "backToPacks": "Voltar para pacotes",
+    "saveBlockedTitle": "Pack incompleto",
+    "saveBlockedBody": "Este pack não tem evidências coletadas. Adicione evidências antes de salvar no Shopify.",
+    "confirmSaveTitle": "Salvar pack incompleto?",
+    "confirmSaveBody": "Este pack está apenas {score}% completo. Salvá-lo no Shopify agora pode enfraquecer sua resposta à contestação. Tem certeza?",
+    "confirmSaveConfirm": "Salvar mesmo assim",
+    "confirmSaveCancel": "Voltar",
+    "buildingInProgress": "Gerando evidências…"
   },
   "analytics": {
     "title": "Análises",
@@ -856,7 +870,7 @@
       },
       "completenessBlockerGates": {
         "title": "Verificações de completude e bloqueios",
-        "body": "Verificações são controles de qualidade que determinam se um pacote de evidências pode ser salvo automaticamente no Shopify.\n\nDuas verificações estão disponíveis:\n\n1. Verificação de completude: a pontuação de completude do pacote deve atingir o limite mínimo configurado (padrão: 80%). Pacotes abaixo dessa pontuação não serão salvos automaticamente.\n\n2. Verificação de bloqueios: se \"Exigir zero bloqueios\" estiver ativado, qualquer pacote com itens de evidência obrigatórios ausentes não será salvo automaticamente.\n\nAmbas as verificações devem ser aprovadas para que o salvamento automático prossiga. Se alguma verificação falhar, o pacote permanece no estado atual e você pode:\n- Enviar evidências adicionais para melhorar a pontuação.\n- Revisar e salvar o pacote manualmente se estiver satisfeito com as evidências.\n- Ajustar os limites das verificações em Configurações > Automação.\n\nAs verificações afetam apenas o salvamento automático. Você sempre pode salvar evidências no Shopify manualmente, independentemente do status das verificações."
+        "body": "Verificações são controles de qualidade que determinam se um pacote de evidências pode ser salvo no Shopify.\n\n**Verificações de salvamento automático** (pipeline de automação):\n\n1. Verificação de completude: a pontuação deve atingir o limite mínimo configurado (padrão: 80%).\n2. Verificação de bloqueios: se ativado, pacotes com itens obrigatórios ausentes não são salvos automaticamente.\n\nAmbas as verificações devem ser aprovadas para o salvamento automático.\n\n**Proteções de salvamento manual** (botão Salvar Evidência):\n\n- Pacotes vazios (0% ou status \"bloqueado\") não podem ser salvos.\n- Pacotes abaixo de 80% exibem uma caixa de confirmação — você pode salvar mesmo assim ou voltar.\n- Pacotes ainda em construção exibem um indicador de carregamento no lugar do botão."
       },
       "rulePresets": {
         "title": "Predefinições e regras sugeridas",

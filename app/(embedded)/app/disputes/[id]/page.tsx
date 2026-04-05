@@ -24,6 +24,7 @@ import {
   Spinner,
   Divider,
   Icon,
+  Modal,
 } from "@shopify/polaris";
 import {
   OrderIcon,
@@ -249,6 +250,9 @@ export default function DisputeDetailPage() {
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [quotaError, setQuotaError] = useState<string | null>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateCheckLoading, setTemplateCheckLoading] = useState(false);
+  const [matchedTemplate, setMatchedTemplate] = useState<{ id: string; name: string } | null>(null);
 
   const daysUntilInfo = (iso: string | null): { text: string; urgent: boolean } => {
     if (!iso) return { text: "—", urgent: false };
@@ -288,7 +292,8 @@ export default function DisputeDetailPage() {
     setSyncing(false);
   };
 
-  const handleGenerate = async () => {
+  const doGenerate = async () => {
+    setShowTemplateModal(false);
     setGenerating(true);
     setQuotaError(null);
     const res = await fetch(`/api/disputes/${id}/packs`, { method: "POST" });
@@ -299,6 +304,28 @@ export default function DisputeDetailPage() {
       await fetchData();
     }
     setGenerating(false);
+  };
+
+  const handleGenerate = async () => {
+    setTemplateCheckLoading(true);
+    const locale = searchParams.get("locale") ?? "";
+    const reason = dispute?.reason ?? "";
+    try {
+      const res = await fetch(
+        `/api/templates?reason=${encodeURIComponent(reason)}&locale=${encodeURIComponent(locale)}`
+      );
+      const { templates } = await res.json();
+      const best =
+        (templates as Array<{ id: string; name: string; is_recommended?: boolean }>)
+          ?.find((t) => t.is_recommended) ??
+        templates?.[0] ??
+        null;
+      setMatchedTemplate(best ?? null);
+    } catch {
+      setMatchedTemplate(null);
+    }
+    setTemplateCheckLoading(false);
+    setShowTemplateModal(true);
   };
 
   if (loading) {
@@ -337,9 +364,9 @@ export default function DisputeDetailPage() {
       backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       titleMetadata={isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined}
       primaryAction={{
-        content: generating ? t("disputes.generating") : t("disputes.generatePack"),
+        content: generating || templateCheckLoading ? t("disputes.generating") : t("disputes.generatePack"),
         onAction: handleGenerate,
-        loading: generating,
+        loading: generating || templateCheckLoading,
         icon: NoteIcon,
       }}
       secondaryActions={[
@@ -521,7 +548,7 @@ export default function DisputeDetailPage() {
                   <Icon source={NoteIcon} tone="subdued" />
                   <Text as="h2" variant="headingSm">{t("disputes.evidencePacks")}</Text>
                 </InlineStack>
-                <Button onClick={handleGenerate} loading={generating} size="slim">
+                <Button onClick={handleGenerate} loading={generating || templateCheckLoading} size="slim">
                   {t("disputes.generateNewPack")}
                 </Button>
               </InlineStack>
@@ -592,6 +619,41 @@ export default function DisputeDetailPage() {
           <Banner tone="info">{t("disputes.compliance")}</Banner>
         </Layout.Section>
       </Layout>
+
+      <Modal
+        open={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        title={matchedTemplate ? t("disputes.templateFound") : t("disputes.noTemplate")}
+        primaryAction={
+          matchedTemplate
+            ? {
+                content: t("disputes.useTemplate"),
+                onAction: () => {
+                  setShowTemplateModal(false);
+                  window.location.href = withShopParams("/app/packs", searchParams);
+                },
+              }
+            : {
+                content: t("disputes.goToTemplateLibrary"),
+                onAction: () => {
+                  setShowTemplateModal(false);
+                  window.location.href = withShopParams("/app/packs", searchParams);
+                },
+              }
+        }
+        secondaryActions={[{
+          content: t("disputes.generateBasic"),
+          onAction: doGenerate,
+        }]}
+      >
+        <Modal.Section>
+          <Text as="p" variant="bodyMd">
+            {matchedTemplate
+              ? t("disputes.templateFoundBody", { name: matchedTemplate.name })
+              : t("disputes.noTemplateBody")}
+          </Text>
+        </Modal.Section>
+      </Modal>
     </Page>
   );
 }

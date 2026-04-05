@@ -189,7 +189,14 @@
     "statusLost": "Perdu",
     "statusUnknown": "Inconnu",
     "disputeInitiated": "Litige initié",
-    "evidenceSavedToShopify": "Preuves enregistrées dans Shopify"
+    "evidenceSavedToShopify": "Preuves enregistrées dans Shopify",
+    "templateFound": "Modèle disponible pour ce type de contestation",
+    "templateFoundBody": "Un modèle de preuve \"{name}\" existe pour ce type de contestation. Commencez avec le modèle pour un dossier plus solide, ou générez un pack automatique de base.",
+    "noTemplate": "Aucun modèle pour ce type de contestation",
+    "noTemplateBody": "Aucun modèle prédéfini n'existe pour ce type de contestation. Nous recommandons d'en créer un pour une qualité de preuve cohérente.",
+    "useTemplate": "Utiliser le modèle",
+    "generateBasic": "Générer un pack de base",
+    "goToTemplateLibrary": "Aller à la bibliothèque de modèles"
   },
   "packs": {
     "title": "Dossiers de preuves",
@@ -242,7 +249,14 @@
     "pdf": "PDF",
     "download": "Télécharger",
     "view": "Voir",
-    "backToPacks": "Retour aux packs"
+    "backToPacks": "Retour aux packs",
+    "saveBlockedTitle": "Le pack est incomplet",
+    "saveBlockedBody": "Ce pack ne contient aucune preuve collectée. Veuillez ajouter des preuves avant de sauvegarder dans Shopify.",
+    "confirmSaveTitle": "Sauvegarder le pack incomplet ?",
+    "confirmSaveBody": "Ce pack n'est complet qu'à {score}%. L'enregistrer dans Shopify maintenant peut affaiblir votre réponse à la contestation. Êtes-vous sûr ?",
+    "confirmSaveConfirm": "Sauvegarder quand même",
+    "confirmSaveCancel": "Retour",
+    "buildingInProgress": "Génération des preuves en cours…"
   },
   "analytics": {
     "title": "Analytiques",
@@ -856,7 +870,7 @@
       },
       "completenessBlockerGates": {
         "title": "Seuils de complétude et de blocage",
-        "body": "Deux contrôles qualité :\n\n1. Seuil de complétude : score minimum requis (défaut : 80%).\n2. Seuil de blocage : aucune preuve obligatoire manquante.\n\nLes deux doivent passer pour l'enregistrement automatique. L'enregistrement manuel est toujours possible."
+        "body": "Contrôles qualité qui déterminent si un pack de preuves peut être enregistré dans Shopify.\n\n**Vérifications d'enregistrement automatique** (pipeline d'automatisation) :\n\n1. Seuil de complétude : score minimum requis (défaut : 80%).\n2. Seuil de blocage : aucune preuve obligatoire manquante.\n\nLes deux doivent passer pour l'enregistrement automatique.\n\n**Protections d'enregistrement manuel** (bouton Enregistrer les preuves) :\n\n- Les packs vides (0% ou statut « bloqué ») ne peuvent pas être enregistrés.\n- Les packs en dessous de 80% affichent une boîte de confirmation — vous pouvez enregistrer quand même ou revenir en arrière.\n- Les packs en cours de construction affichent un indicateur de chargement à la place du bouton."
       },
       "rulePresets": {
         "title": "Préréglages et règles suggérées",
