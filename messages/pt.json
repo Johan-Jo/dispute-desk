@@ -104,7 +104,10 @@
     "howItWorksStep1": "1. O DisputeDesk sincroniza disputas automaticamente do Shopify Payments.",
     "howItWorksStep2": "2. Pacotes de evidências são criados automaticamente usando dados de pedidos, rastreamento e políticas.",
     "howItWorksStep3": "3. Quando o pacote atende às suas regras (pontuação de completude + sem bloqueadores), as evidências são salvas no Shopify via API.",
-    "howItWorksCompliance": "O envio à rede de cartões acontece no Shopify Admin, ou o Shopify envia automaticamente na data de vencimento. O DisputeDesk não envia em seu nome."
+    "howItWorksCompliance": "O envio à rede de cartões acontece no Shopify Admin, ou o Shopify envia automaticamente na data de vencimento. O DisputeDesk não envia em seu nome.",
+    "helpCardTitle": "Como ler seu painel",
+    "helpCardDesc": "Saiba o que cada métrica significa e como navegar até as disputas.",
+    "helpCardLink": "Ler o guia"
   },
   "disputes": {
     "title": "Disputas",
@@ -908,6 +911,35 @@
       "notSubmitToNetworks": {
         "title": "O DisputeDesk NÃO envia evidências às operadoras de cartão",
         "body": "Esta é uma distinção importante: o DisputeDesk salva evidências no Shopify, mas NÃO as envia para as operadoras de cartão (Visa, Mastercard, American Express, etc.).\n\nVeja o processo:\n1. O DisputeDesk monta seu pacote de evidências e o salva no Shopify via API.\n2. O envio das evidências à operadora de cartão é feito inteiramente pelo Shopify.\n3. O Shopify envia automaticamente na data limite ou você responde manualmente pelo Shopify Admin.\n\nPor que funciona assim:\n- O Shopify é o comerciante registrado e cuida da comunicação oficial com as operadoras de cartão.\n- Isso garante conformidade com os requisitos das processadoras de pagamento.\n- Suas evidências são formatadas e estruturadas pelo DisputeDesk, e então entregues ao Shopify para o processo oficial.\n\nVocê sempre mantém o controle. Revise suas evidências no Shopify Admin antes que o Shopify as encaminhe à operadora de cartão."
+      }
+    },
+    "embedded": {
+      "title": "Ajuda",
+      "search": "Pesquisar ajuda...",
+      "backToHelp": "Voltar para Ajuda",
+      "relatedArticles": "Artigos Relacionados",
+      "contactSupport": "Precisa de mais ajuda? Entre em contato: support@disputedesk.com",
+      "noResults": "Nenhum artigo encontrado.",
+      "interactiveGuidesTitle": "Guias Interativos",
+      "interactiveGuidesDesc": "Orientação passo a passo para as principais tarefas deste app.",
+      "startGuide": "Iniciar guia",
+      "articles": {
+        "connectShopifyStore": {
+          "title": "Conectando sua loja no app do Shopify",
+          "body": "Quando você instala o DisputeDesk da Shopify App Store, sua loja é conectada automaticamente. Você está usando o app dentro do Shopify Admin, portanto nenhuma etapa de conexão separada é necessária.\n\nSe precisar reconectar (por exemplo, após uma atualização do app que solicita novas permissões):\n1. Abra o DisputeDesk no Shopify Admin (Apps → DisputeDesk).\n2. Aprove as permissões solicitadas.\n3. Seus dados e configurações existentes são preservados.\n\nOs dados da sua loja são criptografados e nunca compartilhados com terceiros."
+        },
+        "shopifyAppStoreInstall": {
+          "title": "Usando o DisputeDesk da Shopify App Store",
+          "body": "Você está usando o DisputeDesk dentro do Shopify Admin. Essa é a maneira recomendada de usar o app.\n\nSe ainda não instalou:\n1. Encontre o DisputeDesk na Shopify App Store.\n2. Toque em Adicionar app, aprove as permissões e conclua a instalação.\n3. Abra Apps e, em seguida, DisputeDesk aqui no Admin.\n\nSe começou pelo nosso site: conclua as etapas de OAuth que o Shopify mostrar e continue abrindo o app pelo Apps (não apenas por um favorito) para que a sessão permaneça válida.\n\nPara reconectar após uma atualização, consulte Conectando sua loja no app do Shopify."
+        },
+        "understandingDashboard": {
+          "title": "Entendendo o painel de controle",
+          "body": "O painel fornece uma visão geral das suas operações de disputas.\n\nMétricas principais: Total de disputas, Taxa de vitória, Auto-salvo e Total resolvido.\n\nO cartão Status de automação mostra suas configurações atuais: criação automática, salvamento automático, pontuação mínima de completude e gate de bloqueadores.\n\nA tabela Disputas recentes lista seus chargebacks mais recentes. Clique no número do pedido para ir diretamente a esse pedido no Shopify Admin, ou clique em Ver detalhes para gerenciar evidências."
+        },
+        "afterSaving": {
+          "title": "O que acontece após salvar as evidências",
+          "body": "Depois de salvar evidências deste app para o Shopify:\n\n1. As evidências aparecem no Shopify Admin: vá em Pedidos → o pedido vinculado → Estorno.\n2. Você pode adicionar notas finais ou ajustes no Shopify Admin.\n3. O Shopify envia as evidências para a rede de cartões quando você clica em responder no Shopify Admin, ou automaticamente na data de vencimento.\n4. A rede de cartões analisa e resolve a disputa como Ganha ou Perdida.\n\nO DisputeDesk atualiza o status quando o Shopify informa a resolução."
+        }
       }
     }
   },

@@ -599,9 +599,9 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
   users skip straight to the destination.
 
 ### Dashboard Stats (Embedded)
-- `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns real KPIs for the embedded dashboard: `totalDisputes`, `winRate`, `revenueRecovered`, `avgResponseTime`, `winRateTrend` (6 buckets), `disputeCategories` (by reason). Period filters disputes by `created_at`.
+- `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns KPIs matching the portal: `activeDisputes`, `winRate`, `packCount`, `amountAtRisk`, plus period-over-period change fields (`activeDisputesChange`, `winRateChange`, `amountAtRiskChange` — null when period is "all"), `winRateTrend` (6 buckets), `disputeCategories` (by reason), and legacy fields (`totalDisputes`, `revenueRecovered`, `avgResponseTime`). Pack count is queried from `evidence_packs`. Previous period is computed as an equal-length window immediately before the current period.
 
-**Overview KPI cards (embedded dashboard):** 4 bordered cards with Polaris icons — Total Disputes (`AlertCircleIcon`), Win Rate (`ChartLineIcon`), Revenue Recovered (`CashDollarIcon`), Avg Response Time (`ClockIcon`). Each shows the selected period label below the value. Period selector (24h / 7d / 30d / All) sits above the cards and is shared with the charts section.
+**Overview KPI cards (embedded dashboard):** 4 bordered cards matching the portal — Active Disputes (`AlertCircleIcon`), Win Rate (`ChartLineIcon`), Evidence Packs (`PackageIcon`), Amount at Risk (`CashDollarIcon`). Label top-left, icon top-right. When period comparison data is available shows `↗ +N% vs last month` / `↘ -N% vs last month` in green/red; falls back to a purple accent bar + period label for "All" or when comparison is unavailable. Period selector (24h / 7d / 30d / All) sits above the cards.
 
 **Recent Disputes table (embedded dashboard):** Fetches `/api/disputes?per_page=5` + `/api/billing/usage` in parallel. Columns: Order (links to Shopify Admin order), ID (plain short UUID), Customer, Amount, Reason, Status (colored badge), Deadline, View Details. Order URL is built from `order_gid` + `shop_domain`.
 
@@ -1263,7 +1263,8 @@ includes `./content/policy-templates/**/*.md` for the
 ### Embedded app help (separate and adapted)
 - The **Shopify embedded app** (`/app/help`) uses a **separate** help surface so the in-app experience can be adapted for the Shopify Admin context.
 - **Data:** `lib/help/embedded.ts` defines which article slugs are available in the app (`EMBEDDED_ARTICLE_SLUGS`), ordered categories, and optional copy overrides. Portal-only articles (e.g. `template-setup-wizard`) are excluded from the embedded list. The slug `shopify-app-store-install` explains installing from the Shopify App Store vs website flows (merchant help for distribution).
-- **Copy:** Embedded UI strings (title, search, backToHelp, etc.) and selected article bodies use the `help.embedded` i18n namespace in `messages/{locale}.json`. Where `EMBEDDED_ARTICLE_COPY_OVERRIDES` is set, titles and bodies are taken from `help.embedded.articles.{slug}.title` / `.body`; otherwise the shared `help.articles.*` keys are used.
+- **Copy:** Embedded UI strings (title, search, backToHelp, etc.) and selected article bodies use the `help.embedded` i18n namespace in `messages/{locale}.json`. Where `EMBEDDED_ARTICLE_COPY_OVERRIDES` is set, titles and bodies are taken from `help.embedded.articles.{slug}.title` / `.body`; otherwise the shared `help.articles.*` keys are used. All six regional locales (`en-US`, `de-DE`, `es-ES`, `fr-FR`, `pt-BR`, `sv-SE`) have fully translated UI strings and article overrides for `connectShopifyStore`, `shopifyAppStoreInstall`, `understandingDashboard`, and `afterSaving`.
+- **Dashboard help card:** The embedded dashboard page (`/app/page.tsx`) renders a `DashboardHelpCard` at the bottom of the layout. It links directly to the `understanding-dashboard` help article. Strings live under `dashboard.helpCardTitle`, `dashboard.helpCardDesc`, `dashboard.helpCardLink` in all locale files.
 - **Portal** (`/portal/help`) continues to use the full `HELP_ARTICLES` and `HELP_CATEGORIES` with the shared `help.*` namespace (Tailwind UI).
 
 ### Search

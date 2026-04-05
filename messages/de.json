@@ -104,7 +104,10 @@
     "howItWorksStep1": "1. DisputeDesk synchronisiert Streitfälle automatisch von Shopify Payments.",
     "howItWorksStep2": "2. Beweispakete werden automatisch aus Bestell-, Versand- und Richtliniendaten erstellt.",
     "howItWorksStep3": "3. Wenn das Paket Ihre Regeln erfüllt (Vollständigkeitswert + keine Blocker), werden Beweise automatisch über die API an Shopify gesendet.",
-    "howItWorksCompliance": "Die Übermittlung an das Kartennetzwerk erfolgt im Shopify Admin oder Shopify sendet automatisch am Fälligkeitsdatum. DisputeDesk übermittelt nicht in Ihrem Namen."
+    "howItWorksCompliance": "Die Übermittlung an das Kartennetzwerk erfolgt im Shopify Admin oder Shopify sendet automatisch am Fälligkeitsdatum. DisputeDesk übermittelt nicht in Ihrem Namen.",
+    "helpCardTitle": "Dashboard verstehen",
+    "helpCardDesc": "Erfahre, was jede Kennzahl bedeutet und wie du zu Streitfällen navigierst.",
+    "helpCardLink": "Anleitung lesen"
   },
   "disputes": {
     "title": "Streitfälle",
@@ -908,6 +911,35 @@
       "notSubmitToNetworks": {
         "title": "DisputeDesk reicht NICHT beim Kartennetzwerk ein",
         "body": "Wichtig: DisputeDesk speichert Beweise bei Shopify, reicht aber NICHT beim Kartennetzwerk ein.\n\nDer Prozess:\n1. DisputeDesk erstellt Ihr Paket und speichert es bei Shopify.\n2. Die Einreichung wird von Shopify durchgeführt.\n3. Shopify reicht automatisch zum Fälligkeitsdatum ein oder Sie reichen manuell ein.\n\nSie behalten die Kontrolle. Prüfen Sie Ihre Beweise im Shopify Admin."
+      }
+    },
+    "embedded": {
+      "title": "Hilfe",
+      "search": "Hilfe suchen...",
+      "backToHelp": "Zurück zur Hilfe",
+      "relatedArticles": "Verwandte Artikel",
+      "contactSupport": "Weitere Hilfe? Kontaktiere uns: support@disputedesk.com",
+      "noResults": "Keine Artikel gefunden.",
+      "interactiveGuidesTitle": "Interaktive Touren",
+      "interactiveGuidesDesc": "Schritt-für-Schritt-Anleitungen für wichtige Aufgaben in dieser App.",
+      "startGuide": "Anleitung starten",
+      "articles": {
+        "connectShopifyStore": {
+          "title": "Shop mit der Shopify-App verbinden",
+          "body": "Wenn du DisputeDesk aus dem Shopify App Store installierst, wird dein Shop automatisch verbunden. Du nutzt die App in Shopify Admin – ein separater Verbindungsschritt ist nicht nötig.\n\nFalls du erneut verbinden musst (z. B. nach einem App-Update mit neuen Berechtigungen):\n1. Öffne DisputeDesk in Shopify Admin (Apps → DisputeDesk).\n2. Bestätige die angeforderten Berechtigungen.\n3. Bestehende Daten und Einstellungen bleiben erhalten.\n\nDeine Shop-Daten sind verschlüsselt und werden nicht an Dritte weitergegeben."
+        },
+        "shopifyAppStoreInstall": {
+          "title": "DisputeDesk im Shopify App Store nutzen",
+          "body": "Du nutzt DisputeDesk in Shopify Admin. Das ist die empfohlene Nutzung.\n\nFalls noch nicht installiert:\n1. Suche DisputeDesk im Shopify App Store.\n2. Tippe auf App hinzufügen, bestätige die Berechtigungen und schliesse die Installation ab.\n3. Oeffne Apps, dann DisputeDesk hier im Admin.\n\nWenn du von unserer Website kommst: Schliesse die OAuth-Schritte bei Shopify ab und oeffne die App weiterhin ueber Apps (nicht nur ueber ein Lesezeichen), damit die Session gueltig bleibt.\n\nNach einem Update: Siehe 'Shop mit der Shopify-App verbinden'."
+        },
+        "understandingDashboard": {
+          "title": "Das Dashboard dieser App verstehen",
+          "body": "Das Dashboard gibt dir einen schnellen Überblick über deine Streitfalloperationen.\n\nKennzahlen: Gesamte Streitfälle, Gewinnquote, Automatisch gespeichert und Gesamt gelöst.\n\nDie Karte Automatisierungsstatus zeigt deine aktuellen Einstellungen: Auto-Erstellen, Auto-Speichern, Mindest-Vollständigkeitsbewertung und Blocker-Gate.\n\nDie Tabelle Letzte Streitfälle listet deine neuesten Rückbuchungen. Klicke auf eine Bestellnummer, um direkt zu dieser Bestellung in Shopify Admin zu gelangen, oder klicke auf Details anzeigen, um Beweise für den Streitfall zu verwalten."
+        },
+        "afterSaving": {
+          "title": "Was passiert nach dem Speichern der Beweise",
+          "body": "Nachdem du Beweise von dieser App in Shopify gespeichert hast:\n\n1. Beweise erscheinen in Shopify Admin: Gehe zu Bestellungen → die verknüpfte Bestellung → Rückbuchung.\n2. Du kannst in Shopify Admin abschließende Notizen hinzufügen oder Anpassungen vornehmen.\n3. Shopify sendet die Beweise an das Kartennetzwerk, wenn du in Shopify Admin auf 'Antworten' klickst, oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft den Streitfall und löst ihn als Gewonnen oder Verloren.\n\nDisputeDesk aktualisiert den Status, wenn Shopify das Ergebnis meldet."
+        }
       }
     }
   },

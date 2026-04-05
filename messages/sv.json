@@ -106,7 +106,10 @@
     "howItWorksStep1": "1. DisputeDesk synkroniserar tvister automatiskt från Shopify Payments.",
     "howItWorksStep2": "2. Bevispaket byggs automatiskt med beställnings-, spårnings- och policydata.",
     "howItWorksStep3": "3. När paketet uppfyller dina regler (fullständighetspoäng + inga blockerare) sparas bevisen till Shopify via API.",
-    "howItWorksCompliance": "Inlämning till kortnätverket sker i Shopify Admin, eller Shopify skickar automatiskt på förfallodatumet. DisputeDesk skickar inte å dina vägnar."
+    "howItWorksCompliance": "Inlämning till kortnätverket sker i Shopify Admin, eller Shopify skickar automatiskt på förfallodatumet. DisputeDesk skickar inte å dina vägnar.",
+    "helpCardTitle": "Hur du läser din instrumentpanel",
+    "helpCardDesc": "Lär dig vad varje mätvärde betyder och hur du navigerar till tvister.",
+    "helpCardLink": "Läs guiden"
   },
   "disputes": {
     "title": "Tvister",
@@ -910,6 +913,35 @@
       "notSubmitToNetworks": {
         "title": "DisputeDesk skickar INTE in till kortnätverk",
         "body": "Viktigt att förstå: DisputeDesk sparar bevis till Shopify men skickar INTE in svar till kortnätverk (Visa, Mastercard, etc.).\n\nProcessen:\n1. DisputeDesk bygger ditt bevispaket och sparar det till Shopify via API.\n2. Inlämning till kortnätverket hanteras helt av Shopify.\n3. Shopify skickar antingen in automatiskt på förfallodatumet eller så gör du det manuellt.\n\nDu behåller alltid kontrollen. Granska dina bevis i Shopify Admin innan de skickas in."
+      }
+    },
+    "embedded": {
+      "title": "Hjälp",
+      "search": "Sök hjälp...",
+      "backToHelp": "Tillbaka till Hjälp",
+      "relatedArticles": "Relaterade artiklar",
+      "contactSupport": "Behöver du mer hjälp? Kontakta: support@disputedesk.com",
+      "noResults": "Inga artiklar hittades.",
+      "interactiveGuidesTitle": "Interaktiva guider",
+      "interactiveGuidesDesc": "Steg-för-steg-vägledning för viktiga uppgifter i den här appen.",
+      "startGuide": "Starta guiden",
+      "articles": {
+        "connectShopifyStore": {
+          "title": "Anslut din butik i Shopify-appen",
+          "body": "När du installerar DisputeDesk från Shopify App Store ansluts din butik automatiskt. Du använder appen inne i Shopify Admin – inget separat anslutningssteg behövs.\n\nOm du behöver återansluta (t.ex. efter en appuppdatering som begär nya behörigheter):\n1. Öppna DisputeDesk i Shopify Admin (Appar → DisputeDesk).\n2. Godkänn de begärda behörigheterna.\n3. Dina befintliga data och inställningar bevaras.\n\nDina butiksdata är krypterade och delas aldrig med tredje part."
+        },
+        "shopifyAppStoreInstall": {
+          "title": "Använda DisputeDesk från Shopify App Store",
+          "body": "Du använder DisputeDesk inne i Shopify Admin. Det är det rekommenderade sättet att använda appen.\n\nOm du inte har installerat ännu:\n1. Hitta DisputeDesk i Shopify App Store.\n2. Tryck på Lägg till app, godkänn behörigheter och slutför installationen.\n3. Öppna Appar, sedan DisputeDesk här i Admin.\n\nOm du startade från vår webbplats: slutför OAuth-stegen som Shopify visar och öppna sedan alltid appen via Appar (inte bara ett bokmärke) så att din session förblir giltig.\n\nFör att återansluta efter en uppdatering, se Anslut din butik i Shopify-appen."
+        },
+        "understandingDashboard": {
+          "title": "Förstå instrumentpanelen",
+          "body": "Instrumentpanelen ger dig en snabb överblick över dina tvistoperationer.\n\nNyckeltal: Totala tvister, Vinstfrekvens, Automatiskt sparade och Totalt lösta.\n\nKortet Automatiseringsstatus visar dina aktuella inställningar: auto-bygg, auto-spara, minsta komplethetstäng och blockerings-gate.\n\nTabellen Senaste tvister listar dina senaste chargebacks. Klicka på ordernumret för att gå direkt till den ordern i Shopify Admin, eller klicka på Visa detaljer för att hantera bevis."
+        },
+        "afterSaving": {
+          "title": "Vad händer efter att bevis sparats",
+          "body": "Efter att du sparat bevis från den här appen till Shopify:\n\n1. Bevis visas i Shopify Admin: gå till Beställningar → den länkade beställningen → Återkrav.\n2. Du kan lägga till slutliga anteckningar eller justeringar i Shopify Admin.\n3. Shopify skickar bevisen till kortnätverket när du klickar på svara i Shopify Admin, eller automatiskt på förfallodatum.\n4. Kortnätverket granskar och löser tvisten som Vunnen eller Förlorad.\n\nDisputeDesk uppdaterar statusen när Shopify rapporterar lösningen."
+        }
       }
     }
   },

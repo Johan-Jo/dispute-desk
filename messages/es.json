@@ -104,7 +104,10 @@
     "howItWorksStep1": "1. DisputeDesk sincroniza disputas automáticamente desde Shopify Payments.",
     "howItWorksStep2": "2. Los paquetes de evidencia se crean automáticamente usando datos de pedidos, seguimiento y políticas.",
     "howItWorksStep3": "3. Cuando el paquete cumple tus reglas (puntuación de completitud + sin bloqueadores), la evidencia se guarda en Shopify vía API.",
-    "howItWorksCompliance": "El envío a la red de tarjetas se realiza en Shopify Admin, o Shopify envía automáticamente en la fecha de vencimiento. DisputeDesk no envía en tu nombre."
+    "howItWorksCompliance": "El envío a la red de tarjetas se realiza en Shopify Admin, o Shopify envía automáticamente en la fecha de vencimiento. DisputeDesk no envía en tu nombre.",
+    "helpCardTitle": "Cómo leer tu panel",
+    "helpCardDesc": "Aprende qué significa cada métrica y cómo navegar a las disputas.",
+    "helpCardLink": "Leer la guía"
   },
   "disputes": {
     "title": "Disputas",
@@ -908,6 +911,35 @@
       "notSubmitToNetworks": {
         "title": "DisputeDesk NO envía a redes de tarjetas",
         "body": "Importante: DisputeDesk guarda evidencia en Shopify pero NO envía a redes de tarjetas (Visa, Mastercard, etc.).\n\nEl proceso:\n1. DisputeDesk crea su paquete y lo guarda en Shopify.\n2. El envío es gestionado por Shopify.\n3. Shopify envía automáticamente en la fecha límite o usted lo hace manualmente.\n\nUsted siempre mantiene el control. Revise su evidencia en Shopify Admin."
+      }
+    },
+    "embedded": {
+      "title": "Ayuda",
+      "search": "Buscar ayuda...",
+      "backToHelp": "Volver a Ayuda",
+      "relatedArticles": "Artículos relacionados",
+      "contactSupport": "¿Necesitas más ayuda? Contacta: support@disputedesk.com",
+      "noResults": "No se encontraron artículos.",
+      "interactiveGuidesTitle": "Recorridos interactivos",
+      "interactiveGuidesDesc": "Orientación paso a paso para las tareas clave en esta app.",
+      "startGuide": "Iniciar guía",
+      "articles": {
+        "connectShopifyStore": {
+          "title": "Conectar tu tienda en la app de Shopify",
+          "body": "Cuando instalas DisputeDesk desde el App Store de Shopify, tu tienda se conecta automáticamente. Estás usando la app dentro de Shopify Admin, por lo que no se necesita ningún paso adicional de conexión.\n\nSi necesitas volver a conectar (por ejemplo, después de una actualización que solicita nuevos permisos):\n1. Abre DisputeDesk en Shopify Admin (Apps → DisputeDesk).\n2. Aprueba los permisos solicitados.\n3. Tus datos y configuraciones existentes se conservan.\n\nLos datos de tu tienda están cifrados y nunca se comparten con terceros."
+        },
+        "shopifyAppStoreInstall": {
+          "title": "Usar DisputeDesk desde el App Store de Shopify",
+          "body": "Estás usando DisputeDesk dentro de Shopify Admin. Esta es la forma recomendada de ejecutar la app.\n\nSi aún no la has instalado:\n1. Busca DisputeDesk en el App Store de Shopify.\n2. Toca Agregar app, aprueba los permisos y completa la instalación.\n3. Abre Apps, luego DisputeDesk aquí en Admin.\n\nSi comenzaste desde nuestro sitio web: completa los pasos de OAuth que muestra Shopify y continúa abriendo esta app desde Apps (no solo desde un marcador) para que tu sesión siga siendo válida.\n\nPara volver a conectar después de una actualización, consulta Conectar tu tienda en la app de Shopify."
+        },
+        "understandingDashboard": {
+          "title": "Entendiendo el panel de control",
+          "body": "El panel te da una vista general de tus operaciones de disputas.\n\nMétricas clave: Total de disputas, Tasa de victorias, Auto-guardado y Total resueltos.\n\nLa tarjeta Estado de automatización muestra tus ajustes actuales: auto-crear, auto-guardar, puntuación mínima de completitud y bloqueo de bloqueos.\n\nLa tabla Disputas recientes lista tus últimas contracargos. Haz clic en el número de pedido para ir directamente a ese pedido en Shopify Admin, o haz clic en Ver detalles para gestionar evidencias."
+        },
+        "afterSaving": {
+          "title": "Qué ocurre después de guardar evidencias",
+          "body": "Después de guardar evidencias desde esta app a Shopify:\n\n1. Las evidencias aparecen en Shopify Admin: ve a Pedidos → el pedido vinculado → Contracargo.\n2. Puedes añadir notas finales o ajustes en Shopify Admin.\n3. Shopify envía las evidencias a la red de tarjetas cuando haces clic en responder en Shopify Admin, o automáticamente en la fecha de vencimiento.\n4. La red de tarjetas revisa y resuelve la disputa como Ganada o Perdida.\n\nDisputeDesk actualiza el estado cuando Shopify informa la resolución."
+        }
       }
     }
   },

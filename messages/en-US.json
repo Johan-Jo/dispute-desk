@@ -135,7 +135,10 @@
     "revenueRecovered": "Revenue Recovered",
     "avgResponseTime": "Avg. Response Time",
     "winRateTrend": "Win Rate Trend",
-    "disputeCategories": "Dispute Categories"
+    "disputeCategories": "Dispute Categories",
+    "helpCardTitle": "How to read your dashboard",
+    "helpCardDesc": "Learn what each metric means and how to navigate to disputes.",
+    "helpCardLink": "Read the guide"
   },
   "disputes": {
     "title": "Disputes",
@@ -1094,7 +1097,7 @@
       }
     },
     "embedded": {
-      "title": "Help (in Shopify)",
+      "title": "Help",
       "search": "Search help...",
       "backToHelp": "Back to Help",
       "relatedArticles": "Related Articles",
@@ -1106,11 +1109,11 @@
       "articles": {
         "connectShopifyStore": {
           "title": "Connecting your store in the Shopify app",
-          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.com) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
+          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nYour store data is encrypted and never shared with third parties."
         },
         "shopifyAppStoreInstall": {
           "title": "Using DisputeDesk from the Shopify App Store",
-          "body": "You are using DisputeDesk inside Shopify Admin. That is the recommended way to run the app.\n\nIf you have not installed yet:\n1. Find DisputeDesk in the Shopify App Store.\n2. Tap Add app, approve permissions, and finish install.\n3. Open Apps, then DisputeDesk here in Admin.\n\nIf you started from our website: complete any OAuth steps Shopify shows, then keep opening this app from Apps (not only from a bookmark) so your session stays valid for billing and saving evidence.\n\nFor reconnecting after an update, see Connecting your store in the Shopify app."
+          "body": "You are using DisputeDesk inside Shopify Admin. That is the recommended way to run the app.\n\nIf you have not installed yet:\n1. Find DisputeDesk in the Shopify App Store.\n2. Tap Add app, approve permissions, and finish install.\n3. Open Apps, then DisputeDesk here in Admin.\n\nIf you started from our website: complete any OAuth steps Shopify shows, then keep opening this app from Apps (not only from a bookmark) so your session stays valid.\n\nFor reconnecting after an update, see Connecting your store in the Shopify app."
         },
         "understandingDashboard": {
           "title": "Understanding the dashboard in this app",
@@ -1118,7 +1121,7 @@
         },
         "afterSaving": {
           "title": "What happens after saving evidence",
-          "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution. You can continue working in this app or in the portal."
+          "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution."
         }
       }
     }

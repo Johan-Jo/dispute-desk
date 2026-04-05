@@ -124,7 +124,10 @@
     "revenueRecovered": "Revenue Recovered",
     "avgResponseTime": "Avg. Response Time",
     "winRateTrend": "Win Rate Trend",
-    "disputeCategories": "Dispute Categories"
+    "disputeCategories": "Dispute Categories",
+    "helpCardTitle": "How to read your dashboard",
+    "helpCardDesc": "Learn what each metric means and how to navigate to disputes.",
+    "helpCardLink": "Read the guide"
   },
   "disputes": {
     "title": "Disputes",
@@ -1038,7 +1041,7 @@
       }
     },
     "embedded": {
-      "title": "Help (in Shopify)",
+      "title": "Help",
       "search": "Search help...",
       "backToHelp": "Back to Help",
       "relatedArticles": "Related Articles",

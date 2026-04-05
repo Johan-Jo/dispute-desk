@@ -135,7 +135,10 @@
     "revenueRecovered": "Ingresos recuperados",
     "avgResponseTime": "Tiempo medio de respuesta",
     "winRateTrend": "Tendencia de tasa de éxito",
-    "disputeCategories": "Categorías de disputas"
+    "disputeCategories": "Categorías de disputas",
+    "helpCardTitle": "Cómo leer tu panel",
+    "helpCardDesc": "Aprende qué significa cada métrica y cómo navegar a las disputas.",
+    "helpCardLink": "Leer la guía"
   },
   "disputes": {
     "title": "Disputas",
@@ -1086,31 +1089,31 @@
       }
     },
     "embedded": {
-      "title": "Help (in Shopify)",
-      "search": "Search help...",
-      "backToHelp": "Back to Help",
-      "relatedArticles": "Related Articles",
-      "contactSupport": "Need more help? Contact support@disputedesk.com",
-      "noResults": "No articles found.",
-      "interactiveGuidesTitle": "Interactive Tours",
-      "interactiveGuidesDesc": "Step-by-step guidance for key tasks in this app.",
-      "startGuide": "Start guide",
+      "title": "Ayuda",
+      "search": "Buscar ayuda...",
+      "backToHelp": "Volver a Ayuda",
+      "relatedArticles": "Artículos relacionados",
+      "contactSupport": "¿Necesitas más ayuda? Contacta: support@disputedesk.com",
+      "noResults": "No se encontraron artículos.",
+      "interactiveGuidesTitle": "Recorridos interactivos",
+      "interactiveGuidesDesc": "Orientación paso a paso para las tareas clave en esta app.",
+      "startGuide": "Iniciar guía",
       "articles": {
         "connectShopifyStore": {
-          "title": "Connecting your store in the Shopify app",
-          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.com) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
+          "title": "Conectar tu tienda en la app de Shopify",
+          "body": "Cuando instalas DisputeDesk desde el App Store de Shopify, tu tienda se conecta automáticamente. Estás usando la app dentro de Shopify Admin, por lo que no se necesita ningún paso adicional de conexión.\n\nSi necesitas volver a conectar (por ejemplo, después de una actualización que solicita nuevos permisos):\n1. Abre DisputeDesk en Shopify Admin (Apps → DisputeDesk).\n2. Aprueba los permisos solicitados.\n3. Tus datos y configuraciones existentes se conservan.\n\nLos datos de tu tienda están cifrados y nunca se comparten con terceros."
         },
         "shopifyAppStoreInstall": {
-          "title": "Usar DisputeDesk desde la tienda de aplicaciones de Shopify",
-          "body": "Está usando DisputeDesk dentro del admin de Shopify. Es la forma recomendada.\n\nSi aún no ha instalado:\n1. Busque DisputeDesk en la tienda de aplicaciones de Shopify.\n2. Pulse Añadir aplicación, acepte los permisos y termine la instalación.\n3. Abra Aplicaciones y luego DisputeDesk aquí en el admin.\n\nSi llegó desde nuestro sitio web: complete los pasos OAuth en Shopify y siga abriendo la aplicación desde Aplicaciones (no solo desde un marcador) para que la sesión siga siendo válida para facturación y guardar pruebas.\n\nTras una actualización: vea «Conectar su tienda en la aplicación Shopify»."
+          "title": "Usar DisputeDesk desde el App Store de Shopify",
+          "body": "Estás usando DisputeDesk dentro de Shopify Admin. Esta es la forma recomendada de ejecutar la app.\n\nSi aún no la has instalado:\n1. Busca DisputeDesk en el App Store de Shopify.\n2. Toca Agregar app, aprueba los permisos y completa la instalación.\n3. Abre Apps, luego DisputeDesk aquí en Admin.\n\nSi comenzaste desde nuestro sitio web: completa los pasos de OAuth que muestra Shopify y continúa abriendo esta app desde Apps (no solo desde un marcador) para que tu sesión siga siendo válida.\n\nPara volver a conectar después de una actualización, consulta Conectar tu tienda en la app de Shopify."
         },
         "understandingDashboard": {
-          "title": "Understanding the dashboard in this app",
-          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nKey metrics: Open Disputes, Win Rate, Auto-Saved count, and Resolved total.\n\nThe Automation Status card shows your current settings: auto-build, auto-save, minimum completeness score, and blocker gate.\n\nThe Recent Disputes table lists your latest chargebacks. Use the Disputes link in the app to view and filter all disputes, or click a row to see full details and manage evidence."
+          "title": "Entendiendo el panel de control",
+          "body": "El panel te da una vista general de tus operaciones de disputas.\n\nMétricas clave: Total de disputas, Tasa de victorias, Auto-guardado y Total resueltos.\n\nLa tarjeta Estado de automatización muestra tus ajustes actuales: auto-crear, auto-guardar, puntuación mínima de completitud y bloqueo de bloqueos.\n\nLa tabla Disputas recientes lista tus últimas contracargos. Haz clic en el número de pedido para ir directamente a ese pedido en Shopify Admin, o haz clic en Ver detalles para gestionar evidencias."
         },
         "afterSaving": {
-          "title": "What happens after saving evidence",
-          "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution. You can continue working in this app or in the portal."
+          "title": "Qué ocurre después de guardar evidencias",
+          "body": "Después de guardar evidencias desde esta app a Shopify:\n\n1. Las evidencias aparecen en Shopify Admin: ve a Pedidos → el pedido vinculado → Contracargo.\n2. Puedes añadir notas finales o ajustes en Shopify Admin.\n3. Shopify envía las evidencias a la red de tarjetas cuando haces clic en responder en Shopify Admin, o automáticamente en la fecha de vencimiento.\n4. La red de tarjetas revisa y resuelve la disputa como Ganada o Perdida.\n\nDisputeDesk actualiza el estado cuando Shopify informa la resolución."
         }
       }
     }

@@ -104,7 +104,10 @@
     "howItWorksStep1": "1. DisputeDesk synchronise automatiquement les litiges depuis Shopify Payments.",
     "howItWorksStep2": "2. Les dossiers de preuves sont créés automatiquement à partir des données de commande, de suivi et de politique.",
     "howItWorksStep3": "3. Lorsque le dossier respecte vos règles (score de complétude + aucun bloqueur), les preuves sont enregistrées sur Shopify via l'API.",
-    "howItWorksCompliance": "La soumission au réseau de cartes se fait dans Shopify Admin, ou Shopify soumet automatiquement à la date d'échéance. DisputeDesk ne soumet pas en votre nom."
+    "howItWorksCompliance": "La soumission au réseau de cartes se fait dans Shopify Admin, ou Shopify soumet automatiquement à la date d'échéance. DisputeDesk ne soumet pas en votre nom.",
+    "helpCardTitle": "Comment lire votre tableau de bord",
+    "helpCardDesc": "Découvrez ce que signifie chaque indicateur et comment accéder aux litiges.",
+    "helpCardLink": "Lire le guide"
   },
   "disputes": {
     "title": "Litiges",
@@ -908,6 +911,35 @@
       "notSubmitToNetworks": {
         "title": "DisputeDesk ne soumet PAS au réseau de cartes",
         "body": "Important : DisputeDesk enregistre les preuves sur Shopify mais ne soumet PAS au réseau de cartes (Visa, Mastercard, etc.).\n\nLe processus :\n1. DisputeDesk crée votre dossier et l'enregistre sur Shopify.\n2. La soumission est gérée par Shopify.\n3. Shopify soumet automatiquement à la date limite ou vous le faites manuellement.\n\nVous gardez toujours le contrôle. Vérifiez vos preuves dans Shopify Admin."
+      }
+    },
+    "embedded": {
+      "title": "Aide",
+      "search": "Rechercher de l'aide...",
+      "backToHelp": "Retour à l'aide",
+      "relatedArticles": "Articles connexes",
+      "contactSupport": "Besoin d'aide ? Contactez : support@disputedesk.com",
+      "noResults": "Aucun article trouvé.",
+      "interactiveGuidesTitle": "Visites guidées interactives",
+      "interactiveGuidesDesc": "Guidage pas à pas pour les tâches clés dans cette app.",
+      "startGuide": "Démarrer le guide",
+      "articles": {
+        "connectShopifyStore": {
+          "title": "Connecter votre boutique dans l'app Shopify",
+          "body": "Lorsque vous installez DisputeDesk depuis le Shopify App Store, votre boutique est connectée automatiquement. Vous utilisez l'app dans Shopify Admin, aucune étape de connexion séparée n'est nécessaire.\n\nSi vous devez reconnecter (par exemple après une mise à jour demandant de nouvelles autorisations) :\n1. Ouvrez DisputeDesk dans Shopify Admin (Apps → DisputeDesk).\n2. Approuvez les autorisations demandées.\n3. Vos données et paramètres existants sont conservés.\n\nVos données sont chiffrées et ne sont jamais partagées avec des tiers."
+        },
+        "shopifyAppStoreInstall": {
+          "title": "Utiliser DisputeDesk depuis le Shopify App Store",
+          "body": "Vous utilisez DisputeDesk dans Shopify Admin. C'est la façon recommandée d'utiliser l'app.\n\nSi vous ne l'avez pas encore installée :\n1. Trouvez DisputeDesk dans le Shopify App Store.\n2. Appuyez sur Ajouter l'app, approuvez les autorisations et terminez l'installation.\n3. Ouvrez Apps, puis DisputeDesk ici dans Admin.\n\nSi vous avez commencé depuis notre site web : complétez les étapes OAuth que Shopify affiche, puis continuez à ouvrir cette app depuis Apps (pas seulement depuis un favori) pour que votre session reste valide.\n\nPour reconnecter après une mise à jour, voir Connecter votre boutique dans l'app Shopify."
+        },
+        "understandingDashboard": {
+          "title": "Comprendre le tableau de bord",
+          "body": "Le tableau de bord vous donne un aperçu de vos opérations de litiges.\n\nIndicateurs clés : Total des litiges, Taux de victoire, Sauvegarde automatique et Total résolu.\n\nLa carte Statut d'automatisation affiche vos paramètres actuels : création automatique, sauvegarde automatique, score minimum de complétude et blocage.\n\nLe tableau Litiges récents liste vos derniers litiges. Cliquez sur le numéro de commande pour aller directement à cette commande dans Shopify Admin, ou cliquez sur Voir les détails pour gérer les preuves."
+        },
+        "afterSaving": {
+          "title": "Que se passe-t-il après l'enregistrement des preuves",
+          "body": "Après avoir enregistré des preuves depuis cette app vers Shopify :\n\n1. Les preuves apparaissent dans Shopify Admin : allez dans Commandes → la commande liée → Litige.\n2. Vous pouvez ajouter des notes finales ou des ajustements dans Shopify Admin.\n3. Shopify envoie les preuves au réseau de cartes lorsque vous cliquez sur répondre dans Shopify Admin, ou automatiquement à la date d'échéance.\n4. Le réseau de cartes examine et résout le litige comme Gagné ou Perdu.\n\nDisputeDesk met à jour le statut lorsque Shopify signale la résolution."
+        }
       }
     }
   },

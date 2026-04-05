@@ -29,7 +29,8 @@ import {
   AlertCircleIcon,
   ChartLineIcon,
   CashDollarIcon,
-  ClockIcon,
+  PackageIcon,
+  QuestionCircleIcon,
 } from "@shopify/polaris-icons";
 import { useTranslations } from "next-intl";
 import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
@@ -59,19 +60,28 @@ interface DisputeRow {
 }
 
 interface DashboardStats {
-  totalDisputes: number;
+  // Portal-matching KPIs
+  activeDisputes: number;
   winRate: number;
-  revenueRecovered: string;
-  avgResponseTime: string;
+  packCount: number;
+  amountAtRisk: number;
+  // Period-over-period changes (null = no comparison available)
+  activeDisputesChange: number | null;
+  winRateChange: number | null;
+  amountAtRiskChange: number | null;
+  // Chart fields
   winRateTrend: number[];
   disputeCategories: { label: string; value: number }[];
 }
 
 const DEFAULT_STATS: DashboardStats = {
-  totalDisputes: 0,
+  activeDisputes: 0,
   winRate: 0,
-  revenueRecovered: "$0",
-  avgResponseTime: "—",
+  packCount: 0,
+  amountAtRisk: 0,
+  activeDisputesChange: null,
+  winRateChange: null,
+  amountAtRiskChange: null,
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],
 };
@@ -315,35 +325,38 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
 
   const s = stats ?? DEFAULT_STATS;
 
-  const periodLabel = (key: PeriodKey) =>
-    t(`dashboard.period${key === "all" ? "All" : key}`);
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
 
   const kpiCards = [
     {
       icon: AlertCircleIcon,
-      label: t("dashboard.totalDisputes"),
-      value: String(s.totalDisputes),
-      period: periodLabel(period),
+      label: t("dashboard.activeDisputes"),
+      value: String(s.activeDisputes),
+      change: s.activeDisputesChange,
     },
     {
       icon: ChartLineIcon,
       label: t("dashboard.winRate"),
       value: `${s.winRate}%`,
-      period: periodLabel(period),
+      change: s.winRateChange,
+    },
+    {
+      icon: PackageIcon,
+      label: t("dashboard.evidencePacks"),
+      value: String(s.packCount),
+      change: null as number | null,
     },
     {
       icon: CashDollarIcon,
-      label: t("dashboard.revenueRecovered"),
-      value: s.revenueRecovered,
-      period: periodLabel(period),
-    },
-    {
-      icon: ClockIcon,
-      label: t("dashboard.avgResponseTime"),
-      value: s.avgResponseTime,
-      period: periodLabel(period),
+      label: t("dashboard.amountAtRisk"),
+      value: formatCurrency(s.amountAtRisk),
+      change: s.amountAtRiskChange,
     },
   ];
+
+  const periodLabel = (key: PeriodKey) =>
+    t(`dashboard.period${key === "all" ? "All" : key}`);
 
   return (
     <div style={{
@@ -371,7 +384,7 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
                 cursor: "pointer",
               }}
             >
-              {t(`dashboard.period${key === "all" ? "All" : key}`)}
+              {periodLabel(key)}
             </button>
           ))}
         </div>
@@ -379,39 +392,59 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
 
       {/* KPI cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
-        {kpiCards.map((card) => (
-          <div
-            key={card.label}
-            style={{
-              background: "#fff",
-              borderRadius: "10px",
-              border: "1px solid #E5E7EB",
-              padding: "16px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <div style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                background: "#EDE9FE",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                color: "#7C3AED",
-              }}>
-                <Icon source={card.icon} />
+        {kpiCards.map((card) => {
+          const hasChange = card.change !== null && card.change !== undefined;
+          const isPositive = (card.change ?? 0) > 0;
+          const isNegative = (card.change ?? 0) < 0;
+          return (
+            <div
+              key={card.label}
+              style={{
+                background: "#fff",
+                borderRadius: "10px",
+                border: "1px solid #E5E7EB",
+                padding: "16px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                <p style={{ fontSize: "12px", fontWeight: 500, color: "#374151", margin: 0 }}>{card.label}</p>
+                <div style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  background: "#EDE9FE",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  color: "#7C3AED",
+                }}>
+                  <Icon source={card.icon} />
+                </div>
               </div>
-              <p style={{ fontSize: "12px", fontWeight: 500, color: "#374151", margin: 0 }}>{card.label}</p>
+              <p style={{ fontSize: "24px", fontWeight: 700, color: "#111827", margin: 0 }}>{loading ? "—" : card.value}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "6px" }}>
+                {hasChange && !loading ? (
+                  <>
+                    <span style={{
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      color: isPositive ? "#10B981" : isNegative ? "#EF4444" : "#9CA3AF",
+                    }}>
+                      {isPositive ? "↗" : isNegative ? "↘" : ""} {isPositive ? "+" : ""}{card.change}%
+                    </span>
+                    <span style={{ fontSize: "12px", color: "#9CA3AF" }}>{t("dashboard.vsLastMonth")}</span>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ flex: 1, height: "2px", background: "#7C3AED", borderRadius: "1px" }} />
+                    <p style={{ fontSize: "12px", color: "#9CA3AF", margin: 0 }}>{periodLabel(period)}</p>
+                  </>
+                )}
+              </div>
             </div>
-            <p style={{ fontSize: "24px", fontWeight: 700, color: "#111827", margin: 0 }}>{loading ? "—" : card.value}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "6px" }}>
-              <p style={{ fontSize: "12px", color: "#9CA3AF", margin: 0 }}>{card.period}</p>
-              <div style={{ flex: 1, height: "2px", background: "#7C3AED", borderRadius: "1px" }} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -549,6 +582,44 @@ function AutomationStatusCard() {
   );
 }
 
+function DashboardHelpCard() {
+  const t = useTranslations("dashboard");
+  const searchParams = useSearchParams();
+  return (
+    <Card>
+      <InlineStack gap="400" blockAlign="center" wrap={false}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: "#EDE9FE",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            color: "#7C3AED",
+          }}
+        >
+          <Icon source={QuestionCircleIcon} />
+        </div>
+        <BlockStack gap="050">
+          <Text as="h3" variant="headingSm">{t("helpCardTitle")}</Text>
+          <Text as="p" variant="bodySm" tone="subdued">{t("helpCardDesc")}</Text>
+        </BlockStack>
+        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <Button
+            variant="plain"
+            url={withShopParams("/app/help/understanding-dashboard", searchParams)}
+          >
+            {t("helpCardLink")}
+          </Button>
+        </div>
+      </InlineStack>
+    </Card>
+  );
+}
+
 export default function EmbeddedDashboardPage() {
   const t = useTranslations();
   const searchParams = useSearchParams();
@@ -587,6 +658,10 @@ export default function EmbeddedDashboardPage() {
 
         {/* Win Rate Trend + Dispute Categories (real data from API) */}
         <DashboardCharts period={period} />
+
+        <Layout.Section>
+          <DashboardHelpCard />
+        </Layout.Section>
       </Layout>
     </Page>
   );
