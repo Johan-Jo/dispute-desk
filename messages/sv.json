@@ -141,6 +141,7 @@
     "completeness": "Fullständighet",
     "blockers": "Blockeringar",
     "openInShopify": "Öppna i Shopify Admin",
+    "openDisputeInShopify": "Öppna tvist i Shopify",
     "generateNewPack": "Skapa nytt paket",
     "noPacks": "Inga bevispaket ännu. Skapa ett för att komma igång.",
     "noPacksAuto": "Inga bevispaket ännu. Automationspipelinen skapar ett automatiskt, eller klicka Skapa paket.",

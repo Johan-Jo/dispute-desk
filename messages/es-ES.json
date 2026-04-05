@@ -214,7 +214,7 @@
     "evidenceBeingReviewed": "Evidencia siendo revisada por el equipo",
     "customerClaimsNotReceived": "El cliente afirma no haber recibido el producto",
     "customerClaimsQualityIssues": "El cliente reporta problemas de calidad del producto",
-    "openDisputeInShopify": "Open dispute in Shopify",
+    "openDisputeInShopify": "Abrir disputa en Shopify",
     "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now.",
     "statusNeedsResponse": "Requiere respuesta",
     "statusUnderReview": "En revisión",

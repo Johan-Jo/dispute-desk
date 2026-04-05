@@ -139,6 +139,7 @@
     "completeness": "Complétude",
     "blockers": "Blocages",
     "openInShopify": "Ouvrir dans Shopify Admin",
+    "openDisputeInShopify": "Ouvrir le litige dans Shopify",
     "generateNewPack": "Créer un nouveau dossier",
     "noPacks": "Aucun dossier de preuves. Créez-en un pour commencer.",
     "noPacksAuto": "Aucun dossier de preuves. Le pipeline en créera un automatiquement, ou cliquez Créer un dossier.",

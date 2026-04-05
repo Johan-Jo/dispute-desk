@@ -139,6 +139,7 @@
     "completeness": "Completude",
     "blockers": "Bloqueios",
     "openInShopify": "Abrir no Shopify Admin",
+    "openDisputeInShopify": "Abrir contestação no Shopify",
     "generateNewPack": "Gerar Novo Pacote",
     "noPacks": "Nenhum pacote de evidências ainda. Gere um para começar.",
     "noPacksAuto": "Nenhum pacote de evidências ainda. A automação gerará um automaticamente, ou clique em Gerar Pacote.",

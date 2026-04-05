@@ -139,6 +139,7 @@
     "completeness": "Vollständigkeit",
     "blockers": "Blockierungen",
     "openInShopify": "In Shopify Admin öffnen",
+    "openDisputeInShopify": "Streitfall in Shopify öffnen",
     "generateNewPack": "Neues Paket erstellen",
     "noPacks": "Noch keine Bewispakete. Erstellen Sie eines, um zu beginnen.",
     "noPacksAuto": "Noch keine Bewispakete. Die Pipeline erstellt automatisch eines, oder klicken Sie auf Paket erstellen.",
