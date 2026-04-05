@@ -11,20 +11,24 @@
  * the app root for App Bridge routing.
  */
 import { getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
 
 export async function AppNavSidebar() {
   const t = await getTranslations();
+  const headerStore = await headers();
+  const locale = headerStore.get("x-shopify-locale") ?? "";
+  const lq = locale ? `?locale=${encodeURIComponent(locale)}` : "";
 
   return (
     <s-app-nav>
-      <s-link href="/app" rel="home">{t("nav.dashboard")}</s-link>
-      <s-link href="/app/disputes">{t("nav.disputes")}</s-link>
-      <s-link href="/app/packs">{t("nav.packs")}</s-link>
-      <s-link href="/app/rules">{t("nav.rules")}</s-link>
-      <s-link href="/app/analytics">{t("nav.analytics")}</s-link>
-      <s-link href="/app/billing">{t("nav.billing")}</s-link>
-      <s-link href="/app/settings">{t("nav.settings")}</s-link>
-      <s-link href="/app/help">{t("nav.help")}</s-link>
+      <s-link href={`/app${lq}`} rel="home">{t("nav.dashboard")}</s-link>
+      <s-link href={`/app/disputes${lq}`}>{t("nav.disputes")}</s-link>
+      <s-link href={`/app/packs${lq}`}>{t("nav.packs")}</s-link>
+      <s-link href={`/app/rules${lq}`}>{t("nav.rules")}</s-link>
+      <s-link href={`/app/analytics${lq}`}>{t("nav.analytics")}</s-link>
+      <s-link href={`/app/billing${lq}`}>{t("nav.billing")}</s-link>
+      <s-link href={`/app/settings${lq}`}>{t("nav.settings")}</s-link>
+      <s-link href={`/app/help${lq}`}>{t("nav.help")}</s-link>
     </s-app-nav>
   );
 }

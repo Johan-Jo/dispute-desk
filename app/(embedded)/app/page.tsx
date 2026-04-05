@@ -551,14 +551,15 @@ function AutomationStatusCard() {
 
 export default function EmbeddedDashboardPage() {
   const t = useTranslations();
+  const searchParams = useSearchParams();
   const [period, setPeriod] = useState<PeriodKey>("30d");
 
   return (
     <Page
       title={t("dashboard.title")}
       subtitle={t("dashboard.embeddedSubtitle")}
-      primaryAction={{ content: t("dashboard.automationSettings"), url: "/app/settings" }}
-      secondaryActions={[{ content: t("nav.help"), url: "/app/help" }]}
+      primaryAction={{ content: t("dashboard.automationSettings"), url: withShopParams("/app/settings", searchParams) }}
+      secondaryActions={[{ content: t("nav.help"), url: withShopParams("/app/help", searchParams) }]}
     >
       <Layout>
         <Layout.Section>

@@ -9,6 +9,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { withShopParams } from "@/lib/withShopParams";
 import {
   Page,
   Layout,
@@ -39,6 +41,7 @@ export default function EmbeddedSettingsPage() {
   const t = useTranslations("settings");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
+  const searchParams = useSearchParams();
   const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -118,39 +121,34 @@ export default function EmbeddedSettingsPage() {
               {loading ? (
                 <Spinner size="small" />
               ) : (
-                <InlineStack align="space-between" blockAlign="center" wrap>
-                  <InlineStack gap="300" blockAlign="center">
-                    <div
-                      style={{
-                        width: 40,
-                        height: 40,
-                        background: "#96BF48",
-                        borderRadius: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontWeight: 700,
-                        fontSize: 16,
-                      }}
-                    >
-                      S
-                    </div>
-                    <BlockStack gap="100">
-                      <Text as="span" variant="bodyMd" fontWeight="semibold">
-                        {shopInfo?.shopDomain ?? tc("notAvailable")}
-                      </Text>
-                      <Text as="span" variant="bodySm" tone="subdued">
-                        {t("connectedViaOAuth")}
-                      </Text>
-                      <InlineStack gap="200">
-                        <Badge tone="success">{t("active")}</Badge>
-                      </InlineStack>
-                    </BlockStack>
-                  </InlineStack>
-                  <Button variant="secondary" url="/app/session-required">
-                    {t("reconnect")}
-                  </Button>
+                <InlineStack gap="300" blockAlign="center">
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      background: "#96BF48",
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontWeight: 700,
+                      fontSize: 16,
+                    }}
+                  >
+                    S
+                  </div>
+                  <BlockStack gap="100">
+                    <Text as="span" variant="bodyMd" fontWeight="semibold">
+                      {shopInfo?.shopDomain ?? tc("notAvailable")}
+                    </Text>
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {t("connectedViaOAuth")}
+                    </Text>
+                    <InlineStack gap="200">
+                      <Badge tone="success">{t("active")}</Badge>
+                    </InlineStack>
+                  </BlockStack>
                 </InlineStack>
               )}
             </BlockStack>
@@ -249,13 +247,13 @@ export default function EmbeddedSettingsPage() {
                   </div>
                   <Text as="h2" variant="headingMd">{t("teamMembers")}</Text>
                 </InlineStack>
-                <Button variant="primary" url="/portal/team">
+                <Button variant="primary" url={withShopParams("/portal/team", searchParams)}>
                   {t("inviteMember")}
                 </Button>
               </InlineStack>
               <Divider />
               <Text as="p" variant="bodySm" tone="subdued">{t("teamManagedInPortal")}</Text>
-              <Button url="/portal/team" variant="plain">{t("manageTeam")}</Button>
+              <Button url={withShopParams("/portal/team", searchParams)} variant="plain">{t("manageTeam")}</Button>
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -291,7 +289,7 @@ export default function EmbeddedSettingsPage() {
                     {t("billingDesc")}
                   </Text>
                 </BlockStack>
-                <Button variant="secondary" url="/app/billing">
+                <Button variant="secondary" url={withShopParams("/app/billing", searchParams)}>
                   {t("viewPricing")}
                 </Button>
               </InlineStack>
