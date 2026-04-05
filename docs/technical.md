@@ -779,13 +779,28 @@ When a merchant clicks "Generate Pack" on the dispute detail page, the UI first 
 
 1. `GET /api/templates?reason=<dispute.reason>&locale=<locale>` — finds templates for the dispute's reason via `REASON_TO_CATEGORY` mapping (e.g. `FRAUDULENT` → `fraud`, `PRODUCT_NOT_RECEIVED` → `not_received`).
 2. A Polaris `Modal` is always shown:
-   - **Template found**: shows template name, primary "Use template" → navigates to `/app/packs`, secondary "Generate basic pack" → calls the generate API.
-   - **No template**: informs merchant, primary "Go to template library" → `/app/packs`, secondary "Generate basic pack" → calls the generate API.
-3. `GET /api/templates` accepts `?reason=` (Shopify reason code) in addition to `?category=` (explicit short code). Explicit `category` takes precedence.
+   - **Template found**: primary "Use template" → POSTs to `POST /api/disputes/:id/packs` with `{ template_id }`, creates the pack tied to the dispute, then navigates directly to the new pack page. Secondary "Generate basic pack" → same API without template_id.
+   - **No template**: primary "Go to template library" → navigates to `/app/packs`. Secondary "Generate basic pack" → creates a basic pack and navigates to it.
+3. `POST /api/disputes/:id/packs` accepts an optional `template_id` body param and stores it as `pack_template_id` on the `evidence_packs` row.
+4. `GET /api/templates` accepts `?reason=` (Shopify reason code) in addition to `?category=` (explicit short code). Explicit `category` takes precedence.
 
 ### Pack Page Locale Preservation
 
-The pack detail page (`app/(embedded)/app/packs/[packId]/page.tsx`) now reads `useSearchParams()` and wraps the back URL with `withShopParams()`, preserving `?shop`, `?host`, `?locale`, and `?dd_debug` when navigating back to the dispute. Pack links in the dispute detail Evidence Packs table also use `withShopParams`.
+All embedded navigation that leads to/from pack pages now uses `withShopParams` to preserve `?shop`, `?host`, `?locale`, and `?dd_debug`:
+- Pack detail page (`app/(embedded)/app/packs/[packId]/page.tsx`) — back URL
+- Pack list page (`app/(embedded)/app/packs/page.tsx`) — all row click / button navigations
+- Dispute detail Evidence Packs table — pack links (both ID and "View details")
+- Dashboard — "Go to disputes" and "View all" links
+
+### Shopify Admin Dispute URL
+
+`lib/shopify/shopifyAdminUrl.ts` builds the direct link to a specific dispute in Shopify Admin:
+
+```
+https://{shop}.myshopify.com/admin/settings/payments/shopify-payments/chargebacks/{disputeId}
+```
+
+Note: this page is only accessible when Shopify Payments test mode is **off** and a real bank account is connected. Development stores in test mode will see a 404.
 
 ### Rules API
 
