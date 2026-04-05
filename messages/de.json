@@ -871,7 +871,7 @@
       },
       "completenessBlockerGates": {
         "title": "Vollständigkeits- und Blockierungsschwellen",
-        "body": "Qualitätsprüfungen steuern, ob ein Beweispaket in Shopify gespeichert werden kann.\n\n**Automatische Speicherprüfungen** (Automatisierungspipeline):\n\n1. Vollständigkeitsschwelle: Mindestpunktzahl erforderlich (Standard: 80%).\n2. Blockierungsschwelle: keine fehlenden Pflichtbeweise.\n\nBeide müssen für die Auto-Speicherung bestanden werden.\n\n**Manuelle Speicherschutzmechanismen** (Schaltfläche Beweise speichern):\n\n- Leere Pakete (0% oder Status „blockiert") können nicht gespeichert werden.\n- Pakete unter 80% zeigen einen Bestätigungsdialog — Sie können trotzdem speichern oder zurückgehen.\n- Pakete im Aufbau zeigen einen Ladeindikator statt der Schaltfläche."
+        "body": "Qualitätsprüfungen steuern, ob ein Beweispaket in Shopify gespeichert werden kann.\n\n**Automatische Speicherprüfungen** (Automatisierungspipeline):\n\n1. Vollständigkeitsschwelle: Mindestpunktzahl erforderlich (Standard: 80%).\n2. Blockierungsschwelle: keine fehlenden Pflichtbeweise.\n\nBeide müssen für die Auto-Speicherung bestanden werden.\n\n**Manuelle Speicherschutzmechanismen** (Schaltfläche Beweise speichern):\n\n- Leere Pakete (0% oder Status \"blockiert\") können nicht gespeichert werden.\n- Pakete unter 80% zeigen einen Bestätigungsdialog — Sie können trotzdem speichern oder zurückgehen.\n- Pakete im Aufbau zeigen einen Ladeindikator statt der Schaltfläche."
       },
       "rulePresets": {
         "title": "Regelvoreinstellungen und vorgeschlagene Regeln",
