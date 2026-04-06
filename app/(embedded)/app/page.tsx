@@ -524,6 +524,7 @@ function DashboardCharts({ period }: { period: PeriodKey }) {
 
 function AutomationStatusCard() {
   const t = useTranslations("dashboard");
+  const searchParams = useSearchParams();
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
 
   useEffect(() => {
@@ -539,7 +540,7 @@ function AutomationStatusCard() {
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingMd">{t("automationStatus")}</Text>
-          <Button variant="plain" size="slim" url="/app/settings">{t("settings")}</Button>
+          <Button variant="plain" size="slim" url={withShopParams("/app/settings", searchParams)}>{t("settings")}</Button>
         </InlineStack>
         <InlineStack gap="400" wrap>
           <InlineStack gap="200" blockAlign="center">

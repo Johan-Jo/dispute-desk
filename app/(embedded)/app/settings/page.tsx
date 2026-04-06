@@ -23,6 +23,8 @@ import {
   Checkbox,
   Spinner,
   Divider,
+  TextField,
+  Banner,
 } from "@shopify/polaris";
 
 interface ShopInfo {
@@ -37,6 +39,13 @@ interface NotificationPrefs {
   evidenceReady: boolean;
 }
 
+interface AutomationSettings {
+  auto_build_enabled: boolean;
+  auto_save_enabled: boolean;
+  auto_save_min_score: number;
+  enforce_no_blockers: boolean;
+}
+
 export default function EmbeddedSettingsPage() {
   const t = useTranslations("settings");
   const tc = useTranslations("common");
@@ -49,12 +58,23 @@ export default function EmbeddedSettingsPage() {
   const [notifBeforeDue, setNotifBeforeDue] = useState(true);
   const [notifEvidenceReady, setNotifEvidenceReady] = useState(false);
 
+  const [automation, setAutomation] = useState<AutomationSettings>({
+    auto_build_enabled: false,
+    auto_save_enabled: false,
+    auto_save_min_score: 80,
+    enforce_no_blockers: true,
+  });
+  const [minScoreInput, setMinScoreInput] = useState("80");
+  const [automationSaving, setAutomationSaving] = useState(false);
+  const [automationSaved, setAutomationSaved] = useState(false);
+
   const fetchInfo = useCallback(async () => {
     setLoading(true);
     try {
-      const [usageRes, prefsRes] = await Promise.all([
+      const [usageRes, prefsRes, autoRes] = await Promise.all([
         fetch("/api/billing/usage"),
         fetch("/api/shop/preferences"),
+        fetch("/api/automation/settings"),
       ]);
       if (usageRes.ok) {
         const data = await usageRes.json();
@@ -72,10 +92,33 @@ export default function EmbeddedSettingsPage() {
           setNotifEvidenceReady(n.evidenceReady);
         }
       }
+      if (autoRes.ok) {
+        const a = await autoRes.json() as AutomationSettings;
+        setAutomation(a);
+        setMinScoreInput(String(a.auto_save_min_score));
+      }
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const saveAutomation = useCallback(async () => {
+    const score = Math.min(100, Math.max(0, parseInt(minScoreInput, 10) || 0));
+    setAutomationSaving(true);
+    await fetch("/api/automation/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auto_build_enabled: automation.auto_build_enabled,
+        auto_save_enabled: automation.auto_save_enabled,
+        auto_save_min_score: score,
+        enforce_no_blockers: automation.enforce_no_blockers,
+      }),
+    });
+    setAutomationSaving(false);
+    setAutomationSaved(true);
+    setTimeout(() => setAutomationSaved(false), 3000);
+  }, [automation, minScoreInput]);
 
   const persistNotification = useCallback(
     async (key: keyof NotificationPrefs, value: boolean) => {
@@ -150,6 +193,122 @@ export default function EmbeddedSettingsPage() {
                     </InlineStack>
                   </BlockStack>
                 </InlineStack>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Automation */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack gap="300" blockAlign="center">
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    background: "#EDE9FE",
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                  }}
+                >
+                  ⚡
+                </div>
+                <Text as="h2" variant="headingMd">{t("automationSection")}</Text>
+              </InlineStack>
+              <Divider />
+              {loading ? (
+                <Spinner size="small" />
+              ) : (
+                <BlockStack gap="400">
+                  {/* Auto Build */}
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("autoBuildLabel")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("autoBuildDesc")}</Text>
+                      </BlockStack>
+                      <Checkbox
+                        label=""
+                        checked={automation.auto_build_enabled}
+                        onChange={(v) => setAutomation((a) => ({ ...a, auto_build_enabled: v }))}
+                        labelHidden
+                      />
+                    </InlineStack>
+                  </div>
+
+                  {/* Auto Save */}
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("autoSaveLabel")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("autoSaveDesc")}</Text>
+                      </BlockStack>
+                      <Checkbox
+                        label=""
+                        checked={automation.auto_save_enabled}
+                        onChange={(v) => setAutomation((a) => ({ ...a, auto_save_enabled: v }))}
+                        labelHidden
+                      />
+                    </InlineStack>
+                  </div>
+
+                  {/* Min Score */}
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center" wrap={false}>
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("minScore")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("minScoreHelp")}</Text>
+                      </BlockStack>
+                      <div style={{ width: 80, flexShrink: 0 }}>
+                        <TextField
+                          label=""
+                          labelHidden
+                          type="number"
+                          value={minScoreInput}
+                          onChange={setMinScoreInput}
+                          min={0}
+                          max={100}
+                          suffix="%"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </InlineStack>
+                  </div>
+
+                  {/* Blocker Gate */}
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("blockerLabel")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("blockerDesc")}</Text>
+                      </BlockStack>
+                      <Checkbox
+                        label=""
+                        checked={automation.enforce_no_blockers}
+                        onChange={(v) => setAutomation((a) => ({ ...a, enforce_no_blockers: v }))}
+                        labelHidden
+                      />
+                    </InlineStack>
+                  </div>
+
+                  {automationSaved && (
+                    <Banner tone="success">{t("saveAutomation")} ✓</Banner>
+                  )}
+
+                  <InlineStack align="end">
+                    <Button
+                      variant="primary"
+                      onClick={() => void saveAutomation()}
+                      loading={automationSaving}
+                    >
+                      {t("saveAutomation")}
+                    </Button>
+                  </InlineStack>
+                </BlockStack>
               )}
             </BlockStack>
           </Card>

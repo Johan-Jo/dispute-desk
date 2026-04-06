@@ -622,8 +622,10 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - `POST /api/setup/invite` — body `{ email }`. Sends a teammate invite email via Resend pointing to the portal sign-up page. Used by the "Send invite" button in the Setup Wizard Team & Notifications step.
 
 ### Automation
-- `GET /api/automation/settings?shop_id=...` — read shop automation settings
-- `PATCH /api/automation/settings` — update automation toggles
+- `GET /api/automation/settings?shop_id=...` — read shop automation settings (`auto_build_enabled`, `auto_save_enabled`, `auto_save_min_score`, `enforce_no_blockers`)
+- `PATCH /api/automation/settings` — update any subset of the four automation fields. Called by the embedded Settings page Automation section (four controls: Auto Build toggle, Auto Save toggle, Min Score number input, Blocker Gate toggle + Save button).
+
+**Embedded Settings page — Automation section:** `app/(embedded)/app/settings/page.tsx` now includes a full Automation card above Notifications. Fetches `/api/automation/settings` on load alongside usage and prefs. Renders four controls in bordered rows matching the Notifications style. Saving PATCHes `/api/automation/settings` and shows a 3-second success banner. The dashboard Automation Status card "Settings" link uses `withShopParams` to preserve locale when navigating here.
 - `POST /api/disputes/sync` — enqueue dispute sync job
 - `POST /api/packs/:packId/approve` — approve pack for save + enqueue job
 
