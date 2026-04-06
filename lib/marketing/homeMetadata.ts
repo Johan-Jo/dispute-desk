@@ -6,7 +6,7 @@ import {
   pathLocaleToMessages,
   type PathLocale,
 } from "@/lib/i18n/pathLocales";
-import { getPublicBaseUrl } from "@/lib/resources/url";
+import { getPublicBaseUrl, PRODUCTION_ORIGIN } from "@/lib/resources/url";
 
 /** Shared metadata for the marketing homepage (`/` and localized `/de`, etc.). */
 export async function buildMarketingHomeMetadata(
@@ -20,24 +20,36 @@ export async function buildMarketingHomeMetadata(
     .split(",")
     .map((k) => k.trim())
     .filter(Boolean);
+  // Always use the canonical production origin for self-referential tags.
+  // getPublicBaseUrl() now always returns a string (falls back to PRODUCTION_ORIGIN).
   const origin = getPublicBaseUrl();
-
-  const languageAlternates = Object.fromEntries(
-    LOCALE_LIST.map((l) => [l, marketingHomePath(l)]),
-  ) as Record<string, string>;
-  languageAlternates["x-default"] = "/";
+  // For canonical tags use PRODUCTION_ORIGIN so preview deployments don't
+  // accidentally claim a different canonical than the live site.
+  const canonicalOrigin = PRODUCTION_ORIGIN;
 
   const canonicalPath = marketingHomePath(messagesLocale);
+  const canonicalUrl = `${canonicalOrigin}${canonicalPath}`;
 
-  const metadata: Metadata = {
+  const languageAlternates = Object.fromEntries(
+    LOCALE_LIST.map((l) => [l, `${canonicalOrigin}${marketingHomePath(l)}`]),
+  ) as Record<string, string>;
+  languageAlternates["x-default"] = canonicalOrigin;
+
+  return {
+    metadataBase: new URL(origin),
     title,
     description,
     keywords,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: languageAlternates,
+    },
     openGraph: {
       type: "website",
       title,
       description,
       siteName: "DisputeDesk",
+      url: canonicalUrl,
       locale: messagesLocale,
       alternateLocale: LOCALE_LIST.filter((l) => l !== messagesLocale),
     },
@@ -48,17 +60,4 @@ export async function buildMarketingHomeMetadata(
     },
     robots: { index: true, follow: true },
   };
-
-  if (origin) {
-    metadata.alternates = {
-      canonical: canonicalPath,
-      languages: languageAlternates,
-    };
-    metadata.openGraph = {
-      ...metadata.openGraph,
-      url: canonicalPath,
-    };
-  }
-
-  return metadata;
 }
