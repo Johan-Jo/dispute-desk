@@ -181,6 +181,7 @@
     "noPacks": "No evidence packs yet. Generate one to get started.",
     "noPacksAuto": "No evidence packs yet. The automation pipeline will generate one automatically, or click Generate Pack.",
     "noDisputes": "No disputes found. Click Sync Now to fetch from Shopify.",
+    "noMatchingDisputes": "No disputes match your search or filters.",
     "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now.",
     "connectStore": "Connect a Shopify store to see disputes.",
     "packLimitReached": "Pack limit reached",
@@ -1128,7 +1129,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** page lists your chargebacks in a table.\n\nToolbar:\n- **Search** — find disputes by ID, order, or reason.\n- **Filter** — pick one or more statuses (Needs response, Under review, Won, Lost).\n- **Export** — download a CSV of the rows you see after search and filter.\n- **Sync Now** — fetch the latest disputes from Shopify right away.\n\nThe table shows dispute ID, order, reason, amount, status, due date, and a chevron. Click a row to open the dispute detail page.\n\nThere is no separate **Review Queue** tab in this app: disputes your rules send to manual review appear in this same list. Open a dispute to work on its pack and approval."
+          "body": "The **Disputes** table uses the **same columns** as the dashboard's recent disputes: **Order** (link to Shopify Admin when available), **ID** (short internal id), **Customer**, **Amount**, **Reason**, **Status**, **Deadline** (month and day), and **View details** to open the dispute in DisputeDesk.\n\nToolbar: **Search** (order, ID, customer, reason), **Filter** by status, **Export** CSV, **Sync Now**.\n\nThere is no separate **Review Queue** tab: disputes sent for manual review appear in this list. Use **View details**, then **Approve & Save** on the detail page when ready."
         },
         "reviewQueue": {
           "title": "The review queue",
@@ -1136,7 +1137,7 @@
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
-          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and click the row, or open the dispute from the dashboard.\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and use **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
         }
       }
     }

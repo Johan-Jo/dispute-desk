@@ -149,6 +149,7 @@
     "noPacks": "Aucun dossier de preuves. Créez-en un pour commencer.",
     "noPacksAuto": "Aucun dossier de preuves. Le pipeline en créera un automatiquement, ou cliquez Créer un dossier.",
     "noDisputes": "Aucun litige trouvé. Cliquez Synchroniser pour importer depuis Shopify.",
+    "noMatchingDisputes": "Aucun litige ne correspond à votre recherche ou à vos filtres.",
     "connectStore": "Connectez une boutique Shopify pour voir les litiges.",
     "packLimitReached": "Limite de dossiers atteinte",
     "planLimitMessage": "Limite du plan atteinte. Veuillez mettre à niveau.",
@@ -945,7 +946,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Afficher et filtrer les litiges",
-          "body": "La page **Litiges** liste vos rétrofacturations dans un tableau.\n\nBarre d'outils :\n- **Recherche** — par ID, commande ou motif.\n- **Filtrer** — un ou plusieurs statuts (Réponse requise, En examen, Gagné, Perdu).\n- **Exporter** — CSV des lignes visibles après recherche/filtre.\n- **Synchroniser maintenant** — récupérer les derniers litiges depuis Shopify tout de suite.\n\nColonnes : ID de litige, commande, motif, montant, statut, date limite et un chevron. Cliquez sur une ligne pour ouvrir le détail.\n\n**Il n'y a pas d'onglet séparé « file d'attente de révision »** dans cette app : les litiges que vos règles envoient en révision manuelle apparaissent dans la même liste. Ouvrez un litige pour travailler sur le paquet et l'approbation."
+          "body": "Le tableau **Litiges** reprend **les mêmes colonnes** que les litiges récents du tableau de bord : **Commande** (lien Admin Shopify si disponible), **ID** (identifiant interne court), **Client**, **Montant**, **Motif**, **Statut**, **Échéance** (mois et jour) et **Voir les détails** pour ouvrir le litige dans DisputeDesk.\n\nBarre : **Recherche** (commande, ID, client, motif), **Filtrer** par statut, **Exporter** CSV, **Synchroniser maintenant**.\n\n**Pas d'onglet séparé « file d'attente de révision »** : les litiges en révision manuelle apparaissent dans cette liste. Utilisez **Voir les détails** puis **Approuver et enregistrer** sur la page de détail."
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",
@@ -953,7 +954,7 @@
         },
         "approvingDisputes": {
           "title": "Approuver des litiges depuis la file d'attente",
-          "body": "Approuvez depuis la page de **détail du litige** après l'avoir ouverte depuis la liste ou le tableau de bord.\n\nÉtapes :\n1. Allez dans **Litiges** et cliquez sur la ligne, ou ouvrez le litige depuis le tableau de bord.\n2. Vérifiez le paquet de preuves et la complétude sur le détail.\n3. Utilisez **Approuver et enregistrer** pour lancer le pipeline et enregistrer dans Shopify si vos seuils sont atteints.\n\nVous pouvez générer ou actualiser les paquets sur le détail au préalable. **Il n'y a pas de bouton Approuver uniquement sur la liste** — la confirmation se fait sur le détail."
+          "body": "Approuvez depuis la page de **détail du litige** après l'avoir ouverte depuis la liste ou le tableau de bord.\n\nÉtapes :\n1. Allez dans **Litiges** et utilisez **Voir les détails** (ou ouvrez le litige depuis le tableau de bord).\n2. Vérifiez le paquet de preuves et la complétude sur le détail.\n3. Utilisez **Approuver et enregistrer** pour lancer le pipeline et enregistrer dans Shopify si vos seuils sont atteints.\n\nVous pouvez générer ou actualiser les paquets sur le détail au préalable. **Il n'y a pas de bouton Approuver uniquement sur la liste** — la confirmation se fait sur le détail."
         }
       }
     }

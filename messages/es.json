@@ -149,6 +149,7 @@
     "noPacks": "Sin paquetes de evidencia. Cree uno para comenzar.",
     "noPacksAuto": "Sin paquetes de evidencia. El pipeline creará uno automáticamente, o haga clic en Crear paquete.",
     "noDisputes": "No se encontraron disputas. Haga clic en Sincronizar para importar de Shopify.",
+    "noMatchingDisputes": "Ninguna disputa coincide con tu búsqueda o filtros.",
     "connectStore": "Conecte una tienda Shopify para ver las disputas.",
     "packLimitReached": "Límite de paquetes alcanzado",
     "planLimitMessage": "Límite del plan alcanzado. Por favor actualice.",
@@ -945,7 +946,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Ver y filtrar disputas",
-          "body": "La página **Disputas** muestra tus contracargos en una tabla.\n\nBarra de herramientas:\n- **Buscar** — por ID, pedido o motivo.\n- **Filtrar** — uno o más estados (Respuesta necesaria, En revisión, Ganada, Perdida).\n- **Exportar** — CSV de las filas visibles tras buscar/filtrar.\n- **Sincronizar ahora** — traer las últimas disputas de Shopify al instante.\n\nColumnas: ID de disputa, pedido, motivo, importe, estado, fecha límite y un chevron. Haz clic en una fila para abrir el detalle.\n\n**No hay una pestaña separada de cola de revisión** en esta app: las disputas que tus reglas envían a revisión manual aparecen en la misma lista. Abre una disputa para trabajar el paquete y la aprobación."
+          "body": "La tabla **Disputas** usa **las mismas columnas** que las disputas recientes del panel: **Pedido** (enlace al Admin de Shopify si está disponible), **ID** (id interno corto), **Cliente**, **Importe**, **Motivo**, **Estado**, **Plazo** (mes y día) y **Ver detalles** para abrir la disputa en DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por estado, **Exportar** CSV, **Sincronizar ahora**.\n\n**No hay pestaña separada de cola de revisión**: las disputas para revisión manual aparecen en esta lista. Usa **Ver detalles** y luego **Aprobar y guardar** en la página de detalle."
         },
         "reviewQueue": {
           "title": "La cola de revisión",
@@ -953,7 +954,7 @@
         },
         "approvingDisputes": {
           "title": "Aprobar disputas desde la cola de revisión",
-          "body": "Aprueba en la página de **detalle de la disputa** tras abrirla desde la lista o el panel.\n\nPasos:\n1. Ve a **Disputas** y haz clic en la fila, o abre la disputa desde el panel.\n2. Revisa el paquete de evidencia y la completitud en el detalle.\n3. Usa **Aprobar y guardar** para ejecutar el flujo y guardar en Shopify si pasan tus umbrales.\n\nPuedes generar o actualizar paquetes en el detalle antes. **No hay un botón Aprobar solo en la lista** — la confirmación es en el detalle."
+          "body": "Aprueba en la página de **detalle de la disputa** tras abrirla desde la lista o el panel.\n\nPasos:\n1. Ve a **Disputas** y usa **Ver detalles** (o abre la disputa desde el panel).\n2. Revisa el paquete de evidencia y la completitud en el detalle.\n3. Usa **Aprobar y guardar** para ejecutar el flujo y guardar en Shopify si pasan tus umbrales.\n\nPuedes generar o actualizar paquetes en el detalle antes. **No hay un botón Aprobar solo en la lista** — la confirmación es en el detalle."
         }
       }
     }

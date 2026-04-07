@@ -149,6 +149,7 @@
     "noPacks": "Nenhum pacote de evidências ainda. Gere um para começar.",
     "noPacksAuto": "Nenhum pacote de evidências ainda. A automação gerará um automaticamente, ou clique em Gerar Pacote.",
     "noDisputes": "Nenhuma disputa encontrada. Clique em Sincronizar Agora para buscar no Shopify.",
+    "noMatchingDisputes": "Nenhuma disputa corresponde à busca ou aos filtros.",
     "connectStore": "Conecte uma loja Shopify para ver as disputas.",
     "packLimitReached": "Limite de pacotes atingido",
     "planLimitMessage": "Limite do plano atingido. Faça upgrade.",
@@ -945,7 +946,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Ver e filtrar disputas",
-          "body": "A página **Disputas** lista seus chargebacks em uma tabela.\n\nBarra de ferramentas:\n- **Buscar** — por ID, pedido ou motivo.\n- **Filtrar** — um ou mais status (Precisa de resposta, Em análise, Ganhou, Perdeu).\n- **Exportar** — CSV das linhas visíveis após busca/filtro.\n- **Sincronizar agora** — buscar as disputas mais recentes no Shopify na hora.\n\nColunas: ID da disputa, pedido, motivo, valor, status, data limite e um chevron. Clique na linha para abrir o detalhe.\n\n**Não há uma aba separada de fila de revisão** neste app: as disputas que suas regras enviam para revisão manual aparecem na mesma lista. Abra uma disputa para trabalhar no pacote e na aprovação."
+          "body": "A tabela **Disputas** usa as **mesmas colunas** das disputas recentes do painel: **Pedido** (link para o Admin da Shopify quando disponível), **ID** (id interno curto), **Cliente**, **Valor**, **Motivo**, **Status**, **Prazo** (mês e dia) e **Ver detalhes** para abrir a disputa no DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por status, **Exportar** CSV, **Sincronizar agora**.\n\n**Não há aba separada de fila de revisão**: disputas enviadas para revisão manual aparecem nesta lista. Use **Ver detalhes** e depois **Aprovar e salvar** na página de detalhe."
         },
         "reviewQueue": {
           "title": "A fila de revisão",
@@ -953,7 +954,7 @@
         },
         "approvingDisputes": {
           "title": "Aprovar disputas na fila de revisão",
-          "body": "Aprove na página de **detalhe da disputa** depois de abri-la pela lista ou pelo painel.\n\nPassos:\n1. Vá em **Disputas** e clique na linha, ou abra a disputa pelo painel.\n2. Revise o pacote de evidências e a completude no detalhe.\n3. Use **Aprovar e salvar** para executar o fluxo e salvar no Shopify se os limites forem atendidos.\n\nVocê pode gerar ou atualizar pacotes no detalhe antes. **Não há botão Aprovar só na lista** — a confirmação é no detalhe."
+          "body": "Aprove na página de **detalhe da disputa** depois de abri-la pela lista ou pelo painel.\n\nPassos:\n1. Vá em **Disputas** e use **Ver detalhes** (ou abra a disputa pelo painel).\n2. Revise o pacote de evidências e a completude no detalhe.\n3. Use **Aprovar e salvar** para executar o fluxo e salvar no Shopify se os limites forem atendidos.\n\nVocê pode gerar ou atualizar pacotes no detalhe antes. **Não há botão Aprovar só na lista** — a confirmação é no detalhe."
         }
       }
     }

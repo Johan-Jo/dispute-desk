@@ -180,6 +180,7 @@
     "noPacks": "Inga bevispaket ännu. Skapa ett för att komma igång.",
     "noPacksAuto": "Inga bevispaket ännu. Automationspipelinen skapar ett automatiskt, eller klicka Skapa paket.",
     "noDisputes": "Inga tvister hittades. Klicka Synka nu för att hämta från Shopify.",
+    "noMatchingDisputes": "Inga tvister matchar din sökning eller dina filter.",
     "connectStore": "Anslut en Shopify-butik för att se tvister.",
     "packLimitReached": "Paketgräns nådd",
     "planLimitMessage": "Plangräns nådd. Vänligen uppgradera.",
@@ -1121,7 +1122,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Visa och filtrera tvister",
-          "body": "Sidan **Tvister** listar dina återkrav i en tabell.\n\nVerktygsrad:\n- **Sök** — efter ID, order eller anledning.\n- **Filtrera** — ett eller flera statusvärden (Behöver svar, Under granskning, Vunnen, Förlorad).\n- **Exportera** — CSV av raderna du ser efter sökning/filter.\n- **Synka nu** — hämta senaste tvister från Shopify direkt.\n\nKolumner: tvist-ID, order, anledning, belopp, status, förfallodatum och en chevron. Klicka på en rad för detaljsidan.\n\n**Det finns ingen separat flik för granskningskön** i den här appen: tvister som dina regler skickar till manuell granskning visas i samma lista. Öppna en tvist för att arbeta med paketet och godkännande."
+          "body": "Tabellen **Tvister** har **samma kolumner** som de senaste tvisterna på instrumentpanelen: **Order** (länk till Shopify Admin när den finns), **ID** (kort internt id), **Kund**, **Belopp**, **Anledning**, **Status**, **Deadline** (månad och dag) och **Visa detaljer** för att öppna tvisten i DisputeDesk.\n\nVerktygsrad: **Sök** (order, ID, kund, anledning), **Filtrera** efter status, **Exportera** CSV, **Synka nu**.\n\n**Ingen separat granskningskö-flik**: tvister för manuell granskning visas i samma lista. Använd **Visa detaljer** och sedan **Godkänn och spara** på detaljsidan."
         },
         "reviewQueue": {
           "title": "Granskningskön",
@@ -1129,7 +1130,7 @@
         },
         "approvingDisputes": {
           "title": "Godkänna tvister från granskningskön",
-          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och klicka på raden, eller öppna tvisten från instrumentpanelen.\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan."
+          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och använd **Visa detaljer** (eller öppna tvisten från instrumentpanelen).\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan."
         }
       }
     }

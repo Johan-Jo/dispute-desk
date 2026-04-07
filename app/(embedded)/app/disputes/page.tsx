@@ -1,21 +1,26 @@
 /**
- * Figma Make source: ShopifyDisputes (lucide + Tailwind reference).
- * Route: app/(embedded)/app/disputes/page.tsx
- * Layout: title + subtitle, toolbar card (search, Filter, Export, Sync), table card
- * (columns: Dispute ID, Order, Reason, Amount, Status, Due date, chevron).
+ * Embedded disputes list — same table columns as dashboard Recent Disputes (`app/page.tsx`).
+ * Toolbar: Search, Filter, Export, Sync. Columns: Order, ID, Customer, Amount, Reason, Status, Deadline, Actions.
  */
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
+import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
+import {
+  recentDisputesOrderLinkStyle,
+  recentDisputesTdStyle,
+  recentDisputesThStyle,
+  recentDisputesViewDetailsLinkStyle,
+} from "@/lib/embedded/recentDisputesTableStyles";
 import styles from "./disputes-list.module.css";
 import {
   Page,
   Layout,
   Card,
-  IndexTable,
   Text,
   Badge,
   ChoiceList,
@@ -28,18 +33,14 @@ import {
   TextField,
   Popover,
 } from "@shopify/polaris";
-import {
-  ChevronRightIcon,
-  ExportIcon,
-  SearchIcon,
-  FilterIcon,
-  RefreshIcon,
-} from "@shopify/polaris-icons";
+import { ExportIcon, SearchIcon, FilterIcon, RefreshIcon } from "@shopify/polaris-icons";
 
 interface Dispute {
   id: string;
   dispute_gid: string;
   order_gid: string | null;
+  order_name?: string | null;
+  customer_display_name?: string | null;
   status: string | null;
   reason: string | null;
   amount: number | null;
@@ -58,20 +59,10 @@ function isSyntheticDispute(disputeGid: string): boolean {
   return disputeGid?.includes("/seed-") ?? false;
 }
 
-function statusTone(
-  status: string | null
-): "success" | "warning" | "critical" | "info" | undefined {
-  switch (status) {
-    case "won":
-      return "success";
-    case "needs_response":
-    case "under_review":
-      return "warning";
-    case "lost":
-      return "critical";
-    default:
-      return "info";
-  }
+/** Matches dashboard `RecentDisputesTable` reason formatting. */
+function formatReasonTitleCase(reason: string | null): string {
+  if (!reason) return "—";
+  return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatCurrency(amount: number | null, code: string | null): string {
@@ -82,20 +73,15 @@ function formatCurrency(amount: number | null, code: string | null): string {
   }).format(amount);
 }
 
-/** Title case for display (Figma mock: "Fraudulent", "Product not received"). */
-function formatReason(reason: string | null): string {
-  if (!reason?.trim()) return "";
-  const words = reason.replace(/_/g, " ").toLowerCase().split(/\s+/).filter(Boolean);
-  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+function shortDisputeId(id: string): string {
+  return id.slice(0, 8).toUpperCase();
 }
 
-function isPastDue(iso: string | null): boolean {
-  if (!iso) return false;
-  return new Date(iso).getTime() < Date.now();
+function orderLabel(d: Dispute): string {
+  return d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—");
 }
 
 export default function DisputesListPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
   const locale = useLocale();
@@ -108,7 +94,16 @@ export default function DisputesListPage() {
     return "en-US";
   }, [locale]);
 
-  const formatDisputeDate = useCallback(
+  /** Dashboard-style deadline: abbreviated month + day only. */
+  const formatDeadlineShort = useCallback(
+    (iso: string | null) => {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+    },
+    [dateLocale]
+  );
+
+  const formatDisputeDateFull = useCallback(
     (iso: string | null) => {
       if (!iso) return "—";
       return new Date(iso).toLocaleDateString(dateLocale, {
@@ -119,6 +114,8 @@ export default function DisputesListPage() {
     },
     [dateLocale]
   );
+
+  const [shopDomain, setShopDomain] = useState<string | null>(null);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -127,6 +124,18 @@ export default function DisputesListPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
   const [filterPopoverActive, setFilterPopoverActive] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/billing/usage")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: { shop_domain?: string | null }) => {
+        if (!cancelled) setShopDomain(d.shop_domain ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchDisputes = useCallback(async () => {
     setLoading(true);
@@ -157,33 +166,52 @@ export default function DisputesListPage() {
     setSyncing(false);
   };
 
-  const statusLabel = (status: string | null): string => {
+  const statusLabelForCsv = (status: string | null): string => {
+    if (!status) return t("disputes.statusUnknown");
     switch (status) {
       case "needs_response":
-        return t("status.needsResponse");
+        return t("disputes.statusNeedsResponse");
       case "under_review":
-        return t("status.underReview");
+        return t("disputes.statusUnderReview");
+      case "charge_refunded":
       case "won":
-        return t("status.won");
+        return t("disputes.statusWon");
       case "lost":
-        return t("status.lost");
+        return t("disputes.statusLost");
       default:
-        return t("status.unknown");
+        return status.replace(/_/g, " ");
     }
   };
 
-  const disputeIdDisplay = (d: Dispute): string => {
-    const last = d.dispute_gid.split("/").pop();
-    return last ?? d.id.slice(0, 12);
+  const renderStatusBadge = (status: string | null) => {
+    if (!status) return <Badge>{t("disputes.statusUnknown")}</Badge>;
+    switch (status) {
+      case "needs_response":
+        return <Badge tone="warning">{t("disputes.statusNeedsResponse")}</Badge>;
+      case "under_review":
+        return <Badge tone="info">{t("disputes.statusUnderReview")}</Badge>;
+      case "charge_refunded":
+      case "won":
+        return <Badge tone="success">{t("disputes.statusWon")}</Badge>;
+      case "lost":
+        return <Badge tone="critical">{t("disputes.statusLost")}</Badge>;
+      default:
+        return <Badge>{status.replace(/_/g, " ")}</Badge>;
+    }
   };
 
   const visibleDisputes = queryValue
     ? disputes.filter((d) => {
         const q = queryValue.toLowerCase();
+        const sid = shortDisputeId(d.id).toLowerCase();
         return (
           d.dispute_gid.toLowerCase().includes(q) ||
+          d.id.toLowerCase().includes(q) ||
+          sid.includes(q) ||
           (d.reason ?? "").toLowerCase().includes(q) ||
-          (d.order_gid ?? "").toLowerCase().includes(q)
+          (d.order_gid ?? "").toLowerCase().includes(q) ||
+          (d.order_name ?? "").toLowerCase().includes(q) ||
+          (d.customer_display_name ?? "").toLowerCase().includes(q)
         );
       })
     : disputes;
@@ -191,15 +219,16 @@ export default function DisputesListPage() {
   const exportCsv = () => {
     const rows = visibleDisputes.map((d) =>
       [
-        disputeIdDisplay(d),
-        d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "",
-        formatReason(d.reason) || (d.reason ?? ""),
+        orderLabel(d),
+        shortDisputeId(d.id),
+        d.customer_display_name ?? "",
         formatCurrency(d.amount, d.currency_code),
-        statusLabel(d.status),
-        formatDisputeDate(d.due_at),
+        formatReasonTitleCase(d.reason),
+        statusLabelForCsv(d.status),
+        formatDisputeDateFull(d.due_at),
       ].join(",")
     );
-    const csv = ["ID,Order,Reason,Amount,Status,Due Date", ...rows].join("\n");
+    const csv = ["Order,ID,Customer,Amount,Reason,Status,Deadline", ...rows].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     a.download = "disputes.csv";
@@ -238,47 +267,68 @@ export default function DisputesListPage() {
     </Box>
   );
 
-  const rowMarkup = visibleDisputes.map((d, idx) => {
-    const overdue = isPastDue(d.due_at);
-    const reasonText = formatReason(d.reason);
+  const tableBodyMarkup = visibleDisputes.map((d) => {
+    const orderUrl = shopifyOrderAdminUrl(shopDomain, d.order_gid);
+    const label = orderLabel(d);
     return (
-      <IndexTable.Row
-        id={d.id}
+      <tr
         key={d.id}
-        position={idx}
-        onClick={() => router.push(withShopParams(`/app/disputes/${d.id}`, searchParams))}
+        style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}
       >
-        <IndexTable.Cell>
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="span" variant="bodyMd" fontWeight="semibold">
-              {disputeIdDisplay(d)}
+        <td style={recentDisputesTdStyle}>
+          {orderUrl ? (
+            <a
+              href={orderUrl}
+              target="_top"
+              rel="noopener noreferrer"
+              style={recentDisputesOrderLinkStyle}
+            >
+              {label}
+            </a>
+          ) : (
+            <Text as="span" variant="bodySm" fontWeight="semibold">
+              {label}
+            </Text>
+          )}
+        </td>
+        <td style={recentDisputesTdStyle}>
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Text as="span" variant="bodySm" tone="subdued">
+              {shortDisputeId(d.id)}
             </Text>
             {isSyntheticDispute(d.dispute_gid) && <Badge tone="info">Synthetic</Badge>}
           </InlineStack>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <span className={styles.orderLink}>
-            {d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "—"}
-          </span>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <span className={styles.reasonMuted}>{reasonText || t("status.unknown")}</span>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <span className={styles.amountEmphasis}>{formatCurrency(d.amount, d.currency_code)}</span>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <Badge tone={statusTone(d.status)}>{statusLabel(d.status)}</Badge>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <span className={overdue ? styles.dueOverdue : styles.dueDeadline}>
-            {formatDisputeDate(d.due_at)}
-          </span>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <Icon source={ChevronRightIcon} tone="subdued" />
-        </IndexTable.Cell>
-      </IndexTable.Row>
+        </td>
+        <td style={recentDisputesTdStyle}>
+          <Text as="span" variant="bodySm" tone={d.customer_display_name ? undefined : "subdued"}>
+            {d.customer_display_name ?? "—"}
+          </Text>
+        </td>
+        <td style={recentDisputesTdStyle}>
+          <Text as="span" variant="bodySm" fontWeight="semibold">
+            {formatCurrency(d.amount, d.currency_code)}
+          </Text>
+        </td>
+        <td style={recentDisputesTdStyle}>
+          <Text as="span" variant="bodySm" tone="subdued">
+            {formatReasonTitleCase(d.reason)}
+          </Text>
+        </td>
+        <td style={recentDisputesTdStyle}>{renderStatusBadge(d.status)}</td>
+        <td style={recentDisputesTdStyle}>
+          <Text as="span" variant="bodySm" tone="subdued">
+            {formatDeadlineShort(d.due_at)}
+          </Text>
+        </td>
+        <td style={recentDisputesTdStyle}>
+          <Link
+            href={withShopParams(`/app/disputes/${d.id}`, searchParams)}
+            style={recentDisputesViewDetailsLinkStyle}
+          >
+            {t("table.viewDetails")}
+          </Link>
+        </td>
+      </tr>
     );
   });
 
@@ -329,29 +379,36 @@ export default function DisputesListPage() {
                 </Card>
               </div>
 
-              <div className={`${styles.tableCard} ${styles.tableFigma}`}>
-                <Card padding="0">
+              <div className={styles.tableCard}>
+                <Card>
                   {loading ? (
-                    <div style={{ padding: "2rem", textAlign: "center" }}>
+                    <BlockStack gap="400" inlineAlign="center">
                       <Spinner size="large" />
-                    </div>
+                    </BlockStack>
+                  ) : visibleDisputes.length === 0 ? (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      {disputes.length === 0
+                        ? t("disputes.noDisputes")
+                        : t("disputes.noMatchingDisputes")}
+                    </Text>
                   ) : (
-                    <IndexTable
-                      resourceName={{ singular: "dispute", plural: "disputes" }}
-                      itemCount={visibleDisputes.length}
-                      headings={[
-                        { title: t("table.disputeId") },
-                        { title: t("table.order") },
-                        { title: t("table.reason") },
-                        { title: t("table.amount") },
-                        { title: t("table.status") },
-                        { title: t("disputes.dueDate") },
-                        { title: "" },
-                      ]}
-                      selectable={false}
-                    >
-                      {rowMarkup}
-                    </IndexTable>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
+                            <th style={recentDisputesThStyle}>{t("table.order")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.id")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.customer")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.amount")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.reason")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.status")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
+                            <th style={recentDisputesThStyle}>{t("table.actions")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>{tableBodyMarkup}</tbody>
+                      </table>
+                    </div>
                   )}
                 </Card>
               </div>

@@ -36,6 +36,13 @@ import { useTranslations } from "next-intl";
 import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
 import type { SetupStateResponse } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
+import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
+import {
+  recentDisputesOrderLinkStyle,
+  recentDisputesTdStyle,
+  recentDisputesThStyle,
+  recentDisputesViewDetailsLinkStyle,
+} from "@/lib/embedded/recentDisputesTableStyles";
 import { useSearchParams, useRouter } from "next/navigation";
 
 interface AutomationSettings {
@@ -127,14 +134,6 @@ function DashboardSetupBanner() {
   );
 }
 
-function shopifyOrderUrl(shopDomain: string | null, orderGid: string | null): string | null {
-  if (!shopDomain || !orderGid) return null;
-  // gid://shopify/Order/1234567890 → numeric id
-  const numericId = orderGid.split("/").pop();
-  if (!numericId) return null;
-  return `https://${shopDomain}/admin/orders/${numericId}`;
-}
-
 function RecentDisputesTable() {
   const t = useTranslations();
   const searchParams = useSearchParams();
@@ -158,7 +157,7 @@ function RecentDisputesTable() {
             id: d.id,
             shortId: d.id.slice(0, 8).toUpperCase(),
             order: d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—"),
-            orderUrl: shopifyOrderUrl(shopDomain, d.order_gid ?? null),
+            orderUrl: shopifyOrderAdminUrl(shopDomain, d.order_gid ?? null),
             customer: d.customer_display_name ?? null,
             amount: d.amount != null ? `$${Number(d.amount).toFixed(2)}` : "—",
             reason: d.reason ?? null,
@@ -210,16 +209,6 @@ function RecentDisputesTable() {
     return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  const thStyle: React.CSSProperties = {
-    padding: "10px 16px",
-    fontWeight: 600,
-    fontSize: "12px",
-    color: "var(--p-color-text-secondary)",
-    textAlign: "left",
-    whiteSpace: "nowrap",
-  };
-  const tdStyle: React.CSSProperties = { padding: "14px 16px", verticalAlign: "middle" };
-
   return (
     <Card>
       <BlockStack gap="400">
@@ -231,14 +220,14 @@ function RecentDisputesTable() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
-                <th style={thStyle}>{t("table.order")}</th>
-                <th style={thStyle}>{t("table.id")}</th>
-                <th style={thStyle}>{t("table.customer")}</th>
-                <th style={thStyle}>{t("table.amount")}</th>
-                <th style={thStyle}>{t("table.reason")}</th>
-                <th style={thStyle}>{t("table.status")}</th>
-                <th style={thStyle}>{t("table.deadline")}</th>
-                <th style={thStyle}>{t("table.actions")}</th>
+                <th style={recentDisputesThStyle}>{t("table.order")}</th>
+                <th style={recentDisputesThStyle}>{t("table.id")}</th>
+                <th style={recentDisputesThStyle}>{t("table.customer")}</th>
+                <th style={recentDisputesThStyle}>{t("table.amount")}</th>
+                <th style={recentDisputesThStyle}>{t("table.reason")}</th>
+                <th style={recentDisputesThStyle}>{t("table.status")}</th>
+                <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
+                <th style={recentDisputesThStyle}>{t("table.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -247,13 +236,13 @@ function RecentDisputesTable() {
                   key={r.id}
                   style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}
                 >
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>
                     {r.orderUrl ? (
                       <a
                         href={r.orderUrl}
                         target="_top"
                         rel="noopener noreferrer"
-                        style={{ fontWeight: 600, color: "#4F46E5", textDecoration: "none" }}
+                        style={recentDisputesOrderLinkStyle}
                       >
                         {r.order}
                       </a>
@@ -261,28 +250,28 @@ function RecentDisputesTable() {
                       <Text as="span" variant="bodySm" fontWeight="semibold">{r.order}</Text>
                     )}
                   </td>
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{r.shortId}</Text>
                   </td>
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone={r.customer ? undefined : "subdued"}>
                       {r.customer ?? "—"}
                     </Text>
                   </td>
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" fontWeight="semibold">{r.amount}</Text>
                   </td>
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{formatReason(r.reason)}</Text>
                   </td>
-                  <td style={tdStyle}>{statusBadge(r.status)}</td>
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>{statusBadge(r.status)}</td>
+                  <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{r.deadline ?? "—"}</Text>
                   </td>
-                  <td style={tdStyle}>
+                  <td style={recentDisputesTdStyle}>
                     <Link
                       href={withShopParams(`/app/disputes/${r.id}`, searchParams)}
-                      style={{ color: "#4F46E5", fontSize: "13px", textDecoration: "none", whiteSpace: "nowrap" }}
+                      style={recentDisputesViewDetailsLinkStyle}
                     >
                       {t("table.viewDetails")}
                     </Link>

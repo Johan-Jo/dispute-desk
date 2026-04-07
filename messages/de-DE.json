@@ -179,6 +179,7 @@
     "noPacks": "Noch keine Bewispakete. Erstellen Sie eines, um zu beginnen.",
     "noPacksAuto": "Noch keine Bewispakete. Die Pipeline erstellt automatisch eines, oder klicken Sie auf Paket erstellen.",
     "noDisputes": "Keine Streitfälle gefunden. Klicken Sie auf Jetzt synchronisieren.",
+    "noMatchingDisputes": "Keine Streitfälle entsprechen Ihrer Suche oder den Filtern.",
     "connectStore": "Verbinden Sie einen Shopify-Shop, um Streitfälle zu sehen.",
     "packLimitReached": "Paketlimit erreicht",
     "planLimitMessage": "Planlimit erreicht. Bitte upgraden.",
@@ -1120,7 +1121,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Streitfälle anzeigen und filtern",
-          "body": "Die Seite **Streitfälle** listet Ihre Chargebacks in einer Tabelle.\n\nLeiste:\n- **Suche** — nach ID, Bestellung oder Grund suchen.\n- **Filter** — einen oder mehrere Status wählen (Antwort erforderlich, In Prüfung, Gewonnen, Verloren).\n- **Export** — CSV der aktuell sichtbaren Zeilen (nach Suche/Filter).\n- **Jetzt synchronisieren** — neueste Streitfälle sofort von Shopify laden.\n\nSpalten: Streitfall-ID, Bestellung, Grund, Betrag, Status, Fälligkeitsdatum und ein Chevron. Klicken Sie eine Zeile für die Detailseite.\n\nEs gibt **keinen separaten Tab „Prüfungswarteschlange“** in dieser App: Streitfälle, die Ihre Regeln zur manuellen Prüfung senden, erscheinen in derselben Liste. Öffnen Sie einen Streitfall, um am Paket und der Freigabe zu arbeiten."
+          "body": "Die Tabelle **Streitfälle** hat **dieselben Spalten** wie die letzten Streitfälle im Dashboard: **Bestellung** (Link zum Shopify Admin wenn möglich), **ID** (kurze interne ID), **Kunde**, **Betrag**, **Grund**, **Status**, **Frist** (Monat und Tag) und **Details anzeigen** zum Öffnen in DisputeDesk.\n\nLeiste: **Suche** (Bestellung, ID, Kunde, Grund), **Filter** nach Status, **Export** CSV, **Jetzt synchronisieren**.\n\n**Kein separater Tab „Prüfungswarteschlange“**: Streitfälle zur manuellen Prüfung erscheinen in derselben Liste. Nutzen Sie **Details anzeigen**, dann **Genehmigen und speichern** auf der Detailseite."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
@@ -1128,7 +1129,7 @@
         },
         "approvingDisputes": {
           "title": "Freigabe aus der Prüfungswarteschlange",
-          "body": "Freigabe erfolgt auf der **Streitfall-Detailseite**, nachdem Sie einen Streitfall aus der Liste oder vom Dashboard geöffnet haben.\n\nSchritte:\n1. Gehen Sie zu **Streitfälle** und klicken Sie die Zeile, oder öffnen Sie den Streitfall vom Dashboard.\n2. Prüfen Sie Beweispaket und Vollständigkeit auf der Detailseite.\n3. Nutzen Sie **Freigabe & Speichern**, um die Pipeline auszuführen und Beweise in Shopify zu speichern, wenn Ihre Schwellen passen.\n\nSie können Pakete vorher auf der Detailseite erzeugen oder aktualisieren. Es gibt **keine reine Listen-Schaltfläche „Freigabe“** — die Bestätigung erfolgt auf der Detailseite."
+          "body": "Freigabe erfolgt auf der **Streitfall-Detailseite**, nachdem Sie einen Streitfall aus der Liste oder vom Dashboard geöffnet haben.\n\nSchritte:\n1. Gehen Sie zu **Streitfälle** und nutzen Sie **Details anzeigen**, oder öffnen Sie den Streitfall vom Dashboard.\n2. Prüfen Sie Beweispaket und Vollständigkeit auf der Detailseite.\n3. Nutzen Sie **Freigabe & Speichern**, um die Pipeline auszuführen und Beweise in Shopify zu speichern, wenn Ihre Schwellen passen.\n\nSie können Pakete vorher auf der Detailseite erzeugen oder aktualisieren. Es gibt **keine reine Listen-Schaltfläche „Freigabe“** — die Bestätigung erfolgt auf der Detailseite."
         }
       }
     }

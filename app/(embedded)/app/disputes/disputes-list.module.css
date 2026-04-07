@@ -1,58 +1,11 @@
-/* High-fidelity alignment with DisputeDesk disputes mock (toolbar + table). */
+/* Toolbar + table card shell (same Polaris Card shadow as dashboard). */
 .constrain {
   max-width: 72rem;
   margin-inline: auto;
   width: 100%;
 }
 
-/* Figma-like neutral toolbar: one surface with light border (Polaris Card adds its own). */
 .toolbarCard :global(.Polaris-ShadowBevel),
 .tableCard :global(.Polaris-ShadowBevel) {
   box-shadow: 0 1px 0 rgba(22, 29, 37, 0.05);
-}
-
-.tableFigma :global(.Polaris-IndexTable__TableHeading) {
-  background: #f7f8fa !important;
-  color: #6d7175 !important;
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-bottom: 1px solid #e1e3e5 !important;
-}
-
-.tableFigma :global(.Polaris-IndexTable__Table) {
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.orderLink {
-  color: #7c3aed;
-  font-weight: 500;
-  font-size: var(--p-font-size-350);
-  line-height: var(--p-font-line-height-500);
-}
-
-.reasonMuted {
-  color: #6d7175;
-  font-size: var(--p-font-size-350);
-  line-height: var(--p-font-line-height-500);
-}
-
-.amountEmphasis {
-  color: #202223;
-  font-weight: 600;
-  font-size: var(--p-font-size-350);
-}
-
-.dueDeadline {
-  color: #991b1b;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1.25rem;
-}
-
-.dueOverdue {
-  color: #7f1d1d;
-  font-weight: 600;
 }
