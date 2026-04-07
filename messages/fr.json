@@ -942,6 +942,18 @@
         "afterSaving": {
           "title": "Que se passe-t-il après l'enregistrement des preuves",
           "body": "Après avoir enregistré des preuves depuis cette app vers Shopify :\n\n1. Les preuves apparaissent dans Shopify Admin : allez dans Commandes → la commande liée → Litige.\n2. Vous pouvez ajouter des notes finales ou des ajustements dans Shopify Admin.\n3. Shopify envoie les preuves au réseau de cartes lorsque vous cliquez sur répondre dans Shopify Admin, ou automatiquement à la date d'échéance.\n4. Le réseau de cartes examine et résout le litige comme Gagné ou Perdu.\n\nDisputeDesk met à jour le statut lorsque Shopify signale la résolution."
+        },
+        "viewingFilteringDisputes": {
+          "title": "Afficher et filtrer les litiges",
+          "body": "La page **Litiges** liste vos rétrofacturations dans un tableau.\n\nBarre d'outils :\n- **Recherche** — par ID, commande ou motif.\n- **Filtrer** — un ou plusieurs statuts (Réponse requise, En examen, Gagné, Perdu).\n- **Exporter** — CSV des lignes visibles après recherche/filtre.\n- **Synchroniser maintenant** — récupérer les derniers litiges depuis Shopify tout de suite.\n\nColonnes : ID de litige, commande, motif, montant, statut, date limite et un chevron. Cliquez sur une ligne pour ouvrir le détail.\n\n**Il n'y a pas d'onglet séparé « file d'attente de révision »** dans cette app : les litiges que vos règles envoient en révision manuelle apparaissent dans la même liste. Ouvrez un litige pour travailler sur le paquet et l'approbation."
+        },
+        "reviewQueue": {
+          "title": "La file d'attente de révision",
+          "body": "La file d'attente regroupe les litiges que vos règles orientent vers une **révision manuelle** avant l'enregistrement des preuves dans Shopify.\n\nIls y arrivent lorsque :\n- une règle les envoie en révision (par ex. montant élevé),\n- aucune règle ne correspond et la valeur par défaut est la révision,\n- **Révision avant enregistrement auto** est activé dans l'automatisation.\n\nDans l'app intégrée, ils apparaissent dans la liste **Litiges** avec les autres — utilisez **Filtrer** par statut ou ouvrez-les depuis le tableau de bord. Ouvrez le litige, examinez le paquet puis **Approuver et enregistrer** sur la page de détail lorsque vous êtes prêt."
+        },
+        "approvingDisputes": {
+          "title": "Approuver des litiges depuis la file d'attente",
+          "body": "Approuvez depuis la page de **détail du litige** après l'avoir ouverte depuis la liste ou le tableau de bord.\n\nÉtapes :\n1. Allez dans **Litiges** et cliquez sur la ligne, ou ouvrez le litige depuis le tableau de bord.\n2. Vérifiez le paquet de preuves et la complétude sur le détail.\n3. Utilisez **Approuver et enregistrer** pour lancer le pipeline et enregistrer dans Shopify si vos seuils sont atteints.\n\nVous pouvez générer ou actualiser les paquets sur le détail au préalable. **Il n'y a pas de bouton Approuver uniquement sur la liste** — la confirmation se fait sur le détail."
         }
       }
     }

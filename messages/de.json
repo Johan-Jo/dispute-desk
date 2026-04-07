@@ -942,6 +942,18 @@
         "afterSaving": {
           "title": "Was passiert nach dem Speichern der Beweise",
           "body": "Nachdem du Beweise von dieser App in Shopify gespeichert hast:\n\n1. Beweise erscheinen in Shopify Admin: Gehe zu Bestellungen → die verknüpfte Bestellung → Rückbuchung.\n2. Du kannst in Shopify Admin abschließende Notizen hinzufügen oder Anpassungen vornehmen.\n3. Shopify sendet die Beweise an das Kartennetzwerk, wenn du in Shopify Admin auf 'Antworten' klickst, oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft den Streitfall und löst ihn als Gewonnen oder Verloren.\n\nDisputeDesk aktualisiert den Status, wenn Shopify das Ergebnis meldet."
+        },
+        "viewingFilteringDisputes": {
+          "title": "Streitfälle anzeigen und filtern",
+          "body": "Die Seite **Streitfälle** listet deine Chargebacks in einer Tabelle.\n\nLeiste:\n- **Suche** — nach ID, Bestellung oder Grund suchen.\n- **Filter** — einen oder mehrere Status wählen (Antwort erforderlich, In Prüfung, Gewonnen, Verloren).\n- **Export** — CSV der aktuell sichtbaren Zeilen (nach Suche/Filter).\n- **Jetzt synchronisieren** — neueste Streitfälle sofort von Shopify laden.\n\nSpalten: Streitfall-ID, Bestellung, Grund, Betrag, Status, Fälligkeitsdatum und ein Chevron. Klicke eine Zeile für die Detailseite.\n\nEs gibt **keinen separaten Tab „Prüfungswarteschlange“** in dieser App: Streitfälle, die deine Regeln zur manuellen Prüfung senden, erscheinen in derselben Liste. Öffne einen Streitfall, um am Paket und der Freigabe zu arbeiten."
+        },
+        "reviewQueue": {
+          "title": "Die Prüfungswarteschlange",
+          "body": "Die Prüfungswarteschlange umfasst Streitfälle, die deine Regeln zur **manuellen Prüfung** leiten, bevor Beweise in Shopify gespeichert werden.\n\nStreitfälle landen hier, wenn:\n- eine Regel sie zur Prüfung sendet (z. B. hoher Betrag),\n- keine Regel passt und die Vorgabe „Prüfung“ ist,\n- **Prüfung vor Auto-Speichern** in den Automatisierungseinstellungen aktiv ist.\n\nIn der eingebetteten App erscheinen sie auf der Liste **Streitfälle** mit deinen übrigen Chargebacks — nutze **Filter** nach Status oder öffne Einträge vom Dashboard. Öffne einen Streitfall, prüfe das Paket und nutze auf der Detailseite **Freigabe & Speichern**, wenn du soweit bist."
+        },
+        "approvingDisputes": {
+          "title": "Freigabe aus der Prüfungswarteschlange",
+          "body": "Freigabe erfolgt auf der **Streitfall-Detailseite**, nachdem du einen Streitfall aus der Liste oder vom Dashboard geöffnet hast.\n\nSchritte:\n1. Gehe zu **Streitfälle** und klicke die Zeile, oder öffne den Streitfall vom Dashboard.\n2. Prüfe Beweispaket und Vollständigkeit auf der Detailseite.\n3. Nutze **Freigabe & Speichern**, um die Pipeline auszuführen und Beweise in Shopify zu speichern, wenn deine Schwellen passen.\n\nDu kannst Pakete vorher auf der Detailseite erzeugen oder aktualisieren. Es gibt **keine reine Listen-Schaltfläche „Freigabe“** — die Bestätigung erfolgt auf der Detailseite."
         }
       }
     }

@@ -1125,6 +1125,18 @@
         "afterSaving": {
           "title": "What happens after saving evidence",
           "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution."
+        },
+        "viewingFilteringDisputes": {
+          "title": "Viewing and filtering disputes",
+          "body": "The **Disputes** page lists your chargebacks in a table.\n\nToolbar:\n- **Search** — find disputes by ID, order, or reason.\n- **Filter** — pick one or more statuses (Needs response, Under review, Won, Lost).\n- **Export** — download a CSV of the rows you see after search and filter.\n- **Sync Now** — fetch the latest disputes from Shopify right away.\n\nThe table shows dispute ID, order, reason, amount, status, due date, and a chevron. Click a row to open the dispute detail page.\n\nThere is no separate **Review Queue** tab in this app: disputes your rules send to manual review appear in this same list. Open a dispute to work on its pack and approval."
+        },
+        "reviewQueue": {
+          "title": "The review queue",
+          "body": "The review queue is disputes your rules route to **manual review** before evidence is saved to Shopify.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- **Require review before auto-save** is on in automation settings.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nThis keeps automation for simple cases and hands unusual or sensitive disputes to you."
+        },
+        "approvingDisputes": {
+          "title": "Approving disputes from the review queue",
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and click the row, or open the dispute from the dashboard.\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
         }
       }
     }

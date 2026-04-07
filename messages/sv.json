@@ -944,6 +944,18 @@
         "afterSaving": {
           "title": "Vad händer efter att bevis sparats",
           "body": "Efter att du sparat bevis från den här appen till Shopify:\n\n1. Bevis visas i Shopify Admin: gå till Beställningar → den länkade beställningen → Återkrav.\n2. Du kan lägga till slutliga anteckningar eller justeringar i Shopify Admin.\n3. Shopify skickar bevisen till kortnätverket när du klickar på svara i Shopify Admin, eller automatiskt på förfallodatum.\n4. Kortnätverket granskar och löser tvisten som Vunnen eller Förlorad.\n\nDisputeDesk uppdaterar statusen när Shopify rapporterar lösningen."
+        },
+        "viewingFilteringDisputes": {
+          "title": "Visa och filtrera tvister",
+          "body": "Sidan **Tvister** listar dina återkrav i en tabell.\n\nVerktygsrad:\n- **Sök** — efter ID, order eller anledning.\n- **Filtrera** — ett eller flera statusvärden (Behöver svar, Under granskning, Vunnen, Förlorad).\n- **Exportera** — CSV av raderna du ser efter sökning/filter.\n- **Synka nu** — hämta senaste tvister från Shopify direkt.\n\nKolumner: tvist-ID, order, anledning, belopp, status, förfallodatum och en chevron. Klicka på en rad för detaljsidan.\n\n**Det finns ingen separat flik för granskningskön** i den här appen: tvister som dina regler skickar till manuell granskning visas i samma lista. Öppna en tvist för att arbeta med paketet och godkännande."
+        },
+        "reviewQueue": {
+          "title": "Granskningskön",
+          "body": "Granskningskön omfattar tvister som dina regler styr till **manuell granskning** innan bevis sparas i Shopify.\n\nDe hamnar här när:\n- en regel skickar dem till granskning (t.ex. högt belopp),\n- ingen regel matchar och standarden är granskning,\n- **Granska innan autospara** är på i automatiseringen.\n\nI den inbäddade appen visas de i listan **Tvister** tillsammans med övriga — använd **Filtrera** efter status eller öppna från instrumentpanelen. Öppna tvisten, granska paketet och använd **Godkänn och spara** på detaljsidan när du är redo."
+        },
+        "approvingDisputes": {
+          "title": "Godkänna tvister från granskningskön",
+          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och klicka på raden, eller öppna tvisten från instrumentpanelen.\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan."
         }
       }
     }

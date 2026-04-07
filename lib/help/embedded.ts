@@ -63,6 +63,18 @@ export const EMBEDDED_ARTICLE_COPY_OVERRIDES: Record<
     titleKey: "help.embedded.articles.afterSaving.title",
     bodyKey: "help.embedded.articles.afterSaving.body",
   },
+  "viewing-filtering-disputes": {
+    titleKey: "help.embedded.articles.viewingFilteringDisputes.title",
+    bodyKey: "help.embedded.articles.viewingFilteringDisputes.body",
+  },
+  "review-queue": {
+    titleKey: "help.embedded.articles.reviewQueue.title",
+    bodyKey: "help.embedded.articles.reviewQueue.body",
+  },
+  "approving-disputes": {
+    titleKey: "help.embedded.articles.approvingDisputes.title",
+    bodyKey: "help.embedded.articles.approvingDisputes.body",
+  },
 };
 
 const EMBEDDED_SLUG_SET = new Set(EMBEDDED_ARTICLE_SLUGS);

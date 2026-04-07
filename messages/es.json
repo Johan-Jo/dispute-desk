@@ -942,6 +942,18 @@
         "afterSaving": {
           "title": "Qué ocurre después de guardar evidencias",
           "body": "Después de guardar evidencias desde esta app a Shopify:\n\n1. Las evidencias aparecen en Shopify Admin: ve a Pedidos → el pedido vinculado → Contracargo.\n2. Puedes añadir notas finales o ajustes en Shopify Admin.\n3. Shopify envía las evidencias a la red de tarjetas cuando haces clic en responder en Shopify Admin, o automáticamente en la fecha de vencimiento.\n4. La red de tarjetas revisa y resuelve la disputa como Ganada o Perdida.\n\nDisputeDesk actualiza el estado cuando Shopify informa la resolución."
+        },
+        "viewingFilteringDisputes": {
+          "title": "Ver y filtrar disputas",
+          "body": "La página **Disputas** muestra tus contracargos en una tabla.\n\nBarra de herramientas:\n- **Buscar** — por ID, pedido o motivo.\n- **Filtrar** — uno o más estados (Respuesta necesaria, En revisión, Ganada, Perdida).\n- **Exportar** — CSV de las filas visibles tras buscar/filtrar.\n- **Sincronizar ahora** — traer las últimas disputas de Shopify al instante.\n\nColumnas: ID de disputa, pedido, motivo, importe, estado, fecha límite y un chevron. Haz clic en una fila para abrir el detalle.\n\n**No hay una pestaña separada de cola de revisión** en esta app: las disputas que tus reglas envían a revisión manual aparecen en la misma lista. Abre una disputa para trabajar el paquete y la aprobación."
+        },
+        "reviewQueue": {
+          "title": "La cola de revisión",
+          "body": "La cola de revisión son disputas que tus reglas dirigen a **revisión manual** antes de guardar evidencias en Shopify.\n\nEntran aquí cuando:\n- una regla las envía a revisión (por ejemplo, alto importe),\n- no coincide ninguna regla y el valor por defecto es revisión,\n- **Revisión antes del autoguardado** está activo en automatización.\n\nEn la app incrustada aparecen en la lista **Disputas** con el resto — usa **Filtrar** por estado o ábrelas desde el panel. Abre la disputa, revisa el paquete y usa **Aprobar y guardar** en el detalle cuando estés listo."
+        },
+        "approvingDisputes": {
+          "title": "Aprobar disputas desde la cola de revisión",
+          "body": "Aprueba en la página de **detalle de la disputa** tras abrirla desde la lista o el panel.\n\nPasos:\n1. Ve a **Disputas** y haz clic en la fila, o abre la disputa desde el panel.\n2. Revisa el paquete de evidencia y la completitud en el detalle.\n3. Usa **Aprobar y guardar** para ejecutar el flujo y guardar en Shopify si pasan tus umbrales.\n\nPuedes generar o actualizar paquetes en el detalle antes. **No hay un botón Aprobar solo en la lista** — la confirmación es en el detalle."
         }
       }
     }
