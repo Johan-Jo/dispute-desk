@@ -1,0 +1,39 @@
+/* In-iframe brand bar + feedback (Figma-aligned), above Page content. */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-300);
+  padding: var(--p-space-300) var(--p-space-400);
+  background: var(--p-color-bg-surface);
+  border-radius: var(--p-border-radius-300);
+  box-shadow: 0 1px 0 rgba(22, 29, 37, 0.08);
+}
+
+.shieldTile {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--p-border-radius-200);
+  background: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shieldTile :global(.Polaris-Icon) {
+  color: #fff;
+}
+
+.brandTitle {
+  font-size: var(--p-font-size-500);
+  font-weight: var(--p-font-weight-semibold);
+  line-height: var(--p-font-line-height-500);
+  color: var(--p-color-text);
+}

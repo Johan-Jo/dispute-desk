@@ -17,7 +17,7 @@ after any scope or URL change.
 Run on a **development store** with the production or staging app URL (tunnel if needed).
 
 - [ ] **Install:** OAuth completes; app opens embedded with `shop` and `host` query params (see [`docs/technical.md`](technical.md) § Embedded app guard / troubleshooting).
-- [ ] **Embedded shell:** `/app` loads without redirect loops; session cookies present (`sameSite: none` context).
+- [ ] **Embedded shell:** `/app` loads without redirect loops; session cookies present (`sameSite: none` context). **In-iframe chrome:** brand row (DisputeDesk + ⋯ → Help / Settings) and optional feedback card appear above page content; dismiss feedback once and confirm it stays hidden after reload (`EmbeddedAppChrome` — see [`docs/technical.md`](technical.md) § Embedded app troubleshooting).
 - [ ] **Disputes:** `/app/disputes` loads; search, **Filter** (status popover), **Export** CSV, **Sync now** from **More actions** (⋯), row navigation to detail; sync (manual or cron) behaves as expected (see [`docs/technical.md`](technical.md) — embedded disputes list).
 - [ ] **Evidence:** Create or open a pack; **Save evidence** to Shopify works for a staff user with **Manage orders information** (Shopify Admin permission, not OAuth).
 - [ ] **Billing:** If testing paid plans, subscription approval flow opens and returns to the app.
@@ -31,7 +31,7 @@ Automated checks in-repo: `npm test`, `npx tsc --noEmit`, `npm run build`. Optio
 
 ## Design vs production (embedded)
 
-Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav, feedback strip). **Only the iframe body** is DisputeDesk; outer chrome is Shopify. Do not expect pixel parity on the full frame from app code — see [`docs/technical.md`](technical.md) (Figma full-frame vs embedded canvas).
+Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav). **Outer chrome is Shopify** — not rendered by this repo. **Inside the iframe**, DisputeDesk renders **`EmbeddedAppChrome`** (brand row + dismissible feedback card) and then each route’s Polaris `Page` content. Full-frame screenshots will still differ outside the iframe; see [`docs/technical.md`](technical.md) § Embedded app troubleshooting (Figma full-frame vs embedded canvas + in-iframe chrome).
 
 ## Related docs
 

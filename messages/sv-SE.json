@@ -17,6 +17,14 @@
     "clearShopReconnect": "Rensa butik och återanslut",
     "switchToDemo": "Byt till demobutik"
   },
+  "embeddedShell": {
+    "brandName": "DisputeDesk",
+    "feedbackPrompt": "Hur upplever du DisputeDesk hittills?",
+    "dismissFeedback": "Stäng feedback",
+    "menuHelp": "Hjälp",
+    "menuSettings": "Inställningar",
+    "moreActions": "Fler åtgärder"
+  },
   "common": {
     "loading": "Laddar...",
     "save": "Spara",
@@ -81,6 +89,7 @@
   },
   "dashboard": {
     "title": "DisputeDesk",
+    "embeddedPageTitle": "Dashboard",
     "overview": "Översikt",
     "subtitle": "Övervaka dina tvistoperationer på alla butiker",
     "activeDisputes": "Aktiva tvister",

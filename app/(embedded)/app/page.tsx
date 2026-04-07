@@ -617,7 +617,7 @@ export default function EmbeddedDashboardPage() {
 
   return (
     <Page
-      title={t("dashboard.title")}
+      title={t("dashboard.embeddedPageTitle")}
       subtitle={t("dashboard.embeddedSubtitle")}
       primaryAction={{ content: t("dashboard.automationSettings"), url: withShopParams("/app/settings", searchParams) }}
       secondaryActions={[{ content: t("nav.help"), url: withShopParams("/app/help", searchParams) }]}

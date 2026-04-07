@@ -17,6 +17,14 @@
     "clearShopReconnect": "Clear shop & reconnect",
     "switchToDemo": "Switch to demo store"
   },
+  "embeddedShell": {
+    "brandName": "DisputeDesk",
+    "feedbackPrompt": "How's your experience with DisputeDesk so far?",
+    "dismissFeedback": "Dismiss feedback",
+    "menuHelp": "Help",
+    "menuSettings": "Settings",
+    "moreActions": "More actions"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",
@@ -69,6 +77,7 @@
   },
   "dashboard": {
     "title": "DisputeDesk",
+    "embeddedPageTitle": "Dashboard",
     "overview": "Overview",
     "subtitle": "Monitor your dispute operations across all stores",
     "automationSettings": "Automation Settings",

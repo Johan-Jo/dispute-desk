@@ -17,6 +17,14 @@
     "clearShopReconnect": "Clear shop & reconnect",
     "switchToDemo": "Mudar para a loja demo"
   },
+  "embeddedShell": {
+    "brandName": "DisputeDesk",
+    "feedbackPrompt": "Como está sendo sua experiência com o DisputeDesk?",
+    "dismissFeedback": "Dispensar feedback",
+    "menuHelp": "Ajuda",
+    "menuSettings": "Configurações",
+    "moreActions": "Mais ações"
+  },
   "common": {
     "loading": "Carregando...",
     "save": "Salvar",
@@ -80,6 +88,7 @@
   },
   "dashboard": {
     "title": "DisputeDesk",
+    "embeddedPageTitle": "Painel",
     "subtitle": "Monitore suas operações de disputas",
     "overview": "Visão Geral",
     "automationSettings": "Configurações de Automação",
