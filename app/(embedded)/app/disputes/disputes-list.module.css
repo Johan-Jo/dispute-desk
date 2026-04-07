@@ -1,11 +1,71 @@
-/* Toolbar + table card shell (same Polaris Card shadow as dashboard). */
+/* Figma-aligned disputes list: single card, toolbar + table, uppercase header strip. */
 .constrain {
   max-width: 72rem;
   margin-inline: auto;
   width: 100%;
 }
 
-.toolbarCard :global(.Polaris-ShadowBevel),
-.tableCard :global(.Polaris-ShadowBevel) {
+.mainCard :global(.Polaris-ShadowBevel) {
   box-shadow: 0 1px 0 rgba(22, 29, 37, 0.05);
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.listTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.listTable thead tr {
+  background: var(--p-color-bg-surface-secondary);
+}
+
+.listTable th {
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--p-color-text-secondary);
+  text-align: left;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid var(--p-color-border);
+}
+
+.listTable td {
+  padding: 14px 16px;
+  vertical-align: middle;
+}
+
+.listTable tbody tr {
+  border-bottom: 1px solid var(--p-color-border-subdued);
+}
+
+.listTable tbody tr:hover {
+  background: var(--p-color-bg-surface-hover);
+}
+
+.listTable tbody tr:focus-visible {
+  outline: 2px solid var(--p-color-border-focus);
+  outline-offset: -2px;
+}
+
+.chevronCol {
+  width: 2.5rem;
+  text-align: center;
+}
+
+.orderAdminLink {
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: var(--p-font-size-350);
+  line-height: var(--p-font-line-height-500);
+  text-decoration: none;
+}
+
+.orderAdminLink:hover {
+  text-decoration: underline;
 }

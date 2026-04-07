@@ -1,21 +1,14 @@
 /**
- * Embedded disputes list — same table columns as dashboard Recent Disputes (`app/page.tsx`).
- * Toolbar: Search, Filter, Export, Sync. Columns: Order, ID, Customer, Amount, Reason, Status, Deadline, Actions.
+ * Embedded disputes list — Figma-aligned: one Card (toolbar + table), columns
+ * Dispute ID → Order → Reason → Amount → Status → Due date → chevron; row opens detail.
  */
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
-import {
-  recentDisputesOrderLinkStyle,
-  recentDisputesTdStyle,
-  recentDisputesThStyle,
-  recentDisputesViewDetailsLinkStyle,
-} from "@/lib/embedded/recentDisputesTableStyles";
 import styles from "./disputes-list.module.css";
 import {
   Page,
@@ -33,7 +26,7 @@ import {
   TextField,
   Popover,
 } from "@shopify/polaris";
-import { ExportIcon, SearchIcon, FilterIcon, RefreshIcon } from "@shopify/polaris-icons";
+import { ExportIcon, SearchIcon, FilterIcon, RefreshIcon, ChevronRightIcon } from "@shopify/polaris-icons";
 
 interface Dispute {
   id: string;
@@ -59,15 +52,14 @@ function isSyntheticDispute(disputeGid: string): boolean {
   return disputeGid?.includes("/seed-") ?? false;
 }
 
-/** Matches dashboard `RecentDisputesTable` reason formatting. */
 function formatReasonTitleCase(reason: string | null): string {
   if (!reason) return "—";
   return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatCurrency(amount: number | null, code: string | null): string {
+function formatCurrency(amount: number | null, code: string | null, locale: string): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: code ?? "USD",
   }).format(amount);
@@ -77,12 +69,19 @@ function shortDisputeId(id: string): string {
   return id.slice(0, 8).toUpperCase();
 }
 
+/** Figma-style ref e.g. DP-6984 (first 4 hex chars of UUID, no dashes). */
+function formatListDisputeId(id: string): string {
+  const hex = id.replace(/-/g, "").slice(0, 4).toUpperCase();
+  return `DP-${hex}`;
+}
+
 function orderLabel(d: Dispute): string {
   return d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—");
 }
 
 export default function DisputesListPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const t = useTranslations();
   const locale = useLocale();
   const dateLocale = useMemo(() => {
@@ -94,16 +93,9 @@ export default function DisputesListPage() {
     return "en-US";
   }, [locale]);
 
-  /** Dashboard-style deadline: abbreviated month + day only. */
-  const formatDeadlineShort = useCallback(
-    (iso: string | null) => {
-      if (!iso) return "—";
-      return new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
-    },
-    [dateLocale]
-  );
+  const numberLocale = dateLocale;
 
-  const formatDisputeDateFull = useCallback(
+  const formatDueDate = useCallback(
     (iso: string | null) => {
       if (!iso) return "—";
       return new Date(iso).toLocaleDateString(dateLocale, {
@@ -166,11 +158,18 @@ export default function DisputesListPage() {
     setSyncing(false);
   };
 
+  const goToDispute = useCallback(
+    (id: string) => {
+      router.push(withShopParams(`/app/disputes/${id}`, searchParams));
+    },
+    [router, searchParams]
+  );
+
   const statusLabelForCsv = (status: string | null): string => {
     if (!status) return t("disputes.statusUnknown");
     switch (status) {
       case "needs_response":
-        return t("disputes.statusNeedsResponse");
+        return t("disputes.statusOpen");
       case "under_review":
         return t("disputes.statusUnderReview");
       case "charge_refunded":
@@ -183,13 +182,14 @@ export default function DisputesListPage() {
     }
   };
 
+  /** Figma-style badges: Open (neutral), In review (warning/amber), Won, Lost. */
   const renderStatusBadge = (status: string | null) => {
     if (!status) return <Badge>{t("disputes.statusUnknown")}</Badge>;
     switch (status) {
       case "needs_response":
-        return <Badge tone="warning">{t("disputes.statusNeedsResponse")}</Badge>;
+        return <Badge>{t("disputes.statusOpen")}</Badge>;
       case "under_review":
-        return <Badge tone="info">{t("disputes.statusUnderReview")}</Badge>;
+        return <Badge tone="warning">{t("disputes.statusUnderReview")}</Badge>;
       case "charge_refunded":
       case "won":
         return <Badge tone="success">{t("disputes.statusWon")}</Badge>;
@@ -204,10 +204,12 @@ export default function DisputesListPage() {
     ? disputes.filter((d) => {
         const q = queryValue.toLowerCase();
         const sid = shortDisputeId(d.id).toLowerCase();
+        const dp = formatListDisputeId(d.id).toLowerCase();
         return (
           d.dispute_gid.toLowerCase().includes(q) ||
           d.id.toLowerCase().includes(q) ||
           sid.includes(q) ||
+          dp.includes(q) ||
           (d.reason ?? "").toLowerCase().includes(q) ||
           (d.order_gid ?? "").toLowerCase().includes(q) ||
           (d.order_name ?? "").toLowerCase().includes(q) ||
@@ -219,16 +221,15 @@ export default function DisputesListPage() {
   const exportCsv = () => {
     const rows = visibleDisputes.map((d) =>
       [
+        formatListDisputeId(d.id),
         orderLabel(d),
-        shortDisputeId(d.id),
-        d.customer_display_name ?? "",
-        formatCurrency(d.amount, d.currency_code),
         formatReasonTitleCase(d.reason),
+        formatCurrency(d.amount, d.currency_code, numberLocale),
         statusLabelForCsv(d.status),
-        formatDisputeDateFull(d.due_at),
+        formatDueDate(d.due_at),
       ].join(",")
     );
-    const csv = ["Order,ID,Customer,Amount,Reason,Status,Deadline", ...rows].join("\n");
+    const csv = ["Dispute ID,Order,Reason,Amount,Status,Due date", ...rows].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     a.download = "disputes.csv";
@@ -273,15 +274,35 @@ export default function DisputesListPage() {
     return (
       <tr
         key={d.id}
-        style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}
+        role="link"
+        tabIndex={0}
+        aria-label={t("disputes.viewDetails")}
+        style={{ cursor: "pointer" }}
+        onClick={() => goToDispute(d.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            goToDispute(d.id);
+          }
+        }}
       >
-        <td style={recentDisputesTdStyle}>
+        <td>
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Text as="span" variant="bodySm" fontWeight="semibold">
+              {formatListDisputeId(d.id)}
+            </Text>
+            {isSyntheticDispute(d.dispute_gid) && <Badge tone="info">Synthetic</Badge>}
+          </InlineStack>
+        </td>
+        <td>
           {orderUrl ? (
             <a
               href={orderUrl}
               target="_top"
               rel="noopener noreferrer"
-              style={recentDisputesOrderLinkStyle}
+              className={styles.orderAdminLink}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
               {label}
             </a>
@@ -291,42 +312,24 @@ export default function DisputesListPage() {
             </Text>
           )}
         </td>
-        <td style={recentDisputesTdStyle}>
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <Text as="span" variant="bodySm" tone="subdued">
-              {shortDisputeId(d.id)}
-            </Text>
-            {isSyntheticDispute(d.dispute_gid) && <Badge tone="info">Synthetic</Badge>}
-          </InlineStack>
-        </td>
-        <td style={recentDisputesTdStyle}>
-          <Text as="span" variant="bodySm" tone={d.customer_display_name ? undefined : "subdued"}>
-            {d.customer_display_name ?? "—"}
-          </Text>
-        </td>
-        <td style={recentDisputesTdStyle}>
-          <Text as="span" variant="bodySm" fontWeight="semibold">
-            {formatCurrency(d.amount, d.currency_code)}
-          </Text>
-        </td>
-        <td style={recentDisputesTdStyle}>
+        <td>
           <Text as="span" variant="bodySm" tone="subdued">
             {formatReasonTitleCase(d.reason)}
           </Text>
         </td>
-        <td style={recentDisputesTdStyle}>{renderStatusBadge(d.status)}</td>
-        <td style={recentDisputesTdStyle}>
-          <Text as="span" variant="bodySm" tone="subdued">
-            {formatDeadlineShort(d.due_at)}
+        <td>
+          <Text as="span" variant="bodySm" fontWeight="semibold">
+            {formatCurrency(d.amount, d.currency_code, numberLocale)}
           </Text>
         </td>
-        <td style={recentDisputesTdStyle}>
-          <Link
-            href={withShopParams(`/app/disputes/${d.id}`, searchParams)}
-            style={recentDisputesViewDetailsLinkStyle}
-          >
-            {t("table.viewDetails")}
-          </Link>
+        <td>{renderStatusBadge(d.status)}</td>
+        <td>
+          <Text as="span" variant="bodySm" tone="subdued">
+            {formatDueDate(d.due_at)}
+          </Text>
+        </td>
+        <td className={styles.chevronCol}>
+          <Icon source={ChevronRightIcon} tone="subdued" />
         </td>
       </tr>
     );
@@ -338,9 +341,9 @@ export default function DisputesListPage() {
         <Layout>
           <Layout.Section>
             <BlockStack gap="400">
-              <div className={styles.toolbarCard}>
+              <div className={styles.mainCard}>
                 <Card>
-                  <Box padding="400">
+                  <Box padding="400" paddingBlockEnd={loading || visibleDisputes.length === 0 ? "400" : "300"}>
                     <InlineStack gap="300" wrap={false} blockAlign="center">
                       <div style={{ flex: 1, minWidth: "12rem" }}>
                         <TextField
@@ -367,7 +370,7 @@ export default function DisputesListPage() {
                         {t("disputes.export")}
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="tertiary"
                         icon={RefreshIcon}
                         onClick={handleSync}
                         loading={syncing}
@@ -376,34 +379,33 @@ export default function DisputesListPage() {
                       </Button>
                     </InlineStack>
                   </Box>
-                </Card>
-              </div>
 
-              <div className={styles.tableCard}>
-                <Card>
                   {loading ? (
-                    <BlockStack gap="400" inlineAlign="center">
-                      <Spinner size="large" />
-                    </BlockStack>
+                    <Box padding="600">
+                      <BlockStack gap="400" inlineAlign="center">
+                        <Spinner size="large" />
+                      </BlockStack>
+                    </Box>
                   ) : visibleDisputes.length === 0 ? (
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      {disputes.length === 0
-                        ? t("disputes.noDisputes")
-                        : t("disputes.noMatchingDisputes")}
-                    </Text>
+                    <Box paddingInline="400" paddingBlockEnd="400">
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        {disputes.length === 0
+                          ? t("disputes.noDisputes")
+                          : t("disputes.noMatchingDisputes")}
+                      </Text>
+                    </Box>
                   ) : (
-                    <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <div className={styles.tableScroll}>
+                      <table className={styles.listTable}>
                         <thead>
-                          <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
-                            <th style={recentDisputesThStyle}>{t("table.order")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.id")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.customer")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.amount")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.reason")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.status")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
-                            <th style={recentDisputesThStyle}>{t("table.actions")}</th>
+                          <tr>
+                            <th>{t("table.disputeId")}</th>
+                            <th>{t("table.order")}</th>
+                            <th>{t("table.reason")}</th>
+                            <th>{t("table.amount")}</th>
+                            <th>{t("table.status")}</th>
+                            <th>{t("table.dueDateColumn")}</th>
+                            <th className={styles.chevronCol} aria-hidden />
                           </tr>
                         </thead>
                         <tbody>{tableBodyMarkup}</tbody>

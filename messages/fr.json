@@ -154,6 +154,7 @@
     "packLimitReached": "Limite de dossiers atteinte",
     "planLimitMessage": "Limite du plan atteinte. Veuillez mettre à niveau.",
     "upgradePlan": "Mettre à niveau",
+    "statusOpen": "Ouvert",
     "searchPlaceholder": "Rechercher des litiges...",
     "compliance": "Les preuves sont enregistrées sur Shopify via API. La soumission au réseau de cartes se fait dans Shopify Admin, ou Shopify soumet automatiquement à la date limite.",
     "viewDetails": "Voir les détails",
@@ -638,7 +639,8 @@
     "customer": "Client",
     "date": "Date",
     "invoice": "Facture",
-    "viewDetails": "Voir les détails"
+    "viewDetails": "Voir les détails",
+    "dueDateColumn": "Date d'échéance"
   },
   "help": {
     "title": "Centre d'aide",

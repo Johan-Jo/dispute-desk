@@ -154,6 +154,7 @@
     "packLimitReached": "Paketlimit erreicht",
     "planLimitMessage": "Planlimit erreicht. Bitte upgraden.",
     "upgradePlan": "Plan upgraden",
+    "statusOpen": "Offen",
     "searchPlaceholder": "Streitfälle suchen...",
     "compliance": "Beweise werden per API in Shopify gespeichert. Die Einreichung beim Kartennetzwerk erfolgt im Shopify Admin oder Shopify reicht automatisch zum Fälligkeitsdatum ein.",
     "viewDetails": "Details anzeigen",
@@ -638,7 +639,8 @@
     "customer": "Kunde",
     "date": "Datum",
     "invoice": "Rechnung",
-    "viewDetails": "Details anzeigen"
+    "viewDetails": "Details anzeigen",
+    "dueDateColumn": "Fälligkeitsdatum"
   },
   "help": {
     "title": "Hilfe-Center",

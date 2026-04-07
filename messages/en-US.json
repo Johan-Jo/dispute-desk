@@ -187,6 +187,7 @@
     "packLimitReached": "Pack limit reached",
     "planLimitMessage": "Plan limit reached. Please upgrade.",
     "upgradePlan": "Upgrade Plan",
+    "statusOpen": "Open",
     "searchPlaceholder": "Search disputes...",
     "compliance": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin, or Shopify auto-submits on the due date.",
     "disputeNotFound": "Dispute not found.",
@@ -813,7 +814,8 @@
     "customer": "Customer",
     "date": "Date",
     "invoice": "Invoice",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "dueDateColumn": "Due date"
   },
   "help": {
     "title": "Help Center",
@@ -1129,7 +1131,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** table uses the **same columns** as the dashboard's recent disputes: **Order** (link to Shopify Admin when available), **ID** (short internal id), **Customer**, **Amount**, **Reason**, **Status**, **Deadline** (month and day), and **View details** to open the dispute in DisputeDesk.\n\nToolbar: **Search** (order, ID, customer, reason), **Filter** by status, **Export** CSV, **Sync Now**.\n\nThere is no separate **Review Queue** tab: disputes sent for manual review appear in this list. Use **View details**, then **Approve & Save** on the detail page when ready."
+          "body": "The **Disputes** page is one card: toolbar (**Search**, **Filter**, **Export**, **Sync**) and a table. Columns: **Dispute ID** (e.g. DP-6984), **Order** (Shopify Admin link when available), **Reason**, **Amount**, **Status**, **Due date**, and a chevron. **Click any row** to open the dispute; the order link opens Admin and does not navigate away from the list.\n\nSearch also matches customer name even though that column is not shown.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
         },
         "reviewQueue": {
           "title": "The review queue",
@@ -1137,7 +1139,7 @@
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
-          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and use **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and **click a row** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
         }
       }
     }

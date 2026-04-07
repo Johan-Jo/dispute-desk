@@ -771,7 +771,7 @@ Both embedded and portal dispute pages have an "All Disputes" / "Review Queue" t
 Review queue filters `needs_review=true`, sorted by due date (most urgent first).
 Each row has an "Approve" button that clears `needs_review`, logs `rule_overridden`, and triggers automation.
 
-**Embedded disputes list page (`app/(embedded)/app/disputes/page.tsx`):** Toolbar card (search, Filter popover, Export, Sync) sits above a **Card** whose body uses the same plain HTML `<table>` shell as the embedded dashboard “Recent Disputes” (`lib/embedded/recentDisputesTableStyles.ts`: header/row borders, cell padding, indigo order and “View details” links). Reasons are title-cased for display (e.g. `product_not_received` → "Product Not Received"). Rows are not list-wide clickable; use **View details** or the order Admin link.
+**Embedded disputes list page (`app/(embedded)/app/disputes/page.tsx`):** One **Card** contains the toolbar (search, Filter popover, Export, Sync) and a plain HTML `<table>` styled via `disputes-list.module.css` (uppercase header row on `bg-surface-secondary`, row hover). Columns: **Dispute ID** (display ref `DP-` + first 4 hex chars of UUID), **Order** (Shopify Admin link when available), **Reason**, **Amount**, **Status** (`needs_response` → neutral “Open”; `under_review` → warning “Under review”; won/lost as success/critical), **Due date** (localized short month + day + year), trailing **chevron**. Clicking a row navigates to the dispute detail; the order link uses `stopPropagation`. CSV export matches the visible columns (no customer column on this screen). The embedded dashboard “Recent Disputes” widget still uses `lib/embedded/recentDisputesTableStyles.ts` with a wider column set including customer.
 
 ### Completeness Gate
 

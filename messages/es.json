@@ -154,6 +154,7 @@
     "packLimitReached": "Límite de paquetes alcanzado",
     "planLimitMessage": "Límite del plan alcanzado. Por favor actualice.",
     "upgradePlan": "Actualizar plan",
+    "statusOpen": "Abierta",
     "searchPlaceholder": "Buscar disputas...",
     "compliance": "La evidencia se guarda en Shopify vía API. El envío a la red de tarjetas se realiza en Shopify Admin, o Shopify envía automáticamente en la fecha límite.",
     "viewDetails": "Ver detalles",
@@ -638,7 +639,8 @@
     "customer": "Cliente",
     "date": "Fecha",
     "invoice": "Factura",
-    "viewDetails": "Ver detalles"
+    "viewDetails": "Ver detalles",
+    "dueDateColumn": "Fecha límite"
   },
   "help": {
     "title": "Centro de ayuda",
