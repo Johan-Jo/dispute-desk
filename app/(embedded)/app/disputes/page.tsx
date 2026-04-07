@@ -24,7 +24,11 @@ import {
   Spinner,
   InlineStack,
   BlockStack,
+  Box,
+  Divider,
+  Icon,
 } from "@shopify/polaris";
+import { ChevronRightIcon, ExportIcon } from "@shopify/polaris-icons";
 
 interface Dispute {
   id: string;
@@ -60,6 +64,10 @@ function statusTone(status: string | null): "success" | "warning" | "critical" |
 function formatCurrency(amount: number | null, code: string | null): string {
   if (amount == null) return "—";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: code ?? "USD" }).format(amount);
+}
+
+function toTitleCase(s: string): string {
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatDate(iso: string | null): string {
@@ -180,7 +188,7 @@ export default function DisputesListPage() {
       <IndexTable.Cell>{formatCurrency(d.amount, d.currency_code)}</IndexTable.Cell>
       <IndexTable.Cell>
         <Badge tone={statusTone(d.status)}>
-          {(d.status ?? "unknown").replace(/_/g, " ")}
+          {toTitleCase(d.status ?? "unknown")}
         </Badge>
       </IndexTable.Cell>
       <IndexTable.Cell>
@@ -198,6 +206,9 @@ export default function DisputesListPage() {
           </Button>
         </IndexTable.Cell>
       )}
+      <IndexTable.Cell>
+        <Icon source={ChevronRightIcon} tone="subdued" />
+      </IndexTable.Cell>
     </IndexTable.Row>
   ));
 
@@ -210,27 +221,43 @@ export default function DisputesListPage() {
         onAction: handleSync,
         loading: syncing,
       }}
+      secondaryActions={[
+        {
+          content: "Export",
+          icon: ExportIcon,
+          onAction: () => {
+            const rows = visibleDisputes.map((d) =>
+              [d.dispute_gid.split("/").pop(), d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "", d.reason ?? "", formatCurrency(d.amount, d.currency_code), toTitleCase(d.status ?? ""), formatDate(d.due_at)].join(",")
+            );
+            const csv = ["ID,Order,Reason,Amount,Status,Due Date", ...rows].join("\n");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+            a.download = "disputes.csv";
+            a.click();
+          },
+        },
+      ]}
     >
       <Layout>
         <Layout.Section>
-          <InlineStack gap="200">
-            <Button
-              variant={tab === "all" ? "primary" : "secondary"}
-              onClick={() => { setTab("all"); setPage(1); }}
-            >
-              {t("disputes.allDisputes")}
-            </Button>
-            <Button
-              variant={tab === "review" ? "primary" : "secondary"}
-              onClick={() => { setTab("review"); setPage(1); }}
-            >
-              {t("disputes.reviewQueue")}
-            </Button>
-          </InlineStack>
-        </Layout.Section>
-
-        <Layout.Section>
           <Card padding="0">
+            <Box paddingInline="300" paddingBlock="200">
+              <InlineStack gap="200">
+                <Button
+                  variant={tab === "all" ? "primary" : "secondary"}
+                  onClick={() => { setTab("all"); setPage(1); }}
+                >
+                  {t("disputes.allDisputes")}
+                </Button>
+                <Button
+                  variant={tab === "review" ? "primary" : "secondary"}
+                  onClick={() => { setTab("review"); setPage(1); }}
+                >
+                  {t("disputes.reviewQueue")}
+                </Button>
+              </InlineStack>
+            </Box>
+            <Divider />
             <Filters
               queryValue={queryValue}
               filters={filters}
@@ -255,6 +282,7 @@ export default function DisputesListPage() {
                   { title: t("table.status") },
                   { title: t("disputes.dueDate") },
                   ...(tab === "review" ? [{ title: t("table.action") }] : []),
+                  { title: "" },
                 ]}
                 selectable={false}
               >

@@ -769,6 +769,8 @@ Both embedded and portal dispute pages have an "All Disputes" / "Review Queue" t
 Review queue filters `needs_review=true`, sorted by due date (most urgent first).
 Each row has an "Approve" button that clears `needs_review`, logs `rule_overridden`, and triggers automation.
 
+**Embedded disputes list page (`app/(embedded)/app/disputes/page.tsx`):** Tabs ("All Disputes" / "Review Queue") are rendered inside the `Card`, above the `Filters` bar and separated by a `Divider`, so the entire control surface is visually unified. Status values (Shopify snake_case) are title-cased for display (e.g. `under_review` → "Under Review"). Each table row ends with a `ChevronRightIcon` column to indicate navigability. An **Export** secondary page action generates a CSV download of the current visible disputes.
+
 ### Completeness Gate
 
 Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
