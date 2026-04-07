@@ -605,6 +605,8 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 **Recent Disputes table (embedded dashboard):** Fetches `/api/disputes?per_page=5` + `/api/billing/usage` in parallel. Columns: Order (links to Shopify Admin order), ID (plain short UUID), Customer, Amount, Reason, Status (colored badge), Deadline, View Details. Order URL is built from `order_gid` + `shop_domain`.
 
+**Disputes list page (embedded):** `app/(embedded)/app/disputes/page.tsx` with `app/(embedded)/app/disputes/disputes-list.module.css`. Figma-aligned list: pill tabs (All disputes / Review queue), full-width **Search** (`TextField` + `SearchIcon`), **Add filter +** plain control opening a **Popover** with status **ChoiceList** (same `GET /api/disputes` query params: `needs_review`, `status`). Page actions: **Export** (`disputes.export`) downloads a UTF-8 CSV of the current filtered rows; **Sync Now** posts `/api/disputes/sync`. Index table: dispute id from Shopify GID tail, order `#` suffix, **reason** shown uppercased, localized **status** badges, **due date** with a second line — **critical** `common.overdue` when past due, otherwise subdued time remaining. Review tab keeps per-row **Approve** and preserves `shop` / `host` / `locale` on row navigation via `withShopParams`.
+
 **Dispute detail page (embedded):** `app/(embedded)/app/disputes/[id]/page.tsx`. Fetches `/api/disputes/:id` and `/api/disputes/:id/profile` in parallel.
 - **KPI strip:** 4 bordered cards — Amount (large bold), Status (colored Polaris Badge), Due Date, Time Left (red border + `AlertTriangleIcon` when urgent).
 - **Customer Info card:** Name, Email, Phone, Address from profile API (`disputeEvidence` fields).

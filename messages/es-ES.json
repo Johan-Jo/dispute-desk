@@ -145,6 +145,8 @@
     "subtitle": "{total} en total",
     "manageSubtitle": "Gestionar y responder a contracargos",
     "syncNow": "Sincronizar",
+    "export": "Exportar",
+    "addFilter": "Añadir filtro +",
     "syncing": "Sincronizando...",
     "allDisputes": "Todas las disputas",
     "reviewQueue": "Cola de revisión",

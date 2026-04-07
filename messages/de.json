@@ -114,6 +114,8 @@
     "subtitle": "{total} insgesamt",
     "manageSubtitle": "Chargebacks verwalten und beantworten",
     "syncNow": "Jetzt synchronisieren",
+    "export": "Exportieren",
+    "addFilter": "Filter hinzufügen +",
     "syncing": "Synchronisiere...",
     "allDisputes": "Alle Streitfälle",
     "reviewQueue": "Prüfungswarteschlange",

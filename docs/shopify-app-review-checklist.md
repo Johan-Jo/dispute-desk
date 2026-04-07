@@ -18,7 +18,7 @@ Run on a **development store** with the production or staging app URL (tunnel if
 
 - [ ] **Install:** OAuth completes; app opens embedded with `shop` and `host` query params (see [`docs/technical.md`](technical.md) § Embedded app guard / troubleshooting).
 - [ ] **Embedded shell:** `/app` loads without redirect loops; session cookies present (`sameSite: none` context).
-- [ ] **Disputes:** List loads; sync (manual or cron path) behaves as expected.
+- [ ] **Disputes:** `/app/disputes` loads; **Sync Now**, search, **Add filter +** (status), **Export** CSV, row navigation to detail; sync (manual or cron) behaves as expected (see [`docs/technical.md`](technical.md) § Disputes list page (embedded)).
 - [ ] **Evidence:** Create or open a pack; **Save evidence** to Shopify works for a staff user with **Manage orders information** (Shopify Admin permission, not OAuth).
 - [ ] **Billing:** If testing paid plans, subscription approval flow opens and returns to the app.
 - [ ] **Uninstall:** `app/uninstalled` webhook path configured; shop data handling matches your privacy policy.

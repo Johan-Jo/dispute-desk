@@ -145,6 +145,8 @@
     "subtitle": "{total} au total",
     "manageSubtitle": "Gérer et répondre aux rétrofacturations",
     "syncNow": "Synchroniser",
+    "export": "Exporter",
+    "addFilter": "Ajouter un filtre +",
     "syncing": "Synchronisation...",
     "allDisputes": "Tous les litiges",
     "reviewQueue": "File d'examen",

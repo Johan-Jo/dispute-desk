@@ -2,8 +2,7 @@
  * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
  * Route: app/(embedded)/app/disputes/page.tsx
  * Figma Make source: src/app/pages/shopify/shopify-disputes.tsx
- * Reference: header "View and manage all your chargebacks and disputes", search bar,
- * Filter + Export actions, table (ID, Order, Reason, Amount, Status, Due Date, chevron).
+ * Pill tabs, search + add-filter, Export + Sync Now, table (ID, Order, Reason, Amount, Status, Due date + overdue, chevron).
  */
 "use client";
 
@@ -18,17 +17,18 @@ import {
   IndexTable,
   Text,
   Badge,
-  Filters,
   ChoiceList,
   Button,
   Spinner,
   InlineStack,
   BlockStack,
   Box,
-  Divider,
   Icon,
+  TextField,
+  Popover,
 } from "@shopify/polaris";
-import { ChevronRightIcon, ExportIcon } from "@shopify/polaris-icons";
+import { ChevronRightIcon, ExportIcon, SearchIcon } from "@shopify/polaris-icons";
+import styles from "./disputes-list.module.css";
 
 interface Dispute {
   id: string;
@@ -52,27 +52,47 @@ function isSyntheticDispute(disputeGid: string): boolean {
   return disputeGid?.includes("/seed-") ?? false;
 }
 
-function statusTone(status: string | null): "success" | "warning" | "critical" | "info" | undefined {
+function statusTone(
+  status: string | null
+): "success" | "warning" | "critical" | "info" | undefined {
   switch (status) {
-    case "won": return "success";
-    case "needs_response": case "under_review": return "warning";
-    case "lost": return "critical";
-    default: return "info";
+    case "won":
+      return "success";
+    case "needs_response":
+    case "under_review":
+      return "warning";
+    case "lost":
+      return "critical";
+    default:
+      return "info";
   }
 }
 
 function formatCurrency(amount: number | null, code: string | null): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: code ?? "USD" }).format(amount);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: code ?? "USD",
+  }).format(amount);
 }
 
-function toTitleCase(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+function formatReason(reason: string | null): string {
+  if (!reason?.trim()) return "";
+  return reason.replace(/_/g, " ").toUpperCase();
 }
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function isPastDue(iso: string | null): boolean {
+  if (!iso) return false;
+  return new Date(iso).getTime() < Date.now();
 }
 
 export default function DisputesListPage() {
@@ -87,8 +107,8 @@ export default function DisputesListPage() {
   const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
+  const [filterPopoverActive, setFilterPopoverActive] = useState(false);
 
-  // Shop is resolved server-side: middleware forwards session cookies and sets x-shop-id on /api/* (shopify_shop_id is httpOnly — not readable from document.cookie).
   const fetchDisputes = useCallback(async () => {
     setLoading(true);
     try {
@@ -104,7 +124,9 @@ export default function DisputesListPage() {
     }
   }, [page, statusFilter, tab]);
 
-  useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
+  useEffect(() => {
+    fetchDisputes();
+  }, [fetchDisputes]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -124,34 +146,33 @@ export default function DisputesListPage() {
 
   const daysUntil = (iso: string | null): string => {
     if (!iso) return "—";
-    const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil(
+      (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
     if (diff < 0) return t("common.overdue");
     if (diff === 0) return t("common.today");
     return t("common.daysRemaining", { count: diff });
   };
 
-  const filters = [
-    {
-      key: "status",
-      label: t("table.status"),
-      filter: (
-        <ChoiceList
-          title={t("table.status")}
-          titleHidden
-          choices={[
-            { label: t("status.needsResponse"), value: "needs_response" },
-            { label: t("status.underReview"), value: "under_review" },
-            { label: t("status.won"), value: "won" },
-            { label: t("status.lost"), value: "lost" },
-          ]}
-          selected={statusFilter}
-          onChange={setStatusFilter}
-          allowMultiple
-        />
-      ),
-      shortcut: true,
-    },
-  ];
+  const statusLabel = (status: string | null): string => {
+    switch (status) {
+      case "needs_response":
+        return t("status.needsResponse");
+      case "under_review":
+        return t("status.underReview");
+      case "won":
+        return t("status.won");
+      case "lost":
+        return t("status.lost");
+      default:
+        return t("status.unknown");
+    }
+  };
+
+  const disputeIdDisplay = (d: Dispute): string => {
+    const last = d.dispute_gid.split("/").pop();
+    return last ?? d.id.slice(0, 12);
+  };
 
   const visibleDisputes = queryValue
     ? disputes.filter((d) => {
@@ -164,53 +185,118 @@ export default function DisputesListPage() {
       })
     : disputes;
 
-  const rowMarkup = visibleDisputes.map((d, idx) => (
-    <IndexTable.Row
-      id={d.id}
-      key={d.id}
-      position={idx}
-      onClick={() => router.push(withShopParams(`/app/disputes/${d.id}`, searchParams))}
-    >
-      <IndexTable.Cell>
-        <InlineStack gap="200" blockAlign="center">
-          <Text as="span" variant="bodyMd" fontWeight="semibold">
-            {d.dispute_gid.split("/").pop()?.slice(0, 8) ?? d.id.slice(0, 8)}
-          </Text>
-          {isSyntheticDispute(d.dispute_gid) && <Badge tone="info">Synthetic</Badge>}
-        </InlineStack>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" tone="subdued">
-          {d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "—"}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>{d.reason ?? t("status.unknown")}</IndexTable.Cell>
-      <IndexTable.Cell>{formatCurrency(d.amount, d.currency_code)}</IndexTable.Cell>
-      <IndexTable.Cell>
-        <Badge tone={statusTone(d.status)}>
-          {toTitleCase(d.status ?? "unknown")}
-        </Badge>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <BlockStack gap="050">
-          <Text as="span" variant="bodySm">{formatDate(d.due_at)}</Text>
-          <Text as="span" variant="bodySm" tone={daysUntil(d.due_at) === t("common.overdue") ? "critical" : "subdued"}>
-            {daysUntil(d.due_at)}
-          </Text>
-        </BlockStack>
-      </IndexTable.Cell>
-      {tab === "review" && (
+  const exportCsv = () => {
+    const rows = visibleDisputes.map((d) =>
+      [
+        disputeIdDisplay(d),
+        d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "",
+        formatReason(d.reason) || (d.reason ?? ""),
+        formatCurrency(d.amount, d.currency_code),
+        statusLabel(d.status),
+        formatDate(d.due_at),
+      ].join(",")
+    );
+    const csv = [
+      "ID,Order,Reason,Amount,Status,Due Date",
+      ...rows,
+    ].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "disputes.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const filterActivator = (
+    <Button variant="plain" onClick={() => setFilterPopoverActive((v) => !v)}>
+      {t("disputes.addFilter")}
+    </Button>
+  );
+
+  const filterContent = (
+    <Box padding="400" minWidth="240px">
+      <ChoiceList
+        title={t("table.status")}
+        titleHidden
+        choices={[
+          { label: t("status.needsResponse"), value: "needs_response" },
+          { label: t("status.underReview"), value: "under_review" },
+          { label: t("status.won"), value: "won" },
+          { label: t("status.lost"), value: "lost" },
+        ]}
+        selected={statusFilter}
+        onChange={(v) => {
+          setStatusFilter(v);
+          setPage(1);
+        }}
+        allowMultiple
+      />
+    </Box>
+  );
+
+  const rowMarkup = visibleDisputes.map((d, idx) => {
+    const overdue = isPastDue(d.due_at);
+    const reasonText = formatReason(d.reason);
+    return (
+      <IndexTable.Row
+        id={d.id}
+        key={d.id}
+        position={idx}
+        onClick={() => router.push(withShopParams(`/app/disputes/${d.id}`, searchParams))}
+      >
         <IndexTable.Cell>
-          <Button size="micro" onClick={() => handleApprove(d.id)}>
-            {t("disputes.approve")}
-          </Button>
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="span" variant="bodyMd" fontWeight="semibold">
+              {disputeIdDisplay(d)}
+            </Text>
+            {isSyntheticDispute(d.dispute_gid) && <Badge tone="info">Synthetic</Badge>}
+          </InlineStack>
         </IndexTable.Cell>
-      )}
-      <IndexTable.Cell>
-        <Icon source={ChevronRightIcon} tone="subdued" />
-      </IndexTable.Cell>
-    </IndexTable.Row>
-  ));
+        <IndexTable.Cell>
+          <Text as="span" variant="bodyMd" tone="subdued">
+            {d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "—"}
+          </Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Text as="span" variant="bodyMd">
+            {reasonText || t("status.unknown")}
+          </Text>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          {formatCurrency(d.amount, d.currency_code)}
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <Badge tone={statusTone(d.status)}>{statusLabel(d.status)}</Badge>
+        </IndexTable.Cell>
+        <IndexTable.Cell>
+          <BlockStack gap="050">
+            <Text as="span" variant="bodySm">
+              {formatDate(d.due_at)}
+            </Text>
+            {overdue && d.due_at ? (
+              <Text as="span" variant="bodySm" tone="critical">
+                {t("common.overdue")}
+              </Text>
+            ) : d.due_at ? (
+              <Text as="span" variant="bodySm" tone="subdued">
+                {daysUntil(d.due_at)}
+              </Text>
+            ) : null}
+          </BlockStack>
+        </IndexTable.Cell>
+        {tab === "review" && (
+          <IndexTable.Cell>
+            <Button size="micro" onClick={() => handleApprove(d.id)}>
+              {t("disputes.approve")}
+            </Button>
+          </IndexTable.Cell>
+        )}
+        <IndexTable.Cell>
+          <Icon source={ChevronRightIcon} tone="subdued" />
+        </IndexTable.Cell>
+      </IndexTable.Row>
+    );
+  });
 
   return (
     <Page
@@ -223,49 +309,70 @@ export default function DisputesListPage() {
       }}
       secondaryActions={[
         {
-          content: "Export",
+          content: t("disputes.export"),
           icon: ExportIcon,
-          onAction: () => {
-            const rows = visibleDisputes.map((d) =>
-              [d.dispute_gid.split("/").pop(), d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "", d.reason ?? "", formatCurrency(d.amount, d.currency_code), toTitleCase(d.status ?? ""), formatDate(d.due_at)].join(",")
-            );
-            const csv = ["ID,Order,Reason,Amount,Status,Due Date", ...rows].join("\n");
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-            a.download = "disputes.csv";
-            a.click();
-          },
+          onAction: exportCsv,
         },
       ]}
     >
       <Layout>
         <Layout.Section>
           <Card padding="0">
-            <Box paddingInline="300" paddingBlock="200">
-              <InlineStack gap="200">
-                <Button
-                  variant={tab === "all" ? "primary" : "secondary"}
-                  onClick={() => { setTab("all"); setPage(1); }}
+            <Box paddingInline="400" paddingBlockStart="400" paddingBlockEnd="300">
+              <div className={styles.tabGroup} role="tablist" aria-label={t("disputes.title")}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "all"}
+                  className={`${styles.tabPill} ${tab === "all" ? styles.tabPillActive : ""}`}
+                  onClick={() => {
+                    setTab("all");
+                    setPage(1);
+                  }}
                 >
                   {t("disputes.allDisputes")}
-                </Button>
-                <Button
-                  variant={tab === "review" ? "primary" : "secondary"}
-                  onClick={() => { setTab("review"); setPage(1); }}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "review"}
+                  className={`${styles.tabPill} ${tab === "review" ? styles.tabPillActive : ""}`}
+                  onClick={() => {
+                    setTab("review");
+                    setPage(1);
+                  }}
                 >
                   {t("disputes.reviewQueue")}
-                </Button>
-              </InlineStack>
+                </button>
+              </div>
             </Box>
-            <Divider />
-            <Filters
-              queryValue={queryValue}
-              filters={filters}
-              onQueryChange={setQueryValue}
-              onQueryClear={() => setQueryValue("")}
-              onClearAll={() => { setStatusFilter([]); setQueryValue(""); }}
-              queryPlaceholder={t("common.search")}
-            />
+
+            <div className={styles.searchCardInner}>
+              <Box paddingInline="400" paddingBlock="300">
+                <BlockStack gap="200">
+                  <TextField
+                    label={t("common.search")}
+                    labelHidden
+                    value={queryValue}
+                    onChange={setQueryValue}
+                    placeholder={t("common.search")}
+                    autoComplete="off"
+                    clearButton
+                    onClearButtonClick={() => setQueryValue("")}
+                    prefix={<Icon source={SearchIcon} tone="subdued" />}
+                  />
+                  <Popover
+                    active={filterPopoverActive}
+                    activator={filterActivator}
+                    onClose={() => setFilterPopoverActive(false)}
+                    autofocusTarget="none"
+                  >
+                    {filterContent}
+                  </Popover>
+                </BlockStack>
+              </Box>
+            </div>
+
             {loading ? (
               <div style={{ padding: "2rem", textAlign: "center" }}>
                 <Spinner size="large" />
@@ -294,11 +401,16 @@ export default function DisputesListPage() {
           {pagination.total_pages > 1 && (
             <div style={{ padding: "1rem", display: "flex", justifyContent: "center" }}>
               <InlineStack gap="300">
-                <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("common.previous")}</Button>
+                <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  {t("common.previous")}
+                </Button>
                 <Text as="span" variant="bodySm">
                   {t("common.page", { page, total: pagination.total_pages })}
                 </Text>
-                <Button disabled={page >= pagination.total_pages} onClick={() => setPage(page + 1)}>
+                <Button
+                  disabled={page >= pagination.total_pages}
+                  onClick={() => setPage(page + 1)}
+                >
                   {t("common.next")}
                 </Button>
               </InlineStack>

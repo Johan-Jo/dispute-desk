@@ -146,6 +146,8 @@
     "subtitle": "{total} totalt",
     "manageSubtitle": "Hantera och svara på återkrav",
     "syncNow": "Synka nu",
+    "export": "Exportera",
+    "addFilter": "Lägg till filter +",
     "syncing": "Synkar...",
     "allDisputes": "Alla tvister",
     "reviewQueue": "Granskningskö",

@@ -145,6 +145,8 @@
     "subtitle": "{total} no total",
     "manageSubtitle": "Gerencie e responda a chargebacks",
     "syncNow": "Sincronizar Agora",
+    "export": "Exportar",
+    "addFilter": "Adicionar filtro +",
     "syncing": "Sincronizando...",
     "allDisputes": "Todas as Disputas",
     "reviewQueue": "Fila de Revisão",

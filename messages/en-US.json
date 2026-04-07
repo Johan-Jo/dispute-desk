@@ -146,6 +146,8 @@
     "manageSubtitle": "Manage and respond to chargebacks",
     "syncNow": "Sync Now",
     "syncing": "Syncing...",
+    "export": "Export",
+    "addFilter": "Add filter +",
     "allDisputes": "All Disputes",
     "reviewQueue": "Review Queue",
     "approve": "Approve",
