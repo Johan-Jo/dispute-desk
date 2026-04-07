@@ -6,10 +6,11 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
+import styles from "./disputes-list.module.css";
 import {
   Page,
   Layout,
@@ -88,15 +89,6 @@ function formatReason(reason: string | null): string {
   return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function isPastDue(iso: string | null): boolean {
   if (!iso) return false;
   return new Date(iso).getTime() < Date.now();
@@ -106,6 +98,27 @@ export default function DisputesListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
+  const locale = useLocale();
+  const dateLocale = useMemo(() => {
+    if (locale.startsWith("pt")) return "pt-BR";
+    if (locale.startsWith("de")) return "de-DE";
+    if (locale.startsWith("sv")) return "sv-SE";
+    if (locale.startsWith("es")) return "es-ES";
+    if (locale.startsWith("fr")) return "fr-FR";
+    return "en-US";
+  }, [locale]);
+
+  const formatDisputeDate = useCallback(
+    (iso: string | null) => {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString(dateLocale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    },
+    [dateLocale]
+  );
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -183,7 +196,7 @@ export default function DisputesListPage() {
         formatReason(d.reason) || (d.reason ?? ""),
         formatCurrency(d.amount, d.currency_code),
         statusLabel(d.status),
-        formatDate(d.due_at),
+        formatDisputeDate(d.due_at),
       ].join(",")
     );
     const csv = ["ID,Order,Reason,Amount,Status,Due Date", ...rows].join("\n");
@@ -196,6 +209,7 @@ export default function DisputesListPage() {
 
   const filterActivator = (
     <Button
+      variant="secondary"
       icon={FilterIcon}
       onClick={() => setFilterPopoverActive((v) => !v)}
     >
@@ -243,27 +257,23 @@ export default function DisputesListPage() {
           </InlineStack>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <Text as="span" variant="bodyMd" tone="magic">
+          <span className={styles.orderLink}>
             {d.order_gid ? `#${String(d.order_gid).slice(-6)}` : "—"}
-          </Text>
+          </span>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <Text as="span" variant="bodyMd" tone="subdued">
-            {reasonText || t("status.unknown")}
-          </Text>
+          <span className={styles.reasonMuted}>{reasonText || t("status.unknown")}</span>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <Text as="span" variant="bodyMd" fontWeight="semibold">
-            {formatCurrency(d.amount, d.currency_code)}
-          </Text>
+          <span className={styles.amountEmphasis}>{formatCurrency(d.amount, d.currency_code)}</span>
         </IndexTable.Cell>
         <IndexTable.Cell>
           <Badge tone={statusTone(d.status)}>{statusLabel(d.status)}</Badge>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <Text as="span" variant="bodySm" tone={overdue ? "critical" : "subdued"}>
-            {formatDate(d.due_at)}
-          </Text>
+          <span className={overdue ? styles.dueOverdue : styles.dueDeadline}>
+            {formatDisputeDate(d.due_at)}
+          </span>
         </IndexTable.Cell>
         <IndexTable.Cell>
           <Icon source={ChevronRightIcon} tone="subdued" />
@@ -274,93 +284,100 @@ export default function DisputesListPage() {
 
   return (
     <Page title={t("disputes.title")} subtitle={t("disputes.manageSubtitle")}>
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="400">
-            <Card>
-              <Box padding="400">
-                <InlineStack gap="300" wrap={false} blockAlign="center">
-                  <div style={{ flex: 1, minWidth: "12rem" }}>
-                    <TextField
-                      label={t("disputes.searchPlaceholder")}
-                      labelHidden
-                      value={queryValue}
-                      onChange={setQueryValue}
-                      placeholder={t("disputes.searchPlaceholder")}
-                      autoComplete="off"
-                      clearButton
-                      onClearButtonClick={() => setQueryValue("")}
-                      prefix={<Icon source={SearchIcon} tone="subdued" />}
-                    />
-                  </div>
-                  <Popover
-                    active={filterPopoverActive}
-                    activator={filterActivator}
-                    onClose={() => setFilterPopoverActive(false)}
-                    autofocusTarget="none"
-                  >
-                    {filterContent}
-                  </Popover>
-                  <Button icon={ExportIcon} onClick={exportCsv}>
-                    {t("disputes.export")}
-                  </Button>
-                  <Button
-                    icon={RefreshIcon}
-                    onClick={handleSync}
-                    loading={syncing}
-                  >
-                    {syncing ? t("disputes.syncing") : t("disputes.syncNow")}
-                  </Button>
-                </InlineStack>
-              </Box>
-            </Card>
-
-            <Card padding="0">
-              {loading ? (
-                <div style={{ padding: "2rem", textAlign: "center" }}>
-                  <Spinner size="large" />
-                </div>
-              ) : (
-                <IndexTable
-                  resourceName={{ singular: "dispute", plural: "disputes" }}
-                  itemCount={visibleDisputes.length}
-                  headings={[
-                    { title: t("table.disputeId") },
-                    { title: t("table.order") },
-                    { title: t("table.reason") },
-                    { title: t("table.amount") },
-                    { title: t("table.status") },
-                    { title: t("disputes.dueDate") },
-                    { title: "" },
-                  ]}
-                  selectable={false}
-                >
-                  {rowMarkup}
-                </IndexTable>
-              )}
-            </Card>
-
-            {pagination.total_pages > 1 && (
-              <div style={{ padding: "1rem", display: "flex", justifyContent: "center" }}>
-                <InlineStack gap="300">
-                  <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                    {t("common.previous")}
-                  </Button>
-                  <Text as="span" variant="bodySm">
-                    {t("common.page", { page, total: pagination.total_pages })}
-                  </Text>
-                  <Button
-                    disabled={page >= pagination.total_pages}
-                    onClick={() => setPage(page + 1)}
-                  >
-                    {t("common.next")}
-                  </Button>
-                </InlineStack>
+      <div className={styles.constrain}>
+        <Layout>
+          <Layout.Section>
+            <BlockStack gap="400">
+              <div className={styles.toolbarCard}>
+                <Card>
+                  <Box padding="400">
+                    <InlineStack gap="300" wrap={false} blockAlign="center">
+                      <div style={{ flex: 1, minWidth: "12rem" }}>
+                        <TextField
+                          label={t("disputes.searchPlaceholder")}
+                          labelHidden
+                          value={queryValue}
+                          onChange={setQueryValue}
+                          placeholder={t("disputes.searchPlaceholder")}
+                          autoComplete="off"
+                          clearButton
+                          onClearButtonClick={() => setQueryValue("")}
+                          prefix={<Icon source={SearchIcon} tone="subdued" />}
+                        />
+                      </div>
+                      <Popover
+                        active={filterPopoverActive}
+                        activator={filterActivator}
+                        onClose={() => setFilterPopoverActive(false)}
+                        autofocusTarget="none"
+                      >
+                        {filterContent}
+                      </Popover>
+                      <Button variant="secondary" icon={ExportIcon} onClick={exportCsv}>
+                        {t("disputes.export")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        icon={RefreshIcon}
+                        onClick={handleSync}
+                        loading={syncing}
+                      >
+                        {syncing ? t("disputes.syncing") : t("disputes.syncNow")}
+                      </Button>
+                    </InlineStack>
+                  </Box>
+                </Card>
               </div>
-            )}
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+
+              <div className={`${styles.tableCard} ${styles.tableFigma}`}>
+                <Card padding="0">
+                  {loading ? (
+                    <div style={{ padding: "2rem", textAlign: "center" }}>
+                      <Spinner size="large" />
+                    </div>
+                  ) : (
+                    <IndexTable
+                      resourceName={{ singular: "dispute", plural: "disputes" }}
+                      itemCount={visibleDisputes.length}
+                      headings={[
+                        { title: t("table.disputeId") },
+                        { title: t("table.order") },
+                        { title: t("table.reason") },
+                        { title: t("table.amount") },
+                        { title: t("table.status") },
+                        { title: t("disputes.dueDate") },
+                        { title: "" },
+                      ]}
+                      selectable={false}
+                    >
+                      {rowMarkup}
+                    </IndexTable>
+                  )}
+                </Card>
+              </div>
+
+              {pagination.total_pages > 1 && (
+                <div style={{ padding: "1rem", display: "flex", justifyContent: "center" }}>
+                  <InlineStack gap="300">
+                    <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                      {t("common.previous")}
+                    </Button>
+                    <Text as="span" variant="bodySm">
+                      {t("common.page", { page, total: pagination.total_pages })}
+                    </Text>
+                    <Button
+                      disabled={page >= pagination.total_pages}
+                      onClick={() => setPage(page + 1)}
+                    >
+                      {t("common.next")}
+                    </Button>
+                  </InlineStack>
+                </div>
+              )}
+            </BlockStack>
+          </Layout.Section>
+        </Layout>
+      </div>
     </Page>
   );
 }
