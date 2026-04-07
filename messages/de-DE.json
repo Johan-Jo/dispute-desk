@@ -185,6 +185,7 @@
     "planLimitMessage": "Planlimit erreicht. Bitte upgraden.",
     "upgradePlan": "Plan upgraden",
     "statusOpen": "Offen",
+    "moreActions": "Weitere Aktionen",
     "searchPlaceholder": "Streitfälle suchen...",
     "compliance": "Beweise werden per API in Shopify gespeichert. Die Einreichung beim Kartennetzwerk erfolgt im Shopify Admin oder Shopify reicht automatisch zum Fälligkeitsdatum ein.",
     "viewDetails": "Details anzeigen",

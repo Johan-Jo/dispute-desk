@@ -177,6 +177,7 @@
     "planLimitMessage": "Plan limit reached. Please upgrade.",
     "upgradePlan": "Upgrade Plan",
     "statusOpen": "Open",
+    "moreActions": "More actions",
     "searchPlaceholder": "Search disputes...",
     "compliance": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin, or Shopify auto-submits on the due date.",
     "disputeNotFound": "Dispute not found.",
@@ -1075,7 +1076,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** page is one card: toolbar (**Search**, **Filter**, **Export**, **Sync**) and a table. Columns: **Dispute ID** (e.g. DP-6984), **Order** (Shopify Admin link when available), **Reason**, **Amount**, **Status**, **Due date**, and a chevron. **Click any row** to open the dispute; the order link opens Admin and does not navigate away from the list.\n\nSearch also matches customer name even though that column is not shown.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
+          "body": "The **Disputes** page is one card: toolbar (**Search**, **Filter**, **Export**, and **More actions** ⋯ for **Sync now**) and a table. Columns: **Dispute ID** (e.g. DP-6984), **Order** (Shopify Admin link when available), **Reason**, **Amount**, **Status**, **Due date**, and a chevron. **Click any row** to open the dispute; the order link opens Admin and does not navigate away from the list.\n\nSearch also matches customer name even though that column is not shown.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
         },
         "reviewQueue": {
           "title": "The review queue",

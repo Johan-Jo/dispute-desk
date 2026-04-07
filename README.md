@@ -150,6 +150,8 @@ This is a Shopify Admin permission, not an OAuth scope.
 - Re-open DisputeDesk from **Shopify Admin** (Apps > DisputeDesk) so the embedded shop session is established.
 - DisputeDesk resolves the shop identity server-side (httpOnly cookies + middleware), so the UI cannot rely on reading it directly in the browser.
 
+**Embedded UI vs full-page mocks:** Designs that show the entire Shopify Admin (top bar, merchant sidebar, Apps nav) include **chrome that Shopify renders**. The app only controls the **iframe body** under `/app/*`. See [`docs/technical.md`](docs/technical.md) (Figma full-frame vs embedded canvas) and [`docs/shopify-app-review-checklist.md`](docs/shopify-app-review-checklist.md) (Design vs production).
+
 ## Project Structure
 
 ```

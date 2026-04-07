@@ -55,7 +55,7 @@
 | Rules | `GET /api/rules` | Real `match`/`action` schema; `matchSummary` formatting; `Array.isArray` response handling |
 | Settings | `GET /api/billing/usage`, `GET/PATCH /api/shop/preferences` | Store domain from usage; notification prefs persisted in `shop_setup` |
 | Packs | `GET /api/packs`, `GET /api/templates` | Real `documents_count`, `usage_count`, `last_used_at`; no fake completeness bar |
-| Disputes | `GET /api/disputes` | Filters, tabs, IndexTable |
+| Disputes | `GET /api/disputes` | Search, Filter, Export, **More actions** (Sync); HTML table (see `docs/technical.md`) |
 | Billing | `GET /api/billing/usage`, `POST /api/billing/subscribe` | Plan display, trial copy |
 
 **New APIs:**

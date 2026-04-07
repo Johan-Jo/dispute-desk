@@ -25,8 +25,16 @@ import {
   Icon,
   TextField,
   Popover,
+  ActionList,
 } from "@shopify/polaris";
-import { ExportIcon, SearchIcon, FilterIcon, RefreshIcon, ChevronRightIcon } from "@shopify/polaris-icons";
+import {
+  ExportIcon,
+  SearchIcon,
+  FilterIcon,
+  RefreshIcon,
+  ChevronRightIcon,
+  MenuHorizontalIcon,
+} from "@shopify/polaris-icons";
 
 interface Dispute {
   id: string;
@@ -116,6 +124,7 @@ export default function DisputesListPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
   const [filterPopoverActive, setFilterPopoverActive] = useState(false);
+  const [moreMenuActive, setMoreMenuActive] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,6 +256,15 @@ export default function DisputesListPage() {
     </Button>
   );
 
+  const moreMenuActivator = (
+    <Button
+      variant="secondary"
+      icon={MenuHorizontalIcon}
+      onClick={() => setMoreMenuActive((a) => !a)}
+      accessibilityLabel={t("disputes.moreActions")}
+    />
+  );
+
   const filterContent = (
     <Box padding="400" minWidth="240px">
       <ChoiceList
@@ -369,14 +387,28 @@ export default function DisputesListPage() {
                       <Button variant="secondary" icon={ExportIcon} onClick={exportCsv}>
                         {t("disputes.export")}
                       </Button>
-                      <Button
-                        variant="tertiary"
-                        icon={RefreshIcon}
-                        onClick={handleSync}
-                        loading={syncing}
+                      <Popover
+                        active={moreMenuActive}
+                        activator={moreMenuActivator}
+                        onClose={() => setMoreMenuActive(false)}
+                        preferredAlignment="right"
+                        autofocusTarget="first-node"
                       >
-                        {syncing ? t("disputes.syncing") : t("disputes.syncNow")}
-                      </Button>
+                        <ActionList
+                          actionRole="menuitem"
+                          items={[
+                            {
+                              content: syncing ? t("disputes.syncing") : t("disputes.syncNow"),
+                              icon: RefreshIcon,
+                              disabled: syncing,
+                              onAction: () => {
+                                setMoreMenuActive(false);
+                                void handleSync();
+                              },
+                            },
+                          ]}
+                        />
+                      </Popover>
                     </InlineStack>
                   </Box>
 

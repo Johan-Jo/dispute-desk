@@ -18,7 +18,7 @@ Run on a **development store** with the production or staging app URL (tunnel if
 
 - [ ] **Install:** OAuth completes; app opens embedded with `shop` and `host` query params (see [`docs/technical.md`](technical.md) § Embedded app guard / troubleshooting).
 - [ ] **Embedded shell:** `/app` loads without redirect loops; session cookies present (`sameSite: none` context).
-- [ ] **Disputes:** `/app/disputes` loads; **Sync Now**, search, **Filter** (status popover), **Export** CSV, row navigation to detail; sync (manual or cron) behaves as expected (see [`docs/technical.md`](technical.md) — Disputes list page (embedded)).
+- [ ] **Disputes:** `/app/disputes` loads; search, **Filter** (status popover), **Export** CSV, **Sync now** from **More actions** (⋯), row navigation to detail; sync (manual or cron) behaves as expected (see [`docs/technical.md`](technical.md) — embedded disputes list).
 - [ ] **Evidence:** Create or open a pack; **Save evidence** to Shopify works for a staff user with **Manage orders information** (Shopify Admin permission, not OAuth).
 - [ ] **Billing:** If testing paid plans, subscription approval flow opens and returns to the app.
 - [ ] **Uninstall:** `app/uninstalled` webhook path configured; shop data handling matches your privacy policy.
@@ -28,6 +28,10 @@ Automated checks in-repo: `npm test`, `npx tsc --noEmit`, `npm run build`. Optio
 ## 3. Copy and policy
 
 - [ ] No UI claims **programmatic submission** to card networks; use “save evidence to Shopify” / “submit in Shopify Admin” language (see [`CLAUDE.md`](../CLAUDE.md) / EPIC-5).
+
+## Design vs production (embedded)
+
+Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav, feedback strip). **Only the iframe body** is DisputeDesk; outer chrome is Shopify. Do not expect pixel parity on the full frame from app code — see [`docs/technical.md`](technical.md) (Figma full-frame vs embedded canvas).
 
 ## Related docs
 

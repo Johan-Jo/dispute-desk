@@ -157,6 +157,7 @@
     "planLimitMessage": "Plangräns nådd. Vänligen uppgradera.",
     "upgradePlan": "Uppgradera plan",
     "statusOpen": "Öppen",
+    "moreActions": "Fler åtgärder",
     "searchPlaceholder": "Sök tvister...",
     "compliance": "Bevis sparas till Shopify via API. Inlämning till kortnätverket sker i Shopify Admin, eller Shopify skickar in automatiskt på förfallodatumet.",
     "viewDetails": "Visa detaljer",
