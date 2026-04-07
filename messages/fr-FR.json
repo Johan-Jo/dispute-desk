@@ -143,7 +143,7 @@
   "disputes": {
     "title": "Litiges",
     "subtitle": "{total} au total",
-    "manageSubtitle": "Gérer et répondre aux rétrofacturations",
+    "manageSubtitle": "Consultez et gérez tous vos rétrofacturations et litiges",
     "syncNow": "Synchroniser",
     "export": "Exporter",
     "addFilter": "Ajouter un filtre +",
@@ -788,6 +788,7 @@
     "general": "Général"
   },
   "table": {
+    "disputeId": "ID du litige",
     "id": "ID",
     "order": "Commande",
     "amount": "Montant",

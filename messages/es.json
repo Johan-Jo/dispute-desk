@@ -112,7 +112,7 @@
   "disputes": {
     "title": "Disputas",
     "subtitle": "{total} en total",
-    "manageSubtitle": "Gestionar y responder a contracargos",
+    "manageSubtitle": "Consulte y gestione todos sus contracargos y disputas",
     "syncNow": "Sincronizar",
     "export": "Exportar",
     "addFilter": "Añadir filtro +",
@@ -621,6 +621,7 @@
     "general": "General"
   },
   "table": {
+    "disputeId": "ID de disputa",
     "id": "ID",
     "order": "Pedido",
     "amount": "Monto",

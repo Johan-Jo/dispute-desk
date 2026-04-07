@@ -114,7 +114,7 @@
   "disputes": {
     "title": "Tvister",
     "subtitle": "{total} totalt",
-    "manageSubtitle": "Hantera och svara på återkrav",
+    "manageSubtitle": "Visa och hantera alla dina återkrav och tvister",
     "syncNow": "Synka nu",
     "export": "Exportera",
     "addFilter": "Lägg till filter +",
@@ -623,6 +623,7 @@
     "general": "Allmänt"
   },
   "table": {
+    "disputeId": "Disput-ID",
     "id": "ID",
     "order": "Order",
     "amount": "Belopp",

@@ -112,7 +112,7 @@
   "disputes": {
     "title": "Disputas",
     "subtitle": "{total} no total",
-    "manageSubtitle": "Gerencie e responda a chargebacks",
+    "manageSubtitle": "Visualize e gerencie todos os chargebacks e disputas",
     "syncNow": "Sincronizar Agora",
     "export": "Exportar",
     "addFilter": "Adicionar filtro +",
@@ -621,6 +621,7 @@
     "general": "Geral"
   },
   "table": {
+    "disputeId": "ID da disputa",
     "id": "ID",
     "order": "Pedido",
     "amount": "Valor",
