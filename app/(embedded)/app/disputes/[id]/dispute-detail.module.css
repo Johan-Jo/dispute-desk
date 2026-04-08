@@ -416,7 +416,7 @@
 /* Horizontal connecting line behind icons */
 .stepperConnectorTrack {
   position: absolute;
-  top: 48px;
+  top: 48px; /* centered on 48px icon circles: 24px padding-top + 24px half-height */
   left: 20px;
   right: 20px;
   display: flex;
@@ -475,10 +475,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: #fff;
+}
+
+.stepperIconCircle :global(.Polaris-Icon) {
+  width: 28px;
+  height: 28px;
 }
 
 .stepperIconCircle[data-phase="complete"] {
