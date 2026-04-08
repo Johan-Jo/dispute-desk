@@ -170,15 +170,18 @@
 .stepperTrack {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  justify-content: center;
+  align-items: flex-start;
+  column-gap: 12px;
+  row-gap: 16px;
   padding: 16px 20px 20px;
-  justify-content: space-between;
+  box-sizing: border-box;
 }
 
 .stepperStep {
-  flex: 1 1 100px;
-  min-width: 100px;
-  max-width: 180px;
+  flex: 0 0 106px;
+  width: 106px;
+  max-width: 100%;
   text-align: center;
 }
 

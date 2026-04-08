@@ -3,9 +3,9 @@
 import { BlockStack, Text, Badge, Icon, Box } from "@shopify/polaris";
 import { CheckCircleIcon, ClockIcon, ClipboardIcon } from "@shopify/polaris-icons";
 import type { DisputeProgressStep } from "@/lib/embedded/disputeDetailProgress";
+import styles from "./dispute-detail.module.css";
 
 type Translate = (key: string) => string;
-import styles from "./dispute-detail.module.css";
 
 function formatStepDate(iso: string | null, fmt: (s: string | null) => string): string {
   if (!iso) return "—";
