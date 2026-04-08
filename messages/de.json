@@ -235,6 +235,7 @@
     "autoPackTriggered": "Ausgelöst durch Regel: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} Dateien",
     "uploadsUnavailable": "Uploads sind für diesen Fallstatus nicht verfügbar.",
+    "uploadsSubmittedToBank": "Die Beweise wurden bereits an die Bank übermittelt. Für diesen Streitfall können keine weiteren Dateien hochgeladen werden.",
     "uploadsAvailableHint": "Uploads sind nur verfügbar, wenn der Fall in KI-Überprüfung oder Warten auf weitere Beweise ist.",
     "orderData": "Bestelldaten",
     "fulfillmentJourney": "Versandverlauf",

@@ -257,6 +257,7 @@
     "autoPackTriggered": "Triggered by rule: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} files",
     "uploadsUnavailable": "Uploads are unavailable for this case status.",
+    "uploadsSubmittedToBank": "Evidence has already been submitted to the bank. No additional files can be uploaded for this dispute.",
     "uploadsAvailableHint": "Uploads are only available while case is In AI Reviewing or Waiting for other evidence.",
     "orderData": "Order Data",
     "fulfillmentJourney": "Fulfillment Journey",

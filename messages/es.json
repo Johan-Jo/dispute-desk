@@ -235,6 +235,7 @@
     "autoPackTriggered": "Activado por regla: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} archivos",
     "uploadsUnavailable": "Las cargas no están disponibles para este estado del caso.",
+    "uploadsSubmittedToBank": "La evidencia ya ha sido enviada al banco. No se pueden subir archivos adicionales para esta disputa.",
     "uploadsAvailableHint": "Las cargas solo están disponibles mientras el caso está en Revisión IA o Esperando más evidencia.",
     "orderData": "Datos del pedido",
     "fulfillmentJourney": "Trayecto de envío",

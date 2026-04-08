@@ -269,6 +269,7 @@
     "autoPackTriggered": "Utlöst av regel: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} filer",
     "uploadsUnavailable": "Uppladdningar är inte tillgängliga för denna ärendestatus.",
+    "uploadsSubmittedToBank": "Bevisningen har redan skickats till banken. Inga ytterligare filer kan laddas upp för denna tvist.",
     "uploadsAvailableHint": "Uppladdningar är bara tillgängliga när ärendet är i AI-granskning eller Väntar på ytterligare bevis.",
     "orderData": "Orderdata",
     "fulfillmentJourney": "Leveransresa",

@@ -422,6 +422,7 @@ export default function DisputeDetailPage() {
   const deadline = daysUntilInfo(dispute.due_at);
   const timeline = buildTimeline(packs, profile?.orderEvents ?? [], t);
   const isAutomated = matchedRule?.mode === "auto_pack";
+  const isSubmittedToBank = dispute.status === "under_review" || dispute.status === "accepted" || dispute.status === "won" || dispute.status === "lost";
 
   return (
     <Page
@@ -616,7 +617,11 @@ export default function DisputeDetailPage() {
                     </svg>
                   </div>
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    {packForSupplemental ? t("disputes.moreEvidenceBody") : t("disputes.uploadsUnavailable")}
+                    {packForSupplemental
+                      ? t("disputes.moreEvidenceBody")
+                      : isSubmittedToBank
+                        ? t("disputes.uploadsSubmittedToBank")
+                        : t("disputes.uploadsUnavailable")}
                   </Text>
                   {packForSupplemental && (
                     <div className={styles.moreEvidenceLink}>
