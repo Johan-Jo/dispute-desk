@@ -121,7 +121,9 @@ function clichéPenalty(alt) {
 }
 
 function photoToHero(p) {
-  const src = p.src?.large || p.src?.original || p.src?.medium;
+  // Prefer large2x (1880 px) or original over large (940 px) to avoid upscaling artefacts
+  // when the hero is displayed full-bleed on retina screens.
+  const src = p.src?.large2x || p.src?.original || p.src?.large || p.src?.medium;
   const alt =
     (p.alt && String(p.alt).trim()) ||
     (p.photographer ? `Photo by ${p.photographer} on Pexels` : "Stock photo");
