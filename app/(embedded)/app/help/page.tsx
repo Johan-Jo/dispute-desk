@@ -75,7 +75,7 @@ export default function EmbeddedHelpPage() {
   }, [query, t, embeddedArticles]);
 
   return (
-    <Page title={tEmbedded("title")}>
+    <Page fullWidth title={tEmbedded("title")}>
       <BlockStack gap="400">
         {helpGuide && (
           <Card>

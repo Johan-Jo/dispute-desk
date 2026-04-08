@@ -360,7 +360,7 @@ export default function DisputeDetailPage() {
 
   if (loading) {
     return (
-      <Page title={t("disputes.title")}>
+      <Page fullWidth title={t("disputes.title")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -371,6 +371,7 @@ export default function DisputeDetailPage() {
   if (!dispute) {
     return (
       <Page
+        fullWidth
         title={t("disputes.title")}
         backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       >
@@ -410,6 +411,7 @@ export default function DisputeDetailPage() {
           ? [{ content: t("disputes.openDisputeInShopify"), url: disputeUrl, external: true }]
           : []),
       ]}
+      fullWidth
     >
       <Layout>
         {/* Quota / pack limit error */}

@@ -184,7 +184,7 @@ function BillingPageInner() {
 
   if (loading) {
     return (
-      <Page title={t("billing.title")}>
+      <Page fullWidth title={t("billing.title")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -210,6 +210,7 @@ function BillingPageInner() {
 
   return (
     <Page
+      fullWidth
       title={t("billing.planManagement")}
       subtitle={`${t("billing.currentPlan")}: ${plan ? t(planNameKeys[plan.id] ?? "billing.free") : t("billing.free")}`}
     >
@@ -400,7 +401,7 @@ export default function BillingPage() {
   return (
     <Suspense
       fallback={
-        <Page title={t("billing.title")}>
+        <Page fullWidth title={t("billing.title")}>
           <div style={{ padding: "3rem", textAlign: "center" }}>
             <Spinner size="large" />
           </div>

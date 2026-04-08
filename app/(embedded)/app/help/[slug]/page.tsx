@@ -32,7 +32,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
 
   if (!article) {
     return (
-      <Page title={tEmbedded("title")} backAction={{ content: tEmbedded("backToHelp"), onAction: () => router.push("/app/help") }}>
+      <Page fullWidth title={tEmbedded("title")} backAction={{ content: tEmbedded("backToHelp"), onAction: () => router.push("/app/help") }}>
         <Card>
           <Text as="p" tone="subdued">This article is not available in the app. Open the Help Center in the DisputeDesk portal for the full article list.</Text>
         </Card>
@@ -53,6 +53,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
 
   return (
     <Page
+      fullWidth
       title={t(titleKey)}
       backAction={{ content: category ? t(category.labelKey) : tEmbedded("backToHelp"), onAction: () => router.push("/app/help") }}
     >

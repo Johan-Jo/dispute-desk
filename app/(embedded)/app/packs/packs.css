@@ -2,9 +2,11 @@
  * Scoped to the packs page to avoid leaking into other embedded screens.
  */
 
+/* Full width inside embedded shell (matches dashboard / EmbeddedAppChrome.pageContent) */
 .embeddedPacksRoot {
-  max-width: 1120px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .embeddedPacksRoot .Polaris-Card {

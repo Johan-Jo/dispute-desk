@@ -135,6 +135,7 @@ export default function EmbeddedSettingsPage() {
 
   return (
     <Page
+      fullWidth
       title={tn("settings")}
       subtitle={t("subtitle")}
     >

@@ -196,6 +196,7 @@ export default function EmbeddedRulesPage() {
 
   return (
     <Page
+      fullWidth
       title={tn("rules")}
       subtitle={tr("subtitle")}
       primaryAction={{

@@ -108,7 +108,7 @@ export default function ConnectPage() {
 
   if (connected === null) {
     return (
-      <Page>
+      <Page fullWidth>
         <div style={{ padding: "4rem", display: "flex", justifyContent: "center" }}>
           <Spinner size="large" />
         </div>
