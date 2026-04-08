@@ -49,6 +49,15 @@ function firstPackAt(packs: DisputeProgressInput["packs"]): string | null {
 /**
  * Returns the index of the "current" step (0..4). When terminal, returns 4 (outcome reached).
  */
+/**
+ * If the dispute status itself indicates review/submission has happened,
+ * trust that over the pack's saved_to_shopify_at field — Shopify may
+ * auto-submit evidence on the due date even without a DisputeDesk save.
+ */
+function statusImpliesReview(status: string | null): boolean {
+  return status === "under_review" || status === "accepted";
+}
+
 function currentStepIndex(
   status: string | null,
   packs: DisputeProgressInput["packs"],
@@ -57,6 +66,10 @@ function currentStepIndex(
 
   const hasPack = packs.length > 0;
   const hasSaved = firstSavedAt(packs) != null;
+
+  // Status-level signal overrides pack-level: if the bank is already
+  // reviewing, evidence must have been submitted even if we missed the save event.
+  if (statusImpliesReview(status)) return 3;
 
   if (!hasPack) return 1;
   if (!hasSaved) return 2;
@@ -100,7 +113,8 @@ export function getDisputeProgressSteps(
       id: "saved",
       titleKey: "disputes.progress.savedTitle",
       descriptionKey: "disputes.progress.savedDesc",
-      date: savedAt,
+      // If status implies review but we have no saved_to_shopify_at, use pack date as fallback
+      date: savedAt ?? (statusImpliesReview(d.status) ? packAt : null),
       phase: phaseFor(2),
     },
     {
