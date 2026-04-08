@@ -18,7 +18,7 @@ Run on a **development store** with the production or staging app URL (tunnel if
 
 - [ ] **Install:** OAuth completes; app opens embedded with `shop` and `host` query params (see [`docs/technical.md`](technical.md) § Embedded app guard / troubleshooting).
 - [ ] **Embedded shell:** `/app` loads without redirect loops; session cookies present (`sameSite: none` context). **In-iframe chrome:** optional feedback card appears above page content; dismiss feedback once and confirm it stays hidden after reload (`EmbeddedAppChrome`). Shopify Admin title bar shows "DisputeDesk" with the purple shield icon on all embedded pages.
-- [ ] **Disputes:** `/app/disputes` loads; search, **Filter** (status popover), **Export** CSV, **Sync now** from **More actions** (⋯), row navigation to detail; sync (manual or cron) behaves as expected (see [`docs/technical.md`](technical.md) — embedded disputes list).
+- [ ] **Disputes:** `/app/disputes` loads; search, **Filter** (status popover), **Export** CSV, **Sync now** from **More actions** (⋯), **View details** link to dispute detail (columns match dashboard Recent Disputes); sync (manual or cron) behaves as expected (see [`docs/technical.md`](technical.md) — embedded disputes list).
 - [ ] **Evidence:** Create or open a pack; **Save evidence** to Shopify works for a staff user with **Manage orders information** (Shopify Admin permission, not OAuth).
 - [ ] **Billing:** If testing paid plans, subscription approval flow opens and returns to the app.
 - [ ] **Uninstall:** `app/uninstalled` webhook path configured; shop data handling matches your privacy policy.
@@ -31,7 +31,7 @@ Automated checks in-repo: `npm test`, `npx tsc --noEmit`, `npm run build`. Optio
 
 ## Design vs production (embedded)
 
-Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav). **Outer chrome is Shopify** — not rendered by this repo. **Inside the iframe**, DisputeDesk renders **`EmbeddedAppChrome`** (dismissible feedback card, `bg-[#F1F2F4]` content area) and then each route's content. The Shopify Admin title bar always displays "DisputeDesk" with the purple shield icon via `<s-page heading="DisputeDesk" />` in the shared embedded layout. The disputes page uses three separate HTML blocks (header, actions-bar card, table card) with custom CSS instead of Polaris wrappers, matching Figma `shopify-disputes.tsx` pixel-for-pixel. Full-frame screenshots will still differ outside the iframe; see [`docs/technical.md`](technical.md) § Embedded app troubleshooting (Figma full-frame vs embedded canvas + in-iframe chrome).
+Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav). **Outer chrome is Shopify** — not rendered by this repo. **Inside the iframe**, DisputeDesk renders **`EmbeddedAppChrome`** (dismissible feedback card, `bg-[#F1F2F4]` content area) and then each route's content. The Shopify Admin title bar always displays "DisputeDesk" with the purple shield icon via `<s-page heading="DisputeDesk" />` in the shared embedded layout. The disputes list uses Polaris **Page** / **Layout** / **Card** with a Figma-aligned inner table (`disputes-list.module.css`); columns align with the dashboard **Recent Disputes** widget. Full-frame screenshots will still differ outside the iframe; see [`docs/technical.md`](technical.md) § Embedded app troubleshooting (Figma full-frame vs embedded canvas + in-iframe chrome).
 
 ## Related docs
 

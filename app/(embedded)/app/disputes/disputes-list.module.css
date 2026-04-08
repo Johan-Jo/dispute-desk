@@ -67,27 +67,6 @@
   color: #202223;
 }
 
-.chevronCol {
-  width: 40px;
-  text-align: right;
-}
-.chevronBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #1d4ed8;
-  padding: 0;
-  display: flex;
-  transition: color 0.15s;
-}
-.chevronBtn:hover {
-  color: #1e40af;
-}
-.chevronBtn svg {
-  width: 20px;
-  height: 20px;
-}
-
 /* Loading / empty */
 .loadingWrap {
   display: flex;

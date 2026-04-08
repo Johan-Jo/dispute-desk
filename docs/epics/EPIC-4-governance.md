@@ -85,7 +85,7 @@ Both pack preview pages (embedded + portal) now show a warning banner when `comp
 | `app/api/rules/reorder/route.ts` | Reorder rules by priority |
 | `app/api/disputes/[id]/approve/route.ts` | Approve from review queue |
 | `app/api/disputes/route.ts` | Modified: added `needs_review` filter |
-| `app/(embedded)/app/disputes/page.tsx` | Modified: review queue tab + approve |
+| `app/(embedded)/app/disputes/page.tsx` | List + status filter; **View details** to detail (portal list has Review Queue tab + row Approve) |
 | `app/(portal)/portal/disputes/page.tsx` | Modified: review queue tab + approve |
 | `app/(portal)/portal/rules/page.tsx` | Rules settings CRUD UI |
 | `app/(embedded)/app/packs/[packId]/page.tsx` | Modified: completeness gate banner |

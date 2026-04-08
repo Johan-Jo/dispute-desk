@@ -5,10 +5,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
+import { recentDisputesViewDetailsLinkStyle } from "@/lib/embedded/recentDisputesTableStyles";
 import {
   Page,
   Layout,
@@ -84,6 +86,11 @@ function formatCurrency(
   }).format(amount);
 }
 
+/** Same as dashboard Recent Disputes — first 8 chars of id, uppercased */
+function formatShortId(id: string): string {
+  return id.slice(0, 8).toUpperCase();
+}
+
 function formatListDisputeId(id: string): string {
   const hex = id.replace(/-/g, "").slice(0, 4).toUpperCase();
   return `DP-${hex}`;
@@ -97,7 +104,6 @@ function orderLabel(d: Dispute): string {
 
 export default function DisputesListPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const t = useTranslations();
   const locale = useLocale();
 
@@ -119,6 +125,18 @@ export default function DisputesListPage() {
         month: "short",
         day: "numeric",
         year: "numeric",
+      });
+    },
+    [dateLocale],
+  );
+
+  /** Dashboard Recent Disputes: short month + day only */
+  const formatDeadlineShort = useCallback(
+    (iso: string | null) => {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString(dateLocale, {
+        month: "short",
+        day: "numeric",
       });
     },
     [dateLocale],
@@ -183,13 +201,6 @@ export default function DisputesListPage() {
     setSyncing(false);
   };
 
-  const goToDispute = useCallback(
-    (id: string) => {
-      router.push(withShopParams(`/app/disputes/${id}`, searchParams));
-    },
-    [router, searchParams],
-  );
-
   const statusLabelForCsv = (status: string | null): string => {
     if (!status) return t("disputes.statusUnknown");
     switch (status) {
@@ -244,9 +255,11 @@ export default function DisputesListPage() {
     ? disputes.filter((d) => {
         const q = queryValue.toLowerCase();
         const dp = formatListDisputeId(d.id).toLowerCase();
+        const short = formatShortId(d.id).toLowerCase();
         return (
           d.dispute_gid.toLowerCase().includes(q) ||
           d.id.toLowerCase().includes(q) ||
+          short.includes(q) ||
           dp.includes(q) ||
           (d.reason ?? "").toLowerCase().includes(q) ||
           (d.order_gid ?? "").toLowerCase().includes(q) ||
@@ -259,16 +272,17 @@ export default function DisputesListPage() {
   const exportCsv = () => {
     const rows = visibleDisputes.map((d) =>
       [
-        formatListDisputeId(d.id),
         orderLabel(d),
-        formatReasonTitleCase(d.reason),
+        formatShortId(d.id),
+        d.customer_display_name ?? "",
         formatCurrency(d.amount, d.currency_code, numberLocale),
+        formatReasonTitleCase(d.reason),
         statusLabelForCsv(d.status),
         formatDueDate(d.due_at),
       ].join(","),
     );
     const csv = [
-      "Dispute ID,Order,Reason,Amount,Status,Due date",
+      "Order,ID,Customer,Amount,Reason,Status,Due date",
       ...rows,
     ].join("\n");
     const a = document.createElement("a");
@@ -391,44 +405,23 @@ export default function DisputesListPage() {
                   <table className={styles.listTable}>
                     <thead>
                       <tr>
-                        <th>{t("table.disputeId")}</th>
                         <th>{t("table.order")}</th>
-                        <th>{t("table.reason")}</th>
+                        <th>{t("table.id")}</th>
+                        <th>{t("table.customer")}</th>
                         <th>{t("table.amount")}</th>
+                        <th>{t("table.reason")}</th>
                         <th>{t("table.status")}</th>
-                        <th>{t("table.dueDateColumn")}</th>
-                        <th className={styles.chevronCol} aria-hidden />
+                        <th>{t("table.deadline")}</th>
+                        <th>{t("table.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {visibleDisputes.map((d) => {
                         const orderUrl = shopifyOrderAdminUrl(shopDomain, d.order_gid);
                         const label = orderLabel(d);
+                        const detailHref = withShopParams(`/app/disputes/${d.id}`, searchParams);
                         return (
-                          <tr
-                            key={d.id}
-                            role="link"
-                            tabIndex={0}
-                            aria-label={t("disputes.viewDetails")}
-                            style={{ cursor: "pointer" }}
-                            onClick={() => goToDispute(d.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                goToDispute(d.id);
-                              }
-                            }}
-                          >
-                            <td>
-                              <span className={styles.cellId}>
-                                {formatListDisputeId(d.id)}
-                              </span>
-                              {isSyntheticDispute(d.dispute_gid) && (
-                                <span className={styles.syntheticBadge}>
-                                  Synthetic
-                                </span>
-                              )}
-                            </td>
+                          <tr key={d.id}>
                             <td>
                               {orderUrl ? (
                                 <a
@@ -436,8 +429,6 @@ export default function DisputesListPage() {
                                   target="_top"
                                   rel="noopener noreferrer"
                                   className={styles.cellOrder}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => e.stopPropagation()}
                                 >
                                   {label}
                                 </a>
@@ -446,13 +437,32 @@ export default function DisputesListPage() {
                               )}
                             </td>
                             <td>
-                              <span className={styles.cellMuted}>
-                                {formatReasonTitleCase(d.reason)}
-                              </span>
+                              <Text as="span" variant="bodySm" tone="subdued">
+                                {formatShortId(d.id)}
+                              </Text>
+                              {isSyntheticDispute(d.dispute_gid) && (
+                                <span className={styles.syntheticBadge}>
+                                  Synthetic
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <Text
+                                as="span"
+                                variant="bodySm"
+                                tone={d.customer_display_name ? undefined : "subdued"}
+                              >
+                                {d.customer_display_name ?? "—"}
+                              </Text>
                             </td>
                             <td>
                               <span className={styles.cellAmount}>
                                 {formatCurrency(d.amount, d.currency_code, numberLocale)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={styles.cellMuted}>
+                                {formatReasonTitleCase(d.reason)}
                               </span>
                             </td>
                             <td>
@@ -461,26 +471,14 @@ export default function DisputesListPage() {
                               </Badge>
                             </td>
                             <td>
-                              <span className={styles.cellMuted}>
-                                {formatDueDate(d.due_at)}
-                              </span>
+                              <Text as="span" variant="bodySm" tone="subdued">
+                                {formatDeadlineShort(d.due_at)}
+                              </Text>
                             </td>
-                            <td className={styles.chevronCol}>
-                              <span className={styles.chevronBtn}>
-                                <svg
-                                  viewBox="0 0 20 20"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M7.5 4.5l5.5 5.5-5.5 5.5"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </span>
+                            <td>
+                              <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
+                                {t("table.viewDetails")}
+                              </Link>
                             </td>
                           </tr>
                         );

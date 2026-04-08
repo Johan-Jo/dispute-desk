@@ -1142,7 +1142,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** page has three sections: a title header, an **actions bar**, and the **disputes table**.\n\nThe actions bar contains **Search** (type to filter by dispute ID, order, reason, or customer name), **Filter** (status popover), **Export** (CSV download), and a **More actions** menu for **Sync now**.\n\nThe table shows **Dispute ID** (e.g. DP-6984), **Order** (links to Shopify Admin), **Reason**, **Amount**, **Status** (color-coded badge: Open, In Review, Won, Lost), **Due date**, and a chevron arrow. **Click any row** to open the dispute detail; the order link opens Shopify Admin without navigating away.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
+          "body": "The **Disputes** page uses Polaris **Page** with a toolbar and a table inside **Card**. The toolbar has **Search** (dispute ID, order, reason, or customer name), **Filter** (status popover), **Export** (CSV download), and **More actions** ⋯ for **Sync now**.\n\nThe table matches the dashboard **Recent Disputes** columns: **Order** (links to Shopify Admin when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status** (badge), **Deadline**, and **Actions** with **View details** to open the dispute. The order link opens Shopify Admin without leaving the list.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
         },
         "reviewQueue": {
           "title": "The review queue",
@@ -1150,7 +1150,7 @@
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
-          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and **click a row** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
         }
       }
     }

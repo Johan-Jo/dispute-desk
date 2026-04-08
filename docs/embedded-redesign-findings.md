@@ -68,3 +68,7 @@ Figma Make does not use frame/node IDs in the same way as Figma Design. For desi
   - Template install uses the existing `POST /api/templates/:id/install` flow and routes to the installed pack detail.
 
 - Template wizard integration on embedded is still pending (future work after packs page parity).
+
+## Update (2026-04-07): Embedded disputes list — dashboard column parity
+
+- `app/(embedded)/app/disputes/page.tsx` uses Polaris **Page** / **Layout** / **Card** (not three standalone HTML sections). The disputes table columns match the embedded dashboard **Recent Disputes** widget; navigation to detail is via **View details** and the order link, not whole-row click. See `docs/technical.md` (Review Queue + Dashboard Stats).

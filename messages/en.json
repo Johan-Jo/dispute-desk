@@ -1078,7 +1078,7 @@
         },
         "understandingDashboard": {
           "title": "Understanding the dashboard in this app",
-          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nKey metrics: Open Disputes, Win Rate, Auto-Saved count, and Resolved total.\n\nThe Automation Status card shows your current settings: auto-build, auto-save, minimum completeness score, and blocker gate.\n\nThe Recent Disputes table lists your latest chargebacks. Use the Disputes link in the app to view and filter all disputes, or click a row to see full details and manage evidence."
+          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nKey metrics: Open Disputes, Win Rate, Auto-Saved count, and Resolved total.\n\nThe Automation Status card shows your current settings: auto-build, auto-save, minimum completeness score, and blocker gate.\n\nThe Recent Disputes table lists your latest chargebacks. Use the Disputes link in the app to view and filter all disputes, or open a dispute with **View details** (or the order link) to see full details and manage evidence."
         },
         "afterSaving": {
           "title": "What happens after saving evidence",
@@ -1086,7 +1086,7 @@
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** page is one card: toolbar (**Search**, **Filter**, **Export**, and **More actions** ⋯ for **Sync now**) and a table. Columns: **Dispute ID** (e.g. DP-6984), **Order** (Shopify Admin link when available), **Reason**, **Amount**, **Status**, **Due date**, and a chevron. **Click any row** to open the dispute; the order link opens Admin and does not navigate away from the list.\n\nSearch also matches customer name even though that column is not shown.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
+          "body": "The **Disputes** page uses Polaris **Page** with a toolbar (**Search**, **Filter**, **Export**, and **More actions** ⋯ for **Sync now**) and a table inside **Card**. Columns match the dashboard **Recent Disputes** list: **Order** (Shopify Admin link when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status**, **Deadline**, and **Actions** with **View details** to open a dispute. The order link opens Admin without leaving the list.\n\nSearch matches dispute ids, orders, reasons, and customer name.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
         },
         "reviewQueue": {
           "title": "The review queue",
@@ -1094,7 +1094,7 @@
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
-          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and **click a row** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
         }
       }
     }
