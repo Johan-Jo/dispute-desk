@@ -1,5 +1,14 @@
 /* Figma shopify-disputes.tsx — pixel-exact styles. */
 
+/* Same primary column width as Polaris Page + Layout (token from EmbeddedAppChrome .pageContent) */
+.disputesContainer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--pg-layout-width-primary-max, 49.65rem);
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Header */
 .pageTitle {
   font-size: 1.5rem;
