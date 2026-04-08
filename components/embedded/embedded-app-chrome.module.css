@@ -2,7 +2,7 @@
 
 /* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] border-b */
 .feedbackWrap {
-  padding: 12px 16px 0;
+  padding: 12px 4px 0;
   background: #f1f2f4;
 }
 
@@ -85,22 +85,28 @@
   color: #202223;
 }
 
-/* Page content area — tighter gutters + less top gap vs Polaris defaults */
+/*
+ * Minimal side inset (pull toward Shopify nav) + widen Polaris layout tokens ~30%
+ * (--pg-layout-width-primary-max default 41.375rem → 53.7875rem).
+ */
 .pageContent {
-  padding: 8px 16px 20px;
+  --pg-layout-width-primary-max: 53.7875rem;
+  --pg-layout-width-primary-min: 39rem;
+  --pg-layout-width-one-half-width-base: 36.5625rem;
+  --pg-layout-width-secondary-max: 26rem;
+  padding: 8px 4px 20px 4px;
   background: #f1f2f4;
 }
 
-/*
- * Polaris Page adds a max-width, horizontal padding, and large padding-top on
- * .Polaris-Page__Content at sm+ breakpoints — reads as “dead space” under the
- * Admin title bar and wastes horizontal room in the iframe. Scope overrides
- * to this shell only (class substrings match Polaris’s hashed suffixes).
- */
+/* Polaris Page: full width, no side padding, no auto-margins */
 .pageContent :global([class*="Polaris-Page_"]:not([class*="Polaris-Page__"])) {
-  max-width: none;
-  padding-left: 0;
-  padding-right: 0;
+  box-sizing: border-box;
+  max-width: none !important;
+  width: 100%;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 .pageContent :global([class*="Polaris-Page__Content"]) {
@@ -112,4 +118,15 @@
   .pageContent :global([class*="Polaris-Page__Content"]) {
     padding-top: var(--p-space-200);
   }
+}
+
+/* Polaris Layout defaults to justify-content:center — dead space left/right */
+.pageContent :global([class*="Polaris-Layout_"]:not([class*="Polaris-Layout__"])) {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.pageContent :global([class*="Polaris-Layout__Section"]) {
+  box-sizing: border-box;
+  max-width: 100%;
 }
