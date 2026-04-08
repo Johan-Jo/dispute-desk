@@ -86,14 +86,14 @@
 }
 
 /*
- * Widen Polaris layout tokens ~20% over previous values.
- * Previous: primary-max 49.65rem → now 59.58rem (≈44% over Polaris defaults).
+ * Minimal side inset + widen Polaris layout tokens ~20% over default (was ~30%;
+ * narrowed by ~⅓ of that bump). Default primary max 41.375rem → 49.65rem.
  */
 .pageContent {
-  --pg-layout-width-primary-max: 59.58rem;
-  --pg-layout-width-primary-min: 43.2rem;
-  --pg-layout-width-one-half-width-base: 40.5rem;
-  --pg-layout-width-secondary-max: 28.8rem;
+  --pg-layout-width-primary-max: 49.65rem;
+  --pg-layout-width-primary-min: 36rem;
+  --pg-layout-width-one-half-width-base: 33.75rem;
+  --pg-layout-width-secondary-max: 24rem;
   padding: 8px 4px 20px 4px;
   background: #f1f2f4;
 }
