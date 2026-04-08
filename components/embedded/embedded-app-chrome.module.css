@@ -2,7 +2,7 @@
 
 /* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] border-b */
 .feedbackWrap {
-  padding: 12px 32px 0;
+  padding: 12px 16px 0;
   background: #f1f2f4;
 }
 
@@ -85,8 +85,31 @@
   color: #202223;
 }
 
-/* Page content area */
+/* Page content area — tighter gutters + less top gap vs Polaris defaults */
 .pageContent {
-  padding: 12px 32px 24px;
+  padding: 8px 16px 20px;
   background: #f1f2f4;
+}
+
+/*
+ * Polaris Page adds a max-width, horizontal padding, and large padding-top on
+ * .Polaris-Page__Content at sm+ breakpoints — reads as “dead space” under the
+ * Admin title bar and wastes horizontal room in the iframe. Scope overrides
+ * to this shell only (class substrings match Polaris’s hashed suffixes).
+ */
+.pageContent :global([class*="Polaris-Page_"]:not([class*="Polaris-Page__"])) {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.pageContent :global([class*="Polaris-Page__Content"]) {
+  padding-top: var(--p-space-200);
+  padding-bottom: var(--p-space-200);
+}
+
+@media (min-width: 48em) {
+  .pageContent :global([class*="Polaris-Page__Content"]) {
+    padding-top: var(--p-space-200);
+  }
 }
