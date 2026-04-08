@@ -26,6 +26,7 @@ import {
   Icon,
   Modal,
   Box,
+  Collapsible,
 } from "@shopify/polaris";
 import {
   OrderIcon,
@@ -35,6 +36,8 @@ import {
   AlertTriangleIcon,
   CheckCircleIcon,
   RefreshIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from "@shopify/polaris-icons";
 
 import styles from "./dispute-detail.module.css";
@@ -101,6 +104,11 @@ interface TimelineEvent {
   date: string;
   label: string;
   sublabel?: string;
+}
+
+interface MatchedRule {
+  name: string;
+  mode: string;
 }
 
 function formatCurrency(amount: number | null, code: string | null): string {
@@ -183,7 +191,6 @@ function buildTimeline(
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
 
-  // Real Shopify order events — message is pre-localized by Shopify to the store language
   for (const e of orderEvents) {
     events.push({
       date: e.createdAt,
@@ -192,7 +199,6 @@ function buildTimeline(
     });
   }
 
-  // DisputeDesk-specific events not present in Shopify's order event feed
   const saved = packs.find((p) => p.saved_to_shopify_at);
   if (saved?.saved_to_shopify_at) {
     events.push({ date: saved.saved_to_shopify_at, label: t("disputes.evidenceSavedToShopify") });
@@ -201,24 +207,15 @@ function buildTimeline(
     events.push({ date: packs[packs.length - 1].created_at, label: t("disputes.evidencePackGenerated") });
   }
 
-  // Sort descending (newest first)
   events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   return events;
 }
 
-function KpiCard({
-  label,
-  children,
-  urgent,
-}: {
-  label: string;
-  children: React.ReactNode;
-  urgent?: boolean;
-}) {
+function SummaryItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className={`${styles.kpiCard} ${urgent ? styles.kpiCardUrgent : ""}`}>
-      <p className={styles.kpiLabel}>{label}</p>
-      {children}
+    <div className={styles.summaryItem}>
+      <p className={styles.summaryItemLabel}>{label}</p>
+      <div className={styles.summaryItemValue}>{value}</div>
     </div>
   );
 }
@@ -232,6 +229,8 @@ function ProfileRow({ label, value }: { label: string; value: React.ReactNode })
   );
 }
 
+const INFO_BANNER_KEY = "dd-info-banner-dismissed";
+
 export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -241,6 +240,7 @@ export default function DisputeDetailPage() {
   const [packs, setPacks] = useState<Pack[]>([]);
   const [profile, setProfile] = useState<DisputeProfile | null>(null);
   const [shopDomain, setShopDomain] = useState<string | null>(null);
+  const [matchedRule, setMatchedRule] = useState<MatchedRule | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -248,6 +248,17 @@ export default function DisputeDetailPage() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCheckLoading, setTemplateCheckLoading] = useState(false);
   const [matchedTemplate, setMatchedTemplate] = useState<{ id: string; name: string } | null>(null);
+
+  // Collapsible state
+  const [infoBannerDismissed, setInfoBannerDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(INFO_BANNER_KEY) === "1";
+    }
+    return false;
+  });
+  const [summaryOpen, setSummaryOpen] = useState(true);
+  const [orderDataOpen, setOrderDataOpen] = useState(false);
+  const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
 
   const daysUntilInfo = (iso: string | null): { text: string; urgent: boolean } => {
     if (!iso) return { text: "—", urgent: false };
@@ -274,6 +285,7 @@ export default function DisputeDetailPage() {
     setDispute(json.dispute ?? null);
     setPacks(json.packs ?? []);
     setShopDomain(json.shop_domain ?? null);
+    setMatchedRule(json.matchedRule ?? null);
     setProfile(profileJson.profile ?? null);
     setLoading(false);
   }, [id, searchParams]);
@@ -374,6 +386,11 @@ export default function DisputeDetailPage() {
     setShowTemplateModal(true);
   };
 
+  const dismissInfoBanner = () => {
+    setInfoBannerDismissed(true);
+    localStorage.setItem(INFO_BANNER_KEY, "1");
+  };
+
   if (loading) {
     return (
       <Page title={t("disputes.detailPageTitle")}>
@@ -396,6 +413,7 @@ export default function DisputeDetailPage() {
   }
 
   const isSynthetic = dispute.dispute_gid?.includes("/seed-") ?? false;
+  const disputeNumericId = dispute.dispute_gid?.split("/").pop() ?? dispute.id;
   const orderNum = dispute.order_gid?.split("/").pop();
   const disputeUrl =
     shopDomain && dispute.dispute_gid
@@ -403,19 +421,18 @@ export default function DisputeDetailPage() {
       : null;
   const deadline = daysUntilInfo(dispute.due_at);
   const timeline = buildTimeline(packs, profile?.orderEvents ?? [], t);
-
-  const orderLabel =
-    profile?.orderName ??
-    (dispute.dispute_gid.split("/").pop()
-      ? `#${dispute.dispute_gid.split("/").pop()}`
-      : "—");
+  const isAutomated = matchedRule?.mode === "auto_pack";
 
   return (
     <Page
-      title={t("disputes.detailPageTitle")}
-      subtitle={t("disputes.detailPageSubtitle", { orderLabel })}
+      title={t("disputes.chargebackTitle", { id: disputeNumericId })}
+      subtitle={t("disputes.orderDateSubtitle", { date: formatDate(profile?.createdAt ?? dispute.initiated_at) })}
       backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
-      titleMetadata={isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined}
+      titleMetadata={
+        isAutomated
+          ? <span className={styles.automatedBadge}>⚡ {t("disputes.automatedBadge")}</span>
+          : isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined
+      }
       primaryAction={{
         content: generating || templateCheckLoading ? t("disputes.generating") : t("disputes.generatePack"),
         onAction: handleGenerate,
@@ -435,6 +452,16 @@ export default function DisputeDetailPage() {
       ]}
     >
       <Layout>
+        {/* Info Banner */}
+        {!infoBannerDismissed && (
+          <Layout.Section>
+            <Banner tone="info" onDismiss={dismissInfoBanner}>
+              <p><strong>{t("disputes.infoBannerHeadline")}</strong></p>
+              <p>{t("disputes.infoBannerDetail")}</p>
+            </Banner>
+          </Layout.Section>
+        )}
+
         {/* Quota / pack limit error */}
         {quotaError && (
           <Layout.Section>
@@ -449,179 +476,258 @@ export default function DisputeDetailPage() {
           </Layout.Section>
         )}
 
-        {/* KPI cards */}
-        <Layout.Section>
-          <div className={styles.kpiGrid}>
-            <KpiCard label={t("disputes.amount")}>
-              <p className={styles.kpiAmount}>
-                {formatCurrency(dispute.amount, dispute.currency_code)}
-              </p>
-            </KpiCard>
-
-            <KpiCard label={t("table.status")}>
-              <div style={{ marginTop: "4px" }}>
-                <Badge tone={statusTone(dispute.status)}>
-                  {statusLabel(dispute.status, t)}
-                </Badge>
-              </div>
-            </KpiCard>
-
-            <KpiCard label={t("disputes.dueDate")}>
-              <p className={styles.kpiValue}>{formatDate(dispute.due_at)}</p>
-            </KpiCard>
-
-            <KpiCard label={t("disputes.timeLeft")} urgent={deadline.urgent}>
-              <div className={styles.kpiRow}>
-                {deadline.urgent && (
-                  <Icon source={AlertTriangleIcon} tone="critical" />
-                )}
-                <p className={deadline.urgent ? styles.kpiValueUrgent : styles.kpiValue}>
-                  {deadline.text}
-                </p>
-              </div>
-            </KpiCard>
-          </div>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Box background="bg-surface-secondary" padding="300" borderRadius="200">
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("disputes.managedByDisputeDesk")}
-            </Text>
-          </Box>
-        </Layout.Section>
-
+        {/* Dispute Status Stepper */}
         <Layout.Section>
           <DisputeStatusStepper steps={progressSteps} t={t} formatDate={formatDate} />
         </Layout.Section>
 
-        {/* Customer Info + Order Details */}
+        {/* Two-column: Dispute Summary (left) + Managed/Evidence (right) */}
         <Layout.Section>
-          <div className={styles.profileGrid}>
-            <Card>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                <Icon source={PersonIcon} tone="subdued" />
-                <Text as="h3" variant="headingSm">{t("disputes.customerInfo")}</Text>
+          <div className={styles.twoColumnLayout}>
+            {/* LEFT: Dispute Summary */}
+            <Card padding="0">
+              <div
+                className={styles.collapsibleHeader}
+                onClick={() => setSummaryOpen((v) => !v)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSummaryOpen((v) => !v); }}
+              >
+                <Text as="h2" variant="headingSm">{t("disputes.disputeSummary")}</Text>
+                <span className={`${styles.collapsibleHeaderIcon} ${summaryOpen ? styles.collapsibleHeaderIconOpen : ""}`}>
+                  <Icon source={ChevronDownIcon} tone="subdued" />
+                </span>
               </div>
-              <BlockStack gap="200">
-                <ProfileRow label={t("disputes.name")} value={profile?.customerName ?? "—"} />
-                <ProfileRow label={t("disputes.email")} value={profile?.email ?? "—"} />
-                <ProfileRow label={t("disputes.phone")} value={profile?.phone ?? "—"} />
-                <ProfileRow
-                  label={t("disputes.address")}
-                  value={formatAddress(profile?.displayAddress ?? profile?.shippingAddress)}
-                />
-              </BlockStack>
+              <Collapsible open={summaryOpen} id="dispute-summary" transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
+                <div className={styles.summaryGrid}>
+                  <SummaryItem label={t("disputes.disputeId")} value={disputeNumericId} />
+                  <SummaryItem label={t("disputes.source")} value="Shopify Payments" />
+                  <SummaryItem label={t("disputes.transactionId")} value={dispute.dispute_evidence_gid?.split("/").pop()?.slice(0, 4) + "xx" || "—"} />
+                  <SummaryItem label={t("disputes.rrn")} value="—" />
+                  <SummaryItem label={t("disputes.openedOn")} value={formatDate(dispute.initiated_at)} />
+                  <SummaryItem
+                    label={t("table.status")}
+                    value={
+                      <Badge tone={statusTone(dispute.status)}>
+                        {statusLabel(dispute.status, t)}
+                      </Badge>
+                    }
+                  />
+                  <SummaryItem label={t("disputes.dueDate")} value={formatDate(dispute.due_at)} />
+                  <SummaryItem label={t("disputes.state")} value={deadline.urgent ? <span style={{ color: "#EF4444", fontWeight: 600 }}>{deadline.text}</span> : deadline.text} />
+                  <SummaryItem label={t("disputes.amount")} value={formatCurrency(dispute.amount, dispute.currency_code)} />
+                  <SummaryItem label={t("disputes.reason")} value={dispute.reason?.replace(/_/g, " ") ?? "—"} />
+                </div>
+              </Collapsible>
             </Card>
 
-            <Card>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                <Icon source={OrderIcon} tone="subdued" />
-                <Text as="h3" variant="headingSm">{t("disputes.orderDetails")}</Text>
-              </div>
-              <BlockStack gap="200">
-                <ProfileRow
-                  label={t("disputes.orderId")}
-                  value={
-                    profile?.orderName
-                      ? (shopDomain && orderNum ? (
-                          <a
-                            href={`https://${shopDomain}/admin/orders/${orderNum}`}
-                            target="_top"
-                            style={{ color: "#1D4ED8", textDecoration: "none" }}
-                          >
-                            {profile.orderName}
-                          </a>
-                        ) : profile.orderName)
-                      : orderNum ? `#${orderNum}` : "—"
-                  }
-                />
-                <ProfileRow label={t("disputes.date")} value={formatDate(profile?.createdAt ?? null)} />
-                {profile?.total && (
-                  <ProfileRow
-                    label="Total"
-                    value={formatCurrency(parseFloat(profile.total.amount), profile.total.currencyCode)}
-                  />
-                )}
-                {profile?.fulfillments && profile.fulfillments.flatMap((f) => f.trackingInfo).length > 0 && (
-                  profile.fulfillments.flatMap((f) => f.trackingInfo).slice(0, 2).map((trk, i) => (
-                    <ProfileRow
-                      key={i}
-                      label={t("disputes.tracking")}
-                      value={
-                        trk.url ? (
-                          <a href={trk.url} target="_blank" rel="noopener noreferrer" style={{ color: "#1D4ED8", fontFamily: "monospace", fontSize: "12px" }}>
-                            {trk.number}
-                          </a>
-                        ) : (
-                          <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{trk.number}</span>
-                        )
-                      }
-                    />
-                  ))
-                )}
-              </BlockStack>
-            </Card>
+            {/* RIGHT: Managed + Evidence stacked */}
+            <div className={styles.rightColumn}>
+              {/* Managed by DisputeDesk */}
+              <Card padding="0">
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <InlineStack gap="200" blockAlign="center">
+                      <span style={{ display: "inline-flex", color: "var(--p-color-text-subdued)" }}>
+                        <Icon source={CheckCircleIcon} tone="subdued" />
+                      </span>
+                      <Text as="h2" variant="headingSm">{t("disputes.managedByDisputeDesk")}</Text>
+                    </InlineStack>
+                  </InlineStack>
+                </div>
+                <div className={styles.managedCardContent}>
+                  <div className={styles.managedAutomationRow}>
+                    <div className={styles.managedAutomationIcon}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className={styles.managedTitle}>{t("disputes.fullyAutomated")}</p>
+                      <p className={styles.managedDesc}>{t("disputes.fullyAutomatedDesc")}</p>
+                    </div>
+                  </div>
+                  {matchedRule && (
+                    <div className={styles.managedStatusRow}>
+                      <span className={styles.managedStatusDot} />
+                      <div>
+                        <p className={styles.managedStatusLabel}>{t("disputes.autoPackActive")}</p>
+                        <p className={styles.managedStatusRule}>
+                          {t("disputes.autoPackTriggered", { name: matchedRule.name ?? "Default" })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* More Evidence */}
+              <Card padding="0">
+                <div className={styles.moreEvidenceHeader}>
+                  <p className={styles.moreEvidenceTitle}>{t("disputes.moreEvidenceTitle")}</p>
+                  <span className={styles.moreEvidenceCount}>{t("disputes.moreEvidenceFileCount", { count: 0, max: 5 })}</span>
+                </div>
+                <div
+                  className={`${styles.moreEvidenceZone} ${!packForSupplemental ? styles.moreEvidenceZoneDisabled : ""}`}
+                >
+                  <div className={styles.moreEvidenceUploadIcon}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  </div>
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    {packForSupplemental ? t("disputes.moreEvidenceBody") : t("disputes.uploadsUnavailable")}
+                  </Text>
+                  {packForSupplemental && (
+                    <div className={styles.moreEvidenceLink}>
+                      <Button
+                        url={withShopParams(`/app/packs/${packForSupplemental.id}`, searchParams)}
+                      >
+                        {t("disputes.moreEvidenceCta")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className={styles.moreEvidenceFooter}>
+                  <p className={styles.moreEvidenceFooterText}>
+                    {t("disputes.uploadsAvailableHint")}
+                  </p>
+                </div>
+              </Card>
+            </div>
           </div>
         </Layout.Section>
 
+        {/* Order Data (collapsible) */}
         <Layout.Section>
           <Card padding="0">
-            <div className={styles.moreEvidenceHeader}>
-              <div>
-                <p className={styles.moreEvidenceTitle}>{t("disputes.moreEvidenceTitle")}</p>
-              </div>
-            </div>
             <div
-              className={`${styles.moreEvidenceZone} ${!packForSupplemental ? styles.moreEvidenceZoneDisabled : ""}`}
+              className={styles.collapsibleHeader}
+              onClick={() => setOrderDataOpen((v) => !v)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOrderDataOpen((v) => !v); }}
             >
-              <Text as="p" variant="bodyMd" tone="subdued">
-                {packForSupplemental ? t("disputes.moreEvidenceBody") : t("disputes.moreEvidenceLocked")}
-              </Text>
-              {packForSupplemental && (
-                <div className={styles.moreEvidenceLink}>
-                  <Button
-                    url={withShopParams(`/app/packs/${packForSupplemental.id}`, searchParams)}
-                  >
-                    {t("disputes.moreEvidenceCta")}
-                  </Button>
-                </div>
-              )}
+              <Text as="h2" variant="headingSm">{t("disputes.orderData")}</Text>
+              <span className={`${styles.collapsibleHeaderIcon} ${orderDataOpen ? styles.collapsibleHeaderIconOpen : ""}`}>
+                <Icon source={ChevronDownIcon} tone="subdued" />
+              </span>
             </div>
+            <Collapsible open={orderDataOpen} id="order-data" transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
+              <Box padding="400">
+                <div className={styles.profileGrid}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                      <Icon source={PersonIcon} tone="subdued" />
+                      <Text as="h3" variant="headingSm">{t("disputes.customerInfo")}</Text>
+                    </div>
+                    <BlockStack gap="200">
+                      <ProfileRow label={t("disputes.name")} value={profile?.customerName ?? "—"} />
+                      <ProfileRow label={t("disputes.email")} value={profile?.email ?? "—"} />
+                      <ProfileRow label={t("disputes.phone")} value={profile?.phone ?? "—"} />
+                      <ProfileRow
+                        label={t("disputes.address")}
+                        value={formatAddress(profile?.displayAddress ?? profile?.shippingAddress)}
+                      />
+                    </BlockStack>
+                  </div>
+
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                      <Icon source={OrderIcon} tone="subdued" />
+                      <Text as="h3" variant="headingSm">{t("disputes.orderDetails")}</Text>
+                    </div>
+                    <BlockStack gap="200">
+                      <ProfileRow
+                        label={t("disputes.orderId")}
+                        value={
+                          profile?.orderName
+                            ? (shopDomain && orderNum ? (
+                                <a
+                                  href={`https://${shopDomain}/admin/orders/${orderNum}`}
+                                  target="_top"
+                                  style={{ color: "#1D4ED8", textDecoration: "none" }}
+                                >
+                                  {profile.orderName}
+                                </a>
+                              ) : profile.orderName)
+                            : orderNum ? `#${orderNum}` : "—"
+                        }
+                      />
+                      <ProfileRow label={t("disputes.date")} value={formatDate(profile?.createdAt ?? null)} />
+                      {profile?.total && (
+                        <ProfileRow
+                          label="Total"
+                          value={formatCurrency(parseFloat(profile.total.amount), profile.total.currencyCode)}
+                        />
+                      )}
+                      {profile?.fulfillments && profile.fulfillments.flatMap((f) => f.trackingInfo).length > 0 && (
+                        profile.fulfillments.flatMap((f) => f.trackingInfo).slice(0, 2).map((trk, i) => (
+                          <ProfileRow
+                            key={i}
+                            label={t("disputes.tracking")}
+                            value={
+                              trk.url ? (
+                                <a href={trk.url} target="_blank" rel="noopener noreferrer" style={{ color: "#1D4ED8", fontFamily: "monospace", fontSize: "12px" }}>
+                                  {trk.number}
+                                </a>
+                              ) : (
+                                <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{trk.number}</span>
+                              )
+                            }
+                          />
+                        ))
+                      )}
+                    </BlockStack>
+                  </div>
+                </div>
+              </Box>
+            </Collapsible>
           </Card>
         </Layout.Section>
 
-        {/* Timeline */}
+        {/* Fulfillment Journey (collapsible) */}
         {timeline.length > 0 && (
           <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack gap="200" align="start" blockAlign="center">
-                  <Icon source={ClockIcon} tone="subdued" />
-                  <Text as="h3" variant="headingSm">{t("disputes.timeline")}</Text>
-                </InlineStack>
-                <Divider />
-                <div className={styles.timelineList}>
-                  {timeline.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`${styles.timelineRow} ${idx < timeline.length - 1 ? styles.timelineRowSpaced : ""}`}
-                    >
-                      <div className={styles.timelineRail}>
-                        <div className={styles.timelineDot} />
-                        {idx < timeline.length - 1 ? <div className={styles.timelineLine} /> : null}
+            <Card padding="0">
+              <div
+                className={styles.collapsibleHeader}
+                onClick={() => setFulfillmentOpen((v) => !v)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFulfillmentOpen((v) => !v); }}
+              >
+                <Text as="h2" variant="headingSm">{t("disputes.fulfillmentJourney")}</Text>
+                <span className={`${styles.collapsibleHeaderIcon} ${fulfillmentOpen ? styles.collapsibleHeaderIconOpen : ""}`}>
+                  <Icon source={ChevronDownIcon} tone="subdued" />
+                </span>
+              </div>
+              <Collapsible open={fulfillmentOpen} id="fulfillment-journey" transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
+                <Box padding="400">
+                  <div className={styles.timelineList}>
+                    {timeline.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`${styles.timelineRow} ${idx < timeline.length - 1 ? styles.timelineRowSpaced : ""}`}
+                      >
+                        <div className={styles.timelineRail}>
+                          <div className={styles.timelineDot} />
+                          {idx < timeline.length - 1 ? <div className={styles.timelineLine} /> : null}
+                        </div>
+                        <div>
+                          <p className={styles.timelineMeta}>{formatDateTime(item.date)}</p>
+                          <p className={styles.timelineLabel}>{item.label}</p>
+                          {item.sublabel ? (
+                            <p className={styles.timelineSub}>{item.sublabel}</p>
+                          ) : null}
+                        </div>
                       </div>
-                      <div>
-                        <p className={styles.timelineMeta}>{formatDateTime(item.date)}</p>
-                        <p className={styles.timelineLabel}>{item.label}</p>
-                        {item.sublabel ? (
-                          <p className={styles.timelineSub}>{item.sublabel}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </BlockStack>
+                    ))}
+                  </div>
+                </Box>
+              </Collapsible>
             </Card>
           </Layout.Section>
         )}
@@ -699,11 +805,6 @@ export default function DisputeDetailPage() {
               )}
             </BlockStack>
           </Card>
-        </Layout.Section>
-
-        {/* Compliance */}
-        <Layout.Section>
-          <Banner tone="info">{t("disputes.compliance")}</Banner>
         </Layout.Section>
       </Layout>
 

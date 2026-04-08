@@ -36,9 +36,24 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     .eq("dispute_id", id)
     .order("created_at", { ascending: false });
 
+  // Fetch the first enabled automation rule for this shop (powers "Managed by DisputeDesk" card)
+  let matchedRule: { name: string; mode: string } | null = null;
+  if (dispute.shop_id) {
+    const { data: rules } = await sb
+      .from("automation_rules")
+      .select("name, mode")
+      .eq("shop_id", dispute.shop_id)
+      .eq("enabled", true)
+      .limit(1);
+    if (rules && rules.length > 0) {
+      matchedRule = { name: rules[0].name, mode: rules[0].mode };
+    }
+  }
+
   return NextResponse.json({
     dispute,
     packs: packs ?? [],
     shop_domain,
+    matchedRule,
   });
 }

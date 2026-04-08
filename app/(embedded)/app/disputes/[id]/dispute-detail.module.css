@@ -1,55 +1,238 @@
-/* Embedded dispute detail — Figma-aligned shell (KPI, stepper, profile cards, timeline). */
+/* Embedded dispute detail — Figma-aligned layout (stepper, summary, managed card, collapsibles). */
 
-.kpiGrid {
+/* ── Two-column layout ── */
+.twoColumnLayout {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .twoColumnLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rightColumn {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.kpiCard {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  padding: 16px;
-  flex: 1 1 0;
-  min-width: 140px;
+/* ── Collapsible header ── */
+.collapsibleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 16px 20px;
+  user-select: none;
 }
 
-.kpiCardUrgent {
-  border-color: #ef4444;
+.collapsibleHeaderIcon {
+  transition: transform 0.2s ease;
 }
 
-.kpiLabel {
-  font-size: 12px;
+.collapsibleHeaderIconOpen {
+  transform: rotate(180deg);
+}
+
+/* ── Dispute Summary grid ── */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 0 20px 20px;
+}
+
+@media (max-width: 480px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryItem {
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summaryItem:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+@media (max-width: 480px) {
+  .summaryItem:last-child {
+    border-bottom: none;
+  }
+  .summaryItem:nth-last-child(2) {
+    border-bottom: 1px solid #e5e7eb;
+  }
+}
+
+.summaryItemLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #667085;
   margin: 0 0 4px;
+  font-weight: 500;
 }
 
-.kpiAmount {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0b1220;
-  margin: 0;
-}
-
-.kpiValue {
+.summaryItemValue {
   font-size: 14px;
   font-weight: 500;
   color: #0b1220;
+}
+
+/* ── Automated badge (page title) ── */
+.automatedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Managed by DisputeDesk card ── */
+.managedCardContent {
+  padding: 16px 20px;
+}
+
+.managedAutomationRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.managedAutomationIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #DCFCE7;
+  flex-shrink: 0;
+}
+
+.managedAutomationIcon svg {
+  width: 20px;
+  height: 20px;
+  color: #16A34A;
+}
+
+.managedTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0b1220;
+  margin: 0 0 4px;
+}
+
+.managedDesc {
+  font-size: 13px;
+  color: #667085;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.managedStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F0FDF4;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.managedStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22C55E;
+  flex-shrink: 0;
+}
+
+.managedStatusLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #166534;
   margin: 0;
 }
 
-.kpiValueUrgent {
-  color: #ef4444;
+.managedStatusRule {
+  font-size: 12px;
+  color: #667085;
+  margin: 0;
 }
 
-.kpiRow {
+/* ── More Evidence card ── */
+.moreEvidenceHeader {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 2px;
+  justify-content: space-between;
+  padding: 16px 20px 8px;
+  gap: 12px;
 }
 
+.moreEvidenceTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #0b1220;
+  margin: 0;
+}
+
+.moreEvidenceCount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d4ed8;
+  flex-shrink: 0;
+}
+
+.moreEvidenceZone {
+  margin: 0 20px 16px;
+  border: 2px dashed #D0D5DD;
+  border-radius: 8px;
+  padding: 28px 16px;
+  text-align: center;
+  background: #FFFBEB;
+}
+
+.moreEvidenceZoneDisabled {
+  background: #FFFBEB;
+  opacity: 0.95;
+}
+
+.moreEvidenceUploadIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #667085;
+}
+
+.moreEvidenceFooter {
+  padding: 0 20px 16px;
+}
+
+.moreEvidenceFooterText {
+  font-size: 12px;
+  color: #667085;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.moreEvidenceLink {
+  margin-top: 12px;
+}
+
+/* ── Profile rows (Order Data / Customer Info) ── */
 .profileGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -76,6 +259,7 @@
   word-break: break-word;
 }
 
+/* ── Timeline ── */
 .timelineList {
   padding-top: 4px;
 }
@@ -134,6 +318,7 @@
   margin: 0;
 }
 
+/* ── Evidence Packs table ── */
 .evidenceTable {
   width: 100%;
   border-collapse: collapse;
@@ -154,7 +339,7 @@
   border-top: 1px solid #e5e7eb;
 }
 
-/* Stepper */
+/* ── Stepper ── */
 .stepperCard {
   padding: 0;
 }
@@ -183,7 +368,6 @@
   align-items: start;
 }
 
-/* Stack on narrow embedded panes so columns stay readable */
 @media (max-width: 480px) {
   .stepperTrack {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -229,60 +413,4 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-}
-
-.moreEvidenceCard {
-  padding: 0;
-}
-
-.moreEvidenceHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 16px 20px 8px;
-  gap: 12px;
-}
-
-.moreEvidenceTitle {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: #0b1220;
-  margin: 0;
-}
-
-.moreEvidenceCount {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1d4ed8;
-  flex-shrink: 0;
-}
-
-.moreEvidenceZone {
-  margin: 0 20px 16px;
-  border: 2px dashed #e5e7eb;
-  border-radius: 8px;
-  padding: 28px 16px;
-  text-align: center;
-  background: #fafafa;
-}
-
-.moreEvidenceZoneDisabled {
-  opacity: 0.95;
-}
-
-.moreEvidenceFooter {
-  padding: 0 20px 16px;
-}
-
-.moreEvidenceFooterText {
-  font-size: 12px;
-  color: #667085;
-  margin: 0;
-  line-height: 1.45;
-}
-
-.moreEvidenceLink {
-  margin-top: 12px;
 }
