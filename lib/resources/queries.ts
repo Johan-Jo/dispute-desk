@@ -180,23 +180,26 @@ export async function getPublishedLocalizationBySlug(args: {
 }
 
 /**
- * Find a published localization by slug across ALL locales.
- * Used to 301-redirect stale/wrong-locale URLs (e.g. a French slug visited under /es/).
+ * Find a published localization by slug across ALL locales (and optionally all route kinds).
+ * Used to 301-redirect stale/wrong-locale URLs (e.g. a French slug visited under /es/)
+ * and cross-route URLs (e.g. a template slug visited under /resources/).
  */
 export async function findLocalizationBySlugAnyLocale(args: {
-  routeKind: string;
+  routeKind?: string;
   slug: string;
-}): Promise<{ contentItemId: string; locale: HubContentLocale; pillar: string } | null> {
+}): Promise<{ contentItemId: string; locale: HubContentLocale; pillar: string; routeKind: string } | null> {
   const sb = getServiceClient();
-  const { data, error } = await sb
+  let query = sb
     .from("content_localizations")
-    .select("content_item_id, locale, content_items!inner(primary_pillar, workflow_status)")
-    .eq("route_kind", args.routeKind)
+    .select("content_item_id, locale, route_kind, content_items!inner(primary_pillar, workflow_status)")
     .eq("slug", args.slug)
     .eq("is_published", true)
     .eq("content_items.workflow_status", "published")
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (args.routeKind) query = query.eq("route_kind", args.routeKind);
+
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data) return null;
 
@@ -210,6 +213,7 @@ export async function findLocalizationBySlugAnyLocale(args: {
     contentItemId: data.content_item_id,
     locale: data.locale as HubContentLocale,
     pillar: ci.primary_pillar,
+    routeKind: data.route_kind,
   };
 }
 

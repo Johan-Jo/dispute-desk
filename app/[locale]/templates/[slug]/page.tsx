@@ -1,10 +1,14 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
-import { getPublishedLocalizationBySlug } from "@/lib/resources/queries";
+import {
+  getPublishedLocalizationBySlug,
+  findLocalizationBySlugAnyLocale,
+} from "@/lib/resources/queries";
+import { getServiceClient } from "@/lib/supabase/server";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { BodyBlocks } from "@/components/resources/BodyBlocks";
 
@@ -24,7 +28,27 @@ export default async function TemplateDetailPage({ params }: Props) {
     locale: hubLocale,
     slug,
   });
-  if (!row) notFound();
+  if (!row) {
+    const match = await findLocalizationBySlugAnyLocale({ slug });
+    if (match) {
+      const sb = getServiceClient();
+      const { data: targetLoc } = await sb
+        .from("content_localizations")
+        .select("slug")
+        .eq("content_item_id", match.contentItemId)
+        .eq("locale", hubLocale)
+        .eq("route_kind", match.routeKind)
+        .eq("is_published", true)
+        .maybeSingle();
+      if (targetLoc?.slug) {
+        const routePath = match.routeKind === "resources"
+          ? `/resources/${match.pillar}/${targetLoc.slug}`
+          : `/${match.routeKind}/${targetLoc.slug}`;
+        permanentRedirect(`${basePath}${routePath}`);
+      }
+    }
+    notFound();
+  }
   const { localization: L } = row;
 
   return (

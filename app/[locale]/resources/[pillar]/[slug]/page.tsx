@@ -2,7 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Calendar, CheckCircle, Clock, Globe } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
@@ -184,9 +184,10 @@ export default async function ResourceArticlePage({ params }: Props) {
     slug,
   });
   if (!row || row.item.primary_pillar !== pillar) {
-    // Slug not found for this locale — it may belong to another locale (stale Google-cached URL).
-    // Try to find the article by slug in any locale and redirect to the correct slug for this locale.
-    const match = await findLocalizationBySlugAnyLocale({ routeKind: "resources", slug });
+    // Slug not found for this locale — it may belong to another locale or route kind
+    // (stale Google-cached URL, cross-locale slug, or route kind mismatch).
+    // Search across ALL locales and ALL route kinds, then redirect to the correct URL.
+    const match = await findLocalizationBySlugAnyLocale({ slug });
     if (match) {
       const sb = getServiceClient();
       const { data: targetLoc } = await sb
@@ -194,12 +195,15 @@ export default async function ResourceArticlePage({ params }: Props) {
         .select("slug")
         .eq("content_item_id", match.contentItemId)
         .eq("locale", hubLocale)
-        .eq("route_kind", "resources")
+        .eq("route_kind", match.routeKind)
         .eq("is_published", true)
         .maybeSingle();
       if (targetLoc?.slug) {
         const base = pathLocale === "en" ? "" : `/${pathLocale}`;
-        redirect(`${base}/resources/${match.pillar}/${targetLoc.slug}`);
+        const routePath = match.routeKind === "resources"
+          ? `/resources/${match.pillar}/${targetLoc.slug}`
+          : `/${match.routeKind}/${targetLoc.slug}`;
+        permanentRedirect(`${base}${routePath}`);
       }
     }
     notFound();
