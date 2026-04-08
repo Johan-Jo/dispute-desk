@@ -198,7 +198,8 @@ export default async function ResourceArticlePage({ params }: Props) {
         .eq("is_published", true)
         .maybeSingle();
       if (targetLoc?.slug) {
-        redirect(`${basePath}/resources/${match.pillar}/${targetLoc.slug}`);
+        const base = pathLocale === "en" ? "" : `/${pathLocale}`;
+        redirect(`${base}/resources/${match.pillar}/${targetLoc.slug}`);
       }
     }
     notFound();
