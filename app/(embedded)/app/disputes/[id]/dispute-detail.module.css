@@ -1,4 +1,55 @@
-/* Embedded dispute detail — Figma-aligned layout (stepper, summary, managed card, collapsibles). */
+/* Embedded dispute detail — Figma-aligned layout (KPI, stepper, summary, managed card, collapsibles). */
+
+/* ── KPI cards ── */
+.kpiGrid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kpiCard {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  flex: 1 1 0;
+  min-width: 140px;
+}
+
+.kpiCardUrgent {
+  border-color: #ef4444;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: #667085;
+  margin: 0 0 4px;
+}
+
+.kpiAmount {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0b1220;
+  margin: 0;
+}
+
+.kpiValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0b1220;
+  margin: 0;
+}
+
+.kpiValueUrgent {
+  color: #ef4444;
+}
+
+.kpiRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
 
 /* ── Two-column layout ── */
 .twoColumnLayout {

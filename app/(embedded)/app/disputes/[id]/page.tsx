@@ -452,6 +452,44 @@ export default function DisputeDetailPage() {
       ]}
     >
       <Layout>
+        {/* KPI cards */}
+        <Layout.Section>
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <p className={styles.kpiLabel}>{t("disputes.amount")}</p>
+              <p className={styles.kpiAmount}>
+                {formatCurrency(dispute.amount, dispute.currency_code)}
+              </p>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <p className={styles.kpiLabel}>{t("table.status")}</p>
+              <div style={{ marginTop: "4px" }}>
+                <Badge tone={statusTone(dispute.status)}>
+                  {statusLabel(dispute.status, t)}
+                </Badge>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <p className={styles.kpiLabel}>{t("disputes.dueDate")}</p>
+              <p className={styles.kpiValue}>{formatDate(dispute.due_at)}</p>
+            </div>
+
+            <div className={`${styles.kpiCard} ${deadline.urgent ? styles.kpiCardUrgent : ""}`}>
+              <p className={styles.kpiLabel}>{t("disputes.timeLeft")}</p>
+              <div className={styles.kpiRow}>
+                {deadline.urgent && (
+                  <Icon source={AlertTriangleIcon} tone="critical" />
+                )}
+                <p className={deadline.urgent ? styles.kpiValueUrgent : styles.kpiValue}>
+                  {deadline.text}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Layout.Section>
+
         {/* Info Banner */}
         {!infoBannerDismissed && (
           <Layout.Section>
