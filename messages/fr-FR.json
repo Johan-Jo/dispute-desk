@@ -20,6 +20,7 @@
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "Que pensez-vous de DisputeDesk jusqu'à présent ?",
+    "feedbackSubtext": "Vos retours nous aident à améliorer l'application.",
     "dismissFeedback": "Fermer le commentaire",
     "menuHelp": "Aide",
     "menuSettings": "Paramètres",

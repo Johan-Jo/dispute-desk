@@ -31,7 +31,7 @@ Automated checks in-repo: `npm test`, `npx tsc --noEmit`, `npm run build`. Optio
 
 ## Design vs production (embedded)
 
-Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav). **Outer chrome is Shopify** — not rendered by this repo. **Inside the iframe**, DisputeDesk renders **`EmbeddedAppChrome`** (brand row + dismissible feedback card) and then each route’s Polaris `Page` content. Full-frame screenshots will still differ outside the iframe; see [`docs/technical.md`](technical.md) § Embedded app troubleshooting (Figma full-frame vs embedded canvas + in-iframe chrome).
+Figma or marketing screenshots may show the **full** Shopify Admin frame (top bar, merchant sidebar, Apps nav). **Outer chrome is Shopify** — not rendered by this repo. **Inside the iframe**, DisputeDesk renders **`EmbeddedAppChrome`** (white brand-row bar, dismissible feedback card, `bg-[#F1F2F4]` content area) and then each route’s content. The disputes page uses three separate HTML blocks (header, actions-bar card, table card) with custom CSS instead of Polaris wrappers, matching Figma `shopify-disputes.tsx` pixel-for-pixel. Full-frame screenshots will still differ outside the iframe; see [`docs/technical.md`](technical.md) § Embedded app troubleshooting (Figma full-frame vs embedded canvas + in-iframe chrome).
 
 ## Related docs
 

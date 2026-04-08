@@ -14,11 +14,9 @@ export default function EmbeddedAppLayout({
   return (
     <>
       <AppNavSidebar />
-      <main style={{ padding: "16px 24px 24px" }}>
-        <Suspense fallback={<>{children}</>}>
-          <EmbeddedAppChrome>{children}</EmbeddedAppChrome>
-        </Suspense>
-      </main>
+      <Suspense fallback={<main style={{ padding: "24px 32px", background: "#f1f2f4" }}>{children}</main>}>
+        <EmbeddedAppChrome>{children}</EmbeddedAppChrome>
+      </Suspense>
     </>
   );
 }

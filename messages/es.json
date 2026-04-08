@@ -15,6 +15,15 @@
     "demoStore": "Tienda demo",
     "switchToDemo": "Cambiar a la tienda demo"
   },
+  "embeddedShell": {
+    "brandName": "DisputeDesk",
+    "feedbackPrompt": "¿Qué tal va tu experiencia con DisputeDesk?",
+    "feedbackSubtext": "Tus comentarios nos ayudan a mejorar la app.",
+    "dismissFeedback": "Cerrar comentarios",
+    "menuHelp": "Ayuda",
+    "menuSettings": "Configuración",
+    "moreActions": "Más acciones"
+  },
   "common": {
     "loading": "Cargando...",
     "save": "Guardar",

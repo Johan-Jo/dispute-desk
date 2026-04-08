@@ -20,6 +20,7 @@
   "embeddedShell": {
     "brandName": "DisputeDesk",
     "feedbackPrompt": "Wie zufrieden sind Sie bisher mit DisputeDesk?",
+    "feedbackSubtext": "Dein Feedback hilft uns, die App zu verbessern.",
     "dismissFeedback": "Feedback schließen",
     "menuHelp": "Hilfe",
     "menuSettings": "Einstellungen",

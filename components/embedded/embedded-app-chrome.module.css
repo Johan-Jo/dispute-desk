@@ -1,27 +1,20 @@
-/* In-iframe brand bar + feedback (Figma-aligned), above Page content. */
-.wrap {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
+/* Figma shopify-shell.tsx: App Header (line 168) + Feedback Bar (line 184). */
 
 .brandRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--p-space-300);
-  padding: var(--p-space-300) var(--p-space-400);
-  background: var(--p-color-bg-surface);
-  border-radius: var(--p-border-radius-300);
-  box-shadow: 0 1px 0 rgba(22, 29, 37, 0.08);
+  background: #fff;
+  border-bottom: 1px solid #e1e3e5;
+  padding: 16px 32px;
 }
 
 .shieldTile {
   flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--p-border-radius-200);
-  background: #4f46e5;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: #5e4db2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,9 +24,121 @@
   color: #fff;
 }
 
+.brandLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .brandTitle {
-  font-size: var(--p-font-size-500);
-  font-weight: var(--p-font-weight-semibold);
-  line-height: var(--p-font-line-height-500);
-  color: var(--p-color-text);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #202223;
+}
+
+.moreBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6d7175;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.moreBtn:hover {
+  color: #202223;
+}
+
+/* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] border-b */
+.feedbackWrap {
+  padding: 16px 32px;
+  background: #f1f2f4;
+}
+
+.feedbackCard {
+  background: #fff;
+  border: 1px solid #e1e3e5;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(22, 29, 37, 0.05);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feedbackLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.feedbackThumb {
+  flex-shrink: 0;
+  color: #5e4db2;
+  display: flex;
+}
+.feedbackThumb svg {
+  width: 20px;
+  height: 20px;
+}
+
+.feedbackText {
+  font-size: 0.875rem;
+  color: #202223;
+}
+.feedbackTextMuted {
+  color: #6d7175;
+}
+
+.feedbackStars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.starBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  transition: color 0.1s;
+}
+
+.starIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.starEmpty {
+  color: #c9cccf;
+}
+
+.starFilled {
+  color: #ffc107;
+  fill: #ffc107;
+}
+
+.dismissBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6d7175;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+}
+.dismissBtn:hover {
+  color: #202223;
+}
+
+/* Page content area — Figma: px-8 py-6 bg-[#F1F2F4] */
+.pageContent {
+  padding: 24px 32px;
+  background: #f1f2f4;
 }
