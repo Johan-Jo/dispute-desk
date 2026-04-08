@@ -2,7 +2,7 @@
 
 /* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] border-b */
 .feedbackWrap {
-  padding: 16px 32px;
+  padding: 12px 32px 0;
   background: #f1f2f4;
 }
 
@@ -85,8 +85,8 @@
   color: #202223;
 }
 
-/* Page content area — Figma: px-8 py-6 bg-[#F1F2F4] */
+/* Page content area */
 .pageContent {
-  padding: 24px 32px;
+  padding: 12px 32px 24px;
   background: #f1f2f4;
 }
