@@ -56,15 +56,15 @@ describe("totalHubPagesUnfiltered", () => {
     expect(totalHubPagesUnfiltered(0)).toBe(1);
     expect(totalHubPagesUnfiltered(2)).toBe(1);
     expect(totalHubPagesUnfiltered(3)).toBe(1);
-    expect(totalHubPagesUnfiltered(12)).toBe(1);
-    expect(totalHubPagesUnfiltered(13)).toBe(2);
+    expect(totalHubPagesUnfiltered(11)).toBe(1);
+    expect(totalHubPagesUnfiltered(12)).toBe(2);
   });
 });
 
 describe("totalHubPagesFiltered", () => {
   it("ceil of total over page size", () => {
     expect(totalHubPagesFiltered(0)).toBe(1);
-    expect(totalHubPagesFiltered(10)).toBe(1);
-    expect(totalHubPagesFiltered(11)).toBe(2);
+    expect(totalHubPagesFiltered(9)).toBe(1);
+    expect(totalHubPagesFiltered(10)).toBe(2);
   });
 });

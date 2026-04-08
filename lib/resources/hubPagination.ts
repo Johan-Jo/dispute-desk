@@ -1,6 +1,6 @@
 /** Public Resources hub index: 2 featured slots on unfiltered page 1, then 10 grid articles per page. */
 
-export const HUB_GRID_PAGE_SIZE = 10;
+export const HUB_GRID_PAGE_SIZE = 9;
 export const HUB_FEATURED_COUNT = 2;
 
 export function parseHubPage(raw: string | undefined): number {
