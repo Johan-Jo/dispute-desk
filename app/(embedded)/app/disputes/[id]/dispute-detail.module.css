@@ -159,6 +159,11 @@
   padding: 0;
 }
 
+.stepperShell {
+  width: 100%;
+  max-width: 100%;
+}
+
 .stepperHeader {
   display: flex;
   align-items: center;
@@ -168,21 +173,27 @@
 }
 
 .stepperTrack {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  column-gap: 12px;
+  display: grid;
+  width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: clamp(6px, 1.5vw, 14px);
   row-gap: 16px;
   padding: 16px 20px 20px;
-  box-sizing: border-box;
+  align-items: start;
+}
+
+/* Stack on narrow embedded panes so columns stay readable */
+@media (max-width: 480px) {
+  .stepperTrack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .stepperStep {
-  flex: 0 0 106px;
-  width: 106px;
-  max-width: 100%;
+  min-width: 0;
   text-align: center;
+  justify-self: stretch;
 }
 
 .stepperIconWrap {
@@ -196,6 +207,7 @@
   font-weight: 600;
   color: #0b1220;
   margin: 0 0 4px;
+  overflow-wrap: anywhere;
 }
 
 .stepperDesc {
@@ -203,6 +215,7 @@
   color: #667085;
   margin: 0 0 6px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .stepperDate {

@@ -86,29 +86,31 @@ export function DisputeStatusStepper({
   formatDate: (iso: string | null) => string;
 }) {
   return (
-    <Box background="bg-surface" borderWidth="025" borderColor="border" borderRadius="200">
-      <div className={styles.stepperHeader}>
-        <Text as="h2" variant="headingSm">
-          {t("disputes.statusProgressTitle")}
-        </Text>
-      </div>
-      <div className={styles.stepperTrack}>
-        {steps.map((s) => (
-          <div key={s.id} className={styles.stepperStep}>
-            <BlockStack gap="200" inlineAlign="center">
-              <div className={styles.stepperIconWrap}>
-                <StepIcon phase={s.phase} />
-              </div>
-              <p className={styles.stepperTitle}>{t(s.titleKey)}</p>
-              <p className={styles.stepperDesc}>{t(s.descriptionKey)}</p>
-              <p className={styles.stepperDate}>
-                {formatStepDate(s.date, formatDate)}
-              </p>
-              {stepBadge(s.phase, t)}
-            </BlockStack>
-          </div>
-        ))}
-      </div>
-    </Box>
+    <div className={styles.stepperShell}>
+      <Box background="bg-surface" borderWidth="025" borderColor="border" borderRadius="200" width="100%">
+        <div className={styles.stepperHeader}>
+          <Text as="h2" variant="headingSm">
+            {t("disputes.statusProgressTitle")}
+          </Text>
+        </div>
+        <div className={styles.stepperTrack}>
+          {steps.map((s) => (
+            <div key={s.id} className={styles.stepperStep}>
+              <BlockStack gap="200" inlineAlign="center">
+                <div className={styles.stepperIconWrap}>
+                  <StepIcon phase={s.phase} />
+                </div>
+                <p className={styles.stepperTitle}>{t(s.titleKey)}</p>
+                <p className={styles.stepperDesc}>{t(s.descriptionKey)}</p>
+                <p className={styles.stepperDate}>
+                  {formatStepDate(s.date, formatDate)}
+                </p>
+                {stepBadge(s.phase, t)}
+              </BlockStack>
+            </div>
+          ))}
+        </div>
+      </Box>
+    </div>
   );
 }
