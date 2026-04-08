@@ -292,6 +292,9 @@ export default function DisputesListPage() {
 
   return (
     <>
+      {/* Set Shopify Admin title bar (rendered outside iframe by App Bridge) */}
+      <s-page heading={t("disputes.title")} />
+
       {/* Header — Figma line 22 */}
       <div className={styles.headerSection}>
         <h1 className={styles.pageTitle}>{t("disputes.title")}</h1>

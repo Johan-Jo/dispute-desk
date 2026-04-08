@@ -13,6 +13,10 @@ declare namespace React {
         React.AnchorHTMLAttributes<HTMLElement>,
         HTMLElement
       > & { children?: React.ReactNode };
+      "s-page": React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement>,
+        HTMLElement
+      > & { heading?: string; children?: React.ReactNode };
     }
   }
 }
