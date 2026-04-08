@@ -306,7 +306,6 @@ export default function PacksListPage() {
             onAction: () => setCreateModalOpen(true),
           },
         ]}
-        fullWidth
       >
         <div className="embeddedPacksRoot">
         <BlockStack gap="400">
