@@ -8,9 +8,11 @@ type Props = {
 };
 
 /**
- * Upgrades Pexels URLs that were stored with a small w= parameter (e.g. w=940 from the
- * "large" preset) to a higher resolution so Next.js image optimisation doesn't have to
- * upscale them on retina screens.
+ * Upgrades Pexels URLs so the source image is wide enough for full-bleed hero
+ * display on retina screens.  Pexels "large" preset stores `w=940&h=650`;
+ * "large2x" adds `dpr=2` but keeps `h=650`.  The `h` param acts as a bounding-
+ * box constraint, so even with `w=1920` Pexels may return only ~1000 px wide.
+ * Fix: strip `h` and `dpr`, set `w` to the target.
  */
 function upgradePexelsUrl(url: string, targetW = 1920): string {
   if (!url.includes("images.pexels.com")) return url;
@@ -19,6 +21,7 @@ function upgradePexelsUrl(url: string, targetW = 1920): string {
     const currentW = parseInt(u.searchParams.get("w") ?? "0", 10);
     if (currentW > 0 && currentW < targetW) {
       u.searchParams.set("w", String(targetW));
+      u.searchParams.delete("h");
       u.searchParams.delete("dpr");
     }
     return u.toString();
