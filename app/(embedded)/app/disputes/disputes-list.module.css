@@ -1,12 +1,5 @@
 /* Figma shopify-disputes.tsx — pixel-exact styles. */
 
-/* Match Polaris Page default max-width so disputes aligns with dashboard */
-.disputesContainer {
-  max-width: 62.375rem;
-  margin: 0 auto;
-  padding: 0 var(--p-space-500);
-}
-
 /* Header */
 .pageTitle {
   font-size: 1.5rem;

@@ -291,7 +291,7 @@ export default function DisputesListPage() {
   );
 
   return (
-    <div className={styles.disputesContainer}>
+    <>
       {/* Header — Figma line 22 */}
       <div className={styles.headerSection}>
         <h1 className={styles.pageTitle}>{t("disputes.title")}</h1>
@@ -539,6 +539,6 @@ export default function DisputesListPage() {
           </Button>
         </div>
       )}
-    </div>
+    </>
   );
 }
