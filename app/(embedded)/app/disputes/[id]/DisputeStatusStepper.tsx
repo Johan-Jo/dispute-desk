@@ -1,6 +1,6 @@
 "use client";
 
-import { BlockStack, Text, Badge, Icon, Box } from "@shopify/polaris";
+import { Text, Badge, Icon, Box } from "@shopify/polaris";
 import { CheckCircleIcon, ClockIcon, ClipboardIcon } from "@shopify/polaris-icons";
 import type { DisputeProgressStep } from "@/lib/embedded/disputeDetailProgress";
 import styles from "./dispute-detail.module.css";
@@ -8,49 +8,29 @@ import styles from "./dispute-detail.module.css";
 type Translate = (key: string) => string;
 
 function formatStepDate(iso: string | null, fmt: (s: string | null) => string): string {
-  if (!iso) return "—";
+  if (!iso) return "Date N/A";
   return fmt(iso);
 }
 
 function StepIcon({ phase }: { phase: "complete" | "current" | "pending" }) {
   if (phase === "complete") {
     return (
-      <span style={{ display: "inline-flex", color: "var(--p-color-text-success)" }}>
+      <div className={styles.stepperIconCircle} data-phase="complete">
         <Icon source={CheckCircleIcon} tone="success" />
-      </span>
+      </div>
     );
   }
   if (phase === "current") {
     return (
-      <span
-        style={{
-          display: "inline-flex",
-          width: 28,
-          height: 28,
-          borderRadius: "50%",
-          background: "#E0E7FF",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div className={styles.stepperIconCircle} data-phase="current">
         <Icon source={ClipboardIcon} tone="info" />
-      </span>
+      </div>
     );
   }
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        width: 28,
-        height: 28,
-        borderRadius: "50%",
-        background: "#F2F4F7",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <div className={styles.stepperIconCircle} data-phase="pending">
       <Icon source={ClockIcon} tone="subdued" />
-    </span>
+    </div>
   );
 }
 
@@ -93,10 +73,26 @@ export function DisputeStatusStepper({
             {t("disputes.statusProgressTitle")}
           </Text>
         </div>
-        <div className={styles.stepperTrack}>
-          {steps.map((s) => (
-            <div key={s.id} className={styles.stepperStep}>
-              <BlockStack gap="200" inlineAlign="center">
+
+        {/* Connecting line track */}
+        <div className={styles.stepperBody}>
+          <div className={styles.stepperConnectorTrack}>
+            {steps.map((s, i) => {
+              if (i === steps.length - 1) return null;
+              const nextPhase = steps[i + 1].phase;
+              const lineComplete = s.phase === "complete" && nextPhase === "complete";
+              return (
+                <div
+                  key={`line-${s.id}`}
+                  className={`${styles.stepperConnectorSegment} ${lineComplete ? styles.stepperConnectorComplete : styles.stepperConnectorPending}`}
+                />
+              );
+            })}
+          </div>
+
+          <div className={styles.stepperTrack}>
+            {steps.map((s) => (
+              <div key={s.id} className={styles.stepperStep}>
                 <div className={styles.stepperIconWrap}>
                   <StepIcon phase={s.phase} />
                 </div>
@@ -106,9 +102,9 @@ export function DisputeStatusStepper({
                   {formatStepDate(s.date, formatDate)}
                 </p>
                 {stepBadge(s.phase, t)}
-              </BlockStack>
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       </Box>
     </div>
