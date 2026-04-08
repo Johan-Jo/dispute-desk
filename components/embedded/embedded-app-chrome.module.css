@@ -86,14 +86,14 @@
 }
 
 /*
- * Minimal side inset (pull toward Shopify nav) + widen Polaris layout tokens ~30%
- * (--pg-layout-width-primary-max default 41.375rem → 53.7875rem).
+ * Minimal side inset + widen Polaris layout tokens ~20% over default (was ~30%;
+ * narrowed by ~⅓ of that bump). Default primary max 41.375rem → 49.65rem.
  */
 .pageContent {
-  --pg-layout-width-primary-max: 53.7875rem;
-  --pg-layout-width-primary-min: 39rem;
-  --pg-layout-width-one-half-width-base: 36.5625rem;
-  --pg-layout-width-secondary-max: 26rem;
+  --pg-layout-width-primary-max: 49.65rem;
+  --pg-layout-width-primary-min: 36rem;
+  --pg-layout-width-one-half-width-base: 33.75rem;
+  --pg-layout-width-secondary-max: 24rem;
   padding: 8px 4px 20px 4px;
   background: #f1f2f4;
 }
