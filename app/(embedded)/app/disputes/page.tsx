@@ -1,6 +1,6 @@
 /**
- * Embedded disputes list — pixel-exact Figma match (shopify-disputes.tsx).
- * Separate header, actions-bar card, table card — no Polaris Page/Layout/Card wrappers.
+ * Embedded disputes list — Polaris Page/Layout/Card shell with Figma-matched
+ * inner table (shopify-disputes.tsx reference).
  */
 "use client";
 
@@ -10,14 +10,30 @@ import { useTranslations, useLocale } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
 import {
-  ChoiceList,
+  Page,
+  Layout,
+  Card,
+  TextField,
+  Button,
   Popover,
   ActionList,
+  ChoiceList,
   Box,
   Spinner,
-  Button,
+  InlineStack,
+  Pagination,
+  Icon,
+  Badge,
+  BlockStack,
+  Text,
 } from "@shopify/polaris";
-import { RefreshIcon, MenuHorizontalIcon } from "@shopify/polaris-icons";
+import {
+  SearchIcon,
+  FilterIcon,
+  ExportIcon,
+  RefreshIcon,
+  MenuHorizontalIcon,
+} from "@shopify/polaris-icons";
 import styles from "./disputes-list.module.css";
 
 interface Dispute {
@@ -191,19 +207,19 @@ export default function DisputesListPage() {
     }
   };
 
-  const badgeClass = (status: string | null): string => {
+  const badgeTone = (status: string | null): "success" | "critical" | "warning" | "info" | undefined => {
     switch (status) {
-      case "needs_response":
-        return styles.badgeOpen;
-      case "under_review":
-        return styles.badgeReview;
       case "charge_refunded":
       case "won":
-        return styles.badgeWon;
+        return "success";
       case "lost":
-        return styles.badgeLost;
+        return "critical";
+      case "under_review":
+        return "warning";
+      case "needs_response":
+        return "info";
       default:
-        return styles.badgeOpen;
+        return undefined;
     }
   };
 
@@ -264,281 +280,232 @@ export default function DisputesListPage() {
     URL.revokeObjectURL(a.href);
   };
 
-  const filterActivator = (
-    <button
-      className={styles.actionBtn}
-      onClick={() => setFilterPopoverActive((v) => !v)}
-    >
-      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M3 4h14M5 8h10M7 12h6M9 16h2"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-      {t("common.filter")}
-    </button>
-  );
-
-  const moreMenuActivator = (
-    <Button
-      variant="secondary"
-      icon={MenuHorizontalIcon}
-      onClick={() => setMoreMenuActive((a) => !a)}
-      accessibilityLabel={t("disputes.moreActions")}
-    />
-  );
-
   return (
-    <div className={styles.disputesContainer}>
-      {/* Header — Figma line 22 */}
-      <div className={styles.headerSection}>
-        <h1 className={styles.pageTitle}>{t("disputes.title")}</h1>
-        <p className={styles.pageSubtitle}>{t("disputes.manageSubtitle")}</p>
-      </div>
+    <Page
+      title={t("disputes.title")}
+      subtitle={t("disputes.manageSubtitle")}
+    >
+      <Layout>
+        <Layout.Section>
+          <BlockStack gap="400">
+            {/* Actions bar */}
+            <Card>
+              <InlineStack gap="300" align="start" blockAlign="center" wrap={false}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <TextField
+                    label={t("disputes.searchPlaceholder")}
+                    labelHidden
+                    placeholder={t("disputes.searchPlaceholder")}
+                    value={queryValue}
+                    onChange={setQueryValue}
+                    prefix={<Icon source={SearchIcon} />}
+                    autoComplete="off"
+                  />
+                </div>
 
-      {/* Actions bar — Figma line 30 */}
-      <div className={styles.actionsBar}>
-        <div className={styles.searchWrap}>
-          <svg
-            className={styles.searchIcon}
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.45 4.39l3.08 3.08a.75.75 0 11-1.06 1.06l-3.08-3.08A7 7 0 012 9z"
-              fill="currentColor"
-            />
-          </svg>
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder={t("disputes.searchPlaceholder")}
-            value={queryValue}
-            onChange={(e) => setQueryValue(e.target.value)}
-          />
-        </div>
-
-        <Popover
-          active={filterPopoverActive}
-          activator={filterActivator}
-          onClose={() => setFilterPopoverActive(false)}
-          autofocusTarget="none"
-        >
-          <Box padding="400" minWidth="240px">
-            <ChoiceList
-              title={t("table.status")}
-              titleHidden
-              choices={[
-                {
-                  label: t("status.needsResponse"),
-                  value: "needs_response",
-                },
-                {
-                  label: t("status.underReview"),
-                  value: "under_review",
-                },
-                { label: t("status.won"), value: "won" },
-                { label: t("status.lost"), value: "lost" },
-              ]}
-              selected={statusFilter}
-              onChange={(v) => {
-                setStatusFilter(v);
-                setPage(1);
-              }}
-              allowMultiple
-            />
-          </Box>
-        </Popover>
-
-        <button className={styles.actionBtn} onClick={exportCsv}>
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 14v2a1 1 0 001 1h12a1 1 0 001-1v-2M10 3v10M6 10l4 4 4-4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {t("disputes.export")}
-        </button>
-
-        <Popover
-          active={moreMenuActive}
-          activator={moreMenuActivator}
-          onClose={() => setMoreMenuActive(false)}
-          preferredAlignment="right"
-          autofocusTarget="first-node"
-        >
-          <ActionList
-            actionRole="menuitem"
-            items={[
-              {
-                content: syncing
-                  ? t("disputes.syncing")
-                  : t("disputes.syncNow"),
-                icon: RefreshIcon,
-                disabled: syncing,
-                onAction: () => {
-                  setMoreMenuActive(false);
-                  void handleSync();
-                },
-              },
-            ]}
-          />
-        </Popover>
-      </div>
-
-      {/* Table card — Figma line 54 */}
-      <div className={styles.tableCard}>
-        {loading ? (
-          <div className={styles.loadingWrap}>
-            <Spinner size="large" />
-          </div>
-        ) : visibleDisputes.length === 0 ? (
-          <div className={styles.emptyState}>
-            {disputes.length === 0
-              ? t("disputes.noDisputes")
-              : t("disputes.noMatchingDisputes")}
-          </div>
-        ) : (
-          <div className={styles.tableScroll}>
-            <table className={styles.listTable}>
-              <thead>
-                <tr>
-                  <th>{t("table.disputeId")}</th>
-                  <th>{t("table.order")}</th>
-                  <th>{t("table.reason")}</th>
-                  <th>{t("table.amount")}</th>
-                  <th>{t("table.status")}</th>
-                  <th>{t("table.dueDateColumn")}</th>
-                  <th className={styles.chevronCol} aria-hidden />
-                </tr>
-              </thead>
-              <tbody>
-                {visibleDisputes.map((d) => {
-                  const orderUrl = shopifyOrderAdminUrl(
-                    shopDomain,
-                    d.order_gid,
-                  );
-                  const label = orderLabel(d);
-                  return (
-                    <tr
-                      key={d.id}
-                      role="link"
-                      tabIndex={0}
-                      aria-label={t("disputes.viewDetails")}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => goToDispute(d.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          goToDispute(d.id);
-                        }
-                      }}
+                <Popover
+                  active={filterPopoverActive}
+                  activator={
+                    <Button
+                      icon={FilterIcon}
+                      onClick={() => setFilterPopoverActive((v) => !v)}
                     >
-                      <td>
-                        <span className={styles.cellId}>
-                          {formatListDisputeId(d.id)}
-                        </span>
-                        {isSyntheticDispute(d.dispute_gid) && (
-                          <span className={styles.syntheticBadge}>
-                            Synthetic
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {orderUrl ? (
-                          <a
-                            href={orderUrl}
-                            target="_top"
-                            rel="noopener noreferrer"
-                            className={styles.cellOrder}
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
-                          >
-                            {label}
-                          </a>
-                        ) : (
-                          <span className={styles.cellId}>{label}</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={styles.cellMuted}>
-                          {formatReasonTitleCase(d.reason)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={styles.cellAmount}>
-                          {formatCurrency(
-                            d.amount,
-                            d.currency_code,
-                            numberLocale,
-                          )}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`${styles.badge} ${badgeClass(d.status)}`}
-                        >
-                          {badgeLabel(d.status)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={styles.cellMuted}>
-                          {formatDueDate(d.due_at)}
-                        </span>
-                      </td>
-                      <td className={styles.chevronCol}>
-                        <span className={styles.chevronBtn}>
-                          <svg
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M7.5 4.5l5.5 5.5-5.5 5.5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                      {t("common.filter")}
+                    </Button>
+                  }
+                  onClose={() => setFilterPopoverActive(false)}
+                  autofocusTarget="none"
+                >
+                  <Box padding="400" minWidth="240px">
+                    <ChoiceList
+                      title={t("table.status")}
+                      titleHidden
+                      choices={[
+                        { label: t("status.needsResponse"), value: "needs_response" },
+                        { label: t("status.underReview"), value: "under_review" },
+                        { label: t("status.won"), value: "won" },
+                        { label: t("status.lost"), value: "lost" },
+                      ]}
+                      selected={statusFilter}
+                      onChange={(v) => {
+                        setStatusFilter(v);
+                        setPage(1);
+                      }}
+                      allowMultiple
+                    />
+                  </Box>
+                </Popover>
 
-      {/* Pagination */}
-      {pagination.total_pages > 1 && (
-        <div className={styles.paginationWrap}>
-          <Button disabled={page <= 1} onClick={() => setPage(page - 1)}>
-            {t("common.previous")}
-          </Button>
-          <span className={styles.paginationText}>
-            {t("common.page", { page, total: pagination.total_pages })}
-          </span>
-          <Button
-            disabled={page >= pagination.total_pages}
-            onClick={() => setPage(page + 1)}
-          >
-            {t("common.next")}
-          </Button>
-        </div>
-      )}
-    </div>
+                <Button icon={ExportIcon} onClick={exportCsv}>
+                  {t("disputes.export")}
+                </Button>
+
+                <Popover
+                  active={moreMenuActive}
+                  activator={
+                    <Button
+                      variant="secondary"
+                      icon={MenuHorizontalIcon}
+                      onClick={() => setMoreMenuActive((a) => !a)}
+                      accessibilityLabel={t("disputes.moreActions")}
+                    />
+                  }
+                  onClose={() => setMoreMenuActive(false)}
+                  preferredAlignment="right"
+                  autofocusTarget="first-node"
+                >
+                  <ActionList
+                    actionRole="menuitem"
+                    items={[
+                      {
+                        content: syncing ? t("disputes.syncing") : t("disputes.syncNow"),
+                        icon: RefreshIcon,
+                        disabled: syncing,
+                        onAction: () => {
+                          setMoreMenuActive(false);
+                          void handleSync();
+                        },
+                      },
+                    ]}
+                  />
+                </Popover>
+              </InlineStack>
+            </Card>
+
+            {/* Table */}
+            <Card padding="0">
+              {loading ? (
+                <div className={styles.loadingWrap}>
+                  <Spinner size="large" />
+                </div>
+              ) : visibleDisputes.length === 0 ? (
+                <Box padding="500">
+                  <Text as="p" tone="subdued">
+                    {disputes.length === 0
+                      ? t("disputes.noDisputes")
+                      : t("disputes.noMatchingDisputes")}
+                  </Text>
+                </Box>
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table className={styles.listTable}>
+                    <thead>
+                      <tr>
+                        <th>{t("table.disputeId")}</th>
+                        <th>{t("table.order")}</th>
+                        <th>{t("table.reason")}</th>
+                        <th>{t("table.amount")}</th>
+                        <th>{t("table.status")}</th>
+                        <th>{t("table.dueDateColumn")}</th>
+                        <th className={styles.chevronCol} aria-hidden />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleDisputes.map((d) => {
+                        const orderUrl = shopifyOrderAdminUrl(shopDomain, d.order_gid);
+                        const label = orderLabel(d);
+                        return (
+                          <tr
+                            key={d.id}
+                            role="link"
+                            tabIndex={0}
+                            aria-label={t("disputes.viewDetails")}
+                            style={{ cursor: "pointer" }}
+                            onClick={() => goToDispute(d.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                goToDispute(d.id);
+                              }
+                            }}
+                          >
+                            <td>
+                              <span className={styles.cellId}>
+                                {formatListDisputeId(d.id)}
+                              </span>
+                              {isSyntheticDispute(d.dispute_gid) && (
+                                <span className={styles.syntheticBadge}>
+                                  Synthetic
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              {orderUrl ? (
+                                <a
+                                  href={orderUrl}
+                                  target="_top"
+                                  rel="noopener noreferrer"
+                                  className={styles.cellOrder}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                >
+                                  {label}
+                                </a>
+                              ) : (
+                                <span className={styles.cellId}>{label}</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className={styles.cellMuted}>
+                                {formatReasonTitleCase(d.reason)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={styles.cellAmount}>
+                                {formatCurrency(d.amount, d.currency_code, numberLocale)}
+                              </span>
+                            </td>
+                            <td>
+                              <Badge tone={badgeTone(d.status)}>
+                                {badgeLabel(d.status)}
+                              </Badge>
+                            </td>
+                            <td>
+                              <span className={styles.cellMuted}>
+                                {formatDueDate(d.due_at)}
+                              </span>
+                            </td>
+                            <td className={styles.chevronCol}>
+                              <span className={styles.chevronBtn}>
+                                <svg
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M7.5 4.5l5.5 5.5-5.5 5.5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+
+            {/* Pagination */}
+            {pagination.total_pages > 1 && (
+              <InlineStack align="center">
+                <Pagination
+                  hasPrevious={page > 1}
+                  hasNext={page < pagination.total_pages}
+                  onPrevious={() => setPage(page - 1)}
+                  onNext={() => setPage(page + 1)}
+                  label={t("common.page", { page, total: pagination.total_pages })}
+                />
+              </InlineStack>
+            )}
+          </BlockStack>
+        </Layout.Section>
+      </Layout>
+    </Page>
   );
 }

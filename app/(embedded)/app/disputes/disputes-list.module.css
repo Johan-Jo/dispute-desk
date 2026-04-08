@@ -1,109 +1,5 @@
-/* Figma shopify-disputes.tsx — pixel-exact styles. */
+/* Figma shopify-disputes.tsx — table styles inside Polaris Card padding="0". */
 
-/* Same primary column width as Polaris Page + Layout (token from EmbeddedAppChrome .pageContent) */
-.disputesContainer {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: var(--pg-layout-width-primary-max, 49.65rem);
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Header */
-.pageTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #202223;
-  margin: 0 0 8px;
-}
-.pageSubtitle {
-  font-size: 0.875rem;
-  color: #6d7175;
-  margin: 0;
-}
-.headerSection {
-  margin-bottom: 24px;
-}
-
-/* Actions bar — Figma line 30 */
-.actionsBar {
-  background: #fff;
-  border: 1px solid #e1e3e5;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.searchWrap {
-  flex: 1;
-  position: relative;
-  min-width: 0;
-}
-.searchIcon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: #6d7175;
-  pointer-events: none;
-}
-.searchInput {
-  width: 100%;
-  padding: 8px 12px 8px 36px;
-  border: 1px solid #e1e3e5;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  color: #202223;
-  background: #fff;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.searchInput::placeholder {
-  color: #6d7175;
-}
-.searchInput:focus {
-  border-color: transparent;
-  box-shadow: 0 0 0 2px #1d4ed8;
-}
-
-.actionBtn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: 1px solid #e1e3e5;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #202223;
-  background: #fff;
-  cursor: pointer;
-  transition: background-color 0.15s;
-  white-space: nowrap;
-}
-.actionBtn:hover {
-  background: #f7f8fa;
-}
-.actionBtn svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-/* Table card — Figma line 54 */
-.tableCard {
-  background: #fff;
-  border: 1px solid #e1e3e5;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(22, 29, 37, 0.05);
-  overflow: hidden;
-}
 .tableScroll {
   overflow-x: auto;
 }
@@ -171,32 +67,6 @@
   color: #202223;
 }
 
-/* Figma status badges */
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.badgeOpen {
-  background: #e1e3e5;
-  color: #202223;
-}
-.badgeReview {
-  background: #fff4e5;
-  color: #92400e;
-}
-.badgeWon {
-  background: #d1fae5;
-  color: #065f46;
-}
-.badgeLost {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 .chevronCol {
   width: 40px;
   text-align: right;
@@ -219,54 +89,10 @@
 }
 
 /* Loading / empty */
-.emptyState {
-  padding: 24px 20px;
-  font-size: 0.875rem;
-  color: #6d7175;
-}
 .loadingWrap {
   display: flex;
   justify-content: center;
   padding: 48px 0;
-}
-
-/* Pagination */
-.paginationWrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 0;
-}
-.paginationText {
-  font-size: 0.875rem;
-  color: #6d7175;
-}
-
-/* Filter popover */
-.filterPopoverAnchor {
-  position: relative;
-}
-
-/* More menu — same btn style as action btn */
-.moreMenuBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border: 1px solid #e1e3e5;
-  border-radius: 8px;
-  background: #fff;
-  cursor: pointer;
-  color: #6d7175;
-  transition: background-color 0.15s;
-}
-.moreMenuBtn:hover {
-  background: #f7f8fa;
-}
-.moreMenuBtn svg {
-  width: 16px;
-  height: 16px;
 }
 
 /* Synthetic badge */
