@@ -180,6 +180,40 @@ export async function getPublishedLocalizationBySlug(args: {
 }
 
 /**
+ * Find a published localization by slug across ALL locales.
+ * Used to 301-redirect stale/wrong-locale URLs (e.g. a French slug visited under /es/).
+ */
+export async function findLocalizationBySlugAnyLocale(args: {
+  routeKind: string;
+  slug: string;
+}): Promise<{ contentItemId: string; locale: HubContentLocale; pillar: string } | null> {
+  const sb = getServiceClient();
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select("content_item_id, locale, content_items!inner(primary_pillar, workflow_status)")
+    .eq("route_kind", args.routeKind)
+    .eq("slug", args.slug)
+    .eq("is_published", true)
+    .eq("content_items.workflow_status", "published")
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const item = data.content_items as
+    | { primary_pillar: string; workflow_status: string }
+    | { primary_pillar: string; workflow_status: string }[];
+  const ci = Array.isArray(item) ? item[0] : item;
+  if (!ci || ci.workflow_status !== "published") return null;
+
+  return {
+    contentItemId: data.content_item_id,
+    locale: data.locale as HubContentLocale,
+    pillar: ci.primary_pillar,
+  };
+}
+
+/**
  * Same published article in another hub locale (per-locale slug). Used by marketing language switcher.
  */
 export async function getAlternatePublishedResourceSlug(args: {

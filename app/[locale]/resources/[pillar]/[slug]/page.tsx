@@ -2,13 +2,14 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Calendar, CheckCircle, Clock, Globe } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import {
   getPublishedLocalizationBySlug,
+  findLocalizationBySlugAnyLocale,
   getRelatedResources,
 } from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
@@ -182,7 +183,26 @@ export default async function ResourceArticlePage({ params }: Props) {
     locale: hubLocale,
     slug,
   });
-  if (!row || row.item.primary_pillar !== pillar) notFound();
+  if (!row || row.item.primary_pillar !== pillar) {
+    // Slug not found for this locale — it may belong to another locale (stale Google-cached URL).
+    // Try to find the article by slug in any locale and redirect to the correct slug for this locale.
+    const match = await findLocalizationBySlugAnyLocale({ routeKind: "resources", slug });
+    if (match) {
+      const sb = getServiceClient();
+      const { data: targetLoc } = await sb
+        .from("content_localizations")
+        .select("slug")
+        .eq("content_item_id", match.contentItemId)
+        .eq("locale", hubLocale)
+        .eq("route_kind", "resources")
+        .eq("is_published", true)
+        .maybeSingle();
+      if (targetLoc?.slug) {
+        redirect(`${basePath}/resources/${match.pillar}/${targetLoc.slug}`);
+      }
+    }
+    notFound();
+  }
 
   const { item, localization: L } = row;
   const basePath = pathLocale === "en" ? "" : `/${pathLocale}`;
