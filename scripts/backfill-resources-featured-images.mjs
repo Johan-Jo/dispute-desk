@@ -123,12 +123,22 @@ function clichéPenalty(alt) {
 function photoToHero(p) {
   // Prefer large2x (1880 px) or original over large (940 px) to avoid upscaling artefacts
   // when the hero is displayed full-bleed on retina screens.
-  const src = p.src?.large2x || p.src?.original || p.src?.large || p.src?.medium;
+  const raw = p.src?.large2x || p.src?.original || p.src?.large || p.src?.medium;
   const alt =
     (p.alt && String(p.alt).trim()) ||
     (p.photographer ? `Photo by ${p.photographer} on Pexels` : "Stock photo");
-  if (!src || !String(src).startsWith("https://images.pexels.com")) return null;
-  return { url: src, alt };
+  if (!raw || !String(raw).startsWith("https://images.pexels.com")) return null;
+  // Strip h + dpr bounding-box params and set w=1920 so Pexels serves a true
+  // 1920 px-wide image at the photo's natural aspect ratio.
+  try {
+    const u = new URL(raw);
+    u.searchParams.set("w", "1920");
+    u.searchParams.delete("h");
+    u.searchParams.delete("dpr");
+    return { url: u.toString(), alt };
+  } catch {
+    return { url: raw, alt };
+  }
 }
 
 async function fetchPexelsPage(query, page) {
