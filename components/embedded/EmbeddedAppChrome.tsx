@@ -1,23 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Icon, ActionList, Popover } from "@shopify/polaris";
-import {
-  MenuHorizontalIcon,
-  ShieldCheckMarkIcon,
-} from "@shopify/polaris-icons";
-import { withShopParams } from "@/lib/withShopParams";
 import styles from "./embedded-app-chrome.module.css";
 
 const FEEDBACK_DISMISS_KEY = "dd_embedded_feedback_banner_dismissed_v1";
 
 export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("embeddedShell");
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [moreOpen, setMoreOpen] = useState(false);
   const [feedbackDismissed, setFeedbackDismissed] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -44,62 +34,8 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
     setFeedbackDismissed(true);
   }, []);
 
-  const go = useCallback(
-    (path: string) => {
-      router.push(withShopParams(path, searchParams));
-    },
-    [router, searchParams],
-  );
-
-  const moreActivator = (
-    <button
-      className={styles.moreBtn}
-      onClick={() => setMoreOpen((v) => !v)}
-      aria-label={t("moreActions")}
-    >
-      <Icon source={MenuHorizontalIcon} />
-    </button>
-  );
-
   return (
     <>
-      {/* Brand row — Figma line 168 */}
-      <div className={styles.brandRow}>
-        <div className={styles.brandLeft}>
-          <div className={styles.shieldTile}>
-            <Icon source={ShieldCheckMarkIcon} />
-          </div>
-          <h1 className={styles.brandTitle}>{t("brandName")}</h1>
-        </div>
-        <Popover
-          active={moreOpen}
-          activator={moreActivator}
-          autofocusTarget="first-node"
-          preferredAlignment="right"
-          onClose={() => setMoreOpen(false)}
-        >
-          <ActionList
-            actionRole="menuitem"
-            items={[
-              {
-                content: t("menuHelp"),
-                onAction: () => {
-                  setMoreOpen(false);
-                  go("/app/help");
-                },
-              },
-              {
-                content: t("menuSettings"),
-                onAction: () => {
-                  setMoreOpen(false);
-                  go("/app/settings");
-                },
-              },
-            ]}
-          />
-        </Popover>
-      </div>
-
       {/* Feedback bar — Figma line 184 */}
       {!feedbackDismissed && (
         <div className={styles.feedbackWrap}>

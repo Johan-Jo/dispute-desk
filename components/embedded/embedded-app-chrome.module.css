@@ -1,58 +1,6 @@
 /* Figma shopify-shell.tsx: App Header (line 168) + Feedback Bar (line 184). */
 
-.brandRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #e1e3e5;
-  padding: 16px 32px;
-}
-
-.shieldTile {
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 8px;
-  background: #5e4db2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.shieldTile :global(.Polaris-Icon) {
-  color: #fff;
-}
-
-.brandLeft {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brandTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.5;
-  color: #202223;
-}
-
-.moreBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #6d7175;
-  transition: color 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.moreBtn:hover {
-  color: #202223;
-}
-
-/* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] border-b */
+/* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] */
 .feedbackWrap {
   padding: 16px 32px;
   background: #f1f2f4;
