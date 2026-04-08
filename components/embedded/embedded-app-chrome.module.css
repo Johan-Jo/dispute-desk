@@ -2,7 +2,7 @@
 
 /* Feedback card — Figma: px-8 py-4 bg-[#F1F2F4] border-b */
 .feedbackWrap {
-  padding: 12px 4px 0;
+  padding: 12px 20px 0;
   background: #f1f2f4;
 }
 
@@ -94,7 +94,7 @@
   --pg-layout-width-primary-min: 36rem;
   --pg-layout-width-one-half-width-base: 33.75rem;
   --pg-layout-width-secondary-max: 24rem;
-  padding: 8px 4px 20px 4px;
+  padding: 8px 20px 20px 20px;
   background: #f1f2f4;
 }
 
