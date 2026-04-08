@@ -15,7 +15,7 @@ export function ArticleHeroImage({ url, alt, fullBleed }: Props) {
           src={url}
           alt={alt}
           fill
-          className="object-cover"
+          style={{ objectFit: "cover" }}
           priority
           sizes="100vw"
         />
@@ -31,7 +31,7 @@ export function ArticleHeroImage({ url, alt, fullBleed }: Props) {
         src={url}
         alt={alt}
         fill
-        className="object-cover"
+        style={{ objectFit: "cover" }}
         priority
         sizes="(max-width: 900px) 100vw, 840px"
       />
