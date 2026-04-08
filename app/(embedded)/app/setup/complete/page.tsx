@@ -25,8 +25,8 @@ function CompletePageInner() {
   ];
 
   return (
-    <Page fullWidth>
-      <div style={{ width: "100%", marginTop: 24 }}>
+    <Page>
+      <div style={{ maxWidth: 560, margin: "48px auto" }}>
         <Card>
           <BlockStack gap="600">
             {/* Hero */}
@@ -142,7 +142,7 @@ export default function SetupCompletePage() {
   return (
     <Suspense
       fallback={
-        <Page fullWidth>
+        <Page>
           <Card>
             <BlockStack gap="400" inlineAlign="center">
               <Spinner />

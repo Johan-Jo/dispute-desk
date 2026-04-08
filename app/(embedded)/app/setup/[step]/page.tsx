@@ -36,7 +36,7 @@ function StepPageInner() {
 
   if (!STEP_IDS.includes(stepId)) {
     return (
-      <Page fullWidth title={t("wizardTitle")}>
+      <Page title={t("wizardTitle")}>
         <Layout>
           <Layout.Section>
             <Card>
@@ -87,7 +87,7 @@ export default function SetupStepPage() {
   return (
     <Suspense
       fallback={
-        <Page fullWidth title="Setup Wizard">
+        <Page title="Setup Wizard">
           <Layout>
             <Layout.Section>
               <Card>

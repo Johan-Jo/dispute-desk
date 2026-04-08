@@ -115,7 +115,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
   const stepsMap: StepsMap = state?.steps ?? {};
 
   return (
-    <Page fullWidth>
+    <Page>
       <div style={{ padding: "0 24px" }}>
         {stepperLoading ? (
           <div

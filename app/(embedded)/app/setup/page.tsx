@@ -26,7 +26,7 @@ export default function SetupRedirectPage() {
   }, [router, searchParams]);
 
   return (
-    <Page fullWidth title="Setup Wizard">
+    <Page title="Setup Wizard">
       <Layout>
         <Layout.Section>
           <Card>

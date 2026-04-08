@@ -617,7 +617,6 @@ export default function EmbeddedDashboardPage() {
 
   return (
     <Page
-      fullWidth
       title={t("dashboard.embeddedPageTitle")}
       subtitle={t("dashboard.embeddedSubtitle")}
       primaryAction={{ content: t("dashboard.automationSettings"), url: withShopParams("/app/settings", searchParams) }}

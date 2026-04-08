@@ -7,7 +7,7 @@ export default function EmbeddedPoliciesPage() {
   const t = useTranslations("nav");
 
   return (
-    <Page fullWidth title={t("policies")} backAction={{ content: t("overview"), url: "/app" }}>
+    <Page title={t("policies")} backAction={{ content: t("overview"), url: "/app" }}>
       <Card>
         <BlockStack gap="400">
           <Text as="p" variant="bodyMd" tone="subdued">

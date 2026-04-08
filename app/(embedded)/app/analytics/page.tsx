@@ -188,7 +188,6 @@ export default function AnalyticsPage() {
 
   return (
     <Page
-      fullWidth
       title={t("title")}
       subtitle={t("subtitle")}
     >
