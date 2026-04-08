@@ -15,6 +15,7 @@ const EMBEDDED_ARTICLE_SLUGS: string[] = [
   "first-dispute-sync",
   "automation-overview",
   "viewing-filtering-disputes",
+  "dispute-detail-page",
   "syncing-disputes",
   "review-queue",
   "approving-disputes",
@@ -66,6 +67,10 @@ export const EMBEDDED_ARTICLE_COPY_OVERRIDES: Record<
   "viewing-filtering-disputes": {
     titleKey: "help.embedded.articles.viewingFilteringDisputes.title",
     bodyKey: "help.embedded.articles.viewingFilteringDisputes.body",
+  },
+  "dispute-detail-page": {
+    titleKey: "help.embedded.articles.disputeDetailPage.title",
+    bodyKey: "help.embedded.articles.disputeDetailPage.body",
   },
   "review-queue": {
     titleKey: "help.embedded.articles.reviewQueue.title",

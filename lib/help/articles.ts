@@ -56,8 +56,21 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "disputes",
     titleKey: "help.articles.viewingFilteringDisputes.title",
     bodyKey: "help.articles.viewingFilteringDisputes.body",
-    relatedSlugs: ["review-queue", "syncing-disputes"],
+    relatedSlugs: ["dispute-detail-page", "review-queue", "syncing-disputes"],
     tags: ["view", "filter", "list", "status", "search"],
+  },
+  {
+    slug: "dispute-detail-page",
+    category: "disputes",
+    titleKey: "help.articles.disputeDetailPage.title",
+    bodyKey: "help.articles.disputeDetailPage.body",
+    relatedSlugs: [
+      "viewing-filtering-disputes",
+      "generating-pack-manually",
+      "uploading-evidence",
+      "after-saving",
+    ],
+    tags: ["detail", "dispute", "stepper", "timeline", "supplemental", "kpi"],
   },
   {
     slug: "syncing-disputes",

@@ -248,7 +248,30 @@
     "noTemplateBody": "Ingen förinbyggd mall finns för den här tvisttypen. Vi rekommenderar att skapa en för konsekvent beviskvalitet.",
     "useTemplate": "Använd mall",
     "generateBasic": "Generera grundläggande paket",
-    "goToTemplateLibrary": "Gå till mallbiblioteket"
+    "goToTemplateLibrary": "Gå till mallbiblioteket",
+    "detailPageTitle": "Tvist",
+    "detailPageSubtitle": "{orderLabel}",
+    "statusProgressTitle": "Tviststatus",
+    "managedByDisputeDesk": "Hanteras av DisputeDesk",
+    "moreEvidenceTitle": "Kompletterande bevis",
+    "moreEvidenceBody": "Lägg till stödfiler i bevispaketet efter att bevis sparats i Shopify (även via automatisering).",
+    "moreEvidenceLocked": "Tillgängligt när bevis har sparats i Shopify.",
+    "moreEvidenceCta": "Öppna bevispaket",
+    "progress": {
+      "badgeCompleted": "Klar",
+      "badgeCurrent": "Aktuell",
+      "badgePending": "Väntande",
+      "createdTitle": "Skapad",
+      "createdDesc": "Återdebitering öppnad",
+      "packTitle": "Paket",
+      "packDesc": "Bevis förberedda",
+      "savedTitle": "Sparad",
+      "savedDesc": "I Shopify",
+      "reviewTitle": "Granskning",
+      "reviewDesc": "Utfärdargranskning",
+      "outcomeTitle": "Utfall",
+      "outcomeDesc": "Slutresultat"
+    }
   },
   "packs": {
     "title": "Bevispaket",
@@ -1001,6 +1024,10 @@
         "title": "Visa och filtrera tvister",
         "body": "Tvistsidan visar alla dina återkrav i en sorterbar tabell.\n\nDu kan filtrera efter:\n- Status: Behöver svar, Under granskning, Vunnen, Förlorad.\n- Sök: skriv nyckelord för att hitta specifika tvister.\n\nTabellen visar varje tvists ID, kopplad order, belopp, orsak, status, tidsfrist och senaste synkronisering.\n\nTvå flikar finns tillgängliga:\n- Alla tvister: varje tvist oavsett status.\n- Granskningskö: bara tvister som flaggats för manuell granskning."
       },
+      "disputeDetailPage": {
+        "title": "Tvistdetaljsida",
+        "body": "Öppna en tvist från listan för den fullständiga vyn.\n\nInnehåll:\n- KPI-rad: belopp, status, förfallodatum och återstående tid.\n- Hanteras av DisputeDesk: återbetalningsflödet förbereds i appen.\n- Tviststatus: fem steg (Skapad → Paket → Sparad → Granskning → Utfall). Stegen uppdateras när paket byggs och sparas till Shopify; slutstatus (vunnen, förlorad m.m.) markerar alla steg som klara.\n- Kund och order: profil- och orderdata från Shopify med länkar.\n- Kompletterande bevis: när minst ett paket sparats i Shopify (manuellt eller via automation), använd Öppna bevispaket för att ladda upp filer på paketsidan. Tills dess förklarar rutan att uppladdning aktiveras efter sparning i Shopify.\n- Tidslinje: senaste Shopify-ordenhändelser plus DisputeDesk-händelser.\n- Bevispaket: alla paket med fullständighet och länkar.\n\nAnvänd Skapa paket, Synka om och Öppna tvist i Shopify. Byte av appens språk kan påverka tidslinjetexter om Shopify returnerar lokaliserade händelser."
+      },
       "syncingDisputes": {
         "title": "Synkronisera tvister från Shopify",
         "body": "DisputeDesk håller dina tvister uppdaterade via två mekanismer:\n\n1. Webhooks: Shopify skickar realtidsmeddelanden när tvister skapas eller uppdateras.\n2. Manuell synk: Klicka \"Synka nu\" på Tvistsidan för att starta en omedelbar synkning.\n\nUnder en synkning:\n- Hämtar alla öppna tvister från Shopify.\n- Skapar nya poster för tvister som inte spåras.\n- Uppdaterar befintliga tvister med senaste status.\n- För nya tvister utvärderas regler och automation triggas."
@@ -1136,6 +1163,10 @@
         "viewingFilteringDisputes": {
           "title": "Visa och filtrera tvister",
           "body": "Tabellen **Tvister** har **samma kolumner** som de senaste tvisterna på instrumentpanelen: **Order** (länk till Shopify Admin när den finns), **ID** (kort internt id), **Kund**, **Belopp**, **Anledning**, **Status**, **Deadline** (månad och dag) och **Visa detaljer** för att öppna tvisten i DisputeDesk.\n\nVerktygsrad: **Sök** (order, ID, kund, anledning), **Filtrera** efter status, **Exportera** CSV, **Synka nu**.\n\n**Ingen separat granskningskö-flik**: tvister för manuell granskning visas i samma lista. Använd **Visa detaljer** och sedan **Godkänn och spara** på detaljsidan."
+        },
+        "disputeDetailPage": {
+          "title": "Tvistdetalj i den här appen",
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk."
         },
         "reviewQueue": {
           "title": "Granskningskön",

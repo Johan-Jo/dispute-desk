@@ -214,7 +214,30 @@
     "noTemplateBody": "No existe ninguna plantilla predefinida para este tipo de disputa. Recomendamos crear una para una calidad de evidencia coherente.",
     "useTemplate": "Usar plantilla",
     "generateBasic": "Generar paquete básico",
-    "goToTemplateLibrary": "Ir a la biblioteca de plantillas"
+    "goToTemplateLibrary": "Ir a la biblioteca de plantillas",
+    "detailPageTitle": "Disputa",
+    "detailPageSubtitle": "{orderLabel}",
+    "statusProgressTitle": "Estado de la disputa",
+    "managedByDisputeDesk": "Gestionado por DisputeDesk",
+    "moreEvidenceTitle": "Pruebas adicionales",
+    "moreEvidenceBody": "Añada archivos de respaldo desde el paquete de pruebas después de guardar las pruebas en Shopify (incluido por automatización).",
+    "moreEvidenceLocked": "Disponible cuando las pruebas se hayan guardado en Shopify.",
+    "moreEvidenceCta": "Abrir paquete de pruebas",
+    "progress": {
+      "badgeCompleted": "Hecho",
+      "badgeCurrent": "Actual",
+      "badgePending": "Pendiente",
+      "createdTitle": "Creada",
+      "createdDesc": "Contracargo abierto",
+      "packTitle": "Paquete",
+      "packDesc": "Pruebas preparadas",
+      "savedTitle": "Guardada",
+      "savedDesc": "En Shopify",
+      "reviewTitle": "Revisión",
+      "reviewDesc": "Revisión del emisor",
+      "outcomeTitle": "Resultado",
+      "outcomeDesc": "Resultado final"
+    }
   },
   "packs": {
     "title": "Paquetes de evidencia",
@@ -832,6 +855,10 @@
         "title": "Ver y filtrar disputas",
         "body": "La página de Disputas muestra todos sus contracargos en una tabla ordenable.\n\nFiltros: estado, búsqueda por palabras clave.\n\nDos pestañas:\n- Todas las disputas.\n- Cola de revisión: disputas que requieren revisión manual."
       },
+      "disputeDetailPage": {
+        "title": "Página de detalle de la disputa",
+        "body": "Abra cualquier disputa desde la lista para ver la vista completa.\n\nQué verá:\n- Franja de KPI: importe, estado, fecha de vencimiento y tiempo restante.\n- Gestionado por DisputeDesk: el flujo del contracargo se prepara en esta aplicación.\n- Estado de la disputa: vista de cinco pasos (Creada → Paquete → Guardada → Revisión → Resultado). Los pasos se actualizan cuando se construyen paquetes y se guardan en Shopify; los estados finales (ganada, perdida, etc.) marcan todos los pasos como completados.\n- Cliente y pedido: datos de perfil y de pedido de Shopify con enlaces.\n- Evidencia complementaria: cuando al menos un paquete se haya guardado en Shopify (manual o automatización), use Abrir paquete de pruebas para añadir archivos en la página del paquete. Hasta entonces, el bloque indica que las subidas están disponibles tras guardar en Shopify.\n- Línea de tiempo: eventos recientes del pedido en Shopify más hitos de DisputeDesk.\n- Paquetes de pruebas: todos los paquetes con integridad y enlaces.\n\nUse Generar paquete, Volver a sincronizar y Abrir disputa en Shopify. Cambiar el idioma de la aplicación puede afectar los mensajes de la línea de tiempo si Shopify devuelve eventos localizados."
+      },
       "syncingDisputes": {
         "title": "Sincronizar disputas desde Shopify",
         "body": "DisputeDesk mantiene sus disputas actualizadas mediante:\n\n1. Webhooks: notificaciones en tiempo real de Shopify.\n2. Sincronización manual: haga clic en \"Sincronizar\"."
@@ -959,6 +986,10 @@
         "viewingFilteringDisputes": {
           "title": "Ver y filtrar disputas",
           "body": "La tabla **Disputas** usa **las mismas columnas** que las disputas recientes del panel: **Pedido** (enlace al Admin de Shopify si está disponible), **ID** (id interno corto), **Cliente**, **Importe**, **Motivo**, **Estado**, **Plazo** (mes y día) y **Ver detalles** para abrir la disputa en DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por estado, **Exportar** CSV, **Sincronizar ahora**.\n\n**No hay pestaña separada de cola de revisión**: las disputas para revisión manual aparecen en esta lista. Usa **Ver detalles** y luego **Aprobar y guardar** en la página de detalle."
+        },
+        "disputeDetailPage": {
+          "title": "Detalle de disputa en esta aplicación",
+          "body": "En **Disputas**, elija **Ver detalles** para abrir esta página.\n\n- **KPIs**: importe, estado, vencimiento, tiempo restante (resaltado si es urgente).\n- **Estado de la disputa**: cinco pasos desde Creada hasta Resultado. Avanza cuando hay paquetes y las pruebas están **guardadas en Shopify** (manual o automatización). Los resultados finales marcan todos los pasos completos.\n- **Evidencia complementaria** tras guardar en Shopify: **Abrir paquete de pruebas** lleva a la subida.\n- **Línea de tiempo** mezcla eventos de pedido de Shopify con hitos de DisputeDesk.\n- **Paquetes de pruebas** lista todos los paquetes.\n\nAcciones: **Generar paquete**, **Volver a sincronizar**, **Abrir disputa en Shopify**. El idioma en la URL vuelve a cargar el perfil para que la línea de tiempo pueda seguir el idioma de la tienda."
         },
         "reviewQueue": {
           "title": "La cola de revisión",

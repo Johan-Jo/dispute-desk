@@ -214,7 +214,30 @@
     "noTemplateBody": "Für diesen Streitfall-Typ gibt es keine vorgefertigte Vorlage. Wir empfehlen, eine für einheitliche Beleg-Qualität zu erstellen.",
     "useTemplate": "Vorlage verwenden",
     "generateBasic": "Einfaches Paket erstellen",
-    "goToTemplateLibrary": "Zur Vorlagenbibliothek"
+    "goToTemplateLibrary": "Zur Vorlagenbibliothek",
+    "detailPageTitle": "Streitfall",
+    "detailPageSubtitle": "{orderLabel}",
+    "statusProgressTitle": "Streitfallstatus",
+    "managedByDisputeDesk": "Verwaltet von DisputeDesk",
+    "moreEvidenceTitle": "Zusätzliche Beweise",
+    "moreEvidenceBody": "Fügen Sie unterstützende Dateien im Bewispaket hinzu, nachdem die Beweise bei Shopify gespeichert wurden (auch durch Automatisierung).",
+    "moreEvidenceLocked": "Verfügbar, sobald Beweise bei Shopify gespeichert wurden.",
+    "moreEvidenceCta": "Bewispaket öffnen",
+    "progress": {
+      "badgeCompleted": "Erledigt",
+      "badgeCurrent": "Aktuell",
+      "badgePending": "Ausstehend",
+      "createdTitle": "Erstellt",
+      "createdDesc": "Rückbuchung eröffnet",
+      "packTitle": "Paket",
+      "packDesc": "Beweise vorbereitet",
+      "savedTitle": "Gespeichert",
+      "savedDesc": "In Shopify",
+      "reviewTitle": "Prüfung",
+      "reviewDesc": "Prüfung durch Issuer",
+      "outcomeTitle": "Ergebnis",
+      "outcomeDesc": "Endergebnis"
+    }
   },
   "packs": {
     "title": "Bewispakete",
@@ -832,6 +855,10 @@
         "title": "Streitfälle anzeigen und filtern",
         "body": "Die Streitfallseite zeigt alle Chargebacks in einer sortierbaren Tabelle.\n\nFiltern nach Status: Antwort erforderlich, In Prüfung, Gewonnen, Verloren.\n\nZwei Tabs:\n- Alle Streitfälle.\n- Prüfungswarteschlange: nur Streitfälle, die manuelle Prüfung erfordern."
       },
+      "disputeDetailPage": {
+        "title": "Streitfall-Detailseite",
+        "body": "Öffnen Sie einen Streitfall aus der Liste für die vollständige Ansicht.\n\nInhalt:\n- KPI-Leiste: Betrag, Status, Fälligkeitsdatum, verbleibende Zeit.\n- Verwaltet von DisputeDesk: der Chargeback-Workflow wird in dieser App vorbereitet.\n- Streitfallstatus: fünf Schritte (Erstellt → Paket → Gespeichert → Prüfung → Ergebnis). Die Schritte aktualisieren sich, wenn Pakete gebaut und bei Shopify gespeichert werden; abgeschlossene Status (gewonnen, verloren usw.) markieren alle Schritte als erledigt.\n- Kunde und Bestellung: Profil- und Bestelldaten aus Shopify mit Links.\n- Zusätzliche Beweise: sobald mindestens ein Paket bei Shopify gespeichert wurde (manuell oder per Automatisierung), nutzen Sie „Bewispaket öffnen“, um weitere Dateien auf der Paketseite hochzuladen. Vorher erklärt der Bereich, dass Uploads nach dem Speichern bei Shopify möglich sind.\n- Zeitleiste: aktuelle Shopify-Bestellereignisse plus DisputeDesk-Ereignisse.\n- Bewispakete: alle Pakete mit Vollständigkeit und Links.\n\nNutzen Sie Paket erstellen, Erneut synchronisieren und Streitfall in Shopify öffnen. Änderungen der App-Locale können die Texte der Zeitleiste beeinflussen, wenn Shopify lokalisierte Ereignisse liefert."
+      },
       "syncingDisputes": {
         "title": "Streitfälle von Shopify synchronisieren",
         "body": "DisputeDesk hält Ihre Streitfälle über zwei Mechanismen aktuell:\n\n1. Webhooks: Echtzeit-Benachrichtigungen von Shopify.\n2. Manuelle Synchronisierung: Klicken Sie auf \"Jetzt synchronisieren\"."
@@ -959,6 +986,10 @@
         "viewingFilteringDisputes": {
           "title": "Streitfälle anzeigen und filtern",
           "body": "Die Tabelle **Streitfälle** hat **dieselben Spalten** wie die letzten Streitfälle im Dashboard: **Bestellung** (Link zum Shopify Admin wenn möglich), **ID** (kurze interne ID), **Kunde**, **Betrag**, **Grund**, **Status**, **Frist** (Monat und Tag) und **Details anzeigen** zum Öffnen in DisputeDesk.\n\nLeiste: **Suche** (Bestellung, ID, Kunde, Grund), **Filter** nach Status, **Export** CSV, **Jetzt synchronisieren**.\n\n**Kein separater Tab „Prüfungswarteschlange“**: Streitfälle zur manuellen Prüfung erscheinen in derselben Liste. Nutze **Details anzeigen**, dann **Genehmigen und speichern** auf der Detailseite."
+        },
+        "disputeDetailPage": {
+          "title": "Streitfall-Detail in dieser App",
+          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",

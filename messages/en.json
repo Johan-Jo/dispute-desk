@@ -236,7 +236,30 @@
     "noTemplateBody": "No pre-built template exists for this dispute type. We recommend creating one for consistent evidence quality.",
     "useTemplate": "Use template",
     "generateBasic": "Generate basic pack",
-    "goToTemplateLibrary": "Go to template library"
+    "goToTemplateLibrary": "Go to template library",
+    "detailPageTitle": "Dispute",
+    "detailPageSubtitle": "{orderLabel}",
+    "statusProgressTitle": "Dispute status",
+    "managedByDisputeDesk": "Managed by DisputeDesk",
+    "moreEvidenceTitle": "Supplemental evidence",
+    "moreEvidenceBody": "Add supporting files from the evidence pack after evidence is saved to Shopify (including by automation).",
+    "moreEvidenceLocked": "Available once evidence has been saved to Shopify.",
+    "moreEvidenceCta": "Open evidence pack",
+    "progress": {
+      "badgeCompleted": "Done",
+      "badgeCurrent": "Current",
+      "badgePending": "Pending",
+      "createdTitle": "Created",
+      "createdDesc": "Chargeback opened",
+      "packTitle": "Pack",
+      "packDesc": "Evidence prepared",
+      "savedTitle": "Saved",
+      "savedDesc": "In Shopify",
+      "reviewTitle": "Review",
+      "reviewDesc": "Issuer review",
+      "outcomeTitle": "Outcome",
+      "outcomeDesc": "Final result"
+    }
   },
   "packs": {
     "title": "Packs",
@@ -952,6 +975,10 @@
         "title": "Viewing and filtering disputes",
         "body": "The Disputes page shows all your chargebacks in a sortable table.\n\nYou can filter by:\n- Status: Needs response, Under review, Won, Lost.\n- Search: type keywords to find specific disputes by ID, order number, or reason.\n\nThe table shows each dispute's ID, linked order, amount, reason, status, deadline, and when it was last synced.\n\nTwo tabs are available:\n- All Disputes: every dispute regardless of status.\n- Review Queue: only disputes flagged for manual review (based on your rules).\n\nClick any dispute row to open the detail page where you can view evidence packs, generate new packs, or re-sync from Shopify."
       },
+      "disputeDetailPage": {
+        "title": "Dispute detail page",
+        "body": "Open any dispute from the list to see the full detail view.\n\nWhat you see:\n- KPI strip: amount, status, due date, and time remaining.\n- Managed by DisputeDesk: the chargeback workflow is prepared in this app.\n- Dispute status: a five-step overview (Created → Pack → Saved → Review → Outcome). Steps update as evidence packs are built and saved to Shopify; terminal dispute statuses (for example won or lost) mark every step complete.\n- Customer and order: profile and order data from Shopify, with links where available.\n- Supplemental evidence: after at least one pack has been saved to Shopify (manually or by automation), use Open evidence pack to add extra supporting files on the pack page. Until then, the section explains that uploads unlock after a save to Shopify.\n- Timeline: recent Shopify order events plus DisputeDesk events (such as when evidence was saved).\n- Evidence packs: all packs for this dispute with completeness, blockers, and links.\n\nUse Generate Pack to create packs, Re-sync to refresh from Shopify, and Open dispute in Shopify when you need Admin. If you change the app locale, timeline messages may follow the store language where Shopify returns localized order events."
+      },
       "syncingDisputes": {
         "title": "Syncing disputes from Shopify",
         "body": "DisputeDesk keeps your disputes up to date through two mechanisms:\n\n1. Webhooks: Shopify sends real-time notifications when disputes are created or updated. DisputeDesk processes these instantly.\n2. Manual sync: Click \"Sync Now\" on the Disputes page to trigger an immediate sync. This is useful if you suspect a webhook was missed.\n\nDuring a sync, DisputeDesk:\n- Fetches all open disputes from Shopify.\n- Creates new records for any disputes not yet tracked.\n- Updates existing disputes with the latest status and information.\n- For new disputes, evaluates your rules and triggers automation if applicable.\n\nSync status is shown with a \"Last synced\" timestamp on each dispute."
@@ -1087,6 +1114,10 @@
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
           "body": "The **Disputes** page uses Polaris **Page** with a toolbar (**Search**, **Filter**, **Export**, and **More actions** ⋯ for **Sync now**) and a table inside **Card**. Columns match the dashboard **Recent Disputes** list: **Order** (Shopify Admin link when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status**, **Deadline**, and **Actions** with **View details** to open a dispute. The order link opens Admin without leaving the list.\n\nSearch matches dispute ids, orders, reasons, and customer name.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
+        },
+        "disputeDetailPage": {
+          "title": "Dispute detail in this app",
+          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events."
         },
         "reviewQueue": {
           "title": "The review queue",

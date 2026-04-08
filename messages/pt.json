@@ -214,7 +214,30 @@
     "noTemplateBody": "Não existe nenhum modelo predefinido para este tipo de contestação. Recomendamos criar um para qualidade de evidência consistente.",
     "useTemplate": "Usar modelo",
     "generateBasic": "Gerar pack básico",
-    "goToTemplateLibrary": "Ir para a biblioteca de modelos"
+    "goToTemplateLibrary": "Ir para a biblioteca de modelos",
+    "detailPageTitle": "Disputa",
+    "detailPageSubtitle": "{orderLabel}",
+    "statusProgressTitle": "Status da disputa",
+    "managedByDisputeDesk": "Gerenciado pelo DisputeDesk",
+    "moreEvidenceTitle": "Evidências complementares",
+    "moreEvidenceBody": "Adicione arquivos de apoio no pacote de evidências depois que as evidências forem salvas na Shopify (incluindo por automação).",
+    "moreEvidenceLocked": "Disponível após as evidências serem salvas na Shopify.",
+    "moreEvidenceCta": "Abrir pacote de evidências",
+    "progress": {
+      "badgeCompleted": "Concluído",
+      "badgeCurrent": "Atual",
+      "badgePending": "Pendente",
+      "createdTitle": "Criada",
+      "createdDesc": "Chargeback aberto",
+      "packTitle": "Pacote",
+      "packDesc": "Evidências preparadas",
+      "savedTitle": "Salva",
+      "savedDesc": "Na Shopify",
+      "reviewTitle": "Análise",
+      "reviewDesc": "Análise do emissor",
+      "outcomeTitle": "Resultado",
+      "outcomeDesc": "Resultado final"
+    }
   },
   "packs": {
     "title": "Pacotes de Evidências",
@@ -832,6 +855,10 @@
         "title": "Visualizando e filtrando disputas",
         "body": "A página de Disputas exibe todos os seus chargebacks em uma tabela ordenável.\n\nVocê pode filtrar por:\n- Status: Aguardando resposta, Em análise, Ganho, Perdido.\n- Busca: digite palavras-chave para encontrar disputas específicas por ID, número do pedido ou motivo.\n\nA tabela mostra o ID, pedido vinculado, valor, motivo, status, prazo e última sincronização de cada disputa.\n\nDuas abas estão disponíveis:\n- Todas as Disputas: todas as disputas independentemente do status.\n- Fila de Revisão: apenas disputas sinalizadas para revisão manual (com base nas suas regras).\n\nClique em qualquer linha de disputa para abrir a página de detalhes, onde você pode ver pacotes de evidências, gerar novos pacotes ou ressincronizar com o Shopify."
       },
+      "disputeDetailPage": {
+        "title": "Página de detalhe da disputa",
+        "body": "Abra qualquer disputa na lista para ver a visão completa.\n\nO que aparece:\n- Faixa de KPI: valor, status, data de vencimento e tempo restante.\n- Gerenciado pelo DisputeDesk: o fluxo do chargeback é preparado neste app.\n- Status da disputa: visão em cinco etapas (Criada → Pacote → Salva → Revisão → Resultado). As etapas avançam quando há pacotes e as evidências são salvas na Shopify; status finais (ganha, perdida, etc.) marcam todas as etapas como concluídas.\n- Cliente e pedido: dados de perfil e pedido da Shopify com links.\n- Evidências complementares: depois que pelo menos um pacote for salvo na Shopify (manual ou automação), use Abrir pacote de evidências para enviar arquivos na página do pacote. Até lá, a área explica que os uploads ficam disponíveis após salvar na Shopify.\n- Linha do tempo: eventos recentes do pedido na Shopify mais marcos do DisputeDesk.\n- Pacotes de evidências: todos os pacotes com pontuação e links.\n\nUse Gerar pacote, Ressincronizar e Abrir disputa na Shopify. Alterar o idioma do app pode refletir nos textos da linha do tempo quando a Shopify retorna eventos localizados."
+      },
       "syncingDisputes": {
         "title": "Sincronizando disputas do Shopify",
         "body": "O DisputeDesk mantém suas disputas atualizadas por dois mecanismos:\n\n1. Webhooks: o Shopify envia notificações em tempo real quando disputas são criadas ou atualizadas. O DisputeDesk as processa instantaneamente.\n2. Sincronização manual: clique em \"Sincronizar Agora\" na página de Disputas para disparar uma sincronização imediata. Útil se você suspeitar que um webhook foi perdido.\n\nDurante a sincronização, o DisputeDesk:\n- Busca todas as disputas abertas no Shopify.\n- Cria novos registros para disputas ainda não rastreadas.\n- Atualiza disputas existentes com o status e informações mais recentes.\n- Para novas disputas, avalia suas regras e dispara a automação quando aplicável.\n\nO status da sincronização é exibido com um timestamp \"Última sincronização\" em cada disputa."
@@ -959,6 +986,10 @@
         "viewingFilteringDisputes": {
           "title": "Ver e filtrar disputas",
           "body": "A tabela **Disputas** usa as **mesmas colunas** das disputas recentes do painel: **Pedido** (link para o Admin da Shopify quando disponível), **ID** (id interno curto), **Cliente**, **Valor**, **Motivo**, **Status**, **Prazo** (mês e dia) e **Ver detalhes** para abrir a disputa no DisputeDesk.\n\nBarra: **Buscar** (pedido, ID, cliente, motivo), **Filtrar** por status, **Exportar** CSV, **Sincronizar agora**.\n\n**Não há aba separada de fila de revisão**: disputas enviadas para revisão manual aparecem nesta lista. Use **Ver detalhes** e depois **Aprovar e salvar** na página de detalhe."
+        },
+        "disputeDetailPage": {
+          "title": "Detalhe da disputa neste app",
+          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja."
         },
         "reviewQueue": {
           "title": "A fila de revisão",

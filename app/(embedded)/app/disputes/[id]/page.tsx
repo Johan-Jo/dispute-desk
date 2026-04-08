@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
@@ -25,6 +25,7 @@ import {
   Divider,
   Icon,
   Modal,
+  Box,
 } from "@shopify/polaris";
 import {
   OrderIcon,
@@ -35,6 +36,10 @@ import {
   CheckCircleIcon,
   RefreshIcon,
 } from "@shopify/polaris-icons";
+
+import styles from "./dispute-detail.module.css";
+import { DisputeStatusStepper } from "./DisputeStatusStepper";
+import { getDisputeProgressSteps } from "@/lib/embedded/disputeDetailProgress";
 
 interface Dispute {
   id: string;
@@ -201,7 +206,6 @@ function buildTimeline(
   return events;
 }
 
-// KPI Card component styled like portal
 function KpiCard({
   label,
   children,
@@ -212,28 +216,18 @@ function KpiCard({
   urgent?: boolean;
 }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: "8px",
-        border: `1px solid ${urgent ? "#EF4444" : "#E5E7EB"}`,
-        padding: "16px",
-        flex: "1 1 0",
-        minWidth: 0,
-      }}
-    >
-      <p style={{ fontSize: "12px", color: "#667085", marginBottom: "4px" }}>{label}</p>
+    <div className={`${styles.kpiCard} ${urgent ? styles.kpiCardUrgent : ""}`}>
+      <p className={styles.kpiLabel}>{label}</p>
       {children}
     </div>
   );
 }
 
-// Profile row: label + value
 function ProfileRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "14px", paddingBottom: "8px" }}>
-      <span style={{ color: "#667085", flexShrink: 0 }}>{label}</span>
-      <span style={{ color: "#0B1220", fontWeight: 500, textAlign: "right", wordBreak: "break-word" }}>{value || "—"}</span>
+    <div className={styles.profileRow}>
+      <span className={styles.profileRowLabel}>{label}</span>
+      <span className={styles.profileRowValue}>{value || "—"}</span>
     </div>
   );
 }
@@ -282,7 +276,29 @@ export default function DisputeDetailPage() {
     setShopDomain(json.shop_domain ?? null);
     setProfile(profileJson.profile ?? null);
     setLoading(false);
-  }, [id]);
+  }, [id, searchParams]);
+
+  const progressSteps = useMemo(() => {
+    if (!dispute) return [];
+    return getDisputeProgressSteps({
+      initiated_at: dispute.initiated_at,
+      status: dispute.status,
+      packs: packs.map((p) => ({
+        created_at: p.created_at,
+        saved_to_shopify_at: p.saved_to_shopify_at,
+      })),
+    });
+  }, [dispute, packs]);
+
+  const packForSupplemental = useMemo(() => {
+    const saved = packs.filter((p) => p.saved_to_shopify_at);
+    if (saved.length === 0) return null;
+    return [...saved].sort(
+      (a, b) =>
+        new Date(b.saved_to_shopify_at!).getTime() -
+        new Date(a.saved_to_shopify_at!).getTime(),
+    )[0]!;
+  }, [packs]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -360,7 +376,7 @@ export default function DisputeDetailPage() {
 
   if (loading) {
     return (
-      <Page title={t("disputes.title")}>
+      <Page title={t("disputes.detailPageTitle")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -371,7 +387,7 @@ export default function DisputeDetailPage() {
   if (!dispute) {
     return (
       <Page
-        title={t("disputes.title")}
+        title={t("disputes.detailPageTitle")}
         backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       >
         <Banner tone="critical">{t("disputes.disputeNotFound")}</Banner>
@@ -388,9 +404,16 @@ export default function DisputeDetailPage() {
   const deadline = daysUntilInfo(dispute.due_at);
   const timeline = buildTimeline(packs, profile?.orderEvents ?? [], t);
 
+  const orderLabel =
+    profile?.orderName ??
+    (dispute.dispute_gid.split("/").pop()
+      ? `#${dispute.dispute_gid.split("/").pop()}`
+      : "—");
+
   return (
     <Page
-      title={t("disputes.disputeTitle", { id: dispute.dispute_gid.split("/").pop() ?? "" })}
+      title={t("disputes.detailPageTitle")}
+      subtitle={t("disputes.detailPageSubtitle", { orderLabel })}
       backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       titleMetadata={isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined}
       primaryAction={{
@@ -428,9 +451,9 @@ export default function DisputeDetailPage() {
 
         {/* KPI cards */}
         <Layout.Section>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div className={styles.kpiGrid}>
             <KpiCard label={t("disputes.amount")}>
-              <p style={{ fontSize: "20px", fontWeight: 700, color: "#0B1220" }}>
+              <p className={styles.kpiAmount}>
                 {formatCurrency(dispute.amount, dispute.currency_code)}
               </p>
             </KpiCard>
@@ -444,17 +467,15 @@ export default function DisputeDetailPage() {
             </KpiCard>
 
             <KpiCard label={t("disputes.dueDate")}>
-              <p style={{ fontSize: "14px", fontWeight: 500, color: "#0B1220" }}>
-                {formatDate(dispute.due_at)}
-              </p>
+              <p className={styles.kpiValue}>{formatDate(dispute.due_at)}</p>
             </KpiCard>
 
             <KpiCard label={t("disputes.timeLeft")} urgent={deadline.urgent}>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
+              <div className={styles.kpiRow}>
                 {deadline.urgent && (
                   <Icon source={AlertTriangleIcon} tone="critical" />
                 )}
-                <p style={{ fontSize: "14px", fontWeight: 500, color: deadline.urgent ? "#EF4444" : "#0B1220" }}>
+                <p className={deadline.urgent ? styles.kpiValueUrgent : styles.kpiValue}>
                   {deadline.text}
                 </p>
               </div>
@@ -462,11 +483,22 @@ export default function DisputeDetailPage() {
           </div>
         </Layout.Section>
 
+        <Layout.Section>
+          <Box background="bg-surface-secondary" padding="300" borderRadius="200">
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("disputes.managedByDisputeDesk")}
+            </Text>
+          </Box>
+        </Layout.Section>
+
+        <Layout.Section>
+          <DisputeStatusStepper steps={progressSteps} t={t} formatDate={formatDate} />
+        </Layout.Section>
+
         {/* Customer Info + Order Details */}
         <Layout.Section>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
-            {/* Customer Info */}
-            <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", padding: "20px" }}>
+          <div className={styles.profileGrid}>
+            <Card>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
                 <Icon source={PersonIcon} tone="subdued" />
                 <Text as="h3" variant="headingSm">{t("disputes.customerInfo")}</Text>
@@ -480,10 +512,9 @@ export default function DisputeDetailPage() {
                   value={formatAddress(profile?.displayAddress ?? profile?.shippingAddress)}
                 />
               </BlockStack>
-            </div>
+            </Card>
 
-            {/* Order Details */}
-            <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", padding: "20px" }}>
+            <Card>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
                 <Icon source={OrderIcon} tone="subdued" />
                 <Text as="h3" variant="headingSm">{t("disputes.orderDetails")}</Text>
@@ -530,8 +561,34 @@ export default function DisputeDetailPage() {
                   ))
                 )}
               </BlockStack>
-            </div>
+            </Card>
           </div>
+        </Layout.Section>
+
+        <Layout.Section>
+          <Card padding="0">
+            <div className={styles.moreEvidenceHeader}>
+              <div>
+                <p className={styles.moreEvidenceTitle}>{t("disputes.moreEvidenceTitle")}</p>
+              </div>
+            </div>
+            <div
+              className={`${styles.moreEvidenceZone} ${!packForSupplemental ? styles.moreEvidenceZoneDisabled : ""}`}
+            >
+              <Text as="p" variant="bodyMd" tone="subdued">
+                {packForSupplemental ? t("disputes.moreEvidenceBody") : t("disputes.moreEvidenceLocked")}
+              </Text>
+              {packForSupplemental && (
+                <div className={styles.moreEvidenceLink}>
+                  <Button
+                    url={withShopParams(`/app/packs/${packForSupplemental.id}`, searchParams)}
+                  >
+                    {t("disputes.moreEvidenceCta")}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
         </Layout.Section>
 
         {/* Timeline */}
@@ -544,22 +601,22 @@ export default function DisputeDetailPage() {
                   <Text as="h3" variant="headingSm">{t("disputes.timeline")}</Text>
                 </InlineStack>
                 <Divider />
-                <div style={{ paddingTop: "4px" }}>
+                <div className={styles.timelineList}>
                   {timeline.map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", gap: "16px", marginBottom: idx < timeline.length - 1 ? "20px" : 0 }}>
-                      {/* dot + line */}
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "12px", flexShrink: 0 }}>
-                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#1D4ED8", marginTop: "4px" }} />
-                        {idx < timeline.length - 1 && (
-                          <div style={{ width: "1px", flex: 1, background: "#E5E7EB", marginTop: "4px" }} />
-                        )}
+                    <div
+                      key={idx}
+                      className={`${styles.timelineRow} ${idx < timeline.length - 1 ? styles.timelineRowSpaced : ""}`}
+                    >
+                      <div className={styles.timelineRail}>
+                        <div className={styles.timelineDot} />
+                        {idx < timeline.length - 1 ? <div className={styles.timelineLine} /> : null}
                       </div>
-                      <div style={{ paddingBottom: "4px" }}>
-                        <p style={{ fontSize: "12px", color: "#667085", marginBottom: "2px" }}>{formatDateTime(item.date)}</p>
-                        <p style={{ fontSize: "14px", fontWeight: 500, color: "#0B1220" }}>{item.label}</p>
-                        {item.sublabel && (
-                          <p style={{ fontSize: "12px", color: "#667085" }}>{item.sublabel}</p>
-                        )}
+                      <div>
+                        <p className={styles.timelineMeta}>{formatDateTime(item.date)}</p>
+                        <p className={styles.timelineLabel}>{item.label}</p>
+                        {item.sublabel ? (
+                          <p className={styles.timelineSub}>{item.sublabel}</p>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -590,39 +647,39 @@ export default function DisputeDetailPage() {
                 </>
               ) : (
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+                  <table className={styles.evidenceTable}>
                     <thead>
-                      <tr style={{ background: "#F7F8FA" }}>
+                      <tr>
                         {[t("table.pack"), t("table.status"), t("table.score"), t("disputes.blockers"), t("table.created"), t("table.actions")].map((h) => (
-                          <th key={h} style={{ textAlign: "left", padding: "10px 16px", fontWeight: 500, color: "#667085", whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={h} className={styles.evidenceTh}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {packs.map((p) => (
-                        <tr key={p.id} style={{ borderTop: "1px solid #E5E7EB" }}>
-                          <td style={{ padding: "12px 16px" }}>
+                        <tr key={p.id}>
+                          <td className={styles.evidenceTd}>
                             <a href={withShopParams(`/app/packs/${p.id}`, searchParams)} style={{ color: "#1D4ED8", fontWeight: 500, textDecoration: "none" }}>
                               {p.id.slice(0, 8)}
                             </a>
                           </td>
-                          <td style={{ padding: "12px 16px" }}>
+                          <td className={styles.evidenceTd}>
                             <Badge tone={packStatusTone(p.status)}>{p.status.replace(/_/g, " ")}</Badge>
                           </td>
-                          <td style={{ padding: "12px 16px" }}>
+                          <td className={styles.evidenceTd}>
                             {p.completeness_score != null ? (
                               <span style={{ color: p.completeness_score >= 80 ? "#22C55E" : p.completeness_score >= 50 ? "#F59E0B" : "#EF4444", fontWeight: 500 }}>
                                 {p.completeness_score}%
                               </span>
                             ) : "—"}
                           </td>
-                          <td style={{ padding: "12px 16px", color: "#667085" }}>
+                          <td className={styles.evidenceTd} style={{ color: "#667085" }}>
                             {p.blockers && p.blockers.length > 0 ? p.blockers.length + " blocker(s)" : t("common.none")}
                           </td>
-                          <td style={{ padding: "12px 16px", color: "#667085", whiteSpace: "nowrap" }}>
+                          <td className={styles.evidenceTd} style={{ color: "#667085", whiteSpace: "nowrap" }}>
                             {formatDate(p.created_at)}
                           </td>
-                          <td style={{ padding: "12px 16px" }}>
+                          <td className={styles.evidenceTd}>
                             {p.status === "saved_to_shopify" && p.saved_to_shopify_at ? (
                               <span style={{ fontSize: "12px", color: "#22C55E", display: "flex", alignItems: "center", gap: "4px" }}>
                                 <Icon source={CheckCircleIcon} tone="success" />

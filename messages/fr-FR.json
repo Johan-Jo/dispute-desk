@@ -247,7 +247,30 @@
     "noTemplateBody": "Aucun modèle prédéfini n'existe pour ce type de contestation. Nous recommandons d'en créer un pour une qualité de preuve cohérente.",
     "useTemplate": "Utiliser le modèle",
     "generateBasic": "Générer un pack de base",
-    "goToTemplateLibrary": "Aller à la bibliothèque de modèles"
+    "goToTemplateLibrary": "Aller à la bibliothèque de modèles",
+    "detailPageTitle": "Litige",
+    "detailPageSubtitle": "{orderLabel}",
+    "statusProgressTitle": "Statut du litige",
+    "managedByDisputeDesk": "Géré par DisputeDesk",
+    "moreEvidenceTitle": "Preuves supplémentaires",
+    "moreEvidenceBody": "Ajoutez des fichiers depuis le pack de preuves après enregistrement des preuves dans Shopify (y compris via l’automatisation).",
+    "moreEvidenceLocked": "Disponible une fois les preuves enregistrées dans Shopify.",
+    "moreEvidenceCta": "Ouvrir le pack de preuves",
+    "progress": {
+      "badgeCompleted": "Terminé",
+      "badgeCurrent": "En cours",
+      "badgePending": "En attente",
+      "createdTitle": "Créé",
+      "createdDesc": "Chargeback ouvert",
+      "packTitle": "Pack",
+      "packDesc": "Preuves préparées",
+      "savedTitle": "Enregistré",
+      "savedDesc": "Dans Shopify",
+      "reviewTitle": "Examen",
+      "reviewDesc": "Examen émetteur",
+      "outcomeTitle": "Résultat",
+      "outcomeDesc": "Résultat final"
+    }
   },
   "packs": {
     "title": "Dossiers de preuves",
@@ -1000,6 +1023,10 @@
         "title": "Afficher et filtrer les litiges",
         "body": "La page Litiges affiche tous vos rétrofacturations dans un tableau triable.\n\nFiltres disponibles : statut, recherche par mots-clés.\n\nDeux onglets :\n- Tous les litiges.\n- File d'examen : litiges nécessitant un examen manuel."
       },
+      "disputeDetailPage": {
+        "title": "Page de détail du litige",
+        "body": "Ouvrez un litige depuis la liste pour la vue complète.\n\nContenu :\n- Bandeau KPI : montant, statut, date d'échéance, temps restant.\n- Géré par DisputeDesk : le flux de rétrofacturation est préparé dans cette application.\n- Statut du litige : cinq étapes (Créé → Pack → Enregistré → Examen → Résultat). Les étapes évoluent quand les packs sont construits et enregistrés dans Shopify ; un statut final (gagné, perdu, etc.) marque toutes les étapes comme complètes.\n- Client et commande : profil et commande Shopify avec liens.\n- Preuves supplémentaires : dès qu'au moins un pack est enregistré dans Shopify (manuel ou automatisation), utilisez Ouvrir le pack de preuves pour ajouter des fichiers sur la page du pack. Avant cela, la zone indique que les téléversements sont possibles après enregistrement dans Shopify.\n- Chronologie : événements de commande Shopify récents et jalons DisputeDesk.\n- Packs de preuves : tous les packs avec complétude et liens.\n\nUtilisez Générer un pack, Resynchroniser et Ouvrir le litige dans Shopify. Changer la langue de l'application peut adapter les textes de la chronologie si Shopify renvoie des événements localisés."
+      },
       "syncingDisputes": {
         "title": "Synchroniser les litiges depuis Shopify",
         "body": "DisputeDesk maintient vos litiges à jour via :\n\n1. Webhooks : notifications en temps réel de Shopify.\n2. Synchronisation manuelle : cliquez sur \"Synchroniser\"."
@@ -1135,6 +1162,10 @@
         "viewingFilteringDisputes": {
           "title": "Afficher et filtrer les litiges",
           "body": "Le tableau **Litiges** reprend **les mêmes colonnes** que les litiges récents du tableau de bord : **Commande** (lien Admin Shopify si disponible), **ID** (identifiant interne court), **Client**, **Montant**, **Motif**, **Statut**, **Échéance** (mois et jour) et **Voir les détails** pour ouvrir le litige dans DisputeDesk.\n\nBarre : **Recherche** (commande, ID, client, motif), **Filtrer** par statut, **Exporter** CSV, **Synchroniser maintenant**.\n\n**Pas d'onglet séparé « file d'attente de révision »** : les litiges en révision manuelle apparaissent dans cette liste. Utilisez **Voir les détails** puis **Approuver et enregistrer** sur la page de détail."
+        },
+        "disputeDetailPage": {
+          "title": "Détail du litige dans cette application",
+          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible."
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",
