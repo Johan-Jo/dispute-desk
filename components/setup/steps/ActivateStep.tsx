@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
+import {
+  recommendTemplates,
+  deriveEvidenceConfidence,
+  getDefaultEvidenceConfig,
+  EVIDENCE_GROUP_IDS,
+  type StoreProfileForRecommendation,
+  type StoreType,
+  type ProofLevel,
+} from "@/lib/setup/recommendTemplates";
 
 interface ActivateStepProps {
   stepId: StepId;
@@ -17,14 +26,29 @@ interface PackInfo {
   dispute_type: string;
 }
 
+function deriveFamilyAutomation(
+  family: string,
+  confidence: "high" | "medium" | "low"
+): string {
+  if (family === "general") return "notify";
+  if (confidence === "high") return "automated";
+  if (confidence === "medium") {
+    if (family === "not_as_described" || family === "refund") return "review";
+    return "automated";
+  }
+  return "review";
+}
+
 export function ActivateStep({ onSaveRef }: ActivateStepProps) {
   const t = useTranslations("setup.activate");
 
   const [loading, setLoading] = useState(true);
   const [activePacks, setActivePacks] = useState<PackInfo[]>([]);
-  const [packModes, setPackModes] = useState<Record<string, string>>({});
-  const [evidenceCount, setEvidenceCount] = useState(0);
+  const [evidenceCount, setEvidenceCount] = useState(7);
   const [familyCount, setFamilyCount] = useState(0);
+  const [uniquePackNames, setUniquePackNames] = useState<string[]>([]);
+  const [autoCount, setAutoCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,17 +68,55 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         // Evidence count from store profile
         const ec = state?.steps?.store_profile?.payload?.shopifyEvidenceConfig;
         if (ec) {
-          const enabled = Object.values(ec).filter((v) => v !== "off").length;
-          setEvidenceCount(enabled);
+          setEvidenceCount(
+            EVIDENCE_GROUP_IDS.filter((g) => ec[g] !== "off").length
+          );
         }
 
-        // Families from coverage step
-        const families = state?.steps?.coverage?.payload?.selectedFamilies ?? [];
-        setFamilyCount(families.length);
+        // Packs (for activation)
+        const packs = (automation.activePacks ?? []) as PackInfo[];
+        setActivePacks(packs);
 
-        // Packs + modes
-        setActivePacks(automation.activePacks ?? []);
-        setPackModes(automation.pack_modes ?? {});
+        // Deduplicate pack names for display
+        const names = [...new Set(packs.map((p) => p.name))];
+        setUniquePackNames(names);
+
+        // Coverage settings from Step 3, or derive from profile
+        const coverageSettings = state?.steps?.coverage?.payload?.coverageSettings as
+          | Record<string, string>
+          | undefined;
+
+        let automationValues: string[];
+        if (coverageSettings && Object.keys(coverageSettings).length > 0) {
+          automationValues = Object.values(coverageSettings);
+          setFamilyCount(Object.keys(coverageSettings).length);
+        } else {
+          // Derive from store profile
+          const profilePayload = state?.steps?.store_profile?.payload;
+          const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
+          const deliveryProof = (profilePayload?.deliveryProof ?? "always") as ProofLevel;
+          const evidenceConfig = profilePayload?.shopifyEvidenceConfig ??
+            getDefaultEvidenceConfig(storeTypes, deliveryProof);
+          const profile: StoreProfileForRecommendation = {
+            storeTypes,
+            deliveryProof,
+            digitalProof: profilePayload?.digitalProof ?? "yes",
+            shopifyEvidenceConfig: evidenceConfig,
+          };
+          const confidence = deriveEvidenceConfidence(evidenceConfig);
+          const recs = recommendTemplates(profile).filter((r) => r.isDefault);
+          const familySet = new Set(recs.map((r) => r.disputeFamily));
+          setFamilyCount(familySet.size);
+          automationValues = [...familySet].map((f) =>
+            deriveFamilyAutomation(f, confidence)
+          );
+        }
+
+        setAutoCount(automationValues.filter((v) => v === "automated").length);
+        setReviewCount(
+          automationValues.filter((v) => v === "review").length +
+          automationValues.filter((v) => v === "notify").length
+        );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -67,7 +129,6 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
   // Wire save: activate DRAFT packs, mark step done
   useEffect(() => {
     onSaveRef.current = async () => {
-      // Activate all DRAFT packs
       const draftPacks = activePacks.filter((p) => p.status === "DRAFT");
       for (const pack of draftPacks) {
         await fetch(`/api/packs/${pack.id}`, {
@@ -77,7 +138,6 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         });
       }
 
-      // Mark step done
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,9 +158,6 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
     );
   }
 
-  const autoCount = Object.values(packModes).filter((m) => m === "auto").length;
-  const manualCount = activePacks.length - autoCount;
-
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -112,7 +169,6 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         </p>
       </div>
 
-      {/* Summary sections */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Evidence sources */}
         <div style={{
@@ -166,10 +222,12 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-              {t("coverageSummary", { templates: activePacks.length, families: familyCount })}
+              {t("coverageSummary", { templates: uniquePackNames.length, families: familyCount })}
             </div>
-            <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2 }}>
-              {activePacks.map((p) => p.name).join(", ") || "—"}
+            <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2, lineHeight: 1.5 }}>
+              {uniquePackNames.length > 0
+                ? uniquePackNames.slice(0, 6).join(", ") + (uniquePackNames.length > 6 ? ` (+${uniquePackNames.length - 6})` : "")
+                : "—"}
             </div>
           </div>
         </div>
@@ -196,7 +254,7 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-              {t("automationSummary", { auto: autoCount, manual: manualCount })}
+              {t("automationSummary", { auto: autoCount, manual: reviewCount })}
             </div>
           </div>
         </div>
