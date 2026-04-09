@@ -390,6 +390,7 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 | 025_policy_snapshots_privacy_contact.sql | policy_snapshots: allow policy_type `privacy`, `contact` |
 | 026_shops_policy_template_lang.sql | shops.policy_template_lang (language of policy template content) |
 | 027_policy_template_lang_explicit.sql | policy_template_lang values: en, de, fr, es, pt, sv (explicit choice) |
+| 20260408120000_packs_add_description.sql | packs.description (optional text description for library packs) |
 
 ## Automation Pipeline
 
@@ -807,6 +808,16 @@ All embedded navigation that leads to/from pack pages now uses `withShopParams` 
 - Pack list page (`app/(embedded)/app/packs/page.tsx`) — all row click / button navigations
 - Dispute detail Evidence Packs table — pack links (both ID and "View details")
 - Dashboard — "Go to disputes" and "View all" links
+
+### Packs Library — Figma-aligned UI (2026-04-08)
+
+The embedded Evidence Packs Library (`app/(embedded)/app/packs/page.tsx`) was restyled to match Figma:
+- **Pill-style filter tabs** — CSS overrides on Polaris `Tabs` render active tab as blue (`#1D4ED8`) pill, inactive as gray text with hover highlight.
+- **Custom info banner** — Replaced Polaris `Banner` with a custom `#EFF6FF` blue div using lucide `Info` and `X` icons.
+- **Header button icons** — "Start from template" uses `MagicIcon`, "Create Pack" uses `PlusIcon` (both `@shopify/polaris-icons`).
+- **Simplified status column** — DRAFT packs show an "Activate" text link instead of a Draft badge + button.
+- **Table row hover** — Rows highlight `#F9FAFB` on hover.
+- **Description field** — Create Pack modal now includes a multiline Description textarea. The `packs` table has a `description text` column (migration `20260408120000`). API `POST /api/packs` accepts optional `description` in the body.
 
 ### Shopify Admin Dispute URL
 

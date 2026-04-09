@@ -24,14 +24,13 @@ import {
   BlockStack,
   Modal,
   EmptyState,
-  Banner,
   Tabs,
   TextField,
   Select,
   IndexTable,
 } from "@shopify/polaris";
-import { FileText } from "lucide-react";
-import { SearchIcon, EditIcon, DeleteIcon } from "@shopify/polaris-icons";
+import { FileText, Info, X } from "lucide-react";
+import { SearchIcon, EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
 
 interface PackRow {
   id: string;
@@ -113,6 +112,7 @@ export default function PacksListPage() {
   const [creating, setCreating] = useState(false);
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState<string>(DISPUTE_TYPES[0]);
+  const [formDescription, setFormDescription] = useState("");
 
   const [activatingId, setActivatingId] = useState<string | null>(null);
   const [showTemplateBanner, setShowTemplateBanner] = useState(true);
@@ -254,12 +254,14 @@ export default function PacksListPage() {
         body: JSON.stringify({
           name: formName.trim(),
           disputeType: formType,
+          description: formDescription.trim() || undefined,
         }),
       });
       if (res.ok) {
         setCreateModalOpen(false);
         setFormName("");
         setFormType(DISPUTE_TYPES[0]);
+        setFormDescription("");
         await fetchPacks();
       }
     } finally {
@@ -298,11 +300,13 @@ export default function PacksListPage() {
         subtitle={t("packTemplates.subtitle")}
         primaryAction={{
           content: t("packTemplates.startFromTemplate"),
+          icon: MagicIcon,
           onAction: () => setTemplateModalOpen(true),
         }}
         secondaryActions={[
           {
             content: t("packTemplates.createPack"),
+            icon: PlusIcon,
             onAction: () => setCreateModalOpen(true),
           },
         ]}
@@ -310,29 +314,27 @@ export default function PacksListPage() {
         <div className="embeddedPacksRoot">
         <BlockStack gap="400">
           {!loading && packs.length > 0 && showTemplateBanner && (
-            <Banner
-              title={t("packTemplates.exploreMoreTemplates")}
-              tone="info"
-              onDismiss={() => setShowTemplateBanner(false)}
-            >
+            <div className="embeddedPacksInfoBanner">
+              <Info size={20} className="embeddedPacksInfoBannerIcon" />
               <p>
+                {t("packTemplates.exploreMoreTemplates")}{" "}
                 <button
                   type="button"
+                  className="embeddedPacksInfoBannerLink"
                   onClick={() => setTemplateModalOpen(true)}
-                  style={{
-                    border: 0,
-                    background: "transparent",
-                    color: "var(--p-color-text-link)",
-                    cursor: "pointer",
-                    padding: 0,
-                    textDecoration: "underline",
-                    fontWeight: 600,
-                  }}
                 >
                   {t("packTemplates.browseTemplates")}
                 </button>
               </p>
-            </Banner>
+              <button
+                type="button"
+                className="embeddedPacksInfoBannerClose"
+                onClick={() => setShowTemplateBanner(false)}
+                aria-label="Dismiss"
+              >
+                <X size={20} />
+              </button>
+            </div>
           )}
 
           <Card padding="0">
@@ -523,20 +525,18 @@ export default function PacksListPage() {
                         </IndexTable.Cell>
                         <IndexTable.Cell>
                           {pack.status === "DRAFT" ? (
-                            <InlineStack gap="200" blockAlign="center" wrap={false}>
-                              <Badge tone="attention">
-                                {t("packTemplates.filterDraft")}
-                              </Badge>
-                              <Button
-                                variant="plain"
-                                size="slim"
-                                loading={activatingId === pack.id}
-                                disabled={activatingId !== null}
-                                onClick={() => handleActivate(pack.id)}
-                              >
-                                {t("packTemplates.activate")}
-                              </Button>
-                            </InlineStack>
+                            <button
+                              type="button"
+                              className="embeddedPacksActivateLink"
+                              disabled={activatingId !== null}
+                              onClick={() => handleActivate(pack.id)}
+                            >
+                              {activatingId === pack.id ? (
+                                <Spinner size="small" />
+                              ) : (
+                                t("packTemplates.activate")
+                              )}
+                            </button>
                           ) : (
                             <Badge tone={statusTone(pack.status)}>
                               {pack.status === "ACTIVE"
@@ -656,6 +656,14 @@ export default function PacksListPage() {
               }))}
               value={formType}
               onChange={setFormType}
+            />
+            <TextField
+              label={t("packTemplates.descriptionLabel")}
+              autoComplete="off"
+              value={formDescription}
+              onChange={setFormDescription}
+              placeholder={t("packTemplates.descriptionPlaceholder")}
+              multiline={4}
             />
             <Text as="p" variant="bodySm" tone="subdued">
               {t("packTemplates.nextSteps")}

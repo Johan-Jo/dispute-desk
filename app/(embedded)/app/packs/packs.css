@@ -33,12 +33,54 @@
 }
 
 .embeddedPacksRoot .Polaris-Tabs__Wrapper {
-  padding-inline: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--p-color-border);
+}
+
+.embeddedPacksRoot .Polaris-Tabs__TabContainer {
+  display: flex;
+  gap: 6px;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Tab {
+  border-radius: 8px;
+  padding: 6px 12px;
+  border: none !important;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Tab:hover {
+  background: #F7F8FA;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Tab--active,
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected {
+  background: #1D4ED8 !important;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Tab--active .Polaris-Tabs__Title,
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected .Polaris-Tabs__Title {
+  color: #FFFFFF !important;
+}
+
+/* Hide the Polaris underline indicator */
+.embeddedPacksRoot .Polaris-Tabs__Tab::after,
+.embeddedPacksRoot .Polaris-Tabs__Tab--active::after,
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected::after,
+.embeddedPacksRoot .Polaris-Tabs__TabContainer::after {
+  display: none !important;
 }
 
 .embeddedPacksRoot .Polaris-Tabs__Title {
   font-size: 13px;
   font-weight: 500;
+}
+
+/* Table row hover */
+.embeddedPacksRoot .Polaris-IndexTable__Table tbody tr:hover td {
+  background-color: #F9FAFB;
+  transition: background-color 0.15s;
 }
 
 .embeddedPacksRoot .Polaris-IndexTable__Table {
@@ -87,5 +129,79 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 12px;
+}
+
+/* Custom info banner (Figma-aligned) */
+.embeddedPacksInfoBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.embeddedPacksInfoBannerIcon {
+  color: #1D4ED8;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.embeddedPacksInfoBanner p {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  color: #1E40AF;
+  line-height: 1.5;
+}
+
+.embeddedPacksInfoBannerLink {
+  border: 0;
+  background: transparent;
+  color: #1E40AF;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  font-weight: 600;
+  font-size: inherit;
+}
+
+.embeddedPacksInfoBannerLink:hover {
+  text-decoration: none;
+}
+
+.embeddedPacksInfoBannerClose {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #1E40AF;
+  padding: 4px;
+  line-height: 0;
+}
+
+.embeddedPacksInfoBannerClose:hover {
+  color: #1E3A8A;
+}
+
+/* Activate link in status column */
+.embeddedPacksActivateLink {
+  border: 0;
+  background: transparent;
+  color: #1D4ED8;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.embeddedPacksActivateLink:hover {
+  text-decoration: underline;
+}
+
+.embeddedPacksActivateLink:disabled {
+  opacity: 0.5;
+  cursor: default;
+  text-decoration: none;
 }
 

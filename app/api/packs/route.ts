@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
  * Creates a manual pack (source = MANUAL).
  */
 export async function POST(req: NextRequest) {
-  let body: { shopId?: string; name?: string; disputeType?: string; code?: string };
+  let body: { shopId?: string; name?: string; disputeType?: string; code?: string; description?: string };
   try {
     body = await req.json();
   } catch {
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     name: body.name,
     disputeType: body.disputeType,
     code: body.code,
+    description: body.description,
   });
 
   if (!pack) {

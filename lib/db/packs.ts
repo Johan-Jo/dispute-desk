@@ -277,7 +277,7 @@ export async function listLibraryPacksForAutomationRules(
 /** Create a manual (non-template) pack. */
 export async function createPack(
   shopId: string,
-  fields: { name: string; disputeType: string; code?: string }
+  fields: { name: string; disputeType: string; code?: string; description?: string }
 ): Promise<Pack | null> {
   const sb = getServiceClient();
 
@@ -288,6 +288,7 @@ export async function createPack(
       name: fields.name,
       dispute_type: fields.disputeType,
       code: fields.code ?? null,
+      description: fields.description ?? null,
       status: "DRAFT",
       source: "MANUAL",
     })
