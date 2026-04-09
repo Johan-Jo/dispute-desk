@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "@shopify/polaris";
 import { useLocale, useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import {
   recommendTemplates,
   deriveEvidenceConfidence,
-  EVIDENCE_GROUP_IDS,
   TEMPLATE_IDS,
   type TemplateRecommendation,
   type ShopifyEvidenceConfig,
   type StoreProfileForRecommendation,
-  type EvidenceGroupId,
+  type TemplateSlug,
 } from "@/lib/setup/recommendTemplates";
 
 interface CoverageStepProps {
@@ -30,25 +29,79 @@ interface TemplateInfo {
   is_recommended: boolean;
 }
 
-const BEHAVIOR_LABELS: Record<string, string> = {
-  always: "Always include",
-  when_present: "When present",
-  review: "Review first",
-  off: "Off",
+type AutomationMode = "automated" | "review" | "notify";
+
+interface FamilyRow {
+  family: string;
+  recs: TemplateRecommendation[];
+  automation: AutomationMode;
+  confidence: "high" | "medium" | "low";
+}
+
+/** Figma-aligned dispute family display data */
+const FAMILY_DESCRIPTIONS: Record<string, string> = {
+  fraud: "Cardholder claims they did not authorize the transaction",
+  pnr: "Customer claims they never received the product",
+  not_as_described: "Product quality or description issues",
+  subscription: "Customer claims subscription was already canceled",
+  refund: "Customer claims promised refund was not issued",
+  duplicate: "Customer was charged multiple times",
+  digital: "Disputes involving digital products or services",
+  general: "Other dispute types that require careful review",
+};
+
+const FAMILY_HANDLING: Record<string, string> = {
+  fraud: "Full evidence package with fraud signals and delivery proof",
+  pnr: "Tracking data, delivery proof, and shipping policy",
+  not_as_described: "Product details, photos, and return policy",
+  subscription: "Subscription terms, cancellation logs, and usage data",
+  refund: "Refund policy and transaction records",
+  duplicate: "Transaction history and order records",
+  digital: "Access logs, delivery confirmation, and usage records",
+  general: "Comprehensive evidence with manual review",
+};
+
+function deriveDefaultAutomation(
+  family: string,
+  confidence: "high" | "medium" | "low"
+): AutomationMode {
+  if (family === "general") return "notify";
+  if (confidence === "high") return "automated";
+  if (confidence === "medium") {
+    if (family === "not_as_described" || family === "refund") return "review";
+    return "automated";
+  }
+  return "review";
+}
+
+function deriveFamilyConfidence(
+  family: string,
+  globalConfidence: "high" | "medium" | "low"
+): "high" | "medium" | "low" {
+  if (family === "general") return "low";
+  if (family === "not_as_described" || family === "refund") {
+    return globalConfidence === "high" ? "medium" : globalConfidence;
+  }
+  return globalConfidence;
+}
+
+const CONFIDENCE_STYLES: Record<string, { bg: string; color: string }> = {
+  high: { bg: "#D1FAE5", color: "#065F46" },
+  medium: { bg: "#FEF3C7", color: "#92400E" },
+  low: { bg: "#FEE2E2", color: "#991B1B" },
 };
 
 export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepProps) {
   const tCoverage = useTranslations("setup.coverage");
-  const tProfile = useTranslations("setup.storeProfile");
   const locale = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recommendations, setRecommendations] = useState<TemplateRecommendation[]>([]);
   const [templateCatalog, setTemplateCatalog] = useState<TemplateInfo[]>([]);
-  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [installedTemplateIds, setInstalledTemplateIds] = useState<Set<string>>(new Set());
   const [evidenceConfig, setEvidenceConfig] = useState<ShopifyEvidenceConfig | null>(null);
+  const [familyRows, setFamilyRows] = useState<FamilyRow[]>([]);
 
   // Load data on mount
   useEffect(() => {
@@ -64,7 +117,6 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
 
         if (cancelled) return;
 
-        // Read store profile
         const state = stateRes.ok ? await stateRes.json() : null;
         const profilePayload = state?.steps?.store_profile?.payload;
 
@@ -85,32 +137,37 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
 
         setEvidenceConfig(profile.shopifyEvidenceConfig);
 
-        // Template catalog
         const catalogData = templatesRes.ok ? await templatesRes.json() : { templates: [] };
         setTemplateCatalog(catalogData.templates ?? []);
 
-        // Already installed
         const automationData = automationRes.ok ? await automationRes.json() : {};
         setInstalledTemplateIds(
           new Set((automationData.installedTemplateIds ?? []) as string[])
         );
 
-        // Check if re-entering: load previously selected from coverage payload
-        const coveragePayload = state?.steps?.coverage?.payload;
-        if (coveragePayload?.installedTemplateIds?.length > 0) {
-          // Re-entry: use previously installed template IDs to derive selected slugs
-          const prevIds = new Set(coveragePayload.installedTemplateIds as string[]);
-          const allRecs = recommendTemplates(profile);
-          setRecommendations(allRecs);
-          setSelectedSlugs(
-            new Set(allRecs.filter((r) => prevIds.has(r.templateId) || r.isDefault).map((r) => r.slug))
-          );
-        } else {
-          // First visit: use recommendation defaults
-          const recs = recommendTemplates(profile);
-          setRecommendations(recs);
-          setSelectedSlugs(new Set(recs.filter((r) => r.isDefault).map((r) => r.slug)));
+        const recs = recommendTemplates(profile);
+        setRecommendations(recs);
+
+        // Build family rows
+        const globalConfidence = deriveEvidenceConfidence(profile.shopifyEvidenceConfig);
+        const familyMap = new Map<string, TemplateRecommendation[]>();
+        for (const rec of recs.filter((r) => r.isDefault)) {
+          const group = familyMap.get(rec.disputeFamily) ?? [];
+          group.push(rec);
+          familyMap.set(rec.disputeFamily, group);
         }
+
+        const rows: FamilyRow[] = [...familyMap.entries()].map(([family, fRecs]) => {
+          const conf = deriveFamilyConfidence(family, globalConfidence);
+          return {
+            family,
+            recs: fRecs,
+            automation: deriveDefaultAutomation(family, conf),
+            confidence: conf,
+          };
+        });
+
+        setFamilyRows(rows);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -118,31 +175,29 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [locale]);
 
-  // Update canContinue when selection changes
+  // Always allow continue (all families pre-selected)
   useEffect(() => {
-    onCanContinueChange?.(selectedSlugs.size > 0);
-  }, [selectedSlugs, onCanContinueChange]);
+    onCanContinueChange?.(familyRows.length > 0);
+  }, [familyRows, onCanContinueChange]);
 
-  const toggleSlug = useCallback((slug: string) => {
-    setSelectedSlugs((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
-    });
-  }, []);
+  const updateAutomation = (family: string, mode: AutomationMode) => {
+    setFamilyRows((prev) =>
+      prev.map((r) => (r.family === family ? { ...r, automation: mode } : r))
+    );
+  };
 
   // Wire save
   useEffect(() => {
     onSaveRef.current = async () => {
       setSaving(true);
       try {
-        // Install selected templates that aren't already installed
-        const toInstall = [...selectedSlugs]
-          .map((slug) => TEMPLATE_IDS[slug as keyof typeof TEMPLATE_IDS])
-          .filter((id) => id && !installedTemplateIds.has(id));
+        // Install default templates that aren't already installed
+        const defaultRecs = recommendations.filter((r) => r.isDefault);
+        const toInstall = defaultRecs
+          .map((r) => r.templateId)
+          .filter((id) => !installedTemplateIds.has(id));
 
         for (const templateId of toInstall) {
           await fetch(`/api/templates/${templateId}/install`, {
@@ -152,23 +207,17 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
           });
         }
 
-        // Derive confidence for downstream steps
         const confidence = evidenceConfig
           ? deriveEvidenceConfidence(evidenceConfig)
           : "medium";
 
-        // Save step
-        const allSelectedIds = [...selectedSlugs]
-          .map((slug) => TEMPLATE_IDS[slug as keyof typeof TEMPLATE_IDS])
-          .filter(Boolean);
+        const allSelectedIds = defaultRecs.map((r) => r.templateId);
+        const families = [...new Set(defaultRecs.map((r) => r.disputeFamily))];
 
-        const families = [
-          ...new Set(
-            recommendations
-              .filter((r) => selectedSlugs.has(r.slug))
-              .map((r) => r.disputeFamily)
-          ),
-        ];
+        // Save coverage settings (family automation modes) for Step 4
+        const coverageSettings = Object.fromEntries(
+          familyRows.map((r) => [r.family, r.automation])
+        );
 
         const res = await fetch("/api/setup/step", {
           method: "POST",
@@ -179,6 +228,7 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
               installedTemplateIds: allSelectedIds,
               selectedFamilies: families,
               evidenceConfidence: confidence,
+              coverageSettings,
             },
           }),
         });
@@ -187,7 +237,7 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
         setSaving(false);
       }
     };
-  }, [onSaveRef, selectedSlugs, installedTemplateIds, evidenceConfig, recommendations]);
+  }, [onSaveRef, recommendations, installedTemplateIds, evidenceConfig, familyRows]);
 
   if (loading) {
     return (
@@ -197,196 +247,175 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
     );
   }
 
-  // Group recommendations by family
-  const families = new Map<string, TemplateRecommendation[]>();
-  for (const rec of recommendations) {
-    const group = families.get(rec.disputeFamily) ?? [];
-    group.push(rec);
-    families.set(rec.disputeFamily, group);
-  }
-
   const getTemplateName = (slug: string) => {
-    const id = TEMPLATE_IDS[slug as keyof typeof TEMPLATE_IDS];
+    const id = TEMPLATE_IDS[slug as TemplateSlug];
     return templateCatalog.find((t) => t.id === id)?.name ?? slug.replace(/_/g, " ");
   };
 
-  const getTemplateDesc = (slug: string) => {
-    const id = TEMPLATE_IDS[slug as keyof typeof TEMPLATE_IDS];
-    return templateCatalog.find((t) => t.id === id)?.short_description ?? "";
-  };
-
-  const enabledEvidenceCount = evidenceConfig
-    ? EVIDENCE_GROUP_IDS.filter((g) => evidenceConfig[g] !== "off").length
-    : 0;
+  // Stats
+  const automatedCount = familyRows.filter((r) => r.automation === "automated").length;
+  const reviewCount = familyRows.filter((r) => r.automation === "review").length;
+  const notifyCount = familyRows.filter((r) => r.automation === "notify").length;
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
           {tCoverage("title")}
         </h2>
-        <p style={{ fontSize: 14, color: "#6D7175", margin: 0 }}>
+        <p style={{ fontSize: 15, color: "#6D7175", margin: 0 }}>
           {tCoverage("subtitle")}
         </p>
       </div>
 
-      {/* Section A: Evidence summary */}
+      {/* Summary banner */}
       <div style={{
-        background: "#F6F6F7",
-        border: "1px solid #E1E3E5",
-        borderRadius: 8,
-        padding: "16px 20px",
+        background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)",
+        border: "1px solid #BFDBFE",
+        borderRadius: 10,
+        padding: "20px 24px",
         marginBottom: 24,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 600, color: "#202223", margin: 0 }}>
-            {tCoverage("evidenceSummaryTitle")}
+        <div>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: "#202223", margin: "0 0 4px" }}>
+            {tCoverage("summaryTitle")}
           </h3>
+          <p style={{ fontSize: 13, color: "#6D7175", margin: 0 }}>
+            {tCoverage("summarySubtitle")}
+          </p>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-          {evidenceConfig && EVIDENCE_GROUP_IDS.map((groupId) => {
-            const val = evidenceConfig[groupId as EvidenceGroupId];
-            if (val === "off") return null;
-            return (
-              <span
-                key={groupId}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  padding: "4px 10px",
-                  background: val === "always" ? "#D1FAE5" : val === "when_present" ? "#DBEAFE" : "#FEF3C7",
-                  color: val === "always" ? "#065F46" : val === "when_present" ? "#1E40AF" : "#92400E",
-                  borderRadius: 12,
-                  fontSize: 11,
-                  fontWeight: 500,
-                }}
-              >
-                {tProfile(`evidence_${groupId}` as Parameters<typeof tProfile>[0])}
-                <span style={{ opacity: 0.7 }}>
-                  ({BEHAVIOR_LABELS[val] ?? val})
-                </span>
-              </span>
-            );
-          })}
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#1D4ED8" }}>{automatedCount}</div>
+            <div style={{ fontSize: 11, color: "#6D7175" }}>{tCoverage("statAutomated")}</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#F59E0B" }}>{reviewCount}</div>
+            <div style={{ fontSize: 11, color: "#6D7175" }}>{tCoverage("statReview")}</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#6D7175" }}>{notifyCount}</div>
+            <div style={{ fontSize: 11, color: "#6D7175" }}>{tCoverage("statNotify")}</div>
+          </div>
         </div>
-        <p style={{ fontSize: 12, color: "#8C9196", margin: 0 }}>
-          {tCoverage("evidenceNote", { count: enabledEvidenceCount })}
-        </p>
       </div>
 
-      {/* Section B: Coverage selection */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {[...families.entries()].map(([family, recs]) => {
-          const anySelected = recs.some((r) => selectedSlugs.has(r.slug));
-          const allDefault = recs.some((r) => r.isDefault);
-
-          return (
-            <div
-              key={family}
-              style={{
-                border: `2px solid ${anySelected ? "#1D4ED8" : "#E1E3E5"}`,
-                borderRadius: 10,
-                padding: "16px 20px",
-                background: anySelected ? "#FAFBFF" : "#fff",
-                transition: "all 0.15s",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: recs.length > 1 ? 12 : 0 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-                      {tCoverage(`family_${family}` as Parameters<typeof tCoverage>[0])}
-                    </span>
-                    {allDefault && (
-                      <span style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        padding: "2px 8px",
-                        background: "#DBEAFE",
-                        color: "#1D4ED8",
-                        borderRadius: 10,
-                      }}>
-                        {tCoverage("recommendedBadge")}
-                      </span>
-                    )}
-                    {!allDefault && (
-                      <span style={{
-                        fontSize: 10,
-                        fontWeight: 500,
-                        padding: "2px 8px",
-                        background: "#F3F3F3",
-                        color: "#6D7175",
-                        borderRadius: 10,
-                      }}>
-                        {tCoverage("optionalBadge")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {recs.map((rec) => {
-                const isSelected = selectedSlugs.has(rec.slug);
-                const isInstalled = installedTemplateIds.has(rec.templateId);
-
-                return (
-                  <label
-                    key={rec.slug}
+      {/* Coverage table */}
+      <div style={{
+        background: "#fff",
+        border: "1px solid #E1E3E5",
+        borderRadius: 10,
+        overflow: "hidden",
+        marginBottom: 24,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#F7F8FA", borderBottom: "1px solid #E1E3E5" }}>
+                {["colDisputeType", "colHandling", "colAutomation", "colConfidence"].map((key) => (
+                  <th
+                    key={key}
                     style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 10,
-                      padding: "8px 0",
-                      cursor: "pointer",
+                      padding: "10px 20px",
+                      textAlign: "left",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#6D7175",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSlug(rec.slug)}
-                      style={{ marginTop: 3, accentColor: "#1D4ED8" }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: "#202223" }}>
-                          {getTemplateName(rec.slug)}
-                        </span>
-                        {isInstalled && (
-                          <span style={{
-                            fontSize: 10,
-                            padding: "1px 6px",
-                            background: "#D1FAE5",
-                            color: "#065F46",
-                            borderRadius: 8,
-                            fontWeight: 500,
-                          }}>
-                            {tCoverage("installedBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>
-                        {getTemplateDesc(rec.slug)}
-                      </p>
-                      {rec.reason && (
-                        <p style={{ fontSize: 11, color: "#8C9196", margin: "4px 0 0", fontStyle: "italic" }}>
-                          {rec.reason}
-                        </p>
-                      )}
+                    {tCoverage(key as Parameters<typeof tCoverage>[0])}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {familyRows.map((row) => (
+                <tr
+                  key={row.family}
+                  style={{ borderBottom: "1px solid #E1E3E5" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#F7F8FA"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ""; }}
+                >
+                  {/* Dispute Type */}
+                  <td style={{ padding: "14px 20px", verticalAlign: "top" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#202223", marginBottom: 3 }}>
+                      {tCoverage(`family_${row.family}` as Parameters<typeof tCoverage>[0])}
                     </div>
-                  </label>
-                );
-              })}
-            </div>
-          );
-        })}
+                    <div style={{ fontSize: 12, color: "#6D7175" }}>
+                      {FAMILY_DESCRIPTIONS[row.family] ?? ""}
+                    </div>
+                  </td>
+
+                  {/* Recommended Handling */}
+                  <td style={{ padding: "14px 20px", verticalAlign: "top", maxWidth: 240 }}>
+                    <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.5 }}>
+                      {FAMILY_HANDLING[row.family] ?? ""}
+                    </div>
+                  </td>
+
+                  {/* Automation dropdown */}
+                  <td style={{ padding: "14px 20px", verticalAlign: "top" }}>
+                    <select
+                      value={row.automation}
+                      onChange={(e) => updateAutomation(row.family, e.target.value as AutomationMode)}
+                      style={{
+                        padding: "6px 28px 6px 10px",
+                        border: "1px solid #E1E3E5",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: "#202223",
+                        background: "#fff",
+                        cursor: "pointer",
+                        appearance: "auto" as const,
+                        outline: "none",
+                      }}
+                    >
+                      <option value="automated">{tCoverage("modeAutomated")}</option>
+                      <option value="review">{tCoverage("modeReview")}</option>
+                      <option value="notify">{tCoverage("modeNotify")}</option>
+                    </select>
+                  </td>
+
+                  {/* Confidence badge */}
+                  <td style={{ padding: "14px 20px", verticalAlign: "top" }}>
+                    <span style={{
+                      display: "inline-block",
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      background: CONFIDENCE_STYLES[row.confidence].bg,
+                      color: CONFIDENCE_STYLES[row.confidence].color,
+                    }}>
+                      {tCoverage(`confidence_${row.confidence}` as Parameters<typeof tCoverage>[0])}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {selectedSlugs.size === 0 && (
-        <p style={{ fontSize: 13, color: "#D72C0D", marginTop: 12 }}>
-          {tCoverage("noTemplatesSelected")}
+      {/* Info note */}
+      <div style={{
+        background: "#EFF6FF",
+        border: "1px solid #BFDBFE",
+        borderRadius: 10,
+        padding: 16,
+      }}>
+        <p style={{ fontSize: 13, color: "#1E40AF", margin: 0, lineHeight: 1.6 }}>
+          <strong>{tCoverage("noteLabel")}</strong> {tCoverage("noteText")}
         </p>
-      )}
+      </div>
 
       {saving && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
@@ -394,10 +423,6 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
           <span style={{ fontSize: 13, color: "#6D7175" }}>{tCoverage("installingSaving")}</span>
         </div>
       )}
-
-      <p style={{ fontSize: 12, color: "#8C9196", marginTop: 16, marginBottom: 0 }}>
-        {tCoverage("coverageSummary", { count: selectedSlugs.size, total: 10 })}
-      </p>
     </div>
   );
 }
