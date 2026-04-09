@@ -72,7 +72,7 @@ function StepPageInner() {
   };
 
   return (
-    <SetupWizardShell stepId={stepId} onSave={handleSave} canContinue={canContinue} noCard={stepId === "coverage" || stepId === "automation"}>
+    <SetupWizardShell stepId={stepId} onSave={handleSave} canContinue={canContinue} noCard={stepId === "coverage" || stepId === "automation" || stepId === "activate"}>
       <StepComponent
         stepId={stepId}
         onSaveRef={saveRef}

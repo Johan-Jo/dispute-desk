@@ -44,11 +44,10 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
   const [loading, setLoading] = useState(true);
   const [activePacks, setActivePacks] = useState<PackInfo[]>([]);
-  const [evidenceCount, setEvidenceCount] = useState(7);
   const [familyCount, setFamilyCount] = useState(0);
-  const [uniquePackNames, setUniquePackNames] = useState<string[]>([]);
   const [autoCount, setAutoCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
+  const [reviewThreshold, setReviewThreshold] = useState("500");
 
   useEffect(() => {
     let cancelled = false;
@@ -65,23 +64,15 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         const state = stateRes.ok ? await stateRes.json() : null;
         const automation = automationRes.ok ? await automationRes.json() : {};
 
-        // Evidence count from store profile
-        const ec = state?.steps?.store_profile?.payload?.shopifyEvidenceConfig;
-        if (ec) {
-          setEvidenceCount(
-            EVIDENCE_GROUP_IDS.filter((g) => ec[g] !== "off").length
-          );
-        }
+        // Review threshold from store profile
+        const threshold = state?.steps?.store_profile?.payload?.reviewThreshold;
+        if (threshold) setReviewThreshold(String(threshold));
 
-        // Packs (for activation)
+        // Packs for activation
         const packs = (automation.activePacks ?? []) as PackInfo[];
         setActivePacks(packs);
 
-        // Deduplicate pack names for display
-        const names = [...new Set(packs.map((p) => p.name))];
-        setUniquePackNames(names);
-
-        // Coverage settings from Step 3, or derive from profile
+        // Coverage settings from Step 3, or derive
         const coverageSettings = state?.steps?.coverage?.payload?.coverageSettings as
           | Record<string, string>
           | undefined;
@@ -91,7 +82,6 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
           automationValues = Object.values(coverageSettings);
           setFamilyCount(Object.keys(coverageSettings).length);
         } else {
-          // Derive from store profile
           const profilePayload = state?.steps?.store_profile?.payload;
           const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
           const deliveryProof = (profilePayload?.deliveryProof ?? "always") as ProofLevel;
@@ -114,8 +104,7 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
         setAutoCount(automationValues.filter((v) => v === "automated").length);
         setReviewCount(
-          automationValues.filter((v) => v === "review").length +
-          automationValues.filter((v) => v === "notify").length
+          automationValues.filter((v) => v === "review" || v === "notify").length
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -126,7 +115,7 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
     return () => { cancelled = true; };
   }, []);
 
-  // Wire save: activate DRAFT packs, mark step done
+  // Wire save
   useEffect(() => {
     onSaveRef.current = async () => {
       const draftPacks = activePacks.filter((p) => p.status === "DRAFT");
@@ -160,122 +149,143 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
           {t("title")}
         </h2>
-        <p style={{ fontSize: 14, color: "#6D7175", margin: 0 }}>
+        <p style={{ fontSize: 15, color: "#6D7175", margin: 0 }}>
           {t("subtitle")}
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Evidence sources */}
+      {/* Stats grid — 2x2 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+        {/* Coverage Enabled — blue filled */}
         <div style={{
-          background: "#fff",
-          border: "1px solid #E1E3E5",
-          borderRadius: 10,
-          padding: "18px 20px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
+          background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+          borderRadius: 12,
+          padding: "24px 24px 20px",
+          color: "#fff",
         }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: "#DBEAFE",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#1D4ED8", flexShrink: 0,
-          }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M4 4h12v2H4V4zm0 4h12v2H4V8zm0 4h8v2H4v-2z" />
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-              {t("evidenceSummary", { count: evidenceCount })}
-            </div>
-            <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2 }}>
-              {t("evidenceManualNote")}
-            </div>
-          </div>
-        </div>
-
-        {/* Coverage */}
-        <div style={{
-          background: "#fff",
-          border: "1px solid #E1E3E5",
-          borderRadius: 10,
-          padding: "18px 20px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-        }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: "#D1FAE5",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#059669", flexShrink: 0,
-          }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 1l7 3v5c0 4.4-3 8.5-7 9.9C6 17.5 3 13.4 3 9V4l7-3z" />
             </svg>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{t("statCoverageLabel")}</span>
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-              {t("coverageSummary", { templates: uniquePackNames.length, families: familyCount })}
-            </div>
-            <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2, lineHeight: 1.5 }}>
-              {uniquePackNames.length > 0
-                ? uniquePackNames.slice(0, 6).join(", ") + (uniquePackNames.length > 6 ? ` (+${uniquePackNames.length - 6})` : "")
-                : "—"}
-            </div>
-          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>{familyCount}</div>
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{t("statCoverageDesc")}</div>
         </div>
 
-        {/* Automation */}
+        {/* Automated — green outline */}
+        <div style={{
+          background: "#fff",
+          border: "2px solid #22C55E",
+          borderRadius: 12,
+          padding: "24px 24px 20px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="#1D4ED8">
+              <path d="M11 1L5 11h4v8l6-10h-4V1z" />
+            </svg>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statAutomatedLabel")}</span>
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "#22C55E", lineHeight: 1 }}>{autoCount}</div>
+          <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statAutomatedDesc")}</div>
+        </div>
+
+        {/* Review First — amber outline */}
+        <div style={{
+          background: "#fff",
+          border: "2px solid #F59E0B",
+          borderRadius: 12,
+          padding: "24px 24px 20px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="8" stroke="#F59E0B" strokeWidth="2" />
+              <path d="M10 6v5M10 13v1" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statReviewLabel")}</span>
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "#F59E0B", lineHeight: 1 }}>{reviewCount}</div>
+          <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statReviewDesc")}</div>
+        </div>
+
+        {/* Review Threshold — neutral */}
         <div style={{
           background: "#fff",
           border: "1px solid #E1E3E5",
-          borderRadius: 10,
-          padding: "18px 20px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
+          borderRadius: 12,
+          padding: "24px 24px 20px",
         }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: "#EDE9FE",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#7C3AED", flexShrink: 0,
-          }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M11 1L5 11h4v8l6-10h-4V1z" />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="#6D7175">
+              <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm.75 4v1.5h1.5a.75.75 0 0 1 0 1.5h-1.5V10.5a.75.75 0 0 1-1.5 0V9h-1.5a.75.75 0 0 1 0-1.5h1.5V6a.75.75 0 0 1 1.5 0zM6.5 12h7a.75.75 0 0 1 0 1.5h-7a.75.75 0 0 1 0-1.5z" />
             </svg>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statThresholdLabel")}</span>
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
-              {t("automationSummary", { auto: autoCount, manual: reviewCount })}
-            </div>
-          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "#202223", lineHeight: 1 }}>${reviewThreshold}</div>
+          <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statThresholdDesc")}</div>
         </div>
       </div>
 
-      {/* Activation info */}
+      {/* What happens next */}
       <div style={{
-        marginTop: 24,
-        padding: "16px 20px",
-        background: "#EFF6FF",
-        border: "1px solid #BFDBFE",
-        borderRadius: 10,
+        background: "#fff",
+        border: "1px solid #E1E3E5",
+        borderRadius: 12,
+        padding: "24px 28px",
+        marginBottom: 24,
       }}>
-        <p style={{ fontSize: 13, color: "#1E40AF", margin: 0, lineHeight: 1.6 }}>
-          {t("activateInfo")}
-        </p>
+        <h3 style={{ fontSize: 15, fontWeight: 600, color: "#202223", margin: "0 0 20px" }}>
+          {t("nextTitle")}
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {(["next1", "next2", "next3"] as const).map((key) => (
+            <div key={key} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="#22C55E" style={{ flexShrink: 0, marginTop: 1 }}>
+                <path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.7-9.3-4.2 4.2a.75.75 0 0 1-1.06 0L6.8 11.3a.75.75 0 1 1 1.06-1.06l1.1 1.1 3.7-3.7a.75.75 0 0 1 1.06 1.06z" />
+              </svg>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>
+                  {t(`${key}Title` as Parameters<typeof t>[0])}
+                </div>
+                <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2 }}>
+                  {t(`${key}Desc` as Parameters<typeof t>[0])}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <p style={{ fontSize: 12, color: "#8C9196", marginTop: 12, marginBottom: 0 }}>
-        {t("changeLater")}
-      </p>
+      {/* Ready banner */}
+      <div style={{
+        background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)",
+        border: "2px solid #1D4ED8",
+        borderRadius: 14,
+        padding: "32px 24px",
+        textAlign: "center",
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14,
+          background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", marginBottom: 16,
+        }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+        </div>
+        <h3 style={{ fontSize: 18, fontWeight: 600, color: "#202223", margin: "0 0 8px" }}>
+          {t("readyTitle")}
+        </h3>
+        <p style={{ fontSize: 14, color: "#6D7175", margin: 0 }}>
+          {t("readyDesc")}
+        </p>
+      </div>
     </div>
   );
 }
