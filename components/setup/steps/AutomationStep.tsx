@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
+import {
+  recommendTemplates,
+  deriveEvidenceConfidence,
+  getDefaultEvidenceConfig,
+  type StoreProfileForRecommendation,
+  type StoreType,
+  type ProofLevel,
+} from "@/lib/setup/recommendTemplates";
 
 interface AutomationStepProps {
   stepId: StepId;
@@ -89,18 +97,40 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         const coverageSettings = state?.steps?.coverage?.payload?.coverageSettings as
           | Record<string, string>
           | undefined;
+
+        let automationValues: string[];
         if (coverageSettings && Object.keys(coverageSettings).length > 0) {
-          const vals = Object.values(coverageSettings);
-          setAutomatedCount(vals.filter((v) => v === "automated").length);
-          setReviewCount(vals.filter((v) => v === "review").length);
-          setNotifyCount(vals.filter((v) => v === "notify").length);
+          automationValues = Object.values(coverageSettings);
         } else {
-          // Fallback: derive from installed packs if coverage step wasn't completed
-          // Default assumption: 5 automated, 2 review, 1 notify (matches Figma defaults)
-          setAutomatedCount(5);
-          setReviewCount(2);
-          setNotifyCount(1);
+          // Derive from store profile if coverage step not yet completed
+          const profilePayload = state?.steps?.store_profile?.payload;
+          const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
+          const deliveryProof = (profilePayload?.deliveryProof ?? "always") as ProofLevel;
+          const ec = profilePayload?.shopifyEvidenceConfig ??
+            getDefaultEvidenceConfig(storeTypes, deliveryProof);
+          const profile: StoreProfileForRecommendation = {
+            storeTypes,
+            deliveryProof,
+            digitalProof: profilePayload?.digitalProof ?? "yes",
+            shopifyEvidenceConfig: ec,
+          };
+          const confidence = deriveEvidenceConfidence(ec);
+          const recs = recommendTemplates(profile).filter((r) => r.isDefault);
+          // Derive automation mode per family using same logic as CoverageStep
+          const familySet = new Set(recs.map((r) => r.disputeFamily));
+          automationValues = [...familySet].map((family) => {
+            if (family === "general") return "notify";
+            if (confidence === "high") return "automated";
+            if (confidence === "medium") {
+              if (family === "not_as_described" || family === "refund") return "review";
+              return "automated";
+            }
+            return "review";
+          });
         }
+        setAutomatedCount(automationValues.filter((v) => v === "automated").length);
+        setReviewCount(automationValues.filter((v) => v === "review").length);
+        setNotifyCount(automationValues.filter((v) => v === "notify").length);
 
         // Load previously saved safeguards if re-entering
         const automationPayload = state?.steps?.automation?.payload;
