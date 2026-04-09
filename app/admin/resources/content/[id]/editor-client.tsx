@@ -362,7 +362,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top navigation */}
-      <header className="bg-white border-b border-[#E5E7EB] px-4 sm:px-6 py-3 sticky top-0 z-30">
+      <header className="bg-white border-b border-[#E2E8F0] px-4 sm:px-6 py-3 sticky top-0 z-30">
         <div className="flex items-center justify-between max-w-[1400px] mx-auto">
           <div className="flex items-center gap-4">
             <Link
@@ -372,7 +372,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
               <ArrowLeft className="w-5 h-5 text-[#64748B]" />
             </Link>
             <div>
-              <h1 className="text-base font-semibold text-[#0B1220]">Edit Content</h1>
+              <h1 className="text-base font-semibold text-[#0F172A]">Edit Content</h1>
               <p className="text-xs text-[#64748B]">
                 {getContentTypeLabel(item.content_type as ContentType)} · {item.primary_pillar}
                 {lastSaved && <span className="ml-2">Last saved {lastSaved}</span>}
@@ -390,7 +390,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-[#E5E7EB] rounded-lg hover:bg-[#F8FAFC] transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Draft
@@ -398,7 +398,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             {canTransition(item.workflow_status as WorkflowStatus, "scheduled") && (
               <button
                 onClick={() => setShowSchedule(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-[#E5E7EB] rounded-lg hover:bg-[#F8FAFC] transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] transition-colors"
               >
                 <CalendarIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Schedule</span>
@@ -419,13 +419,13 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
       </header>
 
       {/* Mobile tab bar */}
-      <div className="lg:hidden flex items-center border-b border-[#E5E7EB] bg-white sticky top-[57px] z-20">
+      <div className="lg:hidden flex items-center border-b border-[#E2E8F0] bg-white sticky top-[57px] z-20">
         <button
           onClick={() => setShowLocalePicker(true)}
-          className="flex items-center gap-1.5 px-4 py-3 border-r border-[#E5E7EB] text-sm"
+          className="flex items-center gap-1.5 px-4 py-3 border-r border-[#E2E8F0] text-sm"
         >
           <Globe className="w-4 h-4 text-[#64748B]" />
-          <span className="font-medium text-[#0B1220]">
+          <span className="font-medium text-[#0F172A]">
             {ADMIN_LOCALES.find((l) => l.dbLocale === activeLocale)?.flag ?? "🌐"}
           </span>
           <span className="text-xs text-[#64748B]">
@@ -486,15 +486,15 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Article title..."
-                className="w-full px-4 py-3 text-lg font-semibold border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
+                className="w-full px-4 py-3 text-lg font-semibold border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
               />
             </div>
 
             {/* Slug */}
             <div>
               <label className="block text-xs font-medium text-[#64748B] mb-1">Slug</label>
-              <div className="flex items-center border border-[#E5E7EB] rounded-xl overflow-hidden">
-                <span className="px-3 py-2.5 text-sm text-[#64748B] bg-[#F8FAFC] border-r border-[#E5E7EB] whitespace-nowrap">
+              <div className="flex items-center border border-[#E2E8F0] rounded-xl overflow-hidden">
+                <span className="px-3 py-2.5 text-sm text-[#64748B] bg-[#F8FAFC] border-r border-[#E2E8F0] whitespace-nowrap">
                   disputedesk.com/resources/
                 </span>
                 <input
@@ -518,7 +518,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                 onChange={(e) => setExcerpt(e.target.value.slice(0, 300))}
                 placeholder="Brief summary for listings and SEO..."
                 rows={3}
-                className="w-full px-4 py-3 text-sm border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] resize-y"
+                className="w-full px-4 py-3 text-sm border border-[#E2E8F0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] resize-y"
               />
             </div>
 
@@ -550,7 +550,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                   Add Content Block
                 </button>
                 {showAddBlock && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#E5E7EB] rounded-xl shadow-lg z-20 p-2 grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-[300px] overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-20 p-2 grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-[300px] overflow-y-auto">
                     {ADD_BLOCK_TYPES.map((type) => (
                       <button
                         key={type}
@@ -574,8 +574,8 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             </div>
 
             {/* Workflow Status */}
-            <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Status</h3>
+            <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Status</h3>
               <div className="space-y-3">
                 <WorkflowStatusBadge status={item.workflow_status as WorkflowStatus} />
                 {item.published_at && (
@@ -602,7 +602,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                             key={status}
                             onClick={() => transitionTo(status)}
                             disabled={saving}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-[#E5E7EB] hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
+                            className="text-xs px-2.5 py-1 rounded-lg border border-[#E2E8F0] hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
                           >
                             {status.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                           </button>
@@ -614,15 +614,15 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
             </div>
 
             {/* Metadata */}
-            <div className={`bg-white border border-[#E5E7EB] rounded-xl p-5 ${mobileTab === "checklist" ? "hidden lg:block" : ""}`}>
-              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Metadata</h3>
+            <div className={`bg-white border border-[#E2E8F0] rounded-xl p-5 ${mobileTab === "checklist" ? "hidden lg:block" : ""}`}>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Metadata</h3>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs text-[#64748B] mb-1">Content Type</label>
                   <select
                     value={item.content_type}
                     onChange={(e) => setItem((prev) => ({ ...prev, content_type: e.target.value }))}
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   >
                     {CONTENT_TYPES.map((ct) => (
                       <option key={ct} value={ct}>
@@ -638,7 +638,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     onChange={(e) =>
                       setItem((prev) => ({ ...prev, source_locale: e.target.value }))
                     }
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   >
                     {ADMIN_LOCALES.map((loc) => (
                       <option key={loc.dbLocale} value={loc.dbLocale}>
@@ -654,7 +654,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     value={item.topic ?? ""}
                     onChange={(e) => setItem((prev) => ({ ...prev, topic: e.target.value || null }))}
                     placeholder="e.g. Chargebacks"
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   />
                 </div>
                 <div>
@@ -664,7 +664,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     value={item.target_keyword ?? ""}
                     onChange={(e) => setItem((prev) => ({ ...prev, target_keyword: e.target.value || null }))}
                     placeholder="e.g. chargeback prevention"
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   />
                 </div>
                 <div>
@@ -672,7 +672,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                   <select
                     value={item.priority}
                     onChange={(e) => setItem((prev) => ({ ...prev, priority: e.target.value }))}
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   >
                     {(["high", "medium", "low"] as Priority[]).map((p) => (
                       <option key={p} value={p}>
@@ -693,7 +693,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                       }))
                     }
                     placeholder="https://… or /images/resources/…"
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   />
                   <p className="text-xs text-[#94A3B8] mt-1">Public hub card and article hero. Use absolute URL or site path.</p>
                 </div>
@@ -709,15 +709,15 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                       }))
                     }
                     placeholder="Short description for screen readers"
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   />
                 </div>
               </div>
             </div>
 
             {/* SEO */}
-            <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">SEO</h3>
+            <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">SEO</h3>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs text-[#64748B] mb-1">
@@ -728,7 +728,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     value={metaTitle}
                     onChange={(e) => setMetaTitle(e.target.value.slice(0, 60))}
                     placeholder="SEO title..."
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
                   />
                 </div>
                 <div>
@@ -740,7 +740,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                     onChange={(e) => setMetaDesc(e.target.value.slice(0, 160))}
                     placeholder="SEO description..."
                     rows={3}
-                    className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 resize-y"
+                    className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 resize-y"
                   />
                 </div>
               </div>
@@ -769,11 +769,11 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
       </div>
 
       {/* Mobile bottom action bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] px-4 py-3 flex items-center gap-3 z-30">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2E8F0] px-4 py-3 flex items-center gap-3 z-30">
         {canTransition(item.workflow_status as WorkflowStatus, "scheduled") && (
           <button
             onClick={() => setShowSchedule(true)}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium border border-[#E5E7EB] rounded-lg hover:bg-[#F8FAFC]"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC]"
           >
             <CalendarIcon className="w-4 h-4" />
             Schedule
@@ -782,7 +782,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium border border-[#E5E7EB] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save
@@ -804,13 +804,13 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowLocalePicker(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
-              <h3 className="text-base font-semibold text-[#0B1220]">Select Language</h3>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
+              <h3 className="text-base font-semibold text-[#0F172A]">Select Language</h3>
               <button onClick={() => setShowLocalePicker(false)} className="p-1 hover:bg-[#F1F5F9] rounded-lg">
                 <X className="w-5 h-5 text-[#64748B]" />
               </button>
             </div>
-            <div className="divide-y divide-[#E5E7EB]">
+            <div className="divide-y divide-[#E2E8F0]">
               {ADMIN_LOCALES.map((loc) => {
                 const locData = localizations.find((l) => l.locale === loc.dbLocale);
                 const pct = localeCompleteness(locData);
@@ -828,14 +828,14 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
                   >
                     <span className="text-2xl">{loc.flag}</span>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-[#0B1220]">{loc.nativeName}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{loc.nativeName}</p>
                       <p className="text-xs text-[#64748B]">{loc.dbLocale}</p>
                     </div>
                     <div className="text-right">
                       <p className={`text-sm font-medium ${pct === 100 ? "text-[#22C55E]" : "text-[#64748B]"}`}>
                         {pct}%
                       </p>
-                      <div className="w-16 h-1.5 bg-[#E5E7EB] rounded-full mt-1">
+                      <div className="w-16 h-1.5 bg-[#E2E8F0] rounded-full mt-1">
                         <div
                           className={`h-full rounded-full ${pct === 100 ? "bg-[#22C55E]" : pct > 50 ? "bg-[#3B82F6]" : "bg-[#F59E0B]"}`}
                           style={{ width: `${pct}%` }}

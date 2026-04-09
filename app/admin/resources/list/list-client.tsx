@@ -303,7 +303,7 @@ export function ContentListClient({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">All Content</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">All Content</h1>
           <p className="text-sm text-[#64748B] mt-1">
             Manage and publish resources across all languages
           </p>
@@ -311,7 +311,7 @@ export function ContentListClient({
         <div className="flex items-center gap-3">
           <Link
             href="/admin/resources/backlog"
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
           >
             <ListTodo className="w-4 h-4" />
             View Backlog
@@ -327,7 +327,7 @@ export function ContentListClient({
       </div>
 
       {/* Status Tabs */}
-      <div className="flex items-center gap-1 border-b border-[#E5E7EB] mb-6 overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-[#E2E8F0] mb-6 overflow-x-auto">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -335,7 +335,7 @@ export function ContentListClient({
             className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative ${
               activeTab === tab.key
                 ? "text-[#1D4ED8]"
-                : "text-[#64748B] hover:text-[#0B1220]"
+                : "text-[#64748B] hover:text-[#0F172A]"
             }`}
           >
             {tab.label}
@@ -356,7 +356,7 @@ export function ContentListClient({
       </div>
 
       {/* Search + filters (always visible — no toggle) */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] mb-4">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] mb-4">
         <div className="px-4 py-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
@@ -365,7 +365,7 @@ export function ContentListClient({
               placeholder="Search by title, author, or keyword..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] transition-colors"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-[#E2E8F0] rounded-lg bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] transition-colors"
             />
           </div>
         </div>
@@ -408,7 +408,7 @@ export function ContentListClient({
               <button
                 type="button"
                 onClick={() => setSelectedIds(new Set())}
-                className="ml-auto text-sm text-[#64748B] hover:text-[#0B1220]"
+                className="ml-auto text-sm text-[#64748B] hover:text-[#0F172A]"
               >
                 Clear selection
               </button>
@@ -428,7 +428,7 @@ export function ContentListClient({
           </div>
         )}
 
-        <div className="flex flex-wrap sm:flex-nowrap items-end gap-4 px-4 py-3 border-t border-[#E5E7EB] bg-[#F8FAFC] overflow-x-auto">
+        <div className="flex flex-wrap sm:flex-nowrap items-end gap-4 px-4 py-3 border-t border-[#E2E8F0] bg-[#F8FAFC] overflow-x-auto">
           <div className="shrink-0 min-w-[9rem]">
             <label className="block text-xs font-medium text-[#64748B] mb-1">
               Content Type
@@ -436,7 +436,7 @@ export function ContentListClient({
             <select
               value={contentTypeFilter}
               onChange={(e) => onContentTypeChange(e.target.value)}
-              className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+              className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
             >
               <option value="all">All types</option>
               {CONTENT_TYPES.map((ct) => (
@@ -453,7 +453,7 @@ export function ContentListClient({
             <select
               value={topicFilter}
               onChange={(e) => onTopicChange(e.target.value)}
-              className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+              className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
             >
               <option value="all">All topics</option>
               {topics.map((t) => (
@@ -470,7 +470,7 @@ export function ContentListClient({
             <select
               value={languageFilter}
               onChange={(e) => onLanguageChange(e.target.value)}
-              className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+              className="w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
             >
               <option value="all">All languages</option>
               {ADMIN_LOCALES.map((loc) => (
@@ -494,11 +494,11 @@ export function ContentListClient({
       </div>
 
       {/* Content Table */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-[#64748B] uppercase tracking-wider border-b border-[#E5E7EB] bg-[#F8FAFC]">
+              <tr className="text-left text-xs text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0] bg-[#F8FAFC]">
                 <th className="px-4 py-3 w-10">
                   <input
                     type="checkbox"
@@ -519,7 +519,7 @@ export function ContentListClient({
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
+            <tbody className="divide-y divide-[#E2E8F0]">
               {loading && items.length === 0 && (
                 <tr>
                   <td colSpan={11} className="px-4 py-12 text-center text-[#64748B]">
@@ -556,7 +556,7 @@ export function ContentListClient({
                 return (
                   <tr
                     key={item.id}
-                    className={`hover:bg-[#F6F8FB] transition-colors ${
+                    className={`hover:bg-[#F8FAFC] transition-colors ${
                       selectedIds.has(item.id) ? "bg-[#EFF6FF]" : ""
                     }`}
                   >
@@ -571,7 +571,7 @@ export function ContentListClient({
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/resources/content/${item.id}`}
-                        className="font-medium text-[#0B1220] hover:text-[#1D4ED8] truncate block max-w-[260px]"
+                        className="font-medium text-[#0F172A] hover:text-[#1D4ED8] truncate block max-w-[260px]"
                       >
                         {titleLoc?.title ?? "(untitled)"}
                       </Link>
@@ -671,7 +671,7 @@ export function ContentListClient({
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E5E7EB]">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
           <p className="text-sm text-[#64748B]">
             Showing {Math.min((page - 1) * pageSize + 1, total)}–
             {Math.min(page * pageSize, total)} of {total} items
@@ -680,7 +680,7 @@ export function ContentListClient({
             <button
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
-              className="p-2 rounded-lg border border-[#E5E7EB] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4 text-[#64748B]" />
             </button>
@@ -712,7 +712,7 @@ export function ContentListClient({
             <button
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages}
-              className="p-2 rounded-lg border border-[#E5E7EB] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4 text-[#64748B]" />
             </button>

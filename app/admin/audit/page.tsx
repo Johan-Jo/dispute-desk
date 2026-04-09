@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { ScrollText, Download, Calendar } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
+import { AdminTable } from "@/components/admin/AdminTable";
 
 interface AuditEvent {
   id: string;
@@ -28,7 +32,9 @@ export default function AdminAuditPage() {
     setLoading(false);
   }, [shopFilter, typeFilter]);
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const exportCsv = () => {
     const params = new URLSearchParams({ format: "csv" });
@@ -37,72 +43,108 @@ export default function AdminAuditPage() {
     window.open(`/api/admin/audit?${params}`, "_blank");
   };
 
+  const getEventColor = (event: string) => {
+    if (event.includes("created") || event.includes("installed") || event.includes("added"))
+      return "text-[#22C55E]";
+    if (event.includes("failed") || event.includes("deprecated") || event.includes("deleted"))
+      return "text-[#EF4444]";
+    if (event.includes("updated")) return "text-[#3B82F6]";
+    return "text-[#64748B]";
+  };
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#0B1220]">Audit Log</h1>
-        <button onClick={exportCsv} className="h-9 px-4 text-sm bg-white border border-[#E5E7EB] rounded-lg hover:bg-[#F7F8FA]">
-          Export CSV
-        </button>
-      </div>
+    <div className="p-8">
+      <AdminPageHeader
+        title="Audit Log"
+        subtitle="Complete forensic trail of all admin operations"
+        icon={ScrollText}
+        iconGradient="from-[#6366F1] to-[#8B5CF6]"
+        actions={
+          <button
+            onClick={exportCsv}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export Log
+          </button>
+        }
+      />
 
-      <div className="flex gap-3 mb-4">
-        <input
-          type="text"
-          placeholder="Filter by Shop ID"
-          value={shopFilter}
-          onChange={(e) => setShopFilter(e.target.value)}
-          className="h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm w-64"
-        />
-        <input
-          type="text"
-          placeholder="Event type"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm w-48"
-        />
-      </div>
+      <AdminFilterBar searchPlaceholder="Filter by Shop ID or Event type">
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Filter by Shop ID..."
+              value={shopFilter}
+              onChange={(e) => setShopFilter(e.target.value)}
+              className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
+            />
+          </div>
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Filter by event type..."
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
+            />
+          </div>
+        </div>
+      </AdminFilterBar>
 
-      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F8FA]">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Time</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Event</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Actor</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Shop</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Payload</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[#667085]">Loading...</td></tr>
-            ) : events.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[#667085]">No events found</td></tr>
-            ) : events.map((ev) => (
-              <tr key={ev.id} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA]">
-                <td className="px-4 py-3 text-[#667085] whitespace-nowrap">{new Date(ev.created_at).toLocaleString()}</td>
-                <td className="px-4 py-3 font-mono text-xs">{ev.event_type}</td>
-                <td className="px-4 py-3 text-xs capitalize">{ev.actor_type}</td>
-                <td className="px-4 py-3 text-xs font-mono truncate max-w-[120px]">{ev.shop_id}</td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => setExpanded(expanded === ev.id ? null : ev.id)}
-                    className="text-xs text-[#1D4ED8] hover:underline"
-                  >
-                    {expanded === ev.id ? "Hide" : "View"}
-                  </button>
-                  {expanded === ev.id && (
-                    <pre className="mt-2 text-xs bg-[#F7F8FA] p-2 rounded max-w-md overflow-auto">
-                      {JSON.stringify(ev.event_payload, null, 2)}
-                    </pre>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminTable
+        headers={["Timestamp", "Event", "Actor", "Shop", "Payload"]}
+        loading={loading}
+        isEmpty={!loading && events.length === 0}
+        emptyTitle="No events found"
+        emptyMessage="Try adjusting your filters"
+      >
+        {events.map((ev) => (
+          <tr key={ev.id} className="hover:bg-[#F8FAFC] transition-colors">
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5 text-[#64748B]" />
+                <span className="text-xs font-mono text-[#64748B]">
+                  {new Date(ev.created_at).toLocaleString()}
+                </span>
+              </div>
+            </td>
+            <td className="px-6 py-4">
+              <span className={`text-sm font-mono ${getEventColor(ev.event_type)}`}>
+                {ev.event_type}
+              </span>
+            </td>
+            <td className="px-6 py-4">
+              <span
+                className={`text-sm ${ev.actor_type === "system" ? "text-[#8B5CF6] font-mono" : "text-[#0F172A]"}`}
+              >
+                {ev.actor_type}
+              </span>
+            </td>
+            <td className="px-6 py-4">
+              {ev.shop_id ? (
+                <span className="text-xs font-mono text-[#64748B]">{ev.shop_id}</span>
+              ) : (
+                <span className="text-xs text-[#94A3B8] italic">—</span>
+              )}
+            </td>
+            <td className="px-6 py-4">
+              <button
+                onClick={() => setExpanded(expanded === ev.id ? null : ev.id)}
+                className="text-sm text-[#1D4ED8] font-semibold hover:text-[#1E40AF]"
+              >
+                {expanded === ev.id ? "Hide" : "View"}
+              </button>
+              {expanded === ev.id && (
+                <pre className="mt-2 text-xs bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-lg max-w-md overflow-auto">
+                  {JSON.stringify(ev.event_payload, null, 2)}
+                </pre>
+              )}
+            </td>
+          </tr>
+        ))}
+      </AdminTable>
     </div>
   );
 }

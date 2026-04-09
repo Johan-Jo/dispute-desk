@@ -137,7 +137,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Publishing Queue</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Publishing Queue</h1>
           <p className="text-sm text-[#64748B] mt-1">
             Monitor and manage scheduled content publishing
           </p>
@@ -147,7 +147,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
             type="button"
             disabled={publishRunning}
             onClick={() => processPublishQueueNow()}
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg bg-[#0B1220] text-white hover:bg-[#1E293B] disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg bg-[#0F172A] text-white hover:bg-[#1E293B] disabled:opacity-50 transition-colors"
           >
             {publishRunning ? (
               <>
@@ -160,14 +160,14 @@ export function QueueClient({ initialItems }: QueueClientProps) {
           </button>
           <Link
             href="/admin/resources/calendar"
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
           >
             View Calendar
           </Link>
           <button
             type="button"
             onClick={() => router.refresh()}
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -185,14 +185,14 @@ export function QueueClient({ initialItems }: QueueClientProps) {
         ].map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
+            <div key={s.label} className="bg-white rounded-xl border border-[#E2E8F0] p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-[#64748B]">{s.label}</span>
                 <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${s.color}`} />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[#0B1220]">{s.count}</p>
+              <p className="text-3xl font-bold text-[#0F172A]">{s.count}</p>
             </div>
           );
         })}
@@ -206,7 +206,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
               activeTab === tab.key
-                ? "bg-[#0B1220] text-white"
+                ? "bg-[#0F172A] text-white"
                 : "text-[#64748B] hover:bg-[#F1F5F9]"
             }`}
           >
@@ -233,7 +233,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
       {/* Queue items */}
       <div className="space-y-3">
         {filtered.length === 0 && (
-          <div className="bg-white rounded-xl border border-[#E5E7EB] p-12 text-center">
+          <div className="bg-white rounded-xl border border-[#E2E8F0] p-12 text-center">
             <Inbox className="w-12 h-12 text-[#E1E3E5] mx-auto mb-4" />
             <p className="text-[#64748B]">No items found</p>
           </div>
@@ -247,7 +247,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
           return (
             <div
               key={item.id}
-              className="bg-white rounded-xl border border-[#E5E7EB] p-4 hover:shadow-sm transition-shadow"
+              className="bg-white rounded-xl border border-[#E2E8F0] p-4 hover:shadow-sm transition-shadow"
             >
               <div className="flex items-start gap-4">
                 <div className={`w-10 h-10 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}>
@@ -255,7 +255,7 @@ export function QueueClient({ initialItems }: QueueClientProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-sm font-medium text-[#0B1220] truncate">
+                    <span className="text-sm font-medium text-[#0F172A] truncate">
                       {getTitle(item)}
                     </span>
                     {ct && (
@@ -336,18 +336,18 @@ export function QueueClient({ initialItems }: QueueClientProps) {
       </div>
 
       {/* System status */}
-      <div className="mt-8 bg-white rounded-xl border border-[#E5E7EB] p-5">
-        <h3 className="text-base font-semibold text-[#0B1220] mb-4">System Status</h3>
+      <div className="mt-8 bg-white rounded-xl border border-[#E2E8F0] p-5">
+        <h3 className="text-base font-semibold text-[#0F172A] mb-4">System Status</h3>
         <div className="space-y-3">
           {[
             { name: "Publishing Service", status: "Operational", time: "< 100ms" },
             { name: "Translation Service", status: "Operational", time: "< 200ms" },
             { name: "CDN Distribution", status: "Operational", time: "< 50ms" },
           ].map((svc) => (
-            <div key={svc.name} className="flex items-center justify-between py-2 border-b border-[#E5E7EB] last:border-b-0">
+            <div key={svc.name} className="flex items-center justify-between py-2 border-b border-[#E2E8F0] last:border-b-0">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                <span className="text-sm text-[#0B1220]">{svc.name}</span>
+                <span className="text-sm text-[#0F172A]">{svc.name}</span>
               </div>
               <div className="flex items-center gap-4 text-xs text-[#64748B]">
                 <span className="text-[#22C55E] font-medium">{svc.status}</span>

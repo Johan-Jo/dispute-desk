@@ -1,7 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  Users,
+  Plus,
+  Shield,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  MoreVertical,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
+import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
+import { AdminTable } from "@/components/admin/AdminTable";
 
 interface AdminUser {
   id: string;
@@ -28,6 +43,8 @@ export default function AdminTeamPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [showForm, setShowForm] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -88,30 +105,57 @@ export default function AdminTeamPage() {
     }
   };
 
+  const filtered = users.filter((u) => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!u.email.toLowerCase().includes(q) && !(u.name ?? "").toLowerCase().includes(q))
+        return false;
+    }
+    if (statusFilter === "active" && !u.is_active) return false;
+    if (statusFilter === "inactive" && u.is_active) return false;
+    return true;
+  });
+
+  const activeCount = users.filter((u) => u.is_active).length;
+  const inactiveCount = users.filter((u) => !u.is_active).length;
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#0B1220]">Admin Team</h1>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setFormError(null);
-          }}
-          className="flex items-center gap-2 h-9 px-4 bg-[#0B1220] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B]"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add user
-        </button>
-      </div>
+    <div className="p-8">
+      <AdminPageHeader
+        title="Team"
+        subtitle="Manage internal admin access and permissions"
+        icon={Users}
+        iconGradient="from-[#F59E0B] to-[#D97706]"
+        actions={
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setFormError(null);
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Team Member
+          </button>
+        }
+      />
+
+      <AdminStatsRow
+        cards={[
+          { label: "Total Members", value: users.length },
+          { label: "Active", value: activeCount, valueColor: "text-[#22C55E]" },
+          { label: "Inactive", value: inactiveCount, valueColor: "text-[#EF4444]" },
+        ]}
+      />
 
       {error && <p className="text-sm text-[#EF4444] mb-4">{error}</p>}
 
       {showForm && (
-        <div className="bg-white border border-[#E5E7EB] rounded-lg p-6 mb-6">
-          <h2 className="font-semibold text-[#0B1220] mb-2">Grant admin access</h2>
-          <p className="text-sm text-[#667085] mb-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-6 mb-6">
+          <h2 className="font-semibold text-[#0F172A] mb-2">Grant admin access</h2>
+          <p className="text-sm text-[#64748B] mb-4">
             Enter the email they use to sign in to DisputeDesk (portal). They must already have an
-            account — if not, they should sign up first at <code className="text-xs">/auth/sign-up</code>.
+            account.
           </p>
           <form onSubmit={handleAdd} className="space-y-3 max-w-sm">
             <input
@@ -120,21 +164,21 @@ export default function AdminTeamPage() {
               required
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+              className="w-full py-2.5 px-4 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
             />
             {formError && <p className="text-sm text-[#EF4444]">{formError}</p>}
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={formLoading}
-                className="h-9 px-4 bg-[#0B1220] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] disabled:opacity-50"
+                className="px-5 py-2.5 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50"
               >
                 {formLoading ? "Saving..." : "Grant access"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="h-9 px-4 border border-[#E5E7EB] text-[#667085] text-sm rounded-lg hover:bg-[#F9FAFB]"
+                className="px-5 py-2.5 bg-[#F8FAFC] text-[#64748B] text-sm font-semibold rounded-lg hover:bg-[#E2E8F0] transition-colors"
               >
                 Cancel
               </button>
@@ -143,91 +187,160 @@ export default function AdminTeamPage() {
         </div>
       )}
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg overflow-hidden">
-        {loading ? (
-          <p className="text-[#667085] text-sm p-6">Loading...</p>
-        ) : users.length === 0 ? (
-          <p className="text-[#667085] text-sm p-6">No admin users yet. Add one above.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-[#374151]">Name / Email</th>
-                <th className="text-left px-4 py-3 font-medium text-[#374151]">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-[#374151]">Last activity</th>
-                <th className="text-left px-4 py-3 font-medium text-[#374151]">Created</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b border-[#F3F4F6] last:border-0">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-[#0B1220]">{user.name ?? "—"}</p>
-                    <p className="text-[#667085]">{user.email}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        user.is_active
-                          ? "bg-[#ECFDF5] text-[#065F46]"
-                          : "bg-[#F3F4F6] text-[#6B7280]"
-                      }`}
+      <AdminFilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by name or email..."
+        filters={[
+          { label: "All", value: "all" },
+          { label: "Active", value: "active" },
+          { label: "Inactive", value: "inactive" },
+        ]}
+        activeFilter={statusFilter}
+        onFilterChange={setStatusFilter}
+      />
+
+      <AdminTable
+        headers={["Member", "Status", "Last Active", "Created", "Created By", "Actions"]}
+        headerAlign={{ 5: "right" }}
+        loading={loading}
+        isEmpty={!loading && filtered.length === 0}
+        emptyTitle="No team members found"
+        emptyMessage="Try adjusting your search or add a new team member"
+      >
+        {filtered.map((user) => (
+          <tr key={user.id} className="hover:bg-[#F8FAFC] transition-colors">
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                    user.is_active
+                      ? "bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8]"
+                      : "bg-[#94A3B8]"
+                  }`}
+                >
+                  {(user.name ?? user.email)
+                    .split(/[\s@]/)
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-[#0F172A]">{user.name ?? "—"}</div>
+                  <div className="text-xs text-[#64748B]">{user.email}</div>
+                </div>
+              </div>
+            </td>
+            <td className="px-6 py-4">
+              {user.is_active ? (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-[#22C55E]" />
+                  <span className="text-sm text-[#22C55E] font-medium">Active</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-[#94A3B8]" />
+                  <span className="text-sm text-[#94A3B8] font-medium">Inactive</span>
+                </div>
+              )}
+            </td>
+            <td className="px-6 py-4">
+              <span className="text-sm text-[#64748B]">{formatDate(user.last_login_at)}</span>
+            </td>
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-[#64748B]" />
+                <span className="text-sm text-[#64748B]">{formatDate(user.created_at)}</span>
+              </div>
+            </td>
+            <td className="px-6 py-4">
+              <span className="text-xs text-[#64748B]">{user.created_by ?? "—"}</span>
+            </td>
+            <td className="px-6 py-4 text-right">
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  onClick={() => toggleActive(user)}
+                  title={user.is_active ? "Deactivate" : "Activate"}
+                  className="p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors"
+                >
+                  {user.is_active ? (
+                    <ToggleRight className="w-5 h-5 text-[#22C55E]" />
+                  ) : (
+                    <ToggleLeft className="w-5 h-5" />
+                  )}
+                </button>
+                {confirmDelete === user.id ? (
+                  <span className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleDelete(user.id)}
+                      className="text-xs text-[#EF4444] font-semibold hover:underline"
                     >
-                      {user.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[#667085]">{formatDate(user.last_login_at)}</td>
-                  <td className="px-4 py-3 text-[#667085]">
-                    {formatDate(user.created_at)}
-                    {user.created_by && (
-                      <p className="text-xs text-[#94A3B8]">by {user.created_by}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button
-                        onClick={() => toggleActive(user)}
-                        title={user.is_active ? "Deactivate" : "Activate"}
-                        className="text-[#667085] hover:text-[#0B1220]"
-                      >
-                        {user.is_active ? (
-                          <ToggleRight className="w-5 h-5 text-[#10B981]" />
-                        ) : (
-                          <ToggleLeft className="w-5 h-5" />
-                        )}
-                      </button>
-                      {confirmDelete === user.id ? (
-                        <span className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="text-xs text-[#EF4444] font-medium hover:underline"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(null)}
-                            className="text-xs text-[#667085] hover:underline"
-                          >
-                            Cancel
-                          </button>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDelete(user.id)}
-                          title="Revoke admin"
-                          className="text-[#667085] hover:text-[#EF4444]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(null)}
+                      className="text-xs text-[#64748B] hover:underline"
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(user.id)}
+                    title="Revoke admin"
+                    className="p-2 text-[#64748B] hover:text-[#EF4444] hover:bg-[#FEE2E2] rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </AdminTable>
+
+      {/* Role Permissions */}
+      <div className="mt-8 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-6">
+        <h3 className="text-sm font-semibold text-[#0F172A] mb-4">Role Permissions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-[#6B21A8] rounded-full" />
+              <span className="text-sm font-semibold text-[#0F172A]">Admin</span>
+            </div>
+            <ul className="space-y-1 text-xs text-[#64748B] ml-4">
+              <li>Full access to all features</li>
+              <li>Manage team members</li>
+              <li>Configure templates &amp; mappings</li>
+              <li>Access billing &amp; audit logs</li>
+            </ul>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-[#1E40AF] rounded-full" />
+              <span className="text-sm font-semibold text-[#0F172A]">Editor</span>
+            </div>
+            <ul className="space-y-1 text-xs text-[#64748B] ml-4">
+              <li>Edit templates &amp; content</li>
+              <li>Modify reason mappings</li>
+              <li>View shops &amp; disputes</li>
+              <li>No billing or team access</li>
+            </ul>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-[#475569] rounded-full" />
+              <span className="text-sm font-semibold text-[#0F172A]">Viewer</span>
+            </div>
+            <ul className="space-y-1 text-xs text-[#64748B] ml-4">
+              <li>Read-only access</li>
+              <li>View all data</li>
+              <li>Cannot make changes</li>
+              <li>Audit log access</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

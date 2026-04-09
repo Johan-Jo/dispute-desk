@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { Store, ExternalLink, Calendar } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
+import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
+import { AdminTable } from "@/components/admin/AdminTable";
+import { StatusPill } from "@/components/admin/StatusPill";
 
 interface Shop {
   id: string;
@@ -14,6 +20,7 @@ interface Shop {
 export default function AdminShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [search, setSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const fetchShops = useCallback(async () => {
@@ -26,58 +33,101 @@ export default function AdminShopsPage() {
     setLoading(false);
   }, [search]);
 
-  useEffect(() => { fetchShops(); }, [fetchShops]);
+  useEffect(() => {
+    fetchShops();
+  }, [fetchShops]);
+
+  const filtered = shops.filter((s) => {
+    if (planFilter !== "all" && (s.plan ?? "free") !== planFilter) return false;
+    return true;
+  });
+
+  const active = shops.filter((s) => !s.uninstalled_at).length;
+  const uninstalled = shops.filter((s) => s.uninstalled_at).length;
+
+  const planColors: Record<string, { bg: string; text: string }> = {
+    enterprise: { bg: "bg-[#EDE9FE]", text: "text-[#6B21A8]" },
+    scale: { bg: "bg-[#EDE9FE]", text: "text-[#6B21A8]" },
+    professional: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
+    growth: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
+    starter: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
+    trial: { bg: "bg-[#F1F5F9]", text: "text-[#475569]" },
+    free: { bg: "bg-[#F1F5F9]", text: "text-[#475569]" },
+  };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#0B1220] mb-6">Shops</h1>
+    <div className="p-8">
+      <AdminPageHeader title="Shops" subtitle="Manage and monitor DisputeDesk installations" />
 
-      <input
-        type="text"
-        placeholder="Search by domain..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full max-w-sm h-10 px-3 border border-[#E5E7EB] rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+      <AdminStatsRow
+        cards={[
+          { label: "Total Shops", value: shops.length },
+          { label: "Active", value: active, valueColor: "text-[#22C55E]" },
+          { label: "Uninstalled", value: uninstalled, valueColor: "text-[#EF4444]" },
+        ]}
       />
 
-      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F8FA]">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Domain</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Plan</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Installed</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Status</th>
+      <AdminFilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by domain..."
+        filters={[
+          { label: "All Plans", value: "all" },
+          { label: "Enterprise", value: "enterprise" },
+          { label: "Growth", value: "growth" },
+          { label: "Starter", value: "starter" },
+          { label: "Trial", value: "trial" },
+        ]}
+        activeFilter={planFilter}
+        onFilterChange={setPlanFilter}
+      />
+
+      <AdminTable
+        headers={["Shop Domain", "Plan", "Status", "Installed", "Actions"]}
+        headerAlign={{ 4: "right" }}
+        loading={loading}
+        isEmpty={!loading && filtered.length === 0}
+        emptyTitle="No shops found"
+        emptyMessage="Try adjusting your search or plan filter"
+      >
+        {filtered.map((s) => {
+          const plan = (s.plan ?? "free").toLowerCase();
+          const pc = planColors[plan];
+          return (
+            <tr key={s.id} className="hover:bg-[#F8FAFC] transition-colors">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Store className="w-4 h-4 text-[#64748B]" />
+                  <span className="text-sm font-medium text-[#0F172A]">{s.shop_domain}</span>
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <StatusPill status={plan} colorMap={planColors} />
+              </td>
+              <td className="px-6 py-4">
+                <StatusPill status={s.uninstalled_at ? "uninstalled" : "active"} />
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#64748B]" />
+                  <span className="text-sm text-[#64748B]">
+                    {new Date(s.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-right">
+                <Link
+                  href={`/admin/shops/${s.id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#EFF6FF] text-[#1D4ED8] text-sm font-semibold rounded-lg hover:bg-[#DBEAFE] transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View Details
+                </Link>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-[#667085]">Loading...</td></tr>
-            ) : shops.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-[#667085]">No shops found</td></tr>
-            ) : shops.map((s) => (
-              <tr key={s.id} className="border-t border-[#E5E7EB] hover:bg-[#F7F8FA]">
-                <td className="px-4 py-3">
-                  <Link href={`/admin/shops/${s.id}`} className="font-medium text-[#1D4ED8] hover:underline">
-                    {s.shop_domain}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 capitalize">{s.plan ?? "free"}</td>
-                <td className="px-4 py-3 text-[#667085]">
-                  {new Date(s.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3">
-                  {s.uninstalled_at ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">Uninstalled</span>
-                  ) : (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669]">Active</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          );
+        })}
+      </AdminTable>
     </div>
   );
 }

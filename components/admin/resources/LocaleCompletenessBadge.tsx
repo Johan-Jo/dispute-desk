@@ -49,7 +49,7 @@ export function LocaleCompletenessBadge({
         <span className="text-lg">{flag}</span>
         <div className="text-left">
           <div
-            className={`text-sm font-semibold ${isActive ? "text-[#1D4ED8]" : "text-[#0B1220]"}`}
+            className={`text-sm font-semibold ${isActive ? "text-[#1D4ED8]" : "text-[#0F172A]"}`}
           >
             {nativeName}
           </div>

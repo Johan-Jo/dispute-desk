@@ -6,11 +6,13 @@ export const runtime = "nodejs";
 export async function GET() {
   const sb = getServiceClient();
 
-  const [shops, disputes, packs, jobs] = await Promise.all([
+  const [shops, disputes, packs, jobs, templateRows, mappingRows] = await Promise.all([
     sb.from("shops").select("id, plan, uninstalled_at"),
     sb.from("disputes").select("id", { count: "exact", head: true }),
     sb.from("evidence_packs").select("id, status"),
     sb.from("jobs").select("id, status").in("status", ["queued", "running", "failed"]),
+    sb.from("pack_templates").select("id, status"),
+    sb.from("reason_template_mappings").select("id, template_id, dispute_phase"),
   ]);
 
   const shopList = shops.data ?? [];
@@ -34,11 +36,29 @@ export async function GET() {
     if (j.status in jobCounts) jobCounts[j.status as keyof typeof jobCounts]++;
   }
 
+  // Template stats
+  const tplList = templateRows.data ?? [];
+  const tplByStatus: Record<string, number> = { active: 0, draft: 0, archived: 0 };
+  for (const t of tplList) {
+    const s = (t.status as string) ?? "active";
+    tplByStatus[s] = (tplByStatus[s] ?? 0) + 1;
+  }
+
+  // Reason mapping stats
+  const mList = mappingRows.data ?? [];
+  const mappingStats = {
+    total: mList.length,
+    mapped: mList.filter((m) => m.template_id != null).length,
+    unmapped: mList.filter((m) => m.template_id == null).length,
+  };
+
   return NextResponse.json({
     shops: { total: shopList.length, active, uninstalled },
     disputes: disputes.count ?? 0,
     packs: { total: packList.length, byStatus },
     jobs: jobCounts,
     plans,
+    templates: { total: tplList.length, ...tplByStatus },
+    reasonMappings: mappingStats,
   });
 }

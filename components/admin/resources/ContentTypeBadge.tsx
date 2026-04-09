@@ -11,7 +11,7 @@ interface ContentTypeBadgeProps {
 export function ContentTypeBadge({ type, className = "" }: ContentTypeBadgeProps) {
   return (
     <span
-      className={`text-xs px-2 py-1 bg-[#F6F8FB] border border-[#E1E3E5] rounded text-[#0B1220] whitespace-nowrap ${className}`}
+      className={`text-xs px-2 py-1 bg-[#F8FAFC] border border-[#E1E3E5] rounded text-[#0F172A] whitespace-nowrap ${className}`}
     >
       {getContentTypeLabel(type)}
     </span>

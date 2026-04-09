@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Cog } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
+import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
+import { AdminTable } from "@/components/admin/AdminTable";
+import { StatusPill } from "@/components/admin/StatusPill";
 
 interface Job {
   id: string;
@@ -12,29 +18,23 @@ interface Job {
   stale: boolean;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  queued: "bg-[#FFF7ED] text-[#C2410C]",
-  running: "bg-[#EFF6FF] text-[#1D4ED8]",
-  completed: "bg-[#ECFDF5] text-[#059669]",
-  failed: "bg-[#FEF2F2] text-[#DC2626]",
-  cancelled: "bg-[#F3F4F6] text-[#6B7280]",
-};
-
 export default function AdminJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (filter) params.set("status", filter);
+    if (filter !== "all") params.set("status", filter);
     const res = await fetch(`/api/admin/jobs?${params}`);
     setJobs(await res.json());
     setLoading(false);
   }, [filter]);
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
 
   const handleAction = async (jobId: string, action: string) => {
     await fetch(`/api/admin/jobs/${jobId}`, {
@@ -45,68 +45,101 @@ export default function AdminJobsPage() {
     fetchJobs();
   };
 
+  const counts = {
+    queued: jobs.filter((j) => j.status === "queued").length,
+    running: jobs.filter((j) => j.status === "running").length,
+    failed: jobs.filter((j) => j.status === "failed").length,
+    completed: jobs.filter((j) => j.status === "completed").length,
+  };
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#0B1220] mb-6">Job Monitor</h1>
+    <div className="p-8">
+      <AdminPageHeader
+        title="Job Monitor"
+        subtitle="Background job operations and health"
+        icon={Cog}
+      />
 
-      <div className="flex gap-2 mb-4">
-        {["", "queued", "running", "failed", "completed"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 text-sm rounded-lg border ${
-              filter === s ? "bg-[#0B1220] text-white border-[#0B1220]" : "bg-white text-[#667085] border-[#E5E7EB] hover:bg-[#F7F8FA]"
-            }`}
+      <AdminStatsRow
+        cards={[
+          { label: "Queued", value: counts.queued, valueColor: "text-[#3B82F6]" },
+          { label: "Running", value: counts.running, valueColor: "text-[#3B82F6]" },
+          { label: "Failed", value: counts.failed, valueColor: "text-[#EF4444]" },
+          { label: "Completed", value: counts.completed, valueColor: "text-[#22C55E]" },
+        ]}
+      />
+
+      <AdminFilterBar
+        filters={[
+          { label: "All", value: "all" },
+          { label: "Queued", value: "queued" },
+          { label: "Running", value: "running" },
+          { label: "Failed", value: "failed" },
+          { label: "Completed", value: "completed" },
+        ]}
+        activeFilter={filter}
+        onFilterChange={setFilter}
+      />
+
+      <AdminTable
+        headers={["Type", "Status", "Created", "Error", "Actions"]}
+        headerAlign={{ 4: "right" }}
+        loading={loading}
+        isEmpty={!loading && jobs.length === 0}
+        emptyTitle="No jobs found"
+        emptyMessage="Try adjusting your status filter"
+      >
+        {jobs.map((j) => (
+          <tr
+            key={j.id}
+            className={`transition-colors ${j.stale ? "bg-[#FEF3C7]/40" : "hover:bg-[#F8FAFC]"}`}
           >
-            {s || "All"}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-lg border border-[#E5E7EB] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F8FA]">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Type</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Created</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Error</th>
-              <th className="text-left px-4 py-3 font-medium text-[#667085]">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[#667085]">Loading...</td></tr>
-            ) : jobs.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[#667085]">No jobs found</td></tr>
-            ) : jobs.map((j) => (
-              <tr key={j.id} className={`border-t border-[#E5E7EB] ${j.stale ? "bg-[#FFFBEB]" : "hover:bg-[#F7F8FA]"}`}>
-                <td className="px-4 py-3 font-mono text-xs">{j.job_type}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[j.status] ?? ""}`}>
-                    {j.status}
-                    {j.stale && " ⚠️ stale"}
+            <td className="px-6 py-4">
+              <span className="text-sm font-mono text-[#64748B]">{j.job_type}</span>
+            </td>
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-2">
+                <StatusPill status={j.status} />
+                {j.stale && (
+                  <span className="px-2 py-0.5 bg-[#FEF3C7] text-[#92400E] text-xs font-semibold rounded">
+                    Stale
                   </span>
-                </td>
-                <td className="px-4 py-3 text-[#667085]">{new Date(j.created_at).toLocaleString()}</td>
-                <td className="px-4 py-3 text-xs text-[#DC2626] max-w-xs truncate">{j.error ?? "—"}</td>
-                <td className="px-4 py-3">
-                  {j.status === "failed" && (
-                    <button onClick={() => handleAction(j.id, "retry")} className="text-xs text-[#1D4ED8] hover:underline mr-2">
-                      Retry
-                    </button>
-                  )}
-                  {(j.status === "queued" || j.status === "running") && (
-                    <button onClick={() => handleAction(j.id, "cancel")} className="text-xs text-[#DC2626] hover:underline">
-                      Cancel
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                )}
+              </div>
+            </td>
+            <td className="px-6 py-4">
+              <span className="text-sm text-[#64748B]">
+                {new Date(j.created_at).toLocaleString()}
+              </span>
+            </td>
+            <td className="px-6 py-4">
+              <span className="text-sm text-[#EF4444] max-w-xs truncate block">
+                {j.error ?? "—"}
+              </span>
+            </td>
+            <td className="px-6 py-4 text-right">
+              <div className="flex items-center justify-end gap-2">
+                {j.status === "failed" && (
+                  <button
+                    onClick={() => handleAction(j.id, "retry")}
+                    className="px-3 py-1.5 bg-[#EFF6FF] text-[#1D4ED8] text-sm font-semibold rounded-lg hover:bg-[#DBEAFE] transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
+                {(j.status === "queued" || j.status === "running") && (
+                  <button
+                    onClick={() => handleAction(j.id, "cancel")}
+                    className="px-3 py-1.5 bg-[#FEE2E2] text-[#991B1B] text-sm font-semibold rounded-lg hover:bg-[#FECACA] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </AdminTable>
     </div>
   );
 }

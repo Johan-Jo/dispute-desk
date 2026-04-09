@@ -334,14 +334,14 @@ export function SettingsClient({ initial }: SettingsClientProps) {
   return (
     <div className="p-6 lg:p-8 max-w-[900px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#0B1220]">Settings</h1>
+        <h1 className="text-2xl font-bold text-[#0F172A]">Settings</h1>
         <p className="text-sm text-[#64748B] mt-1">
           Configure publishing, translation, and workflow preferences
         </p>
       </div>
 
       {/* Auto-save notice */}
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-6 transition-colors ${saved ? "bg-[#EFF6FF] border border-[#BFDBFE]" : "bg-[#F8FAFC] border border-[#E5E7EB]"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-6 transition-colors ${saved ? "bg-[#EFF6FF] border border-[#BFDBFE]" : "bg-[#F8FAFC] border border-[#E2E8F0]"}`}>
         <Info className={`w-4 h-4 shrink-0 ${saved ? "text-[#1D4ED8]" : "text-[#64748B]"}`} />
         <p className={`text-sm ${saved ? "text-[#1D4ED8] font-medium" : "text-[#64748B]"}`}>
           {saved ? "Settings Auto-saved — Your changes are automatically saved." : "Changes are automatically saved as you edit."}
@@ -350,11 +350,11 @@ export function SettingsClient({ initial }: SettingsClientProps) {
 
       <div className="space-y-8">
         {/* Publishing Settings */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[#0B1220] mb-4">Publishing Settings</h2>
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Publishing Settings</h2>
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Default publish time
               </label>
               <div className="flex items-center gap-2">
@@ -362,7 +362,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                   type="time"
                   value={settings.defaultPublishTimeUtc}
                   onChange={(e) => update("defaultPublishTimeUtc", e.target.value)}
-                  className="px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
+                  className="px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
                 />
                 <span className="text-xs text-[#64748B] bg-[#F1F5F9] px-2 py-1 rounded">UTC</span>
               </div>
@@ -383,8 +383,8 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         </section>
 
         {/* Translation Settings */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[#0B1220] mb-4">Translation Settings</h2>
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Translation Settings</h2>
           <div className="space-y-5">
             <Toggle
               label="Skip incomplete translations"
@@ -393,7 +393,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               onChange={(v) => update("skipIfTranslationIncomplete", v)}
             />
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-2">
+              <label className="block text-sm font-medium text-[#0F172A] mb-2">
                 Locale priority
               </label>
               <p className="text-xs text-[#64748B] mb-3">
@@ -406,7 +406,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                   return (
                     <div
                       key={locale}
-                      className="flex items-center gap-3 px-3 py-2 bg-[#F8FAFC] border border-[#E5E7EB] rounded-lg"
+                      className="flex items-center gap-3 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg"
                     >
                       <button
                         onClick={() => moveLocale(idx, -1)}
@@ -416,7 +416,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                         <GripVertical className="w-4 h-4 text-[#C4C8CD]" />
                       </button>
                       <span className="text-lg">{info?.flag ?? "🌐"}</span>
-                      <span className="text-sm text-[#0B1220] font-medium">{info?.nativeName ?? locale}</span>
+                      <span className="text-sm text-[#0F172A] font-medium">{info?.nativeName ?? locale}</span>
                       <span className="text-xs text-[#64748B]">{locale}</span>
                       {isEnglish && (
                         <span className="ml-auto text-xs font-medium text-[#1D4ED8] bg-[#EFF6FF] px-2 py-0.5 rounded">
@@ -432,8 +432,8 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         </section>
 
         {/* Workflow Settings */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[#0B1220] mb-4">Workflow Settings</h2>
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Workflow Settings</h2>
           <div className="space-y-5">
             <Toggle
               label="Require reviewer before publishing"
@@ -442,7 +442,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               onChange={(v) => update("requireReviewer", v)}
             />
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Archive health threshold
               </label>
               <div className="flex items-center gap-2">
@@ -452,7 +452,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                   max={500}
                   value={settings.archiveHealthThreshold}
                   onChange={(e) => update("archiveHealthThreshold", parseInt(e.target.value) || 50)}
-                  className="w-24 px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
+                  className="w-24 px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
                 />
                 <span className="text-sm text-[#64748B]">items</span>
               </div>
@@ -461,13 +461,13 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Default CTA
               </label>
               <select
                 value={settings.defaultCta}
                 onChange={(e) => update("defaultCta", e.target.value)}
-                className="w-full max-w-xs px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
+                className="w-full max-w-xs px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
               >
                 {CTA_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -478,11 +478,11 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         </section>
 
         {/* AI Autopilot */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#8B5CF6]" />
-              <h2 className="text-lg font-semibold text-[#0B1220]">AI Autopilot</h2>
+              <h2 className="text-lg font-semibold text-[#0F172A]">AI Autopilot</h2>
             </div>
             <Link
               href="/admin/help#help-autopilot"
@@ -518,7 +518,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0B1220] mb-1">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1">
                     Articles per day (after initial 5-day burst)
                   </label>
                   <div className="flex items-center gap-2">
@@ -528,7 +528,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                       max={10}
                       value={settings.autopilotArticlesPerDay}
                       onChange={(e) => update("autopilotArticlesPerDay", Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                      className="w-24 px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                      className="w-24 px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
                     />
                     <span className="text-sm text-[#64748B]">articles / day</span>
                   </div>
@@ -536,7 +536,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               </>
             )}
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Publish notification email
               </label>
               <div className="flex items-center gap-2">
@@ -545,13 +545,13 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                   value={settings.autopilotNotifyEmail}
                   onChange={(e) => update("autopilotNotifyEmail", e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full max-w-sm px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                  className="w-full max-w-sm px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
                 />
                 <button
                   type="button"
                   disabled={!settings.autopilotNotifyEmail.trim() || testEmailLoading}
                   onClick={sendTestEmail}
-                  className="shrink-0 px-3 py-2 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="shrink-0 px-3 py-2 text-sm font-medium rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {testEmailLoading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : "Send test"}
                 </button>
@@ -569,16 +569,16 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         </section>
 
         {/* AI generation prompts (OpenAI) */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#0EA5E9]" />
-              <h2 className="text-lg font-semibold text-[#0B1220]">AI generation prompts</h2>
+              <h2 className="text-lg font-semibold text-[#0F172A]">AI generation prompts</h2>
             </div>
             <button
               type="button"
               onClick={resetGenerationPrompts}
-              className="text-sm font-medium text-[#64748B] hover:text-[#0B1220] underline"
+              className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] underline"
             >
               Reset prompts to defaults
             </button>
@@ -598,7 +598,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               />
               <div className="mt-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                  <label className="block text-sm font-medium text-[#0B1220]">
+                  <label className="block text-sm font-medium text-[#0F172A]">
                     {usesBuiltinSystemPrompt ? "Built-in system prompt (what the model receives)" : "Custom system prompt"}
                   </label>
                   {!usesBuiltinSystemPrompt ? (
@@ -613,7 +613,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 </div>
                 {usesBuiltinSystemPrompt ? (
                   <pre
-                    className="w-full max-h-[min(28rem,55vh)] overflow-auto px-3 py-2 text-xs font-mono whitespace-pre-wrap break-words border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] text-[#334155]"
+                    className="w-full max-h-[min(28rem,55vh)] overflow-auto px-3 py-2 text-xs font-mono whitespace-pre-wrap break-words border border-[#E2E8F0] rounded-lg bg-[#F8FAFC] text-[#334155]"
                     tabIndex={0}
                   >
                     {DEFAULT_SYSTEM_PROMPT}
@@ -624,13 +624,13 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                     onChange={(e) => update("generationSystemPrompt", e.target.value)}
                     placeholder="System prompt sent as the model’s system role…"
                     rows={10}
-                    className="w-full px-3 py-2 text-xs font-mono border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                    className="w-full px-3 py-2 text-xs font-mono border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
                   />
                 )}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Additional instructions (every generation)
               </label>
               <textarea
@@ -638,14 +638,14 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 onChange={(e) => update("generationUserPromptSuffix", e.target.value)}
                 placeholder="e.g. Vary titles and excerpts so two articles on a similar topic do not read like duplicates…"
                 rows={4}
-                className="w-full px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                className="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
               />
               <p className="text-xs text-[#64748B] mt-1">
                 Appended to the user message before the model is asked to return JSON.
               </p>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Locale style lines</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Locale style lines</h3>
               <p className="text-xs text-[#64748B] mb-3">
                 Shown for every locale in the backlog generator. If you clear a locale to an empty string and
                 save, the server falls back to the built-in line for that locale.
@@ -661,14 +661,14 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                       value={settings.generationLocaleInstructions[loc.dbLocale] ?? ""}
                       onChange={(e) => updateLocaleInstr(loc.dbLocale, e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 text-xs border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                      className="w-full px-3 py-2 text-xs border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
                     />
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Content-type instructions</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Content-type instructions</h3>
               <div className="space-y-3">
                 {CONTENT_TYPE_PROMPT_KEYS.map(({ key, label }) => (
                   <div key={key}>
@@ -677,7 +677,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                       value={settings.generationContentTypeInstructions[key] ?? ""}
                       onChange={(e) => updateContentTypeInstr(key, e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 text-xs border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
+                      className="w-full px-3 py-2 text-xs border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] resize-y"
                     />
                   </div>
                 ))}
@@ -687,8 +687,8 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         </section>
 
         {/* Manual cron triggers */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[#0B1220] mb-1">Run scheduled tasks now</h2>
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#0F172A] mb-1">Run scheduled tasks now</h2>
           <p className="text-sm text-[#64748B] mb-4">
             Same logic as Vercel Cron (autopilot generate, then publish queue with email and SEO
             pings). Manual <strong>Run autopilot now</strong> bypasses the daily cap. Each request generates up
@@ -697,7 +697,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
             <code className="text-xs bg-[#F1F5F9] px-1 rounded">GENERATION_ENABLED</code> / OpenAI.
           </p>
           <div className="flex flex-wrap items-center gap-3 mb-3">
-            <label className="flex items-center gap-2 text-sm text-[#0B1220]">
+            <label className="flex items-center gap-2 text-sm text-[#0F172A]">
               <span className="text-[#64748B]">Articles this run</span>
               <input
                 type="number"
@@ -707,7 +707,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 onChange={(e) =>
                   setAutopilotBatchLimit(Math.min(50, Math.max(1, parseInt(e.target.value, 10) || 1)))
                 }
-                className="w-16 px-2 py-1.5 text-sm border border-[#E5E7EB] rounded-lg"
+                className="w-16 px-2 py-1.5 text-sm border border-[#E2E8F0] rounded-lg"
               />
             </label>
             <span className="text-xs text-[#64748B]">Higher values may hit 504 timeouts on Vercel.</span>
@@ -717,7 +717,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               type="button"
               disabled={cronLoading !== null}
               onClick={() => runCron("autopilot")}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-[#0B1220] text-white hover:bg-[#1E293B] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-[#0F172A] text-white hover:bg-[#1E293B] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {cronLoading === "autopilot" ? (
                 <>
@@ -732,7 +732,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               type="button"
               disabled={cronLoading !== null}
               onClick={() => runCron("publish")}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {cronLoading === "publish" ? (
                 <>
@@ -762,7 +762,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
               type="button"
               disabled={cronLoading !== null}
               onClick={() => runResetRebuildAll(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#0B1220] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {cronLoading === "resetRebuildDry" ? (
                 <>
@@ -809,11 +809,11 @@ export function SettingsClient({ initial }: SettingsClientProps) {
         </section>
 
         {/* Legal & Disclaimer */}
-        <section className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-[#0B1220] mb-4">Legal & Disclaimer</h2>
+        <section className="bg-white border border-[#E2E8F0] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Legal & Disclaimer</h2>
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Default legal disclaimer
               </label>
               <textarea
@@ -821,14 +821,14 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 onChange={(e) => update("defaultDisclaimer", e.target.value)}
                 placeholder="This content is for informational purposes only..."
                 rows={4}
-                className="w-full px-4 py-3 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] resize-y"
+                className="w-full px-4 py-3 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8] resize-y"
               />
               <p className="text-xs text-[#64748B] mt-1">
                 Applied automatically to new articles unless overridden
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0B1220] mb-1">
+              <label className="block text-sm font-medium text-[#0F172A] mb-1">
                 Legal review team email
               </label>
               <input
@@ -836,7 +836,7 @@ export function SettingsClient({ initial }: SettingsClientProps) {
                 value={settings.legalReviewEmail}
                 onChange={(e) => update("legalReviewEmail", e.target.value)}
                 placeholder="legal@example.com"
-                className="w-full max-w-sm px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
+                className="w-full max-w-sm px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
               />
             </div>
           </div>
@@ -862,7 +862,7 @@ function Toggle({
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-sm font-medium text-[#0B1220]">{label}</p>
+        <p className="text-sm font-medium text-[#0F172A]">{label}</p>
         <p className="text-xs text-[#64748B] mt-0.5">{description}</p>
       </div>
       <button

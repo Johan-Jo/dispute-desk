@@ -111,7 +111,7 @@ export function ResourcesDashboardClient({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Resources Hub Admin</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Resources Hub Admin</h1>
           <p className="text-sm text-[#64748B] mt-1">
             Manage articles, templates, and knowledge base content
           </p>
@@ -132,7 +132,7 @@ export function ResourcesDashboardClient({
           return (
             <div
               key={kpi.label}
-              className="bg-white rounded-xl border border-[#E5E7EB] p-5 hover:shadow-sm transition-shadow"
+              className="bg-white rounded-xl border border-[#E2E8F0] p-5 hover:shadow-sm transition-shadow"
             >
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-[#64748B]">{kpi.label}</span>
@@ -140,7 +140,7 @@ export function ResourcesDashboardClient({
                   <Icon className={`w-5 h-5 ${kpi.iconColor}`} />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[#0B1220]">{kpi.value}</p>
+              <p className="text-3xl font-bold text-[#0F172A]">{kpi.value}</p>
               <p className="text-xs text-[#64748B] mt-1">{kpi.sub}</p>
             </div>
           );
@@ -150,10 +150,10 @@ export function ResourcesDashboardClient({
       {/* Two-column: Upcoming Scheduled + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Upcoming Scheduled — 2/3 width */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-[#E5E7EB]">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-[#E2E8F0]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
             <div>
-              <h2 className="text-base font-semibold text-[#0B1220]">Upcoming Scheduled</h2>
+              <h2 className="text-base font-semibold text-[#0F172A]">Upcoming Scheduled</h2>
               <p className="text-xs text-[#64748B] mt-0.5">Next posts to go live</p>
             </div>
             <Link
@@ -164,7 +164,7 @@ export function ResourcesDashboardClient({
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="divide-y divide-[#E5E7EB]">
+          <div className="divide-y divide-[#E2E8F0]">
             {upcoming.length === 0 && (
               <p className="px-5 py-8 text-sm text-[#64748B] text-center">
                 No scheduled posts
@@ -180,7 +180,7 @@ export function ResourcesDashboardClient({
               return (
                 <div key={item.id} className="flex items-center gap-4 px-5 py-3 hover:bg-[#F8FAFC] transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#0B1220] truncate">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">
                       {title ?? "(untitled)"}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
@@ -190,7 +190,7 @@ export function ResourcesDashboardClient({
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm text-[#0B1220]">
+                    <p className="text-sm text-[#0F172A]">
                       {item.scheduled_for
                         ? new Date(item.scheduled_for).toLocaleDateString("en-US", {
                             month: "short",
@@ -220,12 +220,12 @@ export function ResourcesDashboardClient({
         {/* Sidebar — 1/3 width */}
         <div className="space-y-6">
           {/* Translation Gaps */}
-          <div className="bg-white rounded-xl border border-[#E5E7EB]">
-            <div className="px-5 py-4 border-b border-[#E5E7EB]">
-              <h2 className="text-base font-semibold text-[#0B1220]">Translation Gaps</h2>
+          <div className="bg-white rounded-xl border border-[#E2E8F0]">
+            <div className="px-5 py-4 border-b border-[#E2E8F0]">
+              <h2 className="text-base font-semibold text-[#0F172A]">Translation Gaps</h2>
               <p className="text-xs text-[#64748B] mt-0.5">Missing locale translations</p>
             </div>
-            <div className="divide-y divide-[#E5E7EB]">
+            <div className="divide-y divide-[#E2E8F0]">
               {gaps.length === 0 && (
                 <p className="px-5 py-6 text-sm text-[#64748B] text-center">
                   All translations complete
@@ -234,7 +234,7 @@ export function ResourcesDashboardClient({
               {gaps.map((gap) => (
                 <div key={gap.contentItemId} className="px-5 py-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-[#0B1220] truncate flex-1">
+                    <p className="text-sm font-medium text-[#0F172A] truncate flex-1">
                       {gap.title}
                     </p>
                     <PriorityBadge priority={gap.priority as Priority} />
@@ -249,9 +249,9 @@ export function ResourcesDashboardClient({
           </div>
 
           {/* Queue Health */}
-          <div className="bg-white rounded-xl border border-[#E5E7EB]">
-            <div className="px-5 py-4 border-b border-[#E5E7EB]">
-              <h2 className="text-base font-semibold text-[#0B1220]">Queue Health</h2>
+          <div className="bg-white rounded-xl border border-[#E2E8F0]">
+            <div className="px-5 py-4 border-b border-[#E2E8F0]">
+              <h2 className="text-base font-semibold text-[#0F172A]">Queue Health</h2>
             </div>
             <div className="px-5 py-4">
               <div className="flex items-center gap-3 mb-3">
@@ -259,13 +259,13 @@ export function ResourcesDashboardClient({
                   <Activity className="w-5 h-5 text-[#22C55E]" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#0B1220]">Operational</p>
+                  <p className="text-sm font-medium text-[#0F172A]">Operational</p>
                   <p className="text-xs text-[#64748B]">Cron publishing active</p>
                 </div>
               </div>
-              <div className="flex justify-between text-sm border-t border-[#E5E7EB] pt-3">
+              <div className="flex justify-between text-sm border-t border-[#E2E8F0] pt-3">
                 <span className="text-[#64748B]">Queue size</span>
-                <span className="font-medium text-[#0B1220]">{queueSize} pending</span>
+                <span className="font-medium text-[#0F172A]">{queueSize} pending</span>
               </div>
               <Link
                 href="/admin/resources/queue"
@@ -279,10 +279,10 @@ export function ResourcesDashboardClient({
       </div>
 
       {/* Recently Edited */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB]">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
+      <div className="bg-white rounded-xl border border-[#E2E8F0]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
           <div>
-            <h2 className="text-base font-semibold text-[#0B1220]">Recently Edited</h2>
+            <h2 className="text-base font-semibold text-[#0F172A]">Recently Edited</h2>
             <p className="text-xs text-[#64748B] mt-0.5">Latest content changes</p>
           </div>
           <Link
@@ -296,7 +296,7 @@ export function ResourcesDashboardClient({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-[#64748B] uppercase tracking-wider border-b border-[#E5E7EB]">
+              <tr className="text-left text-xs text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0]">
                 <th className="px-5 py-3 font-medium">Title</th>
                 <th className="px-5 py-3 font-medium">Type</th>
                 <th className="px-5 py-3 font-medium">Author</th>
@@ -305,7 +305,7 @@ export function ResourcesDashboardClient({
                 <th className="px-5 py-3 font-medium" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
+            <tbody className="divide-y divide-[#E2E8F0]">
               {recent.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-5 py-8 text-center text-[#64748B]">
@@ -319,7 +319,7 @@ export function ResourcesDashboardClient({
                 return (
                   <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-[#0B1220] truncate max-w-[300px]">
+                      <p className="font-medium text-[#0F172A] truncate max-w-[300px]">
                         {enLoc?.title ?? "(untitled)"}
                       </p>
                     </td>

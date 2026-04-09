@@ -711,6 +711,37 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 ### Internal (CRON_SECRET required)
 - `POST /api/jobs/worker`
 
+### Internal Admin API (admin session required)
+- `GET /api/admin/metrics` — dashboard stats (shops, disputes, packs, jobs, plans, templates, reason mappings)
+- `GET /api/admin/shops` — list shops with search/plan/status filters
+- `GET /api/admin/shops/[id]` — shop detail + dispute/pack counts
+- `PATCH /api/admin/shops/[id]` — update plan, pack_limit_override, admin_notes
+- `GET /api/admin/jobs` — list jobs with status filter
+- `PATCH /api/admin/jobs/[id]` — retry or cancel a job
+- `GET /api/admin/audit` — audit events with shop_id/event_type/date filters, CSV export
+- `GET /api/admin/billing` — MRR, plan distribution, per-shop usage
+- `GET /api/admin/team` — list internal admins
+- `POST /api/admin/team` — grant admin access by email
+- `PATCH /api/admin/team/[id]` — toggle active/inactive
+- `DELETE /api/admin/team/[id]` — revoke admin access
+- `GET /api/admin/team/me` — current admin user info (for layout shell)
+- `GET /api/admin/templates` — list templates with status/search filters (admin metadata: usage, locales, mappings)
+- `GET /api/admin/templates/[id]` — template detail with sections, items, and mapping impact
+- `PATCH /api/admin/templates/[id]` — update template status (active/draft/archived). Audited.
+- `GET /api/admin/reason-mapping` — list phase-aware reason-to-template mappings, filterable by phase
+- `PATCH /api/admin/reason-mapping/[id]` — update mapping (template_id, is_active, notes). Validates active-only templates. Audited.
+- `GET /api/admin/template-health` — template governance issues by severity
+- `GET /api/admin/resources/*` — resource management endpoints
+
+#### Reason Template Mapping Data Model
+The `reason_template_mappings` table stores phase-aware default template assignments:
+- `reason_code` + `dispute_phase` is unique (one default per reason per phase)
+- `dispute_phase`: `inquiry` (review-first triage) or `chargeback` (evidence-defense)
+- Mapping changes are non-retroactive: they affect future default selection only
+- "Deprecated" is a computed UI warning (archived template still mapped), not a DB status
+- Template status uses canonical values: `active | draft | archived`
+- All mutations produce audit log entries via `audit_events`
+
 ## Design System
 
 The portal and marketing surfaces use a custom design system built on

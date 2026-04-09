@@ -122,17 +122,17 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Publishing Calendar</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Publishing Calendar</h1>
           <p className="text-sm text-[#64748B] mt-1">
             Schedule and manage upcoming content releases
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="inline-flex rounded-lg border border-[#E5E7EB] overflow-hidden">
+          <div className="inline-flex rounded-lg border border-[#E2E8F0] overflow-hidden">
             <button
               onClick={() => setView("agenda")}
               className={`px-3 py-2 text-sm font-medium flex items-center gap-1.5 ${
-                view === "agenda" ? "bg-[#0B1220] text-white" : "text-[#64748B] hover:bg-[#F8FAFC]"
+                view === "agenda" ? "bg-[#0F172A] text-white" : "text-[#64748B] hover:bg-[#F8FAFC]"
               }`}
             >
               <List className="w-4 h-4" /> Agenda
@@ -140,7 +140,7 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
             <button
               onClick={() => setView("calendar")}
               className={`px-3 py-2 text-sm font-medium flex items-center gap-1.5 ${
-                view === "calendar" ? "bg-[#0B1220] text-white" : "text-[#64748B] hover:bg-[#F8FAFC]"
+                view === "calendar" ? "bg-[#0F172A] text-white" : "text-[#64748B] hover:bg-[#F8FAFC]"
               }`}
             >
               <CalendarIcon className="w-4 h-4" /> Calendar
@@ -148,7 +148,7 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
           </div>
           <Link
             href="/admin/resources/queue"
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
           >
             View Queue
           </Link>
@@ -158,19 +158,19 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
       {/* Month navigation */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={prevMonth} className="p-2 rounded-lg border border-[#E5E7EB] hover:bg-[#F8FAFC]">
+          <button onClick={prevMonth} className="p-2 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC]">
             <ChevronLeft className="w-4 h-4 text-[#64748B]" />
           </button>
-          <h2 className="text-lg font-semibold text-[#0B1220]">
+          <h2 className="text-lg font-semibold text-[#0F172A]">
             {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
           </h2>
-          <button onClick={nextMonth} className="p-2 rounded-lg border border-[#E5E7EB] hover:bg-[#F8FAFC]">
+          <button onClick={nextMonth} className="p-2 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC]">
             <ChevronRight className="w-4 h-4 text-[#64748B]" />
           </button>
         </div>
         <div className="flex items-center gap-4 text-sm text-[#64748B]">
-          <span><strong className="text-[#0B1220]">{totalScheduled}</strong> scheduled</span>
-          <span><strong className="text-[#0B1220]">{thisWeekCount}</strong> this week</span>
+          <span><strong className="text-[#0F172A]">{totalScheduled}</strong> scheduled</span>
+          <span><strong className="text-[#0F172A]">{thisWeekCount}</strong> this week</span>
         </div>
       </div>
 
@@ -178,7 +178,7 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
       {view === "agenda" && (
         <div className="space-y-6">
           {monthItems.length === 0 && (
-            <div className="bg-white rounded-xl border border-[#E5E7EB] p-12 text-center">
+            <div className="bg-white rounded-xl border border-[#E2E8F0] p-12 text-center">
               <CalendarIcon className="w-12 h-12 text-[#E1E3E5] mx-auto mb-4" />
               <p className="text-[#64748B]">No scheduled posts this month</p>
             </div>
@@ -187,11 +187,11 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
             const d = new Date(date + "T00:00:00");
             return (
               <div key={date} className="flex gap-6">
-                <div className="w-24 shrink-0 text-center bg-white border border-[#E5E7EB] rounded-xl p-3">
+                <div className="w-24 shrink-0 text-center bg-white border border-[#E2E8F0] rounded-xl p-3">
                   <p className="text-xs text-[#64748B] uppercase">
                     {d.toLocaleDateString("en-US", { weekday: "short" })}
                   </p>
-                  <p className="text-3xl font-bold text-[#0B1220]">{d.getDate()}</p>
+                  <p className="text-3xl font-bold text-[#0F172A]">{d.getDate()}</p>
                   <p className="text-xs text-[#64748B]">
                     {d.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                   </p>
@@ -212,7 +212,7 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
                     return (
                       <div
                         key={item.id}
-                        className="bg-white border border-[#E5E7EB] rounded-xl p-4 flex items-center gap-4 hover:shadow-sm transition-shadow"
+                        className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-center gap-4 hover:shadow-sm transition-shadow"
                       >
                         <span className="text-sm font-medium text-[#64748B] w-16 shrink-0">
                           {time}
@@ -222,7 +222,7 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
                             {ct && <ContentTypeBadge type={ct as ContentType} />}
                             <WorkflowStatusBadge status="scheduled" />
                           </div>
-                          <p className="text-sm font-medium text-[#0B1220] truncate">
+                          <p className="text-sm font-medium text-[#0F172A] truncate">
                             {getTitle(item)}
                           </p>
                         </div>
@@ -250,14 +250,14 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
 
       {/* Calendar grid view */}
       {view === "calendar" && (
-        <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
-          <div className="grid grid-cols-7 text-center text-xs font-medium text-[#64748B] uppercase tracking-wider border-b border-[#E5E7EB] bg-[#F8FAFC]">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
+          <div className="grid grid-cols-7 text-center text-xs font-medium text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0] bg-[#F8FAFC]">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
               <div key={d} className="py-3">{d}</div>
             ))}
           </div>
           {weeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 border-b border-[#E5E7EB] last:border-b-0">
+            <div key={wi} className="grid grid-cols-7 border-b border-[#E2E8F0] last:border-b-0">
               {week.map((d, di) => {
                 const dk = d ? dayKey(d) : null;
                 const dayPosts = dk ? (itemsByDate.get(dk) ?? []) : [];
@@ -265,7 +265,7 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
                 return (
                   <div
                     key={di}
-                    className={`min-h-[80px] p-2 border-r border-[#E5E7EB] last:border-r-0 ${
+                    className={`min-h-[80px] p-2 border-r border-[#E2E8F0] last:border-r-0 ${
                       hasContent ? "border-[#1D4ED8] bg-[#EFF6FF]/30" : ""
                     } ${!d ? "bg-[#F8FAFC]" : ""}`}
                   >
@@ -293,30 +293,30 @@ export function CalendarClient({ initialItems }: CalendarClientProps) {
 
       {/* Queue health panel */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-        <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 flex items-center gap-4">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-lg bg-[#F0FDF4] flex items-center justify-center">
             <Activity className="w-5 h-5 text-[#22C55E]" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[#0B1220]">System Status</p>
+            <p className="text-sm font-medium text-[#0F172A]">System Status</p>
             <p className="text-xs text-[#22C55E] font-medium">Operational</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 flex items-center gap-4">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-lg bg-[#EFF6FF] flex items-center justify-center">
             <Clock className="w-5 h-5 text-[#3B82F6]" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[#0B1220]">Queue Size</p>
+            <p className="text-sm font-medium text-[#0F172A]">Queue Size</p>
             <p className="text-xs text-[#64748B]">{totalScheduled} pending</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 flex items-center gap-4">
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-lg bg-[#FEF3C7] flex items-center justify-center">
             <Zap className="w-5 h-5 text-[#F59E0B]" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[#0B1220]">Cadence</p>
+            <p className="text-sm font-medium text-[#0F172A]">Cadence</p>
             <p className="text-xs text-[#64748B]">Monitoring active</p>
           </div>
         </div>

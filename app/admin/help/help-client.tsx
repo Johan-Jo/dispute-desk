@@ -70,11 +70,11 @@ export function HelpClient() {
     : SECTIONS;
 
   return (
-    <div ref={contentRef} className="min-h-full bg-[#F6F8FB]">
-      <div className="sticky top-0 z-20 border-b border-[#E5E7EB] bg-[#F6F8FB]/95 backdrop-blur-sm">
+    <div ref={contentRef} className="min-h-full bg-[#F8FAFC]">
+      <div className="sticky top-0 z-20 border-b border-[#E2E8F0] bg-[#F8FAFC]/95 backdrop-blur-sm">
         <div className="max-w-[880px] mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-[#0B1220]">Admin Guide</h1>
+            <h1 className="text-2xl font-bold text-[#0F172A]">Admin Guide</h1>
             <p className="text-sm text-[#64748B] mt-1">
               Complete reference for the DisputeDesk admin panel
             </p>
@@ -87,7 +87,7 @@ export function HelpClient() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Filter help sections"
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-[#E5E7EB] rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-[#E2E8F0] rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
             />
           </div>
           <nav
@@ -104,7 +104,7 @@ export function HelpClient() {
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeSection === s.id
                       ? "border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]"
-                      : "border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#CBD5E1] hover:text-[#0B1220]"
+                      : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#CBD5E1] hover:text-[#0F172A]"
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
@@ -117,7 +117,7 @@ export function HelpClient() {
       </div>
 
       <div className="max-w-[880px] mx-auto px-4 py-6 sm:px-6 lg:px-8 pb-16">
-        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-8 shadow-sm">
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 sm:p-8 shadow-sm">
           {/* LOGIN */}
           <Section id="login" title="Login">
             <P>
@@ -328,7 +328,7 @@ export function HelpClient() {
           {/* WORKFLOW */}
           <Section id="workflow" title="Workflow Reference">
             <P>Content follows a defined state machine. Only valid transitions are allowed:</P>
-            <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-xl p-4 my-4 font-mono text-xs leading-relaxed text-[#64748B]">
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 my-4 font-mono text-xs leading-relaxed text-[#64748B]">
               idea → backlog → brief_ready → drafting → in_translation<br />
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br />
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;in_editorial_review → in_legal_review → approved<br />
@@ -360,14 +360,14 @@ export function HelpClient() {
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={`help-${id}`} className="mb-12 scroll-mt-44">
-      <h2 className="text-xl font-bold text-[#0B1220] mb-4 pb-2 border-b border-[#E5E7EB]">{title}</h2>
+      <h2 className="text-xl font-bold text-[#0F172A] mb-4 pb-2 border-b border-[#E2E8F0]">{title}</h2>
       {children}
     </section>
   );
 }
 
 function H3({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-base font-semibold text-[#0B1220] mt-6 mb-2">{children}</h3>;
+  return <h3 className="text-base font-semibold text-[#0F172A] mt-6 mb-2">{children}</h3>;
 }
 
 function P({ children }: { children: React.ReactNode }) {
@@ -375,7 +375,7 @@ function P({ children }: { children: React.ReactNode }) {
 }
 
 function Strong({ children }: { children: React.ReactNode }) {
-  return <strong className="font-semibold text-[#0B1220]">{children}</strong>;
+  return <strong className="font-semibold text-[#0F172A]">{children}</strong>;
 }
 
 function Code({ children }: { children: React.ReactNode }) {
@@ -405,17 +405,17 @@ function Ol({ items }: { items: string[] }) {
 function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
     <div className="overflow-x-auto mb-4">
-      <table className="w-full text-sm border border-[#E5E7EB] rounded-lg overflow-hidden">
+      <table className="w-full text-sm border border-[#E2E8F0] rounded-lg overflow-hidden">
         <thead>
           <tr className="bg-[#F8FAFC]">
             {headers.map((h, i) => (
-              <th key={i} className="text-left px-3 py-2 font-medium text-[#64748B] border-b border-[#E5E7EB]">{h}</th>
+              <th key={i} className="text-left px-3 py-2 font-medium text-[#64748B] border-b border-[#E2E8F0]">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} className="border-b border-[#E5E7EB] last:border-b-0">
+            <tr key={ri} className="border-b border-[#E2E8F0] last:border-b-0">
               {row.map((cell, ci) => (
                 <td key={ci} className="px-3 py-2 text-[#374151]">{cell}</td>
               ))}

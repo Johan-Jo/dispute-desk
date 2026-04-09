@@ -22,9 +22,9 @@ export function ValidationChecklist({ items, className = "" }: ValidationCheckli
 
   return (
     <div className={`bg-white rounded-lg border border-[#E1E3E5] overflow-hidden ${className}`}>
-      <div className="p-4 border-b border-[#E1E3E5] bg-[#F6F8FB]">
+      <div className="p-4 border-b border-[#E1E3E5] bg-[#F8FAFC]">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-[#0B1220] flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
             <CheckCircle
               className={`w-4 h-4 ${allRequiredComplete ? "text-[#22C55E]" : "text-[#667085]"}`}
             />
@@ -49,7 +49,7 @@ export function ValidationChecklist({ items, className = "" }: ValidationCheckli
           <label
             key={item.id}
             className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${
-              item.completed ? "bg-[#F0FDF4] hover:bg-[#DCFCE7]" : "hover:bg-[#F6F8FB]"
+              item.completed ? "bg-[#F0FDF4] hover:bg-[#DCFCE7]" : "hover:bg-[#F8FAFC]"
             }`}
           >
             <input
@@ -63,7 +63,7 @@ export function ValidationChecklist({ items, className = "" }: ValidationCheckli
                 className={`text-sm ${
                   item.completed
                     ? "text-[#15803D] line-through"
-                    : "text-[#0B1220] font-medium"
+                    : "text-[#0F172A] font-medium"
                 }`}
               >
                 {item.label}

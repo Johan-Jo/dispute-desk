@@ -174,7 +174,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B1220]">Content Backlog</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Content Backlog</h1>
           <p className="text-sm text-[#64748B] mt-1">
             Editorial planning and content ideas pipeline
           </p>
@@ -189,7 +189,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
         <div className="flex items-center gap-3">
           <Link
             href="/admin/resources/list"
-            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E5E7EB] text-[#0B1220] hover:bg-[#F8FAFC] transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
           >
             View Published
           </Link>
@@ -205,21 +205,21 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
-            <div key={kpi.label} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
+            <div key={kpi.label} className="bg-white rounded-xl border border-[#E2E8F0] p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-[#64748B]">{kpi.label}</span>
                 <div className={`w-9 h-9 rounded-lg ${kpi.iconBg} flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${kpi.iconColor}`} />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[#0B1220]">{kpi.value}</p>
+              <p className="text-3xl font-bold text-[#0F172A]">{kpi.value}</p>
             </div>
           );
         })}
       </div>
 
       {/* Search + Filters */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] mb-4">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] mb-4">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
@@ -228,7 +228,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
               placeholder="Search by title or keyword..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-[#E2E8F0] rounded-lg bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 focus:border-[#1D4ED8]"
             />
           </div>
           <button
@@ -236,7 +236,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
             className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
               showFilters || hasActiveFilters
                 ? "border-[#1D4ED8] text-[#1D4ED8] bg-[#EFF6FF]"
-                : "border-[#E5E7EB] text-[#64748B] hover:bg-[#F8FAFC]"
+                : "border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]"
             }`}
           >
             <Filter className="w-4 h-4" />
@@ -244,13 +244,13 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
           </button>
         </div>
         {showFilters && (
-          <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-t border-[#E5E7EB] bg-[#F8FAFC]">
+          <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-t border-[#E2E8F0] bg-[#F8FAFC]">
             <div>
               <label className="block text-xs font-medium text-[#64748B] mb-1">Priority</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                className="text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
               >
                 {PRIORITY_TIERS.map((p) => (
                   <option key={p.value} value={p.value}>{p.label}</option>
@@ -262,7 +262,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
+                className="text-sm border border-[#E2E8F0] rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20"
               >
                 {STATUS_FILTERS.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
@@ -282,11 +282,11 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-[#64748B] uppercase tracking-wider border-b border-[#E5E7EB] bg-[#F8FAFC]">
+              <tr className="text-left text-xs text-[#64748B] uppercase tracking-wider border-b border-[#E2E8F0] bg-[#F8FAFC]">
                 <th className="px-4 py-3 font-medium w-16">#</th>
                 <th className="px-4 py-3 font-medium">Title</th>
                 <th className="px-4 py-3 font-medium">Type</th>
@@ -297,7 +297,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E5E7EB]">
+            <tbody className="divide-y divide-[#E2E8F0]">
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-[#64748B]">
@@ -306,7 +306,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                 </tr>
               )}
               {filtered.map((item, idx) => (
-                <tr key={item.id} className="hover:bg-[#F6F8FB] transition-colors group">
+                <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors group">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-[#64748B] w-5 text-right">{idx + 1}</span>
@@ -314,14 +314,14 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                         <button
                           onClick={() => moveItem(idx, -1)}
                           disabled={idx === 0}
-                          className="p-0.5 hover:bg-[#E5E7EB] rounded disabled:opacity-30"
+                          className="p-0.5 hover:bg-[#E2E8F0] rounded disabled:opacity-30"
                         >
                           <ChevronUp className="w-3 h-3 text-[#64748B]" />
                         </button>
                         <button
                           onClick={() => moveItem(idx, 1)}
                           disabled={idx === filtered.length - 1}
-                          className="p-0.5 hover:bg-[#E5E7EB] rounded disabled:opacity-30"
+                          className="p-0.5 hover:bg-[#E2E8F0] rounded disabled:opacity-30"
                         >
                           <ChevronDown className="w-3 h-3 text-[#64748B]" />
                         </button>
@@ -329,7 +329,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-[#0B1220] truncate max-w-[260px]">
+                    <p className="font-medium text-[#0F172A] truncate max-w-[260px]">
                       {item.proposed_title}
                     </p>
                     {item.notes && (
@@ -398,7 +398,7 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E5E7EB] text-sm text-[#64748B]">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0] text-sm text-[#64748B]">
           <span>Showing {filtered.length} of {items.length} items</span>
           {readyCount > 0 && (
             <span className="text-[#22C55E] font-medium">{readyCount} ready to start</span>

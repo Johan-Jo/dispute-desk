@@ -90,11 +90,11 @@ export function AIAssistantPanel({
   }
 
   return (
-    <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <div className="bg-white border border-[#E2E8F0] rounded-xl p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#8B5CF6]" />
-          <h3 className="text-sm font-semibold text-[#0B1220]">AI Assistant</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A]">AI Assistant</h3>
         </div>
         <Link
           href="/admin/help#help-editor"
@@ -114,7 +114,7 @@ export function AIAssistantPanel({
               key={action.key}
               onClick={() => runAction(action.key)}
               disabled={!!loading}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg border border-[#E5E7EB] hover:bg-[#F8FAFC] transition-colors disabled:opacity-50"
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors disabled:opacity-50"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 text-[#8B5CF6] animate-spin shrink-0" />
@@ -122,7 +122,7 @@ export function AIAssistantPanel({
                 <Icon className="w-4 h-4 text-[#8B5CF6] shrink-0" />
               )}
               <div>
-                <p className="text-sm font-medium text-[#0B1220]">{action.label}</p>
+                <p className="text-sm font-medium text-[#0F172A]">{action.label}</p>
                 <p className="text-xs text-[#64748B]">{action.description}</p>
               </div>
             </button>
@@ -137,15 +137,15 @@ export function AIAssistantPanel({
       )}
 
       {result && (
-        <div className="mt-3 border border-[#E5E7EB] rounded-lg overflow-hidden">
-          <div className="px-3 py-2 bg-[#F8FAFC] border-b border-[#E5E7EB]">
+        <div className="mt-3 border border-[#E2E8F0] rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-[#F8FAFC] border-b border-[#E2E8F0]">
             <p className="text-xs font-medium text-[#64748B]">
               {result.action === "suggest_related" ? "Suggested Topics" : "AI Result"}
             </p>
           </div>
           <div className="px-3 py-2 max-h-40 overflow-y-auto">
             {result.action === "suggest_related" ? (
-              <ul className="text-sm text-[#0B1220] space-y-1">
+              <ul className="text-sm text-[#0F172A] space-y-1">
                 {(() => {
                   try {
                     const topics = JSON.parse(result.data) as string[];
@@ -161,14 +161,14 @@ export function AIAssistantPanel({
                 })()}
               </ul>
             ) : (
-              <p className="text-sm text-[#0B1220] whitespace-pre-wrap">
+              <p className="text-sm text-[#0F172A] whitespace-pre-wrap">
                 {result.data.slice(0, 500)}
                 {result.data.length > 500 && "..."}
               </p>
             )}
           </div>
           {(result.action === "improve_readability" || result.action === "generate_meta") && (
-            <div className="px-3 py-2 border-t border-[#E5E7EB] flex gap-2">
+            <div className="px-3 py-2 border-t border-[#E2E8F0] flex gap-2">
               <button
                 onClick={applyResult}
                 className="text-xs font-medium text-[#1D4ED8] hover:text-[#1E40AF]"
@@ -177,7 +177,7 @@ export function AIAssistantPanel({
               </button>
               <button
                 onClick={() => setResult(null)}
-                className="text-xs text-[#64748B] hover:text-[#0B1220]"
+                className="text-xs text-[#64748B] hover:text-[#0F172A]"
               >
                 Dismiss
               </button>
