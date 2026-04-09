@@ -334,7 +334,7 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
     },
     {
       icon: PackageIcon,
-      label: t("dashboard.evidencePacks"),
+      label: t("dashboard.activePlaybooks"),
       value: String(s.packCount),
       change: null as number | null,
     },
@@ -650,12 +650,25 @@ export default function EmbeddedDashboardPage() {
     <Page
       title={t("dashboard.embeddedPageTitle")}
       subtitle={t("dashboard.embeddedSubtitle")}
-      primaryAction={{ content: t("dashboard.automationSettings"), url: withShopParams("/app/settings", searchParams) }}
+      primaryAction={{ content: t("dashboard.viewCoverage"), url: withShopParams("/app/coverage", searchParams) }}
       secondaryActions={[{ content: t("nav.help"), url: withShopParams("/app/help", searchParams) }]}
     >
       <Layout>
         <Layout.Section>
           <DashboardSetupBanner />
+        </Layout.Section>
+
+        {/* TEMPORARY: quick link to test the setup wizard */}
+        <Layout.Section>
+          <Banner title="Dev: Test Setup Wizard" tone="info">
+            <ButtonGroup>
+              <Button url={withShopParams("/app/setup/connection", searchParams)}>Step 1: Connection</Button>
+              <Button url={withShopParams("/app/setup/store_profile", searchParams)}>Step 2: Store Profile</Button>
+              <Button url={withShopParams("/app/setup/coverage", searchParams)}>Step 3: Coverage</Button>
+              <Button url={withShopParams("/app/setup/automation", searchParams)}>Step 4: Automation</Button>
+              <Button url={withShopParams("/app/setup/activate", searchParams)}>Step 5: Activate</Button>
+            </ButtonGroup>
+          </Banner>
         </Layout.Section>
 
         <Layout.Section>
