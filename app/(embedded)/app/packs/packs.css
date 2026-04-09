@@ -55,13 +55,9 @@
 }
 
 .embeddedPacksRoot .Polaris-Tabs__Tab--active,
-.embeddedPacksRoot .Polaris-Tabs__Tab--selected {
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected,
+.embeddedPacksRoot .Polaris-Tabs__Tab[aria-selected="true"] {
   background: #1D4ED8 !important;
-}
-
-.embeddedPacksRoot .Polaris-Tabs__Tab--active .Polaris-Tabs__Title,
-.embeddedPacksRoot .Polaris-Tabs__Tab--selected .Polaris-Tabs__Title {
-  color: #FFFFFF !important;
 }
 
 /* Hide the Polaris underline indicator */
@@ -74,7 +70,14 @@
 
 .embeddedPacksRoot .Polaris-Tabs__Title {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  color: #303030 !important;
+}
+
+.embeddedPacksRoot .Polaris-Tabs__Tab--active .Polaris-Tabs__Title,
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected .Polaris-Tabs__Title,
+.embeddedPacksRoot [aria-selected="true"] .Polaris-Tabs__Title {
+  color: #FFFFFF !important;
 }
 
 /* Table row hover */
