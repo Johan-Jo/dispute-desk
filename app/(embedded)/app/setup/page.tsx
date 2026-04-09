@@ -81,7 +81,7 @@ export default function SetupWelcomePage() {
     <div style={{ minHeight: "100vh", background: "#F6F6F7" }}>
 
       {/* Main content */}
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "48px 24px 40px" }}>
+      <div style={{ maxWidth: 832, margin: "0 auto", padding: "48px 24px 40px" }}>
         {/* Hero */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div
