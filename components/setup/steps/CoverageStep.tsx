@@ -38,28 +38,10 @@ interface FamilyRow {
   confidence: "high" | "medium" | "low";
 }
 
-/** Figma-aligned dispute family display data */
-const FAMILY_DESCRIPTIONS: Record<string, string> = {
-  fraud: "Cardholder claims they did not authorize the transaction",
-  pnr: "Customer claims they never received the product",
-  not_as_described: "Product quality or description issues",
-  subscription: "Customer claims subscription was already canceled",
-  refund: "Customer claims promised refund was not issued",
-  duplicate: "Customer was charged multiple times",
-  digital: "Disputes involving digital products or services",
-  general: "Other dispute types that require careful review",
-};
-
-const FAMILY_HANDLING: Record<string, string> = {
-  fraud: "Full evidence package with fraud signals and delivery proof",
-  pnr: "Tracking data, delivery proof, and shipping policy",
-  not_as_described: "Product details, photos, and return policy",
-  subscription: "Subscription terms, cancellation logs, and usage data",
-  refund: "Refund policy and transaction records",
-  duplicate: "Transaction history and order records",
-  digital: "Access logs, delivery confirmation, and usage records",
-  general: "Comprehensive evidence with manual review",
-};
+const FAMILY_IDS = [
+  "fraud", "pnr", "not_as_described", "subscription",
+  "refund", "duplicate", "digital", "general",
+] as const;
 
 function deriveDefaultAutomation(
   family: string,
@@ -349,14 +331,14 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
                       {tCoverage(`family_${row.family}` as Parameters<typeof tCoverage>[0])}
                     </div>
                     <div style={{ fontSize: 12, color: "#6D7175" }}>
-                      {FAMILY_DESCRIPTIONS[row.family] ?? ""}
+                      {tCoverage(`desc_${row.family}` as Parameters<typeof tCoverage>[0])}
                     </div>
                   </td>
 
                   {/* Recommended Handling */}
                   <td style={{ padding: "14px 20px", verticalAlign: "top", maxWidth: 240 }}>
                     <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.5 }}>
-                      {FAMILY_HANDLING[row.family] ?? ""}
+                      {tCoverage(`handling_${row.family}` as Parameters<typeof tCoverage>[0])}
                     </div>
                   </td>
 
