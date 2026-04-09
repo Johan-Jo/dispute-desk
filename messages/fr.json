@@ -440,7 +440,19 @@
     "downgradeConfirmTitle": "Passer à {plan} ?",
     "downgradeConfirmBody": "Votre plan passera à {plan} à la fin de votre cycle de facturation actuel. Vous perdrez l accès aux fonctionnalités non incluses dans le plan inférieur.",
     "downgradeConfirm": "Confirmer le changement",
-    "downgradeCancel": "Conserver le plan actuel"
+    "downgradeCancel": "Conserver le plan actuel",
+    "planManagement": "Gestion du plan",
+    "applyDiscount": "Appliquer la remise",
+    "discountCode": "Code de remise",
+    "discountCodePlaceholder": "Entrez le code de remise",
+    "monthlyRevenue": "{count} paquets/mois inclus",
+    "unlimitedRevenue": "Revenus mensuels illimités",
+    "nextPlan": "Plan suivant : {plan}",
+    "upgradeNow": "Mettre à niveau",
+    "hideAllPlans": "Masquer tous les plans",
+    "showAllPlans": "Afficher tous les plans",
+    "getStarted": "Commencer",
+    "popular": "Populaire"
   },
   "rules": {
     "title": "Règles",

@@ -483,8 +483,6 @@
     "noData": "Keine Daten für diesen Zeitraum."
   },
   "billing": {
-    "planManagement": "Planverwaltung",
-    "showAllPlans": "Alle Pläne anzeigen",
     "title": "Abrechnung",
     "subtitle": "Verwalten Sie Ihren Plan und Ihre Nutzung",
     "demoSubtitle": "Verwalten Sie Ihr Abonnement, Ihre Nutzung und Zahlungsmethoden",
@@ -573,7 +571,19 @@
     "downgradeConfirmTitle": "Zu {plan} wechseln?",
     "downgradeConfirmBody": "Dein Plan wird am Ende des aktuellen Abrechnungszeitraums auf {plan} geändert. Du verlierst den Zugang zu Funktionen, die im niedrigeren Plan nicht enthalten sind.",
     "downgradeConfirm": "Wechsel bestätigen",
-    "downgradeCancel": "Aktuellen Plan behalten"
+    "downgradeCancel": "Aktuellen Plan behalten",
+    "planManagement": "Planverwaltung",
+    "applyDiscount": "Rabatt anwenden",
+    "discountCode": "Rabattcode",
+    "discountCodePlaceholder": "Rabattcode eingeben",
+    "monthlyRevenue": "{count} Pakete/Monat inklusive",
+    "unlimitedRevenue": "Unbegrenzter monatlicher Umsatz",
+    "nextPlan": "Nächster Plan: {plan}",
+    "upgradeNow": "Jetzt upgraden",
+    "hideAllPlans": "Alle Pläne ausblenden",
+    "showAllPlans": "Alle Pläne anzeigen",
+    "getStarted": "Loslegen",
+    "popular": "Beliebt"
   },
   "rules": {
     "title": "Regeln",

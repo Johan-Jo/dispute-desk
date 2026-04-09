@@ -560,7 +560,19 @@
     "downgradeConfirmTitle": "Downgrade to {plan}?",
     "downgradeConfirmBody": "Your plan will change to {plan} at the end of your current billing cycle. You will lose access to features not included in the lower plan.",
     "downgradeConfirm": "Confirm downgrade",
-    "downgradeCancel": "Keep current plan"
+    "downgradeCancel": "Keep current plan",
+    "planManagement": "Plan management",
+    "applyDiscount": "Apply discount",
+    "discountCode": "Discount Code",
+    "discountCodePlaceholder": "Enter discount code",
+    "monthlyRevenue": "{count} packs/month included",
+    "unlimitedRevenue": "Unlimited monthly added revenue",
+    "nextPlan": "Next plan: {plan}",
+    "upgradeNow": "Upgrade now",
+    "hideAllPlans": "Hide all plans",
+    "showAllPlans": "Show all plans",
+    "getStarted": "Get Started",
+    "popular": "Popular"
   },
   "rules": {
     "title": "Rules",

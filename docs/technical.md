@@ -915,9 +915,22 @@ All UI labels say "Save evidence." Never "Submit response" or "Submit to card ne
 
 | Plan | Price | Packs/Month | Auto-Pack | Rules |
 |------|-------|-------------|-----------|-------|
-| Free | $0 | 3 | No | No |
-| Starter | $29/mo | 50 | Yes | Yes |
-| Pro | $79/mo | Unlimited | Yes | Yes |
+| Free (Sandbox) | $0 | 3 (lifetime) | No | No |
+| Starter | $29/mo | 15 | Yes | Up to 5 |
+| Growth | $79/mo | 75 | Yes | Yes (advanced) |
+| Scale | $149/mo | 300 | Yes | Yes (advanced) |
+
+Paid plans include a 14-day trial with 25 playbooks.
+
+### Embedded Billing UI
+
+The embedded billing page (`app/(embedded)/app/billing/page.tsx`) uses custom Tailwind styling (not Polaris layout) to match the Figma design:
+
+- **Single card container** with header ("Plan management" + "Apply discount" button), current plan section (icon, name, price, usage), and a "Next plan" recommendation banner with inline upgrade CTA.
+- **Collapsible 4-column plan grid** toggled by "Show/Hide all plans". The Growth card is fully inverted (solid blue `#1D4ED8` background, white text) with a floating "Popular" pill badge.
+- **Discount modal** triggered from header for discount code entry.
+- **Top-ups section** as a separate card below the main container.
+- **Downgrade modal** uses Polaris `<Modal>` for Shopify consistency.
 
 ### Enforcement
 

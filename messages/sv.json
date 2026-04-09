@@ -442,7 +442,19 @@
     "downgradeConfirmTitle": "Nedgradera till {plan}?",
     "downgradeConfirmBody": "Din plan ändras till {plan} i slutet av den aktuella faktureringsperioden. Du förlorar åtkomst till funktioner som inte ingår i det lägre planen.",
     "downgradeConfirm": "Bekräfta nedgradering",
-    "downgradeCancel": "Behåll nuvarande plan"
+    "downgradeCancel": "Behåll nuvarande plan",
+    "planManagement": "Planhantering",
+    "applyDiscount": "Tillämpa rabatt",
+    "discountCode": "Rabattkod",
+    "discountCodePlaceholder": "Ange rabattkod",
+    "monthlyRevenue": "{count} paket/månad inkluderade",
+    "unlimitedRevenue": "Obegränsad månatlig intäkt",
+    "nextPlan": "Nästa plan: {plan}",
+    "upgradeNow": "Uppgradera nu",
+    "hideAllPlans": "Dölj alla planer",
+    "showAllPlans": "Visa alla planer",
+    "getStarted": "Kom igång",
+    "popular": "Populär"
   },
   "rules": {
     "title": "Regler",

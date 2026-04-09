@@ -440,7 +440,19 @@
     "downgradeConfirmTitle": "¿Cambiar a {plan}?",
     "downgradeConfirmBody": "Tu plan cambiará a {plan} al final del ciclo de facturación actual. Perderás acceso a las funciones no incluidas en el plan inferior.",
     "downgradeConfirm": "Confirmar cambio",
-    "downgradeCancel": "Mantener plan actual"
+    "downgradeCancel": "Mantener plan actual",
+    "planManagement": "Gestión del plan",
+    "applyDiscount": "Aplicar descuento",
+    "discountCode": "Código de descuento",
+    "discountCodePlaceholder": "Ingresa el código de descuento",
+    "monthlyRevenue": "{count} paquetes/mes incluidos",
+    "unlimitedRevenue": "Ingresos mensuales ilimitados",
+    "nextPlan": "Siguiente plan: {plan}",
+    "upgradeNow": "Actualizar ahora",
+    "hideAllPlans": "Ocultar todos los planes",
+    "showAllPlans": "Mostrar todos los planes",
+    "getStarted": "Comenzar",
+    "popular": "Popular"
   },
   "rules": {
     "title": "Reglas",
