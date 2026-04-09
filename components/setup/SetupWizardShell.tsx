@@ -18,9 +18,11 @@ interface SetupWizardShellProps {
   onSave: () => Promise<boolean>;
   /** When false, the Continue/Save button is disabled (e.g. Step 1 has blockers). */
   canContinue?: boolean;
+  /** When true, children render directly without a Card wrapper (e.g. Coverage step). */
+  noCard?: boolean;
 }
 
-export function SetupWizardShell({ stepId, children, onSave, canContinue = true }: SetupWizardShellProps) {
+export function SetupWizardShell({ stepId, children, onSave, canContinue = true, noCard }: SetupWizardShellProps) {
   const t = useTranslations("setup");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -136,12 +138,17 @@ export function SetupWizardShell({ stepId, children, onSave, canContinue = true 
         )}
 
         <div style={{ marginTop: 16 }}>
-          <Card>
-            <BlockStack gap="400">
+          {noCard ? (
+            <>
               {children}
-
-              {/* Bottom nav */}
-              <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16, marginTop: 8 }}>
+              {/* Bottom nav (outside card) */}
+              <div style={{
+                background: "#fff",
+                border: "1px solid #E1E3E5",
+                borderRadius: 10,
+                padding: "16px 20px",
+                marginTop: 16,
+              }}>
                 <InlineStack align="space-between">
                   <div>
                     {isFirst ? (
@@ -165,8 +172,39 @@ export function SetupWizardShell({ stepId, children, onSave, canContinue = true 
                   </InlineStack>
                 </InlineStack>
               </div>
-            </BlockStack>
-          </Card>
+            </>
+          ) : (
+            <Card>
+              <BlockStack gap="400">
+                {children}
+                {/* Bottom nav */}
+                <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16, marginTop: 8 }}>
+                  <InlineStack align="space-between">
+                    <div>
+                      {isFirst ? (
+                        <Button disabled>{t("back")}</Button>
+                      ) : (
+                        <Button onClick={handleBack}>{t("back")}</Button>
+                      )}
+                    </div>
+                    <InlineStack gap="300">
+                      {!isFirst && !isLast && (
+                        <Button onClick={() => setSkipModalOpen(true)}>{t("skipForNow")}</Button>
+                      )}
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveAndContinue}
+                        loading={saving}
+                        disabled={!canContinue}
+                      >
+                        {ctaLabel}
+                      </Button>
+                    </InlineStack>
+                  </InlineStack>
+                </div>
+              </BlockStack>
+            </Card>
+          )}
         </div>
       </div>
 
