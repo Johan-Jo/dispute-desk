@@ -40,16 +40,24 @@ export async function POST(req: NextRequest) {
   };
 
   if (existing) {
-    await sb
+    const { error: updateErr } = await sb
       .from("shop_setup")
       .update({ steps: stepsMap, current_step: stepId, updated_at: new Date().toISOString() })
       .eq("shop_id", shopId);
+    if (updateErr) {
+      console.error("[setup/step] update failed:", updateErr.message);
+      return NextResponse.json({ error: "Failed to save step", detail: updateErr.message }, { status: 500 });
+    }
   } else {
-    await sb.from("shop_setup").insert({
+    const { error: insertErr } = await sb.from("shop_setup").insert({
       shop_id: shopId,
       steps: stepsMap,
       current_step: stepId,
     });
+    if (insertErr) {
+      console.error("[setup/step] insert failed:", insertErr.message);
+      return NextResponse.json({ error: "Failed to save step", detail: insertErr.message }, { status: 500 });
+    }
   }
 
   await logSetupEvent(shopId, "step_completed", { stepId, payload });
