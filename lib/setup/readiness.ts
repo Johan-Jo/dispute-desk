@@ -5,8 +5,8 @@
  */
 
 import { loadSession } from "@/lib/shopify/sessionStorage";
-import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { getServiceClient } from "@/lib/supabase/server";
 
 export type ReadinessStatus = "ready" | "needs_action" | "syncing";
 
@@ -91,15 +91,18 @@ export async function evaluateReadiness(shopId: string): Promise<ReadinessResult
     ...(!webhooksReady && { actionLabel: "refreshStatus" }),
   });
 
-  // 5. Store data available — non-blocking, check if we can fetch shop details
+  // 5. Store data available — non-blocking, check if the shop row exists in DB
   let storeDataReady = false;
-  if (sessionValid) {
-    try {
-      const details = await fetchShopDetails(shopId);
-      storeDataReady = Boolean(details?.name);
-    } catch {
-      // API failure — treat as syncing
-    }
+  try {
+    const sb = getServiceClient();
+    const { data } = await sb
+      .from("shops")
+      .select("id, shop_domain")
+      .eq("id", shopId)
+      .single();
+    storeDataReady = Boolean(data?.shop_domain);
+  } catch {
+    // DB failure — treat as syncing
   }
   rows.push({
     id: "store_data",

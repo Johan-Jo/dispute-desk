@@ -1,29 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  createMockSupabaseClient,
+  setTableResult,
+} from "@/tests/helpers/supabaseMock";
 
 vi.mock("@/lib/shopify/sessionStorage", () => ({
   loadSession: vi.fn(),
-}));
-
-vi.mock("@/lib/shopify/shopDetails", () => ({
-  fetchShopDetails: vi.fn(),
 }));
 
 vi.mock("@/lib/shopify/registerDisputeWebhooks", () => ({
   registerDisputeWebhooks: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  getServiceClient: vi.fn(),
+}));
+
 import { evaluateReadiness } from "@/lib/setup/readiness";
 import { loadSession } from "@/lib/shopify/sessionStorage";
-import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { getServiceClient } from "@/lib/supabase/server";
 
 const mockLoadSession = vi.mocked(loadSession);
-const mockFetchShopDetails = vi.mocked(fetchShopDetails);
 const mockRegisterWebhooks = vi.mocked(registerDisputeWebhooks);
+const mockGetServiceClient = vi.mocked(getServiceClient);
+
+function setupSupabaseWithShop(shopDomain: string | null) {
+  const client = createMockSupabaseClient();
+  if (shopDomain) {
+    setTableResult(client, "shops", { id: "shop-1", shop_domain: shopDomain });
+  } else {
+    setTableResult(client, "shops", null);
+  }
+  mockGetServiceClient.mockReturnValue(client as any);
+}
 
 describe("evaluateReadiness", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setupSupabaseWithShop(null);
   });
 
   it("returns all needs_action when no session exists", async () => {
@@ -48,7 +63,7 @@ describe("evaluateReadiness", () => {
     } as any);
 
     mockRegisterWebhooks.mockResolvedValue({ ok: true, created: [], existing: [] } as any);
-    mockFetchShopDetails.mockResolvedValue({ name: "Test Shop" } as any);
+    setupSupabaseWithShop("test.myshopify.com");
 
     const result = await evaluateReadiness("shop-1");
 
@@ -66,7 +81,7 @@ describe("evaluateReadiness", () => {
     } as any);
 
     mockRegisterWebhooks.mockResolvedValue({ ok: true, created: [], existing: [] } as any);
-    mockFetchShopDetails.mockResolvedValue({ name: "Test" } as any);
+    setupSupabaseWithShop("test.myshopify.com");
 
     const result = await evaluateReadiness("shop-1");
 
@@ -83,14 +98,13 @@ describe("evaluateReadiness", () => {
     } as any);
 
     mockRegisterWebhooks.mockRejectedValue(new Error("network"));
-    mockFetchShopDetails.mockResolvedValue({ name: "Test" } as any);
+    setupSupabaseWithShop("test.myshopify.com");
 
     const result = await evaluateReadiness("shop-1");
 
     const webhooks = result.rows.find((r) => r.id === "webhooks_active");
     expect(webhooks?.status).toBe("syncing");
     expect(webhooks?.blocking).toBe(false);
-    // Non-blocking, so hasBlockers should be false
     expect(result.hasBlockers).toBe(false);
   });
 
@@ -107,5 +121,20 @@ describe("evaluateReadiness", () => {
       "webhooks_active",
       "store_data",
     ]);
+  });
+
+  it("marks store_data as syncing when shop row is missing", async () => {
+    mockLoadSession.mockResolvedValue({
+      accessToken: "tok",
+      shopDomain: "test.myshopify.com",
+      scopes: "read_shopify_payments_disputes,write_shopify_payments_dispute_evidences",
+    } as any);
+    mockRegisterWebhooks.mockResolvedValue({ ok: true, created: [], existing: [] } as any);
+    setupSupabaseWithShop(null);
+
+    const result = await evaluateReadiness("shop-1");
+
+    const storeData = result.rows.find((r) => r.id === "store_data");
+    expect(storeData?.status).toBe("syncing");
   });
 });
