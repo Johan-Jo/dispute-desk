@@ -1423,6 +1423,27 @@
       "family_digital": "Digitale Waren und Dienste",
       "family_general": "Allgemeine oder Sonderfälle"
     },
+    "automation": {
+      "title": "Automatisierung und Prüfregeln",
+      "subtitle": "Wählen Sie, wo DisputeDesk automatisch handeln kann und wo Sie zusätzliche Prüfung wünschen.",
+      "ruleHighValue": "Streitfälle über ${threshold} prüfen",
+      "ruleHighValueDesc": "Hochwertige Streitfälle werden vor der Einreichung in die Prüfwarteschlange verschoben",
+      "ruleMissingProof": "Prüfung verlangen, wenn Nachweise fehlen",
+      "ruleMissingProofDesc": "Fälle ohne Sendungsverfolgung oder Zustellbestätigung erfordern manuelle Bearbeitung",
+      "ruleIncomplete": "Prüfung verlangen, wenn Bestelldetails unvollständig sind",
+      "ruleIncompleteDesc": "Fehlende Kundendaten, Versandinformationen oder Produktdetails lösen eine Prüfung aus",
+      "ruleNoOrder": "Prüfung verlangen, wenn keine Bestellung gefunden wird",
+      "ruleNoOrderDesc": "Streitfälle ohne passende Bestellung in Ihrem System erfordern manuelle Prüfung",
+      "ruleEdgeCases": "Prüfung für Sonderfälle verlangen",
+      "ruleEdgeCasesDesc": "Ungewöhnliche Streitfalltypen oder Muster erhalten menschliche Prüfung",
+      "ruleAmbiguous": "Nur bei den unklarsten Fällen benachrichtigen",
+      "ruleAmbiguousDesc": "Erhalten Sie Benachrichtigungen für Fälle, die Ihre Entscheidung erfordern, bevor etwas unternommen wird",
+      "sidebarTitle": "Wie sich dies auf Ihren Arbeitsablauf auswirkt",
+      "sidebarAutomated": "Automatisiert",
+      "sidebarReview": "Zuerst Prüfen",
+      "sidebarNotify": "Nur Benachrichtigen",
+      "sidebarNote": "Sie behalten die Kontrolle über risikoreiche oder unvollständige Fälle."
+    },
     "activate": {
       "title": "Bereit zur Aktivierung",
       "subtitle": "Überprüfen Sie Ihre Konfiguration und aktivieren Sie den Schutz.",

@@ -1409,6 +1409,27 @@
       "family_digital": "Digitala varor och tjänster",
       "family_general": "Allmänna eller specialfall"
     },
+    "automation": {
+      "title": "Automatisering och granskningsregler",
+      "subtitle": "Välj var DisputeDesk kan agera automatiskt och var du vill ha extra granskning.",
+      "ruleHighValue": "Granska tvister över ${threshold}",
+      "ruleHighValueDesc": "Tvister med högt värde skickas till granskningskön innan de skickas in",
+      "ruleMissingProof": "Kräv granskning om bevis saknas",
+      "ruleMissingProofDesc": "Ärenden utan spårning eller leveransbekräftelse behöver manuell hantering",
+      "ruleIncomplete": "Kräv granskning om orderuppgifter är ofullständiga",
+      "ruleIncompleteDesc": "Saknade kunduppgifter, fraktinformation eller produktdetaljer utlöser granskning",
+      "ruleNoOrder": "Kräv granskning om ingen order hittas",
+      "ruleNoOrderDesc": "Tvister utan en matchande order i ditt system behöver manuell granskning",
+      "ruleEdgeCases": "Kräv granskning för specialfall",
+      "ruleEdgeCasesDesc": "Ovanliga tvisttyper eller mönster får mänsklig granskning",
+      "ruleAmbiguous": "Meddela bara vid de mest tvetydiga fallen",
+      "ruleAmbiguousDesc": "Få aviseringar för ärenden som kräver ditt beslut innan någon åtgärd",
+      "sidebarTitle": "Hur detta påverkar ditt arbetsflöde",
+      "sidebarAutomated": "Automatiserat",
+      "sidebarReview": "Granska Först",
+      "sidebarNotify": "Bara Avisering",
+      "sidebarNote": "Du behåller kontrollen över högrisk- eller ofullständiga ärenden."
+    },
     "activate": {
       "title": "Redo att aktivera",
       "subtitle": "Granska din konfiguration och aktivera skyddet.",

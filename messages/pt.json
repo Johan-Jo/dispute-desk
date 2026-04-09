@@ -1416,6 +1416,27 @@
       "family_digital": "Bens e Serviços Digitais",
       "family_general": "Disputas Gerais ou Casos Especiais"
     },
+    "automation": {
+      "title": "Automação e regras de revisão",
+      "subtitle": "Escolha onde o DisputeDesk pode agir automaticamente e onde pretende revisão extra.",
+      "ruleHighValue": "Rever disputas acima de ${threshold}",
+      "ruleHighValueDesc": "Disputas de valor elevado serão enviadas para a fila de revisão antes da submissão",
+      "ruleMissingProof": "Exigir revisão se faltar comprovativo",
+      "ruleMissingProofDesc": "Casos sem rastreamento ou confirmação de entrega necessitam de atenção manual",
+      "ruleIncomplete": "Exigir revisão se os detalhes da encomenda estiverem incompletos",
+      "ruleIncompleteDesc": "Dados do cliente, informações de envio ou detalhes do produto em falta acionam revisão",
+      "ruleNoOrder": "Exigir revisão se nenhuma encomenda for encontrada",
+      "ruleNoOrderDesc": "Disputas sem uma encomenda correspondente no seu sistema necessitam de revisão manual",
+      "ruleEdgeCases": "Exigir revisão para casos especiais",
+      "ruleEdgeCasesDesc": "Tipos ou padrões de disputa invulgares recebem revisão humana",
+      "ruleAmbiguous": "Notificar apenas nos casos mais ambíguos",
+      "ruleAmbiguousDesc": "Receba alertas para casos que necessitam da sua decisão antes de qualquer ação",
+      "sidebarTitle": "Como isto afeta o seu fluxo de trabalho",
+      "sidebarAutomated": "Automatizado",
+      "sidebarReview": "Rever Primeiro",
+      "sidebarNotify": "Apenas Notificar",
+      "sidebarNote": "Mantém o controlo sobre casos de maior risco ou incompletos."
+    },
     "activate": {
       "title": "Pronto para ativar",
       "subtitle": "Reveja a sua configuração e ative a proteção.",

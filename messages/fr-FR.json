@@ -1730,6 +1730,27 @@
       "family_digital": "Biens et services numériques",
       "family_general": "Litiges généraux ou cas particuliers"
     },
+    "automation": {
+      "title": "Automatisation et règles de vérification",
+      "subtitle": "Choisissez où DisputeDesk peut agir automatiquement et où vous souhaitez une vérification supplémentaire.",
+      "ruleHighValue": "Vérifier les litiges au-dessus de ${threshold}",
+      "ruleHighValueDesc": "Les litiges de grande valeur seront envoyés dans votre file de vérification avant soumission",
+      "ruleMissingProof": "Exiger une vérification si des preuves manquent",
+      "ruleMissingProofDesc": "Les dossiers sans suivi ou confirmation de livraison nécessitent une attention manuelle",
+      "ruleIncomplete": "Exiger une vérification si les détails de commande sont incomplets",
+      "ruleIncompleteDesc": "Les données client, informations d'expédition ou détails produit manquants déclenchent une vérification",
+      "ruleNoOrder": "Exiger une vérification si aucune commande n'est trouvée",
+      "ruleNoOrderDesc": "Les litiges sans commande correspondante dans votre système nécessitent une vérification manuelle",
+      "ruleEdgeCases": "Exiger une vérification pour les cas particuliers",
+      "ruleEdgeCasesDesc": "Les types ou schémas de litiges inhabituels font l'objet d'une vérification humaine",
+      "ruleAmbiguous": "Notifier uniquement pour les cas les plus ambigus",
+      "ruleAmbiguousDesc": "Recevez des alertes pour les dossiers nécessitant votre décision avant toute action",
+      "sidebarTitle": "Comment cela affecte votre flux de travail",
+      "sidebarAutomated": "Automatisé",
+      "sidebarReview": "Vérifier d'abord",
+      "sidebarNotify": "Notification uniquement",
+      "sidebarNote": "Vous gardez le contrôle sur les dossiers à haut risque ou incomplets."
+    },
     "activate": {
       "title": "Prêt à activer",
       "subtitle": "Vérifiez votre configuration et activez la protection.",
