@@ -62,15 +62,22 @@
   display: none !important;
 }
 
+/* Inactive tab text — force dark color on all inner elements */
+.embeddedPacksRoot .Polaris-Tabs__Tab,
+.embeddedPacksRoot .Polaris-Tabs__Tab *,
 .embeddedPacksRoot .Polaris-Tabs__Title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #303030 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #202223 !important;
 }
 
-.embeddedPacksRoot .Polaris-Tabs__Tab--active .Polaris-Tabs__Title,
-.embeddedPacksRoot .Polaris-Tabs__Tab--selected .Polaris-Tabs__Title,
-.embeddedPacksRoot [aria-selected="true"] .Polaris-Tabs__Title {
+/* Active tab text — force white on all inner elements */
+.embeddedPacksRoot .Polaris-Tabs__Tab--active,
+.embeddedPacksRoot .Polaris-Tabs__Tab--active *,
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected,
+.embeddedPacksRoot .Polaris-Tabs__Tab--selected *,
+.embeddedPacksRoot .Polaris-Tabs__Tab[aria-selected="true"],
+.embeddedPacksRoot .Polaris-Tabs__Tab[aria-selected="true"] * {
   color: #FFFFFF !important;
 }
 
