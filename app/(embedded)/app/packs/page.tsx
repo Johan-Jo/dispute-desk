@@ -148,7 +148,7 @@ export default function PacksListPage() {
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
     try {
-      const res = await fetch("/api/templates?locale=en-US");
+      const res = await fetch(`/api/templates?locale=${encodeURIComponent(locale)}`);
       if (res.ok) {
         const data = await res.json();
         setTemplates(data.templates ?? []);
@@ -158,7 +158,7 @@ export default function PacksListPage() {
     } finally {
       setTemplatesLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   const fetchRecommendedTemplates = useCallback(async () => {
     setRecommendedLoading(true);
@@ -292,6 +292,14 @@ export default function PacksListPage() {
         });
 
   const showEmpty = !loading && displayPacks.length === 0;
+
+  // Filter out templates already installed by this shop
+  const installedTemplateIds = new Set(
+    packs.filter((p) => p.template_id).map((p) => p.template_id)
+  );
+  const availableTemplates = templates.filter(
+    (tpl) => !installedTemplateIds.has(tpl.id)
+  );
 
   return (
     <>
@@ -578,7 +586,7 @@ export default function PacksListPage() {
             <div style={{ padding: "2rem", textAlign: "center" }}>
               <Spinner size="large" />
             </div>
-          ) : templates.length === 0 ? (
+          ) : availableTemplates.length === 0 ? (
             <Text as="p" variant="bodyMd" tone="subdued">
               {t("packTemplates.emptyDescription")}
             </Text>
@@ -587,7 +595,7 @@ export default function PacksListPage() {
               <Text as="p" variant="bodyMd" tone="subdued">
                 {t("templateLibrary.subtitle")}
               </Text>
-              {templates.map((template) => (
+              {availableTemplates.map((template) => (
                 <InlineStack key={template.id} align="space-between" blockAlign="center" wrap={false}>
                   <BlockStack gap="050">
                     <Text as="p" variant="bodyMd" fontWeight="semibold">
