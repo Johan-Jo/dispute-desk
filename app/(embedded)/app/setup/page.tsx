@@ -79,56 +79,6 @@ export default function SetupWelcomePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F6F6F7" }}>
-      {/* Top bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 24px",
-          background: "#fff",
-          borderBottom: "1px solid #E1E3E5",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#202223" }}>DisputeDesk</div>
-            <div style={{ fontSize: 12, color: "#8C9196" }}>{t("wizardTitle")}</div>
-          </div>
-        </div>
-        <button
-          onClick={handleSkip}
-          style={{
-            background: "none",
-            border: "none",
-            fontSize: 14,
-            color: "#6D7175",
-            cursor: "pointer",
-            padding: "8px 12px",
-          }}
-        >
-          {t("welcome.skipSetup")}
-        </button>
-      </div>
-
-      {/* Blue accent line */}
-      <div style={{ height: 3, background: "linear-gradient(90deg, #1D4ED8, #3B82F6)" }} />
 
       {/* Main content */}
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "48px 24px 40px" }}>
