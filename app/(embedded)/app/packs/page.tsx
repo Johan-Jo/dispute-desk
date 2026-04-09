@@ -449,7 +449,7 @@ export default function PacksListPage() {
                 </div>
               ) : (
                 <IndexTable
-                  resourceName={{ singular: "pack", plural: "packs" }}
+                  resourceName={{ singular: "playbook", plural: "playbooks" }}
                   itemCount={displayPacks.length}
                   headings={[
                     { title: t("packTemplates.packName") },

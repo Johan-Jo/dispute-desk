@@ -15,7 +15,10 @@
     "connectStore": "Conectar sua loja real",
     "demoStore": "Loja demo",
     "clearShopReconnect": "Clear shop & reconnect",
-    "switchToDemo": "Mudar para a loja demo"
+    "switchToDemo": "Mudar para a loja demo",
+    "coverage": "Cobertura",
+    "automation": "Automação",
+    "playbooks": "Playbooks"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -148,7 +151,16 @@
     "disputeCategories": "Categorias de disputas",
     "helpCardTitle": "Como ler seu painel",
     "helpCardDesc": "Saiba o que cada métrica significa e como navegar até as disputas.",
-    "helpCardLink": "Ler o guia"
+    "helpCardLink": "Ler o guia",
+    "activePlaybooks": "Active Playbooks",
+    "protectionStatus": "Protection Status",
+    "protectionActive": "Protection is active",
+    "protectionInactive": "Complete setup to activate protection",
+    "familiesCovered": "{covered} of {total} families covered",
+    "automationSummary": "Automation Summary",
+    "familiesAutomated": "{count} automated",
+    "familiesReviewFirst": "{count} review-first",
+    "viewCoverage": "View Coverage"
   },
   "disputes": {
     "title": "Disputas",
@@ -450,7 +462,9 @@
       "DUPLICATE": "Cobrança duplicada",
       "DIGITAL": "Bens digitais ou serviço",
       "GENERAL": "Geral"
-    }
+    },
+    "playbookTitle": "Playbook Details",
+    "evidencePackTitle": "Evidence Pack"
   },
   "analytics": {
     "title": "Análises",
@@ -2354,5 +2368,37 @@
       "updating": "Updating...",
       "updatePassword": "Update password"
     }
+  },
+  "coverage": {
+    "title": "Dispute Coverage",
+    "subtitle": "See how each dispute type is handled and where to improve",
+    "summaryBanner": "{covered} of {total} dispute families covered",
+    "automatedCount": "{count} automated",
+    "reviewFirstCount": "{count} review-first",
+    "notConfigured": "Not configured",
+    "familyFraud": "Fraud / Unauthorized",
+    "familyUnrecognized": "Unrecognized Payment",
+    "familyPnr": "Product Not Received",
+    "familyNotAsDescribed": "Product Unacceptable / Not as Described",
+    "familySubscription": "Subscription Canceled",
+    "familyRefund": "Refund / Credit Not Processed",
+    "familyDuplicate": "Duplicate Charge",
+    "familyGeneral": "General or Edge-Case",
+    "modeAutomated": "Automated",
+    "modeReviewFirst": "Review First",
+    "modeManual": "Manual",
+    "modeNone": "Not Covered",
+    "covered": "Covered",
+    "notCovered": "Not Covered",
+    "recommended": "Recommended",
+    "installPlaybook": "Install Playbook",
+    "addAutomation": "Add Automation Rule",
+    "viewPlaybook": "View Playbook",
+    "viewAutomation": "View Automation",
+    "allCovered": "All dispute families are covered",
+    "improveCoverage": "Improve Coverage",
+    "activePacks": "{count} active playbook(s)",
+    "noPlaybook": "No playbook installed",
+    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family"
   }
 }

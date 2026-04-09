@@ -13,7 +13,10 @@
     "signOut": "Abmelden",
     "connectStore": "Echten Shop verbinden",
     "demoStore": "Demo-Shop",
-    "switchToDemo": "Zur Demo wechseln"
+    "switchToDemo": "Zur Demo wechseln",
+    "coverage": "Abdeckung",
+    "automation": "Automatisierung",
+    "playbooks": "Playbooks"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -116,7 +119,16 @@
     "howItWorksCompliance": "Die Übermittlung an das Kartennetzwerk erfolgt im Shopify Admin oder Shopify sendet automatisch am Fälligkeitsdatum. DisputeDesk übermittelt nicht in Ihrem Namen.",
     "helpCardTitle": "Dashboard verstehen",
     "helpCardDesc": "Erfahre, was jede Kennzahl bedeutet und wie du zu Streitfällen navigierst.",
-    "helpCardLink": "Anleitung lesen"
+    "helpCardLink": "Anleitung lesen",
+    "activePlaybooks": "Active Playbooks",
+    "protectionStatus": "Protection Status",
+    "protectionActive": "Protection is active",
+    "protectionInactive": "Complete setup to activate protection",
+    "familiesCovered": "{covered} of {total} families covered",
+    "automationSummary": "Automation Summary",
+    "familiesAutomated": "{count} automated",
+    "familiesReviewFirst": "{count} review-first",
+    "viewCoverage": "View Coverage"
   },
   "disputes": {
     "title": "Streitfälle",
@@ -319,7 +331,9 @@
     "confirmSaveBody": "Dieses Paket ist nur {score}% vollständig. Das Speichern in Shopify kann Ihre Reaktion auf den Einspruch schwächen. Sind Sie sicher?",
     "confirmSaveConfirm": "Trotzdem speichern",
     "confirmSaveCancel": "Zurück",
-    "buildingInProgress": "Belege werden generiert…"
+    "buildingInProgress": "Belege werden generiert…",
+    "playbookTitle": "Playbook Details",
+    "evidencePackTitle": "Evidence Pack"
   },
   "analytics": {
     "title": "Analysen",
@@ -1352,6 +1366,50 @@
       "statAutoLabel": "Automatisiert",
       "skipInfoTitle": "Du kannst jeden Schritt überspringen",
       "skipInfoDesc": "Alle Einstellungen können später über die Einstellungsseite konfiguriert werden. Dieser Assistent hilft dir beim schnellen Einstieg."
+    },
+    "complete": {
+      "title": "You're All Set!",
+      "subtitle": "DisputeDesk is configured and ready to protect your store.",
+      "readyHeading": "What's been set up",
+      "highlight1": "Auto-sync disputes from Shopify",
+      "highlight2": "Coverage configured for your dispute types",
+      "highlight3": "Playbooks installed for evidence collection",
+      "highlight4": "Automation rules ready to handle disputes",
+      "infoTitle": "What happens next?",
+      "infoDesc": "DisputeDesk will now monitor your store for new disputes and handle them according to your coverage and automation settings. You can adjust everything from the dashboard at any time.",
+      "goToDashboard": "Go to Dashboard"
     }
+  },
+  "coverage": {
+    "title": "Dispute Coverage",
+    "subtitle": "See how each dispute type is handled and where to improve",
+    "summaryBanner": "{covered} of {total} dispute families covered",
+    "automatedCount": "{count} automated",
+    "reviewFirstCount": "{count} review-first",
+    "notConfigured": "Not configured",
+    "familyFraud": "Fraud / Unauthorized",
+    "familyUnrecognized": "Unrecognized Payment",
+    "familyPnr": "Product Not Received",
+    "familyNotAsDescribed": "Product Unacceptable / Not as Described",
+    "familySubscription": "Subscription Canceled",
+    "familyRefund": "Refund / Credit Not Processed",
+    "familyDuplicate": "Duplicate Charge",
+    "familyGeneral": "General or Edge-Case",
+    "modeAutomated": "Automated",
+    "modeReviewFirst": "Review First",
+    "modeManual": "Manual",
+    "modeNone": "Not Covered",
+    "covered": "Covered",
+    "notCovered": "Not Covered",
+    "recommended": "Recommended",
+    "installPlaybook": "Install Playbook",
+    "addAutomation": "Add Automation Rule",
+    "viewPlaybook": "View Playbook",
+    "viewAutomation": "View Automation",
+    "allCovered": "All dispute families are covered",
+    "improveCoverage": "Improve Coverage",
+    "activePacks": "{count} active playbook(s)",
+    "noPlaybook": "No playbook installed",
+    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family"
   }
 }

@@ -251,7 +251,7 @@ export default function PackPreviewPage() {
 
   if (loading) {
     return (
-      <Page title={t("packs.title")}>
+      <Page title={t("nav.playbooks")}>
         <div style={{ padding: "3rem", textAlign: "center" }}>
           <Spinner size="large" />
         </div>
@@ -261,7 +261,7 @@ export default function PackPreviewPage() {
 
   if (!pack) {
     return (
-      <Page title={t("packs.title")} backAction={{ content: t("packs.backToDisputes"), url: "/app/disputes" }}>
+      <Page title={t("nav.playbooks")} backAction={{ content: t("packs.backToPacks"), url: "/app/packs" }}>
         <Banner tone="critical">{t("packs.packNotFound")}</Banner>
       </Page>
     );
@@ -284,10 +284,13 @@ export default function PackPreviewPage() {
     searchParams
   );
   const backLabel = isLibraryPack ? t("packs.backToPacks") : t("disputes.backToDisputes");
+  const pageTitle = isLibraryPack
+    ? (pack.name ?? t("packs.playbookTitle"))
+    : (pack.name ?? t("packs.evidencePackTitle"));
 
   return (
     <Page
-      title={pack.name ?? t("packs.packTitle", { id: pack.id.slice(0, 8) })}
+      title={pageTitle}
       subtitle={t("packs.created", { date: formatDate(pack.created_at), creator: pack.created_by ?? "system" })}
       backAction={{ content: backLabel, url: backUrl }}
     >

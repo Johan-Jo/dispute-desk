@@ -1427,3 +1427,29 @@ The help page renders the same content as `docs/admin-guide.md` as React compone
 - Sections: Login, Dashboard, Shops, Jobs, Billing, Audit, Resources Hub, Editor, AI Generator, Autopilot, SEO, Settings, Workflow Reference.
 
 **Navigation:** "Help" is in both `ADMIN_NAV` and `RESOURCES_NAV` in `app/admin/layout.tsx` so the guide stays reachable from the main admin shell and while editing in the Resources Hub; `/admin/help` itself uses the top-level Admin nav. Contextual links: Backlog → AI Generator section, Settings (Autopilot) → Autopilot section, `AIAssistantPanel` → Editor section (`#help-editor`).
+
+### Embedded App UX Rewrite — Coverage/Automation/Playbooks Model (2026-04-08)
+
+The embedded app was rewritten to shift the merchant-facing model from packs/rules/manual configuration to coverage/automation/playbooks/activation. Backend remains unchanged — this is a UX-only rewrite.
+
+**New Navigation** (`AppNavSidebar.tsx`):
+Dashboard → Disputes → Coverage → Automation → Playbooks → Billing → Settings → Help
+
+- `/app/coverage` — **NEW** page showing dispute family coverage (8 families), automation mode per family, and recommended actions. Uses `lib/coverage/deriveCoverage.ts` to project existing rules + active packs into a coverage view.
+- `/app/rules` — route preserved, nav label and page title now say "Automation"
+- `/app/packs` — route preserved, nav label and page title now say "Playbooks"
+- `/app/analytics` — removed from nav (page still accessible via direct URL)
+
+**Dashboard** (`app/(embedded)/app/page.tsx`):
+- `AutomationStatusCard` replaced with `ProtectionStatusCard` — shows coverage summary, families covered/automated, links to `/app/coverage`
+- KPI card "Evidence Packs" relabeled to "Active Playbooks"
+- Primary action changed from "Automation Settings" to "View Coverage"
+
+**Pack Detail** (`app/(embedded)/app/packs/[packId]/page.tsx`):
+- Dual-mode display based on `dispute_id`: library packs show as "Playbook Details", dispute-linked packs show as "Evidence Pack"
+- Back link: Playbooks → `/app/packs`, Evidence → `/app/disputes/{id}`
+
+**Coverage Derivation** (`lib/coverage/deriveCoverage.ts`):
+Pure utility that maps existing rules + active packs to 8 dispute families. Each family gets: `hasCoverage`, `automationMode` (automated/review_first/manual/none), `activePackCount`, `matchingRuleId`.
+
+**i18n**: All 12 locale files updated with `nav.coverage`, `nav.automation`, `nav.playbooks` keys and full `coverage.*` namespace. Merchant-facing text updated across `dashboard`, `packTemplates`, `packs`, `rules`, `settings`, `help`, `billing` namespaces to use "playbook" and "automation" instead of "pack" and "rule" where appropriate.

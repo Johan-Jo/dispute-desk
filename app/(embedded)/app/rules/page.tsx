@@ -196,7 +196,7 @@ export default function EmbeddedRulesPage() {
 
   return (
     <Page
-      title={tn("rules")}
+      title={tn("automation")}
       subtitle={tr("subtitle")}
       primaryAction={{
         content: tr("addRule"),
