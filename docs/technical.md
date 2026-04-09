@@ -960,6 +960,10 @@ PDFs deleted from storage. Audit events never deleted.
 | Setup Step API | `tests/api/setup/step.test.ts` | POST /api/setup/step route handler |
 | Setup Skip API | `tests/api/setup/skip.test.ts` | POST /api/setup/skip route handler |
 | Setup Undo-Skip API | `tests/api/setup/undoSkip.test.ts` | POST /api/setup/undo-skip route handler |
+| Setup Readiness API | `tests/api/setup/readiness.test.ts` | GET /api/setup/readiness route handler |
+| Setup Welcome | `tests/unit/setupWelcome.test.ts` | Wizard structure: 5 steps, 0-based indexes, no prereqs |
+| Setup Welcome i18n | `tests/unit/setupWelcomeI18n.test.ts` | setup.welcome.* i18n key completeness |
+| Setup Readiness | `tests/unit/setupReadiness.test.ts` | evaluateReadiness() session/scope/webhook checks |
 | Integrations Status API | `tests/api/integrations/status.test.ts` | GET /api/integrations/status route handler |
 | Gorgias Connect API | `tests/api/integrations/gorgiasConnect.test.ts` | POST /api/integrations/gorgias/connect |
 | Gorgias Disconnect API | `tests/api/integrations/gorgiasDisconnect.test.ts` | POST /api/integrations/gorgias/disconnect |
@@ -1126,6 +1130,17 @@ installation. Progress is tracked per-shop in the `shop_setup` table and surface
 dashboard via a Setup Checklist card with a ring progress indicator.
 
 **Billing, Settings, and Help** are app sections (reachable from nav) but are **not** part of the onboarding checklist.
+
+### Welcome Page (Step 0)
+
+Route: `/app/setup` (`app/(embedded)/app/setup/page.tsx`). Shown to new installs before entering the wizard steps. Displays:
+- Hero with shield icon and "Welcome to DisputeDesk" heading
+- Three benefit cards (Automated Response, Higher Win Rates, Save Time)
+- "What to expect in setup" checklist (5 numbered items)
+- "Get Started" CTA → navigates to `/app/setup/connection`
+- "Skip setup" link → returns to dashboard
+
+The dashboard redirects here when `connection` step is `todo` (fresh install). i18n keys: `setup.welcome.*` in `messages/en.json`.
 
 ### Wizard Steps (onboarding only)
 

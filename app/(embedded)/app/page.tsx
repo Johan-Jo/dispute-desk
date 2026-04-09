@@ -111,7 +111,7 @@ function DashboardSetupBanner() {
           setState(data ?? null);
           // First-time install: connection not yet done → redirect to authorization page
           if (data && data.steps?.connection?.status === "todo") {
-            router.replace("/app/connect");
+            router.replace(withShopParams("/app/setup", searchParams));
           }
         }
       })
