@@ -31,9 +31,9 @@ describe("SETUP_STEPS constants", () => {
     }
   });
 
-  it("each step has index 1-5 in order", () => {
+  it("each step has 0-based index in order", () => {
     SETUP_STEPS.forEach((step, i) => {
-      expect(step.index).toBe(i + 1);
+      expect(step.index).toBe(i);
     });
   });
 

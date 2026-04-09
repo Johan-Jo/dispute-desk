@@ -14,7 +14,7 @@ export interface StepDefinition {
 export const SETUP_STEPS: StepDefinition[] = [
   {
     id: "connection",
-    index: 1,
+    index: 0,
     title: "Connection",
     dashboardLabel: "Connection & Readiness",
     timeEstimate: "1 min",
@@ -27,7 +27,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "store_profile",
-    index: 2,
+    index: 1,
     title: "Store Profile",
     dashboardLabel: "Tell us about your store",
     timeEstimate: "2 min",
@@ -40,7 +40,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "coverage",
-    index: 3,
+    index: 2,
     title: "Coverage",
     dashboardLabel: "Dispute coverage",
     timeEstimate: "2 min",
@@ -53,7 +53,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "automation",
-    index: 4,
+    index: 3,
     title: "Automation",
     dashboardLabel: "Automation rules",
     timeEstimate: "2 min",
@@ -66,7 +66,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "activate",
-    index: 5,
+    index: 4,
     title: "Activate",
     dashboardLabel: "Activate protection",
     timeEstimate: "1 min",

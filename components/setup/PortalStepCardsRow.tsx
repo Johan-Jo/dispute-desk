@@ -54,7 +54,7 @@ export function PortalStepCardsRow({
                 {isCompleted ? (
                   <CheckCircle2 className="w-5 h-5" />
                 ) : (
-                  <span className="font-semibold text-sm">{step.index}</span>
+                  <span className="font-semibold text-sm">{step.index + 1}</span>
                 )}
               </div>
               <span className="text-sm font-semibold text-[#0B1220]">
