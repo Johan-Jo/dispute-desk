@@ -2320,6 +2320,27 @@
       "family_digital": "Digital Goods & Services",
       "family_general": "General or Edge-Case Disputes"
     },
+    "automation": {
+      "title": "Automation and review rules",
+      "subtitle": "Choose where DisputeDesk can act automatically and where you want extra review.",
+      "ruleHighValue": "Review disputes above ${threshold}",
+      "ruleHighValueDesc": "High-value disputes will be sent to your review queue before submission",
+      "ruleMissingProof": "Require review if proof is missing",
+      "ruleMissingProofDesc": "Cases without tracking or delivery confirmation need manual attention",
+      "ruleIncomplete": "Require review if order details are incomplete",
+      "ruleIncompleteDesc": "Missing customer data, shipping info, or product details trigger review",
+      "ruleNoOrder": "Require review if no order is found",
+      "ruleNoOrderDesc": "Disputes without a matching order in your system need manual review",
+      "ruleEdgeCases": "Require review for edge cases",
+      "ruleEdgeCasesDesc": "Unusual dispute types or patterns get human review",
+      "ruleAmbiguous": "Notify only for the most ambiguous cases",
+      "ruleAmbiguousDesc": "Get alerts for cases that need your decision before any action",
+      "sidebarTitle": "How this affects your workflow",
+      "sidebarAutomated": "Automated",
+      "sidebarReview": "Review First",
+      "sidebarNotify": "Notify Only",
+      "sidebarNote": "You stay in control of higher-risk or incomplete cases."
+    },
     "activate": {
       "title": "Ready to activate",
       "subtitle": "Review your configuration and activate protection.",

@@ -20,7 +20,7 @@ import { SetupWizardShell } from "@/components/setup/SetupWizardShell";
 import { ConnectionStep } from "@/components/setup/steps/ConnectionStep";
 import { StoreProfileStep } from "@/components/setup/steps/StoreProfileStep";
 import { CoverageStep } from "@/components/setup/steps/CoverageStep";
-import { AutomationRulesStep } from "@/components/setup/steps/AutomationRulesStep";
+import { AutomationStep } from "@/components/setup/steps/AutomationStep";
 import { ActivateStep } from "@/components/setup/steps/ActivateStep";
 
 const stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
@@ -30,7 +30,7 @@ const stepComponents: Record<StepId, StepComponentType> = {
   connection: ConnectionStep as StepComponentType,
   store_profile: StoreProfileStep as StepComponentType,
   coverage: CoverageStep as StepComponentType,
-  automation: AutomationRulesStep as StepComponentType,
+  automation: AutomationStep as StepComponentType,
   activate: ActivateStep as StepComponentType,
 };
 
@@ -72,7 +72,7 @@ function StepPageInner() {
   };
 
   return (
-    <SetupWizardShell stepId={stepId} onSave={handleSave} canContinue={canContinue} noCard={stepId === "coverage"}>
+    <SetupWizardShell stepId={stepId} onSave={handleSave} canContinue={canContinue} noCard={stepId === "coverage" || stepId === "automation"}>
       <StepComponent
         stepId={stepId}
         onSaveRef={saveRef}
