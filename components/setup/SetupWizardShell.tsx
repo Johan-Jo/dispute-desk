@@ -120,7 +120,7 @@ export function SetupWizardShell({ stepId, children, onSave, canContinue = true 
 
   return (
     <Page>
-      <div style={{ padding: "0 24px" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 24px" }}>
         {stepperLoading ? (
           <div
             style={{
