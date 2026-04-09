@@ -662,6 +662,7 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section>
           <Banner title="Dev: Test Setup Wizard" tone="info">
             <ButtonGroup>
+              <Button url={withShopParams("/app/setup", searchParams)} variant="primary">Step 0: Welcome</Button>
               <Button url={withShopParams("/app/setup/connection", searchParams)}>Step 1: Connection</Button>
               <Button url={withShopParams("/app/setup/store_profile", searchParams)}>Step 2: Store Profile</Button>
               <Button url={withShopParams("/app/setup/coverage", searchParams)}>Step 3: Coverage</Button>
