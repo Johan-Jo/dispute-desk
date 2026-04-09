@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { FileText, Eye, Download, Upload, Copy, Check, Pencil } from "lucide-react";
-import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { useActiveShopId, useActiveShopData } from "@/lib/portal/activeShopContext";
 import { useDemoMode } from "@/lib/demo-mode";
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +65,7 @@ function bodyToPlainText(body: string): string {
 }
 
 export default function PoliciesPage() {
-  useCompleteSetupStep("policies");
+  // TODO: Re-wire portal auto-complete for new wizard steps
   const searchParams = useSearchParams();
   const t = useTranslations("policies");
   const tc = useTranslations("common");

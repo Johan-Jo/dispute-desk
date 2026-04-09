@@ -3,11 +3,11 @@ import { normalizeSetupStepParam } from "@/lib/setup/normalizeStepParam";
 
 describe("normalizeSetupStepParam", () => {
   it("strips junk after & in path segment (common URL typo)", () => {
-    expect(normalizeSetupStepParam("rules&dd_debug=1")).toBe("rules");
+    expect(normalizeSetupStepParam("automation&dd_debug=1")).toBe("automation");
   });
 
   it("keeps simple ids", () => {
-    expect(normalizeSetupStepParam("rules")).toBe("rules");
-    expect(normalizeSetupStepParam("overview")).toBe("overview");
+    expect(normalizeSetupStepParam("automation")).toBe("automation");
+    expect(normalizeSetupStepParam("connection")).toBe("connection");
   });
 });

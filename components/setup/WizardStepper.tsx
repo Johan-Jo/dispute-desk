@@ -9,57 +9,49 @@ interface WizardStepperProps {
   stepsMap: Partial<Record<StepId, StepState>>;
 }
 
-const STEP_ICONS: Record<string, string> = {
-  disputes: "⟳",
-  policies: "📄",
-  packs: "📦",
-  rules: "⚡",
-  team: "👥",
-};
-
-// SVG icons matching Figma design
-function SyncIcon() {
+// SVG icons matching Figma Make onboarding wizard stepper
+function ConnectionIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-      <path d="M10 3a7 7 0 0 1 6.5 4.4l-1.8.7A5 5 0 1 0 15 10h-2l3-3 3 3h-2a7 7 0 1 1-7-7z" />
+      <path d="M10 2a4 4 0 0 0-4 4v1H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v1H8V6zm2 6a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
     </svg>
   );
 }
-function DocIcon() {
+function StoreProfileIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-      <path d="M6 2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v12h8V4H6zm2 3h4v1.5H8V7zm0 3h4v1.5H8V10zm0 3h2.5v1.5H8V13z" />
+      <path d="M3 3h14a1 1 0 0 1 1 1v2l-1.5 3H3.5L2 6V4a1 1 0 0 1 1-1zM4 10v6a1 1 0 0 0 1 1h4v-4h2v4h4a1 1 0 0 0 1-1v-6H4z" />
     </svg>
   );
 }
-function PackIcon() {
+function CoverageIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-      <path d="M3 5h14v2H3V5zm1 3h12v2H4V8zm2 3h8v2H6v-2z" />
+      <path d="M10 1l7 3v5c0 4.4-3 8.5-7 9.9C6 17.5 3 13.4 3 9V4l7-3zm-1.3 10.7l4-4-1.4-1.4-2.6 2.6-1.3-1.3-1.4 1.4 2.7 2.7z" />
     </svg>
   );
 }
-function RuleIcon() {
+function AutomationIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-      <path d="M10 2l2 5h5l-4 3 1.5 5L10 12l-4.5 3L7 10 3 7h5L10 2z" />
+      <path d="M11 1L5 11h4v8l6-10h-4V1z" />
     </svg>
   );
 }
-function TeamIcon() {
+function ActivateIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-      <path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-3 4c-3.3 0-6 1.3-6 3v1h12v-1c0-1.7-2.7-3-6-3zm5-5a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm2 3.5c1.7.4 3 1.3 3 2.5v1h-3v-1c0-.9-.4-1.8-1.1-2.5H17zm-14 0A2 2 0 1 1 3 2a2 2 0 0 1 0 3.5zM1 14v1h3v-1c0-1.2 1.3-2.1 3-2.5H7c-.7.7-1.1 1.6-1.1 2.5H3z" />
+      <path d="M10 2a2.5 2.5 0 0 0-1 4.8V8H6l-1 2v1h3v4.2a2.5 2.5 0 1 0 2 0V11h3v-1l-1-2h-3V6.8A2.5 2.5 0 0 0 10 2z" />
     </svg>
   );
 }
 
 const STEP_ICON_COMPONENTS: Record<string, React.ReactNode> = {
-  disputes: <SyncIcon />,
-  policies: <DocIcon />,
-  packs: <PackIcon />,
-  rules: <RuleIcon />,
-  team: <TeamIcon />,
+  connection: <ConnectionIcon />,
+  store_profile: <StoreProfileIcon />,
+  coverage: <CoverageIcon />,
+  automation: <AutomationIcon />,
+  activate: <ActivateIcon />,
 };
 
 export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
@@ -140,7 +132,7 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {t(stepId as "disputes" | "policies" | "packs" | "rules" | "team")}
+                {t(stepId as "connection" | "store_profile" | "coverage" | "automation" | "activate")}
               </span>
             </div>
 

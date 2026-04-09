@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
 
 function ConnectStoreChecklist() {
   const t = useTranslations("setup");
-  const stepsToShow = SETUP_STEPS.filter((s) => s.id !== "permissions");
+  const stepsToShow = SETUP_STEPS.filter((s) => s.id !== "connection");
   const totalWithConnect = 1 + stepsToShow.length;
 
   return (
@@ -51,7 +51,7 @@ function ConnectStoreChecklist() {
           </span>
           <span className="text-xs text-[#1D4ED8] mt-1">{t("connectCTA")}</span>
         </a>
-        {SETUP_STEPS.filter((s) => s.id !== "permissions").map((stepDef) => (
+        {SETUP_STEPS.filter((s) => s.id !== "connection").map((stepDef) => (
           <div
             key={stepDef.id}
             className="flex flex-col items-center text-center py-3 px-3 rounded-lg flex-1 min-w-[100px] max-w-[140px] opacity-50 bg-[#F8FAFC] border-2 border-[#E2E8F0]"
@@ -79,14 +79,11 @@ function ConnectStoreChecklist() {
 }
 
 const STEP_ROUTES: Record<StepId, string> = {
-  permissions: "/portal/setup/permissions",
-  open_in_admin: "/portal/setup/open_in_admin",
-  overview: "/portal/setup/overview",
-  disputes: "/portal/setup/disputes",
-  packs: "/portal/setup/packs",
-  rules: "/portal/setup/rules",
-  policies: "/portal/setup/policies",
-  team: "/portal/setup/team",
+  connection: "/portal/setup/connection",
+  store_profile: "/portal/setup/store_profile",
+  coverage: "/portal/setup/coverage",
+  automation: "/portal/setup/automation",
+  activate: "/portal/setup/activate",
 };
 
 function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
@@ -150,11 +147,11 @@ function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
   }
 
   const { steps, progress } = state;
-  // Permissions are granted when connecting — don't show as separate step
-  const stepsToShow = SETUP_STEPS.filter((s) => s.id !== "permissions");
-  const permissionsDone = steps.permissions?.status === "done";
+  // Connection is checked live — don't show as separate step in the portal checklist
+  const stepsToShow = SETUP_STEPS.filter((s) => s.id !== "connection");
+  const connectionDone = steps.connection?.status === "done";
   const totalWithConnect = 1 + stepsToShow.length;
-  const doneWithConnect = 1 + progress.doneCount - (permissionsDone ? 1 : 0);
+  const doneWithConnect = 1 + progress.doneCount - (connectionDone ? 1 : 0);
   const remaining = totalWithConnect - doneWithConnect;
 
   return (

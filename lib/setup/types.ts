@@ -10,14 +10,11 @@ export interface StepState {
 }
 
 export type StepId =
-  | "permissions"
-  | "open_in_admin"
-  | "overview"
-  | "disputes"
-  | "packs"
-  | "rules"
-  | "policies"
-  | "team";
+  | "connection"
+  | "store_profile"
+  | "coverage"
+  | "automation"
+  | "activate";
 
 export type StepsMap = Partial<Record<StepId, StepState>>;
 

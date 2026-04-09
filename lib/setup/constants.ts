@@ -10,114 +10,71 @@ export interface StepDefinition {
   unlocks: string[];
 }
 
-/** Wizard steps for onboarding (connect → goals → disputes → packs → rules → policies → team). Billing, settings, and help are app sections only, not part of setup. */
+/** Wizard steps: Connection → Store Profile → Coverage → Automation → Activate. */
 export const SETUP_STEPS: StepDefinition[] = [
   {
-    id: "permissions",
+    id: "connection",
     index: 1,
-    title: "Connect your store",
-    dashboardLabel: "Connect your store",
+    title: "Connection",
+    dashboardLabel: "Connection & Readiness",
+    timeEstimate: "1 min",
+    prerequisites: [],
+    unlocks: [
+      "Verify Shopify connection and permissions",
+      "Confirm dispute and evidence access",
+      "Check webhook and sync status",
+    ],
+  },
+  {
+    id: "store_profile",
+    index: 2,
+    title: "Store Profile",
+    dashboardLabel: "Tell us about your store",
     timeEstimate: "2 min",
     prerequisites: [],
     unlocks: [
-      "Access order and customer data for evidence",
-      "Read and respond to disputes",
-      "Upload evidence documents automatically",
-      "Secure, read-only access where possible",
+      "Personalized coverage recommendations",
+      "Right evidence types for your products",
+      "Optimal automation settings",
     ],
   },
   {
-    id: "open_in_admin",
-    index: 2,
-    title: "Open in Shopify Admin",
-    dashboardLabel: "Open in Shopify Admin",
-    timeEstimate: "1 min",
-    prerequisites: ["permissions"],
-    unlocks: [
-      "Pin the app for quick access",
-      "Use DisputeDesk from your Admin sidebar",
-    ],
-  },
-  {
-    id: "overview",
+    id: "coverage",
     index: 3,
-    title: "Overview & Goals",
-    dashboardLabel: "Set your goals",
-    timeEstimate: "1 min",
-    prerequisites: ["permissions", "open_in_admin"],
+    title: "Coverage",
+    dashboardLabel: "Dispute coverage",
+    timeEstimate: "2 min",
+    prerequisites: [],
     unlocks: [
-      "Personalized setup based on your goals",
-      "Optimized workflows for your use case",
-      "Relevant recommendations and tips",
+      "Recommended handling for each dispute type",
+      "Confidence-based automation levels",
+      "Full dispute family coverage",
     ],
   },
   {
-    id: "disputes",
+    id: "automation",
     index: 4,
-    title: "Disputes",
-    dashboardLabel: "Sync disputes",
-    timeEstimate: "2 min",
-    prerequisites: ["permissions"],
-    unlocks: [
-      "View all disputes in one place",
-      "Track due dates and deadlines",
-      "Auto-import new disputes daily",
-      "Historical data for trends and insights",
-    ],
-  },
-  {
-    id: "packs",
-    index: 5,
-    title: "Evidence Packs",
-    dashboardLabel: "Evidence packs",
-    timeEstimate: "2 min",
-    prerequisites: ["disputes"],
-    unlocks: [
-      "Auto-build evidence for each dispute",
-      "Templates for common dispute types",
-      "Complete evidence packs automatically",
-    ],
-  },
-  {
-    id: "rules",
-    index: 6,
-    title: "Automation Rules",
-    dashboardLabel: "Configure automation",
+    title: "Automation",
+    dashboardLabel: "Automation rules",
     timeEstimate: "2 min",
     prerequisites: [],
     unlocks: [
       "Hands-free dispute handling",
-      "Never miss a submission deadline",
-      "Consistent, high-quality responses",
+      "Review rules for high-value or risky cases",
       "Full control and oversight",
     ],
   },
   {
-    id: "policies",
-    index: 7,
-    title: "Business Policies",
-    dashboardLabel: "Add business policies",
-    timeEstimate: "2 min",
-    prerequisites: ["disputes"],
-    unlocks: [
-      "Auto-fill policy information in evidence",
-      "Consistent, professional documentation",
-      "Strengthen evidence with clear terms",
-      "Easy updates when policies change",
-    ],
-  },
-  {
-    id: "team",
-    index: 8,
-    title: "Team & Notifications",
-    dashboardLabel: "Invite team members",
+    id: "activate",
+    index: 5,
+    title: "Activate",
+    dashboardLabel: "Activate protection",
     timeEstimate: "1 min",
     prerequisites: [],
     unlocks: [
-      "Collaborate with your team",
-      "Stay informed on critical updates",
-      "Slack integration for real-time alerts",
-      "Customizable notification preferences",
+      "Live dispute coverage",
+      "Automated evidence building",
+      "Background preparation of handling rules",
     ],
   },
 ];
@@ -130,22 +87,31 @@ export const STEP_BY_ID = Object.fromEntries(
 
 export const TOTAL_STEPS = SETUP_STEPS.length;
 
-/** Steps navigated by the setup wizard (excludes permissions / open_in_admin which are auto-completed). */
-export const WIZARD_STEP_IDS: StepId[] = ["overview", "disputes", "policies", "packs", "rules", "team"];
+/** All 5 steps are shown in the wizard flow (no separate welcome/pre-steps). */
+export const WIZARD_STEP_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "activate"];
 
-/** Steps shown in the wizard top stepper bar (excludes the overview/welcome screen). */
-export const WIZARD_STEPPER_IDS: StepId[] = ["disputes", "policies", "packs", "rules", "team"];
+/** All 5 steps shown in the wizard top stepper bar. */
+export const WIZARD_STEPPER_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "activate"];
 
 export const TOTAL_WIZARD_STEPS = WIZARD_STEP_IDS.length;
 
 /** Map legacy step ids to new step ids for migration of shop_setup.steps */
 export const LEGACY_STEP_ID_MAP: Record<string, StepId> = {
-  welcome_goals: "overview",
-  sync_disputes: "disputes",
-  business_policies: "policies",
-  evidence_sources: "packs",
-  automation_rules: "rules",
-  team_notifications: "team",
+  // Old 8-step wizard → new 5-step wizard
+  permissions: "connection",
+  open_in_admin: "connection",
+  overview: "connection",
+  welcome_goals: "connection",
+  disputes: "coverage",
+  sync_disputes: "coverage",
+  packs: "coverage",
+  evidence_sources: "coverage",
+  policies: "store_profile",
+  business_policies: "store_profile",
+  rules: "automation",
+  automation_rules: "automation",
+  team: "activate",
+  team_notifications: "activate",
 };
 
 export function getNextActionableStep(
@@ -180,6 +146,7 @@ export function isPrerequisiteMet(
 ): boolean {
   const def = STEP_BY_ID[stepId];
   if (!def) return false;
+  // All steps have empty prerequisites in the new wizard — always met.
   return def.prerequisites.every((preId) => {
     const state = stepsMap[preId];
     return state?.status === "done";

@@ -11,41 +11,30 @@ import { PortalWelcomeGoalsStep } from "@/components/setup/PortalWelcomeGoalsSte
 const STEP_CTA: Partial<
   Record<StepId, { href: string; label: string; ask: string }>
 > = {
-  permissions: {
+  connection: {
     href: "/portal/connect-shopify",
     label: "Connect your Shopify store",
-    ask: "Connect your Shopify store—you'll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you're done, come back here and click Save & Continue.",
+    ask: "Connect your Shopify store—you’ll sign in with Shopify and grant the access we need to read disputes, orders, and upload evidence. When you’re done, come back here and click Save & Continue.",
   },
-  overview: { href: "/portal/setup/overview", label: "Set your goals", ask: "" },
-  open_in_admin: {
-    href: "/portal/dashboard",
-    label: "Open in Shopify Admin",
-    ask: "This step is for the Shopify embedded app. Open the app from your store’s Admin to pin it. You can continue to the next step.",
-  },
-  disputes: {
-    href: "/portal/disputes",
-    label: "Open Disputes",
-    ask: "Import your disputes from Shopify so you can see and manage them in one place. After you've synced, come back and click Save & Continue.",
-  },
-  packs: {
-    href: "/portal/packs",
-    label: "Open Evidence Packs",
-    ask: "Set up your evidence packs using our recommended templates. Each pack is tailored to a dispute type and collects the right documents automatically. When you've installed what you need, come back and click Save & Continue.",
-  },
-  rules: {
-    href: "/portal/rules",
-    label: "Open Automation Rules",
-    ask: "Configure rules to automate your dispute workflow. Install our suggested starter rules or create custom ones. When you're done, come back and click Save & Continue.",
-  },
-  policies: {
+  store_profile: {
     href: "/portal/policies",
-    label: "Open Policies",
-    ask: "Define your store policies using our suggested templates or by uploading your own documents. Policies strengthen your dispute evidence. When you're done, come back and click Save & Continue.",
+    label: "Tell us about your store",
+    ask: "Fill in your store profile and define your store policies. Policies strengthen your dispute evidence. When you’re done, come back and click Save & Continue.",
   },
-  team: {
-    href: "/portal/team",
-    label: "Open Team",
-    ask: "Invite teammates and choose how you get notified about disputes. When you're done, come back and click Save & Continue.",
+  coverage: {
+    href: "/portal/disputes",
+    label: "Review dispute coverage",
+    ask: "Review your dispute coverage settings and evidence packs. Each pack is tailored to a dispute type and collects the right documents automatically. When you’re ready, come back and click Save & Continue.",
+  },
+  automation: {
+    href: "/portal/rules",
+    label: "Configure automation",
+    ask: "Configure rules to automate your dispute workflow. Install our suggested starter rules or create custom ones. When you’re done, come back and click Save & Continue.",
+  },
+  activate: {
+    href: "/portal/dashboard",
+    label: "Activate protection",
+    ask: "Review your setup and activate live dispute protection. When you’re ready, click Save & Continue to go live.",
   },
 };
 
@@ -96,7 +85,7 @@ function StepPageInner() {
   };
 
   const stepContent =
-    stepId === "overview" ? (
+    stepId === "store_profile" ? (
       <PortalWelcomeGoalsStep stepId={stepId} onSaveRef={saveRef} />
     ) : (
       <PortalStepStub stepId={stepId} />

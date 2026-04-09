@@ -31,7 +31,7 @@ describe("POST /api/setup/skip", () => {
   });
 
   it("returns 400 when shop_id is missing", async () => {
-    const res = await POST(makeRequest(null, { stepId: "overview", reason: "do_later" }));
+    const res = await POST(makeRequest(null, { stepId: "store_profile", reason: "do_later" }));
     expect(res.status).toBe(400);
   });
 
@@ -41,14 +41,14 @@ describe("POST /api/setup/skip", () => {
   });
 
   it("returns 400 for invalid reason", async () => {
-    const res = await POST(makeRequest("shop-1", { stepId: "overview", reason: "bored" }));
+    const res = await POST(makeRequest("shop-1", { stepId: "store_profile", reason: "bored" }));
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toContain("reason required");
   });
 
   it("returns 400 when reason is missing", async () => {
-    const res = await POST(makeRequest("shop-1", { stepId: "overview" }));
+    const res = await POST(makeRequest("shop-1", { stepId: "store_profile" }));
     expect(res.status).toBe(400);
   });
 
@@ -61,7 +61,7 @@ describe("POST /api/setup/skip", () => {
     mockGetServiceClient.mockReturnValue(client as any);
 
     const res = await POST(makeRequest("shop-1", {
-      stepId: "overview",
+      stepId: "store_profile",
       reason: "do_later",
     }));
 
@@ -72,7 +72,7 @@ describe("POST /api/setup/skip", () => {
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
       "step_skipped",
-      expect.objectContaining({ stepId: "overview", reason: "do_later" })
+      expect.objectContaining({ stepId: "store_profile", reason: "do_later" })
     );
   });
 
@@ -85,7 +85,7 @@ describe("POST /api/setup/skip", () => {
       mockGetServiceClient.mockReturnValue(client as any);
 
       const res = await POST(makeRequest("shop-1", {
-        stepId: "permissions",
+        stepId: "connection",
         reason,
       }));
       const body = await res.json();

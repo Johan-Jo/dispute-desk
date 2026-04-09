@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 8 steps as todo, nextStepId = permissions", async () => {
+    it("fresh setup has all 5 steps as todo, nextStepId = connection", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -56,58 +56,36 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.progress.doneCount).toBe(0);
-      expect(body.progress.total).toBe(8);
-      expect(body.nextStepId).toBe("permissions");
+      expect(body.progress.total).toBe(5);
+      expect(body.nextStepId).toBe("connection");
       expect(body.allDone).toBe(false);
 
       for (const id of STEP_IDS) {
         expect(body.steps[id].status).toBe("todo");
       }
     });
-
-    it("BUG: permissions step is NOT auto-completed after OAuth", async () => {
-      // ensureShopSetup only creates { steps: {}, current_step: null }
-      // It should mark "permissions" as done since the user just granted
-      // OAuth permissions, but currently it doesn't.
-      const client = createMockSupabaseClient();
-      setTableResult(client, "shop_setup", {
-        shop_id: "shop-new",
-        steps: {},
-        current_step: null,
-      });
-      mockGetServiceClient.mockReturnValue(client as any);
-
-      const res = await getState(makeGetRequest("shop-new"));
-      const body: SetupStateResponse = await res.json();
-
-      // This SHOULD be "done" after OAuth — currently fails
-      expect(body.steps.permissions.status).toBe("todo");
-      // nextStepId should ideally skip permissions and go to overview
-      // (since overview has no prerequisites after permissions, it stays next)
-    });
   });
 
   describe("Step progression logic", () => {
     it("getNextActionableStep returns first todo step in order", () => {
-      expect(getNextActionableStep({})).toBe("permissions");
+      expect(getNextActionableStep({})).toBe("connection");
       expect(
-        getNextActionableStep({ permissions: { status: "done" } })
-      ).toBe("open_in_admin");
+        getNextActionableStep({ connection: { status: "done" } })
+      ).toBe("store_profile");
       expect(
         getNextActionableStep({
-          permissions: { status: "done" },
-          open_in_admin: { status: "done" },
-          overview: { status: "done" },
+          connection: { status: "done" },
+          store_profile: { status: "done" },
         })
-      ).toBe("disputes");
+      ).toBe("coverage");
     });
 
     it("getNextActionableStep skips skipped steps", () => {
       expect(
         getNextActionableStep({
-          permissions: { status: "skipped" },
+          connection: { status: "skipped" },
         })
-      ).toBe("open_in_admin");
+      ).toBe("store_profile");
     });
 
     it("getNextActionableStep returns null when all done", () => {
@@ -116,47 +94,24 @@ describe("Setup flow: end-to-end progression", () => {
       expect(getNextActionableStep(allDone)).toBeNull();
     });
 
-    it("prerequisite check: disputes requires permissions done", () => {
-      expect(isPrerequisiteMet("disputes", {})).toBe(false);
-      expect(
-        isPrerequisiteMet("disputes", {
-          permissions: { status: "done" },
-        })
-      ).toBe(true);
-      expect(
-        isPrerequisiteMet("disputes", {
-          permissions: { status: "todo" },
-        })
-      ).toBe(false);
-    });
-
-    it("prerequisite chain: policies needs disputes done", () => {
-      expect(isPrerequisiteMet("policies", {})).toBe(false);
-      expect(
-        isPrerequisiteMet("policies", {
-          disputes: { status: "done" },
-        })
-      ).toBe(true);
-    });
-
-    it("steps without prerequisites are always met", () => {
-      expect(isPrerequisiteMet("permissions", {})).toBe(true);
-      expect(isPrerequisiteMet("rules", {})).toBe(true);
-      expect(isPrerequisiteMet("team", {})).toBe(true);
+    it("all steps have no prerequisites in the new wizard", () => {
+      for (const id of STEP_IDS) {
+        expect(isPrerequisiteMet(id, {})).toBe(true);
+      }
     });
   });
 
   describe("Step completion via API", () => {
-    it("completing permissions advances nextStepId to open_in_admin", async () => {
+    it("completing store_profile advances nextStepId to coverage", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
-        steps: {},
+        steps: { connection: { status: "done", completed_at: new Date().toISOString() } },
       });
       mockGetServiceClient.mockReturnValue(client as any);
 
       const stepRes = await postStep(
-        makePostRequest("shop-1", { stepId: "permissions", payload: {} })
+        makePostRequest("shop-1", { stepId: "store_profile", payload: { storeTypes: ["physical"] } })
       );
       expect((await stepRes.json()).ok).toBe(true);
 
@@ -164,18 +119,19 @@ describe("Setup flow: end-to-end progression", () => {
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
         steps: {
-          permissions: { status: "done", completed_at: new Date().toISOString() },
+          connection: { status: "done", completed_at: new Date().toISOString() },
+          store_profile: { status: "done", completed_at: new Date().toISOString() },
         },
       });
 
       const stateRes = await getState(makeGetRequest("shop-1"));
       const state: SetupStateResponse = await stateRes.json();
 
-      expect(state.progress.doneCount).toBe(1);
-      expect(state.nextStepId).toBe("open_in_admin");
+      expect(state.progress.doneCount).toBe(2);
+      expect(state.nextStepId).toBe("coverage");
     });
 
-    it("completing all 8 steps results in allDone", async () => {
+    it("completing all 5 steps results in allDone", async () => {
       const allDoneSteps: Record<string, StepState> = {};
       for (const id of STEP_IDS) {
         allDoneSteps[id] = { status: "done", completed_at: new Date().toISOString() };
@@ -192,8 +148,34 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.allDone).toBe(true);
-      expect(body.progress.doneCount).toBe(8);
+      expect(body.progress.doneCount).toBe(5);
       expect(body.nextStepId).toBeNull();
+    });
+  });
+
+  describe("Legacy step migration", () => {
+    it("old step ids are mapped to new step ids", async () => {
+      const client = createMockSupabaseClient();
+      setTableResult(client, "shop_setup", {
+        shop_id: "shop-legacy",
+        steps: {
+          permissions: { status: "done", completed_at: "2026-01-01" },
+          overview: { status: "done", completed_at: "2026-01-01" },
+          disputes: { status: "done", completed_at: "2026-01-01" },
+          policies: { status: "done", completed_at: "2026-01-01" },
+        },
+      });
+      mockGetServiceClient.mockReturnValue(client as any);
+
+      const res = await getState(makeGetRequest("shop-legacy"));
+      const body: SetupStateResponse = await res.json();
+
+      // permissions + overview → connection
+      expect(body.steps.connection.status).toBe("done");
+      // policies → store_profile
+      expect(body.steps.store_profile.status).toBe("done");
+      // disputes → coverage
+      expect(body.steps.coverage.status).toBe("done");
     });
   });
 
@@ -225,14 +207,11 @@ describe("Setup flow: end-to-end progression", () => {
 
   describe("STEP_ROUTES for portal (onboarding steps only)", () => {
     const STEP_ROUTES: Record<string, string> = {
-      permissions: "/portal/setup/permissions",
-      open_in_admin: "/portal/setup/open_in_admin",
-      overview: "/portal/setup/overview",
-      disputes: "/portal/setup/disputes",
-      packs: "/portal/setup/packs",
-      rules: "/portal/setup/rules",
-      policies: "/portal/setup/policies",
-      team: "/portal/setup/team",
+      connection: "/portal/setup/connection",
+      store_profile: "/portal/setup/store_profile",
+      coverage: "/portal/setup/coverage",
+      automation: "/portal/setup/automation",
+      activate: "/portal/setup/activate",
     };
 
     it("every onboarding step has a portal route", () => {

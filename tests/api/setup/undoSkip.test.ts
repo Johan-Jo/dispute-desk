@@ -31,7 +31,7 @@ describe("POST /api/setup/undo-skip", () => {
   });
 
   it("returns 400 when shop_id is missing", async () => {
-    const res = await POST(makeRequest(null, { stepId: "overview" }));
+    const res = await POST(makeRequest(null, { stepId: "store_profile" }));
     expect(res.status).toBe(400);
   });
 
@@ -45,7 +45,7 @@ describe("POST /api/setup/undo-skip", () => {
     setTableResult(client, "shop_setup", null);
     mockGetServiceClient.mockReturnValue(client as any);
 
-    const res = await POST(makeRequest("shop-1", { stepId: "overview" }));
+    const res = await POST(makeRequest("shop-1", { stepId: "store_profile" }));
     expect(res.status).toBe(404);
   });
 
@@ -59,7 +59,7 @@ describe("POST /api/setup/undo-skip", () => {
     });
     mockGetServiceClient.mockReturnValue(client as any);
 
-    const res = await POST(makeRequest("shop-1", { stepId: "overview" }));
+    const res = await POST(makeRequest("shop-1", { stepId: "store_profile" }));
     const body = await res.json();
 
     expect(body.ok).toBe(true);
@@ -69,7 +69,7 @@ describe("POST /api/setup/undo-skip", () => {
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
       "step_undo_skip",
-      expect.objectContaining({ stepId: "overview" })
+      expect.objectContaining({ stepId: "store_profile" })
     );
   });
 });

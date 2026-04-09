@@ -16,9 +16,11 @@ interface SetupWizardShellProps {
   stepId: StepId;
   children: React.ReactNode;
   onSave: () => Promise<boolean>;
+  /** When false, the Continue/Save button is disabled (e.g. Step 1 has blockers). */
+  canContinue?: boolean;
 }
 
-export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellProps) {
+export function SetupWizardShell({ stepId, children, onSave, canContinue = true }: SetupWizardShellProps) {
   const t = useTranslations("setup");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,7 +37,6 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
   const wizardIndex = WIZARD_STEP_IDS.indexOf(stepId);
   const isFirst = wizardIndex === 0;
   const isLast = wizardIndex === WIZARD_STEP_IDS.length - 1;
-  const isWelcome = stepId === "overview";
 
   const fetchState = useCallback(async () => {
     try {
@@ -114,6 +115,9 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
 
   const stepsMap: StepsMap = state?.steps ?? {};
 
+  // CTA label: last step uses "Activate Protection", others use "Save & Continue"
+  const ctaLabel = isLast ? t("activateProtection") : t("saveAndContinue");
+
   return (
     <Page>
       <div style={{ padding: "0 24px" }}>
@@ -140,19 +144,23 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
               <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16, marginTop: 8 }}>
                 <InlineStack align="space-between">
                   <div>
-                    {!isFirst && !isWelcome && (
-                      <Button onClick={handleBack}>{t("back")}</Button>
-                    )}
-                    {isWelcome && (
+                    {isFirst ? (
                       <Button disabled>{t("back")}</Button>
+                    ) : (
+                      <Button onClick={handleBack}>{t("back")}</Button>
                     )}
                   </div>
                   <InlineStack gap="300">
-                    {!isWelcome && !isLast && (
+                    {!isFirst && !isLast && (
                       <Button onClick={() => setSkipModalOpen(true)}>{t("skipForNow")}</Button>
                     )}
-                    <Button variant="primary" onClick={handleSaveAndContinue} loading={saving}>
-                      {isWelcome ? t("getStarted") : isLast ? t("finishSetup") : t("saveAndContinue")}
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveAndContinue}
+                      loading={saving}
+                      disabled={!canContinue}
+                    >
+                      {ctaLabel}
                     </Button>
                   </InlineStack>
                 </InlineStack>
@@ -194,6 +202,7 @@ export function SetupWizardShell({ stepId, children, onSave }: SetupWizardShellP
           <div>step: {stepId}</div>
           <div>GET /api/setup/state → HTTP {setupStateHttp ?? "…"}</div>
           <div>stepperLoading: {String(stepperLoading)}</div>
+          <div>canContinue: {String(canContinue)}</div>
         </div>
       ) : null}
     </Page>

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Search, Filter, RefreshCw, Loader2, ExternalLink } from "lucide-react";
-import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,7 +82,7 @@ function formatDate(iso: string | null, locale: string): string {
 }
 
 export default function DisputesPage() {
-  useCompleteSetupStep("disputes");
+  // TODO: Re-wire portal auto-complete for new wizard steps
   const t = useTranslations("disputes");
   const tc = useTranslations("common");
   const tt = useTranslations("table");

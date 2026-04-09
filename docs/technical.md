@@ -686,7 +686,8 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/setup/step` — mark a step done with payload
 - `POST /api/setup/skip` — skip a step with reason
 - `POST /api/setup/undo-skip` — undo a skip (reset to todo)
-- `progress.total` / `doneCount` count all 8 onboarding steps (`permissions` + `open_in_admin` included); `nextStepId` is the next actionable `todo` step based on prerequisites.
+- `GET /api/setup/readiness?shop_id=...` — live connection/permission readiness checks for Step 1
+- `progress.total` / `doneCount` count all 5 onboarding steps; `nextStepId` is the next actionable `todo` step based on prerequisites.
 
 #### Rules vs library packs (mental model)
 
@@ -1120,7 +1121,7 @@ Single source of truth for all locale data. Exports:
 
 ### Overview
 
-An 8-step guided setup wizard helps merchants configure DisputeDesk after
+A 5-step guided setup wizard helps merchants configure DisputeDesk after
 installation. Progress is tracked per-shop in the `shop_setup` table and surfaced on the
 dashboard via a Setup Checklist card with a ring progress indicator.
 
@@ -1130,31 +1131,51 @@ dashboard via a Setup Checklist card with a ring progress indicator.
 
 | # | ID | Title | Prerequisites |
 |---|-----|-------|---------------|
-| 1 | `permissions` | Connect your store | — |
-| 2 | `open_in_admin` | Open in Shopify Admin | `permissions` |
-| 3 | `overview` | Overview & Goals | `permissions`, `open_in_admin` |
-| 4 | `disputes` | Disputes | `permissions` |
-| 5 | `packs` | Evidence Packs | `disputes` |
-| 6 | `rules` | Automation Rules | — |
-| 7 | `policies` | Business Policies | `disputes` |
-| 8 | `team` | Team & Notifications | — |
+| 1 | `connection` | Connection | — |
+| 2 | `store_profile` | Store Profile | — |
+| 3 | `coverage` | Coverage | — |
+| 4 | `automation` | Automation | — |
+| 5 | `activate` | Activate | — |
 
-Legacy step ids (`welcome_goals`, `sync_disputes`, etc.) are migrated to the new ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
+All 5 steps are shown in both `WIZARD_STEP_IDS` and `WIZARD_STEPPER_IDS` (no separate welcome/pre-steps).
 
-### Step 5: Generate Packs
+Legacy step ids (`permissions`, `open_in_admin`, `overview`, `welcome_goals`, `disputes`, `sync_disputes`, `packs`, `evidence_sources`, `policies`, `business_policies`, `rules`, `automation_rules`, `team`, `team_notifications`) are migrated to the new 5-step ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
 
-**Current state (as of 2026-03-18):** The setup step displays a **template catalog** fetched from `GET /api/templates`. Each template appears as a card with name, dispute type badge, recommended badge, and an **Install** button. Clicking Install opens a 4-step **Template Setup Wizard** modal (`TemplateSetupWizardModal`):
+### Step 1: Connection (`ConnectionStep`)
 
-1. **Choose Evidence** — Select from 8 evidence types (Order Details, Customer Info, Shipping, Product, Policies, Communication, Payment Proof, Custom Fields). Types are grouped as auto-collected vs manual. Recommended types are pre-selected.
-2. **Set Sources** — Displays available data sources per selected evidence type with status badges (Connected / Setup Required / Available).
-3. **Review** — Shows the 4-step automation flow: Detection → Collection → Pack Creation → Notification.
-4. **Activate** — Summary of evidence configuration + green activation banner.
+**Purpose:** Verify Shopify connection health and required permissions before proceeding.
 
-On wizard completion the template is installed via `POST /api/templates/:id/install`. The card flips to a green "Installed" state with a checkmark. On "Save & Continue", all installed template IDs are recorded in `shop_setup.steps.packs.payload.installedTemplates`.
+**Implementation:** `components/setup/steps/ConnectionStep.tsx`. Fetches live readiness data from `GET /api/setup/readiness?shop_id=...` and displays 5 status rows:
 
-Evidence type definitions and source mappings live in `lib/setup/evidenceTypes.ts`. The wizard is client-side only (no new API routes). i18n keys: `setup.packs.*` and `setup.templateWizard.*` in `messages/en-US.json`.
+| Row ID | Label | Blocking | Check |
+|--------|-------|----------|-------|
+| `shopify_connected` | Shopify connection | Yes | Valid offline session with access token |
+| `dispute_access` | Dispute read access | Yes | `read_shopify_payments_disputes` scope |
+| `evidence_access` | Evidence write access | Yes | `write_shopify_payments_dispute_evidences` scope |
+| `webhooks_active` | Webhook registration | No | Dispute webhooks registered |
+| `store_data` | Store data sync | No | Shop details fetchable |
 
-### Step 6: Automation Rules (`AutomationRulesStep`)
+Each row shows a status badge (ready / needs_action / syncing). Continue is disabled while blocking rows have `needs_action` status. Readiness logic lives in `lib/setup/readiness.ts` (`evaluateReadiness()`).
+
+**API:** `GET /api/setup/readiness` (`app/api/setup/readiness/route.ts`) — returns `ReadinessResult` with rows, `hasBlockers`, `hasPending`, `allReady`. No DB writes — purely derived from session and live API checks.
+
+### Step 2: Store Profile (`StoreProfileStep`)
+
+**Purpose:** Collect store metadata to personalize coverage recommendations and automation settings.
+
+**Implementation:** `components/setup/steps/StoreProfileStep.tsx`. Collects:
+- Store type (physical / digital / services / subscriptions)
+- Delivery proof level (always / sometimes / rarely)
+- Digital proof capabilities
+- Preferred handling style (automated / review / conservative)
+
+Payload is saved to `shop_setup.steps.store_profile.payload` on Continue.
+
+### Step 3: Coverage
+
+Dispute coverage configuration — recommended handling for each dispute type based on store profile.
+
+### Step 4: Automation (`AutomationRulesStep`)
 
 **Purpose:** Onboarding-first screen for **what happens when a new dispute syncs** — not a dense admin table. Implemented in `components/setup/steps/AutomationRulesStep.tsx`. Copy lives under `setup.rules` in locale files.
 
@@ -1178,7 +1199,7 @@ Per-shop state persisted in `shop_setup` table:
 - Step statuses: `todo | in_progress | done | skipped`.
 - Each step has an optional `payload` (JSON) and `skipped_reason`.
 - "Save & Continue" marks done. "Skip for now" marks skipped with reason. "Undo skip" resets to todo.
-- Light gating: `permissions` → `overview` → `disputes` → `packs`; `disputes` → `policies`.
+- No hard prerequisite gating between the 5 steps — all steps have empty `prerequisites` arrays.
 
 ### Embedded Navigation
 
@@ -1200,6 +1221,8 @@ All wizard links preserve `shop` and `host` query parameters via
 | UploadSampleFilesModal | `components/setup/modals/UploadSampleFilesModal.tsx` | Sample file upload |
 | ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
 | TemplateSetupWizardModal | `components/setup/modals/TemplateSetupWizardModal.tsx` | 4-step template configuration wizard (evidence, sources, review, activate) |
+| ConnectionStep | `components/setup/steps/ConnectionStep.tsx` | Step 1: live readiness checks (connection, scopes, webhooks, store data) |
+| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style questionnaire |
 | AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Automation & review onboarding: presets, General default, per-reason cards, safeguards, live summary |
 
 ### Shared Utilities
@@ -1208,11 +1231,12 @@ All wizard links preserve `shop` and `host` query parameters via
 |--------|------|---------|
 | Types | `lib/setup/types.ts` | StepStatus, StepState, ShopSetupRow, etc. |
 | Constants | `lib/setup/constants.ts` | SETUP_STEPS, prerequisite logic, helpers |
+| Readiness | `lib/setup/readiness.ts` | `evaluateReadiness()` — live connection/scope/webhook checks |
 | Evidence Types | `lib/setup/evidenceTypes.ts` | 8 evidence type definitions + source mappings |
 | Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
 | withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |
 
-### Step 7: Business Policies (`BusinessPoliciesStep`)
+### Business Policies (`BusinessPoliciesStep`) — formerly Step 7
 
 **Current state (as of 2026-03-18):** The step implements a 3-flow selection UX
 (own policies / use templates / mix & match). It is functional, i18n-complete

@@ -31,6 +31,7 @@ import {
   CashDollarIcon,
   PackageIcon,
   QuestionCircleIcon,
+  ShieldCheckMarkIcon,
 } from "@shopify/polaris-icons";
 import { useTranslations } from "next-intl";
 import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
@@ -44,6 +45,7 @@ import {
   recentDisputesViewDetailsLinkStyle,
 } from "@/lib/embedded/recentDisputesTableStyles";
 import { useSearchParams, useRouter } from "next/navigation";
+import { deriveCoverage, type CoverageSummary } from "@/lib/coverage/deriveCoverage";
 
 interface AutomationSettings {
   auto_build_enabled: boolean;
@@ -107,8 +109,8 @@ function DashboardSetupBanner() {
       .then((data: SetupStateResponse | null) => {
         if (!cancelled) {
           setState(data ?? null);
-          // First-time install: permissions not yet done → redirect to authorization page
-          if (data && data.steps?.permissions?.status === "todo") {
+          // First-time install: connection not yet done → redirect to authorization page
+          if (data && data.steps?.connection?.status === "todo") {
             router.replace("/app/connect");
           }
         }
@@ -511,50 +513,79 @@ function DashboardCharts({ period }: { period: PeriodKey }) {
   );
 }
 
-function AutomationStatusCard() {
+function ProtectionStatusCard() {
   const t = useTranslations("dashboard");
   const searchParams = useSearchParams();
+  const [coverage, setCoverage] = useState<CoverageSummary | null>(null);
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/automation/settings")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => { if (data) setSettings(data); });
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/rules").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/packs?status=ACTIVE").then((r) => (r.ok ? r.json() : { packs: [] })),
+      fetch("/api/automation/settings").then((r) => (r.ok ? r.json() : null)),
+    ]).then(([rulesData, packsData, autoData]) => {
+      if (cancelled) return;
+      const rules = Array.isArray(rulesData) ? rulesData : [];
+      const packs = packsData?.packs ?? [];
+      setCoverage(deriveCoverage(rules, packs));
+      if (autoData) setSettings(autoData);
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  if (!settings) return null;
+  if (loading) return null;
+
+  const c = coverage;
+  const isProtected = c && c.coveredCount > 0 && settings?.auto_build_enabled;
 
   return (
     <Card>
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
-          <Text as="h2" variant="headingMd">{t("automationStatus")}</Text>
-          <Button variant="plain" size="slim" url={withShopParams("/app/settings", searchParams)}>{t("settings")}</Button>
+          <InlineStack gap="200" blockAlign="center">
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: isProtected ? "#DCFCE7" : "#FEF3C7",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                color: isProtected ? "#16A34A" : "#D97706",
+              }}
+            >
+              <Icon source={ShieldCheckMarkIcon} />
+            </div>
+            <Text as="h2" variant="headingMd">{t("protectionStatus")}</Text>
+          </InlineStack>
+          <Button variant="plain" size="slim" url={withShopParams("/app/coverage", searchParams)}>
+            {t("viewCoverage")}
+          </Button>
         </InlineStack>
-        <InlineStack gap="400" wrap>
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">{t("autoBuild")}</Text>
-            {settings.auto_build_enabled
-              ? <Badge tone="success">ON</Badge>
-              : <Badge>OFF</Badge>}
+
+        <Text as="p" variant="bodyMd" fontWeight="semibold" tone={isProtected ? "success" : "caution"}>
+          {isProtected ? t("protectionActive") : t("protectionInactive")}
+        </Text>
+
+        {c && (
+          <InlineStack gap="400" wrap>
+            <Text as="span" variant="bodySm" tone="subdued">
+              {t("familiesCovered", { covered: c.coveredCount, total: c.totalFamilies })}
+            </Text>
+            {c.automatedCount > 0 && (
+              <Badge tone="success">{t("familiesAutomated", { count: c.automatedCount })}</Badge>
+            )}
+            {c.reviewFirstCount > 0 && (
+              <Badge tone="info">{t("familiesReviewFirst", { count: c.reviewFirstCount })}</Badge>
+            )}
           </InlineStack>
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">{t("autoSave")}</Text>
-            {settings.auto_save_enabled
-              ? <Badge tone="success">ON</Badge>
-              : <Badge>OFF</Badge>}
-          </InlineStack>
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">{t("minScore")}</Text>
-            <Text as="span" variant="bodySm" fontWeight="semibold">{settings.auto_save_min_score}%</Text>
-          </InlineStack>
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">{t("blockerGate")}</Text>
-            {settings.enforce_no_blockers
-              ? <Badge tone="success">ON</Badge>
-              : <Badge>OFF</Badge>}
-          </InlineStack>
-        </InlineStack>
+        )}
+
         <div
           style={{
             background: "#F6F6F7",
@@ -632,7 +663,7 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <AutomationStatusCard />
+          <ProtectionStatusCard />
         </Layout.Section>
 
         {/* Overview: period selector + 4 KPI cards (real data from API) */}

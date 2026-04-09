@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Zap } from "lucide-react";
-import { useCompleteSetupStep } from "@/lib/setup/useCompleteSetupStep";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
@@ -74,7 +73,7 @@ function matchSummary(
 }
 
 export default function RulesSettingsPage() {
-  useCompleteSetupStep("rules");
+  // TODO: Re-wire portal auto-complete for new wizard steps
   const t = useTranslations("rules");
   const tc = useTranslations("common");
   const tr = useTranslations("reasons");
