@@ -60,14 +60,37 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
     () => getDefaultEvidenceConfig(["physical"] as RecStoreType[], "always" as RecProofLevel)
   );
 
+  const [loaded, setLoaded] = useState(false);
   const showDigitalProof = storeTypes.includes("digital") || storeTypes.includes("services");
 
-  // Recalculate evidence defaults when store type or delivery proof changes
+  // Load previously saved payload on mount
   useEffect(() => {
+    let cancelled = false;
+    fetch("/api/setup/state")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((state) => {
+        if (cancelled) return;
+        const p = state?.steps?.store_profile?.payload;
+        if (p) {
+          if (p.storeTypes?.length) setStoreTypes(p.storeTypes);
+          if (p.deliveryProof) setDeliveryProof(p.deliveryProof);
+          if (p.digitalProof) setDigitalProof(p.digitalProof);
+          if (p.reviewThreshold != null) setReviewThreshold(String(p.reviewThreshold));
+          if (p.handlingStyle) setHandlingStyle(p.handlingStyle);
+          if (p.shopifyEvidenceConfig) setEvidenceConfig(p.shopifyEvidenceConfig);
+        }
+      })
+      .finally(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Recalculate evidence defaults when store type or delivery proof changes (only after initial load)
+  useEffect(() => {
+    if (!loaded) return;
     setEvidenceConfig(
       getDefaultEvidenceConfig(storeTypes as RecStoreType[], deliveryProof as RecProofLevel)
     );
-  }, [storeTypes, deliveryProof]);
+  }, [storeTypes, deliveryProof, loaded]);
 
   const toggleStoreType = useCallback((type: StoreType) => {
     setStoreTypes((prev) =>
