@@ -3,6 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
+import {
+  getDefaultEvidenceConfig,
+  EVIDENCE_GROUP_IDS,
+  type ShopifyEvidenceConfig,
+  type EvidenceBehavior,
+  type EvidenceGroupId,
+  type StoreType as RecStoreType,
+  type ProofLevel as RecProofLevel,
+} from "@/lib/setup/recommendTemplates";
 
 interface StoreProfileStepProps {
   stepId: StepId;
@@ -47,8 +56,18 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
   const [digitalProof, setDigitalProof] = useState<DigitalProofLevel>("sometimes");
   const [reviewThreshold, setReviewThreshold] = useState("500");
   const [handlingStyle, setHandlingStyle] = useState<HandlingStyle>("automated");
+  const [evidenceConfig, setEvidenceConfig] = useState<ShopifyEvidenceConfig>(
+    () => getDefaultEvidenceConfig(["physical"] as RecStoreType[], "always" as RecProofLevel)
+  );
 
   const showDigitalProof = storeTypes.includes("digital") || storeTypes.includes("services");
+
+  // Recalculate evidence defaults when store type or delivery proof changes
+  useEffect(() => {
+    setEvidenceConfig(
+      getDefaultEvidenceConfig(storeTypes as RecStoreType[], deliveryProof as RecProofLevel)
+    );
+  }, [storeTypes, deliveryProof]);
 
   const toggleStoreType = useCallback((type: StoreType) => {
     setStoreTypes((prev) =>
@@ -64,12 +83,12 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId: "store_profile",
-          payload: { storeTypes, deliveryProof, digitalProof, reviewThreshold, handlingStyle },
+          payload: { storeTypes, deliveryProof, digitalProof, reviewThreshold, handlingStyle, shopifyEvidenceConfig: evidenceConfig },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, storeTypes, deliveryProof, digitalProof, reviewThreshold, handlingStyle]);
+  }, [onSaveRef, storeTypes, deliveryProof, digitalProof, reviewThreshold, handlingStyle, evidenceConfig]);
 
   // Derive summary values
   const shippingCoverage =
@@ -251,6 +270,95 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
                   </label>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Shopify Evidence Config */}
+          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 8, padding: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: "0 0 6px" }}>
+              {t("evidenceTitle")}
+            </h3>
+            <p style={{ fontSize: 12, color: "#6D7175", margin: "0 0 16px" }}>
+              {t("evidenceSubtitle")}
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {EVIDENCE_GROUP_IDS.map((groupId, i) => {
+                const labelKey = `evidence_${groupId}` as Parameters<typeof t>[0];
+                const descKey = `evidence_${groupId}Desc` as Parameters<typeof t>[0];
+                return (
+                  <div
+                    key={groupId}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: "12px 0",
+                      borderTop: i > 0 ? "1px solid #F3F3F3" : undefined,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#202223" }}>
+                        {t(labelKey)}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#8C9196", marginTop: 1 }}>
+                        {t(descKey)}
+                      </div>
+                    </div>
+                    <select
+                      value={evidenceConfig[groupId]}
+                      onChange={(e) =>
+                        setEvidenceConfig((prev) => ({
+                          ...prev,
+                          [groupId]: e.target.value as EvidenceBehavior,
+                        }))
+                      }
+                      style={{
+                        padding: "6px 28px 6px 10px",
+                        border: "1px solid #C9CCCF",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        color: "#202223",
+                        background: "#fff",
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        appearance: "auto" as const,
+                      }}
+                    >
+                      <option value="always">{t("evidenceAlways")}</option>
+                      <option value="when_present">{t("evidenceWhenPresent")}</option>
+                      <option value="review">{t("evidenceReview")}</option>
+                      <option value="off">{t("evidenceOff")}</option>
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Other evidence (manual) */}
+            <div style={{ marginTop: 16, padding: "14px 16px", background: "#F6F6F7", borderRadius: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6D7175", marginBottom: 8 }}>
+                {t("otherEvidenceTitle")}
+              </div>
+              {["carrierProof", "supportConversations", "digitalAccessLogs", "customDocuments"].map((key) => (
+                <div
+                  key={key}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "6px 0",
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: "#6D7175" }}>
+                    {t(`otherEvidence_${key}` as Parameters<typeof t>[0])}
+                  </span>
+                  <span style={{ fontSize: 11, color: "#8C9196", fontStyle: "italic" }}>
+                    {t("manualUploadOnly")}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -125,7 +125,10 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
       setLoading(true);
       setLoadError(null);
       try {
-        const autoRes = await fetch("/api/setup/automation");
+        const [autoRes, stateRes] = await Promise.all([
+          fetch("/api/setup/automation"),
+          fetch("/api/setup/state"),
+        ]);
         if (cancelled) return;
         const sidLen = getShopId()?.length ?? 0;
         setDebugSnap((d) => ({
@@ -149,10 +152,26 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
           pack_modes?: Record<string, PackHandlingUiMode>;
           installedTemplateIds?: string[];
         };
+
+        // Read evidence confidence from coverage step to set smarter defaults
+        const stateBody = stateRes.ok ? await stateRes.json() : null;
+        const evidenceConfidence: string =
+          stateBody?.steps?.coverage?.payload?.evidenceConfidence ?? "medium";
+
         const packs = body.activePacks ?? [];
         const modes: Record<string, PackHandlingUiMode> = { ...(body.pack_modes ?? {}) };
         for (const p of packs) {
-          if (modes[p.id] === undefined) modes[p.id] = "manual";
+          if (modes[p.id] === undefined) {
+            // Smart default based on evidence confidence
+            if (evidenceConfidence === "high") {
+              modes[p.id] = "auto";
+            } else if (evidenceConfidence === "medium") {
+              const dt = (p.dispute_type ?? "").toUpperCase();
+              modes[p.id] = (dt === "FRAUD" || dt === "PNR") ? "auto" : "manual";
+            } else {
+              modes[p.id] = "manual";
+            }
+          }
         }
         if (cancelled) return;
         setActivePacks(packs);

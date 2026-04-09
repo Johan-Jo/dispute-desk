@@ -964,6 +964,8 @@ PDFs deleted from storage. Audit events never deleted.
 | Setup Welcome | `tests/unit/setupWelcome.test.ts` | Wizard structure: 5 steps, 0-based indexes, no prereqs |
 | Setup Welcome i18n | `tests/unit/setupWelcomeI18n.test.ts` | setup.welcome.* i18n key completeness |
 | Setup Readiness | `tests/unit/setupReadiness.test.ts` | evaluateReadiness() session/scope/webhook checks |
+| Recommend Templates | `tests/unit/recommendTemplates.test.ts` | Template recommendation algorithm + evidence confidence derivation |
+| Coverage/Activate i18n | `tests/unit/setupCoverageI18n.test.ts` | coverage, activate, and evidence i18n key completeness |
 | Integrations Status API | `tests/api/integrations/status.test.ts` | GET /api/integrations/status route handler |
 | Gorgias Connect API | `tests/api/integrations/gorgiasConnect.test.ts` | POST /api/integrations/gorgias/connect |
 | Gorgias Disconnect API | `tests/api/integrations/gorgiasDisconnect.test.ts` | POST /api/integrations/gorgias/disconnect |
@@ -1176,19 +1178,40 @@ Each row shows a status badge (ready / needs_action / syncing). Continue is disa
 
 ### Step 2: Store Profile (`StoreProfileStep`)
 
-**Purpose:** Collect store metadata to personalize coverage recommendations and automation settings.
+**Purpose:** Collect store metadata and Shopify evidence preferences to personalize coverage recommendations and automation settings.
 
 **Implementation:** `components/setup/steps/StoreProfileStep.tsx`. Collects:
 - Store type (physical / digital / services / subscriptions)
 - Delivery proof level (always / sometimes / rarely)
 - Digital proof capabilities
 - Preferred handling style (automated / review / conservative)
+- Review threshold ($)
+- **Shopify evidence config** — per-group behavior preferences for 7 Shopify-native evidence groups:
+  - Order details, Customer & address, Fulfillment records, Tracking from Shopify, Order timeline, Refund history, Notes & metadata
+  - Each group: `always` | `when_present` | `review` | `off`
+  - Defaults recalculate when store type or delivery proof changes (`getDefaultEvidenceConfig` in `lib/setup/recommendTemplates.ts`)
+- "Other evidence" informational section (carrier proof, support conversations, digital access logs, custom docs — all manual upload in V1)
 
-Payload is saved to `shop_setup.steps.store_profile.payload` on Continue.
+Payload (including `shopifyEvidenceConfig`) is saved to `shop_setup.steps.store_profile.payload` on Continue.
 
-### Step 3: Coverage
+### Step 3: Coverage (`CoverageStep`)
 
-Dispute coverage configuration — recommended handling for each dispute type based on store profile.
+**Purpose:** Based on store profile and Shopify evidence config from Step 2, recommend dispute templates for the merchant to install.
+
+**Implementation:** `components/setup/steps/CoverageStep.tsx`. On mount:
+1. Reads `steps.store_profile.payload` from `GET /api/setup/state`
+2. Fetches template catalog from `GET /api/templates`
+3. Checks already-installed templates from `GET /api/setup/automation`
+4. Runs `recommendTemplates(profile)` (pure function in `lib/setup/recommendTemplates.ts`) to derive recommended templates
+
+**Recommendation algorithm** maps store types + evidence config to templates:
+- Physical + strong tracking → `pnr_with_tracking`; weak → `pnr_weak_proof`
+- Digital/services → `digital_goods`, `credit_not_processed`
+- Subscriptions → `subscription_canceled`
+- Always: `fraud_standard` (universal) + `general_catchall` (fallback)
+- Evidence confidence (`high` / `medium` / `low`) derived from evidence config, passed to Step 4
+
+**UI:** Evidence summary (read-only, from Step 2) + dispute family cards with template toggles (on/off). On save: installs selected templates via `POST /api/templates/:id/install`, saves step payload with `installedTemplateIds`, `selectedFamilies`, `evidenceConfidence`.
 
 ### Step 4: Automation (`AutomationRulesStep`)
 
@@ -1207,6 +1230,24 @@ Dispute coverage configuration — recommended handling for each dispute type ba
 **Data & API:** Loads via `GET /api/setup/automation` (`activePacks`, `pack_modes`, `reason_rows`, safeguards, `installedTemplateIds`). The step shows one row per template-backed library pack with a segmented control (**Manual review** / **Automatic**). Saves with `POST` `{ shop_id, pack_modes }` (keys = `packs.id`). Presets and per-reason cards still map to the same automation payload where used; see § *Rules vs library packs*.
 
 **Evaluation order** (unchanged; see `lib/rules/pickAutomationAction.ts`): amount safeguards → per-reason rule → default (General) → catch-all. Merchant-facing help article: `help.articles.configuringAutomation`.
+
+**Evidence-aware defaults:** On first load (no existing pack_modes), defaults are set based on `steps.coverage.payload.evidenceConfidence`:
+- `high` → all packs default to "auto"
+- `medium` → fraud/PNR packs to "auto", others to "manual"
+- `low` → all packs default to "manual"
+
+### Step 5: Activate (`ActivateStep`)
+
+**Purpose:** Review configuration summary and activate protection.
+
+**Implementation:** `components/setup/steps/ActivateStep.tsx`. On mount fetches setup state and automation data.
+
+**UI:** Three summary cards:
+1. **Evidence sources** — X of 7 Shopify evidence groups enabled, plus "Other: manual upload"
+2. **Coverage** — X templates installed covering Y dispute families, with template names
+3. **Automation** — X packs on automatic, Y on manual review
+
+Info banner explaining what activation does. On save: patches all DRAFT packs to ACTIVE via `PATCH /api/packs/:packId`, saves step payload with `activatedAt`. Shell navigates to `/app/setup/complete`.
 
 ### State Machine
 
@@ -1237,8 +1278,10 @@ All wizard links preserve `shop` and `host` query parameters via
 | ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
 | TemplateSetupWizardModal | `components/setup/modals/TemplateSetupWizardModal.tsx` | 4-step template configuration wizard (evidence, sources, review, activate) |
 | ConnectionStep | `components/setup/steps/ConnectionStep.tsx` | Step 1: live readiness checks (connection, scopes, webhooks, store data) |
-| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style questionnaire |
-| AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Automation & review onboarding: presets, General default, per-reason cards, safeguards, live summary |
+| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style, Shopify evidence config |
+| CoverageStep | `components/setup/steps/CoverageStep.tsx` | Step 3: evidence summary + template recommendations + install |
+| AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Step 4: per-pack manual/auto toggle with evidence-aware defaults |
+| ActivateStep | `components/setup/steps/ActivateStep.tsx` | Step 5: config summary + bulk pack activation |
 
 ### Shared Utilities
 
@@ -1247,6 +1290,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | Types | `lib/setup/types.ts` | StepStatus, StepState, ShopSetupRow, etc. |
 | Constants | `lib/setup/constants.ts` | SETUP_STEPS, prerequisite logic, helpers |
 | Readiness | `lib/setup/readiness.ts` | `evaluateReadiness()` — live connection/scope/webhook checks |
+| Recommend Templates | `lib/setup/recommendTemplates.ts` | `recommendTemplates()` + `deriveEvidenceConfidence()` + `getDefaultEvidenceConfig()` — store profile → template recs + evidence confidence |
 | Evidence Types | `lib/setup/evidenceTypes.ts` | 8 evidence type definitions + source mappings |
 | Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
 | withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |

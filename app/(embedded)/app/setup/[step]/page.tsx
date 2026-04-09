@@ -19,41 +19,19 @@ import type { StepId } from "@/lib/setup/types";
 import { SetupWizardShell } from "@/components/setup/SetupWizardShell";
 import { ConnectionStep } from "@/components/setup/steps/ConnectionStep";
 import { StoreProfileStep } from "@/components/setup/steps/StoreProfileStep";
-
-// Phase 2 step components — placeholder imports until implemented
-// import { CoverageStep } from "@/components/setup/steps/CoverageStep";
-// import { AutomationStep } from "@/components/setup/steps/AutomationStep";
-// import { ActivateStep } from "@/components/setup/steps/ActivateStep";
+import { CoverageStep } from "@/components/setup/steps/CoverageStep";
+import { AutomationRulesStep } from "@/components/setup/steps/AutomationRulesStep";
+import { ActivateStep } from "@/components/setup/steps/ActivateStep";
 
 const stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
 type StepComponentType = React.ComponentType<typeof stepComponentProps & { onCanContinueChange?: (canContinue: boolean) => void }>;
 
-// Placeholder for Phase 2 steps
-function PlaceholderStep({ stepId, onSaveRef }: { stepId: StepId; onSaveRef: { current: (() => Promise<boolean>) | null } }) {
-  const t = useTranslations("setup");
-  onSaveRef.current = async () => {
-    const res = await fetch("/api/setup/step", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stepId, payload: {} }),
-    });
-    return res.ok;
-  };
-  return (
-    <div style={{ padding: "48px 0", textAlign: "center" }}>
-      <Text as="p" variant="bodyMd">
-        {t("wizardTitle")} — {stepId} (coming soon)
-      </Text>
-    </div>
-  );
-}
-
 const stepComponents: Record<StepId, StepComponentType> = {
   connection: ConnectionStep as StepComponentType,
   store_profile: StoreProfileStep as StepComponentType,
-  coverage: PlaceholderStep as StepComponentType,
-  automation: PlaceholderStep as StepComponentType,
-  activate: PlaceholderStep as StepComponentType,
+  coverage: CoverageStep as StepComponentType,
+  automation: AutomationRulesStep as StepComponentType,
+  activate: ActivateStep as StepComponentType,
 };
 
 function StepPageInner() {
