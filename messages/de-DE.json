@@ -2222,7 +2222,7 @@
       "digitalYes": "Ja, normalerweise",
       "digitalSometimes": "Manchmal",
       "digitalNo": "Nein, selten",
-      "digitalHint": "Beispiele: Zugriffsprotokolle, Kontoaktivität, Download-Aufzeichnungen, Stornierungsprotokolle, Nutzungsverlauf, unterschriebene Dienstleistungsbestätigungen.",
+      "digitalHint": "Beispiele: Zugriffsprotokolle, Download-Aufzeichnungen, Nutzungsverlauf. Diese müssen manuell hochgeladen werden — DisputeDesk sendet Ihnen eine E-Mail, wenn eine Streitigkeit sie benötigt.",
       "reviewThreshold": "Manuelle Prüfung ab diesem Betrag erforderlich",
       "reviewThresholdHint": "Hochwertige Streitigkeiten werden zur genaueren Prüfung an deine Warteschlange gesendet.",
       "handlingStyle": "Bevorzugter Bearbeitungsstil",

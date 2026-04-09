@@ -1821,7 +1821,7 @@
       "digitalYes": "Yes, usually",
       "digitalSometimes": "Sometimes",
       "digitalNo": "No, rarely",
-      "digitalHint": "Examples: access logs, account activity, download records, cancellation logs, usage history, signed service confirmations.",
+      "digitalHint": "Examples: access logs, download records, usage history. These must be uploaded manually — DisputeDesk will email you when a dispute needs them.",
       "reviewThreshold": "Require manual review above this amount",
       "reviewThresholdHint": "High-value disputes will be sent to your review queue for extra attention.",
       "handlingStyle": "Preferred handling style",

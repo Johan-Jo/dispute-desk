@@ -1459,7 +1459,7 @@
       "digitalYes": "Sí, generalmente",
       "digitalSometimes": "A veces",
       "digitalNo": "No, raramente",
-      "digitalHint": "Ejemplos: registros de acceso, actividad de cuenta, registros de descarga, registros de cancelación, historial de uso, confirmaciones de servicio firmadas.",
+      "digitalHint": "Ejemplos: registros de acceso, registros de descarga, historial de uso. Estos deben subirse manualmente — DisputeDesk le enviará un correo cuando una disputa los necesite.",
       "reviewThreshold": "Requerir revisión manual por encima de este monto",
       "reviewThresholdHint": "Las disputas de alto valor se enviarán a tu cola de revisión para atención adicional.",
       "handlingStyle": "Estilo de gestión preferido",

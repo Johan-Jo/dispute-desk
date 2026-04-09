@@ -2,6 +2,10 @@ import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
 import { buildPack } from "../../packs/buildPack";
 import { evaluateAndMaybeAutoSave } from "../../automation/pipeline";
+import {
+  sendEvidenceNeededAlert,
+  shouldSendEvidenceAlert,
+} from "../../email/sendEvidenceNeededAlert";
 import type { ClaimedJob } from "../claimJobs";
 
 /**
@@ -53,6 +57,11 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
     await evaluateAndMaybeAutoSave(packId).catch(() => {
       // Non-fatal: auto-save evaluation failure shouldn't fail the build
     });
+
+    // Send "manual evidence needed" email if the dispute type warrants it
+    await sendManualEvidenceAlert(db, job.shopId, packId).catch((err) => {
+      console.error("[buildPack] Evidence alert failed:", err);
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 
@@ -71,4 +80,76 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
 
     throw err;
   }
+}
+
+/**
+ * Fire-and-forget: check if this dispute needs manual evidence and email the merchant.
+ * Reads store profile, notification prefs, and dispute reason to decide.
+ */
+async function sendManualEvidenceAlert(
+  db: ReturnType<typeof getServiceClient>,
+  shopId: string,
+  packId: string
+): Promise<void> {
+  // Load pack + dispute info
+  const { data: pack } = await db
+    .from("evidence_packs")
+    .select("id, dispute_id, shop_id")
+    .eq("id", packId)
+    .single();
+  if (!pack?.dispute_id) return;
+
+  const { data: dispute } = await db
+    .from("disputes")
+    .select("id, reason, amount, currency_code")
+    .eq("id", pack.dispute_id)
+    .single();
+  if (!dispute) return;
+
+  // Load store profile from shop_setup
+  const { data: setup } = await db
+    .from("shop_setup")
+    .select("steps")
+    .eq("shop_id", shopId)
+    .single();
+
+  const storeProfile = (setup?.steps as Record<string, { payload?: Record<string, unknown> }>)?.store_profile?.payload;
+  const digitalProof = storeProfile?.digitalProof as string | undefined;
+  const deliveryProof = storeProfile?.deliveryProof as string | undefined;
+
+  // Check if this dispute type needs manual evidence given merchant capabilities
+  if (!shouldSendEvidenceAlert(dispute.reason, digitalProof, deliveryProof)) {
+    return;
+  }
+
+  // Check notification preference
+  const teamPayload = (setup?.steps as Record<string, { payload?: Record<string, unknown> }>)?.team?.payload;
+  const notifications = teamPayload?.notifications as { evidenceReady?: boolean } | undefined;
+  // Default to true if preference not set (evidence alerts are important)
+  if (notifications?.evidenceReady === false) return;
+
+  // Get team email
+  const teamEmail = teamPayload?.teamEmail as string | undefined;
+  // Fallback: shop contact email from shops table
+  const { data: shop } = await db
+    .from("shops")
+    .select("contact_email, shop_domain")
+    .eq("id", shopId)
+    .single();
+
+  const to = teamEmail || shop?.contact_email;
+  if (!to) return;
+
+  const amount = dispute.amount != null ? String(dispute.amount) : null;
+
+  await sendEvidenceNeededAlert({
+    to,
+    shopName: shop?.shop_domain ?? undefined,
+    disputeId: dispute.id,
+    disputeReason: dispute.reason,
+    disputeAmount: amount,
+    packId,
+    digitalProof,
+    deliveryProof,
+  });
 }

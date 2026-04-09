@@ -2087,7 +2087,7 @@
       "digitalYes": "Ja, vanligtvis",
       "digitalSometimes": "Ibland",
       "digitalNo": "Nej, sällan",
-      "digitalHint": "Exempel: åtkomstloggar, kontoaktivitet, nedladdningsregister, avbokningsloggar, användningshistorik, signerade tjänstebekräftelser.",
+      "digitalHint": "Exempel: åtkomstloggar, nedladdningsregister, användningshistorik. Dessa måste laddas upp manuellt — DisputeDesk skickar ett e-postmeddelande när en dispyt behöver dem.",
       "reviewThreshold": "Kräv manuell granskning över detta belopp",
       "reviewThresholdHint": "Högt värderade tvister skickas till din granskningskö för extra uppmärksamhet.",
       "handlingStyle": "Föredragen hanteringsstil",

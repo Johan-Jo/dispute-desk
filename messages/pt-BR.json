@@ -2239,7 +2239,7 @@
       "digitalYes": "Sim, geralmente",
       "digitalSometimes": "Às vezes",
       "digitalNo": "Não, raramente",
-      "digitalHint": "Exemplos: logs de acesso, atividade da conta, registros de download, logs de cancelamento, histórico de uso, confirmações de serviço assinadas.",
+      "digitalHint": "Exemplos: logs de acesso, registros de download, histórico de uso. Estes devem ser enviados manualmente — o DisputeDesk enviará um e-mail quando uma disputa precisar deles.",
       "reviewThreshold": "Exigir revisão manual acima deste valor",
       "reviewThresholdHint": "Disputas de alto valor serão enviadas para sua fila de revisão para atenção extra.",
       "handlingStyle": "Estilo de tratamento preferido",

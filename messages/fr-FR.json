@@ -2222,7 +2222,7 @@
       "digitalYes": "Oui, généralement",
       "digitalSometimes": "Parfois",
       "digitalNo": "Non, rarement",
-      "digitalHint": "Exemples : journaux d’accès, activité du compte, historique de téléchargement, journaux d’annulation, historique d’utilisation, confirmations de service signées.",
+      "digitalHint": "Exemples : journaux d’accès, historique de téléchargement, historique d’utilisation. Ceux-ci doivent être téléversés manuellement — DisputeDesk vous enverra un e-mail lorsqu’un litige en aura besoin.",
       "reviewThreshold": "Exiger une vérification manuelle au-dessus de ce montant",
       "reviewThresholdHint": "Les litiges de grande valeur seront envoyés dans votre file d’attente de vérification pour une attention supplémentaire.",
       "handlingStyle": "Style de traitement préféré",
