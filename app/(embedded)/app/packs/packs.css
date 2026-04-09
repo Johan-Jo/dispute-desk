@@ -13,23 +13,17 @@
 }
 
 .embeddedPacksRoot .embeddedPacksCardHeader {
-  padding: 12px 20px;
+  padding: 16px;
   border-bottom: 1px solid var(--p-color-border);
 }
 
 .embeddedPacksRoot .embeddedPacksSearchRow {
   display: flex;
-  gap: 12px;
   align-items: center;
 }
 
 .embeddedPacksRoot .embeddedPacksSearchField {
   flex: 1;
-}
-
-.embeddedPacksRoot .embeddedPacksSearchFilterButton {
-  min-width: 36px;
-  padding-inline: 0;
 }
 
 .embeddedPacksRoot .Polaris-Tabs__Wrapper {
@@ -69,8 +63,8 @@
 }
 
 .embeddedPacksRoot .Polaris-Tabs__Title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   color: #303030 !important;
 }
 
@@ -95,15 +89,19 @@
 }
 
 .embeddedPacksRoot .Polaris-IndexTable__Table th {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: #6D7175;
 }
 
-.embeddedPacksRoot .Polaris-IndexTable__Table th,
+.embeddedPacksRoot .Polaris-IndexTable__Table th {
+  padding: 12px 16px;
+}
+
 .embeddedPacksRoot .Polaris-IndexTable__Table td {
-  padding-block: 10px;
+  padding: 16px 16px;
 }
 
 .embeddedPacksRoot .embeddedPacksNameCellIcon {
@@ -193,7 +191,7 @@
   background: transparent;
   color: #1D4ED8;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   padding: 0;
 }

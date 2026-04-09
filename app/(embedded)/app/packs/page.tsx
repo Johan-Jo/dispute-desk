@@ -30,7 +30,7 @@ import {
   IndexTable,
 } from "@shopify/polaris";
 import { FileText, Info, X } from "lucide-react";
-import { SearchIcon, EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
+import { EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
 
 interface PackRow {
   id: string;
@@ -341,8 +341,7 @@ export default function PacksListPage() {
             <BlockStack gap="0">
               <div className="embeddedPacksCardHeader">
                 <div className="embeddedPacksSearchRow">
-                <InlineStack align="space-between" wrap>
-                  <div className="embeddedPacksSearchField" style={{ minWidth: 260 }}>
+                  <div className="embeddedPacksSearchField">
                     <TextField
                       label=""
                       labelHidden
@@ -351,16 +350,9 @@ export default function PacksListPage() {
                       value={queryValue}
                       onChange={setQueryValue}
                       prefix={<span aria-hidden><svg viewBox="0 0 20 20" width="16" height="16"><path fill="currentColor" d="M8.5 2a6.5 6.5 0 0 1 5.147 10.472l3.94 3.94a.75.75 0 1 1-1.06 1.06l-3.94-3.94A6.5 6.5 0 1 1 8.5 2m0 1.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10"/></svg></span>}
+                      suffix={<span aria-hidden style={{ color: "#6D7175", display: "flex" }}><svg viewBox="0 0 20 20" width="16" height="16"><path fill="currentColor" d="M2 4.5a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.5m2 5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 9.5m3 5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75"/></svg></span>}
                     />
                   </div>
-                  <div className="embeddedPacksSearchFilterButton">
-                    <Button
-                      icon={SearchIcon}
-                      variant="tertiary"
-                      accessibilityLabel={t("packTemplates.searchPlaceholder")}
-                    />
-                  </div>
-                </InlineStack>
                 </div>
               </div>
 
@@ -490,7 +482,7 @@ export default function PacksListPage() {
                               </div>
                               <BlockStack gap="025">
                                 <div className="embeddedPacksNameTextPrimary">
-                                  <Text as="p" variant="bodySm" fontWeight="semibold">
+                                  <Text as="p" variant="bodyMd" fontWeight="medium">
                                     {pack.name}
                                   </Text>
                                 </div>
@@ -502,7 +494,7 @@ export default function PacksListPage() {
                           </button>
                         </IndexTable.Cell>
                         <IndexTable.Cell>
-                          <Text as="p" variant="bodySm">
+                          <Text as="p" variant="bodyMd">
                             {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
                           </Text>
                         </IndexTable.Cell>
@@ -514,12 +506,12 @@ export default function PacksListPage() {
                           </Badge>
                         </IndexTable.Cell>
                         <IndexTable.Cell>
-                          <Text as="p" variant="bodySm">
+                          <Text as="p" variant="bodyMd">
                             {pack.usage_count}
                           </Text>
                         </IndexTable.Cell>
                         <IndexTable.Cell>
-                          <Text as="p" variant="bodySm" tone="subdued">
+                          <Text as="p" variant="bodyMd" tone="subdued">
                             {formatDate(pack.last_used_at, locale, t("packTemplates.never"))}
                           </Text>
                         </IndexTable.Cell>
