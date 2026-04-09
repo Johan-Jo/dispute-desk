@@ -1387,7 +1387,15 @@
       "noTemplatesSelected": "Sélectionnez au moins un type de litige pour continuer.",
       "installingSaving": "Installation des modèles...",
       "coverageSummary": "{count} sur {total} modèles sélectionnés",
-      "loading": "Chargement des recommandations..."
+      "loading": "Chargement des recommandations...",
+      "family_fraud": "Fraude et Non reconnue",
+      "family_pnr": "Produit non reçu",
+      "family_not_as_described": "Non conforme à la description",
+      "family_subscription": "Abonnement",
+      "family_refund": "Remboursement et Crédit",
+      "family_duplicate": "Doublon et Incorrect",
+      "family_digital": "Biens et Services numériques",
+      "family_general": "Général"
     },
     "activate": {
       "title": "Prêt à activer",

@@ -1694,7 +1694,15 @@
       "noTemplatesSelected": "Wählen Sie mindestens einen Streitfalltyp aus, um fortzufahren.",
       "installingSaving": "Vorlagen werden installiert...",
       "coverageSummary": "{count} von {total} Vorlagen ausgewählt",
-      "loading": "Empfehlungen werden geladen..."
+      "loading": "Empfehlungen werden geladen...",
+      "family_fraud": "Betrug & Nicht erkannt",
+      "family_pnr": "Produkt nicht erhalten",
+      "family_not_as_described": "Nicht wie beschrieben",
+      "family_subscription": "Abonnement",
+      "family_refund": "Erstattung & Gutschrift",
+      "family_duplicate": "Doppelt & Fehlerhaft",
+      "family_digital": "Digitale Waren & Dienste",
+      "family_general": "Allgemein"
     },
     "activate": {
       "title": "Bereit zur Aktivierung",

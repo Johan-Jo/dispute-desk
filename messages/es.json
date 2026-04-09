@@ -1387,7 +1387,15 @@
       "noTemplatesSelected": "Selecciona al menos un tipo de disputa para continuar.",
       "installingSaving": "Instalando plantillas...",
       "coverageSummary": "{count} de {total} plantillas seleccionadas",
-      "loading": "Cargando recomendaciones..."
+      "loading": "Cargando recomendaciones...",
+      "family_fraud": "Fraude y No reconocida",
+      "family_pnr": "Producto no recibido",
+      "family_not_as_described": "No conforme a la descripción",
+      "family_subscription": "Suscripción",
+      "family_refund": "Reembolso y Crédito",
+      "family_duplicate": "Duplicado e Incorrecto",
+      "family_digital": "Bienes y Servicios digitales",
+      "family_general": "General"
     },
     "activate": {
       "title": "Listo para activar",

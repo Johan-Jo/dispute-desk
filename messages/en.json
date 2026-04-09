@@ -1906,7 +1906,15 @@
       "noTemplatesSelected": "Select at least one dispute type to continue.",
       "installingSaving": "Installing templates...",
       "coverageSummary": "{count} of {total} templates selected",
-      "loading": "Loading recommendations..."
+      "loading": "Loading recommendations...",
+      "family_fraud": "Fraud & Unrecognized",
+      "family_pnr": "Product Not Received",
+      "family_not_as_described": "Not as Described",
+      "family_subscription": "Subscription",
+      "family_refund": "Refund & Credit",
+      "family_duplicate": "Duplicate & Incorrect",
+      "family_digital": "Digital Goods & Services",
+      "family_general": "General"
     },
     "activate": {
       "title": "Ready to activate",

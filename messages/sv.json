@@ -1373,7 +1373,15 @@
       "noTemplatesSelected": "Välj minst en tvisttyp för att fortsätta.",
       "installingSaving": "Installerar mallar...",
       "coverageSummary": "{count} av {total} mallar valda",
-      "loading": "Laddar rekommendationer..."
+      "loading": "Laddar rekommendationer...",
+      "family_fraud": "Bedrägeri & Okänd",
+      "family_pnr": "Produkt ej mottagen",
+      "family_not_as_described": "Inte som beskrivet",
+      "family_subscription": "Prenumeration",
+      "family_refund": "Återbetalning & Kredit",
+      "family_duplicate": "Dubblett & Felaktig",
+      "family_digital": "Digitala varor & Tjänster",
+      "family_general": "Allmänt"
     },
     "activate": {
       "title": "Redo att aktivera",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "@shopify/polaris";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import {
   recommendTemplates,
@@ -40,6 +40,7 @@ const BEHAVIOR_LABELS: Record<string, string> = {
 export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepProps) {
   const tCoverage = useTranslations("setup.coverage");
   const tProfile = useTranslations("setup.storeProfile");
+  const locale = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,7 +58,7 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
       try {
         const [stateRes, templatesRes, automationRes] = await Promise.all([
           fetch("/api/setup/state"),
-          fetch("/api/templates"),
+          fetch(`/api/templates?locale=${locale}`),
           fetch("/api/setup/automation"),
         ]);
 
@@ -294,8 +295,8 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: recs.length > 1 ? 12 : 0 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#202223", textTransform: "capitalize" }}>
-                      {family.replace(/_/g, " ")}
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>
+                      {tCoverage(`family_${family}` as Parameters<typeof tCoverage>[0])}
                     </span>
                     {allDefault && (
                       <span style={{
