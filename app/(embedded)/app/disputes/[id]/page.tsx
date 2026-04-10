@@ -663,43 +663,45 @@ export default function DisputeDetailPage() {
 
             {/* RIGHT: Managed + Evidence stacked */}
             <div className={styles.rightColumn}>
-              {/* Managed by DisputeDesk */}
-              <Card padding="0">
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <InlineStack gap="200" blockAlign="center">
-                      <span style={{ display: "inline-flex", color: "var(--p-color-text-subdued)" }}>
-                        <Icon source={CheckCircleIcon} tone="subdued" />
-                      </span>
-                      <Text as="h2" variant="headingSm">{t("disputes.managedByDisputeDesk")}</Text>
+              {/* Managed by DisputeDesk — only show if actually automated */}
+              {isAutomated && (
+                <Card padding="0">
+                  <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <InlineStack gap="200" blockAlign="center">
+                        <span style={{ display: "inline-flex", color: "var(--p-color-text-subdued)" }}>
+                          <Icon source={CheckCircleIcon} tone="subdued" />
+                        </span>
+                        <Text as="h2" variant="headingSm">{t("disputes.managedByDisputeDesk")}</Text>
+                      </InlineStack>
                     </InlineStack>
-                  </InlineStack>
-                </div>
-                <div className={styles.managedCardContent}>
-                  <div className={styles.managedAutomationRow}>
-                    <div className={styles.managedAutomationIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className={styles.managedTitle}>{t("disputes.fullyAutomated")}</p>
-                      <p className={styles.managedDesc}>{t("disputes.fullyAutomatedDesc")}</p>
-                    </div>
                   </div>
-                  {matchedRule && (
-                    <div className={styles.managedStatusRow}>
-                      <span className={styles.managedStatusDot} />
+                  <div className={styles.managedCardContent}>
+                    <div className={styles.managedAutomationRow}>
+                      <div className={styles.managedAutomationIcon}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
+                      </div>
                       <div>
-                        <p className={styles.managedStatusLabel}>{t("disputes.autoPackActive")}</p>
-                        <p className={styles.managedStatusRule}>
-                          {t("disputes.autoPackTriggered", { name: matchedRule.name ?? "Default" })}
-                        </p>
+                        <p className={styles.managedTitle}>{t("disputes.fullyAutomated")}</p>
+                        <p className={styles.managedDesc}>{t("disputes.fullyAutomatedDesc")}</p>
                       </div>
                     </div>
-                  )}
-                </div>
-              </Card>
+                    {matchedRule && (
+                      <div className={styles.managedStatusRow}>
+                        <span className={styles.managedStatusDot} />
+                        <div>
+                          <p className={styles.managedStatusLabel}>{t("disputes.autoPackActive")}</p>
+                          <p className={styles.managedStatusRule}>
+                            {t("disputes.autoPackTriggered", { name: matchedRule.name ?? "Default" })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               {/* More Evidence */}
               <Card padding="0">
