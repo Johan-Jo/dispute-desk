@@ -456,11 +456,9 @@ export default function DisputeDetailPage() {
         content: generating || templateCheckLoading
           ? t("disputes.generating")
           : t(cta.key),
-        onAction: !phaseKnown
-          ? handleSync
-          : latestPackStatus === "saved_to_shopify" && disputeUrl
-            ? () => window.open(disputeUrl, "_top")
-            : handleGenerate,
+        onAction: latestPackStatus === "saved_to_shopify" && disputeUrl
+          ? () => window.open(disputeUrl, "_top")
+          : handleGenerate,
         loading: generating || templateCheckLoading || syncing,
         disabled: cta.disabled,
         icon: NoteIcon,
@@ -480,26 +478,26 @@ export default function DisputeDetailPage() {
       <Layout>
         {/* HERO: Phase explanation + what's happening + what to do */}
         <Layout.Section>
-          {!phaseKnown ? (
-            <Banner tone="warning">
-              <p><strong>{t("disputes.unknownPhaseWarning")}</strong></p>
-            </Banner>
-          ) : (
-            <Card>
-              <BlockStack gap="200">
-                <InlineStack gap="200" blockAlign="center">
-                  <Badge tone={phaseBadgeTone(dispute.phase as DisputePhase | null)}>
-                    {phaseLabelFn(dispute.phase as DisputePhase | null, t)}
-                  </Badge>
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {deriveFamily(dispute.reason)}
-                  </Text>
-                </InlineStack>
-                <Text as="p" variant="bodyMd">
-                  {dispute.phase === "inquiry"
-                    ? t("disputes.inquiryHeroExplain")
-                    : t("disputes.chargebackHeroExplain")}
+          <Card>
+            <BlockStack gap="200">
+              <InlineStack gap="200" blockAlign="center">
+                <Badge tone={phaseBadgeTone(dispute.phase as DisputePhase | null)}>
+                  {phaseLabelFn(dispute.phase as DisputePhase | null, t)}
+                </Badge>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {deriveFamily(dispute.reason)}
                 </Text>
+              </InlineStack>
+              {!phaseKnown && (
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("disputes.unknownPhaseWarning")}
+                </Text>
+              )}
+              <Text as="p" variant="bodyMd">
+                {dispute.phase === "inquiry"
+                  ? t("disputes.inquiryHeroExplain")
+                  : t("disputes.chargebackHeroExplain")}
+              </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
                   {latestPackStatus === "building" || latestPackStatus === "queued"
                     ? t("disputes.caseStatusBuilding")
@@ -513,7 +511,6 @@ export default function DisputeDetailPage() {
                 </Text>
               </BlockStack>
             </Card>
-          )}
         </Layout.Section>
 
         {/* KPI cards */}

@@ -357,8 +357,8 @@ export default function PackPreviewPage() {
                 <p>{t("packs.chargebackContext")}</p>
               </Banner>
             ) : (
-              <Banner tone="warning">
-                <p>{t("packs.phaseUnknown")} — {t("disputes.unknownPhaseWarning")}</p>
+              <Banner tone="info">
+                <p>{t("disputes.unknownPhaseWarning")}</p>
               </Banner>
             )}
           </Layout.Section>

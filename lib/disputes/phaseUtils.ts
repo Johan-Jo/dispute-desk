@@ -60,12 +60,8 @@ export function casePrimaryCta(
   phase: DisputePhase | null,
   packStatus: string | null,
 ): { key: string; disabled: boolean } {
-  // Unknown phase: only allow sync
-  if (!isPhaseKnown(phase)) {
-    return { key: "disputes.unknownPhaseAction", disabled: false };
-  }
-
   // Phase-specific CTA based on pack state
+  // Unknown phase: treat like chargeback (safer default), workflow is not blocked
   if (phase === "inquiry") {
     if (!packStatus) return { key: "disputes.prepareResponse", disabled: false };
     if (packStatus === "building" || packStatus === "queued") return { key: "disputes.generating", disabled: true };
