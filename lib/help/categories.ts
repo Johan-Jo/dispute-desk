@@ -19,6 +19,12 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     icon: "scale",
   },
   {
+    slug: "lifecycle",
+    labelKey: "help.categories.lifecycle",
+    descriptionKey: "help.categories.lifecycleDesc",
+    icon: "rocket",
+  },
+  {
     slug: "evidence-packs",
     labelKey: "help.categories.evidencePacks",
     descriptionKey: "help.categories.evidencePacksDesc",

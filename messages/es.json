@@ -361,7 +361,7 @@
     "supportsPhases": "Supports: {phases}"
   },
   "analytics": {
-    "title": "Análisis",
+    "title": "Reporting",
     "subtitle": "Métricas de rendimiento y tendencias de disputas",
     "overview": "Resumen",
     "period24h": "24h",
@@ -645,7 +645,7 @@
     "gdprDesc": "Pleno cumplimiento de la normativa de protección de datos"
   },
   "connect": {
-    "title": "Conectar su tienda Shopify",
+    "title": "Connection Readiness",
     "subtitle": "Sincronizar disputas y pedidos para gestionar evidencia",
     "whatWeAccess": "A qué accederemos:",
     "readDisputesOrders": "Leer disputas y pedidos (solo lectura)",
@@ -919,15 +919,17 @@
       "gettingStarted": "Primeros pasos",
       "gettingStartedDesc": "Conectar su tienda, sincronizar disputas y aprender lo básico",
       "disputes": "Disputas",
-      "disputesDesc": "Ver, filtrar, sincronizar y gestionar sus contracargos",
+      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
       "evidencePacks": "Paquetes de evidencia",
-      "evidencePacksDesc": "Crear, revisar y fortalecer su evidencia",
+      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
       "automationRules": "Automatización y reglas",
-      "automationRulesDesc": "Configurar creación y guardado automáticos y reglas de enrutamiento",
+      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
       "billing": "Facturación y planes",
       "billingDesc": "Planes, cuotas, actualizaciones y período de prueba",
       "savingToShopify": "Guardar en Shopify",
-      "savingToShopifyDesc": "Cómo se guarda la evidencia y qué sucede después"
+      "savingToShopifyDesc": "Cómo se guarda la evidencia y qué sucede después",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1241,8 +1243,8 @@
     }
   },
   "sessionRequired": {
-    "title": "Sesión requerida",
-    "bannerTitle": "Sesión de tienda no encontrada",
+    "title": "Restoring Session",
+    "bannerTitle": "Session needs to be restored",
     "bannerBody": "Por favor, abre DisputeDesk desde Shopify Admin (Aplicaciones) para que podamos verificar tu sesión de tienda.",
     "instructions": "Esta aplicación debe iniciarse desde tu panel de Shopify Admin. Si llegaste aquí por error, cierra esta pestaña y abre la aplicación desde el panel de tu tienda.",
     "returnTo": "Serás redirigido a: {path}"

@@ -195,6 +195,13 @@ export default function ConnectPage() {
             </Button>
           )}
 
+          {/* Readiness note */}
+          {!connected && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("readinessNote")}
+            </Text>
+          )}
+
           {/* Footer */}
           <InlineStack gap="200" blockAlign="center">
             <Icon source={LockIcon} />

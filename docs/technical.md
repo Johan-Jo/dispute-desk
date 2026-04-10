@@ -1593,3 +1593,17 @@ Phase C extends lifecycle awareness to the control surfaces: Coverage, Automatio
 **Pack detail** (`app/(embedded)/app/packs/[packId]/page.tsx`): For dispute-linked packs, shows dispute phase badge and lifecycle context banner (inquiry vs chargeback framing). API extended to return `dispute_phase` from joined disputes table.
 
 **Scope:** Rules remain phase-blind. Both phases show the same automation mode from rules. Lifecycle differentiation comes from `reason_template_mappings` (per-phase template defaults). Phase-specific rules are a future enhancement.
+
+### Supporting Surfaces Cleanup — Phase D (2026-04-09)
+
+Phase D cleans up Settings, Help, Connect, Session Required, and Analytics for product coherence.
+
+**Settings** (`app/(embedded)/app/settings/page.tsx`): Reordered sections — Notifications before Automation. Automation section labeled as "Advanced defaults" with note pointing to the Automation page for policy configuration.
+
+**Help** (`lib/help/categories.ts`, `lib/help/articles.ts`, `lib/help/embedded.ts`): Added "Inquiry & Chargeback Lifecycle" category with 3 new articles: Understanding Inquiries, Understanding Chargebacks, Lifecycle Overview. Updated category descriptions and guide titles to reflect lifecycle model. Category "Disputes" renamed to "Inquiries & Chargebacks" in descriptions.
+
+**Connect** (`app/(embedded)/app/connect/page.tsx`): Reframed as "Connection Readiness" with lifecycle-aware copy. Added readiness note about inquiry/chargeback coverage activation.
+
+**Session Required** (`app/(embedded)/app/session-required/page.tsx`): Updated from "Session Required" / "Store session not found" to "Restoring Session" / "Session needs to be restored" for friendlier framing.
+
+**Analytics** (`app/(embedded)/app/analytics/page.tsx`): Demoted to "Reporting" with subtitle clarifying it's supplemental to the Dashboard. Added back-navigation to Dashboard. Not in primary nav.

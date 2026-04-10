@@ -318,6 +318,31 @@ export const HELP_ARTICLES: HelpArticle[] = [
     relatedSlugs: ["how-evidence-saved", "after-saving"],
     tags: ["submit", "card network", "visa", "mastercard", "compliance"],
   },
+  // --- Lifecycle ---
+  {
+    slug: "understanding-inquiries",
+    category: "lifecycle",
+    titleKey: "help.articles.understandingInquiries.title",
+    bodyKey: "help.articles.understandingInquiries.body",
+    relatedSlugs: ["understanding-chargebacks", "dispute-detail-page"],
+    tags: ["inquiry", "pre-chargeback", "lifecycle", "phase", "early response"],
+  },
+  {
+    slug: "understanding-chargebacks",
+    category: "lifecycle",
+    titleKey: "help.articles.understandingChargebacks.title",
+    bodyKey: "help.articles.understandingChargebacks.body",
+    relatedSlugs: ["understanding-inquiries", "dispute-detail-page", "how-packs-built"],
+    tags: ["chargeback", "formal dispute", "evidence", "lifecycle", "phase"],
+  },
+  {
+    slug: "lifecycle-overview",
+    category: "lifecycle",
+    titleKey: "help.articles.lifecycleOverview.title",
+    bodyKey: "help.articles.lifecycleOverview.body",
+    relatedSlugs: ["understanding-inquiries", "understanding-chargebacks", "configuring-automation"],
+    tags: ["lifecycle", "inquiry", "chargeback", "phase", "coverage", "automation"],
+  },
 ];
 
 export function getArticleBySlug(slug: string): HelpArticle | undefined {

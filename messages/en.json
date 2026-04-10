@@ -481,8 +481,8 @@
     }
   },
   "analytics": {
-    "title": "Analytics",
-    "subtitle": "Dispute performance metrics and trends",
+    "title": "Reporting",
+    "subtitle": "Detailed dispute performance metrics and historical trends. For a real-time operational overview, see the Dashboard.",
     "overview": "Overview",
     "period24h": "24h",
     "period7d": "7 days",
@@ -688,7 +688,7 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Manage your account, automation, and preferences",
+    "subtitle": "Advanced preferences and account settings",
     "automationSection": "Automation",
     "profileSection": "Profile",
     "notificationsSection": "Notifications",
@@ -710,7 +710,7 @@
     "email": "Email",
     "saveChanges": "Save changes",
     "newDisputeAlerts": "New dispute alerts",
-    "newDisputeAlertsDesc": "Get notified when new chargebacks appear",
+    "newDisputeAlertsDesc": "Get notified when new inquiries or chargebacks appear",
     "deadlineReminders": "Deadline reminders",
     "deadlineRemindersDesc": "Reminder emails before response deadlines",
     "packCompletion": "Playbook completion",
@@ -760,8 +760,25 @@
     "active": "Active"
   },
   "connect": {
-    "title": "Connect your Shopify store",
-    "subtitle": "We need access to your store so we can sync disputes, build evidence, and save responses to Shopify on your behalf. You’ll approve the access below.",
+    "title": "Connection Readiness",
+    "subtitle": "DisputeDesk needs Shopify access to sync inquiries and chargebacks, build evidence, and save responses on your behalf.",
+    "statusConnected": "Connected",
+    "statusNotConnected": "Not Connected",
+    "storeConnected": "Permissions granted",
+    "description": "Grant the permissions below so DisputeDesk can protect your store across both inquiry and chargeback phases.",
+    "permissionsHeading": "Required permissions",
+    "permOrders": "Orders",
+    "permOrdersDesc": "Read order details and attach to evidence",
+    "permCustomers": "Customers",
+    "permCustomersDesc": "Include customer info in evidence when required",
+    "permDisputes": "Disputes",
+    "permDisputesDesc": "Sync inquiries and chargebacks from Shopify Payments",
+    "permFiles": "Evidence files",
+    "permFilesDesc": "Upload and save evidence documents to Shopify",
+    "ctaAuthorize": "Authorize DisputeDesk",
+    "ctaContinue": "Continue to setup",
+    "footer": "Your store data is encrypted and never shared with third parties.",
+    "readinessNote": "Once connected, DisputeDesk will begin syncing your disputes and configuring coverage for both inquiries and chargebacks.",
     "whatWeNeed": "What we need from Shopify",
     "whatWeNeedIntro": "DisputeDesk needs the following access. We use it only to manage disputes and evidence; all access is read-only except when we upload evidence for you.",
     "readDisputesOrders": "Disputes and orders (read) — to list your chargebacks, due dates, and attach order details to evidence",
@@ -922,28 +939,28 @@
     },
     "tours": {
       "reviewDispute": {
-        "title": "Handle a Dispute End-to-End",
-        "description": "Complete walkthrough from receiving a dispute to submitting evidence"
+        "title": "Review a Case End-to-End",
+        "description": "Walk through handling an inquiry or chargeback from start to resolution"
       },
       "buildPack": {
         "title": "Create Your First Playbook",
-        "description": "Learn how to build a playbook from scratch with all required documents"
+        "description": "Build a playbook that supports both inquiry and chargeback responses"
       },
       "automationRules": {
-        "title": "Set Up Automation Rules",
-        "description": "Automate dispute handling based on dispute type and order details"
+        "title": "Set Up Automation",
+        "description": "Configure how DisputeDesk handles each dispute family automatically"
       },
       "installTemplate": {
         "title": "Install & Customize Playbooks",
         "description": "Install pre-built playbooks and customize them for your store"
       },
       "configurePolicies": {
-        "title": "Configure Store Policies",
-        "description": "Add your shipping, refund, and terms policies for evidence packs"
+        "title": "Review Coverage",
+        "description": "See how each dispute family is covered across inquiry and chargeback phases"
       },
       "packBuilderAdvanced": {
         "title": "Advanced Playbook Features",
-        "description": "Master conditional logic, custom fields, and narrative templates"
+        "description": "Customize evidence checklists, narrative templates, and conditional logic"
       }
     },
     "resources": {
@@ -1037,17 +1054,19 @@
     },
     "categories": {
       "gettingStarted": "Getting Started",
-      "gettingStartedDesc": "Connect your store, sync disputes, and learn the basics",
-      "disputes": "Disputes",
-      "disputesDesc": "View, filter, sync, and manage your chargebacks",
+      "gettingStartedDesc": "Connect your store, sync disputes, and understand the inquiry/chargeback lifecycle",
+      "disputes": "Inquiries & Chargebacks",
+      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
       "evidencePacks": "Playbooks",
-      "evidencePacksDesc": "Build, review, and manage your playbooks",
-      "automationRules": "Automation",
-      "automationRulesDesc": "Configure automation, coverage, and handling rules",
+      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
+      "automationRules": "Automation & Coverage",
+      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
       "billing": "Billing & Plans",
       "billingDesc": "Plans, quotas, upgrades, and trial information",
       "savingToShopify": "Saving to Shopify",
-      "savingToShopifyDesc": "How evidence is saved and what happens next"
+      "savingToShopifyDesc": "How evidence is saved and what happens next",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "connectShopifyStore": {
@@ -1181,6 +1200,18 @@
       "notSubmitToNetworks": {
         "title": "DisputeDesk does NOT send evidence to card networks",
         "body": "This is an important distinction: DisputeDesk saves evidence to Shopify, but does NOT send it onward to card networks (Visa, Mastercard, American Express, etc.).\n\nHere's the process:\n1. DisputeDesk builds your evidence pack and saves it to Shopify via API.\n2. Forwarding evidence to the card network is handled entirely by Shopify.\n3. Shopify either auto-sends on the due date or you respond manually from Shopify Admin.\n\nWhy it works this way:\n- Shopify is the merchant of record and handles the official communication with card networks.\n- This ensures compliance with payment processor requirements.\n- Your evidence is formatted and structured by DisputeDesk, then handed off to Shopify for the official process.\n\nYou always maintain control. Review your evidence in Shopify Admin before Shopify forwards it to the card network."
+      },
+      "understandingInquiries": {
+        "title": "Understanding Inquiries",
+        "body": "An inquiry is the first stage of a dispute — before it becomes a formal chargeback.\n\nWhat happens during an inquiry:\n- The customer's bank contacts Shopify with questions about a transaction.\n- This is NOT yet a chargeback. No funds have been reversed.\n- You have an opportunity to respond with information that may resolve the issue.\n\nWhy inquiries matter:\n- Responding promptly to an inquiry can prevent it from escalating to a chargeback.\n- A well-prepared response at this stage saves time, money, and effort.\n- DisputeDesk identifies inquiries and helps you prepare the right response.\n\nHow DisputeDesk handles inquiries:\n- Inquiries appear in your disputes list with an 'Inquiry' badge.\n- The dispute detail page uses inquiry-specific language and CTAs.\n- Automation and playbooks can be configured for inquiry-specific handling.\n\nKey difference from chargebacks:\n- Inquiries are informational — the bank is asking questions.\n- Chargebacks are formal — funds are reversed and you must submit evidence."
+      },
+      "understandingChargebacks": {
+        "title": "Understanding Chargebacks",
+        "body": "A chargeback is a formal dispute where the customer's bank has reversed the transaction.\n\nWhat happens during a chargeback:\n- The bank reverses the funds from the merchant's account.\n- You have a limited window (usually 7-21 days) to submit evidence.\n- If you don't respond, you lose the dispute automatically.\n\nHow DisputeDesk handles chargebacks:\n- Chargebacks appear with a 'Chargeback' badge and stronger urgency.\n- DisputeDesk automatically builds evidence packs using order data, tracking info, and customer communications.\n- Evidence is saved to Shopify, where it's forwarded to the card network.\n\nEvidence that helps win chargebacks:\n- Proof of delivery (tracking numbers, delivery confirmation)\n- Order confirmation and customer communication\n- Store policies (refund, shipping, terms of service)\n- Fraud screening data (AVS match, CVV verification)\n\nTimelines are critical. DisputeDesk monitors deadlines and ensures evidence is prepared well before the due date."
+      },
+      "lifecycleOverview": {
+        "title": "How DisputeDesk Handles the Dispute Lifecycle",
+        "body": "Every dispute goes through a lifecycle with two main phases: Inquiry and Chargeback.\n\nPhase 1 — Inquiry:\n- The bank asks questions about a transaction.\n- No funds reversed yet.\n- Prompt response can prevent escalation.\n- DisputeDesk labels these as 'Inquiry' throughout the app.\n\nPhase 2 — Chargeback:\n- The bank formally reverses funds.\n- Evidence submission required within a deadline.\n- DisputeDesk labels these as 'Chargeback' with stronger urgency.\n\nHow coverage works across phases:\n- Each dispute family (Fraud, Product Not Received, etc.) can have different handling for inquiries vs chargebacks.\n- The Coverage page shows how each family is handled in both phases.\n- Automation rules currently apply to both phases equally.\n\nWhat you should do:\n1. Check your Coverage page to see which families are protected.\n2. Review your Automation settings for each dispute type.\n3. Install playbooks for the dispute types most relevant to your store.\n4. Monitor the Dashboard for inquiry and chargeback queue counts."
       }
     },
     "embedded": {
@@ -1375,10 +1406,10 @@
     }
   },
   "sessionRequired": {
-    "title": "Session Required",
-    "bannerTitle": "Store session not found",
-    "bannerBody": "Please open DisputeDesk from Shopify Admin (Apps) so we can verify your store session.",
-    "instructions": "This app must be launched from your Shopify Admin panel. If you arrived here by accident, close this tab and open the app from your store's admin dashboard.",
+    "title": "Restoring Session",
+    "bannerTitle": "Session needs to be restored",
+    "bannerBody": "Your app session has expired. Open DisputeDesk from Shopify Admin to restore it.",
+    "instructions": "DisputeDesk must be launched from your Shopify Admin panel. If you arrived here by accident, close this tab and reopen the app from your store's admin.",
     "returnTo": "You will be returned to: {path}"
   },
   "packTemplates": {

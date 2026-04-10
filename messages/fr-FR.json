@@ -492,7 +492,7 @@
     "evidencePackTitle": "Evidence Pack"
   },
   "analytics": {
-    "title": "Analytiques",
+    "title": "Reporting",
     "subtitle": "Métriques de performance et tendances des litiges",
     "overview": "Aperçu",
     "period24h": "24h",
@@ -794,7 +794,7 @@
     "active": "Actif"
   },
   "connect": {
-    "title": "Autoriser DisputeDesk",
+    "title": "Connection Readiness",
     "statusConnected": "Connecté",
     "statusNotConnected": "Non connecté",
     "description": "Autorisez votre compte Shopify et cliquez sur Autoriser pour vous connecter. DisputeDesk utilisera ces autorisations pour synchroniser les litiges, créer des dossiers de preuves et enregistrer les réponses en votre nom.",
@@ -1077,15 +1077,17 @@
       "gettingStarted": "Premiers pas",
       "gettingStartedDesc": "Connecter votre boutique, synchroniser les litiges et apprendre les bases",
       "disputes": "Litiges",
-      "disputesDesc": "Afficher, filtrer, synchroniser et gérer vos rétrofacturations",
+      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
       "evidencePacks": "Dossiers de preuves",
-      "evidencePacksDesc": "Créer, examiner et renforcer vos preuves",
+      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
       "automationRules": "Automatisation et règles",
-      "automationRulesDesc": "Configurer la création et l'enregistrement automatiques et les règles de routage",
+      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
       "billing": "Facturation et plans",
       "billingDesc": "Plans, quotas, mises à niveau et période d'essai",
       "savingToShopify": "Enregistrement sur Shopify",
-      "savingToShopifyDesc": "Comment les preuves sont enregistrées et la suite du processus"
+      "savingToShopifyDesc": "Comment les preuves sont enregistrées et la suite du processus",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1414,8 +1416,8 @@
     }
   },
   "sessionRequired": {
-    "title": "Session requise",
-    "bannerTitle": "Session de boutique introuvable",
+    "title": "Restoring Session",
+    "bannerTitle": "Session needs to be restored",
     "bannerBody": "Veuillez ouvrir DisputeDesk depuis Shopify Admin (Applications) afin que nous puissions vérifier votre session de boutique.",
     "instructions": "Cette application doit être lancée depuis votre panneau Shopify Admin. Si vous êtes arrivé ici par erreur, fermez cet onglet et ouvrez l'application depuis le tableau de bord de votre boutique.",
     "returnTo": "Vous serez redirigé vers : {path}"

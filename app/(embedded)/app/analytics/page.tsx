@@ -190,6 +190,7 @@ export default function AnalyticsPage() {
     <Page
       title={t("title")}
       subtitle={t("subtitle")}
+      backAction={{ content: "Dashboard", url: "/app" }}
     >
       <Layout>
         <Suspense

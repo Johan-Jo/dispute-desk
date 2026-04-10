@@ -361,7 +361,7 @@
     "supportsPhases": "Supports: {phases}"
   },
   "analytics": {
-    "title": "Análises",
+    "title": "Reporting",
     "subtitle": "Métricas de desempenho e tendências de disputas",
     "overview": "Visão geral",
     "period24h": "24h",
@@ -645,7 +645,7 @@
     "gdprDesc": "Conformidade total com regulamentos de proteção de dados"
   },
   "connect": {
-    "title": "Conecte sua loja Shopify",
+    "title": "Connection Readiness",
     "subtitle": "Sincronize disputas e pedidos para começar a gerenciar evidências",
     "whatWeAccess": "O que vamos acessar:",
     "readDisputesOrders": "Ler disputas e pedidos (somente leitura)",
@@ -919,15 +919,17 @@
       "gettingStarted": "Primeiros Passos",
       "gettingStartedDesc": "Conecte sua loja, sincronize disputas e aprenda o básico",
       "disputes": "Disputas",
-      "disputesDesc": "Visualize, filtre, sincronize e gerencie seus chargebacks",
+      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
       "evidencePacks": "Pacotes de Evidências",
-      "evidencePacksDesc": "Monte, revise e fortaleça suas evidências",
+      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
       "automationRules": "Automação e Regras",
-      "automationRulesDesc": "Configure geração automática, salvamento automático e regras de encaminhamento",
+      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
       "billing": "Cobrança e Planos",
       "billingDesc": "Planos, cotas, upgrades e informações sobre o período de teste",
       "savingToShopify": "Salvando no Shopify",
-      "savingToShopifyDesc": "Como as evidências são salvas e o que acontece depois"
+      "savingToShopifyDesc": "Como as evidências são salvas e o que acontece depois",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1241,8 +1243,8 @@
     }
   },
   "sessionRequired": {
-    "title": "Sessão necessária",
-    "bannerTitle": "Sessão da loja não encontrada",
+    "title": "Restoring Session",
+    "bannerTitle": "Session needs to be restored",
     "bannerBody": "Por favor, abra o DisputeDesk a partir do Shopify Admin (Aplicativos) para que possamos verificar a sessão da sua loja.",
     "instructions": "Este aplicativo deve ser iniciado a partir do painel Shopify Admin. Se você chegou aqui por engano, feche esta aba e abra o aplicativo pelo painel da sua loja.",
     "returnTo": "Você será redirecionado para: {path}"

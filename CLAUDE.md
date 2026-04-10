@@ -4,6 +4,7 @@
 
 1. **Supabase migrations — you run them, every time.** If you create or edit any file under `supabase/migrations/`, you **must** run `npm run db:migrate` in this repo in the **same working session** before you mark the task done or push. Do **not** only commit SQL. Do **not** tell the maintainer to run migrations instead of doing it yourself when the environment has network + shell (use `npm run db:migrate:script` only when CLI link is impossible — document that in the summary).
 2. **Verify before “done”:** `npm test` and `npx tsc --noEmit` (and `npm run build` when touching UI/routes/schema).
+3. **Plan mode is absolute.** When plan mode activates — for any reason, at any time — **immediately stop all write operations**. No edits, no bash commands that modify files, no git operations, no tool calls that change state. Read-only actions only. Do not attempt to “finish up” current work. Do not rationalize continuing. Stop, acknowledge plan mode, and follow the plan workflow. This applies even if plan mode activates mid-task due to background agent completion or other system events.
 
 ## What It Is
 Automation-first Shopify chargeback evidence app. Connects to Shopify, auto-syncs disputes, auto-builds evidence packs, and auto-saves them back to Shopify. Merchants submit via Shopify Admin — DisputeDesk does NOT programmatically submit to card networks.

@@ -361,7 +361,7 @@
     "supportsPhases": "Supports: {phases}"
   },
   "analytics": {
-    "title": "Analysen",
+    "title": "Reporting",
     "subtitle": "Leistungskennzahlen und Trends zu Streitfällen",
     "overview": "Übersicht",
     "period24h": "24h",
@@ -645,7 +645,7 @@
     "gdprDesc": "Vollständige Einhaltung der Datenschutzbestimmungen"
   },
   "connect": {
-    "title": "Shopify-Shop verbinden",
+    "title": "Connection Readiness",
     "subtitle": "Streitfälle und Bestellungen synchronisieren",
     "whatWeAccess": "Worauf wir zugreifen:",
     "readDisputesOrders": "Streitfälle und Bestellungen lesen (schreibgeschützt)",
@@ -919,15 +919,17 @@
       "gettingStarted": "Erste Schritte",
       "gettingStartedDesc": "Shop verbinden, Streitfälle synchronisieren und Grundlagen lernen",
       "disputes": "Streitfälle",
-      "disputesDesc": "Anzeigen, filtern, synchronisieren und verwalten",
+      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
       "evidencePacks": "Bewispakete",
-      "evidencePacksDesc": "Erstellen, prüfen und Beweise stärken",
+      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
       "automationRules": "Automatisierung & Regeln",
-      "automationRulesDesc": "Auto-Erstellung, Auto-Speicherung und Routing-Regeln konfigurieren",
+      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
       "billing": "Abrechnung & Pläne",
       "billingDesc": "Pläne, Kontingente, Upgrades und Testphase",
       "savingToShopify": "Speichern bei Shopify",
-      "savingToShopifyDesc": "Wie Beweise gespeichert werden und was danach passiert"
+      "savingToShopifyDesc": "Wie Beweise gespeichert werden und was danach passiert",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1241,8 +1243,8 @@
     }
   },
   "sessionRequired": {
-    "title": "Sitzung erforderlich",
-    "bannerTitle": "Shop-Sitzung nicht gefunden",
+    "title": "Restoring Session",
+    "bannerTitle": "Session needs to be restored",
     "bannerBody": "Bitte öffnen Sie DisputeDesk über Shopify Admin (Apps), damit wir Ihre Shop-Sitzung verifizieren können.",
     "instructions": "Diese App muss über Ihr Shopify Admin-Panel gestartet werden. Falls Sie versehentlich hier gelandet sind, schließen Sie diesen Tab und öffnen Sie die App über Ihr Shop-Dashboard.",
     "returnTo": "Sie werden weitergeleitet zu: {path}"

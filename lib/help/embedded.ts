@@ -41,6 +41,9 @@ const EMBEDDED_ARTICLE_SLUGS: string[] = [
   "field-mapping",
   "after-saving",
   "not-submit-to-networks",
+  "understanding-inquiries",
+  "understanding-chargebacks",
+  "lifecycle-overview",
 ];
 
 /** Optional embedded-specific title/body i18n keys. Use when copy must differ for in-app context (e.g. "in this app" vs "in the portal"). Keys live under help.embedded.articles.{slug}.title / .body */

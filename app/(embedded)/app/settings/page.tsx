@@ -198,7 +198,77 @@ export default function EmbeddedSettingsPage() {
           </Card>
         </Layout.Section>
 
-        {/* Automation */}
+        {/* Notifications — before automation (daily relevance) */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack gap="300" blockAlign="center">
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    background: "#DCFCE7",
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                  }}
+                >
+                  🔔
+                </div>
+                <Text as="h2" variant="headingMd">{t("notifications")}</Text>
+              </InlineStack>
+              <Divider />
+              <BlockStack gap="300">
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifNewDispute")}</Text>
+                      <Text as="span" variant="bodySm" tone="subdued">{t("notifNewDisputeDesc")}</Text>
+                    </BlockStack>
+                    <Checkbox
+                      label=""
+                      checked={notifNewDispute}
+                      onChange={(v) => { setNotifNewDispute(v); void persistNotification("newDispute", v); }}
+                      labelHidden
+                    />
+                  </InlineStack>
+                </div>
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifBeforeDue")}</Text>
+                      <Text as="span" variant="bodySm" tone="subdued">{t("notifBeforeDueDesc")}</Text>
+                    </BlockStack>
+                    <Checkbox
+                      label=""
+                      checked={notifBeforeDue}
+                      onChange={(v) => { setNotifBeforeDue(v); void persistNotification("beforeDue", v); }}
+                      labelHidden
+                    />
+                  </InlineStack>
+                </div>
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifEvidenceReady")}</Text>
+                      <Text as="span" variant="bodySm" tone="subdued">{t("notifEvidenceReadyDesc")}</Text>
+                    </BlockStack>
+                    <Checkbox
+                      label=""
+                      checked={notifEvidenceReady}
+                      onChange={(v) => { setNotifEvidenceReady(v); void persistNotification("evidenceReady", v); }}
+                      labelHidden
+                    />
+                  </InlineStack>
+                </div>
+              </BlockStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Advanced Automation Defaults */}
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
@@ -217,7 +287,10 @@ export default function EmbeddedSettingsPage() {
                 >
                   ⚡
                 </div>
-                <Text as="h2" variant="headingMd">{t("automationSection")}</Text>
+                <BlockStack gap="050">
+                  <Text as="h2" variant="headingMd">{t("automationSection")}</Text>
+                  <Text as="span" variant="bodySm" tone="subdued">Advanced defaults — for policy configuration, see Automation</Text>
+                </BlockStack>
               </InlineStack>
               <Divider />
               {loading ? (
@@ -310,76 +383,6 @@ export default function EmbeddedSettingsPage() {
                   </InlineStack>
                 </BlockStack>
               )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        {/* Notifications */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack gap="300" blockAlign="center">
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    background: "#DCFCE7",
-                    borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 16,
-                  }}
-                >
-                  🔔
-                </div>
-                <Text as="h2" variant="headingMd">{t("notifications")}</Text>
-              </InlineStack>
-              <Divider />
-              <BlockStack gap="300">
-                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <BlockStack gap="050">
-                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifNewDispute")}</Text>
-                      <Text as="span" variant="bodySm" tone="subdued">{t("notifNewDisputeDesc")}</Text>
-                    </BlockStack>
-                    <Checkbox
-                      label=""
-                      checked={notifNewDispute}
-                      onChange={(v) => { setNotifNewDispute(v); void persistNotification("newDispute", v); }}
-                      labelHidden
-                    />
-                  </InlineStack>
-                </div>
-                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <BlockStack gap="050">
-                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifBeforeDue")}</Text>
-                      <Text as="span" variant="bodySm" tone="subdued">{t("notifBeforeDueDesc")}</Text>
-                    </BlockStack>
-                    <Checkbox
-                      label=""
-                      checked={notifBeforeDue}
-                      onChange={(v) => { setNotifBeforeDue(v); void persistNotification("beforeDue", v); }}
-                      labelHidden
-                    />
-                  </InlineStack>
-                </div>
-                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <BlockStack gap="050">
-                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifEvidenceReady")}</Text>
-                      <Text as="span" variant="bodySm" tone="subdued">{t("notifEvidenceReadyDesc")}</Text>
-                    </BlockStack>
-                    <Checkbox
-                      label=""
-                      checked={notifEvidenceReady}
-                      onChange={(v) => { setNotifEvidenceReady(v); void persistNotification("evidenceReady", v); }}
-                      labelHidden
-                    />
-                  </InlineStack>
-                </div>
-              </BlockStack>
             </BlockStack>
           </Card>
         </Layout.Section>

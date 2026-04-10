@@ -363,7 +363,7 @@
     "supportsPhases": "Supports: {phases}"
   },
   "analytics": {
-    "title": "Analyser",
+    "title": "Reporting",
     "subtitle": "Prestandamått och trender för tvister",
     "overview": "Översikt",
     "period24h": "24h",
@@ -647,7 +647,7 @@
     "gdprDesc": "Fullständig efterlevnad av dataskyddsförordningar"
   },
   "connect": {
-    "title": "Anslut din Shopify-butik",
+    "title": "Connection Readiness",
     "subtitle": "Synka tvister och ordrar för att börja hantera bevis",
     "whatWeAccess": "Vad vi kommer åt:",
     "readDisputesOrders": "Läsa tvister och ordrar (skrivskyddat)",
@@ -921,15 +921,17 @@
       "gettingStarted": "Kom igång",
       "gettingStartedDesc": "Anslut din butik, synka tvister och lär dig grunderna",
       "disputes": "Tvister",
-      "disputesDesc": "Visa, filtrera, synka och hantera dina återkrav",
+      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
       "evidencePacks": "Bevispaket",
-      "evidencePacksDesc": "Bygg, granska och stärk dina bevis",
+      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
       "automationRules": "Automation och regler",
-      "automationRulesDesc": "Konfigurera autobygg, autospara och routningsregler",
+      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
       "billing": "Fakturering och planer",
       "billingDesc": "Planer, kvoter, uppgraderingar och provperiod",
       "savingToShopify": "Spara till Shopify",
-      "savingToShopifyDesc": "Hur bevis sparas och vad som händer sedan"
+      "savingToShopifyDesc": "Hur bevis sparas och vad som händer sedan",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1243,8 +1245,8 @@
     }
   },
   "sessionRequired": {
-    "title": "Session krävs",
-    "bannerTitle": "Butikssession hittades inte",
+    "title": "Restoring Session",
+    "bannerTitle": "Session needs to be restored",
     "bannerBody": "Vänligen öppna DisputeDesk från Shopify Admin (Appar) så att vi kan verifiera din butikssession.",
     "instructions": "Denna app måste startas från din Shopify Admin-panel. Om du hamnade här av misstag, stäng denna flik och öppna appen från din butiks instrumentpanel.",
     "returnTo": "Du kommer att omdirigeras till: {path}"
