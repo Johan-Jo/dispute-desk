@@ -10,6 +10,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  GitBranch,
+  Activity,
+  ArrowRight,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
@@ -236,6 +239,30 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: "Reason Mapping", href: "/admin/reason-mapping", icon: GitBranch, color: "from-[#8B5CF6] to-[#EC4899]" },
+          { label: "Templates", href: "/admin/templates", icon: FileText, color: "from-[#1D4ED8] to-[#3B82F6]" },
+          { label: "Template Health", href: "/admin/template-health", icon: Activity, color: "from-[#059669] to-[#10B981]" },
+          { label: "Job Monitor", href: "/admin/jobs", icon: Cog, color: "from-[#D97706] to-[#F59E0B]" },
+        ].map((action) => (
+          <Link
+            key={action.href}
+            href={action.href}
+            className="group bg-white border border-[#E2E8F0] rounded-lg p-4 hover:border-[#3B82F6] hover:shadow-sm transition-all"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className={`w-9 h-9 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center`}>
+                <action.icon className="w-4 h-4 text-white" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#1D4ED8] transition-colors" />
+            </div>
+            <span className="text-sm font-semibold text-[#0F172A]">{action.label}</span>
+          </Link>
+        ))}
       </div>
 
       {/* Recent Activity */}

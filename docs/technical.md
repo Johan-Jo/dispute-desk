@@ -1607,3 +1607,13 @@ Phase D cleans up Settings, Help, Connect, Session Required, and Analytics for p
 **Session Required** (`app/(embedded)/app/session-required/page.tsx`): Updated from "Session Required" / "Store session not found" to "Restoring Session" / "Session needs to be restored" for friendlier framing.
 
 **Analytics** (`app/(embedded)/app/analytics/page.tsx`): Demoted to "Reporting" with subtitle clarifying it's supplemental to the Dashboard. Added back-navigation to Dashboard. Not in primary nav.
+
+### Internal Admin Portal Polish (2026-04-09)
+
+Admin portal visual polish and enhancement pass. All admin pages already existed with functional backend (API routes + DB functions).
+
+**Overview** (`app/admin/page.tsx`): Added Quick Actions section with links to Reason Mapping, Templates, Template Health, and Job Monitor.
+
+**Reason Mapping** (`app/admin/reason-mapping/page.tsx`): Enhanced phase toggle with segmented control UI. Added unmapped reasons warning banner when gaps exist.
+
+**Shared components**: AdminPageHeader, AdminStatsRow, AdminFilterBar, AdminTable, StatusPill all already in use across all admin pages. Template Library, Template Detail, Template Health, Shops, Jobs, Audit, Billing, and Team pages were already production-quality with consistent styling.

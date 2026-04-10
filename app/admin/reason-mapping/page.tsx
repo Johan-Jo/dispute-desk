@@ -98,28 +98,51 @@ export default function ReasonMappingPage() {
       />
 
       {/* Phase Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setPhase("chargeback")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-            phase === "chargeback"
-              ? "bg-[#1D4ED8] text-white"
-              : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#E2E8F0]"
-          }`}
-        >
-          Chargeback
-        </button>
-        <button
-          onClick={() => setPhase("inquiry")}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-            phase === "inquiry"
-              ? "bg-[#1D4ED8] text-white"
-              : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#E2E8F0]"
-          }`}
-        >
-          Inquiry
-        </button>
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-sm font-medium text-[#64748B]">Lifecycle Phase:</span>
+        <div className="flex gap-1 bg-[#F1F5F9] rounded-lg p-1">
+          <button
+            onClick={() => setPhase("chargeback")}
+            className={`px-5 py-2 rounded-md text-sm font-semibold transition-colors ${
+              phase === "chargeback"
+                ? "bg-white text-[#0F172A] shadow-sm"
+                : "text-[#64748B] hover:text-[#0F172A]"
+            }`}
+          >
+            Chargeback
+          </button>
+          <button
+            onClick={() => setPhase("inquiry")}
+            className={`px-5 py-2 rounded-md text-sm font-semibold transition-colors ${
+              phase === "inquiry"
+                ? "bg-white text-[#0F172A] shadow-sm"
+                : "text-[#64748B] hover:text-[#0F172A]"
+            }`}
+          >
+            Inquiry
+          </button>
+        </div>
+        <span className="text-xs text-[#94A3B8]">
+          Showing default template assignments for {phase} disputes
+        </span>
       </div>
+
+      {/* Warnings banner */}
+      {stats.unmapped > 0 && (
+        <div className="mb-6 p-4 bg-[#FEF3C7] border border-[#FDE68A] rounded-lg flex items-center gap-3">
+          <div className="w-8 h-8 bg-[#F59E0B] rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm font-bold">!</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#92400E]">
+              {stats.unmapped} unmapped reason{stats.unmapped !== 1 ? "s" : ""} for {phase}
+            </p>
+            <p className="text-xs text-[#B45309]">
+              Disputes with unmapped reasons won&apos;t have a default template. Use the filter below to find them.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <AdminStatsRow
