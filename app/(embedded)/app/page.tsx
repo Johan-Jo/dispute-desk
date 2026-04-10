@@ -43,7 +43,7 @@ import {
   recentDisputesViewDetailsLinkStyle,
 } from "@/lib/embedded/recentDisputesTableStyles";
 import { useSearchParams, useRouter } from "next/navigation";
-import { deriveCoverage, type CoverageSummary } from "@/lib/coverage/deriveCoverage";
+import { deriveLifecycleCoverage, type LifecycleCoverageSummary } from "@/lib/coverage/deriveLifecycleCoverage";
 import { phaseBadgeTone, phaseLabel } from "@/lib/disputes/phaseUtils";
 
 interface AutomationSettings {
@@ -278,11 +278,9 @@ function RecentDisputesTable() {
                     <Text as="span" variant="bodySm" tone="subdued">{formatReason(r.reason)}</Text>
                   </td>
                   <td style={recentDisputesTdStyle}>
-                    {r.phase ? (
-                      <Badge tone={phaseBadgeTone(r.phase as "inquiry" | "chargeback")}>{phaseLabel(r.phase as "inquiry" | "chargeback", t)}</Badge>
-                    ) : (
-                      <Text as="span" variant="bodySm" tone="subdued">—</Text>
-                    )}
+                    <Badge tone={phaseBadgeTone(r.phase as "inquiry" | "chargeback" | null)}>
+                      {phaseLabel(r.phase as "inquiry" | "chargeback" | null, t)}
+                    </Badge>
                   </td>
                   <td style={recentDisputesTdStyle}>{statusBadge(r.status)}</td>
                   <td style={recentDisputesTdStyle}>
@@ -376,7 +374,7 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
     }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
-        <Text as="h2" variant="headingMd">{t("dashboard.overview")}</Text>
+        <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           {(["24h", "7d", "30d", "all"] as const).map((key) => (
             <button
@@ -533,8 +531,9 @@ function DashboardCharts({ period }: { period: PeriodKey }) {
 
 function ProtectionStatusCard() {
   const t = useTranslations("dashboard");
+  const tc = useTranslations("coverage");
   const searchParams = useSearchParams();
-  const [coverage, setCoverage] = useState<CoverageSummary | null>(null);
+  const [lifecycle, setLifecycle] = useState<LifecycleCoverageSummary | null>(null);
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -544,11 +543,13 @@ function ProtectionStatusCard() {
       fetch("/api/rules").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/packs?status=ACTIVE").then((r) => (r.ok ? r.json() : { packs: [] })),
       fetch("/api/automation/settings").then((r) => (r.ok ? r.json() : null)),
-    ]).then(([rulesData, packsData, autoData]) => {
+      fetch("/api/reason-mappings").then((r) => (r.ok ? r.json() : { mappings: [] })),
+    ]).then(([rulesData, packsData, autoData, mappingsData]) => {
       if (cancelled) return;
       const rules = Array.isArray(rulesData) ? rulesData : [];
       const packs = packsData?.packs ?? [];
-      setCoverage(deriveCoverage(rules, packs));
+      const mappings = mappingsData?.mappings ?? [];
+      setLifecycle(deriveLifecycleCoverage(rules, packs, mappings));
       if (autoData) setSettings(autoData);
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -556,25 +557,38 @@ function ProtectionStatusCard() {
 
   if (loading) return null;
 
-  const c = coverage;
+  const lc = lifecycle;
+
+  // Build specific gap descriptions
+  const gaps: { family: string; type: "both" | "inquiry" | "chargeback" }[] = [];
+  if (lc) {
+    for (const f of lc.families) {
+      const iGap = f.inquiry.hasGap;
+      const cGap = f.chargeback.hasGap;
+      if (iGap && cGap) {
+        gaps.push({ family: tc(f.labelKey.replace("coverage.", "")), type: "both" });
+      } else if (iGap) {
+        gaps.push({ family: tc(f.labelKey.replace("coverage.", "")), type: "inquiry" });
+      } else if (cGap) {
+        gaps.push({ family: tc(f.labelKey.replace("coverage.", "")), type: "chargeback" });
+      }
+    }
+  }
 
   // Strict status taxonomy
   type ProtectionStatus = "active" | "partial" | "attention" | "setup";
   let status: ProtectionStatus = "setup";
-  const blockers: string[] = [];
 
-  if (c) {
-    const uncoveredFamilies = c.totalFamilies - c.coveredCount;
-    if (uncoveredFamilies > 0) blockers.push(`${uncoveredFamilies} families not covered`);
-    if (!settings?.auto_build_enabled) blockers.push("Auto-build is disabled");
-
-    if (c.coveredCount === c.totalFamilies && settings?.auto_build_enabled) {
+  if (lc) {
+    const hasAutoBuild = settings?.auto_build_enabled ?? false;
+    if (lc.fullyConfiguredCount === lc.totalFamilies && hasAutoBuild) {
       status = "active";
-    } else if (c.coveredCount > 0) {
-      status = blockers.length > 0 ? "attention" : "partial";
+    } else if (lc.fullyConfiguredCount > 0 || gaps.length < lc.totalFamilies) {
+      status = gaps.length > 0 ? "attention" : "partial";
     } else {
-      status = blockers.length > 0 ? "attention" : "setup";
+      status = "setup";
     }
+    if (!hasAutoBuild && status === "active") status = "attention";
   }
 
   const statusConfig = {
@@ -592,18 +606,15 @@ function ProtectionStatusCard() {
   if (status === "setup") {
     ctaContent = t("continueSetupAction");
     ctaUrl = withShopParams("/app/setup", searchParams);
-  } else if (status === "attention") {
-    ctaContent = t("reviewIssueAction");
-    ctaUrl = withShopParams("/app/coverage", searchParams);
-  } else if (status === "partial") {
-    ctaContent = t("completeCoverageAction");
+  } else if (gaps.length > 0) {
+    ctaContent = t("reviewCoverageGaps");
     ctaUrl = withShopParams("/app/coverage", searchParams);
   }
 
   return (
     <Card>
       <BlockStack gap="300">
-        {/* Purpose + Status */}
+        {/* Status header */}
         <InlineStack align="space-between" blockAlign="center">
           <InlineStack gap="200" blockAlign="center">
             <div
@@ -626,14 +637,20 @@ function ProtectionStatusCard() {
           <Badge tone={cfg.tone}>{cfg.label}</Badge>
         </InlineStack>
 
-        {/* Current state: blockers or all clear */}
-        {blockers.length > 0 ? (
-          <BlockStack gap="100">
-            <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">{t("blockersList")}</Text>
-            {blockers.map((b) => (
-              <InlineStack key={b} gap="200" blockAlign="center">
+        {/* Specific gaps or all clear */}
+        {gaps.length > 0 ? (
+          <BlockStack gap="200">
+            <Text as="p" variant="bodySm" fontWeight="semibold">{t("coverageGapsTitle")}</Text>
+            {gaps.map((g) => (
+              <InlineStack key={g.family + g.type} gap="200" blockAlign="center">
                 <div style={{ width: 6, height: 6, borderRadius: 3, background: "#EF4444", flexShrink: 0 }} />
-                <Text as="span" variant="bodySm">{b}</Text>
+                <Text as="span" variant="bodySm">
+                  {g.type === "both"
+                    ? t("gapBothPhases", { family: g.family })
+                    : g.type === "inquiry"
+                      ? t("gapInquiryOnly", { family: g.family })
+                      : t("gapChargebackOnly", { family: g.family })}
+                </Text>
               </InlineStack>
             ))}
           </BlockStack>
@@ -641,12 +658,10 @@ function ProtectionStatusCard() {
           <Text as="p" variant="bodySm" tone="success">{t("noBlockers")}</Text>
         )}
 
-        {/* Coverage summary */}
-        {c && (
-          <InlineStack gap="400" wrap>
-            <Text as="span" variant="bodySm" tone="subdued">
-              {t("familiesCovered", { covered: c.coveredCount, total: c.totalFamilies })}
-            </Text>
+        {!settings?.auto_build_enabled && status !== "setup" && (
+          <InlineStack gap="200" blockAlign="center">
+            <div style={{ width: 6, height: 6, borderRadius: 3, background: "#F59E0B", flexShrink: 0 }} />
+            <Text as="span" variant="bodySm" tone="caution">Auto-build is disabled</Text>
           </InlineStack>
         )}
 
@@ -656,7 +671,7 @@ function ProtectionStatusCard() {
             {ctaContent}
           </Button>
           <Button variant="plain" size="slim" url={withShopParams("/app/coverage", searchParams)}>
-            {t("viewCoverage")}
+            {t("openCoverage")}
           </Button>
         </InlineStack>
       </BlockStack>
@@ -687,44 +702,61 @@ function LifecycleQueueSummary({ period }: { period: PeriodKey }) {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-      {/* Inquiry Queue */}
+      {/* Open Inquiries */}
       <Card>
         <BlockStack gap="200">
           <InlineStack gap="200" blockAlign="center">
             <Badge tone="info">{t("disputes.inquiryBadge")}</Badge>
-            <Text as="h3" variant="headingSm">{t("disputes.inquiryQueueTitle")}</Text>
+            <Text as="h3" variant="headingSm">{t("dashboard.openInquiries")}</Text>
           </InlineStack>
           <Text as="p" variant="headingLg">{s.inquiryCount}</Text>
-          <Button variant="plain" url={withShopParams("/app/disputes?phase=inquiry", searchParams)} size="slim">
-            {t("common.viewAll")}
-          </Button>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {s.inquiryCount === 0 ? t("dashboard.noOpenInquiries") : `${s.inquiryCount} ${t("dashboard.openInquiries").toLowerCase()}`}
+          </Text>
+          {s.inquiryCount > 0 && (
+            <Button variant="plain" url={withShopParams("/app/disputes?phase=inquiry", searchParams)} size="slim">
+              {t("common.viewAll")}
+            </Button>
+          )}
         </BlockStack>
       </Card>
-      {/* Chargeback Queue */}
+      {/* Open Chargebacks */}
       <Card>
         <BlockStack gap="200">
           <InlineStack gap="200" blockAlign="center">
             <Badge tone="warning">{t("disputes.chargebackBadge")}</Badge>
-            <Text as="h3" variant="headingSm">{t("disputes.chargebackQueueTitle")}</Text>
+            <Text as="h3" variant="headingSm">{t("dashboard.openChargebacks")}</Text>
           </InlineStack>
           <Text as="p" variant="headingLg">{s.chargebackCount}</Text>
-          <Button variant="plain" url={withShopParams("/app/disputes?phase=chargeback", searchParams)} size="slim">
-            {t("common.viewAll")}
-          </Button>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {s.chargebackCount === 0 ? t("dashboard.noOpenChargebacks") : `${s.chargebackCount} ${t("dashboard.openChargebacks").toLowerCase()}`}
+          </Text>
+          {s.chargebackCount > 0 && (
+            <Button variant="plain" url={withShopParams("/app/disputes?phase=chargeback", searchParams)} size="slim">
+              {t("common.viewAll")}
+            </Button>
+          )}
         </BlockStack>
       </Card>
-      {/* Needs Attention */}
+      {/* Cases needing review */}
       <Card>
         <BlockStack gap="200">
           <InlineStack gap="200" blockAlign="center">
             <Badge tone={s.needsAttentionCount > 0 ? "critical" : undefined}>
-              {t("disputes.needsAttention")}
+              {t("dashboard.casesNeedingReview")}
             </Badge>
           </InlineStack>
           <Text as="p" variant="headingLg">{s.needsAttentionCount}</Text>
-          <Button variant="plain" url={withShopParams("/app/disputes?needs_review=true", searchParams)} size="slim">
-            {t("common.viewAll")}
-          </Button>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {s.needsAttentionCount > 0
+              ? t("dashboard.casesAwaitingReview", { count: s.needsAttentionCount })
+              : t("dashboard.noCasesNeedReview")}
+          </Text>
+          {s.needsAttentionCount > 0 && (
+            <Button variant="plain" url={withShopParams("/app/disputes?needs_review=true", searchParams)} size="slim">
+              {t("common.viewAll")}
+            </Button>
+          )}
         </BlockStack>
       </Card>
     </div>
