@@ -95,8 +95,9 @@ export async function GET(req: NextRequest) {
   const amountAtRisk = active.reduce((s, d) => s + (Number(d.amount) || 0), 0);
 
   // Lifecycle phase counts (active disputes only)
+  // Unknown phase counts toward chargeback (safer default — matches app behavior)
   const inquiryCount = active.filter((d) => d.phase === "inquiry").length;
-  const chargebackCount = active.filter((d) => d.phase === "chargeback").length;
+  const chargebackCount = active.filter((d) => d.phase !== "inquiry").length;
   const unknownPhaseCount = active.filter(
     (d) => d.phase !== "inquiry" && d.phase !== "chargeback",
   ).length;
