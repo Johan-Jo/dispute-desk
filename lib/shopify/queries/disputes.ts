@@ -15,6 +15,7 @@ export const DISPUTE_LIST_QUERY = `
       edges {
         node {
           id
+          type
           status
           reasonDetails { reason }
           amount { amount currencyCode }
@@ -43,6 +44,7 @@ export const DISPUTE_DETAIL_QUERY = `
   query DisputeDetail($id: ID!) {
     dispute(id: $id) {
       id
+      type
       status
       reasonDetails { reason }
       amount { amount currencyCode }
@@ -83,6 +85,7 @@ export const DISPUTE_DETAIL_QUERY = `
 
 export interface DisputeListNode {
   id: string;
+  type: string | null;
   status: string;
   reasonDetails: { reason: string } | null;
   amount: { amount: string; currencyCode: string } | null;
@@ -114,6 +117,7 @@ export interface DisputeListResponse {
 
 export interface DisputeDetailNode {
   id: string;
+  type: string | null;
   status: string;
   reasonDetails: { reason: string } | null;
   amount: { amount: string; currencyCode: string } | null;

@@ -43,6 +43,15 @@ import {
 import styles from "./dispute-detail.module.css";
 import { DisputeStatusStepper } from "./DisputeStatusStepper";
 import { getDisputeProgressSteps } from "@/lib/embedded/disputeDetailProgress";
+import {
+  deriveFamily,
+  deriveHandlingMode,
+  phaseBadgeTone,
+  phaseLabel as phaseLabelFn,
+  primaryCtaKey,
+  disputeTitle,
+} from "@/lib/disputes/phaseUtils";
+import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 interface Dispute {
   id: string;
@@ -51,6 +60,9 @@ interface Dispute {
   order_gid: string | null;
   status: string | null;
   reason: string | null;
+  phase: string | null;
+  family?: string;
+  handling_mode?: string;
   amount: number | null;
   currency_code: string | null;
   initiated_at: string | null;
@@ -369,8 +381,9 @@ export default function DisputeDetailPage() {
     const locale = searchParams.get("locale") ?? "";
     const reason = dispute?.reason ?? "";
     try {
+      const phase = dispute?.phase ?? "chargeback";
       const res = await fetch(
-        `/api/templates?reason=${encodeURIComponent(reason)}&locale=${encodeURIComponent(locale)}`
+        `/api/templates?reason=${encodeURIComponent(reason)}&phase=${encodeURIComponent(phase)}&locale=${encodeURIComponent(locale)}`
       );
       const { templates } = await res.json();
       const best =
@@ -426,7 +439,7 @@ export default function DisputeDetailPage() {
 
   return (
     <Page
-      title={t("disputes.chargebackTitle", { id: disputeNumericId })}
+      title={disputeTitle(dispute.phase as DisputePhase | null, disputeNumericId, t)}
       subtitle={t("disputes.orderDateSubtitle", { date: formatDate(profile?.createdAt ?? dispute.initiated_at) })}
       backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
       titleMetadata={
@@ -435,7 +448,7 @@ export default function DisputeDetailPage() {
           : isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined
       }
       primaryAction={{
-        content: generating || templateCheckLoading ? t("disputes.generating") : t("disputes.generatePack"),
+        content: generating || templateCheckLoading ? t("disputes.generating") : t(primaryCtaKey(dispute.phase as DisputePhase | null)),
         onAction: handleGenerate,
         loading: generating || templateCheckLoading,
         icon: NoteIcon,
@@ -491,12 +504,53 @@ export default function DisputeDetailPage() {
           </div>
         </Layout.Section>
 
+        {/* Case Metadata Bar */}
+        <Layout.Section>
+          <Card>
+            <InlineStack gap="300" wrap blockAlign="center">
+              {/* Phase */}
+              <InlineStack gap="100" blockAlign="center">
+                <Text as="span" variant="bodySm" fontWeight="semibold">{t("disputes.phaseLabel")}:</Text>
+                {dispute.phase ? (
+                  <Badge tone={phaseBadgeTone(dispute.phase as DisputePhase | null)}>
+                    {phaseLabelFn(dispute.phase as DisputePhase | null, t)}
+                  </Badge>
+                ) : (
+                  <Badge>{t("disputes.phaseUnknown")}</Badge>
+                )}
+              </InlineStack>
+              {/* Family */}
+              <InlineStack gap="100" blockAlign="center">
+                <Text as="span" variant="bodySm" fontWeight="semibold">{t("disputes.familyLabel")}:</Text>
+                <Text as="span" variant="bodySm">
+                  {dispute.family ?? deriveFamily(dispute.reason)}
+                </Text>
+              </InlineStack>
+              {/* Handling Mode */}
+              <InlineStack gap="100" blockAlign="center">
+                <Text as="span" variant="bodySm" fontWeight="semibold">{t("disputes.handlingModeLabel")}:</Text>
+                <Badge tone={dispute.handling_mode === "automated" ? "success" : dispute.handling_mode === "review" ? "warning" : undefined}>
+                  {dispute.handling_mode === "automated"
+                    ? t("disputes.handlingAutomated")
+                    : dispute.handling_mode === "review"
+                      ? t("disputes.handlingReview")
+                      : t("disputes.handlingManual")}
+                </Badge>
+              </InlineStack>
+              {/* Needs Review */}
+              {dispute.needs_review && (
+                <Badge tone="warning">{t("disputes.handlingReview")}</Badge>
+              )}
+            </InlineStack>
+          </Card>
+        </Layout.Section>
+
         {/* Info Banner */}
         {!infoBannerDismissed && (
           <Layout.Section>
-            <Banner tone="info" onDismiss={dismissInfoBanner}>
-              <p><strong>{t("disputes.infoBannerHeadline")}</strong></p>
-              <p>{t("disputes.infoBannerDetail")}</p>
+            <Banner tone={dispute.phase === "inquiry" ? "warning" : "info"} onDismiss={dismissInfoBanner}>
+              <p><strong>{dispute.phase === "inquiry" ? t("disputes.inquiryInfoHeadline") : t("disputes.infoBannerHeadline")}</strong></p>
+              <p>{dispute.phase === "inquiry" ? t("disputes.inquiryInfoDetail") : t("disputes.infoBannerDetail")}</p>
             </Banner>
           </Layout.Section>
         )}

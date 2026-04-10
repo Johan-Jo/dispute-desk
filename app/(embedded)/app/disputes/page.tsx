@@ -35,8 +35,11 @@ import {
   ExportIcon,
   RefreshIcon,
   MenuHorizontalIcon,
+  AlertTriangleIcon,
 } from "@shopify/polaris-icons";
 import styles from "./disputes-list.module.css";
+import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
+import { phaseBadgeTone, phaseLabel as phaseLabelFn } from "@/lib/disputes/phaseUtils";
 
 interface Dispute {
   id: string;
@@ -46,6 +49,7 @@ interface Dispute {
   customer_display_name?: string | null;
   status: string | null;
   reason: string | null;
+  phase: string | null;
   amount: number | null;
   currency_code: string | null;
   due_at: string | null;
@@ -147,6 +151,7 @@ export default function DisputesListPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [phaseFilter, setPhaseFilter] = useState<string[]>([]);
   const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -177,6 +182,8 @@ export default function DisputesListPage() {
       });
       if (statusFilter.length > 0)
         params.set("status", statusFilter.join(","));
+      if (phaseFilter.length === 1)
+        params.set("phase", phaseFilter[0]);
       const res = await fetch(`/api/disputes?${params}`);
       const json: DisputesResponse = await res.json();
       setDisputes(json.disputes ?? []);
@@ -184,7 +191,7 @@ export default function DisputesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, phaseFilter]);
 
   useEffect(() => {
     fetchDisputes();
@@ -277,12 +284,14 @@ export default function DisputesListPage() {
         d.customer_display_name ?? "",
         formatCurrency(d.amount, d.currency_code, numberLocale),
         formatReasonTitleCase(d.reason),
+        DISPUTE_REASON_FAMILIES[d.reason as AllDisputeReasonCode] ?? "",
+        d.phase ?? "",
         statusLabelForCsv(d.status),
         formatDueDate(d.due_at),
       ].join(","),
     );
     const csv = [
-      "Order,ID,Customer,Amount,Reason,Status,Due date",
+      "Order,ID,Customer,Amount,Reason,Family,Phase,Status,Due date",
       ...rows,
     ].join("\n");
     const a = document.createElement("a");
@@ -331,22 +340,36 @@ export default function DisputesListPage() {
                   autofocusTarget="none"
                 >
                   <Box padding="400" minWidth="240px">
-                    <ChoiceList
-                      title={t("table.status")}
-                      titleHidden
-                      choices={[
-                        { label: t("status.needsResponse"), value: "needs_response" },
-                        { label: t("status.underReview"), value: "under_review" },
-                        { label: t("status.won"), value: "won" },
-                        { label: t("status.lost"), value: "lost" },
-                      ]}
-                      selected={statusFilter}
-                      onChange={(v) => {
-                        setStatusFilter(v);
-                        setPage(1);
-                      }}
-                      allowMultiple
-                    />
+                    <BlockStack gap="400">
+                      <ChoiceList
+                        title={t("disputes.phaseLabel")}
+                        choices={[
+                          { label: t("disputes.inquiryBadge"), value: "inquiry" },
+                          { label: t("disputes.chargebackBadge"), value: "chargeback" },
+                        ]}
+                        selected={phaseFilter}
+                        onChange={(v) => {
+                          setPhaseFilter(v);
+                          setPage(1);
+                        }}
+                        allowMultiple
+                      />
+                      <ChoiceList
+                        title={t("table.status")}
+                        choices={[
+                          { label: t("status.needsResponse"), value: "needs_response" },
+                          { label: t("status.underReview"), value: "under_review" },
+                          { label: t("status.won"), value: "won" },
+                          { label: t("status.lost"), value: "lost" },
+                        ]}
+                        selected={statusFilter}
+                        onChange={(v) => {
+                          setStatusFilter(v);
+                          setPage(1);
+                        }}
+                        allowMultiple
+                      />
+                    </BlockStack>
                   </Box>
                 </Popover>
 
@@ -410,6 +433,7 @@ export default function DisputesListPage() {
                         <th>{t("table.customer")}</th>
                         <th>{t("table.amount")}</th>
                         <th>{t("table.reason")}</th>
+                        <th>{t("disputes.phaseLabel")}</th>
                         <th>{t("table.status")}</th>
                         <th>{t("table.deadline")}</th>
                         <th>{t("table.actions")}</th>
@@ -461,9 +485,23 @@ export default function DisputesListPage() {
                               </span>
                             </td>
                             <td>
-                              <span className={styles.cellMuted}>
-                                {formatReasonTitleCase(d.reason)}
-                              </span>
+                              <BlockStack gap="050">
+                                <span className={styles.cellMuted}>
+                                  {formatReasonTitleCase(d.reason)}
+                                </span>
+                                <Text as="span" variant="bodySm" tone="subdued">
+                                  {DISPUTE_REASON_FAMILIES[d.reason as AllDisputeReasonCode] ?? ""}
+                                </Text>
+                              </BlockStack>
+                            </td>
+                            <td>
+                              {d.phase ? (
+                                <Badge tone={phaseBadgeTone(d.phase as "inquiry" | "chargeback")}>
+                                  {phaseLabelFn(d.phase as "inquiry" | "chargeback", t)}
+                                </Badge>
+                              ) : (
+                                <Text as="span" variant="bodySm" tone="subdued">—</Text>
+                              )}
                             </td>
                             <td>
                               <Badge tone={badgeTone(d.status)}>
@@ -476,9 +514,14 @@ export default function DisputesListPage() {
                               </Text>
                             </td>
                             <td>
-                              <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
-                                {t("table.viewDetails")}
-                              </Link>
+                              <InlineStack gap="200" blockAlign="center" wrap={false}>
+                                {d.needs_review && (
+                                  <Icon source={AlertTriangleIcon} tone="warning" />
+                                )}
+                                <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
+                                  {t("table.viewDetails")}
+                                </Link>
+                              </InlineStack>
                             </td>
                           </tr>
                         );

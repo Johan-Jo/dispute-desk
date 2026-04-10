@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -40,18 +41,29 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   let matchedRule: { name: string; mode: string } | null = null;
   if (dispute.shop_id) {
     const { data: rules } = await sb
-      .from("automation_rules")
-      .select("name, mode")
+      .from("rules")
+      .select("name, action")
       .eq("shop_id", dispute.shop_id)
       .eq("enabled", true)
+      .order("priority", { ascending: true })
       .limit(1);
     if (rules && rules.length > 0) {
-      matchedRule = { name: rules[0].name, mode: rules[0].mode };
+      const action = rules[0].action as { mode?: string } | null;
+      matchedRule = { name: rules[0].name, mode: action?.mode ?? "manual" };
     }
   }
 
+  const family =
+    DISPUTE_REASON_FAMILIES[dispute.reason as AllDisputeReasonCode] ?? "General";
+  const handling_mode =
+    matchedRule?.mode === "auto_pack"
+      ? "automated"
+      : matchedRule?.mode === "review"
+        ? "review"
+        : "manual";
+
   return NextResponse.json({
-    dispute,
+    dispute: { ...dispute, family, handling_mode },
     packs: packs ?? [],
     shop_domain,
     matchedRule,

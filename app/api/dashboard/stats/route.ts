@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   // ── Current period disputes ──────────────────────────────────────────────
   let query = sb
     .from("disputes")
-    .select("id, status, amount, currency_code, created_at, due_at, reason")
+    .select("id, status, amount, currency_code, created_at, due_at, reason, phase, needs_review")
     .eq("shop_id", shopId);
   if (since) query = query.gte("created_at", since.toISOString());
   const { data: disputes, error } = await query;
@@ -93,6 +93,24 @@ export async function GET(req: NextRequest) {
   const active = list.filter((d) => ACTIVE_STATUSES.includes(d.status ?? ""));
   const activeDisputes = active.length;
   const amountAtRisk = active.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+
+  // Lifecycle phase counts (active disputes only)
+  const inquiryCount = active.filter((d) => d.phase === "inquiry").length;
+  const chargebackCount = active.filter((d) => d.phase === "chargeback").length;
+  const unknownPhaseCount = active.filter(
+    (d) => d.phase !== "inquiry" && d.phase !== "chargeback",
+  ).length;
+
+  // Needs-attention: needs_review or deadline within 48h
+  const now = Date.now();
+  const needsAttentionCount = active.filter((d) => {
+    if (d.needs_review) return true;
+    if (d.due_at) {
+      const hoursLeft = (new Date(d.due_at).getTime() - now) / (1000 * 60 * 60);
+      if (hoursLeft <= 48 && hoursLeft >= 0) return true;
+    }
+    return false;
+  }).length;
 
   const won = list.filter((d) => d.status === "won");
   const lost = list.filter((d) => d.status === "lost");
@@ -162,6 +180,11 @@ export async function GET(req: NextRequest) {
     winRate,
     packCount: packCount ?? 0,
     amountAtRisk,
+    // ── Lifecycle phase counts (active disputes only) ──
+    inquiryCount,
+    chargebackCount,
+    unknownPhaseCount,
+    needsAttentionCount,
     // ── Period-over-period changes (null when comparison not available) ──
     activeDisputesChange,
     winRateChange,

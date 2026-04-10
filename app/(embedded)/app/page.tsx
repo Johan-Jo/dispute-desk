@@ -19,7 +19,6 @@ import {
   InlineStack,
   Badge,
   Button,
-  ButtonGroup,
   Spinner,
   ProgressBar,
   Box,
@@ -34,7 +33,6 @@ import {
   ShieldCheckMarkIcon,
 } from "@shopify/polaris-icons";
 import { useTranslations } from "next-intl";
-import { ConfigGuideCard } from "@/components/setup/ConfigGuideCard";
 import type { SetupStateResponse } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
 import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
@@ -46,6 +44,7 @@ import {
 } from "@/lib/embedded/recentDisputesTableStyles";
 import { useSearchParams, useRouter } from "next/navigation";
 import { deriveCoverage, type CoverageSummary } from "@/lib/coverage/deriveCoverage";
+import { phaseBadgeTone, phaseLabel } from "@/lib/disputes/phaseUtils";
 
 interface AutomationSettings {
   auto_build_enabled: boolean;
@@ -64,6 +63,7 @@ interface DisputeRow {
   customer: string | null;
   amount: string;
   reason: string | null;
+  phase: string | null;
   status: string | null;
   deadline: string | null;
 }
@@ -78,6 +78,11 @@ interface DashboardStats {
   activeDisputesChange: number | null;
   winRateChange: number | null;
   amountAtRiskChange: number | null;
+  // Lifecycle phase counts
+  inquiryCount: number;
+  chargebackCount: number;
+  unknownPhaseCount: number;
+  needsAttentionCount: number;
   // Chart fields
   winRateTrend: number[];
   disputeCategories: { label: string; value: number }[];
@@ -91,6 +96,10 @@ const DEFAULT_STATS: DashboardStats = {
   activeDisputesChange: null,
   winRateChange: null,
   amountAtRiskChange: null,
+  inquiryCount: 0,
+  chargebackCount: 0,
+  unknownPhaseCount: 0,
+  needsAttentionCount: 0,
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],
 };
@@ -148,7 +157,7 @@ function RecentDisputesTable() {
       fetch("/api/disputes?per_page=5").then((r) => (r.ok ? r.json() : { disputes: [] })),
       fetch("/api/billing/usage").then((r) => (r.ok ? r.json() : {})),
     ]).then(([disputeData, usageData]: [
-      { disputes?: Array<{ id: string; order_gid?: string | null; order_name?: string | null; customer_display_name?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; status?: string | null; due_at?: string | null }> },
+      { disputes?: Array<{ id: string; order_gid?: string | null; order_name?: string | null; customer_display_name?: string | null; amount?: number | null; currency_code?: string | null; reason?: string | null; phase?: string | null; status?: string | null; due_at?: string | null }> },
       { shop_domain?: string | null }
     ]) => {
         if (cancelled) return;
@@ -163,6 +172,7 @@ function RecentDisputesTable() {
             customer: d.customer_display_name ?? null,
             amount: d.amount != null ? `$${Number(d.amount).toFixed(2)}` : "—",
             reason: d.reason ?? null,
+            phase: d.phase ?? null,
             status: d.status ?? null,
             deadline: d.due_at ? new Date(d.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null,
           }))
@@ -227,6 +237,7 @@ function RecentDisputesTable() {
                 <th style={recentDisputesThStyle}>{t("table.customer")}</th>
                 <th style={recentDisputesThStyle}>{t("table.amount")}</th>
                 <th style={recentDisputesThStyle}>{t("table.reason")}</th>
+                <th style={recentDisputesThStyle}>{t("disputes.phaseLabel")}</th>
                 <th style={recentDisputesThStyle}>{t("table.status")}</th>
                 <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
                 <th style={recentDisputesThStyle}>{t("table.actions")}</th>
@@ -265,6 +276,13 @@ function RecentDisputesTable() {
                   </td>
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{formatReason(r.reason)}</Text>
+                  </td>
+                  <td style={recentDisputesTdStyle}>
+                    {r.phase ? (
+                      <Badge tone={phaseBadgeTone(r.phase as "inquiry" | "chargeback")}>{phaseLabel(r.phase as "inquiry" | "chargeback", t)}</Badge>
+                    ) : (
+                      <Text as="span" variant="bodySm" tone="subdued">—</Text>
+                    )}
                   </td>
                   <td style={recentDisputesTdStyle}>{statusBadge(r.status)}</td>
                   <td style={recentDisputesTdStyle}>
@@ -603,6 +621,73 @@ function ProtectionStatusCard() {
   );
 }
 
+function LifecycleQueueSummary({ period }: { period: PeriodKey }) {
+  const t = useTranslations();
+  const searchParams = useSearchParams();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/dashboard/stats?period=${period}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setStats(data);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
+
+  if (loading) return null;
+
+  const s = stats ?? DEFAULT_STATS;
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+      {/* Inquiry Queue */}
+      <Card>
+        <BlockStack gap="200">
+          <InlineStack gap="200" blockAlign="center">
+            <Badge tone="info">{t("disputes.inquiryBadge")}</Badge>
+            <Text as="h3" variant="headingSm">{t("disputes.inquiryQueueTitle")}</Text>
+          </InlineStack>
+          <Text as="p" variant="headingLg">{s.inquiryCount}</Text>
+          <Button variant="plain" url={withShopParams("/app/disputes?phase=inquiry", searchParams)} size="slim">
+            {t("common.viewAll")}
+          </Button>
+        </BlockStack>
+      </Card>
+      {/* Chargeback Queue */}
+      <Card>
+        <BlockStack gap="200">
+          <InlineStack gap="200" blockAlign="center">
+            <Badge tone="warning">{t("disputes.chargebackBadge")}</Badge>
+            <Text as="h3" variant="headingSm">{t("disputes.chargebackQueueTitle")}</Text>
+          </InlineStack>
+          <Text as="p" variant="headingLg">{s.chargebackCount}</Text>
+          <Button variant="plain" url={withShopParams("/app/disputes?phase=chargeback", searchParams)} size="slim">
+            {t("common.viewAll")}
+          </Button>
+        </BlockStack>
+      </Card>
+      {/* Needs Attention */}
+      <Card>
+        <BlockStack gap="200">
+          <InlineStack gap="200" blockAlign="center">
+            <Badge tone={s.needsAttentionCount > 0 ? "critical" : undefined}>
+              {t("disputes.needsAttention")}
+            </Badge>
+          </InlineStack>
+          <Text as="p" variant="headingLg">{s.needsAttentionCount}</Text>
+          <Button variant="plain" url={withShopParams("/app/disputes?needs_review=true", searchParams)} size="slim">
+            {t("common.viewAll")}
+          </Button>
+        </BlockStack>
+      </Card>
+    </div>
+  );
+}
+
 function DashboardHelpCard() {
   const t = useTranslations("dashboard");
   const searchParams = useSearchParams();
@@ -658,22 +743,8 @@ export default function EmbeddedDashboardPage() {
           <DashboardSetupBanner />
         </Layout.Section>
 
-        {/* TEMPORARY: quick link to test the setup wizard */}
         <Layout.Section>
-          <Banner title="Dev: Test Setup Wizard" tone="info">
-            <ButtonGroup>
-              <Button url={withShopParams("/app/setup", searchParams)} variant="primary">Step 0: Welcome</Button>
-              <Button url={withShopParams("/app/setup/connection", searchParams)}>Step 1: Connection</Button>
-              <Button url={withShopParams("/app/setup/store_profile", searchParams)}>Step 2: Store Profile</Button>
-              <Button url={withShopParams("/app/setup/coverage", searchParams)}>Step 3: Coverage</Button>
-              <Button url={withShopParams("/app/setup/automation", searchParams)}>Step 4: Automation</Button>
-              <Button url={withShopParams("/app/setup/activate", searchParams)}>Step 5: Activate</Button>
-            </ButtonGroup>
-          </Banner>
-        </Layout.Section>
-
-        <Layout.Section>
-          <ConfigGuideCard />
+          <LifecycleQueueSummary period={period} />
         </Layout.Section>
 
         <Layout.Section>

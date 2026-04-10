@@ -143,6 +143,7 @@ export async function syncDisputes(
             d.disputeEvidence?.shippingAddress?.name?.trim() ||
             d.disputeEvidence?.billingAddress?.name?.trim() ||
             null,
+          phase: d.type?.toLowerCase() ?? null,
           status: d.status?.toLowerCase() ?? null,
           reason: d.reasonDetails?.reason ?? null,
           amount: d.amount ? parseFloat(d.amount.amount) : null,

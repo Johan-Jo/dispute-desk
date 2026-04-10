@@ -27,6 +27,11 @@ export async function GET(req: NextRequest) {
     .order("due_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
+  const phaseFilter = sp.get("phase");
+  if (phaseFilter) {
+    query = query.eq("phase", phaseFilter);
+  }
+
   const statusFilter = sp.get("status");
   if (statusFilter) {
     const statuses = statusFilter.split(",").map((s) => s.trim());

@@ -606,7 +606,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
   users skip straight to the destination.
 
 ### Dashboard Stats (Embedded)
-- `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns KPIs matching the portal: `activeDisputes`, `winRate`, `packCount`, `amountAtRisk`, plus period-over-period change fields (`activeDisputesChange`, `winRateChange`, `amountAtRiskChange` — null when period is "all"), `winRateTrend` (6 buckets), `disputeCategories` (by reason), and legacy fields (`totalDisputes`, `revenueRecovered`, `avgResponseTime`). Pack count is queried from `evidence_packs`. Previous period is computed as an equal-length window immediately before the current period.
+- `GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all` — returns KPIs matching the portal: `activeDisputes`, `winRate`, `packCount`, `amountAtRisk`, plus period-over-period change fields (`activeDisputesChange`, `winRateChange`, `amountAtRiskChange` — null when period is "all"), `winRateTrend` (6 buckets), `disputeCategories` (by reason), and legacy fields (`totalDisputes`, `revenueRecovered`, `avgResponseTime`). Also returns lifecycle counts: `inquiryCount`, `chargebackCount`, `unknownPhaseCount`, `needsAttentionCount`. Pack count is queried from `evidence_packs`. Previous period is computed as an equal-length window immediately before the current period.
 
 **Overview KPI cards (embedded dashboard):** 4 bordered cards matching the portal — Active Disputes (`AlertCircleIcon`), Win Rate (`ChartLineIcon`), Evidence Packs (`PackageIcon`), Amount at Risk (`CashDollarIcon`). Label top-left, icon top-right. When period comparison data is available shows `↗ +N% vs last month` / `↘ -N% vs last month` in green/red; falls back to a purple accent bar + period label for "All" or when comparison is unavailable. Period selector (24h / 7d / 30d / All) sits above the cards.
 
@@ -615,7 +615,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 **Disputes list page (embedded):** `app/(embedded)/app/disputes/page.tsx` uses Polaris `Page` / `Layout` / `Card` (same shell as other embedded routes). The table inside `Card padding="0"` matches the dashboard **Recent Disputes** column set: **Order, ID** (first 8 chars of UUID, uppercased), **Customer**, **Amount**, **Reason**, **Status**, **Deadline** (short month + day), **Actions** → “View Details” link (`recentDisputesViewDetailsLinkStyle` from `lib/embedded/recentDisputesTableStyles.ts`). Shared helpers: `lib/embedded/shopifyOrderUrl.ts`, `withShopParams` on detail links. CSV export uses the same column order and includes customer. See **Review Queue** for toolbar (search, filter, export, sync).
 
 **Dispute detail page (embedded):** `app/(embedded)/app/disputes/[id]/page.tsx`. Fetches `/api/disputes/:id` and `/api/disputes/:id/profile` in parallel. The API also returns `matchedRule` (first enabled automation rule for the shop). Layout and Figma-aligned chrome live in **`dispute-detail.module.css`**; the five-step **Dispute status** rail is driven by **`getDisputeProgressSteps`** (`lib/embedded/disputeDetailProgress.ts`) and **`DisputeStatusStepper.tsx`** (Dispute Created → Work in Progress → Submit Evidence → Bank Review → Dispute Settled; terminal dispute statuses mark all steps complete).
-- **Page chrome:** Title is **`Chargeback {id}`** with a blue **⚡ Automated** pill badge when an auto_pack rule matches. Subtitle shows **`Order date: {date}`**.
+- **Page chrome:** Title is phase-aware: **`Inquiry {id}`** / **`Chargeback {id}`** / **`Case {id}`** (unknown phase), with a blue **⚡ Automated** pill badge when an auto_pack rule matches. Subtitle shows **`Order date: {date}`**. A case metadata bar displays phase, family (from `DISPUTE_REASON_FAMILIES`), and handling mode. CTA is phase-aware: "Respond to Inquiry" for inquiries, "Build Evidence" for chargebacks.
 - **Info banner:** Dismissible blue `Banner` at the top with 24-hour guarantee messaging. Dismissal persisted in `localStorage` (`dd-info-banner-dismissed`).
 - **Dispute Summary (left column):** Collapsible `Card` with 2-column key-value grid (Dispute ID, Source, Transaction ID, RRN, Opened On, Status, Due Date, State, Amount, Reason). Uses `SummaryItem` component and `summaryGrid` CSS class.
 - **Managed by DisputeDesk (right column top):** Card showing green lightning icon + "Fully Automated" heading + description. When `matchedRule` exists, shows a green "Auto-Pack Active" status row with the rule name.
@@ -646,8 +646,8 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 Shop context is provided by either (1) Shopify session cookies (embedded app) or (2) Supabase Auth + active_shop (portal) for the routes listed under "Portal API prefixes" above.
 
-- `GET /api/disputes` — list disputes (portal: pass `shop_id` query; embedded: shop from cookies)
-- `GET /api/disputes/:id` — single dispute
+- `GET /api/disputes` — list disputes (portal: pass `shop_id` query; embedded: shop from cookies). Optional `?phase=inquiry|chargeback` filter.
+- `GET /api/disputes/:id` — single dispute. Response includes `family` (from `DISPUTE_REASON_FAMILIES`) and `handling_mode` (`automated`|`review`|`manual`).
 - `POST /api/disputes/sync` — run sync for shop (portal: body `{ shop_id }`; runs synchronously, not job)
 - `POST /api/disputes/:id/sync` — re-sync one dispute
 - `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
@@ -673,7 +673,7 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `DELETE /api/pack-templates/:id/documents/:docId` — remove document
 
 ### Portal Template Library (Packs) & Policy APIs
-- `GET /api/templates?locale=&category=` — list pack templates (portal Packs page; filter `is_recommended` for suggested)
+- `GET /api/templates?locale=&category=&phase=inquiry|chargeback` — list pack templates (portal Packs page; filter `is_recommended` for suggested). Optional `phase` filter for phase-aware template recommendation via `reason_template_mappings`.
 - `GET /api/templates/:id/preview?locale=` — template preview
 - `POST /api/templates/:id/install` — install template for shop (creates pack from template). Body: `{ shopId, overrides?: { name? }, activate?: boolean }`. When `activate: true` (e.g. after the embedded Template Setup Wizard “Activate” step), the new library pack is created as **ACTIVE** and `evidence_packs` is **ready**; otherwise defaults to **DRAFT** / **draft**.
 - `GET /api/policy-templates` — list policy template types (refund, shipping, terms-of-service)
@@ -1556,3 +1556,20 @@ Dashboard → Disputes → Coverage → Automation → Playbooks → Billing →
 Pure utility that maps existing rules + active packs to 8 dispute families. Each family gets: `hasCoverage`, `automationMode` (automated/review_first/manual/none), `activePackCount`, `matchingRuleId`.
 
 **i18n**: All 12 locale files updated with `nav.coverage`, `nav.automation`, `nav.playbooks` keys and full `coverage.*` namespace. Merchant-facing text updated across `dashboard`, `packTemplates`, `packs`, `rules`, `settings`, `help`, `billing` namespaces to use "playbook" and "automation" instead of "pack" and "rule" where appropriate.
+
+### Dispute Lifecycle Phases (2026-04-09)
+
+The `disputes` table has a `phase` column (text, nullable) with values `"inquiry"`, `"chargeback"`, or `NULL` (unknown/legacy rows). Phase is synced from Shopify's `ShopifyPaymentsDispute.type` field during dispute sync.
+
+**API changes:**
+- `GET /api/disputes` — accepts optional `?phase=inquiry|chargeback` query filter.
+- `GET /api/disputes/:id` — response now includes `family` (from `DISPUTE_REASON_FAMILIES`) and `handling_mode` (`automated` | `review` | `manual`).
+- `GET /api/dashboard/stats` — response now includes `inquiryCount`, `chargebackCount`, `unknownPhaseCount`, and `needsAttentionCount`.
+- `GET /api/templates` — accepts optional `?phase=inquiry|chargeback` for phase-aware template recommendation via `reason_template_mappings`.
+
+**Embedded app UI:**
+- **Dashboard:** Lifecycle queue summary showing inquiry / chargeback / needs-attention counts.
+- **Disputes list:** New Phase column and phase filter dropdown.
+- **Dispute detail:** Phase-aware title (`"Inquiry {id}"` / `"Chargeback {id}"` / `"Case {id}"` for unknown), phase-aware CTA (`"Respond to Inquiry"` / `"Build Evidence"`), and a case metadata bar displaying phase, family, and handling mode.
+
+**Scope note:** Phase A+B delivers lifecycle visibility and sensible defaults. Rules and automation remain phase-blind. Full inquiry workflow parity (distinct inquiry response forms, inquiry-specific auto-build) is planned for a later phase.
