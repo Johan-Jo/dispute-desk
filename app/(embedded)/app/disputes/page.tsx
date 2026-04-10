@@ -27,6 +27,7 @@ import {
   Icon,
   Badge,
   BlockStack,
+  Banner,
   Text,
 } from "@shopify/polaris";
 import {
@@ -303,14 +304,61 @@ export default function DisputesListPage() {
     URL.revokeObjectURL(a.href);
   };
 
+  // Compute summary counts from visible disputes
+  const summaryInquiries = disputes.filter((d) => d.phase === "inquiry").length;
+  const summaryChargebacks = disputes.filter((d) => d.phase === "chargeback").length;
+  const summaryNeedsReview = disputes.filter((d) => d.needs_review).length;
+  const summaryNeedsSync = disputes.filter((d) => !d.phase).length;
+
+  // Compute urgency for a dispute
+  function getUrgency(d: Dispute): { label: string; tone: "critical" | "warning" | "attention" | "success" | undefined } {
+    if (d.due_at) {
+      const hoursLeft = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hoursLeft < 0) return { label: t("disputes.urgencyOverdue"), tone: "critical" };
+      if (hoursLeft <= 48) return { label: t("disputes.urgencyUrgent"), tone: "warning" };
+    }
+    if (d.needs_review) return { label: t("disputes.urgencyReview"), tone: "attention" };
+    return { label: t("disputes.urgencyOnTrack"), tone: "success" };
+  }
+
   return (
     <Page
       title={t("disputes.title")}
-      subtitle={t("disputes.manageSubtitle")}
+      subtitle={t("disputes.workQueueSubtitle")}
     >
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
+            {/* Summary strip */}
+            {!loading && disputes.length > 0 && (
+              <Card>
+                <InlineStack gap="300" wrap blockAlign="center">
+                  <Text as="span" variant="bodySm" fontWeight="semibold">
+                    {t("disputes.summaryTotal", { count: disputes.length })}
+                  </Text>
+                  {summaryInquiries > 0 && (
+                    <Badge tone="info">{t("disputes.summaryInquiries", { count: summaryInquiries })}</Badge>
+                  )}
+                  {summaryChargebacks > 0 && (
+                    <Badge tone="warning">{t("disputes.summaryChargebacks", { count: summaryChargebacks })}</Badge>
+                  )}
+                  {summaryNeedsReview > 0 && (
+                    <Badge tone="attention">{t("disputes.summaryNeedsReview", { count: summaryNeedsReview })}</Badge>
+                  )}
+                  {summaryNeedsSync > 0 && (
+                    <Badge tone="critical">{t("disputes.summaryNeedsSync", { count: summaryNeedsSync })}</Badge>
+                  )}
+                </InlineStack>
+              </Card>
+            )}
+
+            {/* Needs review banner */}
+            {!loading && summaryNeedsReview > 0 && (
+              <Banner tone="warning">
+                <p>{t("disputes.needsReviewBanner", { count: summaryNeedsReview })}</p>
+              </Banner>
+            )}
+
             {/* Actions bar */}
             <Card>
               <InlineStack gap="300" align="start" blockAlign="center" wrap={false}>
@@ -428,62 +476,33 @@ export default function DisputesListPage() {
                   <table className={styles.listTable}>
                     <thead>
                       <tr>
-                        <th>{t("table.order")}</th>
-                        <th>{t("table.id")}</th>
-                        <th>{t("table.customer")}</th>
-                        <th>{t("table.amount")}</th>
-                        <th>{t("table.reason")}</th>
                         <th>{t("disputes.phaseLabel")}</th>
+                        <th>{t("table.order")}</th>
+                        <th>{t("table.reason")}</th>
+                        <th>{t("table.amount")}</th>
                         <th>{t("table.status")}</th>
-                        <th>{t("table.deadline")}</th>
+                        <th>Urgency</th>
                         <th>{t("table.actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {visibleDisputes.map((d) => {
-                        const orderUrl = shopifyOrderAdminUrl(shopDomain, d.order_gid);
                         const label = orderLabel(d);
                         const detailHref = withShopParams(`/app/disputes/${d.id}`, searchParams);
+                        const urgency = getUrgency(d);
                         return (
                           <tr key={d.id}>
+                            {/* Phase */}
                             <td>
-                              {orderUrl ? (
-                                <a
-                                  href={orderUrl}
-                                  target="_top"
-                                  rel="noopener noreferrer"
-                                  className={styles.cellOrder}
-                                >
-                                  {label}
-                                </a>
-                              ) : (
-                                <span className={styles.cellId}>{label}</span>
-                              )}
+                              <Badge tone={phaseBadgeTone(d.phase as "inquiry" | "chargeback" | null)}>
+                                {phaseLabelFn(d.phase as "inquiry" | "chargeback" | null, t)}
+                              </Badge>
                             </td>
+                            {/* Order */}
                             <td>
-                              <Text as="span" variant="bodySm" tone="subdued">
-                                {formatShortId(d.id)}
-                              </Text>
-                              {isSyntheticDispute(d.dispute_gid) && (
-                                <span className={styles.syntheticBadge}>
-                                  Synthetic
-                                </span>
-                              )}
+                              <Text as="span" variant="bodySm" fontWeight="semibold">{label}</Text>
                             </td>
-                            <td>
-                              <Text
-                                as="span"
-                                variant="bodySm"
-                                tone={d.customer_display_name ? undefined : "subdued"}
-                              >
-                                {d.customer_display_name ?? "—"}
-                              </Text>
-                            </td>
-                            <td>
-                              <span className={styles.cellAmount}>
-                                {formatCurrency(d.amount, d.currency_code, numberLocale)}
-                              </span>
-                            </td>
+                            {/* Reason / Family */}
                             <td>
                               <BlockStack gap="050">
                                 <span className={styles.cellMuted}>
@@ -494,34 +513,27 @@ export default function DisputesListPage() {
                                 </Text>
                               </BlockStack>
                             </td>
+                            {/* Amount */}
                             <td>
-                              {d.phase ? (
-                                <Badge tone={phaseBadgeTone(d.phase as "inquiry" | "chargeback")}>
-                                  {phaseLabelFn(d.phase as "inquiry" | "chargeback", t)}
-                                </Badge>
-                              ) : (
-                                <Text as="span" variant="bodySm" tone="subdued">—</Text>
-                              )}
+                              <span className={styles.cellAmount}>
+                                {formatCurrency(d.amount, d.currency_code, numberLocale)}
+                              </span>
                             </td>
+                            {/* Status */}
                             <td>
                               <Badge tone={badgeTone(d.status)}>
                                 {badgeLabel(d.status)}
                               </Badge>
                             </td>
+                            {/* Urgency */}
                             <td>
-                              <Text as="span" variant="bodySm" tone="subdued">
-                                {formatDeadlineShort(d.due_at)}
-                              </Text>
+                              <Badge tone={urgency.tone}>{urgency.label}</Badge>
                             </td>
+                            {/* Actions */}
                             <td>
-                              <InlineStack gap="200" blockAlign="center" wrap={false}>
-                                {d.needs_review && (
-                                  <Icon source={AlertTriangleIcon} tone="warning" />
-                                )}
-                                <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
-                                  {t("table.viewDetails")}
-                                </Link>
-                              </InlineStack>
+                              <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
+                                {t("table.viewDetails")}
+                              </Link>
                             </td>
                           </tr>
                         );

@@ -557,11 +557,53 @@ function ProtectionStatusCard() {
   if (loading) return null;
 
   const c = coverage;
-  const isProtected = c && c.coveredCount > 0 && settings?.auto_build_enabled;
+
+  // Strict status taxonomy
+  type ProtectionStatus = "active" | "partial" | "attention" | "setup";
+  let status: ProtectionStatus = "setup";
+  const blockers: string[] = [];
+
+  if (c) {
+    const uncoveredFamilies = c.totalFamilies - c.coveredCount;
+    if (uncoveredFamilies > 0) blockers.push(`${uncoveredFamilies} families not covered`);
+    if (!settings?.auto_build_enabled) blockers.push("Auto-build is disabled");
+
+    if (c.coveredCount === c.totalFamilies && settings?.auto_build_enabled) {
+      status = "active";
+    } else if (c.coveredCount > 0) {
+      status = blockers.length > 0 ? "attention" : "partial";
+    } else {
+      status = blockers.length > 0 ? "attention" : "setup";
+    }
+  }
+
+  const statusConfig = {
+    active: { label: t("statusActive"), tone: "success" as const, bg: "#DCFCE7", color: "#16A34A" },
+    partial: { label: t("statusPartial"), tone: "warning" as const, bg: "#FEF3C7", color: "#D97706" },
+    attention: { label: t("statusAttention"), tone: "critical" as const, bg: "#FEE2E2", color: "#DC2626" },
+    setup: { label: t("statusSetup"), tone: "critical" as const, bg: "#FEE2E2", color: "#DC2626" },
+  };
+
+  const cfg = statusConfig[status];
+
+  // Recommended action
+  let ctaContent = t("viewCasesAction");
+  let ctaUrl = withShopParams("/app/disputes", searchParams);
+  if (status === "setup") {
+    ctaContent = t("continueSetupAction");
+    ctaUrl = withShopParams("/app/setup", searchParams);
+  } else if (status === "attention") {
+    ctaContent = t("reviewIssueAction");
+    ctaUrl = withShopParams("/app/coverage", searchParams);
+  } else if (status === "partial") {
+    ctaContent = t("completeCoverageAction");
+    ctaUrl = withShopParams("/app/coverage", searchParams);
+  }
 
   return (
     <Card>
       <BlockStack gap="300">
+        {/* Purpose + Status */}
         <InlineStack align="space-between" blockAlign="center">
           <InlineStack gap="200" blockAlign="center">
             <div
@@ -569,53 +611,54 @@ function ProtectionStatusCard() {
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: isProtected ? "#DCFCE7" : "#FEF3C7",
+                background: cfg.bg,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                color: isProtected ? "#16A34A" : "#D97706",
+                color: cfg.color,
               }}
             >
               <Icon source={ShieldCheckMarkIcon} />
             </div>
-            <Text as="h2" variant="headingMd">{t("protectionStatus")}</Text>
+            <Text as="h2" variant="headingMd">{t("protectionSummary")}</Text>
           </InlineStack>
-          <Button variant="plain" size="slim" url={withShopParams("/app/coverage", searchParams)}>
-            {t("viewCoverage")}
-          </Button>
+          <Badge tone={cfg.tone}>{cfg.label}</Badge>
         </InlineStack>
 
-        <Text as="p" variant="bodyMd" fontWeight="semibold" tone={isProtected ? "success" : "caution"}>
-          {isProtected ? t("protectionActive") : t("protectionInactive")}
-        </Text>
+        {/* Current state: blockers or all clear */}
+        {blockers.length > 0 ? (
+          <BlockStack gap="100">
+            <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">{t("blockersList")}</Text>
+            {blockers.map((b) => (
+              <InlineStack key={b} gap="200" blockAlign="center">
+                <div style={{ width: 6, height: 6, borderRadius: 3, background: "#EF4444", flexShrink: 0 }} />
+                <Text as="span" variant="bodySm">{b}</Text>
+              </InlineStack>
+            ))}
+          </BlockStack>
+        ) : (
+          <Text as="p" variant="bodySm" tone="success">{t("noBlockers")}</Text>
+        )}
 
+        {/* Coverage summary */}
         {c && (
           <InlineStack gap="400" wrap>
             <Text as="span" variant="bodySm" tone="subdued">
               {t("familiesCovered", { covered: c.coveredCount, total: c.totalFamilies })}
             </Text>
-            {c.automatedCount > 0 && (
-              <Badge tone="success">{t("familiesAutomated", { count: c.automatedCount })}</Badge>
-            )}
-            {c.reviewFirstCount > 0 && (
-              <Badge tone="info">{t("familiesReviewFirst", { count: c.reviewFirstCount })}</Badge>
-            )}
           </InlineStack>
         )}
 
-        <div
-          style={{
-            background: "#F6F6F7",
-            borderRadius: 6,
-            padding: "10px 12px",
-            fontSize: 13,
-            color: "#6D7175",
-            lineHeight: 1.5,
-          }}
-        >
-          {t("automationBanner")}
-        </div>
+        {/* Recommended next action */}
+        <InlineStack gap="200">
+          <Button variant="primary" size="slim" url={ctaUrl}>
+            {ctaContent}
+          </Button>
+          <Button variant="plain" size="slim" url={withShopParams("/app/coverage", searchParams)}>
+            {t("viewCoverage")}
+          </Button>
+        </InlineStack>
       </BlockStack>
     </Card>
   );
@@ -739,30 +782,34 @@ export default function EmbeddedDashboardPage() {
       secondaryActions={[{ content: t("nav.help"), url: withShopParams("/app/help", searchParams) }]}
     >
       <Layout>
+        {/* 1. Setup banner — only if setup incomplete */}
         <Layout.Section>
           <DashboardSetupBanner />
         </Layout.Section>
 
-        <Layout.Section>
-          <LifecycleQueueSummary period={period} />
-        </Layout.Section>
-
+        {/* 2. Protection Status — THE FIRST THING merchants see */}
         <Layout.Section>
           <ProtectionStatusCard />
         </Layout.Section>
 
-        {/* Overview: period selector + 4 KPI cards (real data from API) */}
+        {/* 3. Active Cases — inquiry/chargeback split */}
+        <Layout.Section>
+          <LifecycleQueueSummary period={period} />
+        </Layout.Section>
+
+        {/* 4. Advanced: KPI cards */}
         <Layout.Section>
           <DashboardKpis period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
+        {/* 5. Advanced: Recent disputes table */}
         <Layout.Section>
           <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
             <RecentDisputesTable />
           </Suspense>
         </Layout.Section>
 
-        {/* Win Rate Trend + Dispute Categories (real data from API) */}
+        {/* 6. Advanced: Charts */}
         <DashboardCharts period={period} />
 
         <Layout.Section>

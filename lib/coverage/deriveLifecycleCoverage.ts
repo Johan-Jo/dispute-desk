@@ -201,7 +201,8 @@ export function deriveLifecycleCoverage(
       reasonMappings,
     );
 
-    const overallCovered = !inquiry.hasGap || !chargeback.hasGap;
+    // Fully covered = BOTH phases have handling. Partial = one phase. Not covered = both gaps.
+    const overallCovered = !inquiry.hasGap && !chargeback.hasGap;
 
     return {
       familyId: family.id,

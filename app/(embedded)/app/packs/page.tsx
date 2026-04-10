@@ -474,9 +474,6 @@ export default function PacksListPage() {
                     { title: t("packTemplates.packName") },
                     { title: t("packTemplates.type") },
                     { title: t("packTemplates.familyColumn") },
-                    { title: t("packTemplates.source") },
-                    { title: t("packTemplates.usageCount") },
-                    { title: t("packTemplates.lastUsed") },
                     { title: t("table.status") },
                     { title: t("table.actions") },
                   ]}
@@ -529,23 +526,6 @@ export default function PacksListPage() {
                         <IndexTable.Cell>
                           <Text as="p" variant="bodySm" tone="subdued">
                             {getPackFamily(pack.dispute_type)}
-                          </Text>
-                        </IndexTable.Cell>
-                        <IndexTable.Cell>
-                          <Badge tone={pack.source === "TEMPLATE" ? "info" : undefined}>
-                            {pack.source === "TEMPLATE"
-                              ? t("packTemplates.sourceTemplate")
-                              : t("packTemplates.sourceManual")}
-                          </Badge>
-                        </IndexTable.Cell>
-                        <IndexTable.Cell>
-                          <Text as="p" variant="bodyMd">
-                            {pack.usage_count}
-                          </Text>
-                        </IndexTable.Cell>
-                        <IndexTable.Cell>
-                          <Text as="p" variant="bodyMd" tone="subdued">
-                            {formatDate(pack.last_used_at, locale, t("packTemplates.never"))}
                           </Text>
                         </IndexTable.Cell>
                         <IndexTable.Cell>

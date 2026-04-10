@@ -48,7 +48,8 @@ import {
   deriveHandlingMode,
   phaseBadgeTone,
   phaseLabel as phaseLabelFn,
-  primaryCtaKey,
+  isPhaseKnown,
+  casePrimaryCta,
   disputeTitle,
 } from "@/lib/disputes/phaseUtils";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
@@ -381,7 +382,7 @@ export default function DisputeDetailPage() {
     const locale = searchParams.get("locale") ?? "";
     const reason = dispute?.reason ?? "";
     try {
-      const phase = dispute?.phase ?? "chargeback";
+      const phase = dispute?.phase ?? "";
       const res = await fetch(
         `/api/templates?reason=${encodeURIComponent(reason)}&phase=${encodeURIComponent(phase)}&locale=${encodeURIComponent(locale)}`
       );
@@ -436,6 +437,10 @@ export default function DisputeDetailPage() {
   const timeline = buildTimeline(packs, profile?.orderEvents ?? [], t);
   const isAutomated = matchedRule?.mode === "auto_pack";
   const isSubmittedToBank = dispute.status === "under_review" || dispute.status === "accepted" || dispute.status === "won" || dispute.status === "lost";
+  const latestPack = packs.length > 0 ? packs[0] : null;
+  const latestPackStatus = latestPack?.status ?? null;
+  const phaseKnown = isPhaseKnown(dispute.phase);
+  const cta = casePrimaryCta(dispute.phase as DisputePhase | null, latestPackStatus);
 
   return (
     <Page
@@ -448,9 +453,16 @@ export default function DisputeDetailPage() {
           : isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined
       }
       primaryAction={{
-        content: generating || templateCheckLoading ? t("disputes.generating") : t(primaryCtaKey(dispute.phase as DisputePhase | null)),
-        onAction: handleGenerate,
-        loading: generating || templateCheckLoading,
+        content: generating || templateCheckLoading
+          ? t("disputes.generating")
+          : t(cta.key),
+        onAction: !phaseKnown
+          ? handleSync
+          : latestPackStatus === "saved_to_shopify" && disputeUrl
+            ? () => window.open(disputeUrl, "_top")
+            : handleGenerate,
+        loading: generating || templateCheckLoading || syncing,
+        disabled: cta.disabled,
         icon: NoteIcon,
       }}
       secondaryActions={[
@@ -466,6 +478,44 @@ export default function DisputeDetailPage() {
       ]}
     >
       <Layout>
+        {/* HERO: Phase explanation + what's happening + what to do */}
+        <Layout.Section>
+          {!phaseKnown ? (
+            <Banner tone="warning">
+              <p><strong>{t("disputes.unknownPhaseWarning")}</strong></p>
+            </Banner>
+          ) : (
+            <Card>
+              <BlockStack gap="200">
+                <InlineStack gap="200" blockAlign="center">
+                  <Badge tone={phaseBadgeTone(dispute.phase as DisputePhase | null)}>
+                    {phaseLabelFn(dispute.phase as DisputePhase | null, t)}
+                  </Badge>
+                  <Text as="span" variant="bodySm" tone="subdued">
+                    {deriveFamily(dispute.reason)}
+                  </Text>
+                </InlineStack>
+                <Text as="p" variant="bodyMd">
+                  {dispute.phase === "inquiry"
+                    ? t("disputes.inquiryHeroExplain")
+                    : t("disputes.chargebackHeroExplain")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {latestPackStatus === "building" || latestPackStatus === "queued"
+                    ? t("disputes.caseStatusBuilding")
+                    : latestPackStatus === "ready"
+                      ? t("disputes.caseStatusReady")
+                      : latestPackStatus === "saved_to_shopify"
+                        ? t("disputes.caseStatusSaved")
+                        : latestPackStatus
+                          ? t("disputes.caseStatusReview")
+                          : t("disputes.caseStatusNoPack")}
+                </Text>
+              </BlockStack>
+            </Card>
+          )}
+        </Layout.Section>
+
         {/* KPI cards */}
         <Layout.Section>
           <div className={styles.kpiGrid}>

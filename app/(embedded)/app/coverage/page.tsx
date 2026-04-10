@@ -183,16 +183,6 @@ function PhaseRow({
       <Badge tone={automationBadgeTone(handling.automationMode)}>
         {automationModeLabel(handling.automationMode, tc)}
       </Badge>
-      {handling.mappedTemplateName && (
-        <Text as="span" variant="bodySm" tone="subdued">
-          {tc("mappedTemplate", { name: handling.mappedTemplateName })}
-        </Text>
-      )}
-      {!handling.mappedTemplateName && handling.automationMode !== "none" && (
-        <Text as="span" variant="bodySm" tone="subdued">
-          {tc("noMappedTemplate")}
-        </Text>
-      )}
       {handling.playbooks.length > 0 && (
         <Text as="span" variant="bodySm" tone="subdued">
           {tc("activePacks", { count: handling.playbooks.length })}
@@ -217,10 +207,20 @@ function LifecycleFamilyCard({
   searchParams: ReturnType<typeof useSearchParams>;
 }) {
   const FamilyIcon = FAMILY_ICONS[family.familyId] ?? ClipboardCheckFilledIcon;
-  const bothIdentical =
-    family.inquiry.automationMode === family.chargeback.automationMode &&
-    family.inquiry.mappedTemplateName === family.chargeback.mappedTemplateName &&
-    family.inquiry.playbooks.length === family.chargeback.playbooks.length;
+  // Three-state: fully covered, partial, not covered
+  const isPartial = !family.overallCovered && (!family.inquiry.hasGap || !family.chargeback.hasGap);
+  const statusLabel = family.overallCovered
+    ? tc("statusFullyCovered")
+    : isPartial
+      ? tc("statusPartial")
+      : tc("statusNotCovered");
+  const statusTone = family.overallCovered
+    ? ("success" as const)
+    : isPartial
+      ? ("warning" as const)
+      : undefined;
+  const iconBg = family.overallCovered ? "#DCFCE7" : isPartial ? "#FEF3C7" : "#FEE2E2";
+  const iconColor = family.overallCovered ? "#16A34A" : isPartial ? "#D97706" : "#DC2626";
 
   return (
     <Card>
@@ -233,12 +233,12 @@ function LifecycleFamilyCard({
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                background: family.overallCovered ? "#DCFCE7" : "#FEF3C7",
+                background: iconBg,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                color: family.overallCovered ? "#16A34A" : "#D97706",
+                color: iconColor,
               }}
             >
               <Icon source={FamilyIcon} />
@@ -247,9 +247,7 @@ function LifecycleFamilyCard({
               {tc(family.labelKey.replace("coverage.", ""))}
             </Text>
           </InlineStack>
-          <Badge tone={family.overallCovered ? "success" : undefined}>
-            {family.overallCovered ? tc("covered") : tc("notCovered")}
-          </Badge>
+          <Badge tone={statusTone}>{statusLabel}</Badge>
         </InlineStack>
 
         <Divider />
@@ -258,30 +256,26 @@ function LifecycleFamilyCard({
         <PhaseRow handling={family.inquiry} tc={tc} />
         <PhaseRow handling={family.chargeback} tc={tc} />
 
-        {bothIdentical && (
-          <Text as="p" variant="bodySm" tone="subdued">
-            {tc("identicalHandling")}
-          </Text>
-        )}
-
-        {/* Gap actions */}
+        {/* Specific gap actions — not generic */}
         {(family.inquiry.hasGap || family.chargeback.hasGap) && (
           <>
             <Divider />
-            <InlineStack gap="200">
-              <Button
-                size="slim"
-                url={withShopParams("/app/packs", searchParams)}
-              >
-                {tc("installPlaybook")}
-              </Button>
-              <Button
-                size="slim"
-                variant="plain"
-                url={withShopParams("/app/rules", searchParams)}
-              >
-                {tc("addAutomation")}
-              </Button>
+            <InlineStack gap="200" wrap>
+              {family.inquiry.hasGap && (
+                <Button size="slim" url={withShopParams("/app/rules", searchParams)}>
+                  {tc("configureInquiry")}
+                </Button>
+              )}
+              {family.chargeback.hasGap && (
+                <Button size="slim" url={withShopParams("/app/rules", searchParams)}>
+                  {tc("configureChargeback")}
+                </Button>
+              )}
+              {family.inquiry.playbooks.length === 0 && family.chargeback.playbooks.length === 0 && (
+                <Button size="slim" variant="plain" url={withShopParams("/app/packs", searchParams)}>
+                  {tc("installPlaybook")}
+                </Button>
+              )}
             </InlineStack>
           </>
         )}

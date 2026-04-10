@@ -1617,3 +1617,23 @@ Admin portal visual polish and enhancement pass. All admin pages already existed
 **Reason Mapping** (`app/admin/reason-mapping/page.tsx`): Enhanced phase toggle with segmented control UI. Added unmapped reasons warning banner when gaps exist.
 
 **Shared components**: AdminPageHeader, AdminStatsRow, AdminFilterBar, AdminTable, StatusPill all already in use across all admin pages. Template Library, Template Detail, Template Health, Shops, Jobs, Audit, Billing, and Team pages were already production-quality with consistent styling.
+
+### Merchant-First Page Reset (2026-04-09)
+
+Structural reset of all embedded app pages around the four-question contract: Purpose → Current State → Recommended Next Action → Advanced Controls.
+
+**Dashboard**: Restructured to Protection Status → Active Cases → KPIs → Recent Disputes → Charts. Protection card uses strict status taxonomy (Active/Partially Configured/Needs Attention/Needs Setup) with state-dependent primary CTA and blocker list.
+
+**Case Detail**: Added hero section at page top showing phase explanation, case status description, and state-dependent primary CTA. Inquiry CTA: "Prepare Response" / "Review & Send Response". Chargeback CTA: "Build Evidence" / "Review & Save to Shopify". Unknown phase: warning banner + "Re-sync Dispute" as only CTA (workflow suppressed until phase known). Removed silent chargeback default for unknown phase.
+
+**Coverage**: Fixed coverage logic — family is "Fully Covered" only when BOTH phases have handling. Shows "Partial" when only one phase covered. Removed template language from merchant view. Gap CTAs are now specific: "Configure Inquiry Handling" / "Configure Chargeback Handling" → links to Automation page. "Install Playbook" → links to Playbooks.
+
+**Disputes List**: Added summary strip (X inquiries, Y chargebacks, Z need review, W need sync). NULL phase displays as "Needs Sync" badge (orange, attention tone). Added Urgency column (Overdue/Urgent/Review Required/On Track). Reordered columns: Phase → Order → Reason/Family → Amount → Status → Urgency → Actions. Added needs-review banner.
+
+**Automation**: Replaced "phase-blind" jargon banner with plain-language note. Removed Default Templates by Phase table (internal governance). Lead with policy summary showing automated/review/unconfigured counts per family.
+
+**Playbooks List**: Removed Source column (TEMPLATE/MANUAL is internal). Simplified to: Name, Type, Family, Status, Actions.
+
+**Playbook Detail**: NULL phase on dispute-linked packs now shows explicit warning banner instead of silent omission.
+
+**Phase utilities** (`lib/disputes/phaseUtils.ts`): Added `isPhaseKnown()`, `casePrimaryCta()` for state-dependent CTA logic. `phaseLabel()` returns "Needs Sync" for NULL (not "Unknown"). `phaseBadgeTone()` returns "attention" for NULL (not undefined).

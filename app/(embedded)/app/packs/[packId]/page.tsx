@@ -345,16 +345,22 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
-        {/* Phase Context Banner */}
-        {!isLibraryPack && pack.dispute_phase && (
+        {/* Phase Context Banner — explicit for all dispute-linked packs */}
+        {!isLibraryPack && (
           <Layout.Section>
-            <Banner tone={pack.dispute_phase === "inquiry" ? "info" : "warning"}>
-              <p>
-                {pack.dispute_phase === "inquiry"
-                  ? t("packs.inquiryContext")
-                  : t("packs.chargebackContext")}
-              </p>
-            </Banner>
+            {pack.dispute_phase === "inquiry" ? (
+              <Banner tone="info">
+                <p>{t("packs.inquiryContext")}</p>
+              </Banner>
+            ) : pack.dispute_phase === "chargeback" ? (
+              <Banner tone="warning">
+                <p>{t("packs.chargebackContext")}</p>
+              </Banner>
+            ) : (
+              <Banner tone="warning">
+                <p>{t("packs.phaseUnknown")} — {t("disputes.unknownPhaseWarning")}</p>
+              </Banner>
+            )}
           </Layout.Section>
         )}
 

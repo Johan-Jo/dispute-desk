@@ -86,7 +86,7 @@ export default function EmbeddedRulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
-  const [reasonMappings, setReasonMappings] = useState<ReasonMapping[]>([]);
+  const [_reasonMappings, setReasonMappings] = useState<ReasonMapping[]>([]);
   const [starterModes, setStarterModes] = useState<Record<string, "auto_pack" | "review">>(() => {
     const init: Record<string, "auto_pack" | "review"> = {};
     for (const p of RULE_PRESETS) init[p.id] = p.action.mode;
@@ -165,32 +165,6 @@ export default function EmbeddedRulesPage() {
     return { automated, reviewFirst, manual };
   }, [rules]);
 
-  // Group reason mappings by family for the template defaults table
-  const templateDefaults = useMemo(() => {
-    return DISPUTE_FAMILIES.map((family) => {
-      const inquiryMapping = reasonMappings.find(
-        (m) =>
-          m.dispute_phase === "inquiry" &&
-          m.is_active &&
-          family.reasons.includes(m.reason_code) &&
-          m.template_id != null,
-      );
-      const chargebackMapping = reasonMappings.find(
-        (m) =>
-          m.dispute_phase === "chargeback" &&
-          m.is_active &&
-          family.reasons.includes(m.reason_code) &&
-          m.template_id != null,
-      );
-      return {
-        familyId: family.id,
-        labelKey: family.labelKey,
-        inquiryTemplate: inquiryMapping?.template_name ?? null,
-        chargebackTemplate: chargebackMapping?.template_name ?? null,
-      };
-    });
-  }, [reasonMappings]);
-
   const saveStarterRules = useCallback(async () => {
     setSavingStarters(true);
     setStarterError(null);
@@ -259,6 +233,7 @@ export default function EmbeddedRulesPage() {
   }
 
   const tc = useTranslations("coverage");
+  void _reasonMappings; // keep fetch, may use later
 
   return (
     <Page
@@ -290,67 +265,25 @@ export default function EmbeddedRulesPage() {
                 </Banner>
               )}
 
-              {/* Policy Overview */}
+              {/* Policy Overview — Purpose + Current State */}
               <Card>
                 <BlockStack gap="300">
                   <Text as="h2" variant="headingMd">{tr("policyOverview")}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Your automation policy applies to all disputes regardless of phase. Phase-specific automation is planned for a future update.
+                  </Text>
                   <InlineStack gap="300" wrap>
                     <Badge tone="success">{`${policySummary.automated} ${tc("modeAutomated")}`}</Badge>
                     <Badge tone="info">{`${policySummary.reviewFirst} ${tc("modeReviewFirst")}`}</Badge>
-                    <Badge>{`${policySummary.manual} ${tc("modeManual")}`}</Badge>
+                    {policySummary.manual > 0 && (
+                      <Badge tone="warning">{`${policySummary.manual} not configured`}</Badge>
+                    )}
                   </InlineStack>
-                  <Banner tone="info">
-                    <p>{tr("phaseBlindNote")}</p>
-                  </Banner>
-                </BlockStack>
-              </Card>
-
-              {/* Default Templates by Phase */}
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">{tr("defaultTemplates")}</Text>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
-                          <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "12px", fontWeight: 600, color: "#6D7175" }}>
-                            {tc("title")}
-                          </th>
-                          <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "12px", fontWeight: 600, color: "#6D7175" }}>
-                            {tr("inquiryTemplate")}
-                          </th>
-                          <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "12px", fontWeight: 600, color: "#6D7175" }}>
-                            {tr("chargebackTemplate")}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {templateDefaults.map((row) => (
-                          <tr key={row.familyId} style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}>
-                            <td style={{ padding: "10px 12px" }}>
-                              <Text as="span" variant="bodySm" fontWeight="semibold">
-                                {tc(row.labelKey.replace("coverage.", ""))}
-                              </Text>
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              {row.inquiryTemplate ? (
-                                <Text as="span" variant="bodySm">{row.inquiryTemplate}</Text>
-                              ) : (
-                                <Text as="span" variant="bodySm" tone="subdued">{tr("noTemplateConfigured")}</Text>
-                              )}
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              {row.chargebackTemplate ? (
-                                <Text as="span" variant="bodySm">{row.chargebackTemplate}</Text>
-                              ) : (
-                                <Text as="span" variant="bodySm" tone="subdued">{tr("noTemplateConfigured")}</Text>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  {policySummary.manual > 0 && (
+                    <Text as="p" variant="bodySm" tone="caution">
+                      {policySummary.manual} families have no automation — disputes will require manual handling.
+                    </Text>
+                  )}
                 </BlockStack>
               </Card>
 
