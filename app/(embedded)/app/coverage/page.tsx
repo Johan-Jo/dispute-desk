@@ -1,8 +1,9 @@
 /**
- * Coverage page — merchant-facing view of dispute family coverage.
+ * Lifecycle-aware coverage page.
  *
- * Reads from /api/rules and /api/packs?status=ACTIVE to derive coverage
- * state per dispute family using the deriveCoverage utility.
+ * Shows per-family, per-phase handling: how inquiries and chargebacks
+ * are handled for each dispute family. Derives coverage from rules,
+ * active packs, and reason_template_mappings.
  */
 "use client";
 
@@ -36,12 +37,12 @@ import {
 } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
 import {
-  deriveCoverage,
-  DISPUTE_FAMILIES,
-  type CoverageSummary,
-  type FamilyCoverage,
-  type AutomationMode,
-} from "@/lib/coverage/deriveCoverage";
+  deriveLifecycleCoverage,
+  type LifecycleCoverageSummary,
+  type LifecycleFamilyCoverage,
+  type LifecyclePhaseHandling,
+} from "@/lib/coverage/deriveLifecycleCoverage";
+import { type AutomationMode } from "@/lib/coverage/deriveCoverage";
 
 const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   fraud: ShieldPersonIcon,
@@ -54,7 +55,7 @@ const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   general: ClipboardCheckFilledIcon,
 };
 
-function automationBadgeTone(mode: AutomationMode): "success" | "info" | "warning" | "attention" | undefined {
+function automationBadgeTone(mode: AutomationMode): "success" | "info" | "warning" | undefined {
   switch (mode) {
     case "automated": return "success";
     case "review_first": return "info";
@@ -63,11 +64,20 @@ function automationBadgeTone(mode: AutomationMode): "success" | "info" | "warnin
   }
 }
 
+function automationModeLabel(mode: AutomationMode, tc: (key: string) => string): string {
+  switch (mode) {
+    case "automated": return tc("modeAutomated");
+    case "review_first": return tc("modeReviewFirst");
+    case "manual": return tc("modeManual");
+    case "none": return tc("phaseGap");
+  }
+}
+
 export default function CoveragePage() {
   const t = useTranslations();
   const tc = useTranslations("coverage");
   const searchParams = useSearchParams();
-  const [coverage, setCoverage] = useState<CoverageSummary | null>(null);
+  const [coverage, setCoverage] = useState<LifecycleCoverageSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,12 +85,14 @@ export default function CoveragePage() {
     Promise.all([
       fetch("/api/rules").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/packs?status=ACTIVE").then((r) => (r.ok ? r.json() : { packs: [] })),
+      fetch("/api/reason-mappings").then((r) => (r.ok ? r.json() : { mappings: [] })),
     ])
-      .then(([rulesData, packsData]) => {
+      .then(([rulesData, packsData, mappingsData]) => {
         if (cancelled) return;
         const rules = Array.isArray(rulesData) ? rulesData : [];
         const packs = packsData?.packs ?? [];
-        setCoverage(deriveCoverage(rules, packs));
+        const mappings = mappingsData?.mappings ?? [];
+        setCoverage(deriveLifecycleCoverage(rules, packs, mappings));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -90,7 +102,7 @@ export default function CoveragePage() {
 
   if (loading) {
     return (
-      <Page title={tc("title")} subtitle={tc("subtitle")}>
+      <Page title={tc("title")} subtitle={tc("lifecycleSubtitle")}>
         <Layout>
           <Layout.Section>
             <Card>
@@ -109,7 +121,7 @@ export default function CoveragePage() {
   return (
     <Page
       title={tc("title")}
-      subtitle={tc("subtitle")}
+      subtitle={tc("lifecycleSubtitle")}
       primaryAction={{
         content: t("nav.automation"),
         url: withShopParams("/app/rules", searchParams),
@@ -121,16 +133,17 @@ export default function CoveragePage() {
       <Layout>
         {/* Summary Banner */}
         <Layout.Section>
-          <Banner tone={c.coveredCount === c.totalFamilies ? "success" : "warning"}>
+          <Banner tone={c.gapsCount === 0 ? "success" : "warning"}>
             <InlineStack gap="200" wrap>
               <Text as="span" variant="bodyMd" fontWeight="semibold">
-                {tc("summaryBanner", { covered: c.coveredCount, total: c.totalFamilies })}
+                {tc("fullyConfigured", { count: c.fullyConfiguredCount })}
+                {" / "}
+                {c.totalFamilies}
               </Text>
-              {c.automatedCount > 0 && (
-                <Badge tone="success">{tc("automatedCount", { count: c.automatedCount })}</Badge>
-              )}
-              {c.reviewFirstCount > 0 && (
-                <Badge tone="info">{tc("reviewFirstCount", { count: c.reviewFirstCount })}</Badge>
+              <Badge tone="info">{tc("inquiryConfigured", { count: c.inquiryConfiguredCount })}</Badge>
+              <Badge tone="warning">{tc("chargebackConfigured", { count: c.chargebackConfiguredCount })}</Badge>
+              {c.gapsCount > 0 && (
+                <Badge tone="critical">{tc("gapsFound", { count: c.gapsCount })}</Badge>
               )}
             </InlineStack>
           </Banner>
@@ -139,7 +152,7 @@ export default function CoveragePage() {
         {/* Family Cards */}
         {c.families.map((family) => (
           <Layout.Section key={family.familyId}>
-            <FamilyCard
+            <LifecycleFamilyCard
               family={family}
               tc={tc}
               searchParams={searchParams}
@@ -151,20 +164,68 @@ export default function CoveragePage() {
   );
 }
 
-function FamilyCard({
+function PhaseRow({
+  handling,
+  tc,
+}: {
+  handling: LifecyclePhaseHandling;
+  tc: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const phaseLabel = handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel");
+
+  return (
+    <InlineStack gap="300" blockAlign="center" wrap>
+      <div style={{ minWidth: "90px" }}>
+        <Badge tone={handling.phase === "inquiry" ? "info" : "warning"}>
+          {phaseLabel}
+        </Badge>
+      </div>
+      <Badge tone={automationBadgeTone(handling.automationMode)}>
+        {automationModeLabel(handling.automationMode, tc)}
+      </Badge>
+      {handling.mappedTemplateName && (
+        <Text as="span" variant="bodySm" tone="subdued">
+          {tc("mappedTemplate", { name: handling.mappedTemplateName })}
+        </Text>
+      )}
+      {!handling.mappedTemplateName && handling.automationMode !== "none" && (
+        <Text as="span" variant="bodySm" tone="subdued">
+          {tc("noMappedTemplate")}
+        </Text>
+      )}
+      {handling.playbooks.length > 0 && (
+        <Text as="span" variant="bodySm" tone="subdued">
+          {tc("activePacks", { count: handling.playbooks.length })}
+        </Text>
+      )}
+      {handling.hasGap && (
+        <Text as="span" variant="bodySm" tone="critical">
+          {tc("noPlaybook")}
+        </Text>
+      )}
+    </InlineStack>
+  );
+}
+
+function LifecycleFamilyCard({
   family,
   tc,
   searchParams,
 }: {
-  family: FamilyCoverage;
+  family: LifecycleFamilyCoverage;
   tc: ReturnType<typeof useTranslations>;
   searchParams: ReturnType<typeof useSearchParams>;
 }) {
   const FamilyIcon = FAMILY_ICONS[family.familyId] ?? ClipboardCheckFilledIcon;
+  const bothIdentical =
+    family.inquiry.automationMode === family.chargeback.automationMode &&
+    family.inquiry.mappedTemplateName === family.chargeback.mappedTemplateName &&
+    family.inquiry.playbooks.length === family.chargeback.playbooks.length;
 
   return (
     <Card>
       <BlockStack gap="300">
+        {/* Header */}
         <InlineStack align="space-between" blockAlign="center" wrap>
           <InlineStack gap="300" blockAlign="center">
             <div
@@ -172,46 +233,41 @@ function FamilyCard({
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                background: family.hasCoverage ? "#DCFCE7" : "#FEF3C7",
+                background: family.overallCovered ? "#DCFCE7" : "#FEF3C7",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                color: family.hasCoverage ? "#16A34A" : "#D97706",
+                color: family.overallCovered ? "#16A34A" : "#D97706",
               }}
             >
               <Icon source={FamilyIcon} />
             </div>
-            <BlockStack gap="050">
-              <Text as="h3" variant="headingSm">{tc(family.labelKey.replace("coverage.", ""))}</Text>
-              {family.activePackCount > 0 && (
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {tc("activePacks", { count: family.activePackCount })}
-                </Text>
-              )}
-            </BlockStack>
+            <Text as="h3" variant="headingSm">
+              {tc(family.labelKey.replace("coverage.", ""))}
+            </Text>
           </InlineStack>
-
-          <InlineStack gap="200" blockAlign="center">
-            <Badge tone={family.hasCoverage ? "success" : undefined}>
-              {family.hasCoverage ? tc("covered") : tc("notCovered")}
-            </Badge>
-            {family.automationMode !== "none" && (
-              <Badge tone={automationBadgeTone(family.automationMode)}>
-                {tc(`mode${family.automationMode === "automated" ? "Automated" : family.automationMode === "review_first" ? "ReviewFirst" : "Manual"}`)}
-              </Badge>
-            )}
-          </InlineStack>
+          <Badge tone={family.overallCovered ? "success" : undefined}>
+            {family.overallCovered ? tc("covered") : tc("notCovered")}
+          </Badge>
         </InlineStack>
 
-        {!family.hasCoverage && (
+        <Divider />
+
+        {/* Phase rows */}
+        <PhaseRow handling={family.inquiry} tc={tc} />
+        <PhaseRow handling={family.chargeback} tc={tc} />
+
+        {bothIdentical && (
+          <Text as="p" variant="bodySm" tone="subdued">
+            {tc("identicalHandling")}
+          </Text>
+        )}
+
+        {/* Gap actions */}
+        {(family.inquiry.hasGap || family.chargeback.hasGap) && (
           <>
             <Divider />
-            <InlineStack gap="200" blockAlign="center">
-              <Text as="p" variant="bodySm" tone="subdued">
-                {tc("familyRecommendation")}
-              </Text>
-            </InlineStack>
             <InlineStack gap="200">
               <Button
                 size="slim"
@@ -219,21 +275,6 @@ function FamilyCard({
               >
                 {tc("installPlaybook")}
               </Button>
-              <Button
-                size="slim"
-                variant="plain"
-                url={withShopParams("/app/rules", searchParams)}
-              >
-                {tc("addAutomation")}
-              </Button>
-            </InlineStack>
-          </>
-        )}
-
-        {family.hasCoverage && family.automationMode === "none" && (
-          <>
-            <Divider />
-            <InlineStack gap="200">
               <Button
                 size="slim"
                 variant="plain"

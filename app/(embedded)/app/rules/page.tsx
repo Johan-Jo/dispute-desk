@@ -1,8 +1,14 @@
 /**
- * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
- * Route: app/(embedded)/app/rules/page.tsx
- * Onboarding: "Automate Your Dispute Workflow" + suggested starter rules with routing control.
- * Snapshot copy for reference: archive/ui-reference/embedded-rules-page-2025-03-21.tsx
+ * Lifecycle-aware automation policy page.
+ *
+ * Restructured from raw rules to policy sections:
+ * 1. Policy overview (inquiry/chargeback posture)
+ * 2. Default templates by phase (from reason_template_mappings)
+ * 3. Starter rules workflow (existing, reframed)
+ * 4. Custom rules (secondary)
+ *
+ * Rules remain phase-blind — both phases show same automation mode.
+ * Lifecycle differentiation comes from reason_template_mappings.
  */
 "use client";
 
@@ -20,10 +26,12 @@ import {
   InlineStack,
   BlockStack,
   Banner,
+  Divider,
 } from "@shopify/polaris";
 
 import { RULE_PRESETS } from "@/lib/rules/presets";
 import { EmbeddedStarterRulesWorkflow } from "@/components/rules/EmbeddedStarterRulesWorkflow";
+import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 
 interface Rule {
   id: string;
@@ -40,6 +48,15 @@ interface Rule {
     require_fields?: string[];
   };
   priority: number;
+}
+
+interface ReasonMapping {
+  reason_code: string;
+  dispute_phase: "inquiry" | "chargeback";
+  template_id: string | null;
+  template_name: string | null;
+  family: string;
+  is_active: boolean;
 }
 
 const PRESET_NAMES = new Set(RULE_PRESETS.map((p) => p.name));
@@ -69,6 +86,7 @@ export default function EmbeddedRulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
+  const [reasonMappings, setReasonMappings] = useState<ReasonMapping[]>([]);
   const [starterModes, setStarterModes] = useState<Record<string, "auto_pack" | "review">>(() => {
     const init: Record<string, "auto_pack" | "review"> = {};
     for (const p of RULE_PRESETS) init[p.id] = p.action.mode;
@@ -81,9 +99,10 @@ export default function EmbeddedRulesPage() {
   const fetchRules = useCallback(async () => {
     setLoading(true);
     try {
-      const [rulesRes, packsRes] = await Promise.all([
+      const [rulesRes, packsRes, mappingsRes] = await Promise.all([
         fetch("/api/rules"),
         fetch("/api/packs?status=ACTIVE"),
+        fetch("/api/reason-mappings"),
       ]);
       if (rulesRes.ok) {
         const data = await rulesRes.json();
@@ -94,6 +113,10 @@ export default function EmbeddedRulesPage() {
         setActivatedPacks(
           (body.packs ?? []).map((p) => ({ id: p.id, name: p.name }))
         );
+      }
+      if (mappingsRes.ok) {
+        const body = await mappingsRes.json();
+        setReasonMappings(body.mappings ?? []);
       }
     } finally {
       setLoading(false);
@@ -122,6 +145,51 @@ export default function EmbeddedRulesPage() {
       ),
     [rules]
   );
+
+  // Compute policy overview counts
+  const policySummary = useMemo(() => {
+    let automated = 0;
+    let reviewFirst = 0;
+    let manual = 0;
+    for (const family of DISPUTE_FAMILIES) {
+      const matchingRule = rules.find((r) => {
+        if (!r.enabled) return false;
+        if (!r.match.reason || r.match.reason.length === 0) return true;
+        return family.reasons.some((reason) => r.match.reason!.includes(reason));
+      });
+      if (!matchingRule) { manual++; continue; }
+      if (matchingRule.action.mode === "auto_pack") automated++;
+      else if (matchingRule.action.mode === "review") reviewFirst++;
+      else manual++;
+    }
+    return { automated, reviewFirst, manual };
+  }, [rules]);
+
+  // Group reason mappings by family for the template defaults table
+  const templateDefaults = useMemo(() => {
+    return DISPUTE_FAMILIES.map((family) => {
+      const inquiryMapping = reasonMappings.find(
+        (m) =>
+          m.dispute_phase === "inquiry" &&
+          m.is_active &&
+          family.reasons.includes(m.reason_code) &&
+          m.template_id != null,
+      );
+      const chargebackMapping = reasonMappings.find(
+        (m) =>
+          m.dispute_phase === "chargeback" &&
+          m.is_active &&
+          family.reasons.includes(m.reason_code) &&
+          m.template_id != null,
+      );
+      return {
+        familyId: family.id,
+        labelKey: family.labelKey,
+        inquiryTemplate: inquiryMapping?.template_name ?? null,
+        chargebackTemplate: chargebackMapping?.template_name ?? null,
+      };
+    });
+  }, [reasonMappings]);
 
   const saveStarterRules = useCallback(async () => {
     setSavingStarters(true);
@@ -190,14 +258,12 @@ export default function EmbeddedRulesPage() {
     return parts.length ? parts.join(" · ") : tr("matchesAll");
   }
 
-  function statusTone(enabled: boolean): "success" | "warning" | undefined {
-    return enabled ? "success" : "warning";
-  }
+  const tc = useTranslations("coverage");
 
   return (
     <Page
       title={tn("automation")}
-      subtitle={tr("subtitle")}
+      subtitle={tr("policySubtitle")}
       primaryAction={{
         content: tr("addRule"),
         url: "/portal/rules",
@@ -224,6 +290,71 @@ export default function EmbeddedRulesPage() {
                 </Banner>
               )}
 
+              {/* Policy Overview */}
+              <Card>
+                <BlockStack gap="300">
+                  <Text as="h2" variant="headingMd">{tr("policyOverview")}</Text>
+                  <InlineStack gap="300" wrap>
+                    <Badge tone="success">{`${policySummary.automated} ${tc("modeAutomated")}`}</Badge>
+                    <Badge tone="info">{`${policySummary.reviewFirst} ${tc("modeReviewFirst")}`}</Badge>
+                    <Badge>{`${policySummary.manual} ${tc("modeManual")}`}</Badge>
+                  </InlineStack>
+                  <Banner tone="info">
+                    <p>{tr("phaseBlindNote")}</p>
+                  </Banner>
+                </BlockStack>
+              </Card>
+
+              {/* Default Templates by Phase */}
+              <Card>
+                <BlockStack gap="300">
+                  <Text as="h2" variant="headingMd">{tr("defaultTemplates")}</Text>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid var(--p-color-border)" }}>
+                          <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "12px", fontWeight: 600, color: "#6D7175" }}>
+                            {tc("title")}
+                          </th>
+                          <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "12px", fontWeight: 600, color: "#6D7175" }}>
+                            {tr("inquiryTemplate")}
+                          </th>
+                          <th style={{ textAlign: "left", padding: "8px 12px", fontSize: "12px", fontWeight: 600, color: "#6D7175" }}>
+                            {tr("chargebackTemplate")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {templateDefaults.map((row) => (
+                          <tr key={row.familyId} style={{ borderBottom: "1px solid var(--p-color-border-subdued)" }}>
+                            <td style={{ padding: "10px 12px" }}>
+                              <Text as="span" variant="bodySm" fontWeight="semibold">
+                                {tc(row.labelKey.replace("coverage.", ""))}
+                              </Text>
+                            </td>
+                            <td style={{ padding: "10px 12px" }}>
+                              {row.inquiryTemplate ? (
+                                <Text as="span" variant="bodySm">{row.inquiryTemplate}</Text>
+                              ) : (
+                                <Text as="span" variant="bodySm" tone="subdued">{tr("noTemplateConfigured")}</Text>
+                              )}
+                            </td>
+                            <td style={{ padding: "10px 12px" }}>
+                              {row.chargebackTemplate ? (
+                                <Text as="span" variant="bodySm">{row.chargebackTemplate}</Text>
+                              ) : (
+                                <Text as="span" variant="bodySm" tone="subdued">{tr("noTemplateConfigured")}</Text>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </BlockStack>
+              </Card>
+
+              {/* Starter Rules Workflow */}
               <Card>
                 <EmbeddedStarterRulesWorkflow
                   tr={tr}
@@ -245,6 +376,7 @@ export default function EmbeddedRulesPage() {
                 />
               </Card>
 
+              {/* Custom Rules */}
               {customRules.length > 0 && (
                 <BlockStack gap="300">
                   <Text as="h2" variant="headingMd">
@@ -279,7 +411,7 @@ export default function EmbeddedRulesPage() {
                                 <Text as="h3" variant="bodyMd" fontWeight="semibold">
                                   {rule.name ?? tr("unnamedRule")}
                                 </Text>
-                                <Badge tone={statusTone(rule.enabled)}>
+                                <Badge tone={rule.enabled ? "success" : "warning"}>
                                   {rule.enabled ? tr("active") : tr("inactive")}
                                 </Badge>
                               </BlockStack>
@@ -293,12 +425,7 @@ export default function EmbeddedRulesPage() {
 
                             <BlockStack gap="100">
                               <InlineStack gap="200" blockAlign="start">
-                                <Text
-                                  as="span"
-                                  variant="bodySm"
-                                  fontWeight="medium"
-                                  tone="subdued"
-                                >
+                                <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
                                   {tr("triggerCondition")}:
                                 </Text>
                                 <Text as="span" variant="bodySm">
@@ -306,12 +433,7 @@ export default function EmbeddedRulesPage() {
                                 </Text>
                               </InlineStack>
                               <InlineStack gap="200" blockAlign="start">
-                                <Text
-                                  as="span"
-                                  variant="bodySm"
-                                  fontWeight="medium"
-                                  tone="subdued"
-                                >
+                                <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
                                   {tr("action")}:
                                 </Text>
                                 <Text as="span" variant="bodySm">

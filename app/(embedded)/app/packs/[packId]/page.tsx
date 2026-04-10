@@ -62,6 +62,7 @@ interface PackData {
   dispute_type?: string | null;
   shop_domain?: string | null;
   dispute_gid?: string | null;
+  dispute_phase?: string | null;
   status: string;
   completeness_score: number | null;
   checklist: ChecklistItem[] | null;
@@ -315,6 +316,14 @@ export default function PackPreviewPage() {
                     {t("packs.detailDisputeType")} {disputeTypeLabel}
                   </Text>
                 )}
+                {!isLibraryPack && pack.dispute_phase && (
+                  <InlineStack gap="200" blockAlign="center">
+                    <Text as="span" variant="bodySm" tone="subdued">{t("packs.disputePhaseLabel")}</Text>
+                    <Badge tone={pack.dispute_phase === "inquiry" ? "info" : "warning"}>
+                      {pack.dispute_phase === "inquiry" ? t("packs.phaseInquiry") : t("packs.phaseChargeback")}
+                    </Badge>
+                  </InlineStack>
+                )}
                 <InlineStack gap="200" blockAlign="center">
                   <Text as="span" variant="bodySm" tone="subdued">{t("packs.detailStatus")}</Text>
                   <Badge tone={statusTone(pack.status)}>{pack.status.replace(/_/g, " ")}</Badge>
@@ -335,6 +344,19 @@ export default function PackPreviewPage() {
             </BlockStack>
           </Card>
         </Layout.Section>
+
+        {/* Phase Context Banner */}
+        {!isLibraryPack && pack.dispute_phase && (
+          <Layout.Section>
+            <Banner tone={pack.dispute_phase === "inquiry" ? "info" : "warning"}>
+              <p>
+                {pack.dispute_phase === "inquiry"
+                  ? t("packs.inquiryContext")
+                  : t("packs.chargebackContext")}
+              </p>
+            </Banner>
+          </Layout.Section>
+        )}
 
         {/* B. Template continuity */}
         {fromTemplate && (

@@ -1573,3 +1573,23 @@ The `disputes` table has a `phase` column (text, nullable) with values `"inquiry
 - **Dispute detail:** Phase-aware title (`"Inquiry {id}"` / `"Chargeback {id}"` / `"Case {id}"` for unknown), phase-aware CTA (`"Respond to Inquiry"` / `"Build Evidence"`), and a case metadata bar displaying phase, family, and handling mode.
 
 **Scope note:** Phase A+B delivers lifecycle visibility and sensible defaults. Rules and automation remain phase-blind. Full inquiry workflow parity (distinct inquiry response forms, inquiry-specific auto-build) is planned for a later phase.
+
+### Lifecycle-Aware Control Surfaces — Phase C (2026-04-09)
+
+Phase C extends lifecycle awareness to the control surfaces: Coverage, Automation, and Playbooks.
+
+**New API:**
+- `GET /api/reason-mappings?phase=inquiry|chargeback` — returns `reason_template_mappings` data for the embedded app (wraps `listReasonMappings()`).
+
+**New utility:**
+- `lib/coverage/deriveLifecycleCoverage.ts` — extends flat family coverage to per-phase handling. For each family, shows inquiry + chargeback handling separately: automation mode, mapped template, active playbooks, gaps/warnings.
+
+**Coverage page** (`app/(embedded)/app/coverage/page.tsx`): Rewritten to show per-family, per-phase handling. Each family card has Inquiry and Chargeback rows showing automation mode, default template, and gap warnings. Summary shows fully-configured count, inquiry/chargeback flow counts, and gap count.
+
+**Automation page** (`app/(embedded)/app/rules/page.tsx`): Restructured into policy sections: policy overview (automated/review/manual counts), default templates by phase table (from `reason_template_mappings`), starter rules workflow (preserved), and custom rules (secondary). Includes info banner noting rules are phase-blind.
+
+**Playbooks list** (`app/(embedded)/app/packs/page.tsx`): Added Family column (derived from `DISPUTE_REASON_FAMILIES`).
+
+**Pack detail** (`app/(embedded)/app/packs/[packId]/page.tsx`): For dispute-linked packs, shows dispute phase badge and lifecycle context banner (inquiry vs chargeback framing). API extended to return `dispute_phase` from joined disputes table.
+
+**Scope:** Rules remain phase-blind. Both phases show the same automation mode from rules. Lifecycle differentiation comes from `reason_template_mappings` (per-phase template defaults). Phase-specific rules are a future enhancement.

@@ -31,6 +31,25 @@ import {
 } from "@shopify/polaris";
 import { FileText, Info, X } from "lucide-react";
 import { EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
+import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
+
+/** Map pack dispute_type to the primary reason code for family lookup */
+const PACK_TYPE_PRIMARY_REASON: Record<string, string> = {
+  FRAUD: "FRAUDULENT",
+  PNR: "PRODUCT_NOT_RECEIVED",
+  NOT_AS_DESCRIBED: "PRODUCT_UNACCEPTABLE",
+  SUBSCRIPTION: "SUBSCRIPTION_CANCELED",
+  REFUND: "CREDIT_NOT_PROCESSED",
+  DUPLICATE: "DUPLICATE",
+  DIGITAL: "GENERAL",
+  GENERAL: "GENERAL",
+};
+
+function getPackFamily(disputeType: string): string {
+  const reason = PACK_TYPE_PRIMARY_REASON[disputeType?.toUpperCase()] ?? null;
+  if (!reason) return "";
+  return DISPUTE_REASON_FAMILIES[reason as AllDisputeReasonCode] ?? "";
+}
 
 interface PackRow {
   id: string;
@@ -454,6 +473,7 @@ export default function PacksListPage() {
                   headings={[
                     { title: t("packTemplates.packName") },
                     { title: t("packTemplates.type") },
+                    { title: t("packTemplates.familyColumn") },
                     { title: t("packTemplates.source") },
                     { title: t("packTemplates.usageCount") },
                     { title: t("packTemplates.lastUsed") },
@@ -504,6 +524,11 @@ export default function PacksListPage() {
                         <IndexTable.Cell>
                           <Text as="p" variant="bodyMd">
                             {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
+                          </Text>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {getPackFamily(pack.dispute_type)}
                           </Text>
                         </IndexTable.Cell>
                         <IndexTable.Cell>

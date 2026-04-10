@@ -18,7 +18,7 @@ export async function GET(
 
   const { data: row, error } = await db
     .from("evidence_packs")
-    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid)")
+    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid, phase)")
     .eq("id", packId)
     .single();
 
@@ -27,10 +27,11 @@ export async function GET(
       ? (row as { shop: { shop_domain?: string }[] }).shop[0]
       : (row as { shop?: { shop_domain?: string } }).shop;
     const disputeRow = Array.isArray((row as { dispute?: unknown }).dispute)
-      ? (row as { dispute: { dispute_gid?: string }[] }).dispute[0]
-      : (row as { dispute?: { dispute_gid?: string } }).dispute;
+      ? (row as { dispute: { dispute_gid?: string; phase?: string }[] }).dispute[0]
+      : (row as { dispute?: { dispute_gid?: string; phase?: string } }).dispute;
     const shop_domain = shop?.shop_domain ?? null;
     const dispute_gid = disputeRow?.dispute_gid ?? null;
+    const dispute_phase = disputeRow?.phase ?? null;
     const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
 
     // Library packs (dispute_id null): merge name, dispute_type, source, template_id, template_name from packs
@@ -90,6 +91,7 @@ export async function GET(
       ...pack,
       shop_domain,
       dispute_gid,
+      dispute_phase,
       evidence_items: itemsRes.data ?? [],
       audit_events: auditRes.data ?? [],
       active_build_job: buildJobRes.data ?? null,
@@ -134,6 +136,7 @@ export async function GET(
     created_by: null,
     shop_domain: shop_domain ?? null,
     dispute_gid: null,
+    dispute_phase: null,
     evidence_items: [],
     audit_events: [],
     active_build_job: null,

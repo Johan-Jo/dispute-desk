@@ -383,6 +383,13 @@
     "copied": "Copied",
     "submitEvidenceInShopify": "Submit evidence in Shopify",
     "submitEvidenceInShopifyHint": "Open the dispute in Shopify, then copy each section below and paste into the matching evidence field.",
+    "disputePhaseLabel": "Dispute Phase",
+    "phaseInquiry": "Inquiry",
+    "phaseChargeback": "Chargeback",
+    "inquiryContext": "This is an inquiry — the customer's bank is asking questions before filing a formal chargeback.",
+    "chargebackContext": "This is a chargeback — formal evidence submission is required to defend this case.",
+    "phaseUnknown": "Phase unknown",
+    "supportsPhases": "Supports: {phases}",
     "detailHeroTitle": "Prepare your evidence pack",
     "detailHeroDescription": "Use this page to collect and save the documents and details that support your dispute. DisputeDesk helps you prepare the pack; final submission happens in Shopify Admin.",
     "detailHeroTitleTemplate": "Define your evidence template",
@@ -679,7 +686,17 @@
     "activatedPackagesTitle": "Aktiverade paket",
     "activatedPackagesHint": "Paket markerade som AKTIVA i ditt bibliotek (samma som på Paket-sidan).",
     "activatedPackagesEmpty": "Inga aktiverade paket ännu.",
-    "customRulesTitle": "Övriga regler"
+    "customRulesTitle": "Övriga regler",
+    "policyOverview": "Policy Overview",
+    "policySubtitle": "How disputes are handled at each lifecycle stage",
+    "inquiryPolicyTitle": "Inquiry Handling",
+    "chargebackPolicyTitle": "Chargeback Handling",
+    "defaultTemplates": "Default Templates by Phase",
+    "phaseBlindNote": "Automation rules currently apply to all dispute phases equally. Phase-specific rules are coming soon.",
+    "inquiryTemplate": "Inquiry",
+    "chargebackTemplate": "Chargeback",
+    "noTemplateConfigured": "None configured",
+    "reviewSafeguards": "Review Safeguards"
   },
   "settings": {
     "title": "Inställningar",
@@ -1477,7 +1494,14 @@
     "sourceTemplate": "Mall",
     "sourceManual": "Manuell",
     "activate": "Activate",
-    "badgeActivated": "Aktiverad"
+    "badgeActivated": "Aktiverad",
+    "phaseColumn": "Phase",
+    "familyColumn": "Family",
+    "phaseInquiry": "Inquiry",
+    "phaseChargeback": "Chargeback",
+    "phaseBoth": "Both",
+    "phaseAny": "Any phase",
+    "activeInAutomation": "In automation"
   },
   "templateLibrary": {
     "title": "Mallbibliotek",
@@ -2608,6 +2632,20 @@
     "improveCoverage": "Improve Coverage",
     "activePacks": "{count} active playbook(s)",
     "noPlaybook": "No playbook installed",
-    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family"
+    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family",
+    "lifecycleSubtitle": "See how inquiries and chargebacks are handled per dispute family",
+    "inquiryLabel": "Inquiry",
+    "chargebackLabel": "Chargeback",
+    "inquiryConfigured": "{count} inquiry flows",
+    "chargebackConfigured": "{count} chargeback flows",
+    "fullyConfigured": "{count} fully configured",
+    "gapsFound": "{count} gaps",
+    "noAutomation": "No automation rule",
+    "reviewOnly": "Review only — no playbook",
+    "mappedTemplate": "Default: {name}",
+    "noMappedTemplate": "No default template",
+    "identicalHandling": "Same handling for both phases",
+    "configurePhase": "Configure {phase}",
+    "phaseGap": "Not configured"
   }
 }

@@ -351,7 +351,14 @@
     "confirmSaveCancel": "Retour",
     "buildingInProgress": "Génération des preuves en cours…",
     "playbookTitle": "Playbook Details",
-    "evidencePackTitle": "Evidence Pack"
+    "evidencePackTitle": "Evidence Pack",
+    "disputePhaseLabel": "Dispute Phase",
+    "phaseInquiry": "Inquiry",
+    "phaseChargeback": "Chargeback",
+    "inquiryContext": "This is an inquiry — the customer's bank is asking questions before filing a formal chargeback.",
+    "chargebackContext": "This is a chargeback — formal evidence submission is required to defend this case.",
+    "phaseUnknown": "Phase unknown",
+    "supportsPhases": "Supports: {phases}"
   },
   "analytics": {
     "title": "Analytiques",
@@ -529,7 +536,17 @@
     "activatedPackagesTitle": "Paquets activés",
     "activatedPackagesHint": "Paquets marqués ACTIF dans votre bibliothèque (identique à la page Paquets).",
     "activatedPackagesEmpty": "Aucun paquet activé pour l'instant.",
-    "customRulesTitle": "Autres règles"
+    "customRulesTitle": "Autres règles",
+    "policyOverview": "Policy Overview",
+    "policySubtitle": "How disputes are handled at each lifecycle stage",
+    "inquiryPolicyTitle": "Inquiry Handling",
+    "chargebackPolicyTitle": "Chargeback Handling",
+    "defaultTemplates": "Default Templates by Phase",
+    "phaseBlindNote": "Automation rules currently apply to all dispute phases equally. Phase-specific rules are coming soon.",
+    "inquiryTemplate": "Inquiry",
+    "chargebackTemplate": "Chargeback",
+    "noTemplateConfigured": "None configured",
+    "reviewSafeguards": "Review Safeguards"
   },
   "settings": {
     "title": "Paramètres",
@@ -1302,7 +1319,14 @@
     "source": "Source",
     "sourceTemplate": "Modèle",
     "sourceManual": "Manuel",
-    "badgeActivated": "Activé"
+    "badgeActivated": "Activé",
+    "phaseColumn": "Phase",
+    "familyColumn": "Family",
+    "phaseInquiry": "Inquiry",
+    "phaseChargeback": "Chargeback",
+    "phaseBoth": "Both",
+    "phaseAny": "Any phase",
+    "activeInAutomation": "In automation"
   },
   "templateLibrary": {
     "title": "Bibliothèque de modèles",
@@ -1652,6 +1676,20 @@
     "improveCoverage": "Improve Coverage",
     "activePacks": "{count} active playbook(s)",
     "noPlaybook": "No playbook installed",
-    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family"
+    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family",
+    "lifecycleSubtitle": "See how inquiries and chargebacks are handled per dispute family",
+    "inquiryLabel": "Inquiry",
+    "chargebackLabel": "Chargeback",
+    "inquiryConfigured": "{count} inquiry flows",
+    "chargebackConfigured": "{count} chargeback flows",
+    "fullyConfigured": "{count} fully configured",
+    "gapsFound": "{count} gaps",
+    "noAutomation": "No automation rule",
+    "reviewOnly": "Review only — no playbook",
+    "mappedTemplate": "Default: {name}",
+    "noMappedTemplate": "No default template",
+    "identicalHandling": "Same handling for both phases",
+    "configurePhase": "Configure {phase}",
+    "phaseGap": "Not configured"
   }
 }
