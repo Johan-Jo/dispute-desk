@@ -251,6 +251,129 @@ export default function ReasonMappingPage() {
           );
         })}
       </AdminTable>
+
+      {/* Policy footer — explains how this table feeds the dispute pipeline */}
+      <div className="mt-8 space-y-6 text-sm text-[#475569] max-w-4xl">
+        <div>
+          <h3 className="text-base font-semibold text-[#0F172A] mb-2">
+            How this mapping is used
+          </h3>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              When a dispute arrives, the pack builder looks up{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                (reason_code, dispute_phase)
+              </code>{" "}
+              in this table and uses the assigned template as the default.
+            </li>
+            <li>
+              Merchants can override per-shop using rules on the{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                /app/rules
+              </code>{" "}
+              page. Merchant rules take priority over this table.
+            </li>
+            <li>
+              Changes here are <strong>non-retroactive</strong> — existing
+              packs are not rebuilt. Only new dispute packs pick up the
+              new default.
+            </li>
+            <li>
+              Each phase has a separate default. Inquiries use lighter
+              variants (<code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">*_inquiry</code>)
+              because they&apos;re conversational pre-chargeback questions
+              that close faster with minimal evidence.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-base font-semibold text-[#0F172A] mb-2">
+            Fallback chain
+          </h3>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              Mapping exists and template is active → use the assigned
+              template.
+            </li>
+            <li>
+              Mapping exists but the assigned template is archived → the
+              builder falls back to the hardcoded{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                REASON_TEMPLATES
+              </code>{" "}
+              map in{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                lib/automation/completeness.ts
+              </code>
+              .
+            </li>
+            <li>
+              Mapping missing or{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                template_id = NULL
+              </code>{" "}
+              → same hardcoded fallback.
+            </li>
+            <li>
+              Shopify sends a reason not in{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                ALL_DISPUTE_REASONS
+              </code>{" "}
+              → a placeholder row is auto-created with{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                family = &apos;Unknown&apos;
+              </code>{" "}
+              and an admin alert email is sent (see{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                lib/disputes/syncDisputes.ts
+              </code>{" "}
+              and{" "}
+              <code className="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-xs">
+                lib/email/sendUnknownReasonAlert.ts
+              </code>
+              ). Drifted rows appear with the Unknown family pill here
+              and should be triaged.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-base font-semibold text-[#0F172A] mb-2">
+            Intentional defaults
+          </h3>
+          <p className="mb-2">
+            These assignments are opinionated. They reflect the judgment
+            that a safe default is better than leaving anything unmapped
+            — the rule engine is the right place for shop-specific
+            overrides. Rationale for the non-obvious ones:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>BANK_CANNOT_PROCESS / INCORRECT_ACCOUNT_DETAILS
+              / INSUFFICIENT_FUNDS</strong> → General Catch-all. These are
+              technical payment-routing failures, not merchant-defendable
+              disputes. They almost never surface but if they do, the
+              catch-all provides a minimal pack.
+            </li>
+            <li>
+              <strong>DEBIT_NOT_AUTHORIZED</strong> → Fraudulent /
+              Unrecognized. This is an authorization-contest dispute with
+              the same defense pattern as fraud.
+            </li>
+            <li>
+              <strong>PRODUCT_NOT_RECEIVED</strong> → PNR With Tracking.
+              The With-Tracking variant is the default; PNR Weak Proof is
+              a fallback that belongs in the rules engine, not here.
+            </li>
+            <li>
+              <strong>CUSTOMER_INITIATED / GENERAL</strong> → General
+              Catch-all. The reasons are deliberately vague on Shopify&apos;s
+              side, so a flexible catch-all is the honest default.
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
