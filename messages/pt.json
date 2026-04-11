@@ -343,7 +343,13 @@
       "reviewDesc": "Banco está analisando a disputa",
       "outcomeTitle": "Disputa encerrada",
       "outcomeDesc": "Decisão bancária"
-    }
+    },
+    "managedAutomatedTitle": "Totalmente automatizado",
+    "managedAutomatedDesc": "O DisputeDesk trata este caso automaticamente com base nas suas regras.",
+    "managedReviewTitle": "Revisão necessária",
+    "managedReviewDesc": "O DisputeDesk prepara as evidências mas aguarda sua revisão antes de salvar no Shopify.",
+    "managedManualTitle": "Tratamento manual",
+    "managedManualDesc": "Nenhuma regra de automação corresponde a este caso. Você precisará preparar e salvar as evidências manualmente."
   },
   "packs": {
     "title": "Pacotes de Evidências",

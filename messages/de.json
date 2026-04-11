@@ -343,7 +343,13 @@
       "reviewDesc": "Bank prüft den Streitfall",
       "outcomeTitle": "Streitfall beigelegt",
       "outcomeDesc": "Bankentscheidung"
-    }
+    },
+    "managedAutomatedTitle": "Vollständig automatisiert",
+    "managedAutomatedDesc": "DisputeDesk bearbeitet diesen Fall automatisch basierend auf Ihren Regeln.",
+    "managedReviewTitle": "Überprüfung erforderlich",
+    "managedReviewDesc": "DisputeDesk bereitet Beweise vor, wartet aber auf Ihre Überprüfung, bevor diese bei Shopify gespeichert werden.",
+    "managedManualTitle": "Manuelle Bearbeitung",
+    "managedManualDesc": "Keine Automatisierungsregel passt zu diesem Fall. Sie müssen Beweise manuell vorbereiten und speichern."
   },
   "packs": {
     "title": "Bewispakete",

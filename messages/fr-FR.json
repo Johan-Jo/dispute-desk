@@ -376,7 +376,13 @@
       "reviewDesc": "La banque examine le litige",
       "outcomeTitle": "Litige réglé",
       "outcomeDesc": "Règlement bancaire"
-    }
+    },
+    "managedAutomatedTitle": "Entièrement automatisé",
+    "managedAutomatedDesc": "DisputeDesk traite ce cas automatiquement selon vos règles.",
+    "managedReviewTitle": "Examen requis",
+    "managedReviewDesc": "DisputeDesk prépare les preuves mais attend votre examen avant de les enregistrer dans Shopify.",
+    "managedManualTitle": "Traitement manuel",
+    "managedManualDesc": "Aucune règle d automatisation ne correspond à ce cas. Vous devrez préparer et enregistrer les preuves manuellement."
   },
   "packs": {
     "title": "Dossiers de preuves",

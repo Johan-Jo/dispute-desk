@@ -345,7 +345,13 @@
       "reviewDesc": "Banken granskar tvisten",
       "outcomeTitle": "Tvist avgjord",
       "outcomeDesc": "Bankens beslut"
-    }
+    },
+    "managedAutomatedTitle": "Helt automatiserad",
+    "managedAutomatedDesc": "DisputeDesk hanterar detta ärende automatiskt baserat på dina regler.",
+    "managedReviewTitle": "Granskning krävs",
+    "managedReviewDesc": "DisputeDesk förbereder bevis men väntar på din granskning innan de sparas till Shopify.",
+    "managedManualTitle": "Manuell hantering",
+    "managedManualDesc": "Ingen automatiseringsregel matchar detta ärende. Du måste förbereda och spara bevis manuellt."
   },
   "packs": {
     "title": "Bevispaket",
