@@ -382,7 +382,13 @@
     "managedReviewTitle": "Revisión necesaria",
     "managedReviewDesc": "DisputeDesk prepara las evidencias pero espera tu revisión antes de guardarlas en Shopify.",
     "managedManualTitle": "Manejo manual",
-    "managedManualDesc": "Ninguna regla de automatización coincide con este caso. Necesitarás preparar y guardar las evidencias manualmente."
+    "managedManualDesc": "Ninguna regla de automatización coincide con este caso. Necesitarás preparar y guardar las evidencias manualmente.",
+    "purposeLine": "Todas tus disputas de Shopify en un solo lugar — con estado, urgencia y lo que aún necesita tu atención.",
+    "stateZero": "No hay disputas que gestionar ahora mismo. Las nuevas disputas aparecerán aquí automáticamente cuando lleguen desde Shopify.",
+    "stateAllClear": "Tienes {total} disputas abiertas — todo parece en orden.",
+    "stateSomeUrgent": "Tienes {total} disputas abiertas. {urgent} necesitan atención inmediata — vencidas o próximas a vencer.",
+    "stateNeedsReview": "Tienes {total} disputas abiertas. {review} están marcadas para tu revisión antes de que DisputeDesk pueda continuar.",
+    "stateNeedsSync": "Tienes {total} disputas. {sync} aún no han sido clasificadas — ejecuta una sincronización para ponerte al día."
   },
   "packs": {
     "title": "Paquetes de evidencia",
@@ -990,7 +996,8 @@
     "date": "Fecha",
     "invoice": "Factura",
     "viewDetails": "Ver detalles",
-    "dueDateColumn": "Fecha límite"
+    "dueDateColumn": "Fecha límite",
+    "urgency": "Urgencia"
   },
   "help": {
     "title": "Centro de ayuda",

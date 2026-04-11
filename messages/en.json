@@ -371,7 +371,13 @@
       "reviewDesc": "Bank is reviewing the dispute",
       "outcomeTitle": "Dispute Settled",
       "outcomeDesc": "Bank settlement"
-    }
+    },
+    "purposeLine": "All your Shopify disputes in one place — with status, urgency, and what still needs your attention.",
+    "stateZero": "No disputes to handle right now. New disputes will appear here automatically as they come in from Shopify.",
+    "stateAllClear": "You have {total} open disputes — everything looks on track.",
+    "stateSomeUrgent": "You have {total} open disputes. {urgent} need immediate attention — overdue or due soon.",
+    "stateNeedsReview": "You have {total} open disputes. {review} are flagged for your review before DisputeDesk can proceed.",
+    "stateNeedsSync": "You have {total} disputes. {sync} haven't been classified yet — run a sync to catch up."
   },
   "packs": {
     "title": "Packs",
@@ -969,7 +975,8 @@
     "date": "Date",
     "invoice": "Invoice",
     "viewDetails": "View Details",
-    "dueDateColumn": "Due date"
+    "dueDateColumn": "Due date",
+    "urgency": "Urgency"
   },
   "help": {
     "title": "Help Center",

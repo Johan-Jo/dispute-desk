@@ -349,7 +349,13 @@
     "managedReviewTitle": "Examen requis",
     "managedReviewDesc": "DisputeDesk prépare les preuves mais attend votre examen avant de les enregistrer dans Shopify.",
     "managedManualTitle": "Traitement manuel",
-    "managedManualDesc": "Aucune règle d automatisation ne correspond à ce cas. Vous devrez préparer et enregistrer les preuves manuellement."
+    "managedManualDesc": "Aucune règle d automatisation ne correspond à ce cas. Vous devrez préparer et enregistrer les preuves manuellement.",
+    "purposeLine": "Tous vos litiges Shopify au même endroit — avec statut, urgence et ce qui nécessite encore votre attention.",
+    "stateZero": "Aucun litige à traiter pour le moment. Les nouveaux litiges apparaîtront ici automatiquement dès leur arrivée depuis Shopify.",
+    "stateAllClear": "Vous avez {total} litiges ouverts — tout semble en ordre.",
+    "stateSomeUrgent": "Vous avez {total} litiges ouverts. {urgent} nécessitent une attention immédiate — en retard ou bientôt dus.",
+    "stateNeedsReview": "Vous avez {total} litiges ouverts. {review} sont signalés pour votre examen avant que DisputeDesk ne puisse continuer.",
+    "stateNeedsSync": "Vous avez {total} litiges. {sync} n'ont pas encore été classés — lancez une synchronisation pour rattraper."
   },
   "packs": {
     "title": "Dossiers de preuves",
@@ -832,7 +838,8 @@
     "date": "Date",
     "invoice": "Facture",
     "viewDetails": "Voir les détails",
-    "dueDateColumn": "Date d'échéance"
+    "dueDateColumn": "Date d'échéance",
+    "urgency": "Urgence"
   },
   "help": {
     "title": "Centre d'aide",

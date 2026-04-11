@@ -383,7 +383,13 @@
     "managedReviewTitle": "Granskning krävs",
     "managedReviewDesc": "DisputeDesk förbereder bevis men väntar på din granskning innan de sparas till Shopify.",
     "managedManualTitle": "Manuell hantering",
-    "managedManualDesc": "Ingen automatiseringsregel matchar detta ärende. Du måste förbereda och spara bevis manuellt."
+    "managedManualDesc": "Ingen automatiseringsregel matchar detta ärende. Du måste förbereda och spara bevis manuellt.",
+    "purposeLine": "Alla dina Shopify-tvister på ett ställe — med status, brådska och vad som fortfarande behöver din uppmärksamhet.",
+    "stateZero": "Inga tvister att hantera just nu. Nya tvister visas här automatiskt när de kommer in från Shopify.",
+    "stateAllClear": "Du har {total} öppna tvister — allt ser bra ut.",
+    "stateSomeUrgent": "Du har {total} öppna tvister. {urgent} behöver omedelbar uppmärksamhet — försenade eller snart förfallna.",
+    "stateNeedsReview": "Du har {total} öppna tvister. {review} är markerade för din granskning innan DisputeDesk kan fortsätta.",
+    "stateNeedsSync": "Du har {total} tvister. {sync} har inte klassificerats än — kör en synkronisering för att komma ikapp."
   },
   "packs": {
     "title": "Bevispaket",
@@ -991,7 +997,8 @@
     "date": "Datum",
     "invoice": "Faktura",
     "viewDetails": "Visa detaljer",
-    "dueDateColumn": "Förfallodatum"
+    "dueDateColumn": "Förfallodatum",
+    "urgency": "Brådska"
   },
   "help": {
     "title": "Hjälpcenter",

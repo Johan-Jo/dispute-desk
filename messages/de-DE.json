@@ -382,7 +382,13 @@
     "managedReviewTitle": "Überprüfung erforderlich",
     "managedReviewDesc": "DisputeDesk bereitet Beweise vor, wartet aber auf Ihre Überprüfung, bevor diese bei Shopify gespeichert werden.",
     "managedManualTitle": "Manuelle Bearbeitung",
-    "managedManualDesc": "Keine Automatisierungsregel passt zu diesem Fall. Sie müssen Beweise manuell vorbereiten und speichern."
+    "managedManualDesc": "Keine Automatisierungsregel passt zu diesem Fall. Sie müssen Beweise manuell vorbereiten und speichern.",
+    "purposeLine": "Alle Ihre Shopify-Streitfälle an einem Ort — mit Status, Dringlichkeit und was noch Ihre Aufmerksamkeit benötigt.",
+    "stateZero": "Derzeit keine Streitfälle zu bearbeiten. Neue Streitfälle erscheinen hier automatisch, sobald sie aus Shopify eintreffen.",
+    "stateAllClear": "Sie haben {total} offene Streitfälle — alles sieht gut aus.",
+    "stateSomeUrgent": "Sie haben {total} offene Streitfälle. {urgent} benötigen sofortige Aufmerksamkeit — überfällig oder bald fällig.",
+    "stateNeedsReview": "Sie haben {total} offene Streitfälle. {review} sind zur Überprüfung markiert, bevor DisputeDesk fortfahren kann.",
+    "stateNeedsSync": "Sie haben {total} Streitfälle. {sync} wurden noch nicht klassifiziert — führen Sie eine Synchronisierung aus."
   },
   "packs": {
     "title": "Bewispakete",
@@ -990,7 +996,8 @@
     "date": "Datum",
     "invoice": "Rechnung",
     "viewDetails": "Details anzeigen",
-    "dueDateColumn": "Fälligkeitsdatum"
+    "dueDateColumn": "Fälligkeitsdatum",
+    "urgency": "Dringlichkeit"
   },
   "help": {
     "title": "Hilfe-Center",

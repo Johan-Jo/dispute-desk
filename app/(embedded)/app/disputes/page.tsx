@@ -18,7 +18,6 @@ import {
   TextField,
   Button,
   Popover,
-  ActionList,
   ChoiceList,
   Box,
   Spinner,
@@ -34,9 +33,6 @@ import {
   SearchIcon,
   FilterIcon,
   ExportIcon,
-  RefreshIcon,
-  MenuHorizontalIcon,
-  AlertTriangleIcon,
 } from "@shopify/polaris-icons";
 import styles from "./disputes-list.module.css";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
@@ -160,7 +156,6 @@ export default function DisputesListPage() {
     total_pages: 0,
   });
   const [filterPopoverActive, setFilterPopoverActive] = useState(false);
-  const [moreMenuActive, setMoreMenuActive] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -309,6 +304,23 @@ export default function DisputesListPage() {
   const summaryChargebacks = disputes.filter((d) => d.phase === "chargeback").length;
   const summaryNeedsReview = disputes.filter((d) => d.needs_review).length;
   const summaryNeedsSync = disputes.filter((d) => !d.phase).length;
+  const summaryUrgent = disputes.filter((d) => {
+    if (!d.due_at) return false;
+    const hoursLeft = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
+    return hoursLeft <= 48;
+  }).length;
+
+  // Plain-language state sentence — priority order surfaces the biggest blocker first
+  const stateSentence = (() => {
+    if (disputes.length === 0) return t("disputes.stateZero");
+    if (summaryNeedsSync > 0)
+      return t("disputes.stateNeedsSync", { total: disputes.length, sync: summaryNeedsSync });
+    if (summaryUrgent > 0)
+      return t("disputes.stateSomeUrgent", { total: disputes.length, urgent: summaryUrgent });
+    if (summaryNeedsReview > 0)
+      return t("disputes.stateNeedsReview", { total: disputes.length, review: summaryNeedsReview });
+    return t("disputes.stateAllClear", { total: disputes.length });
+  })();
 
   // Compute urgency for a dispute
   function getUrgency(d: Dispute): { label: string; tone: "critical" | "warning" | "attention" | "success" | undefined } {
@@ -324,31 +336,41 @@ export default function DisputesListPage() {
   return (
     <Page
       title={t("disputes.title")}
-      subtitle={t("disputes.workQueueSubtitle")}
+      subtitle={t("disputes.purposeLine")}
+      primaryAction={{
+        content: syncing ? t("disputes.syncing") : t("disputes.syncNow"),
+        onAction: () => void handleSync(),
+        loading: syncing,
+        disabled: syncing,
+      }}
     >
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
-            {/* Summary strip */}
-            {!loading && disputes.length > 0 && (
+            {/* Current state — plain language */}
+            {!loading && (
               <Card>
-                <InlineStack gap="300" wrap blockAlign="center">
-                  <Text as="span" variant="bodySm" fontWeight="semibold">
-                    {t("disputes.summaryTotal", { count: disputes.length })}
+                <BlockStack gap="200">
+                  <Text as="p" variant="bodyLg" fontWeight="semibold">
+                    {stateSentence}
                   </Text>
-                  {summaryInquiries > 0 && (
-                    <Badge tone="info">{t("disputes.summaryInquiries", { count: summaryInquiries })}</Badge>
+                  {disputes.length > 0 && (
+                    <InlineStack gap="200" wrap>
+                      {summaryInquiries > 0 && (
+                        <Badge tone="info">{t("disputes.summaryInquiries", { count: summaryInquiries })}</Badge>
+                      )}
+                      {summaryChargebacks > 0 && (
+                        <Badge tone="warning">{t("disputes.summaryChargebacks", { count: summaryChargebacks })}</Badge>
+                      )}
+                      {summaryNeedsReview > 0 && (
+                        <Badge tone="attention">{t("disputes.summaryNeedsReview", { count: summaryNeedsReview })}</Badge>
+                      )}
+                      {summaryNeedsSync > 0 && (
+                        <Badge tone="critical">{t("disputes.summaryNeedsSync", { count: summaryNeedsSync })}</Badge>
+                      )}
+                    </InlineStack>
                   )}
-                  {summaryChargebacks > 0 && (
-                    <Badge tone="warning">{t("disputes.summaryChargebacks", { count: summaryChargebacks })}</Badge>
-                  )}
-                  {summaryNeedsReview > 0 && (
-                    <Badge tone="attention">{t("disputes.summaryNeedsReview", { count: summaryNeedsReview })}</Badge>
-                  )}
-                  {summaryNeedsSync > 0 && (
-                    <Badge tone="critical">{t("disputes.summaryNeedsSync", { count: summaryNeedsSync })}</Badge>
-                  )}
-                </InlineStack>
+                </BlockStack>
               </Card>
             )}
 
@@ -424,36 +446,6 @@ export default function DisputesListPage() {
                 <Button icon={ExportIcon} onClick={exportCsv}>
                   {t("disputes.export")}
                 </Button>
-
-                <Popover
-                  active={moreMenuActive}
-                  activator={
-                    <Button
-                      variant="secondary"
-                      icon={MenuHorizontalIcon}
-                      onClick={() => setMoreMenuActive((a) => !a)}
-                      accessibilityLabel={t("disputes.moreActions")}
-                    />
-                  }
-                  onClose={() => setMoreMenuActive(false)}
-                  preferredAlignment="right"
-                  autofocusTarget="first-node"
-                >
-                  <ActionList
-                    actionRole="menuitem"
-                    items={[
-                      {
-                        content: syncing ? t("disputes.syncing") : t("disputes.syncNow"),
-                        icon: RefreshIcon,
-                        disabled: syncing,
-                        onAction: () => {
-                          setMoreMenuActive(false);
-                          void handleSync();
-                        },
-                      },
-                    ]}
-                  />
-                </Popover>
               </InlineStack>
             </Card>
 
@@ -478,10 +470,11 @@ export default function DisputesListPage() {
                       <tr>
                         <th>{t("disputes.phaseLabel")}</th>
                         <th>{t("table.order")}</th>
+                        <th>{t("table.customer")}</th>
                         <th>{t("table.reason")}</th>
                         <th>{t("table.amount")}</th>
                         <th>{t("table.status")}</th>
-                        <th>Urgency</th>
+                        <th>{t("table.urgency")}</th>
                         <th>{t("table.actions")}</th>
                       </tr>
                     </thead>
@@ -501,6 +494,12 @@ export default function DisputesListPage() {
                             {/* Order */}
                             <td>
                               <Text as="span" variant="bodySm" fontWeight="semibold">{label}</Text>
+                            </td>
+                            {/* Customer */}
+                            <td>
+                              <Text as="span" variant="bodySm">
+                                {d.customer_display_name ?? "—"}
+                              </Text>
                             </td>
                             {/* Reason / Family */}
                             <td>
