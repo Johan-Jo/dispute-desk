@@ -26,6 +26,7 @@ import {
   type ReasonEnumIntrospectionResponse,
 } from "@/lib/shopify/queries/enumIntrospection";
 import { sendReasonEnumDriftAlert } from "@/lib/email/sendReasonEnumDriftAlert";
+import { sendReasonEnumDriftResolvedAlert } from "@/lib/email/sendReasonEnumDriftResolvedAlert";
 
 export type DriftCheckResult =
   | { ok: true; skipped: "no_connected_shop" }
@@ -38,6 +39,15 @@ export type DriftCheckResult =
   | {
       ok: true;
       drift: false;
+      enumTotalCount: number;
+      checkedShopDomain: string;
+    }
+  | {
+      ok: true;
+      drift: false;
+      resolved: true;
+      previousMissingLocally: string[];
+      previousExtraLocally: string[];
       enumTotalCount: number;
       checkedShopDomain: string;
     }
@@ -140,11 +150,78 @@ export async function checkShopifyReasonEnumDrift(): Promise<DriftCheckResult> {
   }
 
   const currentDiff = computeDiff(enumValues, ALL_DISPUTE_REASONS);
-
-  if (
+  const isClean =
     currentDiff.missingLocally.length === 0 &&
-    currentDiff.extraLocally.length === 0
-  ) {
+    currentDiff.extraLocally.length === 0;
+
+  // Look up the most recent audit event of either type. This is what
+  // gates the "new drift", "dedup", and "resolved" transitions — we
+  // only alert on state change.
+  const { data: lastAudit } = await sb
+    .from("audit_events")
+    .select("event_type, event_payload")
+    .in("event_type", [
+      "shopify_enum_drift",
+      "shopify_enum_drift_resolved",
+    ])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const lastAuditType = lastAudit?.event_type as
+    | "shopify_enum_drift"
+    | "shopify_enum_drift_resolved"
+    | undefined;
+
+  if (isClean) {
+    // Resolution transition: previous state was drift, now clean.
+    // Write a resolution audit row and fire the "resolved" email so
+    // the admin knows the fix landed. Subsequent clean runs will be
+    // silent because lastAuditType will be 'shopify_enum_drift_resolved'.
+    if (lastAuditType === "shopify_enum_drift") {
+      const payload = lastAudit!.event_payload as {
+        missing_locally?: string[];
+        extra_locally?: string[];
+      };
+      const previousMissingLocally = (payload?.missing_locally ?? [])
+        .slice()
+        .sort();
+      const previousExtraLocally = (payload?.extra_locally ?? [])
+        .slice()
+        .sort();
+
+      await sb.from("audit_events").insert({
+        shop_id: (session as { shop_id: string }).shop_id,
+        actor_type: "system",
+        event_type: "shopify_enum_drift_resolved",
+        event_payload: {
+          previous_missing_locally: previousMissingLocally,
+          previous_extra_locally: previousExtraLocally,
+          checked_shop_domain: shopDomain,
+          enum_total_count: enumValues.length,
+          resolved_at: new Date().toISOString(),
+        },
+      });
+
+      void sendReasonEnumDriftResolvedAlert({
+        previousMissingLocally,
+        previousExtraLocally,
+        checkedShopDomain: shopDomain,
+        enumTotalCount: enumValues.length,
+      });
+
+      return {
+        ok: true,
+        drift: false,
+        resolved: true,
+        previousMissingLocally,
+        previousExtraLocally,
+        enumTotalCount: enumValues.length,
+        checkedShopDomain: shopDomain,
+      };
+    }
+
+    // Plain happy path: no drift, no previous drift to resolve. Silent.
     return {
       ok: true,
       drift: false,
@@ -153,16 +230,12 @@ export async function checkShopifyReasonEnumDrift(): Promise<DriftCheckResult> {
     };
   }
 
-  const { data: lastAlert } = await sb
-    .from("audit_events")
-    .select("event_payload")
-    .eq("event_type", "shopify_enum_drift")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (lastAlert) {
-    const payload = lastAlert.event_payload as {
+  // Dedup: only skip the alert if the latest event was a drift with
+  // the exact same diff. If the latest event was a resolution (or
+  // there's no previous event), any new drift is genuinely new and
+  // we alert.
+  if (lastAuditType === "shopify_enum_drift") {
+    const payload = lastAudit!.event_payload as {
       missing_locally?: string[];
       extra_locally?: string[];
     };

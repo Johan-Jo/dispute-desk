@@ -24,7 +24,13 @@ async function runPublish(req: NextRequest) {
   void (async () => {
     try {
       const driftResult = await checkShopifyReasonEnumDrift();
-      if ("drift" in driftResult && driftResult.drift === true) {
+      // Log on any state change: new drift, or resolution. Clean runs
+      // and already-alerted dedup stay silent so the logs stay quiet.
+      const isNewDrift =
+        "drift" in driftResult && driftResult.drift === true && "alertSent" in driftResult;
+      const isResolved =
+        "drift" in driftResult && driftResult.drift === false && "resolved" in driftResult;
+      if (isNewDrift || isResolved) {
         console.log(
           "[cron/publish-content] reason-enum drift check:",
           JSON.stringify(driftResult),

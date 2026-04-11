@@ -113,6 +113,24 @@ describe("GET /api/cron/check-shopify-reasons", () => {
     expect(json.skipped).toBe("no_connected_shop");
   });
 
+  it("returns 200 with drift=false, resolved=true when previous drift is now clean", async () => {
+    mockCheck.mockResolvedValue({
+      ok: true,
+      drift: false,
+      resolved: true,
+      previousMissingLocally: ["NEW_SHOPIFY_REASON"],
+      previousExtraLocally: [],
+      enumTotalCount: 14,
+      checkedShopDomain: "test.myshopify.com",
+    });
+    const res = await GET(makeReq("test-secret"));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.drift).toBe(false);
+    expect(json.resolved).toBe(true);
+    expect(json.previousMissingLocally).toEqual(["NEW_SHOPIFY_REASON"]);
+  });
+
   it("returns 500 when the helper reports introspection_failed", async () => {
     mockCheck.mockResolvedValue({
       ok: false,
