@@ -612,7 +612,16 @@
     "inquiryTemplate": "Anfrage",
     "chargebackTemplate": "Rückbuchung",
     "noTemplateConfigured": "Keine konfiguriert",
-    "reviewSafeguards": "Prüfungs-Sicherungen"
+    "reviewSafeguards": "Prüfungs-Sicherungen",
+    "purposeLine": "Wie DisputeDesk neue Streitfälle automatisch basierend auf Ihren Regeln und Playbooks behandelt.",
+    "stateAllAuto": "Alle {total} Streitfalltypen sind eingerichtet. DisputeDesk verarbeitet sie automatisch, sobald Streitfälle eintreffen.",
+    "stateMostlyAuto": "DisputeDesk behandelt {automated} von {total} Streitfalltypen automatisch, {review} werden zuerst an Ihre Prüfungswarteschlange gesendet.",
+    "stateWithGaps": "{manual} von {total} Streitfalltypen haben noch keine Automatisierung — sie müssen manuell bearbeitet werden, bis Sie Regeln einrichten.",
+    "stateNoSetup": "Es ist noch keine Automatisierung eingerichtet. Alle neuen Streitfälle müssen manuell bearbeitet werden, bis Sie unten Starter-Regeln speichern.",
+    "primarySetupRules": "Automatisierung einrichten",
+    "primaryAddCustom": "Benutzerdefinierte Regel hinzufügen",
+    "notConfigured": "Nicht konfiguriert",
+    "editRule": "Bearbeiten"
   },
   "settings": {
     "title": "Einstellungen",

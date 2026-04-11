@@ -667,7 +667,16 @@
     "activatedPackagesTitle": "Activated packages",
     "activatedPackagesHint": "Packs marked ACTIVE in your library (same as the Packs page).",
     "activatedPackagesEmpty": "No activated packs yet.",
-    "customRulesTitle": "Other rules"
+    "customRulesTitle": "Other rules",
+    "purposeLine": "How DisputeDesk automatically handles new disputes based on your rules and playbooks.",
+    "stateAllAuto": "All {total} dispute types are set up. DisputeDesk will handle them automatically as disputes come in.",
+    "stateMostlyAuto": "DisputeDesk handles {automated} of {total} dispute types automatically, with {review} sent to your review queue first.",
+    "stateWithGaps": "{manual} of {total} dispute types have no automation yet — they'll need manual handling until you set up rules.",
+    "stateNoSetup": "No automation is set up yet. All new disputes will need manual handling until you save starter rules below.",
+    "primarySetupRules": "Set up automation",
+    "primaryAddCustom": "Add custom rule",
+    "notConfigured": "Not configured",
+    "editRule": "Edit"
   },
   "settings": {
     "title": "Settings",

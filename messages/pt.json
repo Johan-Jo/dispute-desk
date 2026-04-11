@@ -612,7 +612,16 @@
     "inquiryTemplate": "Consulta",
     "chargebackTemplate": "Chargeback",
     "noTemplateConfigured": "Nenhum configurado",
-    "reviewSafeguards": "Salvaguardas de revisão"
+    "reviewSafeguards": "Salvaguardas de revisão",
+    "purposeLine": "Como o DisputeDesk lida automaticamente com novas disputas com base nas suas regras e playbooks.",
+    "stateAllAuto": "Todos os {total} tipos de disputa estão configurados. O DisputeDesk os tratará automaticamente quando chegarem.",
+    "stateMostlyAuto": "O DisputeDesk trata {automated} de {total} tipos de disputa automaticamente e envia {review} para sua fila de revisão primeiro.",
+    "stateWithGaps": "{manual} de {total} tipos de disputa não têm automação ainda — precisarão de tratamento manual até você configurar regras.",
+    "stateNoSetup": "Nenhuma automação foi configurada ainda. Todas as novas disputas exigirão tratamento manual até você salvar as regras iniciais abaixo.",
+    "primarySetupRules": "Configurar automação",
+    "primaryAddCustom": "Adicionar regra personalizada",
+    "notConfigured": "Não configurado",
+    "editRule": "Editar"
   },
   "settings": {
     "title": "Configurações",

@@ -761,7 +761,16 @@
     "inquiryTemplate": "Demande",
     "chargebackTemplate": "Rétrofacturation",
     "noTemplateConfigured": "Aucun configuré",
-    "reviewSafeguards": "Garde-fous de vérification"
+    "reviewSafeguards": "Garde-fous de vérification",
+    "purposeLine": "Comment DisputeDesk gère automatiquement les nouveaux litiges selon vos règles et playbooks.",
+    "stateAllAuto": "Les {total} types de litige sont configurés. DisputeDesk les traitera automatiquement à leur arrivée.",
+    "stateMostlyAuto": "DisputeDesk gère {automated} des {total} types de litige automatiquement et envoie {review} dans votre file d'examen en premier.",
+    "stateWithGaps": "{manual} des {total} types de litige n'ont pas encore d'automatisation — ils nécessiteront un traitement manuel jusqu'à ce que vous configuriez des règles.",
+    "stateNoSetup": "Aucune automatisation n'est encore configurée. Tous les nouveaux litiges nécessiteront un traitement manuel jusqu'à ce que vous enregistriez les règles de démarrage.",
+    "primarySetupRules": "Configurer l'automatisation",
+    "primaryAddCustom": "Ajouter une règle personnalisée",
+    "notConfigured": "Non configuré",
+    "editRule": "Modifier"
   },
   "settings": {
     "title": "Paramètres",

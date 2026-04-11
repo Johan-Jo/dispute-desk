@@ -762,7 +762,16 @@
     "inquiryTemplate": "Förfrågan",
     "chargebackTemplate": "Återkrav",
     "noTemplateConfigured": "Ingen konfigurerad",
-    "reviewSafeguards": "Granskningsskydd"
+    "reviewSafeguards": "Granskningsskydd",
+    "purposeLine": "Hur DisputeDesk automatiskt hanterar nya tvister baserat på dina regler och playbooks.",
+    "stateAllAuto": "Alla {total} tvistetyper är inställda. DisputeDesk hanterar dem automatiskt när tvister kommer in.",
+    "stateMostlyAuto": "DisputeDesk hanterar {automated} av {total} tvistetyper automatiskt och skickar {review} till din granskningskö först.",
+    "stateWithGaps": "{manual} av {total} tvistetyper har ingen automatisering än — de kräver manuell hantering tills du ställer in regler.",
+    "stateNoSetup": "Ingen automatisering är inställd än. Alla nya tvister kräver manuell hantering tills du sparar startregler nedan.",
+    "primarySetupRules": "Ställ in automatisering",
+    "primaryAddCustom": "Lägg till anpassad regel",
+    "notConfigured": "Ej konfigurerad",
+    "editRule": "Redigera"
   },
   "settings": {
     "title": "Inställningar",

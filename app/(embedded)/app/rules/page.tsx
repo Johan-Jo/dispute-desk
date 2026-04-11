@@ -12,7 +12,7 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -26,7 +26,6 @@ import {
   InlineStack,
   BlockStack,
   Banner,
-  Divider,
 } from "@shopify/polaris";
 
 import { RULE_PRESETS } from "@/lib/rules/presets";
@@ -83,6 +82,7 @@ export default function EmbeddedRulesPage() {
   const router = useRouter();
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
+  const starterSectionRef = useRef<HTMLDivElement | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
@@ -235,14 +235,48 @@ export default function EmbeddedRulesPage() {
   const tc = useTranslations("coverage");
   void _reasonMappings; // keep fetch, may use later
 
+  const totalFamilies = DISPUTE_FAMILIES.length;
+
+  // Plain-language state sentence — priority ordered
+  const stateSentence = (() => {
+    if (policySummary.automated + policySummary.reviewFirst === 0)
+      return tr("stateNoSetup");
+    if (policySummary.manual > 0)
+      return tr("stateWithGaps", {
+        manual: policySummary.manual,
+        total: totalFamilies,
+      });
+    if (policySummary.reviewFirst > 0)
+      return tr("stateMostlyAuto", {
+        automated: policySummary.automated,
+        total: totalFamilies,
+        review: policySummary.reviewFirst,
+      });
+    return tr("stateAllAuto", { total: totalFamilies });
+  })();
+
+  // Primary action follows the state: close gaps first, then invite custom rules.
+  const needsSetup = policySummary.manual > 0;
+  const primaryActionProps = needsSetup
+    ? {
+        content: tr("primarySetupRules"),
+        onAction: () => {
+          starterSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        },
+      }
+    : {
+        content: tr("primaryAddCustom"),
+        url: "/portal/rules",
+      };
+
   return (
     <Page
       title={tn("automation")}
-      subtitle={tr("policySubtitle")}
-      primaryAction={{
-        content: tr("addRule"),
-        url: "/portal/rules",
-      }}
+      subtitle={tr("purposeLine")}
+      primaryAction={primaryActionProps}
     >
       <Layout>
         <Layout.Section>
@@ -265,29 +299,31 @@ export default function EmbeddedRulesPage() {
                 </Banner>
               )}
 
-              {/* Policy Overview — Purpose + Current State */}
+              {/* Current state — plain language */}
               <Card>
                 <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">{tr("policyOverview")}</Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Your automation policy applies to all disputes regardless of phase. Phase-specific automation is planned for a future update.
+                  <Text as="p" variant="bodyLg" fontWeight="semibold">
+                    {stateSentence}
                   </Text>
-                  <InlineStack gap="300" wrap>
-                    <Badge tone="success">{`${policySummary.automated} ${tc("modeAutomated")}`}</Badge>
-                    <Badge tone="info">{`${policySummary.reviewFirst} ${tc("modeReviewFirst")}`}</Badge>
+                  <InlineStack gap="200" wrap>
+                    {policySummary.automated > 0 && (
+                      <Badge tone="success">{`${policySummary.automated} ${tc("modeAutomated")}`}</Badge>
+                    )}
+                    {policySummary.reviewFirst > 0 && (
+                      <Badge tone="info">{`${policySummary.reviewFirst} ${tc("modeReviewFirst")}`}</Badge>
+                    )}
                     {policySummary.manual > 0 && (
-                      <Badge tone="warning">{`${policySummary.manual} not configured`}</Badge>
+                      <Badge tone="attention">{`${policySummary.manual} ${tr("notConfigured")}`}</Badge>
                     )}
                   </InlineStack>
-                  {policySummary.manual > 0 && (
-                    <Text as="p" variant="bodySm" tone="caution">
-                      {policySummary.manual} families have no automation — disputes will require manual handling.
-                    </Text>
-                  )}
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {tr("phaseBlindNote")}
+                  </Text>
                 </BlockStack>
               </Card>
 
               {/* Starter Rules Workflow */}
+              <div ref={starterSectionRef}>
               <Card>
                 <EmbeddedStarterRulesWorkflow
                   tr={tr}
@@ -308,6 +344,7 @@ export default function EmbeddedRulesPage() {
                   }
                 />
               </Card>
+              </div>
 
               {/* Custom Rules */}
               {customRules.length > 0 && (
@@ -319,67 +356,50 @@ export default function EmbeddedRulesPage() {
                     .sort((a, b) => a.priority - b.priority)
                     .map((rule, index) => (
                       <Card key={rule.id}>
-                        <InlineStack gap="400" blockAlign="start" wrap={false}>
-                          <div
-                            style={{
-                              width: 32,
-                              height: 32,
-                              background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
-                              borderRadius: 8,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "white",
-                              fontWeight: 700,
-                              fontSize: 14,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {index + 1}
-                          </div>
-
-                          <BlockStack gap="200" as="div" inlineAlign="start">
-                            <InlineStack align="space-between" blockAlign="center" wrap>
-                              <BlockStack gap="100">
-                                <Text as="h3" variant="bodyMd" fontWeight="semibold">
-                                  {rule.name ?? tr("unnamedRule")}
-                                </Text>
-                                <Badge tone={rule.enabled ? "success" : "warning"}>
-                                  {rule.enabled ? tr("active") : tr("inactive")}
-                                </Badge>
-                              </BlockStack>
-                              <Button
-                                variant="plain"
-                                onClick={() => router.push("/portal/rules")}
-                              >
-                                ›
-                              </Button>
+                        <BlockStack gap="300">
+                          <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
+                            <InlineStack gap="300" blockAlign="center" wrap={false}>
+                              <Text as="span" variant="bodySm" tone="subdued">
+                                {`${index + 1}.`}
+                              </Text>
+                              <Text as="h3" variant="bodyMd" fontWeight="semibold">
+                                {rule.name ?? tr("unnamedRule")}
+                              </Text>
+                              <Badge tone={rule.enabled ? "success" : undefined}>
+                                {rule.enabled ? tr("active") : tr("inactive")}
+                              </Badge>
                             </InlineStack>
+                            <Button
+                              onClick={() => router.push("/portal/rules")}
+                              accessibilityLabel={tr("editRule")}
+                            >
+                              {tr("editRule")}
+                            </Button>
+                          </InlineStack>
 
-                            <BlockStack gap="100">
-                              <InlineStack gap="200" blockAlign="start">
-                                <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
-                                  {tr("triggerCondition")}:
-                                </Text>
-                                <Text as="span" variant="bodySm">
-                                  {matchSummary(rule.match)}
-                                </Text>
-                              </InlineStack>
-                              <InlineStack gap="200" blockAlign="start">
-                                <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
-                                  {tr("action")}:
-                                </Text>
-                                <Text as="span" variant="bodySm">
-                                  {rule.action?.mode === "auto_pack"
-                                    ? tr("autoPack")
-                                    : rule.action?.mode === "manual"
-                                      ? tr("manual")
-                                      : tr("review")}
-                                </Text>
-                              </InlineStack>
-                            </BlockStack>
+                          <BlockStack gap="100">
+                            <InlineStack gap="200" blockAlign="start" wrap>
+                              <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
+                                {tr("triggerCondition")}:
+                              </Text>
+                              <Text as="span" variant="bodySm">
+                                {matchSummary(rule.match)}
+                              </Text>
+                            </InlineStack>
+                            <InlineStack gap="200" blockAlign="start" wrap>
+                              <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
+                                {tr("action")}:
+                              </Text>
+                              <Text as="span" variant="bodySm">
+                                {rule.action?.mode === "auto_pack"
+                                  ? tr("autoPack")
+                                  : rule.action?.mode === "manual"
+                                    ? tr("manual")
+                                    : tr("review")}
+                              </Text>
+                            </InlineStack>
                           </BlockStack>
-                        </InlineStack>
+                        </BlockStack>
                       </Card>
                     ))}
                 </BlockStack>
