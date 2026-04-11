@@ -51,6 +51,15 @@ interface AuditEvent {
   created_at: string;
 }
 
+interface TemplateItemRow {
+  section_title: string;
+  key: string;
+  label: string;
+  required: boolean;
+  guidance: string | null;
+  item_type: string;
+}
+
 interface PackData {
   id: string;
   shop_id: string;
@@ -77,6 +86,7 @@ interface PackData {
   template_name?: string | null;
   shop_domain?: string | null;
   dispute_gid?: string | null;
+  template_items?: TemplateItemRow[];
 }
 
 function formatDate(iso: string | null, locale: string = "en"): string {
@@ -102,19 +112,6 @@ function statusConfig(status: string, ts: (key: string) => string) {
   };
   return map[status] ?? { variant: "default" as const, label: status };
 }
-
-/** Suggested evidence message keys by dispute type (fallback when no checklist). */
-const SUGGESTED_EVIDENCE_KEYS: Record<string, string[]> = {
-  FRAUD: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy", "suggestedFraudScreening", "suggestedMetadata"],
-  FRAUDULENT: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy", "suggestedFraudScreening", "suggestedMetadata"],
-  PNR: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy"],
-  PRODUCT_NOT_RECEIVED: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedBillingShipping", "suggestedCustomerComm", "suggestedStorePolicy"],
-  NOT_AS_DESCRIBED: ["suggestedOrderConfirmation", "suggestedRefundPolicy", "suggestedCustomerComm", "suggestedStorePolicy"],
-  DUPLICATE: ["suggestedOrderConfirmation", "suggestedBillingShipping", "suggestedCustomerComm"],
-  SUBSCRIPTION: ["suggestedOrderConfirmation", "suggestedRefundPolicy", "suggestedCustomerComm"],
-  REFUND: ["suggestedOrderConfirmation", "suggestedRefundPolicy", "suggestedCustomerComm"],
-  GENERAL: ["suggestedOrderConfirmation", "suggestedTracking", "suggestedCustomerComm", "suggestedRefundPolicy", "suggestedStorePolicy"],
-};
 
 function getReadinessStateLabel(score: number, t: (key: string) => string): string {
   if (score >= 90) return t("readinessReadyToReview");
@@ -155,7 +152,9 @@ export default function PackPreviewPage() {
   const pollRef = useRef<ReturnType<typeof setInterval>>();
 
   const fetchPack = useCallback(async () => {
-    const res = await fetch(`/api/packs/${packId}`);
+    const res = await fetch(
+      `/api/packs/${packId}?locale=${encodeURIComponent(locale)}`,
+    );
     if (res.ok) {
       const data = await res.json();
       setPack(data);
@@ -166,7 +165,7 @@ export default function PackPreviewPage() {
       if (!isActive && pollRef.current) clearInterval(pollRef.current);
     }
     setLoading(false);
-  }, [packId]);
+  }, [packId, locale]);
 
   useEffect(() => {
     fetchPack();
@@ -263,8 +262,13 @@ export default function PackPreviewPage() {
   const disputeTypeLabel = pack.dispute_type
     ? (t as (key: string) => string)(`disputeTypeLabel.${disputeTypeKey}`) || pack.dispute_type.replace(/_/g, " ")
     : null;
-  const suggestedKeys = SUGGESTED_EVIDENCE_KEYS[disputeTypeKey] ?? SUGGESTED_EVIDENCE_KEYS.GENERAL;
-  const suggestedLabels = suggestedKeys.map((key) => t(key));
+  // Previously fell back to a hardcoded SUGGESTED_EVIDENCE_KEYS map
+  // when pack.checklist was empty. The API now returns real
+  // template_items from pack_template_items (localized via the
+  // request's ?locale= param) so we use those as the fallback list
+  // instead — zero hardcoded strings, no English leaks.
+  const suggestedLabels: string[] =
+    pack.template_items?.map((item) => item.label) ?? [];
   const statusBanner = getStatusBanner(pack, t, isLibraryPack);
 
   if (isLibraryPack) {
