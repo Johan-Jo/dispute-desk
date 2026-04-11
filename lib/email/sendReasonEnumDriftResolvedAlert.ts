@@ -12,12 +12,7 @@
  * Non-blocking: does not throw, logs on failure only.
  */
 
-import { Resend } from "resend";
-
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL ?? "oi@johan.com.br";
+import { sendAdminEmail } from "./adminEmail";
 
 export interface ReasonEnumDriftResolvedAlertOptions {
   /**
@@ -41,13 +36,6 @@ function renderList(items: string[]): string {
 export async function sendReasonEnumDriftResolvedAlert(
   options: ReasonEnumDriftResolvedAlertOptions,
 ): Promise<void> {
-  if (!RESEND_API_KEY) {
-    console.warn(
-      "[email] RESEND_API_KEY not set — skipping drift-resolved alert",
-    );
-    return;
-  }
-
   const {
     previousMissingLocally,
     previousExtraLocally,
@@ -118,16 +106,10 @@ export async function sendReasonEnumDriftResolvedAlert(
   ];
   const text = textLines.join("\n");
 
-  try {
-    const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
-      subject,
-      html,
-      text,
-    });
-  } catch (err) {
-    console.error("[email] Reason enum drift-resolved alert failed:", err);
-  }
+  await sendAdminEmail({
+    subject,
+    html,
+    text,
+    logTag: "enum-drift-resolved",
+  });
 }

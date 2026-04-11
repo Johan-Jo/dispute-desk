@@ -3,13 +3,7 @@
  * Fires from the email confirmation handler — one notification per confirmed sign-up.
  */
 
-import { Resend } from "resend";
-
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-/** Override via ADMIN_NOTIFY_EMAIL env var if needed. */
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL ?? "oi@johan.com.br";
+import { sendAdminEmail } from "./adminEmail";
 
 export interface AdminSignupNotificationOptions {
   email: string;
@@ -23,11 +17,6 @@ export interface AdminSignupNotificationOptions {
 export async function sendAdminSignupNotification(
   options: AdminSignupNotificationOptions
 ): Promise<void> {
-  if (!RESEND_API_KEY) {
-    console.warn("[email] RESEND_API_KEY not set — skipping admin notification");
-    return;
-  }
-
   const name = options.fullName?.trim() || "—";
   const timestamp = new Date().toUTCString();
   const subject = `New DisputeDesk sign-up: ${options.email}`;
@@ -47,10 +36,5 @@ export async function sendAdminSignupNotification(
 
   const text = `New sign-up confirmed\n\nName: ${name}\nEmail: ${options.email}\nTime: ${timestamp}`;
 
-  try {
-    const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({ from: FROM_EMAIL, to: ADMIN_EMAIL, subject, html, text });
-  } catch (err) {
-    console.error("[email] Admin sign-up notification failed:", err);
-  }
+  await sendAdminEmail({ subject, html, text, logTag: "admin-signup" });
 }

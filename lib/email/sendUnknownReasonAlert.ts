@@ -7,12 +7,7 @@
  * Non-blocking — does not throw; logs on failure only.
  */
 
-import { Resend } from "resend";
-
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL ?? "oi@johan.com.br";
+import { sendAdminEmail } from "./adminEmail";
 
 export interface UnknownReasonAlertOptions {
   /** The new reason code Shopify sent (not in ALL_DISPUTE_REASONS). */
@@ -28,13 +23,6 @@ export interface UnknownReasonAlertOptions {
 export async function sendUnknownReasonAlert(
   options: UnknownReasonAlertOptions,
 ): Promise<void> {
-  if (!RESEND_API_KEY) {
-    console.warn(
-      "[email] RESEND_API_KEY not set — skipping unknown-reason alert",
-    );
-    return;
-  }
-
   const { reasonCode, phase, shopDomain, firstSeenDisputeGid } = options;
   const timestamp = new Date().toUTCString();
   const subject = `New Shopify dispute reason: ${reasonCode}`;
@@ -81,16 +69,5 @@ export async function sendUnknownReasonAlert(
     `on the admin reason-mapping page.`,
   ].join("\n");
 
-  try {
-    const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
-      subject,
-      html,
-      text,
-    });
-  } catch (err) {
-    console.error("[email] Unknown reason alert failed:", err);
-  }
+  await sendAdminEmail({ subject, html, text, logTag: "unknown-reason" });
 }
