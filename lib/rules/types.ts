@@ -1,7 +1,11 @@
+export type DisputePhaseMatch = "inquiry" | "chargeback";
+
 export interface RuleMatch {
   reason?: string[];
   status?: string[];
   amount_range?: { min?: number; max?: number };
+  /** Restrict the rule to disputes in the listed phases. Empty/undefined matches both. */
+  phase?: DisputePhaseMatch[];
 }
 
 export interface RuleAction {

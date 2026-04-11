@@ -20,7 +20,7 @@ export async function POST(
 
   const { data: dispute, error } = await sb
     .from("disputes")
-    .select("id, shop_id, reason, needs_review")
+    .select("id, shop_id, reason, phase, needs_review")
     .eq("id", id)
     .single();
 
@@ -48,10 +48,16 @@ export async function POST(
     eventPayload: { action: "approved_from_review_queue" },
   });
 
+  const phase =
+    dispute.phase === "inquiry" || dispute.phase === "chargeback"
+      ? dispute.phase
+      : null;
+
   const result = await runAutomationPipeline({
     id: dispute.id,
     shop_id: dispute.shop_id,
     reason: dispute.reason,
+    phase,
   });
 
   return NextResponse.json({ approved: true, automation: result });

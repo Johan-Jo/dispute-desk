@@ -16,6 +16,7 @@ interface DisputeContext {
   reason: string | null;
   status: string | null;
   amount: number | null;
+  phase?: "inquiry" | "chargeback" | null;
 }
 
 const DEFAULT_ACTION: RuleEvalResult["action"] = {

@@ -796,10 +796,13 @@ Tailwind CSS with shared components in `components/ui/`.
 `lib/rules/evaluateRules.ts` — deterministic, first-match-wins evaluator:
 
 1. Fetches enabled rules for shop, ordered by `priority ASC`.
-2. Each rule has `match` (JSONB: reason[], status[], amount_range) + `action` (JSONB: mode, require_fields).
+2. Each rule has `match` (JSONB: reason[], status[], amount_range, phase[]) + `action` (JSONB: mode, require_fields).
 3. All match conditions are AND-joined; empty match = match all.
-4. First matching rule wins. No match defaults to `{ mode: "review" }`.
-5. Every evaluation logged as `rule_applied` audit event.
+4. First matching rule wins. At the same priority, **phase-specific rules beat phase-blind rules** so a `match.phase = ["inquiry"]` rule will win over a phase-blind rule for the same reason. Phase-blind rules still match both phases (back-compat).
+5. No match defaults to `{ mode: "review" }`.
+6. Every evaluation logged as `rule_applied` audit event.
+
+**Phase-aware automation (`lib/automation/pipeline.ts` → `resolveAutomationTemplate`):** When the matched rule supplies `pack_template_id`, the pipeline uses it as-is. When the rule omits it (catch-all / safeguard rules), the pipeline falls back to `reason_template_mappings` keyed by `(reason_code, dispute_phase)` so inquiry-phase disputes get the lighter inquiry template (`fraud_inquiry`, `pnr_inquiry`, …) instead of falling through to the chargeback `REASON_TEMPLATES` hardcoded list.
 
 ### Sync Integration
 

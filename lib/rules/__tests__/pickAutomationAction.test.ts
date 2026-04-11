@@ -88,6 +88,96 @@ describe("pickAutomationAction", () => {
     expect(r.action.mode).toBe("auto_pack");
   });
 
+  describe("phase matching", () => {
+    it("phase-specific rule only matches its phase", () => {
+      const rules = [
+        baseRule({
+          id: "fraud-inq",
+          match: { reason: ["FRAUDULENT"], phase: ["inquiry"] },
+          action: { mode: "auto_pack", pack_template_id: "t-fraud-inq" },
+          priority: 20,
+        }),
+      ];
+      const onChargeback = pickAutomationAction(rules, {
+        id: "d1",
+        shop_id: "s1",
+        reason: "FRAUDULENT",
+        status: null,
+        amount: 50,
+        phase: "chargeback",
+      });
+      expect(onChargeback.matchedRule).toBeNull();
+      expect(onChargeback.action.mode).toBe("manual");
+
+      const onInquiry = pickAutomationAction(rules, {
+        id: "d2",
+        shop_id: "s1",
+        reason: "FRAUDULENT",
+        status: null,
+        amount: 50,
+        phase: "inquiry",
+      });
+      expect(onInquiry.matchedRule?.id).toBe("fraud-inq");
+      expect(onInquiry.packTemplateId).toBe("t-fraud-inq");
+    });
+
+    it("phase-blind rule still matches both phases (back-compat)", () => {
+      const rules = [
+        baseRule({
+          id: "fraud-blind",
+          match: { reason: ["FRAUDULENT"] },
+          action: { mode: "auto_pack", pack_template_id: "t-fraud" },
+          priority: 20,
+        }),
+      ];
+      const r1 = pickAutomationAction(rules, {
+        id: "d1",
+        shop_id: "s1",
+        reason: "FRAUDULENT",
+        status: null,
+        amount: 50,
+        phase: "inquiry",
+      });
+      expect(r1.matchedRule?.id).toBe("fraud-blind");
+      const r2 = pickAutomationAction(rules, {
+        id: "d2",
+        shop_id: "s1",
+        reason: "FRAUDULENT",
+        status: null,
+        amount: 50,
+        phase: "chargeback",
+      });
+      expect(r2.matchedRule?.id).toBe("fraud-blind");
+    });
+
+    it("phase-specific rule beats phase-blind at the same priority", () => {
+      const rules = [
+        baseRule({
+          id: "fraud-blind",
+          match: { reason: ["FRAUDULENT"] },
+          action: { mode: "auto_pack", pack_template_id: "t-fraud" },
+          priority: 20,
+        }),
+        baseRule({
+          id: "fraud-inq",
+          match: { reason: ["FRAUDULENT"], phase: ["inquiry"] },
+          action: { mode: "auto_pack", pack_template_id: "t-fraud-inq" },
+          priority: 20,
+        }),
+      ];
+      const r = pickAutomationAction(rules, {
+        id: "d1",
+        shop_id: "s1",
+        reason: "FRAUDULENT",
+        status: null,
+        amount: 50,
+        phase: "inquiry",
+      });
+      expect(r.matchedRule?.id).toBe("fraud-inq");
+      expect(r.packTemplateId).toBe("t-fraud-inq");
+    });
+  });
+
   it("tier 2 catch-all applies when no reason rule", () => {
     const rules = [
       baseRule({

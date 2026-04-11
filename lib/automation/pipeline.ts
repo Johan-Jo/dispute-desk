@@ -15,8 +15,38 @@ interface Dispute {
   id: string;
   shop_id: string;
   reason: string | null;
+  /** Lifecycle phase from Shopify. Used to pick a phase-specific template fallback. */
+  phase?: "inquiry" | "chargeback" | null;
   /** Global pack_templates.id when auto-build was triggered by a reason rule */
   pack_template_id?: string | null;
+}
+
+/**
+ * Resolve which pack_template the auto-build should use.
+ *
+ * Precedence:
+ *   1. The template the matched rule explicitly specified.
+ *   2. The phase-specific default mapping for (reason, phase) — only consulted
+ *      when the rule did not specify a template (catch-all / safeguard rules).
+ *      This is what makes inquiry-phase disputes get the lighter inquiry
+ *      template instead of falling through to the chargeback REASON_TEMPLATES
+ *      hardcoded list.
+ *   3. null (the build falls through to REASON_TEMPLATES inside buildPack).
+ */
+async function resolveAutomationTemplate(dispute: Dispute): Promise<string | null> {
+  if (dispute.pack_template_id) return dispute.pack_template_id;
+  if (!dispute.reason || !dispute.phase) return null;
+
+  const sb = getServiceClient();
+  const { data } = await sb
+    .from("reason_template_mappings")
+    .select("template_id")
+    .eq("reason_code", dispute.reason)
+    .eq("dispute_phase", dispute.phase)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return (data?.template_id as string | null) ?? null;
 }
 
 /**
@@ -56,6 +86,8 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     return { action: "existing_pack" };
   }
 
+  const resolvedTemplateId = await resolveAutomationTemplate(dispute);
+
   const { data: pack, error: packErr } = await sb
     .from("evidence_packs")
     .insert({
@@ -63,7 +95,7 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
       dispute_id: dispute.id,
       status: "queued",
       created_by: "automation",
-      pack_template_id: dispute.pack_template_id ?? null,
+      pack_template_id: resolvedTemplateId,
     })
     .select("id")
     .single();

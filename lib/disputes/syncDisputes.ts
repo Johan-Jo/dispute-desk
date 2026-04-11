@@ -273,12 +273,17 @@ export async function syncDisputes(
         // For new disputes: evaluate rules, then trigger automation or set needs_review
         if (!existing && triggerAutomation && upserted) {
           try {
+            const phaseForRules =
+              phaseLower === "inquiry" || phaseLower === "chargeback"
+                ? phaseLower
+                : null;
             const evalResult = await evaluateRules({
               id: upserted.id,
               shop_id: shopId,
               reason: d.reasonDetails?.reason ?? null,
               status: d.status?.toLowerCase() ?? null,
               amount: d.amount ? parseFloat(d.amount.amount) : null,
+              phase: phaseForRules,
             });
 
             if (evalResult.action.mode === "review") {
@@ -291,6 +296,7 @@ export async function syncDisputes(
                 id: upserted.id,
                 shop_id: shopId,
                 reason: d.reasonDetails?.reason ?? null,
+                phase: phaseForRules,
                 pack_template_id: evalResult.packTemplateId ?? evalResult.action.pack_template_id ?? null,
               });
             }

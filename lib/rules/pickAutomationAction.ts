@@ -1,4 +1,10 @@
-import type { Rule, RuleAction, RuleEvalResult, RuleMatch } from "./types";
+import type {
+  DisputePhaseMatch,
+  Rule,
+  RuleAction,
+  RuleEvalResult,
+  RuleMatch,
+} from "./types";
 
 export interface DisputeEvalContext {
   id: string;
@@ -6,6 +12,8 @@ export interface DisputeEvalContext {
   reason: string | null;
   status: string | null;
   amount: number | null;
+  /** Lifecycle phase of the dispute, if known. Rules with a `match.phase` filter use this. */
+  phase?: DisputePhaseMatch | null;
 }
 
 function isAmountRule(match: RuleMatch): boolean {
@@ -47,10 +55,13 @@ function finish(rule: Rule): RuleEvalResult {
   };
 }
 
-/** Same priority: review beats auto-build, then manual. */
+/** Same priority: phase-specific beats phase-blind, review beats auto-build, then manual. */
 function sortRulesByPriorityThenMode(a: Rule, b: Rule): number {
   const d = a.priority - b.priority;
   if (d !== 0) return d;
+  const phaseRank = (r: Rule) => (r.match.phase?.length ? 0 : 1);
+  const pd = phaseRank(a) - phaseRank(b);
+  if (pd !== 0) return pd;
   const rank = (m: string) =>
     m === "review" ? 0 : m === "auto_pack" ? 1 : 2;
   const am = normalizeAction(a.action).mode;
@@ -108,6 +119,10 @@ export function pickAutomationAction(
 }
 
 function matchesRule(dispute: DisputeEvalContext, match: RuleMatch): boolean {
+  if (match.phase?.length) {
+    if (!dispute.phase || !match.phase.includes(dispute.phase)) return false;
+  }
+
   if (match.reason?.length) {
     if (!dispute.reason || !match.reason.includes(dispute.reason)) return false;
   }
