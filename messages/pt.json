@@ -1410,7 +1410,16 @@
     "phaseChargeback": "Chargeback",
     "phaseBoth": "Ambas",
     "phaseAny": "Qualquer fase",
-    "activeInAutomation": "Na automação"
+    "activeInAutomation": "Na automação",
+    "purposeLine": "Playbooks são os conjuntos de evidências que o DisputeDesk usa para responder a cada tipo de disputa.",
+    "stateNoPlaybooks": "Você ainda não tem playbooks. Instale um da biblioteca de modelos para que o DisputeDesk possa começar a gerar evidências para você.",
+    "stateOnlyDrafts": "Você tem {draft} playbook(s) em rascunho, mas nenhum está ativo. Ative pelo menos um para que o DisputeDesk possa usá-lo quando surgir uma disputa.",
+    "stateGaps": "Você tem {active} playbook(s) ativo(s) cobrindo {covered} de {total} tipos de disputa. {missing} tipos de disputa ainda não têm playbook.",
+    "stateAllCovered": "{active} playbooks ativos cobrem todos os {total} tipos de disputa. O DisputeDesk pode responder a qualquer nova disputa.",
+    "stateHint": "As regras de automação na página Automação decidem qual playbook o DisputeDesk usa para cada disputa.",
+    "activeCount": "{count} ativo",
+    "draftCount": "{count} rascunho",
+    "uncoveredCount": "{count} sem cobertura"
   },
   "templateLibrary": {
     "title": "Biblioteca de modelos",

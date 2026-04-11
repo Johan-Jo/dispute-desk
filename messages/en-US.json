@@ -1481,7 +1481,16 @@
     "source": "Source",
     "sourceTemplate": "Template",
     "sourceManual": "Manual",
-    "badgeActivated": "Activated"
+    "badgeActivated": "Activated",
+    "purposeLine": "Playbooks are the bundles of evidence DisputeDesk uses to respond to each type of dispute.",
+    "stateNoPlaybooks": "You don't have any playbooks yet. Install one from the template library so DisputeDesk can start building evidence for you.",
+    "stateOnlyDrafts": "You have {draft} draft playbook(s) but none are active. Activate at least one so DisputeDesk can use it when a dispute comes in.",
+    "stateGaps": "You have {active} active playbook(s) covering {covered} of {total} dispute types. {missing} dispute types still have no playbook.",
+    "stateAllCovered": "{active} active playbooks cover all {total} dispute types. DisputeDesk can respond to any new dispute that comes in.",
+    "stateHint": "Automation rules on the Automation page decide which playbook DisputeDesk uses for each dispute.",
+    "activeCount": "{count} active",
+    "draftCount": "{count} draft",
+    "uncoveredCount": "{count} uncovered"
   },
   "templateCustomize": {
     "banner": "Template Setup Wizard — Complete these steps to activate your template",

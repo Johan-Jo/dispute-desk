@@ -1410,7 +1410,16 @@
     "phaseChargeback": "Rétrofacturation",
     "phaseBoth": "Les deux",
     "phaseAny": "Toute phase",
-    "activeInAutomation": "Dans l'automatisation"
+    "activeInAutomation": "Dans l'automatisation",
+    "purposeLine": "Les playbooks sont les ensembles de preuves que DisputeDesk utilise pour répondre à chaque type de litige.",
+    "stateNoPlaybooks": "Vous n'avez pas encore de playbooks. Installez-en un depuis la bibliothèque de modèles pour que DisputeDesk puisse commencer à générer des preuves pour vous.",
+    "stateOnlyDrafts": "Vous avez {draft} brouillon(s) de playbook, mais aucun n'est actif. Activez-en au moins un pour que DisputeDesk puisse l'utiliser lors d'un litige.",
+    "stateGaps": "Vous avez {active} playbook(s) actif(s) couvrant {covered} des {total} types de litige. {missing} types de litige n'ont toujours pas de playbook.",
+    "stateAllCovered": "{active} playbooks actifs couvrent les {total} types de litige. DisputeDesk peut répondre à tout nouveau litige.",
+    "stateHint": "Les règles d'automatisation sur la page Automatisation décident quel playbook DisputeDesk utilise pour chaque litige.",
+    "activeCount": "{count} actif",
+    "draftCount": "{count} brouillon",
+    "uncoveredCount": "{count} non couvert"
   },
   "templateLibrary": {
     "title": "Bibliothèque de modèles",

@@ -1585,7 +1585,16 @@
     "phaseChargeback": "Återkrav",
     "phaseBoth": "Båda",
     "phaseAny": "Alla faser",
-    "activeInAutomation": "I automatiseringen"
+    "activeInAutomation": "I automatiseringen",
+    "purposeLine": "Playbooks är de bevissamlingar som DisputeDesk använder för att svara på varje typ av tvist.",
+    "stateNoPlaybooks": "Du har inga playbooks än. Installera en från mallbiblioteket så att DisputeDesk automatiskt kan börja samla in bevis åt dig.",
+    "stateOnlyDrafts": "Du har {draft} playbook-utkast men ingen är aktiv. Aktivera minst en så att DisputeDesk kan använda den när en tvist kommer in.",
+    "stateGaps": "Du har {active} aktiva playbook(s) som täcker {covered} av {total} tvistetyper. {missing} tvistetyper har fortfarande ingen playbook.",
+    "stateAllCovered": "{active} aktiva playbooks täcker alla {total} tvistetyper. DisputeDesk kan svara på varje ny tvist.",
+    "stateHint": "Automatiseringsregler på automatiseringssidan avgör vilken playbook DisputeDesk använder för varje tvist.",
+    "activeCount": "{count} aktiv",
+    "draftCount": "{count} utkast",
+    "uncoveredCount": "{count} utan täckning"
   },
   "templateLibrary": {
     "title": "Mallbibliotek",

@@ -32,6 +32,7 @@ import {
 import { FileText, Info, X } from "lucide-react";
 import { EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
+import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 
 /** Map pack dispute_type to the primary reason code for family lookup */
 const PACK_TYPE_PRIMARY_REASON: Record<string, string> = {
@@ -312,6 +313,36 @@ export default function PacksListPage() {
 
   const showEmpty = !loading && displayPacks.length === 0;
 
+  // Plain-language state summary — priority ordered
+  const activeCount = packs.filter((p) => p.status === "ACTIVE").length;
+  const draftCount = packs.filter((p) => p.status === "DRAFT").length;
+  const coveredFamilyLabels = new Set(
+    packs
+      .filter((p) => p.status === "ACTIVE")
+      .map((p) => getPackFamily(p.dispute_type))
+      .filter((f) => f !== ""),
+  );
+  const totalFamilies = DISPUTE_FAMILIES.length;
+  const coveredCount = coveredFamilyLabels.size;
+  const missingCount = Math.max(0, totalFamilies - coveredCount);
+
+  const stateSentence = (() => {
+    if (packs.length === 0) return t("packTemplates.stateNoPlaybooks");
+    if (activeCount === 0 && draftCount > 0)
+      return t("packTemplates.stateOnlyDrafts", { draft: draftCount });
+    if (missingCount > 0)
+      return t("packTemplates.stateGaps", {
+        active: activeCount,
+        covered: coveredCount,
+        total: totalFamilies,
+        missing: missingCount,
+      });
+    return t("packTemplates.stateAllCovered", {
+      active: activeCount,
+      total: totalFamilies,
+    });
+  })();
+
   // Filter out templates already installed by this shop
   const installedTemplateIds = new Set(
     packs.filter((p) => p.template_id).map((p) => p.template_id)
@@ -324,7 +355,7 @@ export default function PacksListPage() {
     <>
       <Page
         title={t("packTemplates.title")}
-        subtitle={t("packTemplates.subtitle")}
+        subtitle={t("packTemplates.purposeLine")}
         primaryAction={{
           content: t("packTemplates.startFromTemplate"),
           icon: MagicIcon,
@@ -340,6 +371,39 @@ export default function PacksListPage() {
       >
         <div className="embeddedPacksRoot">
         <BlockStack gap="400">
+          {/* Current state — plain language */}
+          {!loading && (
+            <Card>
+              <BlockStack gap="300">
+                <Text as="p" variant="bodyLg" fontWeight="semibold">
+                  {stateSentence}
+                </Text>
+                {packs.length > 0 && (
+                  <InlineStack gap="200" wrap>
+                    {activeCount > 0 && (
+                      <Badge tone="success">
+                        {t("packTemplates.activeCount", { count: activeCount })}
+                      </Badge>
+                    )}
+                    {draftCount > 0 && (
+                      <Badge tone="attention">
+                        {t("packTemplates.draftCount", { count: draftCount })}
+                      </Badge>
+                    )}
+                    {missingCount > 0 && (
+                      <Badge tone="warning">
+                        {t("packTemplates.uncoveredCount", { count: missingCount })}
+                      </Badge>
+                    )}
+                  </InlineStack>
+                )}
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("packTemplates.stateHint")}
+                </Text>
+              </BlockStack>
+            </Card>
+          )}
+
           {!loading && packs.length > 0 && showTemplateBanner && (
             <div className="embeddedPacksInfoBanner">
               <Info size={20} className="embeddedPacksInfoBannerIcon" />

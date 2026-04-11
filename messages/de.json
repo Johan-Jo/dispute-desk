@@ -1410,7 +1410,16 @@
     "phaseChargeback": "Rückbuchung",
     "phaseBoth": "Beide",
     "phaseAny": "Jede Phase",
-    "activeInAutomation": "In der Automatisierung"
+    "activeInAutomation": "In der Automatisierung",
+    "purposeLine": "Playbooks sind die Beweisbündel, mit denen DisputeDesk auf jeden Streitfalltyp reagiert.",
+    "stateNoPlaybooks": "Sie haben noch keine Playbooks. Installieren Sie eines aus der Vorlagenbibliothek, damit DisputeDesk automatisch Beweise für Sie sammeln kann.",
+    "stateOnlyDrafts": "Sie haben {draft} Playbook-Entwurf/-würfe, aber keines ist aktiv. Aktivieren Sie mindestens eines, damit DisputeDesk es bei einem Streitfall verwenden kann.",
+    "stateGaps": "Sie haben {active} aktive Playbook(s), die {covered} von {total} Streitfalltypen abdecken. {missing} Streitfalltypen haben noch kein Playbook.",
+    "stateAllCovered": "{active} aktive Playbooks decken alle {total} Streitfalltypen ab. DisputeDesk kann auf jeden neuen Streitfall reagieren.",
+    "stateHint": "Automatisierungsregeln auf der Automatisierungsseite entscheiden, welches Playbook DisputeDesk für jeden Streitfall verwendet.",
+    "activeCount": "{count} aktiv",
+    "draftCount": "{count} Entwurf",
+    "uncoveredCount": "{count} nicht abgedeckt"
   },
   "templateLibrary": {
     "title": "Vorlagenbibliothek",

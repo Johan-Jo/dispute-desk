@@ -1410,7 +1410,16 @@
     "phaseChargeback": "Contracargo",
     "phaseBoth": "Ambas",
     "phaseAny": "Cualquier fase",
-    "activeInAutomation": "En la automatización"
+    "activeInAutomation": "En la automatización",
+    "purposeLine": "Los playbooks son los paquetes de evidencia que DisputeDesk utiliza para responder a cada tipo de disputa.",
+    "stateNoPlaybooks": "Aún no tienes playbooks. Instala uno de la biblioteca de plantillas para que DisputeDesk pueda empezar a generar evidencia por ti.",
+    "stateOnlyDrafts": "Tienes {draft} playbook(s) en borrador, pero ninguno está activo. Activa al menos uno para que DisputeDesk pueda usarlo cuando llegue una disputa.",
+    "stateGaps": "Tienes {active} playbook(s) activo(s) cubriendo {covered} de {total} tipos de disputa. {missing} tipos de disputa aún no tienen playbook.",
+    "stateAllCovered": "{active} playbooks activos cubren los {total} tipos de disputa. DisputeDesk puede responder a cualquier nueva disputa.",
+    "stateHint": "Las reglas de automatización en la página Automatización deciden qué playbook usa DisputeDesk para cada disputa.",
+    "activeCount": "{count} activo",
+    "draftCount": "{count} borrador",
+    "uncoveredCount": "{count} sin cubrir"
   },
   "templateLibrary": {
     "title": "Biblioteca de plantillas",
