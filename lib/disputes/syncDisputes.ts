@@ -15,6 +15,67 @@ import {
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
+import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
+import { sendUnknownReasonAlert } from "@/lib/email/sendUnknownReasonAlert";
+
+const KNOWN_REASONS = new Set<string>(ALL_DISPUTE_REASONS);
+
+function titleCaseReason(reason: string): string {
+  return reason
+    .split("_")
+    .map((word) =>
+      word.length > 0 ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word,
+    )
+    .join(" ");
+}
+
+/**
+ * Ensure a reason_template_mappings row exists for the given (reason, phase)
+ * pair. Inserts a placeholder row with template_id = NULL and family = 'Unknown'
+ * when the pair is new, returns true in that case so the caller can fire the
+ * "new reason detected" email + audit event exactly once. Existing rows are
+ * left untouched.
+ */
+async function ensureReasonMapping(
+  sb: ReturnType<typeof getServiceClient>,
+  reasonCode: string,
+  phase: string,
+): Promise<boolean> {
+  if (phase !== "inquiry" && phase !== "chargeback") return false;
+
+  const { data: existing } = await sb
+    .from("reason_template_mappings")
+    .select("id")
+    .eq("reason_code", reasonCode)
+    .eq("dispute_phase", phase)
+    .maybeSingle();
+
+  if (existing) return false;
+
+  const isKnown = KNOWN_REASONS.has(reasonCode);
+  const label = isKnown ? titleCaseReason(reasonCode) : titleCaseReason(reasonCode);
+  const family = isKnown ? "General" : "Unknown";
+
+  const { error } = await sb.from("reason_template_mappings").insert({
+    reason_code: reasonCode,
+    dispute_phase: phase,
+    template_id: null,
+    label,
+    family,
+    is_active: true,
+    notes: isKnown
+      ? null
+      : `Auto-created from Shopify sync on ${new Date().toISOString()} — please review`,
+  });
+
+  if (error) {
+    // Race with another sync worker is fine — the row now exists.
+    console.warn("[syncDisputes] ensureReasonMapping insert failed:", error.message);
+    return false;
+  }
+
+  return !isKnown;
+}
 
 export interface SyncResult {
   synced: number;
@@ -170,6 +231,43 @@ export async function syncDisputes(
           result.updated++;
         } else {
           result.created++;
+        }
+
+        // Auto-heal reason_template_mappings. If Shopify sent a reason
+        // that's not in ALL_DISPUTE_REASONS (schema drift), insert a
+        // placeholder mapping row, write an audit event, and email the
+        // admin — exactly once per new reason because subsequent syncs
+        // find the row already exists.
+        const reasonCode = d.reasonDetails?.reason ?? null;
+        const phaseLower = d.type?.toLowerCase() ?? null;
+        if (reasonCode && phaseLower && !KNOWN_REASONS.has(reasonCode)) {
+          const isNewUnknownReason = await ensureReasonMapping(
+            sb,
+            reasonCode,
+            phaseLower,
+          );
+          if (isNewUnknownReason) {
+            await sb.from("audit_events").insert({
+              shop_id: shopId,
+              dispute_id: upserted?.id ?? null,
+              actor_type: "system",
+              event_type: "unknown_dispute_reason",
+              event_payload: {
+                reason_code: reasonCode,
+                phase: phaseLower,
+                shop_domain: shop.shop_domain,
+                first_seen_dispute_gid: d.id,
+                detected_at: new Date().toISOString(),
+              },
+            });
+            // Fire-and-forget — non-blocking per the helper's contract.
+            void sendUnknownReasonAlert({
+              reasonCode,
+              phase: phaseLower,
+              shopDomain: shop.shop_domain,
+              firstSeenDisputeGid: d.id,
+            });
+          }
         }
 
         // For new disputes: evaluate rules, then trigger automation or set needs_review
