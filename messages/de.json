@@ -1634,7 +1634,10 @@
       "family_refund": "Erstattung / Gutschrift nicht verarbeitet",
       "family_duplicate": "Doppelte Belastung",
       "family_digital": "Digitale Waren und Dienste",
-      "family_general": "Allgemeine oder Sonderfälle"
+      "family_general": "Allgemeine oder Sonderfälle",
+      "advancedTitle": "Weitere Playbooks hinzufügen",
+      "advancedSubtitle": "Optionale Vorlagen für Shops mit einer breiteren Mischung an Reklamationen. Wähle die zutreffenden aus.",
+      "advancedAlreadyInstalled": "bereits installiert"
     },
     "automation": {
       "title": "Automatisierung und Prüfregeln",

@@ -1749,7 +1749,10 @@
       "family_refund": "Återbetalning / Kredit ej behandlad",
       "family_duplicate": "Dubbeldebitering",
       "family_digital": "Digitala varor och tjänster",
-      "family_general": "Allmänna eller specialfall"
+      "family_general": "Allmänna eller specialfall",
+      "advancedTitle": "Lägg till fler playbooks",
+      "advancedSubtitle": "Valfria mallar för butiker som hanterar en bredare mix av tvister. Markera de som passar.",
+      "advancedAlreadyInstalled": "redan installerad"
     },
     "automation": {
       "title": "Automatisering och granskningsregler",

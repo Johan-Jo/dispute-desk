@@ -12,6 +12,14 @@ import type { Rule, RuleAction } from "@/lib/rules/types";
 export const packRuleName = (packId: string) =>
   `${SETUP_RULE_PREFIX}pack:${packId}`;
 
+/**
+ * Phase-paired inquiry rule for the same chargeback pack. The chargeback pack
+ * id is used (not the inquiry sibling pack id) so the merchant-facing pack row
+ * remains the single source of truth for pack mode in the wizard.
+ */
+export const packInquiryRuleName = (packId: string) =>
+  `${SETUP_RULE_PREFIX}pack:${packId}:inquiry`;
+
 export type PackHandlingUiMode = "manual" | "auto";
 
 /**
@@ -47,6 +55,9 @@ export function parsePackModesFromRules(rules: Rule[]): Record<string, PackHandl
   for (const r of rules) {
     const name = r.name ?? "";
     if (!name.startsWith(prefix)) continue;
+    // Skip the phase-paired inquiry sibling rule — its mode is implied by
+    // the chargeback rule it pairs with.
+    if (name.endsWith(":inquiry")) continue;
     const id = name.slice(prefix.length);
     const mode = normalizeAction(r.action).mode;
     out[id] = mode === "auto_pack" ? "auto" : "manual";

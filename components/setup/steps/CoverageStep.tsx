@@ -7,6 +7,7 @@ import type { StepId } from "@/lib/setup/types";
 import {
   recommendTemplates,
   deriveEvidenceConfidence,
+  inquiryPairsFor,
   TEMPLATE_IDS,
   type TemplateRecommendation,
   type ShopifyEvidenceConfig,
@@ -84,6 +85,8 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
   const [installedTemplateIds, setInstalledTemplateIds] = useState<Set<string>>(new Set());
   const [evidenceConfig, setEvidenceConfig] = useState<ShopifyEvidenceConfig | null>(null);
   const [familyRows, setFamilyRows] = useState<FamilyRow[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [extraSelectedIds, setExtraSelectedIds] = useState<Set<string>>(new Set());
 
   // Load data on mount
   useEffect(() => {
@@ -175,11 +178,18 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
     onSaveRef.current = async () => {
       setSaving(true);
       try {
-        // Install default templates that aren't already installed
+        // Install default templates plus any extras the merchant ticked from
+        // the "advanced" disclosure, plus the silent inquiry siblings for
+        // every chargeback template being installed.
         const defaultRecs = recommendations.filter((r) => r.isDefault);
-        const toInstall = defaultRecs
-          .map((r) => r.templateId)
-          .filter((id) => !installedTemplateIds.has(id));
+        const chargebackIds = [
+          ...defaultRecs.map((r) => r.templateId),
+          ...extraSelectedIds,
+        ];
+        const inquiryPairIds = inquiryPairsFor(chargebackIds);
+        const toInstall = [...chargebackIds, ...inquiryPairIds].filter(
+          (id) => !installedTemplateIds.has(id)
+        );
 
         for (const templateId of toInstall) {
           await fetch(`/api/templates/${templateId}/install`, {
@@ -193,7 +203,9 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
           ? deriveEvidenceConfidence(evidenceConfig)
           : "medium";
 
-        const allSelectedIds = defaultRecs.map((r) => r.templateId);
+        // The wizard's persisted state still tracks chargeback templates only;
+        // inquiry pairs are an implementation detail of the runtime routing.
+        const allSelectedIds = chargebackIds;
         const families = [...new Set(defaultRecs.map((r) => r.disputeFamily))];
 
         // Save coverage settings (family automation modes) for Step 4
@@ -219,7 +231,7 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
         setSaving(false);
       }
     };
-  }, [onSaveRef, recommendations, installedTemplateIds, evidenceConfig, familyRows]);
+  }, [onSaveRef, recommendations, installedTemplateIds, evidenceConfig, familyRows, extraSelectedIds]);
 
   if (loading) {
     return (
@@ -386,6 +398,99 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
           </table>
         </div>
       </div>
+
+      {/* Advanced playbooks disclosure — non-recommended chargeback templates */}
+      {(() => {
+        const extras = recommendations.filter((r) => !r.isDefault);
+        if (extras.length === 0) return null;
+        return (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #E1E3E5",
+              borderRadius: 10,
+              padding: 16,
+              marginBottom: 24,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#202223",
+              }}
+              aria-expanded={showAdvanced}
+            >
+              <span style={{ fontSize: 11 }}>{showAdvanced ? "▼" : "▶"}</span>
+              {tCoverage("advancedTitle")}
+              <span style={{ fontSize: 11, fontWeight: 500, color: "#6D7175" }}>
+                ({extras.length})
+              </span>
+            </button>
+            {showAdvanced && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ fontSize: 12, color: "#6D7175", margin: "0 0 12px" }}>
+                  {tCoverage("advancedSubtitle")}
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {extras.map((rec) => {
+                    const id = rec.templateId;
+                    const checked =
+                      extraSelectedIds.has(id) || installedTemplateIds.has(id);
+                    const alreadyInstalled = installedTemplateIds.has(id);
+                    return (
+                      <label
+                        key={id}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          fontSize: 12,
+                          color: "#202223",
+                          cursor: alreadyInstalled ? "default" : "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={alreadyInstalled}
+                          onChange={(e) => {
+                            setExtraSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(id);
+                              else next.delete(id);
+                              return next;
+                            });
+                          }}
+                          style={{ marginTop: 2 }}
+                        />
+                        <span>
+                          <strong>{getTemplateName(rec.slug)}</strong>
+                          {alreadyInstalled && (
+                            <span style={{ color: "#6D7175", fontWeight: 400 }}>
+                              {" "}
+                              · {tCoverage("advancedAlreadyInstalled")}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Info note */}
       <div style={{

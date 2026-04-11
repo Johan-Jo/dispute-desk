@@ -6,8 +6,10 @@ import type { Rule } from "@/lib/rules/types";
 import {
   disputeTypeToPrimaryReason,
   packRuleName,
+  packInquiryRuleName,
   type PackHandlingUiMode,
 } from "@/lib/rules/packHandlingAutomation";
+import { CHARGEBACK_TO_INQUIRY_TEMPLATE } from "@/lib/setup/recommendTemplates";
 
 const LEGACY_PRESET_NAMES = new Set(RULE_PRESETS.map((p) => p.name));
 
@@ -19,24 +21,58 @@ function buildPackAndFallbackRules(
   packModes: Record<string, PackHandlingUiMode>
 ): Array<Omit<Rule, "id" | "created_at" | "updated_at">> {
   const rows: Array<Omit<Rule, "id" | "created_at" | "updated_at">> = [];
+
+  // Inquiry sibling templates that the merchant has installed (silently
+  // paired during the Coverage step). Used to write phase-aware rules.
+  const installedInquiryTemplateIds = new Set(
+    packsOrdered
+      .map((p) => p.template_id)
+      .filter((id): id is string => Boolean(id))
+  );
+
   for (let i = 0; i < packsOrdered.length; i++) {
     const pack = packsOrdered[i];
     const mode = packModes[pack.id] ?? "manual";
     const reason = disputeTypeToPrimaryReason(pack.dispute_type);
     const priority = 20 + i * 5;
     const useAuto = mode === "auto" && pack.template_id;
+    const inquirySiblingId = pack.template_id
+      ? CHARGEBACK_TO_INQUIRY_TEMPLATE[pack.template_id]
+      : undefined;
+    const hasInquirySiblingInstalled =
+      !!inquirySiblingId && installedInquiryTemplateIds.has(inquirySiblingId);
+
     if (useAuto) {
+      // Chargeback-phase rule. If we have an inquiry sibling installed we
+      // restrict this rule to the chargeback phase so the inquiry rule
+      // (written next) can take over for inquiry disputes.
       rows.push({
         shop_id: shopId,
         enabled: true,
         name: packRuleName(pack.id),
-        match: { reason: [reason] },
+        match: hasInquirySiblingInstalled
+          ? { reason: [reason], phase: ["chargeback"] }
+          : { reason: [reason] },
         action: {
           mode: "auto_pack",
           pack_template_id: pack.template_id!,
         },
         priority,
       });
+
+      if (hasInquirySiblingInstalled) {
+        rows.push({
+          shop_id: shopId,
+          enabled: true,
+          name: packInquiryRuleName(pack.id),
+          match: { reason: [reason], phase: ["inquiry"] },
+          action: {
+            mode: "auto_pack",
+            pack_template_id: inquirySiblingId!,
+          },
+          priority,
+        });
+      }
     } else {
       rows.push({
         shop_id: shopId,

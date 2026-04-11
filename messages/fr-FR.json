@@ -1884,7 +1884,10 @@
       "family_refund": "Remboursement / Crédit non traité",
       "family_duplicate": "Double facturation",
       "family_digital": "Biens et services numériques",
-      "family_general": "Litiges généraux ou cas particuliers"
+      "family_general": "Litiges généraux ou cas particuliers",
+      "advancedTitle": "Ajouter plus de playbooks",
+      "advancedSubtitle": "Modèles optionnels pour les boutiques qui gèrent une plus grande variété de litiges. Cochez ceux qui s'appliquent.",
+      "advancedAlreadyInstalled": "déjà installé"
     },
     "automation": {
       "title": "Automatisation et règles de vérification",

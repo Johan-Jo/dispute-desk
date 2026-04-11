@@ -2370,7 +2370,10 @@
       "family_refund": "Refund / Credit Not Processed",
       "family_duplicate": "Duplicate Charge",
       "family_digital": "Digital Goods & Services",
-      "family_general": "General or Edge-Case Disputes"
+      "family_general": "General or Edge-Case Disputes",
+      "advancedTitle": "Add more playbooks",
+      "advancedSubtitle": "Optional templates for stores that handle a wider mix of disputes. Tick any that apply.",
+      "advancedAlreadyInstalled": "already installed"
     },
     "automation": {
       "title": "Automation and review rules",

@@ -22,6 +22,62 @@ export const TEMPLATE_IDS = {
 
 export type TemplateSlug = keyof typeof TEMPLATE_IDS;
 
+/**
+ * Inquiry-phase template variants from migration 20260411150000.
+ * These are installed silently alongside their chargeback siblings — merchants
+ * never see them in the wizard UI. The runtime rules engine routes inquiry-
+ * phase disputes to these via phase-aware rules written in
+ * `replacePackBasedAutomationRules`.
+ */
+export const INQUIRY_TEMPLATE_IDS = {
+  fraud_inquiry: "a0000000-0000-0000-0000-000000000011",
+  pnr_inquiry: "a0000000-0000-0000-0000-000000000012",
+  not_as_described_inquiry: "a0000000-0000-0000-0000-000000000013",
+  subscription_inquiry: "a0000000-0000-0000-0000-000000000014",
+  refund_inquiry: "a0000000-0000-0000-0000-000000000015",
+  duplicate_inquiry: "a0000000-0000-0000-0000-000000000016",
+  policy_forward_inquiry: "a0000000-0000-0000-0000-000000000017",
+  general_inquiry: "a0000000-0000-0000-0000-000000000018",
+} as const;
+
+export const INQUIRY_TEMPLATE_ID_SET: ReadonlySet<string> = new Set(
+  Object.values(INQUIRY_TEMPLATE_IDS)
+);
+
+/**
+ * Map a chargeback template id to its paired inquiry template id.
+ * `digital_goods` deliberately has no entry — there's no inquiry sibling for
+ * digital goods (per migration 20260411150000); inquiries on digital products
+ * fall back to `general_inquiry` via `reason_template_mappings`.
+ */
+export const CHARGEBACK_TO_INQUIRY_TEMPLATE: Readonly<Record<string, string>> = {
+  [TEMPLATE_IDS.fraud_standard]: INQUIRY_TEMPLATE_IDS.fraud_inquiry,
+  [TEMPLATE_IDS.pnr_with_tracking]: INQUIRY_TEMPLATE_IDS.pnr_inquiry,
+  [TEMPLATE_IDS.pnr_weak_proof]: INQUIRY_TEMPLATE_IDS.pnr_inquiry,
+  [TEMPLATE_IDS.not_as_described_quality]:
+    INQUIRY_TEMPLATE_IDS.not_as_described_inquiry,
+  [TEMPLATE_IDS.subscription_canceled]: INQUIRY_TEMPLATE_IDS.subscription_inquiry,
+  [TEMPLATE_IDS.credit_not_processed]: INQUIRY_TEMPLATE_IDS.refund_inquiry,
+  [TEMPLATE_IDS.duplicate_incorrect]: INQUIRY_TEMPLATE_IDS.duplicate_inquiry,
+  [TEMPLATE_IDS.policy_forward]: INQUIRY_TEMPLATE_IDS.policy_forward_inquiry,
+  [TEMPLATE_IDS.general_catchall]: INQUIRY_TEMPLATE_IDS.general_inquiry,
+};
+
+/**
+ * Given a list of chargeback template ids the merchant has selected, return
+ * the silent inquiry pairs that should be installed alongside them.
+ */
+export function inquiryPairsFor(
+  chargebackTemplateIds: readonly string[]
+): string[] {
+  const pairs = new Set<string>();
+  for (const id of chargebackTemplateIds) {
+    const paired = CHARGEBACK_TO_INQUIRY_TEMPLATE[id];
+    if (paired) pairs.add(paired);
+  }
+  return [...pairs];
+}
+
 const SLUG_TO_FAMILY: Record<TemplateSlug, string> = {
   fraud_standard: "fraud",
   pnr_with_tracking: "pnr",

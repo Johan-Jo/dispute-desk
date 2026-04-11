@@ -1,5 +1,6 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import type { Pack, PackNarrativeSettings, PackNarrative } from "@/lib/types/packs";
+import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
 
 // Uses Shopify dispute reason codes directly after migration
 // 20260411160000. DIGITAL is retained as a product-type signal
@@ -233,6 +234,11 @@ export async function listPacks(
  * Template-backed library packs for automation setup: **DRAFT and ACTIVE** (excludes ARCHIVED).
  * Oldest first = rule priority. Aligns with “installed templates” on the Packs step; many installs
  * stay DRAFT until explicitly activated, so filtering only ACTIVE hid most packs on Auto e revisão.
+ *
+ * Inquiry-phase packs (the silent siblings of chargeback packs) are excluded
+ * here so the merchant only sees one row per dispute family in the wizard /
+ * Automation rules page. Routing for inquiries is handled invisibly via the
+ * phase-paired rules written by `replacePackBasedAutomationRules`.
  */
 export async function listLibraryPacksForAutomationRules(
   shopId: string
@@ -250,7 +256,9 @@ export async function listLibraryPacksForAutomationRules(
     console.error("[listLibraryPacksForAutomationRules]", error.message);
     return [];
   }
-  return (data ?? []) as Pack[];
+  return ((data ?? []) as Pack[]).filter(
+    (p) => !p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)
+  );
 }
 
 /** Create a manual (non-template) pack. */

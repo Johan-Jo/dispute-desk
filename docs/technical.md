@@ -1259,7 +1259,11 @@ Payload (including `shopifyEvidenceConfig`) is saved to `shop_setup.steps.store_
 - Always: `fraud_standard` (universal) + `general_catchall` (fallback)
 - Evidence confidence (`high` / `medium` / `low`) derived from evidence config, passed to Step 4
 
-**UI:** Evidence summary (read-only, from Step 2) + dispute family cards with template toggles (on/off). On save: installs selected templates via `POST /api/templates/:id/install`, saves step payload with `installedTemplateIds`, `selectedFamilies`, `evidenceConfidence`.
+**UI:** Evidence summary (read-only, from Step 2) + dispute family cards with template toggles (on/off) + an **"Add more playbooks"** disclosure that lists every non-recommended chargeback template (e.g. `pnr_weak_proof`, `digital_goods`, `credit_not_processed`, `duplicate_incorrect`, `policy_forward`) so merchants whose store doesn't match a single profile can opt in to extras.
+
+**Silent inquiry pairing:** Inquiry-phase template variants from migration `20260411150000` (`fraud_inquiry`, `pnr_inquiry`, …) are installed alongside their chargeback siblings using `inquiryPairsFor()` from `lib/setup/recommendTemplates.ts`. Merchants never see them in the wizard or the Automation Rules page (`listLibraryPacksForAutomationRules` filters them out via `INQUIRY_TEMPLATE_ID_SET`). Routing happens in `replacePackBasedAutomationRules`, which writes a phase-paired rule per chargeback pack: one rule with `match.phase = ["chargeback"]` pointing at the chargeback template, plus a sibling rule named `__dd_setup__:pack:{packId}:inquiry` with `match.phase = ["inquiry"]` pointing at the inquiry template. `digital_goods` deliberately has no inquiry sibling — inquiries on digital products fall back to `general_inquiry` via the `reason_template_mappings` defaults consulted in `lib/automation/pipeline.ts → resolveAutomationTemplate`.
+
+On save: installs the recommended chargeback templates plus any extras the merchant ticked, plus their inquiry pairs, all via `POST /api/templates/:id/install`. Saves step payload with `installedTemplateIds` (chargeback ids only), `selectedFamilies`, `evidenceConfidence`.
 
 ### Step 4: Automation (`AutomationRulesStep`)
 

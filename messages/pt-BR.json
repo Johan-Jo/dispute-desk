@@ -1884,7 +1884,10 @@
       "family_refund": "Reembolso / Crédito Não Processado",
       "family_duplicate": "Cobrança Duplicada",
       "family_digital": "Bens e Serviços Digitais",
-      "family_general": "Disputas Gerais ou Casos Especiais"
+      "family_general": "Disputas Gerais ou Casos Especiais",
+      "advancedTitle": "Adicionar mais playbooks",
+      "advancedSubtitle": "Templates opcionais para lojas que lidam com uma mistura mais ampla de disputas. Marque os que se aplicam.",
+      "advancedAlreadyInstalled": "já instalado"
     },
     "automation": {
       "title": "Automação e regras de revisão",
