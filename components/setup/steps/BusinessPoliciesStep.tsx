@@ -32,11 +32,23 @@ function getShopOriginFallback(): string | null {
   return null;
 }
 
+const LANG_LABELS: Record<string, string> = {
+  en: "English",
+  de: "Deutsch",
+  fr: "Français",
+  es: "Español",
+  pt: "Português",
+  sv: "Svenska",
+};
+
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
   const tCommon = useTranslations("common");
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
+  const [templateLang, setTemplateLang] = useState<string>("en");
+  const [localLang, setLocalLang] = useState<string | null>(null);
+  const [langSaving, setLangSaving] = useState(false);
 
   const [ownUrls, setOwnUrls] = useState<Record<PolicyKey, string>>({
     shipping: "", refunds: "", terms: "", privacy: "",
@@ -83,6 +95,14 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       .then((data) => {
         if (!data?.shopId) return;
         setResolvedShopId(data.shopId);
+        fetch(`/api/shop/policy-template-lang?shop_id=${data.shopId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((langData) => {
+            if (!langData) return;
+            if (langData.policy_template_lang) setTemplateLang(langData.policy_template_lang);
+            if (langData.local_lang) setLocalLang(langData.local_lang);
+          })
+          .catch(() => {});
         return fetch(`/api/shop/details?shop_id=${data.shopId}`)
           .then((r) => (r.ok ? r.json() : null))
           .then((details) => {
@@ -209,15 +229,76 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     privacy: t("ownPrivacySupport"),
   };
 
+  const handleLangChange = useCallback(
+    async (nextLang: string) => {
+      if (nextLang === templateLang || !resolvedShopId) return;
+      setLangSaving(true);
+      const previous = templateLang;
+      setTemplateLang(nextLang);
+      setTemplateDrafts({});
+      try {
+        const res = await fetch("/api/shop/policy-template-lang", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shop_id: resolvedShopId, policy_template_lang: nextLang }),
+        });
+        if (!res.ok) setTemplateLang(previous);
+      } catch {
+        setTemplateLang(previous);
+      } finally {
+        setLangSaving(false);
+      }
+    },
+    [templateLang, resolvedShopId]
+  );
+
+  const hasLocalOption = localLang !== null && localLang !== "en";
+  const localOptionValue = hasLocalOption ? localLang! : null;
+
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex flex-col items-center text-center mb-10">
+      <div className="flex flex-col items-center text-center mb-6">
         <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
           <FileText className="w-7 h-7 text-white" />
         </div>
         <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>{t("title")}</h2>
         <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
       </div>
+
+      {hasLocalOption && (
+        <div className="flex flex-col items-center mb-8">
+          <p className="text-[#6D7175] mb-2" style={{ fontSize: 13 }}>{t("languageLabel")}</p>
+          <div className="inline-flex rounded-[10px] border border-[#E1E3E5] bg-white p-1" role="group">
+            <button
+              type="button"
+              onClick={() => handleLangChange("en")}
+              disabled={langSaving}
+              className={`px-5 py-2 rounded-[8px] transition-colors ${
+                templateLang === "en"
+                  ? "bg-[#1D4ED8] text-white"
+                  : "text-[#202223] hover:bg-[#F3F4F6]"
+              }`}
+              style={{ fontSize: 14, fontWeight: 600 }}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLangChange(localOptionValue!)}
+              disabled={langSaving}
+              className={`px-5 py-2 rounded-[8px] transition-colors ${
+                templateLang === localOptionValue
+                  ? "bg-[#1D4ED8] text-white"
+                  : "text-[#202223] hover:bg-[#F3F4F6]"
+              }`}
+              style={{ fontSize: 14, fontWeight: 600 }}
+            >
+              {LANG_LABELS[localOptionValue!]}
+            </button>
+          </div>
+          <p className="text-[#8C9196] mt-2 text-center" style={{ fontSize: 12 }}>{t("languageHint")}</p>
+        </div>
+      )}
 
       {/* ── Flow selection ── */}
       {!selectedFlow && (

@@ -1948,6 +1948,8 @@
       "autoIncludeDesc": "DisputeDesk bifogar relevanta policyer till varje bevispaket baserat på tvisttypen.",
       "flowSelectTitle": "Hur vill du sätta upp dina policyer?",
       "flowSelectSubtitle": "Välj hur du vill hantera din butiks policyer",
+      "languageLabel": "Mallspråk",
+      "languageHint": "Välj engelska om du säljer på engelskspråkiga marknader, oavsett butikens språk.",
       "ownFlowTitle": "Använd egna",
       "ownFlowDesc": "Länka till dina befintliga Shopify-policyer eller ladda upp egna dokument",
       "ownFlowShortDesc": "Länka befintliga policysidor",

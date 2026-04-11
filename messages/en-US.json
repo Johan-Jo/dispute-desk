@@ -1893,6 +1893,8 @@
       "autoIncludeDesc": "DisputeDesk will attach the relevant policies to each evidence pack based on the dispute type.",
       "flowSelectTitle": "How would you like to set up your policies?",
       "flowSelectSubtitle": "Choose how you want to handle your store policies",
+      "languageLabel": "Template language",
+      "languageHint": "Pick English if you sell in English-speaking markets, regardless of your store language.",
       "ownFlowTitle": "Use your own",
       "ownFlowDesc": "Link to your existing Shopify policies or upload custom documents",
       "ownFlowShortDesc": "Link existing policy pages",

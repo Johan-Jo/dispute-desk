@@ -2083,6 +2083,8 @@
       "autoIncludeDesc": "DisputeDesk joindra les politiques pertinentes à chaque dossier de preuves selon le type de litige.",
       "flowSelectTitle": "Comment souhaitez-vous configurer vos politiques ?",
       "flowSelectSubtitle": "Choisissez comment gérer les politiques de votre boutique",
+      "languageLabel": "Langue du modèle",
+      "languageHint": "Choisissez l'anglais si vous vendez sur des marchés anglophones, quelle que soit la langue de votre boutique.",
       "ownFlowTitle": "Utiliser les vôtres",
       "ownFlowDesc": "Liez vos politiques Shopify existantes ou téléversez vos propres documents",
       "ownFlowShortDesc": "Lier les pages de politiques existantes",
