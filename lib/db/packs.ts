@@ -1,12 +1,15 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import type { Pack, PackNarrativeSettings, PackNarrative } from "@/lib/types/packs";
 
+// Uses Shopify dispute reason codes directly after migration
+// 20260411160000. DIGITAL is retained as a product-type signal
+// with no Shopify equivalent.
 const DISPUTE_TYPE_LABELS: Record<string, string> = {
-  FRAUD: "Fraudulent transaction",
-  PNR: "Product not received",
-  NOT_AS_DESCRIBED: "Product not as described",
-  SUBSCRIPTION: "Subscription",
-  REFUND: "Refund/credit not processed",
+  FRAUDULENT: "Fraudulent transaction",
+  PRODUCT_NOT_RECEIVED: "Product not received",
+  PRODUCT_UNACCEPTABLE: "Product not as described",
+  SUBSCRIPTION_CANCELED: "Subscription",
+  CREDIT_NOT_PROCESSED: "Refund/credit not processed",
   DUPLICATE: "Duplicate/incorrect amount",
   DIGITAL: "Digital goods/service",
   GENERAL: "General",

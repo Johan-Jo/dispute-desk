@@ -59,28 +59,19 @@ interface PackInput {
 }
 
 /**
- * Map pack dispute_type values (e.g. "FRAUD", "PNR") to Shopify reason codes
- * so we can match packs to families.
+ * pack_templates.dispute_type and packs.dispute_type use Shopify
+ * reason codes directly after migration
+ * 20260411160000_normalize_dispute_type_to_reason_codes.sql. DIGITAL
+ * is the one legacy value that has no Shopify equivalent — it maps
+ * to GENERAL family handling.
  */
-const PACK_TYPE_TO_REASONS: Record<string, string[]> = {
-  FRAUD: ["FRAUDULENT"],
-  FRAUDULENT: ["FRAUDULENT"],
-  PNR: ["PRODUCT_NOT_RECEIVED"],
-  PRODUCT_NOT_RECEIVED: ["PRODUCT_NOT_RECEIVED"],
-  NOT_AS_DESCRIBED: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"],
-  PRODUCT_UNACCEPTABLE: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"],
-  SUBSCRIPTION: ["SUBSCRIPTION_CANCELED"],
-  SUBSCRIPTION_CANCELED: ["SUBSCRIPTION_CANCELED"],
-  REFUND: ["CREDIT_NOT_PROCESSED"],
-  CREDIT_NOT_PROCESSED: ["CREDIT_NOT_PROCESSED"],
-  DUPLICATE: ["DUPLICATE"],
-  DIGITAL: ["GENERAL"],
-  GENERAL: ["GENERAL"],
-};
-
 function packMatchesFamily(pack: PackInput, family: DisputeFamily): boolean {
-  const packReasons = PACK_TYPE_TO_REASONS[pack.dispute_type?.toUpperCase()] ?? [];
-  return family.reasons.some((r) => packReasons.includes(r));
+  const type = pack.dispute_type?.toUpperCase();
+  if (!type) return false;
+  if (type === "DIGITAL") {
+    return family.reasons.includes("GENERAL");
+  }
+  return family.reasons.includes(type);
 }
 
 function ruleMatchesFamily(rule: RuleInput, family: DisputeFamily): boolean {

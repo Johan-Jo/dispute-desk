@@ -32,7 +32,7 @@ describe("pickTemplateIdForDisputeType", () => {
       {
         id: "t-fraud",
         slug: "f",
-        dispute_type: "FRAUD",
+        dispute_type: "FRAUDULENT",
         is_recommended: true,
         min_plan: "free",
         created_at: "",
@@ -57,13 +57,13 @@ describe("pickTemplateIdForDisputeType", () => {
       },
     ];
     expect(
-      pickTemplateIdForDisputeType(["t-fraud", "t-other"], catalog, "FRAUD")
+      pickTemplateIdForDisputeType(["t-fraud", "t-other"], catalog, "FRAUDULENT")
     ).toBe("t-fraud");
   });
 
   it("falls back to first installed id", () => {
     const catalog: TemplateListItem[] = [];
-    expect(pickTemplateIdForDisputeType(["z1", "z2"], catalog, "FRAUD")).toBe(
+    expect(pickTemplateIdForDisputeType(["z1", "z2"], catalog, "FRAUDULENT")).toBe(
       "z1"
     );
   });
@@ -115,7 +115,7 @@ describe("applyStarterModeChange", () => {
       {
         id: "tf",
         slug: "f",
-        dispute_type: "FRAUD",
+        dispute_type: "FRAUDULENT",
         is_recommended: true,
         min_plan: "free",
         created_at: "",

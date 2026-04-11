@@ -6,11 +6,15 @@ import {
 } from "@/lib/rules/packHandlingAutomation";
 
 describe("disputeTypeToPrimaryReason", () => {
-  it("maps FRAUD to FRAUDULENT", () => {
-    expect(disputeTypeToPrimaryReason("FRAUD")).toBe("FRAUDULENT");
+  it("passes through Shopify reason codes unchanged", () => {
+    expect(disputeTypeToPrimaryReason("FRAUDULENT")).toBe("FRAUDULENT");
+    expect(disputeTypeToPrimaryReason("PRODUCT_NOT_RECEIVED")).toBe("PRODUCT_NOT_RECEIVED");
   });
-  it("defaults unknown to GENERAL", () => {
-    expect(disputeTypeToPrimaryReason("UNKNOWN_X")).toBe("GENERAL");
+  it("maps legacy DIGITAL to GENERAL", () => {
+    expect(disputeTypeToPrimaryReason("DIGITAL")).toBe("GENERAL");
+  });
+  it("defaults empty to GENERAL", () => {
+    expect(disputeTypeToPrimaryReason("")).toBe("GENERAL");
   });
 });
 
@@ -20,7 +24,7 @@ describe("validatePackModes", () => {
     shop_id: "s",
     name: "Test",
     code: null,
-    dispute_type: "FRAUD",
+    dispute_type: "FRAUDULENT",
     status: "ACTIVE",
     source: "TEMPLATE",
     template_id: "tpl1",

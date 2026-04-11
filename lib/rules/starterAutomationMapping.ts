@@ -34,7 +34,7 @@ function handlingToStarter(
 export function pickTemplateIdForDisputeType(
   installedTemplateIds: string[],
   catalog: TemplateListItem[],
-  disputeType: "FRAUD" | "PNR"
+  disputeType: "FRAUDULENT" | "PRODUCT_NOT_RECEIVED"
 ): string | null {
   const installed = new Set(installedTemplateIds);
   const match = catalog
@@ -96,7 +96,7 @@ export function applyStarterModeChange(
         const tid = pickTemplateIdForDisputeType(
           installedTemplateIds,
           catalog,
-          "FRAUD"
+          "FRAUDULENT"
         );
         if (!tid) {
           return { ...row, mode: "review" as const, pack_template_id: null };
@@ -122,7 +122,7 @@ export function applyStarterModeChange(
         const tid = pickTemplateIdForDisputeType(
           installedTemplateIds,
           catalog,
-          "PNR"
+          "PRODUCT_NOT_RECEIVED"
         );
         if (!tid) {
           return { ...row, mode: "review" as const, pack_template_id: null };

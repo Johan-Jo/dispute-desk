@@ -34,22 +34,18 @@ import { EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icon
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 
-/** Map pack dispute_type to the primary reason code for family lookup */
-const PACK_TYPE_PRIMARY_REASON: Record<string, string> = {
-  FRAUD: "FRAUDULENT",
-  PNR: "PRODUCT_NOT_RECEIVED",
-  NOT_AS_DESCRIBED: "PRODUCT_UNACCEPTABLE",
-  SUBSCRIPTION: "SUBSCRIPTION_CANCELED",
-  REFUND: "CREDIT_NOT_PROCESSED",
-  DUPLICATE: "DUPLICATE",
-  DIGITAL: "GENERAL",
-  GENERAL: "GENERAL",
-};
-
+/**
+ * packs.dispute_type now stores Shopify reason codes directly
+ * (migration 20260411160000). DIGITAL is the only legacy value with
+ * no Shopify equivalent — it maps to the GENERAL family.
+ */
 function getPackFamily(disputeType: string): string {
-  const reason = PACK_TYPE_PRIMARY_REASON[disputeType?.toUpperCase()] ?? null;
-  if (!reason) return "";
-  return DISPUTE_REASON_FAMILIES[reason as AllDisputeReasonCode] ?? "";
+  const type = disputeType?.toUpperCase();
+  if (!type) return "";
+  if (type === "DIGITAL") {
+    return DISPUTE_REASON_FAMILIES.GENERAL ?? "";
+  }
+  return DISPUTE_REASON_FAMILIES[type as AllDisputeReasonCode] ?? "";
 }
 
 interface PackRow {
@@ -74,22 +70,22 @@ interface TemplateItem {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  FRAUD: "typeFraudulent",
-  PNR: "typeProductNotReceived",
-  NOT_AS_DESCRIBED: "typeProductUnacceptable",
-  SUBSCRIPTION: "typeSubscriptionCanceled",
-  REFUND: "typeCreditNotProcessed",
+  FRAUDULENT: "typeFraudulent",
+  PRODUCT_NOT_RECEIVED: "typeProductNotReceived",
+  PRODUCT_UNACCEPTABLE: "typeProductUnacceptable",
+  SUBSCRIPTION_CANCELED: "typeSubscriptionCanceled",
+  CREDIT_NOT_PROCESSED: "typeCreditNotProcessed",
   DUPLICATE: "typeDuplicate",
   DIGITAL: "typeDigital",
   GENERAL: "typeGeneral",
 };
 
 const DISPUTE_TYPES = [
-  "FRAUD",
-  "PNR",
-  "NOT_AS_DESCRIBED",
-  "SUBSCRIPTION",
-  "REFUND",
+  "FRAUDULENT",
+  "PRODUCT_NOT_RECEIVED",
+  "PRODUCT_UNACCEPTABLE",
+  "SUBSCRIPTION_CANCELED",
+  "CREDIT_NOT_PROCESSED",
   "DUPLICATE",
   "DIGITAL",
   "GENERAL",

@@ -14,19 +14,16 @@ export const packRuleName = (packId: string) =>
 
 export type PackHandlingUiMode = "manual" | "auto";
 
-/** Map library/template dispute_type to primary Shopify Payments reason code. */
+/**
+ * Map library/template dispute_type to primary Shopify Payments reason code.
+ * After migration 20260411160000 pack.dispute_type stores Shopify reason
+ * codes directly — this function is now mostly a pass-through. DIGITAL is
+ * the one legacy value that has no Shopify equivalent and still maps to
+ * GENERAL.
+ */
 export function disputeTypeToPrimaryReason(disputeType: string): string {
-  const m: Record<string, string> = {
-    FRAUD: "FRAUDULENT",
-    PNR: "PRODUCT_NOT_RECEIVED",
-    NOT_AS_DESCRIBED: "PRODUCT_UNACCEPTABLE",
-    SUBSCRIPTION: "SUBSCRIPTION_CANCELED",
-    REFUND: "CREDIT_NOT_PROCESSED",
-    DUPLICATE: "DUPLICATE",
-    DIGITAL: "GENERAL",
-    GENERAL: "GENERAL",
-  };
-  return m[disputeType] ?? "GENERAL";
+  if (disputeType === "DIGITAL") return "GENERAL";
+  return disputeType || "GENERAL";
 }
 
 function normalizeAction(action: Rule["action"]): RuleAction {
