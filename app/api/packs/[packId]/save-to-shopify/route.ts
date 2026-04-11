@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,9 @@ export async function POST(
     );
   }
 
-  const body = await req.json().catch(() => ({})) as { confirmLowCompleteness?: boolean };
+  const parsed = await parseJsonBody<{ confirmLowCompleteness?: boolean }>(req);
+  if (parsed instanceof NextResponse) return parsed;
+  const body = parsed;
   if (score < 80 && !body.confirmLowCompleteness) {
     return NextResponse.json(
       { error: "PACK_LOW_COMPLETENESS", score, message: "Pack completeness is below 80%. Send confirmLowCompleteness: true to override." },

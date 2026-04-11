@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
+import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
 /**
  * POST /api/disputes/:id/packs
@@ -14,7 +15,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: disputeId } = await params;
-  const body = await req.json().catch(() => ({})) as { template_id?: string };
+  const parsed = await parseJsonBody<{ template_id?: string }>(req);
+  if (parsed instanceof NextResponse) return parsed;
+  const body = parsed;
   const db = getServiceClient();
 
   const { data: dispute } = await db
