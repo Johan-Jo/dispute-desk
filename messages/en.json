@@ -538,7 +538,16 @@
     "sourceShopifyOrder": "From your Shopify order",
     "sourceShopifyShipping": "From your Shopify shipping",
     "sourceStorePolicy": "From your store policies",
-    "sourceMerchantUpload": "You'll upload this at dispute time"
+    "sourceMerchantUpload": "You'll upload this at dispute time",
+    "statusDraftLabel": "Draft",
+    "statusQueuedLabel": "Queued",
+    "statusBuildingLabel": "Building",
+    "statusReadyLabel": "Ready",
+    "statusBlockedLabel": "Blocked",
+    "statusFailedLabel": "Failed",
+    "statusSavingLabel": "Saving",
+    "statusSavedToShopifyLabel": "Saved to Shopify",
+    "statusSaveFailedLabel": "Save failed"
   },
   "analytics": {
     "title": "Reporting",

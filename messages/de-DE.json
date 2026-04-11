@@ -549,7 +549,16 @@
     "sourceShopifyOrder": "Aus Ihrer Shopify-Bestellung",
     "sourceShopifyShipping": "Aus Ihrem Shopify-Versand",
     "sourceStorePolicy": "Aus Ihren Geschäftsbedingungen",
-    "sourceMerchantUpload": "Sie laden dies bei einem Streitfall hoch"
+    "sourceMerchantUpload": "Sie laden dies bei einem Streitfall hoch",
+    "statusDraftLabel": "Entwurf",
+    "statusQueuedLabel": "In Warteschlange",
+    "statusBuildingLabel": "Wird erstellt",
+    "statusReadyLabel": "Bereit",
+    "statusBlockedLabel": "Blockiert",
+    "statusFailedLabel": "Fehlgeschlagen",
+    "statusSavingLabel": "Wird gespeichert",
+    "statusSavedToShopifyLabel": "In Shopify gespeichert",
+    "statusSaveFailedLabel": "Speichern fehlgeschlagen"
   },
   "analytics": {
     "title": "Reporting",

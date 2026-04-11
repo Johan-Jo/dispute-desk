@@ -466,7 +466,16 @@
     "sourceShopifyOrder": "Från din Shopify-beställning",
     "sourceShopifyShipping": "Från din Shopify-frakt",
     "sourceStorePolicy": "Från dina butikspolicyer",
-    "sourceMerchantUpload": "Du laddar upp detta när tvisten kommer"
+    "sourceMerchantUpload": "Du laddar upp detta när tvisten kommer",
+    "statusDraftLabel": "Utkast",
+    "statusQueuedLabel": "I kö",
+    "statusBuildingLabel": "Bygger",
+    "statusReadyLabel": "Klar",
+    "statusBlockedLabel": "Blockerad",
+    "statusFailedLabel": "Misslyckades",
+    "statusSavingLabel": "Sparar",
+    "statusSavedToShopifyLabel": "Sparad i Shopify",
+    "statusSaveFailedLabel": "Sparning misslyckades"
   },
   "analytics": {
     "title": "Reporting",

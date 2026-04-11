@@ -549,7 +549,16 @@
     "sourceShopifyOrder": "De tu pedido de Shopify",
     "sourceShopifyShipping": "De tu envío de Shopify",
     "sourceStorePolicy": "De tus políticas de tienda",
-    "sourceMerchantUpload": "Lo subirás cuando llegue la disputa"
+    "sourceMerchantUpload": "Lo subirás cuando llegue la disputa",
+    "statusDraftLabel": "Borrador",
+    "statusQueuedLabel": "En cola",
+    "statusBuildingLabel": "Creando",
+    "statusReadyLabel": "Listo",
+    "statusBlockedLabel": "Bloqueado",
+    "statusFailedLabel": "Falló",
+    "statusSavingLabel": "Guardando",
+    "statusSavedToShopifyLabel": "Guardado en Shopify",
+    "statusSaveFailedLabel": "Error al guardar"
   },
   "analytics": {
     "title": "Reporting",

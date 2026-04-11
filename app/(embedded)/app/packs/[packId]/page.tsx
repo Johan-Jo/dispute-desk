@@ -37,6 +37,7 @@ import {
   XCircleIcon,
 } from "@shopify/polaris-icons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
+import { formatPackStatus } from "@/lib/types/packStatus";
 
 interface ChecklistItem {
   field: string;
@@ -550,7 +551,9 @@ export default function PackPreviewPage() {
                   </MetadataRow>
                 )}
                 <MetadataRow label={t("packs.metaStatus")}>
-                  <Badge tone={statusTone(pack.status)}>{pack.status.replace(/_/g, " ")}</Badge>
+                  <Badge tone={statusTone(pack.status)}>
+                    {formatPackStatus(pack.status, t)}
+                  </Badge>
                 </MetadataRow>
                 <MetadataRow label={t("packs.metaCreated")}>
                   <Text as="span" variant="bodyMd">{formatDate(pack.created_at)}</Text>

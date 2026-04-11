@@ -549,7 +549,16 @@
     "sourceShopifyOrder": "De votre commande Shopify",
     "sourceShopifyShipping": "De votre expédition Shopify",
     "sourceStorePolicy": "De vos politiques de boutique",
-    "sourceMerchantUpload": "Vous le téléchargerez à l'arrivée du litige"
+    "sourceMerchantUpload": "Vous le téléchargerez à l'arrivée du litige",
+    "statusDraftLabel": "Brouillon",
+    "statusQueuedLabel": "En file d'attente",
+    "statusBuildingLabel": "En cours de création",
+    "statusReadyLabel": "Prêt",
+    "statusBlockedLabel": "Bloqué",
+    "statusFailedLabel": "Échoué",
+    "statusSavingLabel": "Enregistrement en cours",
+    "statusSavedToShopifyLabel": "Enregistré dans Shopify",
+    "statusSaveFailedLabel": "Échec de l'enregistrement"
   },
   "analytics": {
     "title": "Reporting",
