@@ -56,15 +56,26 @@ describe("Setup coverage and activate i18n keys", () => {
       expect(activate).toBeDefined();
     });
 
+    // Keys actually referenced by components/setup/steps/ActivateStep.tsx
+    // in its current form. The flow was refactored from an
+    // "evidenceSummary / coverageSummary / automationSummary" layout
+    // to a "stat<Thing>Label / stat<Thing>Desc" grid, but this test
+    // was never updated — causing the 6 pre-existing failures noted
+    // in the codebase audit. Keys below mirror the actual t() calls.
     const requiredKeys = [
       "title",
       "subtitle",
-      "evidenceSummary",
-      "evidenceManualNote",
-      "coverageSummary",
-      "automationSummary",
-      "activateInfo",
-      "changeLater",
+      "statCoverageLabel",
+      "statCoverageDesc",
+      "statAutomatedLabel",
+      "statAutomatedDesc",
+      "statReviewLabel",
+      "statReviewDesc",
+      "statThresholdLabel",
+      "statThresholdDesc",
+      "nextTitle",
+      "readyTitle",
+      "readyDesc",
       "loading",
     ];
 
