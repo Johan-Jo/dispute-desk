@@ -79,54 +79,30 @@ export async function installTemplate(
     return null;
   }
 
-  // 3. Fetch template sections + items
+  // 3. Fetch template sections + items (used only to seed the
+  //    skeleton narrative — we no longer copy these into
+  //    pack_sections / pack_section_items. The API path at
+  //    /api/packs/:id now reads pack_template_sections and
+  //    pack_template_items directly with locale joins, so the
+  //    per-merchant copies were dead data. Cleanup migration
+  //    20260411170000 deletes the stale existing rows.
   const { data: tplSections } = await sb
     .from("pack_template_sections")
     .select("*, pack_template_items(*)")
     .eq("template_id", templateId)
     .order("sort", { ascending: true });
 
-  // 4. Copy sections and items
   const requiredItemLabels: string[] = [];
-
   for (const sec of tplSections ?? []) {
-    const { data: packSection } = await sb
-      .from("pack_sections")
-      .insert({
-        pack_id: pack.id,
-        title: sec.title_default,
-        sort: sec.sort,
-      })
-      .select("id")
-      .single();
-
-    if (!packSection) continue;
-
     const items = (
-      (sec.pack_template_items ?? []) as Array<{
-        item_type: string;
-        key: string;
-        label_default: string;
-        required: boolean;
-        guidance_default: string | null;
-        sort: number;
-      }>
-    ).sort((a, b) => a.sort - b.sort);
-
-    if (items.length > 0) {
-      const rows = items.map((it) => {
-        if (it.required) requiredItemLabels.push(it.label_default);
-        return {
-          section_id: packSection.id,
-          item_type: it.item_type,
-          key: it.key,
-          label: it.label_default,
-          required: it.required,
-          guidance: it.guidance_default,
-          sort: it.sort,
-        };
-      });
-      await sb.from("pack_section_items").insert(rows);
+      (
+        sec as {
+          pack_template_items?: Array<{ label_default: string; required: boolean }>;
+        }
+      ).pack_template_items ?? []
+    ) as Array<{ label_default: string; required: boolean }>;
+    for (const it of items) {
+      if (it.required) requiredItemLabels.push(it.label_default);
     }
   }
 
