@@ -152,6 +152,104 @@ async function resolveTemplateName(
   return list[0]?.name ?? null;
 }
 
+interface StoredChecklistItem {
+  field: string;
+  label: string;
+  required: boolean;
+  present: boolean;
+}
+
+/**
+ * Re-materialize localized labels on a dispute pack's cached
+ * checklist. buildPack stores `label_default` (English) when it
+ * writes pack_json.checklist, so rendering those strings directly
+ * leaks English to non-English merchants. At read time we look up
+ * each item's live pack_template_item_i18n row for the requested
+ * locale and substitute. If the item has no matching template row
+ * (e.g. a REASON_TEMPLATES fallback field that isn't in the
+ * template), the English label stays.
+ */
+async function localizeChecklist(
+  db: ReturnType<typeof getServiceClient>,
+  templateId: string | null,
+  checklist: StoredChecklistItem[] | null,
+  locale: string,
+): Promise<StoredChecklistItem[] | null> {
+  if (!checklist || checklist.length === 0 || !templateId) return checklist;
+
+  const { data: items } = await db
+    .from("pack_template_items")
+    .select(
+      `key,
+       label_default,
+       pack_template_section_id: template_section_id,
+       pack_template_item_i18n!pack_template_item_i18n_template_item_id_fkey(locale, label)`,
+    )
+    .in(
+      "template_section_id",
+      (
+        await db
+          .from("pack_template_sections")
+          .select("id")
+          .eq("template_id", templateId)
+      ).data?.map((s) => (s as { id: string }).id) ?? [],
+    );
+
+  if (!items?.length) return checklist;
+
+  // Build a lookup: item key (or label_default) → localized label.
+  const byKey = new Map<string, string>();
+  for (const raw of items) {
+    const r = raw as {
+      key: string;
+      label_default: string;
+      pack_template_item_i18n?: Array<{ locale: string; label: string }>;
+    };
+    const localized = r.pack_template_item_i18n?.find(
+      (x) => x.locale === locale,
+    );
+    const label = localized?.label ?? r.label_default;
+    byKey.set(r.key, label);
+    // Also index by label_default so fallback labels that don't
+    // carry a matching key (e.g. REASON_TEMPLATES fields stored by
+    // their collector string) still resolve if the English text
+    // happens to match.
+    byKey.set(r.label_default, label);
+  }
+
+  return checklist.map((item) => {
+    const localizedLabel =
+      byKey.get(item.field) ?? byKey.get(item.label) ?? item.label;
+    return { ...item, label: localizedLabel };
+  });
+}
+
+/**
+ * For dispute packs, resolve the effective template id. Prefers
+ * evidence_packs.pack_template_id (set when a rule explicitly
+ * picked a template), then falls back to the default mapping in
+ * reason_template_mappings (set by the admin + backfilled by the
+ * audit work in commit 8a6bf59). Returns null only when neither
+ * source has a template — in that case the cached label_default
+ * English strings stay.
+ */
+async function resolveDisputePackTemplateId(
+  db: ReturnType<typeof getServiceClient>,
+  pack: { pack_template_id?: string | null },
+  disputeReason: string | null,
+  disputePhase: string | null,
+): Promise<string | null> {
+  if (pack.pack_template_id) return pack.pack_template_id;
+  if (!disputeReason || !disputePhase) return null;
+  const { data: mapping } = await db
+    .from("reason_template_mappings")
+    .select("template_id")
+    .eq("reason_code", disputeReason)
+    .eq("dispute_phase", disputePhase)
+    .maybeSingle();
+  return (mapping as { template_id?: string } | null)?.template_id ?? null;
+}
+
 /**
  * GET /api/packs/:packId
  *
@@ -169,7 +267,7 @@ export async function GET(
 
   const { data: row, error } = await db
     .from("evidence_packs")
-    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid, phase)")
+    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid, phase, reason)")
     .eq("id", packId)
     .single();
 
@@ -178,11 +276,12 @@ export async function GET(
       ? (row as { shop: { shop_domain?: string }[] }).shop[0]
       : (row as { shop?: { shop_domain?: string } }).shop;
     const disputeRow = Array.isArray((row as { dispute?: unknown }).dispute)
-      ? (row as { dispute: { dispute_gid?: string; phase?: string }[] }).dispute[0]
-      : (row as { dispute?: { dispute_gid?: string; phase?: string } }).dispute;
+      ? (row as { dispute: { dispute_gid?: string; phase?: string; reason?: string }[] }).dispute[0]
+      : (row as { dispute?: { dispute_gid?: string; phase?: string; reason?: string } }).dispute;
     const shop_domain = shop?.shop_domain ?? null;
     const dispute_gid = disputeRow?.dispute_gid ?? null;
     const dispute_phase = disputeRow?.phase ?? null;
+    const dispute_reason = disputeRow?.reason ?? null;
     const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
 
     // Library packs (dispute_id null): merge name, dispute_type, source, template_id, template_name from packs
@@ -215,6 +314,28 @@ export async function GET(
         libraryTemplateId,
         locale,
       );
+    }
+
+    // Dispute packs: re-materialize localized checklist labels.
+    // buildPack caches label_default (English) in pack_json.checklist;
+    // we look up the live pack_template_item_i18n row for the caller's
+    // locale and substitute. Falls through when there's no template
+    // to key off (the English labels stay as a last-resort fallback).
+    if (pack.dispute_id != null) {
+      const effectiveTemplateId = await resolveDisputePackTemplateId(
+        db,
+        pack as { pack_template_id?: string | null },
+        dispute_reason,
+        dispute_phase,
+      );
+      if (effectiveTemplateId) {
+        (pack as Record<string, unknown>).checklist = await localizeChecklist(
+          db,
+          effectiveTemplateId,
+          pack.checklist as StoredChecklistItem[] | null,
+          locale,
+        );
+      }
     }
 
     const [itemsRes, auditRes, buildJobRes, pdfJobRes] = await Promise.all([
