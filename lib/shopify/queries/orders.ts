@@ -18,6 +18,8 @@ export const ORDER_DETAIL_QUERY = `
         closedAt
         displayFinancialStatus
         displayFulfillmentStatus
+        note
+        customAttributes { key value }
         totalPriceSet { shopMoney { amount currencyCode } }
         subtotalPriceSet { shopMoney { amount currencyCode } }
         totalShippingPriceSet { shopMoney { amount currencyCode } }
@@ -75,9 +77,22 @@ export const ORDER_DETAIL_QUERY = `
           note
           totalRefundedSet { shopMoney { amount currencyCode } }
         }
+        events(first: 30) {
+          edges {
+            node {
+              id
+              message
+              createdAt
+              attributeToUser
+              attributeToApp
+              criticalAlert
+            }
+          }
+        }
         customer {
           numberOfOrders
           createdAt
+          note
         }
       }
     }
@@ -126,6 +141,20 @@ export interface OrderRefund {
   totalRefundedSet: MoneySet;
 }
 
+export interface OrderCustomAttribute {
+  key: string;
+  value: string | null;
+}
+
+export interface OrderEventNode {
+  id: string;
+  message: string;
+  createdAt: string;
+  attributeToUser: boolean;
+  attributeToApp: boolean;
+  criticalAlert: boolean;
+}
+
 export interface OrderDetailNode {
   id: string;
   name: string;
@@ -136,6 +165,8 @@ export interface OrderDetailNode {
   closedAt: string | null;
   displayFinancialStatus: string | null;
   displayFulfillmentStatus: string | null;
+  note: string | null;
+  customAttributes: OrderCustomAttribute[];
   totalPriceSet: MoneySet;
   subtotalPriceSet: MoneySet;
   totalShippingPriceSet: MoneySet;
@@ -157,9 +188,11 @@ export interface OrderDetailNode {
   lineItems: { edges: Array<{ node: OrderLineItem }> };
   fulfillments: OrderFulfillment[];
   refunds: OrderRefund[];
+  events: { edges: Array<{ node: OrderEventNode }> };
   customer: {
     numberOfOrders: string;
     createdAt: string;
+    note: string | null;
   } | null;
 }
 

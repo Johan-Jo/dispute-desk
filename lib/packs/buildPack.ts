@@ -19,6 +19,7 @@ import { collectOrderEvidence } from "./sources/orderSource";
 import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
 import { collectManualEvidence } from "./sources/manualSource";
+import { collectCustomerCommEvidence } from "./sources/customerCommSource";
 import type { EvidenceSection, BuildContext } from "./types";
 
 function decryptAccessToken(encrypted: string): string {
@@ -93,6 +94,7 @@ export async function buildPack(
     collectOrderEvidence(ctx),
     collectFulfillmentEvidence(ctx),
     collectPolicyEvidence(ctx),
+    collectCustomerCommEvidence(ctx),
     collectManualEvidence(ctx),
   ]);
 
