@@ -536,7 +536,17 @@
     "eventSaveFailed": "Save failed",
     "eventBuildStarted": "Build started",
     "eventBuildCompleted": "Build completed",
-    "eventManualUpload": "File uploaded"
+    "eventManualUpload": "File uploaded",
+    "templatePreviewTitle": "What DisputeDesk will collect",
+    "templatePreviewBody": "When a dispute of this type arrives, DisputeDesk will automatically try to gather the items below. Some are pulled from Shopify, some from your store policies, and some you'll need to upload when the dispute lands.",
+    "templatePreviewFooter": "These items are defined by DisputeDesk and apply to every merchant. Contact support if you need a different collection rule.",
+    "templateItemsEmpty": "This template doesn't have any items defined yet.",
+    "requiredBadge": "Required",
+    "optionalBadge": "Optional",
+    "sourceShopifyOrder": "From your Shopify order",
+    "sourceShopifyShipping": "From your Shopify shipping",
+    "sourceStorePolicy": "From your store policies",
+    "sourceMerchantUpload": "You'll upload this at dispute time"
   },
   "analytics": {
     "title": "Reporting",

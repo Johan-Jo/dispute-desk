@@ -454,7 +454,17 @@
     "eventSaveFailed": "Falha ao salvar",
     "eventBuildStarted": "Construção iniciada",
     "eventBuildCompleted": "Construção concluída",
-    "eventManualUpload": "Arquivo enviado"
+    "eventManualUpload": "Arquivo enviado",
+    "templatePreviewTitle": "O que o DisputeDesk vai coletar",
+    "templatePreviewBody": "Quando chegar uma disputa deste tipo, o DisputeDesk tentará reunir automaticamente os itens abaixo. Alguns vêm do Shopify, outros das suas políticas de loja, e alguns você precisará enviar quando a disputa chegar.",
+    "templatePreviewFooter": "Estes itens são definidos pelo DisputeDesk e se aplicam a todos os comerciantes. Entre em contato com o suporte se precisar de uma regra de coleta diferente.",
+    "templateItemsEmpty": "Este modelo ainda não tem itens definidos.",
+    "requiredBadge": "Obrigatório",
+    "optionalBadge": "Opcional",
+    "sourceShopifyOrder": "Do seu pedido Shopify",
+    "sourceShopifyShipping": "Do seu envio Shopify",
+    "sourceStorePolicy": "Das suas políticas de loja",
+    "sourceMerchantUpload": "Você fará upload quando a disputa chegar"
   },
   "analytics": {
     "title": "Reporting",

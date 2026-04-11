@@ -548,7 +548,17 @@
     "eventSaveFailed": "Sparning misslyckades",
     "eventBuildStarted": "Bygge startat",
     "eventBuildCompleted": "Bygge slutfört",
-    "eventManualUpload": "Fil uppladdad"
+    "eventManualUpload": "Fil uppladdad",
+    "templatePreviewTitle": "Vad DisputeDesk kommer att samla in",
+    "templatePreviewBody": "När en tvist av denna typ kommer in kommer DisputeDesk automatiskt att försöka samla in objekten nedan. Vissa hämtas från Shopify, andra från dina butikspolicyer, och några måste du ladda upp när tvisten kommer.",
+    "templatePreviewFooter": "Dessa objekt är definierade av DisputeDesk och gäller för alla handlare. Kontakta supporten om du behöver en annan insamlingsregel.",
+    "templateItemsEmpty": "Den här mallen har inga objekt definierade än.",
+    "requiredBadge": "Obligatorisk",
+    "optionalBadge": "Valfri",
+    "sourceShopifyOrder": "Från din Shopify-beställning",
+    "sourceShopifyShipping": "Från din Shopify-frakt",
+    "sourceStorePolicy": "Från dina butikspolicyer",
+    "sourceMerchantUpload": "Du laddar upp detta när tvisten kommer"
   },
   "analytics": {
     "title": "Reporting",

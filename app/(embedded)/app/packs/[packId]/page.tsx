@@ -62,6 +62,15 @@ interface AuditEvent {
   created_at: string;
 }
 
+interface TemplateItemRow {
+  section_title: string;
+  key: string;
+  label: string;
+  required: boolean;
+  guidance: string | null;
+  item_type: string;
+}
+
 interface PackData {
   id: string;
   shop_id: string;
@@ -89,6 +98,7 @@ interface PackData {
   source?: string | null;
   template_id?: string | null;
   template_name?: string | null;
+  template_items?: TemplateItemRow[];
 }
 
 function statusTone(status: string): "success" | "warning" | "critical" | "info" | undefined {
@@ -109,17 +119,55 @@ function formatDate(iso: string | null): string {
   });
 }
 
-const SUGGESTED_EVIDENCE_KEYS: Record<string, string[]> = {
-  FRAUD: ["packs.suggestedOrderConfirmation", "packs.suggestedTracking", "packs.suggestedBillingShipping", "packs.suggestedCustomerComm", "packs.suggestedStorePolicy", "packs.suggestedFraudScreening", "packs.suggestedMetadata"],
-  FRAUDULENT: ["packs.suggestedOrderConfirmation", "packs.suggestedTracking", "packs.suggestedBillingShipping", "packs.suggestedCustomerComm", "packs.suggestedStorePolicy", "packs.suggestedFraudScreening", "packs.suggestedMetadata"],
-  PNR: ["packs.suggestedOrderConfirmation", "packs.suggestedTracking", "packs.suggestedBillingShipping", "packs.suggestedCustomerComm", "packs.suggestedStorePolicy"],
-  PRODUCT_NOT_RECEIVED: ["packs.suggestedOrderConfirmation", "packs.suggestedTracking", "packs.suggestedBillingShipping", "packs.suggestedCustomerComm", "packs.suggestedStorePolicy"],
-  NOT_AS_DESCRIBED: ["packs.suggestedOrderConfirmation", "packs.suggestedRefundPolicy", "packs.suggestedCustomerComm", "packs.suggestedStorePolicy"],
-  DUPLICATE: ["packs.suggestedOrderConfirmation", "packs.suggestedBillingShipping", "packs.suggestedCustomerComm"],
-  SUBSCRIPTION: ["packs.suggestedOrderConfirmation", "packs.suggestedRefundPolicy", "packs.suggestedCustomerComm"],
-  REFUND: ["packs.suggestedOrderConfirmation", "packs.suggestedRefundPolicy", "packs.suggestedCustomerComm"],
-  GENERAL: ["packs.suggestedOrderConfirmation", "packs.suggestedTracking", "packs.suggestedCustomerComm", "packs.suggestedRefundPolicy", "packs.suggestedStorePolicy"],
-};
+// Best-effort mapping from template item key → where that evidence comes
+// from when the template runs on a real dispute. The collectors in
+// lib/packs/sources/ emit specific field names, but templates may use
+// their own naming, so we pattern-match by keyword. This is a merchant-
+// facing hint, not a contract — merchants shouldn't infer that every
+// `*_tracking` item is actually auto-collected.
+type FieldSource =
+  | "shopify_order"
+  | "shopify_shipping"
+  | "store_policy"
+  | "merchant_upload";
+
+function getFieldSource(key: string): FieldSource {
+  const k = key.toLowerCase();
+  if (k.includes("policy") || k.includes("terms")) return "store_policy";
+  if (
+    k.includes("tracking") ||
+    k.includes("carrier") ||
+    k.includes("delivery") ||
+    k.startsWith("shipping_") ||
+    k.includes("shipping_receipt") ||
+    k.includes("shipping_method")
+  )
+    return "shopify_shipping";
+  if (
+    k.includes("customer_email") ||
+    k.includes("customer_comm") ||
+    k.includes("correspondence") ||
+    k.includes("message") ||
+    k === "customer_account_info" ||
+    k.startsWith("note") ||
+    k.includes("_note")
+  )
+    return "merchant_upload";
+  return "shopify_order";
+}
+
+function getFieldSourceLabel(source: FieldSource, t: (key: string) => string): string {
+  switch (source) {
+    case "shopify_order":
+      return t("packs.sourceShopifyOrder");
+    case "shopify_shipping":
+      return t("packs.sourceShopifyShipping");
+    case "store_policy":
+      return t("packs.sourceStorePolicy");
+    case "merchant_upload":
+      return t("packs.sourceMerchantUpload");
+  }
+}
 
 const EVENT_TYPE_KEYS: Record<string, string> = {
   pack_created: "packs.eventPackCreated",
@@ -311,8 +359,6 @@ export default function PackPreviewPage() {
   const disputeTypeLabel = pack.dispute_type
     ? (t(`packs.disputeTypeLabel.${disputeTypeKey}`) as string) || pack.dispute_type.replace(/_/g, " ")
     : "—";
-  const suggestedKeys = SUGGESTED_EVIDENCE_KEYS[disputeTypeKey] ?? SUGGESTED_EVIDENCE_KEYS.GENERAL;
-  const suggestedLabels = suggestedKeys.map((key) => t(key));
   const stateKey = getPackStateKey(pack, isLibraryPack);
   const phaseLabel =
     pack.dispute_phase === "inquiry"
@@ -397,7 +443,19 @@ export default function PackPreviewPage() {
 
   const checklistItems = pack.checklist?.length
     ? pack.checklist.map((c) => ({ label: c.label, present: c.present }))
-    : suggestedLabels.map((label) => ({ label, present: false }));
+    : [];
+
+  // Group template items by their parent section for the library-pack preview.
+  const templateItemsBySection = (() => {
+    const groups = new Map<string, TemplateItemRow[]>();
+    for (const item of pack.template_items ?? []) {
+      const key = item.section_title ?? "";
+      const list = groups.get(key);
+      if (list) list.push(item);
+      else groups.set(key, [item]);
+    }
+    return Array.from(groups.entries()).map(([title, items]) => ({ title, items }));
+  })();
 
   return (
     <Page
@@ -520,53 +578,120 @@ export default function PackPreviewPage() {
         {/* 2. Work card */}
         <Layout.Section>
           <div ref={workCardRef}>
-            <Card>
-              <BlockStack gap="500">
-                {/* Evidence needed */}
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    {t("packs.evidenceNeededTitle")}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {isLibraryPack
-                      ? t("packs.recommendedForTemplateDescription")
-                      : t("packs.recommendedForDisputeDescription")}
-                  </Text>
+            {isLibraryPack ? (
+              /* Library-pack preview: read-only template definition. No upload, no save, no readiness. */
+              <Card>
+                <BlockStack gap="400">
                   <BlockStack gap="100">
-                    {checklistItems.map((item, idx) => (
-                      <InlineStack key={idx} gap="200" blockAlign="center">
-                        <Icon
-                          source={item.present ? CheckCircleIcon : XCircleIcon}
-                          tone={item.present ? "success" : "subdued"}
-                        />
-                        <Text as="p" variant="bodyMd">{item.label}</Text>
-                      </InlineStack>
-                    ))}
+                    <Text as="h3" variant="headingMd">
+                      {t("packs.templatePreviewTitle")}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("packs.templatePreviewBody")}
+                    </Text>
                   </BlockStack>
-                </BlockStack>
 
-                <Divider />
+                  {templateItemsBySection.length === 0 ? (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      {t("packs.templateItemsEmpty")}
+                    </Text>
+                  ) : (
+                    <BlockStack gap="500">
+                      {templateItemsBySection.map((group) => (
+                        <BlockStack key={group.title} gap="200">
+                          <Text as="h4" variant="headingSm">
+                            {group.title}
+                          </Text>
+                          <BlockStack gap="300">
+                            {group.items.map((item) => {
+                              const source = getFieldSource(item.key);
+                              return (
+                                <BlockStack key={`${group.title}-${item.key}`} gap="100">
+                                  <InlineStack gap="200" blockAlign="center" wrap>
+                                    <Text as="span" variant="bodyMd" fontWeight="semibold">
+                                      {item.label}
+                                    </Text>
+                                    <Badge tone={item.required ? "attention" : undefined}>
+                                      {item.required
+                                        ? t("packs.requiredBadge")
+                                        : t("packs.optionalBadge")}
+                                    </Badge>
+                                    <Badge
+                                      tone={
+                                        source === "merchant_upload" ? "warning" : "info"
+                                      }
+                                    >
+                                      {getFieldSourceLabel(source, t)}
+                                    </Badge>
+                                  </InlineStack>
+                                  {item.guidance && (
+                                    <Text as="p" variant="bodySm" tone="subdued">
+                                      {item.guidance}
+                                    </Text>
+                                  )}
+                                </BlockStack>
+                              );
+                            })}
+                          </BlockStack>
+                        </BlockStack>
+                      ))}
+                    </BlockStack>
+                  )}
 
-                {/* Upload */}
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    {t("packs.uploadSectionTitle")}
+                  <Divider />
+
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("packs.templatePreviewFooter")}
                   </Text>
-                  <DropZone
-                    onDrop={handleUpload}
-                    allowMultiple
-                    accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
-                  >
-                    {uploading ? (
-                      <DropZone.FileUpload actionHint={t("packs.uploading")} />
-                    ) : (
-                      <DropZone.FileUpload actionHint={t("packs.clickToUpload")} />
-                    )}
-                  </DropZone>
                 </BlockStack>
+              </Card>
+            ) : (
+              /* Dispute pack: full work card with checklist, upload, and collected evidence. */
+              <Card>
+                <BlockStack gap="500">
+                  {/* Evidence needed */}
+                  <BlockStack gap="200">
+                    <Text as="h3" variant="headingMd">
+                      {t("packs.evidenceNeededTitle")}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("packs.recommendedForDisputeDescription")}
+                    </Text>
+                    <BlockStack gap="100">
+                      {checklistItems.map((item, idx) => (
+                        <InlineStack key={idx} gap="200" blockAlign="center">
+                          <Icon
+                            source={item.present ? CheckCircleIcon : XCircleIcon}
+                            tone={item.present ? "success" : "subdued"}
+                          />
+                          <Text as="p" variant="bodyMd">{item.label}</Text>
+                        </InlineStack>
+                      ))}
+                    </BlockStack>
+                  </BlockStack>
 
-                {/* Collected evidence */}
-                {pack.evidence_items.length > 0 && (
+                  <Divider />
+
+                  {/* Upload */}
+                  <BlockStack gap="200">
+                    <Text as="h3" variant="headingMd">
+                      {t("packs.uploadSectionTitle")}
+                    </Text>
+                    <DropZone
+                      onDrop={handleUpload}
+                      allowMultiple
+                      accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
+                    >
+                      {uploading ? (
+                        <DropZone.FileUpload actionHint={t("packs.uploading")} />
+                      ) : (
+                        <DropZone.FileUpload actionHint={t("packs.clickToUpload")} />
+                      )}
+                    </DropZone>
+                  </BlockStack>
+
+                  {/* Collected evidence */}
+                  {pack.evidence_items.length > 0 && (
                   <>
                     <Divider />
                     <BlockStack gap="200">
@@ -647,8 +772,9 @@ export default function PackPreviewPage() {
                     </BlockStack>
                   </>
                 )}
-              </BlockStack>
-            </Card>
+                </BlockStack>
+              </Card>
+            )}
           </div>
         </Layout.Section>
 

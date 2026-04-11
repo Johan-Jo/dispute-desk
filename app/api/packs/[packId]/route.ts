@@ -2,6 +2,54 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPackById, deletePack, updatePackStatus } from "@/lib/db/packs";
 
+interface TemplateItemRow {
+  section_title: string;
+  key: string;
+  label: string;
+  required: boolean;
+  guidance: string | null;
+  item_type: string;
+}
+
+async function fetchTemplateItems(
+  db: ReturnType<typeof getServiceClient>,
+  packId: string,
+): Promise<TemplateItemRow[]> {
+  const { data: sections } = await db
+    .from("pack_sections")
+    .select(
+      "id, title, sort, pack_section_items(id, item_type, key, label, required, guidance, sort)",
+    )
+    .eq("pack_id", packId)
+    .order("sort", { ascending: true });
+
+  const items: TemplateItemRow[] = [];
+  for (const sec of sections ?? []) {
+    const rawItems = (
+      sec as { pack_section_items?: Array<{
+        item_type: string;
+        key: string;
+        label: string;
+        required: boolean;
+        guidance: string | null;
+        sort: number;
+      }> }
+    ).pack_section_items ?? [];
+    const sorted = [...rawItems].sort((a, b) => a.sort - b.sort);
+    for (const it of sorted) {
+      items.push({
+        section_title: (sec as { title: string }).title,
+        key: it.key,
+        label: it.label,
+        required: it.required,
+        guidance: it.guidance,
+        item_type: it.item_type,
+      });
+    }
+  }
+  return items;
+}
+
 /**
  * GET /api/packs/:packId
  *
@@ -35,6 +83,8 @@ export async function GET(
     const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
 
     // Library packs (dispute_id null): merge name, dispute_type, source, template_id, template_name from packs
+    // and load template items (sections + items copied from the template on install) so the
+    // embedded UI can render a real read-only preview instead of a hardcoded fallback list.
     if (pack.dispute_id == null) {
       const { data: libraryRow } = await db
         .from("packs")
@@ -56,6 +106,7 @@ export async function GET(
           (pack as Record<string, unknown>).template_name = i18nRow?.name ?? null;
         }
       }
+      (pack as Record<string, unknown>).template_items = await fetchTemplateItems(db, packId);
     }
 
     const [itemsRes, auditRes, buildJobRes, pdfJobRes] = await Promise.all([
@@ -121,6 +172,8 @@ export async function GET(
     template_name = i18nRow?.name ?? null;
   }
 
+  const fallbackTemplateItems = await fetchTemplateItems(db, packId);
+
   return NextResponse.json({
     ...rest,
     template_id: template_id ?? null,
@@ -141,6 +194,7 @@ export async function GET(
     audit_events: [],
     active_build_job: null,
     active_pdf_job: null,
+    template_items: fallbackTemplateItems,
   });
 }
 
