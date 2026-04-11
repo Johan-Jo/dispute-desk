@@ -18,7 +18,6 @@ import {
   Badge,
   BlockStack,
   InlineStack,
-  Banner,
   Button,
   Spinner,
   Divider,
@@ -74,7 +73,6 @@ function automationModeLabel(mode: AutomationMode, tc: (key: string) => string):
 }
 
 export default function CoveragePage() {
-  const t = useTranslations();
   const tc = useTranslations("coverage");
   const searchParams = useSearchParams();
   const [coverage, setCoverage] = useState<LifecycleCoverageSummary | null>(null);
@@ -118,35 +116,70 @@ export default function CoveragePage() {
 
   const c = coverage!;
 
+  // Priority gap = first family with any gap, in DISPUTE_FAMILIES order.
+  // If the priority family has no playbooks at all, the first step is installing one.
+  const priorityGap = c.families.find((f) => !f.overallCovered) ?? null;
+  const priorityNeedsPlaybook =
+    priorityGap !== null &&
+    priorityGap.inquiry.playbooks.length === 0 &&
+    priorityGap.chargeback.playbooks.length === 0;
+
+  const primaryActionContent = priorityGap
+    ? tc("primaryFixGap", {
+        family: tc(priorityGap.labelKey.replace("coverage.", "")),
+      })
+    : tc("primaryReviewRules");
+  const primaryActionUrl = withShopParams(
+    priorityNeedsPlaybook ? "/app/packs" : "/app/rules",
+    searchParams,
+  );
+
+  const stateText =
+    c.gapsCount === 0
+      ? tc("stateAllSetup", { total: c.totalFamilies })
+      : c.fullyConfiguredCount === 0
+        ? tc("stateNoSetup")
+        : tc("stateWithGaps", {
+            covered: c.fullyConfiguredCount,
+            total: c.totalFamilies,
+            gaps: c.gapsCount,
+          });
+
   return (
     <Page
       title={tc("title")}
-      subtitle={tc("lifecycleSubtitle")}
+      subtitle={tc("coveragePurpose")}
       primaryAction={{
-        content: t("nav.automation"),
-        url: withShopParams("/app/rules", searchParams),
+        content: primaryActionContent,
+        url: primaryActionUrl,
       }}
       secondaryActions={[
-        { content: t("nav.playbooks"), url: withShopParams("/app/packs", searchParams) },
+        {
+          content: tc("primaryBrowsePlaybooks"),
+          url: withShopParams("/app/packs", searchParams),
+        },
       ]}
     >
       <Layout>
-        {/* Summary Banner */}
+        {/* Current state — plain language */}
         <Layout.Section>
-          <Banner tone={c.gapsCount === 0 ? "success" : "warning"}>
-            <InlineStack gap="200" wrap>
-              <Text as="span" variant="bodyMd" fontWeight="semibold">
-                {tc("fullyConfigured", { count: c.fullyConfiguredCount })}
-                {" / "}
-                {c.totalFamilies}
+          <Card>
+            <BlockStack gap="200">
+              <Text as="p" variant="bodyLg" fontWeight="semibold">
+                {stateText}
               </Text>
-              <Badge tone="info">{tc("inquiryConfigured", { count: c.inquiryConfiguredCount })}</Badge>
-              <Badge tone="warning">{tc("chargebackConfigured", { count: c.chargebackConfiguredCount })}</Badge>
-              {c.gapsCount > 0 && (
-                <Badge tone="critical">{tc("gapsFound", { count: c.gapsCount })}</Badge>
-              )}
-            </InlineStack>
-          </Banner>
+              <InlineStack gap="200" wrap>
+                <Badge tone={c.gapsCount === 0 ? "success" : undefined}>
+                  {tc("fullyConfigured", { count: c.fullyConfiguredCount })}
+                </Badge>
+                {c.gapsCount > 0 && (
+                  <Badge tone="attention">
+                    {tc("gapsFound", { count: c.gapsCount })}
+                  </Badge>
+                )}
+              </InlineStack>
+            </BlockStack>
+          </Card>
         </Layout.Section>
 
         {/* Family Cards */}

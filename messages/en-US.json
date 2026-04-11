@@ -2606,6 +2606,12 @@
     "improveCoverage": "Improve Coverage",
     "activePacks": "{count} active playbook(s)",
     "noPlaybook": "No playbook installed",
-    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family"
+    "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family",
+    "stateAllSetup": "DisputeDesk is set up for all {total} dispute types. New disputes will be handled automatically using your rules and playbooks.",
+    "stateWithGaps": "DisputeDesk is fully set up for {covered} of {total} dispute types. {gaps} still need a rule or playbook before new disputes can be handled.",
+    "stateNoSetup": "DisputeDesk isn't set up yet. New disputes will need manual handling until you add rules and playbooks.",
+    "primaryFixGap": "Set up {family}",
+    "primaryBrowsePlaybooks": "Browse playbooks",
+    "primaryReviewRules": "Review automation rules"
   }
 }

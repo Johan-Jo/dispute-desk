@@ -1741,7 +1741,13 @@
     "statusNotCovered": "Not Covered",
     "priorityGap": "Highest priority: {family} needs {phase} handling configured",
     "configureInquiry": "Configure Inquiry Handling",
-    "configureChargeback": "Configure Chargeback Handling"
+    "configureChargeback": "Configure Chargeback Handling",
+    "stateAllSetup": "DisputeDesk is set up for all {total} dispute types. New disputes will be handled automatically using your rules and playbooks.",
+    "stateWithGaps": "DisputeDesk is fully set up for {covered} of {total} dispute types. {gaps} still need a rule or playbook before new disputes can be handled.",
+    "stateNoSetup": "DisputeDesk isn't set up yet. New disputes will need manual handling until you add rules and playbooks.",
+    "primaryFixGap": "Set up {family}",
+    "primaryBrowsePlaybooks": "Browse playbooks",
+    "primaryReviewRules": "Review automation rules"
   },
   "templateLibrary": {
     "title": "Template Library",
@@ -1847,7 +1853,18 @@
     "stepsLocked": "Complete store connection to unlock remaining steps",
     "done": "Done",
     "edit": "Edit",
-    "complete": "Complete",
+    "complete": {
+      "title": "You're All Set!",
+      "subtitle": "DisputeDesk is configured and ready to protect your store.",
+      "readyHeading": "What's been set up",
+      "highlight1": "Auto-sync disputes from Shopify",
+      "highlight2": "Coverage configured for your dispute types",
+      "highlight3": "Playbooks installed for evidence collection",
+      "highlight4": "Automation rules ready to handle disputes",
+      "infoTitle": "What happens next?",
+      "infoDesc": "DisputeDesk will now monitor your store for new disputes and handle them according to your coverage and automation settings. You can adjust everything from the dashboard at any time.",
+      "goToDashboard": "Go to Dashboard"
+    },
     "undoSkip": "Undo skip",
     "back": "← Back",
     "saveAndContinue": "Save & Continue →",
@@ -2166,18 +2183,6 @@
       "readyTitle": "Your recommended dispute coverage is ready",
       "readyDesc": "Activate protection to begin routing new disputes with these settings.",
       "loading": "Loading configuration..."
-    },
-    "complete": {
-      "title": "You're All Set!",
-      "subtitle": "DisputeDesk is configured and ready to protect your store.",
-      "readyHeading": "What's been set up",
-      "highlight1": "Auto-sync disputes from Shopify",
-      "highlight2": "Coverage configured for your dispute types",
-      "highlight3": "Playbooks installed for evidence collection",
-      "highlight4": "Automation rules ready to handle disputes",
-      "infoTitle": "What happens next?",
-      "infoDesc": "DisputeDesk will now monitor your store for new disputes and handle them according to your coverage and automation settings. You can adjust everything from the dashboard at any time.",
-      "goToDashboard": "Go to Dashboard"
     }
   }
 }

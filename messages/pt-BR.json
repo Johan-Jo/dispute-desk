@@ -2731,6 +2731,12 @@
     "statusNotCovered": "Não coberto",
     "priorityGap": "Prioridade: {family} precisa de tratamento de {phase} configurado",
     "configureInquiry": "Configurar tratamento de consultas",
-    "configureChargeback": "Configurar tratamento de chargebacks"
+    "configureChargeback": "Configurar tratamento de chargebacks",
+    "stateAllSetup": "O DisputeDesk está configurado para todos os {total} tipos de disputa. Novas disputas serão tratadas automaticamente com suas regras e playbooks.",
+    "stateWithGaps": "O DisputeDesk está totalmente configurado para {covered} de {total} tipos de disputa. {gaps} ainda precisam de uma regra ou playbook.",
+    "stateNoSetup": "O DisputeDesk ainda não está configurado. Novas disputas exigirão tratamento manual até você adicionar regras e playbooks.",
+    "primaryFixGap": "Configurar {family}",
+    "primaryBrowsePlaybooks": "Explorar playbooks",
+    "primaryReviewRules": "Revisar regras de automação"
   }
 }

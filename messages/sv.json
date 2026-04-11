@@ -1866,6 +1866,12 @@
     "statusNotCovered": "Ej täckt",
     "priorityGap": "Högsta prioritet: {family} behöver {phase}-hantering konfigurerad",
     "configureInquiry": "Konfigurera hantering av förfrågningar",
-    "configureChargeback": "Konfigurera chargebackhantering"
+    "configureChargeback": "Konfigurera chargebackhantering",
+    "stateAllSetup": "DisputeDesk är inställt för alla {total} tvistetyper. Nya tvister hanteras automatiskt med dina regler och playbooks.",
+    "stateWithGaps": "DisputeDesk är fullt inställt för {covered} av {total} tvistetyper. {gaps} behöver fortfarande en regel eller en playbook.",
+    "stateNoSetup": "DisputeDesk är inte inställt än. Nya tvister måste hanteras manuellt tills du lägger till regler och playbooks.",
+    "primaryFixGap": "Ställ in {family}",
+    "primaryBrowsePlaybooks": "Bläddra bland playbooks",
+    "primaryReviewRules": "Granska automatiseringsregler"
   }
 }
