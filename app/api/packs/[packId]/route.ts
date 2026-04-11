@@ -11,10 +11,94 @@ interface TemplateItemRow {
   item_type: string;
 }
 
+/**
+ * Library pack template items, localized when possible.
+ *
+ * When a library pack was installed from a template we read directly
+ * from `pack_template_sections` + `pack_template_items` (the global
+ * catalog), joining the per-locale `pack_template_section_i18n` and
+ * `pack_template_item_i18n` override tables. Strings fall back to
+ * `*_default` when the requested locale has no row.
+ *
+ * When the pack has no template_id (legacy / hand-rolled library
+ * pack) we still fall back to the merchant's copied `pack_sections`
+ * / `pack_section_items` rows, which are English-only.
+ */
 async function fetchTemplateItems(
   db: ReturnType<typeof getServiceClient>,
   packId: string,
+  templateId: string | null,
+  locale: string,
 ): Promise<TemplateItemRow[]> {
+  if (templateId) {
+    const { data: sections } = await db
+      .from("pack_template_sections")
+      .select(
+        `id,
+         title_default,
+         sort,
+         pack_template_section_i18n!pack_template_section_i18n_template_section_id_fkey(locale, title),
+         pack_template_items(
+           id,
+           item_type,
+           key,
+           label_default,
+           required,
+           guidance_default,
+           sort,
+           pack_template_item_i18n!pack_template_item_i18n_template_item_id_fkey(locale, label, guidance)
+         )`,
+      )
+      .eq("template_id", templateId)
+      .order("sort", { ascending: true });
+
+    const items: TemplateItemRow[] = [];
+    for (const sec of sections ?? []) {
+      const secAny = sec as {
+        title_default: string;
+        pack_template_section_i18n?: Array<{ locale: string; title: string }>;
+        pack_template_items?: Array<{
+          item_type: string;
+          key: string;
+          label_default: string;
+          required: boolean;
+          guidance_default: string | null;
+          sort: number;
+          pack_template_item_i18n?: Array<{
+            locale: string;
+            label: string;
+            guidance: string | null;
+          }>;
+        }>;
+      };
+      const secLocale = secAny.pack_template_section_i18n?.find(
+        (r) => r.locale === locale,
+      );
+      const sectionTitle = secLocale?.title ?? secAny.title_default;
+
+      const rawItems = secAny.pack_template_items ?? [];
+      const sorted = [...rawItems].sort((a, b) => a.sort - b.sort);
+      for (const it of sorted) {
+        const itLocale = it.pack_template_item_i18n?.find(
+          (r) => r.locale === locale,
+        );
+        items.push({
+          section_title: sectionTitle,
+          key: it.key,
+          label: itLocale?.label ?? it.label_default,
+          required: it.required,
+          guidance: itLocale?.guidance ?? it.guidance_default,
+          item_type: it.item_type,
+        });
+      }
+    }
+    return items;
+  }
+
+  // Fallback: legacy / hand-rolled library pack without a template link.
+  // Uses the merchant's copied pack_sections/pack_section_items, which
+  // don't have localization support — text stays in whatever language
+  // was copied at install time.
   const { data: sections } = await db
     .from("pack_sections")
     .select(
@@ -50,6 +134,24 @@ async function fetchTemplateItems(
   return items;
 }
 
+async function resolveTemplateName(
+  db: ReturnType<typeof getServiceClient>,
+  templateId: string,
+  locale: string,
+): Promise<string | null> {
+  // Try the requested locale first, then en-US, then any row.
+  const { data: rows } = await db
+    .from("pack_template_i18n")
+    .select("name, locale")
+    .eq("template_id", templateId);
+  const list = rows ?? [];
+  const exact = list.find((r) => r.locale === locale);
+  if (exact) return exact.name;
+  const english = list.find((r) => r.locale === "en-US");
+  if (english) return english.name;
+  return list[0]?.name ?? null;
+}
+
 /**
  * GET /api/packs/:packId
  *
@@ -58,11 +160,12 @@ async function fetchTemplateItems(
  * to the packs table and returns a compatible shape with empty evidence/jobs.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
   const db = getServiceClient();
+  const locale = req?.nextUrl?.searchParams?.get("locale") ?? "en-US";
 
   const { data: row, error } = await db
     .from("evidence_packs")
@@ -85,6 +188,7 @@ export async function GET(
     // Library packs (dispute_id null): merge name, dispute_type, source, template_id, template_name from packs
     // and load template items (sections + items copied from the template on install) so the
     // embedded UI can render a real read-only preview instead of a hardcoded fallback list.
+    let libraryTemplateId: string | null = null;
     if (pack.dispute_id == null) {
       const { data: libraryRow } = await db
         .from("packs")
@@ -96,17 +200,21 @@ export async function GET(
         (pack as Record<string, unknown>).dispute_type = libraryRow.dispute_type;
         (pack as Record<string, unknown>).source = libraryRow.source;
         (pack as Record<string, unknown>).template_id = libraryRow.template_id;
+        libraryTemplateId = libraryRow.template_id ?? null;
         if (libraryRow.template_id) {
-          const { data: i18nRow } = await db
-            .from("pack_template_i18n")
-            .select("name")
-            .eq("template_id", libraryRow.template_id)
-            .eq("locale", "en-US")
-            .maybeSingle();
-          (pack as Record<string, unknown>).template_name = i18nRow?.name ?? null;
+          (pack as Record<string, unknown>).template_name = await resolveTemplateName(
+            db,
+            libraryRow.template_id,
+            locale,
+          );
         }
       }
-      (pack as Record<string, unknown>).template_items = await fetchTemplateItems(db, packId);
+      (pack as Record<string, unknown>).template_items = await fetchTemplateItems(
+        db,
+        packId,
+        libraryTemplateId,
+        locale,
+      );
     }
 
     const [itemsRes, auditRes, buildJobRes, pdfJobRes] = await Promise.all([
@@ -163,16 +271,15 @@ export async function GET(
   const { shop_domain, template_id, ...rest } = libraryPack as typeof libraryPack & { template_id?: string | null };
   let template_name: string | null = null;
   if (template_id) {
-    const { data: i18nRow } = await db
-      .from("pack_template_i18n")
-      .select("name")
-      .eq("template_id", template_id)
-      .eq("locale", "en-US")
-      .maybeSingle();
-    template_name = i18nRow?.name ?? null;
+    template_name = await resolveTemplateName(db, template_id, locale);
   }
 
-  const fallbackTemplateItems = await fetchTemplateItems(db, packId);
+  const fallbackTemplateItems = await fetchTemplateItems(
+    db,
+    packId,
+    template_id ?? null,
+    locale,
+  );
 
   return NextResponse.json({
     ...rest,

@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Page,
   Layout,
@@ -214,6 +214,7 @@ export default function PackPreviewPage() {
   const { packId } = useParams<{ packId: string }>();
   const searchParams = useSearchParams();
   const t = useTranslations();
+  const locale = useLocale();
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -228,7 +229,9 @@ export default function PackPreviewPage() {
   const workCardRef = useRef<HTMLDivElement | null>(null);
 
   const fetchPack = useCallback(async () => {
-    const res = await fetch(`/api/packs/${packId}`);
+    const res = await fetch(
+      `/api/packs/${packId}?locale=${encodeURIComponent(locale)}`,
+    );
     if (res.ok) {
       const data = await res.json();
       setPack(data);
@@ -239,7 +242,7 @@ export default function PackPreviewPage() {
       if (!isActive && pollRef.current) clearInterval(pollRef.current);
     }
     setLoading(false);
-  }, [packId]);
+  }, [packId, locale]);
 
   useEffect(() => {
     fetchPack();
