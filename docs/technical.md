@@ -1171,7 +1171,7 @@ Single source of truth for all locale data. Exports:
 
 ### Overview
 
-A 5-step guided setup wizard helps merchants configure DisputeDesk after
+A 6-step guided setup wizard helps merchants configure DisputeDesk after
 installation. Progress is tracked per-shop in the `shop_setup` table and surfaced on the
 dashboard via a Setup Checklist card with a ring progress indicator.
 
@@ -1182,7 +1182,7 @@ dashboard via a Setup Checklist card with a ring progress indicator.
 Route: `/app/setup` (`app/(embedded)/app/setup/page.tsx`). Shown to new installs before entering the wizard steps. Displays:
 - Hero with shield icon and "Welcome to DisputeDesk" heading
 - Three benefit cards (Automated Response, Higher Win Rates, Save Time)
-- "What to expect in setup" checklist (5 numbered items)
+- "What to expect in setup" checklist (6 numbered items)
 - "Get Started" CTA → navigates to `/app/setup/connection`
 - "Skip setup" link → returns to dashboard
 
@@ -1196,11 +1196,12 @@ The dashboard redirects here when `connection` step is `todo` (fresh install). i
 | 2 | `store_profile` | Store Profile | — |
 | 3 | `coverage` | Coverage | — |
 | 4 | `automation` | Automation | — |
-| 5 | `activate` | Activate | — |
+| 5 | `policies` | Policies | — |
+| 6 | `activate` | Activate | — |
 
-All 5 steps are shown in both `WIZARD_STEP_IDS` and `WIZARD_STEPPER_IDS` (no separate welcome/pre-steps).
+All 6 steps are shown in both `WIZARD_STEP_IDS` and `WIZARD_STEPPER_IDS` (no separate welcome/pre-steps).
 
-Legacy step ids (`permissions`, `open_in_admin`, `overview`, `welcome_goals`, `disputes`, `sync_disputes`, `packs`, `evidence_sources`, `policies`, `business_policies`, `rules`, `automation_rules`, `team`, `team_notifications`) are migrated to the new 5-step ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
+Legacy step ids (`permissions`, `open_in_admin`, `overview`, `welcome_goals`, `disputes`, `sync_disputes`, `packs`, `evidence_sources`, `business_policies`, `rules`, `automation_rules`, `team`, `team_notifications`) are migrated to the new 6-step ids when reading `shop_setup.steps` (see `LEGACY_STEP_ID_MAP` in `lib/setup/constants.ts`).
 
 ### Step 1: Connection (`ConnectionStep`)
 
@@ -1280,7 +1281,13 @@ Payload (including `shopifyEvidenceConfig`) is saved to `shop_setup.steps.store_
 - `medium` → fraud/PNR packs to "auto", others to "manual"
 - `low` → all packs default to "manual"
 
-### Step 5: Activate (`ActivateStep`)
+### Step 5: Policies (`BusinessPoliciesStep`)
+
+**Purpose:** Let merchants set up their shipping, refund, terms, and privacy policies so they get included in every evidence pack.
+
+**Implementation:** `components/setup/steps/BusinessPoliciesStep.tsx`. Three flows — use your own policies (URL or upload), use suggested templates, or mix and match. Selections persist via `POST /api/policies/apply` + `POST /api/setup/step`. Same component also powers the standalone `/app/policies` page so there is one source of truth for policy management.
+
+### Step 6: Activate (`ActivateStep`)
 
 **Purpose:** Review configuration summary and activate protection.
 
@@ -1299,7 +1306,7 @@ Per-shop state persisted in `shop_setup` table:
 - Step statuses: `todo | in_progress | done | skipped`.
 - Each step has an optional `payload` (JSON) and `skipped_reason`.
 - "Save & Continue" marks done. "Skip for now" marks skipped with reason. "Undo skip" resets to todo.
-- No hard prerequisite gating between the 5 steps — all steps have empty `prerequisites` arrays.
+- No hard prerequisite gating between the 6 steps — all steps have empty `prerequisites` arrays.
 
 ### Embedded Navigation
 
@@ -1325,7 +1332,8 @@ All wizard links preserve `shop` and `host` query parameters via
 | StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style, Shopify evidence config |
 | CoverageStep | `components/setup/steps/CoverageStep.tsx` | Step 3: evidence summary + template recommendations + install |
 | AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Step 4: per-pack manual/auto toggle with evidence-aware defaults |
-| ActivateStep | `components/setup/steps/ActivateStep.tsx` | Step 5: config summary + bulk pack activation |
+| BusinessPoliciesStep | `components/setup/steps/BusinessPoliciesStep.tsx` | Step 5: shipping/refund/terms/privacy policy setup (own / template / mixed flows) |
+| ActivateStep | `components/setup/steps/ActivateStep.tsx` | Step 6: config summary + bulk pack activation |
 
 ### Shared Utilities
 
@@ -1339,7 +1347,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
 | withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |
 
-### Business Policies (`BusinessPoliciesStep`) — formerly Step 7
+### Business Policies (`BusinessPoliciesStep`) — implementation notes
 
 **Current state (as of 2026-03-18):** The step implements a 3-flow selection UX
 (own policies / use templates / mix & match). It is functional, i18n-complete

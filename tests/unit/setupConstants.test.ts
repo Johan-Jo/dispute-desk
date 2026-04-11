@@ -10,9 +10,9 @@ import {
 import type { StepId } from "@/lib/setup/types";
 
 describe("SETUP_STEPS constants", () => {
-  it("has exactly 5 onboarding steps", () => {
-    expect(SETUP_STEPS).toHaveLength(5);
-    expect(TOTAL_STEPS).toBe(5);
+  it("has exactly 6 onboarding steps", () => {
+    expect(SETUP_STEPS).toHaveLength(6);
+    expect(TOTAL_STEPS).toBe(6);
   });
 
   it("STEP_IDS matches SETUP_STEPS order", () => {
@@ -21,6 +21,7 @@ describe("SETUP_STEPS constants", () => {
       "store_profile",
       "coverage",
       "automation",
+      "policies",
       "activate",
     ]);
   });

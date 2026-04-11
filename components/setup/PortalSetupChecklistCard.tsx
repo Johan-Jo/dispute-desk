@@ -83,6 +83,7 @@ const STEP_ROUTES: Record<StepId, string> = {
   store_profile: "/portal/setup/store_profile",
   coverage: "/portal/setup/coverage",
   automation: "/portal/setup/automation",
+  policies: "/portal/setup/policies",
   activate: "/portal/setup/activate",
 };
 

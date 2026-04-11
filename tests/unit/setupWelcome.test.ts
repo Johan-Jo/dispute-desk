@@ -2,22 +2,23 @@ import { describe, it, expect } from "vitest";
 import { WIZARD_STEP_IDS, WIZARD_STEPPER_IDS, SETUP_STEPS, STEP_BY_ID } from "@/lib/setup/constants";
 
 describe("Setup welcome page and wizard structure", () => {
-  it("has exactly 5 wizard steps", () => {
-    expect(WIZARD_STEP_IDS).toHaveLength(5);
-    expect(WIZARD_STEPPER_IDS).toHaveLength(5);
-    expect(SETUP_STEPS).toHaveLength(5);
+  it("has exactly 6 wizard steps", () => {
+    expect(WIZARD_STEP_IDS).toHaveLength(6);
+    expect(WIZARD_STEPPER_IDS).toHaveLength(6);
+    expect(SETUP_STEPS).toHaveLength(6);
   });
 
   it("wizard and stepper IDs are identical", () => {
     expect(WIZARD_STEP_IDS).toEqual(WIZARD_STEPPER_IDS);
   });
 
-  it("step order is connection → store_profile → coverage → automation → activate", () => {
+  it("step order is connection → store_profile → coverage → automation → policies → activate", () => {
     expect(WIZARD_STEP_IDS).toEqual([
       "connection",
       "store_profile",
       "coverage",
       "automation",
+      "policies",
       "activate",
     ]);
   });

@@ -14,6 +14,7 @@ export type StepId =
   | "store_profile"
   | "coverage"
   | "automation"
+  | "policies"
   | "activate";
 
 export type StepsMap = Partial<Record<StepId, StepState>>;

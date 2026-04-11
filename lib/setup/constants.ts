@@ -10,7 +10,7 @@ export interface StepDefinition {
   unlocks: string[];
 }
 
-/** Wizard steps: Connection → Store Profile → Coverage → Automation → Activate. */
+/** Wizard steps: Connection → Store Profile → Coverage → Automation → Policies → Activate. */
 export const SETUP_STEPS: StepDefinition[] = [
   {
     id: "connection",
@@ -65,8 +65,21 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "activate",
+    id: "policies",
     index: 4,
+    title: "Policies",
+    dashboardLabel: "Business policies",
+    timeEstimate: "2 min",
+    prerequisites: [],
+    unlocks: [
+      "Shipping, refund, and terms policies in every pack",
+      "Stronger evidence for chargeback responses",
+      "Template or upload — your choice",
+    ],
+  },
+  {
+    id: "activate",
+    index: 5,
     title: "Activate",
     dashboardLabel: "Activate protection",
     timeEstimate: "1 min",
@@ -87,11 +100,11 @@ export const STEP_BY_ID = Object.fromEntries(
 
 export const TOTAL_STEPS = SETUP_STEPS.length;
 
-/** All 5 steps are shown in the wizard flow (no separate welcome/pre-steps). */
-export const WIZARD_STEP_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "activate"];
+/** All 6 steps are shown in the wizard flow (no separate welcome/pre-steps). */
+export const WIZARD_STEP_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "policies", "activate"];
 
-/** All 5 steps shown in the wizard top stepper bar. */
-export const WIZARD_STEPPER_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "activate"];
+/** All 6 steps shown in the wizard top stepper bar. */
+export const WIZARD_STEPPER_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "policies", "activate"];
 
 export const TOTAL_WIZARD_STEPS = WIZARD_STEP_IDS.length;
 
@@ -106,8 +119,7 @@ export const LEGACY_STEP_ID_MAP: Record<string, StepId> = {
   sync_disputes: "coverage",
   packs: "coverage",
   evidence_sources: "coverage",
-  policies: "store_profile",
-  business_policies: "store_profile",
+  business_policies: "policies",
   rules: "automation",
   automation_rules: "automation",
   team: "activate",

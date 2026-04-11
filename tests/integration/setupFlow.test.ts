@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 5 steps as todo, nextStepId = connection", async () => {
+    it("fresh setup has all 6 steps as todo, nextStepId = connection", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -56,7 +56,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.progress.doneCount).toBe(0);
-      expect(body.progress.total).toBe(5);
+      expect(body.progress.total).toBe(6);
       expect(body.nextStepId).toBe("connection");
       expect(body.allDone).toBe(false);
 
@@ -131,7 +131,7 @@ describe("Setup flow: end-to-end progression", () => {
       expect(state.nextStepId).toBe("coverage");
     });
 
-    it("completing all 5 steps results in allDone", async () => {
+    it("completing all 6 steps results in allDone", async () => {
       const allDoneSteps: Record<string, StepState> = {};
       for (const id of STEP_IDS) {
         allDoneSteps[id] = { status: "done", completed_at: new Date().toISOString() };
@@ -148,7 +148,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.allDone).toBe(true);
-      expect(body.progress.doneCount).toBe(5);
+      expect(body.progress.doneCount).toBe(6);
       expect(body.nextStepId).toBeNull();
     });
   });
@@ -162,7 +162,7 @@ describe("Setup flow: end-to-end progression", () => {
           permissions: { status: "done", completed_at: "2026-01-01" },
           overview: { status: "done", completed_at: "2026-01-01" },
           disputes: { status: "done", completed_at: "2026-01-01" },
-          policies: { status: "done", completed_at: "2026-01-01" },
+          business_policies: { status: "done", completed_at: "2026-01-01" },
         },
       });
       mockGetServiceClient.mockReturnValue(client as any);
@@ -172,8 +172,8 @@ describe("Setup flow: end-to-end progression", () => {
 
       // permissions + overview → connection
       expect(body.steps.connection.status).toBe("done");
-      // policies → store_profile
-      expect(body.steps.store_profile.status).toBe("done");
+      // business_policies → policies
+      expect(body.steps.policies.status).toBe("done");
       // disputes → coverage
       expect(body.steps.coverage.status).toBe("done");
     });
@@ -211,6 +211,7 @@ describe("Setup flow: end-to-end progression", () => {
       store_profile: "/portal/setup/store_profile",
       coverage: "/portal/setup/coverage",
       automation: "/portal/setup/automation",
+      policies: "/portal/setup/policies",
       activate: "/portal/setup/activate",
     };
 

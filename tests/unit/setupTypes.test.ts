@@ -49,9 +49,10 @@ describe("setup types", () => {
         store_profile: { status: "done" },
         coverage: { status: "todo" },
         automation: { status: "todo" },
+        policies: { status: "todo" },
         activate: { status: "todo" },
       },
-      progress: { doneCount: 2, total: 5 },
+      progress: { doneCount: 2, total: 6 },
       nextStepId: "coverage",
       allDone: false,
     };
