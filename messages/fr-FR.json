@@ -770,7 +770,13 @@
     "primarySetupRules": "Configurer l'automatisation",
     "primaryAddCustom": "Ajouter une règle personnalisée",
     "notConfigured": "Non configuré",
-    "editRule": "Modifier"
+    "editRule": "Modifier",
+    "automationRulesTitle": "Règles d'automatisation",
+    "automationRulesSubtitle": "Chaque règle que DisputeDesk évalue, par ordre de priorité. La première règle dont les conditions correspondent décide.",
+    "baselineBadge": "Base",
+    "customBadge": "Personnalisée",
+    "unsavedBadge": "Non enregistrée",
+    "firstMatchWinsHint": "Les règles sont vérifiées de haut en bas. La première correspondance l'emporte."
   },
   "settings": {
     "title": "Paramètres",

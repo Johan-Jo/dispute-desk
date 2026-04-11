@@ -676,7 +676,13 @@
     "primarySetupRules": "Set up automation",
     "primaryAddCustom": "Add custom rule",
     "notConfigured": "Not configured",
-    "editRule": "Edit"
+    "editRule": "Edit",
+    "automationRulesTitle": "Automation rules",
+    "automationRulesSubtitle": "Every rule DisputeDesk evaluates, in priority order. The first rule whose conditions match a dispute decides what happens.",
+    "baselineBadge": "Baseline",
+    "customBadge": "Custom",
+    "unsavedBadge": "Unsaved",
+    "firstMatchWinsHint": "Rules are checked top to bottom. The first match wins."
   },
   "settings": {
     "title": "Settings",

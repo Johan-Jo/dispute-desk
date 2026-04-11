@@ -1,18 +1,14 @@
 /**
- * Lifecycle-aware automation policy page.
+ * Embedded automation rules page.
  *
- * Restructured from raw rules to policy sections:
- * 1. Policy overview (inquiry/chargeback posture)
- * 2. Default templates by phase (from reason_template_mappings)
- * 3. Starter rules workflow (existing, reframed)
- * 4. Custom rules (secondary)
- *
- * Rules remain phase-blind — both phases show same automation mode.
- * Lifecycle differentiation comes from reason_template_mappings.
+ * Single unified list: baseline preset rules and custom rules rendered
+ * in one priority-ordered list. Baseline rows edit routing inline via a
+ * Select; custom rows open /portal/rules for editing. First matching
+ * rule wins.
  */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -26,10 +22,11 @@ import {
   InlineStack,
   BlockStack,
   Banner,
+  Select,
+  Divider,
 } from "@shopify/polaris";
 
-import { RULE_PRESETS } from "@/lib/rules/presets";
-import { EmbeddedStarterRulesWorkflow } from "@/components/rules/EmbeddedStarterRulesWorkflow";
+import { RULE_PRESETS, type RulePreset } from "@/lib/rules/presets";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 
 interface Rule {
@@ -78,14 +75,22 @@ function routingMode(rule: Rule): "auto_pack" | "review" {
   return rule.action?.mode === "auto_pack" ? "auto_pack" : "review";
 }
 
+type UnifiedRow =
+  | {
+      kind: "baseline";
+      preset: RulePreset;
+      existing: Rule | null;
+      priority: number;
+    }
+  | { kind: "custom"; rule: Rule; priority: number };
+
 export default function EmbeddedRulesPage() {
   const router = useRouter();
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
-  const starterSectionRef = useRef<HTMLDivElement | null>(null);
+  const tc = useTranslations("coverage");
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
   const [_reasonMappings, setReasonMappings] = useState<ReasonMapping[]>([]);
   const [starterModes, setStarterModes] = useState<Record<string, "auto_pack" | "review">>(() => {
     const init: Record<string, "auto_pack" | "review"> = {};
@@ -99,20 +104,13 @@ export default function EmbeddedRulesPage() {
   const fetchRules = useCallback(async () => {
     setLoading(true);
     try {
-      const [rulesRes, packsRes, mappingsRes] = await Promise.all([
+      const [rulesRes, mappingsRes] = await Promise.all([
         fetch("/api/rules"),
-        fetch("/api/packs?status=ACTIVE"),
         fetch("/api/reason-mappings"),
       ]);
       if (rulesRes.ok) {
         const data = await rulesRes.json();
         setRules(Array.isArray(data) ? data : []);
-      }
-      if (packsRes.ok) {
-        const body = (await packsRes.json()) as { packs?: { id: string; name: string }[] };
-        setActivatedPacks(
-          (body.packs ?? []).map((p) => ({ id: p.id, name: p.name }))
-        );
       }
       if (mappingsRes.ok) {
         const body = await mappingsRes.json();
@@ -146,7 +144,7 @@ export default function EmbeddedRulesPage() {
     [rules]
   );
 
-  // Compute policy overview counts
+  // Compute policy overview counts — still drives the state sentence.
   const policySummary = useMemo(() => {
     let automated = 0;
     let reviewFirst = 0;
@@ -164,6 +162,27 @@ export default function EmbeddedRulesPage() {
     }
     return { automated, reviewFirst, manual };
   }, [rules]);
+
+  // Unified, priority-ordered list of every rule the engine will consider.
+  const unifiedRows: UnifiedRow[] = useMemo(() => {
+    const baselineRows: UnifiedRow[] = RULE_PRESETS.map((preset) => {
+      const existing = rules.find((r) => r.name === preset.name) ?? null;
+      return {
+        kind: "baseline" as const,
+        preset,
+        existing,
+        priority: existing?.priority ?? preset.priority,
+      };
+    });
+    const customRows: UnifiedRow[] = customRules.map((rule) => ({
+      kind: "custom" as const,
+      rule,
+      priority: rule.priority,
+    }));
+    return [...baselineRows, ...customRows].sort(
+      (a, b) => a.priority - b.priority,
+    );
+  }, [rules, customRules]);
 
   const saveStarterRules = useCallback(async () => {
     setSavingStarters(true);
@@ -232,7 +251,6 @@ export default function EmbeddedRulesPage() {
     return parts.length ? parts.join(" · ") : tr("matchesAll");
   }
 
-  const tc = useTranslations("coverage");
   void _reasonMappings; // keep fetch, may use later
 
   const totalFamilies = DISPUTE_FAMILIES.length;
@@ -255,28 +273,98 @@ export default function EmbeddedRulesPage() {
     return tr("stateAllAuto", { total: totalFamilies });
   })();
 
-  // Primary action follows the state: close gaps first, then invite custom rules.
-  const needsSetup = policySummary.manual > 0;
-  const primaryActionProps = needsSetup
-    ? {
-        content: tr("primarySetupRules"),
-        onAction: () => {
-          starterSectionRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        },
-      }
-    : {
-        content: tr("primaryAddCustom"),
-        url: "/portal/rules",
-      };
+  const routingChoices = [
+    { label: tr("autoPack"), value: "auto_pack" as const },
+    { label: tr("review"), value: "review" as const },
+  ];
+
+  function renderBaselineRow(row: Extract<UnifiedRow, { kind: "baseline" }>, index: number) {
+    const mode = starterModes[row.preset.id] ?? row.preset.action.mode;
+    const isSaved = row.existing !== null;
+    return (
+      <BlockStack gap="200">
+        <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
+          <InlineStack gap="300" blockAlign="center" wrap>
+            <Text as="span" variant="bodySm" tone="subdued">
+              {`${index + 1}.`}
+            </Text>
+            <Text as="h3" variant="bodyMd" fontWeight="semibold">
+              {tr(row.preset.nameKey)}
+            </Text>
+            <Badge tone="info">{tr("baselineBadge")}</Badge>
+            {!isSaved && (
+              <Badge tone="attention">{tr("unsavedBadge")}</Badge>
+            )}
+          </InlineStack>
+          <div style={{ minWidth: 180, flexShrink: 0 }}>
+            <Select
+              label={tr("actionRouting")}
+              labelHidden
+              options={routingChoices}
+              value={mode}
+              onChange={(value) =>
+                setStarterModes((prev) => ({
+                  ...prev,
+                  [row.preset.id]: value as "auto_pack" | "review",
+                }))
+              }
+            />
+          </div>
+        </InlineStack>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {tr(row.preset.descriptionKey)}
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {`${tr("triggerCondition")}: ${matchSummary(row.preset.match)}`}
+        </Text>
+      </BlockStack>
+    );
+  }
+
+  function renderCustomRow(row: Extract<UnifiedRow, { kind: "custom" }>, index: number) {
+    const actionLabel =
+      row.rule.action?.mode === "auto_pack"
+        ? tr("autoPack")
+        : row.rule.action?.mode === "manual"
+          ? tr("manual")
+          : tr("review");
+    return (
+      <BlockStack gap="200">
+        <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
+          <InlineStack gap="300" blockAlign="center" wrap>
+            <Text as="span" variant="bodySm" tone="subdued">
+              {`${index + 1}.`}
+            </Text>
+            <Text as="h3" variant="bodyMd" fontWeight="semibold">
+              {row.rule.name ?? tr("unnamedRule")}
+            </Text>
+            <Badge>{tr("customBadge")}</Badge>
+            <Badge tone={row.rule.enabled ? "success" : undefined}>
+              {row.rule.enabled ? tr("active") : tr("inactive")}
+            </Badge>
+          </InlineStack>
+          <Button onClick={() => router.push("/portal/rules")}>
+            {tr("editRule")}
+          </Button>
+        </InlineStack>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {`${tr("triggerCondition")}: ${matchSummary(row.rule.match)}`}
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {`${tr("action")}: ${actionLabel}`}
+        </Text>
+      </BlockStack>
+    );
+  }
 
   return (
     <Page
       title={tn("automation")}
       subtitle={tr("purposeLine")}
-      primaryAction={primaryActionProps}
+      primaryAction={{
+        content: tr("primaryAddCustom"),
+        url: "/portal/rules",
+      }}
     >
       <Layout>
         <Layout.Section>
@@ -322,88 +410,51 @@ export default function EmbeddedRulesPage() {
                 </BlockStack>
               </Card>
 
-              {/* Starter Rules Workflow */}
-              <div ref={starterSectionRef}>
+              {/* Unified rules list */}
               <Card>
-                <EmbeddedStarterRulesWorkflow
-                  tr={tr}
-                  starterModes={starterModes}
-                  onStarterModeChange={(presetId, mode) =>
-                    setStarterModes((prev) => ({ ...prev, [presetId]: mode }))
-                  }
-                  activatedPacks={activatedPacks}
-                  primaryFooter={
-                    <Button
-                      variant="primary"
-                      loading={savingStarters}
-                      disabled={savingStarters}
-                      onClick={saveStarterRules}
-                    >
-                      {tr("saveStarterRules")}
-                    </Button>
-                  }
-                />
-              </Card>
-              </div>
+                <BlockStack gap="400">
+                  <BlockStack gap="100">
+                    <Text as="h2" variant="headingMd">
+                      {tr("automationRulesTitle")}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {tr("automationRulesSubtitle")}
+                    </Text>
+                  </BlockStack>
 
-              {/* Custom Rules */}
-              {customRules.length > 0 && (
-                <BlockStack gap="300">
-                  <Text as="h2" variant="headingMd">
-                    {tr("customRulesTitle")}
-                  </Text>
-                  {customRules
-                    .sort((a, b) => a.priority - b.priority)
-                    .map((rule, index) => (
-                      <Card key={rule.id}>
-                        <BlockStack gap="300">
-                          <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
-                            <InlineStack gap="300" blockAlign="center" wrap={false}>
-                              <Text as="span" variant="bodySm" tone="subdued">
-                                {`${index + 1}.`}
-                              </Text>
-                              <Text as="h3" variant="bodyMd" fontWeight="semibold">
-                                {rule.name ?? tr("unnamedRule")}
-                              </Text>
-                              <Badge tone={rule.enabled ? "success" : undefined}>
-                                {rule.enabled ? tr("active") : tr("inactive")}
-                              </Badge>
-                            </InlineStack>
-                            <Button
-                              onClick={() => router.push("/portal/rules")}
-                              accessibilityLabel={tr("editRule")}
-                            >
-                              {tr("editRule")}
-                            </Button>
-                          </InlineStack>
-
-                          <BlockStack gap="100">
-                            <InlineStack gap="200" blockAlign="start" wrap>
-                              <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
-                                {tr("triggerCondition")}:
-                              </Text>
-                              <Text as="span" variant="bodySm">
-                                {matchSummary(rule.match)}
-                              </Text>
-                            </InlineStack>
-                            <InlineStack gap="200" blockAlign="start" wrap>
-                              <Text as="span" variant="bodySm" fontWeight="medium" tone="subdued">
-                                {tr("action")}:
-                              </Text>
-                              <Text as="span" variant="bodySm">
-                                {rule.action?.mode === "auto_pack"
-                                  ? tr("autoPack")
-                                  : rule.action?.mode === "manual"
-                                    ? tr("manual")
-                                    : tr("review")}
-                              </Text>
-                            </InlineStack>
-                          </BlockStack>
-                        </BlockStack>
-                      </Card>
+                  <BlockStack gap="0">
+                    {unifiedRows.map((row, index) => (
+                      <div key={row.kind === "baseline" ? row.preset.id : row.rule.id}>
+                        {index > 0 && <Divider />}
+                        <div style={{ padding: "16px 0" }}>
+                          {row.kind === "baseline"
+                            ? renderBaselineRow(row, index)
+                            : renderCustomRow(row, index)}
+                        </div>
+                      </div>
                     ))}
+                  </BlockStack>
+
+                  <InlineStack align="space-between" blockAlign="center" wrap gap="200">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {tr("firstMatchWinsHint")}
+                    </Text>
+                    <InlineStack gap="200">
+                      <Button onClick={() => router.push("/portal/rules")}>
+                        {tr("primaryAddCustom")}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        loading={savingStarters}
+                        disabled={savingStarters}
+                        onClick={saveStarterRules}
+                      >
+                        {tr("saveStarterRules")}
+                      </Button>
+                    </InlineStack>
+                  </InlineStack>
                 </BlockStack>
-              )}
+              </Card>
             </BlockStack>
           )}
         </Layout.Section>

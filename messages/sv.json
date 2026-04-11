@@ -623,7 +623,13 @@
     "primarySetupRules": "Ställ in automatisering",
     "primaryAddCustom": "Lägg till anpassad regel",
     "notConfigured": "Ej konfigurerad",
-    "editRule": "Redigera"
+    "editRule": "Redigera",
+    "automationRulesTitle": "Automatiseringsregler",
+    "automationRulesSubtitle": "Varje regel som DisputeDesk utvärderar, i prioritetsordning. Den första regeln vars villkor matchar avgör.",
+    "baselineBadge": "Bas",
+    "customBadge": "Anpassad",
+    "unsavedBadge": "Ej sparad",
+    "firstMatchWinsHint": "Reglerna kontrolleras uppifrån och ner. Den första matchningen vinner."
   },
   "settings": {
     "title": "Inställningar",
