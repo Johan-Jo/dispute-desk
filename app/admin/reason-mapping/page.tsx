@@ -1,3 +1,15 @@
+/**
+ * Admin-only reason mapping page. Internal staff surface — English
+ * only by design, consistent with the rest of app/admin/*.
+ *
+ * Note on `family` strings: reason_template_mappings.family is seeded
+ * in English ("Fraud", "Billing", "Technical", ...). Those values are
+ * only displayed here (internal surface) — the merchant-facing
+ * Coverage / Automation pages compute family labels via
+ * DISPUTE_REASON_FAMILIES in lib/rules/disputeReasons.ts, which is
+ * TypeScript code that can be localized independently of the DB
+ * seed. So the DB column staying English doesn't leak to merchants.
+ */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";

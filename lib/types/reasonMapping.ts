@@ -28,6 +28,3 @@ export interface ReasonMappingStats {
   unmapped: number;
   warnings: number;
 }
-
-/** Computed mapping status for UI display. */
-export type MappingStatus = "mapped" | "unmapped" | "warning" | "deprecated-target";

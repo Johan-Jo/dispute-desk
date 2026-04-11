@@ -87,9 +87,14 @@ async function main() {
     process.exit(2);
   }
 
-  // For the script we assume the access token is either plaintext or
-  // we're in a local dev env where decryption is not required. The
-  // route-based path uses the full decryption helper.
+  // DEV-ONLY CAVEAT: this script reads shop_sessions.access_token_encrypted
+  // directly without running it through lib/security/encryption's decrypt
+  // helper. In dev, session tokens may be stored plaintext so this Just
+  // Works. In production, tokens are AES-256-GCM encrypted and the script
+  // will send a garbled token that Shopify rejects with 401. The
+  // authoritative drift-check path is /api/cron/check-shopify-reasons
+  // (wired to lib/shopify/checkReasonEnumDrift.ts) which uses the full
+  // decryption helper — prefer that for non-dev checks.
   const accessToken = session.access_token_encrypted;
 
   const query = `
