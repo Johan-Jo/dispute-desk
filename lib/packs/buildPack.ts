@@ -15,6 +15,12 @@ import {
   evaluateCompleteness,
   type TemplateChecklistItem,
 } from "@/lib/automation/completeness";
+import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import {
+  ORDER_DETAIL_QUERY,
+  type OrderDetailResponse,
+  type OrderDetailNode,
+} from "@/lib/shopify/queries/orders";
 import { collectOrderEvidence } from "./sources/orderSource";
 import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
@@ -78,6 +84,35 @@ export async function buildPack(
     .maybeSingle();
   if (!session) throw new Error(`No offline session for shop ${pack.shop_id}`);
 
+  // Fetch the order once and share it across all three
+  // order-dependent collectors (orderSource, fulfillmentSource,
+  // customerCommSource). Before this, each collector was issuing the
+  // same ORDER_DETAIL_QUERY independently — three round-trips per
+  // pack build. Cache happens at the shared-context level.
+  let order: OrderDetailNode | null = null;
+  if (dispute.order_gid) {
+    try {
+      const res = await requestShopifyGraphQL<OrderDetailResponse>({
+        session: {
+          shopDomain: shop.shop_domain,
+          accessToken: decryptAccessToken(session.access_token_encrypted),
+        },
+        query: ORDER_DETAIL_QUERY,
+        variables: { id: dispute.order_gid },
+        correlationId: opts?.correlationId,
+      });
+      order = (res.data?.node as OrderDetailNode | undefined) ?? null;
+    } catch (err) {
+      // Non-fatal — collectors that need the order will receive null
+      // and return empty sections, the build continues with whatever
+      // policy + manual evidence exists.
+      console.warn(
+        "[buildPack] order fetch failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
   const ctx: BuildContext = {
     packId,
     disputeId: dispute.id,
@@ -87,6 +122,7 @@ export async function buildPack(
     shopDomain: shop.shop_domain,
     accessToken: decryptAccessToken(session.access_token_encrypted),
     correlationId: opts?.correlationId,
+    order,
   };
 
   // Run all collectors concurrently

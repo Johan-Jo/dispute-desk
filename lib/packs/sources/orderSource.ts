@@ -1,18 +1,17 @@
 /**
  * Order evidence source collector.
  *
- * Fetches order details from Shopify and extracts:
+ * Reads the pre-fetched OrderDetailNode from ctx.order (populated by
+ * buildPack.ts once per build) and extracts:
  * - Line items, amounts, discounts, refunds
  * - Billing/shipping addresses (city-level only, no street for PII)
  * - Customer tenure info
+ *
+ * Before commit 1ab166e the three order-dependent collectors each
+ * issued their own ORDER_DETAIL_QUERY. The fetch is now centralized
+ * in buildPack.ts.
  */
 
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import {
-  ORDER_DETAIL_QUERY,
-  type OrderDetailResponse,
-  type OrderDetailNode,
-} from "@/lib/shopify/queries/orders";
 import type { EvidenceSection, BuildContext } from "../types";
 
 function redactAddress(addr: { city: string; provinceCode: string; countryCode: string; zip: string } | null) {
@@ -26,18 +25,9 @@ function redactAddress(addr: { city: string; provinceCode: string; countryCode: 
 }
 
 export async function collectOrderEvidence(
-  ctx: BuildContext
+  ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
-  if (!ctx.orderGid) return [];
-
-  const res = await requestShopifyGraphQL<OrderDetailResponse>({
-    session: { shopDomain: ctx.shopDomain, accessToken: ctx.accessToken },
-    query: ORDER_DETAIL_QUERY,
-    variables: { id: ctx.orderGid },
-    correlationId: ctx.correlationId,
-  });
-
-  const order = res.data?.node as OrderDetailNode | undefined;
+  const order = ctx.order;
   if (!order) return [];
 
   const lineItems = order.lineItems.edges.map((e) => ({

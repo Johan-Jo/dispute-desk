@@ -1,17 +1,12 @@
 /**
  * Fulfillment / shipping evidence source collector.
  *
- * Extracts fulfillment and tracking data from the order fetched
- * by the order source. Contributes shipping_tracking and delivery_proof.
+ * Reads the pre-fetched OrderDetailNode from ctx.order (populated by
+ * buildPack.ts) and extracts fulfillment + tracking data.
+ * Contributes shipping_tracking and delivery_proof.
  */
 
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import {
-  ORDER_DETAIL_QUERY,
-  type OrderDetailResponse,
-  type OrderDetailNode,
-  type OrderFulfillment,
-} from "@/lib/shopify/queries/orders";
+import type { OrderFulfillment } from "@/lib/shopify/queries/orders";
 import type { EvidenceSection, BuildContext } from "../types";
 
 function extractTrackingData(fulfillment: OrderFulfillment) {
@@ -37,18 +32,9 @@ function extractTrackingData(fulfillment: OrderFulfillment) {
 }
 
 export async function collectFulfillmentEvidence(
-  ctx: BuildContext
+  ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
-  if (!ctx.orderGid) return [];
-
-  const res = await requestShopifyGraphQL<OrderDetailResponse>({
-    session: { shopDomain: ctx.shopDomain, accessToken: ctx.accessToken },
-    query: ORDER_DETAIL_QUERY,
-    variables: { id: ctx.orderGid },
-    correlationId: ctx.correlationId,
-  });
-
-  const order = res.data?.node as OrderDetailNode | undefined;
+  const order = ctx.order;
   if (!order?.fulfillments?.length) return [];
 
   const fieldsProvided: string[] = [];

@@ -18,18 +18,11 @@
  * satisfied later by manualSource's uploads, which also emit
  * `customer_communication` for backwards-compatibility).
  *
- * Reuses ORDER_DETAIL_QUERY rather than issuing a narrower query
- * because the build pipeline already runs it via orderSource and
- * fulfillmentSource — Shopify caches and per-source concurrency is
- * cheap enough that consistency with the existing pattern wins.
+ * Reads the pre-fetched OrderDetailNode from ctx.order (populated by
+ * buildPack.ts). No independent Shopify round-trip.
  */
 
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import {
-  ORDER_DETAIL_QUERY,
-  type OrderDetailResponse,
-  type OrderDetailNode,
-} from "@/lib/shopify/queries/orders";
+import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
 import type { EvidenceSection, BuildContext } from "../types";
 
 interface ExtractedSignals {
@@ -90,16 +83,7 @@ function extract(order: OrderDetailNode): ExtractedSignals {
 export async function collectCustomerCommEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
-  if (!ctx.orderGid) return [];
-
-  const res = await requestShopifyGraphQL<OrderDetailResponse>({
-    session: { shopDomain: ctx.shopDomain, accessToken: ctx.accessToken },
-    query: ORDER_DETAIL_QUERY,
-    variables: { id: ctx.orderGid },
-    correlationId: ctx.correlationId,
-  });
-
-  const order = res.data?.node as OrderDetailNode | undefined;
+  const order = ctx.order;
   if (!order) return [];
 
   const signals = extract(order);
