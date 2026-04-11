@@ -1895,6 +1895,7 @@
       "flowSelectSubtitle": "Choose how you want to handle your store policies",
       "languageLabel": "Template language",
       "languageHint": "Pick English if you sell in English-speaking markets, regardless of your store language.",
+      "legalReviewNotice": "These templates are a starting point. We recommend having a local lawyer review them before publishing.",
       "ownFlowTitle": "Use your own",
       "ownFlowDesc": "Link to your existing Shopify policies or upload custom documents",
       "ownFlowShortDesc": "Link existing policy pages",

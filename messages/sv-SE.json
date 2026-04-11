@@ -1950,6 +1950,7 @@
       "flowSelectSubtitle": "Välj hur du vill hantera din butiks policyer",
       "languageLabel": "Mallspråk",
       "languageHint": "Välj engelska om du säljer på engelskspråkiga marknader, oavsett butikens språk.",
+      "legalReviewNotice": "Dessa mallar är en utgångspunkt. Vi rekommenderar att en lokal jurist granskar dem innan publicering.",
       "ownFlowTitle": "Använd egna",
       "ownFlowDesc": "Länka till dina befintliga Shopify-policyer eller ladda upp egna dokument",
       "ownFlowShortDesc": "Länka befintliga policysidor",

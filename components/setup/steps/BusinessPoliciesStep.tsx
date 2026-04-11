@@ -297,6 +297,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             </button>
           </div>
           <p className="text-[#8C9196] mt-2 text-center" style={{ fontSize: 12 }}>{t("languageHint")}</p>
+          <p className="text-[#8C9196] mt-1 text-center max-w-md" style={{ fontSize: 12 }}>{t("legalReviewNotice")}</p>
         </div>
       )}
 

@@ -2085,6 +2085,7 @@
       "flowSelectSubtitle": "Wähle, wie du deine Shop-Richtlinien verwalten möchtest",
       "languageLabel": "Vorlagensprache",
       "languageHint": "Wähle Englisch, wenn du in englischsprachigen Märkten verkaufst, unabhängig von der Sprache deines Shops.",
+      "legalReviewNotice": "Diese Vorlagen sind ein Ausgangspunkt. Wir empfehlen, sie vor der Veröffentlichung von einem lokalen Anwalt prüfen zu lassen.",
       "ownFlowTitle": "Eigene verwenden",
       "ownFlowDesc": "Verknüpfe deine bestehenden Shopify-Richtlinien oder lade eigene Dokumente hoch",
       "ownFlowShortDesc": "Bestehende Richtlinien verknüpfen",
