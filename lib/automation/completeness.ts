@@ -76,21 +76,53 @@ function getTemplate(reason: string | null | undefined): ReasonTemplate {
 }
 
 /**
+ * Row from pack_template_items (plus its parent section's title) used
+ * when the pack was built from an admin-defined template. The
+ * collector_key column points at a collector field; NULL means the
+ * item is merchant-supplied and satisfied by any manual upload.
+ */
+export interface TemplateChecklistItem {
+  key: string;
+  label: string;
+  required: boolean;
+  collector_key: string | null;
+}
+
+/**
  * Evaluate completeness of an evidence pack against its dispute reason.
  *
  * @param reason - The dispute reason code from Shopify
  * @param presentFields - Set of field keys that the pack currently has
+ * @param templateItems - Optional admin-defined template items. When
+ *   provided, takes precedence over the reason-based REASON_TEMPLATES
+ *   fallback. Items with a non-null `collector_key` are matched against
+ *   `presentFields` directly; items with `collector_key === null` are
+ *   treated as satisfied when any manual upload exists
+ *   (`presentFields.has(MANUAL_UPLOAD_FIELD)`).
  */
 export function evaluateCompleteness(
   reason: string | null | undefined,
-  presentFields: Set<string>
+  presentFields: Set<string>,
+  templateItems?: TemplateChecklistItem[] | null,
 ): CompletenessResult {
-  const template = getTemplate(reason);
-
-  const checklist: ChecklistItem[] = template.map((t) => ({
-    ...t,
-    present: presentFields.has(t.field),
-  }));
+  // When the caller supplies admin-defined template items, use them as
+  // the source of truth. Otherwise fall back to the hardcoded
+  // REASON_TEMPLATES map keyed on dispute reason.
+  const checklist: ChecklistItem[] =
+    templateItems && templateItems.length > 0
+      ? templateItems.map((t) => ({
+          field: t.collector_key ?? t.key,
+          label: t.label,
+          required: t.required,
+          present:
+            t.collector_key != null
+              ? presentFields.has(t.collector_key)
+              : presentFields.has(MANUAL_UPLOAD_FIELD),
+        }))
+      : getTemplate(reason).map((t) => ({
+          ...t,
+          present: presentFields.has(t.field),
+        }));
 
   const total = checklist.length;
   const present = checklist.filter((c) => c.present).length;

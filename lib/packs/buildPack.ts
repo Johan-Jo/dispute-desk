@@ -11,7 +11,10 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { logAuditEvent } from "@/lib/audit/logEvent";
-import { evaluateCompleteness } from "@/lib/automation/completeness";
+import {
+  evaluateCompleteness,
+  type TemplateChecklistItem,
+} from "@/lib/automation/completeness";
 import { collectOrderEvidence } from "./sources/orderSource";
 import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
@@ -44,7 +47,7 @@ export async function buildPack(
   // Load pack → dispute → shop + session
   const { data: pack, error: packErr } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id")
+    .select("id, shop_id, dispute_id, pack_template_id")
     .eq("id", packId)
     .single();
   if (packErr || !pack) throw new Error(`Pack not found: ${packId}`);
@@ -139,7 +142,54 @@ export async function buildPack(
   for (const s of allSections) {
     for (const f of s.fieldsProvided) collectedFields.add(f);
   }
-  const completeness = evaluateCompleteness(dispute.reason, collectedFields);
+
+  // When a matching automation rule installed a template on this
+  // pack, load its items so the engine scores against admin-defined
+  // requirements instead of the hardcoded REASON_TEMPLATES fallback.
+  // Items whose collector_key is NULL are merchant-supplied and
+  // counted as satisfied by any manual upload (supporting_documents).
+  let templateItems: TemplateChecklistItem[] | null = null;
+  const templateId = (pack as { pack_template_id?: string | null })
+    .pack_template_id;
+  if (templateId) {
+    const { data: sections } = await sb
+      .from("pack_template_sections")
+      .select(
+        "id, sort, pack_template_items(key, label_default, required, collector_key, sort)",
+      )
+      .eq("template_id", templateId)
+      .order("sort", { ascending: true });
+    const items: TemplateChecklistItem[] = [];
+    for (const sec of sections ?? []) {
+      const raw = (
+        sec as {
+          pack_template_items?: Array<{
+            key: string;
+            label_default: string;
+            required: boolean;
+            collector_key: string | null;
+            sort: number;
+          }>;
+        }
+      ).pack_template_items ?? [];
+      const sorted = [...raw].sort((a, b) => a.sort - b.sort);
+      for (const it of sorted) {
+        items.push({
+          key: it.key,
+          label: it.label_default,
+          required: it.required,
+          collector_key: it.collector_key,
+        });
+      }
+    }
+    if (items.length > 0) templateItems = items;
+  }
+
+  const completeness = evaluateCompleteness(
+    dispute.reason,
+    collectedFields,
+    templateItems,
+  );
 
   const packStatus = completeness.blockers.length > 0 ? "blocked" : "ready";
 
