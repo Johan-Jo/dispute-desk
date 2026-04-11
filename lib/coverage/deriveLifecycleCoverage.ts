@@ -2,8 +2,10 @@
  * Lifecycle-aware coverage derivation.
  *
  * Extends the flat family coverage model to show per-phase handling.
- * Rules are phase-blind — both phases show the same automation mode.
- * The difference comes from reason_template_mappings (per-phase template defaults).
+ * Rules can be phase-aware (`match.phase = ["inquiry"]` / `["chargeback"]`)
+ * or phase-blind (no `match.phase`). Phase-blind rules match both phases for
+ * back-compat. Phase-specific rules win at the same priority.
+ * Per-phase template defaults still come from reason_template_mappings.
  */
 
 import {
@@ -67,6 +69,7 @@ interface RuleInput {
     reason?: string[];
     status?: string[];
     amount_range?: { min?: number; max?: number };
+    phase?: ("inquiry" | "chargeback")[];
   };
   action: { mode: string; pack_template_id?: string | null };
 }
@@ -94,10 +97,33 @@ function packMatchesFamily(pack: PackInput, family: DisputeFamily): boolean {
   return family.reasons.includes(type);
 }
 
-function ruleMatchesFamily(rule: RuleInput, family: DisputeFamily): boolean {
+function ruleMatchesFamily(
+  rule: RuleInput,
+  family: DisputeFamily,
+  phase?: "inquiry" | "chargeback",
+): boolean {
   if (!rule.enabled) return false;
+  if (phase && rule.match.phase?.length && !rule.match.phase.includes(phase)) {
+    return false;
+  }
   if (!rule.match.reason || rule.match.reason.length === 0) return true;
   return family.reasons.some((r) => rule.match.reason!.includes(r));
+}
+
+/** Phase-specific rules win over phase-blind rules at the same priority. */
+function pickRuleForFamilyAndPhase(
+  rules: RuleInput[],
+  family: DisputeFamily,
+  phase: "inquiry" | "chargeback",
+): RuleInput | null {
+  const matches = rules.filter((r) => ruleMatchesFamily(r, family, phase));
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => {
+    const aPhase = a.match.phase?.length ? 0 : 1;
+    const bPhase = b.match.phase?.length ? 0 : 1;
+    return aPhase - bPhase;
+  });
+  return matches[0];
 }
 
 function ruleToAutomationMode(rule: RuleInput): AutomationMode {
@@ -173,20 +199,24 @@ export function deriveLifecycleCoverage(
 ): LifecycleCoverageSummary {
   const families: LifecycleFamilyCoverage[] = DISPUTE_FAMILIES.map((family) => {
     const matchingPacks = activePacks.filter((p) => packMatchesFamily(p, family));
-    const matchingRule =
-      rules.find((r) => ruleMatchesFamily(r, family)) ?? null;
+    const inquiryRule = pickRuleForFamilyAndPhase(rules, family, "inquiry");
+    const chargebackRule = pickRuleForFamilyAndPhase(
+      rules,
+      family,
+      "chargeback",
+    );
 
     const inquiry = derivePhaseHandling(
       "inquiry",
       family,
-      matchingRule,
+      inquiryRule,
       matchingPacks,
       reasonMappings,
     );
     const chargeback = derivePhaseHandling(
       "chargeback",
       family,
-      matchingRule,
+      chargebackRule,
       matchingPacks,
       reasonMappings,
     );

@@ -760,7 +760,7 @@
     "inquiryPolicyTitle": "Anfrage-Behandlung",
     "chargebackPolicyTitle": "Rückbuchungs-Behandlung",
     "defaultTemplates": "Standardvorlagen nach Phase",
-    "phaseBlindNote": "Automatisierungsregeln gelten derzeit für alle Phasen gleichermaßen. Phasenspezifische Regeln sind in Planung.",
+    "phaseBlindNote": "Reklamationen in der Anfragephase werden automatisch an leichtere Anfrage-Vorlagen geleitet. Jede Regel gilt für beide Phasen, sofern Sie sie nicht einschränken.",
     "inquiryTemplate": "Anfrage",
     "chargebackTemplate": "Rückbuchung",
     "noTemplateConfigured": "Keine konfiguriert",

@@ -657,7 +657,7 @@
     "inquiryPolicyTitle": "Gestión de consultas",
     "chargebackPolicyTitle": "Gestión de contracargos",
     "defaultTemplates": "Plantillas predeterminadas por fase",
-    "phaseBlindNote": "Las reglas de automatización se aplican a todas las fases de disputa por igual. Las reglas por fase están en desarrollo.",
+    "phaseBlindNote": "Las disputas en fase de consulta se enrutan automáticamente a plantillas de consulta más ligeras. Cada regla se aplica a ambas fases a menos que la restrinjas.",
     "inquiryTemplate": "Consulta",
     "chargebackTemplate": "Contracargo",
     "noTemplateConfigured": "Ninguna configurada",

@@ -688,7 +688,8 @@
     "baselineBadge": "Baseline",
     "customBadge": "Custom",
     "unsavedBadge": "Unsaved",
-    "firstMatchWinsHint": "Rules are checked top to bottom. The first match wins."
+    "firstMatchWinsHint": "Rules are checked top to bottom. The first match wins.",
+    "phaseBlindNote": "Inquiry-phase disputes route to lighter inquiry templates automatically. Each rule applies to both phases unless you restrict it."
   },
   "settings": {
     "title": "Settings",

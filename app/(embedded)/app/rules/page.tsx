@@ -37,6 +37,7 @@ interface Rule {
     reason?: string[];
     status?: string[];
     amount_range?: { min?: number; max?: number };
+    phase?: ("inquiry" | "chargeback")[];
   };
   action: {
     mode: "auto_pack" | "review" | "manual";
@@ -44,6 +45,16 @@ interface Rule {
     require_fields?: string[];
   };
   priority: number;
+}
+
+/**
+ * Phase-paired inquiry sibling rules are an implementation detail of the
+ * runtime — they're written automatically alongside chargeback rules so
+ * inquiry-phase disputes get the lighter inquiry template. Hide them from
+ * the merchant-facing rules list.
+ */
+function isInquirySiblingSetupRule(name: string | null | undefined): boolean {
+  return Boolean(name?.startsWith("__dd_setup__:pack:") && name.endsWith(":inquiry"));
 }
 
 interface ReasonMapping {
@@ -110,7 +121,8 @@ export default function EmbeddedRulesPage() {
       ]);
       if (rulesRes.ok) {
         const data = await rulesRes.json();
-        setRules(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? (data as Rule[]) : [];
+        setRules(arr.filter((r) => !isInquirySiblingSetupRule(r.name)));
       }
       if (mappingsRes.ok) {
         const body = await mappingsRes.json();

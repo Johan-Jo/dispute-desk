@@ -760,7 +760,7 @@
     "inquiryPolicyTitle": "Traitement des demandes",
     "chargebackPolicyTitle": "Traitement des rétrofacturations",
     "defaultTemplates": "Modèles par défaut par phase",
-    "phaseBlindNote": "Les règles d'automatisation s'appliquent actuellement à toutes les phases de litige. Les règles par phase sont en préparation.",
+    "phaseBlindNote": "Les litiges en phase de consultation sont automatiquement dirigés vers des modèles plus légers. Chaque règle s'applique aux deux phases, sauf si vous la limitez.",
     "inquiryTemplate": "Demande",
     "chargebackTemplate": "Rétrofacturation",
     "noTemplateConfigured": "Aucun configuré",

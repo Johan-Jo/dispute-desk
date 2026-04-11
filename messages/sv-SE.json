@@ -761,7 +761,7 @@
     "inquiryPolicyTitle": "Hantering av förfrågningar",
     "chargebackPolicyTitle": "Hantering av återkrav",
     "defaultTemplates": "Standardmallar per fas",
-    "phaseBlindNote": "Automatiseringsregler gäller för alla tvistfaser lika. Fasspecifika regler är planerade.",
+    "phaseBlindNote": "Tvister i förfrågningsfasen dirigeras automatiskt till lättare förfrågningsmallar. Varje regel gäller för båda faserna om du inte begränsar den.",
     "inquiryTemplate": "Förfrågan",
     "chargebackTemplate": "Återkrav",
     "noTemplateConfigured": "Ingen konfigurerad",

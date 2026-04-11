@@ -749,7 +749,7 @@
     "inquiryPolicyTitle": "Inquiry Handling",
     "chargebackPolicyTitle": "Chargeback Handling",
     "defaultTemplates": "Default Templates by Phase",
-    "phaseBlindNote": "Automation rules currently apply to all dispute phases equally. Phase-specific rules are coming soon.",
+    "phaseBlindNote": "Inquiry-phase disputes route to lighter inquiry templates automatically. Each rule applies to both phases unless you restrict it.",
     "inquiryTemplate": "Inquiry",
     "chargebackTemplate": "Chargeback",
     "noTemplateConfigured": "None configured",

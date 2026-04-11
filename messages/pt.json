@@ -657,7 +657,7 @@
     "inquiryPolicyTitle": "Tratamento de consultas",
     "chargebackPolicyTitle": "Tratamento de chargebacks",
     "defaultTemplates": "Modelos padrão por fase",
-    "phaseBlindNote": "As regras de automação se aplicam a todas as fases de disputa igualmente. Regras por fase estão planejadas.",
+    "phaseBlindNote": "Disputas em fase de consulta são roteadas automaticamente para templates de consulta mais leves. Cada regra se aplica a ambas as fases, a menos que você restrinja.",
     "inquiryTemplate": "Consulta",
     "chargebackTemplate": "Chargeback",
     "noTemplateConfigured": "Nenhum configurado",

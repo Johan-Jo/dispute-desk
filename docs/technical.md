@@ -804,6 +804,10 @@ Tailwind CSS with shared components in `components/ui/`.
 
 **Phase-aware automation (`lib/automation/pipeline.ts` → `resolveAutomationTemplate`):** When the matched rule supplies `pack_template_id`, the pipeline uses it as-is. When the rule omits it (catch-all / safeguard rules), the pipeline falls back to `reason_template_mappings` keyed by `(reason_code, dispute_phase)` so inquiry-phase disputes get the lighter inquiry template (`fraud_inquiry`, `pnr_inquiry`, …) instead of falling through to the chargeback `REASON_TEMPLATES` hardcoded list.
 
+**Embedded Automation page (`/app/rules`):** Inquiry sibling rules (`__dd_setup__:pack:{packId}:inquiry`) are filtered out before render — they're an implementation detail of the runtime, not something merchants configure. The state-sentence card uses `rules.phaseBlindNote` to explain that inquiry-phase disputes route to the lighter inquiry templates automatically and that each rule applies to both phases unless restricted.
+
+**Coverage page (`/app/coverage`):** `lib/coverage/deriveLifecycleCoverage.ts` picks a separate matching rule per `(family, phase)` via `pickRuleForFamilyAndPhase`. Phase-specific rules win over phase-blind rules at the same priority so the inquiry and chargeback rows of a family can show different automation modes when the merchant has configured them that way.
+
 ### Sync Integration
 
 When `syncDisputes()` detects a new dispute:
