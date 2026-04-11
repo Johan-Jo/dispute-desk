@@ -2221,6 +2221,7 @@
       "store_profile": "Store Profile",
       "coverage": "Coverage",
       "automation": "Automation",
+      "policies": "Policies",
       "activate": "Activate"
     },
     "connection": {
