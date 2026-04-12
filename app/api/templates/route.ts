@@ -3,6 +3,7 @@ import { listTemplates } from "@/lib/db/templates";
 import { normalizeLocale, DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { getServiceClient } from "@/lib/supabase/server";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
+import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
 
 const REASON_TO_CATEGORY: Record<string, string> = {
   FRAUDULENT: "fraud",
@@ -39,7 +40,17 @@ export async function GET(req: NextRequest) {
     explicitCategory ??
     (reason ? REASON_TO_CATEGORY[reason.toUpperCase()] : undefined);
 
-  const templates = await listTemplates(locale, category);
+  const rawTemplates = await listTemplates(locale, category);
+
+  // Hide inquiry-phase templates from merchant-facing surfaces. They are
+  // installed silently alongside their chargeback siblings in the install
+  // endpoint (see app/api/templates/[id]/install/route.ts). Merchants should
+  // never see or pick inquiry templates directly — they're an implementation
+  // detail of how the runtime handles pre-chargeback inquiries. Admin UIs use
+  // a separate /api/admin/templates route and are unaffected.
+  const templates = rawTemplates.filter(
+    (t) => !INQUIRY_TEMPLATE_ID_SET.has(t.id)
+  );
 
   // Phase-aware: if phase + reason provided, look up the default mapping
   // and promote the mapped template to the top of results.
