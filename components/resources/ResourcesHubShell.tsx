@@ -128,7 +128,7 @@ export async function ResourcesHubShell({
 
       {/* Hero — Figma Make marketing shell (same gradient + blobs as home `MarketingLandingPageClient`) */}
       <section
-        className="relative text-white overflow-hidden pt-10 pb-10 md:pt-14 md:pb-12"
+        className={`relative text-white overflow-hidden pt-10 md:pt-14 ${page > 1 ? "pb-14 md:pb-16" : "pb-10 md:pb-12"}`}
         style={{
           background:
             "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
