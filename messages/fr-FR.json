@@ -1052,6 +1052,7 @@
     "subtitle": "Obtenez de l'aide avec DisputeDesk grâce aux visites interactives, guides détaillés et bonnes pratiques",
     "articleCount": "{count} articles",
     "articleNotFound": "Article non trouvé.",
+    "articleNotAvailable": "Cet article n'est pas disponible dans l'application. Ouvrez le Centre d'aide dans le portail DisputeDesk pour la liste complète des articles.",
     "noResults": "Aucun article ne correspond à votre recherche.",
     "interactiveGuidesTitle": "Visites interactives",
     "interactiveGuidesDesc": "Conseils étape par étape pour les tâches essentielles",

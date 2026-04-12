@@ -34,7 +34,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
     return (
       <Page title={tEmbedded("title")} backAction={{ content: tEmbedded("backToHelp"), onAction: () => router.push("/app/help") }}>
         <Card>
-          <Text as="p" tone="subdued">This article is not available in the app. Open the Help Center in the DisputeDesk portal for the full article list.</Text>
+          <Text as="p" tone="subdued">{tEmbedded("articleNotAvailable")}</Text>
         </Card>
       </Page>
     );

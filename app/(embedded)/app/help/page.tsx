@@ -75,7 +75,10 @@ export default function EmbeddedHelpPage() {
   }, [query, t, embeddedArticles]);
 
   return (
-    <Page title={tEmbedded("title")}>
+    <Page
+      title={tEmbedded("title")}
+      backAction={{ content: t("nav.overview"), url: "/app" }}
+    >
       <BlockStack gap="400">
         {helpGuide && (
           <Card>
@@ -172,7 +175,7 @@ export default function EmbeddedHelpPage() {
                           <Text as="h3" variant="headingSm">{t(cat.labelKey)}</Text>
                         </InlineStack>
                         <Text as="p" variant="bodySm" tone="subdued">
-                          {count} articles
+                          {tEmbedded("articleCount", { count })}
                         </Text>
                       </BlockStack>
                     </Card>

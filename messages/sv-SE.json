@@ -1053,6 +1053,7 @@
     "subtitle": "Få hjälp med DisputeDesk genom interaktiva turer, detaljerade guider och bästa praxis",
     "articleCount": "{count} artiklar",
     "articleNotFound": "Artikeln hittades inte.",
+    "articleNotAvailable": "Den här artikeln är inte tillgänglig i appen. Öppna Hjälpcentret i DisputeDesk-portalen för den fullständiga artikellistan.",
     "noResults": "Inga artiklar hittades som matchar din sökning.",
     "interactiveGuidesTitle": "Interaktiva turer",
     "interactiveGuidesDesc": "Steg-för-steg-vägledning för viktiga uppgifter",
