@@ -103,6 +103,7 @@ interface VisiblePack {
 
 export default function CoveragePage() {
   const tc = useTranslations("coverage");
+  const tPacks = useTranslations("packs");
   const tNav = useTranslations("nav");
   const locale = useLocale();
   const searchParams = useSearchParams();
@@ -375,6 +376,7 @@ export default function CoveragePage() {
             <LifecycleFamilyCard
               family={family}
               tc={tc}
+              tPacks={tPacks}
               searchParams={searchParams}
               onInstallClick={() => setInstallModalFamily(family.familyId)}
             />
@@ -405,10 +407,25 @@ export default function CoveragePage() {
   );
 }
 
-function uniquePlaybookNames(
-  playbooks: { name: string }[],
+function translatePlaybookNames(
+  playbooks: { name: string; disputeType: string }[],
+  tPacks: (key: string) => string,
 ): string[] {
-  return [...new Set(playbooks.map((p) => p.name))];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const p of playbooks) {
+    let label: string;
+    try {
+      label = tPacks(`disputeTypeLabel.${p.disputeType}`);
+    } catch {
+      label = p.name;
+    }
+    if (!seen.has(label)) {
+      seen.add(label);
+      result.push(label);
+    }
+  }
+  return result;
 }
 
 function phasesIdentical(a: LifecyclePhaseHandling, b: LifecyclePhaseHandling): boolean {
@@ -424,6 +441,7 @@ function phasesIdentical(a: LifecyclePhaseHandling, b: LifecyclePhaseHandling): 
 function PhaseSection({
   handling,
   tc,
+  tPacks,
   familyId,
   searchParams,
   onInstallClick,
@@ -431,13 +449,14 @@ function PhaseSection({
 }: {
   handling: LifecyclePhaseHandling;
   tc: (key: string, params?: Record<string, string | number>) => string;
+  tPacks: (key: string) => string;
   familyId: string;
   searchParams: ReturnType<typeof useSearchParams>;
   onInstallClick: () => void;
   showPlaybookNames: boolean;
 }) {
   const phaseLabel = handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel");
-  const translatedNames = uniquePlaybookNames(handling.playbooks);
+  const translatedNames = translatePlaybookNames(handling.playbooks, tPacks);
 
   return (
     <BlockStack gap="200">
@@ -485,11 +504,13 @@ function PhaseSection({
 function LifecycleFamilyCard({
   family,
   tc,
+  tPacks,
   searchParams,
   onInstallClick,
 }: {
   family: LifecycleFamilyCoverage;
   tc: ReturnType<typeof useTranslations>;
+  tPacks: (key: string) => string;
   searchParams: ReturnType<typeof useSearchParams>;
   onInstallClick: () => void;
 }) {
@@ -510,7 +531,7 @@ function LifecycleFamilyCard({
 
   const identical = phasesIdentical(family.inquiry, family.chargeback);
   const sharedNames = identical
-    ? uniquePlaybookNames(family.inquiry.playbooks)
+    ? translatePlaybookNames(family.inquiry.playbooks, tPacks)
     : [];
 
   return (
@@ -581,6 +602,7 @@ function LifecycleFamilyCard({
             <PhaseSection
               handling={family.inquiry}
               tc={tc}
+              tPacks={tPacks}
               familyId={family.familyId}
               searchParams={searchParams}
               onInstallClick={onInstallClick}
@@ -590,6 +612,7 @@ function LifecycleFamilyCard({
             <PhaseSection
               handling={family.chargeback}
               tc={tc}
+              tPacks={tPacks}
               familyId={family.familyId}
               searchParams={searchParams}
               onInstallClick={onInstallClick}
