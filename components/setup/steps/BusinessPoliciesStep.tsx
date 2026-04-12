@@ -95,6 +95,19 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       .then((data) => {
         if (!data?.shopId) return;
         setResolvedShopId(data.shopId);
+
+        // Restore previously saved form state
+        const saved = data.steps?.policies?.payload;
+        if (saved) {
+          if (saved.flow) setSelectedFlow(saved.flow as FlowType);
+          if (saved.ownOptions) setOwnOptions(saved.ownOptions as Record<PolicyKey, OwnOption>);
+          if (saved.ownUrls) setOwnUrls(saved.ownUrls as Record<PolicyKey, string>);
+          if (saved.mixedOptions) setMixedOptions(saved.mixedOptions as Record<PolicyKey, MixedOption>);
+          if (saved.mixedUrls) setMixedUrls(saved.mixedUrls as Record<PolicyKey, string>);
+          if (saved.uploadedFiles) setUploadedFiles(saved.uploadedFiles as Partial<Record<PolicyKey, { id: string; url: string }>>);
+          if (saved.templateSelections) setTemplateSelections(saved.templateSelections as Record<PolicyKey, boolean>);
+        }
+
         fetch(`/api/shop/policy-template-lang?shop_id=${data.shopId}`)
           .then((r) => (r.ok ? r.json() : null))
           .then((langData) => {
@@ -109,11 +122,14 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
             if (!details?.primaryDomain) return;
             const base = details.primaryDomain.replace(/\/$/, "");
             if (fallbackOrigin && base === fallbackOrigin.replace(/\/$/, "")) return;
-            const prefilled = Object.fromEntries(
-              POLICY_KEYS.map((k) => [k, `${base}${POLICY_PATHS[k]}`])
-            ) as Record<PolicyKey, string>;
-            setOwnUrls(prefilled);
-            setMixedUrls(prefilled);
+            // Only prefill URLs if not already restored from saved state
+            if (!saved?.ownUrls) {
+              const prefilled = Object.fromEntries(
+                POLICY_KEYS.map((k) => [k, `${base}${POLICY_PATHS[k]}`])
+              ) as Record<PolicyKey, string>;
+              setOwnUrls(prefilled);
+              setMixedUrls(prefilled);
+            }
           });
       })
       .catch(() => {});

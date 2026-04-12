@@ -6,7 +6,8 @@ import { Page, Banner } from "@shopify/polaris";
 import { BusinessPoliciesStep } from "@/components/setup/steps/BusinessPoliciesStep";
 
 export default function EmbeddedPoliciesPage() {
-  const t = useTranslations("nav");
+  const tNav = useTranslations("nav");
+  const t = useTranslations("policies");
   const saveRef = useRef<(() => Promise<boolean>) | null>(null) as React.MutableRefObject<(() => Promise<boolean>) | null>;
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -27,22 +28,22 @@ export default function EmbeddedPoliciesPage() {
 
   return (
     <Page
-      title={t("policies")}
-      backAction={{ content: t("overview"), url: "/app" }}
+      title={tNav("policies")}
+      backAction={{ content: tNav("overview"), url: "/app" }}
       primaryAction={{
-        content: "Save policies",
+        content: t("savePolicies"),
         onAction: handleSave,
         loading: saving,
       }}
     >
       {status === "success" && (
         <Banner tone="success" onDismiss={() => setStatus("idle")}>
-          Policies saved.
+          {t("policiesSaved")}
         </Banner>
       )}
       {status === "error" && (
         <Banner tone="critical" onDismiss={() => setStatus("idle")}>
-          Could not save policies. Pick a flow and try again.
+          {t("policiesSaveError")}
         </Banner>
       )}
       <BusinessPoliciesStep stepId="policies" onSaveRef={saveRef} />

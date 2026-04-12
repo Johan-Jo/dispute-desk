@@ -947,7 +947,10 @@
     "clearAllPolicies": "Limpar todas as políticas",
     "clearAllPoliciesConfirm": "Remover todos os documentos de política desta loja? Pode voltar a carregar ou aplicar modelos depois.",
     "clearAllPoliciesSuccess": "Todas as políticas foram limpas. Pode adicioná-las novamente por carregamento ou modelos.",
-    "clearAllPoliciesError": "Falha ao limpar as políticas. Tente novamente."
+    "clearAllPoliciesError": "Falha ao limpar as políticas. Tente novamente.",
+    "savePolicies": "Salvar políticas",
+    "policiesSaved": "Políticas salvas.",
+    "policiesSaveError": "Não foi possível salvar as políticas. Selecione um fluxo e tente novamente."
   },
   "reasons": {
     "fraudulent": "Fraudulento",

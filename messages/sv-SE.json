@@ -1008,6 +1008,9 @@
     "clearAllPoliciesConfirm": "Ta bort alla policydokument för denna butik? Du kan ladda upp eller tillämpa mallar igen efteråt.",
     "clearAllPoliciesSuccess": "Alla policyer borttagna. Du kan nu ladda upp eller använda mallar igen.",
     "clearAllPoliciesError": "Kunde inte rensa policyer. Försök igen.",
+    "savePolicies": "Spara policyer",
+    "policiesSaved": "Policyer sparade.",
+    "policiesSaveError": "Kunde inte spara policyer. Välj ett flöde och försök igen.",
     "returnToTemplateSetup": "Return to template setup"
   },
   "reasons": {

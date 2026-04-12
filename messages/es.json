@@ -947,7 +947,10 @@
     "clearAllPolicies": "Borrar todas las políticas",
     "clearAllPoliciesConfirm": "¿Eliminar todos los documentos de política de esta tienda? Podrá volver a subirlos o aplicar plantillas después.",
     "clearAllPoliciesSuccess": "Todas las políticas borradas. Puede volver a subirlas o usar plantillas.",
-    "clearAllPoliciesError": "No se pudieron borrar las políticas. Inténtelo de nuevo."
+    "clearAllPoliciesError": "No se pudieron borrar las políticas. Inténtelo de nuevo.",
+    "savePolicies": "Guardar políticas",
+    "policiesSaved": "Políticas guardadas.",
+    "policiesSaveError": "No se pudieron guardar las políticas. Seleccione un flujo e inténtelo de nuevo."
   },
   "reasons": {
     "fraudulent": "Fraudulento",

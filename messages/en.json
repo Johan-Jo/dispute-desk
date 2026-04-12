@@ -986,7 +986,10 @@
     "clearAllPolicies": "Clear all policies",
     "clearAllPoliciesConfirm": "Remove all policy documents for this store? You can re-upload or re-apply templates afterward to re-review.",
     "clearAllPoliciesSuccess": "All policies cleared. You can now re-upload or use templates to add them again.",
-    "clearAllPoliciesError": "Failed to clear policies. Please try again."
+    "clearAllPoliciesError": "Failed to clear policies. Please try again.",
+    "savePolicies": "Save policies",
+    "policiesSaved": "Policies saved.",
+    "policiesSaveError": "Could not save policies. Pick a flow and try again."
   },
   "reasons": {
     "fraudulent": "Fraudulent",

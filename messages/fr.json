@@ -947,7 +947,10 @@
     "clearAllPolicies": "Effacer toutes les politiques",
     "clearAllPoliciesConfirm": "Supprimer tous les documents de politique de cette boutique ? Vous pourrez les téléverser ou réappliquer les modèles ensuite.",
     "clearAllPoliciesSuccess": "Toutes les politiques ont été effacées. Vous pouvez les ajouter à nouveau par téléversement ou modèles.",
-    "clearAllPoliciesError": "Impossible d'effacer les politiques. Veuillez réessayer."
+    "clearAllPoliciesError": "Impossible d'effacer les politiques. Veuillez réessayer.",
+    "savePolicies": "Enregistrer les politiques",
+    "policiesSaved": "Politiques enregistrées.",
+    "policiesSaveError": "Impossible d'enregistrer les politiques. Sélectionnez un mode et réessayez."
   },
   "reasons": {
     "fraudulent": "Frauduleux",

@@ -947,7 +947,10 @@
     "clearAllPolicies": "Alle Richtlinien löschen",
     "clearAllPoliciesConfirm": "Alle Richtliniendokumente für diesen Shop entfernen? Sie können sie danach erneut hochladen oder Vorlagen anwenden.",
     "clearAllPoliciesSuccess": "Alle Richtlinien gelöscht. Sie können sie jetzt erneut hochladen oder Vorlagen verwenden.",
-    "clearAllPoliciesError": "Richtlinien konnten nicht gelöscht werden. Bitte erneut versuchen."
+    "clearAllPoliciesError": "Richtlinien konnten nicht gelöscht werden. Bitte erneut versuchen.",
+    "savePolicies": "Richtlinien speichern",
+    "policiesSaved": "Richtlinien gespeichert.",
+    "policiesSaveError": "Richtlinien konnten nicht gespeichert werden. Wählen Sie einen Ablauf und versuchen Sie es erneut."
   },
   "reasons": {
     "fraudulent": "Betrug",
