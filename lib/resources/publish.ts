@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { isResourceHubPillar } from "@/lib/resources/pillars";
+import type { ResourceHubPillar } from "@/lib/resources/pillars";
+import { ensureFeaturedImage } from "@/lib/resources/featuredImage";
 import { sendPublishNotification } from "@/lib/email/sendPublishNotification";
 import { notifySearchEngines } from "@/lib/seo/indexnow";
 import type { HubContentLocale } from "./constants";
@@ -62,6 +64,12 @@ export async function publishLocalization(id: string): Promise<{ ok: boolean; er
     .select("*", { count: "exact", head: true })
     .eq("content_item_id", loc.content_item_id);
   if ((tagCount ?? 0) < 3) return { ok: false, error: "min_3_tags" };
+
+  // Auto-assign a featured image from Pexels if the item doesn't have one yet.
+  // Non-blocking: publish proceeds even if image assignment fails.
+  await ensureFeaturedImage(loc.content_item_id, pillar as ResourceHubPillar).catch((err) => {
+    console.error("[publish] ensureFeaturedImage failed (non-blocking):", err);
+  });
 
   const now = new Date().toISOString();
   const { error: locUpdateErr } = await sb
