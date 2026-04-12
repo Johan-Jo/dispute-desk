@@ -505,7 +505,17 @@
       "REFUND": "Reembolso não processado",
       "DUPLICATE": "Cobrança duplicada",
       "DIGITAL": "Bens digitais ou serviço",
-      "GENERAL": "Geral"
+      "GENERAL": "Geral",
+      "CREDIT_NOT_PROCESSED": "Reembolso não processado",
+      "SUBSCRIPTION_CANCELED": "Assinatura cancelada",
+      "PRODUCT_UNACCEPTABLE": "Produto não conforme",
+      "NONCOMPLIANT": "Não conforme",
+      "UNRECOGNIZED": "Cobrança não reconhecida",
+      "DEBIT_NOT_AUTHORIZED": "Débito não autorizado",
+      "CUSTOMER_INITIATED": "Iniciado pelo cliente",
+      "BANK_CANNOT_PROCESS": "Banco não pode processar",
+      "INCORRECT_ACCOUNT_DETAILS": "Dados da conta incorretos",
+      "INSUFFICIENT_FUNDS": "Fundos insuficientes"
     },
     "playbookTitle": "Detalhes do playbook",
     "evidencePackTitle": "Pacote de evidências",

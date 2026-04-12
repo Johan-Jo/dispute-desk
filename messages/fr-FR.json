@@ -505,7 +505,17 @@
       "REFUND": "Remboursement non traité",
       "DUPLICATE": "Double facturation",
       "DIGITAL": "Biens numériques ou service",
-      "GENERAL": "Général"
+      "GENERAL": "Général",
+      "CREDIT_NOT_PROCESSED": "Remboursement non traité",
+      "SUBSCRIPTION_CANCELED": "Abonnement annulé",
+      "PRODUCT_UNACCEPTABLE": "Produit non conforme",
+      "NONCOMPLIANT": "Non conforme",
+      "UNRECOGNIZED": "Charge non reconnue",
+      "DEBIT_NOT_AUTHORIZED": "Débit non autorisé",
+      "CUSTOMER_INITIATED": "Initié par le client",
+      "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
+      "INCORRECT_ACCOUNT_DETAILS": "Détails du compte incorrects",
+      "INSUFFICIENT_FUNDS": "Fonds insuffisants"
     },
     "playbookTitle": "Détails du playbook",
     "evidencePackTitle": "Dossier de preuves",

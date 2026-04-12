@@ -496,7 +496,17 @@
       "REFUND": "Refund not processed",
       "DUPLICATE": "Duplicate charge",
       "DIGITAL": "Digital goods or service",
-      "GENERAL": "General"
+      "GENERAL": "General",
+      "CREDIT_NOT_PROCESSED": "Refund / credit not processed",
+      "SUBSCRIPTION_CANCELED": "Subscription canceled",
+      "PRODUCT_UNACCEPTABLE": "Product not as described",
+      "NONCOMPLIANT": "Noncompliant",
+      "UNRECOGNIZED": "Unrecognized charge",
+      "DEBIT_NOT_AUTHORIZED": "Debit not authorized",
+      "CUSTOMER_INITIATED": "Customer initiated",
+      "BANK_CANNOT_PROCESS": "Bank cannot process",
+      "INCORRECT_ACCOUNT_DETAILS": "Incorrect account details",
+      "INSUFFICIENT_FUNDS": "Insufficient funds"
     },
     "subtitleDispute": "Evidence DisputeDesk built for this dispute. {type} — {phase}.",
     "subtitleLibrary": "Template for {type} disputes. DisputeDesk uses it automatically when a matching dispute comes in.",

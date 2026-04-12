@@ -360,8 +360,11 @@ export default function PackPreviewPage() {
   const isLibraryPack = pack.dispute_id == null;
   const fromTemplate = pack.source === "TEMPLATE" && Boolean(pack.template_name ?? pack.name);
   const disputeTypeKey = pack.dispute_type ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_") : "GENERAL";
+  const disputeTypeRaw = t(`packs.disputeTypeLabel.${disputeTypeKey}` as Parameters<typeof t>[0]);
+  // next-intl returns the full key path when a key is missing — detect that
+  // and fall back to a human-readable form of the raw dispute_type.
   const disputeTypeLabel = pack.dispute_type
-    ? (t(`packs.disputeTypeLabel.${disputeTypeKey}`) as string) || pack.dispute_type.replace(/_/g, " ")
+    ? (disputeTypeRaw.includes("disputeTypeLabel.") ? pack.dispute_type.replace(/_/g, " ") : disputeTypeRaw)
     : "—";
   const stateKey = getPackStateKey(pack, isLibraryPack);
   const phaseLabel =

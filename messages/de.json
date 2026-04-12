@@ -475,7 +475,29 @@
     "statusFailedLabel": "Fehlgeschlagen",
     "statusSavingLabel": "Wird gespeichert",
     "statusSavedToShopifyLabel": "In Shopify gespeichert",
-    "statusSaveFailedLabel": "Speichern fehlgeschlagen"
+    "statusSaveFailedLabel": "Speichern fehlgeschlagen",
+    "disputeTypeLabel": {
+      "FRAUD": "Betrügerische Transaktion",
+      "FRAUDULENT": "Betrügerische Transaktion",
+      "PNR": "Produkt nicht erhalten",
+      "PRODUCT_NOT_RECEIVED": "Produkt nicht erhalten",
+      "NOT_AS_DESCRIBED": "Produkt nicht wie beschrieben",
+      "SUBSCRIPTION": "Abonnement",
+      "REFUND": "Rückerstattung nicht verarbeitet",
+      "DUPLICATE": "Doppelte Belastung",
+      "DIGITAL": "Digitale Güter oder Dienstleistung",
+      "GENERAL": "Allgemein",
+      "CREDIT_NOT_PROCESSED": "Rückerstattung nicht verarbeitet",
+      "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
+      "PRODUCT_UNACCEPTABLE": "Produkt nicht wie beschrieben",
+      "NONCOMPLIANT": "Nicht konform",
+      "UNRECOGNIZED": "Unerkannte Belastung",
+      "DEBIT_NOT_AUTHORIZED": "Lastschrift nicht autorisiert",
+      "CUSTOMER_INITIATED": "Vom Kunden initiiert",
+      "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
+      "INCORRECT_ACCOUNT_DETAILS": "Falsche Kontodaten",
+      "INSUFFICIENT_FUNDS": "Unzureichende Mittel"
+    }
   },
   "analytics": {
     "title": "Reporting",

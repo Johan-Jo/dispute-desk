@@ -477,7 +477,29 @@
     "statusFailedLabel": "Misslyckades",
     "statusSavingLabel": "Sparar",
     "statusSavedToShopifyLabel": "Sparad i Shopify",
-    "statusSaveFailedLabel": "Sparning misslyckades"
+    "statusSaveFailedLabel": "Sparning misslyckades",
+    "disputeTypeLabel": {
+      "FRAUD": "Bedräglig transaktion",
+      "FRAUDULENT": "Bedräglig transaktion",
+      "PNR": "Produkt ej mottagen",
+      "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
+      "NOT_AS_DESCRIBED": "Produkt ej som beskriven",
+      "SUBSCRIPTION": "Prenumeration",
+      "REFUND": "Återbetalning ej behandlad",
+      "DUPLICATE": "Dubbel debitering",
+      "DIGITAL": "Digitala varor eller tjänst",
+      "GENERAL": "Allmänt",
+      "CREDIT_NOT_PROCESSED": "Återbetalning ej behandlad",
+      "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
+      "PRODUCT_UNACCEPTABLE": "Produkt ej som beskriven",
+      "NONCOMPLIANT": "Ej regelenlig",
+      "UNRECOGNIZED": "Okänd debitering",
+      "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
+      "CUSTOMER_INITIATED": "Initierad av kund",
+      "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
+      "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
+      "INSUFFICIENT_FUNDS": "Otillräckliga medel"
+    }
   },
   "analytics": {
     "title": "Reporting",

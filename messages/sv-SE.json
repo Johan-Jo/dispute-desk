@@ -506,7 +506,17 @@
       "REFUND": "Återbetalning ej genomförd",
       "DUPLICATE": "Dubbel debitering",
       "DIGITAL": "Digitala varor eller tjänst",
-      "GENERAL": "Allmänt"
+      "GENERAL": "Allmänt",
+      "CREDIT_NOT_PROCESSED": "Återbetalning ej behandlad",
+      "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
+      "PRODUCT_UNACCEPTABLE": "Produkt ej som beskriven",
+      "NONCOMPLIANT": "Ej regelenlig",
+      "UNRECOGNIZED": "Okänd debitering",
+      "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
+      "CUSTOMER_INITIATED": "Initierad av kund",
+      "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
+      "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
+      "INSUFFICIENT_FUNDS": "Otillräckliga medel"
     },
     "playbookTitle": "Playbook-detaljer",
     "evidencePackTitle": "Bevispaket",
