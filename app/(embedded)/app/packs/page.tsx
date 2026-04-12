@@ -587,7 +587,13 @@ export default function PacksListPage() {
                         </IndexTable.Cell>
                         <IndexTable.Cell>
                           <Text as="p" variant="bodySm" tone="subdued">
-                            {getPackFamily(pack.dispute_type)}
+                            {(() => {
+                              const family = getPackFamily(pack.dispute_type);
+                              if (!family) return "";
+                              const key = `disputeFamilies.${family}`;
+                              const translated = t(key);
+                              return translated === key ? family : translated;
+                            })()}
                           </Text>
                         </IndexTable.Cell>
                         <IndexTable.Cell>

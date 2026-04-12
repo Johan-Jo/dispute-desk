@@ -68,11 +68,25 @@ function isSyntheticDispute(disputeGid: string): boolean {
   return disputeGid?.includes("/seed-") ?? false;
 }
 
-function formatReasonTitleCase(reason: string | null): string {
+function translateReason(reason: string | null, t: (key: string) => string): string {
   if (!reason) return "—";
-  return reason
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const key = `disputeReasons.${reason}`;
+  const translated = t(key);
+  // Fallback to title-cased reason if key is missing
+  if (translated === key) {
+    return reason
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return translated;
+}
+
+function translateFamily(reason: string | null, t: (key: string) => string): string {
+  const family = DISPUTE_REASON_FAMILIES[reason as AllDisputeReasonCode];
+  if (!family) return "";
+  const key = `disputeFamilies.${family}`;
+  const translated = t(key);
+  return translated === key ? family : translated;
 }
 
 function formatCurrency(
@@ -290,17 +304,19 @@ export default function DisputesListPage() {
         formatShortId(d.id),
         d.customer_display_name ?? "",
         formatCurrency(d.amount, d.currency_code, numberLocale),
-        formatReasonTitleCase(d.reason),
-        DISPUTE_REASON_FAMILIES[d.reason as AllDisputeReasonCode] ?? "",
+        translateReason(d.reason, t),
+        translateFamily(d.reason, t),
         d.phase ?? "",
         statusLabelForCsv(d.status),
         formatDueDate(d.due_at),
       ].join(","),
     );
-    const csv = [
-      "Order,ID,Customer,Amount,Reason,Family,Phase,Status,Due date",
-      ...rows,
-    ].join("\n");
+    const csvHeader = [
+      t("disputes.csvOrder"), t("disputes.csvId"), t("disputes.csvCustomer"),
+      t("disputes.csvAmount"), t("disputes.csvReason"), t("disputes.csvFamily"),
+      t("disputes.csvPhase"), t("disputes.csvStatus"), t("disputes.csvDueDate"),
+    ].join(",");
+    const csv = [csvHeader, ...rows].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(
       new Blob([csv], { type: "text/csv;charset=utf-8" }),
@@ -531,10 +547,10 @@ export default function DisputesListPage() {
                             <td>
                               <BlockStack gap="050">
                                 <span className={styles.cellMuted}>
-                                  {formatReasonTitleCase(d.reason)}
+                                  {translateReason(d.reason, t)}
                                 </span>
                                 <Text as="span" variant="bodySm" tone="subdued">
-                                  {DISPUTE_REASON_FAMILIES[d.reason as AllDisputeReasonCode] ?? ""}
+                                  {translateFamily(d.reason, t)}
                                 </Text>
                               </BlockStack>
                             </td>
