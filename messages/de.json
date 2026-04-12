@@ -1900,7 +1900,7 @@
     "viewAutomation": "Automatisierung anzeigen",
     "allCovered": "Alle Streitfall-Familien sind abgedeckt",
     "improveCoverage": "Abdeckung verbessern",
-    "activePacks": "{count} aktive(s) Playbook(s)",
+    "activePacks": "{count, plural, one {1 aktives Playbook} other {# aktive Playbooks}}",
     "noPlaybook": "Kein Playbook installiert",
     "familyRecommendation": "Empfohlen: Installieren Sie ein Playbook und konfigurieren Sie eine Automatisierungsregel für diese Familie",
     "lifecycleSubtitle": "Sehen Sie, wie Anfragen und Rückbuchungen je Streitfall-Familie behandelt werden",

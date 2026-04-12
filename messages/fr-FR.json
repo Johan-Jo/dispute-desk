@@ -2763,7 +2763,7 @@
     "viewAutomation": "Voir l'automatisation",
     "allCovered": "Toutes les familles de litiges sont couvertes",
     "improveCoverage": "Améliorer la couverture",
-    "activePacks": "{count} playbook(s) actif(s)",
+    "activePacks": "{count, plural, one {1 playbook actif} other {# playbooks actifs}}",
     "noPlaybook": "Aucun playbook installé",
     "familyRecommendation": "Recommandé : installez un playbook et configurez une règle d'automatisation pour cette famille",
     "lifecycleSubtitle": "Voyez comment les demandes et rétrofacturations sont traitées par famille de litige",

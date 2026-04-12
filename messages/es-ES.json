@@ -2763,7 +2763,7 @@
     "viewAutomation": "Ver automatización",
     "allCovered": "Todas las familias de disputas están cubiertas",
     "improveCoverage": "Mejorar cobertura",
-    "activePacks": "{count} playbook(s) activo(s)",
+    "activePacks": "{count, plural, one {1 playbook activo} other {# playbooks activos}}",
     "noPlaybook": "Ningún playbook instalado",
     "familyRecommendation": "Recomendado: instala un playbook y configura una regla de automatización para esta familia",
     "lifecycleSubtitle": "Mira cómo se gestionan consultas y contracargos por familia de disputa",

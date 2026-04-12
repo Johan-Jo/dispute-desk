@@ -2681,7 +2681,7 @@
     "viewAutomation": "View Automation",
     "allCovered": "All dispute families are covered",
     "improveCoverage": "Improve Coverage",
-    "activePacks": "{count} active playbook(s)",
+    "activePacks": "{count, plural, one {1 active playbook} other {# active playbooks}}",
     "noPlaybook": "No playbook installed",
     "familyRecommendation": "Recommended: install a playbook and set up an automation rule for this family",
     "stateAllSetup": "DisputeDesk is set up for all {total} dispute types. New disputes will be handled automatically using your rules and playbooks.",

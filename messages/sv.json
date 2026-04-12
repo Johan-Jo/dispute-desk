@@ -2007,7 +2007,7 @@
     "viewAutomation": "Visa automatisering",
     "allCovered": "Alla tvistfamiljer är täckta",
     "improveCoverage": "Förbättra täckning",
-    "activePacks": "{count} aktiv(a) playbook(s)",
+    "activePacks": "{count, plural, one {1 aktiv playbook} other {# aktiva playbooks}}",
     "noPlaybook": "Ingen playbook installerad",
     "familyRecommendation": "Rekommenderat: installera en playbook och konfigurera en automatiseringsregel för denna familj",
     "lifecycleSubtitle": "Se hur förfrågningar och återkrav hanteras per tvistfamilj",
