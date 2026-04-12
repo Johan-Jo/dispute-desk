@@ -137,6 +137,7 @@
     "protectionSummary": "Schutzstatus Ihres Shops",
     "blockersList": "Probleme, die Aufmerksamkeit erfordern:",
     "noBlockers": "Keine Probleme — Ihr Schutz ist aktiv",
+    "autoBuildDisabled": "Automatische Erstellung deaktiviert",
     "recommendedAction": "Empfohlener nächster Schritt",
     "continueSetupAction": "Einrichtung fortsetzen",
     "reviewIssueAction": "Probleme prüfen",

@@ -137,6 +137,7 @@
     "protectionSummary": "État de protection de votre boutique",
     "blockersList": "Problèmes nécessitant votre attention :",
     "noBlockers": "Aucun problème — votre protection est active",
+    "autoBuildDisabled": "Construction automatique désactivée",
     "recommendedAction": "Prochaine étape recommandée",
     "continueSetupAction": "Continuer la configuration",
     "reviewIssueAction": "Examiner les problèmes",

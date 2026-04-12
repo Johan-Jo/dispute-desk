@@ -120,6 +120,7 @@
     "protectionSummary": "Status de proteção contra disputas da sua loja",
     "blockersList": "Problemas que precisam de atenção:",
     "noBlockers": "Sem problemas — sua proteção está ativa",
+    "autoBuildDisabled": "Construção automática desativada",
     "recommendedAction": "Próximo passo recomendado",
     "continueSetupAction": "Continuar configuração",
     "reviewIssueAction": "Revisar problemas",

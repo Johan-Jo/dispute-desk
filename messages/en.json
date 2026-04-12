@@ -136,6 +136,7 @@
     "protectionSummary": "Your store's dispute protection status",
     "blockersList": "Issues requiring attention:",
     "noBlockers": "No issues — your protection is active",
+    "autoBuildDisabled": "Auto-build is disabled",
     "recommendedAction": "Recommended next step",
     "continueSetupAction": "Continue Setup",
     "reviewIssueAction": "Review Issues",

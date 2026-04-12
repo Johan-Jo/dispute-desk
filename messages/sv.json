@@ -122,6 +122,7 @@
     "protectionSummary": "Din butiks tvistskyddsstatus",
     "blockersList": "Problem som kräver uppmärksamhet:",
     "noBlockers": "Inga problem — ditt skydd är aktivt",
+    "autoBuildDisabled": "Automatisk generering inaktiverad",
     "recommendedAction": "Rekommenderat nästa steg",
     "continueSetupAction": "Fortsätt konfiguration",
     "reviewIssueAction": "Granska problem",

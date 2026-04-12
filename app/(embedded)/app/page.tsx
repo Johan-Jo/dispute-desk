@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Page,
@@ -32,7 +32,7 @@ import {
   QuestionCircleIcon,
   ShieldCheckMarkIcon,
 } from "@shopify/polaris-icons";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { SetupStateResponse } from "@/lib/setup/types";
 import { withShopParams } from "@/lib/withShopParams";
 import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
@@ -74,6 +74,7 @@ interface DashboardStats {
   winRate: number;
   packCount: number;
   amountAtRisk: number;
+  currencyCode: string;
   // Period-over-period changes (null = no comparison available)
   activeDisputesChange: number | null;
   winRateChange: number | null;
@@ -93,6 +94,7 @@ const DEFAULT_STATS: DashboardStats = {
   winRate: 0,
   packCount: 0,
   amountAtRisk: 0,
+  currencyCode: "USD",
   activeDisputesChange: null,
   winRateChange: null,
   amountAtRiskChange: null,
@@ -147,9 +149,20 @@ function DashboardSetupBanner() {
 
 function RecentDisputesTable() {
   const t = useTranslations();
+  const tPacks = useTranslations("packs");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<DisputeRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const dateLocale = useMemo(() => {
+    if (locale.startsWith("pt")) return "pt-BR";
+    if (locale.startsWith("de")) return "de-DE";
+    if (locale.startsWith("sv")) return "sv-SE";
+    if (locale.startsWith("es")) return "es-ES";
+    if (locale.startsWith("fr")) return "fr-FR";
+    return "en-US";
+  }, [locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,17 +183,19 @@ function RecentDisputesTable() {
             order: d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—"),
             orderUrl: shopifyOrderAdminUrl(shopDomain, d.order_gid ?? null),
             customer: d.customer_display_name ?? null,
-            amount: d.amount != null ? `$${Number(d.amount).toFixed(2)}` : "—",
+            amount: d.amount != null
+              ? new Intl.NumberFormat(dateLocale, { style: "currency", currency: d.currency_code ?? "USD" }).format(Number(d.amount))
+              : "—",
             reason: d.reason ?? null,
             phase: d.phase ?? null,
             status: d.status ?? null,
-            deadline: d.due_at ? new Date(d.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null,
+            deadline: d.due_at ? new Date(d.due_at).toLocaleDateString(dateLocale, { month: "short", day: "numeric" }) : null,
           }))
         );
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [dateLocale]);
 
   if (loading) {
     return (
@@ -218,6 +233,7 @@ function RecentDisputesTable() {
 
   const formatReason = (reason: string | null) => {
     if (!reason) return "—";
+    try { return tPacks(`disputeTypeLabel.${reason}`); } catch { /* fallback */ }
     return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
@@ -304,36 +320,23 @@ function RecentDisputesTable() {
   );
 }
 
-function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriodChange: (p: PeriodKey) => void }) {
+function DashboardKpis({ stats, loading, period, onPeriodChange }: { stats: DashboardStats; loading: boolean; period: PeriodKey; onPeriodChange: (p: PeriodKey) => void }) {
   const t = useTranslations();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const locale = useLocale();
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/dashboard/stats?period=${period}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data) setStats(data);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [period]);
+  const dateLocale = useMemo(() => {
+    if (locale.startsWith("pt")) return "pt-BR";
+    if (locale.startsWith("de")) return "de-DE";
+    if (locale.startsWith("sv")) return "sv-SE";
+    if (locale.startsWith("es")) return "es-ES";
+    if (locale.startsWith("fr")) return "fr-FR";
+    return "en-US";
+  }, [locale]);
 
-  if (loading) {
-    return (
-      <Card>
-        <BlockStack gap="400" inlineAlign="center">
-          <Spinner size="small" />
-        </BlockStack>
-      </Card>
-    );
-  }
-
-  const s = stats ?? DEFAULT_STATS;
+  const s = stats;
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat(dateLocale, { style: "currency", currency: s.currencyCode, maximumFractionDigits: 0 }).format(amount);
 
   const kpiCards = [
     {
@@ -457,23 +460,16 @@ function DashboardKpis({ period, onPeriodChange }: { period: PeriodKey; onPeriod
   );
 }
 
-function DashboardCharts({ period }: { period: PeriodKey }) {
+function DashboardCharts({ stats, loading }: { stats: DashboardStats; loading: boolean }) {
   const t = useTranslations();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const tPacks = useTranslations("packs");
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/dashboard/stats?period=${period}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data) setStats(data);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [period]);
+  const s = stats;
 
-  const s = stats ?? DEFAULT_STATS;
+  const translateCategory = (label: string) => {
+    try { return tPacks(`disputeTypeLabel.${label}`); } catch { /* fallback */ }
+    return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
 
   return (
     <>
@@ -514,7 +510,7 @@ function DashboardCharts({ period }: { period: PeriodKey }) {
                 {s.disputeCategories.map(({ label, value }) => (
                   <BlockStack key={label} gap="100">
                     <InlineStack align="space-between" blockAlign="center">
-                      <Text as="span" variant="bodyMd">{label}</Text>
+                      <Text as="span" variant="bodyMd">{translateCategory(label)}</Text>
                       <Text as="span" variant="bodyMd" tone="subdued">{value}%</Text>
                     </InlineStack>
                     <ProgressBar progress={value} size="small" />
@@ -661,7 +657,7 @@ function ProtectionStatusCard() {
         {!settings?.auto_build_enabled && status !== "setup" && (
           <InlineStack gap="200" blockAlign="center">
             <div style={{ width: 6, height: 6, borderRadius: 3, background: "#F59E0B", flexShrink: 0 }} />
-            <Text as="span" variant="bodySm" tone="caution">Auto-build is disabled</Text>
+            <Text as="span" variant="bodySm" tone="caution">{t("autoBuildDisabled")}</Text>
           </InlineStack>
         )}
 
@@ -679,26 +675,13 @@ function ProtectionStatusCard() {
   );
 }
 
-function LifecycleQueueSummary({ period }: { period: PeriodKey }) {
+function LifecycleQueueSummary({ stats, loading }: { stats: DashboardStats; loading: boolean }) {
   const t = useTranslations();
   const searchParams = useSearchParams();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/dashboard/stats?period=${period}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data) setStats(data);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [period]);
 
   if (loading) return null;
 
-  const s = stats ?? DEFAULT_STATS;
+  const s = stats;
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
@@ -805,6 +788,20 @@ export default function EmbeddedDashboardPage() {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const [period, setPeriod] = useState<PeriodKey>("30d");
+  const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatsLoading(true);
+    fetch(`/api/dashboard/stats?period=${period}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setStats(data);
+      })
+      .finally(() => { if (!cancelled) setStatsLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
 
   return (
     <Page
@@ -826,12 +823,12 @@ export default function EmbeddedDashboardPage() {
 
         {/* 3. Active Cases — inquiry/chargeback split */}
         <Layout.Section>
-          <LifecycleQueueSummary period={period} />
+          <LifecycleQueueSummary stats={stats} loading={statsLoading} />
         </Layout.Section>
 
         {/* 4. Advanced: KPI cards */}
         <Layout.Section>
-          <DashboardKpis period={period} onPeriodChange={setPeriod} />
+          <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
         {/* 5. Advanced: Recent disputes table */}
@@ -842,7 +839,7 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         {/* 6. Advanced: Charts */}
-        <DashboardCharts period={period} />
+        <DashboardCharts stats={stats} loading={statsLoading} />
 
         <Layout.Section>
           <DashboardHelpCard />

@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
   }
   const disputeCategories = Object.entries(reasonCounts)
     .map(([label, count]) => ({
-      label: label.replace(/_/g, " "),
+      label,
       value: totalDisputes > 0 ? Math.round((count / totalDisputes) * 100) : 0,
     }))
     .sort((a, b) => b.value - a.value)
@@ -175,12 +175,22 @@ export async function GET(req: NextRequest) {
     winRateTrend.push(r > 0 ? Math.round((w / r) * 100) : 0);
   }
 
+  // Derive the shop's primary currency from disputes
+  const currencyCounts: Record<string, number> = {};
+  for (const d of list) {
+    const c = d.currency_code ?? "USD";
+    currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
+  }
+  const currencyCode = Object.entries(currencyCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+
   return NextResponse.json({
     // ── Portal-matching KPIs ──
     activeDisputes,
     winRate,
     packCount: packCount ?? 0,
     amountAtRisk,
+    currencyCode,
     // ── Lifecycle phase counts (active disputes only) ──
     inquiryCount,
     chargebackCount,
