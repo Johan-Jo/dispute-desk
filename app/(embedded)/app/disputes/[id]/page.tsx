@@ -242,7 +242,6 @@ function ProfileRow({ label, value }: { label: string; value: React.ReactNode })
   );
 }
 
-const INFO_BANNER_KEY = "dd-info-banner-dismissed";
 
 export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -263,12 +262,6 @@ export default function DisputeDetailPage() {
   const [matchedTemplate, setMatchedTemplate] = useState<{ id: string; name: string } | null>(null);
 
   // Collapsible state
-  const [infoBannerDismissed, setInfoBannerDismissed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(INFO_BANNER_KEY) === "1";
-    }
-    return false;
-  });
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [orderDataOpen, setOrderDataOpen] = useState(false);
   const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
@@ -398,11 +391,6 @@ export default function DisputeDetailPage() {
     }
     setTemplateCheckLoading(false);
     setShowTemplateModal(true);
-  };
-
-  const dismissInfoBanner = () => {
-    setInfoBannerDismissed(true);
-    localStorage.setItem(INFO_BANNER_KEY, "1");
   };
 
   if (loading) {
@@ -591,16 +579,6 @@ export default function DisputeDetailPage() {
             </InlineStack>
           </Card>
         </Layout.Section>
-
-        {/* Info Banner */}
-        {!infoBannerDismissed && (
-          <Layout.Section>
-            <Banner tone={dispute.phase === "inquiry" ? "warning" : "info"} onDismiss={dismissInfoBanner}>
-              <p><strong>{dispute.phase === "inquiry" ? t("disputes.inquiryInfoHeadline") : t("disputes.infoBannerHeadline")}</strong></p>
-              <p>{dispute.phase === "inquiry" ? t("disputes.inquiryInfoDetail") : t("disputes.infoBannerDetail")}</p>
-            </Banner>
-          </Layout.Section>
-        )}
 
         {/* Quota / pack limit error */}
         {quotaError && (
