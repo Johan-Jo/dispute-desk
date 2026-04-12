@@ -430,7 +430,7 @@ function PhaseRow({
       </Badge>
       {handling.playbooks.length > 0 && (
         <Text as="span" variant="bodySm" tone="subdued">
-          {[...new Set(handling.playbooks.map((p) => p.name))].join(", ")}
+          {tc("activePacks", { count: new Set(handling.playbooks.map((p) => p.name)).size })}
         </Text>
       )}
       {handling.hasGap && (
