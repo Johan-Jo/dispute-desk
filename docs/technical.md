@@ -468,7 +468,7 @@ The pack detail page (embedded `app/packs/[packId]` and portal `portal/packs/[pa
 - **Template (library) pack** — `dispute_id == null`. The user is defining a **reusable template** that specifies what evidence to collect. This template is applied automatically (or manually) when a dispute matches. The UI shows "Define your evidence template", a checklist of required evidence types, optional sample files, and a "When this template is used" card. **Save evidence to Shopify** and **Submit in Shopify Admin** are not shown (they apply per dispute when the template is used).
 - **Dispute pack** — `dispute_id != null`. The user is preparing evidence for **one specific dispute**. The UI shows "Prepare your evidence pack", the full flow (upload → save to Shopify → submit in Admin), and copy that states order/tracking/policies are already pulled from Shopify; upload is for additional documents.
 
-Conditional copy and sections are driven by `isLibraryPack` (derived from `pack.dispute_id == null`) in both embedded and portal pack detail pages. i18n keys are namespaced (e.g. `detailHeroTitleTemplate`, `step1DescriptionDispute`) so template vs dispute wording stays consistent.
+Conditional copy and sections are driven by `isLibraryPack` (derived from `pack.dispute_id == null`) in both embedded and portal pack detail pages. i18n keys are namespaced (e.g. `detailHeroTitleTemplate`, `step1DescriptionDispute`) so template vs dispute wording stays consistent. **Localized pack names:** for template-backed packs, the API overrides `pack.name` at read time with the localized template name from `pack_template_i18n` (locale fallback: requested → en-US → any), so Portuguese merchants see Portuguese pack titles without re-installing.
 
 ### Auto-collected evidence vs manual upload
 
@@ -687,11 +687,11 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/setup/skip` — skip a step with reason
 - `POST /api/setup/undo-skip` — undo a skip (reset to todo)
 - `GET /api/setup/readiness?shop_id=...` — live connection/permission readiness checks for Step 1
-- `progress.total` / `doneCount` count all 5 onboarding steps; `nextStepId` is the next actionable `todo` step based on prerequisites.
+- `progress.total` / `doneCount` count all 6 onboarding steps; `nextStepId` is the next actionable `todo` step based on prerequisites.
 
 #### Rules vs library packs (mental model)
 
-- **Pack templates** (`POST /api/templates/:id/install`): Creates shop **library** rows in `packs`, `pack_sections`, narratives, etc. (`installTemplate` in `lib/db/packs.ts`). When the Packs wizard step completes, installed template IDs are stored in `shop_setup.steps.packs.payload.installedTemplates`.
+- **Pack templates** (`POST /api/templates/:id/install`): Creates shop **library** rows in `packs`, `pack_sections`, narratives, etc. (`installTemplate` in `lib/db/packs.ts`). **Silent inquiry pairing:** when a chargeback template is installed, the endpoint also installs the matching inquiry-phase sibling from `CHARGEBACK_TO_INQUIRY_TEMPLATE` (in `lib/setup/recommendTemplates.ts`) so pre-chargeback inquiries are automatically covered. The pairing is idempotent — if the inquiry pack already exists for the shop, it is skipped. `digital_goods` has no inquiry pair by design (falls back to `general_inquiry` via `reason_template_mappings`). **Localization:** `installTemplate` resolves the shop's `locale` from the `shops` table and names the pack using the matching `pack_template_i18n` row (falls back to `en-US`). When the Packs wizard step completes, installed template IDs are stored in `shop_setup.steps.packs.payload.installedTemplates`.
 - **Automation setup — library pack list:** `listLibraryPacksForAutomationRules` (`lib/db/packs.ts`) returns template-backed library packs for the shop: `status` is **not** `ARCHIVED`, `template_id` is set, ordered by `created_at` ascending. That includes **DRAFT** and **ACTIVE** rows so every installed template (even before activation) appears on the **Automation & review** step. The Packs step may still emphasize **ACTIVE** rows in its own UI; do not assume the two lists use the same filter.
 - **Setup automation** (`GET` / `POST /api/setup/automation`): `GET` returns `activePacks` (the library list above), `pack_modes` (per-pack handling keyed by `packs.id`: `manual` | `review` | `auto_pack`), `installedTemplateIds`, and merged `reason_rows` / safeguards derived from pack modes plus existing setup rules (`buildAutomationPayloadFromPackModes` in `lib/rules/packHandlingAutomation.ts`). `POST` with `{ shop_id, pack_modes }` validates modes against that pack list and installed templates, then persists via `replacePackBasedAutomationRules`. The legacy body with `reason_rows` / `safeguards` still goes through `replaceSetupAutomationRules` when `pack_modes` is omitted (see `lib/rules/setupAutomation.ts`). Setup-managed rows use the `__dd_setup__:` prefix; saving replaces setup-managed rules and removes legacy `install-preset` rows with the old fixed names.
 - **Evaluation** (`pickAutomationAction` in `lib/rules/pickAutomationAction.ts`, used by `evaluateRules`): Tier order is **amount safeguards → per-reason rules → catch-all** `match: {}`. Default when nothing matches: **manual** (no pipeline, no `needs_review`). Within the same tier and priority, **review** sorts before **auto_pack**. On **new dispute** sync (`syncDisputes.ts`), `review` sets `needs_review`; `auto_pack` runs `runAutomationPipeline` and stores `pack_template_id` on the new `evidence_packs` row (`029_evidence_packs_pack_template.sql`); `manual` does neither.
@@ -806,7 +806,9 @@ Tailwind CSS with shared components in `components/ui/`.
 
 **Embedded Automation page (`/app/rules`):** Inquiry sibling rules (`__dd_setup__:pack:{packId}:inquiry`) are filtered out before render — they're an implementation detail of the runtime, not something merchants configure. The state-sentence card uses `rules.phaseBlindNote` to explain that inquiry-phase disputes route to the lighter inquiry templates automatically and that each rule applies to both phases unless restricted.
 
-**Coverage page (`/app/coverage`):** `lib/coverage/deriveLifecycleCoverage.ts` picks a separate matching rule per `(family, phase)` via `pickRuleForFamilyAndPhase`. Phase-specific rules win over phase-blind rules at the same priority so the inquiry and chargeback rows of a family can show different automation modes when the merchant has configured them that way.
+**Coverage page (`/app/coverage`):** `lib/coverage/deriveLifecycleCoverage.ts` picks a separate matching rule per `(family, phase)` via `pickRuleForFamilyAndPhase`. Phase-specific rules win over phase-blind rules at the same priority so the inquiry and chargeback rows of a family can show different automation modes when the merchant has configured them that way. Per-family "Install playbook" buttons open `TemplateLibraryModal` in-place (pre-filtered by the row's dispute type via `FAMILY_TO_DISPUTE_TYPE` map) instead of navigating away. On successful install, coverage data reloads so the card updates immediately.
+
+**Template catalog API (`GET /api/templates`):** Inquiry-phase templates are filtered out of merchant-facing results using `INQUIRY_TEMPLATE_ID_SET` so merchants never see or pick inquiry packs directly. The admin route (`/api/admin/templates`) is unaffected.
 
 ### Sync Integration
 
@@ -1353,10 +1355,10 @@ All wizard links preserve `shop` and `host` query parameters via
 | Types | `lib/setup/types.ts` | StepStatus, StepState, ShopSetupRow, etc. |
 | Constants | `lib/setup/constants.ts` | SETUP_STEPS, prerequisite logic, helpers |
 | Readiness | `lib/setup/readiness.ts` | `evaluateReadiness()` — live connection/scope/webhook checks |
-| Recommend Templates | `lib/setup/recommendTemplates.ts` | `recommendTemplates()` + `deriveEvidenceConfidence()` + `getDefaultEvidenceConfig()` — store profile → template recs + evidence confidence |
+| Recommend Templates | `lib/setup/recommendTemplates.ts` | `recommendTemplates()` + `deriveEvidenceConfidence()` + `getDefaultEvidenceConfig()` + `CHARGEBACK_TO_INQUIRY_TEMPLATE` + `inquiryPairsFor()` — store profile → template recs + evidence confidence + inquiry pairing |
 | Evidence Types | `lib/setup/evidenceTypes.ts` | 8 evidence type definitions + source mappings |
 | Events | `lib/setup/events.ts` | `logSetupEvent()` → app_events table |
-| withShopParams | `lib/withShopParams.ts` | Preserve shop/host params in URLs |
+| withShopParams | `lib/withShopParams.ts` | Preserve shop/host/locale params in URLs. Merges query params when the pathname already contains `?key=value` (e.g. `/app/rules?family=fraud`). |
 
 ### Business Policies (`BusinessPoliciesStep`) — implementation notes
 
