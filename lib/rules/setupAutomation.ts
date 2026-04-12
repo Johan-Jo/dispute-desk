@@ -8,7 +8,7 @@
 
 export const SETUP_RULE_PREFIX = "__dd_setup__:";
 
-export type HandlingModeUi = "auto_build" | "review" | "manual";
+export type HandlingModeUi = "auto_build" | "review" | "manual" | "notify";
 
 export interface ReasonRowState {
   reason: string;

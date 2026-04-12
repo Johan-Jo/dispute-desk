@@ -790,7 +790,9 @@
     "safeguardAmountLabel": "Minimibelopp",
     "safeguardHint": "Bevispaketet skapas fortfarande automatiskt, men hålls kvar för ditt godkännande innan det sparas till Shopify.",
     "advancedFiltersTitle": "Avancerade anpassade regler",
-    "advancedFiltersSubtitle": "Anpassade regler skapade i portalen. Dessa körs parallellt med familjeautomatiseringen."
+    "advancedFiltersSubtitle": "Anpassade regler skapade i portalen. Dessa körs parallellt med familjeautomatiseringen.",
+    "quickNotifyAll": "Bara avisera alla",
+    "notifyOnly": "Bara Avisera"
   },
   "settings": {
     "title": "Inställningar",

@@ -839,7 +839,9 @@
     "safeguardAmountLabel": "Valor mínimo",
     "safeguardHint": "O pacote de evidências ainda é criado automaticamente, mas retido para sua aprovação antes de salvar no Shopify.",
     "advancedFiltersTitle": "Regras personalizadas avançadas",
-    "advancedFiltersSubtitle": "Regras personalizadas criadas no portal. Elas são executadas junto com a automação familiar."
+    "advancedFiltersSubtitle": "Regras personalizadas criadas no portal. Elas são executadas junto com a automação familiar.",
+    "quickNotifyAll": "Apenas notificar tudo",
+    "notifyOnly": "Apenas Notificar"
   },
   "settings": {
     "title": "Configurações",

@@ -788,7 +788,9 @@
     "safeguardAmountLabel": "Mindestbetrag",
     "safeguardHint": "Das Beweispaket wird weiterhin automatisch erstellt, aber vor dem Speichern bei Shopify zur Genehmigung zurückgehalten.",
     "advancedFiltersTitle": "Erweiterte benutzerdefinierte Regeln",
-    "advancedFiltersSubtitle": "Im Portal erstellte benutzerdefinierte Regeln. Diese laufen parallel zur Familienautomatisierung."
+    "advancedFiltersSubtitle": "Im Portal erstellte benutzerdefinierte Regeln. Diese laufen parallel zur Familienautomatisierung.",
+    "quickNotifyAll": "Alle nur benachrichtigen",
+    "notifyOnly": "Nur Benachrichtigen"
   },
   "settings": {
     "title": "Einstellungen",

@@ -823,6 +823,8 @@
     "playbooksInUse": "Using: {names}",
     "quickAutoAll": "Auto-pack all",
     "quickReviewAll": "Review all",
+    "quickNotifyAll": "Notify only all",
+    "notifyOnly": "Notify Only",
     "safeguardTitle": "Safeguards",
     "safeguardToggle": "Review high-value disputes before sending",
     "safeguardAmountLabel": "Minimum amount",

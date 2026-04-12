@@ -9,7 +9,7 @@ export interface RuleMatch {
 }
 
 export interface RuleAction {
-  mode: "auto_pack" | "review" | "manual";
+  mode: "auto_pack" | "review" | "manual" | "notify";
   pack_template_id?: string | null;
   require_fields?: string[];
 }

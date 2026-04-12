@@ -839,7 +839,9 @@
     "safeguardAmountLabel": "Montant minimum",
     "safeguardHint": "Le dossier de preuves est toujours constitué automatiquement, mais retenu pour votre approbation avant l'enregistrement sur Shopify.",
     "advancedFiltersTitle": "Règles personnalisées avancées",
-    "advancedFiltersSubtitle": "Règles personnalisées créées dans le portail. Elles s'exécutent en parallèle de l'automatisation familiale."
+    "advancedFiltersSubtitle": "Règles personnalisées créées dans le portail. Elles s'exécutent en parallèle de l'automatisation familiale.",
+    "quickNotifyAll": "Tout notifier uniquement",
+    "notifyOnly": "Notifier Uniquement"
   },
   "settings": {
     "title": "Paramètres",

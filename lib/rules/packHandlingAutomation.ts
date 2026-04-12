@@ -20,7 +20,7 @@ export const packRuleName = (packId: string) =>
 export const packInquiryRuleName = (packId: string) =>
   `${SETUP_RULE_PREFIX}pack:${packId}:inquiry`;
 
-export type PackHandlingUiMode = "manual" | "auto";
+export type PackHandlingUiMode = "manual" | "auto" | "notify";
 
 /**
  * Map library/template dispute_type to primary Shopify Payments reason code.
@@ -37,7 +37,7 @@ export function disputeTypeToPrimaryReason(disputeType: string): string {
 function normalizeAction(action: Rule["action"]): RuleAction {
   const a = action as RuleAction;
   const mode = a.mode ?? "manual";
-  if (mode === "auto_pack" || mode === "review" || mode === "manual") {
+  if (mode === "auto_pack" || mode === "review" || mode === "manual" || mode === "notify") {
     return {
       mode,
       pack_template_id: a.pack_template_id ?? null,
@@ -60,7 +60,7 @@ export function parsePackModesFromRules(rules: Rule[]): Record<string, PackHandl
     if (name.endsWith(":inquiry")) continue;
     const id = name.slice(prefix.length);
     const mode = normalizeAction(r.action).mode;
-    out[id] = mode === "auto_pack" ? "auto" : "manual";
+    out[id] = mode === "auto_pack" ? "auto" : mode === "notify" ? "notify" : "manual";
   }
   return out;
 }
@@ -81,6 +81,9 @@ export function buildCollapsedReasonRowsFromPacks(
       return { reason, mode: "manual" as const, pack_template_id: null };
     }
     const m = packModes[winning.id] ?? "manual";
+    if (m === "notify") {
+      return { reason, mode: "notify" as const, pack_template_id: null };
+    }
     if (m === "auto") {
       const tid = winning.template_id;
       if (!tid || !installedTemplateIds.has(tid)) {

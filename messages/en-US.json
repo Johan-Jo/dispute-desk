@@ -748,7 +748,9 @@
     "safeguardHint": "The evidence pack is still built automatically, but held for your approval before saving to Shopify.",
     "advancedFiltersTitle": "Advanced custom rules",
     "advancedFiltersSubtitle": "Custom rules created in the portal. These run alongside family automation.",
-    "phaseBlindNote": "Inquiry-phase disputes route to lighter inquiry templates automatically. Each rule applies to both phases unless you restrict it."
+    "phaseBlindNote": "Inquiry-phase disputes route to lighter inquiry templates automatically. Each rule applies to both phases unless you restrict it.",
+    "quickNotifyAll": "Notify only all",
+    "notifyOnly": "Notify Only"
   },
   "settings": {
     "title": "Settings",

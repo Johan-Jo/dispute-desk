@@ -39,7 +39,16 @@ function buildPackAndFallbackRules(
     const hasInquirySiblingInstalled =
       !!inquirySiblingId && installedInquiryTemplateIds.has(inquirySiblingId);
 
-    if (useAuto) {
+    if (mode === "notify") {
+      rows.push({
+        shop_id: shopId,
+        enabled: true,
+        name: packRuleName(pack.id),
+        match: { reason: [reason] },
+        action: { mode: "notify", pack_template_id: null },
+        priority,
+      });
+    } else if (useAuto) {
       // Chargeback-phase rule. If we have an inquiry sibling installed we
       // restrict this rule to the chargeback phase so the inquiry rule
       // (written next) can take over for inquiry disputes.

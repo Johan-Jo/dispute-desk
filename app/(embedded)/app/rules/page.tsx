@@ -102,7 +102,7 @@ interface CustomRule {
     amount_range?: { min?: number; max?: number };
   };
   action: {
-    mode: "auto_pack" | "review" | "manual";
+    mode: "auto_pack" | "review" | "manual" | "notify";
     pack_template_id?: string | null;
   };
   priority: number;
@@ -120,7 +120,7 @@ function isSetupOrSafeguardRule(name: string | null | undefined): boolean {
   );
 }
 
-type FamilyMode = "auto" | "review" | "none";
+type FamilyMode = "auto" | "review" | "notify" | "none";
 
 // ─── Component ──────────────────────────────────────────────────────────
 
@@ -241,7 +241,8 @@ export default function EmbeddedRulesPage() {
         continue;
       }
       const anyAuto = packs.some((p) => pendingModes[p.id] === "auto");
-      out[family.id] = anyAuto ? "auto" : "review";
+      const anyNotify = packs.some((p) => pendingModes[p.id] === "notify");
+      out[family.id] = anyAuto ? "auto" : anyNotify ? "notify" : "review";
     }
     return out;
   }, [familyPacks, pendingModes]);
@@ -249,14 +250,16 @@ export default function EmbeddedRulesPage() {
   const summary = useMemo(() => {
     let auto = 0;
     let review = 0;
+    let notify = 0;
     let noPlaybook = 0;
     for (const family of DISPUTE_FAMILIES) {
       const m = familyModes[family.id];
       if (m === "auto") auto++;
       else if (m === "review") review++;
+      else if (m === "notify") notify++;
       else noPlaybook++;
     }
-    return { auto, review, noPlaybook, total: DISPUTE_FAMILIES.length };
+    return { auto, review, notify, noPlaybook, total: DISPUTE_FAMILIES.length };
   }, [familyModes]);
 
   const packModesDirty = useMemo(() => {
@@ -299,13 +302,13 @@ export default function EmbeddedRulesPage() {
   // ─── Actions ──────────────────────────────────────────────────────────
 
   const setFamilyMode = useCallback(
-    (familyId: string, mode: "auto" | "review") => {
+    (familyId: string, mode: "auto" | "review" | "notify") => {
       const packs = familyPacks[familyId] ?? [];
       if (packs.length === 0) return;
       setPendingModes((prev) => {
         const next = { ...prev };
         for (const p of packs) {
-          next[p.id] = mode === "auto" ? "auto" : "manual";
+          next[p.id] = mode === "auto" ? "auto" : mode === "notify" ? "notify" : "manual";
         }
         return next;
       });
@@ -314,12 +317,12 @@ export default function EmbeddedRulesPage() {
   );
 
   const applyQuickConfig = useCallback(
-    (mode: "auto" | "review") => {
+    (mode: "auto" | "review" | "notify") => {
       if (!automation) return;
       setPendingModes((prev) => {
         const next = { ...prev };
         for (const p of automation.activePacks) {
-          next[p.id] = mode === "auto" ? "auto" : "manual";
+          next[p.id] = mode === "auto" ? "auto" : mode === "notify" ? "notify" : "manual";
         }
         return next;
       });
@@ -402,7 +405,7 @@ export default function EmbeddedRulesPage() {
   }
 
   const stateSentence = (() => {
-    if (summary.auto === 0 && summary.review === 0) return tr("stateNoSetup");
+    if (summary.auto === 0 && summary.review === 0 && summary.notify === 0) return tr("stateNoSetup");
     if (summary.noPlaybook > 0)
       return tr("stateWithGaps", {
         manual: summary.noPlaybook,
@@ -420,6 +423,7 @@ export default function EmbeddedRulesPage() {
   const routingChoices = [
     { label: tr("autoPack"), value: "auto" as const },
     { label: tr("review"), value: "review" as const },
+    { label: tr("notifyOnly"), value: "notify" as const },
   ];
 
   return (
@@ -457,6 +461,11 @@ export default function EmbeddedRulesPage() {
                   {summary.review > 0 && (
                     <Badge tone="info">
                       {`${summary.review} ${tc("modeReviewFirst")}`}
+                    </Badge>
+                  )}
+                  {summary.notify > 0 && (
+                    <Badge tone="warning">
+                      {`${summary.notify} ${tc("modeNotify")}`}
                     </Badge>
                   )}
                   {summary.noPlaybook > 0 && (
@@ -498,13 +507,17 @@ export default function EmbeddedRulesPage() {
                         ? "#DCFCE7"
                         : mode === "review"
                           ? "#DBEAFE"
-                          : "#FEE2E2";
+                          : mode === "notify"
+                            ? "#FEF9C3"
+                            : "#FEE2E2";
                     const iconColor =
                       mode === "auto"
                         ? "#16A34A"
                         : mode === "review"
                           ? "#2563EB"
-                          : "#DC2626";
+                          : mode === "notify"
+                            ? "#CA8A04"
+                            : "#DC2626";
 
                     return (
                       <div
@@ -581,7 +594,7 @@ export default function EmbeddedRulesPage() {
                                     onChange={(value) =>
                                       setFamilyMode(
                                         family.id,
-                                        value as "auto" | "review",
+                                        value as "auto" | "review" | "notify",
                                       )
                                     }
                                   />
@@ -613,6 +626,12 @@ export default function EmbeddedRulesPage() {
                     onClick={() => applyQuickConfig("review")}
                   >
                     {tr("quickReviewAll")}
+                  </Button>
+                  <Button
+                    size="slim"
+                    onClick={() => applyQuickConfig("notify")}
+                  >
+                    {tr("quickNotifyAll")}
                   </Button>
                 </InlineStack>
 
@@ -703,9 +722,11 @@ export default function EmbeddedRulesPage() {
                       const actionLabel =
                         rule.action?.mode === "auto_pack"
                           ? tr("autoPack")
-                          : rule.action?.mode === "manual"
-                            ? tr("manual")
-                            : tr("review");
+                          : rule.action?.mode === "notify"
+                            ? tr("notifyOnly")
+                            : rule.action?.mode === "manual"
+                              ? tr("manual")
+                              : tr("review");
                       return (
                         <div key={rule.id}>
                           {idx > 0 && <Divider />}
