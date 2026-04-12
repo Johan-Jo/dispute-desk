@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info } from "lucide-react";
 import type { StepId } from "@/lib/setup/types";
 
@@ -41,13 +41,20 @@ const LANG_LABELS: Record<string, string> = {
   sv: "Svenska",
 };
 
+const TEMPLATE_LANGS = new Set(["en", "de", "fr", "es", "pt", "sv"]);
+
+function interfaceToTemplateLang(locale: string): string {
+  const short = locale.split("-")[0]?.toLowerCase() ?? "en";
+  return TEMPLATE_LANGS.has(short) ? short : "en";
+}
+
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
   const tCommon = useTranslations("common");
+  const uiLocale = useLocale();
   const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
   const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
-  const [templateLang, setTemplateLang] = useState<string>("en");
-  const [localLang, setLocalLang] = useState<string | null>(null);
+  const [templateLang, setTemplateLang] = useState<string>(() => interfaceToTemplateLang(uiLocale));
   const [langSaving, setLangSaving] = useState(false);
 
   const [ownUrls, setOwnUrls] = useState<Record<PolicyKey, string>>({
@@ -113,7 +120,6 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           .then((langData) => {
             if (!langData) return;
             if (langData.policy_template_lang) setTemplateLang(langData.policy_template_lang);
-            if (langData.local_lang) setLocalLang(langData.local_lang);
           })
           .catch(() => {});
         return fetch(`/api/shop/details?shop_id=${data.shopId}`)
@@ -268,8 +274,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     [templateLang, resolvedShopId]
   );
 
-  const hasLocalOption = localLang !== null && localLang !== "en";
-  const localOptionValue = hasLocalOption ? localLang! : null;
+  const ALL_TEMPLATE_LANGS = ["en", "de", "fr", "es", "pt", "sv"] as const;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -281,41 +286,29 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
       </div>
 
-      {hasLocalOption && (
-        <div className="flex flex-col items-center mb-8">
-          <p className="text-[#6D7175] mb-2" style={{ fontSize: 13 }}>{t("languageLabel")}</p>
-          <div className="inline-flex rounded-[10px] border border-[#E1E3E5] bg-white p-1" role="group">
+      <div className="flex flex-col items-center mb-8">
+        <p className="text-[#6D7175] mb-2" style={{ fontSize: 13 }}>{t("languageLabel")}</p>
+        <div className="inline-flex flex-wrap justify-center rounded-[10px] border border-[#E1E3E5] bg-white p-1 gap-0.5" role="group">
+          {ALL_TEMPLATE_LANGS.map((lang) => (
             <button
+              key={lang}
               type="button"
-              onClick={() => handleLangChange("en")}
+              onClick={() => handleLangChange(lang)}
               disabled={langSaving}
-              className={`px-5 py-2 rounded-[8px] transition-colors ${
-                templateLang === "en"
+              className={`px-4 py-2 rounded-[8px] transition-colors ${
+                templateLang === lang
                   ? "bg-[#1D4ED8] text-white"
                   : "text-[#202223] hover:bg-[#F3F4F6]"
               }`}
               style={{ fontSize: 14, fontWeight: 600 }}
             >
-              English
+              {LANG_LABELS[lang]}
             </button>
-            <button
-              type="button"
-              onClick={() => handleLangChange(localOptionValue!)}
-              disabled={langSaving}
-              className={`px-5 py-2 rounded-[8px] transition-colors ${
-                templateLang === localOptionValue
-                  ? "bg-[#1D4ED8] text-white"
-                  : "text-[#202223] hover:bg-[#F3F4F6]"
-              }`}
-              style={{ fontSize: 14, fontWeight: 600 }}
-            >
-              {LANG_LABELS[localOptionValue!]}
-            </button>
-          </div>
-          <p className="text-[#8C9196] mt-2 text-center" style={{ fontSize: 12 }}>{t("languageHint")}</p>
-          <p className="text-[#8C9196] mt-1 text-center max-w-md" style={{ fontSize: 12 }}>{t("legalReviewNotice")}</p>
+          ))}
         </div>
-      )}
+        <p className="text-[#8C9196] mt-2 text-center" style={{ fontSize: 12 }}>{t("languageHint")}</p>
+        <p className="text-[#8C9196] mt-1 text-center max-w-md" style={{ fontSize: 12 }}>{t("legalReviewNotice")}</p>
+      </div>
 
       {/* ── Flow selection ── */}
       {!selectedFlow && (
