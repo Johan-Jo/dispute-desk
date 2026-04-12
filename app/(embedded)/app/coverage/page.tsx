@@ -403,50 +403,39 @@ export default function CoveragePage() {
   );
 }
 
-function phasesIdentical(a: LifecyclePhaseHandling, b: LifecyclePhaseHandling): boolean {
-  if (a.automationMode !== b.automationMode) return false;
-  if (a.hasGap !== b.hasGap) return false;
-  const aPacks = new Set(a.playbooks.map((p) => p.name));
-  const bPacks = new Set(b.playbooks.map((p) => p.name));
-  if (aPacks.size !== bPacks.size) return false;
-  for (const n of aPacks) if (!bPacks.has(n)) return false;
-  return true;
-}
-
-function PhaseRow({
+function PhaseSection({
   handling,
-  mergedLabel,
   tc,
   familyId,
   searchParams,
   onInstallClick,
 }: {
   handling: LifecyclePhaseHandling;
-  mergedLabel?: string;
   tc: (key: string, params?: Record<string, string | number>) => string;
   familyId: string;
   searchParams: ReturnType<typeof useSearchParams>;
   onInstallClick: () => void;
 }) {
-  const phaseLabel = mergedLabel ?? (handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel"));
+  const phaseLabel = handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel");
+  const uniqueNames = [...new Set(handling.playbooks.map((p) => p.name))];
 
   return (
-    <InlineStack gap="300" blockAlign="center" wrap>
-      <div style={{ minWidth: "90px" }}>
+    <BlockStack gap="200">
+      <InlineStack gap="200" blockAlign="center" wrap>
         <Badge tone={handling.phase === "inquiry" ? "info" : "warning"}>
           {phaseLabel}
         </Badge>
-      </div>
-      <Badge tone={automationBadgeTone(handling.automationMode, handling.playbooks.length > 0)}>
-        {automationModeLabel(handling.automationMode, handling.playbooks.length > 0, tc)}
-      </Badge>
-      {handling.playbooks.length > 0 && (
-        <Text as="span" variant="bodySm" tone="subdued">
-          {tc("activePacks", { count: new Set(handling.playbooks.map((p) => p.name)).size })}
+        <Badge tone={automationBadgeTone(handling.automationMode, handling.playbooks.length > 0)}>
+          {automationModeLabel(handling.automationMode, handling.playbooks.length > 0, tc)}
+        </Badge>
+      </InlineStack>
+      {uniqueNames.length > 0 && (
+        <Text as="p" variant="bodySm" tone="subdued">
+          {uniqueNames.join(", ")}
         </Text>
       )}
       {handling.hasGap && (
-        <>
+        <InlineStack gap="200" wrap>
           <Text as="span" variant="bodySm" tone="critical">
             {tc("noPlaybook")}
           </Text>
@@ -467,9 +456,9 @@ function PhaseRow({
           >
             {tc("installPlaybook")}
           </Button>
-        </>
+        </InlineStack>
       )}
-    </InlineStack>
+    </BlockStack>
   );
 }
 
@@ -529,34 +518,25 @@ function LifecycleFamilyCard({
 
         <Divider />
 
-        {/* Phase rows — merge into one when both phases have identical handling */}
-        {phasesIdentical(family.inquiry, family.chargeback) ? (
-          <PhaseRow
-            handling={family.inquiry}
-            mergedLabel={tc("bothPhases")}
-            tc={tc}
-            familyId={family.familyId}
-            searchParams={searchParams}
-            onInstallClick={onInstallClick}
-          />
-        ) : (
-          <>
-            <PhaseRow
-              handling={family.inquiry}
-              tc={tc}
-              familyId={family.familyId}
-              searchParams={searchParams}
-              onInstallClick={onInstallClick}
-            />
-            <PhaseRow
-              handling={family.chargeback}
-              tc={tc}
-              familyId={family.familyId}
-              searchParams={searchParams}
-              onInstallClick={onInstallClick}
-            />
-          </>
-        )}
+        {/* Inquiry */}
+        <PhaseSection
+          handling={family.inquiry}
+          tc={tc}
+          familyId={family.familyId}
+          searchParams={searchParams}
+          onInstallClick={onInstallClick}
+        />
+
+        <Divider />
+
+        {/* Chargeback */}
+        <PhaseSection
+          handling={family.chargeback}
+          tc={tc}
+          familyId={family.familyId}
+          searchParams={searchParams}
+          onInstallClick={onInstallClick}
+        />
 
         <Divider />
         <InlineStack gap="200" wrap>
