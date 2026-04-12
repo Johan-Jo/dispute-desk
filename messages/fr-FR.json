@@ -2775,6 +2775,10 @@
     "inquiryCoverageTitle": "Couverture des consultations",
     "inquiryCoverageOn": "Activée",
     "inquiryCoverageOff": "Pas encore active",
-    "inquiryCoverageBody": "Lorsque les clients soulèvent des consultations avant chargeback, DisputeDesk répond automatiquement avec des modèles plus légers. {installed} sur {total} modèles de consultation actifs."
+    "inquiryCoverageBody": "Lorsque les clients soulèvent des consultations avant chargeback, DisputeDesk répond automatiquement avec des modèles plus légers. {installed} sur {total} modèles de consultation actifs.",
+    "explainerTitle": "Ce que vous consultez",
+    "explainerBullet1": "Cette page montre comment DisputeDesk gérera chaque type de litige Shopify lorsqu'un vrai cas arrive — automatiquement, après votre vérification, ou laissé en traitement manuel.",
+    "explainerBullet2": "Chaque litige commence par une consultation légère (la banque du titulaire pose une question) puis devient un chargeback formel s'il n'est pas résolu. DisputeDesk gère les deux phases — des réponses plus légères pour les consultations, des dossiers de preuve complets pour les chargebacks.",
+    "explainerBullet3": "Les lignes marquées Partiel ou Non couvert manquent d'un playbook (le modèle de preuves) ou d'une règle (ce que DisputeDesk doit faire). Cliquez sur Configurer sur n'importe quelle ligne pour ajouter ce qui manque."
   }
 }

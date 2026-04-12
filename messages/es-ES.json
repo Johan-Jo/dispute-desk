@@ -2775,6 +2775,10 @@
     "inquiryCoverageTitle": "Cobertura de consultas",
     "inquiryCoverageOn": "Activa",
     "inquiryCoverageOff": "Aún no activa",
-    "inquiryCoverageBody": "Cuando los clientes plantean consultas previas al chargeback, DisputeDesk responde automáticamente con plantillas más ligeras. {installed} de {total} plantillas de consulta activas."
+    "inquiryCoverageBody": "Cuando los clientes plantean consultas previas al chargeback, DisputeDesk responde automáticamente con plantillas más ligeras. {installed} de {total} plantillas de consulta activas.",
+    "explainerTitle": "Qué estás viendo",
+    "explainerBullet1": "Esta página muestra cómo DisputeDesk manejará cada tipo de disputa de Shopify cuando llegue una real: automáticamente, tras tu revisión, o en modo manual.",
+    "explainerBullet2": "Cada disputa aparece primero como una consulta suave (el banco del titular preguntando) y luego escala a un chargeback formal si no se resuelve. DisputeDesk gestiona ambas fases: respuestas más ligeras para consultas, paquetes de evidencia completos para chargebacks.",
+    "explainerBullet3": "Las filas marcadas como Parcial o Sin cobertura no tienen un playbook (la plantilla de evidencia) o una regla (qué debe hacer DisputeDesk). Haz clic en Configurar en cualquier fila para añadir lo que falta."
   }
 }

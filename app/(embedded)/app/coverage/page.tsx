@@ -181,6 +181,29 @@ export default function CoveragePage() {
       ]}
     >
       <Layout>
+        {/* Plain-language explainer — first-time visitors need to know what
+            this page is actually for before the state sentence makes sense. */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h3" variant="headingSm">
+                {tc("explainerTitle")}
+              </Text>
+              <BlockStack gap="200">
+                <Text as="p" variant="bodySm" tone="subdued">
+                  • {tc("explainerBullet1")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  • {tc("explainerBullet2")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  • {tc("explainerBullet3")}
+                </Text>
+              </BlockStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
         {/* Current state — plain language */}
         <Layout.Section>
           <Card>

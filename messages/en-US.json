@@ -2672,6 +2672,10 @@
     "inquiryCoverageTitle": "Inquiry coverage",
     "inquiryCoverageOn": "On",
     "inquiryCoverageOff": "Not yet active",
-    "inquiryCoverageBody": "When customers raise pre-chargeback inquiries, DisputeDesk responds with lighter inquiry templates automatically. {installed} of {total} inquiry templates active."
+    "inquiryCoverageBody": "When customers raise pre-chargeback inquiries, DisputeDesk responds with lighter inquiry templates automatically. {installed} of {total} inquiry templates active.",
+    "explainerTitle": "What you're looking at",
+    "explainerBullet1": "This page shows how DisputeDesk will handle each type of Shopify dispute when a real one arrives — automatically, after your review, or left to manual handling.",
+    "explainerBullet2": "Every dispute first appears as a soft inquiry (the cardholder's bank asking a question) and then escalates to a formal chargeback if it isn't resolved. DisputeDesk handles both phases — lighter responses for inquiries, full evidence packs for chargebacks.",
+    "explainerBullet3": "Rows marked Partial or Not covered are missing a playbook (the evidence template) or a rule (what DisputeDesk should do). Click Set up on any row to add what's missing."
   }
 }
