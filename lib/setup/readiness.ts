@@ -30,6 +30,7 @@ export interface ReadinessResult {
   hasBlockers: boolean;
   hasPending: boolean;
   allReady: boolean;
+  shopDomain?: string;
 }
 
 const REQUIRED_DISPUTE_SCOPE = "read_shopify_payments_disputes";
@@ -93,6 +94,7 @@ export async function evaluateReadiness(shopId: string): Promise<ReadinessResult
 
   // 5. Store data available — non-blocking, check if the shop row exists in DB
   let storeDataReady = false;
+  let shopDomain: string | undefined;
   try {
     const sb = getServiceClient();
     const { data } = await sb
@@ -101,6 +103,7 @@ export async function evaluateReadiness(shopId: string): Promise<ReadinessResult
       .eq("id", shopId)
       .single();
     storeDataReady = Boolean(data?.shop_domain);
+    if (data?.shop_domain) shopDomain = data.shop_domain;
   } catch {
     // DB failure — treat as syncing
   }
@@ -115,5 +118,5 @@ export async function evaluateReadiness(shopId: string): Promise<ReadinessResult
   const hasPending = rows.some((r) => !r.blocking && r.status !== "ready");
   const allReady = rows.every((r) => r.status === "ready");
 
-  return { rows, hasBlockers, hasPending, allReady };
+  return { rows, hasBlockers, hasPending, allReady, shopDomain };
 }

@@ -234,6 +234,16 @@ export async function syncDisputes(
           result.created++;
         }
 
+        // Track first chargeback win — sets shops.first_win_at once.
+        const statusLower = d.status?.toLowerCase() ?? null;
+        if (statusLower === "won") {
+          await sb
+            .from("shops")
+            .update({ first_win_at: new Date().toISOString() })
+            .eq("id", shopId)
+            .is("first_win_at", null);
+        }
+
         // Auto-heal reason_template_mappings. If Shopify sent a reason
         // that's not in ALL_DISPUTE_REASONS (schema drift), insert a
         // placeholder mapping row, write an audit event, and email the

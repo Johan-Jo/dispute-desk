@@ -74,6 +74,13 @@ function StatusIcon({ status }: { status: ReadinessStatus }) {
   return <SpinnerIcon />;
 }
 
+/** Row IDs that require OAuth re-authentication to fix. */
+const OAUTH_ACTION_ROWS: ReadonlySet<string> = new Set([
+  "shopify_connected",
+  "dispute_access",
+  "evidence_access",
+]);
+
 export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionStepProps) {
   const t = useTranslations("setup.connection");
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
@@ -92,6 +99,18 @@ export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionSte
       setLoading(false);
     }
   }, [onCanContinueChange]);
+
+  /** Trigger OAuth re-authentication for connection/scope issues. */
+  const handleReconnect = useCallback(() => {
+    const domain = readiness?.shopDomain
+      ?? new URLSearchParams(window.location.search).get("shop");
+    if (domain) {
+      window.top!.location.href =
+        `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
+    } else {
+      window.location.reload();
+    }
+  }, [readiness?.shopDomain]);
 
   useEffect(() => {
     fetchReadiness();
@@ -169,7 +188,7 @@ export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionSte
                     </span>
                     {row.actionLabel && (
                       <button
-                        onClick={fetchReadiness}
+                        onClick={OAUTH_ACTION_ROWS.has(row.id) && row.status === "needs_action" ? handleReconnect : fetchReadiness}
                         style={{
                           padding: "5px 14px",
                           background: row.status === "needs_action" ? "#1D4ED8" : "#fff",
