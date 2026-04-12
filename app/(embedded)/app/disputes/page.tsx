@@ -545,14 +545,9 @@ export default function DisputesListPage() {
                             </td>
                             {/* Reason / Family */}
                             <td>
-                              <BlockStack gap="050">
-                                <span className={styles.cellMuted}>
-                                  {translateReason(d.reason, t)}
-                                </span>
-                                <Text as="span" variant="bodySm" tone="subdued">
-                                  {translateFamily(d.reason, t)}
-                                </Text>
-                              </BlockStack>
+                              <span className={styles.cellMuted}>
+                                {translateReason(d.reason, t)}
+                              </span>
                             </td>
                             {/* Amount */}
                             <td>
