@@ -156,6 +156,7 @@ export default function DisputesListPage() {
     total_pages: 0,
   });
   const [filterPopoverActive, setFilterPopoverActive] = useState(false);
+  const [hasAlertEmail, setHasAlertEmail] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +165,16 @@ export default function DisputesListPage() {
       .then((d: { shop_domain?: string | null }) => {
         if (!cancelled) setShopDomain(d.shop_domain ?? null);
       });
+    fetch("/api/setup/state")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const teamEmail = (
+          data?.steps?.team?.payload as { teamEmail?: string } | undefined
+        )?.teamEmail;
+        setHasAlertEmail(Boolean(teamEmail));
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -378,6 +389,21 @@ export default function DisputesListPage() {
             {!loading && summaryNeedsReview > 0 && (
               <Banner tone="warning">
                 <p>{t("disputes.needsReviewBanner", { count: summaryNeedsReview })}</p>
+              </Banner>
+            )}
+
+            {/* Nudge: enable email alerts when teamEmail is not configured */}
+            {!loading && !hasAlertEmail && (
+              <Banner tone="info">
+                <p>
+                  {t("disputes.alertsNudge")}{" "}
+                  <a
+                    href={withShopParams("/app/settings", searchParams)}
+                    style={{ fontWeight: 600 }}
+                  >
+                    {t("disputes.alertsNudgeLink")}
+                  </a>
+                </p>
               </Banner>
             )}
 

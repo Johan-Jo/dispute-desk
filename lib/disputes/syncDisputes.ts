@@ -17,6 +17,7 @@ import { runAutomationPipeline } from "@/lib/automation/pipeline";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
 import { sendUnknownReasonAlert } from "@/lib/email/sendUnknownReasonAlert";
+import { sendNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
 
 const KNOWN_REASONS = new Set<string>(ALL_DISPUTE_REASONS);
 
@@ -268,6 +269,21 @@ export async function syncDisputes(
               firstSeenDisputeGid: d.id,
             });
           }
+        }
+
+        // Notify merchant of new dispute (fire-and-forget; respects the
+        // newDispute notification preference set in TeamNotificationsStep).
+        if (!existing && upserted) {
+          void sendNewDisputeAlert({
+            shopId,
+            disputeId: upserted.id,
+            reason: d.reasonDetails?.reason ?? null,
+            phase: d.type?.toLowerCase() ?? null,
+            amount: d.amount ? parseFloat(d.amount.amount) : null,
+            currencyCode: d.amount?.currencyCode ?? null,
+            dueAt: d.evidenceDueBy ?? null,
+            orderName: d.order?.name ?? null,
+          });
         }
 
         // For new disputes: evaluate rules, then trigger automation or set needs_review

@@ -355,7 +355,9 @@
     "stateAllClear": "Sie haben {total, plural, one {1 offenen Streitfall} other {# offene Streitfälle}} — alles sieht gut aus.",
     "stateSomeUrgent": "Sie haben {total, plural, one {1 offenen Streitfall} other {# offene Streitfälle}}. {urgent, plural, one {1 benötigt} other {# benötigen}} sofortige Aufmerksamkeit — überfällig oder bald fällig.",
     "stateNeedsReview": "Sie haben {total, plural, one {1 offenen Streitfall} other {# offene Streitfälle}}. {review, plural, one {1 ist zur Überprüfung markiert} other {# sind zur Überprüfung markiert}}, bevor DisputeDesk fortfahren kann.",
-    "stateNeedsSync": "Sie haben {total, plural, one {1 Streitfall} other {# Streitfälle}}. {sync, plural, one {1 wurde noch nicht klassifiziert} other {# wurden noch nicht klassifiziert}} — führen Sie eine Synchronisierung aus."
+    "stateNeedsSync": "Sie haben {total, plural, one {1 Streitfall} other {# Streitfälle}}. {sync, plural, one {1 wurde noch nicht klassifiziert} other {# wurden noch nicht klassifiziert}} — führen Sie eine Synchronisierung aus.",
+    "alertsNudge": "Möchten Sie E-Mail-Benachrichtigungen erhalten, wenn neue Reklamationen eingehen? Fügen Sie Ihre Team-E-Mail in den Einstellungen hinzu.",
+    "alertsNudgeLink": "Einstellungen öffnen"
   },
   "packs": {
     "title": "Bewispakete",

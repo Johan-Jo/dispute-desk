@@ -377,7 +377,9 @@
     "stateAllClear": "You have {total, plural, one {1 open dispute} other {# open disputes}} — everything looks on track.",
     "stateSomeUrgent": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {urgent, plural, one {1 needs} other {# need}} immediate attention — overdue or due soon.",
     "stateNeedsReview": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {review, plural, one {1 is flagged} other {# are flagged}} for your review before DisputeDesk can proceed.",
-    "stateNeedsSync": "You have {total, plural, one {1 dispute} other {# disputes}}. {sync, plural, one {1 hasn't} other {# haven't}} been classified yet — run a sync to catch up."
+    "stateNeedsSync": "You have {total, plural, one {1 dispute} other {# disputes}}. {sync, plural, one {1 hasn't} other {# haven't}} been classified yet — run a sync to catch up.",
+    "alertsNudge": "Want email alerts when new disputes arrive? Add your team email in Settings.",
+    "alertsNudgeLink": "Open Settings"
   },
   "packs": {
     "title": "Packs",
