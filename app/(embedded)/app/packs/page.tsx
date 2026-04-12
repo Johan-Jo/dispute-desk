@@ -33,6 +33,7 @@ import { FileText, Info, X } from "lucide-react";
 import { EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
+import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
 
 /**
  * packs.dispute_type now stores Shopify reason codes directly
@@ -148,7 +149,8 @@ export default function PacksListPage() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setPacks(data.packs ?? []);
+        const all = (data.packs ?? []) as PackRow[];
+        setPacks(all.filter((p) => !p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)));
       } else {
         setPacks([]);
       }
