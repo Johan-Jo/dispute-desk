@@ -470,10 +470,12 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
               lineHeight: 1.5,
             }}
           >
-            {tCoverage("inquiryCoverageBody", {
-              installed: installedInquiryCount,
-              total: TOTAL_INQUIRY_TEMPLATES,
-            })}
+            {installedInquiryCount > 0
+              ? tCoverage("inquiryCoverageBody", {
+                  installed: installedInquiryCount,
+                  total: TOTAL_INQUIRY_TEMPLATES,
+                })
+              : tCoverage("inquiryCoverageBodyPending")}
           </p>
         </div>
       </div>

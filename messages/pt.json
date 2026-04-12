@@ -1757,7 +1757,8 @@
       "advancedSubtitle": "Templates opcionais para lojas que lidam com uma mistura mais ampla de disputas. Marque os que se aplicam.",
       "advancedAlreadyInstalled": "já instalado",
       "inquiryCoverageTitle": "Cobertura de consultas incluída",
-      "inquiryCoverageBody": "Consultas pré-chargeback são respondidas com templates mais leves automaticamente — sem configuração adicional. {installed} de {total} templates de consulta instalados junto com seus pacotes de chargeback."
+      "inquiryCoverageBody": "Consultas pré-chargeback são respondidas com templates mais leves automaticamente — sem configuração adicional. {installed} de {total} templates de consulta instalados junto com seus pacotes de chargeback.",
+      "inquiryCoverageBodyPending": "Consultas pré-chargeback serão respondidas com templates mais leves automaticamente — os templates de consulta são instalados ao salvar esta etapa."
     },
     "automation": {
       "title": "Automação e regras de revisão",

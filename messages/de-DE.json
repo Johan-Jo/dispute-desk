@@ -1963,7 +1963,8 @@
       "advancedSubtitle": "Optionale Vorlagen für Shops mit einer breiteren Mischung an Reklamationen. Wähle die zutreffenden aus.",
       "advancedAlreadyInstalled": "bereits installiert",
       "inquiryCoverageTitle": "Anfrage-Abdeckung enthalten",
-      "inquiryCoverageBody": "Anfragen vor einer Reklamation werden automatisch mit leichteren Vorlagen beantwortet — keine zusätzliche Einrichtung nötig. {installed} von {total} Anfrage-Vorlagen zusammen mit Ihren Reklamations-Packs installiert."
+      "inquiryCoverageBody": "Anfragen vor einer Reklamation werden automatisch mit leichteren Vorlagen beantwortet — keine zusätzliche Einrichtung nötig. {installed} von {total} Anfrage-Vorlagen zusammen mit Ihren Reklamations-Packs installiert.",
+      "inquiryCoverageBodyPending": "Anfragen vor einer Reklamation werden automatisch mit leichteren Vorlagen beantwortet — Anfrage-Vorlagen werden installiert, wenn Sie diesen Schritt speichern."
     },
     "automation": {
       "title": "Automatisierung und Prüfregeln",

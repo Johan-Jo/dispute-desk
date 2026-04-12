@@ -1963,7 +1963,8 @@
       "advancedSubtitle": "Plantillas opcionales para tiendas que manejan una mezcla más amplia de disputas. Marca las que apliquen.",
       "advancedAlreadyInstalled": "ya instalada",
       "inquiryCoverageTitle": "Cobertura de consultas incluida",
-      "inquiryCoverageBody": "Las consultas previas al chargeback se responden con plantillas más ligeras automáticamente — sin configuración adicional. {installed} de {total} plantillas de consulta instaladas junto con tus paquetes de chargeback."
+      "inquiryCoverageBody": "Las consultas previas al chargeback se responden con plantillas más ligeras automáticamente — sin configuración adicional. {installed} de {total} plantillas de consulta instaladas junto con tus paquetes de chargeback.",
+      "inquiryCoverageBodyPending": "Las consultas previas al chargeback se responderán con plantillas más ligeras automáticamente — las plantillas de consulta se instalan al guardar este paso."
     },
     "automation": {
       "title": "Automatización y reglas de revisión",

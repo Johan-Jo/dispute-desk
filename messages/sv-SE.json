@@ -1828,7 +1828,8 @@
       "advancedSubtitle": "Valfria mallar för butiker som hanterar en bredare mix av tvister. Markera de som passar.",
       "advancedAlreadyInstalled": "redan installerad",
       "inquiryCoverageTitle": "Förfrågningstäckning ingår",
-      "inquiryCoverageBody": "Förfrågningar före en tvist besvaras automatiskt med lättare mallar — ingen extra konfiguration. {installed} av {total} förfrågningsmallar installerade tillsammans med dina tvistepaket."
+      "inquiryCoverageBody": "Förfrågningar före en tvist besvaras automatiskt med lättare mallar — ingen extra konfiguration. {installed} av {total} förfrågningsmallar installerade tillsammans med dina tvistepaket.",
+      "inquiryCoverageBodyPending": "Förfrågningar före en tvist besvaras automatiskt med lättare mallar — förfrågningsmallar installeras när du sparar detta steg."
     },
     "automation": {
       "title": "Automatisering och granskningsregler",

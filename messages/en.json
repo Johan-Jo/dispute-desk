@@ -2276,7 +2276,8 @@
       "advancedSubtitle": "Optional templates for stores that handle a wider mix of disputes. Tick any that apply.",
       "advancedAlreadyInstalled": "already installed",
       "inquiryCoverageTitle": "Inquiry coverage included",
-      "inquiryCoverageBody": "Pre-chargeback inquiries are answered with lighter templates automatically — no extra setup. {installed} of {total} inquiry templates installed alongside your chargeback packs."
+      "inquiryCoverageBody": "Pre-chargeback inquiries are answered with lighter templates automatically — no extra setup. {installed} of {total} inquiry templates installed alongside your chargeback packs.",
+      "inquiryCoverageBodyPending": "Pre-chargeback inquiries will be answered with lighter templates automatically — inquiry templates are installed when you save this step."
     },
     "automation": {
       "title": "Automation and review rules",

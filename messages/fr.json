@@ -1765,7 +1765,8 @@
       "advancedSubtitle": "Modèles optionnels pour les boutiques qui gèrent une plus grande variété de litiges. Cochez ceux qui s'appliquent.",
       "advancedAlreadyInstalled": "déjà installé",
       "inquiryCoverageTitle": "Couverture des consultations incluse",
-      "inquiryCoverageBody": "Les consultations avant chargeback reçoivent automatiquement une réponse avec des modèles plus légers — sans configuration supplémentaire. {installed} sur {total} modèles de consultation installés avec vos packs de chargeback."
+      "inquiryCoverageBody": "Les consultations avant chargeback reçoivent automatiquement une réponse avec des modèles plus légers — sans configuration supplémentaire. {installed} sur {total} modèles de consultation installés avec vos packs de chargeback.",
+      "inquiryCoverageBodyPending": "Les consultations avant chargeback recevront automatiquement une réponse avec des modèles plus légers — les modèles de consultation sont installés lorsque vous enregistrez cette étape."
     },
     "automation": {
       "title": "Automatisation et règles de vérification",
