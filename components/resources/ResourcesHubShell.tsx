@@ -193,6 +193,9 @@ export async function ResourcesHubShell({
         </div>
       </section>
 
+      {/* Spacer between hero and sticky bar on paginated / filtered pages (no featured section) */}
+      {featuredItems.length === 0 && <div className="h-6" />}
+
       {/* Sticky topic row + counts */}
       <div className="sticky z-40 border-b border-gray-200 bg-white top-16 shadow-sm">
         <div className={`${HUB_CONTAINER} py-4`}>
