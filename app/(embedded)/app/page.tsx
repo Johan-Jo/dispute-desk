@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Page,
@@ -15,7 +15,6 @@ import {
   Card,
   Text,
   BlockStack,
-  Banner,
   InlineStack,
   Badge,
   Button,
@@ -105,47 +104,6 @@ const DEFAULT_STATS: DashboardStats = {
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],
 };
-
-function DashboardSetupBanner() {
-  const t = useTranslations();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [state, setState] = useState<SetupStateResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/setup/state")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: SetupStateResponse | null) => {
-        if (!cancelled) {
-          setState(data ?? null);
-          // First-time install: connection not yet done → redirect to authorization page
-          if (data && data.steps?.connection?.status === "todo") {
-            router.replace(withShopParams("/app/setup", searchParams));
-          }
-        }
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [router]);
-
-  if (loading || !state || state.allDone) return null;
-
-  const continueUrl = state.nextStepId
-    ? withShopParams(`/app/setup/${state.nextStepId}`, searchParams)
-    : "/app/setup/overview";
-
-  return (
-    <Banner
-      tone="warning"
-      title={state.nextStepId ? t("dashboard.resumeSetup") : t("dashboard.completeSetup")}
-      action={{ content: t("dashboard.continueSetup"), url: continueUrl }}
-    >
-      <p>{t("dashboard.completeSetupDesc")}</p>
-    </Banner>
-  );
-}
 
 function RecentDisputesTable() {
   const t = useTranslations();
@@ -787,11 +745,34 @@ function DashboardHelpCard() {
 export default function EmbeddedDashboardPage() {
   const t = useTranslations();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [period, setPeriod] = useState<PeriodKey>("30d");
   const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [setupDone, setSetupDone] = useState<boolean | null>(null); // null = loading
+
+  // Check setup state before rendering dashboard
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/setup/state")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: SetupStateResponse | null) => {
+        if (cancelled) return;
+        if (!data || data.allDone) {
+          setSetupDone(true);
+        } else {
+          // Redirect to setup wizard
+          const target = data.steps?.connection?.status === "todo"
+            ? "/app/setup"
+            : `/app/setup/${data.nextStepId ?? "connection"}`;
+          router.replace(withShopParams(target, searchParams));
+        }
+      });
+    return () => { cancelled = true; };
+  }, [router, searchParams]);
 
   useEffect(() => {
+    if (!setupDone) return;
     let cancelled = false;
     setStatsLoading(true);
     fetch(`/api/dashboard/stats?period=${period}`)
@@ -801,7 +782,20 @@ export default function EmbeddedDashboardPage() {
       })
       .finally(() => { if (!cancelled) setStatsLoading(false); });
     return () => { cancelled = true; };
-  }, [period]);
+  }, [period, setupDone]);
+
+  // Show nothing while checking setup or redirecting
+  if (!setupDone) {
+    return (
+      <Page title="DisputeDesk">
+        <Layout>
+          <Layout.Section>
+            <Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    );
+  }
 
   return (
     <Page
@@ -811,12 +805,7 @@ export default function EmbeddedDashboardPage() {
       secondaryActions={[{ content: t("nav.help"), url: withShopParams("/app/help", searchParams) }]}
     >
       <Layout>
-        {/* 1. Setup banner — only if setup incomplete */}
-        <Layout.Section>
-          <DashboardSetupBanner />
-        </Layout.Section>
-
-        {/* 2. Protection Status — THE FIRST THING merchants see */}
+        {/* 1. Protection Status — THE FIRST THING merchants see */}
         <Layout.Section>
           <ProtectionStatusCard />
         </Layout.Section>
