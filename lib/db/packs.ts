@@ -25,7 +25,7 @@ const DISPUTE_TYPE_LABELS: Record<string, string> = {
 export async function installTemplate(
   templateId: string,
   shopId: string,
-  options?: { name?: string; activate?: boolean }
+  options?: { name?: string; activate?: boolean; locale?: string }
 ): Promise<Pack | null> {
   const sb = getServiceClient();
   const activate = options?.activate === true;
@@ -46,8 +46,22 @@ export async function installTemplate(
     locale: string;
     name: string;
   }>;
+
+  let shopLocale = options?.locale;
+  if (!shopLocale) {
+    const { data: shop } = await sb
+      .from("shops")
+      .select("locale")
+      .eq("id", shopId)
+      .single();
+    shopLocale = (shop?.locale as string | null) ?? undefined;
+  }
+
+  const localeRow = shopLocale
+    ? i18nRows.find((r) => r.locale === shopLocale)
+    : undefined;
   const enRow = i18nRows.find((r) => r.locale === "en-US") ?? i18nRows[0];
-  const packName = options?.name ?? enRow?.name ?? tpl.slug;
+  const packName = options?.name ?? localeRow?.name ?? enRow?.name ?? tpl.slug;
 
   // 2. Create pack
   const { data: pack, error: packErr } = await sb

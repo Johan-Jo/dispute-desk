@@ -295,17 +295,20 @@ export async function GET(
         .eq("id", packId)
         .single();
       if (libraryRow) {
-        (pack as Record<string, unknown>).name = libraryRow.name;
         (pack as Record<string, unknown>).dispute_type = libraryRow.dispute_type;
         (pack as Record<string, unknown>).source = libraryRow.source;
         (pack as Record<string, unknown>).template_id = libraryRow.template_id;
         libraryTemplateId = libraryRow.template_id ?? null;
         if (libraryRow.template_id) {
-          (pack as Record<string, unknown>).template_name = await resolveTemplateName(
+          const localizedName = await resolveTemplateName(
             db,
             libraryRow.template_id,
             locale,
           );
+          (pack as Record<string, unknown>).template_name = localizedName;
+          (pack as Record<string, unknown>).name = localizedName ?? libraryRow.name;
+        } else {
+          (pack as Record<string, unknown>).name = libraryRow.name;
         }
       }
       (pack as Record<string, unknown>).template_items = await fetchTemplateItems(
