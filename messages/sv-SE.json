@@ -527,7 +527,7 @@
     "stateBlockedHint": "Blockerad — åtgärda saknade objekt nedan innan du sparar.",
     "stateSavedHint": "Redan sparad i Shopify Admin {date}.",
     "stateInProgressHint": "Pågår — fortsätt lägga till bevis för att nå 80 %.",
-    "stateLibraryHint": "Detta är en mall, inte en aktiv tvist. Anpassa den så använder DisputeDesk den automatiskt.",
+    "stateLibraryHint": "Detta är en playbook. DisputeDesk använder den automatiskt när en matchande tvist kommer in.",
     "primaryResolveBlockers": "Åtgärda blockeringar",
     "primaryBrowseTemplates": "Bläddra bland mallar",
     "metaType": "Typ",

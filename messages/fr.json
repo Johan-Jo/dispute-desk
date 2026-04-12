@@ -431,7 +431,7 @@
     "stateBlockedHint": "Bloqué — résolvez les éléments manquants ci-dessous avant d'enregistrer.",
     "stateSavedHint": "Déjà enregistré dans Shopify Admin le {date}.",
     "stateInProgressHint": "En cours — continuez d'ajouter des preuves pour atteindre 80 %.",
-    "stateLibraryHint": "Ceci est un modèle, pas un litige actif. Personnalisez-le et DisputeDesk l'utilisera automatiquement.",
+    "stateLibraryHint": "Ceci est un playbook. DisputeDesk l'utilise automatiquement lorsqu'un litige correspondant arrive.",
     "primaryResolveBlockers": "Résoudre les blocages",
     "primaryBrowseTemplates": "Parcourir les modèles",
     "metaType": "Type",

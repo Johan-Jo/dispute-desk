@@ -526,7 +526,7 @@
     "stateBlockedHint": "Bloqueado — resuelve los elementos faltantes abajo antes de guardar.",
     "stateSavedHint": "Ya guardado en Shopify Admin el {date}.",
     "stateInProgressHint": "En progreso — sigue agregando evidencia para llegar al 80%.",
-    "stateLibraryHint": "Esto es una plantilla, no una disputa activa. Personalízala y DisputeDesk la usará automáticamente.",
+    "stateLibraryHint": "Este es un playbook. DisputeDesk lo usa automáticamente cuando llega una disputa correspondiente.",
     "primaryResolveBlockers": "Resolver bloqueos",
     "primaryBrowseTemplates": "Explorar plantillas",
     "metaType": "Tipo",

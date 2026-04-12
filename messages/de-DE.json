@@ -526,7 +526,7 @@
     "stateBlockedHint": "Blockiert — beheben Sie die fehlenden Punkte unten, bevor Sie speichern.",
     "stateSavedHint": "Am {date} bereits in Shopify Admin gespeichert.",
     "stateInProgressHint": "In Bearbeitung — fügen Sie weitere Beweise hinzu, um 80 % zu erreichen.",
-    "stateLibraryHint": "Dies ist eine Vorlage, kein aktiver Streitfall. Passen Sie sie an, und DisputeDesk verwendet sie automatisch.",
+    "stateLibraryHint": "Dies ist ein Playbook. DisputeDesk verwendet es automatisch, wenn ein passender Streitfall eintrifft.",
     "primaryResolveBlockers": "Blockaden beheben",
     "primaryBrowseTemplates": "Vorlagen durchsuchen",
     "metaType": "Typ",

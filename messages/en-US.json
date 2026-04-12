@@ -445,7 +445,7 @@
     "stateBlockedHint": "Blocked — resolve the missing items below before saving.",
     "stateSavedHint": "Already saved to Shopify Admin on {date}.",
     "stateInProgressHint": "In progress — keep adding evidence to reach 80% and save.",
-    "stateLibraryHint": "This is a template, not a live dispute. Customize it and DisputeDesk will use it automatically.",
+    "stateLibraryHint": "This is a playbook. DisputeDesk uses it automatically when a matching dispute arrives.",
     "primaryResolveBlockers": "Resolve blockers",
     "primaryBrowseTemplates": "Browse templates",
     "metaType": "Type",
