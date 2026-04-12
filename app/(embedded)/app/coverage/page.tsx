@@ -78,6 +78,7 @@ function automationBadgeTone(mode: AutomationMode, hasPlaybooks: boolean): "succ
   switch (mode) {
     case "automated": return "success";
     case "review_first": return "info";
+    case "notify": return "info";
     case "manual": return "warning";
     case "none": return hasPlaybooks ? "warning" : undefined;
   }
@@ -87,6 +88,7 @@ function automationModeLabel(mode: AutomationMode, hasPlaybooks: boolean, tc: (k
   switch (mode) {
     case "automated": return tc("modeAutomated");
     case "review_first": return tc("modeReviewFirst");
+    case "notify": return tc("modeNotify");
     case "manual": return tc("modeManual");
     case "none": return hasPlaybooks ? tc("modeManualPlaybookReady") : tc("phaseGap");
   }

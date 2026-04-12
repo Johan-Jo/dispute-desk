@@ -13,7 +13,7 @@ function mapWizardMode(mode: WizardMode): string {
   switch (mode) {
     case "automated": return "auto_pack";
     case "review": return "review";
-    case "notify": return "manual";
+    case "notify": return "notify";
     default: return "manual";
   }
 }

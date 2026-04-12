@@ -1881,6 +1881,7 @@
     "modeAutomated": "Automatizado",
     "modeReviewFirst": "Revisão primeiro",
     "modeManual": "Manual",
+    "modeNotify": "Apenas notificar",
     "modeNone": "Não coberto",
     "modeManualPlaybookReady": "Manual — playbook pronto",
     "covered": "Coberto",

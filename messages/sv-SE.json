@@ -2753,6 +2753,7 @@
     "modeAutomated": "Automatiserad",
     "modeReviewFirst": "Granskning först",
     "modeManual": "Manuell",
+    "modeNotify": "Endast avisering",
     "modeNone": "Inte täckt",
     "modeManualPlaybookReady": "Manuell — playbook klar",
     "covered": "Täckt",

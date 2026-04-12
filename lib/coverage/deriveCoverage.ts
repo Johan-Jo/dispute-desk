@@ -24,7 +24,7 @@ export const DISPUTE_FAMILIES: DisputeFamily[] = [
   { id: "general", reasons: ["GENERAL"], labelKey: "coverage.familyGeneral" },
 ];
 
-export type AutomationMode = "automated" | "review_first" | "manual" | "none";
+export type AutomationMode = "automated" | "review_first" | "manual" | "notify" | "none";
 
 export interface FamilyCoverage {
   familyId: string;
@@ -85,6 +85,7 @@ function ruleToAutomationMode(rule: RuleInput): AutomationMode {
     case "auto_pack": return "automated";
     case "review": return "review_first";
     case "manual": return "manual";
+    case "notify": return "notify";
     default: return "none";
   }
 }

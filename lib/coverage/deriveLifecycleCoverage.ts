@@ -134,6 +134,8 @@ function ruleToAutomationMode(rule: RuleInput): AutomationMode {
       return "review_first";
     case "manual":
       return "manual";
+    case "notify":
+      return "notify";
     default:
       return "none";
   }
