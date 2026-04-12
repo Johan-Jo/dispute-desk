@@ -54,6 +54,9 @@ export default function EmbeddedSettingsPage() {
   const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [teamEmail, setTeamEmail] = useState("");
+  const [savedTeamEmail, setSavedTeamEmail] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
   const [notifNewDispute, setNotifNewDispute] = useState(true);
   const [notifBeforeDue, setNotifBeforeDue] = useState(true);
   const [notifEvidenceReady, setNotifEvidenceReady] = useState(false);
@@ -90,6 +93,10 @@ export default function EmbeddedSettingsPage() {
           setNotifNewDispute(n.newDispute);
           setNotifBeforeDue(n.beforeDue);
           setNotifEvidenceReady(n.evidenceReady);
+        }
+        if (prefs.teamEmail) {
+          setTeamEmail(prefs.teamEmail);
+          setSavedTeamEmail(prefs.teamEmail);
         }
       }
       if (autoRes.ok) {
@@ -221,6 +228,43 @@ export default function EmbeddedSettingsPage() {
               </InlineStack>
               <Divider />
               <BlockStack gap="300">
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <BlockStack gap="200">
+                    <Text as="span" variant="bodyMd" fontWeight="medium">{t("teamEmailLabel")}</Text>
+                    <Text as="span" variant="bodySm" tone="subdued">{t("teamEmailDesc")}</Text>
+                    <InlineStack gap="200" blockAlign="end">
+                      <div style={{ flex: 1 }}>
+                        <TextField
+                          label=""
+                          labelHidden
+                          type="email"
+                          value={teamEmail}
+                          onChange={setTeamEmail}
+                          placeholder="team@yourstore.com"
+                          autoComplete="email"
+                        />
+                      </div>
+                      {teamEmail !== savedTeamEmail && (
+                        <Button
+                          size="slim"
+                          loading={emailSaving}
+                          onClick={async () => {
+                            setEmailSaving(true);
+                            await fetch("/api/shop/preferences", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ teamEmail }),
+                            });
+                            setSavedTeamEmail(teamEmail);
+                            setEmailSaving(false);
+                          }}
+                        >
+                          {tc("save")}
+                        </Button>
+                      )}
+                    </InlineStack>
+                  </BlockStack>
+                </div>
                 <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
                   <InlineStack align="space-between" blockAlign="center">
                     <BlockStack gap="050">

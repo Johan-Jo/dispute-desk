@@ -49,7 +49,9 @@ export async function GET(req: NextRequest) {
     evidenceReady: notifs?.evidenceReady ?? DEFAULTS.evidenceReady,
   };
 
-  return NextResponse.json({ notifications: preferences });
+  const teamEmail = (team?.payload as Record<string, unknown>)?.teamEmail as string | undefined;
+
+  return NextResponse.json({ notifications: preferences, teamEmail: teamEmail ?? "" });
 }
 
 /**
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
  * Merges into team step payload.
  */
 export async function PATCH(req: NextRequest) {
-  let body: { shop_id?: string; notifications?: Partial<NotificationPreferences> };
+  let body: { shop_id?: string; notifications?: Partial<NotificationPreferences>; teamEmail?: string };
   try {
     body = await req.json();
   } catch {
@@ -71,7 +73,9 @@ export async function PATCH(req: NextRequest) {
   }
 
   const updates = body.notifications ?? {};
-  if (Object.keys(updates).length === 0) {
+  const hasNotifUpdates = Object.keys(updates).length > 0;
+  const hasEmailUpdate = body.teamEmail !== undefined;
+  if (!hasNotifUpdates && !hasEmailUpdate) {
     return NextResponse.json({ ok: true });
   }
 
@@ -90,9 +94,13 @@ export async function PATCH(req: NextRequest) {
     ...updates,
   };
 
+  const updatedPayload: Record<string, unknown> = { ...team.payload, notifications: merged };
+  if (hasEmailUpdate) {
+    updatedPayload.teamEmail = body.teamEmail;
+  }
   stepsMap.team = {
     ...team,
-    payload: { ...team.payload, notifications: merged },
+    payload: updatedPayload,
   };
 
   await sb

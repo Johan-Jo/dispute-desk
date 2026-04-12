@@ -916,6 +916,8 @@
     "connectedViaOAuth": "Conectado via Shopify OAuth",
     "reconnect": "Reconectar",
     "notifications": "Notificações",
+    "teamEmailLabel": "Email da equipe",
+    "teamEmailDesc": "Alertas e notificações de disputas são enviados para este endereço.",
     "notifNewDispute": "Novas disputas",
     "notifNewDisputeDesc": "Seja notificado quando uma nova disputa chegar",
     "notifBeforeDue": "Antes do prazo",

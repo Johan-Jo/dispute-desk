@@ -866,6 +866,8 @@
     "reconnect": "Reconnecter",
     "active": "Actif",
     "notifications": "Notifications",
+    "teamEmailLabel": "Email de l'équipe",
+    "teamEmailDesc": "Les alertes et notifications de litiges sont envoyées à cette adresse.",
     "notifNewDispute": "Nouveaux litiges",
     "notifNewDisputeDesc": "Soyez notifié à l'arrivée d'un nouveau litige",
     "notifBeforeDue": "Avant l'échéance",

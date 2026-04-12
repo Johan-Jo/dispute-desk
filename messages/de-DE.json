@@ -916,6 +916,8 @@
     "connectedViaOAuth": "Verbunden über Shopify OAuth",
     "reconnect": "Erneut verbinden",
     "notifications": "Benachrichtigungen",
+    "teamEmailLabel": "Team-E-Mail",
+    "teamEmailDesc": "Streitfall-Benachrichtigungen werden an diese Adresse gesendet.",
     "notifNewDispute": "Neue Streitfälle",
     "notifNewDisputeDesc": "Benachrichtigung bei neuen Streitfällen",
     "notifBeforeDue": "Vor Fälligkeit",

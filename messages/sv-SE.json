@@ -917,6 +917,8 @@
     "connectedViaOAuth": "Ansluten via Shopify OAuth",
     "reconnect": "Återanslut",
     "notifications": "Aviseringar",
+    "teamEmailLabel": "Team-e-post",
+    "teamEmailDesc": "Tvistmeddelanden och notifieringar skickas till denna adress.",
     "notifNewDispute": "Nya tvister",
     "notifNewDisputeDesc": "Bli aviserad när en ny tvist inkommer",
     "notifBeforeDue": "Innan förfallodatum",
