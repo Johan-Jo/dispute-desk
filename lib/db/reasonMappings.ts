@@ -47,11 +47,22 @@ export async function listReasonMappings(
   }
 
   return (data ?? []).map((row) => {
-    // Supabase returns FK joins as arrays; take the first match
-    const tplArr = row.pack_templates as unknown as
-      | { slug: string; status: string; pack_template_i18n: { name: string; locale: string }[] }[]
+    // template_id → pack_templates is a many-to-one FK, so PostgREST returns
+    // a single object (not an array). Handle both shapes defensively because
+    // the old code was typed as an array and still works for callers that
+    // mutate the payload.
+    type TplShape = {
+      slug: string;
+      status: string;
+      pack_template_i18n: { name: string; locale: string }[];
+    };
+    const tplAny = row.pack_templates as unknown as
+      | TplShape
+      | TplShape[]
       | null;
-    const tpl = tplArr?.[0] ?? null;
+    const tpl: TplShape | null = Array.isArray(tplAny)
+      ? tplAny[0] ?? null
+      : tplAny ?? null;
 
     const i18nName =
       tpl?.pack_template_i18n?.find((r: { locale: string }) => r.locale === "en-US")?.name ??
@@ -147,8 +158,14 @@ export async function getReasonMappingStats(
   const unmapped = rows.filter((r) => r.template_id == null).length;
   const warnings = rows.filter((r) => {
     if (!r.template_id) return false;
-    const tplArr = r.pack_templates as unknown as { status: string }[] | null;
-    return tplArr?.[0]?.status === "archived";
+    // Same many-to-one join quirk as listReasonMappings — PostgREST returns
+    // pack_templates as an object, not an array.
+    const tplAny = r.pack_templates as unknown as
+      | { status: string }
+      | { status: string }[]
+      | null;
+    const tpl = Array.isArray(tplAny) ? tplAny[0] ?? null : tplAny ?? null;
+    return tpl?.status === "archived";
   }).length;
 
   return { total, mapped, unmapped, warnings };
