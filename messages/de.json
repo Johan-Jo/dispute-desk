@@ -676,7 +676,17 @@
     "baselineBadge": "Basis",
     "customBadge": "Benutzerdefiniert",
     "unsavedBadge": "Nicht gespeichert",
-    "firstMatchWinsHint": "Regeln werden von oben nach unten geprüft. Die erste Übereinstimmung gewinnt."
+    "firstMatchWinsHint": "Regeln werden von oben nach unten geprüft. Die erste Übereinstimmung gewinnt.",
+    "noPlaybookBadge": "Kein Playbook",
+    "playbooksInUse": "Verwendet: {names}",
+    "quickAutoAll": "Alle automatisch packen",
+    "quickReviewAll": "Alle überprüfen",
+    "safeguardTitle": "Sicherheitsvorkehrungen",
+    "safeguardToggle": "Hochwertige Streitfälle vor dem Senden überprüfen",
+    "safeguardAmountLabel": "Mindestbetrag",
+    "safeguardHint": "Das Beweispaket wird weiterhin automatisch erstellt, aber vor dem Speichern bei Shopify zur Genehmigung zurückgehalten.",
+    "advancedFiltersTitle": "Erweiterte benutzerdefinierte Regeln",
+    "advancedFiltersSubtitle": "Im Portal erstellte benutzerdefinierte Regeln. Diese laufen parallel zur Familienautomatisierung."
   },
   "settings": {
     "title": "Einstellungen",

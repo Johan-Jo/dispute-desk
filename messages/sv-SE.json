@@ -780,7 +780,17 @@
     "baselineBadge": "Bas",
     "customBadge": "Anpassad",
     "unsavedBadge": "Ej sparad",
-    "firstMatchWinsHint": "Reglerna kontrolleras uppifrån och ner. Den första matchningen vinner."
+    "firstMatchWinsHint": "Reglerna kontrolleras uppifrån och ner. Den första matchningen vinner.",
+    "noPlaybookBadge": "Ingen playbook",
+    "playbooksInUse": "Använder: {names}",
+    "quickAutoAll": "Packa alla automatiskt",
+    "quickReviewAll": "Granska alla",
+    "safeguardTitle": "Skyddsåtgärder",
+    "safeguardToggle": "Granska tvister med högt värde innan de skickas",
+    "safeguardAmountLabel": "Minimibelopp",
+    "safeguardHint": "Bevispaketet skapas fortfarande automatiskt, men hålls kvar för ditt godkännande innan det sparas till Shopify.",
+    "advancedFiltersTitle": "Avancerade anpassade regler",
+    "advancedFiltersSubtitle": "Anpassade regler skapade i portalen. Dessa körs parallellt med familjeautomatiseringen."
   },
   "settings": {
     "title": "Inställningar",

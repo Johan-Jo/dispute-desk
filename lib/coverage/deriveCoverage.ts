@@ -16,7 +16,6 @@ export interface DisputeFamily {
 
 export const DISPUTE_FAMILIES: DisputeFamily[] = [
   { id: "fraud", reasons: ["FRAUDULENT", "UNRECOGNIZED"], labelKey: "coverage.familyFraud" },
-  { id: "unrecognized", reasons: ["UNRECOGNIZED"], labelKey: "coverage.familyUnrecognized" },
   { id: "pnr", reasons: ["PRODUCT_NOT_RECEIVED"], labelKey: "coverage.familyPnr" },
   { id: "not_as_described", reasons: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"], labelKey: "coverage.familyNotAsDescribed" },
   { id: "subscription", reasons: ["SUBSCRIPTION_CANCELED"], labelKey: "coverage.familySubscription" },

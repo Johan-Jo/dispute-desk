@@ -879,10 +879,9 @@ Note: this page is only accessible when Shopify Payments test mode is **off** an
 | `/api/rules/:id` | PATCH | Update rule |
 | `/api/rules/:id` | DELETE | Delete rule |
 | `/api/rules/reorder` | POST | Reorder by priority |
-| `/api/rules/install-preset` | POST | Bulk install rule presets (body: `shop_id`, optional `preset_ids[]`). Idempotent by preset name. Plan-gated. |
 | `/api/disputes/:id/approve` | POST | Approve from review queue |
 
-Rule presets are defined in `lib/rules/presets.ts` (e.g. fraud auto-pack, PNR auto-pack, high-value review, catch-all review). Portal Rules page offers "Install Suggested Rules" and empty-state preset cards. The **embedded** Rules page (`app/(embedded)/app/rules/page.tsx`) always shows these four as **Suggested Starter Rules** with a **routing** control per row (Auto-Pack vs Send to Review) and **Save starter rules** (creates or updates `rules` rows by preset name). It also lists **ACTIVE** library packs from `GET /api/packs?status=ACTIVE`.
+The **embedded** Rules page (`app/(embedded)/app/rules/page.tsx`) is a per-family view of the canonical pack-based automation system. It shows one row per dispute family (from `DISPUTE_FAMILIES`, currently 7), grouped by the pack(s) matching each family. Each row has a routing Select (Automated / Review first). Changes save via `POST /api/setup/automation { pack_modes }`, the same pipeline the setup wizard uses. A **Safeguards** section offers a high-value review threshold (`__dd_safeguard__:high_value` rule, persisted independently of pack-based saves). Quick-action buttons ("Auto-pack all" / "Review all") bulk-set pack modes. Custom rules from the portal appear in a read-only **Advanced custom rules** section.
 
 ## Save Evidence to Shopify
 
@@ -1026,7 +1025,7 @@ PDFs deleted from storage. Audit events never deleted.
 | Sample Files Delete API | `tests/api/files/samplesDelete.test.ts` | POST /api/files/samples/delete |
 | Policy Templates API | `tests/api/policy-templates/route.test.ts` | GET /api/policy-templates |
 | Policy Template Content API | `tests/api/policy-templates/content.test.ts` | GET /api/policy-templates/[type]/content |
-| Rules Install Preset API | `tests/api/rules/installPreset.test.ts` | POST /api/rules/install-preset |
+| Pack Handling Automation | `lib/rules/__tests__/packHandlingAutomation.test.ts` | Pack-based mode parsing + validation |
 | Pack Detail API | `tests/api/packs/packDetailRoute.test.ts` | GET /api/packs/[packId] (evidence_packs + library packs fallback) |
 | Templates API | `tests/api/templates/route.test.ts` | GET /api/templates (list pack templates) |
 
@@ -1285,7 +1284,7 @@ On save: installs the recommended chargeback templates plus any extras the merch
 5. **Safeguards** — Visually separated “safety” block: **switch-style** controls (not plain checkboxes) for high-value review threshold and catch-all review. Helper copy states these **override** the default and per-reason rules when conditions match.
 6. **Live summary** — Read-only recap of effective configuration (default line, per-reason lines, safeguard lines).
 
-**Data & API:** Loads via `GET /api/setup/automation` (`activePacks`, `pack_modes`, `reason_rows`, safeguards, `installedTemplateIds`). The step shows one row per template-backed library pack with a segmented control (**Manual review** / **Automatic**). Saves with `POST` `{ shop_id, pack_modes }` (keys = `packs.id`). Presets and per-reason cards still map to the same automation payload where used; see § *Rules vs library packs*.
+**Data & API:** Loads via `GET /api/setup/automation` (`activePacks`, `pack_modes`, `installedTemplateIds`). The step shows one row per template-backed library pack with a segmented control (**Manual review** / **Automatic**). Saves with `POST` `{ shop_id, pack_modes }` (keys = `packs.id`). The embedded `/app/rules` page uses the same API, presenting a per-family view of the same data.
 
 **Evaluation order** (unchanged; see `lib/rules/pickAutomationAction.ts`): amount safeguards → per-reason rule → default (General) → catch-all. Merchant-facing help article: `help.articles.configuringAutomation`.
 

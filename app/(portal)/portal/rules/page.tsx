@@ -9,7 +9,6 @@ import { InfoBanner } from "@/components/ui/info-banner";
 import { Modal } from "@/components/ui/modal";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
-import { RULE_PRESETS } from "@/lib/rules/presets";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface Rule {
@@ -93,9 +92,6 @@ export default function RulesSettingsPage() {
   const shopId = useActiveShopId() ?? "";
 
   const [planBlocked, setPlanBlocked] = useState(false);
-  const [showPresetsBanner, setShowPresetsBanner] = useState(true);
-  const [showPresetsSection, setShowPresetsSection] = useState(false);
-  const [installingPresets, setInstallingPresets] = useState(false);
 
   const fetchRules = useCallback(async () => {
     if (isDemo || !shopId) { setLoading(false); return; }
@@ -129,21 +125,6 @@ export default function RulesSettingsPage() {
     setShowForm(false);
     setFormName(""); setFormReasons([]); setFormMode("auto_pack"); setFormMinAmount(""); setFormMaxAmount("");
     await fetchRules();
-  };
-
-  const handleInstallPresets = async () => {
-    if (!shopId || planBlocked) return;
-    setInstallingPresets(true);
-    try {
-      const res = await fetch("/api/rules/install-preset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shop_id: shopId }),
-      });
-      if (res.ok) await fetchRules();
-    } finally {
-      setInstallingPresets(false);
-    }
   };
 
   if (isDemo) {
@@ -333,21 +314,6 @@ export default function RulesSettingsPage() {
         </div>
       )}
 
-      {!loading && rules.length > 0 && !planBlocked && showPresetsBanner && (
-        <div className="mb-4">
-          <InfoBanner variant="info" onDismiss={() => setShowPresetsBanner(false)}>
-            {t("morePresets")}{" "}
-            <button
-              type="button"
-              onClick={() => setShowPresetsSection(true)}
-              className="font-semibold underline hover:no-underline"
-            >
-              {t("viewPresets")}
-            </button>
-          </InfoBanner>
-        </div>
-      )}
-
       {showForm && !planBlocked && (
         <Modal
           isOpen={true}
@@ -438,54 +404,7 @@ export default function RulesSettingsPage() {
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#E5E7EB] to-transparent" />
                   </div>
 
-                  <div className="space-y-3 mb-10">
-                    {RULE_PRESETS.map((preset, index) => (
-                      <div
-                        key={preset.id}
-                        className="group relative bg-white rounded-xl border border-[#E5E7EB] p-5 hover:border-[#1D4ED8]/30 hover:shadow-md transition-all duration-200"
-                      >
-                        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#1D4ED8] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md">
-                          {index + 1}
-                        </div>
-                        <div className="flex items-start justify-between gap-6 pl-4">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-base font-bold text-[#0B1220] mb-2 group-hover:text-[#1D4ED8] transition-colors">
-                              {t(preset.nameKey)}
-                            </h4>
-                            <p className="text-sm text-[#667085] leading-relaxed">
-                              {t(preset.descriptionKey)}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={preset.action.mode === "auto_pack" ? "success" : "warning"}
-                            className="text-xs whitespace-nowrap flex-shrink-0 mt-1 font-semibold px-3 py-1.5"
-                          >
-                            {preset.action.mode === "auto_pack" ? t("autoPack") : t("review")}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
                   <div className="flex flex-col items-center justify-center gap-4 mb-8">
-                    <Button
-                      variant="primary"
-                      disabled={installingPresets}
-                      onClick={handleInstallPresets}
-                      className="w-full sm:w-auto px-8 py-3 text-base font-semibold shadow-lg shadow-[#1D4ED8]/20 hover:shadow-xl hover:shadow-[#1D4ED8]/30 transition-all"
-                    >
-                      {installingPresets ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                          {t("installAll")}
-                        </span>
-                      ) : (
-                        <>
-                          <Zap className="w-5 h-5 mr-2" />
-                          {t("installAll")}
-                        </>
-                      )}
-                    </Button>
                     <button
                       type="button"
                       onClick={() => setShowForm(true)}
@@ -525,43 +444,6 @@ export default function RulesSettingsPage() {
           </div>
         )}
       </div>
-
-      {showPresetsSection && rules.length > 0 && !planBlocked && (
-        <div className="mt-6 p-6 bg-[#F7F8FA] rounded-lg border border-[#E5E7EB]">
-          <h4 className="text-sm font-medium text-[#0B1220] mb-3">{t("suggestedRules")}</h4>
-          <div className="space-y-3 mb-4">
-            {RULE_PRESETS.map((preset) => (
-              <div
-                key={preset.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 bg-white border border-[#E5E7EB] rounded-lg"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[#0B1220] text-sm">{t(preset.nameKey)}</p>
-                  <p className="text-xs text-[#667085]">{t(preset.descriptionKey)}</p>
-                </div>
-                <Badge variant={preset.action.mode === "auto_pack" ? "success" : "warning"} className="flex-shrink-0 w-fit">
-                  {preset.action.mode === "auto_pack" ? t("autoPack") : t("review")}
-                </Badge>
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={installingPresets}
-            onClick={handleInstallPresets}
-          >
-            {installingPresets ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="animate-spin w-3.5 h-3.5 border-2 border-[#1D4ED8] border-t-transparent rounded-full" />
-                {t("installAll")}
-              </span>
-            ) : (
-              t("installAll")
-            )}
-          </Button>
-        </div>
-      )}
 
       <p className="text-xs text-[#94A3B8] mt-3">{t("footer")}</p>
     </div>

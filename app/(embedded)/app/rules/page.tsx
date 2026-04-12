@@ -1,10 +1,17 @@
 /**
  * Embedded automation rules page.
  *
- * Single unified list: baseline preset rules and custom rules rendered
- * in one priority-ordered list. Baseline rows edit routing inline via a
- * Select; custom rows open /portal/rules for editing. First matching
- * rule wins.
+ * Per-family routing view backed by the canonical pack-based automation
+ * system. One row per dispute family from DISPUTE_FAMILIES; each row's
+ * Select edits the modes of all packs belonging to that family. Saves go
+ * through POST /api/setup/automation (pack_modes branch), the same
+ * pipeline the setup wizard uses, so coverage and rules always agree.
+ *
+ * Also includes:
+ * - Safeguards section: high-value review threshold (standalone rule with
+ *   __dd_safeguard__: prefix, survives pack-based saves)
+ * - Suggested configurations: quick-action buttons that bulk-set pack modes
+ * - Custom rules: read-only list of user-created rules from /portal/rules
  */
 "use client";
 
@@ -24,12 +31,57 @@ import {
   Banner,
   Select,
   Divider,
+  Icon,
+  Checkbox,
+  TextField,
 } from "@shopify/polaris";
-
-import { RULE_PRESETS, type RulePreset } from "@/lib/rules/presets";
+import {
+  ShieldPersonIcon,
+  AlertTriangleIcon,
+  DeliveryIcon,
+  OrderIcon,
+  ReceiptRefundIcon,
+  DuplicateIcon,
+  ClipboardCheckFilledIcon,
+} from "@shopify/polaris-icons";
+import { withShopParams } from "@/lib/withShopParams";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
+import {
+  disputeTypeToPrimaryReason,
+  type PackHandlingUiMode,
+} from "@/lib/rules/packHandlingAutomation";
 
-interface Rule {
+// ─── Constants ──────────────────────────────────────────────────────────
+
+const SAFEGUARD_RULE_NAME = "__dd_safeguard__:high_value";
+const DEFAULT_SAFEGUARD_AMOUNT = 500;
+
+const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
+  fraud: ShieldPersonIcon,
+  pnr: DeliveryIcon,
+  not_as_described: AlertTriangleIcon,
+  subscription: OrderIcon,
+  refund: ReceiptRefundIcon,
+  duplicate: DuplicateIcon,
+  general: ClipboardCheckFilledIcon,
+};
+
+// ─── Types ──────────────────────────────────────────────────────────────
+
+interface ActivePack {
+  id: string;
+  name: string;
+  dispute_type: string;
+  template_id: string | null;
+  status: string;
+}
+
+interface AutomationData {
+  activePacks: ActivePack[];
+  pack_modes: Record<string, PackHandlingUiMode>;
+}
+
+interface CustomRule {
   id: string;
   name: string | null;
   enabled: boolean;
@@ -37,101 +89,102 @@ interface Rule {
     reason?: string[];
     status?: string[];
     amount_range?: { min?: number; max?: number };
-    phase?: ("inquiry" | "chargeback")[];
   };
   action: {
     mode: "auto_pack" | "review" | "manual";
     pack_template_id?: string | null;
-    require_fields?: string[];
   };
   priority: number;
 }
 
-/**
- * Phase-paired inquiry sibling rules are an implementation detail of the
- * runtime — they're written automatically alongside chargeback rules so
- * inquiry-phase disputes get the lighter inquiry template. Hide them from
- * the merchant-facing rules list.
- */
-function isInquirySiblingSetupRule(name: string | null | undefined): boolean {
-  return Boolean(name?.startsWith("__dd_setup__:pack:") && name.endsWith(":inquiry"));
+interface SafeguardState {
+  ruleId: string | null;
+  enabled: boolean;
+  amount: number;
 }
 
-interface ReasonMapping {
-  reason_code: string;
-  dispute_phase: "inquiry" | "chargeback";
-  template_id: string | null;
-  template_name: string | null;
-  family: string;
-  is_active: boolean;
+function isSetupOrSafeguardRule(name: string | null | undefined): boolean {
+  return Boolean(
+    name?.startsWith("__dd_setup__") || name?.startsWith("__dd_safeguard__"),
+  );
 }
 
-const PRESET_NAMES = new Set(RULE_PRESETS.map((p) => p.name));
+type FamilyMode = "auto" | "review" | "none";
 
-const REASON_KEYS: Record<string, string> = {
-  PRODUCT_NOT_RECEIVED: "productNotReceived",
-  PRODUCT_UNACCEPTABLE: "productUnacceptable",
-  FRAUDULENT: "fraudulent",
-  CREDIT_NOT_PROCESSED: "creditNotProcessed",
-  SUBSCRIPTION_CANCELED: "subscriptionCanceled",
-  DUPLICATE: "duplicate",
-  GENERAL: "general",
-};
-
-function isSetupRuleName(name: string | null | undefined): boolean {
-  return Boolean(name?.startsWith("__dd_setup__"));
-}
-
-function routingMode(rule: Rule): "auto_pack" | "review" {
-  return rule.action?.mode === "auto_pack" ? "auto_pack" : "review";
-}
-
-type UnifiedRow =
-  | {
-      kind: "baseline";
-      preset: RulePreset;
-      existing: Rule | null;
-      priority: number;
-    }
-  | { kind: "custom"; rule: Rule; priority: number };
+// ─── Component ──────────────────────────────────────────────────────────
 
 export default function EmbeddedRulesPage() {
   const router = useRouter();
-  const pageSearchParams = useSearchParams();
+  const searchParams = useSearchParams();
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
   const tc = useTranslations("coverage");
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [_reasonMappings, setReasonMappings] = useState<ReasonMapping[]>([]);
-  const [highlightedPresetId, setHighlightedPresetId] = useState<string | null>(
-    null,
-  );
-  const presetRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [starterModes, setStarterModes] = useState<Record<string, "auto_pack" | "review">>(() => {
-    const init: Record<string, "auto_pack" | "review"> = {};
-    for (const p of RULE_PRESETS) init[p.id] = p.action.mode;
-    return init;
-  });
-  const [savingStarters, setSavingStarters] = useState(false);
-  const [starterError, setStarterError] = useState<string | null>(null);
-  const [starterSavedBanner, setStarterSavedBanner] = useState(false);
 
-  const fetchRules = useCallback(async () => {
+  // Data
+  const [automation, setAutomation] = useState<AutomationData | null>(null);
+  const [customRules, setCustomRules] = useState<CustomRule[]>([]);
+  const [pendingModes, setPendingModes] = useState<
+    Record<string, PackHandlingUiMode>
+  >({});
+  const [safeguard, setSafeguard] = useState<SafeguardState>({
+    ruleId: null,
+    enabled: false,
+    amount: DEFAULT_SAFEGUARD_AMOUNT,
+  });
+  const [savedSafeguard, setSavedSafeguard] = useState<SafeguardState>({
+    ruleId: null,
+    enabled: false,
+    amount: DEFAULT_SAFEGUARD_AMOUNT,
+  });
+
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savedBanner, setSavedBanner] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [highlightedFamilyId, setHighlightedFamilyId] = useState<
+    string | null
+  >(null);
+  const familyRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // ─── Data fetching ────────────────────────────────────────────────────
+
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [rulesRes, mappingsRes] = await Promise.all([
+      const [automationRes, rulesRes] = await Promise.all([
+        fetch("/api/setup/automation"),
         fetch("/api/rules"),
-        fetch("/api/reason-mappings"),
       ]);
-      if (rulesRes.ok) {
-        const data = await rulesRes.json();
-        const arr = Array.isArray(data) ? (data as Rule[]) : [];
-        setRules(arr.filter((r) => !isInquirySiblingSetupRule(r.name)));
+
+      if (automationRes.ok) {
+        const data = await automationRes.json();
+        const next: AutomationData = {
+          activePacks: data.activePacks ?? [],
+          pack_modes: data.pack_modes ?? {},
+        };
+        setAutomation(next);
+        setPendingModes(next.pack_modes);
       }
-      if (mappingsRes.ok) {
-        const body = await mappingsRes.json();
-        setReasonMappings(body.mappings ?? []);
+
+      if (rulesRes.ok) {
+        const allRules = (await rulesRes.json()) as CustomRule[];
+        const arr = Array.isArray(allRules) ? allRules : [];
+
+        // Find safeguard rule
+        const sg = arr.find((r) => r.name === SAFEGUARD_RULE_NAME);
+        if (sg) {
+          const sgState: SafeguardState = {
+            ruleId: sg.id,
+            enabled: sg.enabled,
+            amount: sg.match?.amount_range?.min ?? DEFAULT_SAFEGUARD_AMOUNT,
+          };
+          setSafeguard(sgState);
+          setSavedSafeguard(sgState);
+        }
+
+        // Custom rules = everything that isn't setup/safeguard managed
+        setCustomRules(arr.filter((r) => !isSetupOrSafeguardRule(r.name)));
       }
     } finally {
       setLoading(false);
@@ -139,385 +192,549 @@ export default function EmbeddedRulesPage() {
   }, []);
 
   useEffect(() => {
-    fetchRules();
-  }, [fetchRules]);
+    fetchAll();
+  }, [fetchAll]);
 
-  useEffect(() => {
-    setStarterModes((prev) => {
-      const next = { ...prev };
-      for (const preset of RULE_PRESETS) {
-        const row = rules.find((r) => r.name === preset.name);
-        if (row) next[preset.id] = routingMode(row);
+  // ─── Derived state ────────────────────────────────────────────────────
+
+  const familyPacks = useMemo(() => {
+    const map: Record<string, ActivePack[]> = {};
+    for (const family of DISPUTE_FAMILIES) {
+      if (!automation) {
+        map[family.id] = [];
+        continue;
       }
-      return next;
-    });
-  }, [rules]);
+      map[family.id] = automation.activePacks.filter((p) => {
+        const reason = disputeTypeToPrimaryReason(p.dispute_type);
+        return family.reasons.includes(reason);
+      });
+    }
+    return map;
+  }, [automation]);
 
-  // Deep link from /app/coverage: /app/rules?family=fraud scrolls to the
-  // first baseline preset whose reasons overlap the family's reasons and
-  // briefly highlights it so the merchant can see where to edit.
-  useEffect(() => {
-    if (loading) return;
-    const familyId = pageSearchParams?.get("family");
-    if (!familyId) return;
-    const family = DISPUTE_FAMILIES.find((f) => f.id === familyId);
-    if (!family) return;
-    const matchingPreset = RULE_PRESETS.find((p) =>
-      (p.match.reason ?? []).some((r) => family.reasons.includes(r)),
-    );
-    if (!matchingPreset) return;
-    // Defer one frame so refs are attached after the first paint.
-    requestAnimationFrame(() => {
-      const el = presetRowRefs.current[matchingPreset.id];
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        setHighlightedPresetId(matchingPreset.id);
-        setTimeout(() => setHighlightedPresetId(null), 2500);
+  const familyModes = useMemo(() => {
+    const out: Record<string, FamilyMode> = {};
+    for (const family of DISPUTE_FAMILIES) {
+      const packs = familyPacks[family.id] ?? [];
+      if (packs.length === 0) {
+        out[family.id] = "none";
+        continue;
       }
-    });
-  }, [loading, pageSearchParams]);
+      const anyAuto = packs.some((p) => pendingModes[p.id] === "auto");
+      out[family.id] = anyAuto ? "auto" : "review";
+    }
+    return out;
+  }, [familyPacks, pendingModes]);
 
-  const customRules = useMemo(
+  const summary = useMemo(() => {
+    let auto = 0;
+    let review = 0;
+    let noPlaybook = 0;
+    for (const family of DISPUTE_FAMILIES) {
+      const m = familyModes[family.id];
+      if (m === "auto") auto++;
+      else if (m === "review") review++;
+      else noPlaybook++;
+    }
+    return { auto, review, noPlaybook, total: DISPUTE_FAMILIES.length };
+  }, [familyModes]);
+
+  const packModesDirty = useMemo(() => {
+    if (!automation) return false;
+    const allKeys = new Set([
+      ...Object.keys(automation.pack_modes),
+      ...Object.keys(pendingModes),
+    ]);
+    for (const id of allKeys) {
+      if (automation.pack_modes[id] !== pendingModes[id]) return true;
+    }
+    return false;
+  }, [automation, pendingModes]);
+
+  const safeguardDirty = useMemo(
     () =>
-      rules.filter(
-        (r) => r.name && !PRESET_NAMES.has(r.name) && !isSetupRuleName(r.name)
-      ),
-    [rules]
+      safeguard.enabled !== savedSafeguard.enabled ||
+      safeguard.amount !== savedSafeguard.amount,
+    [safeguard, savedSafeguard],
   );
 
-  // Compute policy overview counts — still drives the state sentence.
-  const policySummary = useMemo(() => {
-    let automated = 0;
-    let reviewFirst = 0;
-    let manual = 0;
-    for (const family of DISPUTE_FAMILIES) {
-      const matchingRule = rules.find((r) => {
-        if (!r.enabled) return false;
-        if (!r.match.reason || r.match.reason.length === 0) return true;
-        return family.reasons.some((reason) => r.match.reason!.includes(reason));
-      });
-      if (!matchingRule) { manual++; continue; }
-      if (matchingRule.action.mode === "auto_pack") automated++;
-      else if (matchingRule.action.mode === "review") reviewFirst++;
-      else manual++;
-    }
-    return { automated, reviewFirst, manual };
-  }, [rules]);
+  const dirty = packModesDirty || safeguardDirty;
 
-  // Unified, priority-ordered list of every rule the engine will consider.
-  const unifiedRows: UnifiedRow[] = useMemo(() => {
-    const baselineRows: UnifiedRow[] = RULE_PRESETS.map((preset) => {
-      const existing = rules.find((r) => r.name === preset.name) ?? null;
-      return {
-        kind: "baseline" as const,
-        preset,
-        existing,
-        priority: existing?.priority ?? preset.priority,
-      };
+  // ─── Deep link from coverage ──────────────────────────────────────────
+
+  useEffect(() => {
+    if (loading) return;
+    const familyId = searchParams?.get("family");
+    if (!familyId) return;
+    requestAnimationFrame(() => {
+      const el = familyRowRefs.current[familyId];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedFamilyId(familyId);
+        setTimeout(() => setHighlightedFamilyId(null), 2500);
+      }
     });
-    const customRows: UnifiedRow[] = customRules.map((rule) => ({
-      kind: "custom" as const,
-      rule,
-      priority: rule.priority,
-    }));
-    return [...baselineRows, ...customRows].sort(
-      (a, b) => a.priority - b.priority,
-    );
-  }, [rules, customRules]);
+  }, [loading, searchParams]);
 
-  const saveStarterRules = useCallback(async () => {
-    setSavingStarters(true);
-    setStarterError(null);
-    setStarterSavedBanner(false);
+  // ─── Actions ──────────────────────────────────────────────────────────
+
+  const setFamilyMode = useCallback(
+    (familyId: string, mode: "auto" | "review") => {
+      const packs = familyPacks[familyId] ?? [];
+      if (packs.length === 0) return;
+      setPendingModes((prev) => {
+        const next = { ...prev };
+        for (const p of packs) {
+          next[p.id] = mode === "auto" ? "auto" : "manual";
+        }
+        return next;
+      });
+    },
+    [familyPacks],
+  );
+
+  const applyQuickConfig = useCallback(
+    (mode: "auto" | "review") => {
+      if (!automation) return;
+      setPendingModes((prev) => {
+        const next = { ...prev };
+        for (const p of automation.activePacks) {
+          next[p.id] = mode === "auto" ? "auto" : "manual";
+        }
+        return next;
+      });
+    },
+    [automation],
+  );
+
+  const save = useCallback(async () => {
+    setSaving(true);
+    setErrorMsg(null);
+    setSavedBanner(false);
     try {
-      for (const preset of RULE_PRESETS) {
-        const mode = starterModes[preset.id] ?? preset.action.mode;
-        const existing = rules.find((r) => r.name === preset.name);
-        if (existing) {
-          const res = await fetch(`/api/rules/${existing.id}`, {
+      // Save pack modes
+      if (packModesDirty) {
+        const res = await fetch("/api/setup/automation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pack_modes: pendingModes }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(
+            typeof body?.error === "string" ? body.error : "save_failed",
+          );
+        }
+      }
+
+      // Save safeguard
+      if (safeguardDirty) {
+        const rulePayload = {
+          name: SAFEGUARD_RULE_NAME,
+          match: { amount_range: { min: safeguard.amount } },
+          action: { mode: "review" as const },
+          enabled: safeguard.enabled,
+          priority: 5,
+        };
+
+        if (safeguard.ruleId) {
+          const res = await fetch(`/api/rules/${safeguard.ruleId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: { mode } }),
+            body: JSON.stringify(rulePayload),
           });
-          if (!res.ok) {
-            const errBody = await res.json().catch(() => ({}));
-            throw new Error(
-              typeof errBody?.error === "string" ? errBody.error : "patch_failed"
-            );
-          }
-        } else {
+          if (!res.ok) throw new Error("safeguard_save_failed");
+        } else if (safeguard.enabled) {
           const res = await fetch("/api/rules", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: preset.name,
-              match: preset.match,
-              action: { mode },
-              enabled: true,
-              priority: preset.priority,
-            }),
+            body: JSON.stringify(rulePayload),
           });
-          if (!res.ok) {
-            const errBody = await res.json().catch(() => ({}));
-            throw new Error(
-              typeof errBody?.error === "string" ? errBody.error : "post_failed"
-            );
-          }
+          if (!res.ok) throw new Error("safeguard_save_failed");
         }
       }
-      await fetchRules();
-      setStarterSavedBanner(true);
+
+      await fetchAll();
+      setSavedBanner(true);
     } catch {
-      setStarterError("starterRulesError");
+      setErrorMsg("starterRulesError");
     } finally {
-      setSavingStarters(false);
+      setSaving(false);
     }
-  }, [starterModes, rules, fetchRules]);
+  }, [pendingModes, packModesDirty, safeguard, safeguardDirty, fetchAll]);
 
-  function matchSummary(match: Rule["match"]): string {
-    const parts: string[] = [];
-    if (match.reason?.length) {
-      const translated = match.reason.map((r) =>
-        REASON_KEYS[r] ? r.replace(/_/g, " ") : r
-      );
-      parts.push(`${tr("reason")}: ${translated.join(", ")}`);
-    }
-    if (match.status?.length) parts.push(`${tr("statusLabel")}: ${match.status.join(", ")}`);
-    if (match.amount_range) {
-      const { min, max } = match.amount_range;
-      if (min != null && max != null) parts.push(`$${min}–$${max}`);
-      else if (min != null) parts.push(`≥ $${min}`);
-      else if (max != null) parts.push(`≤ $${max}`);
-    }
-    return parts.length ? parts.join(" · ") : tr("matchesAll");
-  }
+  // ─── Render ───────────────────────────────────────────────────────────
 
-  void _reasonMappings; // keep fetch, may use later
-
-  const totalFamilies = DISPUTE_FAMILIES.length;
-
-  // Plain-language state sentence — priority ordered
-  const stateSentence = (() => {
-    if (policySummary.automated + policySummary.reviewFirst === 0)
-      return tr("stateNoSetup");
-    if (policySummary.manual > 0)
-      return tr("stateWithGaps", {
-        manual: policySummary.manual,
-        total: totalFamilies,
-      });
-    if (policySummary.reviewFirst > 0)
-      return tr("stateMostlyAuto", {
-        automated: policySummary.automated,
-        total: totalFamilies,
-        review: policySummary.reviewFirst,
-      });
-    return tr("stateAllAuto", { total: totalFamilies });
-  })();
-
-  const routingChoices = [
-    { label: tr("autoPack"), value: "auto_pack" as const },
-    { label: tr("review"), value: "review" as const },
-  ];
-
-  function renderBaselineRow(row: Extract<UnifiedRow, { kind: "baseline" }>, index: number) {
-    const mode = starterModes[row.preset.id] ?? row.preset.action.mode;
-    const isSaved = row.existing !== null;
+  if (loading) {
     return (
-      <BlockStack gap="200">
-        <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
-          <InlineStack gap="300" blockAlign="center" wrap>
-            <Text as="span" variant="bodySm" tone="subdued">
-              {`${index + 1}.`}
-            </Text>
-            <Text as="h3" variant="bodyMd" fontWeight="semibold">
-              {tr(row.preset.nameKey)}
-            </Text>
-            <Badge tone="info">{tr("baselineBadge")}</Badge>
-            {!isSaved && (
-              <Badge tone="attention">{tr("unsavedBadge")}</Badge>
-            )}
-          </InlineStack>
-          <div style={{ minWidth: 180, flexShrink: 0 }}>
-            <Select
-              label={tr("actionRouting")}
-              labelHidden
-              options={routingChoices}
-              value={mode}
-              onChange={(value) =>
-                setStarterModes((prev) => ({
-                  ...prev,
-                  [row.preset.id]: value as "auto_pack" | "review",
-                }))
-              }
-            />
-          </div>
-        </InlineStack>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {tr(row.preset.descriptionKey)}
-        </Text>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {`${tr("triggerCondition")}: ${matchSummary(row.preset.match)}`}
-        </Text>
-      </BlockStack>
-    );
-  }
-
-  function renderCustomRow(row: Extract<UnifiedRow, { kind: "custom" }>, index: number) {
-    const actionLabel =
-      row.rule.action?.mode === "auto_pack"
-        ? tr("autoPack")
-        : row.rule.action?.mode === "manual"
-          ? tr("manual")
-          : tr("review");
-    return (
-      <BlockStack gap="200">
-        <InlineStack align="space-between" blockAlign="center" wrap={false} gap="300">
-          <InlineStack gap="300" blockAlign="center" wrap>
-            <Text as="span" variant="bodySm" tone="subdued">
-              {`${index + 1}.`}
-            </Text>
-            <Text as="h3" variant="bodyMd" fontWeight="semibold">
-              {row.rule.name ?? tr("unnamedRule")}
-            </Text>
-            <Badge>{tr("customBadge")}</Badge>
-            <Badge tone={row.rule.enabled ? "success" : undefined}>
-              {row.rule.enabled ? tr("active") : tr("inactive")}
-            </Badge>
-          </InlineStack>
-          <Button onClick={() => router.push("/portal/rules")}>
-            {tr("editRule")}
-          </Button>
-        </InlineStack>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {`${tr("triggerCondition")}: ${matchSummary(row.rule.match)}`}
-        </Text>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {`${tr("action")}: ${actionLabel}`}
-        </Text>
-      </BlockStack>
-    );
-  }
-
-  return (
-    <Page
-      title={tn("automation")}
-      subtitle={tr("purposeLine")}
-      primaryAction={{
-        content: tr("primaryAddCustom"),
-        url: "/portal/rules",
-      }}
-    >
-      <Layout>
-        <Layout.Section>
-          {loading ? (
+      <Page title={tn("automation")} subtitle={tr("purposeLine")}>
+        <Layout>
+          <Layout.Section>
             <Card>
               <div style={{ padding: "2rem", textAlign: "center" }}>
                 <Spinner size="large" />
               </div>
             </Card>
-          ) : (
-            <BlockStack gap="400">
-              {starterSavedBanner && (
-                <Banner tone="success" onDismiss={() => setStarterSavedBanner(false)}>
-                  <p>{tr("starterRulesSaved")}</p>
-                </Banner>
-              )}
-              {starterError && (
-                <Banner tone="critical" onDismiss={() => setStarterError(null)}>
-                  <p>{tr(starterError)}</p>
-                </Banner>
-              )}
+          </Layout.Section>
+        </Layout>
+      </Page>
+    );
+  }
 
-              {/* Current state — plain language */}
-              <Card>
-                <BlockStack gap="300">
-                  <Text as="p" variant="bodyLg" fontWeight="semibold">
-                    {stateSentence}
+  const stateSentence = (() => {
+    if (summary.auto === 0 && summary.review === 0) return tr("stateNoSetup");
+    if (summary.noPlaybook > 0)
+      return tr("stateWithGaps", {
+        manual: summary.noPlaybook,
+        total: summary.total,
+      });
+    if (summary.review > 0)
+      return tr("stateMostlyAuto", {
+        automated: summary.auto,
+        total: summary.total,
+        review: summary.review,
+      });
+    return tr("stateAllAuto", { total: summary.total });
+  })();
+
+  const routingChoices = [
+    { label: tr("autoPack"), value: "auto" as const },
+    { label: tr("review"), value: "review" as const },
+  ];
+
+  return (
+    <Page
+      title={tn("automation")}
+      subtitle={tr("purposeLine")}
+      primaryAction={{ content: tr("primaryAddCustom"), url: "/portal/rules" }}
+    >
+      <Layout>
+        <Layout.Section>
+          <BlockStack gap="400">
+            {savedBanner && (
+              <Banner tone="success" onDismiss={() => setSavedBanner(false)}>
+                <p>{tr("starterRulesSaved")}</p>
+              </Banner>
+            )}
+            {errorMsg && (
+              <Banner tone="critical" onDismiss={() => setErrorMsg(null)}>
+                <p>{tr(errorMsg)}</p>
+              </Banner>
+            )}
+
+            {/* ── State sentence ─────────────────────────────────── */}
+            <Card>
+              <BlockStack gap="300">
+                <Text as="p" variant="bodyLg" fontWeight="semibold">
+                  {stateSentence}
+                </Text>
+                <InlineStack gap="200" wrap>
+                  {summary.auto > 0 && (
+                    <Badge tone="success">
+                      {`${summary.auto} ${tc("modeAutomated")}`}
+                    </Badge>
+                  )}
+                  {summary.review > 0 && (
+                    <Badge tone="info">
+                      {`${summary.review} ${tc("modeReviewFirst")}`}
+                    </Badge>
+                  )}
+                  {summary.noPlaybook > 0 && (
+                    <Badge tone="attention">
+                      {`${summary.noPlaybook} ${tr("notConfigured")}`}
+                    </Badge>
+                  )}
+                </InlineStack>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {tr("phaseBlindNote")}
+                </Text>
+              </BlockStack>
+            </Card>
+
+            {/* ── Per-family rows ────────────────────────────────── */}
+            <Card>
+              <BlockStack gap="400">
+                <BlockStack gap="100">
+                  <Text as="h2" variant="headingMd">
+                    {tr("automationRulesTitle")}
                   </Text>
-                  <InlineStack gap="200" wrap>
-                    {policySummary.automated > 0 && (
-                      <Badge tone="success">{`${policySummary.automated} ${tc("modeAutomated")}`}</Badge>
-                    )}
-                    {policySummary.reviewFirst > 0 && (
-                      <Badge tone="info">{`${policySummary.reviewFirst} ${tc("modeReviewFirst")}`}</Badge>
-                    )}
-                    {policySummary.manual > 0 && (
-                      <Badge tone="attention">{`${policySummary.manual} ${tr("notConfigured")}`}</Badge>
-                    )}
-                  </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {tr("phaseBlindNote")}
+                    {tr("automationRulesSubtitle")}
                   </Text>
                 </BlockStack>
-              </Card>
 
-              {/* Unified rules list */}
+                <BlockStack gap="0">
+                  {DISPUTE_FAMILIES.map((family, index) => {
+                    const FamilyIcon =
+                      FAMILY_ICONS[family.id] ?? ClipboardCheckFilledIcon;
+                    const mode = familyModes[family.id];
+                    const packs = familyPacks[family.id] ?? [];
+                    const isHighlighted = highlightedFamilyId === family.id;
+                    const familyLabel = tc(
+                      family.labelKey.replace("coverage.", ""),
+                    );
+                    const iconBg =
+                      mode === "auto"
+                        ? "#DCFCE7"
+                        : mode === "review"
+                          ? "#DBEAFE"
+                          : "#FEE2E2";
+                    const iconColor =
+                      mode === "auto"
+                        ? "#16A34A"
+                        : mode === "review"
+                          ? "#2563EB"
+                          : "#DC2626";
+
+                    return (
+                      <div
+                        key={family.id}
+                        ref={(el) => {
+                          familyRowRefs.current[family.id] = el;
+                        }}
+                      >
+                        {index > 0 && <Divider />}
+                        <div
+                          style={{
+                            padding: "16px 0",
+                            transition: "background-color 400ms ease",
+                            backgroundColor: isHighlighted
+                              ? "#FEF3C7"
+                              : "transparent",
+                            borderRadius: 8,
+                          }}
+                        >
+                          <BlockStack gap="200">
+                            <InlineStack
+                              align="space-between"
+                              blockAlign="center"
+                              wrap={false}
+                              gap="300"
+                            >
+                              <InlineStack
+                                gap="300"
+                                blockAlign="center"
+                                wrap
+                              >
+                                <div
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 8,
+                                    background: iconBg,
+                                    color: iconColor,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <Icon source={FamilyIcon} />
+                                </div>
+                                <Text
+                                  as="h3"
+                                  variant="bodyMd"
+                                  fontWeight="semibold"
+                                >
+                                  {familyLabel}
+                                </Text>
+                                {mode === "none" && (
+                                  <Badge tone="attention">
+                                    {tr("noPlaybookBadge")}
+                                  </Badge>
+                                )}
+                              </InlineStack>
+                              {mode === "none" ? (
+                                <Button
+                                  size="slim"
+                                  url={withShopParams(
+                                    "/app/packs",
+                                    searchParams,
+                                  )}
+                                >
+                                  {tc("installPlaybook")}
+                                </Button>
+                              ) : (
+                                <div style={{ minWidth: 180, flexShrink: 0 }}>
+                                  <Select
+                                    label={tr("actionRouting")}
+                                    labelHidden
+                                    options={routingChoices}
+                                    value={mode}
+                                    onChange={(value) =>
+                                      setFamilyMode(
+                                        family.id,
+                                        value as "auto" | "review",
+                                      )
+                                    }
+                                  />
+                                </div>
+                              )}
+                            </InlineStack>
+                            {packs.length > 0 && (
+                              <Text as="p" variant="bodySm" tone="subdued">
+                                {tr("playbooksInUse", {
+                                  names: packs.map((p) => p.name).join(", "),
+                                })}
+                              </Text>
+                            )}
+                          </BlockStack>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </BlockStack>
+
+                {/* Quick actions */}
+                <Divider />
+                <InlineStack gap="200" wrap>
+                  <Button size="slim" onClick={() => applyQuickConfig("auto")}>
+                    {tr("quickAutoAll")}
+                  </Button>
+                  <Button
+                    size="slim"
+                    onClick={() => applyQuickConfig("review")}
+                  >
+                    {tr("quickReviewAll")}
+                  </Button>
+                </InlineStack>
+
+                <InlineStack
+                  align="space-between"
+                  blockAlign="center"
+                  wrap
+                  gap="200"
+                >
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {tr("firstMatchWinsHint")}
+                  </Text>
+                  <Button
+                    variant="primary"
+                    loading={saving}
+                    disabled={saving || !dirty}
+                    onClick={save}
+                  >
+                    {tr("saveStarterRules")}
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+
+            {/* ── Safeguards ─────────────────────────────────────── */}
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">
+                  {tr("safeguardTitle")}
+                </Text>
+                <Checkbox
+                  label={tr("safeguardToggle")}
+                  checked={safeguard.enabled}
+                  onChange={(checked) =>
+                    setSafeguard((prev) => ({ ...prev, enabled: checked }))
+                  }
+                />
+                {safeguard.enabled && (
+                  <div style={{ maxWidth: 200 }}>
+                    <TextField
+                      label={tr("safeguardAmountLabel")}
+                      type="number"
+                      value={String(safeguard.amount)}
+                      onChange={(value) => {
+                        const num = parseInt(value, 10);
+                        if (!isNaN(num) && num > 0) {
+                          setSafeguard((prev) => ({ ...prev, amount: num }));
+                        }
+                      }}
+                      prefix="$"
+                      autoComplete="off"
+                    />
+                  </div>
+                )}
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {tr("safeguardHint")}
+                </Text>
+                {safeguardDirty && (
+                  <InlineStack align="end">
+                    <Button
+                      variant="primary"
+                      loading={saving}
+                      disabled={saving}
+                      onClick={save}
+                    >
+                      {tr("saveStarterRules")}
+                    </Button>
+                  </InlineStack>
+                )}
+              </BlockStack>
+            </Card>
+
+            {/* ── Custom advanced rules ──────────────────────────── */}
+            {customRules.length > 0 && (
               <Card>
                 <BlockStack gap="400">
                   <BlockStack gap="100">
                     <Text as="h2" variant="headingMd">
-                      {tr("automationRulesTitle")}
+                      {tr("advancedFiltersTitle")}
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      {tr("automationRulesSubtitle")}
+                      {tr("advancedFiltersSubtitle")}
                     </Text>
                   </BlockStack>
 
                   <BlockStack gap="0">
-                    {unifiedRows.map((row, index) => {
-                      const presetId =
-                        row.kind === "baseline" ? row.preset.id : null;
-                      const isHighlighted =
-                        presetId !== null && highlightedPresetId === presetId;
+                    {customRules.map((rule, idx) => {
+                      const actionLabel =
+                        rule.action?.mode === "auto_pack"
+                          ? tr("autoPack")
+                          : rule.action?.mode === "manual"
+                            ? tr("manual")
+                            : tr("review");
                       return (
-                        <div
-                          key={row.kind === "baseline" ? row.preset.id : row.rule.id}
-                          ref={(el) => {
-                            if (presetId) presetRowRefs.current[presetId] = el;
-                          }}
-                        >
-                          {index > 0 && <Divider />}
-                          <div
-                            style={{
-                              padding: "16px 0",
-                              transition: "background-color 400ms ease",
-                              backgroundColor: isHighlighted
-                                ? "#FEF3C7"
-                                : "transparent",
-                              borderRadius: 8,
-                            }}
-                          >
-                            {row.kind === "baseline"
-                              ? renderBaselineRow(row, index)
-                              : renderCustomRow(row, index)}
+                        <div key={rule.id}>
+                          {idx > 0 && <Divider />}
+                          <div style={{ padding: "12px 0" }}>
+                            <InlineStack
+                              align="space-between"
+                              blockAlign="center"
+                              wrap={false}
+                              gap="300"
+                            >
+                              <InlineStack
+                                gap="300"
+                                blockAlign="center"
+                                wrap
+                              >
+                                <Text
+                                  as="h3"
+                                  variant="bodyMd"
+                                  fontWeight="semibold"
+                                >
+                                  {rule.name ?? tr("unnamedRule")}
+                                </Text>
+                                <Badge
+                                  tone={rule.enabled ? "success" : undefined}
+                                >
+                                  {rule.enabled ? tr("active") : tr("inactive")}
+                                </Badge>
+                              </InlineStack>
+                              <Button
+                                onClick={() => router.push("/portal/rules")}
+                              >
+                                {tr("editRule")}
+                              </Button>
+                            </InlineStack>
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              {`${tr("action")}: ${actionLabel}`}
+                            </Text>
                           </div>
                         </div>
                       );
                     })}
                   </BlockStack>
-
-                  <InlineStack align="space-between" blockAlign="center" wrap gap="200">
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {tr("firstMatchWinsHint")}
-                    </Text>
-                    <InlineStack gap="200">
-                      <Button onClick={() => router.push("/portal/rules")}>
-                        {tr("primaryAddCustom")}
-                      </Button>
-                      <Button
-                        variant="primary"
-                        loading={savingStarters}
-                        disabled={savingStarters}
-                        onClick={saveStarterRules}
-                      >
-                        {tr("saveStarterRules")}
-                      </Button>
-                    </InlineStack>
-                  </InlineStack>
                 </BlockStack>
               </Card>
-            </BlockStack>
-          )}
+            )}
+          </BlockStack>
         </Layout.Section>
       </Layout>
     </Page>

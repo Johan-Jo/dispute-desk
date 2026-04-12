@@ -779,7 +779,17 @@
     "baselineBadge": "Base",
     "customBadge": "Personnalisée",
     "unsavedBadge": "Non enregistrée",
-    "firstMatchWinsHint": "Les règles sont vérifiées de haut en bas. La première correspondance l'emporte."
+    "firstMatchWinsHint": "Les règles sont vérifiées de haut en bas. La première correspondance l'emporte.",
+    "noPlaybookBadge": "Aucun playbook",
+    "playbooksInUse": "Utilise : {names}",
+    "quickAutoAll": "Tout empaqueter automatiquement",
+    "quickReviewAll": "Tout examiner",
+    "safeguardTitle": "Garde-fous",
+    "safeguardToggle": "Examiner les litiges de grande valeur avant l'envoi",
+    "safeguardAmountLabel": "Montant minimum",
+    "safeguardHint": "Le dossier de preuves est toujours constitué automatiquement, mais retenu pour votre approbation avant l'enregistrement sur Shopify.",
+    "advancedFiltersTitle": "Règles personnalisées avancées",
+    "advancedFiltersSubtitle": "Règles personnalisées créées dans le portail. Elles s'exécutent en parallèle de l'automatisation familiale."
   },
   "settings": {
     "title": "Paramètres",

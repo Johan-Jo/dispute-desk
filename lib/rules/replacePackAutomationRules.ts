@@ -1,5 +1,4 @@
 import { getServiceClient } from "@/lib/supabase/server";
-import { RULE_PRESETS } from "@/lib/rules/presets";
 import type { Pack } from "@/lib/types/packs";
 import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
 import type { Rule } from "@/lib/rules/types";
@@ -10,8 +9,6 @@ import {
   type PackHandlingUiMode,
 } from "@/lib/rules/packHandlingAutomation";
 import { CHARGEBACK_TO_INQUIRY_TEMPLATE } from "@/lib/setup/recommendTemplates";
-
-const LEGACY_PRESET_NAMES = new Set(RULE_PRESETS.map((p) => p.name));
 
 const FALLBACK_RULE_NAME = `${SETUP_RULE_PREFIX}fallback:default`;
 
@@ -110,12 +107,6 @@ export async function replacePackBasedAutomationRules(
     .delete()
     .eq("shop_id", shopId)
     .like("name", `${SETUP_RULE_PREFIX}%`);
-
-  await sb
-    .from("rules")
-    .delete()
-    .eq("shop_id", shopId)
-    .in("name", [...LEGACY_PRESET_NAMES]);
 
   const rows = buildPackAndFallbackRules(shopId, packsOrdered, packModes);
   if (rows.length === 0) return;

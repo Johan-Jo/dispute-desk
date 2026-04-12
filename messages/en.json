@@ -768,7 +768,17 @@
     "baselineBadge": "Baseline",
     "customBadge": "Custom",
     "unsavedBadge": "Unsaved",
-    "firstMatchWinsHint": "Rules are checked top to bottom. The first match wins."
+    "firstMatchWinsHint": "Rules are checked top to bottom. The first match wins.",
+    "noPlaybookBadge": "No playbook",
+    "playbooksInUse": "Using: {names}",
+    "quickAutoAll": "Auto-pack all",
+    "quickReviewAll": "Review all",
+    "safeguardTitle": "Safeguards",
+    "safeguardToggle": "Review high-value disputes before sending",
+    "safeguardAmountLabel": "Minimum amount",
+    "safeguardHint": "The evidence pack is still built automatically, but held for your approval before saving to Shopify.",
+    "advancedFiltersTitle": "Advanced custom rules",
+    "advancedFiltersSubtitle": "Custom rules created in the portal. These run alongside family automation."
   },
   "settings": {
     "title": "Settings",
