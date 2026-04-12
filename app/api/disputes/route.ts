@@ -61,42 +61,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Join the latest evidence_packs row per dispute so the list can render
-  // pack-state — the merchant needs to know whether DisputeDesk has built a
-  // pack, whether it's ready to review, whether it's saved to Shopify, etc.
-  // The list page uses this to label the per-row CTA (Review & Save, View in
-  // Shopify, Build Evidence, …).
-  const disputeIds = (data ?? [])
-    .map((d) => (d as { id?: string }).id)
-    .filter((id): id is string => Boolean(id));
-
-  const packStatusByDispute = new Map<string, string>();
-  if (disputeIds.length > 0) {
-    const { data: packRows } = await sb
-      .from("evidence_packs")
-      .select("dispute_id, status, updated_at")
-      .in("dispute_id", disputeIds)
-      .order("updated_at", { ascending: false });
-    for (const row of (packRows ?? []) as Array<{
-      dispute_id: string | null;
-      status: string | null;
-    }>) {
-      if (row.dispute_id && !packStatusByDispute.has(row.dispute_id)) {
-        packStatusByDispute.set(row.dispute_id, row.status ?? "");
-      }
-    }
-  }
-
-  const disputes = (data ?? []).map((d) => {
-    const id = (d as { id?: string }).id;
-    return {
-      ...d,
-      pack_status: id ? packStatusByDispute.get(id) ?? null : null,
-    };
-  });
-
   return NextResponse.json({
-    disputes,
+    disputes: data,
     pagination: {
       page,
       per_page: perPage,

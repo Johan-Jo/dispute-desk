@@ -311,15 +311,7 @@
     "stateSomeUrgent": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {urgent, plural, one {1 needs} other {# need}} immediate attention — overdue or due soon.",
     "stateNeedsReview": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {review, plural, one {1 is flagged} other {# are flagged}} for your review before DisputeDesk can proceed.",
     "stateNeedsSync": "You have {total, plural, one {1 dispute} other {# disputes}}. {sync, plural, one {1 hasn't} other {# haven't}} been classified yet — run a sync to catch up.",
-    "phaseLabel": "Phase",
-    "packColumn": "Pack",
-    "packNotStarted": "Not started",
-    "packBuilding": "Building…",
-    "packReady": "Ready to review",
-    "packSaved": "Saved to Shopify",
-    "packFailed": "Needs attention",
-    "clearFilter": "Clear filter",
-    "needsReviewBannerAction": "Show these"
+    "phaseLabel": "Phase"
   },
   "packs": {
     "title": "Packs",

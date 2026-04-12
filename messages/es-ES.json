@@ -388,15 +388,7 @@
     "stateAllClear": "Tienes {total, plural, one {1 disputa abierta} other {# disputas abiertas}} — todo parece en orden.",
     "stateSomeUrgent": "Tienes {total, plural, one {1 disputa abierta} other {# disputas abiertas}}. {urgent, plural, one {1 necesita} other {# necesitan}} atención inmediata — vencidas o próximas a vencer.",
     "stateNeedsReview": "Tienes {total, plural, one {1 disputa abierta} other {# disputas abiertas}}. {review, plural, one {1 está marcada} other {# están marcadas}} para tu revisión antes de que DisputeDesk pueda continuar.",
-    "stateNeedsSync": "Tienes {total, plural, one {1 disputa} other {# disputas}}. {sync, plural, one {1 aún no ha sido clasificada} other {# aún no han sido clasificadas}} — ejecuta una sincronización para ponerte al día.",
-    "packColumn": "Pack",
-    "packNotStarted": "Sin iniciar",
-    "packBuilding": "Generando…",
-    "packReady": "Listo para revisar",
-    "packSaved": "Guardado en Shopify",
-    "packFailed": "Requiere atención",
-    "clearFilter": "Limpiar filtro",
-    "needsReviewBannerAction": "Mostrar estos"
+    "stateNeedsSync": "Tienes {total, plural, one {1 disputa} other {# disputas}}. {sync, plural, one {1 aún no ha sido clasificada} other {# aún no han sido clasificadas}} — ejecuta una sincronización para ponerte al día."
   },
   "packs": {
     "title": "Paquetes de evidencia",
