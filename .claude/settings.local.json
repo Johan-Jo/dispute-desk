@@ -1,12 +1,12 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
-      "Bash(npx vitest:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npm i:*)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "figma-official"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

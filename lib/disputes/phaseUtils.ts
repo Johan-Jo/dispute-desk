@@ -28,23 +28,21 @@ export function deriveHandlingMode(
   }
 }
 
-/** Badge tone for the phase badge. Null = "attention" (orange). */
+/** Badge tone for the phase badge. Null defaults to chargeback tone. */
 export function phaseBadgeTone(
   phase: DisputePhase | null,
-): "info" | "warning" | "attention" | undefined {
+): "info" | "warning" {
   if (phase === "inquiry") return "info";
-  if (phase === "chargeback") return "warning";
-  return "attention"; // unknown phase = needs attention
+  return "warning";
 }
 
-/** Label for phase badge. Null = "Needs Sync" (not blank, not generic). */
+/** Label for phase badge. Null defaults to "Chargeback" (safer assumption). */
 export function phaseLabel(
   phase: DisputePhase | null,
   t: (key: string) => string,
 ): string {
   if (phase === "inquiry") return t("disputes.inquiryBadge");
-  if (phase === "chargeback") return t("disputes.chargebackBadge");
-  return t("disputes.phaseNeedsSync");
+  return t("disputes.chargebackBadge");
 }
 
 /** Whether phase is known and actionable. */

@@ -575,6 +575,8 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 **Embedded client and shopId:** `shopify_shop` / `shopify_shop_id` are HTTP-only cookies, so client components should not read them via `document.cookie`. Middleware resolves the shop and forwards it as `x-shop-id` / `x-shop-domain` headers; embedded UI should rely on those server-derived values (e.g. packs list + template install).
 
+**Stale cookie protection (reinstall):** When a merchant uninstalls and reinstalls, the `app/uninstalled` webhook cannot clear browser cookies (it's server-to-server). The `shopify_shop` cookie (30-day `maxAge`) may survive, tricking middleware into skipping OAuth. To prevent this, middleware calls `GET /api/auth/shopify/session-exists?shop=…` on the `/app` entry path (not sub-paths) to verify an offline session exists in the DB. If no session is found, it clears the stale cookies and redirects to OAuth. The endpoint is protected by `CRON_SECRET` via the `x-dd-internal-secret` header. On check failure, the request passes through gracefully (the readiness API will surface the issue).
+
 ### Portal demo mode & test stores
 - **Demo mode** (`isDemo`): true when no real shop is selected (no `active_shop_id` cookie or cookie not in user's linked shops). Portal shows a demo store label and some actions are disabled.
 - **Demo data** (`useDemoData`): when true, dispute list, dashboard, rules, and billing show hardcoded demo/placeholder data instead of calling the API. True when `isDemo` is true **or** the active shop's domain is in `TEST_STORE_DOMAINS` (see `lib/demo-mode.tsx`).
