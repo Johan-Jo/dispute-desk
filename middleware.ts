@@ -312,8 +312,9 @@ export async function middleware(req: NextRequest) {
     }
 
     const shopDomain = req.cookies.get("shopify_shop")?.value;
+    const shopParam = req.nextUrl.searchParams.get("shop");
+
     if (!shopDomain) {
-      const shopParam = req.nextUrl.searchParams.get("shop");
       if (shopParam) {
         const authUrl = new URL("/api/auth/shopify", req.url);
         authUrl.searchParams.set("shop", shopParam);
@@ -324,6 +325,35 @@ export async function middleware(req: NextRequest) {
       const sessionUrl = new URL("/app/session-required", req.url);
       sessionUrl.searchParams.set("returnTo", pathname + req.nextUrl.search);
       return NextResponse.redirect(sessionUrl);
+    }
+
+    // When ?shop= is present (Shopify sends it on every install/open), verify
+    // that a valid offline session exists in the DB. Stale cookies survive
+    // uninstall because the app/uninstalled webhook is server-to-server and
+    // can't clear browser cookies. If the session is gone, clear the stale
+    // cookie and restart OAuth so the callback stores fresh sessions.
+    if (shopParam) {
+      try {
+        const checkUrl = new URL("/api/auth/shopify/session-exists", req.url);
+        checkUrl.searchParams.set("shop", shopDomain);
+        const checkRes = await fetch(checkUrl.toString(), {
+          headers: { "x-dd-internal-secret": process.env.CRON_SECRET ?? "" },
+        });
+        const { exists } = (await checkRes.json()) as { exists?: boolean };
+        if (!exists) {
+          const authUrl = new URL("/api/auth/shopify", req.url);
+          authUrl.searchParams.set("shop", shopParam);
+          if (hostParam) authUrl.searchParams.set("host", hostParam);
+          const clearRes = NextResponse.redirect(authUrl);
+          clearRes.cookies.delete("shopify_shop");
+          clearRes.cookies.delete("shopify_shop_id");
+          return clearRes;
+        }
+      } catch (err) {
+        // If the check fails, let the request through — the readiness API
+        // will surface the issue in the UI.
+        console.warn("[middleware] session-exists check failed:", err);
+      }
     }
 
     const res = NextResponse.next({ request: { headers: requestHeaders } });
