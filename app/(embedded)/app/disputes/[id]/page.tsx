@@ -444,9 +444,25 @@ export default function DisputeDetailPage() {
         content: generating || templateCheckLoading
           ? t("disputes.generating")
           : t(cta.key),
-        onAction: latestPackStatus === "saved_to_shopify" && disputeUrl
-          ? () => window.open(disputeUrl, "_top")
-          : handleGenerate,
+        onAction: (() => {
+          // 1. Pack already saved → deep-link to Shopify Admin.
+          if (latestPackStatus === "saved_to_shopify" && disputeUrl) {
+            return () => window.open(disputeUrl, "_top");
+          }
+          // 2. Pack exists but not yet saved (ready / building / blocked /
+          //    saving) → navigate to the pack workspace where the merchant
+          //    actually reviews evidence and saves to Shopify. Without this
+          //    branch the button runs handleGenerate and creates a duplicate
+          //    pack every time — which is the bug the merchant hit.
+          if (latestPack) {
+            return () =>
+              router.push(
+                withShopParams(`/app/packs/${latestPack.id}`, searchParams),
+              );
+          }
+          // 3. No pack yet → open the template picker and create one.
+          return handleGenerate;
+        })(),
         loading: generating || templateCheckLoading || syncing,
         disabled: cta.disabled,
         icon: NoteIcon,
