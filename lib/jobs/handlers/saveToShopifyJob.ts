@@ -14,6 +14,7 @@ import {
   type DisputeEvidenceUpdateResult,
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { sendPackSavedAlert } from "@/lib/email/sendPackSavedAlert";
 import type { ClaimedJob } from "../claimJobs";
 
 function decryptAccessToken(encrypted: string): string {
@@ -38,7 +39,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
 
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, dispute_evidence_gid")
+    .select("id, dispute_evidence_gid, reason, amount, currency_code")
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute?.dispute_evidence_gid) {
@@ -128,5 +129,15 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       fields_sent: Object.keys(input),
       job_id: job.id,
     },
+  });
+
+  // Notify merchant that evidence has been saved — fire-and-forget.
+  void sendPackSavedAlert({
+    shopId: pack.shop_id,
+    disputeId: pack.dispute_id,
+    packId,
+    reason: dispute.reason ?? null,
+    amount: dispute.amount ?? null,
+    currencyCode: dispute.currency_code ?? null,
   });
 }
