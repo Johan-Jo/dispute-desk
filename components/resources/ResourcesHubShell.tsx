@@ -128,7 +128,7 @@ export async function ResourcesHubShell({
 
       {/* Hero — Figma Make marketing shell (same gradient + blobs as home `MarketingLandingPageClient`) */}
       <section
-        className={`relative text-white overflow-hidden pt-10 md:pt-14 ${page > 1 ? "pb-14 md:pb-16" : "pb-10 md:pb-12"}`}
+        className="relative text-white overflow-hidden pt-10 pb-10 md:pt-14 md:pb-12"
         style={{
           background:
             "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
@@ -306,7 +306,7 @@ export async function ResourcesHubShell({
         </div>
       )}
 
-      <div className={`${HUB_CONTAINER} py-12 pt-0`}>
+      <div className={`${HUB_CONTAINER} py-12 ${featuredItems.length > 0 ? "pt-0" : ""}`}>
           <div className="flex items-center gap-2 mb-6">
             <div className="h-8 w-1 rounded-full" style={{ backgroundColor: blue }} />
             <h2 className="text-2xl font-bold text-gray-900">{t("latestHeading")}</h2>
