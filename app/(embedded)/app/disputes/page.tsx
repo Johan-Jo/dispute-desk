@@ -36,7 +36,12 @@ import {
 } from "@shopify/polaris-icons";
 import styles from "./disputes-list.module.css";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
-import { phaseBadgeTone, phaseLabel as phaseLabelFn } from "@/lib/disputes/phaseUtils";
+import {
+  phaseBadgeTone,
+  phaseLabel as phaseLabelFn,
+  casePrimaryCta,
+} from "@/lib/disputes/phaseUtils";
+import type { DisputePhase } from "@/lib/rules/disputeReasons";
 
 interface Dispute {
   id: string;
@@ -52,7 +57,16 @@ interface Dispute {
   due_at: string | null;
   needs_review: boolean;
   last_synced_at: string | null;
+  /** Latest evidence_packs.status for this dispute, or null if no pack exists. */
+  pack_status: string | null;
 }
+
+type QuickFilter =
+  | null
+  | "needs_review"
+  | "needs_sync"
+  | "inquiry"
+  | "chargeback";
 
 interface DisputesResponse {
   disputes: Dispute[];
@@ -100,6 +114,38 @@ function formatListDisputeId(id: string): string {
 function orderLabel(d: Dispute): string {
   return (
     d.order_name ?? (d.order_gid ? `#${String(d.order_gid).slice(-4)}` : "—")
+  );
+}
+
+/** Clickable badge used in the state-sentence card for quick filtering. */
+function FilterBadge({
+  label,
+  tone,
+  active,
+  onClick,
+}: {
+  label: string;
+  tone: "info" | "warning" | "attention" | "critical";
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        background: "transparent",
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+        outline: active ? "2px solid #2563EB" : "none",
+        outlineOffset: 2,
+        borderRadius: 12,
+      }}
+    >
+      <Badge tone={tone}>{label}</Badge>
+    </button>
   );
 }
 
@@ -156,6 +202,7 @@ export default function DisputesListPage() {
     total_pages: 0,
   });
   const [filterPopoverActive, setFilterPopoverActive] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +301,7 @@ export default function DisputesListPage() {
     }
   };
 
-  const visibleDisputes = queryValue
+  const searchFiltered = queryValue
     ? disputes.filter((d) => {
         const q = queryValue.toLowerCase();
         const dp = formatListDisputeId(d.id).toLowerCase();
@@ -271,6 +318,21 @@ export default function DisputesListPage() {
         );
       })
     : disputes;
+
+  const visibleDisputes = quickFilter
+    ? searchFiltered.filter((d) => {
+        switch (quickFilter) {
+          case "needs_review":
+            return d.needs_review;
+          case "needs_sync":
+            return !d.phase;
+          case "inquiry":
+            return d.phase === "inquiry";
+          case "chargeback":
+            return d.phase === "chargeback";
+        }
+      })
+    : searchFiltered;
 
   const exportCsv = () => {
     const rows = visibleDisputes.map((d) =>
@@ -322,6 +384,30 @@ export default function DisputesListPage() {
     return t("disputes.stateAllClear", { total: disputes.length });
   })();
 
+  // Pack-state label + tone for the new Pack column. Sourced from the latest
+  // evidence_packs row for this dispute — tells the merchant what DisputeDesk
+  // has actually done, separate from Shopify's status.
+  function getPackState(status: string | null): {
+    label: string;
+    tone: "success" | "info" | "warning" | "critical" | "attention" | undefined;
+  } {
+    if (!status) return { label: t("disputes.packNotStarted"), tone: "attention" };
+    switch (status) {
+      case "queued":
+      case "building":
+        return { label: t("disputes.packBuilding"), tone: "info" };
+      case "ready":
+        return { label: t("disputes.packReady"), tone: "warning" };
+      case "saved_to_shopify":
+        return { label: t("disputes.packSaved"), tone: "success" };
+      case "failed":
+      case "blocked":
+        return { label: t("disputes.packFailed"), tone: "critical" };
+      default:
+        return { label: status.replace(/_/g, " "), tone: undefined };
+    }
+  }
+
   // Compute urgency for a dispute
   function getUrgency(d: Dispute): { label: string; tone: "critical" | "warning" | "attention" | "success" | undefined } {
     if (d.due_at) {
@@ -347,7 +433,7 @@ export default function DisputesListPage() {
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
-            {/* Current state — plain language */}
+            {/* Current state — plain language. Badges are clickable filters. */}
             {!loading && (
               <Card>
                 <BlockStack gap="200">
@@ -357,16 +443,71 @@ export default function DisputesListPage() {
                   {disputes.length > 0 && (
                     <InlineStack gap="200" wrap>
                       {summaryInquiries > 0 && (
-                        <Badge tone="info">{t("disputes.summaryInquiries", { count: summaryInquiries })}</Badge>
+                        <FilterBadge
+                          active={quickFilter === "inquiry"}
+                          tone="info"
+                          onClick={() =>
+                            setQuickFilter(
+                              quickFilter === "inquiry" ? null : "inquiry",
+                            )
+                          }
+                          label={t("disputes.summaryInquiries", {
+                            count: summaryInquiries,
+                          })}
+                        />
                       )}
                       {summaryChargebacks > 0 && (
-                        <Badge tone="warning">{t("disputes.summaryChargebacks", { count: summaryChargebacks })}</Badge>
+                        <FilterBadge
+                          active={quickFilter === "chargeback"}
+                          tone="warning"
+                          onClick={() =>
+                            setQuickFilter(
+                              quickFilter === "chargeback" ? null : "chargeback",
+                            )
+                          }
+                          label={t("disputes.summaryChargebacks", {
+                            count: summaryChargebacks,
+                          })}
+                        />
                       )}
                       {summaryNeedsReview > 0 && (
-                        <Badge tone="attention">{t("disputes.summaryNeedsReview", { count: summaryNeedsReview })}</Badge>
+                        <FilterBadge
+                          active={quickFilter === "needs_review"}
+                          tone="attention"
+                          onClick={() =>
+                            setQuickFilter(
+                              quickFilter === "needs_review"
+                                ? null
+                                : "needs_review",
+                            )
+                          }
+                          label={t("disputes.summaryNeedsReview", {
+                            count: summaryNeedsReview,
+                          })}
+                        />
                       )}
                       {summaryNeedsSync > 0 && (
-                        <Badge tone="critical">{t("disputes.summaryNeedsSync", { count: summaryNeedsSync })}</Badge>
+                        <FilterBadge
+                          active={quickFilter === "needs_sync"}
+                          tone="critical"
+                          onClick={() =>
+                            setQuickFilter(
+                              quickFilter === "needs_sync" ? null : "needs_sync",
+                            )
+                          }
+                          label={t("disputes.summaryNeedsSync", {
+                            count: summaryNeedsSync,
+                          })}
+                        />
+                      )}
+                      {quickFilter && (
+                        <Button
+                          size="slim"
+                          variant="plain"
+                          onClick={() => setQuickFilter(null)}
+                        >
+                          {t("disputes.clearFilter")}
+                        </Button>
                       )}
                     </InlineStack>
                   )}
@@ -374,9 +515,15 @@ export default function DisputesListPage() {
               </Card>
             )}
 
-            {/* Needs review banner */}
+            {/* Needs review banner — click to filter the list to those rows */}
             {!loading && summaryNeedsReview > 0 && (
-              <Banner tone="warning">
+              <Banner
+                tone="warning"
+                action={{
+                  content: t("disputes.needsReviewBannerAction"),
+                  onAction: () => setQuickFilter("needs_review"),
+                }}
+              >
                 <p>{t("disputes.needsReviewBanner", { count: summaryNeedsReview })}</p>
               </Banner>
             )}
@@ -474,6 +621,7 @@ export default function DisputesListPage() {
                         <th>{t("table.reason")}</th>
                         <th>{t("table.amount")}</th>
                         <th>{t("table.status")}</th>
+                        <th>{t("disputes.packColumn")}</th>
                         <th>{t("table.urgency")}</th>
                         <th>{t("table.actions")}</th>
                       </tr>
@@ -483,6 +631,11 @@ export default function DisputesListPage() {
                         const label = orderLabel(d);
                         const detailHref = withShopParams(`/app/disputes/${d.id}`, searchParams);
                         const urgency = getUrgency(d);
+                        const pack = getPackState(d.pack_status);
+                        const cta = casePrimaryCta(
+                          d.phase as DisputePhase | null,
+                          d.pack_status,
+                        );
                         return (
                           <tr key={d.id}>
                             {/* Phase */}
@@ -524,14 +677,20 @@ export default function DisputesListPage() {
                                 {badgeLabel(d.status)}
                               </Badge>
                             </td>
+                            {/* Pack state */}
+                            <td>
+                              <Badge tone={pack.tone}>{pack.label}</Badge>
+                            </td>
                             {/* Urgency */}
                             <td>
                               <Badge tone={urgency.tone}>{urgency.label}</Badge>
                             </td>
-                            {/* Actions */}
+                            {/* Intent CTA — always goes to the detail page; the
+                                label is state-aware so the merchant knows what
+                                they're about to do. */}
                             <td>
                               <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
-                                {t("table.viewDetails")}
+                                {t(cta.key as "disputes.buildEvidence")}
                               </Link>
                             </td>
                           </tr>

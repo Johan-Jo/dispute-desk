@@ -357,7 +357,15 @@
     "stateAllClear": "Du har {total, plural, one {1 öppen tvist} other {# öppna tvister}} — allt ser bra ut.",
     "stateSomeUrgent": "Du har {total, plural, one {1 öppen tvist} other {# öppna tvister}}. {urgent, plural, one {1 behöver} other {# behöver}} omedelbar uppmärksamhet — försenad eller snart förfallen.",
     "stateNeedsReview": "Du har {total, plural, one {1 öppen tvist} other {# öppna tvister}}. {review, plural, one {1 är markerad} other {# är markerade}} för din granskning innan DisputeDesk kan fortsätta.",
-    "stateNeedsSync": "Du har {total, plural, one {1 tvist} other {# tvister}}. {sync, plural, one {1 har inte klassificerats än} other {# har inte klassificerats än}} — kör en synkronisering för att komma ikapp."
+    "stateNeedsSync": "Du har {total, plural, one {1 tvist} other {# tvister}}. {sync, plural, one {1 har inte klassificerats än} other {# har inte klassificerats än}} — kör en synkronisering för att komma ikapp.",
+    "packColumn": "Paket",
+    "packNotStarted": "Inte påbörjad",
+    "packBuilding": "Skapas…",
+    "packReady": "Redo att granska",
+    "packSaved": "Sparad i Shopify",
+    "packFailed": "Kräver uppmärksamhet",
+    "clearFilter": "Rensa filter",
+    "needsReviewBannerAction": "Visa dessa"
   },
   "packs": {
     "title": "Bevispaket",
