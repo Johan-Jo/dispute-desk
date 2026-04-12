@@ -356,29 +356,32 @@ function LifecycleFamilyCard({
         <PhaseRow handling={family.inquiry} tc={tc} />
         <PhaseRow handling={family.chargeback} tc={tc} />
 
-        {/* Specific gap actions — not generic */}
-        {(family.inquiry.hasGap || family.chargeback.hasGap) && (
-          <>
-            <Divider />
-            <InlineStack gap="200" wrap>
-              {family.inquiry.hasGap && (
-                <Button size="slim" url={withShopParams("/app/rules", searchParams)}>
-                  {tc("configureInquiry")}
-                </Button>
-              )}
-              {family.chargeback.hasGap && (
-                <Button size="slim" url={withShopParams("/app/rules", searchParams)}>
-                  {tc("configureChargeback")}
-                </Button>
-              )}
-              {family.inquiry.playbooks.length === 0 && family.chargeback.playbooks.length === 0 && (
-                <Button size="slim" variant="plain" url={withShopParams("/app/packs", searchParams)}>
-                  {tc("installPlaybook")}
-                </Button>
-              )}
-            </InlineStack>
-          </>
-        )}
+        {/* Edit handling — always visible so the merchant has a clear path to
+            change how this family is handled (automated / review / manual /
+            installed playbooks). Deep-links to /app/rules with the family id
+            so the rules page can scroll to the matching row. */}
+        <Divider />
+        <InlineStack gap="200" wrap>
+          <Button
+            size="slim"
+            url={withShopParams(
+              `/app/rules?family=${family.familyId}`,
+              searchParams,
+            )}
+          >
+            {tc("editHandling")}
+          </Button>
+          {family.inquiry.playbooks.length === 0 &&
+            family.chargeback.playbooks.length === 0 && (
+              <Button
+                size="slim"
+                variant="plain"
+                url={withShopParams("/app/packs", searchParams)}
+              >
+                {tc("installPlaybook")}
+              </Button>
+            )}
+        </InlineStack>
       </BlockStack>
     </Card>
   );

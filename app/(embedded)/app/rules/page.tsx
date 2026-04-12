@@ -8,8 +8,8 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Page,
@@ -97,12 +97,17 @@ type UnifiedRow =
 
 export default function EmbeddedRulesPage() {
   const router = useRouter();
+  const pageSearchParams = useSearchParams();
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
   const tc = useTranslations("coverage");
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [_reasonMappings, setReasonMappings] = useState<ReasonMapping[]>([]);
+  const [highlightedPresetId, setHighlightedPresetId] = useState<string | null>(
+    null,
+  );
+  const presetRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [starterModes, setStarterModes] = useState<Record<string, "auto_pack" | "review">>(() => {
     const init: Record<string, "auto_pack" | "review"> = {};
     for (const p of RULE_PRESETS) init[p.id] = p.action.mode;
@@ -147,6 +152,30 @@ export default function EmbeddedRulesPage() {
       return next;
     });
   }, [rules]);
+
+  // Deep link from /app/coverage: /app/rules?family=fraud scrolls to the
+  // first baseline preset whose reasons overlap the family's reasons and
+  // briefly highlights it so the merchant can see where to edit.
+  useEffect(() => {
+    if (loading) return;
+    const familyId = pageSearchParams?.get("family");
+    if (!familyId) return;
+    const family = DISPUTE_FAMILIES.find((f) => f.id === familyId);
+    if (!family) return;
+    const matchingPreset = RULE_PRESETS.find((p) =>
+      (p.match.reason ?? []).some((r) => family.reasons.includes(r)),
+    );
+    if (!matchingPreset) return;
+    // Defer one frame so refs are attached after the first paint.
+    requestAnimationFrame(() => {
+      const el = presetRowRefs.current[matchingPreset.id];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedPresetId(matchingPreset.id);
+        setTimeout(() => setHighlightedPresetId(null), 2500);
+      }
+    });
+  }, [loading, pageSearchParams]);
 
   const customRules = useMemo(
     () =>
@@ -435,16 +464,36 @@ export default function EmbeddedRulesPage() {
                   </BlockStack>
 
                   <BlockStack gap="0">
-                    {unifiedRows.map((row, index) => (
-                      <div key={row.kind === "baseline" ? row.preset.id : row.rule.id}>
-                        {index > 0 && <Divider />}
-                        <div style={{ padding: "16px 0" }}>
-                          {row.kind === "baseline"
-                            ? renderBaselineRow(row, index)
-                            : renderCustomRow(row, index)}
+                    {unifiedRows.map((row, index) => {
+                      const presetId =
+                        row.kind === "baseline" ? row.preset.id : null;
+                      const isHighlighted =
+                        presetId !== null && highlightedPresetId === presetId;
+                      return (
+                        <div
+                          key={row.kind === "baseline" ? row.preset.id : row.rule.id}
+                          ref={(el) => {
+                            if (presetId) presetRowRefs.current[presetId] = el;
+                          }}
+                        >
+                          {index > 0 && <Divider />}
+                          <div
+                            style={{
+                              padding: "16px 0",
+                              transition: "background-color 400ms ease",
+                              backgroundColor: isHighlighted
+                                ? "#FEF3C7"
+                                : "transparent",
+                              borderRadius: 8,
+                            }}
+                          >
+                            {row.kind === "baseline"
+                              ? renderBaselineRow(row, index)
+                              : renderCustomRow(row, index)}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </BlockStack>
 
                   <InlineStack align="space-between" blockAlign="center" wrap gap="200">
