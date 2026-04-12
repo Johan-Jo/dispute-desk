@@ -761,11 +761,8 @@ export default function EmbeddedDashboardPage() {
         if (!data || data.allDone) {
           setSetupDone(true);
         } else {
-          // Redirect to setup wizard
-          const target = data.steps?.connection?.status === "todo"
-            ? "/app/setup"
-            : `/app/setup/${data.nextStepId ?? "connection"}`;
-          router.replace(withShopParams(target, searchParams));
+          // Setup not complete → always show the welcome page on first visit
+          router.replace(withShopParams("/app/setup", searchParams));
         }
       });
     return () => { cancelled = true; };
