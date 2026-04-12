@@ -25,6 +25,12 @@
     "feedbackPrompt": "Que pensez-vous de DisputeDesk jusqu'à présent ?",
     "feedbackSubtext": "Vos retours nous aident à améliorer l'application.",
     "dismissFeedback": "Fermer le commentaire",
+    "feedbackFormTitle": "Que pourrions-nous améliorer ?",
+    "feedbackFormPlaceholder": "Dites-nous ce que vous aimeriez voir amélioré...",
+    "feedbackFormSkip": "Passer",
+    "feedbackFormSubmit": "Envoyer",
+    "feedbackFormSubmitting": "Envoi...",
+    "feedbackFormThanks": "Merci pour vos commentaires ! Nous les utiliserons pour améliorer DisputeDesk.",
     "menuHelp": "Aide",
     "menuSettings": "Paramètres",
     "moreActions": "Autres actions"

@@ -85,6 +85,102 @@
   color: #202223;
 }
 
+/* Feedback form (shown on 1-3 star ratings) */
+.feedbackFormWrap {
+  padding: 0 4px;
+  background: #f1f2f4;
+}
+
+.feedbackFormCard {
+  background: #fff;
+  border: 1px solid #e1e3e5;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(22, 29, 37, 0.05);
+  padding: 20px 24px;
+}
+
+.feedbackFormHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.feedbackFormTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #202223;
+  margin: 0;
+}
+
+.feedbackFormTextarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid #c9cccf;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: #202223;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.feedbackFormTextarea:focus {
+  border-color: #5e4db2;
+}
+
+.feedbackFormActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.feedbackFormSkip {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: #6d7175;
+  padding: 6px 12px;
+}
+
+.feedbackFormSkip:hover {
+  color: #202223;
+}
+
+.feedbackFormSubmit {
+  background: #5e4db2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.feedbackFormSubmit:hover {
+  background: #4c3d99;
+}
+
+.feedbackFormSubmit:disabled {
+  background: #c9cccf;
+  cursor: not-allowed;
+}
+
+.feedbackFormThanks {
+  font-size: 0.875rem;
+  color: #202223;
+  text-align: center;
+  padding: 8px 0;
+}
+
 /*
  * Minimal side inset + widen Polaris layout tokens ~20% over default (was ~30%;
  * narrowed by ~⅓ of that bump). Default primary max 41.375rem → 49.65rem.

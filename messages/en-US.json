@@ -25,6 +25,12 @@
     "feedbackPrompt": "How's your experience with DisputeDesk so far?",
     "feedbackSubtext": "Your feedback helps us improve the app.",
     "dismissFeedback": "Dismiss feedback",
+    "feedbackFormTitle": "What could we do better?",
+    "feedbackFormPlaceholder": "Tell us what you'd like to see improved...",
+    "feedbackFormSkip": "Skip",
+    "feedbackFormSubmit": "Send feedback",
+    "feedbackFormSubmitting": "Sending...",
+    "feedbackFormThanks": "Thanks for your feedback! We'll use it to improve DisputeDesk.",
     "menuHelp": "Help",
     "menuSettings": "Settings",
     "moreActions": "More actions"

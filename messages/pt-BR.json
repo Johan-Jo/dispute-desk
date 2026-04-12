@@ -25,6 +25,12 @@
     "feedbackPrompt": "Como está sendo sua experiência com o DisputeDesk?",
     "feedbackSubtext": "Seu feedback nos ajuda a melhorar o app.",
     "dismissFeedback": "Dispensar feedback",
+    "feedbackFormTitle": "O que podemos melhorar?",
+    "feedbackFormPlaceholder": "Conte-nos o que você gostaria de ver melhorado...",
+    "feedbackFormSkip": "Pular",
+    "feedbackFormSubmit": "Enviar feedback",
+    "feedbackFormSubmitting": "Enviando...",
+    "feedbackFormThanks": "Obrigado pelo seu feedback! Vamos usá-lo para melhorar o DisputeDesk.",
     "menuHelp": "Ajuda",
     "menuSettings": "Configurações",
     "moreActions": "Mais ações"

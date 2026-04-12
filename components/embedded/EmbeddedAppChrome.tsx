@@ -8,22 +8,25 @@ const FEEDBACK_DISMISS_KEY = "dd_feedback_dismissed_v2";
 
 /**
  * Embedded app chrome with a feedback banner that appears only after
- * the merchant wins their first chargeback dispute. On positive ratings
- * (4-5 stars), opens the Shopify app store review page.
+ * the merchant wins their first chargeback dispute.
+ * - 4-5 stars → opens the Shopify app store review page
+ * - 1-3 stars → shows an inline feedback form
  */
 export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("embeddedShell");
   const [showBanner, setShowBanner] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [feedbackRating, setFeedbackRating] = useState(0);
+  const [showForm, setShowForm] = useState(false);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    // Skip if already dismissed
     try {
       if (localStorage.getItem(FEEDBACK_DISMISS_KEY) === "1") return;
     } catch { /* ignore */ }
 
-    // Check if merchant is eligible (has first win)
     fetch("/api/feedback/eligibility")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -35,32 +38,53 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
   const dismiss = useCallback(() => {
     try { localStorage.setItem(FEEDBACK_DISMISS_KEY, "1"); } catch { /* ignore */ }
     setShowBanner(false);
+    setShowForm(false);
+  }, []);
+
+  const saveRating = useCallback((star: number, comment?: string | null) => {
+    fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: star, comment: comment ?? null }),
+    }).catch(() => {});
   }, []);
 
   const handleRate = useCallback((star: number) => {
     setFeedbackRating(star);
-    // Positive rating → open Shopify app store review page
     if (star >= 4) {
-      // Use shopify global to get the app handle for the review URL
-      const apiKey = document.querySelector<HTMLScriptElement>(
-        "script[data-api-key]"
-      )?.dataset.apiKey;
-      if (apiKey) {
-        window.open(
-          `https://apps.shopify.com/partners/login?redirect_uri=/apps/disputedesk-1/reviews/new`,
-          "_blank"
-        );
-      }
+      saveRating(star);
+      window.open(
+        "https://apps.shopify.com/partners/login?redirect_uri=/apps/disputedesk-1/reviews/new",
+        "_blank"
+      );
       dismiss();
-    } else if (star >= 1) {
-      // Low rating → dismiss and optionally could open a feedback form later
-      dismiss();
+    } else {
+      setShowForm(true);
     }
-  }, [dismiss]);
+  }, [dismiss, saveRating]);
+
+  const handleSubmitFeedback = useCallback(async () => {
+    setSubmitting(true);
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: feedbackRating, comment: comment.trim() || null }),
+      });
+    } catch { /* ignore */ }
+    setSubmitting(false);
+    setSubmitted(true);
+    setTimeout(dismiss, 2000);
+  }, [feedbackRating, comment, dismiss]);
+
+  if (!showBanner) {
+    return <div className={styles.pageContent}>{children}</div>;
+  }
 
   return (
     <>
-      {showBanner && (
+      {/* Star rating banner */}
+      {!showForm && (
         <div className={styles.feedbackWrap}>
           <div className={styles.feedbackCard}>
             <div className={styles.feedbackLeft}>
@@ -68,25 +92,17 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
                 <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M7 17h5.5a2.5 2.5 0 002.45-2.01l1.3-6.5A1.5 1.5 0 0014.78 7H11V3.5A1.5 1.5 0 009.5 2L7 8v9z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
                   />
                   <path
                     d="M7 17H4.5A1.5 1.5 0 013 15.5v-6A1.5 1.5 0 014.5 8H7"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
                   />
                 </svg>
               </div>
               <span className={styles.feedbackText}>
                 {t("feedbackPrompt")}{" "}
-                <span className={styles.feedbackTextMuted}>
-                  {t("feedbackSubtext")}
-                </span>
+                <span className={styles.feedbackTextMuted}>{t("feedbackSubtext")}</span>
               </span>
               <div className={styles.feedbackStars}>
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -100,29 +116,20 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
                     <svg
                       viewBox="0 0 20 20"
                       className={`${styles.starIcon} ${
-                        star <= (hoveredStar || feedbackRating)
-                          ? styles.starFilled
-                          : styles.starEmpty
+                        star <= (hoveredStar || feedbackRating) ? styles.starFilled : styles.starEmpty
                       }`}
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         d="M10 1l2.39 4.84 5.34.78-3.87 3.77.91 5.32L10 13.27l-4.77 2.44.91-5.32-3.87-3.77 5.34-.78L10 1z"
-                        fill="currentColor"
-                        stroke="currentColor"
-                        strokeWidth="1"
-                        strokeLinejoin="round"
+                        fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"
                       />
                     </svg>
                   </button>
                 ))}
               </div>
             </div>
-            <button
-              className={styles.dismissBtn}
-              onClick={dismiss}
-              aria-label={t("dismissFeedback")}
-            >
+            <button className={styles.dismissBtn} onClick={dismiss} aria-label={t("dismissFeedback")}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
@@ -130,6 +137,48 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* Feedback form (1-3 stars) */}
+      {showForm && (
+        <div className={styles.feedbackFormWrap}>
+          <div className={styles.feedbackFormCard}>
+            {submitted ? (
+              <p className={styles.feedbackFormThanks}>{t("feedbackFormThanks")}</p>
+            ) : (
+              <>
+                <div className={styles.feedbackFormHeader}>
+                  <p className={styles.feedbackFormTitle}>{t("feedbackFormTitle")}</p>
+                  <button className={styles.dismissBtn} onClick={dismiss} aria-label={t("dismissFeedback")}>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+                <textarea
+                  className={styles.feedbackFormTextarea}
+                  placeholder={t("feedbackFormPlaceholder")}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  maxLength={2000}
+                />
+                <div className={styles.feedbackFormActions}>
+                  <button className={styles.feedbackFormSkip} onClick={dismiss}>
+                    {t("feedbackFormSkip")}
+                  </button>
+                  <button
+                    className={styles.feedbackFormSubmit}
+                    onClick={handleSubmitFeedback}
+                    disabled={submitting}
+                  >
+                    {submitting ? t("feedbackFormSubmitting") : t("feedbackFormSubmit")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={styles.pageContent}>{children}</div>
     </>
   );
