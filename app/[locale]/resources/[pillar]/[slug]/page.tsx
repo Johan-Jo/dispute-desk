@@ -148,6 +148,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: L.og_title || L.meta_title || L.title,
       description: L.og_description || L.meta_description || L.excerpt,
       url: base ? `${base}${path}` : path,
+      ...(row.item.featured_image_url
+        ? { images: [row.item.featured_image_url] }
+        : {}),
     },
     alternates: base ? { canonical: `${base}${path}` } : undefined,
   };
