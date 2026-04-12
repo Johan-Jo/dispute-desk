@@ -1752,7 +1752,9 @@
       "family_general": "Allmänna eller specialfall",
       "advancedTitle": "Lägg till fler playbooks",
       "advancedSubtitle": "Valfria mallar för butiker som hanterar en bredare mix av tvister. Markera de som passar.",
-      "advancedAlreadyInstalled": "redan installerad"
+      "advancedAlreadyInstalled": "redan installerad",
+      "inquiryCoverageTitle": "Förfrågningstäckning ingår",
+      "inquiryCoverageBody": "Förfrågningar före en tvist besvaras automatiskt med lättare mallar — ingen extra konfiguration. {installed} av {total} förfrågningsmallar installerade tillsammans med dina tvistepaket."
     },
     "automation": {
       "title": "Automatisering och granskningsregler",
@@ -2762,6 +2764,10 @@
     "stateNoSetup": "DisputeDesk är inte inställt än. Nya tvister måste hanteras manuellt tills du lägger till regler och playbooks.",
     "primaryFixGap": "Ställ in {family}",
     "primaryBrowsePlaybooks": "Bläddra bland playbooks",
-    "primaryReviewRules": "Granska automatiseringsregler"
+    "primaryReviewRules": "Granska automatiseringsregler",
+    "inquiryCoverageTitle": "Förfrågningstäckning",
+    "inquiryCoverageOn": "På",
+    "inquiryCoverageOff": "Ännu inte aktiv",
+    "inquiryCoverageBody": "När kunder ställer förfrågningar före en tvist svarar DisputeDesk automatiskt med lättare förfrågningsmallar. {installed} av {total} förfrågningsmallar aktiva."
   }
 }

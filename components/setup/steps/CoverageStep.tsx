@@ -9,11 +9,15 @@ import {
   deriveEvidenceConfidence,
   inquiryPairsFor,
   TEMPLATE_IDS,
+  INQUIRY_TEMPLATE_IDS,
+  INQUIRY_TEMPLATE_ID_SET,
   type TemplateRecommendation,
   type ShopifyEvidenceConfig,
   type StoreProfileForRecommendation,
   type TemplateSlug,
 } from "@/lib/setup/recommendTemplates";
+
+const TOTAL_INQUIRY_TEMPLATES = Object.keys(INQUIRY_TEMPLATE_IDS).length;
 
 interface CoverageStepProps {
   stepId: StepId;
@@ -251,6 +255,14 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
   const reviewCount = familyRows.filter((r) => r.automation === "review").length;
   const notifyCount = familyRows.filter((r) => r.automation === "notify").length;
 
+  // Count inquiry templates the merchant already has installed (silently
+  // paired during a previous save). Used by the read-only inquiry coverage
+  // block below the table.
+  let installedInquiryCount = 0;
+  for (const id of installedTemplateIds) {
+    if (INQUIRY_TEMPLATE_ID_SET.has(id)) installedInquiryCount++;
+  }
+
   return (
     <div>
       {/* Header */}
@@ -396,6 +408,64 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Inquiry coverage — read-only reassurance about silent pairing */}
+      <div
+        style={{
+          background: "#F0FDF4",
+          border: "1px solid #BBF7D0",
+          borderRadius: 10,
+          padding: 16,
+          marginBottom: 16,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            flexShrink: 0,
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "#DCFCE7",
+            color: "#166534",
+            fontWeight: 700,
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          aria-hidden
+        >
+          ✓
+        </div>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#14532D",
+              marginBottom: 4,
+            }}
+          >
+            {tCoverage("inquiryCoverageTitle")}
+          </div>
+          <p
+            style={{
+              fontSize: 12,
+              color: "#166534",
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            {tCoverage("inquiryCoverageBody", {
+              installed: installedInquiryCount,
+              total: TOTAL_INQUIRY_TEMPLATES,
+            })}
+          </p>
         </div>
       </div>
 

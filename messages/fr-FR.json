@@ -1887,7 +1887,9 @@
       "family_general": "Litiges généraux ou cas particuliers",
       "advancedTitle": "Ajouter plus de playbooks",
       "advancedSubtitle": "Modèles optionnels pour les boutiques qui gèrent une plus grande variété de litiges. Cochez ceux qui s'appliquent.",
-      "advancedAlreadyInstalled": "déjà installé"
+      "advancedAlreadyInstalled": "déjà installé",
+      "inquiryCoverageTitle": "Couverture des consultations incluse",
+      "inquiryCoverageBody": "Les consultations avant chargeback reçoivent automatiquement une réponse avec des modèles plus légers — sans configuration supplémentaire. {installed} sur {total} modèles de consultation installés avec vos packs de chargeback."
     },
     "automation": {
       "title": "Automatisation et règles de vérification",
@@ -2761,6 +2763,10 @@
     "stateNoSetup": "DisputeDesk n'est pas encore configuré. Les nouveaux litiges devront être traités manuellement jusqu'à l'ajout de règles et de playbooks.",
     "primaryFixGap": "Configurer {family}",
     "primaryBrowsePlaybooks": "Parcourir les playbooks",
-    "primaryReviewRules": "Vérifier les règles d'automatisation"
+    "primaryReviewRules": "Vérifier les règles d'automatisation",
+    "inquiryCoverageTitle": "Couverture des consultations",
+    "inquiryCoverageOn": "Activée",
+    "inquiryCoverageOff": "Pas encore active",
+    "inquiryCoverageBody": "Lorsque les clients soulèvent des consultations avant chargeback, DisputeDesk répond automatiquement avec des modèles plus légers. {installed} sur {total} modèles de consultation actifs."
   }
 }

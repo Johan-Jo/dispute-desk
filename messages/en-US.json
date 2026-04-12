@@ -2374,7 +2374,9 @@
       "family_general": "General or Edge-Case Disputes",
       "advancedTitle": "Add more playbooks",
       "advancedSubtitle": "Optional templates for stores that handle a wider mix of disputes. Tick any that apply.",
-      "advancedAlreadyInstalled": "already installed"
+      "advancedAlreadyInstalled": "already installed",
+      "inquiryCoverageTitle": "Inquiry coverage included",
+      "inquiryCoverageBody": "Pre-chargeback inquiries are answered with lighter templates automatically — no extra setup. {installed} of {total} inquiry templates installed alongside your chargeback packs."
     },
     "automation": {
       "title": "Automation and review rules",
@@ -2658,6 +2660,10 @@
     "stateNoSetup": "DisputeDesk isn't set up yet. New disputes will need manual handling until you add rules and playbooks.",
     "primaryFixGap": "Set up {family}",
     "primaryBrowsePlaybooks": "Browse playbooks",
-    "primaryReviewRules": "Review automation rules"
+    "primaryReviewRules": "Review automation rules",
+    "inquiryCoverageTitle": "Inquiry coverage",
+    "inquiryCoverageOn": "On",
+    "inquiryCoverageOff": "Not yet active",
+    "inquiryCoverageBody": "When customers raise pre-chargeback inquiries, DisputeDesk responds with lighter inquiry templates automatically. {installed} of {total} inquiry templates active."
   }
 }

@@ -1887,7 +1887,9 @@
       "family_general": "Disputas Gerais ou Casos Especiais",
       "advancedTitle": "Adicionar mais playbooks",
       "advancedSubtitle": "Templates opcionais para lojas que lidam com uma mistura mais ampla de disputas. Marque os que se aplicam.",
-      "advancedAlreadyInstalled": "já instalado"
+      "advancedAlreadyInstalled": "já instalado",
+      "inquiryCoverageTitle": "Cobertura de consultas incluída",
+      "inquiryCoverageBody": "Consultas pré-chargeback são respondidas com templates mais leves automaticamente — sem configuração adicional. {installed} de {total} templates de consulta instalados junto com seus pacotes de chargeback."
     },
     "automation": {
       "title": "Automação e regras de revisão",
@@ -2778,6 +2780,10 @@
     "stateNoSetup": "O DisputeDesk ainda não está configurado. Novas disputas exigirão tratamento manual até você adicionar regras e playbooks.",
     "primaryFixGap": "Configurar {family}",
     "primaryBrowsePlaybooks": "Explorar playbooks",
-    "primaryReviewRules": "Revisar regras de automação"
+    "primaryReviewRules": "Revisar regras de automação",
+    "inquiryCoverageTitle": "Cobertura de consultas",
+    "inquiryCoverageOn": "Ativa",
+    "inquiryCoverageOff": "Ainda não ativa",
+    "inquiryCoverageBody": "Quando os clientes abrem consultas pré-chargeback, o DisputeDesk responde automaticamente com templates mais leves. {installed} de {total} templates de consulta ativos."
   }
 }

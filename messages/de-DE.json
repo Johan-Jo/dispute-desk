@@ -1887,7 +1887,9 @@
       "family_general": "Allgemeine oder Sonderfälle",
       "advancedTitle": "Weitere Playbooks hinzufügen",
       "advancedSubtitle": "Optionale Vorlagen für Shops mit einer breiteren Mischung an Reklamationen. Wähle die zutreffenden aus.",
-      "advancedAlreadyInstalled": "bereits installiert"
+      "advancedAlreadyInstalled": "bereits installiert",
+      "inquiryCoverageTitle": "Anfrage-Abdeckung enthalten",
+      "inquiryCoverageBody": "Anfragen vor einer Reklamation werden automatisch mit leichteren Vorlagen beantwortet — keine zusätzliche Einrichtung nötig. {installed} von {total} Anfrage-Vorlagen zusammen mit Ihren Reklamations-Packs installiert."
     },
     "automation": {
       "title": "Automatisierung und Prüfregeln",
@@ -2761,6 +2763,10 @@
     "stateNoSetup": "DisputeDesk ist noch nicht eingerichtet. Neue Streitfälle müssen manuell bearbeitet werden, bis Sie Regeln und Playbooks hinzufügen.",
     "primaryFixGap": "{family} einrichten",
     "primaryBrowsePlaybooks": "Playbooks durchsuchen",
-    "primaryReviewRules": "Automatisierungsregeln prüfen"
+    "primaryReviewRules": "Automatisierungsregeln prüfen",
+    "inquiryCoverageTitle": "Anfrage-Abdeckung",
+    "inquiryCoverageOn": "Aktiv",
+    "inquiryCoverageOff": "Noch nicht aktiv",
+    "inquiryCoverageBody": "Wenn Kunden Anfragen vor einer Reklamation stellen, antwortet DisputeDesk automatisch mit leichteren Anfrage-Vorlagen. {installed} von {total} Anfrage-Vorlagen aktiv."
   }
 }

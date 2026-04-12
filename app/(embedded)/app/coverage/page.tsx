@@ -42,6 +42,12 @@ import {
   type LifecyclePhaseHandling,
 } from "@/lib/coverage/deriveLifecycleCoverage";
 import { type AutomationMode } from "@/lib/coverage/deriveCoverage";
+import {
+  INQUIRY_TEMPLATE_IDS,
+  INQUIRY_TEMPLATE_ID_SET,
+} from "@/lib/setup/recommendTemplates";
+
+const TOTAL_INQUIRY_TEMPLATES = Object.keys(INQUIRY_TEMPLATE_IDS).length;
 
 const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   fraud: ShieldPersonIcon,
@@ -76,21 +82,35 @@ export default function CoveragePage() {
   const tc = useTranslations("coverage");
   const searchParams = useSearchParams();
   const [coverage, setCoverage] = useState<LifecycleCoverageSummary | null>(null);
+  const [installedInquiryCount, setInstalledInquiryCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       fetch("/api/rules").then((r) => (r.ok ? r.json() : [])),
-      fetch("/api/packs?status=ACTIVE").then((r) => (r.ok ? r.json() : { packs: [] })),
+      fetch("/api/packs").then((r) => (r.ok ? r.json() : { packs: [] })),
       fetch("/api/reason-mappings").then((r) => (r.ok ? r.json() : { mappings: [] })),
     ])
       .then(([rulesData, packsData, mappingsData]) => {
         if (cancelled) return;
         const rules = Array.isArray(rulesData) ? rulesData : [];
-        const packs = packsData?.packs ?? [];
+        const allPacks: Array<{ template_id?: string | null; status?: string }> =
+          packsData?.packs ?? [];
+        const inquiryIds = new Set<string>();
+        for (const p of allPacks) {
+          if (p.template_id && INQUIRY_TEMPLATE_ID_SET.has(p.template_id)) {
+            inquiryIds.add(p.template_id);
+          }
+        }
+        setInstalledInquiryCount(inquiryIds.size);
+        const visiblePacks = allPacks.filter(
+          (p) =>
+            p.status === "ACTIVE" &&
+            (!p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)),
+        );
         const mappings = mappingsData?.mappings ?? [];
-        setCoverage(deriveLifecycleCoverage(rules, packs, mappings));
+        setCoverage(deriveLifecycleCoverage(rules, visiblePacks as never, mappings));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -178,6 +198,30 @@ export default function CoveragePage() {
                   </Badge>
                 )}
               </InlineStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Inquiry coverage — read-only reassurance that silent pairing is wired up */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="200">
+              <InlineStack gap="200" blockAlign="center" wrap>
+                <Text as="h3" variant="headingSm">
+                  {tc("inquiryCoverageTitle")}
+                </Text>
+                <Badge tone={installedInquiryCount > 0 ? "success" : undefined}>
+                  {installedInquiryCount > 0
+                    ? tc("inquiryCoverageOn")
+                    : tc("inquiryCoverageOff")}
+                </Badge>
+              </InlineStack>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {tc("inquiryCoverageBody", {
+                  installed: installedInquiryCount,
+                  total: TOTAL_INQUIRY_TEMPLATES,
+                })}
+              </Text>
             </BlockStack>
           </Card>
         </Layout.Section>
