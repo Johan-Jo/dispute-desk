@@ -12,9 +12,16 @@ type BodyJson = {
 export function BodyBlocks({
   body,
   takeawaysLabel = "Key Takeaways",
+  disclaimerLabel = "Disclaimer",
+  disclaimerText,
+  updatesLabel = "Updates",
 }: {
   body: Record<string, unknown>;
   takeawaysLabel?: string;
+  disclaimerLabel?: string;
+  /** When provided, overrides `body.disclaimer` — useful for translated fallback. */
+  disclaimerText?: string;
+  updatesLabel?: string;
 }) {
   const b = body as BodyJson;
   const nodes: ReactNode[] = [];
@@ -67,7 +74,7 @@ export function BodyBlocks({
     );
   }
 
-  if (b.disclaimer) {
+  if (b.disclaimer || disclaimerText) {
     nodes.push(
       <div
         key="disc"
@@ -77,9 +84,9 @@ export function BodyBlocks({
           <AlertTriangle className="w-6 h-6 text-[#EF4444] flex-shrink-0" />
           <div>
             <h3 className="text-lg font-bold text-[#0B1220] mb-2">
-              Disclaimer
+              {disclaimerLabel}
             </h3>
-            <p className="text-[#64748B] leading-relaxed">{b.disclaimer}</p>
+            <p className="text-[#64748B] leading-relaxed">{disclaimerText ?? b.disclaimer}</p>
           </div>
         </div>
       </div>
@@ -89,7 +96,7 @@ export function BodyBlocks({
   if (b.updateLog?.length) {
     nodes.push(
       <section key="log" className="mt-8 bg-white border border-[#E5E7EB] rounded-lg p-6">
-        <h3 className="text-sm font-semibold text-[#0B1220] mb-3">Updates</h3>
+        <h3 className="text-sm font-semibold text-[#0B1220] mb-3">{updatesLabel}</h3>
         <ul className="text-sm text-[#64748B] space-y-2">
           {b.updateLog.map((u, i) => (
             <li key={i} className="flex gap-2">

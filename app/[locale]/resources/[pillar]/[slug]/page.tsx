@@ -393,6 +393,9 @@ export default async function ResourceArticlePage({ params }: Props) {
         <BodyBlocks
           body={renderedBody}
           takeawaysLabel={t("keyTakeaways")}
+          disclaimerLabel={t("disclaimerLabel")}
+          disclaimerText={t("disclaimerText")}
+          updatesLabel={t("updatesLabel")}
         />
 
         {faq?.length ? (

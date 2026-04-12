@@ -2618,6 +2618,9 @@
     "ctaSeePlans": "Ver planos",
     "relatedResources": "Recursos relacionados",
     "keyTakeaways": "Principais conclusões",
+    "disclaimerLabel": "Aviso legal",
+    "disclaimerText": "Este conteúdo é apenas informativo e não constitui aconselhamento jurídico.",
+    "updatesLabel": "Atualizações",
     "ctaDemo": "Solicitar demo",
     "ctaNewsletter": "Assinar atualizações",
     "types": {

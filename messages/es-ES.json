@@ -2601,6 +2601,9 @@
     "ctaSeePlans": "Ver planes",
     "relatedResources": "Recursos relacionados",
     "keyTakeaways": "Puntos clave",
+    "disclaimerLabel": "Aviso legal",
+    "disclaimerText": "Este contenido es solo informativo y no constituye asesoramiento jurídico.",
+    "updatesLabel": "Actualizaciones",
     "ctaDemo": "Solicitar demo",
     "ctaNewsletter": "Suscribirse a novedades",
     "types": {

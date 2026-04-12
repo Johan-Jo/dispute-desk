@@ -2601,6 +2601,9 @@
     "ctaSeePlans": "Voir les offres",
     "relatedResources": "Ressources associées",
     "keyTakeaways": "Points clés",
+    "disclaimerLabel": "Avertissement",
+    "disclaimerText": "Ce contenu est fourni à titre informatif uniquement et ne constitue pas un conseil juridique.",
+    "updatesLabel": "Mises à jour",
     "ctaDemo": "Demander une démo",
     "ctaNewsletter": "S’abonner aux mises à jour",
     "types": {

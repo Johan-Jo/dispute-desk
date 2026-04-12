@@ -2602,6 +2602,9 @@
     "ctaSeePlans": "Se planer",
     "relatedResources": "Relaterade resurser",
     "keyTakeaways": "Viktigaste slutsatserna",
+    "disclaimerLabel": "Ansvarsfriskrivning",
+    "disclaimerText": "Detta innehåll är endast avsett som information och utgör inte juridisk rådgivning.",
+    "updatesLabel": "Uppdateringar",
     "ctaDemo": "Boka demo",
     "ctaNewsletter": "Prenumerera på uppdateringar",
     "types": {
