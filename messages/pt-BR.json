@@ -2796,7 +2796,7 @@
     "explainerTitle": "O que você está vendo",
     "explainerBullet1": "Esta página mostra como o DisputeDesk vai lidar com cada tipo de disputa do Shopify quando uma real chegar — automaticamente, após sua revisão, ou deixada para tratamento manual.",
     "explainerBullet2": "Cada disputa aparece primeiro como uma consulta leve (o banco do titular fazendo uma pergunta) e depois escala para um chargeback formal se não for resolvida. O DisputeDesk cuida das duas fases — respostas mais leves para consultas, pacotes de evidência completos para chargebacks.",
-    "explainerBullet3": "Linhas marcadas como Parcial ou Sem cobertura estão faltando um playbook (o template de evidência) ou uma regra (o que o DisputeDesk deve fazer). Clique em Configurar em qualquer linha para adicionar o que falta.",
+    "explainerBullet3": "Linhas marcadas como Parcial ou Sem cobertura estão faltando um playbook (o template de evidência) ou uma regra (o que o DisputeDesk deve fazer). Use Editar tratamento em qualquer linha para definir a regra, ou Instalar playbook quando o template estiver faltando.",
     "editHandling": "Editar tratamento"
   }
 }
