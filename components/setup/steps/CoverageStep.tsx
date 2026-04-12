@@ -230,7 +230,16 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
             },
           }),
         });
-        return res.ok;
+        if (!res.ok) return false;
+
+        // Create family-level automation rules from coverage settings
+        await fetch("/api/setup/coverage-rules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coverageSettings }),
+        });
+
+        return true;
       } finally {
         setSaving(false);
       }
