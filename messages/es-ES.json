@@ -2769,6 +2769,7 @@
     "lifecycleSubtitle": "Mira cómo se gestionan consultas y contracargos por familia de disputa",
     "inquiryLabel": "Consulta",
     "chargebackLabel": "Contracargo",
+    "bothPhases": "Ambas fases",
     "inquiryConfigured": "{count} flujos de consulta",
     "chargebackConfigured": "{count} flujos de contracargo",
     "fullyConfigured": "{count} totalmente configurados",

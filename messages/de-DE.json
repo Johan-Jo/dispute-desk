@@ -2769,6 +2769,7 @@
     "lifecycleSubtitle": "Sehen Sie, wie Anfragen und Rückbuchungen je Streitfall-Familie behandelt werden",
     "inquiryLabel": "Anfrage",
     "chargebackLabel": "Rückbuchung",
+    "bothPhases": "Beide Phasen",
     "inquiryConfigured": "{count} Anfrage-Abläufe",
     "chargebackConfigured": "{count} Rückbuchungs-Abläufe",
     "fullyConfigured": "{count} vollständig konfiguriert",

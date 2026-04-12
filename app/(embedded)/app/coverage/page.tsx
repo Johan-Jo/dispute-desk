@@ -403,20 +403,32 @@ export default function CoveragePage() {
   );
 }
 
+function phasesIdentical(a: LifecyclePhaseHandling, b: LifecyclePhaseHandling): boolean {
+  if (a.automationMode !== b.automationMode) return false;
+  if (a.hasGap !== b.hasGap) return false;
+  const aPacks = new Set(a.playbooks.map((p) => p.name));
+  const bPacks = new Set(b.playbooks.map((p) => p.name));
+  if (aPacks.size !== bPacks.size) return false;
+  for (const n of aPacks) if (!bPacks.has(n)) return false;
+  return true;
+}
+
 function PhaseRow({
   handling,
+  mergedLabel,
   tc,
   familyId,
   searchParams,
   onInstallClick,
 }: {
   handling: LifecyclePhaseHandling;
+  mergedLabel?: string;
   tc: (key: string, params?: Record<string, string | number>) => string;
   familyId: string;
   searchParams: ReturnType<typeof useSearchParams>;
   onInstallClick: () => void;
 }) {
-  const phaseLabel = handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel");
+  const phaseLabel = mergedLabel ?? (handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel"));
 
   return (
     <InlineStack gap="300" blockAlign="center" wrap>
@@ -517,21 +529,34 @@ function LifecycleFamilyCard({
 
         <Divider />
 
-        {/* Phase rows */}
-        <PhaseRow
-          handling={family.inquiry}
-          tc={tc}
-          familyId={family.familyId}
-          searchParams={searchParams}
-          onInstallClick={onInstallClick}
-        />
-        <PhaseRow
-          handling={family.chargeback}
-          tc={tc}
-          familyId={family.familyId}
-          searchParams={searchParams}
-          onInstallClick={onInstallClick}
-        />
+        {/* Phase rows — merge into one when both phases have identical handling */}
+        {phasesIdentical(family.inquiry, family.chargeback) ? (
+          <PhaseRow
+            handling={family.inquiry}
+            mergedLabel={tc("bothPhases")}
+            tc={tc}
+            familyId={family.familyId}
+            searchParams={searchParams}
+            onInstallClick={onInstallClick}
+          />
+        ) : (
+          <>
+            <PhaseRow
+              handling={family.inquiry}
+              tc={tc}
+              familyId={family.familyId}
+              searchParams={searchParams}
+              onInstallClick={onInstallClick}
+            />
+            <PhaseRow
+              handling={family.chargeback}
+              tc={tc}
+              familyId={family.familyId}
+              searchParams={searchParams}
+              onInstallClick={onInstallClick}
+            />
+          </>
+        )}
 
         <Divider />
         <InlineStack gap="200" wrap>
