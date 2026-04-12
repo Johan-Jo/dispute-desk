@@ -7,9 +7,9 @@
  */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Page,
   Layout,
@@ -31,7 +31,6 @@ import {
   ReceiptRefundIcon,
   CashDollarIcon,
   DuplicateIcon,
-  QuestionCircleIcon,
   ClipboardCheckFilledIcon,
 } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
@@ -46,12 +45,24 @@ import {
   INQUIRY_TEMPLATE_IDS,
   INQUIRY_TEMPLATE_ID_SET,
 } from "@/lib/setup/recommendTemplates";
+import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
+
+/** Maps the coverage page's family IDs to pack_templates.dispute_type values
+ * used by the template library catalog. */
+const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
+  fraud: "FRAUD",
+  pnr: "PNR",
+  not_as_described: "NOT_AS_DESCRIBED",
+  subscription: "SUBSCRIPTION",
+  refund: "REFUND",
+  duplicate: "DUPLICATE",
+  general: "GENERAL",
+};
 
 const TOTAL_INQUIRY_TEMPLATES = Object.keys(INQUIRY_TEMPLATE_IDS).length;
 
 const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   fraud: ShieldPersonIcon,
-  unrecognized: QuestionCircleIcon,
   pnr: DeliveryIcon,
   not_as_described: AlertTriangleIcon,
   subscription: OrderIcon,
@@ -80,43 +91,58 @@ function automationModeLabel(mode: AutomationMode, tc: (key: string) => string):
 
 export default function CoveragePage() {
   const tc = useTranslations("coverage");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const [coverage, setCoverage] = useState<LifecycleCoverageSummary | null>(null);
   const [installedInquiryCount, setInstalledInquiryCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [installModalFamily, setInstallModalFamily] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
+  const loadCoverage = useCallback(async () => {
+    const [rulesData, packsData, mappingsData] = await Promise.all([
       fetch("/api/rules").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/packs").then((r) => (r.ok ? r.json() : { packs: [] })),
       fetch("/api/reason-mappings").then((r) => (r.ok ? r.json() : { mappings: [] })),
-    ])
-      .then(([rulesData, packsData, mappingsData]) => {
-        if (cancelled) return;
-        const rules = Array.isArray(rulesData) ? rulesData : [];
-        const allPacks: Array<{ template_id?: string | null; status?: string }> =
-          packsData?.packs ?? [];
-        const inquiryIds = new Set<string>();
-        for (const p of allPacks) {
-          if (p.template_id && INQUIRY_TEMPLATE_ID_SET.has(p.template_id)) {
-            inquiryIds.add(p.template_id);
-          }
-        }
-        setInstalledInquiryCount(inquiryIds.size);
-        const visiblePacks = allPacks.filter(
-          (p) =>
-            p.status === "ACTIVE" &&
-            (!p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)),
-        );
-        const mappings = mappingsData?.mappings ?? [];
-        setCoverage(deriveLifecycleCoverage(rules, visiblePacks as never, mappings));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
+    ]);
+    const rules = Array.isArray(rulesData) ? rulesData : [];
+    const allPacks: Array<{ template_id?: string | null; status?: string }> =
+      packsData?.packs ?? [];
+    const inquiryIds = new Set<string>();
+    for (const p of allPacks) {
+      if (p.template_id && INQUIRY_TEMPLATE_ID_SET.has(p.template_id)) {
+        inquiryIds.add(p.template_id);
+      }
+    }
+    setInstalledInquiryCount(inquiryIds.size);
+    const visiblePacks = allPacks.filter(
+      (p) =>
+        p.status === "ACTIVE" &&
+        (!p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)),
+    );
+    const mappings = mappingsData?.mappings ?? [];
+    setCoverage(deriveLifecycleCoverage(rules, visiblePacks as never, mappings));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadCoverage().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    // Resolve shopId for the template library modal.
+    fetch("/api/setup/state")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.shopId) setShopId(data.shopId);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [loadCoverage]);
+
+  const handleInstalled = useCallback(() => {
+    setInstallModalFamily(null);
+    loadCoverage();
+  }, [loadCoverage]);
 
   if (loading) {
     return (
@@ -256,10 +282,21 @@ export default function CoveragePage() {
               family={family}
               tc={tc}
               searchParams={searchParams}
+              onInstallClick={() => setInstallModalFamily(family.familyId)}
             />
           </Layout.Section>
         ))}
       </Layout>
+      {shopId && installModalFamily && (
+        <TemplateLibraryModal
+          isOpen
+          onClose={() => setInstallModalFamily(null)}
+          shopId={shopId}
+          locale={locale}
+          onInstalled={handleInstalled}
+          initialCategory={FAMILY_TO_DISPUTE_TYPE[installModalFamily] ?? ""}
+        />
+      )}
     </Page>
   );
 }
@@ -301,10 +338,12 @@ function LifecycleFamilyCard({
   family,
   tc,
   searchParams,
+  onInstallClick,
 }: {
   family: LifecycleFamilyCoverage;
   tc: ReturnType<typeof useTranslations>;
   searchParams: ReturnType<typeof useSearchParams>;
+  onInstallClick: () => void;
 }) {
   const FamilyIcon = FAMILY_ICONS[family.familyId] ?? ClipboardCheckFilledIcon;
   // Three-state: fully covered, partial, not covered
@@ -376,7 +415,7 @@ function LifecycleFamilyCard({
               <Button
                 size="slim"
                 variant="plain"
-                url={withShopParams("/app/packs", searchParams)}
+                onClick={onInstallClick}
               >
                 {tc("installPlaybook")}
               </Button>

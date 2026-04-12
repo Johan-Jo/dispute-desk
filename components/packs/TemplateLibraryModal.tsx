@@ -10,6 +10,8 @@ interface Props {
   shopId: string;
   locale: string;
   onInstalled: (packId: string) => void;
+  /** Pre-select a dispute-type filter (e.g. "FRAUD") when opening */
+  initialCategory?: string;
 }
 
 export function TemplateLibraryModal({
@@ -18,6 +20,7 @@ export function TemplateLibraryModal({
   shopId,
   locale,
   onInstalled,
+  initialCategory,
 }: Props) {
   const t = useTranslations("templateLibrary");
 
@@ -36,6 +39,7 @@ export function TemplateLibraryModal({
         onGoToPacks={onClose}
         isActive={isOpen}
         layoutMode="modal"
+        initialCategory={initialCategory}
       />
     </Modal>
   );

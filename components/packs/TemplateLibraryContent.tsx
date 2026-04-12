@@ -96,6 +96,8 @@ export interface TemplateLibraryContentProps {
   isActive?: boolean;
   /** 'page' = back link + full-height grid; 'modal' = constrained grid */
   layoutMode?: "modal" | "page";
+  /** Pre-select a dispute-type filter (e.g. "FRAUD") when opening */
+  initialCategory?: string;
 }
 
 export function TemplateLibraryContent({
@@ -106,12 +108,13 @@ export function TemplateLibraryContent({
   onBack,
   isActive = true,
   layoutMode = "modal",
+  initialCategory = "",
 }: TemplateLibraryContentProps) {
   const t = useTranslations("templateLibrary");
 
   const [templates, setTemplates] = useState<TemplateCard[]>([]);
   const [loading, setLoading] = useState(false);
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("recommended");
   const [installing, setInstalling] = useState<string | null>(null);

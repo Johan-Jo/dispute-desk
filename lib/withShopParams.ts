@@ -2,6 +2,11 @@
  * Append `shop` and `host` query params from the current URL
  * to a target pathname. Used for Shopify embedded app navigation
  * to maintain iframe context.
+ *
+ * The pathname may already contain its own query string (e.g.
+ * `/app/rules?family=fraud`); in that case the shop params are
+ * merged into the existing query string rather than naively
+ * appended with a second `?`.
  */
 export function withShopParams(
   pathname: string,
@@ -12,7 +17,9 @@ export function withShopParams(
       ? searchParams
       : new URLSearchParams(searchParams);
 
-  const params = new URLSearchParams();
+  const [basePath, existingQs] = pathname.split("?", 2);
+  const params = new URLSearchParams(existingQs ?? "");
+
   const shop = sp.get("shop");
   const host = sp.get("host");
   const locale = sp.get("locale");
@@ -23,5 +30,5 @@ export function withShopParams(
   if (ddDebug) params.set("dd_debug", ddDebug);
 
   const qs = params.toString();
-  return qs ? `${pathname}?${qs}` : pathname;
+  return qs ? `${basePath}?${qs}` : basePath;
 }
