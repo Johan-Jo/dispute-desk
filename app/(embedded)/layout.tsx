@@ -47,8 +47,8 @@ export default async function EmbeddedLayout({
       />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
         {children}
+        <TawkToWidget />
       </Providers>
-      <TawkToWidget />
     </>
   );
 }
