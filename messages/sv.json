@@ -2044,6 +2044,11 @@
     "explainerBullet1": "Den här sidan visar hur DisputeDesk kommer att hantera varje typ av Shopify-tvist när en riktig kommer in — automatiskt, efter din granskning eller manuellt.",
     "explainerBullet2": "Varje tvist dyker först upp som en mjuk förfrågan (kortinnehavarens bank ställer en fråga) och eskalerar sedan till en formell tvist om den inte löses. DisputeDesk hanterar båda faserna — lättare svar för förfrågningar, fullständiga bevispaket för tvister.",
     "explainerBullet3": "Rader markerade som Delvis eller Ej täckt saknar en playbook (bevismallen) eller en regel (vad DisputeDesk ska göra). Använd Redigera hantering på valfri rad för att ange regeln, eller Installera playbook när mallen saknas.",
-    "editHandling": "Redigera hantering"
+    "editHandling": "Redigera hantering",
+    "fixPhaseGap": "Åtgärda",
+    "emptyStateTitle": "Inga tvisttyper täcks ännu",
+    "emptyStateBody": "Skapa din första automatiseringsregel och installera en playbook så att DisputeDesk kan hantera tvister automatiskt när de kommer från Shopify.",
+    "emptyStatePrimaryCta": "Skapa din första regel",
+    "inquiryInstallCta": "Installera förfrågningsmallar"
   }
 }

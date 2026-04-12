@@ -2800,6 +2800,11 @@
     "explainerBullet1": "Diese Seite zeigt, wie DisputeDesk jeden Shopify-Reklamationstyp behandelt, wenn ein echter Fall eingeht — automatisch, nach Ihrer Prüfung oder manuell.",
     "explainerBullet2": "Jede Reklamation erscheint zunächst als sanfte Anfrage (die Bank des Karteninhabers stellt eine Frage) und eskaliert dann zu einer formellen Reklamation, wenn sie nicht gelöst wird. DisputeDesk behandelt beide Phasen — leichtere Antworten für Anfragen, vollständige Beweispakete für Reklamationen.",
     "explainerBullet3": "Zeilen, die als Teilweise oder Nicht abgedeckt markiert sind, fehlt ein Playbook (die Beweisvorlage) oder eine Regel (was DisputeDesk tun soll). Verwenden Sie Behandlung bearbeiten in einer beliebigen Zeile, um die Regel festzulegen, oder Playbook installieren, wenn die Vorlage fehlt.",
-    "editHandling": "Behandlung bearbeiten"
+    "editHandling": "Behandlung bearbeiten",
+    "fixPhaseGap": "Beheben",
+    "emptyStateTitle": "Noch keine Streitfalltypen abgedeckt",
+    "emptyStateBody": "Erstellen Sie Ihre erste Automatisierungsregel und installieren Sie ein Playbook, damit DisputeDesk Streitfälle automatisch bearbeitet, wenn sie von Shopify eingehen.",
+    "emptyStatePrimaryCta": "Erste Regel erstellen",
+    "inquiryInstallCta": "Anfrage-Vorlagen installieren"
   }
 }

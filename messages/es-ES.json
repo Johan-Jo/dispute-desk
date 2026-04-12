@@ -2800,6 +2800,11 @@
     "explainerBullet1": "Esta página muestra cómo DisputeDesk manejará cada tipo de disputa de Shopify cuando llegue una real: automáticamente, tras tu revisión, o en modo manual.",
     "explainerBullet2": "Cada disputa aparece primero como una consulta suave (el banco del titular preguntando) y luego escala a un chargeback formal si no se resuelve. DisputeDesk gestiona ambas fases: respuestas más ligeras para consultas, paquetes de evidencia completos para chargebacks.",
     "explainerBullet3": "Las filas marcadas como Parcial o Sin cobertura no tienen un playbook (la plantilla de evidencia) o una regla (qué debe hacer DisputeDesk). Usa Editar manejo en cualquier fila para definir la regla, o Instalar playbook cuando falte la plantilla.",
-    "editHandling": "Editar manejo"
+    "editHandling": "Editar manejo",
+    "fixPhaseGap": "Corregir",
+    "emptyStateTitle": "Ningún tipo de disputa está cubierto aún",
+    "emptyStateBody": "Configure su primera regla de automatización e instale un playbook para que DisputeDesk maneje las disputas automáticamente cuando lleguen de Shopify.",
+    "emptyStatePrimaryCta": "Crear su primera regla",
+    "inquiryInstallCta": "Instalar plantillas de consulta"
   }
 }

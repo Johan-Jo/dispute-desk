@@ -22,6 +22,8 @@ import {
   Spinner,
   Divider,
   Icon,
+  Banner,
+  Collapsible,
 } from "@shopify/polaris";
 import {
   ShieldPersonIcon,
@@ -29,7 +31,6 @@ import {
   DeliveryIcon,
   OrderIcon,
   ReceiptRefundIcon,
-  CashDollarIcon,
   DuplicateIcon,
   ClipboardCheckFilledIcon,
 } from "@shopify/polaris-icons";
@@ -71,6 +72,8 @@ const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   general: ClipboardCheckFilledIcon,
 };
 
+const EXPLAINER_DISMISSED_KEY = "dd_coverage_explainer_dismissed";
+
 function automationBadgeTone(mode: AutomationMode): "success" | "info" | "warning" | undefined {
   switch (mode) {
     case "automated": return "success";
@@ -89,8 +92,16 @@ function automationModeLabel(mode: AutomationMode, tc: (key: string) => string):
   }
 }
 
+interface VisiblePack {
+  id: string;
+  name: string;
+  dispute_type: string;
+  status: string;
+}
+
 export default function CoveragePage() {
   const tc = useTranslations("coverage");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const [coverage, setCoverage] = useState<LifecycleCoverageSummary | null>(null);
@@ -98,6 +109,16 @@ export default function CoveragePage() {
   const [loading, setLoading] = useState(true);
   const [shopId, setShopId] = useState<string | null>(null);
   const [installModalFamily, setInstallModalFamily] = useState<string | null>(null);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [explainerOpen, setExplainerOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(EXPLAINER_DISMISSED_KEY) !== "1";
+  });
+
+  const dismissExplainer = useCallback(() => {
+    setExplainerOpen(false);
+    try { localStorage.setItem(EXPLAINER_DISMISSED_KEY, "1"); } catch {}
+  }, []);
 
   const loadCoverage = useCallback(async () => {
     const [rulesData, packsData, mappingsData] = await Promise.all([
@@ -106,7 +127,7 @@ export default function CoveragePage() {
       fetch("/api/reason-mappings").then((r) => (r.ok ? r.json() : { mappings: [] })),
     ]);
     const rules = Array.isArray(rulesData) ? rulesData : [];
-    const allPacks: Array<{ template_id?: string | null; status?: string }> =
+    const allPacks: Array<{ id: string; name: string; template_id?: string | null; status?: string; dispute_type?: string }> =
       packsData?.packs ?? [];
     const inquiryIds = new Set<string>();
     for (const p of allPacks) {
@@ -115,13 +136,20 @@ export default function CoveragePage() {
       }
     }
     setInstalledInquiryCount(inquiryIds.size);
-    const visiblePacks = allPacks.filter(
-      (p) =>
-        p.status === "ACTIVE" &&
-        (!p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)),
-    );
+    const visiblePacks: VisiblePack[] = allPacks
+      .filter(
+        (p) =>
+          p.status === "ACTIVE" &&
+          (!p.template_id || !INQUIRY_TEMPLATE_ID_SET.has(p.template_id)),
+      )
+      .map((p) => ({
+        id: p.id,
+        name: p.name ?? "",
+        dispute_type: p.dispute_type ?? "",
+        status: p.status ?? "",
+      }));
     const mappings = mappingsData?.mappings ?? [];
-    setCoverage(deriveLifecycleCoverage(rules, visiblePacks as never, mappings));
+    setCoverage(deriveLifecycleCoverage(rules, visiblePacks, mappings));
   }, []);
 
   useEffect(() => {
@@ -129,7 +157,6 @@ export default function CoveragePage() {
     loadCoverage().finally(() => {
       if (!cancelled) setLoading(false);
     });
-    // Resolve shopId for the template library modal.
     fetch("/api/setup/state")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -141,12 +168,17 @@ export default function CoveragePage() {
 
   const handleInstalled = useCallback(() => {
     setInstallModalFamily(null);
+    setShowInquiryModal(false);
     loadCoverage();
   }, [loadCoverage]);
 
   if (loading) {
     return (
-      <Page title={tc("title")} subtitle={tc("lifecycleSubtitle")}>
+      <Page
+        title={tc("title")}
+        subtitle={tc("lifecycleSubtitle")}
+        backAction={{ content: tNav("overview"), url: "/app" }}
+      >
         <Layout>
           <Layout.Section>
             <Card>
@@ -162,8 +194,60 @@ export default function CoveragePage() {
 
   const c = coverage!;
 
+  // All families unconfigured → show empty state
+  if (c.fullyConfiguredCount === 0 && c.gapsCount === c.totalFamilies) {
+    return (
+      <Page
+        title={tc("title")}
+        subtitle={tc("coveragePurpose")}
+        backAction={{ content: tNav("overview"), url: "/app" }}
+      >
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400" inlineAlign="center">
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 12,
+                    background: "#FEE2E2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#DC2626",
+                  }}
+                >
+                  <Icon source={ShieldPersonIcon} />
+                </div>
+                <Text as="h2" variant="headingMd" alignment="center">
+                  {tc("emptyStateTitle")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+                  {tc("emptyStateBody")}
+                </Text>
+                <InlineStack gap="200" align="center">
+                  <Button
+                    variant="primary"
+                    url={withShopParams("/app/rules", searchParams)}
+                  >
+                    {tc("emptyStatePrimaryCta")}
+                  </Button>
+                  <Button
+                    url={withShopParams("/app/packs", searchParams)}
+                  >
+                    {tc("primaryBrowsePlaybooks")}
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    );
+  }
+
   // Priority gap = first family with any gap, in DISPUTE_FAMILIES order.
-  // If the priority family has no playbooks at all, the first step is installing one.
   const priorityGap = c.families.find((f) => !f.overallCovered) ?? null;
   const priorityNeedsPlaybook =
     priorityGap !== null &&
@@ -183,9 +267,7 @@ export default function CoveragePage() {
   const stateText =
     c.gapsCount === 0
       ? tc("stateAllSetup", { total: c.totalFamilies })
-      : c.fullyConfiguredCount === 0
-        ? tc("stateNoSetup")
-        : tc("stateWithGaps", {
+      : tc("stateWithGaps", {
             covered: c.fullyConfiguredCount,
             total: c.totalFamilies,
             gaps: c.gapsCount,
@@ -195,6 +277,7 @@ export default function CoveragePage() {
     <Page
       title={tc("title")}
       subtitle={tc("coveragePurpose")}
+      backAction={{ content: tNav("overview"), url: "/app" }}
       primaryAction={{
         content: primaryActionContent,
         url: primaryActionUrl,
@@ -207,27 +290,26 @@ export default function CoveragePage() {
       ]}
     >
       <Layout>
-        {/* Plain-language explainer — first-time visitors need to know what
-            this page is actually for before the state sentence makes sense. */}
+        {/* Dismissable explainer */}
         <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingSm">
-                {tc("explainerTitle")}
-              </Text>
+          <Collapsible id="coverage-explainer" open={explainerOpen}>
+            <Banner onDismiss={dismissExplainer}>
               <BlockStack gap="200">
-                <Text as="p" variant="bodySm" tone="subdued">
+                <Text as="h3" variant="headingSm">
+                  {tc("explainerTitle")}
+                </Text>
+                <Text as="p" variant="bodySm">
                   • {tc("explainerBullet1")}
                 </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
+                <Text as="p" variant="bodySm">
                   • {tc("explainerBullet2")}
                 </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
+                <Text as="p" variant="bodySm">
                   • {tc("explainerBullet3")}
                 </Text>
               </BlockStack>
-            </BlockStack>
-          </Card>
+            </Banner>
+          </Collapsible>
         </Layout.Section>
 
         {/* Current state — plain language */}
@@ -251,7 +333,7 @@ export default function CoveragePage() {
           </Card>
         </Layout.Section>
 
-        {/* Inquiry coverage — read-only reassurance that silent pairing is wired up */}
+        {/* Inquiry coverage */}
         <Layout.Section>
           <Card>
             <BlockStack gap="200">
@@ -271,6 +353,16 @@ export default function CoveragePage() {
                   total: TOTAL_INQUIRY_TEMPLATES,
                 })}
               </Text>
+              {installedInquiryCount === 0 && (
+                <InlineStack gap="200">
+                  <Button
+                    size="slim"
+                    onClick={() => setShowInquiryModal(true)}
+                  >
+                    {tc("inquiryInstallCta")}
+                  </Button>
+                </InlineStack>
+              )}
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -297,6 +389,16 @@ export default function CoveragePage() {
           initialCategory={FAMILY_TO_DISPUTE_TYPE[installModalFamily] ?? ""}
         />
       )}
+      {shopId && showInquiryModal && (
+        <TemplateLibraryModal
+          isOpen
+          onClose={() => setShowInquiryModal(false)}
+          shopId={shopId}
+          locale={locale}
+          onInstalled={handleInstalled}
+          initialCategory=""
+        />
+      )}
     </Page>
   );
 }
@@ -304,9 +406,15 @@ export default function CoveragePage() {
 function PhaseRow({
   handling,
   tc,
+  familyId,
+  searchParams,
+  onInstallClick,
 }: {
   handling: LifecyclePhaseHandling;
   tc: (key: string, params?: Record<string, string | number>) => string;
+  familyId: string;
+  searchParams: ReturnType<typeof useSearchParams>;
+  onInstallClick: () => void;
 }) {
   const phaseLabel = handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel");
 
@@ -326,9 +434,28 @@ function PhaseRow({
         </Text>
       )}
       {handling.hasGap && (
-        <Text as="span" variant="bodySm" tone="critical">
-          {tc("noPlaybook")}
-        </Text>
+        <>
+          <Text as="span" variant="bodySm" tone="critical">
+            {tc("noPlaybook")}
+          </Text>
+          <Button
+            size="slim"
+            variant="plain"
+            url={withShopParams(
+              `/app/rules?family=${familyId}&phase=${handling.phase}`,
+              searchParams,
+            )}
+          >
+            {tc("fixPhaseGap")}
+          </Button>
+          <Button
+            size="slim"
+            variant="plain"
+            onClick={onInstallClick}
+          >
+            {tc("installPlaybook")}
+          </Button>
+        </>
       )}
     </InlineStack>
   );
@@ -346,7 +473,6 @@ function LifecycleFamilyCard({
   onInstallClick: () => void;
 }) {
   const FamilyIcon = FAMILY_ICONS[family.familyId] ?? ClipboardCheckFilledIcon;
-  // Three-state: fully covered, partial, not covered
   const isPartial = !family.overallCovered && (!family.inquiry.hasGap || !family.chargeback.hasGap);
   const statusLabel = family.overallCovered
     ? tc("statusFullyCovered")
@@ -392,13 +518,21 @@ function LifecycleFamilyCard({
         <Divider />
 
         {/* Phase rows */}
-        <PhaseRow handling={family.inquiry} tc={tc} />
-        <PhaseRow handling={family.chargeback} tc={tc} />
+        <PhaseRow
+          handling={family.inquiry}
+          tc={tc}
+          familyId={family.familyId}
+          searchParams={searchParams}
+          onInstallClick={onInstallClick}
+        />
+        <PhaseRow
+          handling={family.chargeback}
+          tc={tc}
+          familyId={family.familyId}
+          searchParams={searchParams}
+          onInstallClick={onInstallClick}
+        />
 
-        {/* Edit handling — always visible so the merchant has a clear path to
-            change how this family is handled (automated / review / manual /
-            installed playbooks). Deep-links to /app/rules with the family id
-            so the rules page can scroll to the matching row. */}
         <Divider />
         <InlineStack gap="200" wrap>
           <Button
@@ -410,16 +544,6 @@ function LifecycleFamilyCard({
           >
             {tc("editHandling")}
           </Button>
-          {family.inquiry.playbooks.length === 0 &&
-            family.chargeback.playbooks.length === 0 && (
-              <Button
-                size="slim"
-                variant="plain"
-                onClick={onInstallClick}
-              >
-                {tc("installPlaybook")}
-              </Button>
-            )}
         </InlineStack>
       </BlockStack>
     </Card>

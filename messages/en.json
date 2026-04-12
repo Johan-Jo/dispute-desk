@@ -1815,7 +1815,12 @@
     "explainerBullet1": "This page shows how DisputeDesk will handle each type of Shopify dispute when a real one arrives — automatically, after your review, or left to manual handling.",
     "explainerBullet2": "Every dispute first appears as a soft inquiry (the cardholder's bank asking a question) and then escalates to a formal chargeback if it isn't resolved. DisputeDesk handles both phases — lighter responses for inquiries, full evidence packs for chargebacks.",
     "explainerBullet3": "Rows marked Partial or Not covered are missing a playbook (the evidence template) or a rule (what DisputeDesk should do). Use Edit handling on any row to set the rule, or Install playbook when the template is missing.",
-    "editHandling": "Edit handling"
+    "editHandling": "Edit handling",
+    "fixPhaseGap": "Fix",
+    "emptyStateTitle": "No dispute types are covered yet",
+    "emptyStateBody": "Set up your first automation rule and install a playbook so DisputeDesk can handle disputes automatically when they arrive from Shopify.",
+    "emptyStatePrimaryCta": "Create your first rule",
+    "inquiryInstallCta": "Install inquiry templates"
   },
   "templateLibrary": {
     "title": "Template Library",
