@@ -17,7 +17,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Page,
   Layout,
@@ -46,6 +46,7 @@ import {
 } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
+import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
 import {
   disputeTypeToPrimaryReason,
   type PackHandlingUiMode,
@@ -55,6 +56,16 @@ import {
 
 const SAFEGUARD_RULE_NAME = "__dd_safeguard__:high_value";
 const DEFAULT_SAFEGUARD_AMOUNT = 500;
+
+const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
+  fraud: "FRAUD",
+  pnr: "PNR",
+  not_as_described: "NOT_AS_DESCRIBED",
+  subscription: "SUBSCRIPTION",
+  refund: "REFUND",
+  duplicate: "DUPLICATE",
+  general: "GENERAL",
+};
 
 const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   fraud: ShieldPersonIcon,
@@ -116,6 +127,7 @@ type FamilyMode = "auto" | "review" | "none";
 export default function EmbeddedRulesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const locale = useLocale();
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
   const tc = useTranslations("coverage");
@@ -145,6 +157,8 @@ export default function EmbeddedRulesPage() {
   const [highlightedFamilyId, setHighlightedFamilyId] = useState<
     string | null
   >(null);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [installModalFamily, setInstallModalFamily] = useState<string | null>(null);
   const familyRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // ─── Data fetching ────────────────────────────────────────────────────
@@ -152,10 +166,16 @@ export default function EmbeddedRulesPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [automationRes, rulesRes] = await Promise.all([
+      const [automationRes, rulesRes, stateRes] = await Promise.all([
         fetch("/api/setup/automation"),
         fetch("/api/rules"),
+        fetch("/api/setup/state"),
       ]);
+
+      if (stateRes.ok) {
+        const stateData = await stateRes.json();
+        if (stateData?.shopId) setShopId(stateData.shopId);
+      }
 
       if (automationRes.ok) {
         const data = await automationRes.json();
@@ -547,10 +567,7 @@ export default function EmbeddedRulesPage() {
                               {mode === "none" ? (
                                 <Button
                                   size="slim"
-                                  url={withShopParams(
-                                    "/app/packs",
-                                    searchParams,
-                                  )}
+                                  onClick={() => setInstallModalFamily(family.id)}
                                 >
                                   {tc("installPlaybook")}
                                 </Button>
@@ -737,6 +754,19 @@ export default function EmbeddedRulesPage() {
           </BlockStack>
         </Layout.Section>
       </Layout>
+      {shopId && installModalFamily && (
+        <TemplateLibraryModal
+          isOpen
+          onClose={() => setInstallModalFamily(null)}
+          shopId={shopId}
+          locale={locale}
+          onInstalled={() => {
+            setInstallModalFamily(null);
+            fetchAll();
+          }}
+          initialCategory={FAMILY_TO_DISPUTE_TYPE[installModalFamily] ?? ""}
+        />
+      )}
     </Page>
   );
 }
