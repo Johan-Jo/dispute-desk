@@ -430,7 +430,7 @@ function PhaseRow({
       </Badge>
       {handling.playbooks.length > 0 && (
         <Text as="span" variant="bodySm" tone="subdued">
-          {handling.playbooks.map((p) => p.name).join(", ")}
+          {[...new Set(handling.playbooks.map((p) => p.name))].join(", ")}
         </Text>
       )}
       {handling.hasGap && (
