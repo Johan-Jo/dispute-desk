@@ -31,7 +31,7 @@ export interface LifecyclePhaseHandling {
   /** From rules (phase-blind — same for both phases currently) */
   automationMode: AutomationMode;
   /** Active packs matching this family */
-  playbooks: { id: string; name: string }[];
+  playbooks: { id: string; name: string; disputeType: string }[];
   /** Default template from reason_template_mappings for this phase */
   mappedTemplateName: string | null;
   /** True if automation mode is "none" AND no playbooks AND no mapped template */
@@ -154,7 +154,7 @@ function derivePhaseHandling(
     ? ruleToAutomationMode(matchingRule)
     : "none";
 
-  const playbooks = matchingPacks.map((p) => ({ id: p.id, name: p.name }));
+  const playbooks = matchingPacks.map((p) => ({ id: p.id, name: p.name, disputeType: p.dispute_type }));
 
   // Find the best mapped template for this phase from reason_template_mappings
   const phaseMapping = mappings.find(

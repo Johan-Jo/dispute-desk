@@ -2770,7 +2770,7 @@
     "lifecycleSubtitle": "Se hur förfrågningar och återkrav hanteras per tvistfamilj",
     "inquiryLabel": "Förfrågan",
     "chargebackLabel": "Återkrav",
-    "bothPhases": "Båda faserna",
+    "inquiryAndChargeback": "Förfrågan & Återkrav",
     "inquiryConfigured": "{count} förfrågningsflöden",
     "chargebackConfigured": "{count} återkravsflöden",
     "fullyConfigured": "{count} helt konfigurerade",

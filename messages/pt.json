@@ -1898,7 +1898,7 @@
     "lifecycleSubtitle": "Veja como consultas e chargebacks são tratados por família de disputa",
     "inquiryLabel": "Consulta",
     "chargebackLabel": "Chargeback",
-    "bothPhases": "Ambas as fases",
+    "inquiryAndChargeback": "Consulta e Chargeback",
     "inquiryConfigured": "{count} fluxos de consulta",
     "chargebackConfigured": "{count} fluxos de chargeback",
     "fullyConfigured": "{count} totalmente configurados",

@@ -102,6 +102,7 @@ interface VisiblePack {
 export default function CoveragePage() {
   const tc = useTranslations("coverage");
   const tNav = useTranslations("nav");
+  const tPacks = useTranslations("packs");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const [coverage, setCoverage] = useState<LifecycleCoverageSummary | null>(null);
@@ -373,6 +374,7 @@ export default function CoveragePage() {
             <LifecycleFamilyCard
               family={family}
               tc={tc}
+              tPacks={tPacks}
               searchParams={searchParams}
               onInstallClick={() => setInstallModalFamily(family.familyId)}
             />
@@ -403,21 +405,53 @@ export default function CoveragePage() {
   );
 }
 
+function translatePlaybookNames(
+  playbooks: { disputeType: string; name: string }[],
+  tPacks: (key: string) => string,
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const p of playbooks) {
+    if (seen.has(p.disputeType)) continue;
+    seen.add(p.disputeType);
+    try {
+      result.push(tPacks(`disputeTypeLabel.${p.disputeType}`));
+    } catch {
+      result.push(p.name);
+    }
+  }
+  return result;
+}
+
+function phasesIdentical(a: LifecyclePhaseHandling, b: LifecyclePhaseHandling): boolean {
+  if (a.automationMode !== b.automationMode) return false;
+  if (a.hasGap !== b.hasGap) return false;
+  const aTypes = new Set(a.playbooks.map((p) => p.disputeType));
+  const bTypes = new Set(b.playbooks.map((p) => p.disputeType));
+  if (aTypes.size !== bTypes.size) return false;
+  for (const t of aTypes) if (!bTypes.has(t)) return false;
+  return true;
+}
+
 function PhaseSection({
   handling,
   tc,
+  tPacks,
   familyId,
   searchParams,
   onInstallClick,
+  showPlaybookNames,
 }: {
   handling: LifecyclePhaseHandling;
   tc: (key: string, params?: Record<string, string | number>) => string;
+  tPacks: (key: string) => string;
   familyId: string;
   searchParams: ReturnType<typeof useSearchParams>;
   onInstallClick: () => void;
+  showPlaybookNames: boolean;
 }) {
   const phaseLabel = handling.phase === "inquiry" ? tc("inquiryLabel") : tc("chargebackLabel");
-  const uniqueNames = [...new Set(handling.playbooks.map((p) => p.name))];
+  const translatedNames = translatePlaybookNames(handling.playbooks, tPacks);
 
   return (
     <BlockStack gap="200">
@@ -429,9 +463,9 @@ function PhaseSection({
           {automationModeLabel(handling.automationMode, handling.playbooks.length > 0, tc)}
         </Badge>
       </InlineStack>
-      {uniqueNames.length > 0 && (
+      {showPlaybookNames && translatedNames.length > 0 && (
         <Text as="p" variant="bodySm" tone="subdued">
-          {uniqueNames.join(", ")}
+          {translatedNames.join(", ")}
         </Text>
       )}
       {handling.hasGap && (
@@ -465,11 +499,13 @@ function PhaseSection({
 function LifecycleFamilyCard({
   family,
   tc,
+  tPacks,
   searchParams,
   onInstallClick,
 }: {
   family: LifecycleFamilyCoverage;
   tc: ReturnType<typeof useTranslations>;
+  tPacks: (key: string) => string;
   searchParams: ReturnType<typeof useSearchParams>;
   onInstallClick: () => void;
 }) {
@@ -487,6 +523,11 @@ function LifecycleFamilyCard({
       : undefined;
   const iconBg = family.overallCovered ? "#DCFCE7" : isPartial ? "#FEF3C7" : "#FEE2E2";
   const iconColor = family.overallCovered ? "#16A34A" : isPartial ? "#D97706" : "#DC2626";
+
+  const identical = phasesIdentical(family.inquiry, family.chargeback);
+  const sharedNames = identical
+    ? translatePlaybookNames(family.inquiry.playbooks, tPacks)
+    : [];
 
   return (
     <Card>
@@ -518,25 +559,62 @@ function LifecycleFamilyCard({
 
         <Divider />
 
-        {/* Inquiry */}
-        <PhaseSection
-          handling={family.inquiry}
-          tc={tc}
-          familyId={family.familyId}
-          searchParams={searchParams}
-          onInstallClick={onInstallClick}
-        />
-
-        <Divider />
-
-        {/* Chargeback */}
-        <PhaseSection
-          handling={family.chargeback}
-          tc={tc}
-          familyId={family.familyId}
-          searchParams={searchParams}
-          onInstallClick={onInstallClick}
-        />
+        {identical ? (
+          /* Both phases identical — single combined view */
+          <BlockStack gap="200">
+            <InlineStack gap="200" blockAlign="center" wrap>
+              <Badge tone="info">{tc("inquiryAndChargeback")}</Badge>
+              <Badge tone={automationBadgeTone(family.inquiry.automationMode, family.inquiry.playbooks.length > 0)}>
+                {automationModeLabel(family.inquiry.automationMode, family.inquiry.playbooks.length > 0, tc)}
+              </Badge>
+            </InlineStack>
+            {sharedNames.length > 0 && (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {sharedNames.join(", ")}
+              </Text>
+            )}
+            {family.inquiry.hasGap && (
+              <InlineStack gap="200" wrap>
+                <Text as="span" variant="bodySm" tone="critical">
+                  {tc("noPlaybook")}
+                </Text>
+                <Button
+                  size="slim"
+                  variant="plain"
+                  url={withShopParams(`/app/rules?family=${family.familyId}`, searchParams)}
+                >
+                  {tc("fixPhaseGap")}
+                </Button>
+                <Button size="slim" variant="plain" onClick={onInstallClick}>
+                  {tc("installPlaybook")}
+                </Button>
+              </InlineStack>
+            )}
+          </BlockStack>
+        ) : (
+          /* Phases differ — show separately */
+          <>
+            <PhaseSection
+              handling={family.inquiry}
+              tc={tc}
+              tPacks={tPacks}
+              familyId={family.familyId}
+              searchParams={searchParams}
+              onInstallClick={onInstallClick}
+              showPlaybookNames
+            />
+            <Divider />
+            <PhaseSection
+              handling={family.chargeback}
+              tc={tc}
+              tPacks={tPacks}
+              familyId={family.familyId}
+              searchParams={searchParams}
+              onInstallClick={onInstallClick}
+              showPlaybookNames
+            />
+          </>
+        )}
 
         <Divider />
         <InlineStack gap="200" wrap>

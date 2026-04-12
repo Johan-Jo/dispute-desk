@@ -1784,7 +1784,7 @@
     "lifecycleSubtitle": "See how inquiries and chargebacks are handled per dispute family",
     "inquiryLabel": "Inquiry",
     "chargebackLabel": "Chargeback",
-    "bothPhases": "Both phases",
+    "inquiryAndChargeback": "Inquiry & Chargeback",
     "inquiryConfigured": "{count} inquiry flows",
     "chargebackConfigured": "{count} chargeback flows",
     "fullyConfigured": "{count} fully configured",

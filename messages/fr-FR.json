@@ -2769,7 +2769,7 @@
     "lifecycleSubtitle": "Voyez comment les demandes et rétrofacturations sont traitées par famille de litige",
     "inquiryLabel": "Demande",
     "chargebackLabel": "Rétrofacturation",
-    "bothPhases": "Les deux phases",
+    "inquiryAndChargeback": "Demande & Rétrofacturation",
     "inquiryConfigured": "{count} flux de demandes",
     "chargebackConfigured": "{count} flux de rétrofacturations",
     "fullyConfigured": "{count} entièrement configurées",
