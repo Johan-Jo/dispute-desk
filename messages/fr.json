@@ -1890,6 +1890,7 @@
     "modeReviewFirst": "Vérification d'abord",
     "modeManual": "Manuel",
     "modeNone": "Non couvert",
+    "modeManualPlaybookReady": "Manuel — playbook prêt",
     "covered": "Couvert",
     "notCovered": "Non couvert",
     "recommended": "Recommandé",

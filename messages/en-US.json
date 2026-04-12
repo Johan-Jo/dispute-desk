@@ -2671,6 +2671,7 @@
     "modeReviewFirst": "Review First",
     "modeManual": "Manual",
     "modeNone": "Not Covered",
+    "modeManualPlaybookReady": "Manual — playbook ready",
     "covered": "Covered",
     "notCovered": "Not Covered",
     "recommended": "Recommended",

@@ -74,21 +74,21 @@ const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
 
 const EXPLAINER_DISMISSED_KEY = "dd_coverage_explainer_dismissed";
 
-function automationBadgeTone(mode: AutomationMode): "success" | "info" | "warning" | undefined {
+function automationBadgeTone(mode: AutomationMode, hasPlaybooks: boolean): "success" | "info" | "warning" | undefined {
   switch (mode) {
     case "automated": return "success";
     case "review_first": return "info";
     case "manual": return "warning";
-    case "none": return undefined;
+    case "none": return hasPlaybooks ? "warning" : undefined;
   }
 }
 
-function automationModeLabel(mode: AutomationMode, tc: (key: string) => string): string {
+function automationModeLabel(mode: AutomationMode, hasPlaybooks: boolean, tc: (key: string) => string): string {
   switch (mode) {
     case "automated": return tc("modeAutomated");
     case "review_first": return tc("modeReviewFirst");
     case "manual": return tc("modeManual");
-    case "none": return tc("phaseGap");
+    case "none": return hasPlaybooks ? tc("modeManualPlaybookReady") : tc("phaseGap");
   }
 }
 
@@ -425,8 +425,8 @@ function PhaseRow({
           {phaseLabel}
         </Badge>
       </div>
-      <Badge tone={automationBadgeTone(handling.automationMode)}>
-        {automationModeLabel(handling.automationMode, tc)}
+      <Badge tone={automationBadgeTone(handling.automationMode, handling.playbooks.length > 0)}>
+        {automationModeLabel(handling.automationMode, handling.playbooks.length > 0, tc)}
       </Badge>
       {handling.playbooks.length > 0 && (
         <Text as="span" variant="bodySm" tone="subdued">
