@@ -186,27 +186,35 @@ export async function GET(req: NextRequest) {
       expiresAt,
     });
 
-    cookieStore.set("shopify_shop", shop, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 60 * 60 * 24 * 30,
-      path: "/",
-    });
-
-    cookieStore.set("shopify_shop_id", shopInternalId, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 60 * 60 * 24 * 30,
-      path: "/",
-    });
-
     // Mark permissions step done for embedded installs (portal handles this above).
     await ensureShopSetup(db, shopInternalId);
 
-    const embeddedUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`;
-    return NextResponse.redirect(embeddedUrl);
+    // Redirect back into the embedded app. A server-side redirect to
+    // admin.shopify.com would be blocked by X-Frame-Options when the OAuth
+    // callback loads inside the Shopify Admin iframe. Instead, return a small
+    // HTML page that uses `window.top.location` to break out of the iframe.
+    const storeHandle = shop.replace(".myshopify.com", "");
+    const embeddedUrl = `https://admin.shopify.com/store/${storeHandle}/apps/${process.env.SHOPIFY_API_KEY}`;
+    const html = `<!DOCTYPE html><html><head><script>window.top.location.href=${JSON.stringify(embeddedUrl)};</script></head><body></body></html>`;
+    const res = new NextResponse(html, {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8" },
+    });
+    res.cookies.set("shopify_shop", shop, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
+    res.cookies.set("shopify_shop_id", shopInternalId, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
+    return res;
   } catch (err) {
     console.error("[auth/shopify/callback] Unhandled error:", err);
     const message = err instanceof Error ? err.message : String(err);
