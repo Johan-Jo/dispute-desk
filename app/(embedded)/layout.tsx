@@ -9,6 +9,7 @@ import { Providers } from "./providers";
 import { resolveLocale } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
 import { getPolarisTranslations } from "@/lib/i18n/polarisLocales";
+import { TawkToWidget } from "@/components/embedded/TawkToWidget";
 
 export default async function EmbeddedLayout({
   children,
@@ -47,6 +48,7 @@ export default async function EmbeddedLayout({
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
         {children}
       </Providers>
+      <TawkToWidget />
     </>
   );
 }

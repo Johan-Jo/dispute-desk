@@ -12,6 +12,13 @@ const GA_CONNECT_SRC = [
   "https://www.googletagmanager.com",
 ].join(" ");
 
+/** tawk.to live chat: script loader, API/websocket, widget iframe, and static assets. */
+const TAWK_SCRIPT_SRC = "https://embed.tawk.to";
+const TAWK_CONNECT_SRC = "https://*.tawk.to wss://*.tawk.to";
+const TAWK_FRAME_SRC = "https://*.tawk.to";
+const TAWK_IMG_SRC = "https://*.tawk.to";
+const TAWK_FONT_SRC = "https://*.tawk.to";
+
 /** Hub hero / cards: Supabase Storage + common stock CDNs (next/image remotePatterns). */
 const IMG_SRC_HUB =
   "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co https://images.pexels.com https://images.unsplash.com";
@@ -153,11 +160,12 @@ const nextConfig = {
           value: [
             "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
             "default-src 'self'",
-            `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC}`,
+            `frame-src 'self' ${TAWK_FRAME_SRC}`,
+            `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            IMG_SRC_HUB,
-            `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC}`,
-            "font-src 'self' https://cdn.shopify.com",
+            `${IMG_SRC_HUB} ${TAWK_IMG_SRC}`,
+            `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC}`,
+            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC}`,
           ].join("; "),
         },
       ],
