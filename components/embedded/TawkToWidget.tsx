@@ -59,7 +59,10 @@ export function TawkToWidget() {
           background: "#fff",
           border: "1px solid #E5E7EB",
           boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-          display: open ? "block" : "none",
+          visibility: open ? "visible" : "hidden",
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 200ms, visibility 200ms",
         }}
       />
 
