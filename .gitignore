@@ -37,3 +37,9 @@ next-env.d.ts
 .vercel
 .env*.local
 .screenshots/
+
+# Tool state / generated dumps
+.omc/
+.claude/worktrees/
+admin-all-code.txt
+embedded-app-all-code.txt
