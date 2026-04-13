@@ -52,6 +52,15 @@ export default async function RootLayout({
         )}
       </head>
       <body className={inter.className}>{children}</body>
+      {!loadAppBridge && (
+        <Script
+          id="tawk-to"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `var Tawk_API=Tawk_API||{},Tawk_LoadStart=new Date();(function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src="https://embed.tawk.to/69dc1d426161b11c33210737/1jm1t4isv";s1.charset="UTF-8";s1.setAttribute("crossorigin","*");s0.parentNode.insertBefore(s1,s0)})();`,
+          }}
+        />
+      )}
       <Script
         id="ga-consent-bootstrap"
         strategy="beforeInteractive"
