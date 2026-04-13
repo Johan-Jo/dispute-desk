@@ -64,7 +64,10 @@
     "upgradeRequired": "Uppgradering krävs",
     "dismiss": "Stäng",
     "demoNotice": "You're viewing sample data. Connect your Shopify store to manage real data.",
-    "connectStoreCTA": "Connect store"
+    "connectStoreCTA": "Connect store",
+    "minutesAgo": "{n}m sedan",
+    "hoursAgo": "{n}t sedan",
+    "daysAgo": "{n}d sedan"
   },
   "consent": {
     "ariaLabel": "Inställningar för cookies och integritet",
@@ -408,7 +411,23 @@
     "csvFamily": "Kategori",
     "csvPhase": "Fas",
     "csvStatus": "Status",
-    "csvDueDate": "Förfallodatum"
+    "csvDueDate": "Förfallodatum",
+    "csvNormalizedStatus": "Normaliserad status",
+    "csvSubmissionState": "Inlämningsstatus",
+    "csvSubmittedAt": "Inskickad",
+    "csvClosedAt": "Stängd",
+    "csvOutcome": "Slutresultat",
+    "csvRecovered": "Återvunnet belopp",
+    "csvLost": "Förlorat belopp",
+    "csvLastEvent": "Senaste händelse",
+    "tabActive": "Aktiva",
+    "tabClosed": "Stängda",
+    "tabAll": "Alla",
+    "filterNormalizedStatus": "Status",
+    "filterOutcome": "Resultat",
+    "columnOutcome": "Resultat",
+    "columnClosedAt": "Stängd",
+    "columnLastEvent": "Senaste händelse"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
@@ -632,7 +651,14 @@
     "avgResponseTime": "Genomsnittlig svarstid",
     "winRateTrend": "Trend för vinstfrekvens",
     "byReason": "Tvister per anledning",
-    "noData": "Inga data för denna period."
+    "noData": "Inga data för denna period.",
+    "activeDisputes": "Aktiva tvister",
+    "amountRecovered": "Återvunnet belopp",
+    "amountLost": "Förlorat belopp",
+    "avgTimeToSubmit": "Snitt tid till inlämning",
+    "avgTimeToClose": "Snitt tid till stängning",
+    "outcomeBreakdown": "Resultatfördelning",
+    "statusDistribution": "Statusfördelning"
   },
   "billing": {
     "title": "Fakturering",

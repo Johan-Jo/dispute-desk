@@ -52,7 +52,17 @@ interface Dispute {
   due_at: string | null;
   needs_review: boolean;
   last_synced_at: string | null;
+  normalized_status?: string | null;
+  submission_state?: string | null;
+  final_outcome?: string | null;
+  closed_at?: string | null;
+  submitted_at?: string | null;
+  outcome_amount_recovered?: number | null;
+  outcome_amount_lost?: number | null;
+  last_event_at?: string | null;
 }
+
+type TabId = "active" | "closed" | "all";
 
 interface DisputesResponse {
   disputes: Dispute[];
@@ -66,6 +76,28 @@ interface DisputesResponse {
 
 function isSyntheticDispute(disputeGid: string): boolean {
   return disputeGid?.includes("/seed-") ?? false;
+}
+
+const NORMALIZED_STATUS_TONE: Record<string, "success" | "critical" | "warning" | "info" | "attention" | undefined> = {
+  won: "success", lost: "critical", new: "info", in_progress: "info",
+  needs_review: "attention", ready_to_submit: "attention", action_needed: "warning",
+  submitted: "info", waiting_on_issuer: "info", accepted_not_contested: "success", closed_other: "success",
+};
+
+const OUTCOME_TONE: Record<string, "success" | "critical" | "warning" | undefined> = {
+  won: "success", lost: "critical", refunded: "warning", accepted: "warning",
+  partially_won: "success", canceled: undefined, expired: undefined,
+};
+
+function relativeTime(iso: string | null, t: (key: string) => string): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return t("common.minutesAgo").replace("{n}", String(Math.max(1, mins)));
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return t("common.hoursAgo").replace("{n}", String(hours));
+  const days = Math.floor(hours / 24);
+  return t("common.daysAgo").replace("{n}", String(days));
 }
 
 function translateReason(reason: string | null, t: (key: string) => string): string {
@@ -163,6 +195,9 @@ export default function DisputesListPage() {
   const [syncing, setSyncing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [phaseFilter, setPhaseFilter] = useState<string[]>([]);
+  const [normalizedStatusFilter, setNormalizedStatusFilter] = useState<string[]>([]);
+  const [outcomeFilter, setOutcomeFilter] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<TabId>("active");
   const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -205,6 +240,17 @@ export default function DisputesListPage() {
         params.set("status", statusFilter.join(","));
       if (phaseFilter.length === 1)
         params.set("phase", phaseFilter[0]);
+      if (normalizedStatusFilter.length > 0)
+        params.set("normalized_status", normalizedStatusFilter.join(","));
+      if (outcomeFilter.length > 0)
+        params.set("final_outcome", outcomeFilter.join(","));
+      if (activeTab === "active") {
+        params.set("closed", "false");
+      } else if (activeTab === "closed") {
+        params.set("closed", "true");
+        params.set("sort", "closed_at");
+        params.set("sort_dir", "desc");
+      }
       const res = await fetch(`/api/disputes?${params}`);
       const json: DisputesResponse = await res.json();
       setDisputes(json.disputes ?? []);
@@ -212,7 +258,7 @@ export default function DisputesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, phaseFilter]);
+  }, [page, statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, activeTab]);
 
   useEffect(() => {
     fetchDisputes();
@@ -298,23 +344,36 @@ export default function DisputesListPage() {
     : disputes;
 
   const exportCsv = () => {
+    const esc = (v: string) => v.includes(",") ? `"${v}"` : v;
     const rows = visibleDisputes.map((d) =>
       [
-        orderLabel(d),
+        esc(orderLabel(d)),
         formatShortId(d.id),
-        d.customer_display_name ?? "",
+        esc(d.customer_display_name ?? ""),
         formatCurrency(d.amount, d.currency_code, numberLocale),
-        translateReason(d.reason, t),
-        translateFamily(d.reason, t),
+        esc(translateReason(d.reason, t)),
+        esc(translateFamily(d.reason, t)),
         d.phase ?? "",
         statusLabelForCsv(d.status),
+        d.normalized_status ?? "",
+        d.submission_state ?? "",
         formatDueDate(d.due_at),
+        formatDueDate(d.submitted_at ?? null),
+        formatDueDate(d.closed_at ?? null),
+        d.final_outcome ?? "",
+        d.outcome_amount_recovered != null ? String(d.outcome_amount_recovered) : "",
+        d.outcome_amount_lost != null ? String(d.outcome_amount_lost) : "",
+        formatDueDate(d.last_event_at ?? null),
       ].join(","),
     );
     const csvHeader = [
       t("disputes.csvOrder"), t("disputes.csvId"), t("disputes.csvCustomer"),
       t("disputes.csvAmount"), t("disputes.csvReason"), t("disputes.csvFamily"),
-      t("disputes.csvPhase"), t("disputes.csvStatus"), t("disputes.csvDueDate"),
+      t("disputes.csvPhase"), t("disputes.csvStatus"),
+      t("disputes.csvNormalizedStatus"), t("disputes.csvSubmissionState"),
+      t("disputes.csvDueDate"), t("disputes.csvSubmittedAt"), t("disputes.csvClosedAt"),
+      t("disputes.csvOutcome"), t("disputes.csvRecovered"), t("disputes.csvLost"),
+      t("disputes.csvLastEvent"),
     ].join(",");
     const csv = [csvHeader, ...rows].join("\n");
     const a = document.createElement("a");
@@ -423,6 +482,20 @@ export default function DisputesListPage() {
               </Banner>
             )}
 
+            {/* Tabs: Active / Closed / All */}
+            <InlineStack gap="200">
+              {(["active", "closed", "all"] as const).map((tab) => (
+                <Button
+                  key={tab}
+                  pressed={activeTab === tab}
+                  onClick={() => { setActiveTab(tab); setPage(1); }}
+                  size="slim"
+                >
+                  {t(`disputes.tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)}
+                </Button>
+              ))}
+            </InlineStack>
+
             {/* Actions bar */}
             <Card>
               <InlineStack gap="300" align="start" blockAlign="center" wrap={false}>
@@ -451,7 +524,7 @@ export default function DisputesListPage() {
                   onClose={() => setFilterPopoverActive(false)}
                   autofocusTarget="none"
                 >
-                  <Box padding="400" minWidth="240px">
+                  <Box padding="400" minWidth="280px">
                     <BlockStack gap="400">
                       <ChoiceList
                         title={t("disputes.phaseLabel")}
@@ -467,20 +540,44 @@ export default function DisputesListPage() {
                         allowMultiple
                       />
                       <ChoiceList
-                        title={t("table.status")}
+                        title={t("disputes.filterNormalizedStatus")}
                         choices={[
-                          { label: t("status.needsResponse"), value: "needs_response" },
-                          { label: t("status.underReview"), value: "under_review" },
-                          { label: t("status.won"), value: "won" },
-                          { label: t("status.lost"), value: "lost" },
+                          { label: t("disputeTimeline.normalizedStatuses.new"), value: "new" },
+                          { label: t("disputeTimeline.normalizedStatuses.in_progress"), value: "in_progress" },
+                          { label: t("disputeTimeline.normalizedStatuses.needs_review"), value: "needs_review" },
+                          { label: t("disputeTimeline.normalizedStatuses.ready_to_submit"), value: "ready_to_submit" },
+                          { label: t("disputeTimeline.normalizedStatuses.action_needed"), value: "action_needed" },
+                          { label: t("disputeTimeline.normalizedStatuses.submitted"), value: "submitted" },
+                          { label: t("disputeTimeline.normalizedStatuses.waiting_on_issuer"), value: "waiting_on_issuer" },
+                          { label: t("disputeTimeline.normalizedStatuses.won"), value: "won" },
+                          { label: t("disputeTimeline.normalizedStatuses.lost"), value: "lost" },
                         ]}
-                        selected={statusFilter}
+                        selected={normalizedStatusFilter}
                         onChange={(v) => {
-                          setStatusFilter(v);
+                          setNormalizedStatusFilter(v);
                           setPage(1);
                         }}
                         allowMultiple
                       />
+                      {activeTab === "closed" && (
+                        <ChoiceList
+                          title={t("disputes.filterOutcome")}
+                          choices={[
+                            { label: t("disputeTimeline.outcomes.won"), value: "won" },
+                            { label: t("disputeTimeline.outcomes.lost"), value: "lost" },
+                            { label: t("disputeTimeline.outcomes.refunded"), value: "refunded" },
+                            { label: t("disputeTimeline.outcomes.accepted"), value: "accepted" },
+                            { label: t("disputeTimeline.outcomes.canceled"), value: "canceled" },
+                            { label: t("disputeTimeline.outcomes.expired"), value: "expired" },
+                          ]}
+                          selected={outcomeFilter}
+                          onChange={(v) => {
+                            setOutcomeFilter(v);
+                            setPage(1);
+                          }}
+                          allowMultiple
+                        />
+                      )}
                     </BlockStack>
                   </Box>
                 </Popover>
@@ -516,7 +613,17 @@ export default function DisputesListPage() {
                         <th>{t("table.reason")}</th>
                         <th>{t("table.amount")}</th>
                         <th>{t("table.status")}</th>
-                        <th>{t("table.urgency")}</th>
+                        {activeTab === "closed" ? (
+                          <>
+                            <th>{t("disputes.columnOutcome")}</th>
+                            <th>{t("disputes.columnClosedAt")}</th>
+                          </>
+                        ) : (
+                          <>
+                            <th>{t("table.urgency")}</th>
+                            <th>{t("disputes.columnLastEvent")}</th>
+                          </>
+                        )}
                         <th>{t("table.actions")}</th>
                       </tr>
                     </thead>
@@ -525,6 +632,7 @@ export default function DisputesListPage() {
                         const label = orderLabel(d);
                         const detailHref = withShopParams(`/app/disputes/${d.id}`, searchParams);
                         const urgency = getUrgency(d);
+                        const ns = d.normalized_status;
                         return (
                           <tr key={d.id}>
                             {/* Phase */}
@@ -555,16 +663,47 @@ export default function DisputesListPage() {
                                 {formatCurrency(d.amount, d.currency_code, numberLocale)}
                               </span>
                             </td>
-                            {/* Status */}
+                            {/* Normalized Status */}
                             <td>
-                              <Badge tone={badgeTone(d.status)}>
-                                {badgeLabel(d.status)}
+                              <Badge tone={ns ? NORMALIZED_STATUS_TONE[ns] : badgeTone(d.status)}>
+                                {ns
+                                  ? t(`disputeTimeline.normalizedStatuses.${ns}`)
+                                  : badgeLabel(d.status)}
                               </Badge>
                             </td>
-                            {/* Urgency */}
-                            <td>
-                              <Badge tone={urgency.tone}>{urgency.label}</Badge>
-                            </td>
+                            {activeTab === "closed" ? (
+                              <>
+                                {/* Final Outcome */}
+                                <td>
+                                  {d.final_outcome ? (
+                                    <Badge tone={OUTCOME_TONE[d.final_outcome]}>
+                                      {t(`disputeTimeline.outcomes.${d.final_outcome}`)}
+                                    </Badge>
+                                  ) : (
+                                    <span className={styles.cellMuted}>—</span>
+                                  )}
+                                </td>
+                                {/* Closed At */}
+                                <td>
+                                  <span className={styles.cellMuted}>
+                                    {formatDueDate(d.closed_at ?? null)}
+                                  </span>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                {/* Urgency */}
+                                <td>
+                                  <Badge tone={urgency.tone}>{urgency.label}</Badge>
+                                </td>
+                                {/* Last Event */}
+                                <td>
+                                  <span className={styles.cellMuted}>
+                                    {relativeTime(d.last_event_at ?? null, t)}
+                                  </span>
+                                </td>
+                              </>
+                            )}
                             {/* Actions */}
                             <td>
                               <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>

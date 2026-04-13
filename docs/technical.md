@@ -694,7 +694,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 Shop context is provided by either (1) Shopify session cookies (embedded app) or (2) Supabase Auth + active_shop (portal) for the routes listed under "Portal API prefixes" above.
 
-- `GET /api/disputes` — list disputes (portal: pass `shop_id` query; embedded: shop from cookies). Optional `?phase=inquiry|chargeback` filter.
+- `GET /api/disputes` — list disputes. Supports: `shop_id`, `status`, `phase`, `needs_review`, `due_before`, `normalized_status`, `final_outcome`, `submission_state`, `closed` (true/false), `date_field` (initiated_at|submitted_at|closed_at), `date_from`, `date_to`, `amount_min`, `amount_max`, `sort` (due_at|initiated_at|closed_at|submitted_at|amount), `sort_dir` (asc|desc), `page`, `per_page`.
 - `GET /api/disputes/:id` — single dispute. Response includes `family` (from `DISPUTE_REASON_FAMILIES`) and `handling_mode` (`automated`|`review`|`manual`).
 - `POST /api/disputes/sync` — run sync for shop (portal: body `{ shop_id }`; runs synchronously, not job)
 - `POST /api/disputes/:id/sync` — re-sync one dispute

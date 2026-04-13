@@ -59,7 +59,10 @@
     "today": "Aujourd'hui",
     "remaining": "{count} restant(s)",
     "daysRemaining": "{count}j",
-    "upgradeRequired": "Mise à niveau requise"
+    "upgradeRequired": "Mise à niveau requise",
+    "minutesAgo": "il y a {n}m",
+    "hoursAgo": "il y a {n}h",
+    "daysAgo": "il y a {n}j"
   },
   "status": {
     "needsResponse": "Réponse requise",
@@ -374,7 +377,23 @@
     "csvFamily": "Famille",
     "csvPhase": "Phase",
     "csvStatus": "Statut",
-    "csvDueDate": "Date limite"
+    "csvDueDate": "Date limite",
+    "csvNormalizedStatus": "Statut Normalisé",
+    "csvSubmissionState": "État de Soumission",
+    "csvSubmittedAt": "Soumis le",
+    "csvClosedAt": "Clôturé le",
+    "csvOutcome": "Résultat Final",
+    "csvRecovered": "Montant Récupéré",
+    "csvLost": "Montant Perdu",
+    "csvLastEvent": "Dernier Événement",
+    "tabActive": "Actifs",
+    "tabClosed": "Clôturés",
+    "tabAll": "Tous",
+    "filterNormalizedStatus": "Statut",
+    "filterOutcome": "Résultat",
+    "columnOutcome": "Résultat",
+    "columnClosedAt": "Clôturé",
+    "columnLastEvent": "Dernier Événement"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
@@ -598,7 +617,14 @@
     "avgResponseTime": "Temps de réponse moy.",
     "winRateTrend": "Tendance du taux de succès",
     "byReason": "Litiges par motif",
-    "noData": "Aucune donnée pour cette période."
+    "noData": "Aucune donnée pour cette période.",
+    "activeDisputes": "Litiges Actifs",
+    "amountRecovered": "Montant Récupéré",
+    "amountLost": "Montant Perdu",
+    "avgTimeToSubmit": "Temps Moyen de Soumission",
+    "avgTimeToClose": "Temps Moyen de Clôture",
+    "outcomeBreakdown": "Répartition des Résultats",
+    "statusDistribution": "Répartition des Statuts"
   },
   "billing": {
     "title": "Facturation",

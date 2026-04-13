@@ -63,7 +63,10 @@
     "daysRemaining": "{count}T",
     "upgradeRequired": "Upgrade erforderlich",
     "demoNotice": "You're viewing sample data. Connect your Shopify store to manage real data.",
-    "connectStoreCTA": "Connect store"
+    "connectStoreCTA": "Connect store",
+    "minutesAgo": "vor {n}m",
+    "hoursAgo": "vor {n}h",
+    "daysAgo": "vor {n}T"
   },
   "consent": {
     "ariaLabel": "Cookie- und Datenschutzeinstellungen",
@@ -407,7 +410,23 @@
     "csvFamily": "Kategorie",
     "csvPhase": "Phase",
     "csvStatus": "Status",
-    "csvDueDate": "Fälligkeitsdatum"
+    "csvDueDate": "Fälligkeitsdatum",
+    "csvNormalizedStatus": "Normalisierter Status",
+    "csvSubmissionState": "Einreichungsstatus",
+    "csvSubmittedAt": "Eingereicht am",
+    "csvClosedAt": "Geschlossen am",
+    "csvOutcome": "Endergebnis",
+    "csvRecovered": "Zurückgewonnen",
+    "csvLost": "Verloren",
+    "csvLastEvent": "Letztes Ereignis",
+    "tabActive": "Aktiv",
+    "tabClosed": "Geschlossen",
+    "tabAll": "Alle",
+    "filterNormalizedStatus": "Status",
+    "filterOutcome": "Ergebnis",
+    "columnOutcome": "Ergebnis",
+    "columnClosedAt": "Geschlossen",
+    "columnLastEvent": "Letztes Ereignis"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
@@ -631,7 +650,14 @@
     "avgResponseTime": "Ø Antwortzeit",
     "winRateTrend": "Trend der Erfolgsquote",
     "byReason": "Streitfälle nach Grund",
-    "noData": "Keine Daten für diesen Zeitraum."
+    "noData": "Keine Daten für diesen Zeitraum.",
+    "activeDisputes": "Aktive Dispute",
+    "amountRecovered": "Zurückgewonnener Betrag",
+    "amountLost": "Verlorener Betrag",
+    "avgTimeToSubmit": "Durchschn. Zeit bis Einreichung",
+    "avgTimeToClose": "Durchschn. Zeit bis Abschluss",
+    "outcomeBreakdown": "Ergebnisverteilung",
+    "statusDistribution": "Statusverteilung"
   },
   "billing": {
     "title": "Abrechnung",

@@ -1,10 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const sb = getServiceClient();
+
+  // Period for dispute metrics
+  const period = req.nextUrl.searchParams.get("period") ?? "30d";
+  const periodMs =
+    period === "24h" ? 86400000
+    : period === "7d" ? 604800000
+    : period === "30d" ? 2592000000
+    : 0;
+  const periodFrom = periodMs > 0
+    ? new Date(Date.now() - periodMs).toISOString()
+    : undefined;
 
   const [shops, disputes, packs, jobs, templateRows, mappingRows] = await Promise.all([
     sb.from("shops").select("id, plan, uninstalled_at"),
@@ -52,6 +64,9 @@ export async function GET() {
     unmapped: mList.filter((m) => m.template_id == null).length,
   };
 
+  // Cross-shop dispute metrics (no shopId = admin view)
+  const disputeMetrics = await computeDisputeMetrics({ periodFrom });
+
   return NextResponse.json({
     shops: { total: shopList.length, active, uninstalled },
     disputes: disputes.count ?? 0,
@@ -60,5 +75,6 @@ export async function GET() {
     plans,
     templates: { total: tplList.length, ...tplByStatus },
     reasonMappings: mappingStats,
+    disputeMetrics,
   });
 }

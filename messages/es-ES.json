@@ -63,7 +63,10 @@
     "daysRemaining": "{count}d",
     "upgradeRequired": "Actualización requerida",
     "demoNotice": "You're viewing sample data. Connect your Shopify store to manage real data.",
-    "connectStoreCTA": "Connect store"
+    "connectStoreCTA": "Connect store",
+    "minutesAgo": "hace {n}m",
+    "hoursAgo": "hace {n}h",
+    "daysAgo": "hace {n}d"
   },
   "consent": {
     "ariaLabel": "Opciones de cookies y privacidad",
@@ -407,7 +410,23 @@
     "csvFamily": "Familia",
     "csvPhase": "Fase",
     "csvStatus": "Estado",
-    "csvDueDate": "Fecha límite"
+    "csvDueDate": "Fecha límite",
+    "csvNormalizedStatus": "Estado Normalizado",
+    "csvSubmissionState": "Estado de Envío",
+    "csvSubmittedAt": "Enviado el",
+    "csvClosedAt": "Cerrado el",
+    "csvOutcome": "Resultado Final",
+    "csvRecovered": "Monto Recuperado",
+    "csvLost": "Monto Perdido",
+    "csvLastEvent": "Último Evento",
+    "tabActive": "Activos",
+    "tabClosed": "Cerrados",
+    "tabAll": "Todos",
+    "filterNormalizedStatus": "Estado",
+    "filterOutcome": "Resultado",
+    "columnOutcome": "Resultado",
+    "columnClosedAt": "Cerrado",
+    "columnLastEvent": "Último Evento"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",
@@ -631,7 +650,14 @@
     "avgResponseTime": "Tiempo de respuesta prom.",
     "winRateTrend": "Tendencia de tasa de éxito",
     "byReason": "Disputas por motivo",
-    "noData": "Sin datos para este período."
+    "noData": "Sin datos para este período.",
+    "activeDisputes": "Disputas Activas",
+    "amountRecovered": "Monto Recuperado",
+    "amountLost": "Monto Perdido",
+    "avgTimeToSubmit": "Tiempo Promedio de Envío",
+    "avgTimeToClose": "Tiempo Promedio de Cierre",
+    "outcomeBreakdown": "Desglose de Resultados",
+    "statusDistribution": "Distribución de Estado"
   },
   "billing": {
     "title": "Facturación",

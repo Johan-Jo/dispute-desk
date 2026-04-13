@@ -26,6 +26,18 @@ import { useTranslations } from "next-intl";
 
 type PeriodKey = "24h" | "7d" | "30d" | "all";
 
+function fmtCurrency(amount: number, code?: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: code ?? "USD",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `$${amount}`;
+  }
+}
+
 interface AnalyticsData {
   totalDisputes: number;
   winRate: number;
@@ -33,6 +45,18 @@ interface AnalyticsData {
   avgResponseTime: string;
   winRateTrend: number[];
   disputeCategories: { label: string; value: number }[];
+  // Phase 2 fields
+  amountRecovered?: number;
+  amountLost?: number;
+  recoveryRate?: number;
+  avgTimeToSubmit?: number | null;
+  avgTimeToClose?: number | null;
+  currencyCode?: string;
+  statusBreakdown?: Record<string, number>;
+  outcomeBreakdown?: Record<string, number>;
+  activeDisputes?: number;
+  disputesWon?: number;
+  disputesLost?: number;
 }
 
 const DEFAULT_DATA: AnalyticsData = {
@@ -95,28 +119,48 @@ function AnalyticsContent({
               </BlockStack>
             ) : (
               <InlineStack gap="400" wrap>
-                <Box minWidth="140px">
+                <Box minWidth="130px">
                   <BlockStack gap="100">
-                    <Text as="p" variant="bodySm" tone="subdued">{t("totalDisputes")}</Text>
-                    <Text as="p" variant="headingXl">{d.totalDisputes}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{t("activeDisputes")}</Text>
+                    <Text as="p" variant="headingXl">{d.activeDisputes ?? d.totalDisputes}</Text>
                   </BlockStack>
                 </Box>
-                <Box minWidth="140px">
+                <Box minWidth="130px">
                   <BlockStack gap="100">
                     <Text as="p" variant="bodySm" tone="subdued">{t("winRate")}</Text>
                     <Text as="p" variant="headingXl">{d.winRate}%</Text>
                   </BlockStack>
                 </Box>
-                <Box minWidth="140px">
+                <Box minWidth="130px">
                   <BlockStack gap="100">
-                    <Text as="p" variant="bodySm" tone="subdued">{t("revenueRecovered")}</Text>
-                    <Text as="p" variant="headingXl">{d.revenueRecovered}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{t("amountRecovered")}</Text>
+                    <Text as="p" variant="headingXl" tone="success">
+                      {fmtCurrency(d.amountRecovered ?? 0, d.currencyCode)}
+                    </Text>
                   </BlockStack>
                 </Box>
-                <Box minWidth="140px">
+                <Box minWidth="130px">
                   <BlockStack gap="100">
-                    <Text as="p" variant="bodySm" tone="subdued">{t("avgResponseTime")}</Text>
-                    <Text as="p" variant="headingXl">{d.avgResponseTime}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{t("amountLost")}</Text>
+                    <Text as="p" variant="headingXl" tone="critical">
+                      {fmtCurrency(d.amountLost ?? 0, d.currencyCode)}
+                    </Text>
+                  </BlockStack>
+                </Box>
+                <Box minWidth="130px">
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodySm" tone="subdued">{t("avgTimeToSubmit")}</Text>
+                    <Text as="p" variant="headingXl">
+                      {d.avgTimeToSubmit != null ? `${d.avgTimeToSubmit}d` : "—"}
+                    </Text>
+                  </BlockStack>
+                </Box>
+                <Box minWidth="130px">
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodySm" tone="subdued">{t("avgTimeToClose")}</Text>
+                    <Text as="p" variant="headingXl">
+                      {d.avgTimeToClose != null ? `${d.avgTimeToClose}d` : "—"}
+                    </Text>
                   </BlockStack>
                 </Box>
               </InlineStack>
@@ -178,6 +222,31 @@ function AnalyticsContent({
           </BlockStack>
         </Card>
       </Layout.Section>
+
+      {/* Outcome Breakdown */}
+      {!loading && d.outcomeBreakdown && Object.keys(d.outcomeBreakdown).length > 0 && (
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingMd">{t("outcomeBreakdown")}</Text>
+              <InlineStack gap="400" wrap>
+                {Object.entries(d.outcomeBreakdown)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([outcome, count]) => (
+                    <Box key={outcome} minWidth="120px">
+                      <BlockStack gap="100">
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {outcome.charAt(0).toUpperCase() + outcome.slice(1).replace(/_/g, " ")}
+                        </Text>
+                        <Text as="p" variant="headingLg">{count}</Text>
+                      </BlockStack>
+                    </Box>
+                  ))}
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+      )}
     </>
   );
 }

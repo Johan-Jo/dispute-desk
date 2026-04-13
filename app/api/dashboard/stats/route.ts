@@ -1,40 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 
 export const runtime = "nodejs";
 
 type PeriodKey = "24h" | "7d" | "30d" | "all";
 
-const ACTIVE_STATUSES = [
-  "needs_response",
-  "under_review",
-  "building",
-  "blocked",
-  "ready",
-  "saved_to_shopify",
-];
-
-function sinceDate(period: PeriodKey): Date | null {
-  if (period === "all") return null;
-  const now = new Date();
+function sinceDate(period: PeriodKey): string | undefined {
+  if (period === "all") return undefined;
   const ms =
     period === "24h"
       ? 24 * 60 * 60 * 1000
       : period === "7d"
         ? 7 * 24 * 60 * 60 * 1000
         : 30 * 24 * 60 * 60 * 1000;
-  return new Date(now.getTime() - ms);
+  return new Date(Date.now() - ms).toISOString();
 }
 
 /**
  * GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all
  *
- * Returns KPIs matching the portal dashboard:
- *   activeDisputes, winRate, packCount, amountAtRisk
- * Plus legacy / chart fields:
- *   totalDisputes, revenueRecovered, avgResponseTime,
- *   winRateTrend, disputeCategories
- * And period-over-period change values for the 4 main KPIs.
+ * Returns KPIs via the shared metrics layer plus legacy chart fields.
  */
 export async function GET(req: NextRequest) {
   const shopId = req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
@@ -43,98 +29,32 @@ export async function GET(req: NextRequest) {
   }
 
   const period = (req.nextUrl.searchParams.get("period") ?? "30d") as PeriodKey;
-  const since = sinceDate(period);
+  const periodFrom = sinceDate(period);
 
+  // ── Shared metrics ────────────────────────────────────────────────────
+  const m = await computeDisputeMetrics({ shopId, periodFrom });
+
+  // ── Evidence packs count ──────────────────────────────────────────────
   const sb = getServiceClient();
-
-  // ── Current period disputes ──────────────────────────────────────────────
-  let query = sb
-    .from("disputes")
-    .select("id, status, amount, currency_code, created_at, due_at, reason, phase, needs_review")
-    .eq("shop_id", shopId);
-  if (since) query = query.gte("created_at", since.toISOString());
-  const { data: disputes, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const list = disputes ?? [];
-
-  // ── Previous period disputes (for % change) ──────────────────────────────
-  let prevActiveCount: number | null = null;
-  let prevWinRate: number | null = null;
-  let prevAmountAtRisk: number | null = null;
-
-  if (since) {
-    const periodMs = Date.now() - since.getTime();
-    const prevSince = new Date(since.getTime() - periodMs);
-    const { data: prevDisputes } = await sb
-      .from("disputes")
-      .select("id, status, amount")
-      .eq("shop_id", shopId)
-      .gte("created_at", prevSince.toISOString())
-      .lt("created_at", since.toISOString());
-
-    const prev = prevDisputes ?? [];
-    const prevActive = prev.filter((d) => ACTIVE_STATUSES.includes(d.status ?? ""));
-    prevActiveCount = prevActive.length;
-    prevAmountAtRisk = prevActive.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-    const prevWon = prev.filter((d) => d.status === "won").length;
-    const prevLost = prev.filter((d) => d.status === "lost").length;
-    const prevResolved = prevWon + prevLost;
-    prevWinRate = prevResolved > 0 ? Math.round((prevWon / prevResolved) * 100) : null;
-  }
-
-  // ── Evidence packs ───────────────────────────────────────────────────────
   const { count: packCount } = await sb
     .from("evidence_packs")
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId);
 
-  // ── Compute current KPIs ─────────────────────────────────────────────────
-  const active = list.filter((d) => ACTIVE_STATUSES.includes(d.status ?? ""));
-  const activeDisputes = active.length;
-  const amountAtRisk = active.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+  // ── Legacy chart fields (backward compat) ─────────────────────────────
+  const since = periodFrom ? new Date(periodFrom) : new Date(0);
+  let legacyQuery = sb
+    .from("disputes")
+    .select("id, status, amount, created_at, due_at, reason")
+    .eq("shop_id", shopId);
+  if (periodFrom) legacyQuery = legacyQuery.gte("created_at", periodFrom);
+  const { data: legacyDisputes } = await legacyQuery;
+  const legacyList = legacyDisputes ?? [];
 
-  // Lifecycle phase counts (active disputes only)
-  // Unknown phase counts toward chargeback (safer default — matches app behavior)
-  const inquiryCount = active.filter((d) => d.phase === "inquiry").length;
-  const chargebackCount = active.filter((d) => d.phase !== "inquiry").length;
-  const unknownPhaseCount = active.filter(
-    (d) => d.phase !== "inquiry" && d.phase !== "chargeback",
-  ).length;
+  const totalDisputes = legacyList.length;
+  const revenueRecovered = m.amountRecovered > 0 ? `$${m.amountRecovered.toFixed(0)}` : "$0";
 
-  // Needs-attention: needs_review or deadline within 48h
-  const now = Date.now();
-  const needsAttentionCount = active.filter((d) => {
-    if (d.needs_review) return true;
-    if (d.due_at) {
-      const hoursLeft = (new Date(d.due_at).getTime() - now) / (1000 * 60 * 60);
-      if (hoursLeft <= 48 && hoursLeft >= 0) return true;
-    }
-    return false;
-  }).length;
-
-  const won = list.filter((d) => d.status === "won");
-  const lost = list.filter((d) => d.status === "lost");
-  const resolved = won.length + lost.length;
-  const winRate = resolved > 0 ? Math.round((won.length / resolved) * 100) : 0;
-
-  // ── Period-over-period changes (percentage points / count diff) ──────────
-  function pctChange(curr: number, prev: number | null): number | null {
-    if (prev === null) return null;
-    if (prev === 0) return curr > 0 ? 100 : 0;
-    return Math.round(((curr - prev) / prev) * 100);
-  }
-
-  const activeDisputesChange = pctChange(activeDisputes, prevActiveCount);
-  const winRateChange = prevWinRate !== null ? winRate - prevWinRate : null; // pp change
-  const amountAtRiskChange = pctChange(amountAtRisk, prevAmountAtRisk);
-
-  // ── Legacy fields (still used by chart components) ───────────────────────
-  const totalDisputes = list.length;
-  const revenueRecovered = won.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-  const revenueFormatted = revenueRecovered > 0 ? `$${revenueRecovered.toFixed(0)}` : "$0";
-
-  const responded = list.filter((d) => d.due_at && d.created_at);
+  const responded = legacyList.filter((d) => d.due_at && d.created_at);
   const avgResponseMs =
     responded.length > 0
       ? responded.reduce((s, d) => {
@@ -147,7 +67,7 @@ export async function GET(req: NextRequest) {
   const avgResponseTime = avgResponseDays >= 1 ? `${avgResponseDays.toFixed(1)}d` : "<1d";
 
   const reasonCounts: Record<string, number> = {};
-  for (const d of list) {
+  for (const d of legacyList) {
     const r = d.reason ?? "UNKNOWN";
     reasonCounts[r] = (reasonCounts[r] ?? 0) + 1;
   }
@@ -159,15 +79,14 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  const rangeStart = since ?? new Date(0);
   const rangeEnd = new Date();
-  const rangeMs = rangeEnd.getTime() - rangeStart.getTime();
+  const rangeMs = rangeEnd.getTime() - since.getTime();
   const winRateTrend: number[] = [];
   for (let i = 0; i < 6; i++) {
-    const bStart = new Date(rangeStart.getTime() + (i * rangeMs) / 6);
-    const bEnd = new Date(rangeStart.getTime() + ((i + 1) * rangeMs) / 6);
-    const subset = list.filter(
-      (d) => new Date(d.created_at) >= bStart && new Date(d.created_at) < bEnd
+    const bStart = new Date(since.getTime() + (i * rangeMs) / 6);
+    const bEnd = new Date(since.getTime() + ((i + 1) * rangeMs) / 6);
+    const subset = legacyList.filter(
+      (d) => new Date(d.created_at) >= bStart && new Date(d.created_at) < bEnd,
     );
     const w = subset.filter((d) => d.status === "won").length;
     const l = subset.filter((d) => d.status === "lost").length;
@@ -175,34 +94,14 @@ export async function GET(req: NextRequest) {
     winRateTrend.push(r > 0 ? Math.round((w / r) * 100) : 0);
   }
 
-  // Derive the shop's primary currency from disputes
-  const currencyCounts: Record<string, number> = {};
-  for (const d of list) {
-    const c = d.currency_code ?? "USD";
-    currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
-  }
-  const currencyCode = Object.entries(currencyCounts)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
-
   return NextResponse.json({
-    // ── Portal-matching KPIs ──
-    activeDisputes,
-    winRate,
+    // ── Shared metrics (new) ──
+    ...m,
     packCount: packCount ?? 0,
-    amountAtRisk,
-    currencyCode,
-    // ── Lifecycle phase counts (active disputes only) ──
-    inquiryCount,
-    chargebackCount,
-    unknownPhaseCount,
-    needsAttentionCount,
-    // ── Period-over-period changes (null when comparison not available) ──
-    activeDisputesChange,
-    winRateChange,
-    amountAtRiskChange,
-    // ── Legacy fields ──
+
+    // ── Legacy fields (backward compat) ──
     totalDisputes,
-    revenueRecovered: revenueFormatted,
+    revenueRecovered,
     avgResponseTime,
     winRateTrend,
     disputeCategories,
