@@ -841,7 +841,7 @@ export default function DisputeDetailPage() {
 
         {/* Dispute History & Timeline */}
         <Layout.Section>
-          <DisputeTimeline disputeId={id as string} />
+          <DisputeTimeline disputeId={id as string} orderEvents={profile?.orderEvents ?? []} />
         </Layout.Section>
 
         {/* Evidence Packs */}

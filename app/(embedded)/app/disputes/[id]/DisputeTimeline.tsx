@@ -103,9 +103,20 @@ function formatAmount(amount: number | null, currency: string | null): string {
   }
 }
 
+interface OrderEvent {
+  id: string;
+  createdAt: string;
+  message: string;
+  appTitle: string | null;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').trim();
+}
+
 // ─── Component ──────────────────────────────────────────────────────────
 
-export default function DisputeTimeline({ disputeId }: { disputeId: string }) {
+export default function DisputeTimeline({ disputeId, orderEvents = [] }: { disputeId: string; orderEvents?: OrderEvent[] }) {
   const t = useTranslations("disputeTimeline");
   const locale = useLocale();
   const [events, setEvents] = useState<TimelineEvent[]>([]);
@@ -142,6 +153,22 @@ export default function DisputeTimeline({ disputeId }: { disputeId: string }) {
   }
 
   if (!summary) return null;
+
+  // Merge Shopify order events into the timeline
+  const shopifyEvents: TimelineEvent[] = orderEvents.map((e) => ({
+    id: e.id,
+    event_type: "shopify_order_event",
+    description: null,
+    event_at: e.createdAt,
+    actor_type: "shopify",
+    source_type: "shopify",
+    visibility: "merchant_and_internal",
+    metadata_json: { message: stripHtml(e.message), appTitle: e.appTitle },
+  }));
+
+  const allEvents = [...events, ...shopifyEvents].sort(
+    (a, b) => new Date(b.event_at).getTime() - new Date(a.event_at).getTime(),
+  );
 
   const outcomeTone = summary.finalOutcome === "won"
     ? "success"
@@ -241,7 +268,7 @@ export default function DisputeTimeline({ disputeId }: { disputeId: string }) {
       </Card>
 
       {/* Event timeline */}
-      {events.length > 0 && (
+      {allEvents.length > 0 && (
         <Card padding="0">
           <div
             className={styles.collapsibleHeader}
@@ -264,40 +291,50 @@ export default function DisputeTimeline({ disputeId }: { disputeId: string }) {
           >
             <Box padding="400">
               <div className={styles.timelineList}>
-                {events.map((event, idx) => (
-                  <div
-                    key={event.id}
-                    className={`${styles.timelineRow} ${idx < events.length - 1 ? styles.timelineRowSpaced : ""}`}
-                  >
-                    <div className={styles.timelineRail}>
-                      <div
-                        className={styles.timelineDot}
-                        style={{ background: DOT_COLOR[event.event_type] ?? "#1d4ed8" }}
-                      />
-                      {idx < events.length - 1 ? <div className={styles.timelineLine} /> : null}
+                {allEvents.map((event, idx) => {
+                  const isShopifyEvent = event.event_type === "shopify_order_event";
+                  const shopifyMessage = isShopifyEvent
+                    ? (event.metadata_json?.message as string) ?? ""
+                    : "";
+                  const shopifyAppTitle = isShopifyEvent
+                    ? (event.metadata_json?.appTitle as string) ?? "Shopify"
+                    : "";
+
+                  return (
+                    <div
+                      key={event.id}
+                      className={`${styles.timelineRow} ${idx < allEvents.length - 1 ? styles.timelineRowSpaced : ""}`}
+                    >
+                      <div className={styles.timelineRail}>
+                        <div
+                          className={styles.timelineDot}
+                          style={{ background: isShopifyEvent ? "#6b7280" : (DOT_COLOR[event.event_type] ?? "#1d4ed8") }}
+                        />
+                        {idx < allEvents.length - 1 ? <div className={styles.timelineLine} /> : null}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p className={styles.timelineMeta}>
+                          {formatDate(event.event_at, locale)}
+                          {" · "}
+                          {isShopifyEvent ? shopifyAppTitle : safeT(t, `actors.${event.actor_type}`, event.actor_type)}
+                        </p>
+                        <p className={styles.timelineLabel}>
+                          {isShopifyEvent ? shopifyMessage : safeT(t, `eventTypes.${event.event_type}`, event.event_type)}
+                        </p>
+                        {event.description && !isShopifyEvent && (
+                          <p className={styles.timelineSub}>{event.description}</p>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <p className={styles.timelineMeta}>
-                        {formatDate(event.event_at, locale)}
-                        {" · "}
-                        {safeT(t, `actors.${event.actor_type}`, event.actor_type)}
-                      </p>
-                      <p className={styles.timelineLabel}>
-                        {safeT(t, `eventTypes.${event.event_type}`, event.event_type)}
-                      </p>
-                      {event.description && (
-                        <p className={styles.timelineSub}>{event.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Box>
           </Collapsible>
         </Card>
       )}
 
-      {events.length === 0 && (
+      {allEvents.length === 0 && (
         <Card>
           <Box padding="400">
             <Text as="p" variant="bodySm" tone="subdued">{t("noEvents")}</Text>
