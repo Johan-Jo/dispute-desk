@@ -7,7 +7,9 @@ import {
 import {
   buildAutomationPayloadFromPackModes,
   parsePackModesFromRules,
+  parseCoverageModesFromRules,
   validatePackModes,
+  disputeTypeToPrimaryReason,
   type PackHandlingUiMode,
 } from "@/lib/rules/packHandlingAutomation";
 import { replacePackBasedAutomationRules } from "@/lib/rules/replacePackAutomationRules";
@@ -49,10 +51,18 @@ export async function GET(req: NextRequest) {
 
   const installedTemplateIds = await listInstalledTemplateIdsForShop(shopId);
   const activePacks = await listLibraryPacksForAutomationRules(shopId);
-  const fromRules = parsePackModesFromRules((rules ?? []) as Rule[]);
+  const allRules = (rules ?? []) as Rule[];
+  const fromRules = parsePackModesFromRules(allRules);
+  const coverageModes = parseCoverageModesFromRules(allRules);
   const pack_modes: Record<string, PackHandlingUiMode> = {};
   for (const p of activePacks) {
-    pack_modes[p.id] = fromRules[p.id] ?? "manual";
+    if (fromRules[p.id]) {
+      pack_modes[p.id] = fromRules[p.id];
+    } else {
+      // Fall back to coverage-level rules from the wizard
+      const reason = disputeTypeToPrimaryReason(p.dispute_type);
+      pack_modes[p.id] = coverageModes.get(reason) ?? "manual";
+    }
   }
 
   const payloadFromPacks = buildAutomationPayloadFromPackModes(

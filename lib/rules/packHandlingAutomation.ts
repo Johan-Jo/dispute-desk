@@ -66,6 +66,27 @@ export function parsePackModesFromRules(rules: Rule[]): Record<string, PackHandl
 }
 
 /**
+ * Build a reason→mode map from coverage-level rules created by the wizard's
+ * Coverage step. Used as fallback for packs without per-pack rules.
+ */
+export function parseCoverageModesFromRules(rules: Rule[]): Map<string, PackHandlingUiMode> {
+  const coveragePrefix = `${SETUP_RULE_PREFIX}coverage:`;
+  const reasonToMode = new Map<string, PackHandlingUiMode>();
+  for (const r of rules) {
+    const name = r.name ?? "";
+    if (!name.startsWith(coveragePrefix)) continue;
+    if (!r.enabled) continue;
+    const mode = normalizeAction(r.action).mode;
+    const uiMode: PackHandlingUiMode = mode === "auto_pack" ? "auto" : mode === "notify" ? "notify" : "manual";
+    const reasons = (r.match as { reason?: string[] })?.reason ?? [];
+    for (const reason of reasons) {
+      reasonToMode.set(reason, uiMode);
+    }
+  }
+  return reasonToMode;
+}
+
+/**
  * Synthetic reason rows for validators / legacy readers: first matching pack per reason wins.
  */
 export function buildCollapsedReasonRowsFromPacks(
