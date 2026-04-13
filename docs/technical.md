@@ -792,7 +792,7 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/jobs/worker`
 
 ### Internal Admin API (admin session required)
-- `GET /api/admin/metrics` — dashboard stats (shops, disputes, packs, jobs, plans, templates, reason mappings)
+- `GET /api/admin/metrics` — ops triage dashboard stats: `disputeMetrics` (cross-shop via `computeDisputeMetrics` — includes `statusBreakdown`, `outcomeBreakdown`, `overriddenCount`, `syncIssueCount`, `disputesWithNotesCount`), `submissionUncertainCount`, `staleCount` (open disputes with no event in 7+ days), `shopLeaderboard` (top 10 shops by problem dispute count — attention/syncFail/overridden/stale/uncertain), `recentOpsActivity` (last 15 internal ops events: failures, overrides, resyncs, notes, outcomes — enriched with shop domain and order name), plus platform counters (shops, disputes, packs, jobs, plans, templates, reason mappings)
 - `GET /api/admin/shops` — list shops with search/plan/status filters
 - `GET /api/admin/shops/[id]` — shop detail + dispute/pack counts
 - `PATCH /api/admin/shops/[id]` — update plan, pack_limit_override, admin_notes
@@ -1717,7 +1717,7 @@ Phase D cleans up Settings, Help, Connect, Session Required, and Analytics for p
 
 Admin portal visual polish and enhancement pass. All admin pages already existed with functional backend (API routes + DB functions).
 
-**Overview** (`app/admin/page.tsx`): Added Quick Actions section with links to Reason Mapping, Templates, Template Health, and Job Monitor.
+**Overview** (`app/admin/page.tsx`): Rewritten as ops triage dashboard. Top row: 6 operational counters (needs attention, failed jobs, sync issues, submission uncertain, overridden, stale 7d+). Triage panel with grouped actionable items linking to filtered admin views. Dispute Health panel (status distribution bar + outcome breakdown + key metrics). Shops Needing Intervention leaderboard (top 10 by problem dispute count). Ops Activity feed (failures, overrides, resyncs, notes). Quick Actions. Platform Summary (demoted: counters, plan distribution, financials).
 
 **Reason Mapping** (`app/admin/reason-mapping/page.tsx`): Enhanced phase toggle with segmented control UI. Added unmapped reasons warning banner when gaps exist.
 
