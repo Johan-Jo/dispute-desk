@@ -20,7 +20,8 @@ function sinceDate(period: PeriodKey): string | undefined {
 /**
  * GET /api/dashboard/stats?shop_id=...&period=24h|7d|30d|all
  *
- * Returns KPIs via the shared metrics layer plus legacy chart fields.
+ * Returns the full shared metrics layer plus submission state breakdown,
+ * recent activity feed, and legacy chart fields.
  */
 export async function GET(req: NextRequest) {
   const shopId = req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
@@ -34,8 +35,58 @@ export async function GET(req: NextRequest) {
   // ── Shared metrics ────────────────────────────────────────────────────
   const m = await computeDisputeMetrics({ shopId, periodFrom });
 
-  // ── Evidence packs count ──────────────────────────────────────────────
   const sb = getServiceClient();
+
+  // ── Submission state breakdown ────────────────────────────────────────
+  const { data: subRows } = await sb
+    .from("disputes")
+    .select("submission_state")
+    .eq("shop_id", shopId)
+    .is("closed_at", null);
+
+  const submissionBreakdown: Record<string, number> = {};
+  for (const r of subRows ?? []) {
+    const ss = (r as Record<string, unknown>).submission_state as string ?? "not_saved";
+    submissionBreakdown[ss] = (submissionBreakdown[ss] ?? 0) + 1;
+  }
+
+  // ── Recent activity (last 10 events) ─────────────────────────────────
+  const { data: activityRows } = await sb
+    .from("dispute_events")
+    .select("id, dispute_id, event_type, description, event_at, actor_type")
+    .eq("shop_id", shopId)
+    .eq("visibility", "merchant_and_internal")
+    .order("event_at", { ascending: false })
+    .limit(10);
+
+  // Enrich with order name for display
+  const disputeIds = [...new Set((activityRows ?? []).map((e) => (e as Record<string, unknown>).dispute_id as string))];
+  let disputeNames: Record<string, string> = {};
+  if (disputeIds.length > 0) {
+    const { data: nameRows } = await sb
+      .from("disputes")
+      .select("id, order_name")
+      .in("id", disputeIds);
+    for (const r of nameRows ?? []) {
+      const row = r as Record<string, unknown>;
+      disputeNames[row.id as string] = (row.order_name as string) ?? (row.id as string).slice(0, 8).toUpperCase();
+    }
+  }
+
+  const recentActivity = (activityRows ?? []).map((e) => {
+    const row = e as Record<string, unknown>;
+    return {
+      id: row.id,
+      disputeId: row.dispute_id,
+      orderName: disputeNames[row.dispute_id as string] ?? (row.dispute_id as string).slice(0, 8).toUpperCase(),
+      eventType: row.event_type,
+      description: row.description,
+      eventAt: row.event_at,
+      actorType: row.actor_type,
+    };
+  });
+
+  // ── Evidence packs count ──────────────────────────────────────────────
   const { count: packCount } = await sb
     .from("evidence_packs")
     .select("id", { count: "exact", head: true })
@@ -98,6 +149,10 @@ export async function GET(req: NextRequest) {
     // ── Shared metrics (new) ──
     ...m,
     packCount: packCount ?? 0,
+
+    // ── New dashboard fields ──
+    submissionBreakdown,
+    recentActivity,
 
     // ── Legacy fields (backward compat) ──
     totalDisputes,
