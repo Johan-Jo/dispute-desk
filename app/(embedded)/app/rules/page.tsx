@@ -131,6 +131,7 @@ export default function EmbeddedRulesPage() {
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
   const tc = useTranslations("coverage");
+  const tp = useTranslations("packs");
 
   // Data
   const [automation, setAutomation] = useState<AutomationData | null>(null);
@@ -604,7 +605,7 @@ export default function EmbeddedRulesPage() {
                             {packs.length > 0 && (
                               <Text as="p" variant="bodySm" tone="subdued">
                                 {tr("playbooksInUse", {
-                                  names: packs.map((p) => p.name).join(", "),
+                                  names: packs.map((p) => tp.has(`disputeTypeLabel.${p.dispute_type}`) ? tp(`disputeTypeLabel.${p.dispute_type}`) : p.name).join(", "),
                                 })}
                               </Text>
                             )}
