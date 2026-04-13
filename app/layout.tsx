@@ -5,6 +5,7 @@ import Script from "next/script";
 import "./globals.css";
 import { isLocale, resolveLocale } from "@/lib/i18n/locales";
 import { gtagConsentBootstrapScript } from "@/lib/consent/ga-bootstrap";
+import { TawkChatWidget } from "@/components/marketing/TawkChatWidget";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -53,15 +54,7 @@ export default async function RootLayout({
       </head>
       <body className={inter.className}>
         {children}
-        {!loadAppBridge && (
-          <Script
-            id="tawk-to"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `var Tawk_API=Tawk_API||{},Tawk_LoadStart=new Date();(function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src="https://embed.tawk.to/69dc1d426161b11c33210737/1jm1t4isv";s1.charset="UTF-8";s1.setAttribute("crossorigin","*");s0.parentNode.insertBefore(s1,s0)})();`,
-            }}
-          />
-        )}
+        {!loadAppBridge && <TawkChatWidget />}
         <Script
           id="ga-consent-bootstrap"
           strategy="beforeInteractive"
