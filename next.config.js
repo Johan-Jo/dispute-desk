@@ -15,7 +15,7 @@ const GA_CONNECT_SRC = [
 /** tawk.to live chat: script loader, API/websocket, widget iframe, and static assets. */
 const TAWK_SCRIPT_SRC = "https://embed.tawk.to";
 const TAWK_CONNECT_SRC = "https://*.tawk.to wss://*.tawk.to";
-const TAWK_FRAME_SRC = "https://*.tawk.to";
+const TAWK_FRAME_SRC = "https://tawk.to https://*.tawk.to";
 const TAWK_IMG_SRC = "https://*.tawk.to";
 const TAWK_FONT_SRC = "https://*.tawk.to";
 

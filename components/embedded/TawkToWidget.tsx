@@ -1,70 +1,53 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useLocale } from "next-intl";
+import { useState, useCallback } from "react";
 
 const TAWK_PROPERTY_ID = "69dc1d426161b11c33210737";
 const TAWK_WIDGET_ID = "1jm1t4isv";
+const TAWK_CHAT_URL = `https://tawk.to/chat/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
 
 /**
  * Tawk.to live chat for the embedded Shopify app.
  *
- * The standard floating widget doesn't appear inside Shopify's iframe because
- * Tawk.to detects the iframe context and suppresses it. Workaround: render
- * the widget in "embedded" mode inside a container div, and toggle visibility
- * with a custom floating button.
+ * Tawk.to's widget script detects iframe contexts and won't initialize.
+ * Workaround: embed Tawk.to's direct chat page in a sub-iframe. From
+ * Tawk.to's perspective it's a top-level page, so it renders normally.
  */
 export function TawkToWidget() {
-  const locale = useLocale();
-  const lang = locale.split("-")[0];
   const [open, setOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    if (document.getElementById("tawk-script")) return;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
-    w.Tawk_API = w.Tawk_API || {};
-    w.Tawk_API.language = lang;
-    w.Tawk_API.embedded = "tawk-container";
-    w.Tawk_API.onLoad = () => setLoaded(true);
-    w.Tawk_LoadStart = new Date();
-
-    const s = document.createElement("script");
-    s.id = "tawk-script";
-    s.async = true;
-    s.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
-    s.charset = "UTF-8";
-    s.setAttribute("crossorigin", "*");
-    document.head.appendChild(s);
-  }, [lang]);
-
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
   return (
     <>
-      {/* Chat container — shown/hidden via the button */}
-      <div
-        id="tawk-container"
-        style={{
-          position: "fixed",
-          bottom: 76,
-          right: 20,
-          width: 376,
-          height: 500,
-          zIndex: 10000,
-          borderRadius: 12,
-          overflow: "hidden",
-          background: "#fff",
-          border: "1px solid #E5E7EB",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-          visibility: open ? "visible" : "hidden",
-          opacity: open ? 1 : 0,
-          pointerEvents: open ? "auto" : "none",
-          transition: "opacity 200ms, visibility 200ms",
-        }}
-      />
+      {/* Chat iframe — lazy-loaded on first open */}
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 76,
+            right: 20,
+            width: 380,
+            height: 520,
+            zIndex: 10000,
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "#fff",
+            border: "1px solid #E5E7EB",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+          }}
+        >
+          <iframe
+            src={TAWK_CHAT_URL}
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+            }}
+            allow="microphone; camera"
+            title="Live Chat"
+          />
+        </div>
+      )}
 
       {/* Floating toggle button */}
       <button
