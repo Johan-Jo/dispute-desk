@@ -181,3 +181,11 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Tawk.to widget — prevent Tailwind Preflight from resetting widget styles */
+iframe[src*="tawk.to"],
+#tawk-bubble-container,
+.tawk-min-container,
+[class*="tawk"] {
+  all: revert;
+}
