@@ -62,7 +62,7 @@ const nextConfig = {
   headers: async () => [
     {
       // Default: deny framing via CSP only (no X-Frame-Options so embedded allow rules are not blocked)
-      source: "/((?!app/).*)",
+      source: "/((?!app/|api/chat).*)",
       headers: [
         {
           key: "Content-Security-Policy",
