@@ -118,6 +118,7 @@ export async function middleware(req: NextRequest) {
     if (
       pathname.startsWith("/api/auth") ||
       pathname.startsWith("/api/admin/") ||
+      pathname === "/api/chat" ||
       pathname === "/api/health" ||
       pathname === "/api/indexnow" ||
       pathname === "/api/jobs/worker" ||

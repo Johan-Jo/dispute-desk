@@ -152,6 +152,25 @@ const nextConfig = {
       ],
     },
     {
+      // Chat proxy page: loaded in iframe inside embedded app; needs Tawk.to CSP + framing.
+      source: "/api/chat",
+      headers: [
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://disputedesk.app",
+            "default-src 'self'",
+            `frame-src 'self' ${TAWK_FRAME_SRC}`,
+            `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${TAWK_SCRIPT_SRC}`,
+            "style-src 'self' 'unsafe-inline'",
+            `img-src 'self' data: ${TAWK_IMG_SRC}`,
+            `connect-src 'self' ${TAWK_CONNECT_SRC}`,
+            `font-src 'self' ${TAWK_FONT_SRC}`,
+          ].join("; "),
+        },
+      ],
+    },
+    {
       // Embedded app: allow framing. MUST come last so it wins for /app and /app/*.
       source: "/app/:path*",
       headers: [
