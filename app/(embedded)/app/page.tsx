@@ -29,7 +29,6 @@ import {
   ChartLineIcon,
   CashDollarIcon,
   QuestionCircleIcon,
-  ClockIcon,
 } from "@shopify/polaris-icons";
 import { useTranslations, useLocale } from "next-intl";
 import type { SetupStateResponse } from "@/lib/setup/types";
@@ -321,16 +320,10 @@ function DashboardKpis({ stats, loading, period, onPeriodChange }: {
       change: null,
     },
     {
-      icon: ClockIcon,
-      label: t("dashboard.avgTimeToSubmit"),
-      value: stats.avgTimeToSubmit !== null ? t("dashboard.daysValue", { days: stats.avgTimeToSubmit }) : "—",
-      change: null,
-    },
-    {
-      icon: ClockIcon,
-      label: t("dashboard.avgTimeToClose"),
-      value: stats.avgTimeToClose !== null ? t("dashboard.daysValue", { days: stats.avgTimeToClose }) : "—",
-      change: null,
+      icon: CashDollarIcon,
+      label: t("dashboard.amountAtRisk"),
+      value: formatCurrency(stats.amountAtRisk),
+      change: stats.amountAtRiskChange,
     },
   ];
 
@@ -383,21 +376,9 @@ function DashboardKpis({ stats, loading, period, onPeriodChange }: {
         ))}
       </div>
 
-      {/* Secondary: Amount at Risk */}
-      {!loading && stats.amountAtRisk > 0 && (
-        <div style={{ marginTop: "12px", padding: "10px 14px", background: "#FEF3C7", borderRadius: "8px" }}>
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="span" variant="bodySm" fontWeight="semibold">{t("dashboard.amountAtRisk")}:</Text>
-            <Text as="span" variant="bodySm">{formatCurrency(stats.amountAtRisk)}</Text>
-            <ChangeIndicator value={stats.amountAtRiskChange} label={vsLabel} />
-          </InlineStack>
-        </div>
-      )}
     </div>
   );
 }
-
-// ─── 4. Status Distribution ───────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, string> = {
   new: "#6B7280",
@@ -413,48 +394,6 @@ const STATUS_COLORS: Record<string, string> = {
   closed_other: "#9CA3AF",
 };
 
-function StatusDistribution({ stats, loading }: { stats: DashboardStats; loading: boolean }) {
-  const t = useTranslations();
-  const tTimeline = useTranslations("disputeTimeline");
-
-  if (loading) return null;
-
-  const entries = Object.entries(stats.statusBreakdown).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-  const total = entries.reduce((s, [, v]) => s + v, 0);
-  if (total === 0) return null;
-
-  return (
-    <Card>
-      <BlockStack gap="300">
-        <Text as="h2" variant="headingSm">{t("dashboard.statusDistribution")}</Text>
-        {/* Stacked bar */}
-        <div style={{ display: "flex", height: "12px", borderRadius: "6px", overflow: "hidden" }}>
-          {entries.map(([status, count]) => (
-            <div
-              key={status}
-              style={{
-                width: `${(count / total) * 100}%`,
-                background: STATUS_COLORS[status] ?? "#9CA3AF",
-              }}
-              title={`${safeStatusLabel(tTimeline, status)}: ${count}`}
-            />
-          ))}
-        </div>
-        {/* Legend */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-          {entries.map(([status, count]) => (
-            <InlineStack key={status} gap="100" blockAlign="center">
-              <div style={{ width: 8, height: 8, borderRadius: 4, background: STATUS_COLORS[status] ?? "#9CA3AF", flexShrink: 0 }} />
-              <Text as="span" variant="bodySm">{safeStatusLabel(tTimeline, status)}</Text>
-              <Text as="span" variant="bodySm" tone="subdued">{count}</Text>
-            </InlineStack>
-          ))}
-        </div>
-      </BlockStack>
-    </Card>
-  );
-}
-
 function safeStatusLabel(t: ReturnType<typeof useTranslations>, status: string): string {
   try {
     const result = t(`normalizedStatuses.${status}`);
@@ -465,7 +404,7 @@ function safeStatusLabel(t: ReturnType<typeof useTranslations>, status: string):
   }
 }
 
-// ─── 5. Outcome Breakdown ─────────────────────────────────────────────────
+// ─── 4. Outcome Breakdown ─────────────────────────────────────────────────
 
 const OUTCOME_COLORS: Record<string, string> = {
   won: "#10B981",
@@ -979,11 +918,8 @@ export default function EmbeddedDashboardPage() {
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
-        {/* 4 & 5. Status Distribution + Outcome Breakdown */}
-        <Layout.Section variant="oneHalf">
-          <StatusDistribution stats={stats} loading={statsLoading} />
-        </Layout.Section>
-        <Layout.Section variant="oneHalf">
+        {/* 4. Outcome Breakdown */}
+        <Layout.Section>
           <OutcomeBreakdown stats={stats} loading={statsLoading} />
         </Layout.Section>
 
