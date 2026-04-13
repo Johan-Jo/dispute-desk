@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import React, { use } from "react";
 import { useRouter } from "next/navigation";
 import {
   Page,
@@ -22,6 +22,13 @@ import { getCategoryBySlug } from "@/lib/help/categories";
 import { useTranslations } from "next-intl";
 
 const EMBEDDED_NAMESPACE = "help.embedded";
+
+/** Turn **bold** markers into <strong> elements. */
+function parseBold(text: string): React.ReactNode[] {
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+  );
+}
 
 export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -68,7 +75,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
                     <ul style={{ paddingLeft: "1.25rem", margin: 0 }}>
                       {lines.filter((l) => l.trim()).map((l, j) => (
                         <li key={j} style={{ marginBottom: "4px" }}>
-                          <Text as="span" variant="bodyMd">{l.replace(/^[-•\d]+[.)]\s*/, "")}</Text>
+                          <Text as="span" variant="bodyMd">{parseBold(l.replace(/^[-•\d]+[.)]\s*/, ""))}</Text>
                         </li>
                       ))}
                     </ul>
@@ -77,7 +84,7 @@ export default function EmbeddedHelpArticlePage({ params }: { params: Promise<{ 
               }
               return (
                 <Text key={i} as="p" variant="bodyMd">
-                  {p}
+                  {parseBold(p)}
                 </Text>
               );
             })}
