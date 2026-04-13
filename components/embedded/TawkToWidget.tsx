@@ -56,6 +56,8 @@ export function TawkToWidget() {
           zIndex: 10000,
           borderRadius: 12,
           overflow: "hidden",
+          background: "#fff",
+          border: "1px solid #E5E7EB",
           boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
           display: open ? "block" : "none",
         }}
