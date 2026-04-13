@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
 
   // Enrich ops events with shop domain and order name
   const opsDisputeIds = [...new Set((opsEvents ?? []).map((e) => (e as Record<string, unknown>).dispute_id as string))];
-  let opsDisputeNames: Record<string, string> = {};
+  const opsDisputeNames: Record<string, string> = {};
   if (opsDisputeIds.length > 0) {
     const { data: nameRows } = await sb
       .from("disputes")

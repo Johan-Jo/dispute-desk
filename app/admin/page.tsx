@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Store,
   FileText,
-  Package,
   Cog,
   AlertTriangle,
   CheckCircle,
@@ -15,7 +14,6 @@ import {
   ArrowRight,
   ShieldAlert,
   RefreshCw,
-  MessageSquare,
   Zap,
   XCircle,
   Eye,

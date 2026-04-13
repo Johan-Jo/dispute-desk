@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 
   // Enrich with order name for display
   const disputeIds = [...new Set((activityRows ?? []).map((e) => (e as Record<string, unknown>).dispute_id as string))];
-  let disputeNames: Record<string, string> = {};
+  const disputeNames: Record<string, string> = {};
   if (disputeIds.length > 0) {
     const { data: nameRows } = await sb
       .from("disputes")

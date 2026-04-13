@@ -23,7 +23,6 @@ import {
   ProgressBar,
   Box,
   Icon,
-  Collapsible,
 } from "@shopify/polaris";
 import {
   AlertCircleIcon,
@@ -31,8 +30,6 @@ import {
   CashDollarIcon,
   QuestionCircleIcon,
   ClockIcon,
-  CheckIcon,
-  ChevronDownIcon,
 } from "@shopify/polaris-icons";
 import { useTranslations, useLocale } from "next-intl";
 import type { SetupStateResponse } from "@/lib/setup/types";
