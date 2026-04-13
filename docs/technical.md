@@ -434,9 +434,31 @@ Snapshot columns on `disputes` for fast rendering without recalculating from eve
 
 `GET /api/disputes/:id/timeline` — returns events + summary snapshot. Internal-only events require verified admin/support role via Supabase auth.
 
+### Phase 3 additions
+
+- `dispute_notes` table — support notes with visibility control (merchant_and_internal / internal_only)
+- `has_admin_override` + `overridden_fields` columns on disputes — tracks which fields were manually set by admin
+- Overrides are a separate layer: resyncs skip overridden fields, admin can clear overrides to restore sync behavior
+
+### Phase 3 API routes
+
+- `GET/POST /api/disputes/:id/notes` — support notes (admin/support auth)
+- `POST /api/admin/disputes/:id/override` — admin field override with snapshot consistency (admin auth)
+- `POST /api/disputes/:id/resync` — single-dispute resync respecting override locks (admin/support auth)
+- `GET /api/admin/disputes` — cross-shop disputes list with note_count and override indicators (admin auth)
+
+### Phase 3 event types
+
+- `support_note_added`, `admin_override`, `admin_override_cleared`, `dispute_resynced` (all internal_only)
+
+### Shared metrics layer
+
+- `lib/disputes/metrics.ts` — `computeDisputeMetrics({ shopId?, periodFrom?, periodTo? })`. Single source of truth for both merchant and admin dashboards. Shop-scoped when shopId provided, cross-shop when omitted. Admin-only fields (overriddenCount, syncIssueCount, disputesWithNotesCount) populated only for cross-shop queries.
+
 ### Key modules
 
 - `lib/disputeEvents/` — emitEvent, normalizeStatus, deriveFinalOutcome, updateNormalizedStatus, eventTypes, types
+- `lib/disputes/metrics.ts` — shared dispute metrics aggregation
 
 ## Automation Pipeline
 

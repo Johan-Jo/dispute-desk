@@ -52,6 +52,7 @@ interface NavItem {
 
 const ADMIN_NAV: NavItem[] = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Disputes", href: "/admin/disputes", icon: Shield },
   { label: "Shops", href: "/admin/shops", icon: Store },
   { label: "Jobs", href: "/admin/jobs", icon: Cog },
   { label: "Templates", href: "/admin/templates", icon: FileText, group: "Template Ops" },

@@ -30,6 +30,12 @@ export const MERCHANT_APPROVED_FOR_SAVE = "merchant_approved_for_save";
 // Outcome
 export const OUTCOME_DETECTED = "outcome_detected";
 
+// Admin/support
+export const SUPPORT_NOTE_ADDED = "support_note_added";
+export const ADMIN_OVERRIDE = "admin_override";
+export const ADMIN_OVERRIDE_CLEARED = "admin_override_cleared";
+export const DISPUTE_RESYNCED = "dispute_resynced";
+
 // Internal-only
 export const SYNC_FAILED = "sync_failed";
 export const PACK_BUILD_FAILED = "pack_build_failed";
