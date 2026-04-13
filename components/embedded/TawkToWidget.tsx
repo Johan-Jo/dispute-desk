@@ -3,20 +3,19 @@
 import { useState, useCallback } from "react";
 import { useLocale } from "next-intl";
 
-const TAWK_PROPERTY_ID = "69dc1d426161b11c33210737";
-const TAWK_WIDGET_ID = "1jm1t4isv";
-
 /**
  * Tawk.to live chat for the embedded Shopify app.
  *
  * Tawk.to's widget script detects iframe contexts and won't initialize.
- * Workaround: embed Tawk.to's direct chat page in a sub-iframe. From
- * Tawk.to's perspective it's a top-level page, so it renders normally.
+ * Workaround: load /api/chat (a lightweight HTML page on our own domain)
+ * in a sub-iframe. That page sets Tawk_API.language from the ?lang= param
+ * and loads the Tawk.to script. From Tawk.to's perspective it's a regular
+ * page, so the widget renders normally in the merchant's language.
  */
 export function TawkToWidget() {
   const locale = useLocale();
   const lang = locale.split("-")[0];
-  const chatUrl = `https://tawk.to/chat/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}?lang=${lang}`;
+  const chatUrl = `/api/chat?lang=${lang}`;
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
