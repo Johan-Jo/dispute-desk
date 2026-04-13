@@ -64,7 +64,7 @@ export function TawkToWidget() {
           height: 48,
           borderRadius: 24,
           border: "none",
-          background: open ? "#374151" : "#1C1C1C",
+          background: open ? "#1E40AF" : "#1D4ED8",
           color: "#fff",
           cursor: "pointer",
           boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
