@@ -241,12 +241,7 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
               />
             </div>
 
-            <InlineStack gap="200">
-              <Button variant="primary" size="slim" url={ctaUrl}>{ctaLabel}</Button>
-              <Button variant="plain" size="slim" url={withShopParams("/app/disputes", searchParams)}>
-                {t("dashboard.viewAllDisputes")}
-              </Button>
-            </InlineStack>
+            <Button variant="primary" size="slim" url={ctaUrl}>{ctaLabel}</Button>
           </>
         )}
       </BlockStack>
