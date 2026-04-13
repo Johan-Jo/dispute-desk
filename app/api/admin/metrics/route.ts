@@ -21,10 +21,10 @@ export async function GET(req: NextRequest) {
   const [shops, disputes, packs, jobs, templateRows, mappingRows] = await Promise.all([
     sb.from("shops").select("id, shop_domain, plan, uninstalled_at"),
     sb.from("disputes").select("id", { count: "exact", head: true }),
-    sb.from("evidence_packs").select("id, status"),
+    sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_type, saved_to_shopify_at"),
     sb.from("jobs").select("id, status").in("status", ["queued", "running", "failed"]),
-    sb.from("pack_templates").select("id, status"),
-    sb.from("reason_template_mappings").select("id, template_id, dispute_phase"),
+    sb.from("pack_templates").select("id, name, status"),
+    sb.from("reason_template_mappings").select("id, template_id, dispute_phase, reason_code"),
   ]);
 
   const shopList = shops.data ?? [];
@@ -36,10 +36,11 @@ export async function GET(req: NextRequest) {
     plans[s.plan ?? "free"] = (plans[s.plan ?? "free"] ?? 0) + 1;
   }
 
-  const packList = packs.data ?? [];
+  const packList = (packs.data ?? []) as Record<string, unknown>[];
   const byStatus: Record<string, number> = {};
   for (const p of packList) {
-    byStatus[p.status ?? "unknown"] = (byStatus[p.status ?? "unknown"] ?? 0) + 1;
+    const st = (p.status as string) ?? "unknown";
+    byStatus[st] = (byStatus[st] ?? 0) + 1;
   }
 
   const jobList = jobs.data ?? [];
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Reason mapping stats
-  const mList = mappingRows.data ?? [];
+  const mList = (mappingRows.data ?? []) as Record<string, unknown>[];
   const mappingStats = {
     total: mList.length,
     mapped: mList.filter((m) => m.template_id != null).length,
@@ -67,16 +68,68 @@ export async function GET(req: NextRequest) {
   // Cross-shop dispute metrics (no shopId = admin view)
   const disputeMetrics = await computeDisputeMetrics({ periodFrom });
 
-  // ── Ops-specific queries ──────────────────────────────────────────────
+  // ── Platform health metrics ───────────────────────────────────────────
 
-  // Submission uncertain count
+  // Automation success rate: packs that reached ready/saved vs total built
+  const builtStatuses = ["ready", "saved_to_shopify", "blocked", "failed"];
+  const totalBuilt = packList.filter((p) => builtStatuses.includes(p.status as string)).length;
+  const successBuilt = packList.filter((p) => p.status === "ready" || p.status === "saved_to_shopify").length;
+  const automationSuccessRate = totalBuilt > 0 ? Math.round((successBuilt / totalBuilt) * 100) : 0;
+
+  // Save-to-Shopify success rate
+  const savedCount = packList.filter((p) => p.saved_to_shopify_at != null).length;
+  const saveAttempts = packList.filter((p) => ["saved_to_shopify", "ready", "failed"].includes(p.status as string)).length;
+  const saveSuccessRate = saveAttempts > 0 ? Math.round((savedCount / saveAttempts) * 100) : 0;
+
+  // Manual intervention rate
+  const manualCount = disputeMetrics.needsAttentionCount + (disputeMetrics.overriddenCount ?? 0);
+  const totalActive = disputeMetrics.activeDisputes || 1;
+  const manualInterventionRate = Math.round((manualCount / totalActive) * 100);
+
+  // Submission uncertainty rate
   const { count: submissionUncertainCount } = await sb
     .from("disputes")
     .select("id", { count: "exact", head: true })
     .eq("submission_state", "submission_uncertain")
     .is("closed_at", null);
+  const uncertainRate = totalActive > 0
+    ? Math.round(((submissionUncertainCount ?? 0) / totalActive) * 100)
+    : 0;
 
-  // Stale open disputes (no event in 7+ days, still active)
+  // Top blocked evidence (most common blockers across packs)
+  const blockerCounts: Record<string, number> = {};
+  for (const p of packList) {
+    const bl = p.blockers as string[] | null;
+    if (bl && Array.isArray(bl)) {
+      for (const b of bl) {
+        blockerCounts[b] = (blockerCounts[b] ?? 0) + 1;
+      }
+    }
+  }
+  const topBlockers = Object.entries(blockerCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([blocker, count]) => ({ blocker, count }));
+
+  // Top failing dispute types (packs with status=failed or blocked, grouped by dispute_type)
+  const failingTypes: Record<string, number> = {};
+  for (const p of packList) {
+    if (p.status === "failed" || p.status === "blocked") {
+      const dt = (p.dispute_type as string) ?? "unknown";
+      failingTypes[dt] = (failingTypes[dt] ?? 0) + 1;
+    }
+  }
+  const topFailingTypes = Object.entries(failingTypes)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([disputeType, count]) => ({ disputeType, count }));
+
+  // Weak reason mappings (unmapped with dispute volume)
+  const unmappedReasons = mList
+    .filter((m) => m.template_id == null)
+    .map((m) => (m.reason_code as string) ?? "unknown");
+
+  // Stale open disputes
   const staleThreshold = new Date(Date.now() - 7 * 86400000).toISOString();
   const { count: staleCount } = await sb
     .from("disputes")
@@ -84,7 +137,15 @@ export async function GET(req: NextRequest) {
     .is("closed_at", null)
     .lt("last_event_at", staleThreshold);
 
-  // Shops needing intervention — group by shop_id for problem disputes
+  // ── Ops/exceptions data (for /admin/operations) ───────────────────────
+
+  // Shop domain map
+  const shopDomainMap: Record<string, string> = {};
+  for (const s of shopList) {
+    shopDomainMap[s.id] = s.shop_domain ?? s.id.slice(0, 8);
+  }
+
+  // Shops needing intervention
   const { data: problemRows } = await sb
     .from("disputes")
     .select("shop_id, needs_attention, sync_health, has_admin_override, submission_state, last_event_at, closed_at")
@@ -101,13 +162,6 @@ export async function GET(req: NextRequest) {
     if (d.last_event_at && (d.last_event_at as string) < staleThreshold) shopProblems[sid].stale++;
   }
 
-  // Build shop domain map
-  const shopDomainMap: Record<string, string> = {};
-  for (const s of shopList) {
-    shopDomainMap[s.id] = s.shop_domain ?? s.id.slice(0, 8);
-  }
-
-  // Top problem shops sorted by total issues
   const shopLeaderboard = Object.entries(shopProblems)
     .map(([shopId, counts]) => ({
       shopId,
@@ -119,7 +173,7 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
-  // Recent ops events (internal_only or error events)
+  // Recent ops events
   const { data: opsEvents } = await sb
     .from("dispute_events")
     .select("id, dispute_id, shop_id, event_type, description, event_at, actor_type, actor_ref, visibility")
@@ -131,7 +185,6 @@ export async function GET(req: NextRequest) {
     .order("event_at", { ascending: false })
     .limit(15);
 
-  // Enrich ops events with shop domain and order name
   const opsDisputeIds = [...new Set((opsEvents ?? []).map((e) => (e as Record<string, unknown>).dispute_id as string))];
   const opsDisputeNames: Record<string, string> = {};
   if (opsDisputeIds.length > 0) {
@@ -173,9 +226,17 @@ export async function GET(req: NextRequest) {
     templates: { total: tplList.length, ...tplByStatus },
     reasonMappings: mappingStats,
     disputeMetrics,
-    // Ops-specific
+    // Platform health
+    automationSuccessRate,
+    saveSuccessRate,
+    manualInterventionRate,
     submissionUncertainCount: submissionUncertainCount ?? 0,
+    uncertainRate,
     staleCount: staleCount ?? 0,
+    topBlockers,
+    topFailingTypes,
+    unmappedReasons,
+    // Ops/exceptions
     shopLeaderboard,
     recentOpsActivity,
   });

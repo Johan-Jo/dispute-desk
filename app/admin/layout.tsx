@@ -20,6 +20,7 @@ import {
   Users,
   BookOpen,
   HelpCircle,
+  AlertTriangle,
   List,
   Calendar,
   Clock,
@@ -52,6 +53,7 @@ interface NavItem {
 
 const ADMIN_NAV: NavItem[] = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Operations", href: "/admin/operations", icon: AlertTriangle },
   { label: "Disputes", href: "/admin/disputes", icon: Shield },
   { label: "Shops", href: "/admin/shops", icon: Store },
   { label: "Jobs", href: "/admin/jobs", icon: Cog },

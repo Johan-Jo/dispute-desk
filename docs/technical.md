@@ -1717,7 +1717,9 @@ Phase D cleans up Settings, Help, Connect, Session Required, and Analytics for p
 
 Admin portal visual polish and enhancement pass. All admin pages already existed with functional backend (API routes + DB functions).
 
-**Overview** (`app/admin/page.tsx`): Rewritten as ops triage dashboard. Top row: 6 operational counters (needs attention, failed jobs, sync issues, submission uncertain, overridden, stale 7d+). Triage panel with grouped actionable items linking to filtered admin views. Dispute Health panel (status distribution bar + outcome breakdown + key metrics). Shops Needing Intervention leaderboard (top 10 by problem dispute count). Ops Activity feed (failures, overrides, resyncs, notes). Quick Actions. Platform Summary (demoted: counters, plan distribution, financials).
+**Overview** (`app/admin/page.tsx`): Platform health dashboard. Health status bar (sync, jobs, mappings, automation — green/red). KPIs: active shops, disputes processed, automation success rate, save-to-Shopify rate, win rate, amount recovered, avg time to submit/close, manual intervention %, submission uncertainty %. Systemic bottlenecks: top evidence blockers, failing dispute types, unmapped reasons. Status distribution + outcome breakdown. Plan distribution + financials demoted to bottom. Links to Operations Queue for case triage.
+
+**Operations** (`app/admin/operations/page.tsx`): Exception queue for manual review. 6 ops counters (needs attention, failed jobs, sync issues, submission uncertain, overridden, stale 7d+). Triage panel with grouped actionable items. Shops Needing Intervention leaderboard. Ops Activity feed (failures, overrides, resyncs, notes).
 
 **Reason Mapping** (`app/admin/reason-mapping/page.tsx`): Enhanced phase toggle with segmented control UI. Added unmapped reasons warning banner when gaps exist.
 
