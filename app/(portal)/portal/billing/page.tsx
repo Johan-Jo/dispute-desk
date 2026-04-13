@@ -182,7 +182,7 @@ function DemoBilling() {
 
 export default function BillingPage() {
   const t = useTranslations("billing");
-  const tt = useTranslations("table");
+  const _tt = useTranslations("table");
   const tc = useTranslations("common");
   const isDemo = useDemoMode();
   const [plan, setPlan] = useState<PlanInfo | null>(null);

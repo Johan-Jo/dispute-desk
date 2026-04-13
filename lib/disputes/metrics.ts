@@ -67,8 +67,6 @@ const ACTIVE_NORMALIZED = [
   "action_needed", "submitted", "waiting_on_issuer",
 ];
 
-const TERMINAL_OUTCOMES = ["won", "lost", "partially_won", "accepted", "refunded", "canceled", "expired", "closed_other", "unknown"];
-
 function pctChange(curr: number, prev: number | null): number | null {
   if (prev === null) return null;
   if (prev === 0) return curr > 0 ? 100 : 0;

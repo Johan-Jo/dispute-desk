@@ -7,7 +7,6 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { getShopSettings } from "./settings";
-import { evaluateCompleteness } from "./completeness";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";

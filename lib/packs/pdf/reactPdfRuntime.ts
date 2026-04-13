@@ -13,7 +13,6 @@ export async function getReactPdfRenderer() {
     ...mod,
     renderToBuffer: mod.renderToBuffer as (
       // Widen the type so wrapper components (not just <Document>) are accepted.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       element: React.ReactElement<any>
     ) => Promise<Uint8Array>,
   };

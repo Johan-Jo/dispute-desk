@@ -283,63 +283,7 @@ function SummaryCounter({ label, count, tone, url }: {
   return url ? <Link href={url} style={{ textDecoration: "none" }}>{inner}</Link> : inner;
 }
 
-// ─── 2. Lifecycle Status Cards ────────────────────────────────────────────
-
-function LifecycleStatusCards({ stats, loading }: { stats: DashboardStats; loading: boolean }) {
-  const t = useTranslations();
-  const searchParams = useSearchParams();
-  if (loading) return null;
-
-  const s = stats;
-  const sub = s.submissionBreakdown;
-
-  type BadgeTone = "success" | "critical" | "warning" | "attention" | "info" | undefined;
-  const cards: { label: string; count: number; tone: BadgeTone; url: string }[] = [
-    {
-      label: t("dashboard.actionNeeded"),
-      count: (s.statusBreakdown["action_needed"] ?? 0) + (s.statusBreakdown["needs_review"] ?? 0),
-      tone: "critical",
-      url: withShopParams("/app/disputes?normalized_status=action_needed,needs_review", searchParams),
-    },
-    {
-      label: t("dashboard.readyToSubmit"),
-      count: s.statusBreakdown["ready_to_submit"] ?? 0,
-      tone: "warning",
-      url: withShopParams("/app/disputes?normalized_status=ready_to_submit", searchParams),
-    },
-    {
-      label: t("dashboard.savedToShopify"),
-      count: sub["saved_to_shopify"] ?? 0,
-      tone: "info",
-      url: withShopParams("/app/disputes?submission_state=saved_to_shopify", searchParams),
-    },
-    {
-      label: t("dashboard.waitingOnIssuer"),
-      count: s.statusBreakdown["waiting_on_issuer"] ?? 0,
-      tone: "info",
-      url: withShopParams("/app/disputes?normalized_status=waiting_on_issuer", searchParams),
-    },
-  ];
-
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
-      {cards.map((card) => (
-        <Link key={card.label} href={card.url} style={{ textDecoration: "none", color: "inherit" }}>
-          <Card>
-            <BlockStack gap="200">
-              <InlineStack gap="200" blockAlign="center">
-                <Badge tone={card.count > 0 ? card.tone : undefined}>{card.label}</Badge>
-              </InlineStack>
-              <Text as="p" variant="headingLg">{card.count}</Text>
-            </BlockStack>
-          </Card>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-// ─── 3. KPI Section ───────────────────────────────────────────────────────
+// ─── 2. KPI Section ───────────────────────────────────────────────────────
 
 function DashboardKpis({ stats, loading, period, onPeriodChange }: {
   stats: DashboardStats;
@@ -1030,12 +974,7 @@ export default function EmbeddedDashboardPage() {
           <OperationalSummaryCard stats={stats} loading={statsLoading} />
         </Layout.Section>
 
-        {/* 2. Lifecycle Status Cards */}
-        <Layout.Section>
-          <LifecycleStatusCards stats={stats} loading={statsLoading} />
-        </Layout.Section>
-
-        {/* 3. KPIs */}
+        {/* 2. KPIs */}
         <Layout.Section>
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>

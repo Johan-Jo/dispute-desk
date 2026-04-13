@@ -6,13 +6,11 @@ import type { HelpGuideId } from "@/lib/help-guides-config";
  */
 export function trackHelpGuideStarted(guideId: HelpGuideId): void {
   if (typeof window === "undefined") return;
-  // eslint-disable-next-line no-console
   console.debug("[analytics] help_guide_started", { guideId });
 }
 
 export function trackHelpGuideCompleted(guideId: HelpGuideId): void {
   if (typeof window === "undefined") return;
-  // eslint-disable-next-line no-console
   console.debug("[analytics] help_guide_completed", { guideId });
 }
 
@@ -21,6 +19,5 @@ export function trackHelpGuideSkipped(
   stepIndex: number
 ): void {
   if (typeof window === "undefined") return;
-  // eslint-disable-next-line no-console
   console.debug("[analytics] help_guide_skipped", { guideId, stepIndex });
 }

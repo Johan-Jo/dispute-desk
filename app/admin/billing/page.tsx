@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DollarSign, Users, TrendingUp, ArrowUpRight } from "lucide-react";
+import { DollarSign, Users, TrendingUp } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminTable } from "@/components/admin/AdminTable";

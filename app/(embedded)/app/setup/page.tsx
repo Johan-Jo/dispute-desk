@@ -65,10 +65,6 @@ export default function SetupWelcomePage() {
     router.push(withShopParams("/app/setup/connection", searchParams));
   };
 
-  const handleSkip = () => {
-    router.push(withShopParams("/app", searchParams));
-  };
-
   const steps = [
     { num: 1, title: t("welcome.step1Title"), desc: t("welcome.step1Desc") },
     { num: 2, title: t("welcome.step2Title"), desc: t("welcome.step2Desc") },

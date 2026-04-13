@@ -13,7 +13,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { GitBranch, Edit2, Search, X } from "lucide-react";
+import { GitBranch, Edit2, X } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminFilterBar } from "@/components/admin/AdminFilterBar";

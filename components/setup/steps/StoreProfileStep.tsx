@@ -8,7 +8,6 @@ import {
   EVIDENCE_GROUP_IDS,
   type ShopifyEvidenceConfig,
   type EvidenceBehavior,
-  type EvidenceGroupId,
   type StoreType as RecStoreType,
   type ProofLevel as RecProofLevel,
 } from "@/lib/setup/recommendTemplates";

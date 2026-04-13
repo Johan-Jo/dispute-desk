@@ -8,7 +8,6 @@ import {
   Icon,
   Badge,
   Button,
-  Spinner,
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 

@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
-import { shopifyOrderAdminUrl } from "@/lib/embedded/shopifyOrderUrl";
 import { recentDisputesViewDetailsLinkStyle } from "@/lib/embedded/recentDisputesTableStyles";
 import {
   Page,
@@ -72,10 +71,6 @@ interface DisputesResponse {
     total: number;
     total_pages: number;
   };
-}
-
-function isSyntheticDispute(disputeGid: string): boolean {
-  return disputeGid?.includes("/seed-") ?? false;
 }
 
 const NORMALIZED_STATUS_TONE: Record<string, "success" | "critical" | "warning" | "info" | "attention" | undefined> = {
@@ -177,23 +172,10 @@ export default function DisputesListPage() {
     [dateLocale],
   );
 
-  /** Dashboard Recent Disputes: short month + day only */
-  const formatDeadlineShort = useCallback(
-    (iso: string | null) => {
-      if (!iso) return "—";
-      return new Date(iso).toLocaleDateString(dateLocale, {
-        month: "short",
-        day: "numeric",
-      });
-    },
-    [dateLocale],
-  );
-
-  const [shopDomain, setShopDomain] = useState<string | null>(null);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter] = useState<string[]>([]);
   const [phaseFilter, setPhaseFilter] = useState<string[]>([]);
   const [normalizedStatusFilter, setNormalizedStatusFilter] = useState<string[]>([]);
   const [outcomeFilter, setOutcomeFilter] = useState<string[]>([]);
@@ -209,11 +191,6 @@ export default function DisputesListPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/billing/usage")
-      .then((r) => (r.ok ? r.json() : {}))
-      .then((d: { shop_domain?: string | null }) => {
-        if (!cancelled) setShopDomain(d.shop_domain ?? null);
-      });
     fetch("/api/setup/state")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {

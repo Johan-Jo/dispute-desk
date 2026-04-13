@@ -8,8 +8,6 @@ import {
   BlockStack,
   Text,
   Banner,
-  InlineStack,
-  Button,
 } from "@shopify/polaris";
 
 interface ConnectGorgiasModalProps {

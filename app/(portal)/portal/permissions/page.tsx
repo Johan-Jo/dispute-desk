@@ -1,13 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AuthCard } from "@/components/ui/auth-card";
 import { InlineError } from "@/components/ui/inline-error";
 import { Button } from "@/components/ui/button";
 
 export default function PermissionsPage() {
   const t = useTranslations("permissions");
-  const tc = useTranslations("common");
+  const _tc = useTranslations("common");
   return (
     <div className="max-w-md mx-auto py-8">
       <h2 className="text-2xl font-bold text-[#0B1220] mb-2">

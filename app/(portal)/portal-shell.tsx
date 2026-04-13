@@ -261,7 +261,7 @@ function OnboardingTourOverlay() {
     <OnboardingTour
       steps={onboardingSteps}
       onComplete={completeTour}
-      onSkip={(stepIndex) => skipTour()}
+      onSkip={(_stepIndex) => skipTour()}
       onNavigate={(path) => router.push(path)}
     />
   );

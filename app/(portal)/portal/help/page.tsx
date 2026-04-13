@@ -8,7 +8,6 @@ import { useHelpGuideSafe } from "@/components/help/help-guide-provider";
 import { HELP_CATEGORIES } from "@/lib/help/categories";
 import { HELP_ARTICLES, getArticlesByCategory } from "@/lib/help/articles";
 import {
-  getPortalGuideTranslationKeyPrefix,
   HELP_GUIDE_IDS,
   isHelpGuideId,
   type HelpGuideId,
@@ -22,7 +21,6 @@ import {
   Shield,
   Settings,
   CreditCard,
-  FileText,
   Zap,
   ChevronRight,
   ChevronDown,
@@ -31,7 +29,6 @@ import {
   MessageCircle,
   Lightbulb,
   ExternalLink,
-  Scale,
   Rocket,
   Upload,
 } from "lucide-react";
@@ -52,12 +49,6 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "automation-rules": Settings,
   billing: CreditCard,
   "saving-to-shopify": Upload,
-};
-
-const GUIDE_ICONS: Record<string, React.ElementType> = {
-  "review-dispute": Scale,
-  "build-pack": Package,
-  "automation-rules": Zap,
 };
 
 interface InteractiveTourMeta {

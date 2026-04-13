@@ -24,8 +24,8 @@ import { AutomationStep } from "@/components/setup/steps/AutomationStep";
 import { BusinessPoliciesStep } from "@/components/setup/steps/BusinessPoliciesStep";
 import { ActivateStep } from "@/components/setup/steps/ActivateStep";
 
-const stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
-type StepComponentType = React.ComponentType<typeof stepComponentProps & { onCanContinueChange?: (canContinue: boolean) => void }>;
+const _stepComponentProps = { stepId: "" as StepId, onSaveRef: { current: null as (() => Promise<boolean>) | null } };
+type StepComponentType = React.ComponentType<typeof _stepComponentProps & { onCanContinueChange?: (canContinue: boolean) => void }>;
 
 const stepComponents: Record<StepId, StepComponentType> = {
   connection: ConnectionStep as StepComponentType,

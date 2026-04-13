@@ -285,7 +285,6 @@ export function TemplateSetupWizard({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
 
   const disputeTypeLabel = disputeTypeLabelProp ?? pack?.dispute_type?.replace(/_/g, " ") ?? t("productNotReceived");
@@ -311,8 +310,8 @@ export function TemplateSetupWizard({
     if (pack != null) {
       setEvidenceTypes(buildInitialEvidenceTypes(pack, disputeTypeKey));
     }
-  }, [pack?.id, pack?.checklist?.length, disputeTypeKey]);
-  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>(() => {
+  }, [pack, disputeTypeKey]);
+  const [_uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>(() => {
     if (pack?.evidence_items?.length) {
       return pack.evidence_items.map((item, i) => ({
         id: item.id,
@@ -323,7 +322,6 @@ export function TemplateSetupWizard({
     }
     return [];
   });
-  const [isDragging, setIsDragging] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [submissionMode, setSubmissionMode] = React.useState<"auto" | "manual">("manual");
   const [policySetByType, setPolicySetByType] = React.useState<Record<string, boolean>>({});
@@ -430,24 +428,6 @@ export function TemplateSetupWizard({
       }));
       setUploadedFiles((prev) => [...prev, ...newFiles]);
     }
-  };
-
-  const handleRemoveFile = (id: string) => {
-    setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleFileUpload(e.dataTransfer.files);
   };
 
   const getBadgeClasses = (badge: string) => {

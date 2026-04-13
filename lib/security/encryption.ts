@@ -2,7 +2,6 @@ import { randomBytes, createCipheriv, createDecipheriv } from "crypto";
 
 const ALGO = "aes-256-gcm";
 const IV_BYTES = 12;
-const TAG_BYTES = 16;
 
 export interface EncryptedPayload {
   keyVersion: number;

@@ -10,7 +10,6 @@ import {
   Button,
   Banner,
   Thumbnail,
-  Icon,
 } from "@shopify/polaris";
 import { DeleteIcon } from "@shopify/polaris-icons";
 import type { EvidenceFileRow } from "@/lib/setup/types";
@@ -29,7 +28,7 @@ export function UploadSampleFilesModal({
   const [files, setFiles] = useState<EvidenceFileRow[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingFiles, setLoadingFiles] = useState(true);
+  const [_loadingFiles, setLoadingFiles] = useState(true);
 
   const fetchFiles = useCallback(async () => {
     setLoadingFiles(true);

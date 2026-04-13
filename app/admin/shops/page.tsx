@@ -92,7 +92,7 @@ export default function AdminShopsPage() {
       >
         {filtered.map((s) => {
           const plan = (s.plan ?? "free").toLowerCase();
-          const pc = planColors[plan];
+          const _pc = planColors[plan];
           return (
             <tr key={s.id} className="hover:bg-[#F8FAFC] transition-colors">
               <td className="px-6 py-4">

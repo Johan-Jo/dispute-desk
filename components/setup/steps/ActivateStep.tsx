@@ -8,7 +8,6 @@ import {
   recommendTemplates,
   deriveEvidenceConfidence,
   getDefaultEvidenceConfig,
-  EVIDENCE_GROUP_IDS,
   type StoreProfileForRecommendation,
   type StoreType,
   type ProofLevel,

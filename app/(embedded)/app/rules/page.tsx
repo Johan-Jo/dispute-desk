@@ -44,7 +44,6 @@ import {
   DuplicateIcon,
   ClipboardCheckFilledIcon,
 } from "@shopify/polaris-icons";
-import { withShopParams } from "@/lib/withShopParams";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
 import {

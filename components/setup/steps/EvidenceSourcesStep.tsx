@@ -9,13 +9,8 @@ import {
   InlineStack,
   Badge,
   Button,
-  Icon,
   Banner,
 } from "@shopify/polaris";
-import {
-  CheckCircleIcon,
-  AlertTriangleIcon,
-} from "@shopify/polaris-icons";
 import type { IntegrationRow, EvidenceFileRow } from "@/lib/setup/types";
 import { ConnectGorgiasModal } from "../modals/ConnectGorgiasModal";
 import { UploadSampleFilesModal } from "../modals/UploadSampleFilesModal";

@@ -92,15 +92,6 @@ const DISPUTE_TYPES = [
   "GENERAL",
 ] as const;
 
-function formatDate(iso: string | null, locale: string, fallback: string): string {
-  if (!iso) return fallback;
-  return new Date(iso).toLocaleDateString(locale, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function statusTone(status: string): "success" | "attention" | undefined {
   if (status === "ACTIVE") return "success";
   if (status === "DRAFT") return "attention";
@@ -233,7 +224,7 @@ export default function PacksListPage() {
         setInstallingId(null);
       }
     },
-    [router]
+    [router, searchParams]
   );
 
   const handleActivate = useCallback(
@@ -285,7 +276,7 @@ export default function PacksListPage() {
     } finally {
       setCreating(false);
     }
-  }, [formName, formType, fetchPacks]);
+  }, [formName, formType, formDescription, fetchPacks]);
 
   const tabs = [
     { id: "all", content: t("packTemplates.filterAll"), panelID: "packs-all" },

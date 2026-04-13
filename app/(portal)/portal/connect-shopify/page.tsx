@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
-import { AuthCard } from "@/components/ui/auth-card";
 import { OAuthButton } from "@/components/ui/oauth-button";
 
 export default function ConnectShopifyPage() {

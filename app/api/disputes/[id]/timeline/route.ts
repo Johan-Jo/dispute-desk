@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
   }
 
-  const shopId = dispute.shop_id as string;
+  const _shopId = dispute.shop_id as string;
 
   // Determine visibility filter — internal events require verified admin/support role
   let includeInternal = false;

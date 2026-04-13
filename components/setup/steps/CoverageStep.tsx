@@ -43,11 +43,6 @@ interface FamilyRow {
   confidence: "high" | "medium" | "low";
 }
 
-const FAMILY_IDS = [
-  "fraud", "pnr", "not_as_described", "subscription",
-  "refund", "duplicate", "digital", "general",
-] as const;
-
 function deriveDefaultAutomation(
   family: string,
   confidence: "high" | "medium" | "low"

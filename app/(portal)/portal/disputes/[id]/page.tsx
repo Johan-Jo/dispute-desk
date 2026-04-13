@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { ArrowLeft, RefreshCw, FileText, Clock, AlertTriangle, CheckCircle, User, MapPin, Package, CreditCard } from "lucide-react";
+import { ArrowLeft, RefreshCw, FileText, Clock, AlertTriangle, CheckCircle, User, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoBanner } from "@/components/ui/info-banner";
@@ -407,7 +407,7 @@ export default function DisputeDetailPage() {
     setPacks(json.packs ?? []);
     setProfile(profileJson.profile ?? null);
     setLoading(false);
-  }, [id, showDemoDetail]);
+  }, [id, showDemoDetail, locale]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

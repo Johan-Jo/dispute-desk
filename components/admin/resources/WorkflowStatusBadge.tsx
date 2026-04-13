@@ -7,7 +7,6 @@ import {
   Edit,
   Globe,
   FileText,
-  Send,
   Archive,
   Lightbulb,
   ListTodo,

@@ -60,7 +60,7 @@ export async function sendWelcomeEmail(
   const subject = getWelcomeSubject(options.locale);
 
   const resend = new Resend(RESEND_API_KEY);
-  const { data, error } = await resend.emails.send(
+  const { error } = await resend.emails.send(
     {
       from: FROM_EMAIL,
       replyTo: REPLY_TO,

@@ -14,7 +14,6 @@ import {
   Upload,
   Clock,
   Shield,
-  FileDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -207,15 +206,6 @@ export default function PackPreviewPage() {
     await fetchPack();
     setUploading(false);
     e.target.value = "";
-  };
-
-  const handleApprove = async () => {
-    await fetch(`/api/packs/${packId}/approve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    await fetchPack();
   };
 
   const handleExportPdf = async () => {

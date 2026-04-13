@@ -32,12 +32,10 @@ import {
   OrderIcon,
   PersonIcon,
   NoteIcon,
-  ClockIcon,
   AlertTriangleIcon,
   CheckCircleIcon,
   RefreshIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
 } from "@shopify/polaris-icons";
 
 import styles from "./dispute-detail.module.css";
@@ -46,7 +44,6 @@ import DisputeTimeline from "./DisputeTimeline";
 import { getDisputeProgressSteps } from "@/lib/embedded/disputeDetailProgress";
 import {
   deriveFamily,
-  deriveHandlingMode,
   phaseBadgeTone,
   phaseLabel as phaseLabelFn,
   isPhaseKnown,
@@ -114,12 +111,6 @@ interface Pack {
   created_at: string;
 }
 
-interface TimelineEvent {
-  date: string;
-  label: string;
-  sublabel?: string;
-}
-
 interface MatchedRule {
   name: string;
   mode: string;
@@ -139,17 +130,6 @@ function formatDate(iso: string | null): string {
     month: "short",
     day: "numeric",
     year: "numeric",
-  });
-}
-
-function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
@@ -194,37 +174,6 @@ function packStatusTone(status: string): "success" | "warning" | "critical" | "i
   }
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').trim();
-}
-
-function buildTimeline(
-  packs: Pack[],
-  orderEvents: DisputeProfile["orderEvents"],
-  t: ReturnType<typeof useTranslations>
-): TimelineEvent[] {
-  const events: TimelineEvent[] = [];
-
-  for (const e of orderEvents) {
-    events.push({
-      date: e.createdAt,
-      label: stripHtml(e.message),
-      sublabel: e.appTitle ?? "Shopify",
-    });
-  }
-
-  const saved = packs.find((p) => p.saved_to_shopify_at);
-  if (saved?.saved_to_shopify_at) {
-    events.push({ date: saved.saved_to_shopify_at, label: t("disputes.evidenceSavedToShopify") });
-  }
-  if (packs.length > 0) {
-    events.push({ date: packs[packs.length - 1].created_at, label: t("disputes.evidencePackGenerated") });
-  }
-
-  events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  return events;
-}
-
 function SummaryItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className={styles.summaryItem}>
@@ -265,7 +214,6 @@ export default function DisputeDetailPage() {
   // Collapsible state
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [orderDataOpen, setOrderDataOpen] = useState(false);
-  const [fulfillmentOpen, setFulfillmentOpen] = useState(false);
 
   const daysUntilInfo = (iso: string | null): { text: string; urgent: boolean } => {
     if (!iso) return { text: "—", urgent: false };
@@ -423,7 +371,6 @@ export default function DisputeDetailPage() {
       ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
       : null;
   const deadline = daysUntilInfo(dispute.due_at);
-  const timeline = buildTimeline(packs, profile?.orderEvents ?? [], t);
   const isAutomated = matchedRule?.mode === "auto_pack";
   const isSubmittedToBank = dispute.status === "under_review" || dispute.status === "accepted" || dispute.status === "won" || dispute.status === "lost";
   const latestPack = packs.length > 0 ? packs[0] : null;

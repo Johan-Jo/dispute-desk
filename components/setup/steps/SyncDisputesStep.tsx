@@ -48,11 +48,6 @@ function formatCurrency(amount: number | null, code: string | null): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: code ?? "USD" }).format(amount);
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
-
 function daysUntilDiff(iso: string | null): number | null {
   if (!iso) return null;
   return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));

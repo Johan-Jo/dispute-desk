@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { InfoBanner } from "@/components/ui/info-banner";
 import { Modal } from "@/components/ui/modal";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";

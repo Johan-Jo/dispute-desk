@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { X, ArrowRight, ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { OnboardingStep } from "@/lib/onboarding-config";
 
