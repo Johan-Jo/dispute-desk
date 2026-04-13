@@ -210,7 +210,7 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
             {s.needsAttentionCount > 0 && (
               <Badge tone="critical">{t("dashboard.attentionCount", { count: s.needsAttentionCount })}</Badge>
             )}
-            <Button variant="plain" size="slim" url={ctaUrl}>{ctaLabel}</Button>
+            <Button variant="primary" size="slim" url={ctaUrl}>{ctaLabel}</Button>
           </InlineStack>
         </InlineStack>
 
