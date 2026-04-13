@@ -206,43 +206,42 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingMd">{t("dashboard.operationalSummary")}</Text>
-          {s.needsAttentionCount > 0 && (
-            <Badge tone="critical">{t("dashboard.attentionCount", { count: s.needsAttentionCount })}</Badge>
-          )}
+          <InlineStack gap="200" blockAlign="center">
+            {s.needsAttentionCount > 0 && (
+              <Badge tone="critical">{t("dashboard.attentionCount", { count: s.needsAttentionCount })}</Badge>
+            )}
+            <Button variant="plain" size="slim" url={ctaUrl}>{ctaLabel}</Button>
+          </InlineStack>
         </InlineStack>
 
         {loading ? (
           <InlineStack align="center"><Spinner size="small" /></InlineStack>
         ) : (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
-              <SummaryCounter
-                label={t("dashboard.actionNeeded")}
-                count={actionNeeded}
-                tone={actionNeeded > 0 ? "critical" : "subdued"}
-                url={withShopParams("/app/disputes?normalized_status=action_needed,needs_review", searchParams)}
-              />
-              <SummaryCounter
-                label={t("dashboard.readyToSubmit")}
-                count={readyToSubmit}
-                tone={readyToSubmit > 0 ? "warning" : "subdued"}
-                url={withShopParams("/app/disputes?normalized_status=ready_to_submit", searchParams)}
-              />
-              <SummaryCounter
-                label={t("dashboard.waitingOnIssuer")}
-                count={waitingOnIssuer}
-                tone="subdued"
-                url={withShopParams("/app/disputes?normalized_status=waiting_on_issuer", searchParams)}
-              />
-              <SummaryCounter
-                label={t("dashboard.closedInPeriod")}
-                count={s.totalClosed}
-                tone="subdued"
-              />
-            </div>
-
-            <Button variant="primary" size="slim" url={ctaUrl}>{ctaLabel}</Button>
-          </>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
+            <SummaryCounter
+              label={t("dashboard.actionNeeded")}
+              count={actionNeeded}
+              tone={actionNeeded > 0 ? "critical" : "subdued"}
+              url={withShopParams("/app/disputes?normalized_status=action_needed,needs_review", searchParams)}
+            />
+            <SummaryCounter
+              label={t("dashboard.readyToSubmit")}
+              count={readyToSubmit}
+              tone={readyToSubmit > 0 ? "warning" : "subdued"}
+              url={withShopParams("/app/disputes?normalized_status=ready_to_submit", searchParams)}
+            />
+            <SummaryCounter
+              label={t("dashboard.waitingOnIssuer")}
+              count={waitingOnIssuer}
+              tone="subdued"
+              url={withShopParams("/app/disputes?normalized_status=waiting_on_issuer", searchParams)}
+            />
+            <SummaryCounter
+              label={t("dashboard.closedInPeriod")}
+              count={s.totalClosed}
+              tone="subdued"
+            />
+          </div>
         )}
       </BlockStack>
     </Card>
