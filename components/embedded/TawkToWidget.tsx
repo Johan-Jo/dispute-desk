@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useLocale } from "next-intl";
 
 const TAWK_PROPERTY_ID = "69dc1d426161b11c33210737";
 const TAWK_WIDGET_ID = "1jm1t4isv";
-const TAWK_CHAT_URL = `https://tawk.to/chat/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
 
 /**
  * Tawk.to live chat for the embedded Shopify app.
@@ -14,6 +14,9 @@ const TAWK_CHAT_URL = `https://tawk.to/chat/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID
  * Tawk.to's perspective it's a top-level page, so it renders normally.
  */
 export function TawkToWidget() {
+  const locale = useLocale();
+  const lang = locale.split("-")[0];
+  const chatUrl = `https://tawk.to/chat/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}?lang=${lang}`;
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
@@ -37,7 +40,7 @@ export function TawkToWidget() {
           }}
         >
           <iframe
-            src={TAWK_CHAT_URL}
+            src={chatUrl}
             style={{
               width: "100%",
               height: "100%",
