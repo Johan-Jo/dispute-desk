@@ -1237,17 +1237,17 @@
       "gettingStarted": "Erste Schritte",
       "gettingStartedDesc": "Shop verbinden, Streitfälle synchronisieren und Grundlagen lernen",
       "disputes": "Streitfälle",
-      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
+      "disputesDesc": "Fälle in beiden Lebenszyklusphasen anzeigen, filtern und verwalten",
       "evidencePacks": "Bewispakete",
-      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
+      "evidencePacksDesc": "Playbooks für Anfrage- und Chargeback-Antworten erstellen und verwalten",
       "automationRules": "Automatisierung & Regeln",
-      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
+      "automationRulesDesc": "Konfigurieren, wie DisputeDesk jede Streitfallfamilie pro Lebenszyklusphase behandelt",
       "billing": "Abrechnung & Pläne",
       "billingDesc": "Pläne, Kontingente, Upgrades und Testphase",
       "savingToShopify": "Speichern bei Shopify",
       "savingToShopifyDesc": "Wie Beweise gespeichert werden und was danach passiert",
-      "lifecycle": "Inquiry & Chargeback Lifecycle",
-      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
+      "lifecycle": "Anfrage- & Chargeback-Lebenszyklus",
+      "lifecycleDesc": "Die zwei Phasen eines Streitfalls verstehen und wie DisputeDesk jede behandelt"
     },
     "articles": {
       "connectShopifyStore": {
@@ -1390,6 +1390,8 @@
       "relatedArticles": "Verwandte Artikel",
       "contactSupport": "Weitere Hilfe? Kontaktiere uns: support@disputedesk.com",
       "noResults": "Keine Artikel gefunden.",
+      "articleCount": "{count} Artikel",
+      "articleNotAvailable": "Dieser Artikel ist nicht verfügbar.",
       "interactiveGuidesTitle": "Interaktive Touren",
       "interactiveGuidesDesc": "Schritt-für-Schritt-Anleitungen für wichtige Aufgaben in dieser App.",
       "startGuide": "Anleitung starten",

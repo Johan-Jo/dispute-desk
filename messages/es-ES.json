@@ -1237,17 +1237,17 @@
       "gettingStarted": "Primeros pasos",
       "gettingStartedDesc": "Conectar su tienda, sincronizar disputas y aprender lo básico",
       "disputes": "Disputas",
-      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
+      "disputesDesc": "Ver, filtrar y gestionar casos en ambas fases del ciclo de vida",
       "evidencePacks": "Paquetes de evidencia",
-      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
+      "evidencePacksDesc": "Crear y gestionar playbooks para respuestas de consultas y chargebacks",
       "automationRules": "Automatización y reglas",
-      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
+      "automationRulesDesc": "Configurar cómo DisputeDesk maneja cada familia de disputas por fase del ciclo de vida",
       "billing": "Facturación y planes",
       "billingDesc": "Planes, cuotas, actualizaciones y período de prueba",
       "savingToShopify": "Guardar en Shopify",
       "savingToShopifyDesc": "Cómo se guarda la evidencia y qué sucede después",
-      "lifecycle": "Inquiry & Chargeback Lifecycle",
-      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
+      "lifecycle": "Ciclo de vida: consulta y chargeback",
+      "lifecycleDesc": "Comprender las dos fases de una disputa y cómo DisputeDesk gestiona cada una"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1390,6 +1390,8 @@
       "relatedArticles": "Artículos relacionados",
       "contactSupport": "¿Necesitas más ayuda? Contacta: support@disputedesk.com",
       "noResults": "No se encontraron artículos.",
+      "articleCount": "{count} artículos",
+      "articleNotAvailable": "Este artículo no está disponible.",
       "interactiveGuidesTitle": "Recorridos interactivos",
       "interactiveGuidesDesc": "Orientación paso a paso para las tareas clave en esta app.",
       "startGuide": "Iniciar guía",

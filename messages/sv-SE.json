@@ -1238,17 +1238,17 @@
       "gettingStarted": "Kom igång",
       "gettingStartedDesc": "Anslut din butik, synka tvister och lär dig grunderna",
       "disputes": "Tvister",
-      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
+      "disputesDesc": "Visa, filtrera och hantera ärenden i båda livscykelfaserna",
       "evidencePacks": "Bevispaket",
-      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
+      "evidencePacksDesc": "Bygg och hantera spelböcker för förfrågnings- och chargebacksvar",
       "automationRules": "Automation och regler",
-      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
+      "automationRulesDesc": "Konfigurera hur DisputeDesk hanterar varje tvistfamilj per livscykelfas",
       "billing": "Fakturering och planer",
       "billingDesc": "Planer, kvoter, uppgraderingar och provperiod",
       "savingToShopify": "Spara till Shopify",
       "savingToShopifyDesc": "Hur bevis sparas och vad som händer sedan",
-      "lifecycle": "Inquiry & Chargeback Lifecycle",
-      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
+      "lifecycle": "Förfrågan & chargeback-livscykel",
+      "lifecycleDesc": "Förstå de två faserna av en tvist och hur DisputeDesk hanterar varje fas"
     },
     "articles": {
       "shopifyAppStoreInstall": {
@@ -1391,6 +1391,8 @@
       "relatedArticles": "Relaterade artiklar",
       "contactSupport": "Behöver du mer hjälp? Kontakta: support@disputedesk.com",
       "noResults": "Inga artiklar hittades.",
+      "articleCount": "{count} artiklar",
+      "articleNotAvailable": "Den här artikeln är inte tillgänglig.",
       "interactiveGuidesTitle": "Interaktiva guider",
       "interactiveGuidesDesc": "Steg-för-steg-vägledning för viktiga uppgifter i den här appen.",
       "startGuide": "Starta guiden",

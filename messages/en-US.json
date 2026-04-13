@@ -1297,6 +1297,8 @@
       "relatedArticles": "Related Articles",
       "contactSupport": "Need more help? Contact support@disputedesk.com",
       "noResults": "No articles found.",
+      "articleCount": "{count} articles",
+      "articleNotAvailable": "This article is not available.",
       "interactiveGuidesTitle": "Interactive Tours",
       "interactiveGuidesDesc": "Step-by-step guidance for key tasks in this app.",
       "startGuide": "Start guide",

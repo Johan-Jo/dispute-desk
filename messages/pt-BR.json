@@ -1390,6 +1390,8 @@
       "relatedArticles": "Artigos Relacionados",
       "contactSupport": "Precisa de mais ajuda? Entre em contato: support@disputedesk.com",
       "noResults": "Nenhum artigo encontrado.",
+      "articleCount": "{count} artigos",
+      "articleNotAvailable": "Este artigo não está disponível.",
       "interactiveGuidesTitle": "Guias Interativos",
       "interactiveGuidesDesc": "Orientação passo a passo para as principais tarefas deste app.",
       "startGuide": "Iniciar guia",
