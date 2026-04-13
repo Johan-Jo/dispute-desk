@@ -369,6 +369,14 @@
   margin: 0;
 }
 
+/* ── Dispute Timeline Summary ── */
+.nextActionBanner {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
 /* ── Evidence Packs table ── */
 .evidenceTable {
   width: 100%;

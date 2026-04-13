@@ -2862,5 +2862,78 @@
     "emptyStateBody": "Configure su primera regla de automatización e instale un playbook para que DisputeDesk maneje las disputas automáticamente cuando lleguen de Shopify.",
     "emptyStatePrimaryCta": "Crear su primera regla",
     "inquiryInstallCta": "Instalar plantillas de consulta"
+  },
+  "disputeTimeline": {
+    "title": "Historial",
+    "summary": "Resumen",
+    "currentStatus": "Estado Actual",
+    "submissionStatus": "Envío",
+    "amountAtRisk": "Monto en Riesgo",
+    "finalOutcome": "Resultado Final",
+    "nextAction": "Siguiente Paso",
+    "evidenceSavedAt": "Evidencia Guardada",
+    "submittedAt": "Enviado",
+    "closedAt": "Cerrado",
+    "amountRecovered": "Monto Recuperado",
+    "amountLost": "Monto Perdido",
+    "noEvents": "Aún no hay eventos en la línea de tiempo.",
+    "eventTypes": {
+      "dispute_opened": "Disputa Abierta",
+      "status_changed": "Estado Cambiado",
+      "due_date_changed": "Fecha Límite Cambiada",
+      "dispute_closed": "Disputa Cerrada",
+      "pack_created": "Paquete de Evidencia Generado",
+      "pack_ready": "Paquete Listo para Revisión",
+      "pack_blocked": "Paquete Bloqueado",
+      "pdf_rendered": "PDF de Evidencia Generado",
+      "evidence_saved_to_shopify": "Evidencia Guardada en Shopify",
+      "submission_confirmed": "Envío Confirmado",
+      "auto_build_triggered": "Auto-Construcción Iniciada",
+      "auto_save_triggered": "Auto-Guardado Iniciado",
+      "parked_for_review": "Señalado para Revisión",
+      "merchant_approved_for_save": "Aprobado por el Comerciante",
+      "outcome_detected": "Resultado Detectado",
+      "sync_failed": "Sincronización Fallida",
+      "pack_build_failed": "Construcción del Paquete Fallida",
+      "evidence_save_failed": "Guardado de Evidencia Fallido"
+    },
+    "actors": {
+      "merchant_user": "Usted",
+      "disputedesk_system": "DisputeDesk",
+      "disputedesk_admin": "Admin",
+      "shopify": "Shopify",
+      "external_unknown": "Externo"
+    },
+    "normalizedStatuses": {
+      "new": "Nuevo",
+      "in_progress": "En Progreso",
+      "needs_review": "Necesita Revisión",
+      "ready_to_submit": "Listo para Enviar",
+      "action_needed": "Acción Requerida",
+      "submitted": "Enviado",
+      "waiting_on_issuer": "Esperando al Emisor",
+      "won": "Ganado",
+      "lost": "Perdido",
+      "accepted_not_contested": "Aceptado",
+      "closed_other": "Cerrado"
+    },
+    "submissionStates": {
+      "not_saved": "Evidencia aún no guardada",
+      "saved_to_shopify": "Evidencia guardada en borrador de Shopify",
+      "submitted_confirmed": "Enviado",
+      "submission_uncertain": "Envío no confirmado",
+      "manual_submission_reported": "Comerciante reportó como enviado"
+    },
+    "outcomes": {
+      "won": "Ganado",
+      "lost": "Perdido",
+      "partially_won": "Parcialmente Ganado",
+      "accepted": "Aceptado",
+      "refunded": "Reembolsado",
+      "canceled": "Cancelado",
+      "expired": "Expirado",
+      "closed_other": "Cerrado",
+      "unknown": "Desconocido"
+    }
   }
 }

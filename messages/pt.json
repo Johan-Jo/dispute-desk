@@ -1989,5 +1989,78 @@
     "emptyStateBody": "Configure sua primeira regra de automação e instale um playbook para que o DisputeDesk trate disputas automaticamente quando chegarem do Shopify.",
     "emptyStatePrimaryCta": "Criar sua primeira regra",
     "inquiryInstallCta": "Instalar modelos de consulta"
+  },
+  "disputeTimeline": {
+    "title": "Histórico",
+    "summary": "Resumo",
+    "currentStatus": "Status Atual",
+    "submissionStatus": "Envio",
+    "amountAtRisk": "Valor em Risco",
+    "finalOutcome": "Resultado Final",
+    "nextAction": "Próxima Ação",
+    "evidenceSavedAt": "Evidência Salva",
+    "submittedAt": "Enviado",
+    "closedAt": "Encerrado",
+    "amountRecovered": "Valor Recuperado",
+    "amountLost": "Valor Perdido",
+    "noEvents": "Nenhum evento na linha do tempo ainda.",
+    "eventTypes": {
+      "dispute_opened": "Disputa Aberta",
+      "status_changed": "Status Alterado",
+      "due_date_changed": "Data Limite Alterada",
+      "dispute_closed": "Disputa Encerrada",
+      "pack_created": "Pacote de Evidências Gerado",
+      "pack_ready": "Pacote Pronto para Revisão",
+      "pack_blocked": "Pacote Bloqueado",
+      "pdf_rendered": "PDF de Evidências Gerado",
+      "evidence_saved_to_shopify": "Evidência Salva no Shopify",
+      "submission_confirmed": "Envio Confirmado",
+      "auto_build_triggered": "Auto-Construção Iniciada",
+      "auto_save_triggered": "Auto-Salvamento Iniciado",
+      "parked_for_review": "Sinalizado para Revisão",
+      "merchant_approved_for_save": "Aprovado pelo Comerciante",
+      "outcome_detected": "Resultado Detectado",
+      "sync_failed": "Sincronização Falhou",
+      "pack_build_failed": "Construção do Pacote Falhou",
+      "evidence_save_failed": "Salvamento de Evidência Falhou"
+    },
+    "actors": {
+      "merchant_user": "Você",
+      "disputedesk_system": "DisputeDesk",
+      "disputedesk_admin": "Admin",
+      "shopify": "Shopify",
+      "external_unknown": "Externo"
+    },
+    "normalizedStatuses": {
+      "new": "Novo",
+      "in_progress": "Em Progresso",
+      "needs_review": "Precisa de Revisão",
+      "ready_to_submit": "Pronto para Enviar",
+      "action_needed": "Ação Necessária",
+      "submitted": "Enviado",
+      "waiting_on_issuer": "Aguardando Emissor",
+      "won": "Ganho",
+      "lost": "Perdido",
+      "accepted_not_contested": "Aceito",
+      "closed_other": "Encerrado"
+    },
+    "submissionStates": {
+      "not_saved": "Evidência ainda não salva",
+      "saved_to_shopify": "Evidência salva no rascunho do Shopify",
+      "submitted_confirmed": "Enviado",
+      "submission_uncertain": "Envio não confirmado",
+      "manual_submission_reported": "Comerciante reportou como enviado"
+    },
+    "outcomes": {
+      "won": "Ganho",
+      "lost": "Perdido",
+      "partially_won": "Parcialmente Ganho",
+      "accepted": "Aceito",
+      "refunded": "Reembolsado",
+      "canceled": "Cancelado",
+      "expired": "Expirado",
+      "closed_other": "Encerrado",
+      "unknown": "Desconhecido"
+    }
   }
 }

@@ -2104,5 +2104,78 @@
     "emptyStateBody": "Skapa din första automatiseringsregel och installera en playbook så att DisputeDesk kan hantera tvister automatiskt när de kommer från Shopify.",
     "emptyStatePrimaryCta": "Skapa din första regel",
     "inquiryInstallCta": "Installera förfrågningsmallar"
+  },
+  "disputeTimeline": {
+    "title": "Historik",
+    "summary": "Sammanfattning",
+    "currentStatus": "Aktuell status",
+    "submissionStatus": "Inlämning",
+    "amountAtRisk": "Belopp i fara",
+    "finalOutcome": "Slutresultat",
+    "nextAction": "Nästa steg",
+    "evidenceSavedAt": "Bevis sparat",
+    "submittedAt": "Inskickad",
+    "closedAt": "Stängd",
+    "amountRecovered": "Återvunnet belopp",
+    "amountLost": "Förlorat belopp",
+    "noEvents": "Inga tidslinjehändelser ännu.",
+    "eventTypes": {
+      "dispute_opened": "Tvist öppnad",
+      "status_changed": "Status ändrad",
+      "due_date_changed": "Förfallodatum ändrat",
+      "dispute_closed": "Tvist stängd",
+      "pack_created": "Bevispaket genererat",
+      "pack_ready": "Paket redo för granskning",
+      "pack_blocked": "Paket blockerat",
+      "pdf_rendered": "Bevis-PDF genererad",
+      "evidence_saved_to_shopify": "Bevis sparat till Shopify",
+      "submission_confirmed": "Inlämning bekräftad",
+      "auto_build_triggered": "Autobygge startat",
+      "auto_save_triggered": "Autosparande startat",
+      "parked_for_review": "Flaggad för granskning",
+      "merchant_approved_for_save": "Godkänd av handlare",
+      "outcome_detected": "Resultat detekterat",
+      "sync_failed": "Synk misslyckades",
+      "pack_build_failed": "Paketbygge misslyckades",
+      "evidence_save_failed": "Bevissparande misslyckades"
+    },
+    "actors": {
+      "merchant_user": "Du",
+      "disputedesk_system": "DisputeDesk",
+      "disputedesk_admin": "Admin",
+      "shopify": "Shopify",
+      "external_unknown": "Extern"
+    },
+    "normalizedStatuses": {
+      "new": "Ny",
+      "in_progress": "Pågår",
+      "needs_review": "Behöver granskning",
+      "ready_to_submit": "Redo att skicka",
+      "action_needed": "Åtgärd krävs",
+      "submitted": "Inskickad",
+      "waiting_on_issuer": "Väntar på utfärdare",
+      "won": "Vunnen",
+      "lost": "Förlorad",
+      "accepted_not_contested": "Accepterad",
+      "closed_other": "Stängd"
+    },
+    "submissionStates": {
+      "not_saved": "Bevis ännu ej sparat",
+      "saved_to_shopify": "Bevis sparat till Shopify-utkast",
+      "submitted_confirmed": "Inskickad",
+      "submission_uncertain": "Inlämning ej bekräftad",
+      "manual_submission_reported": "Handlare rapporterade som inskickad"
+    },
+    "outcomes": {
+      "won": "Vunnen",
+      "lost": "Förlorad",
+      "partially_won": "Delvis vunnen",
+      "accepted": "Accepterad",
+      "refunded": "Återbetald",
+      "canceled": "Avbruten",
+      "expired": "Utgången",
+      "closed_other": "Stängd",
+      "unknown": "Okänd"
+    }
   }
 }

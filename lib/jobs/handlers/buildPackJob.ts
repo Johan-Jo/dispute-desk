@@ -6,6 +6,12 @@ import {
   sendEvidenceNeededAlert,
   shouldSendEvidenceAlert,
 } from "../../email/sendEvidenceNeededAlert";
+import { emitDisputeEvent } from "../../disputeEvents/emitEvent";
+import { updateNormalizedStatus } from "../../disputeEvents/updateNormalizedStatus";
+import {
+  PACK_CREATED,
+  PACK_BUILD_FAILED,
+} from "../../disputeEvents/eventTypes";
 import type { ClaimedJob } from "../claimJobs";
 
 /**
@@ -53,6 +59,32 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       },
     });
 
+    // Emit merchant-facing dispute event
+    const { data: packRow } = await db
+      .from("evidence_packs")
+      .select("dispute_id")
+      .eq("id", packId)
+      .single();
+    if (packRow?.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: packRow.dispute_id,
+        shopId: job.shopId,
+        eventType: PACK_CREATED,
+        description: `Score: ${result.completenessScore}%, ${result.itemsCreated} evidence items collected`,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        metadataJson: {
+          pack_id: packId,
+          completeness_score: result.completenessScore,
+          items_created: result.itemsCreated,
+          blockers: result.blockers,
+        },
+        dedupeKey: `${packRow.dispute_id}:${PACK_CREATED}:${packId}`,
+      });
+      void updateNormalizedStatus(packRow.dispute_id);
+    }
+
     // Automation: evaluate auto-save gate
     await evaluateAndMaybeAutoSave(packId).catch(() => {
       // Non-fatal: auto-save evaluation failure shouldn't fail the build
@@ -77,6 +109,27 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       eventType: "job_failed",
       eventPayload: { jobId: job.id, error: message },
     });
+
+    // Emit internal-only failure event
+    const { data: failedPack } = await db
+      .from("evidence_packs")
+      .select("dispute_id")
+      .eq("id", packId)
+      .single();
+    if (failedPack?.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: failedPack.dispute_id,
+        shopId: job.shopId,
+        eventType: PACK_BUILD_FAILED,
+        description: message,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        visibility: "internal_only",
+        metadataJson: { pack_id: packId, error: message },
+        dedupeKey: `${failedPack.dispute_id}:${PACK_BUILD_FAILED}:${packId}`,
+      });
+    }
 
     throw err;
   }

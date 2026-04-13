@@ -18,6 +18,16 @@ import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
 import { sendUnknownReasonAlert } from "@/lib/email/sendUnknownReasonAlert";
 import { sendNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
+import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
+import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import {
+  DISPUTE_OPENED,
+  STATUS_CHANGED,
+  DUE_DATE_CHANGED,
+  OUTCOME_DETECTED,
+  DISPUTE_CLOSED,
+  SUBMISSION_CONFIRMED,
+} from "@/lib/disputeEvents/eventTypes";
 
 const KNOWN_REASONS = new Set<string>(ALL_DISPUTE_REASONS);
 
@@ -185,10 +195,10 @@ export async function syncDisputes(
     for (const edge of edges) {
       const d = edge.node;
       try {
-        // Check if row already exists
+        // Check if row already exists (include fields for change detection)
         const { data: existing } = await sb
           .from("disputes")
-          .select("id")
+          .select("id, status, due_at, submitted_at, final_outcome, submission_state")
           .eq("shop_id", shopId)
           .eq("dispute_gid", d.id)
           .maybeSingle();
@@ -228,10 +238,181 @@ export async function syncDisputes(
         }
 
         result.synced++;
+        const disputeId = upserted?.id;
+        const nowIso = new Date().toISOString();
+        const newStatus = d.status?.toLowerCase() ?? null;
+
         if (existing) {
           result.updated++;
+
+          // Detect status changes
+          if (disputeId && existing.status !== newStatus && newStatus) {
+            void emitDisputeEvent({
+              disputeId,
+              shopId,
+              eventType: STATUS_CHANGED,
+              description: `${existing.status ?? "unknown"} → ${newStatus}`,
+              eventAt: nowIso,
+              actorType: "shopify",
+              sourceType: "shopify_sync",
+              metadataJson: {
+                old_status: existing.status,
+                new_status: newStatus,
+              },
+              dedupeKey: `${disputeId}:${STATUS_CHANGED}:${existing.status}_${newStatus}`,
+            });
+
+            // Terminal outcome
+            const terminalStatuses = ["won", "lost", "charge_refunded", "accepted"];
+            if (terminalStatuses.includes(newStatus) && !existing.final_outcome) {
+              const amount = d.amount ? parseFloat(d.amount.amount) : 0;
+              const outcomeMap: Record<string, string> = {
+                won: "won", lost: "lost",
+                charge_refunded: "refunded", accepted: "accepted",
+              };
+              void emitDisputeEvent({
+                disputeId,
+                shopId,
+                eventType: OUTCOME_DETECTED,
+                description: `Outcome: ${outcomeMap[newStatus] ?? newStatus}`,
+                eventAt: d.finalizedOn ?? nowIso,
+                actorType: "shopify",
+                sourceType: "shopify_sync",
+                metadataJson: {
+                  final_outcome: outcomeMap[newStatus],
+                  amount,
+                  currency_code: d.amount?.currencyCode,
+                },
+                dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${outcomeMap[newStatus]}`,
+              });
+              void emitDisputeEvent({
+                disputeId,
+                shopId,
+                eventType: DISPUTE_CLOSED,
+                eventAt: d.finalizedOn ?? nowIso,
+                actorType: "shopify",
+                sourceType: "shopify_sync",
+                dedupeKey: `${disputeId}:${DISPUTE_CLOSED}`,
+              });
+              await sb
+                .from("disputes")
+                .update({ closed_at: d.finalizedOn ?? nowIso })
+                .eq("id", disputeId);
+            }
+          }
+
+          // Detect due date changes
+          if (disputeId && existing.due_at !== d.evidenceDueBy && d.evidenceDueBy) {
+            void emitDisputeEvent({
+              disputeId,
+              shopId,
+              eventType: DUE_DATE_CHANGED,
+              description: `Due date changed to ${d.evidenceDueBy}`,
+              eventAt: nowIso,
+              actorType: "shopify",
+              sourceType: "shopify_sync",
+              metadataJson: {
+                old_due_at: existing.due_at,
+                new_due_at: d.evidenceDueBy,
+              },
+              dedupeKey: `${disputeId}:${DUE_DATE_CHANGED}:${d.evidenceDueBy}`,
+            });
+          }
+
+          // Detect confirmed submission via Shopify evidenceSentOn
+          if (
+            disputeId &&
+            d.evidenceSentOn &&
+            existing.submission_state !== "submitted_confirmed" &&
+            !existing.submitted_at
+          ) {
+            await sb
+              .from("disputes")
+              .update({
+                submission_state: "submitted_confirmed",
+                submitted_at: d.evidenceSentOn,
+              })
+              .eq("id", disputeId);
+            void emitDisputeEvent({
+              disputeId,
+              shopId,
+              eventType: SUBMISSION_CONFIRMED,
+              description: "Representment submission confirmed by Shopify",
+              eventAt: d.evidenceSentOn,
+              actorType: "shopify",
+              sourceType: "shopify_sync",
+              dedupeKey: `${disputeId}:${SUBMISSION_CONFIRMED}:${d.evidenceSentOn}`,
+            });
+          }
+
+          if (disputeId) void updateNormalizedStatus(disputeId);
         } else {
           result.created++;
+
+          // Emit dispute_opened for new disputes
+          if (disputeId) {
+            void emitDisputeEvent({
+              disputeId,
+              shopId,
+              eventType: DISPUTE_OPENED,
+              description: `${d.type ?? "Dispute"} opened — ${d.reasonDetails?.reason ?? "unknown reason"}`,
+              eventAt: d.initiatedAt ?? nowIso,
+              actorType: "shopify",
+              sourceType: "shopify_sync",
+              metadataJson: {
+                reason: d.reasonDetails?.reason,
+                phase: d.type?.toLowerCase(),
+                amount: d.amount ? parseFloat(d.amount.amount) : null,
+                currency_code: d.amount?.currencyCode,
+              },
+              dedupeKey: `${disputeId}:${DISPUTE_OPENED}`,
+            });
+
+            // If already terminal on first sync
+            const terminalStatuses = ["won", "lost", "charge_refunded", "accepted"];
+            if (newStatus && terminalStatuses.includes(newStatus)) {
+              const outcomeMap: Record<string, string> = {
+                won: "won", lost: "lost",
+                charge_refunded: "refunded", accepted: "accepted",
+              };
+              void emitDisputeEvent({
+                disputeId,
+                shopId,
+                eventType: OUTCOME_DETECTED,
+                eventAt: d.finalizedOn ?? nowIso,
+                actorType: "shopify",
+                sourceType: "shopify_sync",
+                metadataJson: { final_outcome: outcomeMap[newStatus] },
+                dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${outcomeMap[newStatus]}`,
+              });
+              await sb
+                .from("disputes")
+                .update({ closed_at: d.finalizedOn ?? nowIso })
+                .eq("id", disputeId);
+            }
+
+            // If Shopify already has evidenceSentOn
+            if (d.evidenceSentOn) {
+              await sb
+                .from("disputes")
+                .update({
+                  submission_state: "submitted_confirmed",
+                  submitted_at: d.evidenceSentOn,
+                })
+                .eq("id", disputeId);
+              void emitDisputeEvent({
+                disputeId,
+                shopId,
+                eventType: SUBMISSION_CONFIRMED,
+                eventAt: d.evidenceSentOn,
+                actorType: "shopify",
+                sourceType: "shopify_sync",
+                dedupeKey: `${disputeId}:${SUBMISSION_CONFIRMED}:${d.evidenceSentOn}`,
+              });
+            }
+
+            void updateNormalizedStatus(disputeId);
+          }
         }
 
         // Track first chargeback win — sets shops.first_win_at once.

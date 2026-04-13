@@ -2862,5 +2862,78 @@
     "emptyStateBody": "Erstellen Sie Ihre erste Automatisierungsregel und installieren Sie ein Playbook, damit DisputeDesk Streitfälle automatisch bearbeitet, wenn sie von Shopify eingehen.",
     "emptyStatePrimaryCta": "Erste Regel erstellen",
     "inquiryInstallCta": "Anfrage-Vorlagen installieren"
+  },
+  "disputeTimeline": {
+    "title": "Verlauf",
+    "summary": "Zusammenfassung",
+    "currentStatus": "Aktueller Status",
+    "submissionStatus": "Einreichung",
+    "amountAtRisk": "Gefährdeter Betrag",
+    "finalOutcome": "Endergebnis",
+    "nextAction": "Nächster Schritt",
+    "evidenceSavedAt": "Beweis gespeichert",
+    "submittedAt": "Eingereicht",
+    "closedAt": "Geschlossen",
+    "amountRecovered": "Zurückgewonnener Betrag",
+    "amountLost": "Verlorener Betrag",
+    "noEvents": "Noch keine Zeitleistenereignisse.",
+    "eventTypes": {
+      "dispute_opened": "Disput eröffnet",
+      "status_changed": "Status geändert",
+      "due_date_changed": "Fälligkeitsdatum geändert",
+      "dispute_closed": "Disput geschlossen",
+      "pack_created": "Beweispaket erstellt",
+      "pack_ready": "Paket bereit zur Prüfung",
+      "pack_blocked": "Paket blockiert",
+      "pdf_rendered": "Beweis-PDF erstellt",
+      "evidence_saved_to_shopify": "Beweis bei Shopify gespeichert",
+      "submission_confirmed": "Einreichung bestätigt",
+      "auto_build_triggered": "Auto-Build gestartet",
+      "auto_save_triggered": "Auto-Speichern gestartet",
+      "parked_for_review": "Zur Prüfung markiert",
+      "merchant_approved_for_save": "Vom Händler genehmigt",
+      "outcome_detected": "Ergebnis erkannt",
+      "sync_failed": "Synchronisierung fehlgeschlagen",
+      "pack_build_failed": "Paketerstellung fehlgeschlagen",
+      "evidence_save_failed": "Beweisspeicherung fehlgeschlagen"
+    },
+    "actors": {
+      "merchant_user": "Sie",
+      "disputedesk_system": "DisputeDesk",
+      "disputedesk_admin": "Admin",
+      "shopify": "Shopify",
+      "external_unknown": "Extern"
+    },
+    "normalizedStatuses": {
+      "new": "Neu",
+      "in_progress": "In Bearbeitung",
+      "needs_review": "Prüfung erforderlich",
+      "ready_to_submit": "Bereit zum Einreichen",
+      "action_needed": "Handlung erforderlich",
+      "submitted": "Eingereicht",
+      "waiting_on_issuer": "Warten auf Herausgeber",
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "accepted_not_contested": "Akzeptiert",
+      "closed_other": "Geschlossen"
+    },
+    "submissionStates": {
+      "not_saved": "Beweis noch nicht gespeichert",
+      "saved_to_shopify": "Beweis im Shopify-Entwurf gespeichert",
+      "submitted_confirmed": "Eingereicht",
+      "submission_uncertain": "Einreichung nicht bestätigt",
+      "manual_submission_reported": "Händler meldete als eingereicht"
+    },
+    "outcomes": {
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "partially_won": "Teilweise gewonnen",
+      "accepted": "Akzeptiert",
+      "refunded": "Erstattet",
+      "canceled": "Storniert",
+      "expired": "Abgelaufen",
+      "closed_other": "Geschlossen",
+      "unknown": "Unbekannt"
+    }
   }
 }

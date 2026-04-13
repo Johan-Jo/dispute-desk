@@ -15,6 +15,12 @@ import {
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendPackSavedAlert } from "@/lib/email/sendPackSavedAlert";
+import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
+import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import {
+  EVIDENCE_SAVED_TO_SHOPIFY,
+  EVIDENCE_SAVE_FAILED,
+} from "@/lib/disputeEvents/eventTypes";
 import type { ClaimedJob } from "../claimJobs";
 
 function decryptAccessToken(encrypted: string): string {
@@ -103,6 +109,21 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       },
     });
 
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: EVIDENCE_SAVE_FAILED,
+        description: userErrors.map((e) => e.message).join(", "),
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        visibility: "internal_only",
+        metadataJson: { pack_id: packId, user_errors: userErrors },
+        dedupeKey: `${pack.dispute_id}:${EVIDENCE_SAVE_FAILED}:${packId}:${new Date().toISOString()}`,
+      });
+    }
+
     throw new Error(
       `Shopify userErrors: ${userErrors.map((e) => e.message).join(", ")}`
     );
@@ -118,6 +139,17 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     })
     .eq("id", packId);
 
+  // Update dispute submission state (NOT submitted_at — only confirmed submission sets that)
+  if (pack.dispute_id) {
+    await sb
+      .from("disputes")
+      .update({
+        submission_state: "saved_to_shopify",
+        evidence_saved_to_shopify_at: now,
+      })
+      .eq("id", pack.dispute_id);
+  }
+
   await logAuditEvent({
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
@@ -130,6 +162,25 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       job_id: job.id,
     },
   });
+
+  if (pack.dispute_id) {
+    void emitDisputeEvent({
+      disputeId: pack.dispute_id,
+      shopId: pack.shop_id,
+      eventType: EVIDENCE_SAVED_TO_SHOPIFY,
+      description: `${Object.keys(input).length} evidence fields sent to Shopify`,
+      eventAt: now,
+      actorType: "disputedesk_system",
+      sourceType: "pack_engine",
+      metadataJson: {
+        pack_id: packId,
+        evidence_gid: dispute.dispute_evidence_gid,
+        fields_sent: Object.keys(input),
+      },
+      dedupeKey: `${pack.dispute_id}:${EVIDENCE_SAVED_TO_SHOPIFY}:${packId}`,
+    });
+    void updateNormalizedStatus(pack.dispute_id);
+  }
 
   // Notify merchant that evidence has been saved — fire-and-forget.
   void sendPackSavedAlert({

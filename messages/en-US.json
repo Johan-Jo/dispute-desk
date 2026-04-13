@@ -2757,5 +2757,78 @@
     "emptyStateBody": "Set up your first automation rule and install a playbook so DisputeDesk can handle disputes automatically when they arrive from Shopify.",
     "emptyStatePrimaryCta": "Create your first rule",
     "inquiryInstallCta": "Install inquiry templates"
+  },
+  "disputeTimeline": {
+    "title": "History",
+    "summary": "Summary",
+    "currentStatus": "Current Status",
+    "submissionStatus": "Submission",
+    "amountAtRisk": "Amount at Risk",
+    "finalOutcome": "Final Outcome",
+    "nextAction": "Next Action",
+    "evidenceSavedAt": "Evidence Saved",
+    "submittedAt": "Submitted",
+    "closedAt": "Closed",
+    "amountRecovered": "Amount Recovered",
+    "amountLost": "Amount Lost",
+    "noEvents": "No timeline events yet.",
+    "eventTypes": {
+      "dispute_opened": "Dispute Opened",
+      "status_changed": "Status Changed",
+      "due_date_changed": "Due Date Changed",
+      "dispute_closed": "Dispute Closed",
+      "pack_created": "Evidence Pack Generated",
+      "pack_ready": "Pack Ready for Review",
+      "pack_blocked": "Pack Blocked",
+      "pdf_rendered": "Evidence PDF Generated",
+      "evidence_saved_to_shopify": "Evidence Saved to Shopify",
+      "submission_confirmed": "Submission Confirmed",
+      "auto_build_triggered": "Auto-Build Started",
+      "auto_save_triggered": "Auto-Save Started",
+      "parked_for_review": "Flagged for Review",
+      "merchant_approved_for_save": "Approved by Merchant",
+      "outcome_detected": "Outcome Detected",
+      "sync_failed": "Sync Failed",
+      "pack_build_failed": "Pack Build Failed",
+      "evidence_save_failed": "Evidence Save Failed"
+    },
+    "actors": {
+      "merchant_user": "You",
+      "disputedesk_system": "DisputeDesk",
+      "disputedesk_admin": "Admin",
+      "shopify": "Shopify",
+      "external_unknown": "External"
+    },
+    "normalizedStatuses": {
+      "new": "New",
+      "in_progress": "In Progress",
+      "needs_review": "Needs Review",
+      "ready_to_submit": "Ready to Submit",
+      "action_needed": "Action Needed",
+      "submitted": "Submitted",
+      "waiting_on_issuer": "Waiting on Issuer",
+      "won": "Won",
+      "lost": "Lost",
+      "accepted_not_contested": "Accepted",
+      "closed_other": "Closed"
+    },
+    "submissionStates": {
+      "not_saved": "Evidence not yet saved",
+      "saved_to_shopify": "Evidence saved to Shopify draft",
+      "submitted_confirmed": "Submitted",
+      "submission_uncertain": "Submission not confirmed",
+      "manual_submission_reported": "Merchant reported as submitted"
+    },
+    "outcomes": {
+      "won": "Won",
+      "lost": "Lost",
+      "partially_won": "Partially Won",
+      "accepted": "Accepted",
+      "refunded": "Refunded",
+      "canceled": "Canceled",
+      "expired": "Expired",
+      "closed_other": "Closed",
+      "unknown": "Unknown"
+    }
   }
 }

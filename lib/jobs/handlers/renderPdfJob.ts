@@ -1,6 +1,8 @@
 import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
 import { renderPackPdf } from "../../packs/renderPdf";
+import { emitDisputeEvent } from "../../disputeEvents/emitEvent";
+import { PDF_RENDERED } from "../../disputeEvents/eventTypes";
 import type { PackPdfData } from "../../packs/pdf/EvidencePackDocument";
 import type { ClaimedJob } from "../claimJobs";
 
@@ -114,6 +116,19 @@ export async function handleRenderPdf(job: ClaimedJob): Promise<void> {
         fileSizeBytes: result.buffer.length,
       },
     });
+
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: job.shopId,
+        eventType: PDF_RENDERED,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        metadataJson: { pack_id: packId },
+        dedupeKey: `${pack.dispute_id}:${PDF_RENDERED}:${packId}`,
+      });
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 

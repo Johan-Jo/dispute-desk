@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
+import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import { MERCHANT_APPROVED_FOR_SAVE } from "@/lib/disputeEvents/eventTypes";
 
 export const runtime = "nodejs";
 
@@ -47,6 +50,17 @@ export async function POST(
     eventType: "rule_overridden",
     eventPayload: { action: "approved_from_review_queue" },
   });
+
+  void emitDisputeEvent({
+    disputeId: id,
+    shopId: dispute.shop_id,
+    eventType: MERCHANT_APPROVED_FOR_SAVE,
+    eventAt: new Date().toISOString(),
+    actorType: "merchant_user",
+    sourceType: "user_action",
+    dedupeKey: `${id}:${MERCHANT_APPROVED_FOR_SAVE}:${new Date().toISOString()}`,
+  });
+  void updateNormalizedStatus(id);
 
   const phase =
     dispute.phase === "inquiry" || dispute.phase === "chargeback"

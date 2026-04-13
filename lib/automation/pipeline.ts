@@ -10,6 +10,14 @@ import { getShopSettings } from "./settings";
 import { evaluateCompleteness } from "./completeness";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
+import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
+import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import {
+  AUTO_BUILD_TRIGGERED,
+  AUTO_SAVE_TRIGGERED,
+  PARKED_FOR_REVIEW,
+  PACK_BLOCKED,
+} from "@/lib/disputeEvents/eventTypes";
 
 interface Dispute {
   id: string;
@@ -119,6 +127,18 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     event_payload: { trigger: "automation_pipeline" },
   });
 
+  void emitDisputeEvent({
+    disputeId: dispute.id,
+    shopId: dispute.shop_id,
+    eventType: AUTO_BUILD_TRIGGERED,
+    eventAt: new Date().toISOString(),
+    actorType: "disputedesk_system",
+    sourceType: "pack_engine",
+    metadataJson: { pack_id: pack.id },
+    dedupeKey: `${dispute.id}:${AUTO_BUILD_TRIGGERED}:${pack.id}`,
+  });
+  void updateNormalizedStatus(dispute.id);
+
   return { action: "pack_enqueued" };
 }
 
@@ -179,6 +199,23 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       },
     });
 
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: AUTO_SAVE_TRIGGERED,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        metadataJson: {
+          pack_id: packId,
+          completeness_score: pack.completeness_score,
+        },
+        dedupeKey: `${pack.dispute_id}:${AUTO_SAVE_TRIGGERED}:${packId}`,
+      });
+      void updateNormalizedStatus(pack.dispute_id);
+    }
+
     return { action: "auto_save", details: "Enqueued save to Shopify" };
   }
 
@@ -197,6 +234,20 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       event_payload: { reason: gate.reason },
     });
 
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: PARKED_FOR_REVIEW,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        metadataJson: { pack_id: packId, reason: gate.reason },
+        dedupeKey: `${pack.dispute_id}:${PARKED_FOR_REVIEW}:${packId}`,
+      });
+      void updateNormalizedStatus(pack.dispute_id);
+    }
+
     return { action: "park_for_review", details: gate.reason };
   }
 
@@ -214,6 +265,21 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     event_type: "auto_save_blocked",
     event_payload: { reasons: gate.reasons },
   });
+
+  if (pack.dispute_id) {
+    void emitDisputeEvent({
+      disputeId: pack.dispute_id,
+      shopId: pack.shop_id,
+      eventType: PACK_BLOCKED,
+      eventAt: new Date().toISOString(),
+      actorType: "disputedesk_system",
+      sourceType: "pack_engine",
+      visibility: "merchant_and_internal",
+      metadataJson: { pack_id: packId, reasons: gate.reasons },
+      dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
+    });
+    void updateNormalizedStatus(pack.dispute_id);
+  }
 
   return {
     action: "block",

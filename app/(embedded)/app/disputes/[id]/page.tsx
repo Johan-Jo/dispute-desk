@@ -42,6 +42,7 @@ import {
 
 import styles from "./dispute-detail.module.css";
 import { DisputeStatusStepper } from "./DisputeStatusStepper";
+import DisputeTimeline from "./DisputeTimeline";
 import { getDisputeProgressSteps } from "@/lib/embedded/disputeDetailProgress";
 import {
   deriveFamily,
@@ -838,49 +839,10 @@ export default function DisputeDetailPage() {
           </Card>
         </Layout.Section>
 
-        {/* Fulfillment Journey (collapsible) */}
-        {timeline.length > 0 && (
-          <Layout.Section>
-            <Card padding="0">
-              <div
-                className={styles.collapsibleHeader}
-                onClick={() => setFulfillmentOpen((v) => !v)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setFulfillmentOpen((v) => !v); }}
-              >
-                <Text as="h2" variant="headingSm">{t("disputes.fulfillmentJourney")}</Text>
-                <span className={`${styles.collapsibleHeaderIcon} ${fulfillmentOpen ? styles.collapsibleHeaderIconOpen : ""}`}>
-                  <Icon source={ChevronDownIcon} tone="subdued" />
-                </span>
-              </div>
-              <Collapsible open={fulfillmentOpen} id="fulfillment-journey" transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
-                <Box padding="400">
-                  <div className={styles.timelineList}>
-                    {timeline.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`${styles.timelineRow} ${idx < timeline.length - 1 ? styles.timelineRowSpaced : ""}`}
-                      >
-                        <div className={styles.timelineRail}>
-                          <div className={styles.timelineDot} />
-                          {idx < timeline.length - 1 ? <div className={styles.timelineLine} /> : null}
-                        </div>
-                        <div>
-                          <p className={styles.timelineMeta}>{formatDateTime(item.date)}</p>
-                          <p className={styles.timelineLabel}>{item.label}</p>
-                          {item.sublabel ? (
-                            <p className={styles.timelineSub}>{item.sublabel}</p>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Box>
-              </Collapsible>
-            </Card>
-          </Layout.Section>
-        )}
+        {/* Dispute History & Timeline */}
+        <Layout.Section>
+          <DisputeTimeline disputeId={id as string} />
+        </Layout.Section>
 
         {/* Evidence Packs */}
         <Layout.Section>

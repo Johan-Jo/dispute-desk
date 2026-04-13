@@ -391,6 +391,52 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 | 026_shops_policy_template_lang.sql | shops.policy_template_lang (language of policy template content) |
 | 027_policy_template_lang_explicit.sql | policy_template_lang values: en, de, fr, es, pt, sv (explicit choice) |
 | 20260408120000_packs_add_description.sql | packs.description (optional text description for library packs) |
+| 20260409130000_disputes_phase.sql | disputes.phase (inquiry/chargeback) |
+| 20260411160000_normalize_dispute_type_to_reason_codes.sql | normalize pack template dispute_type codes |
+| 20260411170000_cleanup_stale_pack_sections.sql | cleanup stale pack sections |
+| 20260412120000_purge_orphan_legacy_rules.sql | purge orphan legacy rules |
+| 20260412130000_dispute_reminder_sent_at.sql | disputes.reminder_sent_at |
+| 20260412140000_shops_first_win_at.sql | shops.first_win_at |
+| 20260413100000_dispute_events_and_normalized_status.sql | dispute_events ledger + disputes normalized status/submission/outcome columns |
+
+## Dispute History & Timeline (Phase 1)
+
+Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.
+
+### dispute_events table
+
+Append-only, immutable ledger (DB triggers reject UPDATE/DELETE). Each event has:
+- `event_type` — canonical identity (UI localizes from `disputeTimeline.eventTypes.{type}`)
+- `actor_type` — merchant_user, disputedesk_system, disputedesk_admin, shopify, external_unknown
+- `source_type` — system, user_action, pack_engine, shopify_sync, admin_override, webhook, manual_entry
+- `visibility` — merchant_and_internal (default) or internal_only
+- `dedupe_key` — UNIQUE constraint for idempotent emission (safe retries, reruns, backfills)
+
+### Normalized status model
+
+Snapshot columns on `disputes` for fast rendering without recalculating from events:
+- `normalized_status` — new, in_progress, needs_review, ready_to_submit, action_needed, submitted, waiting_on_issuer, won, lost, accepted_not_contested, closed_other
+- `submission_state` — not_saved, saved_to_shopify, submitted_confirmed, submission_uncertain, manual_submission_reported
+- `final_outcome` — won, lost, partially_won, accepted, refunded, canceled, expired, closed_other, unknown
+
+**Key rule:** "submitted" only appears when we have a confirmed submission signal (Shopify `evidenceSentOn` or merchant self-report). Saving evidence to Shopify sets `submission_state = saved_to_shopify`, NOT `submitted_at`.
+
+### Event emission points
+
+- `syncDisputes()` — dispute_opened, status_changed, due_date_changed, outcome_detected, dispute_closed, submission_confirmed
+- `runAutomationPipeline()` — auto_build_triggered, auto_save_triggered, parked_for_review, pack_blocked
+- `handleBuildPack()` — pack_created, pack_build_failed (internal_only)
+- `handleSaveToShopify()` — evidence_saved_to_shopify, evidence_save_failed (internal_only)
+- `handleRenderPdf()` — pdf_rendered
+- `POST /api/disputes/:id/approve` — merchant_approved_for_save
+
+### Timeline API
+
+`GET /api/disputes/:id/timeline` — returns events + summary snapshot. Internal-only events require verified admin/support role via Supabase auth.
+
+### Key modules
+
+- `lib/disputeEvents/` — emitEvent, normalizeStatus, deriveFinalOutcome, updateNormalizedStatus, eventTypes, types
 
 ## Automation Pipeline
 
