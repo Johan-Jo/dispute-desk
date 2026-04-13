@@ -47,6 +47,19 @@ export async function GET(req: NextRequest) {
     headers: {
       "Content-Type": "text/html; charset=UTF-8",
       "Cache-Control": "public, max-age=3600",
+      // Override the default frame-ancestors 'none' from next.config.js
+      // so this page can be loaded in an iframe inside the embedded app.
+      "Content-Security-Policy": [
+        "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://disputedesk.app",
+        "default-src 'self'",
+        "frame-src 'self' https://tawk.to https://*.tawk.to",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://embed.tawk.to",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https://*.tawk.to",
+        "connect-src 'self' https://*.tawk.to wss://*.tawk.to",
+        "font-src 'self' https://*.tawk.to",
+      ].join("; "),
+      "X-Frame-Options": "ALLOWALL",
     },
   });
 }
