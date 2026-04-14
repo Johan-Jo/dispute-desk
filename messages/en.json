@@ -916,6 +916,7 @@
     "saveChanges": "Save changes",
     "teamEmailLabel": "Team email",
     "teamEmailDesc": "Dispute alerts and notifications are sent to this address.",
+    "emailSaveError": "Failed to save email. Please try again.",
     "notifNewDispute": "New dispute alerts",
     "notifNewDisputeDesc": "Get notified when a new dispute arrives",
     "notifBeforeDue": "Before due date",

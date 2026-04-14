@@ -979,6 +979,7 @@
     "notifications": "Benachrichtigungen",
     "teamEmailLabel": "Team-E-Mail",
     "teamEmailDesc": "Streitfall-Benachrichtigungen werden an diese Adresse gesendet.",
+    "emailSaveError": "E-Mail konnte nicht gespeichert werden. Bitte erneut versuchen.",
     "notifNewDispute": "Neue Streitfälle",
     "notifNewDisputeDesc": "Benachrichtigung bei neuen Streitfällen",
     "notifBeforeDue": "Vor Fälligkeit",

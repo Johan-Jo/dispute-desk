@@ -103,12 +103,17 @@ export async function PATCH(req: NextRequest) {
     payload: updatedPayload,
   };
 
-  await sb
+  const { error } = await sb
     .from("shop_setup")
     .upsert(
       { shop_id: shopId, steps: stepsMap, updated_at: new Date().toISOString() },
       { onConflict: "shop_id" }
     );
+
+  if (error) {
+    console.error("[preferences] upsert failed:", error);
+    return NextResponse.json({ error: "Failed to save preferences" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, notifications: merged });
 }

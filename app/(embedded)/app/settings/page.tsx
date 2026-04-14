@@ -57,6 +57,7 @@ export default function EmbeddedSettingsPage() {
   const [teamEmail, setTeamEmail] = useState("");
   const [savedTeamEmail, setSavedTeamEmail] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
+  const [emailError, setEmailError] = useState(false);
   const [notifNewDispute, setNotifNewDispute] = useState(true);
   const [notifBeforeDue, setNotifBeforeDue] = useState(true);
   const [notifEvidenceReady, setNotifEvidenceReady] = useState(false);
@@ -250,19 +251,34 @@ export default function EmbeddedSettingsPage() {
                           loading={emailSaving}
                           onClick={async () => {
                             setEmailSaving(true);
-                            await fetch("/api/shop/preferences", {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ teamEmail }),
-                            });
-                            setSavedTeamEmail(teamEmail);
-                            setEmailSaving(false);
+                            setEmailError(false);
+                            try {
+                              const res = await fetch("/api/shop/preferences", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ teamEmail }),
+                              });
+                              if (res.ok) {
+                                setSavedTeamEmail(teamEmail);
+                              } else {
+                                setEmailError(true);
+                                console.error("[settings] email save failed:", res.status, await res.text());
+                              }
+                            } catch (err) {
+                              setEmailError(true);
+                              console.error("[settings] email save error:", err);
+                            } finally {
+                              setEmailSaving(false);
+                            }
                           }}
                         >
                           {tc("save")}
                         </Button>
                       )}
                     </InlineStack>
+                    {emailError && (
+                      <Banner tone="critical">{t("emailSaveError")}</Banner>
+                    )}
                   </BlockStack>
                 </div>
                 <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>

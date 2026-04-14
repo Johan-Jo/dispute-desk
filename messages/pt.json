@@ -929,6 +929,7 @@
     "notifications": "Notificações",
     "teamEmailLabel": "Email da equipe",
     "teamEmailDesc": "Alertas e notificações de disputas são enviados para este endereço.",
+    "emailSaveError": "Não foi possível salvar o e-mail. Tente novamente.",
     "notifNewDispute": "Novas disputas",
     "notifNewDisputeDesc": "Seja notificado quando uma nova disputa chegar",
     "notifBeforeDue": "Antes do prazo",

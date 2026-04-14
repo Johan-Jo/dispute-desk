@@ -929,6 +929,7 @@
     "notifications": "Notifications",
     "teamEmailLabel": "Email de l'équipe",
     "teamEmailDesc": "Les alertes et notifications de litiges sont envoyées à cette adresse.",
+    "emailSaveError": "Impossible d'enregistrer l'e-mail. Veuillez réessayer.",
     "notifNewDispute": "Nouveaux litiges",
     "notifNewDisputeDesc": "Soyez notifié à l'arrivée d'un nouveau litige",
     "notifBeforeDue": "Avant l'échéance",

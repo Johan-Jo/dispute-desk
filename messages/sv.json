@@ -931,6 +931,7 @@
     "notifications": "Aviseringar",
     "teamEmailLabel": "Team-e-post",
     "teamEmailDesc": "Tvistmeddelanden och notifieringar skickas till denna adress.",
+    "emailSaveError": "Kunde inte spara e-post. Försök igen.",
     "notifNewDispute": "Nya tvister",
     "notifNewDisputeDesc": "Bli aviserad när en ny tvist inkommer",
     "notifBeforeDue": "Innan förfallodatum",
