@@ -212,7 +212,16 @@ function BillingPageInner() {
     (upgradeError.includes("missing shop domain") || upgradeError.includes("Shopify Admin"));
 
   return (
-    <Page>
+    <Page
+      title={t("billing.planManagement")}
+      backAction={{ content: t("nav.overview"), url: "/app" }}
+      secondaryActions={[
+        {
+          content: t("billing.applyDiscount"),
+          onAction: () => setShowDiscountModal(true),
+        },
+      ]}
+    >
       {/* Error banner */}
       {upgradeError && (
         <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -241,19 +250,6 @@ function BillingPageInner() {
 
       {/* Main container card */}
       <div className="rounded-lg border border-[#E1E3E5] bg-white shadow-sm">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#E1E3E5] px-6 py-4">
-          <h1 className="text-xl font-semibold text-[#202223]">
-            {t("billing.planManagement")}
-          </h1>
-          <button
-            onClick={() => setShowDiscountModal(true)}
-            className="rounded-lg border border-[#C9CCCF] px-4 py-2 text-sm font-medium text-[#202223] hover:bg-[#F7F8FA]"
-          >
-            {t("billing.applyDiscount")}
-          </button>
-        </div>
-
         {/* Current plan section */}
         <div className="border-b border-[#E1E3E5] px-6 py-6">
           <div className="mb-4 flex items-start justify-between">
@@ -365,13 +361,11 @@ function BillingPageInner() {
                     )}
 
                     {/* Plan name */}
-                    <h3
-                      className={`mb-2 text-lg font-semibold ${
-                        isPopular ? "text-white" : "text-[#202223]"
-                      }`}
-                    >
-                      {t(planNameKeys[planId])}
-                    </h3>
+                    <Text as="h3" variant="headingMd">
+                      <span className={isPopular ? "text-white" : ""}>
+                        {t(planNameKeys[planId])}
+                      </span>
+                    </Text>
 
                     {/* Price */}
                     <p className="mb-1">
@@ -476,9 +470,9 @@ function BillingPageInner() {
 
       {/* Top-ups section */}
       <div className="mt-4 rounded-lg border border-[#E1E3E5] bg-white p-6 shadow-sm">
-        <h2 className="mb-1 text-base font-semibold text-[#202223]">
+        <Text as="h2" variant="headingMd">
           {t("billing.topUps")}
-        </h2>
+        </Text>
         <p className="mb-4 text-sm text-[#6D7175]">{t("billing.topUpsDesc")}</p>
         <div className="flex gap-3">
           {[
@@ -509,9 +503,9 @@ function BillingPageInner() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-[#202223]">
+              <Text as="h2" variant="headingLg">
                 {t("billing.applyDiscount")}
-              </h2>
+              </Text>
               <button
                 onClick={() => setShowDiscountModal(false)}
                 className="text-[#6D7175] hover:text-[#202223]"
