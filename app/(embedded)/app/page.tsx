@@ -510,7 +510,10 @@ function RecentActivityFeed({ stats, loading }: { stats: DashboardStats; loading
                     </p>
                     <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>
                       {item.orderName}
-                      {item.description ? ` — ${item.description}` : ""}
+                      {(() => {
+                        const desc = localizeEventDescription(tTimeline, item.eventType, item.description);
+                        return desc ? ` — ${desc}` : "";
+                      })()}
                     </p>
                   </div>
                   <span style={{ fontSize: "12px", color: "#9CA3AF", flexShrink: 0 }}>{timeStr}</span>
@@ -532,6 +535,63 @@ function safeEventLabel(t: ReturnType<typeof useTranslations>, eventType: string
   } catch {
     return eventType.replace(/_/g, " ");
   }
+}
+
+/** Parse dynamic values from raw English descriptions and return a localized version. */
+function localizeEventDescription(
+  t: ReturnType<typeof useTranslations>,
+  eventType: string,
+  description: string | null,
+): string | null {
+  if (!description) return null;
+
+  try {
+    // Parse dynamic values from the raw English description based on event type
+    switch (eventType) {
+      case "submission_confirmed":
+        return t("eventDescriptions.submission_confirmed");
+
+      case "dispute_opened": {
+        const m = description.match(/^(.+?) opened — (.+)$/);
+        if (m) return t("eventDescriptions.dispute_opened", { type: m[1], reason: m[2] });
+        break;
+      }
+      case "status_changed": {
+        const m = description.match(/^(.+?) → (.+)$/);
+        if (m) return t("eventDescriptions.status_changed", { from: m[1], to: m[2] });
+        break;
+      }
+      case "due_date_changed": {
+        const m = description.match(/^Due date changed to (.+)$/);
+        if (m) return t("eventDescriptions.due_date_changed", { date: m[1] });
+        break;
+      }
+      case "pack_created": {
+        const m = description.match(/^Score: (\d+)%, (\d+) evidence items collected$/);
+        if (m) return t("eventDescriptions.pack_created", { score: m[1], count: m[2] });
+        break;
+      }
+      case "evidence_saved_to_shopify": {
+        const m = description.match(/^(\d+) evidence fields sent to Shopify$/);
+        if (m) return t("eventDescriptions.evidence_saved_to_shopify", { count: m[1] });
+        break;
+      }
+      case "support_note_added": {
+        const m = description.match(/^Note added by (.+)$/);
+        if (m) return t("eventDescriptions.support_note_added", { role: m[1] });
+        break;
+      }
+      case "dispute_resynced": {
+        const m = description.match(/^Resynced by (.+?)\./);
+        if (m) return t("eventDescriptions.dispute_resynced", { role: m[1] });
+        break;
+      }
+    }
+  } catch {
+    // i18n key missing — fall through
+  }
+
+  return description;
 }
 
 // ─── 7. Recent Disputes Table ─────────────────────────────────────────────

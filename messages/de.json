@@ -2091,7 +2091,11 @@
       "outcome_detected": "Ergebnis erkannt",
       "sync_failed": "Synchronisierung fehlgeschlagen",
       "pack_build_failed": "Paketerstellung fehlgeschlagen",
-      "evidence_save_failed": "Beweisspeicherung fehlgeschlagen"
+      "evidence_save_failed": "Beweisspeicherung fehlgeschlagen",
+      "support_note_added": "Notiz hinzugefügt",
+      "admin_override": "Admin-Überschreibung",
+      "admin_override_cleared": "Überschreibung aufgehoben",
+      "dispute_resynced": "Streitfall neu synchronisiert"
     },
     "actors": {
       "merchant_user": "Sie",
@@ -2130,6 +2134,16 @@
       "expired": "Abgelaufen",
       "closed_other": "Geschlossen",
       "unknown": "Unbekannt"
+    },
+    "eventDescriptions": {
+      "submission_confirmed": "Einreichung von Shopify bestätigt",
+      "dispute_opened": "{type} eröffnet — {reason}",
+      "status_changed": "{from} → {to}",
+      "due_date_changed": "Fälligkeitsdatum geändert auf {date}",
+      "pack_created": "Bewertung: {score}%, {count} Beweise gesammelt",
+      "evidence_saved_to_shopify": "{count} Beweisfelder an Shopify gesendet",
+      "support_note_added": "Notiz hinzugefügt von {role}",
+      "dispute_resynced": "Neu synchronisiert von {role}"
     }
   },
   "auth": {

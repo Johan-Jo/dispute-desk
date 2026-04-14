@@ -2958,7 +2958,11 @@
       "outcome_detected": "Resultado Detectado",
       "sync_failed": "Sincronización Fallida",
       "pack_build_failed": "Construcción del Paquete Fallida",
-      "evidence_save_failed": "Guardado de Evidencia Fallido"
+      "evidence_save_failed": "Guardado de Evidencia Fallido",
+      "support_note_added": "Nota añadida",
+      "admin_override": "Anulación de admin",
+      "admin_override_cleared": "Anulación eliminada",
+      "dispute_resynced": "Disputa resincronizada"
     },
     "actors": {
       "merchant_user": "Usted",
@@ -2997,6 +3001,16 @@
       "expired": "Expirado",
       "closed_other": "Cerrado",
       "unknown": "Desconocido"
+    },
+    "eventDescriptions": {
+      "submission_confirmed": "Envío confirmado por Shopify",
+      "dispute_opened": "{type} abierta — {reason}",
+      "status_changed": "{from} → {to}",
+      "due_date_changed": "Fecha límite cambiada a {date}",
+      "pack_created": "Puntuación: {score}%, {count} pruebas recopiladas",
+      "evidence_saved_to_shopify": "{count} campos de evidencia enviados a Shopify",
+      "support_note_added": "Nota añadida por {role}",
+      "dispute_resynced": "Resincronizado por {role}"
     }
   },
   "contact": {

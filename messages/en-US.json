@@ -2883,7 +2883,11 @@
       "outcome_detected": "Outcome Detected",
       "sync_failed": "Sync Failed",
       "pack_build_failed": "Pack Build Failed",
-      "evidence_save_failed": "Evidence Save Failed"
+      "evidence_save_failed": "Evidence Save Failed",
+      "support_note_added": "Note Added",
+      "admin_override": "Admin Override",
+      "admin_override_cleared": "Override Cleared",
+      "dispute_resynced": "Dispute Resynced"
     },
     "actors": {
       "merchant_user": "You",
@@ -2922,6 +2926,16 @@
       "expired": "Expired",
       "closed_other": "Closed",
       "unknown": "Unknown"
+    },
+    "eventDescriptions": {
+      "submission_confirmed": "Submission confirmed by Shopify",
+      "dispute_opened": "{type} opened — {reason}",
+      "status_changed": "{from} → {to}",
+      "due_date_changed": "Due date changed to {date}",
+      "pack_created": "Score: {score}%, {count} evidence items collected",
+      "evidence_saved_to_shopify": "{count} evidence fields sent to Shopify",
+      "support_note_added": "Note added by {role}",
+      "dispute_resynced": "Resynced by {role}"
     }
   },
   "contact": {

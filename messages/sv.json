@@ -2198,7 +2198,11 @@
       "outcome_detected": "Resultat detekterat",
       "sync_failed": "Synk misslyckades",
       "pack_build_failed": "Paketbygge misslyckades",
-      "evidence_save_failed": "Bevissparande misslyckades"
+      "evidence_save_failed": "Bevissparande misslyckades",
+      "support_note_added": "Anteckning tillagd",
+      "admin_override": "Adminöverställning",
+      "admin_override_cleared": "Överställning rensad",
+      "dispute_resynced": "Tvist omsynkad"
     },
     "actors": {
       "merchant_user": "Du",
@@ -2237,6 +2241,16 @@
       "expired": "Utgången",
       "closed_other": "Stängd",
       "unknown": "Okänd"
+    },
+    "eventDescriptions": {
+      "submission_confirmed": "Inlämning bekräftad av Shopify",
+      "dispute_opened": "{type} öppnad — {reason}",
+      "status_changed": "{from} → {to}",
+      "due_date_changed": "Förfallodatum ändrat till {date}",
+      "pack_created": "Poäng: {score}%, {count} bevis insamlade",
+      "evidence_saved_to_shopify": "{count} bevisfält skickade till Shopify",
+      "support_note_added": "Anteckning tillagd av {role}",
+      "dispute_resynced": "Omsynkad av {role}"
     }
   },
   "auth": {
