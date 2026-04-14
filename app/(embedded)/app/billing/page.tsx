@@ -476,8 +476,8 @@ function BillingPageInner() {
         <p className="mb-4 text-sm text-[#6D7175]">{t("billing.topUpsDesc")}</p>
         <div className="flex gap-3">
           {[
-            { sku: "topup_25", labelKey: "billing.topUp25", price: "$19" },
-            { sku: "topup_100", labelKey: "billing.topUp100", price: "$59" },
+            { sku: "topup_25", labelKey: "billing.topUp25" },
+            { sku: "topup_100", labelKey: "billing.topUp100" },
           ].map((topUp) => (
             <button
               key={topUp.sku}
@@ -492,7 +492,7 @@ function BillingPageInner() {
               }}
               className="rounded-lg border border-[#C9CCCF] px-4 py-2 text-sm font-medium text-[#202223] hover:bg-[#F7F8FA]"
             >
-              {t(topUp.labelKey)} — {topUp.price}
+              {t(topUp.labelKey)}
             </button>
           ))}
         </div>
