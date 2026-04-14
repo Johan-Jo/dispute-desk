@@ -733,6 +733,12 @@
     "topUpsDesc": "Köp tilläggspaket. Krediter läggs till omedelbart.",
     "topUp25": "+25 paket — $19",
     "topUp100": "+100 paket — $59",
+    "installTitle": "Installera DisputeDesk",
+    "installSubtitle": "Ange din Shopify-butik för att komma igång",
+    "shopPlaceholder": "dinbutik.myshopify.com",
+    "shopError": "Ange ett giltigt butiksnamn, t.ex. dinbutik eller dinbutik.myshopify.com",
+    "installButton": "Installera",
+    "installHint": "Du omdirigeras till Shopify för att auktorisera appen. Gratis plan — inget kreditkort krävs.",
     "packLimitTitle": "Paketgräns nådd",
     "packLimitDesc": "Inga paketkrediter kvar. Utkast är fortfarande obegränsade.",
     "upgradeAction": "Uppgradera plan",
@@ -1517,7 +1523,6 @@
       "howItWorks": "Så fungerar det",
       "security": "Säkerhet",
       "pricing": "Priser",
-      "signIn": "Logga in",
       "installOnShopify": "Installera på Shopify"
     },
     "seo": {
@@ -1636,7 +1641,10 @@
     "bannerTitle": "Session needs to be restored",
     "bannerBody": "Vänligen öppna DisputeDesk från Shopify Admin (Appar) så att vi kan verifiera din butikssession.",
     "instructions": "Denna app måste startas från din Shopify Admin-panel. Om du hamnade här av misstag, stäng denna flik och öppna appen från din butiks instrumentpanel.",
-    "returnTo": "Du kommer att omdirigeras till: {path}"
+    "returnTo": "Du kommer att omdirigeras till: {path}",
+    "installCta": "Installera DisputeDesk",
+    "installHint": "Har du inte appen än? Installera den från Shopify App Store.",
+    "learnMore": "Läs mer om DisputeDesk"
   },
   "packTemplates": {
     "title": "Bevispakets-bibliotek",
@@ -2749,6 +2757,8 @@
     "ctaResourcesButton": "Bläddra bland resurser"
   },
   "auth": {
+    "shopifyBanner": "DisputeDesk körs i Shopify Admin. Öppna det från butikens Apps-meny, eller fortsätt nedan om du har ett webbportalkonto.",
+    "shopifyBannerCta": "Läs mer",
     "signIn": {
       "title": "Logga in",
       "subtitle": "Fortsätt med Shopify öppnar din butik i Shopify Admin efter att du godkänt. Eller logga in med e-post nedan.",
@@ -2989,5 +2999,50 @@
       "closed_other": "Stängd",
       "unknown": "Okänd"
     }
+  },
+  "contact": {
+    "seo": {
+      "title": "Kontakta DisputeDesk — Chatt, demo eller e-post",
+      "description": "Få hjälp med chargebacks, bevispaket, Shopify-inställningar eller att komma igång. Starta en chatt för snabbast svar."
+    },
+    "heroTitle": "Prata med DisputeDesk",
+    "heroSubtitle": "Frågor om chargebacks, bevispaket, Shopify-inställningar eller att komma igång? Starta en chatt så hjälper vi dig vidare.",
+    "openChat": "Öppna chatt",
+    "bookDemo": "Boka demo",
+    "aiNote": "Du börjar oftast med vår AI-assistent i chatten för snabbast routing.",
+    "helpTitle": "Vad kan vi hjälpa till med?",
+    "helpGettingStartedTitle": "Komma igång",
+    "helpGettingStartedDesc": "Förstå hur DisputeDesk fungerar och om det passar din butik.",
+    "helpSetupTitle": "Shopify-inställning",
+    "helpSetupDesc": "Frågor om onboarding, behörigheter och inställning.",
+    "helpWorkflowsTitle": "Tvistflöden",
+    "helpWorkflowsDesc": "Bevispaket, granskningsflöde, automatisering och processfrågor.",
+    "helpOtherTitle": "Partnerskap eller annat",
+    "helpOtherDesc": "Byråer, partners eller annat som inte täcks ovan.",
+    "reachTitle": "Så når du oss",
+    "reachChatTitle": "Chatta med oss",
+    "reachChatDesc": "Använd chattbubblan för att starta en konversation. Vår AI-assistent hjälper dig snabbt.",
+    "reachDemoTitle": "Boka demo",
+    "reachDemoDesc": "Föredrar du en genomgång? Boka tid med oss.",
+    "reachEmailTitle": "Maila oss",
+    "reachEmailDesc": "Använd e-post om chatt inte passar.",
+    "reachEmailAddress": "support@disputedesk.com",
+    "fitTitle": "Är detta rätt ställe?",
+    "fitBestFor": "Passar bäst för:",
+    "fitBest1": "Handlare som utvärderar DisputeDesk",
+    "fitBest2": "Befintliga användare som behöver produkthjälp",
+    "fitBest3": "Inställnings- och arbetsflödesfrågor",
+    "fitBest4": "Partnerskapsförfrågningar",
+    "fitNotFor": "Inte idealiskt för:",
+    "fitNot1": "Brådskande tvistdeadlines som kräver omedelbar åtgärd direkt i Shopify Admin",
+    "faqTitle": "Vanliga frågor",
+    "faq1Q": "Behöver jag installera Shopify-appen först?",
+    "faq1A": "Nej. Du kan höra av dig innan du installerar om du vill förstå om det passar.",
+    "faq2Q": "Kan ni hjälpa mig förstå bevisinställning?",
+    "faq2A": "Ja. Vi kan förklara vad som kan samlas in, vad som behöver granskning och vad som förblir manuellt.",
+    "faq3Q": "Hanterar ni tvister åt handlare?",
+    "faq3A": "DisputeDesk är byggt för att hjälpa handlare driva ett bättre tvistflöde med mer kontroll och tydligare bevishantering.",
+    "closingTitle": "Osäker på var du ska börja?",
+    "closingBody": "Öppna chatten och berätta lite om din butik, betalningsupplägg och tvistflöde."
   }
 }

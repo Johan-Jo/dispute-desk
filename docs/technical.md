@@ -168,6 +168,7 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 |------|--------|--------|
 | Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
 | Privacy | `/privacy`, `/{pathLocale}/privacy` (e.g. `/de/privacy`) | `app/[locale]/privacy/page.tsx`; copy under `messages/*/consent.*` |
+| Contact | `/contact`, `/{pathLocale}/contact` | `app/[locale]/contact/page.tsx` + `components/marketing/ContactPageClient.tsx`; chat-first routing page — "Open chat" triggers the global Tawk widget, secondary CTA links to demo booking, email fallback. Copy under `messages/*/contact.*` |
 | Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
 | Hub filter bar | `components/resources/ResourcesFilterBar.tsx` | Client component: content-type filters with icons, **More Filters** for additional types, language picker, clear filters — embedded in `ResourcesHubShell`. |
 | Public article chrome | `components/resources/ArticleStickyBar.tsx` | Sticky bar on article pages: back to resources, share (native share or copy link). |

@@ -1453,7 +1453,6 @@
       "howItWorks": "How it works",
       "security": "Security",
       "pricing": "Pricing",
-      "signIn": "Sign in",
       "installOnShopify": "Install on Shopify"
     },
     "seo": {
@@ -1534,7 +1533,13 @@
       "topUpsTitle": "Need more packs?",
       "topUpsDesc": "Purchase top-up bundles any time. Credits are added immediately upon payment.",
       "topUp25": "+25 packs",
-      "topUp100": "+100 packs"
+      "topUp100": "+100 packs",
+      "installTitle": "Install DisputeDesk",
+      "installSubtitle": "Enter your Shopify store to get started",
+      "shopPlaceholder": "yourstore.myshopify.com",
+      "shopError": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
+      "installButton": "Install",
+      "installHint": "You'll be redirected to Shopify to authorize the app. Free plan — no credit card required."
     },
     "footer": {
       "tagline": "Your command center for Shopify disputes.",
@@ -1572,7 +1577,10 @@
     "bannerTitle": "Store session not found",
     "bannerBody": "Please open DisputeDesk from Shopify Admin (Apps) so we can verify your store session.",
     "instructions": "This app must be launched from your Shopify Admin panel. If you arrived here by accident, close this tab and open the app from your store's admin dashboard.",
-    "returnTo": "You will be returned to: {path}"
+    "returnTo": "You will be returned to: {path}",
+    "installCta": "Install DisputeDesk",
+    "installHint": "Don't have the app yet? Install it from the Shopify App Store.",
+    "learnMore": "Learn more about DisputeDesk"
   },
   "packTemplates": {
     "title": "Evidence Packs Library",
@@ -2695,6 +2703,8 @@
     }
   },
   "auth": {
+    "shopifyBanner": "DisputeDesk runs inside Shopify Admin. Open it from your store's Apps menu, or continue below if you have a web portal account.",
+    "shopifyBannerCta": "Learn more",
     "signIn": {
       "title": "Sign in",
       "subtitle": "Continue with Shopify opens your store in Shopify Admin after you authorize. Or sign in with email below.",
@@ -2913,5 +2923,50 @@
       "closed_other": "Closed",
       "unknown": "Unknown"
     }
+  },
+  "contact": {
+    "seo": {
+      "title": "Contact DisputeDesk — Chat, Demo, or Email",
+      "description": "Get help with chargebacks, evidence packs, Shopify setup, or getting started. Start a chat for the fastest route to answers."
+    },
+    "heroTitle": "Talk to DisputeDesk",
+    "heroSubtitle": "Questions about chargebacks, evidence packs, Shopify setup, or getting started? Start a chat and we'll help you find the right next step.",
+    "openChat": "Open chat",
+    "bookDemo": "Book a demo",
+    "aiNote": "You'll usually start with our AI assistant in chat for the fastest routing.",
+    "helpTitle": "What can we help with?",
+    "helpGettingStartedTitle": "Getting started",
+    "helpGettingStartedDesc": "Understand how DisputeDesk works and whether it fits your store.",
+    "helpSetupTitle": "Shopify setup",
+    "helpSetupDesc": "Questions about onboarding, permissions, and setup.",
+    "helpWorkflowsTitle": "Dispute workflows",
+    "helpWorkflowsDesc": "Evidence packs, review flow, automation, and process questions.",
+    "helpOtherTitle": "Partnerships or other",
+    "helpOtherDesc": "Agencies, partners, or anything else not covered above.",
+    "reachTitle": "How to reach us",
+    "reachChatTitle": "Chat with us",
+    "reachChatDesc": "Use the chat bubble to start a conversation. Our AI assistant helps route your question quickly.",
+    "reachDemoTitle": "Book a demo",
+    "reachDemoDesc": "Prefer a walkthrough? Book time with us.",
+    "reachEmailTitle": "Email us",
+    "reachEmailDesc": "Use email if chat is not the right fit.",
+    "reachEmailAddress": "support@disputedesk.com",
+    "fitTitle": "Is this the right place?",
+    "fitBestFor": "Best for:",
+    "fitBest1": "Merchants evaluating DisputeDesk",
+    "fitBest2": "Existing users who need product guidance",
+    "fitBest3": "Setup and workflow questions",
+    "fitBest4": "Partnership inquiries",
+    "fitNotFor": "Not ideal for:",
+    "fitNot1": "Urgent dispute deadlines that require immediate action directly inside Shopify Admin",
+    "faqTitle": "Common questions",
+    "faq1Q": "Do I need to install the Shopify app first?",
+    "faq1A": "No. You can reach out before installing if you want to understand fit and setup.",
+    "faq2Q": "Can you help me understand evidence setup?",
+    "faq2A": "Yes. We can explain what can be collected, what needs review, and what stays manual.",
+    "faq3Q": "Do you handle disputes for merchants?",
+    "faq3A": "DisputeDesk is built to help merchants run a better dispute workflow with more control and clearer evidence handling.",
+    "closingTitle": "Not sure where to start?",
+    "closingBody": "Open the chat and tell us a bit about your store, payment setup, and dispute workflow."
   }
 }

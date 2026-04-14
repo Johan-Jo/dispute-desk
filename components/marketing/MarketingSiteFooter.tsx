@@ -64,7 +64,7 @@ export function MarketingSiteFooter({ base = "" }: Props) {
                 </a>
               </li>
               <li>
-                <a href="mailto:support@disputedesk.com" className="hover:text-white transition-colors">
+                <a href={pathHref(base, "/contact")} className="hover:text-white transition-colors">
                   {t("footer.contact")}
                 </a>
               </li>

@@ -732,6 +732,12 @@
     "topUpsDesc": "Compre packs adicionales. Créditos añadidos inmediatamente.",
     "topUp25": "+25 packs — $19",
     "topUp100": "+100 packs — $59",
+    "installTitle": "Instalar DisputeDesk",
+    "installSubtitle": "Ingresa tu tienda Shopify para comenzar",
+    "shopPlaceholder": "tutienda.myshopify.com",
+    "shopError": "Ingresa un nombre de tienda válido, por ej. tutienda o tutienda.myshopify.com",
+    "installButton": "Instalar",
+    "installHint": "Serás redirigido a Shopify para autorizar la app. Plan gratuito — no se requiere tarjeta de crédito.",
     "packLimitTitle": "Límite de packs alcanzado",
     "packLimitDesc": "Sin créditos de packs. Los borradores siguen siendo ilimitados.",
     "upgradeAction": "Actualizar plan",
@@ -1516,7 +1522,6 @@
       "howItWorks": "Cómo funciona",
       "security": "Seguridad",
       "pricing": "Precios",
-      "signIn": "Iniciar sesión",
       "installOnShopify": "Instalar en Shopify"
     },
     "seo": {
@@ -1635,7 +1640,10 @@
     "bannerTitle": "Session needs to be restored",
     "bannerBody": "Por favor, abre DisputeDesk desde Shopify Admin (Aplicaciones) para que podamos verificar tu sesión de tienda.",
     "instructions": "Esta aplicación debe iniciarse desde tu panel de Shopify Admin. Si llegaste aquí por error, cierra esta pestaña y abre la aplicación desde el panel de tu tienda.",
-    "returnTo": "Serás redirigido a: {path}"
+    "returnTo": "Serás redirigido a: {path}",
+    "installCta": "Instalar DisputeDesk",
+    "installHint": "¿Aún no tienes la app? Instálala desde la Shopify App Store.",
+    "learnMore": "Más información sobre DisputeDesk"
   },
   "packTemplates": {
     "title": "Biblioteca de packs de evidencia",
@@ -2748,6 +2756,8 @@
     "ctaResourcesButton": "Ver recursos"
   },
   "auth": {
+    "shopifyBanner": "DisputeDesk funciona dentro de Shopify Admin. Ábrelo desde el menú de aplicaciones de tu tienda, o continúa abajo si tienes una cuenta del portal web.",
+    "shopifyBannerCta": "Más información",
     "signIn": {
       "title": "Sign in",
       "subtitle": "Continue with Shopify opens your store in Shopify Admin after you authorize. Or sign in with email below.",
@@ -2988,5 +2998,50 @@
       "closed_other": "Cerrado",
       "unknown": "Desconocido"
     }
+  },
+  "contact": {
+    "seo": {
+      "title": "Contactar DisputeDesk — Chat, demo o correo",
+      "description": "Obtén ayuda con chargebacks, paquetes de evidencia, configuración de Shopify o para empezar. Inicia un chat para la respuesta más rápida."
+    },
+    "heroTitle": "Habla con DisputeDesk",
+    "heroSubtitle": "¿Preguntas sobre chargebacks, paquetes de evidencia, configuración de Shopify o para empezar? Inicia un chat y te ayudaremos.",
+    "openChat": "Abrir chat",
+    "bookDemo": "Reservar demo",
+    "aiNote": "Normalmente empezarás con nuestro asistente de IA en el chat para un enrutamiento más rápido.",
+    "helpTitle": "¿En qué podemos ayudarte?",
+    "helpGettingStartedTitle": "Empezar",
+    "helpGettingStartedDesc": "Entiende cómo funciona DisputeDesk y si es adecuado para tu tienda.",
+    "helpSetupTitle": "Configuración de Shopify",
+    "helpSetupDesc": "Preguntas sobre incorporación, permisos y configuración.",
+    "helpWorkflowsTitle": "Flujos de disputas",
+    "helpWorkflowsDesc": "Paquetes de evidencia, flujo de revisión, automatización y preguntas de proceso.",
+    "helpOtherTitle": "Asociaciones u otro",
+    "helpOtherDesc": "Agencias, socios o cualquier otra cosa no cubierta arriba.",
+    "reachTitle": "Cómo contactarnos",
+    "reachChatTitle": "Chatea con nosotros",
+    "reachChatDesc": "Usa la burbuja de chat para iniciar una conversación. Nuestro asistente de IA ayuda a enrutar tu pregunta rápidamente.",
+    "reachDemoTitle": "Reservar demo",
+    "reachDemoDesc": "¿Prefieres una demostración? Reserva un horario.",
+    "reachEmailTitle": "Envíanos un correo",
+    "reachEmailDesc": "Usa el correo si el chat no es adecuado.",
+    "reachEmailAddress": "support@disputedesk.com",
+    "fitTitle": "¿Es este el lugar correcto?",
+    "fitBestFor": "Ideal para:",
+    "fitBest1": "Comerciantes evaluando DisputeDesk",
+    "fitBest2": "Usuarios actuales que necesitan orientación del producto",
+    "fitBest3": "Preguntas de configuración y flujo de trabajo",
+    "fitBest4": "Consultas de asociación",
+    "fitNotFor": "No ideal para:",
+    "fitNot1": "Plazos urgentes de disputas que requieren acción inmediata en Shopify Admin",
+    "faqTitle": "Preguntas frecuentes",
+    "faq1Q": "¿Necesito instalar la app de Shopify primero?",
+    "faq1A": "No. Puedes contactarnos antes de instalar si quieres entender si es adecuado.",
+    "faq2Q": "¿Pueden ayudarme a entender la configuración de evidencia?",
+    "faq2A": "Sí. Podemos explicar qué se puede recopilar, qué necesita revisión y qué permanece manual.",
+    "faq3Q": "¿Manejan disputas para comerciantes?",
+    "faq3A": "DisputeDesk está diseñado para ayudar a los comerciantes a ejecutar un mejor flujo de disputas con más control y manejo de evidencia más claro.",
+    "closingTitle": "¿No sabes por dónde empezar?",
+    "closingBody": "Abre el chat y cuéntanos sobre tu tienda, configuración de pagos y flujo de disputas."
   }
 }
