@@ -191,14 +191,11 @@ export default function DisputesListPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/setup/state")
+    fetch("/api/shop/preferences")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled) return;
-        const teamEmail = (
-          data?.steps?.team?.payload as { teamEmail?: string } | undefined
-        )?.teamEmail;
-        setHasAlertEmail(Boolean(teamEmail));
+        setHasAlertEmail(Boolean(data?.teamEmail));
       })
       .catch(() => {});
     return () => {
