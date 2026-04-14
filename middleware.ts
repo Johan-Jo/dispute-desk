@@ -88,6 +88,7 @@ export async function middleware(req: NextRequest) {
   if (
     pathname === "/" ||
     pathname === "/privacy" ||
+    pathname === "/contact" ||
     localePathRegex.test(pathname) ||
     hubPublicPathRegex.test(pathname) ||
     enPrefixedHubPathRegex.test(pathname)
