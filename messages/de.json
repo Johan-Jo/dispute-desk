@@ -2179,6 +2179,13 @@
     "faq3Q": "Bearbeiten Sie Streitfälle für Händler?",
     "faq3A": "DisputeDesk hilft Händlern, einen besseren Streitfall-Workflow mit mehr Kontrolle und klarerer Beweisführung zu betreiben.",
     "closingTitle": "Unsicher, wo Sie anfangen sollen?",
-    "closingBody": "Öffnen Sie den Chat und erzählen Sie uns von Ihrem Shop, Zahlungssetup und Streitfall-Workflow."
+    "closingBody": "Öffnen Sie den Chat und erzählen Sie uns von Ihrem Shop, Zahlungssetup und Streitfall-Workflow.",
+    "formName": "Ihr Name",
+    "formEmail": "E-Mail-Adresse",
+    "formMessage": "Wie können wir helfen?",
+    "formSend": "Nachricht senden",
+    "formSending": "Wird gesendet...",
+    "formSent": "Nachricht gesendet. Wir melden uns bald.",
+    "formError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
   }
 }

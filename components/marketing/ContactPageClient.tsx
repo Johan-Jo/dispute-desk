@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   MessageCircle,
@@ -177,25 +177,8 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
               </a>
             </div>
 
-            {/* Email */}
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EFF6FF]">
-                <Mail className="h-5 w-5 text-[#1D4ED8]" />
-              </div>
-              <h3 className="mt-4 text-base font-semibold text-[#0B1220]">
-                {t("reachEmailTitle")}
-              </h3>
-              <p className="mt-1 text-sm text-[#6B7280] leading-relaxed">
-                {t("reachEmailDesc")}
-              </p>
-              <a
-                href={`mailto:${SUPPORT_EMAIL}`}
-                className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1D4ED8] hover:text-[#1E40AF] transition-colors"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                {SUPPORT_EMAIL}
-              </a>
-            </div>
+            {/* Email form */}
+            <ContactForm t={t} />
           </div>
         </div>
       </section>
@@ -276,6 +259,119 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
       </section>
 
       <MarketingSiteFooter />
+    </div>
+  );
+}
+
+/* ── Contact email form ── */
+
+function ContactForm({ t }: { t: ReturnType<typeof useTranslations<"contact">> }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const honeyRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setStatus("sending");
+      setErrorMsg("");
+      try {
+        const res = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim(),
+            message: message.trim(),
+            _honey: honeyRef.current?.value ?? "",
+          }),
+        });
+        if (res.ok) {
+          setStatus("sent");
+          setName("");
+          setEmail("");
+          setMessage("");
+        } else {
+          const data = await res.json().catch(() => ({}));
+          setErrorMsg(data.error ?? t("formError"));
+          setStatus("error");
+        }
+      } catch {
+        setErrorMsg(t("formError"));
+        setStatus("error");
+      }
+    },
+    [name, email, message, t]
+  );
+
+  return (
+    <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EFF6FF]">
+        <Mail className="h-5 w-5 text-[#1D4ED8]" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-[#0B1220]">
+        {t("reachEmailTitle")}
+      </h3>
+      <p className="mt-1 text-sm text-[#6B7280] leading-relaxed">
+        {t("reachEmailDesc")}
+      </p>
+
+      {status === "sent" ? (
+        <div className="mt-4 flex items-center gap-2 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0] p-3">
+          <Check className="h-4 w-4 text-[#059669] flex-shrink-0" />
+          <p className="text-sm text-[#059669]">{t("formSent")}</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          {/* Honeypot — hidden from real users */}
+          <input
+            ref={honeyRef}
+            type="text"
+            name="website"
+            autoComplete="off"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="absolute opacity-0 h-0 w-0 pointer-events-none"
+          />
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("formName")}
+            className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#0B1220] placeholder:text-[#9CA3AF] focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] focus:outline-none"
+          />
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("formEmail")}
+            className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#0B1220] placeholder:text-[#9CA3AF] focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] focus:outline-none"
+          />
+          <textarea
+            required
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={t("formMessage")}
+            rows={3}
+            className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#0B1220] placeholder:text-[#9CA3AF] focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] focus:outline-none resize-none"
+          />
+          {status === "error" && errorMsg && (
+            <p className="text-xs text-red-600">{errorMsg}</p>
+          )}
+          <button
+            type="submit"
+            disabled={status === "sending"}
+            className="w-full rounded-lg bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1E40AF] transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:ring-offset-2"
+          >
+            {status === "sending" ? t("formSending") : t("formSend")}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

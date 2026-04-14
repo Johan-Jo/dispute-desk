@@ -2286,6 +2286,13 @@
     "faq3Q": "Hanterar ni tvister åt handlare?",
     "faq3A": "DisputeDesk är byggt för att hjälpa handlare driva ett bättre tvistflöde med mer kontroll och tydligare bevishantering.",
     "closingTitle": "Osäker på var du ska börja?",
-    "closingBody": "Öppna chatten och berätta lite om din butik, betalningsupplägg och tvistflöde."
+    "closingBody": "Öppna chatten och berätta lite om din butik, betalningsupplägg och tvistflöde.",
+    "formName": "Ditt namn",
+    "formEmail": "E-postadress",
+    "formMessage": "Hur kan vi hjälpa?",
+    "formSend": "Skicka meddelande",
+    "formSending": "Skickar...",
+    "formSent": "Meddelande skickat. Vi återkommer snart.",
+    "formError": "Något gick fel. Försök igen."
   }
 }

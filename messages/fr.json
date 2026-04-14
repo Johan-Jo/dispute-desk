@@ -2179,6 +2179,13 @@
     "faq3Q": "Gérez-vous les litiges pour les marchands ?",
     "faq3A": "DisputeDesk aide les marchands à gérer un meilleur flux de litiges avec plus de contrôle et une gestion des preuves plus claire.",
     "closingTitle": "Pas sûr par où commencer ?",
-    "closingBody": "Ouvrez le chat et parlez-nous de votre boutique, votre configuration de paiement et votre flux de litiges."
+    "closingBody": "Ouvrez le chat et parlez-nous de votre boutique, votre configuration de paiement et votre flux de litiges.",
+    "formName": "Votre nom",
+    "formEmail": "Adresse e-mail",
+    "formMessage": "Comment pouvons-nous aider ?",
+    "formSend": "Envoyer le message",
+    "formSending": "Envoi en cours...",
+    "formSent": "Message envoyé. Nous vous répondrons bientôt.",
+    "formError": "Une erreur est survenue. Veuillez réessayer."
   }
 }

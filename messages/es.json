@@ -2179,6 +2179,13 @@
     "faq3Q": "¿Manejan disputas para comerciantes?",
     "faq3A": "DisputeDesk está diseñado para ayudar a los comerciantes a ejecutar un mejor flujo de disputas con más control y manejo de evidencia más claro.",
     "closingTitle": "¿No sabes por dónde empezar?",
-    "closingBody": "Abre el chat y cuéntanos sobre tu tienda, configuración de pagos y flujo de disputas."
+    "closingBody": "Abre el chat y cuéntanos sobre tu tienda, configuración de pagos y flujo de disputas.",
+    "formName": "Tu nombre",
+    "formEmail": "Correo electrónico",
+    "formMessage": "¿Cómo podemos ayudarte?",
+    "formSend": "Enviar mensaje",
+    "formSending": "Enviando...",
+    "formSent": "Mensaje enviado. Te responderemos pronto.",
+    "formError": "Algo salió mal. Inténtalo de nuevo."
   }
 }
