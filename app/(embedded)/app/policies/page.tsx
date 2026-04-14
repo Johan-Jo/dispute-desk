@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Page, Banner } from "@shopify/polaris";
+import { Page, Banner, Layout, Card } from "@shopify/polaris";
 import { BusinessPoliciesStep } from "@/components/setup/steps/BusinessPoliciesStep";
 
 export default function EmbeddedPoliciesPage() {
@@ -36,17 +36,23 @@ export default function EmbeddedPoliciesPage() {
         loading: saving,
       }}
     >
-      {status === "success" && (
-        <Banner tone="success" onDismiss={() => setStatus("idle")}>
-          {t("policiesSaved")}
-        </Banner>
-      )}
-      {status === "error" && (
-        <Banner tone="critical" onDismiss={() => setStatus("idle")}>
-          {t("policiesSaveError")}
-        </Banner>
-      )}
-      <BusinessPoliciesStep stepId="policies" onSaveRef={saveRef} />
+      <Layout>
+        <Layout.Section>
+          {status === "success" && (
+            <Banner tone="success" onDismiss={() => setStatus("idle")}>
+              {t("policiesSaved")}
+            </Banner>
+          )}
+          {status === "error" && (
+            <Banner tone="critical" onDismiss={() => setStatus("idle")}>
+              {t("policiesSaveError")}
+            </Banner>
+          )}
+          <Card>
+            <BusinessPoliciesStep stepId="policies" onSaveRef={saveRef} />
+          </Card>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }
