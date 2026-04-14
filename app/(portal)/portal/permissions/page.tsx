@@ -39,7 +39,7 @@ export default function PermissionsPage() {
             {t("retryConnection")}
           </Button>
         </a>
-        <a href="mailto:support@disputedesk.com">
+        <a href="mailto:support@disputedesk.app">
           <Button variant="ghost" className="w-full">
             {t("contactSupport")}
           </Button>

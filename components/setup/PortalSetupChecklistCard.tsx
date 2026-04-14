@@ -268,7 +268,7 @@ function ActiveShopChecklist({ isDemo }: { isDemo: boolean }) {
         </Button>
         <div>
           <a
-            href="mailto:support@disputedesk.com?subject=Setup%20call%20request"
+            href="mailto:support@disputedesk.app?subject=Setup%20call%20request"
             className="text-sm text-[#64748B] hover:text-[#1D4ED8] hover:underline"
           >
             {t("bookSetupCall")}

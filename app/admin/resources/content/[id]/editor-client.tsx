@@ -495,7 +495,7 @@ export function ContentEditorClient({ contentId, initial }: EditorProps) {
               <label className="block text-xs font-medium text-[#64748B] mb-1">Slug</label>
               <div className="flex items-center border border-[#E2E8F0] rounded-xl overflow-hidden">
                 <span className="px-3 py-2.5 text-sm text-[#64748B] bg-[#F8FAFC] border-r border-[#E2E8F0] whitespace-nowrap">
-                  disputedesk.com/resources/
+                  disputedesk.app/resources/
                 </span>
                 <input
                   type="text"

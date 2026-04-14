@@ -1095,7 +1095,7 @@
     "search": "Rechercher des articles d'aide...",
     "backToHelp": "Retour à l'aide",
     "relatedArticles": "Articles connexes",
-    "contactSupport": "Besoin d'aide supplémentaire ? Contactez le support à support@disputedesk.com",
+    "contactSupport": "Besoin d'aide supplémentaire ? Contactez le support à support@disputedesk.app",
     "subtitle": "Obtenez de l'aide avec DisputeDesk grâce aux visites interactives, guides détaillés et bonnes pratiques",
     "articleCount": "{count} articles",
     "articleNotFound": "Article non trouvé.",
@@ -1251,7 +1251,7 @@
     "articles": {
       "shopifyAppStoreInstall": {
         "title": "Installation depuis la boutique d'applications Shopify",
-        "body": "DisputeDesk est disponible sur la boutique d'applications Shopify. C'est la méthode recommandée pour ajouter l'application à une boutique.\n\nDepuis la boutique d'applications :\n1. Ouvrez la boutique d'applications Shopify (apps.shopify.com) et recherchez DisputeDesk.\n2. Cliquez sur Ajouter l'application et choisissez la boutique cible.\n3. Examinez et acceptez les autorisations affichées. DisputeDesk a besoin d'accéder aux commandes, litiges, preuves de litige, expéditions et données associées pour constituer les dossiers de preuve.\n4. Après l'installation, ouvrez l'admin Shopify, puis Applications, puis DisputeDesk pour utiliser l'application intégrée.\n\nDepuis notre site :\nSi vous avez commencé sur disputedesk.com ou une page marketing, suivez les invites d'inscription ou d'installation. Vous finaliserez quand même OAuth avec Shopify. Ouvrez ensuite DisputeDesk depuis Applications dans l'admin pour la facturation, l'enregistrement des preuves et l'expérience intégrée complète.\n\nAstuce : ouvrez l'application depuis l'admin Shopify (Applications, puis DisputeDesk) pour une session boutique fiable. En cas d'erreur de connexion ou de facturation, utilisez Vider la boutique et reconnecter dans la barre latérale du portail ou rouvrez l'application depuis l'admin. Voir aussi l'article d'aide sur la session boutique invalide.\n\nEnsuite : consultez « Votre première synchronisation des litiges » et « Comprendre le tableau de bord »."
+        "body": "DisputeDesk est disponible sur la boutique d'applications Shopify. C'est la méthode recommandée pour ajouter l'application à une boutique.\n\nDepuis la boutique d'applications :\n1. Ouvrez la boutique d'applications Shopify (apps.shopify.com) et recherchez DisputeDesk.\n2. Cliquez sur Ajouter l'application et choisissez la boutique cible.\n3. Examinez et acceptez les autorisations affichées. DisputeDesk a besoin d'accéder aux commandes, litiges, preuves de litige, expéditions et données associées pour constituer les dossiers de preuve.\n4. Après l'installation, ouvrez l'admin Shopify, puis Applications, puis DisputeDesk pour utiliser l'application intégrée.\n\nDepuis notre site :\nSi vous avez commencé sur disputedesk.app ou une page marketing, suivez les invites d'inscription ou d'installation. Vous finaliserez quand même OAuth avec Shopify. Ouvrez ensuite DisputeDesk depuis Applications dans l'admin pour la facturation, l'enregistrement des preuves et l'expérience intégrée complète.\n\nAstuce : ouvrez l'application depuis l'admin Shopify (Applications, puis DisputeDesk) pour une session boutique fiable. En cas d'erreur de connexion ou de facturation, utilisez Vider la boutique et reconnecter dans la barre latérale du portail ou rouvrez l'application depuis l'admin. Voir aussi l'article d'aide sur la session boutique invalide.\n\nEnsuite : consultez « Votre première synchronisation des litiges » et « Comprendre le tableau de bord »."
       },
       "connectShopifyStore": {
         "title": "Comment connecter votre boutique Shopify",
@@ -1379,7 +1379,7 @@
       "search": "Rechercher de l'aide...",
       "backToHelp": "Retour à l'aide",
       "relatedArticles": "Articles connexes",
-      "contactSupport": "Besoin d'aide ? Contactez : support@disputedesk.com",
+      "contactSupport": "Besoin d'aide ? Contactez : support@disputedesk.app",
       "noResults": "Aucun article trouvé.",
       "interactiveGuidesTitle": "Visites guidées interactives",
       "interactiveGuidesDesc": "Guidage pas à pas pour les tâches clés dans cette app.",
@@ -2162,7 +2162,7 @@
     "reachDemoDesc": "Vous préférez une présentation ? Réservez un créneau.",
     "reachEmailTitle": "Envoyez un e-mail",
     "reachEmailDesc": "Utilisez l’e-mail si le chat ne convient pas.",
-    "reachEmailAddress": "support@disputedesk.com",
+    "reachEmailAddress": "support@disputedesk.app",
     "fitTitle": "Êtes-vous au bon endroit ?",
     "fitBestFor": "Idéal pour :",
     "fitBest1": "Marchands évaluant DisputeDesk",

@@ -19,7 +19,7 @@ import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter"
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 const DEMO_URL = "https://cal.com/disputedesk/demo";
-const SUPPORT_EMAIL = "support@disputedesk.com";
+const SUPPORT_EMAIL = "support@disputedesk.app";
 
 /**
  * Attempt to open the global Tawk chat widget.

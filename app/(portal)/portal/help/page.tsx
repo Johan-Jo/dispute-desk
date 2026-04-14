@@ -385,7 +385,7 @@ function PortalHelpContent() {
                   <h3 className="font-semibold text-[#0B1220] mb-2">{t("help.resources.contactSupport")}</h3>
                   <p className="text-sm text-[#667085] mb-4">{t("help.resources.contactSupportDesc")}</p>
                   <a
-                    href="mailto:support@disputedesk.com"
+                    href="mailto:support@disputedesk.app"
                     className="inline-flex w-full items-center justify-center px-4 py-2 text-sm font-medium text-[#0B1220] bg-white border border-[#E5E7EB] rounded-lg hover:bg-[#F6F8FB] transition-colors"
                   >
                     {t("help.resources.sendMessage")}
@@ -409,7 +409,7 @@ function PortalHelpContent() {
                   <h3 className="font-semibold text-[#0B1220] mb-2">{t("help.resources.apiDocs")}</h3>
                   <p className="text-sm text-[#667085] mb-4">{t("help.resources.apiDocsDesc")}</p>
                   <a
-                    href="https://docs.disputedesk.com"
+                    href="https://docs.disputedesk.app"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex w-full items-center justify-center px-4 py-2 text-sm font-medium text-[#0B1220] bg-white border border-[#E5E7EB] rounded-lg hover:bg-[#F6F8FB] transition-colors"

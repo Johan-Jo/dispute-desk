@@ -39,7 +39,7 @@ export function FloatingHelpButton() {
       icon: MessageCircle,
       color: "#F59E0B",
       onClick: () => {
-        window.location.href = "mailto:support@disputedesk.com";
+        window.location.href = "mailto:support@disputedesk.app";
         setIsOpen(false);
       },
     },

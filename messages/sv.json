@@ -1097,7 +1097,7 @@
     "search": "Sök hjälpartiklar...",
     "backToHelp": "Tillbaka till hjälp",
     "relatedArticles": "Relaterade artiklar",
-    "contactSupport": "Behöver du mer hjälp? Kontakta support på support@disputedesk.com",
+    "contactSupport": "Behöver du mer hjälp? Kontakta support på support@disputedesk.app",
     "subtitle": "Få hjälp med DisputeDesk genom interaktiva turer, detaljerade guider och bästa praxis",
     "articleCount": "{count} artiklar",
     "articleNotFound": "Artikeln hittades inte.",
@@ -1253,7 +1253,7 @@
     "articles": {
       "shopifyAppStoreInstall": {
         "title": "Installation från Shopify App Store",
-        "body": "DisputeDesk finns i Shopify App Store. Det är det rekommenderade sättet att lägga till appen i en butik.\n\nFrån App Store:\n1. Gå till Shopify App Store (apps.shopify.com) och sök efter DisputeDesk.\n2. Klicka på Lägg till app och välj butik.\n3. Granska och godkänn behörigheterna som Shopify visar. DisputeDesk behöver åtkomst till ordrar, tvister, tvistbevis, leveranser och relaterad butiksdata för att bygga bevispaket.\n4. Efter installationen öppnar du Shopify-admin, sedan Appar och DisputeDesk för den inbäddade appen.\n\nFrån vår webbplats:\nOm du började på disputedesk.com eller en annan landningssida följer du stegen för registrering eller installation. Du slutför ändå OAuth i Shopify. Öppna sedan DisputeDesk från Appar i admin för fakturering, att spara bevis och hela den inbäddade upplevelsen.\n\nTips: Öppna appen från Shopify-admin (Appar, sedan DisputeDesk) så att butikssessionen blir stabil. Vid anslutnings- eller faktureringsfel: prova Rensa butik och återanslut i portalens sidofält eller öppna appen igen från admin. Se även hjälpartikeln om ogiltig butikssession.\n\nNästa steg: läs \"Din första tvistsynkronisering\" och \"Förstå instrumentpanelen\"."
+        "body": "DisputeDesk finns i Shopify App Store. Det är det rekommenderade sättet att lägga till appen i en butik.\n\nFrån App Store:\n1. Gå till Shopify App Store (apps.shopify.com) och sök efter DisputeDesk.\n2. Klicka på Lägg till app och välj butik.\n3. Granska och godkänn behörigheterna som Shopify visar. DisputeDesk behöver åtkomst till ordrar, tvister, tvistbevis, leveranser och relaterad butiksdata för att bygga bevispaket.\n4. Efter installationen öppnar du Shopify-admin, sedan Appar och DisputeDesk för den inbäddade appen.\n\nFrån vår webbplats:\nOm du började på disputedesk.app eller en annan landningssida följer du stegen för registrering eller installation. Du slutför ändå OAuth i Shopify. Öppna sedan DisputeDesk från Appar i admin för fakturering, att spara bevis och hela den inbäddade upplevelsen.\n\nTips: Öppna appen från Shopify-admin (Appar, sedan DisputeDesk) så att butikssessionen blir stabil. Vid anslutnings- eller faktureringsfel: prova Rensa butik och återanslut i portalens sidofält eller öppna appen igen från admin. Se även hjälpartikeln om ogiltig butikssession.\n\nNästa steg: läs \"Din första tvistsynkronisering\" och \"Förstå instrumentpanelen\"."
       },
       "connectShopifyStore": {
         "title": "Hur du ansluter din Shopify-butik",
@@ -1381,7 +1381,7 @@
       "search": "Sök hjälp...",
       "backToHelp": "Tillbaka till Hjälp",
       "relatedArticles": "Relaterade artiklar",
-      "contactSupport": "Behöver du mer hjälp? Kontakta: support@disputedesk.com",
+      "contactSupport": "Behöver du mer hjälp? Kontakta: support@disputedesk.app",
       "noResults": "Inga artiklar hittades.",
       "interactiveGuidesTitle": "Interaktiva guider",
       "interactiveGuidesDesc": "Steg-för-steg-vägledning för viktiga uppgifter i den här appen.",
@@ -2269,7 +2269,7 @@
     "reachDemoDesc": "Föredrar du en genomgång? Boka tid med oss.",
     "reachEmailTitle": "Maila oss",
     "reachEmailDesc": "Använd e-post om chatt inte passar.",
-    "reachEmailAddress": "support@disputedesk.com",
+    "reachEmailAddress": "support@disputedesk.app",
     "fitTitle": "Är detta rätt ställe?",
     "fitBestFor": "Passar bäst för:",
     "fitBest1": "Handlare som utvärderar DisputeDesk",

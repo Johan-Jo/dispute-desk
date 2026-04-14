@@ -1140,7 +1140,7 @@
     "search": "Search help articles...",
     "backToHelp": "Back to Help",
     "relatedArticles": "Related Articles",
-    "contactSupport": "Need more help? Contact support at support@disputedesk.com",
+    "contactSupport": "Need more help? Contact support at support@disputedesk.app",
     "subtitle": "Get help with DisputeDesk through interactive tours, detailed guides, and best practices",
     "articleCount": "{count} articles",
     "articleNotFound": "Article not found.",
@@ -1300,7 +1300,7 @@
       },
       "shopifyAppStoreInstall": {
         "title": "Installing from the Shopify App Store",
-        "body": "DisputeDesk is available on the Shopify App Store. That is the recommended way to add the app to a store.\n\nFrom the App Store:\n1. Go to the Shopify App Store (apps.shopify.com) and search for DisputeDesk.\n2. Click Add app and choose which store to install on.\n3. Review and approve the permissions Shopify shows. DisputeDesk needs access to orders, disputes, dispute evidence, fulfillments, and related store data to build evidence packs.\n4. After installation, open Shopify Admin, then Apps, then DisputeDesk to use the embedded app.\n\nFrom our website:\nIf you started on disputedesk.com or another marketing page, follow the sign-up or install prompts. You will still complete Shopify OAuth. Then open DisputeDesk from Apps in Admin for billing, saving evidence, and the full embedded experience.\n\nTip: Opening the app from Shopify Admin (Apps, then DisputeDesk) keeps your store session reliable. If you see connection or billing errors, try Clear shop & reconnect in the portal sidebar or reopen the app from Admin. See also \"Can't upgrade: Store session is invalid\" in Help.\n\nNext: read \"Your first dispute sync\" and \"Understanding the dashboard.\""
+        "body": "DisputeDesk is available on the Shopify App Store. That is the recommended way to add the app to a store.\n\nFrom the App Store:\n1. Go to the Shopify App Store (apps.shopify.com) and search for DisputeDesk.\n2. Click Add app and choose which store to install on.\n3. Review and approve the permissions Shopify shows. DisputeDesk needs access to orders, disputes, dispute evidence, fulfillments, and related store data to build evidence packs.\n4. After installation, open Shopify Admin, then Apps, then DisputeDesk to use the embedded app.\n\nFrom our website:\nIf you started on disputedesk.app or another marketing page, follow the sign-up or install prompts. You will still complete Shopify OAuth. Then open DisputeDesk from Apps in Admin for billing, saving evidence, and the full embedded experience.\n\nTip: Opening the app from Shopify Admin (Apps, then DisputeDesk) keeps your store session reliable. If you see connection or billing errors, try Clear shop & reconnect in the portal sidebar or reopen the app from Admin. See also \"Can't upgrade: Store session is invalid\" in Help.\n\nNext: read \"Your first dispute sync\" and \"Understanding the dashboard.\""
       },
       "understandingDashboard": {
         "title": "Understanding the dashboard",
@@ -1444,7 +1444,7 @@
       "search": "Search help...",
       "backToHelp": "Back to Help",
       "relatedArticles": "Related Articles",
-      "contactSupport": "Need more help? Contact support@disputedesk.com",
+      "contactSupport": "Need more help? Contact support@disputedesk.app",
       "noResults": "No articles found.",
       "interactiveGuidesTitle": "Interactive Tours",
       "interactiveGuidesDesc": "Step-by-step guidance for key tasks in this app.",
@@ -1452,7 +1452,7 @@
       "articles": {
         "connectShopifyStore": {
           "title": "Connecting your store in the Shopify app",
-          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.com) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
+          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.app) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
         },
         "shopifyAppStoreInstall": {
           "title": "Using DisputeDesk from the Shopify App Store",
@@ -1655,7 +1655,7 @@
     "reachDemoDesc": "Prefer a walkthrough? Book time with us.",
     "reachEmailTitle": "Email us",
     "reachEmailDesc": "Use email if chat is not the right fit.",
-    "reachEmailAddress": "support@disputedesk.com",
+    "reachEmailAddress": "support@disputedesk.app",
     "formName": "Your name",
     "formEmail": "Email address",
     "formMessage": "How can we help?",

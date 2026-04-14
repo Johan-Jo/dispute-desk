@@ -1155,7 +1155,7 @@
     "search": "Hilfe-Artikel durchsuchen...",
     "backToHelp": "Zurück zur Hilfe",
     "relatedArticles": "Verwandte Artikel",
-    "contactSupport": "Brauchen Sie weitere Hilfe? Kontaktieren Sie den Support unter support@disputedesk.com",
+    "contactSupport": "Brauchen Sie weitere Hilfe? Kontaktieren Sie den Support unter support@disputedesk.app",
     "subtitle": "Hilfe zu DisputeDesk durch interaktive Touren, detaillierte Anleitungen und Best Practices",
     "articleCount": "{count} Artikel",
     "articleNotFound": "Artikel nicht gefunden.",
@@ -1315,7 +1315,7 @@
       },
       "shopifyAppStoreInstall": {
         "title": "Installation über den Shopify App Store",
-        "body": "DisputeDesk ist im Shopify App Store verfügbar. Das ist der empfohlene Weg, die App in einem Shop zu installieren.\n\nVom App Store:\n1. Öffnen Sie den Shopify App Store (apps.shopify.com) und suchen Sie nach DisputeDesk.\n2. Klicken Sie auf App hinzufügen und wählen Sie den Ziel-Shop.\n3. Prüfen und bestätigen Sie die angezeigten Berechtigungen. DisputeDesk benötigt Zugriff auf Bestellungen, Streitfälle, Streitfall-Nachweise, Lieferungen und zugehörige Shop-Daten für Beweispakete.\n4. Nach der Installation öffnen Sie Shopify Admin, dann Apps, dann DisputeDesk, um die eingebettete App zu nutzen.\n\nÜber unsere Website:\nWenn Sie auf disputedesk.com oder einer Marketingseite gestartet sind, folgen Sie den Anmelde- oder Installationshinweisen. Sie schließen die OAuth-Autorisierung bei Shopify ab. Öffnen Sie DisputeDesk anschließend über Apps im Admin für Abrechnung, Speichern von Nachweisen und die volle eingebettete Erfahrung.\n\nTipp: Öffnen Sie die App über Shopify Admin (Apps, dann DisputeDesk), damit die Shop-Session zuverlässig bleibt. Bei Verbindungs- oder Abrechnungsfehlern: Shop leeren & erneut verbinden in der Portal-Seitenleiste oder die App erneut aus dem Admin öffnen. Siehe auch den Hilfeartikel zur ungültigen Shop-Session.\n\nAls Nächstes: Erste Streitfall-Synchronisierung und Dashboard."
+        "body": "DisputeDesk ist im Shopify App Store verfügbar. Das ist der empfohlene Weg, die App in einem Shop zu installieren.\n\nVom App Store:\n1. Öffnen Sie den Shopify App Store (apps.shopify.com) und suchen Sie nach DisputeDesk.\n2. Klicken Sie auf App hinzufügen und wählen Sie den Ziel-Shop.\n3. Prüfen und bestätigen Sie die angezeigten Berechtigungen. DisputeDesk benötigt Zugriff auf Bestellungen, Streitfälle, Streitfall-Nachweise, Lieferungen und zugehörige Shop-Daten für Beweispakete.\n4. Nach der Installation öffnen Sie Shopify Admin, dann Apps, dann DisputeDesk, um die eingebettete App zu nutzen.\n\nÜber unsere Website:\nWenn Sie auf disputedesk.app oder einer Marketingseite gestartet sind, folgen Sie den Anmelde- oder Installationshinweisen. Sie schließen die OAuth-Autorisierung bei Shopify ab. Öffnen Sie DisputeDesk anschließend über Apps im Admin für Abrechnung, Speichern von Nachweisen und die volle eingebettete Erfahrung.\n\nTipp: Öffnen Sie die App über Shopify Admin (Apps, dann DisputeDesk), damit die Shop-Session zuverlässig bleibt. Bei Verbindungs- oder Abrechnungsfehlern: Shop leeren & erneut verbinden in der Portal-Seitenleiste oder die App erneut aus dem Admin öffnen. Siehe auch den Hilfeartikel zur ungültigen Shop-Session.\n\nAls Nächstes: Erste Streitfall-Synchronisierung und Dashboard."
       },
       "understandingDashboard": {
         "title": "Das Dashboard verstehen",
@@ -1447,7 +1447,7 @@
       "search": "Hilfe suchen...",
       "backToHelp": "Zurück zur Hilfe",
       "relatedArticles": "Verwandte Artikel",
-      "contactSupport": "Weitere Hilfe? Kontaktiere uns: support@disputedesk.com",
+      "contactSupport": "Weitere Hilfe? Kontaktiere uns: support@disputedesk.app",
       "noResults": "Keine Artikel gefunden.",
       "articleCount": "{count} Artikel",
       "articleNotAvailable": "Dieser Artikel ist nicht verfügbar.",
@@ -3025,7 +3025,7 @@
     "reachDemoDesc": "Bevorzugen Sie eine Führung? Buchen Sie einen Termin.",
     "reachEmailTitle": "E-Mail senden",
     "reachEmailDesc": "Nutzen Sie E-Mail, wenn Chat nicht passt.",
-    "reachEmailAddress": "support@disputedesk.com",
+    "reachEmailAddress": "support@disputedesk.app",
     "fitTitle": "Sind Sie hier richtig?",
     "fitBestFor": "Am besten für:",
     "fitBest1": "Händler, die DisputeDesk evaluieren",
