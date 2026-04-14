@@ -17,6 +17,7 @@ import { ResourcesFilterBar } from "@/components/resources/ResourcesFilterBar";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 import { RESOURCES_HUB } from "@/lib/marketing/resourcesHubTokens";
 import { ResourceCardImage } from "@/components/resources/ResourceCardImage";
+import { getMarketingShopifyAppInstallUrl } from "@/lib/marketing/shopifyInstallUrl";
 
 type Row = ContentLocalizationRow & { content_items: ContentItemRow };
 
@@ -461,13 +462,13 @@ export async function ResourcesHubShell({
             <h3 className="text-xl md:text-2xl font-bold mb-3">{t("ctaStripeTitle")}</h3>
             <p className="text-white/90 mb-6 max-w-xl mx-auto text-sm md:text-base">{t("ctaStripeBody")}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-              <Link
-                href={`${base}/portal/connect-shopify`}
+              <a
+                href={getMarketingShopifyAppInstallUrl()}
                 className="inline-flex items-center justify-center px-8 py-3 rounded-xl font-semibold text-black transition-colors"
                 style={{ backgroundColor: lime }}
               >
                 {t("ctaStripePrimary")}
-              </Link>
+              </a>
               <Link
                 href={`${base}/templates`}
                 className="inline-flex items-center justify-center px-8 py-3 rounded-xl font-semibold border-2 border-white/80 text-white hover:bg-white/10 transition-colors"

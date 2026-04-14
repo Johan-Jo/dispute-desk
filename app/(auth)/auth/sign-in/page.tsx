@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
+import { Info } from "lucide-react";
 import { AuthCard } from "@/components/ui/auth-card";
 import { TextField } from "@/components/ui/text-field";
 import { PasswordField } from "@/components/ui/password-field";
@@ -35,9 +36,11 @@ function isValidEmail(value: string) {
 
 function SignInForm() {
   const t = useTranslations("auth.signIn");
+  const ta = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const continueUrl = searchParams.get("continue") ?? "/portal/dashboard";
+  const isDirectVisit = !searchParams.get("continue");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -118,6 +121,16 @@ function SignInForm() {
         </p>
       }
     >
+      {isDirectVisit && (
+        <div className="flex items-start gap-2.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg px-4 py-3 mb-1">
+          <Info className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-[#1D4ED8]">
+            {ta("shopifyBanner")}{" "}
+            <a href="/" className="font-medium underline">{ta("shopifyBannerCta")}</a>
+          </p>
+        </div>
+      )}
+
       {shopStep ? (
         <div className="space-y-2">
           <TextField

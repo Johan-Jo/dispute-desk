@@ -14,6 +14,7 @@ import {
   type PathLocale,
 } from "@/lib/i18n/pathLocales";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
+import { SHOPIFY_INSTALL_URL } from "@/lib/marketing/shopifyInstallUrl";
 
 function useMarketingHomeHref(): string {
   const raw = useLocale();
@@ -76,12 +77,7 @@ export function MarketingSiteHeader() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher />
-          <a href="/auth/sign-in" className="hidden sm:block">
-            <Button variant="ghost" size="sm">
-              {t("nav.signIn")}
-            </Button>
-          </a>
-          <a href="/portal/connect-shopify" className="hidden sm:block">
+          <a href={SHOPIFY_INSTALL_URL} className="hidden sm:block">
             <Button variant="primary" size="sm">
               {t("nav.installOnShopify")}
             </Button>
@@ -136,12 +132,7 @@ export function MarketingSiteHeader() {
             {t("nav.pricing")}
           </a>
           <div className="pt-3 border-t border-[#E5E7EB] flex flex-col gap-2">
-            <a href="/auth/sign-in">
-              <Button variant="ghost" size="sm" className="w-full">
-                {t("nav.signIn")}
-              </Button>
-            </a>
-            <a href="/portal/connect-shopify">
+            <a href={SHOPIFY_INSTALL_URL}>
               <Button variant="primary" size="sm" className="w-full">
                 {t("nav.installOnShopify")}
               </Button>

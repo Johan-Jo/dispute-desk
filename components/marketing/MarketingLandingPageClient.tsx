@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info } from "lucide-react";
+import { useRef, useState } from "react";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info, Store } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
+import { SHOPIFY_INSTALL_URL } from "@/lib/marketing/shopifyInstallUrl";
 
 type RoiMode = "conservative" | "base" | "aggressive";
 
@@ -34,9 +35,44 @@ const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean
   },
 };
 
+const IS_APP_STORE_SET = !!process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL?.trim();
+
+function normalizeShopDomain(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  const domain = trimmed.endsWith(".myshopify.com")
+    ? trimmed
+    : `${trimmed}.myshopify.com`;
+  const [subdomain] = domain.split(".");
+  if (!/^[a-z0-9-]+$/.test(subdomain)) return null;
+  return domain;
+}
+
 export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
   const t = useTranslations("marketing");
   const [roiMode, setRoiMode] = useState<RoiMode>("base");
+  const [showInstall, setShowInstall] = useState(false);
+  const [shopInput, setShopInput] = useState("");
+  const [shopError, setShopError] = useState<string | null>(null);
+  const installRef = useRef<HTMLDivElement>(null);
+
+  const handlePricingCta = () => {
+    if (IS_APP_STORE_SET) {
+      window.location.href = SHOPIFY_INSTALL_URL;
+      return;
+    }
+    setShowInstall(true);
+    setTimeout(() => installRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
+
+  const handleInstallSubmit = () => {
+    const domain = normalizeShopDomain(shopInput);
+    if (!domain) {
+      setShopError(t("pricing.shopError"));
+      return;
+    }
+    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -94,7 +130,7 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <a href="/portal/connect-shopify">
+                <a href={SHOPIFY_INSTALL_URL}>
                   <Button
                     variant="primary"
                     size="lg"
@@ -279,7 +315,7 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF3")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF4")}</li>
               </ul>
-              <a href="/app/billing?plan=free"><Button variant="secondary" className="w-full">{t("pricing.getStarted")}</Button></a>
+              <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.getStarted")}</Button>
             </div>
 
             {/* Starter */}
@@ -293,7 +329,7 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF4")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF5")}</li>
               </ul>
-              <a href="/app/billing?plan=starter"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
+              <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
             </div>
 
             {/* Growth */}
@@ -308,7 +344,7 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF4")}</li>
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF5")}</li>
               </ul>
-              <a href="/app/billing?plan=growth"><Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]">{t("pricing.startTrial")}</Button></a>
+              <Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
             </div>
 
             {/* Scale */}
@@ -322,9 +358,40 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF4")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF5")}</li>
               </ul>
-              <a href="/app/billing?plan=scale"><Button variant="secondary" className="w-full">{t("pricing.startTrial")}</Button></a>
+              <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
             </div>
           </div>
+
+          {/* Inline install panel — appears when pricing CTA clicked (pre-App Store listing) */}
+          {showInstall && (
+            <div ref={installRef} className="mt-8 bg-[#F6F8FB] rounded-xl border border-[#E5E7EB] p-6 sm:p-8 max-w-lg mx-auto">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
+                  <Store className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[#0B1220]">{t("pricing.installTitle")}</h3>
+                  <p className="text-sm text-[#64748B]">{t("pricing.installSubtitle")}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={shopInput}
+                  onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleInstallSubmit()}
+                  placeholder={t("pricing.shopPlaceholder")}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/40 focus:border-[#1D4ED8]"
+                  autoFocus
+                />
+                <Button variant="primary" onClick={handleInstallSubmit}>
+                  {t("pricing.installButton")}
+                </Button>
+              </div>
+              {shopError && <p className="text-sm text-[#EF4444] mt-2">{shopError}</p>}
+              <p className="text-xs text-[#94A3B8] mt-3">{t("pricing.installHint")}</p>
+            </div>
+          )}
         </div>
       </section>
 

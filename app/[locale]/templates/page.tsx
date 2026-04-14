@@ -9,6 +9,7 @@ import { pathLocaleToMessages } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { listPublishedByRoute } from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
+import { getMarketingShopifyAppInstallUrl } from "@/lib/marketing/shopifyInstallUrl";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { HubSectionNav } from "@/components/resources/HubSectionNav";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
@@ -179,12 +180,12 @@ export default async function TemplatesHubPage({ params }: Props) {
               <p className="text-sm text-[#667085] mb-6">
                 {t("ctaDemoBody")}
               </p>
-              <Link
-                href={`${basePath}/portal/connect-shopify`}
+              <a
+                href={getMarketingShopifyAppInstallUrl()}
                 className="inline-block px-6 py-3 bg-[#1D4ED8] text-white rounded-lg font-medium hover:bg-[#1e40af] transition-colors text-center"
               >
                 {t("ctaDemoButton")}
-              </Link>
+              </a>
             </div>
             <div>
               <h3 className="text-xl font-bold text-[#0B1220] mb-3">

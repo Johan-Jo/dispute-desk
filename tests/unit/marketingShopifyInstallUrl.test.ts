@@ -26,16 +26,16 @@ describe("getMarketingShopifyAppInstallUrl", () => {
     expect(getMarketingShopifyAppInstallUrl()).toBe("https://apps.shopify.com/disputedesk");
   });
 
-  it("falls back to sign-up on public origin when App Store URL unset", () => {
+  it("falls back to /#pricing on public origin when App Store URL unset", () => {
     expect(getMarketingShopifyAppInstallUrl()).toBe(
-      "https://disputedesk.app/auth/sign-up?utm_source=marketing&utm_medium=install_cta&utm_campaign=app_store_fallback"
+      "https://disputedesk.app/#pricing"
     );
   });
 
-  it("uses NEXT_PUBLIC_APP_URL for fallback sign-up base when set", () => {
+  it("uses NEXT_PUBLIC_APP_URL for fallback base when set", () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://preview.example.com";
     expect(getMarketingShopifyAppInstallUrl()).toBe(
-      "https://preview.example.com/auth/sign-up?utm_source=marketing&utm_medium=install_cta&utm_campaign=app_store_fallback"
+      "https://preview.example.com/#pricing"
     );
   });
 });
