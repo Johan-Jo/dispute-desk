@@ -7,3 +7,7 @@ export {
   SuggestedEvidenceChecklist,
   type ChecklistItemFromApi,
 } from "./SuggestedEvidenceChecklist";
+export { PackHeader } from "./PackHeader";
+export { EvidenceBuilderSection } from "./EvidenceBuilderSection";
+export { EvidenceItemRow, IncludedItemRow, type ChecklistItemUI } from "./EvidenceItemRow";
+export { SubmissionSidebar } from "./SubmissionSidebar";
