@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import Cal, { getCalApi } from "@calcom/embed-react";
+import { getCalApi } from "@calcom/embed-react";
 import {
   MessageCircle,
   Calendar,
@@ -138,7 +138,7 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
             {t("reachTitle")}
           </h2>
 
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Chat */}
             <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EFF6FF]">
@@ -159,27 +159,28 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
               </button>
             </div>
 
+            {/* Demo */}
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EFF6FF]">
+                <Calendar className="h-5 w-5 text-[#1D4ED8]" />
+              </div>
+              <h3 className="mt-4 text-base font-semibold text-[#0B1220]">
+                {t("reachDemoTitle")}
+              </h3>
+              <p className="mt-1 text-sm text-[#6B7280] leading-relaxed">
+                {t("reachDemoDesc")}
+              </p>
+              <button
+                onClick={handleBookDemo}
+                className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1D4ED8] hover:text-[#1E40AF] transition-colors focus:outline-none"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                {t("bookDemo")}
+              </button>
+            </div>
+
             {/* Email form */}
             <ContactForm t={t} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Book a Demo (inline Cal.com embed) ── */}
-      <section className="py-14 sm:py-20 bg-white">
-        <div className={MARKETING_PAGE_CONTAINER_CLASS}>
-          <h2 className="text-center text-2xl sm:text-3xl font-bold text-[#0B1220]">
-            {t("reachDemoTitle")}
-          </h2>
-          <p className="mt-2 text-center text-base text-[#6B7280]">
-            {t("reachDemoDesc")}
-          </p>
-          <div className="mt-8 rounded-xl border border-[#E5E7EB] overflow-hidden">
-            <Cal
-              calLink={CAL_LINK}
-              style={{ width: "100%", height: "100%", overflow: "scroll" }}
-              config={{ layout: "month_view" }}
-            />
           </div>
         </div>
       </section>
