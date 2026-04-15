@@ -89,6 +89,21 @@ export const ORDER_DETAIL_QUERY = `
             }
           }
         }
+        transactions(first: 10) {
+          id
+          kind
+          status
+          gateway
+          paymentDetails {
+            __typename
+            ... on CardPaymentDetails {
+              avsResultCode
+              cvvResultCode
+              company
+              number
+            }
+          }
+        }
         customer {
           numberOfOrders
           createdAt
@@ -155,6 +170,22 @@ export interface OrderEventNode {
   criticalAlert: boolean;
 }
 
+export interface CardPaymentDetails {
+  __typename: "CardPaymentDetails";
+  avsResultCode: string | null;
+  cvvResultCode: string | null;
+  company: string | null;
+  number: string | null;
+}
+
+export interface OrderTransaction {
+  id: string;
+  kind: string;
+  status: string;
+  gateway: string;
+  paymentDetails: CardPaymentDetails | { __typename: string } | null;
+}
+
 export interface OrderDetailNode {
   id: string;
   name: string;
@@ -188,6 +219,7 @@ export interface OrderDetailNode {
   lineItems: { edges: Array<{ node: OrderLineItem }> };
   fulfillments: OrderFulfillment[];
   refunds: OrderRefund[];
+  transactions: OrderTransaction[];
   events: { edges: Array<{ node: OrderEventNode }> };
   customer: {
     numberOfOrders: string;

@@ -488,18 +488,36 @@ when disputes are detected:
 | Module | Path | Purpose |
 |--------|------|---------|
 | Settings | `lib/automation/settings.ts` | Read/write shop_settings with auto-upsert |
-| Completeness | `lib/automation/completeness.ts` | Per-reason templates, score + blockers |
+| Completeness | `lib/automation/completeness.ts` | Context-aware templates, conditional requirements, weighted scoring |
 | Auto-Save Gate | `lib/automation/autoSaveGate.ts` | Decision logic for auto-save |
 | Pipeline | `lib/automation/pipeline.ts` | Orchestrator: trigger build + evaluate gate |
+| Payment Source | `lib/packs/sources/paymentSource.ts` | AVS/CVV collection from order transactions |
 
 ### Pack Status Flow
 
 ```
 queued → building → ready → saved_to_shopify
-                  → blocked (missing required items)
+                  → ready (auto-save blocked by gate, merchant can still act)
                   → ready (parked for review → approve → saved_to_shopify)
                   → failed
 ```
+
+**Core principle:** Packs are ALWAYS generated (`ready` or `failed`). Missing evidence never blocks pack creation — blockers only gate auto-save/submission. The `blocked` status is no longer set by the build step.
+
+### Conditional Requirement Modes
+
+Template items have a `requirement_mode` column (`pack_template_items`):
+- `required_always` — always required
+- `required_if_fulfilled` — required only when order has been shipped (AVS/tracking items)
+- `required_if_card_payment` — required only when payment is a card (AVS/CVV)
+- `recommended` — not required but weighted in scoring (0.5x)
+- `optional` — nice to have (0.1x)
+
+`OrderContext { isFulfilled, hasCardPayment }` is derived in `buildPack.ts` from the fetched order and passed to the completeness engine. Items that are inapplicable for the order context are marked `unavailable` with a reason string, not counted as blockers.
+
+### AVS/CVV Collection
+
+`ORDER_DETAIL_QUERY` fetches `transactions.paymentDetails` (typed `CardPaymentDetails` with `avsResultCode`, `cvvResultCode`). The `paymentSource.ts` collector extracts these from the first successful SALE/AUTHORIZATION transaction. The field `avs_cvv_match` uses `required_if_card_payment` mode — required when the order has a card transaction, unavailable otherwise.
 
 ## Evidence Pack Builder
 

@@ -250,12 +250,8 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "park_for_review", details: gate.reason };
   }
 
-  // blocked
-  await sb
-    .from("evidence_packs")
-    .update({ status: "blocked", updated_at: new Date().toISOString() })
-    .eq("id", packId);
-
+  // Auto-save blocked — pack stays "ready", blockers are metadata only.
+  // The merchant can still view and manually act on the pack.
   await sb.from("audit_events").insert({
     shop_id: pack.shop_id,
     dispute_id: pack.dispute_id,

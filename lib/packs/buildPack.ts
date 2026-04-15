@@ -26,7 +26,9 @@ import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
 import { collectManualEvidence } from "./sources/manualSource";
 import { collectCustomerCommEvidence } from "./sources/customerCommSource";
+import { collectPaymentEvidence } from "./sources/paymentSource";
 import type { EvidenceSection, BuildContext } from "./types";
+import type { OrderContext } from "@/lib/automation/completeness";
 
 function decryptAccessToken(encrypted: string): string {
   try {
@@ -38,7 +40,7 @@ function decryptAccessToken(encrypted: string): string {
 
 export interface BuildResult {
   packId: string;
-  status: "ready" | "blocked" | "failed";
+  status: "ready" | "failed";
   completenessScore: number;
   blockers: string[];
   sectionsCollected: number;
@@ -132,6 +134,7 @@ export async function buildPack(
     collectPolicyEvidence(ctx),
     collectCustomerCommEvidence(ctx),
     collectManualEvidence(ctx),
+    collectPaymentEvidence(ctx),
   ]);
 
   const allSections: EvidenceSection[] = [];
@@ -223,13 +226,26 @@ export async function buildPack(
     if (items.length > 0) templateItems = items;
   }
 
+  // Derive order context for conditional requirement evaluation
+  const isFulfilled =
+    order?.displayFulfillmentStatus !== "UNFULFILLED" &&
+    (order?.fulfillments?.length ?? 0) > 0;
+  const hasCardPayment =
+    order?.transactions?.some(
+      (t) => t.paymentDetails?.__typename === "CardPaymentDetails",
+    ) ?? false;
+  const orderContext: OrderContext = { isFulfilled, hasCardPayment };
+
   const completeness = evaluateCompleteness(
     dispute.reason,
     collectedFields,
     templateItems,
+    orderContext,
   );
 
-  const packStatus = completeness.blockers.length > 0 ? "blocked" : "ready";
+  // Packs are always "ready" after successful build. Blockers are
+  // metadata only — they gate auto-save, not pack creation.
+  const packStatus = "ready" as const;
 
   // Build the pack_json
   const packJson = {
@@ -246,6 +262,7 @@ export async function buildPack(
     })),
     completeness: {
       score: completeness.score,
+      evidenceStrengthScore: completeness.evidenceStrengthScore,
       checklist: completeness.checklist,
       blockers: completeness.blockers,
       recommended_actions: completeness.recommended_actions,

@@ -35,6 +35,7 @@ import {
   ChevronUpIcon,
   CheckCircleIcon,
   XCircleIcon,
+  AlertTriangleIcon,
 } from "@shopify/polaris-icons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { formatPackStatus } from "@/lib/types/packStatus";
@@ -188,13 +189,24 @@ function getReadinessStateLabel(score: number, t: (key: string) => string): stri
   return t("packs.readinessJustStarted");
 }
 
-type PackStateKey = "blocked" | "ready" | "saved" | "inProgress" | "library";
+type PackStateKey = "blocked" | "ready" | "saved" | "inProgress" | "library" | "partial";
 
 function getPackStateKey(pack: PackData, isLibraryPack: boolean): PackStateKey {
   if (isLibraryPack) return "library";
   if (pack.status === "saved_to_shopify") return "saved";
-  const hasBlockers = (pack.blockers?.length ?? 0) > 0;
-  if (pack.status === "blocked" || hasBlockers) return "blocked";
+  // Check if there are missing required + collectable items
+  const checklist = (pack.checklist ?? []) as Array<{
+    required?: boolean;
+    present?: boolean;
+    collectable?: boolean;
+    unavailableReason?: string;
+  }>;
+  const missingRequired = checklist.filter(
+    (c) => c.required && !c.present && c.collectable,
+  );
+  const hasUnavailable = checklist.some((c) => c.unavailableReason);
+  if (missingRequired.length > 0) return "blocked";
+  if (hasUnavailable) return "partial";
   const score = pack.completeness_score ?? 0;
   if (score >= 80) return "ready";
   return "inProgress";
@@ -391,6 +403,7 @@ export default function PackPreviewPage() {
     if (stateKey === "saved")
       return t("packs.stateSavedHint", { date: formatDate(pack.saved_to_shopify_at) });
     if (stateKey === "blocked") return t("packs.stateBlockedHint");
+    if (stateKey === "partial") return t("packs.statePartialHint");
     if (stateKey === "ready") return t("packs.stateReadyHint");
     if (stateKey === "library") return t("packs.stateLibraryHint");
     return t("packs.stateInProgressHint", { percent: score });
@@ -449,8 +462,28 @@ export default function PackPreviewPage() {
   }
 
   const checklistItems = pack.checklist?.length
-    ? pack.checklist.map((c) => ({ label: c.label, present: c.present }))
+    ? pack.checklist.map((c: {
+        label: string;
+        present: boolean;
+        collectable?: boolean;
+        unavailableReason?: string;
+        required?: boolean;
+      }) => ({
+        label: c.label,
+        present: c.present,
+        collectable: c.collectable ?? true,
+        unavailableReason: c.unavailableReason,
+        required: c.required ?? false,
+      }))
     : [];
+
+  const collectedItems = checklistItems.filter((c) => c.present);
+  const missingItems = checklistItems.filter(
+    (c) => !c.present && c.collectable,
+  );
+  const unavailableItems = checklistItems.filter(
+    (c) => !c.present && !c.collectable && c.unavailableReason,
+  );
 
   // Group template items by their parent section for the library-pack preview.
   const templateItemsBySection = (() => {
@@ -584,11 +617,11 @@ export default function PackPreviewPage() {
           </Card>
         </Layout.Section>
 
-        {/* 2. Work card */}
-        <Layout.Section>
-          <div ref={workCardRef}>
-            {isLibraryPack ? (
-              /* Library-pack preview: read-only template definition. No upload, no save, no readiness. */
+        {/* 2. Work cards */}
+        <div ref={workCardRef}>
+          {isLibraryPack ? (
+            /* Library-pack preview: read-only template definition. */
+            <Layout.Section>
               <Card>
                 <BlockStack gap="400">
                   <BlockStack gap="100">
@@ -654,34 +687,77 @@ export default function PackPreviewPage() {
                   </Text>
                 </BlockStack>
               </Card>
-            ) : (
-              /* Dispute pack: full work card with checklist, upload, and collected evidence. */
-              <Card>
-                <BlockStack gap="500">
-                  {/* Evidence needed */}
-                  <BlockStack gap="200">
+            </Layout.Section>
+          ) : (
+            /* Dispute pack: separate cards for checklist, upload, and collected evidence. */
+            <>
+              {/* Evidence needed — own card */}
+              <Layout.Section>
+                <Card>
+                  <BlockStack gap="300">
                     <Text as="h3" variant="headingMd">
                       {t("packs.evidenceNeededTitle")}
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued">
                       {t("packs.recommendedForDisputeDescription")}
                     </Text>
-                    <BlockStack gap="100">
-                      {checklistItems.map((item, idx) => (
-                        <InlineStack key={idx} gap="200" blockAlign="center">
-                          <Icon
-                            source={item.present ? CheckCircleIcon : XCircleIcon}
-                            tone={item.present ? "success" : "subdued"}
-                          />
-                          <Text as="p" variant="bodyMd">{item.label}</Text>
-                        </InlineStack>
-                      ))}
-                    </BlockStack>
+                    {/* Collected */}
+                    {collectedItems.length > 0 && (
+                      <BlockStack gap="100">
+                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
+                          {t("packs.categoryCollected")}
+                        </Text>
+                        {collectedItems.map((item, idx) => (
+                          <div key={`c-${idx}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "8px", background: "#f0fdf4" }}>
+                            <Icon source={CheckCircleIcon} tone="success" />
+                            <Text as="p" variant="bodyMd">{item.label}</Text>
+                          </div>
+                        ))}
+                      </BlockStack>
+                    )}
+
+                    {/* Missing — action needed */}
+                    {missingItems.length > 0 && (
+                      <BlockStack gap="100">
+                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="critical">
+                          {t("packs.categoryMissing")}
+                        </Text>
+                        {missingItems.map((item, idx) => (
+                          <div key={`m-${idx}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "8px", background: "#fef2f2" }}>
+                            <Icon source={XCircleIcon} tone="critical" />
+                            <Text as="p" variant="bodyMd">{item.label}</Text>
+                            {item.required && <Badge tone="critical">{t("packs.requiredBadge")}</Badge>}
+                          </div>
+                        ))}
+                      </BlockStack>
+                    )}
+
+                    {/* Not available for this order */}
+                    {unavailableItems.length > 0 && (
+                      <BlockStack gap="100">
+                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
+                          {t("packs.categoryUnavailable")}
+                        </Text>
+                        {unavailableItems.map((item, idx) => (
+                          <div key={`u-${idx}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "8px", background: "#f5f5f5" }}>
+                            <Icon source={AlertTriangleIcon} tone="subdued" />
+                            <BlockStack gap="0">
+                              <Text as="p" variant="bodyMd" tone="subdued">{item.label}</Text>
+                              {item.unavailableReason && (
+                                <Text as="p" variant="bodySm" tone="subdued">{item.unavailableReason}</Text>
+                              )}
+                            </BlockStack>
+                          </div>
+                        ))}
+                      </BlockStack>
+                    )}
                   </BlockStack>
+                </Card>
+              </Layout.Section>
 
-                  <Divider />
-
-                  {/* Upload */}
+              {/* Upload — own card */}
+              <Layout.Section>
+                <Card>
                   <BlockStack gap="200">
                     <Text as="h3" variant="headingMd">
                       {t("packs.uploadSectionTitle")}
@@ -698,18 +774,22 @@ export default function PackPreviewPage() {
                       )}
                     </DropZone>
                   </BlockStack>
+                </Card>
+              </Layout.Section>
 
-                  {/* Collected evidence */}
-                  {pack.evidence_items.length > 0 && (
-                  <>
-                    <Divider />
-                    <BlockStack gap="200">
-                      <Text as="h3" variant="headingMd">
-                        {t("packs.collectedEvidenceTitle")}
-                      </Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {t("packs.evidenceItems", { count: pack.evidence_items.length })}
-                      </Text>
+              {/* Collected evidence — own card */}
+              {pack.evidence_items.length > 0 && (
+                <Layout.Section>
+                  <Card>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Text as="h3" variant="headingMd">
+                          {t("packs.collectedEvidenceTitle")}
+                        </Text>
+                        <Badge tone="info">
+                          {t("packs.evidenceItems", { count: pack.evidence_items.length })}
+                        </Badge>
+                      </InlineStack>
                       <BlockStack gap="0">
                         {pack.evidence_items.map((item, idx) => (
                           <div key={item.id}>
@@ -719,7 +799,7 @@ export default function PackPreviewPage() {
                               style={{ cursor: "pointer", padding: "12px 0" }}
                             >
                               <InlineStack align="space-between" blockAlign="center">
-                                <InlineStack gap="200" blockAlign="center">
+                                <InlineStack gap="300" blockAlign="center">
                                   <Badge>{item.type}</Badge>
                                   <Text as="p" variant="bodyMd" fontWeight="semibold">
                                     {item.label}
@@ -753,39 +833,46 @@ export default function PackPreviewPage() {
                             >
                               <div
                                 style={{
-                                  padding: "8px 0 16px",
+                                  padding: "8px 12px 16px",
                                   maxHeight: 300,
                                   overflow: "auto",
+                                  background: "#f8fafc",
+                                  borderRadius: "8px",
+                                  marginBottom: "4px",
                                 }}
                               >
                                 <pre
                                   style={{
                                     fontSize: 12,
+                                    lineHeight: 1.5,
                                     whiteSpace: "pre-wrap",
-                                    wordBreak: "break-all",
+                                    wordBreak: "break-word",
+                                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                                    margin: 0,
                                   }}
                                 >
                                   {JSON.stringify(item.payload, null, 2)}
                                 </pre>
-                                <Text as="p" variant="bodySm" tone="subdued">
-                                  {t("packs.source", {
-                                    source: item.source,
-                                    date: formatDate(item.created_at),
-                                  })}
-                                </Text>
+                                <div style={{ marginTop: 8 }}>
+                                  <Text as="p" variant="bodySm" tone="subdued">
+                                    {t("packs.source", {
+                                      source: item.source,
+                                      date: formatDate(item.created_at),
+                                    })}
+                                  </Text>
+                                </div>
                               </div>
                             </Collapsible>
                           </div>
                         ))}
                       </BlockStack>
                     </BlockStack>
-                  </>
-                )}
-                </BlockStack>
-              </Card>
-            )}
-          </div>
-        </Layout.Section>
+                  </Card>
+                </Layout.Section>
+              )}
+            </>
+          )}
+        </div>
 
         {/* 3. Activity log (collapsed) + compliance */}
         <Layout.Section>
