@@ -221,9 +221,14 @@ export default function DisputesListPage() {
         params.set("final_outcome", outcomeFilter.join(","));
       if (activeTab === "active") {
         params.set("closed", "false");
+        params.set("sort", "created_at");
+        params.set("sort_dir", "desc");
       } else if (activeTab === "closed") {
         params.set("closed", "true");
         params.set("sort", "closed_at");
+        params.set("sort_dir", "desc");
+      } else {
+        params.set("sort", "created_at");
         params.set("sort_dir", "desc");
       }
       const res = await fetch(`/api/disputes?${params}`);

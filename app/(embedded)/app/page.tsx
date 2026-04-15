@@ -623,7 +623,7 @@ function RecentDisputesTable() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch("/api/disputes?per_page=8&sort=due_at&sort_dir=asc").then((r) => (r.ok ? r.json() : { disputes: [] })),
+      fetch("/api/disputes?per_page=8&sort=created_at&sort_dir=desc").then((r) => (r.ok ? r.json() : { disputes: [] })),
       fetch("/api/billing/usage").then((r) => (r.ok ? r.json() : {})),
     ]).then(([disputeData, usageData]: [
       { disputes?: Array<Record<string, unknown>> },
