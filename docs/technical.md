@@ -160,7 +160,7 @@ All transactional email is sent via **Resend** using branded table-based HTML te
 
 ## Cal.com (demo booking)
 
-The `/contact` page embeds Cal.com scheduling via **`@calcom/embed-react`** (event slug `disputedesk/demo`). The hero "Book Demo" button opens a Cal modal; a dedicated section below the contact cards renders the calendar inline with month-view layout.
+The `/contact` page integrates Cal.com scheduling via **`@calcom/embed-react`** (profile `disputedesk`). Both the hero "Book Demo" button and the Demo card in the "How to reach us" section open a Cal.com modal where visitors choose between 15min and 30min meetings. CSP allows `app.cal.com` for `script-src`, `frame-src`, and `connect-src` on marketing routes (`next.config.js`).
 
 - **Env:** `CAL_API_KEY` — Cal.com API key (server-only, available for future API calls such as webhook verification or booking queries). The client-side embed uses the public event slug and does not require the API key.
 
@@ -174,7 +174,7 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 |------|--------|--------|
 | Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
 | Privacy | `/privacy`, `/{pathLocale}/privacy` (e.g. `/de/privacy`) | `app/[locale]/privacy/page.tsx`; copy under `messages/*/consent.*` |
-| Contact | `/contact`, `/{pathLocale}/contact` | `app/[locale]/contact/page.tsx` + `components/marketing/ContactPageClient.tsx`; chat-first routing page — "Open chat" triggers the global Tawk widget, hero "Book Demo" opens a Cal.com modal, dedicated section with inline Cal.com embed (`@calcom/embed-react`, event `disputedesk/demo`), email fallback form. Copy under `messages/*/contact.*` |
+| Contact | `/contact`, `/{pathLocale}/contact` | `app/[locale]/contact/page.tsx` + `components/marketing/ContactPageClient.tsx`; chat-first routing page — "Open chat" triggers the global Tawk widget, "Book Demo" (hero + Demo card) opens Cal.com modal via `@calcom/embed-react` (profile `disputedesk`), email fallback form. Copy under `messages/*/contact.*` |
 | Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
 | Hub filter bar | `components/resources/ResourcesFilterBar.tsx` | Client component: content-type filters with icons, **More Filters** for additional types, language picker, clear filters — embedded in `ResourcesHubShell`. |
 | Public article chrome | `components/resources/ArticleStickyBar.tsx` | Sticky bar on article pages: back to resources, share (native share or copy link). |
