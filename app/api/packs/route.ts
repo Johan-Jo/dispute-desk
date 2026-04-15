@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listPacks, createPack } from "@/lib/db/packs";
+import { getServiceClient } from "@/lib/supabase/server";
+import { normalizeLocale, DEFAULT_LOCALE } from "@/lib/i18n/locales";
 
 /**
  * GET /api/packs?shopId=...&status=DRAFT&q=search
@@ -24,6 +26,39 @@ export async function GET(req: NextRequest) {
     status: searchParams.get("status") ?? undefined,
     search: searchParams.get("q") ?? undefined,
   });
+
+  // Resolve localized template names for template-based packs
+  const locale = normalizeLocale(searchParams.get("locale")) ?? DEFAULT_LOCALE;
+  const templateIds = [...new Set(packs.filter((p) => p.template_id).map((p) => p.template_id as string))];
+
+  if (templateIds.length > 0) {
+    const sb = getServiceClient();
+    const { data: i18nRows } = await sb
+      .from("pack_template_i18n")
+      .select("template_id, locale, name")
+      .in("template_id", templateIds);
+
+    if (i18nRows && i18nRows.length > 0) {
+      const byTemplate = new Map<string, Array<{ locale: string; name: string }>>();
+      for (const row of i18nRows) {
+        const list = byTemplate.get(row.template_id) ?? [];
+        list.push({ locale: row.locale, name: row.name });
+        byTemplate.set(row.template_id, list);
+      }
+
+      for (const pack of packs) {
+        if (!pack.template_id) continue;
+        const rows = byTemplate.get(pack.template_id);
+        if (!rows) continue;
+        const baseLang = locale.split("-")[0];
+        const exact = rows.find((r) => r.locale === locale);
+        const base = rows.find((r) => r.locale.split("-")[0] === baseLang);
+        const en = rows.find((r) => r.locale === DEFAULT_LOCALE);
+        const resolved = exact ?? base ?? en ?? rows[0];
+        if (resolved) pack.name = resolved.name;
+      }
+    }
+  }
 
   return NextResponse.json({ packs });
 }

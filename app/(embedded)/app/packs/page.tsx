@@ -131,12 +131,12 @@ export default function PacksListPage() {
   const fetchPacks = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
+    params.set("locale", locale);
     if (statusTab !== "all") params.set("status", statusTab.toUpperCase());
     if (queryValue.trim()) params.set("q", queryValue.trim());
 
     try {
-      const qs = params.toString();
-      const url = qs ? `/api/packs?${qs}` : "/api/packs";
+      const url = `/api/packs?${params.toString()}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -148,7 +148,7 @@ export default function PacksListPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusTab, queryValue]);
+  }, [statusTab, queryValue, locale]);
 
   useEffect(() => {
     fetchPacks();
