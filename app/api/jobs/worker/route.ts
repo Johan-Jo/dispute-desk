@@ -10,14 +10,17 @@ export const runtime = "nodejs";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
- * POST /api/jobs/worker
+ * POST|GET /api/jobs/worker
  *
- * Called by Vercel Cron (or external scheduler) every 1-5 minutes.
+ * Called by Vercel Cron every 2 minutes.
  * Requires CRON_SECRET header for authentication.
  * Claims queued jobs and executes handlers.
  */
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret") ?? req.headers.get("authorization")?.replace("Bearer ", "");
+async function runWorker(req: NextRequest) {
+  const secret =
+    req.headers.get("x-cron-secret") ??
+    req.headers.get("authorization")?.replace("Bearer ", "") ??
+    req.nextUrl.searchParams.get("secret");
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -58,4 +61,12 @@ export async function POST(req: NextRequest) {
     claimed: claimed.length,
     results,
   });
+}
+
+export async function POST(req: NextRequest) {
+  return runWorker(req);
+}
+
+export async function GET(req: NextRequest) {
+  return runWorker(req);
 }

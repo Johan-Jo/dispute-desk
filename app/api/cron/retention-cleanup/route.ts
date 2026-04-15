@@ -1,15 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
+const CRON_SECRET = process.env.CRON_SECRET;
+
 /**
  * GET /api/cron/retention-cleanup
  *
- * Archives evidence packs older than the shop's retention period.
- * Deletes associated PDFs from storage. Audit events are never deleted.
+ * Called by Vercel Cron weekly. Archives evidence packs older than
+ * the shop's retention period. Deletes associated PDFs from storage.
+ * Audit events are never deleted (compliance requirement).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const secret =
+    req.headers.get("authorization")?.replace("Bearer ", "") ??
+    req.nextUrl.searchParams.get("secret");
+
+  if (!CRON_SECRET || secret !== CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const sb = getServiceClient();
 
   const { data: shops } = await sb

@@ -7,8 +7,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
 /**
  * GET /api/cron/sync-disputes
  *
- * Called by Vercel Cron every 5 minutes. Enqueues a sync_disputes
- * job for each active (installed) shop.
+ * Called by Vercel Cron every 5 minutes (Pro plan).
+ * Enqueues a sync_disputes job for each active (installed) shop.
  */
 export async function GET(req: NextRequest) {
   const secret =

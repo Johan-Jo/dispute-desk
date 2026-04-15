@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executePublishQueueTick } from "@/lib/resources/cron/publishQueueTick";
-import { checkShopifyReasonEnumDrift } from "@/lib/shopify/checkReasonEnumDrift";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -14,32 +13,6 @@ async function runPublish(req: NextRequest) {
   }
 
   const result = await executePublishQueueTick();
-
-  // Piggyback the daily Shopify dispute-reason enum drift check onto
-  // this cron because Vercel Hobby caps at 2 cron slots and both are
-  // in use. Fire-and-forget: we do not await, we do not block the
-  // cron response, and any failure is logged only. The helper itself
-  // handles dedup so the admin only gets an email on new or changed
-  // drift — clean runs are silent.
-  void (async () => {
-    try {
-      const driftResult = await checkShopifyReasonEnumDrift();
-      // Log on any state change: new drift, or resolution. Clean runs
-      // and already-alerted dedup stay silent so the logs stay quiet.
-      const isNewDrift =
-        "drift" in driftResult && driftResult.drift === true && "alertSent" in driftResult;
-      const isResolved =
-        "drift" in driftResult && driftResult.drift === false && "resolved" in driftResult;
-      if (isNewDrift || isResolved) {
-        console.log(
-          "[cron/publish-content] reason-enum drift check:",
-          JSON.stringify(driftResult),
-        );
-      }
-    } catch (err) {
-      console.error("[cron/publish-content] drift check failed:", err);
-    }
-  })();
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 500 });
