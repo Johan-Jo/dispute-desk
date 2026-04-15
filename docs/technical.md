@@ -158,6 +158,12 @@ All transactional email is sent via **Resend** using branded table-based HTML te
   4. **Magic link sign-in:** `POST /api/auth/magic-link` calls `admin.generateLink` server-side (redirect URL from `NEXT_PUBLIC_APP_URL`, never client origin) then sends our branded magic-link email via Resend. The sign-in page calls this route — Supabase's own OTP email is never triggered.
 - **Idempotency keys** prevent duplicate welcome sends: `welcome-confirm/{email}` (email flow), `welcome-shopify/{userId}` (Shopify flow), `welcome/{userId}` (signed-in connect).
 
+## Cal.com (demo booking)
+
+The `/contact` page embeds Cal.com scheduling via **`@calcom/embed-react`** (event slug `disputedesk/demo`). The hero "Book Demo" button opens a Cal modal; a dedicated section below the contact cards renders the calendar inline with month-view layout.
+
+- **Env:** `CAL_API_KEY` — Cal.com API key (server-only, available for future API calls such as webhook verification or booking queries). The client-side embed uses the public event slug and does not require the API key.
+
 ## Resources Hub (public marketing)
 
 The **Resources Hub** is the localized **marketing / SEO** surface for long-form content (articles, templates, case studies, glossary, blog). It is **not** part of the embedded Shopify app.
@@ -168,7 +174,7 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 |------|--------|--------|
 | Public hub | `/resources`, `/templates`, `/case-studies`, `/glossary`, `/blog` and locale-prefixed variants (`/sv/resources`, …) | `app/[locale]/*`, next-intl |
 | Privacy | `/privacy`, `/{pathLocale}/privacy` (e.g. `/de/privacy`) | `app/[locale]/privacy/page.tsx`; copy under `messages/*/consent.*` |
-| Contact | `/contact`, `/{pathLocale}/contact` | `app/[locale]/contact/page.tsx` + `components/marketing/ContactPageClient.tsx`; chat-first routing page — "Open chat" triggers the global Tawk widget, secondary CTA links to demo booking, email fallback. Copy under `messages/*/contact.*` |
+| Contact | `/contact`, `/{pathLocale}/contact` | `app/[locale]/contact/page.tsx` + `components/marketing/ContactPageClient.tsx`; chat-first routing page — "Open chat" triggers the global Tawk widget, hero "Book Demo" opens a Cal.com modal, dedicated section with inline Cal.com embed (`@calcom/embed-react`, event `disputedesk/demo`), email fallback form. Copy under `messages/*/contact.*` |
 | Hub UI shell | `components/resources/ResourcesHubShell.tsx` | Shared horizontal layout with the marketing header via `MARKETING_PAGE_CONTAINER_CLASS` in `lib/marketing/pageContainer.ts` |
 | Hub filter bar | `components/resources/ResourcesFilterBar.tsx` | Client component: content-type filters with icons, **More Filters** for additional types, language picker, clear filters — embedded in `ResourcesHubShell`. |
 | Public article chrome | `components/resources/ArticleStickyBar.tsx` | Sticky bar on article pages: back to resources, share (native share or copy link). |
