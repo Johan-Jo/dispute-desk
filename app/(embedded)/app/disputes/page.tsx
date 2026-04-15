@@ -594,10 +594,7 @@ export default function DisputesListPage() {
                             <th>{t("disputes.columnClosedAt")}</th>
                           </>
                         ) : (
-                          <>
-                            <th>{t("table.urgency")}</th>
-                            <th>{t("disputes.columnLastEvent")}</th>
-                          </>
+                          <th>{t("table.urgency")}</th>
                         )}
                         <th>{t("table.date")}</th>
                         <th>{t("table.actions")}</th>
@@ -667,23 +664,14 @@ export default function DisputesListPage() {
                                 </td>
                               </>
                             ) : (
-                              <>
-                                {/* Urgency */}
-                                <td>
-                                  <Badge tone={urgency.tone}>{urgency.label}</Badge>
-                                </td>
-                                {/* Last Event */}
-                                <td>
-                                  <span className={styles.cellMuted}>
-                                    {relativeTime(d.last_event_at ?? null, t)}
-                                  </span>
-                                </td>
-                              </>
+                              <td>
+                                <Badge tone={urgency.tone}>{urgency.label}</Badge>
+                              </td>
                             )}
                             {/* Date */}
                             <td>
                               <span className={styles.cellMuted}>
-                                {formatDueDate(d.initiated_at)}
+                                {d.initiated_at ? new Date(d.initiated_at).toLocaleString(dateLocale, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                               </span>
                             </td>
                             {/* Actions */}

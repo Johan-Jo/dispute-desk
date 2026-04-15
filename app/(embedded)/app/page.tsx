@@ -763,10 +763,9 @@ function RecentDisputesTable() {
                 <th style={recentDisputesThStyle}>{t("table.reason")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.statusCol")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.submissionCol")}</th>
-                <th style={recentDisputesThStyle}>{t("dashboard.lastEventCol")}</th>
+                <th style={recentDisputesThStyle}>{t("table.date")}</th>
                 <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.outcomeCol")}</th>
-                <th style={recentDisputesThStyle}>{t("table.date")}</th>
                 <th style={recentDisputesThStyle}>{t("table.actions")}</th>
               </tr>
             </thead>
@@ -791,15 +790,14 @@ function RecentDisputesTable() {
                   <td style={recentDisputesTdStyle}>{normalizedStatusBadge(r.normalizedStatus)}</td>
                   <td style={recentDisputesTdStyle}>{submissionBadge(r.submissionState)}</td>
                   <td style={recentDisputesTdStyle}>
-                    <Text as="span" variant="bodySm" tone="subdued">{formatRelativeTime(r.lastEventAt)}</Text>
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {r.initiatedAt ? new Date(r.initiatedAt).toLocaleString(dateLocale, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                    </Text>
                   </td>
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{formatShortDate(r.dueAt)}</Text>
                   </td>
                   <td style={recentDisputesTdStyle}>{outcomeBadge(r.finalOutcome)}</td>
-                  <td style={recentDisputesTdStyle}>
-                    <Text as="span" variant="bodySm" tone="subdued">{formatShortDate(r.initiatedAt)}</Text>
-                  </td>
                   <td style={recentDisputesTdStyle}>
                     <Link href={withShopParams(`/app/disputes/${r.id}`, searchParams)} style={recentDisputesViewDetailsLinkStyle}>
                       {t("table.viewDetails")}
