@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { getCalApi } from "@calcom/embed-react";
 import {
@@ -52,10 +52,12 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
   const t = useTranslations("contact");
 
   const handleOpenChat = useCallback(() => openTawkChat(), []);
-  const handleBookDemo = useCallback(async () => {
-    const cal = await getCalApi();
-    cal("ui", { hideEventTypeDetails: false, layout: "month_view" });
-    cal("modal", { calLink: CAL_LINK });
+
+  useEffect(() => {
+    (async function () {
+      const cal = await getCalApi();
+      cal("ui", { hideEventTypeDetails: false, layout: "month_view" });
+    })();
   }, []);
 
   return (
@@ -87,7 +89,8 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
                 {t("openChat")}
               </button>
               <button
-                onClick={handleBookDemo}
+                data-cal-link={CAL_LINK}
+                data-cal-config='{"layout":"month_view"}'
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-500 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#0B1220]"
               >
                 <Calendar className="h-4 w-4" />
@@ -171,7 +174,8 @@ export function ContactPageClient({ base = "" }: { base?: string }) {
                 {t("reachDemoDesc")}
               </p>
               <button
-                onClick={handleBookDemo}
+                data-cal-link={CAL_LINK}
+                data-cal-config='{"layout":"month_view"}'
                 className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1D4ED8] hover:text-[#1E40AF] transition-colors focus:outline-none"
               >
                 <Calendar className="h-3.5 w-3.5" />
