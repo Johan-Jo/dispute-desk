@@ -726,7 +726,7 @@
     "shopPlaceholder": "yourstore.myshopify.com",
     "shopError": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
     "installButton": "Install",
-    "installHint": "You'll be redirected to Shopify to authorize the app. Free plan — no credit card required.",
+    "installHint": "You'll be redirected to Shopify to authorize the app.",
     "packLimitTitle": "Playbook limit reached",
     "packLimitDesc": "You have no remaining playbook credits. Drafts are still unlimited — but exporting or submitting requires credits.",
     "upgradeAction": "Upgrade plan",

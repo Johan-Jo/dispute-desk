@@ -704,7 +704,7 @@
     "shopPlaceholder": "votreboutique.myshopify.com",
     "shopError": "Entrez un nom de boutique valide, par ex. votreboutique ou votreboutique.myshopify.com",
     "installButton": "Installer",
-    "installHint": "Vous serez redirigé vers Shopify pour autoriser l'application. Plan gratuit — aucune carte bancaire requise.",
+    "installHint": "Vous serez redirigé vers Shopify pour autoriser l’application.",
     "packLimitTitle": "Limite de packs atteinte",
     "packLimitDesc": "Plus de crédits packs. Les brouillons restent illimités.",
     "upgradeAction": "Mettre à niveau",

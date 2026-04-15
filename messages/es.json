@@ -704,7 +704,7 @@
     "shopPlaceholder": "tutienda.myshopify.com",
     "shopError": "Ingresa un nombre de tienda válido, por ej. tutienda o tutienda.myshopify.com",
     "installButton": "Instalar",
-    "installHint": "Serás redirigido a Shopify para autorizar la app. Plan gratuito — no se requiere tarjeta de crédito.",
+    "installHint": "Serás redirigido a Shopify para autorizar la aplicación.",
     "packLimitTitle": "Límite de packs alcanzado",
     "packLimitDesc": "Sin créditos de packs. Los borradores siguen siendo ilimitados.",
     "upgradeAction": "Actualizar plan",

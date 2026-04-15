@@ -704,7 +704,7 @@
     "shopPlaceholder": "deinshop.myshopify.com",
     "shopError": "Gib einen gültigen Shop-Namen ein, z. B. deinshop oder deinshop.myshopify.com",
     "installButton": "Installieren",
-    "installHint": "Du wirst zu Shopify weitergeleitet, um die App zu autorisieren. Kostenloser Plan — keine Kreditkarte erforderlich.",
+    "installHint": "Sie werden zu Shopify weitergeleitet, um die App zu autorisieren.",
     "packLimitTitle": "Paketlimit erreicht",
     "packLimitDesc": "Keine Paketkredite mehr. Entwürfe bleiben unbegrenzt.",
     "upgradeAction": "Plan upgraden",

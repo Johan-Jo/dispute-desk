@@ -738,7 +738,7 @@
     "shopPlaceholder": "dinbutik.myshopify.com",
     "shopError": "Ange ett giltigt butiksnamn, t.ex. dinbutik eller dinbutik.myshopify.com",
     "installButton": "Installera",
-    "installHint": "Du omdirigeras till Shopify för att auktorisera appen. Gratis plan — inget kreditkort krävs.",
+    "installHint": "sv",
     "packLimitTitle": "Paketgräns nådd",
     "packLimitDesc": "Inga paketkrediter kvar. Utkast är fortfarande obegränsade.",
     "upgradeAction": "Uppgradera plan",

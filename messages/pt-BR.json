@@ -737,7 +737,7 @@
     "shopPlaceholder": "sualoja.myshopify.com",
     "shopError": "Digite um nome de loja válido, ex. sualoja ou sualoja.myshopify.com",
     "installButton": "Instalar",
-    "installHint": "Você será redirecionado ao Shopify para autorizar o app. Plano gratuito — sem cartão de crédito.",
+    "installHint": "pt",
     "packLimitTitle": "Limite de pacotes atingido",
     "packLimitDesc": "Sem créditos de pacotes. Rascunhos continuam ilimitados.",
     "upgradeAction": "Atualizar plano",
