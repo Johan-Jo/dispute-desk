@@ -8,7 +8,7 @@
  */
 
 import { Resend } from "resend";
-import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 
@@ -163,8 +163,7 @@ export async function sendPackSavedAlert(
     const reason = reasonLabel(ctx.reason);
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
 
-    const baseUrl = getPublicSiteBaseUrl();
-    const disputeUrl = `${baseUrl}/app/disputes/${ctx.disputeId}`;
+    const disputeUrl = getEmbeddedAppUrl(shopDomain || null, `disputes/${ctx.disputeId}`);
     const shopifyUrl =
       shopDomain && dispute?.dispute_gid
         ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
@@ -177,21 +176,25 @@ export async function sendPackSavedAlert(
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F6F6F7">
   <div style="max-width:560px;margin:0 auto;padding:32px 16px">
     <div style="background:#fff;border-radius:12px;border:1px solid #E1E3E5;padding:32px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
-        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#1D4ED8,#3B82F6);display:flex;align-items:center;justify-content:center">
-          <span style="color:#fff;font-size:16px;font-weight:700">D</span>
-        </div>
-        <span style="font-size:15px;font-weight:600;color:#202223">DisputeDesk</span>
-      </div>
+      <table style="border-collapse:collapse;margin-bottom:20px" role="presentation"><tr>
+        <td style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#1D4ED8,#3B82F6);text-align:center;vertical-align:middle">
+          <span style="color:#fff;font-size:16px;font-weight:700;line-height:32px">D</span>
+        </td>
+        <td style="padding-left:10px;vertical-align:middle">
+          <span style="font-size:15px;font-weight:600;color:#202223">DisputeDesk</span>
+        </td>
+      </tr></table>
 
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-        <div style="width:28px;height:28px;border-radius:50%;background:#DCFCE7;display:flex;align-items:center;justify-content:center">
-          <span style="color:#16A34A;font-size:14px;font-weight:700">✓</span>
-        </div>
+      <table style="border-collapse:collapse;margin-bottom:16px" role="presentation"><tr>
+        <td style="width:28px;height:28px;border-radius:50%;background:#DCFCE7;text-align:center;vertical-align:middle">
+          <span style="color:#16A34A;font-size:14px;font-weight:700;line-height:28px">✓</span>
+        </td>
+        <td style="padding-left:8px;vertical-align:middle">
         <h1 style="font-size:20px;font-weight:600;color:#202223;margin:0">
           ${s.heading}
         </h1>
-      </div>
+        </td>
+      </tr></table>
 
       <p style="font-size:14px;color:#6D7175;margin:0 0 16px;line-height:1.5">
         ${s.intro({ reason, amount: amountStr, shop: shopName })}
@@ -203,9 +206,9 @@ export async function sendPackSavedAlert(
         </p>
       </div>
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        ${shopifyUrl ? `<a href="${shopifyUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">${s.ctaShopify.replace(" →", " →")}</a>` : ""}
-        <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#F3F4F6;color:#374151;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">${s.ctaDispute.replace(" →", " →")}</a>
+      <div>
+        ${shopifyUrl ? `<a href="${shopifyUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;margin-right:12px;margin-bottom:8px">${s.ctaShopify.replace(" →", " →")}</a>` : ""}
+        <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#F3F4F6;color:#374151;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;margin-bottom:8px">${s.ctaDispute.replace(" →", " →")}</a>
       </div>
     </div>
     <p style="font-size:12px;color:#8C9196;text-align:center;margin:0">${s.footer}</p>

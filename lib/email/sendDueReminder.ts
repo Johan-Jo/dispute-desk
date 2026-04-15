@@ -7,7 +7,7 @@
  */
 
 import { Resend } from "resend";
-import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
@@ -19,6 +19,7 @@ export interface DueReminderContext {
   to: string;
   locale: string;
   shopName: string;
+  shopDomain?: string | null;
   disputeId: string;
   reason: string | null;
   phase: string | null;
@@ -161,8 +162,7 @@ export async function sendDueReminder(ctx: DueReminderContext): Promise<boolean>
   try {
     const locale = resolveLocale(ctx.locale);
     const s = STRINGS[locale];
-    const baseUrl = getPublicSiteBaseUrl();
-    const disputeUrl = `${baseUrl}/app/disputes/${ctx.disputeId}`;
+    const disputeUrl = getEmbeddedAppUrl(ctx.shopDomain ?? null, `disputes/${ctx.disputeId}`);
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
     const reason = reasonLabel(ctx.reason);
     const hoursLeft = Math.max(0, Math.round((new Date(ctx.dueAt).getTime() - Date.now()) / (1000 * 60 * 60)));
@@ -176,12 +176,14 @@ export async function sendDueReminder(ctx: DueReminderContext): Promise<boolean>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F6F6F7">
   <div style="max-width:560px;margin:0 auto;padding:32px 16px">
     <div style="background:#fff;border-radius:12px;border:1px solid #E1E3E5;padding:32px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
-        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#1D4ED8,#3B82F6);display:flex;align-items:center;justify-content:center">
-          <span style="color:#fff;font-size:16px;font-weight:700">D</span>
-        </div>
-        <span style="font-size:15px;font-weight:600;color:#202223">DisputeDesk</span>
-      </div>
+      <table style="border-collapse:collapse;margin-bottom:20px" role="presentation"><tr>
+        <td style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#1D4ED8,#3B82F6);text-align:center;vertical-align:middle">
+          <span style="color:#fff;font-size:16px;font-weight:700;line-height:32px">D</span>
+        </td>
+        <td style="padding-left:10px;vertical-align:middle">
+          <span style="font-size:15px;font-weight:600;color:#202223">DisputeDesk</span>
+        </td>
+      </tr></table>
 
       <h1 style="font-size:20px;font-weight:600;color:#202223;margin:0 0 8px">
         ${s.heading({ hours: hoursLeft })}

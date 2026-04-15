@@ -198,6 +198,7 @@ async function sendManualEvidenceAlert(
   await sendEvidenceNeededAlert({
     to,
     shopName: shop?.shop_domain ?? undefined,
+    shopDomain: shop?.shop_domain ?? null,
     disputeId: dispute.id,
     disputeReason: dispute.reason,
     disputeAmount: amount,

@@ -14,3 +14,21 @@ export function getPublicSiteBaseUrl(): string {
   }
   return "https://disputedesk.app";
 }
+
+/**
+ * Build a Shopify Admin deep link that opens the app inside the iframe.
+ *
+ * Format: https://admin.shopify.com/store/{handle}/apps/disputedesk-1/{path}
+ *
+ * Falls back to the public site URL when shopDomain is not available.
+ */
+export function getEmbeddedAppUrl(
+  shopDomain: string | null,
+  path: string,
+): string {
+  if (shopDomain) {
+    const handle = shopDomain.replace(/\.myshopify\.com$/, "");
+    return `https://admin.shopify.com/store/${handle}/apps/disputedesk-1/${path.replace(/^\//, "")}`;
+  }
+  return `${getPublicSiteBaseUrl()}/app/${path.replace(/^\//, "")}`;
+}

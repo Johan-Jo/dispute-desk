@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
         to: teamEmail,
         locale: storeLocale,
         shopName,
+        shopDomain: shop?.shop_domain ?? null,
         disputeId: d.id,
         reason: d.reason,
         phase: d.phase,
