@@ -1,10 +1,13 @@
 /**
- * Embedded pack detail page.
+ * Embedded pack detail page — task-based workflow.
  *
- * Four sections: status hero (readiness + metadata), work card (evidence
- * needed + upload + collected), collapsed activity log, and a dynamic
- * Page primary action that picks the single most useful next step based
- * on the pack's state.
+ * Three sections:
+ * 1. Header: status + next action
+ * 2. Evidence builder (left) + submission sidebar (right)
+ * 3. Activity log (collapsed)
+ *
+ * Library packs (no dispute) fall back to the existing template
+ * preview / wizard view.
  */
 "use client";
 
@@ -23,10 +26,8 @@ import {
   Button,
   Spinner,
   Divider,
-  ProgressBar,
   Collapsible,
   Icon,
-  DropZone,
   Modal,
 } from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
@@ -34,17 +35,24 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   CheckCircleIcon,
-  XCircleIcon,
-  AlertTriangleIcon,
 } from "@shopify/polaris-icons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { formatPackStatus } from "@/lib/types/packStatus";
+import { PackHeader } from "@/components/packs/detail/PackHeader";
+import { EvidenceBuilderSection } from "@/components/packs/detail/EvidenceBuilderSection";
+import { SubmissionSidebar } from "@/components/packs/detail/SubmissionSidebar";
+import type { ChecklistItemUI } from "@/components/packs/detail/EvidenceItemRow";
+import styles from "./pack-detail.module.css";
+
+/* ── Interfaces ── */
 
 interface ChecklistItem {
   field: string;
   label: string;
   required: boolean;
   present: boolean;
+  collectable?: boolean;
+  unavailableReason?: string;
 }
 
 interface EvidenceItem {
@@ -101,37 +109,34 @@ interface PackData {
   template_id?: string | null;
   template_name?: string | null;
   template_items?: TemplateItemRow[];
+  deadline?: string | null;
 }
 
-function statusTone(status: string): "success" | "warning" | "critical" | "info" | undefined {
-  switch (status) {
-    case "saved_to_shopify": return "success";
-    case "ready": return "warning";
-    case "blocked": case "failed": return "critical";
-    case "building": case "queued": return "info";
-    default: return undefined;
-  }
-}
+/* ── Helpers ── */
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
-// Best-effort mapping from template item key → where that evidence comes
-// from when the template runs on a real dispute. The collectors in
-// lib/packs/sources/ emit specific field names, but templates may use
-// their own naming, so we pattern-match by keyword. This is a merchant-
-// facing hint, not a contract — merchants shouldn't infer that every
-// `*_tracking` item is actually auto-collected.
-type FieldSource =
-  | "shopify_order"
-  | "shopify_shipping"
-  | "store_policy"
-  | "merchant_upload";
+const EVENT_TYPE_KEYS: Record<string, string> = {
+  pack_created: "packs.eventPackCreated",
+  evidence_collected: "packs.eventEvidenceCollected",
+  pdf_rendered: "packs.eventPdfRendered",
+  pack_saved: "packs.eventPackSaved",
+  save_failed: "packs.eventSaveFailed",
+  build_started: "packs.eventBuildStarted",
+  build_completed: "packs.eventBuildCompleted",
+  manual_upload: "packs.eventManualUpload",
+};
+
+type FieldSource = "shopify_order" | "shopify_shipping" | "store_policy" | "merchant_upload";
 
 function getFieldSource(key: string): FieldSource {
   const k = key.toLowerCase();
@@ -158,6 +163,18 @@ function getFieldSource(key: string): FieldSource {
   return "shopify_order";
 }
 
+function getSourceLabel(source: FieldSource): string {
+  switch (source) {
+    case "shopify_order":
+    case "shopify_shipping":
+      return "From Shopify order";
+    case "store_policy":
+      return "From store policies";
+    case "merchant_upload":
+      return "Uploaded";
+  }
+}
+
 function getFieldSourceLabel(source: FieldSource, t: (key: string) => string): string {
   switch (source) {
     case "shopify_order":
@@ -171,47 +188,6 @@ function getFieldSourceLabel(source: FieldSource, t: (key: string) => string): s
   }
 }
 
-const EVENT_TYPE_KEYS: Record<string, string> = {
-  pack_created: "packs.eventPackCreated",
-  evidence_collected: "packs.eventEvidenceCollected",
-  pdf_rendered: "packs.eventPdfRendered",
-  pack_saved: "packs.eventPackSaved",
-  save_failed: "packs.eventSaveFailed",
-  build_started: "packs.eventBuildStarted",
-  build_completed: "packs.eventBuildCompleted",
-  manual_upload: "packs.eventManualUpload",
-};
-
-function getReadinessStateLabel(score: number, t: (key: string) => string): string {
-  if (score >= 90) return t("packs.readinessReadyToReview");
-  if (score >= 60) return t("packs.readinessNearlyReady");
-  if (score >= 25) return t("packs.readinessInProgress");
-  return t("packs.readinessJustStarted");
-}
-
-type PackStateKey = "blocked" | "ready" | "saved" | "inProgress" | "library" | "partial";
-
-function getPackStateKey(pack: PackData, isLibraryPack: boolean): PackStateKey {
-  if (isLibraryPack) return "library";
-  if (pack.status === "saved_to_shopify") return "saved";
-  // Check if there are missing required + collectable items
-  const checklist = (pack.checklist ?? []) as Array<{
-    required?: boolean;
-    present?: boolean;
-    collectable?: boolean;
-    unavailableReason?: string;
-  }>;
-  const missingRequired = checklist.filter(
-    (c) => c.required && !c.present && c.collectable,
-  );
-  const hasUnavailable = checklist.some((c) => c.unavailableReason);
-  if (missingRequired.length > 0) return "blocked";
-  if (hasUnavailable) return "partial";
-  const score = pack.completeness_score ?? 0;
-  if (score >= 80) return "ready";
-  return "inProgress";
-}
-
 function MetadataRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <InlineStack gap="400" align="start" wrap blockAlign="start">
@@ -223,23 +199,34 @@ function MetadataRow({ label, children }: { label: string; children: React.React
   );
 }
 
+/* ── Page Component ── */
+
 export default function PackPreviewPage() {
   const { packId } = useParams<{ packId: string }>();
   const searchParams = useSearchParams();
   const t = useTranslations();
   const locale = useLocale();
+
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showSaveWarning, setShowSaveWarning] = useState(false);
-  const [saveBlocked, setSaveBlocked] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [saveBlocked, setSaveBlocked] = useState(false);
+  const [focusField, setFocusField] = useState<string | null>(null);
+  const [replacingField, setReplacingField] = useState<string | null>(null);
+
+  // Optimistic state: fields uploaded this session (moved to "already included")
+  const [completedFields, setCompletedFields] = useState<Set<string>>(new Set());
+  const [failedFields, setFailedFields] = useState<Map<string, string>>(new Map());
+
   const pollRef = useRef<ReturnType<typeof setInterval>>();
-  const workCardRef = useRef<HTMLDivElement | null>(null);
+  const builderRef = useRef<HTMLDivElement | null>(null);
+
+  /* ── Data fetching ── */
 
   const fetchPack = useCallback(async () => {
     const res = await fetch(
@@ -248,6 +235,8 @@ export default function PackPreviewPage() {
     if (res.ok) {
       const data = await res.json();
       setPack(data);
+      // Clear optimistic state when server catches up
+      setCompletedFields(new Set());
       const isActive =
         data.status === "queued" ||
         data.status === "building" ||
@@ -260,64 +249,95 @@ export default function PackPreviewPage() {
   useEffect(() => {
     fetchPack();
     pollRef.current = setInterval(fetchPack, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [fetchPack]);
 
-  const toggleSection = (id: string) => {
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
+  /* ── Upload handler (per-item) ── */
 
-  const disputeUrl =
-    pack?.shop_domain && pack?.dispute_gid && pack.dispute_id
-      ? getShopifyDisputeUrl(pack.shop_domain, pack.dispute_gid)
-      : null;
+  const handleItemUpload = useCallback(
+    async (field: string, files: File[]) => {
+      if (files.length === 0) return;
+      setUploadingField(field);
+      // Clear previous error for this field
+      setFailedFields((prev) => {
+        const next = new Map(prev);
+        next.delete(field);
+        return next;
+      });
 
-  const copyEvidence = async (item: EvidenceItem) => {
-    const text =
-      typeof item.payload === "string"
-        ? item.payload
-        : `${item.label}\n\n${JSON.stringify(item.payload, null, 2)}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(item.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch {
-      setCopiedId(null);
-    }
-  };
+      try {
+        for (const file of files) {
+          const form = new FormData();
+          form.append("file", file);
+          form.append("label", file.name);
+          form.append("field", field);
+          const res = await fetch(`/api/packs/${packId}/upload`, {
+            method: "POST",
+            body: form,
+          });
+          if (!res.ok) throw new Error("Upload failed");
+        }
+        // Optimistic: move item to "already included"
+        setCompletedFields((prev) => new Set(prev).add(field));
+      } catch {
+        setFailedFields((prev) => {
+          const next = new Map(prev);
+          next.set(field, "Upload failed — try again");
+          return next;
+        });
+      } finally {
+        setUploadingField(null);
+        // Background sync
+        fetchPack();
+      }
+    },
+    [packId, fetchPack],
+  );
 
-  const handleUpload = async (_files: File[], accepted: File[]) => {
-    if (accepted.length === 0) return;
-    setUploading(true);
-    for (const file of accepted) {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("label", file.name);
-      await fetch(`/api/packs/${packId}/upload`, { method: "POST", body: form });
-    }
-    await fetchPack();
-    setUploading(false);
-  };
+  /* ── Replace file handler ── */
 
-  const handleExportPdf = async () => {
+  const handleReplaceFile = useCallback(
+    async (field: string, files: File[]) => {
+      if (files.length === 0) return;
+      setReplacingField(field);
+      try {
+        const form = new FormData();
+        form.append("file", files[0]);
+        form.append("label", files[0].name);
+        form.append("field", field);
+        await fetch(`/api/packs/${packId}/upload`, {
+          method: "POST",
+          body: form,
+        });
+      } finally {
+        setReplacingField(null);
+        fetchPack();
+      }
+    },
+    [packId, fetchPack],
+  );
+
+  /* ── PDF actions ── */
+
+  const handleExportPdf = useCallback(async () => {
     setRendering(true);
     await fetch(`/api/packs/${packId}/render-pdf`, { method: "POST" });
     pollRef.current = setInterval(fetchPack, 3000);
     await fetchPack();
     setRendering(false);
-  };
+  }, [packId, fetchPack]);
 
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
     const res = await fetch(`/api/packs/${packId}/download`);
     if (res.ok) {
       const { url } = await res.json();
       window.open(url, "_blank");
     }
-  };
+  }, [packId]);
+
+  /* ── Save handler ── */
 
   const handleSave = useCallback(
     async (confirmed = false) => {
@@ -327,8 +347,8 @@ export default function PackPreviewPage() {
         setSaveBlocked(true);
         return;
       }
-      if (currentScore < 80 && !confirmed) {
-        setShowSaveWarning(true);
+      if (!confirmed) {
+        setShowConfirmModal(true);
         return;
       }
       setSaving(true);
@@ -338,16 +358,30 @@ export default function PackPreviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      setShowSaveWarning(false);
+      setShowConfirmModal(false);
       await fetchPack();
       setSaving(false);
     },
     [pack, packId, fetchPack],
   );
 
-  const scrollToWorkCard = () => {
-    workCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  /* ── Scroll to builder ── */
+
+  const scrollToFirstMissing = useCallback(() => {
+    // Find the first missing required field and focus it
+    if (!pack) return;
+    const checklist = (pack.checklist ?? []) as ChecklistItem[];
+    const firstMissing = checklist.find(
+      (c) => c.required && !c.present && (c.collectable ?? true) && !completedFields.has(c.field),
+    );
+    if (firstMissing) {
+      setFocusField(firstMissing.field);
+    } else {
+      builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [pack, completedFields]);
+
+  /* ── Loading / not found ── */
 
   if (loading) {
     return (
@@ -361,24 +395,37 @@ export default function PackPreviewPage() {
 
   if (!pack) {
     return (
-      <Page title={t("nav.playbooks")} backAction={{ content: t("packs.backToPacks"), url: "/app/packs" }}>
+      <Page
+        title={t("nav.playbooks")}
+        backAction={{ content: t("packs.backToPacks"), url: "/app/packs" }}
+      >
         <Banner tone="critical">{t("packs.packNotFound")}</Banner>
       </Page>
     );
   }
 
+  /* ── Derived state ── */
+
   const isBuilding = pack.status === "queued" || pack.status === "building";
   const score = pack.completeness_score ?? 0;
   const isLibraryPack = pack.dispute_id == null;
-  const fromTemplate = pack.source === "TEMPLATE" && Boolean(pack.template_name ?? pack.name);
-  const disputeTypeKey = pack.dispute_type ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_") : "GENERAL";
-  const disputeTypeRaw = t(`packs.disputeTypeLabel.${disputeTypeKey}` as Parameters<typeof t>[0]);
-  // next-intl returns the full key path when a key is missing — detect that
-  // and fall back to a human-readable form of the raw dispute_type.
+  const isSaved = pack.status === "saved_to_shopify";
+  const isReadOnly = isSaved;
+  const fromTemplate =
+    pack.source === "TEMPLATE" && Boolean(pack.template_name ?? pack.name);
+
+  const disputeTypeKey = pack.dispute_type
+    ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_")
+    : "GENERAL";
+  const disputeTypeRaw = t(
+    `packs.disputeTypeLabel.${disputeTypeKey}` as Parameters<typeof t>[0],
+  );
   const disputeTypeLabel = pack.dispute_type
-    ? (disputeTypeRaw.includes("disputeTypeLabel.") ? pack.dispute_type.replace(/_/g, " ") : disputeTypeRaw)
+    ? disputeTypeRaw.includes("disputeTypeLabel.")
+      ? pack.dispute_type.replace(/_/g, " ")
+      : disputeTypeRaw
     : "—";
-  const stateKey = getPackStateKey(pack, isLibraryPack);
+
   const phaseLabel =
     pack.dispute_phase === "inquiry"
       ? t("packs.phaseInquiry")
@@ -386,11 +433,18 @@ export default function PackPreviewPage() {
         ? t("packs.phaseChargeback")
         : "—";
 
+  const disputeUrl =
+    pack.shop_domain && pack.dispute_gid && pack.dispute_id
+      ? getShopifyDisputeUrl(pack.shop_domain, pack.dispute_gid)
+      : null;
+
   const backUrl = withShopParams(
     isLibraryPack ? "/app/packs" : `/app/disputes/${pack.dispute_id}`,
     searchParams,
   );
-  const backLabel = isLibraryPack ? t("packs.backToPacks") : t("disputes.backToDisputes");
+  const backLabel = isLibraryPack
+    ? t("packs.backToPacks")
+    : t("disputes.backToDisputes");
   const pageTitle = isLibraryPack
     ? (pack.name ?? t("packs.playbookTitle"))
     : (pack.name ?? t("packs.evidencePackTitle"));
@@ -399,93 +453,81 @@ export default function PackPreviewPage() {
     ? t("packs.subtitleLibrary", { type: disputeTypeLabel })
     : t("packs.subtitleDispute", { type: disputeTypeLabel, phase: phaseLabel });
 
-  const stateSentence = (() => {
-    if (stateKey === "saved")
-      return t("packs.stateSavedHint", { date: formatDate(pack.saved_to_shopify_at) });
-    if (stateKey === "blocked") return t("packs.stateBlockedHint");
-    if (stateKey === "partial") return t("packs.statePartialHint");
-    if (stateKey === "ready") return t("packs.stateReadyHint");
-    if (stateKey === "library") return t("packs.stateLibraryHint");
-    return t("packs.stateInProgressHint", { percent: score });
-  })();
+  /* ── Checklist derivation (with optimistic completedFields) ── */
 
-  const primaryAction = (() => {
-    if (isLibraryPack) {
-      return {
-        content: t("packs.primaryBrowseTemplates"),
-        url: withShopParams("/app/packs", searchParams),
-      };
-    }
-    if (stateKey === "saved" && disputeUrl) {
-      return {
-        content: t("packs.openInShopifyAdmin"),
-        url: disputeUrl,
-        external: true,
-      };
-    }
-    if (stateKey === "blocked" || score === 0) {
-      return {
-        content: t("packs.primaryResolveBlockers"),
-        onAction: scrollToWorkCard,
-      };
-    }
-    return {
-      content: saving || pack.status === "saving" ? t("packs.saving") : t("packs.saveToShopify"),
-      onAction: () => handleSave(),
-      loading: saving || pack.status === "saving",
-      disabled: isBuilding,
-    };
-  })();
+  const rawChecklist = (pack.checklist ?? []) as ChecklistItem[];
+  const checklistItems: ChecklistItemUI[] = rawChecklist.map((c) => ({
+    field: c.field,
+    label: c.label,
+    required: c.required ?? false,
+    present: c.present || completedFields.has(c.field),
+    collectable: c.collectable ?? true,
+    unavailableReason: c.unavailableReason,
+  }));
 
-  const secondaryActions: {
-    content: string;
-    onAction?: () => void | Promise<void>;
-    loading?: boolean;
-    disabled?: boolean;
-  }[] = [];
-  if (pack.active_pdf_job) {
-    secondaryActions.push({
-      content: t("packs.generatingPdf"),
-      disabled: true,
-    });
-  } else if (pack.pdf_path) {
-    secondaryActions.push({
-      content: t("packs.downloadPdfReady"),
-      onAction: handleDownload,
-    });
-  } else {
-    secondaryActions.push({
-      content: t("packs.exportPdf"),
-      onAction: handleExportPdf,
-      loading: rendering,
-    });
-  }
-
-  const checklistItems = pack.checklist?.length
-    ? pack.checklist.map((c: {
-        label: string;
-        present: boolean;
-        collectable?: boolean;
-        unavailableReason?: string;
-        required?: boolean;
-      }) => ({
-        label: c.label,
-        present: c.present,
-        collectable: c.collectable ?? true,
-        unavailableReason: c.unavailableReason,
-        required: c.required ?? false,
-      }))
-    : [];
-
-  const collectedItems = checklistItems.filter((c) => c.present);
-  const missingItems = checklistItems.filter(
-    (c) => !c.present && c.collectable,
+  const missingRequired = checklistItems.filter(
+    (c) => !c.present && c.collectable && c.required,
   );
+  const missingRecommended = checklistItems.filter(
+    (c) => !c.present && c.collectable && !c.required,
+  );
+  const collectedChecklist = checklistItems.filter((c) => c.present);
   const unavailableItems = checklistItems.filter(
     (c) => !c.present && !c.collectable && c.unavailableReason,
   );
 
-  // Group template items by their parent section for the library-pack preview.
+  const allRequiredDone = missingRequired.length === 0;
+  const totalRequired = checklistItems.filter((c) => c.required).length;
+  const requiredComplete = totalRequired - missingRequired.length;
+
+  // Build "already included" items from evidence_items + optimistically completed
+  const includedItems = [
+    // Items from evidence_items (auto-collected + previously uploaded)
+    ...pack.evidence_items.map((ei) => ({
+      label: ei.label,
+      sourceLabel: getSourceLabel(getFieldSource(ei.type)),
+      timestamp: ei.source === "manual" ? formatDate(ei.created_at) : undefined,
+      canReplace: ei.source === "manual",
+      field: ei.type,
+    })),
+    // Optimistically completed items (not yet in evidence_items from server)
+    ...Array.from(completedFields)
+      .filter(
+        (field) => !pack.evidence_items.some((ei) => ei.type === field),
+      )
+      .map((field) => {
+        const cl = rawChecklist.find((c) => c.field === field);
+        return {
+          label: cl?.label ?? field,
+          sourceLabel: "Uploaded",
+          timestamp: "Added just now",
+          canReplace: true,
+          field,
+        };
+      }),
+    // Collected checklist items not in evidence_items
+    ...collectedChecklist
+      .filter(
+        (c) =>
+          !pack.evidence_items.some((ei) => ei.type === c.field) &&
+          !completedFields.has(c.field),
+      )
+      .map((c) => ({
+        label: c.label,
+        sourceLabel: getSourceLabel(getFieldSource(c.field)),
+        canReplace: false,
+        field: c.field,
+      })),
+  ];
+
+  // Recommended counts for confirm modal
+  const totalRecommended = checklistItems.filter(
+    (c) => !c.required && c.collectable,
+  ).length;
+  const recommendedComplete = totalRecommended - missingRecommended.length;
+
+  /* ── Library pack: template preview ── */
+
   const templateItemsBySection = (() => {
     const groups = new Map<string, TemplateItemRow[]>();
     for (const item of pack.template_items ?? []) {
@@ -494,7 +536,40 @@ export default function PackPreviewPage() {
       if (list) list.push(item);
       else groups.set(key, [item]);
     }
-    return Array.from(groups.entries()).map(([title, items]) => ({ title, items }));
+    return Array.from(groups.entries()).map(([title, items]) => ({
+      title,
+      items,
+    }));
+  })();
+
+  /* ── Page-level primary action ── */
+
+  const primaryAction = (() => {
+    if (isLibraryPack) {
+      return {
+        content: t("packs.primaryBrowseTemplates"),
+        url: withShopParams("/app/packs", searchParams),
+      };
+    }
+    if (isSaved && disputeUrl) {
+      return {
+        content: t("packs.openInShopifyAdmin"),
+        url: disputeUrl,
+        external: true,
+      };
+    }
+    if (!allRequiredDone) {
+      return {
+        content: t("packs.ctaAddRequired"),
+        onAction: scrollToFirstMissing,
+      };
+    }
+    return {
+      content: saving ? t("packs.saving") : t("packs.ctaSubmit"),
+      onAction: () => handleSave(),
+      loading: saving || pack.status === "saving",
+      disabled: isBuilding,
+    };
   })();
 
   return (
@@ -503,124 +578,11 @@ export default function PackPreviewPage() {
       subtitle={subtitle}
       backAction={{ content: backLabel, url: backUrl }}
       primaryAction={primaryAction}
-      secondaryActions={secondaryActions}
     >
       <Layout>
-        {/* 1. Status hero */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between" blockAlign="start" wrap gap="300">
-                <BlockStack gap="100">
-                  <Text as="h2" variant="headingLg">
-                    {isLibraryPack
-                      ? t("packs.packReadinessTemplate")
-                      : `${score}% ${t("packs.readyLabel")}`}
-                  </Text>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    {stateSentence}
-                  </Text>
-                </BlockStack>
-                {!isLibraryPack && (
-                  <Badge tone={statusTone(pack.status)}>
-                    {getReadinessStateLabel(score, t)}
-                  </Badge>
-                )}
-              </InlineStack>
-
-              {!isLibraryPack && (
-                <ProgressBar
-                  progress={score}
-                  tone={score >= 80 ? "success" : score >= 50 ? "highlight" : "critical"}
-                  size="small"
-                />
-              )}
-
-              {pack.blockers && pack.blockers.length > 0 && (
-                <InlineStack gap="200" blockAlign="start" wrap={false}>
-                  <div style={{ marginTop: 2 }}>
-                    <Icon source={XCircleIcon} tone="critical" />
-                  </div>
-                  <BlockStack gap="050">
-                    <Text as="p" variant="bodySm" fontWeight="semibold" tone="critical">
-                      {t("packs.blockersInlineLabel")}
-                    </Text>
-                    <Text as="p" variant="bodySm">
-                      {pack.blockers.join(", ")}
-                    </Text>
-                  </BlockStack>
-                </InlineStack>
-              )}
-
-              {saveBlocked && (
-                <Banner tone="critical" onDismiss={() => setSaveBlocked(false)}>
-                  <Text as="p" fontWeight="semibold">{t("packs.saveBlockedTitle")}</Text>
-                  <Text as="p">{t("packs.saveBlockedBody")}</Text>
-                </Banner>
-              )}
-              {pack.status === "save_failed" && (
-                <Banner tone="critical">{t("packs.saveFailed")}</Banner>
-              )}
-              {isBuilding && (
-                <Banner tone="info">{t("packs.building")}</Banner>
-              )}
-
-              <Divider />
-
-              {/* Metadata grid */}
-              <BlockStack gap="200">
-                <MetadataRow label={t("packs.metaType")}>
-                  <Text as="span" variant="bodyMd">{disputeTypeLabel}</Text>
-                </MetadataRow>
-                {!isLibraryPack && pack.dispute_phase && (
-                  <MetadataRow label={t("packs.metaPhase")}>
-                    <InlineStack gap="200" blockAlign="center" wrap>
-                      <Badge tone={pack.dispute_phase === "inquiry" ? "info" : "warning"}>
-                        {phaseLabel}
-                      </Badge>
-                      <Text as="span" variant="bodySm" tone="subdued">
-                        {pack.dispute_phase === "inquiry"
-                          ? t("packs.phaseInquiryHint")
-                          : t("packs.phaseChargebackHint")}
-                      </Text>
-                    </InlineStack>
-                  </MetadataRow>
-                )}
-                <MetadataRow label={t("packs.metaStatus")}>
-                  <Badge tone={statusTone(pack.status)}>
-                    {formatPackStatus(pack.status, t)}
-                  </Badge>
-                </MetadataRow>
-                <MetadataRow label={t("packs.metaCreated")}>
-                  <Text as="span" variant="bodyMd">{formatDate(pack.created_at)}</Text>
-                </MetadataRow>
-                {pack.saved_to_shopify_at && (
-                  <MetadataRow label={t("packs.metaSavedAt")}>
-                    <InlineStack gap="200" blockAlign="center" wrap>
-                      <Icon source={CheckCircleIcon} tone="success" />
-                      <Text as="span" variant="bodyMd">{formatDate(pack.saved_to_shopify_at)}</Text>
-                      {disputeUrl && (
-                        <Button variant="plain" url={disputeUrl} target="_blank">
-                          {t("packs.openInShopifyAdmin")}
-                        </Button>
-                      )}
-                    </InlineStack>
-                  </MetadataRow>
-                )}
-                {fromTemplate && (
-                  <MetadataRow label={t("packs.metaTemplate")}>
-                    <Text as="span" variant="bodyMd">{pack.template_name ?? pack.name ?? "—"}</Text>
-                  </MetadataRow>
-                )}
-              </BlockStack>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        {/* 2. Work cards */}
-        <div ref={workCardRef}>
-          {isLibraryPack ? (
-            /* Library-pack preview: read-only template definition. */
+        {isLibraryPack ? (
+          /* ── Library pack: template preview (preserved) ── */
+          <>
             <Layout.Section>
               <Card>
                 <BlockStack gap="400">
@@ -648,26 +610,47 @@ export default function PackPreviewPage() {
                             {group.items.map((item) => {
                               const source = getFieldSource(item.key);
                               return (
-                                <BlockStack key={`${group.title}-${item.key}`} gap="100">
-                                  <InlineStack gap="200" blockAlign="center" wrap>
-                                    <Text as="span" variant="bodyMd" fontWeight="semibold">
+                                <BlockStack
+                                  key={`${group.title}-${item.key}`}
+                                  gap="100"
+                                >
+                                  <InlineStack
+                                    gap="200"
+                                    blockAlign="center"
+                                    wrap
+                                  >
+                                    <Text
+                                      as="span"
+                                      variant="bodyMd"
+                                      fontWeight="semibold"
+                                    >
                                       {item.label}
                                     </Text>
-                                    <Badge tone={item.required ? "attention" : undefined}>
+                                    <Badge
+                                      tone={
+                                        item.required ? "attention" : undefined
+                                      }
+                                    >
                                       {item.required
                                         ? t("packs.requiredBadge")
                                         : t("packs.optionalBadge")}
                                     </Badge>
                                     <Badge
                                       tone={
-                                        source === "merchant_upload" ? "warning" : "info"
+                                        source === "merchant_upload"
+                                          ? "warning"
+                                          : "info"
                                       }
                                     >
                                       {getFieldSourceLabel(source, t)}
                                     </Badge>
                                   </InlineStack>
                                   {item.guidance && (
-                                    <Text as="p" variant="bodySm" tone="subdued">
+                                    <Text
+                                      as="p"
+                                      variant="bodySm"
+                                      tone="subdued"
+                                    >
                                       {item.guidance}
                                     </Text>
                                   )}
@@ -688,193 +671,72 @@ export default function PackPreviewPage() {
                 </BlockStack>
               </Card>
             </Layout.Section>
-          ) : (
-            /* Dispute pack: separate cards for checklist, upload, and collected evidence. */
-            <>
-              {/* Evidence needed — own card */}
-              <Layout.Section>
-                <Card>
-                  <BlockStack gap="300">
-                    <Text as="h3" variant="headingMd">
-                      {t("packs.evidenceNeededTitle")}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {t("packs.recommendedForDisputeDescription")}
-                    </Text>
-                    {/* Collected */}
-                    {collectedItems.length > 0 && (
-                      <BlockStack gap="100">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                          {t("packs.categoryCollected")}
-                        </Text>
-                        {collectedItems.map((item, idx) => (
-                          <div key={`c-${idx}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "8px", background: "#f0fdf4" }}>
-                            <Icon source={CheckCircleIcon} tone="success" />
-                            <Text as="p" variant="bodyMd">{item.label}</Text>
-                          </div>
-                        ))}
-                      </BlockStack>
-                    )}
+          </>
+        ) : (
+          /* ── Dispute pack: task workflow ── */
+          <>
+            {/* Section 1: Header */}
+            <Layout.Section>
+              <PackHeader
+                status={pack.status}
+                score={score}
+                missingRequiredCount={missingRequired.length}
+                allRequiredDone={allRequiredDone}
+                isBuilding={isBuilding}
+                savedAt={pack.saved_to_shopify_at}
+                saveFailed={pack.status === "save_failed"}
+                disputeUrl={disputeUrl}
+                disputePhase={pack.dispute_phase ?? null}
+                deadline={pack.deadline ?? null}
+                onScrollToBuilder={scrollToFirstMissing}
+                onSave={() => handleSave()}
+                saving={saving || pack.status === "saving"}
+              />
+            </Layout.Section>
 
-                    {/* Missing — action needed */}
-                    {missingItems.length > 0 && (
-                      <BlockStack gap="100">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="critical">
-                          {t("packs.categoryMissing")}
-                        </Text>
-                        {missingItems.map((item, idx) => (
-                          <div key={`m-${idx}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "8px", background: "#fef2f2" }}>
-                            <Icon source={XCircleIcon} tone="critical" />
-                            <Text as="p" variant="bodyMd">{item.label}</Text>
-                            {item.required && <Badge tone="critical">{t("packs.requiredBadge")}</Badge>}
-                          </div>
-                        ))}
-                      </BlockStack>
-                    )}
+            {/* Section 2: Two-column layout */}
+            <Layout.Section>
+              <div className={styles.twoColumnLayout}>
+                {/* Left: Evidence Builder */}
+                <div className={styles.leftColumn} ref={builderRef}>
+                  <EvidenceBuilderSection
+                    missingRequired={missingRequired}
+                    missingRecommended={missingRecommended}
+                    unavailableItems={unavailableItems}
+                    includedItems={includedItems}
+                    onUpload={handleItemUpload}
+                    uploadingField={uploadingField}
+                    failedFields={failedFields}
+                    onReplace={handleReplaceFile}
+                    replacingField={replacingField}
+                    focusField={focusField}
+                    onFocusHandled={() => setFocusField(null)}
+                    readOnly={isReadOnly}
+                  />
+                </div>
 
-                    {/* Not available for this order */}
-                    {unavailableItems.length > 0 && (
-                      <BlockStack gap="100">
-                        <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                          {t("packs.categoryUnavailable")}
-                        </Text>
-                        {unavailableItems.map((item, idx) => (
-                          <div key={`u-${idx}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "8px", background: "#f5f5f5" }}>
-                            <Icon source={AlertTriangleIcon} tone="subdued" />
-                            <BlockStack gap="0">
-                              <Text as="p" variant="bodyMd" tone="subdued">{item.label}</Text>
-                              {item.unavailableReason && (
-                                <Text as="p" variant="bodySm" tone="subdued">{item.unavailableReason}</Text>
-                              )}
-                            </BlockStack>
-                          </div>
-                        ))}
-                      </BlockStack>
-                    )}
-                  </BlockStack>
-                </Card>
-              </Layout.Section>
+                {/* Right: Sidebar */}
+                <div className={styles.rightColumn}>
+                  <SubmissionSidebar
+                    requiredTotal={totalRequired}
+                    requiredComplete={requiredComplete}
+                    onSave={() => handleSave()}
+                    onExportPdf={handleExportPdf}
+                    onDownload={handleDownload}
+                    saving={saving || pack.status === "saving"}
+                    rendering={rendering}
+                    hasPdf={Boolean(pack.pdf_path)}
+                    hasPdfJob={Boolean(pack.active_pdf_job)}
+                    readOnly={isReadOnly}
+                    disputeUrl={disputeUrl}
+                  />
+                </div>
+              </div>
+            </Layout.Section>
+          </>
+        )}
 
-              {/* Upload — own card */}
-              <Layout.Section>
-                <Card>
-                  <BlockStack gap="200">
-                    <Text as="h3" variant="headingMd">
-                      {t("packs.uploadSectionTitle")}
-                    </Text>
-                    <DropZone
-                      onDrop={handleUpload}
-                      allowMultiple
-                      accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
-                    >
-                      {uploading ? (
-                        <DropZone.FileUpload actionHint={t("packs.uploading")} />
-                      ) : (
-                        <DropZone.FileUpload actionHint={t("packs.clickToUpload")} />
-                      )}
-                    </DropZone>
-                  </BlockStack>
-                </Card>
-              </Layout.Section>
-
-              {/* Collected evidence — own card */}
-              {pack.evidence_items.length > 0 && (
-                <Layout.Section>
-                  <Card>
-                    <BlockStack gap="300">
-                      <InlineStack align="space-between" blockAlign="center">
-                        <Text as="h3" variant="headingMd">
-                          {t("packs.collectedEvidenceTitle")}
-                        </Text>
-                        <Badge tone="info">
-                          {t("packs.evidenceItems", { count: pack.evidence_items.length })}
-                        </Badge>
-                      </InlineStack>
-                      <BlockStack gap="0">
-                        {pack.evidence_items.map((item, idx) => (
-                          <div key={item.id}>
-                            {idx > 0 && <Divider />}
-                            <div
-                              onClick={() => toggleSection(item.id)}
-                              style={{ cursor: "pointer", padding: "12px 0" }}
-                            >
-                              <InlineStack align="space-between" blockAlign="center">
-                                <InlineStack gap="300" blockAlign="center">
-                                  <Badge>{item.type}</Badge>
-                                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                                    {item.label}
-                                  </Text>
-                                </InlineStack>
-                                <InlineStack gap="200" blockAlign="center">
-                                  <span onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                      size="slim"
-                                      variant="plain"
-                                      onClick={() => copyEvidence(item)}
-                                    >
-                                      {copiedId === item.id
-                                        ? t("packs.copied")
-                                        : t("packs.copyToClipboard")}
-                                    </Button>
-                                  </span>
-                                  <Icon
-                                    source={
-                                      expandedSections.has(item.id)
-                                        ? ChevronUpIcon
-                                        : ChevronDownIcon
-                                    }
-                                  />
-                                </InlineStack>
-                              </InlineStack>
-                            </div>
-                            <Collapsible
-                              open={expandedSections.has(item.id)}
-                              id={`section-${item.id}`}
-                            >
-                              <div
-                                style={{
-                                  padding: "8px 12px 16px",
-                                  maxHeight: 300,
-                                  overflow: "auto",
-                                  background: "#f8fafc",
-                                  borderRadius: "8px",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                <pre
-                                  style={{
-                                    fontSize: 12,
-                                    lineHeight: 1.5,
-                                    whiteSpace: "pre-wrap",
-                                    wordBreak: "break-word",
-                                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                                    margin: 0,
-                                  }}
-                                >
-                                  {JSON.stringify(item.payload, null, 2)}
-                                </pre>
-                                <div style={{ marginTop: 8 }}>
-                                  <Text as="p" variant="bodySm" tone="subdued">
-                                    {t("packs.source", {
-                                      source: item.source,
-                                      date: formatDate(item.created_at),
-                                    })}
-                                  </Text>
-                                </div>
-                              </div>
-                            </Collapsible>
-                          </div>
-                        ))}
-                      </BlockStack>
-                    </BlockStack>
-                  </Card>
-                </Layout.Section>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* 3. Activity log (collapsed) + compliance */}
+        {/* Activity log (collapsed) */}
         <Layout.Section>
           <Card>
             <BlockStack gap="200">
@@ -886,7 +748,9 @@ export default function PackPreviewPage() {
                 >
                   {showAuditLog
                     ? t("packs.activityLogHide")
-                    : t("packs.activityLogShow", { count: pack.audit_events.length })}
+                    : t("packs.activityLogShow", {
+                        count: pack.audit_events.length,
+                      })}
                 </Button>
               </InlineStack>
               <Collapsible open={showAuditLog} id="audit-log">
@@ -930,24 +794,37 @@ export default function PackPreviewPage() {
         </Layout.Section>
       </Layout>
 
+      {/* Confirmation modal */}
       <Modal
-        open={showSaveWarning}
-        onClose={() => setShowSaveWarning(false)}
-        title={t("packs.confirmSaveTitle")}
+        open={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title={t("packs.confirmSubmitTitle")}
         primaryAction={{
-          content: t("packs.confirmSaveConfirm"),
+          content: t("packs.confirmSubmitConfirm"),
           onAction: () => handleSave(true),
-          destructive: true,
         }}
-        secondaryActions={[{
-          content: t("packs.confirmSaveCancel"),
-          onAction: () => setShowSaveWarning(false),
-        }]}
+        secondaryActions={[
+          {
+            content: t("packs.confirmSubmitCancel"),
+            onAction: () => setShowConfirmModal(false),
+          },
+        ]}
       >
         <Modal.Section>
-          <Text as="p" variant="bodyMd">
-            {t("packs.confirmSaveBody", { score })}
-          </Text>
+          <BlockStack gap="200">
+            <Text as="p" variant="bodyMd">
+              {t("packs.confirmSubmitBody")}
+            </Text>
+            <Text as="p" variant="bodyMd" fontWeight="semibold">
+              {t("packs.confirmSubmitRequired")}
+            </Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("packs.confirmSubmitRecommended", {
+                done: recommendedComplete,
+                total: totalRecommended,
+              })}
+            </Text>
+          </BlockStack>
         </Modal.Section>
       </Modal>
     </Page>
