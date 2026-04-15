@@ -7,11 +7,14 @@ import {
   Button,
   Divider,
   ProgressBar,
+  Banner,
 } from "@shopify/polaris";
+import type { SubmissionReadiness } from "@/lib/types/evidenceItem";
 
 interface SubmissionSidebarProps {
-  requiredTotal: number;
-  requiredComplete: number;
+  readiness: SubmissionReadiness;
+  completenessScore: number;
+  warningCount: number;
   onSave: () => void;
   onExportPdf: () => void;
   onDownload: () => void;
@@ -24,8 +27,9 @@ interface SubmissionSidebarProps {
 }
 
 export function SubmissionSidebar({
-  requiredTotal,
-  requiredComplete,
+  readiness,
+  completenessScore,
+  warningCount,
   onSave,
   onExportPdf,
   onDownload,
@@ -36,9 +40,8 @@ export function SubmissionSidebar({
   readOnly,
   disputeUrl,
 }: SubmissionSidebarProps) {
-  const allRequiredDone = requiredTotal > 0 && requiredComplete >= requiredTotal;
-  const progress =
-    requiredTotal > 0 ? Math.round((requiredComplete / requiredTotal) * 100) : 100;
+  const canSubmit = readiness !== "blocked";
+  const isSubmitted = readiness === "submitted" || readOnly;
 
   return (
     <BlockStack gap="400">
@@ -46,18 +49,26 @@ export function SubmissionSidebar({
       <Card>
         <BlockStack gap="300">
           <Text as="h3" variant="headingMd">
-            Required: {requiredComplete}/{requiredTotal}
+            {`Evidence: ${completenessScore}%`}
           </Text>
 
           <ProgressBar
-            progress={progress}
-            tone={allRequiredDone ? "success" : "critical"}
+            progress={completenessScore}
+            tone={completenessScore >= 80 ? "success" : completenessScore >= 40 ? "highlight" : "critical"}
             size="small"
           />
 
+          {readiness === "ready_with_warnings" && warningCount > 0 && (
+            <Banner tone="warning" hideIcon>
+              <Text as="p" variant="bodySm">
+                {`${warningCount} high-impact ${warningCount === 1 ? "item" : "items"} missing. You may still proceed.`}
+              </Text>
+            </Banner>
+          )}
+
           <Divider />
 
-          {readOnly ? (
+          {isSubmitted ? (
             disputeUrl ? (
               <Button fullWidth url={disputeUrl} target="_blank">
                 Open in Shopify Admin
@@ -72,7 +83,7 @@ export function SubmissionSidebar({
               fullWidth
               variant="primary"
               onClick={onSave}
-              disabled={!allRequiredDone || saving}
+              disabled={!canSubmit || saving}
               loading={saving}
             >
               Submit to Shopify

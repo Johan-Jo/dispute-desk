@@ -13,6 +13,7 @@ import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   evaluateCompleteness,
+  evaluateCompletenessV2,
   type TemplateChecklistItem,
 } from "@/lib/automation/completeness";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
@@ -243,6 +244,22 @@ export async function buildPack(
     orderContext,
   );
 
+  // V2 evaluation: preserves any waived items from the pack row
+  const { data: existingPack } = await sb
+    .from("evidence_packs")
+    .select("waived_items")
+    .eq("id", packId)
+    .single();
+  const waivedItems = (existingPack?.waived_items ?? []) as import("@/lib/types/evidenceItem").WaivedItemRecord[];
+
+  const completenessV2 = evaluateCompletenessV2(
+    dispute.reason,
+    collectedFields,
+    waivedItems,
+    templateItems,
+    orderContext,
+  );
+
   // Packs are always "ready" after successful build. Blockers are
   // metadata only — they gate auto-save, not pack creation.
   const packStatus = "ready" as const;
@@ -270,16 +287,18 @@ export async function buildPack(
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 
-  // Update the pack row
+  // Update the pack row (dual-write: v1 checklist + v2 checklist)
   await sb
     .from("evidence_packs")
     .update({
       status: packStatus as string,
       pack_json: packJson,
-      completeness_score: completeness.score,
-      checklist: completeness.checklist,
-      blockers: completeness.blockers,
-      recommended_actions: completeness.recommended_actions,
+      completeness_score: completenessV2.completenessScore,
+      checklist: completenessV2.legacyChecklist,
+      blockers: completenessV2.legacyBlockers,
+      recommended_actions: completenessV2.legacyRecommendedActions,
+      checklist_v2: completenessV2.checklist,
+      submission_readiness: completenessV2.submissionReadiness,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);

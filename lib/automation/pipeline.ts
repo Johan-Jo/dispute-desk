@@ -154,7 +154,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, completeness_score, blockers, status"
+      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status"
     )
     .eq("id", packId)
     .single();
@@ -168,6 +168,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     completenessScore: pack.completeness_score ?? 0,
     blockers: (pack.blockers as string[]) ?? [],
     isApproved: false,
+    submissionReadiness: (pack.submission_readiness as "ready" | "ready_with_warnings" | "blocked" | "submitted") ?? undefined,
   });
 
   if (gate.action === "auto_save") {

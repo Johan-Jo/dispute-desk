@@ -488,7 +488,7 @@ when disputes are detected:
 | Module | Path | Purpose |
 |--------|------|---------|
 | Settings | `lib/automation/settings.ts` | Read/write shop_settings with auto-upsert |
-| Completeness | `lib/automation/completeness.ts` | Context-aware templates, conditional requirements, weighted scoring |
+| Completeness | `lib/automation/completeness.ts` | Context-aware templates, conditional requirements, weighted scoring. V2 engine (`evaluateCompletenessV2`) adds priority/blocking/waive model with `SubmissionReadiness` (ready/ready_with_warnings/blocked/submitted) |
 | Auto-Save Gate | `lib/automation/autoSaveGate.ts` | Decision logic for auto-save |
 | Pipeline | `lib/automation/pipeline.ts` | Orchestrator: trigger build + evaluate gate |
 | Payment Source | `lib/packs/sources/paymentSource.ts` | AVS/CVV collection from order transactions |
@@ -515,9 +515,23 @@ Template items have a `requirement_mode` column (`pack_template_items`):
 
 `OrderContext { isFulfilled, hasCardPayment }` is derived in `buildPack.ts` from the fetched order and passed to the completeness engine. Items that are inapplicable for the order context are marked `unavailable` with a reason string, not counted as blockers.
 
+### Evidence Model V2 — Priority + Blocking + Waive
+
+The v2 evidence model (`lib/types/evidenceItem.ts`) replaces the binary required/not-required model with:
+- **Status**: `available | missing | unavailable | waived`
+- **Priority**: `critical | recommended | optional` (win-rate impact)
+- **Blocking**: `boolean` — only `true` for platform-mandated blockers (currently `false` for ALL default templates since Shopify accepts partial submissions)
+- **Submission readiness**: orthogonal to completeness score — `ready | ready_with_warnings | blocked | submitted`
+
+DB columns (`evidence_packs`): `checklist_v2` (jsonb), `submission_readiness` (text), `waived_items` (jsonb array of `WaivedItemRecord`). Dual-written alongside v1 `checklist`/`blockers` for backward compat.
+
+**Waive flow**: `POST /api/packs/:packId/waive` — merchant can skip any missing/unavailable item with a controlled reason. Waived items count as present in scoring. Audit events: `evidence_waived`, `evidence_unwaived`. Un-waive via `DELETE /api/packs/:packId/waive?field=...`.
+
+**Save gate**: `submission_readiness === "blocked"` → 422. `ready_with_warnings` → requires `confirmWarnings: true`. Sidebar shows warning count; header distinguishes "blocked" from "ready with warnings".
+
 ### AVS/CVV Collection
 
-`ORDER_DETAIL_QUERY` fetches `transactions.paymentDetails` (typed `CardPaymentDetails` with `avsResultCode`, `cvvResultCode`). The `paymentSource.ts` collector extracts these from the first successful SALE/AUTHORIZATION transaction. The field `avs_cvv_match` uses `required_if_card_payment` mode — required when the order has a card transaction, unavailable otherwise.
+`ORDER_DETAIL_QUERY` fetches `transactions.paymentDetails` (typed `CardPaymentDetails` with `avsResultCode`, `cvvResultCode`). The `paymentSource.ts` collector extracts these from the first successful SALE/AUTHORIZATION transaction. The field `avs_cvv_match` uses `required_if_card_payment` mode — collectable only when the order has a card transaction, unavailable otherwise. In v2: `priority: "critical"`, `blocking: false` — it is high-impact evidence for fraud disputes but does not hard-block submission.
 
 ## Evidence Pack Builder
 
@@ -561,7 +575,9 @@ The pack detail page (embedded `app/packs/[packId]` and portal `portal/packs/[pa
 - **Template (library) pack** — `dispute_id == null`. The user is defining a **reusable template** that specifies what evidence to collect. This template is applied automatically (or manually) when a dispute matches. The UI shows "Define your evidence template", a checklist of required evidence types, optional sample files, and a "When this template is used" card. **Save evidence to Shopify** and **Submit in Shopify Admin** are not shown (they apply per dispute when the template is used).
 - **Dispute pack** — `dispute_id != null`. Task-based workflow for one specific dispute. Three sections: (1) **Header** — single status message + next action CTA, (2) **Evidence Builder** (left column) + **Submission Sidebar** (right column) in a 3fr/2fr CSS grid, (3) collapsed **Activity Log**. The evidence builder groups items into **Required** (red, must complete to unblock), **Recommended** (amber, optional), and **Already Included** (collapsed). Upload happens inline per evidence item via `DropZone` — no generic upload box. Completing an upload optimistically moves the item from Required/Recommended to Already Included. Header CTA scrolls to and auto-expands the first missing required item. Sidebar shows only a fraction (`Required: X/Y`) and Submit/Export buttons — no messaging. Post-submit the page becomes read-only.
 
-Components: `PackHeader.tsx`, `EvidenceBuilderSection.tsx`, `EvidenceItemRow.tsx`, `SubmissionSidebar.tsx` in `components/packs/detail/`. CSS module: `app/(embedded)/app/packs/[packId]/pack-detail.module.css`. i18n keys: `packs.header*`, `packs.cta*`, `packs.builder*`, `packs.upload*`, `packs.sidebar*`, `packs.confirmSubmit*`, `packs.why*`.
+Components: `PackHeader.tsx`, `EvidenceBuilderSection.tsx`, `EvidenceItemRow.tsx`, `EvidenceContentViewer.tsx`, `SubmissionSidebar.tsx` in `components/packs/detail/`. CSS module: `app/(embedded)/app/packs/[packId]/pack-detail.module.css`. i18n keys: `packs.header*`, `packs.cta*`, `packs.builder*`, `packs.upload*`, `packs.sidebar*`, `packs.confirmSubmit*`, `packs.why*`.
+
+**Evidence tabs:** The "Already included in your submission" section uses Polaris `Tabs` to let merchants inspect each evidence item's content. `EvidenceContentViewer` renders structured payload data (order details, shipping/tracking, policies, communications, AVS/CVV results, manual uploads) based on `evidence_items.type` and `source`. Falls back to a flat list when no full evidence data is available.
 
 Conditional copy and sections are driven by `isLibraryPack` (derived from `pack.dispute_id == null`) in both embedded and portal pack detail pages. **Localized pack names:** for template-backed packs, the API overrides `pack.name` at read time with the localized template name from `pack_template_i18n` (locale fallback: requested → en-US → any), so Portuguese merchants see Portuguese pack titles without re-installing.
 
@@ -1013,8 +1029,9 @@ The API and the client enforce three gates before a save is allowed:
 
 | Condition | Server response | Client behaviour |
 |---|---|---|
-| `status === "blocked"` or `completeness_score === 0` | 422 `PACK_INCOMPLETE` | Critical banner shown; no API call made |
-| `completeness_score < 80` without `confirmLowCompleteness: true` | 422 `PACK_LOW_COMPLETENESS` (includes `score`) | Polaris `Modal` shown for merchant confirmation; on confirm, resends with `{ confirmLowCompleteness: true }` |
+| `submission_readiness === "blocked"` | 422 `PACK_BLOCKED` | Critical banner shown; no API call made |
+| `submission_readiness === "ready_with_warnings"` or `completeness_score < 80` without `confirmWarnings: true` | 422 `PACK_HAS_WARNINGS` (includes `score`, `readiness`) | Polaris `Modal` shown for merchant confirmation; on confirm, resends with `{ confirmWarnings: true }` |
+| `completeness_score === 0` | 422 `PACK_INCOMPLETE` | No evidence collected at all |
 | `status === "queued"` or `"building"` | — (client gate only) | Save button replaced by spinner + "Generating evidence…" label |
 | `completeness_score >= 80` | Proceeds normally | Button enabled, no modal |
 

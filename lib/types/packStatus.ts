@@ -35,6 +35,13 @@ export const EVIDENCE_PACK_STATUSES = [
 export type EvidencePackStatus = (typeof EVIDENCE_PACK_STATUSES)[number];
 
 /**
+ * Submission readiness — orthogonal to pack status and completeness score.
+ * Re-exported from evidenceItem.ts for convenience; canonical definition
+ * lives there alongside the full v2 evidence model.
+ */
+export type { SubmissionReadiness } from "./evidenceItem";
+
+/**
  * Look up the merchant-facing localized label for a pack status.
  * Accepts any string so raw DB reads don't need casts — unknown
  * values fall through to a humanized fallback ("saved to shopify"

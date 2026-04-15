@@ -12,15 +12,22 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Page, Spinner, Modal, Text } from "@shopify/polaris";
 import {
-  CheckCircle,
-  MoreVertical,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  X,
-} from "lucide-react";
+  Page,
+  Spinner,
+  Modal,
+  Text,
+  Card,
+  BlockStack,
+  InlineStack,
+  Banner,
+  Badge,
+  Button,
+  TextField,
+  InlineGrid,
+  Divider,
+  Box,
+} from "@shopify/polaris";
 
 interface PlanInfo {
   id: string;
@@ -83,6 +90,226 @@ function getNextPlan(currentId: string): string | null {
   const tier = PLAN_TIER[currentId] ?? 0;
   if (tier >= 3) return null;
   return PLAN_IDS[tier + 1];
+}
+
+const styles = {
+  currentPlanHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  } as React.CSSProperties,
+  planIconBox: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    background: "#E0F2FE",
+  } as React.CSSProperties,
+  planIconSvg: {
+    width: 20,
+    height: 20,
+    color: "#1D4ED8",
+  } as React.CSSProperties,
+  priceText: {
+    fontSize: 28,
+    fontWeight: 600,
+    color: "#202223",
+    margin: 0,
+  } as React.CSSProperties,
+  priceSuffix: {
+    fontSize: 16,
+    fontWeight: 400,
+    color: "#6D7175",
+  } as React.CSSProperties,
+  nextPlanBanner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 8,
+    border: "1px solid #E1E3E5",
+    background: "#F7F8FB",
+  } as React.CSSProperties,
+  nextPlanRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    flexShrink: 0,
+  } as React.CSSProperties,
+  toggleButton: {
+    display: "flex",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    padding: "12px 0",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#1D4ED8",
+  } as React.CSSProperties,
+  planCardsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 24,
+  } as React.CSSProperties,
+  planCard: (isPopular: boolean): React.CSSProperties => ({
+    position: "relative",
+    borderRadius: 8,
+    padding: 24,
+    border: isPopular ? "1px solid #1D4ED8" : "1px solid #E1E3E5",
+    background: isPopular ? "#1D4ED8" : "#FFFFFF",
+    color: isPopular ? "#FFFFFF" : "#202223",
+    boxShadow: isPopular ? "0 4px 12px rgba(29, 78, 216, 0.25)" : "none",
+  }),
+  popularBadge: {
+    position: "absolute",
+    top: -12,
+    left: "50%",
+    transform: "translateX(-50%)",
+    borderRadius: 99,
+    border: "1px solid #1D4ED8",
+    background: "#FFFFFF",
+    padding: "4px 12px",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#1D4ED8",
+    whiteSpace: "nowrap",
+  } as React.CSSProperties,
+  planCardPrice: (isPopular: boolean): React.CSSProperties => ({
+    fontSize: 30,
+    fontWeight: 700,
+    color: isPopular ? "#FFFFFF" : "#202223",
+    margin: "4px 0",
+  }),
+  planCardPriceSuffix: (isPopular: boolean): React.CSSProperties => ({
+    fontSize: 16,
+    fontWeight: 400,
+    color: isPopular ? "rgba(255,255,255,0.8)" : "#6D7175",
+  }),
+  featureList: {
+    minHeight: 180,
+    paddingTop: 16,
+    marginBottom: 24,
+  } as React.CSSProperties,
+  featureRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 12,
+  } as React.CSSProperties,
+  checkIcon: (isPopular: boolean): React.CSSProperties => ({
+    width: 16,
+    height: 16,
+    flexShrink: 0,
+    marginTop: 2,
+    color: isPopular ? "#FFFFFF" : "#22C55E",
+  }),
+  featureText: (isPopular: boolean): React.CSSProperties => ({
+    fontSize: 14,
+    color: isPopular ? "rgba(255,255,255,0.9)" : "#6D7175",
+  }),
+  ctaButton: (variant: "current" | "upgrade" | "downgrade" | "disabled", isPopular: boolean): React.CSSProperties => {
+    const base: React.CSSProperties = {
+      width: "100%",
+      borderRadius: 8,
+      padding: "10px 16px",
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: variant === "current" || variant === "disabled" ? "default" : "pointer",
+      border: "1px solid #C9CCCF",
+      opacity: 1,
+    };
+    if (variant === "current") {
+      return {
+        ...base,
+        background: isPopular ? "rgba(255,255,255,0.2)" : "#F7F8FA",
+        color: isPopular ? "#FFFFFF" : "#6D7175",
+        cursor: "default",
+      };
+    }
+    if (variant === "upgrade" && isPopular) {
+      return { ...base, background: "#FFFFFF", color: "#1D4ED8", border: "1px solid #FFFFFF" };
+    }
+    return { ...base, background: "#F7F8FA", color: "#202223" };
+  },
+  trialNote: {
+    textAlign: "center",
+    marginTop: 24,
+    fontSize: 14,
+    color: "#6D7175",
+  } as React.CSSProperties,
+  topUpButton: {
+    borderRadius: 8,
+    border: "1px solid #C9CCCF",
+    padding: "8px 16px",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#202223",
+    background: "#FFFFFF",
+    cursor: "pointer",
+  } as React.CSSProperties,
+  discountOverlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 50,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(0,0,0,0.5)",
+  } as React.CSSProperties,
+  discountPanel: {
+    width: "100%",
+    maxWidth: 448,
+    borderRadius: 8,
+    background: "#FFFFFF",
+    padding: 24,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+  } as React.CSSProperties,
+} as const;
+
+function CheckSvg({ color }: { color: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
+      <path d="M13.3 4.3a1 1 0 0 1 0 1.4l-6 6a1 1 0 0 1-1.4 0l-3-3a1 1 0 1 1 1.4-1.4L6.6 9.6l5.3-5.3a1 1 0 0 1 1.4 0Z" fill={color} />
+    </svg>
+  );
+}
+
+function ChevronSvg({ up }: { up: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style={{ width: 16, height: 16 }}>
+      {up ? (
+        <path fillRule="evenodd" d="M14.707 12.707a1 1 0 0 1-1.414 0L10 9.414l-3.293 3.293a1 1 0 0 1-1.414-1.414l4-4a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414Z" clipRule="evenodd" />
+      ) : (
+        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z" clipRule="evenodd" />
+      )}
+    </svg>
+  );
+}
+
+function CheckCircleSvg() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={styles.planIconSvg}>
+      <path d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" stroke="#1D4ED8" strokeWidth="1.5" />
+      <path d="m7 10 2 2 4-4" stroke="#1D4ED8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function XSvg() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clipRule="evenodd" />
+    </svg>
+  );
 }
 
 function BillingPageInner() {
@@ -222,323 +449,285 @@ function BillingPageInner() {
         },
       ]}
     >
-      {/* Error banner */}
-      {upgradeError && (
-        <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {upgradeError}
-          {showOpenInShopifyLink && (
-            <>
-              {" "}
-              <a
-                href="https://admin.shopify.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold underline"
-              >
-                {t("billing.openInShopifyAdmin")}
-              </a>
-            </>
-          )}
-          <button
-            onClick={() => setUpgradeError(null)}
-            className="float-right text-red-600 hover:text-red-800"
+      <BlockStack gap="400">
+        {/* Error banner */}
+        {upgradeError && (
+          <Banner
+            title={upgradeError}
+            tone="critical"
+            onDismiss={() => setUpgradeError(null)}
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Main container card */}
-      <div className="rounded-lg border border-[#E1E3E5] bg-white shadow-sm">
-        {/* Current plan section */}
-        <div className="border-b border-[#E1E3E5] px-6 py-6">
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E0F2FE]">
-                <CheckCircle className="h-5 w-5 text-[#1D4ED8]" />
-              </div>
-              <div>
-                <p className="text-base font-semibold text-[#202223]">
-                  {currentPlanName}
-                </p>
-                <p className="text-sm text-[#6D7175]">
-                  {plan?.packsPerMonth
-                    ? t("billing.monthlyRevenue", { count: plan.packsPerMonth })
-                    : t("billing.unlimitedRevenue")}
-                </p>
-              </div>
-            </div>
-            <button className="rounded p-1 text-[#6D7175] hover:bg-[#F7F8FA]">
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </div>
-
-          <p className="mb-1 text-2xl font-semibold text-[#202223]">
-            {PLAN_PRICES[plan?.id ?? "free"].label}
-            {PLAN_PRICES[plan?.id ?? "free"].monthly && (
-              <span className="text-base font-normal text-[#6D7175]">
-                {PLAN_PRICES[plan?.id ?? "free"].monthly}
-              </span>
-            )}
-          </p>
-          {usage && usage.packsLimit != null && (
-            <p className="text-sm text-[#6D7175]">
-              {t("billing.packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}
-            </p>
-          )}
-
-          {/* Next plan recommendation banner */}
-          {nextPlanId && nextPlanPrice && (
-            <div className="mt-4 flex items-center justify-between rounded-lg border border-[#E1E3E5] bg-[#F7F8FB] p-4">
-              <div>
-                <p className="mb-1 text-sm font-semibold text-[#202223]">
-                  {t("billing.nextPlan", { plan: nextPlanName ?? "" })}
-                </p>
-                <p className="text-sm text-[#6D7175]">
-                  {PLAN_SHORT_FEATURES[nextPlanId]}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-[#202223]">
-                  {nextPlanPrice.label}{nextPlanPrice.monthly}
-                </span>
-                <button
-                  onClick={() => handleUpgrade(nextPlanId)}
-                  disabled={upgrading === nextPlanId}
-                  className="rounded-lg bg-[#202223] px-4 py-2 text-sm font-medium text-white hover:bg-[#000000] disabled:opacity-50"
+            {showOpenInShopifyLink && (
+              <p>
+                <a
+                  href="https://admin.shopify.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontWeight: 600, textDecoration: "underline" }}
                 >
-                  {upgrading === nextPlanId ? t("billing.redirecting") : t("billing.upgradeNow")}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Show/hide all plans toggle */}
-        <div className="border-b border-[#E1E3E5] px-6 py-3">
-          <button
-            onClick={() => setShowAllPlans(!showAllPlans)}
-            className="flex w-full items-center justify-center gap-1 text-sm font-medium text-[#1D4ED8] hover:text-[#1e40af]"
-          >
-            {showAllPlans ? t("billing.hideAllPlans") : t("billing.showAllPlans")}
-            {showAllPlans ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
+                  {t("billing.openInShopifyAdmin")}
+                </a>
+              </p>
             )}
-          </button>
-        </div>
+          </Banner>
+        )}
 
-        {/* Plan cards grid */}
-        {showAllPlans && (
-          <div className="px-6 py-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {PLAN_IDS.map((planId) => {
-                const priceInfo = PLAN_PRICES[planId];
-                const featureKeys = PLAN_FEATURE_KEYS[planId];
-                const isPopular = planId === "growth";
-                const isCurrent = plan?.id === planId;
-                const currentTier = PLAN_TIER[plan?.id ?? "free"];
-                const cardTier = PLAN_TIER[planId];
-                const isUpgrade = cardTier > currentTier;
-                const isDowngrade = cardTier < currentTier && planId !== "free";
+        {/* Main container card */}
+        <Card padding="0">
+          {/* Current plan section */}
+          <Box padding="600" borderBlockEndWidth="025" borderColor="border">
+            <div style={styles.currentPlanHeader}>
+              <InlineStack gap="300" blockAlign="start">
+                <div style={styles.planIconBox}>
+                  <CheckCircleSvg />
+                </div>
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {currentPlanName}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {plan?.packsPerMonth
+                      ? t("billing.monthlyRevenue", { count: plan.packsPerMonth })
+                      : t("billing.unlimitedRevenue")}
+                  </Text>
+                </BlockStack>
+              </InlineStack>
+            </div>
 
-                return (
-                  <div
-                    key={planId}
-                    id={planId === "free" ? "billing-plan-free" : undefined}
-                    className={`relative rounded-lg p-6 ${
-                      isPopular
-                        ? "border border-[#1D4ED8] bg-[#1D4ED8] text-white shadow-lg"
-                        : "border border-[#E1E3E5] bg-white hover:border-[#C9CCCF]"
-                    }`}
+            <p style={styles.priceText}>
+              {PLAN_PRICES[plan?.id ?? "free"].label}
+              {PLAN_PRICES[plan?.id ?? "free"].monthly && (
+                <span style={styles.priceSuffix}>
+                  {PLAN_PRICES[plan?.id ?? "free"].monthly}
+                </span>
+              )}
+            </p>
+            {usage && usage.packsLimit != null && (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t("billing.packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}
+              </Text>
+            )}
+
+            {/* Next plan recommendation banner */}
+            {nextPlanId && nextPlanPrice && (
+              <div style={styles.nextPlanBanner}>
+                <div>
+                  <Text as="p" variant="bodySm" fontWeight="semibold">
+                    {t("billing.nextPlan", { plan: nextPlanName ?? "" })}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {PLAN_SHORT_FEATURES[nextPlanId]}
+                  </Text>
+                </div>
+                <div style={styles.nextPlanRight}>
+                  <Text as="span" variant="bodySm" fontWeight="semibold">
+                    {nextPlanPrice.label}{nextPlanPrice.monthly}
+                  </Text>
+                  <Button
+                    variant="primary"
+                    onClick={() => handleUpgrade(nextPlanId)}
+                    disabled={upgrading === nextPlanId}
+                    loading={upgrading === nextPlanId}
                   >
-                    {/* Popular badge */}
-                    {isPopular && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-[#1D4ED8] bg-white px-3 py-1 text-xs font-semibold text-[#1D4ED8]">
-                        {t("billing.popular")}
-                      </span>
-                    )}
+                    {t("billing.upgradeNow")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Box>
 
-                    {/* Plan name */}
-                    <Text as="h3" variant="headingMd">
-                      <span className={isPopular ? "text-white" : ""}>
-                        {t(planNameKeys[planId])}
-                      </span>
-                    </Text>
+          {/* Show/hide all plans toggle */}
+          <Box padding="0" borderBlockEndWidth="025" borderColor="border">
+            <button
+              onClick={() => setShowAllPlans(!showAllPlans)}
+              style={styles.toggleButton}
+            >
+              {showAllPlans ? t("billing.hideAllPlans") : t("billing.showAllPlans")}
+              <ChevronSvg up={showAllPlans} />
+            </button>
+          </Box>
 
-                    {/* Price */}
-                    <p className="mb-1">
-                      <span
-                        className={`text-3xl font-bold ${
-                          isPopular ? "text-white" : "text-[#202223]"
-                        }`}
-                      >
-                        {priceInfo.label}
-                      </span>
-                      {priceInfo.monthly && (
-                        <span
-                          className={`text-base font-normal ${
-                            isPopular ? "text-white/80" : "text-[#6D7175]"
-                          }`}
-                        >
-                          {priceInfo.monthly}
+          {/* Plan cards grid */}
+          {showAllPlans && (
+            <Box padding="600">
+              <div style={styles.planCardsGrid}>
+                {PLAN_IDS.map((planId) => {
+                  const priceInfo = PLAN_PRICES[planId];
+                  const featureKeys = PLAN_FEATURE_KEYS[planId];
+                  const isPopular = planId === "growth";
+                  const isCurrent = plan?.id === planId;
+                  const currentTier = PLAN_TIER[plan?.id ?? "free"];
+                  const cardTier = PLAN_TIER[planId];
+                  const isUpgrade = cardTier > currentTier;
+                  const isDowngrade = cardTier < currentTier && planId !== "free";
+
+                  let ctaVariant: "current" | "upgrade" | "downgrade" | "disabled";
+                  if (isCurrent) ctaVariant = "current";
+                  else if (isUpgrade) ctaVariant = "upgrade";
+                  else if (isDowngrade) ctaVariant = "downgrade";
+                  else ctaVariant = "disabled";
+
+                  return (
+                    <div
+                      key={planId}
+                      id={planId === "free" ? "billing-plan-free" : undefined}
+                      style={styles.planCard(isPopular)}
+                    >
+                      {/* Popular badge */}
+                      {isPopular && (
+                        <span style={styles.popularBadge}>
+                          {t("billing.popular")}
                         </span>
                       )}
-                    </p>
 
-                    {/* Features */}
-                    <div className="mb-6 min-h-[180px] space-y-3 pt-4">
-                      {featureKeys.map((key) => (
-                        <div key={key} className="flex items-start gap-2">
-                          <Check
-                            className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                              isPopular ? "text-white" : "text-[#22C55E]"
-                            }`}
-                          />
-                          <span
-                            className={`text-sm ${
-                              isPopular ? "text-white/90" : "text-[#6D7175]"
-                            }`}
-                          >
-                            {t(key)}
+                      {/* Plan name */}
+                      <Text as="h3" variant="headingMd">
+                        <span style={{ color: isPopular ? "#FFFFFF" : undefined }}>
+                          {t(planNameKeys[planId])}
+                        </span>
+                      </Text>
+
+                      {/* Price */}
+                      <p style={styles.planCardPrice(isPopular)}>
+                        {priceInfo.label}
+                        {priceInfo.monthly && (
+                          <span style={styles.planCardPriceSuffix(isPopular)}>
+                            {priceInfo.monthly}
                           </span>
-                        </div>
-                      ))}
-                    </div>
+                        )}
+                      </p>
 
-                    {/* CTA button */}
-                    {isCurrent ? (
-                      <button
-                        disabled
-                        className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold ${
-                          isPopular
-                            ? "bg-white/20 text-white"
-                            : "border border-[#C9CCCF] bg-[#F7F8FA] text-[#6D7175]"
-                        }`}
-                      >
-                        {t("billing.yourCurrentPlan")}
-                      </button>
-                    ) : isUpgrade ? (
-                      <button
-                        onClick={() => handleUpgrade(planId)}
-                        disabled={upgrading === planId}
-                        className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${
-                          isPopular
-                            ? "bg-white text-[#1D4ED8] hover:bg-gray-50"
+                      {/* Features */}
+                      <div style={styles.featureList}>
+                        {featureKeys.map((key) => (
+                          <div key={key} style={styles.featureRow}>
+                            <CheckSvg color={isPopular ? "#FFFFFF" : "#22C55E"} />
+                            <span style={styles.featureText(isPopular)}>
+                              {t(key)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* CTA button */}
+                      {isCurrent ? (
+                        <button disabled style={styles.ctaButton("current", isPopular)}>
+                          {t("billing.yourCurrentPlan")}
+                        </button>
+                      ) : isUpgrade ? (
+                        <button
+                          onClick={() => handleUpgrade(planId)}
+                          disabled={upgrading === planId}
+                          style={{
+                            ...styles.ctaButton("upgrade", isPopular),
+                            opacity: upgrading === planId ? 0.5 : 1,
+                          }}
+                        >
+                          {upgrading === planId
+                            ? t("billing.redirecting")
                             : planId === "free"
-                              ? "border border-[#C9CCCF] text-[#202223] hover:bg-[#F7F8FA]"
-                              : "border border-[#E1E3E5] bg-[#F7F8FA] text-[#202223] hover:bg-[#E3E5E7]"
-                        }`}
-                      >
-                        {upgrading === planId
-                          ? t("billing.redirecting")
-                          : planId === "free"
-                            ? t("billing.getStarted")
-                            : t("billing.startTrial", { plan: t(planNameKeys[planId]) })}
-                      </button>
-                    ) : isDowngrade ? (
-                      <button
-                        onClick={() => setDowngradeTarget(planId)}
-                        disabled={upgrading === planId}
-                        className={`w-full rounded-lg border border-[#E1E3E5] bg-[#F7F8FA] px-4 py-2.5 text-sm font-semibold text-[#202223] hover:bg-[#E3E5E7] disabled:opacity-50`}
-                      >
-                        {upgrading === planId
-                          ? t("billing.redirecting")
-                          : t("billing.downgradeTo", { plan: t(planNameKeys[planId]) })}
-                      </button>
-                    ) : (
-                      <button
-                        disabled
-                        className="w-full rounded-lg border border-[#C9CCCF] px-4 py-2.5 text-sm font-semibold text-[#202223] hover:bg-[#F7F8FA]"
-                      >
-                        {t("billing.getStarted")}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                              ? t("billing.getStarted")
+                              : t("billing.startTrial", { plan: t(planNameKeys[planId]) })}
+                        </button>
+                      ) : isDowngrade ? (
+                        <button
+                          onClick={() => setDowngradeTarget(planId)}
+                          disabled={upgrading === planId}
+                          style={{
+                            ...styles.ctaButton("downgrade", isPopular),
+                            opacity: upgrading === planId ? 0.5 : 1,
+                          }}
+                        >
+                          {upgrading === planId
+                            ? t("billing.redirecting")
+                            : t("billing.downgradeTo", { plan: t(planNameKeys[planId]) })}
+                        </button>
+                      ) : (
+                        <button disabled style={styles.ctaButton("disabled", isPopular)}>
+                          {t("billing.getStarted")}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
-            {/* Trial note */}
-            <p className="mt-6 text-center text-sm text-[#6D7175]">
-              {t("billing.trialNote")}
-            </p>
-          </div>
-        )}
-      </div>
+              {/* Trial note */}
+              <p style={styles.trialNote}>
+                {t("billing.trialNote")}
+              </p>
+            </Box>
+          )}
+        </Card>
 
-      {/* Top-ups section */}
-      <div className="mt-4 rounded-lg border border-[#E1E3E5] bg-white p-6 shadow-sm">
-        <Text as="h2" variant="headingMd">
-          {t("billing.topUps")}
-        </Text>
-        <p className="mb-4 text-sm text-[#6D7175]">{t("billing.topUpsDesc")}</p>
-        <div className="flex gap-3">
-          {[
-            { sku: "topup_25", labelKey: "billing.topUp25" },
-            { sku: "topup_100", labelKey: "billing.topUp100" },
-          ].map((topUp) => (
-            <button
-              key={topUp.sku}
-              onClick={async () => {
-                const res = await fetch("/api/billing/topup", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ sku: topUp.sku }),
-                });
-                const data = await res.json();
-                if (data.confirmationUrl) window.top!.location.href = data.confirmationUrl;
-              }}
-              className="rounded-lg border border-[#C9CCCF] px-4 py-2 text-sm font-medium text-[#202223] hover:bg-[#F7F8FA]"
-            >
-              {t(topUp.labelKey)}
-            </button>
-          ))}
-        </div>
-      </div>
+        {/* Top-ups section */}
+        <Card>
+          <BlockStack gap="300">
+            <Text as="h2" variant="headingMd">
+              {t("billing.topUps")}
+            </Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {t("billing.topUpsDesc")}
+            </Text>
+            <InlineStack gap="300">
+              {[
+                { sku: "topup_25", labelKey: "billing.topUp25" },
+                { sku: "topup_100", labelKey: "billing.topUp100" },
+              ].map((topUp) => (
+                <button
+                  key={topUp.sku}
+                  onClick={async () => {
+                    const res = await fetch("/api/billing/topup", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ sku: topUp.sku }),
+                    });
+                    const data = await res.json();
+                    if (data.confirmationUrl) window.top!.location.href = data.confirmationUrl;
+                  }}
+                  style={styles.topUpButton}
+                >
+                  {t(topUp.labelKey)}
+                </button>
+              ))}
+            </InlineStack>
+          </BlockStack>
+        </Card>
+      </BlockStack>
 
       {/* Discount modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
-              <Text as="h2" variant="headingLg">
-                {t("billing.applyDiscount")}
-              </Text>
-              <button
-                onClick={() => setShowDiscountModal(false)}
-                className="text-[#6D7175] hover:text-[#202223]"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <label className="mb-1 block text-sm font-medium text-[#6D7175]">
-              {t("billing.discountCode")}
-            </label>
-            <input
-              type="text"
+        <Modal
+          open
+          onClose={() => setShowDiscountModal(false)}
+          title={t("billing.applyDiscount")}
+          primaryAction={{
+            content: t("billing.applyDiscount"),
+            onAction: () => {
+              // TODO: implement discount code application via API
+              setShowDiscountModal(false);
+            },
+          }}
+          secondaryActions={[
+            {
+              content: t("billing.cancel") ?? "Cancel",
+              onAction: () => setShowDiscountModal(false),
+            },
+          ]}
+        >
+          <Modal.Section>
+            <TextField
+              label={t("billing.discountCode")}
+              autoComplete="off"
               value={discountCode}
-              onChange={(e) => setDiscountCode(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-[#C9CCCF] px-3 py-2 shadow-sm focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8] sm:text-sm"
+              onChange={setDiscountCode}
               placeholder={t("billing.discountCodePlaceholder")}
             />
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => {
-                  // TODO: implement discount code application via API
-                  setShowDiscountModal(false);
-                }}
-                className="rounded-lg border border-[#C9CCCF] px-4 py-2 text-sm font-medium text-[#202223] hover:bg-[#F7F8FA]"
-              >
-                {t("billing.applyDiscount")}
-              </button>
-            </div>
-          </div>
-        </div>
+          </Modal.Section>
+        </Modal>
       )}
 
-      {/* Downgrade modal - keep Polaris for consistency with Shopify */}
+      {/* Downgrade modal */}
       {downgradeTarget && (
         <Modal
           open

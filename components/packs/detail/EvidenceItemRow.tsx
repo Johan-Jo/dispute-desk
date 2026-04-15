@@ -12,14 +12,22 @@ import {
   DropZone,
   Banner,
   Spinner,
+  Popover,
+  ActionList,
 } from "@shopify/polaris";
 import {
   XCircleIcon,
   AlertTriangleIcon,
   CheckCircleIcon,
+  MinusCircleIcon,
 } from "@shopify/polaris-icons";
+import type {
+  ChecklistItemV2,
+  WaiveReason,
+} from "@/lib/types/evidenceItem";
 import styles from "@/app/(embedded)/app/packs/[packId]/pack-detail.module.css";
 
+/** Legacy UI type — kept for backward compat shim in page.tsx. */
 export interface ChecklistItemUI {
   field: string;
   label: string;
@@ -29,9 +37,20 @@ export interface ChecklistItemUI {
   unavailableReason?: string;
 }
 
+/* ── Waive reason labels ── */
+
+const WAIVE_REASON_LABELS: Record<WaiveReason, string> = {
+  not_applicable: "Not applicable to this dispute",
+  evidence_unavailable: "I can\u2019t get this evidence",
+  already_in_shopify: "Already submitted separately",
+  merchant_accepts_risk: "I understand the risk",
+  other: "Other reason",
+};
+
+/* ── EvidenceItemRow ── */
+
 interface EvidenceItemRowProps {
-  item: ChecklistItemUI;
-  variant: "required" | "recommended";
+  item: ChecklistItemV2;
   whyText: string;
   onUpload: (field: string, files: File[]) => Promise<void>;
   isUploading: boolean;
@@ -39,13 +58,13 @@ interface EvidenceItemRowProps {
   autoExpand?: boolean;
   highlighted?: boolean;
   readOnly?: boolean;
+  onWaive?: (field: string, reason: WaiveReason, note?: string) => void;
 }
 
 export const EvidenceItemRow = forwardRef<HTMLDivElement, EvidenceItemRowProps>(
   function EvidenceItemRow(
     {
       item,
-      variant,
       whyText,
       onUpload,
       isUploading,
@@ -53,11 +72,34 @@ export const EvidenceItemRow = forwardRef<HTMLDivElement, EvidenceItemRowProps>(
       autoExpand = false,
       highlighted = false,
       readOnly = false,
+      onWaive,
     },
     ref,
   ) {
     const [expanded, setExpanded] = useState(autoExpand);
+    const [waiveOpen, setWaiveOpen] = useState(false);
     const dropZoneId = `upload-${item.field}`;
+
+    const isCritical = item.priority === "critical";
+    const rowClass = isCritical
+      ? styles.evidenceRowRequired
+      : item.priority === "recommended"
+        ? styles.evidenceRowRecommended
+        : styles.evidenceRowRecommended;
+
+    const badgeTone = item.blocking
+      ? "critical" as const
+      : isCritical
+        ? "attention" as const
+        : undefined;
+    const badgeLabel = item.blocking
+      ? "Required"
+      : isCritical
+        ? "High impact"
+        : "Recommended";
+
+    const iconSource = item.blocking ? XCircleIcon : isCritical ? AlertTriangleIcon : AlertTriangleIcon;
+    const iconTone = item.blocking ? "critical" as const : isCritical ? "caution" as const : "subdued" as const;
 
     const handleDrop = useCallback(
       async (_files: File[], accepted: File[]) => {
@@ -68,10 +110,15 @@ export const EvidenceItemRow = forwardRef<HTMLDivElement, EvidenceItemRowProps>(
       [item.field, onUpload],
     );
 
-    const rowClass =
-      variant === "required"
-        ? styles.evidenceRowRequired
-        : styles.evidenceRowRecommended;
+    const waiveActions = Object.entries(WAIVE_REASON_LABELS).map(
+      ([reason, label]) => ({
+        content: label,
+        onAction: () => {
+          setWaiveOpen(false);
+          onWaive?.(item.field, reason as WaiveReason);
+        },
+      }),
+    );
 
     return (
       <div
@@ -81,27 +128,36 @@ export const EvidenceItemRow = forwardRef<HTMLDivElement, EvidenceItemRowProps>(
         <BlockStack gap="200">
           <InlineStack align="space-between" blockAlign="start" wrap>
             <InlineStack gap="200" blockAlign="center" wrap>
-              <Icon
-                source={
-                  variant === "required" ? XCircleIcon : AlertTriangleIcon
-                }
-                tone={variant === "required" ? "critical" : "caution"}
-              />
+              <Icon source={iconSource} tone={iconTone} />
               <Text as="span" variant="bodyMd" fontWeight="semibold">
                 {item.label}
               </Text>
-              <Badge tone={variant === "required" ? "critical" : "attention"}>
-                {variant === "required" ? "Required" : "Recommended"}
-              </Badge>
+              <Badge tone={badgeTone}>{badgeLabel}</Badge>
             </InlineStack>
 
             {!readOnly && !isUploading && (
-              <Button
-                size="slim"
-                onClick={() => setExpanded((v) => !v)}
-              >
-                {errorMessage ? "Retry upload" : "Upload proof"}
-              </Button>
+              <InlineStack gap="200">
+                <Button size="slim" onClick={() => setExpanded((v) => !v)}>
+                  {errorMessage ? "Retry upload" : "Upload proof"}
+                </Button>
+                {onWaive && (
+                  <Popover
+                    active={waiveOpen}
+                    activator={
+                      <Button
+                        size="slim"
+                        variant="plain"
+                        onClick={() => setWaiveOpen((v) => !v)}
+                      >
+                        Continue without this
+                      </Button>
+                    }
+                    onClose={() => setWaiveOpen(false)}
+                  >
+                    <ActionList items={waiveActions} />
+                  </Popover>
+                )}
+              </InlineStack>
             )}
             {isUploading && <Spinner size="small" />}
           </InlineStack>
@@ -138,7 +194,44 @@ export const EvidenceItemRow = forwardRef<HTMLDivElement, EvidenceItemRowProps>(
   },
 );
 
-/* Already-included item row (compact, no upload) */
+/* ── Waived item row ── */
+
+interface WaivedItemRowProps {
+  item: ChecklistItemV2;
+  onUnwaive?: (field: string) => void;
+}
+
+export function WaivedItemRow({ item, onUnwaive }: WaivedItemRowProps) {
+  return (
+    <div className={styles.evidenceRowIncluded}>
+      <InlineStack align="space-between" blockAlign="center" wrap>
+        <InlineStack gap="200" blockAlign="center">
+          <Icon source={MinusCircleIcon} tone="subdued" />
+          <Text as="span" variant="bodyMd" tone="subdued">
+            {item.label}
+          </Text>
+          <Badge>
+            {item.waiveReason
+              ? WAIVE_REASON_LABELS[item.waiveReason] ?? "Waived"
+              : "Waived"}
+          </Badge>
+        </InlineStack>
+        {onUnwaive && (
+          <Button
+            size="slim"
+            variant="plain"
+            onClick={() => onUnwaive(item.field)}
+          >
+            Undo
+          </Button>
+        )}
+      </InlineStack>
+    </div>
+  );
+}
+
+/* ── Already-included item row (compact, no upload) ── */
+
 interface IncludedItemRowProps {
   label: string;
   sourceLabel: string;

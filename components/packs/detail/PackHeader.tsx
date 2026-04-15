@@ -10,18 +10,19 @@ import {
   Banner,
   Spinner,
 } from "@shopify/polaris";
+import type { SubmissionReadiness } from "@/lib/types/evidenceItem";
 
 interface PackHeaderProps {
   status: string;
   score: number;
-  missingRequiredCount: number;
-  allRequiredDone: boolean;
+  readiness: SubmissionReadiness;
+  warningCount: number;
+  blockerCount: number;
   isBuilding: boolean;
   savedAt: string | null;
   saveFailed: boolean;
   disputeUrl: string | null;
   disputePhase: string | null;
-  /** ISO deadline date string, if available. */
   deadline: string | null;
   onScrollToBuilder: () => void;
   onSave: () => void;
@@ -29,7 +30,7 @@ interface PackHeaderProps {
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "\u2014";
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -42,8 +43,9 @@ function formatDate(iso: string | null): string {
 export function PackHeader({
   status,
   score,
-  missingRequiredCount,
-  allRequiredDone,
+  readiness,
+  warningCount,
+  blockerCount,
   isBuilding,
   savedAt,
   saveFailed,
@@ -54,7 +56,7 @@ export function PackHeader({
   onSave,
   saving,
 }: PackHeaderProps) {
-  const isSaved = status === "saved_to_shopify";
+  const isSaved = status === "saved_to_shopify" || readiness === "submitted";
   const isSaving = status === "saving" || saving;
 
   // Deadline urgency
@@ -65,13 +67,13 @@ export function PackHeader({
       (new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60);
     if (hoursLeft < 48 && hoursLeft > 0) {
       deadlineUrgent = true;
-      deadlineText = `Deadline approaching — respond by ${formatDate(deadline)}`;
+      deadlineText = `Deadline approaching \u2014 respond by ${formatDate(deadline)}`;
     } else if (hoursLeft > 0) {
       deadlineText = `Respond by ${formatDate(deadline)}`;
     }
   }
 
-  // Determine state
+  // Determine state message and CTA
   let statusMessage: string;
   let cta: { label: string; action: () => void; disabled?: boolean } | null =
     null;
@@ -87,23 +89,25 @@ export function PackHeader({
       };
     }
   } else if (saveFailed) {
-    statusMessage = "Save failed — try again";
+    statusMessage = "Save failed \u2014 try again";
     cta = { label: "Retry submission", action: onSave };
-  } else if (!allRequiredDone && missingRequiredCount > 0) {
-    statusMessage = `Submission blocked — ${missingRequiredCount} required ${missingRequiredCount === 1 ? "item" : "items"} missing`;
+  } else if (readiness === "blocked" && blockerCount > 0) {
+    statusMessage = `Submission blocked \u2014 ${blockerCount} required ${blockerCount === 1 ? "item" : "items"} missing`;
     cta = { label: "Add required evidence", action: onScrollToBuilder };
-  } else if (allRequiredDone) {
-    statusMessage = missingRequiredCount === 0 && score === 0
-      ? "Everything is already included"
-      : "Ready to submit";
+  } else if (readiness === "ready_with_warnings" && warningCount > 0) {
+    statusMessage = `Ready to submit \u2014 ${warningCount} high-impact ${warningCount === 1 ? "item" : "items"} could strengthen your case`;
+    cta = {
+      label: "Review & submit",
+      action: onSave,
+      disabled: isSaving,
+    };
+  } else {
+    statusMessage = "Ready to submit";
     cta = {
       label: "Submit to Shopify",
       action: onSave,
       disabled: isSaving,
     };
-  } else {
-    statusMessage = "Everything is already included";
-    cta = { label: "Submit to Shopify", action: onSave };
   }
 
   return (
@@ -121,7 +125,7 @@ export function PackHeader({
               variant="primary"
               onClick={cta.action}
               disabled={cta.disabled}
-              loading={isSaving && cta.label === "Submit to Shopify"}
+              loading={isSaving && cta.label !== "Add required evidence" && cta.label !== "Open in Shopify Admin"}
             >
               {cta.label}
             </Button>

@@ -34,7 +34,12 @@ import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { PackHeader } from "@/components/packs/detail/PackHeader";
 import { EvidenceBuilderSection } from "@/components/packs/detail/EvidenceBuilderSection";
 import { SubmissionSidebar } from "@/components/packs/detail/SubmissionSidebar";
-import type { ChecklistItemUI } from "@/components/packs/detail/EvidenceItemRow";
+import type {
+  ChecklistItemV2,
+  SubmissionReadiness,
+  WaiveReason,
+  WaivedItemRecord,
+} from "@/lib/types/evidenceItem";
 import styles from "./pack-detail.module.css";
 
 /* ── Interfaces ── */
@@ -103,6 +108,9 @@ interface PackData {
   template_name?: string | null;
   template_items?: TemplateItemRow[];
   deadline?: string | null;
+  checklist_v2?: ChecklistItemV2[] | null;
+  submission_readiness?: string | null;
+  waived_items?: WaivedItemRecord[] | null;
 }
 
 /* ── Helpers ── */
@@ -299,6 +307,31 @@ export default function PackPreviewPage() {
     [packId, fetchPack],
   );
 
+  /* ── Waive / unwaive handlers ── */
+
+  const handleWaive = useCallback(
+    async (field: string, reason: WaiveReason) => {
+      await fetch(`/api/packs/${packId}/waive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, reason }),
+      });
+      fetchPack();
+    },
+    [packId, fetchPack],
+  );
+
+  const handleUnwaive = useCallback(
+    async (field: string) => {
+      await fetch(
+        `/api/packs/${packId}/waive?field=${encodeURIComponent(field)}`,
+        { method: "DELETE" },
+      );
+      fetchPack();
+    },
+    [packId, fetchPack],
+  );
+
   /* ── PDF actions ── */
 
   const handleExportPdf = useCallback(async () => {
@@ -331,7 +364,7 @@ export default function PackPreviewPage() {
         return;
       }
       setSaving(true);
-      const body = currentScore < 80 ? { confirmLowCompleteness: true } : {};
+      const body = { confirmWarnings: true };
       await fetch(`/api/packs/${packId}/save-to-shopify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -347,12 +380,15 @@ export default function PackPreviewPage() {
   /* ── Scroll to builder ── */
 
   const scrollToFirstMissing = useCallback(() => {
-    // Find the first missing required field and focus it
     if (!pack) return;
-    const checklist = (pack.checklist ?? []) as ChecklistItem[];
-    const firstMissing = checklist.find(
-      (c) => c.required && !c.present && (c.collectable ?? true) && !completedFields.has(c.field),
-    );
+    // V2: find first missing blocker, then first missing critical
+    const v2 = (pack.checklist_v2 ?? pack.checklist ?? []) as (ChecklistItemV2 | ChecklistItem)[];
+    const firstMissing = v2.find((c) => {
+      if ("status" in c) {
+        return c.status === "missing" && !completedFields.has(c.field);
+      }
+      return (c.required ?? false) && !c.present && !completedFields.has(c.field);
+    });
     if (firstMissing) {
       setFocusField(firstMissing.field);
     } else {
@@ -429,36 +465,58 @@ export default function PackPreviewPage() {
     ? t("packs.subtitleLibrary", { type: disputeTypeLabel })
     : t("packs.subtitleDispute", { type: disputeTypeLabel, phase: phaseLabel });
 
-  /* ── Checklist derivation (with optimistic completedFields) ── */
+  /* ── V2 checklist derivation (with v1→v2 shim + optimistic state) ── */
 
-  const rawChecklist = (pack.checklist ?? []) as ChecklistItem[];
-  const checklistItems: ChecklistItemUI[] = rawChecklist.map((c) => ({
-    field: c.field,
-    label: c.label,
-    required: c.required ?? false,
-    present: c.present || completedFields.has(c.field),
-    collectable: c.collectable ?? true,
-    unavailableReason: c.unavailableReason,
-  }));
+  // Use v2 checklist from API if available; fall back to v1→v2 conversion
+  const v2Checklist: ChecklistItemV2[] = (() => {
+    if (pack.checklist_v2 && Array.isArray(pack.checklist_v2) && pack.checklist_v2.length > 0) {
+      return pack.checklist_v2 as ChecklistItemV2[];
+    }
+    // V1→V2 shim: derive from legacy checklist
+    const v1 = (pack.checklist ?? []) as ChecklistItem[];
+    return v1.map((c): ChecklistItemV2 => ({
+      field: c.field,
+      label: c.label,
+      status: c.present ? "available" : (c.collectable ?? true) ? "missing" : "unavailable",
+      priority: (c.required ?? false) ? "critical" : "recommended",
+      blocking: false,
+      source: "auto_shopify",
+      unavailableReason: c.unavailableReason,
+    }));
+  })();
 
-  const missingRequired = checklistItems.filter(
-    (c) => !c.present && c.collectable && c.required,
-  );
-  const missingRecommended = checklistItems.filter(
-    (c) => !c.present && c.collectable && !c.required,
-  );
-  const collectedChecklist = checklistItems.filter((c) => c.present);
-  const unavailableItems = checklistItems.filter(
-    (c) => !c.present && !c.collectable && c.unavailableReason,
-  );
+  // Apply optimistic state: completedFields → status: "available"
+  const checklist: ChecklistItemV2[] = v2Checklist.map((c) => {
+    if (completedFields.has(c.field) && c.status === "missing") {
+      return { ...c, status: "available" as const };
+    }
+    return c;
+  });
 
-  const allRequiredDone = missingRequired.length === 0;
-  const totalRequired = checklistItems.filter((c) => c.required).length;
-  const requiredComplete = totalRequired - missingRequired.length;
+  // Derive readiness from API or checklist
+  const readiness: SubmissionReadiness = (() => {
+    if (isSaved) return "submitted";
+    // API v2 readiness, adjusted for optimistic state
+    const missingBlockers = checklist.filter(
+      (c) => c.blocking && c.status === "missing",
+    );
+    if (missingBlockers.length > 0) return "blocked";
+    const missingCritical = checklist.filter(
+      (c) => c.priority === "critical" && c.status === "missing",
+    );
+    if (missingCritical.length > 0) return "ready_with_warnings";
+    return "ready";
+  })();
+
+  const blockerCount = checklist.filter(
+    (c) => c.blocking && c.status === "missing",
+  ).length;
+  const warningCount = checklist.filter(
+    (c) => c.priority === "critical" && !c.blocking && c.status === "missing",
+  ).length;
 
   // Build "already included" items from evidence_items + optimistically completed
   const includedItems = [
-    // Items from evidence_items (auto-collected + previously uploaded)
     ...pack.evidence_items.map((ei) => ({
       label: ei.label,
       sourceLabel: getSourceLabel(getFieldSource(ei.type)),
@@ -466,13 +524,12 @@ export default function PackPreviewPage() {
       canReplace: ei.source === "manual",
       field: ei.type,
     })),
-    // Optimistically completed items (not yet in evidence_items from server)
     ...Array.from(completedFields)
       .filter(
         (field) => !pack.evidence_items.some((ei) => ei.type === field),
       )
       .map((field) => {
-        const cl = rawChecklist.find((c) => c.field === field);
+        const cl = checklist.find((c) => c.field === field);
         return {
           label: cl?.label ?? field,
           sourceLabel: "Uploaded",
@@ -481,10 +538,11 @@ export default function PackPreviewPage() {
           field,
         };
       }),
-    // Collected checklist items not in evidence_items
-    ...collectedChecklist
+    // Checklist items marked available but not in evidence_items or completedFields
+    ...checklist
       .filter(
         (c) =>
+          c.status === "available" &&
           !pack.evidence_items.some((ei) => ei.type === c.field) &&
           !completedFields.has(c.field),
       )
@@ -496,11 +554,15 @@ export default function PackPreviewPage() {
       })),
   ];
 
-  // Recommended counts for confirm modal
-  const totalRecommended = checklistItems.filter(
-    (c) => !c.required && c.collectable,
+  // Counts for confirm modal
+  const totalRecommended = checklist.filter(
+    (c) => c.priority !== "critical" && c.status !== "unavailable",
   ).length;
-  const recommendedComplete = totalRecommended - missingRecommended.length;
+  const recommendedComplete = checklist.filter(
+    (c) =>
+      c.priority !== "critical" &&
+      (c.status === "available" || c.status === "waived"),
+  ).length;
 
   /* ── Library pack: template preview ── */
 
@@ -534,7 +596,7 @@ export default function PackPreviewPage() {
         external: true,
       };
     }
-    if (!allRequiredDone) {
+    if (readiness === "blocked") {
       return {
         content: t("packs.ctaAddRequired"),
         onAction: scrollToFirstMissing,
@@ -656,8 +718,9 @@ export default function PackPreviewPage() {
               <PackHeader
                 status={pack.status}
                 score={score}
-                missingRequiredCount={missingRequired.length}
-                allRequiredDone={allRequiredDone}
+                readiness={readiness}
+                warningCount={warningCount}
+                blockerCount={blockerCount}
                 isBuilding={isBuilding}
                 savedAt={pack.saved_to_shopify_at}
                 saveFailed={pack.status === "save_failed"}
@@ -676,15 +739,16 @@ export default function PackPreviewPage() {
                 {/* Left: Evidence Builder */}
                 <div className={styles.leftColumn} ref={builderRef}>
                   <EvidenceBuilderSection
-                    missingRequired={missingRequired}
-                    missingRecommended={missingRecommended}
-                    unavailableItems={unavailableItems}
+                    checklist={checklist}
                     includedItems={includedItems}
+                    evidenceItems={pack.evidence_items}
                     onUpload={handleItemUpload}
                     uploadingField={uploadingField}
                     failedFields={failedFields}
                     onReplace={handleReplaceFile}
                     replacingField={replacingField}
+                    onWaive={handleWaive}
+                    onUnwaive={handleUnwaive}
                     focusField={focusField}
                     onFocusHandled={() => setFocusField(null)}
                     readOnly={isReadOnly}
@@ -694,8 +758,9 @@ export default function PackPreviewPage() {
                 {/* Right: Sidebar */}
                 <div className={styles.rightColumn}>
                   <SubmissionSidebar
-                    requiredTotal={totalRequired}
-                    requiredComplete={requiredComplete}
+                    readiness={readiness}
+                    completenessScore={score}
+                    warningCount={warningCount}
                     onSave={() => handleSave()}
                     onExportPdf={handleExportPdf}
                     onDownload={handleDownload}

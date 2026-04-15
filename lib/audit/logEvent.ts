@@ -16,7 +16,10 @@ export type EventType =
   | "admin_override"
   | "billing_activated"
   | "billing_declined"
-  | "data_retained";
+  | "data_retained"
+  | "evidence_waived"
+  | "evidence_unwaived"
+  | "submitted_with_warnings";
 
 export interface AuditLogInput {
   shopId: string;

@@ -4,6 +4,7 @@
  */
 
 import type { ShopSettings } from "./settings";
+import type { SubmissionReadiness } from "@/lib/types/evidenceItem";
 
 export type GateDecision =
   | { action: "auto_save" }
@@ -15,10 +16,12 @@ interface GateInput {
   completenessScore: number;
   blockers: string[];
   isApproved: boolean;
+  /** V2: when present, uses readiness instead of blockers for gating. */
+  submissionReadiness?: SubmissionReadiness;
 }
 
 export function evaluateAutoSaveGate(input: GateInput): GateDecision {
-  const { settings, completenessScore, blockers, isApproved } = input;
+  const { settings, completenessScore, blockers, isApproved, submissionReadiness } = input;
 
   if (!settings.auto_save_enabled) {
     return { action: "block", reasons: ["Auto-save is disabled for this store"] };
@@ -32,10 +35,18 @@ export function evaluateAutoSaveGate(input: GateInput): GateDecision {
     );
   }
 
-  if (settings.enforce_no_blockers && blockers.length > 0) {
-    blockReasons.push(
-      `${blockers.length} blocker(s) remain: ${blockers.join(", ")}`
-    );
+  // V2 readiness-aware: only hard-block when readiness is "blocked"
+  // (not for "ready_with_warnings"). Falls back to legacy blocker count.
+  if (settings.enforce_no_blockers) {
+    if (submissionReadiness !== undefined) {
+      if (submissionReadiness === "blocked") {
+        blockReasons.push("Submission is blocked — required evidence missing");
+      }
+    } else if (blockers.length > 0) {
+      blockReasons.push(
+        `${blockers.length} blocker(s) remain: ${blockers.join(", ")}`
+      );
+    }
   }
 
   if (blockReasons.length > 0) {
