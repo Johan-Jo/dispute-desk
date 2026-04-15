@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, forwardRef } from "react";
+import { useState, useCallback, forwardRef } from "react";
 import {
   BlockStack,
   InlineStack,

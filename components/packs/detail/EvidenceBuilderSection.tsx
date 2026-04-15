@@ -229,7 +229,7 @@ export function EvidenceBuilderSection({
                 Not available for this order
               </Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                These fields cannot be collected because of the order's payment method or fulfillment state
+                {"These fields cannot be collected because of the order\u2019s payment method or fulfillment state"}
               </Text>
             </BlockStack>
             {unavailableItems.map((item) => (

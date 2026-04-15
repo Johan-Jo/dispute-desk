@@ -5,7 +5,6 @@ import {
   BlockStack,
   InlineStack,
   Text,
-  Badge,
   Button,
   ProgressBar,
   Banner,
@@ -74,16 +73,13 @@ export function PackHeader({
 
   // Determine state
   let statusMessage: string;
-  let statusTone: "success" | "critical" | "info" | undefined;
   let cta: { label: string; action: () => void; disabled?: boolean } | null =
     null;
 
   if (isBuilding) {
     statusMessage = "Building evidence pack...";
-    statusTone = "info";
   } else if (isSaved) {
     statusMessage = `Submitted to Shopify on ${formatDate(savedAt)}`;
-    statusTone = "success";
     if (disputeUrl) {
       cta = {
         label: "Open in Shopify Admin",
@@ -92,17 +88,14 @@ export function PackHeader({
     }
   } else if (saveFailed) {
     statusMessage = "Save failed — try again";
-    statusTone = "critical";
     cta = { label: "Retry submission", action: onSave };
   } else if (!allRequiredDone && missingRequiredCount > 0) {
     statusMessage = `Submission blocked — ${missingRequiredCount} required ${missingRequiredCount === 1 ? "item" : "items"} missing`;
-    statusTone = "critical";
     cta = { label: "Add required evidence", action: onScrollToBuilder };
   } else if (allRequiredDone) {
     statusMessage = missingRequiredCount === 0 && score === 0
       ? "Everything is already included"
       : "Ready to submit";
-    statusTone = "success";
     cta = {
       label: "Submit to Shopify",
       action: onSave,
@@ -110,7 +103,6 @@ export function PackHeader({
     };
   } else {
     statusMessage = "Everything is already included";
-    statusTone = "success";
     cta = { label: "Submit to Shopify", action: onSave };
   }
 

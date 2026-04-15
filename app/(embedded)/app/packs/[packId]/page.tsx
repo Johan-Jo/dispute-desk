@@ -27,17 +27,10 @@ import {
   Spinner,
   Divider,
   Collapsible,
-  Icon,
   Modal,
 } from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  CheckCircleIcon,
-} from "@shopify/polaris-icons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
-import { formatPackStatus } from "@/lib/types/packStatus";
 import { PackHeader } from "@/components/packs/detail/PackHeader";
 import { EvidenceBuilderSection } from "@/components/packs/detail/EvidenceBuilderSection";
 import { SubmissionSidebar } from "@/components/packs/detail/SubmissionSidebar";
@@ -188,17 +181,6 @@ function getFieldSourceLabel(source: FieldSource, t: (key: string) => string): s
   }
 }
 
-function MetadataRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <InlineStack gap="400" align="start" wrap blockAlign="start">
-      <div style={{ minWidth: 140 }}>
-        <Text as="span" variant="bodySm" tone="subdued">{label}</Text>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
-    </InlineStack>
-  );
-}
-
 /* ── Page Component ── */
 
 export default function PackPreviewPage() {
@@ -209,13 +191,11 @@ export default function PackPreviewPage() {
 
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [saveBlocked, setSaveBlocked] = useState(false);
   const [focusField, setFocusField] = useState<string | null>(null);
   const [replacingField, setReplacingField] = useState<string | null>(null);
 
@@ -344,7 +324,6 @@ export default function PackPreviewPage() {
       if (!pack) return;
       const currentScore = pack.completeness_score ?? 0;
       if (pack.status === "blocked" || currentScore === 0) {
-        setSaveBlocked(true);
         return;
       }
       if (!confirmed) {
@@ -411,9 +390,6 @@ export default function PackPreviewPage() {
   const isLibraryPack = pack.dispute_id == null;
   const isSaved = pack.status === "saved_to_shopify";
   const isReadOnly = isSaved;
-  const fromTemplate =
-    pack.source === "TEMPLATE" && Boolean(pack.template_name ?? pack.name);
-
   const disputeTypeKey = pack.dispute_type
     ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_")
     : "GENERAL";
