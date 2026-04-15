@@ -19,6 +19,11 @@ const TAWK_FRAME_SRC = "https://tawk.to https://*.tawk.to";
 const TAWK_IMG_SRC = "https://*.tawk.to";
 const TAWK_FONT_SRC = "https://*.tawk.to";
 
+/** Cal.com embed: script loader, booking iframe, and API. */
+const CAL_SCRIPT_SRC = "https://app.cal.com";
+const CAL_FRAME_SRC = "https://app.cal.com";
+const CAL_CONNECT_SRC = "https://app.cal.com";
+
 /** Hub hero / cards: Supabase Storage + common stock CDNs (next/image remotePatterns). */
 const IMG_SRC_HUB =
   "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co https://images.pexels.com https://images.unsplash.com";
@@ -69,11 +74,11 @@ const nextConfig = {
           value: [
             "frame-ancestors 'none'",
             "default-src 'self'",
-            `frame-src 'self' https://vercel.live ${TAWK_FRAME_SRC}`,
-            `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC}`,
+            `frame-src 'self' https://vercel.live ${TAWK_FRAME_SRC} ${CAL_FRAME_SRC}`,
+            `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC} ${CAL_SCRIPT_SRC}`,
             "style-src 'self' 'unsafe-inline'",
             `${IMG_SRC_HUB} ${TAWK_IMG_SRC}`,
-            `connect-src 'self' https://*.supabase.co ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC}`,
+            `connect-src 'self' https://*.supabase.co ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC} ${CAL_CONNECT_SRC}`,
             `font-src 'self' ${TAWK_FONT_SRC}`,
           ].join("; "),
         },
