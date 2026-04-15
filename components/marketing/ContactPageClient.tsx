@@ -19,7 +19,7 @@ import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader"
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
-const CAL_LINK = "disputedesk/demo";
+const CAL_LINK = "disputedesk/30min";
 const SUPPORT_EMAIL = "support@disputedesk.app";
 
 /**
