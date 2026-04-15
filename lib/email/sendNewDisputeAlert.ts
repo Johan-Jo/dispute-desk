@@ -274,7 +274,7 @@ ${s.footer}`;
     await resend.emails.send({
       from: FROM_EMAIL,
       replyTo: REPLY_TO,
-      to: teamEmail,
+      to: teamEmail.includes(",") ? teamEmail.split(",").map((e) => e.trim()) : teamEmail,
       subject,
       html,
       text,

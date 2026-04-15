@@ -607,6 +607,7 @@ interface DisputeRow {
   nextAction: string | null;
   lastEventAt: string | null;
   dueAt: string | null;
+  initiatedAt: string | null;
   finalOutcome: string | null;
 }
 
@@ -645,6 +646,7 @@ function RecentDisputesTable() {
           nextAction: (d.next_action_text as string) ?? null,
           lastEventAt: (d.last_event_at as string) ?? null,
           dueAt: (d.due_at as string) ?? null,
+          initiatedAt: (d.initiated_at as string) ?? null,
           finalOutcome: (d.final_outcome as string) ?? null,
         }))
       );
@@ -764,6 +766,7 @@ function RecentDisputesTable() {
                 <th style={recentDisputesThStyle}>{t("dashboard.lastEventCol")}</th>
                 <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.outcomeCol")}</th>
+                <th style={recentDisputesThStyle}>{t("table.date")}</th>
                 <th style={recentDisputesThStyle}>{t("table.actions")}</th>
               </tr>
             </thead>
@@ -794,6 +797,9 @@ function RecentDisputesTable() {
                     <Text as="span" variant="bodySm" tone="subdued">{formatShortDate(r.dueAt)}</Text>
                   </td>
                   <td style={recentDisputesTdStyle}>{outcomeBadge(r.finalOutcome)}</td>
+                  <td style={recentDisputesTdStyle}>
+                    <Text as="span" variant="bodySm" tone="subdued">{formatShortDate(r.initiatedAt)}</Text>
+                  </td>
                   <td style={recentDisputesTdStyle}>
                     <Link href={withShopParams(`/app/disputes/${r.id}`, searchParams)} style={recentDisputesViewDetailsLinkStyle}>
                       {t("table.viewDetails")}

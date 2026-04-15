@@ -218,7 +218,7 @@ This email was sent because you enabled evidence alerts in DisputeDesk setup.`;
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     replyTo: REPLY_TO,
-    to: ctx.to,
+    to: ctx.to.includes(",") ? ctx.to.split(",").map((e) => e.trim()) : ctx.to,
     subject,
     html,
     text,

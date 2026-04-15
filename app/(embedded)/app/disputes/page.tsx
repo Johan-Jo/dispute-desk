@@ -49,6 +49,7 @@ interface Dispute {
   amount: number | null;
   currency_code: string | null;
   due_at: string | null;
+  initiated_at: string | null;
   needs_review: boolean;
   last_synced_at: string | null;
   normalized_status?: string | null;
@@ -598,6 +599,7 @@ export default function DisputesListPage() {
                             <th>{t("disputes.columnLastEvent")}</th>
                           </>
                         )}
+                        <th>{t("table.date")}</th>
                         <th>{t("table.actions")}</th>
                       </tr>
                     </thead>
@@ -678,6 +680,12 @@ export default function DisputesListPage() {
                                 </td>
                               </>
                             )}
+                            {/* Date */}
+                            <td>
+                              <span className={styles.cellMuted}>
+                                {formatDueDate(d.initiated_at)}
+                              </span>
+                            </td>
                             {/* Actions */}
                             <td>
                               <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
