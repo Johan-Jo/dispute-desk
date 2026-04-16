@@ -278,34 +278,58 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         </>
       )}
 
-      {/* B. Why This Case Should Win */}
-      {(whyWins.strengths.length > 0 || whyWins.weaknesses.length > 0) && (
-        <div className={whyWins.overall === "weak" || whyWins.overall === "insufficient" ? styles.whyWinsCardWeak : styles.whyWinsCard}>
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">Your current defense</Text>
-            {whyWins.strengths.length > 0 && (
-              <BlockStack gap="100">
-                <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                  Based on current data, this case is {whyWins.overall}:
-                </Text>
-                {whyWins.strengths.map((s, i) => (
-                  <Text key={i} as="p" variant="bodySm">{`\u2022 ${s}`}</Text>
-                ))}
-              </BlockStack>
-            )}
-            {whyWins.weaknesses.length > 0 && (
-              <BlockStack gap="100">
-                <Text as="p" variant="bodySm" fontWeight="semibold" tone="caution">
-                  Weaknesses:
-                </Text>
-                {whyWins.weaknesses.map((w, i) => (
-                  <Text key={i} as="p" variant="bodySm">{`\u2022 ${w}`}</Text>
-                ))}
-              </BlockStack>
-            )}
-          </BlockStack>
-        </div>
-      )}
+      {/* B. Case Strength — unified decision block */}
+      <Card>
+        <BlockStack gap="300">
+          <InlineStack align="space-between" blockAlign="center">
+            <Text as="h3" variant="headingMd">Case strength</Text>
+            <Badge tone={
+              derived.caseStrength.overall === "strong" ? "success" :
+              derived.caseStrength.overall === "moderate" ? "warning" :
+              "critical"
+            }>
+              {derived.caseStrength.overall === "strong" ? "Strong" :
+               derived.caseStrength.overall === "moderate" ? "Medium" :
+               "Weak"}
+            </Badge>
+          </InlineStack>
+
+          {derived.caseStrength.strengthReason && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {derived.caseStrength.strengthReason}
+            </Text>
+          )}
+
+          {whyWins.strengths.length > 0 && (
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                Your core defense is supported by:
+              </Text>
+              {whyWins.strengths.map((s, i) => (
+                <Text key={i} as="p" variant="bodySm">{`\u2022 ${s}`}</Text>
+              ))}
+            </BlockStack>
+          )}
+
+          {derived.missingItems.length > 0 && derived.caseStrength.overall !== "strong" && (
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                To strengthen your case:
+              </Text>
+              {derived.missingItems.slice(0, 3).map((item) => (
+                <InlineStack key={item.field} gap="200" blockAlign="center">
+                  <Text as="p" variant="bodySm">
+                    {`\u2022 Add ${item.label}`}
+                  </Text>
+                  <Badge tone={item.priority === "critical" ? "attention" : undefined}>
+                    {item.priority === "critical" ? "critical" : "recommended"}
+                  </Badge>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          )}
+        </BlockStack>
+      </Card>
 
       {/* C. Rebuttal Editor */}
       {rebuttalDraft && (

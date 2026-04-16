@@ -37,6 +37,7 @@ const WEAKNESS_DESCRIPTIONS: Record<string, string> = {
 export function generateWhyWins(
   argumentMap: ArgumentMap | null,
   checklist: ChecklistItemV2[],
+  weightedStrength?: CaseStrengthLevel,
 ): WhyWinsResult {
   if (!argumentMap) {
     return { strengths: [], weaknesses: [], overall: "insufficient" };
@@ -53,6 +54,7 @@ export function generateWhyWins(
         strengths.push(desc);
       }
     }
+    // Only include weaknesses from merchant-actionable missing items
     for (const m of claim.missing) {
       if (m.impact === "high" || m.impact === "medium") {
         const desc = WEAKNESS_DESCRIPTIONS[m.field];
@@ -63,9 +65,10 @@ export function generateWhyWins(
     }
   }
 
-  return {
-    strengths,
-    weaknesses,
-    overall: argumentMap.overallStrength,
-  };
+  // Use weighted strength (from caseStrength engine) when provided,
+  // NOT the argument map's raw claim-based strength which causes
+  // contradictions (e.g., "insufficient" when AVS/CVV is strong).
+  const overall = weightedStrength ?? argumentMap.overallStrength;
+
+  return { strengths, weaknesses, overall };
 }
