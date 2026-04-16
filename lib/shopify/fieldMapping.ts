@@ -1,10 +1,25 @@
 import type { DisputeEvidenceUpdateInput } from "./mutations/disputeEvidenceUpdate";
 
 /**
- * IMPORTANT: All evidence submitted to Shopify must be in English.
- * This includes policy text, rebuttal arguments, and any merchant-provided
- * text. Non-English content should be translated or replaced before
- * submission. This is a Shopify requirement for dispute evidence.
+ * STRICT SUBMISSION RULES (NON-NEGOTIABLE):
+ *
+ * 1. All evidence submitted to Shopify MUST be in English.
+ *
+ * 2. DUAL RENDER RULE: Bank-facing output MUST NEVER include:
+ *    - Missing or unavailable evidence
+ *    - Completeness scores or readiness states
+ *    - Checklists or audit-style sections
+ *    - Internal logic, scoring, or system state
+ *    - Any section not supported by actual evidence
+ *
+ * 3. Every statement MUST be backed by available evidence.
+ *    If evidence is missing, the section is OMITTED — never mentioned.
+ *
+ * 4. Response shape MUST match the dispute reason family.
+ *    See lib/argument/responseEngine.ts for family strategies.
+ *
+ * 5. NEVER weaken the case by referencing what is absent.
+ *    "Not available" must not exist in bank output.
  */
 
 /**

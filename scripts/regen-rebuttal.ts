@@ -25,9 +25,29 @@ async function main() {
 
   const checklist = (pack?.checklist_v2 ?? []) as ChecklistItemV2[];
 
+  // Load evidence items for real data
+  const { data: evidenceItems } = await sb
+    .from("evidence_items")
+    .select("type, payload")
+    .eq("pack_id", packId);
+
   const argMap = generateArgumentMap("FRAUDULENT", checklist);
   const reason = selectRebuttalReason("FRAUDULENT", checklist);
-  const rebuttal = generateRebuttalDraft(argMap, reason);
+
+  // Build real evidence data from collected items
+  const paymentItem = evidenceItems?.find((i: { type: string; payload: Record<string, unknown> }) => i.type === "other" && i.payload?.avsResultCode);
+  const orderItem = evidenceItems?.find((i: { type: string }) => i.type === "order");
+  const evidenceData = {
+    avsCode: (paymentItem?.payload?.avsResultCode as string) ?? null,
+    cvvCode: (paymentItem?.payload?.cvvResultCode as string) ?? null,
+    cardCompany: (paymentItem?.payload?.cardCompany as string) ?? null,
+    cardLastFour: (paymentItem?.payload?.lastFour as string) ?? null,
+    gateway: (paymentItem?.payload?.gateway as string) ?? null,
+    orderName: (orderItem?.payload?.orderName as string) ?? null,
+    orderDate: (orderItem?.payload?.createdAt as string) ?? null,
+  };
+
+  const rebuttal = generateRebuttalDraft(argMap, reason, evidenceData);
 
   for (const s of rebuttal.sections) {
     console.log("[" + s.type + "]");
