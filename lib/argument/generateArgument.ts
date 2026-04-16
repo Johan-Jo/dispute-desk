@@ -29,8 +29,6 @@ const FIELD_LABELS: Record<string, string> = {
   product_description: "Product Description",
   duplicate_explanation: "Duplicate Explanation",
   supporting_documents: "Supporting Documents",
-  customer_ip: "Customer Purchase IP",
-  risk_analysis: "Fraud Risk Assessment",
 };
 
 function getFieldLabel(field: string, checklist: ChecklistItemV2[]): string {

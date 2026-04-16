@@ -23,8 +23,6 @@ const EVIDENCE_PHRASES: Record<string, string> = {
   activity_log: "customer account activity records",
   duplicate_explanation: "transaction records showing distinct orders",
   supporting_documents: "additional supporting documentation",
-  customer_ip: "customer purchase IP address records",
-  risk_analysis: "fraud risk assessment data",
 };
 
 function evidencePhrase(field: string): string {

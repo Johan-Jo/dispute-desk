@@ -19,8 +19,6 @@ const STRENGTH_DESCRIPTIONS: Record<string, string> = {
   product_description: "Product description matches listing",
   activity_log: "Customer account activity verified",
   duplicate_explanation: "Separate transactions documented",
-  customer_ip: "IP address matches billing region",
-  risk_analysis: "Fraud risk assessment favorable",
 };
 
 const WEAKNESS_DESCRIPTIONS: Record<string, string> = {
@@ -34,8 +32,6 @@ const WEAKNESS_DESCRIPTIONS: Record<string, string> = {
   refund_policy: "Refund policy not captured",
   shipping_policy: "Shipping policy not captured",
   cancellation_policy: "Cancellation policy not captured",
-  customer_ip: "Customer IP address not available",
-  risk_analysis: "No fraud risk assessment available",
 };
 
 export function generateWhyWins(

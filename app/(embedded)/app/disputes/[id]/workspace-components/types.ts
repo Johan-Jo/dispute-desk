@@ -102,7 +102,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
   { key: "fulfillment", label: "Fulfillment & Delivery", fields: ["shipping_tracking", "delivery_proof"] },
   { key: "communication", label: "Customer Communication", fields: ["customer_communication"] },
   { key: "policy", label: "Policies & Disclosures", fields: ["refund_policy", "shipping_policy", "cancellation_policy"] },
-  { key: "identity", label: "Customer Identity & History", fields: ["activity_log", "customer_ip", "risk_analysis"] },
+  { key: "identity", label: "Customer Identity & History", fields: ["activity_log"] },
   { key: "merchant", label: "Merchant Evidence", fields: ["supporting_documents", "product_description", "duplicate_explanation"] },
 ];
 
