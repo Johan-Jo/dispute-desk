@@ -151,6 +151,7 @@ All transactional email is sent via **Resend** using branded table-based HTML te
   - `lib/email/sendWelcome.ts` — branded welcome email; accepts `locale?: Locale`.
   - `lib/email/sendMagicLink.ts` — branded magic link email; accepts `locale?: Locale`.
   - `lib/email/sendAdminNotification.ts` — plain admin alert to `ADMIN_NOTIFY_EMAIL` on every confirmed sign-up.
+  - `lib/email/sendPackSavedAlert.ts` — "Evidence saved" confirmation with locale-aware "Submit now in Shopify Admin" CTA. Includes an auto-submit note explaining Shopify will submit on the deadline if the merchant doesn't act. Fired after `save_to_shopify` job completes (fire-and-forget). Gated by `evidenceReady` notification preference.
 - **Email trigger points:**
   1. **Welcome — email/password sign-up:** the Send Email hook emails a link to `GET /api/auth/confirm?token_hash=…&type=signup&redirect=…` (and optional `locale`). The confirm route calls `verifyOtp` with `token_hash` (no PKCE). On `type=signup` it sends welcome + admin notification server-side, then redirects. Legacy: `?code=…` still uses PKCE `exchangeCodeForSession` when the link came from Supabase-hosted verify.
   2. **Welcome — Shopify OAuth new user:** `GET /api/auth/shopify/callback` calls `sendWelcomeEmail` + `sendAdminSignupNotification` after creating the Supabase user.

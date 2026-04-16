@@ -144,7 +144,7 @@ async function sendManualEvidenceAlert(
   shopId: string,
   packId: string
 ): Promise<void> {
-  // Load pack + dispute info
+  // Load pack → dispute info
   const { data: pack } = await db
     .from("evidence_packs")
     .select("id, dispute_id, shop_id")
@@ -154,10 +154,13 @@ async function sendManualEvidenceAlert(
 
   const { data: dispute } = await db
     .from("disputes")
-    .select("id, reason, amount, currency_code")
+    .select("id, reason, amount, currency_code, evidence_alert_sent_at")
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) return;
+
+  // Skip if alert was already sent for this dispute (survives pack rebuilds)
+  if (dispute.evidence_alert_sent_at) return;
 
   // Load store profile from shop_setup
   const { data: setup } = await db
@@ -195,7 +198,7 @@ async function sendManualEvidenceAlert(
 
   const amount = dispute.amount != null ? String(dispute.amount) : null;
 
-  await sendEvidenceNeededAlert({
+  const result = await sendEvidenceNeededAlert({
     to,
     shopName: shop?.shop_domain ?? undefined,
     shopDomain: shop?.shop_domain ?? null,
@@ -206,4 +209,12 @@ async function sendManualEvidenceAlert(
     digitalProof,
     deliveryProof,
   });
+
+  // Stamp on the dispute so subsequent pack rebuilds won't re-send
+  if (result.ok) {
+    await db
+      .from("disputes")
+      .update({ evidence_alert_sent_at: new Date().toISOString() })
+      .eq("id", dispute.id);
+  }
 }

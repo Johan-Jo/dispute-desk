@@ -34,6 +34,7 @@ interface S {
   heading: string;
   intro: (p: { reason: string; amount: string; shop: string }) => string;
   nextStep: string;
+  autoSubmitNote: string;
   ctaShopify: string;
   ctaDispute: string;
   footer: string;
@@ -44,8 +45,9 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, amount }) => `Evidence saved: ${reason} dispute (${amount})`,
     heading: "Evidence saved to Shopify",
     intro: ({ reason, amount, shop }) => `The evidence pack for the <strong>${reason}</strong> dispute (${amount}) on ${shop} has been saved to Shopify.`,
-    nextStep: "Open Shopify Admin to review and submit your response to the card network.",
-    ctaShopify: "Open in Shopify Admin →",
+    nextStep: "Want to speed things up? Submit your response now in Shopify Admin instead of waiting for the deadline.",
+    autoSubmitNote: "If you don't submit manually, Shopify will auto-submit your evidence on the dispute due date.",
+    ctaShopify: "Submit now in Shopify Admin →",
     ctaDispute: "View dispute in DisputeDesk →",
     footer: "You received this because evidence alerts are enabled in DisputeDesk settings.",
   },
@@ -53,8 +55,9 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, amount }) => `Evidencia guardada: disputa ${reason} (${amount})`,
     heading: "Evidencia guardada en Shopify",
     intro: ({ reason, amount, shop }) => `El paquete de evidencia para la disputa <strong>${reason}</strong> (${amount}) en ${shop} ha sido guardado en Shopify.`,
-    nextStep: "Abre Shopify Admin para revisar y enviar tu respuesta a la red de tarjetas.",
-    ctaShopify: "Abrir en Shopify Admin →",
+    nextStep: "¿Quieres acelerar el proceso? Envía tu respuesta ahora en Shopify Admin en lugar de esperar la fecha límite.",
+    autoSubmitNote: "Si no envías manualmente, Shopify enviará automáticamente tu evidencia en la fecha límite de la disputa.",
+    ctaShopify: "Enviar ahora en Shopify Admin →",
     ctaDispute: "Ver disputa en DisputeDesk →",
     footer: "Recibiste esto porque las alertas de evidencia están activadas en DisputeDesk.",
   },
@@ -62,8 +65,9 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, amount }) => `Evidência salva: disputa ${reason} (${amount})`,
     heading: "Evidência salva no Shopify",
     intro: ({ reason, amount, shop }) => `O pacote de evidência para a disputa <strong>${reason}</strong> (${amount}) em ${shop} foi salvo no Shopify.`,
-    nextStep: "Abra o Shopify Admin para revisar e enviar sua resposta à bandeira do cartão.",
-    ctaShopify: "Abrir no Shopify Admin →",
+    nextStep: "Quer agilizar? Envie sua resposta agora no Shopify Admin em vez de esperar o prazo.",
+    autoSubmitNote: "Se você não enviar manualmente, o Shopify enviará automaticamente sua evidência na data limite da disputa.",
+    ctaShopify: "Enviar agora no Shopify Admin →",
     ctaDispute: "Ver disputa no DisputeDesk →",
     footer: "Você recebeu isto porque os alertas de evidência estão ativados nas configurações do DisputeDesk.",
   },
@@ -71,8 +75,9 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, amount }) => `Preuves enregistrées : litige ${reason} (${amount})`,
     heading: "Preuves enregistrées sur Shopify",
     intro: ({ reason, amount, shop }) => `Le dossier de preuves pour le litige <strong>${reason}</strong> (${amount}) sur ${shop} a été enregistré sur Shopify.`,
-    nextStep: "Ouvrez Shopify Admin pour vérifier et soumettre votre réponse au réseau de cartes.",
-    ctaShopify: "Ouvrir dans Shopify Admin →",
+    nextStep: "Vous voulez accélérer le processus ? Soumettez votre réponse maintenant dans Shopify Admin au lieu d'attendre la date limite.",
+    autoSubmitNote: "Si vous ne soumettez pas manuellement, Shopify soumettra automatiquement vos preuves à la date limite du litige.",
+    ctaShopify: "Soumettre maintenant dans Shopify Admin →",
     ctaDispute: "Voir le litige dans DisputeDesk →",
     footer: "Vous recevez ceci car les alertes de preuves sont activées dans les paramètres DisputeDesk.",
   },
@@ -80,8 +85,9 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, amount }) => `Beweise gespeichert: Reklamation ${reason} (${amount})`,
     heading: "Beweise in Shopify gespeichert",
     intro: ({ reason, amount, shop }) => `Das Beweispaket für die <strong>${reason}</strong>-Reklamation (${amount}) bei ${shop} wurde in Shopify gespeichert.`,
-    nextStep: "Öffnen Sie Shopify Admin, um Ihre Antwort an das Kartennetzwerk zu prüfen und einzureichen.",
-    ctaShopify: "In Shopify Admin öffnen →",
+    nextStep: "Möchten Sie den Vorgang beschleunigen? Reichen Sie Ihre Antwort jetzt in Shopify Admin ein, anstatt auf die Frist zu warten.",
+    autoSubmitNote: "Wenn Sie nicht manuell einreichen, wird Shopify Ihre Beweise am Fristdatum der Reklamation automatisch einreichen.",
+    ctaShopify: "Jetzt in Shopify Admin einreichen →",
     ctaDispute: "Reklamation in DisputeDesk ansehen →",
     footer: "Sie erhalten dies, weil Beweisbenachrichtigungen in den DisputeDesk-Einstellungen aktiviert sind.",
   },
@@ -89,8 +95,9 @@ const STRINGS: Record<Locale, S> = {
     subject: ({ reason, amount }) => `Bevis sparade: tvist ${reason} (${amount})`,
     heading: "Bevis sparade i Shopify",
     intro: ({ reason, amount, shop }) => `Bevispaketet för <strong>${reason}</strong>-tvisten (${amount}) på ${shop} har sparats i Shopify.`,
-    nextStep: "Öppna Shopify Admin för att granska och skicka in ditt svar till kortnätverket.",
-    ctaShopify: "Öppna i Shopify Admin →",
+    nextStep: "Vill du snabba på processen? Skicka in ditt svar nu i Shopify Admin istället för att vänta på tidsfristen.",
+    autoSubmitNote: "Om du inte skickar in manuellt kommer Shopify att automatiskt skicka in dina bevis på tvistens förfallodatum.",
+    ctaShopify: "Skicka in nu i Shopify Admin →",
     ctaDispute: "Visa tvist i DisputeDesk →",
     footer: "Du fick detta eftersom bevisaviseringar är aktiverade i DisputeDesk-inställningarna.",
   },
@@ -201,13 +208,16 @@ export async function sendPackSavedAlert(
       </p>
 
       <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 16px;margin-bottom:20px">
-        <p style="font-size:13px;color:#1E40AF;margin:0;line-height:1.5">
+        <p style="font-size:13px;color:#1E40AF;margin:0 0 8px;line-height:1.5;font-weight:600">
           ${s.nextStep}
+        </p>
+        <p style="font-size:12px;color:#6B7280;margin:0;line-height:1.4">
+          ${s.autoSubmitNote}
         </p>
       </div>
 
       <div>
-        ${shopifyUrl ? `<a href="${shopifyUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;margin-right:12px;margin-bottom:8px">${s.ctaShopify.replace(" →", " →")}</a>` : ""}
+        ${shopifyUrl ? `<a href="${shopifyUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;margin-right:12px;margin-bottom:8px">${s.ctaShopify.replace(" →", " →")}</a>` : ""}
         <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#F3F4F6;color:#374151;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;margin-bottom:8px">${s.ctaDispute.replace(" →", " →")}</a>
       </div>
     </div>
@@ -221,6 +231,7 @@ export async function sendPackSavedAlert(
 ${s.intro({ reason, amount: amountStr, shop: shopName }).replace(/<[^>]+>/g, "")}
 
 ${s.nextStep}
+${s.autoSubmitNote}
 
 ${shopifyUrl ? `${s.ctaShopify.replace(" →", "")}: ${shopifyUrl}` : ""}
 ${s.ctaDispute.replace(" →", "")}: ${disputeUrl}

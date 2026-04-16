@@ -7,7 +7,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 /**
  * GET /api/cron/dispute-reminders
  *
- * Called by Vercel Cron every 6 hours. For each dispute due within 48h
+ * Called by Vercel Cron once daily (9 AM UTC). For each dispute due within 48h
  * that hasn't had a reminder sent yet, sends a due-date reminder email
  * to the merchant's team email (if the beforeDue preference is enabled).
  */

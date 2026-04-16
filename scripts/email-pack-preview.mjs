@@ -55,11 +55,22 @@ async function main() {
   // Filter to only relevant, available evidence
   const bankItems = (items ?? []).filter(i => relevantTypes.has(i.type));
 
+  // ── Classify defense position from evidence ──
+  const hasAvs = bankItems.some(i => i.type === "other" && i.payload?.avsResultCode);
+  const hasCvv = bankItems.some(i => i.type === "other" && i.payload?.cvvResultCode);
+  const hasOrder = bankItems.some(i => i.type === "order");
+  const hasComms = bankItems.some(i => i.type === "comms");
+  const hasHistory = bankItems.some(i => i.type === "access_log");
+  const signals = [hasAvs && "AVS match", hasCvv && "CVV match", hasOrder && "Order confirmed", hasComms && "Customer notified", hasHistory && "Account history"].filter(Boolean);
+  const positionLabel = "Purchase made by the legitimate cardholder";
+  const confidence = signals.length >= 3 ? "High" : signals.length >= 2 ? "Medium" : "Low";
+
   // ── Build bank-facing output ──
 
   let body = "";
   body += `DISPUTE RESPONSE \u2014 ${reasonLabel.toUpperCase()}\n`;
   body += `Order ${orderName} | ${dispute.currency_code} ${dispute.amount}\n`;
+  body += `Defense position: ${positionLabel} (${confidence} confidence)\n`;
   body += "\u2500".repeat(60) + "\n\n";
 
   // Argument (rebuttal)
