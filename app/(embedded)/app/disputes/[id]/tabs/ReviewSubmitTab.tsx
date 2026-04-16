@@ -198,7 +198,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
               loading={isSaving}
               size="large"
             >
-              Save evidence to Shopify
+              Submit evidence to Shopify
             </Button>
           </div>
           {!isStrong && (
