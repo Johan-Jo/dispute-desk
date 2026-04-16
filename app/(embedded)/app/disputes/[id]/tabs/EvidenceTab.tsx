@@ -186,12 +186,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
           {/* Argument Summary */}
           <Card>
             <BlockStack gap="200">
-              <InlineStack align="space-between" blockAlign="center">
-                <Text as="h3" variant="headingMd">Argument summary</Text>
-                <Button size="slim" variant="plain" onClick={actions.regenerateArgument}>
-                  Regenerate
-                </Button>
-              </InlineStack>
+              <Text as="h3" variant="headingMd">Argument summary</Text>
               <Text as="p" variant="bodySm" tone="subdued">
                 {argumentMap.issuerClaim.text}
               </Text>
@@ -335,10 +330,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
       {rebuttalDraft && (
         <Card>
           <BlockStack gap="300">
-            <InlineStack align="space-between" blockAlign="center">
-              <Text as="h3" variant="headingMd">Rebuttal letter</Text>
-              <Badge>{rebuttalDraft.source === "generated" ? "Auto-generated" : "Edited"}</Badge>
-            </InlineStack>
+            <Text as="h3" variant="headingMd">Rebuttal letter</Text>
             {rebuttalDraft.sections.map((section) => (
               <BlockStack key={section.id} gap="100">
                 <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
