@@ -8,17 +8,18 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { ArgumentMap, RiskResult, CaseStrengthLevel } from "./types";
 
 const RISK_DESCRIPTIONS: Record<string, string> = {
-  avs_cvv_match: "Missing AVS/CVV verification weakens fraud defense",
-  billing_address_match: "Unverified billing address reduces credibility",
+  // System-derived: descriptive, not action-oriented
+  avs_cvv_match: "AVS/CVV data is not available for this transaction",
+  billing_address_match: "Billing/shipping consistency could not be determined",
+  // Merchant-actionable: these are real gaps the merchant can address
   shipping_tracking: "No tracking data weakens delivery proof",
-  delivery_proof: "Missing delivery confirmation is a significant gap",
+  delivery_proof: "No delivery confirmation is a significant gap",
   customer_communication: "No customer communication reduces merchant credibility",
-  refund_policy: "Missing refund policy weakens policy defense",
-  shipping_policy: "Missing shipping policy weakens shipping claims",
-  cancellation_policy: "Missing cancellation policy weakens subscription defense",
-  product_description: "No product description weakens 'as described' defense",
-  activity_log: "No customer history reduces fraud defense",
-  customer_ip: "Missing IP data reduces identity verification",
+  refund_policy: "Refund policy not captured",
+  shipping_policy: "Shipping policy not captured",
+  cancellation_policy: "Cancellation policy not captured",
+  product_description: "No product description weakens case",
+  activity_log: "No customer purchase history available",
 };
 
 export function generateRiskExplanation(

@@ -129,6 +129,10 @@ function deriveMissingItems(
 ): MissingItemWithContext[] {
   return checklist
     .filter((c) => c.status === "missing")
+    // Only merchant-actionable items appear as tasks.
+    // System-derived evidence (auto/conditional_auto) is not something
+    // the merchant can upload or fix — it should never appear as a CTA.
+    .filter((c) => c.collectionType === "manual" || !c.collectionType)
     .map((c) => ({
       field: c.field,
       label: c.label,

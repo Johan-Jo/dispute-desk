@@ -25,6 +25,12 @@ export interface CounterclaimNode {
     label: string;
     status: "available" | "waived";
   }>;
+  /** System-derived evidence that is not present (informational, not actionable). */
+  systemUnavailable: Array<{
+    field: string;
+    label: string;
+  }>;
+  /** Merchant-actionable evidence that can be added. */
   missing: Array<{
     field: string;
     label: string;

@@ -66,27 +66,39 @@ export function generateArgumentMap(
     fieldStatus.set(item.field, item.status);
   }
 
+  // Build collectionType lookup from checklist
+  const fieldCollection = new Map<string, string>();
+  for (const item of checklist) {
+    if (item.collectionType) fieldCollection.set(item.field, item.collectionType);
+  }
+
   const counterclaims: CounterclaimNode[] = template.counterclaims
     .map((ct) => {
       const allEvidence = [...ct.requiredEvidence, ...ct.supportingEvidence];
       const supporting: CounterclaimNode["supporting"] = [];
+      const systemUnavailable: CounterclaimNode["systemUnavailable"] = [];
       const missing: CounterclaimNode["missing"] = [];
 
       for (const field of allEvidence) {
         const status = fieldStatus.get(field) ?? "missing";
         const label = getFieldLabel(field, checklist);
         const isRequired = ct.requiredEvidence.includes(field);
+        const collection = fieldCollection.get(field) ?? "auto";
 
         if (status === "available" || status === "waived") {
           supporting.push({ field, label, status });
         } else if (status === "missing") {
-          // Only show missing items the merchant can actually act on
-          // (not unavailable/non-actionable signals)
-          missing.push({
-            field,
-            label,
-            impact: isRequired ? "high" : "medium",
-          });
+          // System-derived evidence: informational only, not a merchant task
+          if (collection === "auto" || collection === "conditional_auto") {
+            systemUnavailable.push({ field, label });
+          } else {
+            // Merchant-actionable: can be uploaded
+            missing.push({
+              field,
+              label,
+              impact: isRequired ? "high" : "medium",
+            });
+          }
         }
         // "unavailable" items are omitted — can't be collected
       }
@@ -101,11 +113,16 @@ export function generateArgumentMap(
         title: ct.title,
         strength: claimStrength(ct.requiredEvidence.length, requiredPresent),
         supporting,
+        systemUnavailable,
         missing,
       };
     })
-    // Only include claims that have at least some evidence or actionable gaps
-    .filter((claim) => claim.supporting.length > 0 || claim.missing.length > 0);
+    // Include claims that have evidence, actionable gaps, or system signals
+    .filter((claim) =>
+      claim.supporting.length > 0 ||
+      claim.missing.length > 0 ||
+      claim.systemUnavailable.length > 0,
+    );
 
   // Overall strength: weakest claim determines ceiling
   let overallStrength: CaseStrengthLevel = "strong";

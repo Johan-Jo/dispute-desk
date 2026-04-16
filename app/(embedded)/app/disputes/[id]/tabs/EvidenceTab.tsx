@@ -242,6 +242,21 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                       </InlineStack>
                     )}
 
+                    {/* System-derived evidence: not available, informational only */}
+                    {claim.systemUnavailable && claim.systemUnavailable.length > 0 && (
+                      <InlineStack gap="200" wrap>
+                        {claim.systemUnavailable.map((s) => (
+                          <span
+                            key={s.field}
+                            className={`${styles.evidenceTag} ${styles.evidenceTagWaived}`}
+                          >
+                            {s.label}: Not available
+                          </span>
+                        ))}
+                      </InlineStack>
+                    )}
+
+                    {/* Merchant-actionable: can be added */}
                     {claim.missing.length > 0 && (
                       <InlineStack gap="200" wrap>
                         {claim.missing.map((m) => (
@@ -250,7 +265,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                             className={`${styles.evidenceTag} ${styles.evidenceTagMissing}`}
                             onClick={() => actions.navigateToEvidence(m.field)}
                           >
-                            {"\u26a0"} {m.label}
+                            Add {m.label}
                           </span>
                         ))}
                       </InlineStack>
@@ -492,9 +507,12 @@ function EvidenceItemInline({
 
   const highlighted = focusField === item.field;
 
+  const isSystemDerived = item.collectionType === "auto" || item.collectionType === "conditional_auto";
   const rowClass =
     item.status === "available" ? styles.evidenceRowAvailable :
     item.status === "waived" ? styles.evidenceRowAvailable :
+    item.status === "unavailable" ? styles.evidenceRowAvailable :
+    isSystemDerived ? styles.evidenceRowAvailable :
     item.priority === "critical" ? styles.evidenceRowMissing :
     styles.evidenceRowMissingRecommended;
 
@@ -521,13 +539,16 @@ function EvidenceItemInline({
               source={
                 item.status === "available" ? CheckCircleIcon :
                 item.status === "waived" ? MinusCircleIcon :
-                item.priority === "critical" ? XCircleIcon :
+                (item.collectionType === "auto" || item.collectionType === "conditional_auto")
+                  ? MinusCircleIcon :
+                item.priority === "critical" ? AlertTriangleIcon :
                 AlertTriangleIcon
               }
               tone={
                 item.status === "available" ? "success" :
                 item.status === "waived" ? "subdued" :
-                item.priority === "critical" ? "critical" :
+                (item.collectionType === "auto" || item.collectionType === "conditional_auto")
+                  ? "subdued" :
                 "caution"
               }
             />
@@ -535,12 +556,18 @@ function EvidenceItemInline({
             <Badge tone={
               item.status === "available" ? "success" :
               item.status === "waived" ? undefined :
-              item.priority === "critical" ? "critical" :
+              item.status === "unavailable" ? undefined :
+              (item.collectionType === "auto" || item.collectionType === "conditional_auto")
+                ? undefined :
+              item.priority === "critical" ? "attention" :
               "attention"
             }>
               {item.status === "available" ? "Available" :
                item.status === "waived" ? "Waived" :
-               item.priority === "critical" ? "High impact" :
+               item.status === "unavailable" ? "Not available" :
+               (item.collectionType === "auto" || item.collectionType === "conditional_auto")
+                 ? "Not available" :
+               item.priority === "critical" ? "Add to strengthen" :
                "Recommended"}
             </Badge>
             {item.strength !== "none" && item.status === "available" && (
@@ -556,7 +583,8 @@ function EvidenceItemInline({
                 {showContent ? "Hide" : "Preview"}
               </Button>
             )}
-            {item.status === "missing" && !readOnly && !uploading && (
+            {/* Only show Upload/Skip for merchant-actionable items (manual collectionType) */}
+            {item.status === "missing" && !readOnly && !uploading && (item.collectionType === "manual" || !item.collectionType) && (
               <>
                 <Button size="slim" onClick={() => setShowUpload((v) => !v)}>
                   {error ? "Retry" : "Upload"}
