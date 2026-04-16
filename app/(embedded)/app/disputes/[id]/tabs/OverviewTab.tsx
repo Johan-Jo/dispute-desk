@@ -154,9 +154,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             </BlockStack>
           )}
 
-          {caseStrength.overall === "strong" && (
+          {caseStrength.strengthReason && (
             <Text as="p" variant="bodySm" tone="subdued">
-              All critical evidence is present. This case is ready for submission.
+              {caseStrength.strengthReason}
             </Text>
           )}
         </BlockStack>

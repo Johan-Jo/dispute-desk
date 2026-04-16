@@ -561,7 +561,7 @@ export function useDisputeWorkspace(disputeId: string) {
     const blockerCount = effectiveChecklist.filter((c) => c.blocking && c.status === "missing").length;
     const warningCount = effectiveChecklist.filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing").length;
 
-    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist);
+    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason);
     const whyWins = generateWhyWins(data.argumentMap, effectiveChecklist);
     const risk = generateRiskExplanation(data.argumentMap, effectiveChecklist);
     const improvement = calculateImprovement(data.argumentMap, effectiveChecklist, data.dispute.reason);

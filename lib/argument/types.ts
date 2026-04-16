@@ -62,6 +62,8 @@ export interface CaseStrengthResult {
   score: number;
   supportedClaims: number;
   totalClaims: number;
+  /** Merchant-facing explanation of why this strength was assigned. */
+  strengthReason?: string;
   improvementHint: string | null;
 }
 
