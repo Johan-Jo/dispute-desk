@@ -9,25 +9,29 @@ import {
   Badge,
   Button,
   Banner,
-  ProgressBar,
+  Collapsible,
   Divider,
   Modal,
-  Checkbox,
   Select,
   TextField,
 } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { SubmissionField } from "../workspace-components/types";
-import styles from "../workspace.module.css";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
+
+function strengthLabel(s: string): string {
+  if (s === "strong") return "Strong";
+  if (s === "moderate") return "Medium";
+  return "Weak";
+}
 
 export default function ReviewSubmitTab({ workspace }: { workspace: Workspace }) {
   const { data, clientState, derived, actions } = workspace;
 
-  // Load submission preview
   const [fields, setFields] = useState<SubmissionField[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideNote, setOverrideNote] = useState("");
 
@@ -45,12 +49,12 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
   }, [pack]);
 
   const handleSubmit = useCallback(() => {
-    if (readiness === "ready_with_warnings" || warningCount > 0) {
+    if (derived.caseStrength.overall === "weak" || readiness === "ready_with_warnings" || warningCount > 0) {
       actions.setShowOverrideModal(true);
     } else {
       actions.submitToShopify();
     }
-  }, [readiness, warningCount, actions]);
+  }, [derived.caseStrength.overall, readiness, warningCount, actions]);
 
   const handleConfirmOverride = useCallback(() => {
     actions.submitToShopify(overrideReason, overrideNote || undefined);
@@ -60,16 +64,14 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
 
   if (!data) return null;
 
-  const { caseStrength, risk, improvement } = derived;
+  const { caseStrength, improvement, whyWins, missingItems, nextAction } = derived;
 
   if (!pack) {
     return (
       <Card>
-        <BlockStack gap="200">
-          <Text as="p" variant="bodyMd" tone="subdued">
-            Generate an evidence pack first to review and submit.
-          </Text>
-        </BlockStack>
+        <Text as="p" variant="bodyMd" tone="subdued">
+          Generate an evidence pack first to review and submit.
+        </Text>
       </Card>
     );
   }
@@ -77,143 +79,100 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
   const isReadOnly = derived.isReadOnly;
   const isSaving = clientState.saving;
   const canSubmit = readiness !== "blocked" && !isReadOnly;
+  const isStrong = caseStrength.overall === "strong";
+  const isWeak = caseStrength.overall === "weak";
+
+  // Readiness label
+  const readinessLabel = isReadOnly ? "Submitted"
+    : readiness === "blocked" ? "Blocked"
+    : isWeak ? "Risky"
+    : "Ready to submit";
+  const readinessTone = isReadOnly ? "info" as const
+    : readiness === "blocked" ? "critical" as const
+    : isWeak ? "warning" as const
+    : "success" as const;
 
   return (
     <BlockStack gap="400">
-      {/* A. Submission Preview */}
+      {/* 1. DECISION BLOCK — primary */}
       <Card>
         <BlockStack gap="300">
-          <Text as="h3" variant="headingMd">Submission preview</Text>
-          <Text as="p" variant="bodySm" tone="subdued">
-            This is exactly what will be sent to Shopify.
-          </Text>
-
-          {previewLoading ? (
-            <Text as="p" variant="bodySm" tone="subdued">Loading preview...</Text>
-          ) : fields.length === 0 ? (
-            <Text as="p" variant="bodySm" tone="subdued">No evidence fields to submit.</Text>
-          ) : (
-            <BlockStack gap="0">
-              <div className={styles.submissionRow} style={{ fontWeight: 600 }}>
-                <span>Shopify field</span>
-                <span>Content</span>
-                <span>Source</span>
-                <span>Include</span>
-              </div>
-              {fields.map((field) => {
-                const excluded = clientState.excludedFields.has(field.shopifyFieldName);
-                return (
-                  <div key={field.shopifyFieldName} className={styles.submissionRow} style={{ opacity: excluded ? 0.5 : 1 }}>
-                    <Text as="p" variant="bodySm" fontWeight="semibold">
-                      {field.shopifyFieldLabel}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {field.contentPreview || "\u2014"}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {field.source}
-                    </Text>
-                    <Checkbox
-                      label=""
-                      checked={!excluded && field.included}
-                      onChange={() => actions.toggleSubmissionField(field.shopifyFieldName)}
-                      disabled={isReadOnly || !field.content}
-                    />
-                  </div>
-                );
-              })}
-            </BlockStack>
-          )}
-        </BlockStack>
-      </Card>
-
-      {/* B. Readiness */}
-      <Card>
-        <BlockStack gap="200">
-          <InlineStack align="space-between" blockAlign="center">
-            <Text as="h3" variant="headingMd">Readiness</Text>
-            <Badge
-              tone={
-                readiness === "ready" ? "success" :
-                readiness === "ready_with_warnings" ? "warning" :
-                readiness === "blocked" ? "critical" :
-                "info"
-              }
-            >
-              {readiness === "ready" ? "Ready to submit" :
-               readiness === "ready_with_warnings" ? "Ready with warnings" :
-               readiness === "blocked" ? "Blocked" :
-               "Submitted"}
-            </Badge>
-          </InlineStack>
-          <ProgressBar
-            progress={pack.completenessScore}
-            tone={pack.completenessScore >= 80 ? "success" : "critical"}
-            size="small"
-          />
-          {caseStrength.overall !== "insufficient" && (
-            <Text as="p" variant="bodySm" tone="subdued">
-              Case strength: {caseStrength.overall}
-            </Text>
-          )}
-        </BlockStack>
-      </Card>
-
-      {/* C. Risk Explanation */}
-      {risk.risks.length > 0 && !isReadOnly && (
-        <div className={styles.riskCard}>
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">What happens if you submit now</Text>
+          <InlineStack align="space-between" blockAlign="center" wrap>
             <InlineStack gap="200" blockAlign="center">
-              <Text as="p" variant="bodySm" fontWeight="semibold">
-                Expected outcome:
-              </Text>
-              <Badge
-                tone={risk.expectedOutcome === "strong" ? "success" : risk.expectedOutcome === "moderate" ? "warning" : "critical"}
-              >
-                {risk.expectedOutcome.charAt(0).toUpperCase() + risk.expectedOutcome.slice(1)}
+              <Badge tone={readinessTone}>{readinessLabel}</Badge>
+              <Badge tone={
+                isStrong ? "success" : caseStrength.overall === "moderate" ? "warning" : "critical"
+              }>
+                {`Case strength: ${strengthLabel(caseStrength.overall)}`}
               </Badge>
             </InlineStack>
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" fontWeight="semibold">Risks:</Text>
-              {risk.risks.map((r, i) => (
-                <Text key={i} as="p" variant="bodySm">{`\u2022 ${r}`}</Text>
-              ))}
-            </BlockStack>
-          </BlockStack>
-        </div>
-      )}
+          </InlineStack>
 
-      {/* D. Case Improvement Signal */}
-      {improvement && !isReadOnly && (
-        <div className={styles.improvementCard}>
-          <InlineStack align="space-between" blockAlign="center" wrap>
+          {caseStrength.strengthReason && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {caseStrength.strengthReason}
+            </Text>
+          )}
+
+          {/* Supporting evidence */}
+          {whyWins.strengths.length > 0 && (
             <BlockStack gap="100">
               <Text as="p" variant="bodySm" fontWeight="semibold">
-                {`Case strength: ${improvement.currentStrength} \u2192 ${improvement.potentialStrength}`}
+                Your defense is supported by:
               </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {`after adding: ${improvement.action.replace("Add ", "")}`}
-              </Text>
+              {whyWins.strengths.map((s, i) => (
+                <Text key={i} as="p" variant="bodySm">{`\u2022 ${s}`}</Text>
+              ))}
             </BlockStack>
-            <Button
-              size="slim"
-              onClick={() => actions.navigateToEvidence(improvement.field)}
-            >
-              Add now
-            </Button>
-          </InlineStack>
-        </div>
-      )}
+          )}
 
-      {/* E. Submit Action */}
+          {/* Missing — actionable only */}
+          {!isStrong && missingItems.length > 0 && !isReadOnly && (
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                To strengthen your case:
+              </Text>
+              {missingItems.slice(0, 3).map((item) => (
+                <InlineStack key={item.field} gap="200" blockAlign="center">
+                  <Text as="p" variant="bodySm">{`\u2022 Add ${item.label}`}</Text>
+                  <Badge tone={item.priority === "critical" ? "attention" : undefined}>
+                    {item.priority === "critical" ? "critical" : "recommended"}
+                  </Badge>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          )}
+
+          {/* Next best action */}
+          {!isStrong && !isReadOnly && improvement && (
+            <>
+              <Divider />
+              <InlineStack align="space-between" blockAlign="center" wrap>
+                <BlockStack gap="050">
+                  <Text as="p" variant="bodySm" fontWeight="semibold">
+                    Next best action
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {improvement.action.replace("Add ", "Add ") + " to improve your case."}
+                  </Text>
+                </BlockStack>
+                <Button size="slim" onClick={() => actions.navigateToEvidence(improvement.field)}>
+                  {improvement.action}
+                </Button>
+              </InlineStack>
+            </>
+          )}
+        </BlockStack>
+      </Card>
+
+      {/* 2. SUBMIT / IMPROVE BUTTONS */}
       <Card>
         <BlockStack gap="200">
           {isReadOnly ? (
             <>
               <Banner tone="success" hideIcon>
                 <Text as="p" variant="bodySm">
-                  Evidence submitted to Shopify on {pack.savedToShopifyAt ? new Date(pack.savedToShopifyAt).toLocaleDateString() : "\u2014"}
+                  {`Evidence submitted to Shopify on ${pack.savedToShopifyAt ? new Date(pack.savedToShopifyAt).toLocaleDateString() : "\u2014"}`}
                 </Text>
               </Banner>
               {data.dispute.disputeGid && data.dispute.shopDomain && (
@@ -227,26 +186,78 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
               )}
             </>
           ) : (
-            <Button
-              fullWidth
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={!canSubmit || isSaving}
-              loading={isSaving}
-            >
-              {readiness === "blocked" ? "Resolve blockers to submit" :
-               readiness === "ready_with_warnings" ? "Review & submit" :
-               "Submit to Shopify"}
-            </Button>
+            <InlineStack gap="200">
+              <Button
+                variant="primary"
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSaving}
+                loading={isSaving}
+              >
+                Submit to Shopify
+              </Button>
+              {!isStrong && (
+                <Button
+                  onClick={() => {
+                    if (improvement) {
+                      actions.navigateToEvidence(improvement.field);
+                    } else {
+                      actions.setActiveTab(1);
+                    }
+                  }}
+                >
+                  Improve case first
+                </Button>
+              )}
+            </InlineStack>
           )}
         </BlockStack>
       </Card>
 
-      {/* F. Decision Log */}
+      {/* 3. SUBMISSION CONTENT — collapsed by default */}
+      {!isReadOnly && (
+        <Card>
+          <BlockStack gap="200">
+            <Button
+              variant="plain"
+              onClick={() => setPreviewOpen(v => !v)}
+              disclosure={previewOpen ? "up" : "down"}
+            >
+              {previewOpen ? "Hide submission details" : "View what will be submitted to Shopify"}
+            </Button>
+            <Collapsible open={previewOpen} id="submission-preview">
+              <BlockStack gap="300">
+                {previewLoading ? (
+                  <Text as="p" variant="bodySm" tone="subdued">Loading...</Text>
+                ) : fields.length === 0 ? (
+                  <Text as="p" variant="bodySm" tone="subdued">No evidence to submit.</Text>
+                ) : (
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Automatically included based on your evidence.
+                    </Text>
+                    {fields.filter(f => f.included && f.content).map((field) => (
+                      <BlockStack key={field.shopifyFieldName} gap="050">
+                        <Text as="p" variant="bodySm" fontWeight="semibold">
+                          {field.shopifyFieldLabel}
+                        </Text>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {field.contentPreview || "\u2014"}
+                        </Text>
+                      </BlockStack>
+                    ))}
+                  </BlockStack>
+                )}
+              </BlockStack>
+            </Collapsible>
+          </BlockStack>
+        </Card>
+      )}
+
+      {/* 4. ACTIVITY LOG — secondary */}
       {pack.auditEvents.length > 0 && (
         <Card>
           <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">Decision log</Text>
+            <Text as="h3" variant="headingMd" tone="subdued">Activity log</Text>
             <BlockStack gap="100">
               {pack.auditEvents
                 .filter((e) =>
@@ -261,9 +272,6 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
                     <Text as="span" variant="bodySm">
                       {evt.event_type.replace(/_/g, " ")}
                     </Text>
-                    {evt.actor_type && (
-                      <Badge>{evt.actor_type}</Badge>
-                    )}
                   </InlineStack>
                 ))}
             </BlockStack>
@@ -275,7 +283,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
       <Modal
         open={clientState.showOverrideModal}
         onClose={() => actions.setShowOverrideModal(false)}
-        title="Submit with warnings?"
+        title="Submit with current evidence?"
         primaryAction={{
           content: "Submit anyway",
           onAction: handleConfirmOverride,
@@ -290,12 +298,14 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
           <BlockStack gap="300">
             <Banner tone="warning">
               <Text as="p" variant="bodySm">
-                {`${warningCount} high-impact ${warningCount === 1 ? "item is" : "items are"} missing. Submitting now may reduce your chances.`}
+                {isWeak
+                  ? "This case is weak. Submitting now may significantly reduce your chances of winning."
+                  : "Some recommended evidence is missing. Submitting is possible but adding it could improve your outcome."}
               </Text>
             </Banner>
 
             <Select
-              label="Reason for proceeding"
+              label="Why are you submitting now?"
               options={[
                 { label: "Select a reason", value: "" },
                 { label: "I've provided all available evidence", value: "all_available" },
@@ -318,7 +328,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
             )}
 
             <Text as="p" variant="bodySm" tone="subdued">
-              This decision will be logged in the audit trail.
+              This decision will be logged.
             </Text>
           </BlockStack>
         </Modal.Section>
