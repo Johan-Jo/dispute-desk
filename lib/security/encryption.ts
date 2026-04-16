@@ -12,7 +12,11 @@ export interface EncryptedPayload {
 
 function getKey(version: number): Buffer {
   const envName = `TOKEN_ENCRYPTION_KEY_V${version}`;
-  const hex = process.env[envName];
+  let hex = process.env[envName];
+  // Backward compat: V1 falls back to the legacy TOKEN_ENCRYPTION_KEY
+  if (!hex && version === 1) {
+    hex = process.env.TOKEN_ENCRYPTION_KEY;
+  }
   if (!hex) {
     throw new Error(`Missing encryption key env var: ${envName}`);
   }

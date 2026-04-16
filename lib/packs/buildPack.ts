@@ -34,7 +34,12 @@ import type { OrderContext } from "@/lib/automation/completeness";
 function decryptAccessToken(encrypted: string): string {
   try {
     return decrypt(deserializeEncrypted(encrypted));
-  } catch {
+  } catch (err) {
+    console.error(
+      "[buildPack] Failed to decrypt access token:",
+      err instanceof Error ? err.message : String(err),
+    );
+    // Fall back to raw string — will likely 401 at Shopify
     return encrypted;
   }
 }
