@@ -546,6 +546,27 @@ The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: w
 
 `ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. The `customerPurchaseIp` field on `ShopifyPaymentsDisputeEvidenceUpdateInput` is supported — the save-to-Shopify job injects it when IP evidence exists. Priority: `recommended` for fraud disputes.
 
+## Dispute Workspace
+
+The dispute detail page (`/app/disputes/:id`) is a **unified tabbed workspace** with 3 tabs: Overview, Evidence, Review & Submit. It replaces the previous separate dispute detail + pack detail pages.
+
+**Architecture:** `page.tsx` → `WorkspaceShell.tsx` (Polaris Tabs) → `OverviewTab`, `EvidenceTab`, `ReviewSubmitTab`. Central data hook `useDisputeWorkspace.ts` loads all data from `GET /api/disputes/:id/workspace` (composite endpoint). Tab state is React state, not URL params (avoids App Bridge iframe re-renders).
+
+**Argument Engine** (`lib/argument/`):
+- `templates.ts` — per-reason counterclaim templates (toWin, strongestEvidence, claims with required/supporting evidence)
+- `generateArgument.ts` — builds `ArgumentMap` from reason + checklist (evaluates per-claim strength)
+- `generateRebuttal.ts` — generates structured rebuttal sections (summary + per-claim + conclusion)
+- `caseStrength.ts` — overall + per-claim strength scoring + improvement signal
+- `whyThisCaseWins.ts` — auto-generated strengths/weaknesses
+- `riskExplanation.ts` — risk assessment for submit tab
+- `nextAction.ts` — computes single next step for merchant
+
+**Auto-generation:** When the workspace loads and finds a pack but no argument map, it auto-generates one (`POST /api/disputes/:id/argument`). No manual trigger needed.
+
+**DB tables:** `argument_maps` (dispute_id, pack_id, counterclaims jsonb, overall_strength), `rebuttal_drafts` (pack_id, sections jsonb, source), `submission_attempts` (full submission audit).
+
+**Key feature:** Argument map claims are clickable — clicking an evidence badge switches to the Evidence tab, expands the correct category, scrolls to the item, and highlights it.
+
 ## Evidence Pack Builder
 
 ### Build Pipeline (`lib/packs/buildPack.ts`)
