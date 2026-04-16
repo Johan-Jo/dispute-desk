@@ -1,74 +1,4 @@
-/* Embedded dispute detail — Figma-aligned layout (KPI, stepper, summary, managed card, collapsibles). */
-
-/* ── KPI cards ── */
-.kpiGrid {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.kpiCard {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  padding: 16px;
-  flex: 1 1 0;
-  min-width: 140px;
-}
-
-.kpiCardUrgent {
-  border-color: #ef4444;
-}
-
-.kpiLabel {
-  font-size: 12px;
-  color: #667085;
-  margin: 0 0 4px;
-}
-
-.kpiAmount {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0b1220;
-  margin: 0;
-}
-
-.kpiValue {
-  font-size: 14px;
-  font-weight: 500;
-  color: #0b1220;
-  margin: 0;
-}
-
-.kpiValueUrgent {
-  color: #ef4444;
-}
-
-.kpiRow {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-/* ── Two-column layout ── */
-.twoColumnLayout {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .twoColumnLayout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.rightColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* Embedded dispute detail — 4-tier command center layout. */
 
 /* ── Collapsible header ── */
 .collapsibleHeader {
@@ -88,12 +18,12 @@
   transform: rotate(180deg);
 }
 
-/* ── Dispute Summary grid ── */
+/* ── Summary grid (Tier 3: Key Dispute Facts) ── */
 .summaryGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
-  padding: 0 20px 20px;
+  padding: 12px 0 0;
 }
 
 @media (max-width: 480px) {
@@ -103,7 +33,7 @@
 }
 
 .summaryItem {
-  padding: 12px 0;
+  padding: 10px 0;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -125,7 +55,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #667085;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-weight: 500;
 }
 
@@ -147,140 +77,6 @@
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-}
-
-/* ── Managed by DisputeDesk card ── */
-.managedCardContent {
-  padding: 16px 20px;
-}
-
-.managedAutomationRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.managedAutomationIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #DCFCE7;
-  flex-shrink: 0;
-}
-
-.managedAutomationIcon svg {
-  width: 20px;
-  height: 20px;
-  color: #16A34A;
-}
-
-.managedTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0b1220;
-  margin: 0 0 4px;
-}
-
-.managedDesc {
-  font-size: 13px;
-  color: #667085;
-  margin: 0;
-  line-height: 1.45;
-}
-
-.managedStatusRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #F0FDF4;
-  border-radius: 8px;
-  padding: 10px 14px;
-}
-
-.managedStatusDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #22C55E;
-  flex-shrink: 0;
-}
-
-.managedStatusLabel {
-  font-size: 13px;
-  font-weight: 600;
-  color: #166534;
-  margin: 0;
-}
-
-.managedStatusRule {
-  font-size: 12px;
-  color: #667085;
-  margin: 0;
-}
-
-/* ── More Evidence card ── */
-.moreEvidenceHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px 8px;
-  gap: 12px;
-}
-
-.moreEvidenceTitle {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: #0b1220;
-  margin: 0;
-}
-
-.moreEvidenceCount {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1d4ed8;
-  flex-shrink: 0;
-}
-
-.moreEvidenceZone {
-  margin: 0 20px 16px;
-  border: 2px dashed #D0D5DD;
-  border-radius: 8px;
-  padding: 28px 16px;
-  text-align: center;
-  background: #FFFBEB;
-}
-
-.moreEvidenceZoneDisabled {
-  background: #FFFBEB;
-  opacity: 0.95;
-}
-
-.moreEvidenceUploadIcon {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-  color: #667085;
-}
-
-.moreEvidenceFooter {
-  padding: 0 20px 16px;
-}
-
-.moreEvidenceFooterText {
-  font-size: 12px;
-  color: #667085;
-  margin: 0;
-  line-height: 1.45;
-}
-
-.moreEvidenceLink {
-  margin-top: 12px;
 }
 
 /* ── Profile rows (Order Data / Customer Info) ── */
@@ -377,165 +173,22 @@
   padding: 12px 16px;
 }
 
-/* ── Evidence Packs table ── */
-.evidenceTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.evidenceTh {
-  text-align: left;
-  padding: 10px 16px;
-  font-weight: 500;
-  color: #667085;
-  white-space: nowrap;
-  background: #f7f8fa;
-}
-
-.evidenceTd {
-  padding: 12px 16px;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* ── Stepper ── */
-.stepperCard {
-  padding: 0;
-}
-
-.stepperShell {
-  width: 100%;
-  max-width: 100%;
-}
-
-.stepperHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.stepperBody {
-  position: relative;
-  padding: 24px 20px 20px;
-}
-
-/* Horizontal connecting line behind icons */
-.stepperConnectorTrack {
-  position: absolute;
-  top: 52px; /* centered on 56px icon circles: 24px padding-top + 28px half-height */
-  left: 20px;
-  right: 20px;
-  display: flex;
-  z-index: 0;
-  /* Inset to center on icons: half of first column + half of last column */
-  padding: 0 calc(100% / 10);
-}
-
-.stepperConnectorSegment {
-  flex: 1;
-  height: 2px;
-}
-
-.stepperConnectorComplete {
-  background: #22C55E;
-}
-
-.stepperConnectorPending {
-  background: #e5e7eb;
-}
-
-.stepperTrack {
+/* ── Tier 2: Evidence Pack Module count stats ── */
+.evidenceCountGrid {
   display: grid;
-  width: 100%;
-  box-sizing: border-box;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  column-gap: clamp(6px, 1.5vw, 14px);
-  row-gap: 16px;
-  align-items: start;
-  position: relative;
-  z-index: 1;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.evidenceCountItem {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f7f8fa;
+  text-align: center;
 }
 
 @media (max-width: 480px) {
-  .stepperTrack {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .evidenceCountGrid {
+    grid-template-columns: 1fr;
   }
-  .stepperConnectorTrack {
-    display: none;
-  }
-}
-
-.stepperStep {
-  min-width: 0;
-  text-align: center;
-  justify-self: stretch;
-}
-
-.stepperIconWrap {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 10px;
-}
-
-.stepperIconCircle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.stepperIconCircle :global(.Polaris-Icon) {
-  width: 32px;
-  height: 32px;
-}
-
-.stepperIconCircle :global(.Polaris-Icon) svg {
-  width: 32px;
-  height: 32px;
-}
-
-.stepperIconCircle[data-phase="complete"] {
-  background: #F0FDF4;
-}
-
-.stepperIconCircle[data-phase="current"] {
-  background: #E0E7FF;
-}
-
-.stepperIconCircle[data-phase="pending"] {
-  background: #F2F4F7;
-}
-
-.stepperTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0b1220;
-  margin: 0 0 4px;
-  overflow-wrap: anywhere;
-}
-
-.stepperDesc {
-  font-size: 11px;
-  color: #667085;
-  margin: 0 0 6px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.stepperDate {
-  font-size: 11px;
-  color: #98a2b3;
-  margin: 0 0 6px;
-}
-
-.managedBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
 }

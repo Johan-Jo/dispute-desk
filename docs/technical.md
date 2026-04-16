@@ -491,7 +491,7 @@ when disputes are detected:
 | Completeness | `lib/automation/completeness.ts` | Context-aware templates, conditional requirements, weighted scoring. V2 engine (`evaluateCompletenessV2`) adds priority/blocking/waive model with `SubmissionReadiness` (ready/ready_with_warnings/blocked/submitted) |
 | Auto-Save Gate | `lib/automation/autoSaveGate.ts` | Decision logic for auto-save |
 | Pipeline | `lib/automation/pipeline.ts` | Orchestrator: trigger build + evaluate gate |
-| Payment Source | `lib/packs/sources/paymentSource.ts` | AVS/CVV collection from order transactions |
+| Payment Source | `lib/packs/sources/paymentSource.ts` | Card evidence (AVS/CVV/BIN/wallet), risk assessments, customer IP |
 
 ### Pack Status Flow
 
@@ -513,7 +513,7 @@ Template items have a `requirement_mode` column (`pack_template_items`):
 - `recommended` — not required but weighted in scoring (0.5x)
 - `optional` — nice to have (0.1x)
 
-`OrderContext { isFulfilled, hasCardPayment }` is derived in `buildPack.ts` from the fetched order and passed to the completeness engine. Items that are inapplicable for the order context are marked `unavailable` with a reason string, not counted as blockers.
+`OrderContext { isFulfilled, hasCardPayment, avsCvvAvailable }` is derived in `buildPack.ts` from the fetched order and passed to the completeness engine. Items that are inapplicable for the order context are marked `unavailable` with a reason string, not counted as blockers. `avsCvvAvailable` is true only when a card transaction actually returned AVS/CVV codes — external gateways (Stripe via Shopify, Adyen) often return null even for card payments.
 
 ### Evidence Model V2 — Priority + Blocking + Waive
 
@@ -531,7 +531,20 @@ DB columns (`evidence_packs`): `checklist_v2` (jsonb), `submission_readiness` (t
 
 ### AVS/CVV Collection
 
-`ORDER_DETAIL_QUERY` fetches `transactions.paymentDetails` (typed `CardPaymentDetails` with `avsResultCode`, `cvvResultCode`). The `paymentSource.ts` collector extracts these from the first successful SALE/AUTHORIZATION transaction. The field `avs_cvv_match` uses `required_if_card_payment` mode — collectable only when the order has a card transaction, unavailable otherwise. In v2: `priority: "critical"`, `blocking: false` — it is high-impact evidence for fraud disputes but does not hard-block submission.
+`ORDER_DETAIL_QUERY` fetches `transactions.paymentDetails` (typed `CardPaymentDetails` with `avsResultCode`, `cvvResultCode`, `bin`, `name`, `expirationMonth`, `expirationYear`, `wallet`). The `paymentSource.ts` collector extracts card evidence from the first successful SALE/AUTHORIZATION transaction and reports a three-state `avsCvvStatus`:
+- `available` — AVS/CVV codes present (Shopify Payments typically provides these)
+- `unavailable_from_gateway` — card payment but gateway returned null (common with Stripe via Shopify, Adyen, etc.)
+- `not_applicable` — non-card payment (PayPal, manual, etc.)
+
+The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: when a card payment exists but the gateway didn't return codes, AVS/CVV is marked `unavailable` (not `missing`) — it does not penalize the completeness score or appear as a warning. In v2: `priority: "critical"`, `blocking: false`.
+
+### Risk Assessment Collection
+
+`ORDER_DETAIL_QUERY` fetches `riskAssessments { riskLevel, provider { title }, facts { description, sentiment } }`. The `paymentSource.ts` collector extracts the overall risk level (highest severity across assessments), provider name, and individual risk facts. The `risk_analysis` field is `recommended` priority, `blocking: false` — supporting evidence for fraud disputes, not deterministic proof.
+
+### Customer IP Collection
+
+`ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. The `customerPurchaseIp` field on `ShopifyPaymentsDisputeEvidenceUpdateInput` is supported — the save-to-Shopify job injects it when IP evidence exists. Priority: `recommended` for fraud disputes.
 
 ## Evidence Pack Builder
 
@@ -539,7 +552,7 @@ DB columns (`evidence_packs`): `checklist_v2` (jsonb), `submission_readiness` (t
 
 1. Load dispute → shop → offline session from DB
 2. Decrypt access token (AES-256-GCM)
-3. Run 4 source collectors concurrently (`Promise.allSettled`)
+3. Run 6 source collectors concurrently (`Promise.allSettled`)
 4. Insert `evidence_items` rows + audit events per section
 5. Compute completeness from collected fields
 6. Assemble `pack_json`, update pack row
@@ -737,15 +750,14 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 **Disputes list page (embedded):** `app/(embedded)/app/disputes/page.tsx` uses Polaris `Page` / `Layout` / `Card` (same shell as other embedded routes). The table inside `Card padding="0"` matches the dashboard **Recent Disputes** column set: **Order, ID** (first 8 chars of UUID, uppercased), **Customer**, **Amount**, **Reason**, **Status**, **Deadline** (short month + day), **Actions** → “View Details” link (`recentDisputesViewDetailsLinkStyle` from `lib/embedded/recentDisputesTableStyles.ts`). Shared helpers: `lib/embedded/shopifyOrderUrl.ts`, `withShopParams` on detail links. CSV export uses the same column order and includes customer. See **Review Queue** for toolbar (search, filter, export, sync).
 
-**Dispute detail page (embedded):** `app/(embedded)/app/disputes/[id]/page.tsx`. Fetches `/api/disputes/:id` and `/api/disputes/:id/profile` in parallel. The API also returns `matchedRule` (first enabled automation rule for the shop). Layout and Figma-aligned chrome live in **`dispute-detail.module.css`**; the five-step **Dispute status** rail is driven by **`getDisputeProgressSteps`** (`lib/embedded/disputeDetailProgress.ts`) and **`DisputeStatusStepper.tsx`** (Dispute Created → Work in Progress → Submit Evidence → Bank Review → Dispute Settled; terminal dispute statuses mark all steps complete).
-- **Page chrome:** Title is phase-aware: **`Inquiry {id}`** / **`Chargeback {id}`** / **`Case {id}`** (unknown phase), with a blue **⚡ Automated** pill badge when an auto_pack rule matches. Subtitle shows **`Order date: {date}`**. A case metadata bar displays phase, family (from `DISPUTE_REASON_FAMILIES`), and handling mode. CTA is phase-aware: "Respond to Inquiry" for inquiries, "Build Evidence" for chargebacks.
-- **Info banner:** Dismissible blue `Banner` at the top with 24-hour guarantee messaging. Dismissal persisted in `localStorage` (`dd-info-banner-dismissed`).
-- **Dispute Summary (left column):** Collapsible `Card` with 2-column key-value grid (Dispute ID, Source, Transaction ID, RRN, Opened On, Status, Due Date, State, Amount, Reason). Uses `SummaryItem` component and `summaryGrid` CSS class.
-- **Managed by DisputeDesk (right column top):** Card showing green lightning icon + "Fully Automated" heading + description. When `matchedRule` exists, shows a green "Auto-Pack Active" status row with the rule name.
-- **More Evidence (right column bottom):** Card with "DO YOU HAVE MORE EVIDENCE?" header, file count badge (`0/5 files`), upload zone icon, and status-dependent copy. When any pack has been saved to Shopify, an **Open evidence pack** button links to the most recently saved pack.
-- **Order Data:** Collapsible card merging Customer Info + Order Details (profile rows, order link, total, tracking).
-- **Fulfillment Journey:** Collapsible card with the real Shopify order events timeline. Events fetched via `Order.events(first: 30, reverse: true)` in `DISPUTE_PROFILE_QUERY`. The profile API receives `?locale=` and forwards it as `Accept-Language`. Rail styling uses **`timeline*`** classes.
-- **Evidence Packs table:** Pack ID (link to `/app/packs/:id`), Status badge, score (green ≥80 / amber ≥50 / red), blocker count, created date, View Details link or "Saved {date}" indicator. Header/cell classes: **`evidenceTable`** / **`evidenceTh`** / **`evidenceTd`**.
+**Dispute detail page (embedded):** `app/(embedded)/app/disputes/[id]/page.tsx`. Fetches `/api/disputes/:id` and `/api/disputes/:id/profile` in parallel. The API also returns `matchedRule` (first enabled automation rule for the shop). The page is structured as a **4-tier command center** with components in `[id]/components/`:
+
+- **Tier 1 — StatusHero** (`components/StatusHero.tsx`): Single dominant card answering "what's happening" and "what to do next". Displays phase badge, family, amount, deadline (with urgent warning banner), and a state-dependent headline + explanation + primary CTA. Six states: no pack → "Build Evidence Pack"; building → "Generating..." (disabled); blocked → "Complete Evidence Pack"; ready → "Review & Save to Shopify"; saved → "Open in Shopify"; terminal (won/lost) → outcome display. i18n keys: `disputes.hero.*`.
+- **Tier 2 — EvidencePackModule** (`components/EvidencePackModule.tsx`): Dashboard card for the latest evidence pack. Shows `ProgressBar` (completeness score), 3-stat grid (required missing / recommended missing / included), blockers list as `Banner`, and full-width CTA to open the pack detail page. Empty state shows "Generate Evidence Pack" button. Multiple packs shown as compact links below a divider. i18n keys: `disputes.evidence.*`.
+- **Tier 3 — KeyDisputeFacts** (`components/KeyDisputeFacts.tsx`): Compact 2-column grid with 6 essential facts: Amount, Deadline, Reason, Status, Source, Created. Non-collapsible reference card. Reuses `summaryGrid`/`summaryItem` CSS classes. i18n keys: `disputes.facts.*`.
+- **Tier 4 — DetailsAndHistory** (`components/DetailsAndHistory.tsx`): Secondary information. Handling mode card (only for automated/review modes), collapsible Order Data (customer + order details, default closed), and `DisputeTimeline` component. Low visual emphasis.
+- **Shared utilities** (`components/utils.ts`): Types (`Dispute`, `Pack`, `MatchedRule`, `DisputeProfile`) and formatting helpers (`formatCurrency`, `formatDate`, `statusTone`, `statusLabel`, `packStatusTone`, `daysUntilInfo`) shared across all tier components.
+- **Page chrome:** Title is phase-aware: **`Inquiry {id}`** / **`Chargeback {id}`** / **`Case {id}`** (unknown phase), with a blue **⚡ Automated** pill badge when an auto_pack rule matches. Subtitle shows **`Order date: {date}`**. Page-level `primaryAction` mirrors the hero CTA for quick access when scrolled. Secondary actions: Re-sync, Open in Shopify.
 - **Navigation / i18n:** `fetchData` depends on `[id, searchParams]` so changing `?locale=` refetches the profile with the correct `Accept-Language`. All links use `withShopParams` to preserve `?shop`, `?host`, and `?locale`.
 - **Open dispute in Shopify:** links to `https://admin.shopify.com/store/{handle}/finances/disputes/{id}` (note: `/finances/disputes/`, not the deprecated `/payments/disputes/`).
 - **Help:** Merchants can read **Dispute detail page** / **Dispute detail in this app** in embedded Help (`dispute-detail-page` article; i18n: `help.articles.disputeDetailPage` and `help.embedded.articles.disputeDetailPage`).

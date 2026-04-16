@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
@@ -14,184 +14,31 @@ import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import {
   Page,
   Layout,
-  Card,
-  Text,
-  Badge,
-  BlockStack,
-  InlineStack,
   Banner,
-  Button,
   Spinner,
-  Divider,
-  Icon,
+  Badge,
   Modal,
-  Box,
-  Collapsible,
+  Text,
 } from "@shopify/polaris";
-import {
-  OrderIcon,
-  PersonIcon,
-  NoteIcon,
-  AlertTriangleIcon,
-  CheckCircleIcon,
-  RefreshIcon,
-  ChevronDownIcon,
-} from "@shopify/polaris-icons";
+import { NoteIcon, RefreshIcon } from "@shopify/polaris-icons";
 
 import styles from "./dispute-detail.module.css";
-import { DisputeStatusStepper } from "./DisputeStatusStepper";
-import DisputeTimeline from "./DisputeTimeline";
-import { getDisputeProgressSteps } from "@/lib/embedded/disputeDetailProgress";
+import StatusHero from "./components/StatusHero";
+import EvidencePackModule from "./components/EvidencePackModule";
+import KeyDisputeFacts from "./components/KeyDisputeFacts";
+import DetailsAndHistory from "./components/DetailsAndHistory";
 import {
-  deriveFamily,
-  phaseBadgeTone,
-  phaseLabel as phaseLabelFn,
-  isPhaseKnown,
   casePrimaryCta,
   disputeTitle,
 } from "@/lib/disputes/phaseUtils";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
-
-interface Dispute {
-  id: string;
-  dispute_gid: string;
-  dispute_evidence_gid: string | null;
-  order_gid: string | null;
-  status: string | null;
-  reason: string | null;
-  phase: string | null;
-  family?: string;
-  handling_mode?: string;
-  amount: number | null;
-  currency_code: string | null;
-  initiated_at: string | null;
-  due_at: string | null;
-  last_synced_at: string | null;
-  needs_review: boolean;
-}
-
-interface ProfileAddress {
-  name?: string | null;
-  address1?: string | null;
-  address2?: string | null;
-  city?: string | null;
-  province?: string | null;
-  zip?: string | null;
-  country?: string | null;
-  phone?: string | null;
-}
-
-interface DisputeProfile {
-  orderName: string | null;
-  orderId: string | null;
-  createdAt: string | null;
-  total?: { amount: string; currencyCode: string } | null;
-  customerName: string | null;
-  email: string | null;
-  phone: string | null;
-  displayAddress: ProfileAddress | null;
-  shippingAddress: ProfileAddress | null;
-  billingAddress: ProfileAddress | null;
-  fulfillments: Array<{
-    id: string;
-    status: string;
-    trackingInfo: Array<{ number: string; url: string; company: string }>;
-    createdAt: string;
-  }>;
-  orderEvents: Array<{ id: string; createdAt: string; message: string; appTitle: string | null }>;
-}
-
-interface Pack {
-  id: string;
-  status: string;
-  completeness_score: number | null;
-  blockers: string[] | null;
-  recommended_actions: string[] | null;
-  saved_to_shopify_at: string | null;
-  created_at: string;
-}
-
-interface MatchedRule {
-  name: string;
-  mode: string;
-}
-
-function formatCurrency(amount: number | null, code: string | null): string {
-  if (amount == null) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: code ?? "USD",
-  }).format(amount);
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatAddress(addr: ProfileAddress | null | undefined): string {
-  if (!addr) return "—";
-  return [addr.address1, addr.city, addr.province, addr.zip, addr.country]
-    .filter(Boolean)
-    .join(", ") || addr.name || "—";
-}
-
-function statusTone(
-  status: string | null
-): "success" | "warning" | "critical" | "info" | undefined {
-  switch (status) {
-    case "won": return "success";
-    case "needs_response": return "warning";
-    case "lost": return "critical";
-    case "under_review": return "info";
-    default: return undefined;
-  }
-}
-
-function statusLabel(status: string | null, t: ReturnType<typeof useTranslations>): string {
-  switch (status) {
-    case "needs_response": return t("disputes.statusNeedsResponse");
-    case "under_review": return t("disputes.statusUnderReview");
-    case "won": return t("disputes.statusWon");
-    case "lost": return t("disputes.statusLost");
-    default: return status?.replace(/_/g, " ") ?? t("status.unknown");
-  }
-}
-
-function packStatusTone(status: string): "success" | "warning" | "critical" | "info" | undefined {
-  switch (status) {
-    case "saved_to_shopify": return "success";
-    case "ready": return "warning";
-    case "blocked":
-    case "failed": return "critical";
-    case "building":
-    case "queued": return "info";
-    default: return undefined;
-  }
-}
-
-function SummaryItem({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className={styles.summaryItem}>
-      <p className={styles.summaryItemLabel}>{label}</p>
-      <div className={styles.summaryItemValue}>{value}</div>
-    </div>
-  );
-}
-
-function ProfileRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className={styles.profileRow}>
-      <span className={styles.profileRowLabel}>{label}</span>
-      <span className={styles.profileRowValue}>{value || "—"}</span>
-    </div>
-  );
-}
-
+import type {
+  Dispute,
+  DisputeProfile,
+  Pack,
+  MatchedRule,
+} from "./components/utils";
+import { daysUntilInfo } from "./components/utils";
 
 export default function DisputeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -209,21 +56,10 @@ export default function DisputeDetailPage() {
   const [quotaError, setQuotaError] = useState<string | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateCheckLoading, setTemplateCheckLoading] = useState(false);
-  const [matchedTemplate, setMatchedTemplate] = useState<{ id: string; name: string } | null>(null);
-
-  // Collapsible state
-  const [summaryOpen, setSummaryOpen] = useState(true);
-  const [orderDataOpen, setOrderDataOpen] = useState(false);
-
-  const daysUntilInfo = (iso: string | null): { text: string; urgent: boolean } => {
-    if (!iso) return { text: "—", urgent: false };
-    const diff = Math.ceil(
-      (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-    );
-    if (diff < 0) return { text: t("disputes.daysOverdue", { count: Math.abs(diff) }), urgent: true };
-    if (diff === 0) return { text: t("disputes.dueToday"), urgent: true };
-    return { text: t("disputes.daysRemaining", { count: diff }), urgent: diff <= 3 };
-  };
+  const [matchedTemplate, setMatchedTemplate] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -245,29 +81,9 @@ export default function DisputeDetailPage() {
     setLoading(false);
   }, [id, searchParams]);
 
-  const progressSteps = useMemo(() => {
-    if (!dispute) return [];
-    return getDisputeProgressSteps({
-      initiated_at: dispute.initiated_at,
-      status: dispute.status,
-      packs: packs.map((p) => ({
-        created_at: p.created_at,
-        saved_to_shopify_at: p.saved_to_shopify_at,
-      })),
-    });
-  }, [dispute, packs]);
-
-  const packForSupplemental = useMemo(() => {
-    const saved = packs.filter((p) => p.saved_to_shopify_at);
-    if (saved.length === 0) return null;
-    return [...saved].sort(
-      (a, b) =>
-        new Date(b.saved_to_shopify_at!).getTime() -
-        new Date(a.saved_to_shopify_at!).getTime(),
-    )[0]!;
-  }, [packs]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -326,12 +142,17 @@ export default function DisputeDetailPage() {
     try {
       const phase = dispute?.phase ?? "";
       const res = await fetch(
-        `/api/templates?reason=${encodeURIComponent(reason)}&phase=${encodeURIComponent(phase)}&locale=${encodeURIComponent(locale)}`
+        `/api/templates?reason=${encodeURIComponent(reason)}&phase=${encodeURIComponent(phase)}&locale=${encodeURIComponent(locale)}`,
       );
       const { templates } = await res.json();
       const best =
-        (templates as Array<{ id: string; name: string; is_recommended?: boolean }>)
-          ?.find((t) => t.is_recommended) ??
+        (
+          templates as Array<{
+            id: string;
+            name: string;
+            is_recommended?: boolean;
+          }>
+        )?.find((t) => t.is_recommended) ??
         templates?.[0] ??
         null;
       setMatchedTemplate(best ?? null);
@@ -341,6 +162,8 @@ export default function DisputeDetailPage() {
     setTemplateCheckLoading(false);
     setShowTemplateModal(true);
   };
+
+  /* ── Loading / error states ── */
 
   if (loading) {
     return (
@@ -356,59 +179,92 @@ export default function DisputeDetailPage() {
     return (
       <Page
         title={t("disputes.detailPageTitle")}
-        backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
+        backAction={{
+          content: t("disputes.title"),
+          url: withShopParams("/app/disputes", searchParams),
+        }}
       >
         <Banner tone="critical">{t("disputes.disputeNotFound")}</Banner>
       </Page>
     );
   }
 
+  /* ── Derived state ── */
+
   const isSynthetic = dispute.dispute_gid?.includes("/seed-") ?? false;
-  const disputeNumericId = dispute.dispute_gid?.split("/").pop() ?? dispute.id;
-  const orderNum = dispute.order_gid?.split("/").pop();
+  const disputeNumericId =
+    dispute.dispute_gid?.split("/").pop() ?? dispute.id;
   const disputeUrl =
     shopDomain && dispute.dispute_gid
       ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
       : null;
-  const deadline = daysUntilInfo(dispute.due_at);
+  const deadline = daysUntilInfo(dispute.due_at, t);
   const isAutomated = matchedRule?.mode === "auto_pack";
-  const isSubmittedToBank = dispute.status === "under_review" || dispute.status === "accepted" || dispute.status === "won" || dispute.status === "lost";
   const latestPack = packs.length > 0 ? packs[0] : null;
   const latestPackStatus = latestPack?.status ?? null;
-  const phaseKnown = isPhaseKnown(dispute.phase);
-  const cta = casePrimaryCta(dispute.phase as DisputePhase | null, latestPackStatus);
+  const cta = casePrimaryCta(
+    dispute.phase as DisputePhase | null,
+    latestPackStatus,
+  );
+
+  /* Hero CTA action — same logic as the Page-level primary action */
+  const handleHeroCta = (() => {
+    if (latestPackStatus === "saved_to_shopify" && disputeUrl) {
+      return () => window.open(disputeUrl, "_top");
+    }
+    if (latestPack) {
+      return () =>
+        router.push(
+          withShopParams(`/app/packs/${latestPack.id}`, searchParams),
+        );
+    }
+    return handleGenerate;
+  })();
 
   return (
     <Page
-      title={disputeTitle(dispute.phase as DisputePhase | null, disputeNumericId, t)}
-      subtitle={t("disputes.orderDateSubtitle", { date: formatDate(profile?.createdAt ?? dispute.initiated_at) })}
-      backAction={{ content: t("disputes.title"), url: withShopParams("/app/disputes", searchParams) }}
+      title={disputeTitle(
+        dispute.phase as DisputePhase | null,
+        disputeNumericId,
+        t,
+      )}
+      subtitle={t("disputes.orderDateSubtitle", {
+        date: new Date(
+          profile?.createdAt ?? dispute.initiated_at ?? "",
+        ).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+      })}
+      backAction={{
+        content: t("disputes.title"),
+        url: withShopParams("/app/disputes", searchParams),
+      }}
       titleMetadata={
-        isAutomated
-          ? <span className={styles.automatedBadge}>⚡ {t("disputes.automatedBadge")}</span>
-          : isSynthetic ? <Badge tone="info">Synthetic</Badge> : undefined
+        isAutomated ? (
+          <span className={styles.automatedBadge}>
+            {"\u26A1"} {t("disputes.automatedBadge")}
+          </span>
+        ) : isSynthetic ? (
+          <Badge tone="info">Synthetic</Badge>
+        ) : undefined
       }
       primaryAction={{
-        content: generating || templateCheckLoading
-          ? t("disputes.generating")
-          : t(cta.key),
+        content:
+          generating || templateCheckLoading
+            ? t("disputes.generating")
+            : t(cta.key),
         onAction: (() => {
-          // 1. Pack already saved → deep-link to Shopify Admin.
           if (latestPackStatus === "saved_to_shopify" && disputeUrl) {
             return () => window.open(disputeUrl, "_top");
           }
-          // 2. Pack exists but not yet saved (ready / building / blocked /
-          //    saving) → navigate to the pack workspace where the merchant
-          //    actually reviews evidence and saves to Shopify. Without this
-          //    branch the button runs handleGenerate and creates a duplicate
-          //    pack every time — which is the bug the merchant hit.
           if (latestPack) {
             return () =>
               router.push(
                 withShopParams(`/app/packs/${latestPack.id}`, searchParams),
               );
           }
-          // 3. No pack yet → open the template picker and create one.
           return handleGenerate;
         })(),
         loading: generating || templateCheckLoading || syncing,
@@ -417,140 +273,51 @@ export default function DisputeDetailPage() {
       }}
       secondaryActions={[
         {
-          content: syncing ? t("disputes.reSyncing") : t("disputes.reSync"),
+          content: syncing
+            ? t("disputes.reSyncing")
+            : t("disputes.reSync"),
           onAction: handleSync,
           loading: syncing,
           icon: RefreshIcon,
         },
         ...(disputeUrl
-          ? [{ content: t("disputes.openDisputeInShopify"), url: disputeUrl, external: true }]
+          ? [
+              {
+                content: t("disputes.openDisputeInShopify"),
+                url: disputeUrl,
+                external: true,
+              },
+            ]
           : []),
       ]}
     >
       <Layout>
-        {/* HERO: Phase explanation + what's happening + what to do */}
+        {/* Tier 1: Status Hero */}
         <Layout.Section>
-          <Card>
-            <BlockStack gap="200">
-              <InlineStack gap="200" blockAlign="center">
-                <Badge tone={phaseBadgeTone(dispute.phase as DisputePhase | null)}>
-                  {phaseLabelFn(dispute.phase as DisputePhase | null, t)}
-                </Badge>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {deriveFamily(dispute.reason)}
-                </Text>
-              </InlineStack>
-              {!phaseKnown && (
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("disputes.unknownPhaseWarning")}
-                </Text>
-              )}
-              <Text as="p" variant="bodyMd">
-                {dispute.phase === "inquiry"
-                  ? t("disputes.inquiryHeroExplain")
-                  : t("disputes.chargebackHeroExplain")}
-              </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {latestPackStatus === "building" || latestPackStatus === "queued"
-                    ? t("disputes.caseStatusBuilding")
-                    : latestPackStatus === "ready"
-                      ? t("disputes.caseStatusReady")
-                      : latestPackStatus === "saved_to_shopify"
-                        ? t("disputes.caseStatusSaved")
-                        : latestPackStatus
-                          ? t("disputes.caseStatusReview")
-                          : t("disputes.caseStatusNoPack")}
-                </Text>
-              </BlockStack>
-            </Card>
+          <StatusHero
+            dispute={dispute}
+            latestPack={latestPack}
+            deadline={deadline}
+            isAutomated={isAutomated}
+            matchedRule={matchedRule}
+            disputeUrl={disputeUrl}
+            onPrimaryAction={handleHeroCta}
+            primaryActionLoading={
+              generating || templateCheckLoading || syncing
+            }
+          />
         </Layout.Section>
 
-        {/* KPI cards */}
-        <Layout.Section>
-          <div className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <p className={styles.kpiLabel}>{t("disputes.amount")}</p>
-              <p className={styles.kpiAmount}>
-                {formatCurrency(dispute.amount, dispute.currency_code)}
-              </p>
-            </div>
-
-            <div className={styles.kpiCard}>
-              <p className={styles.kpiLabel}>{t("table.status")}</p>
-              <div style={{ marginTop: "4px" }}>
-                <Badge tone={statusTone(dispute.status)}>
-                  {statusLabel(dispute.status, t)}
-                </Badge>
-              </div>
-            </div>
-
-            <div className={styles.kpiCard}>
-              <p className={styles.kpiLabel}>{t("disputes.dueDate")}</p>
-              <p className={styles.kpiValue}>{formatDate(dispute.due_at)}</p>
-            </div>
-
-            <div className={`${styles.kpiCard} ${deadline.urgent ? styles.kpiCardUrgent : ""}`}>
-              <p className={styles.kpiLabel}>{t("disputes.timeLeft")}</p>
-              <div className={styles.kpiRow}>
-                {deadline.urgent && (
-                  <Icon source={AlertTriangleIcon} tone="critical" />
-                )}
-                <p className={deadline.urgent ? styles.kpiValueUrgent : styles.kpiValue}>
-                  {deadline.text}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Layout.Section>
-
-        {/* Case Metadata Bar */}
-        <Layout.Section>
-          <Card>
-            <InlineStack gap="300" wrap blockAlign="center">
-              {/* Phase */}
-              <InlineStack gap="100" blockAlign="center">
-                <Text as="span" variant="bodySm" fontWeight="semibold">{t("disputes.phaseLabel")}:</Text>
-                {dispute.phase ? (
-                  <Badge tone={phaseBadgeTone(dispute.phase as DisputePhase | null)}>
-                    {phaseLabelFn(dispute.phase as DisputePhase | null, t)}
-                  </Badge>
-                ) : (
-                  <Badge>{t("disputes.phaseUnknown")}</Badge>
-                )}
-              </InlineStack>
-              {/* Family */}
-              <InlineStack gap="100" blockAlign="center">
-                <Text as="span" variant="bodySm" fontWeight="semibold">{t("disputes.familyLabel")}:</Text>
-                <Text as="span" variant="bodySm">
-                  {dispute.family ?? deriveFamily(dispute.reason)}
-                </Text>
-              </InlineStack>
-              {/* Handling Mode */}
-              <InlineStack gap="100" blockAlign="center">
-                <Text as="span" variant="bodySm" fontWeight="semibold">{t("disputes.handlingModeLabel")}:</Text>
-                <Badge tone={dispute.handling_mode === "automated" ? "success" : dispute.handling_mode === "review" ? "warning" : undefined}>
-                  {dispute.handling_mode === "automated"
-                    ? t("disputes.handlingAutomated")
-                    : dispute.handling_mode === "review"
-                      ? t("disputes.handlingReview")
-                      : t("disputes.handlingManual")}
-                </Badge>
-              </InlineStack>
-              {/* Needs Review */}
-              {dispute.needs_review && (
-                <Badge tone="warning">{t("disputes.handlingReview")}</Badge>
-              )}
-            </InlineStack>
-          </Card>
-        </Layout.Section>
-
-        {/* Quota / pack limit error */}
+        {/* Quota error banner */}
         {quotaError && (
           <Layout.Section>
             <Banner
               tone="warning"
               title={t("disputes.packLimitReached")}
-              action={{ content: t("disputes.upgradePlan"), url: "/app/billing" }}
+              action={{
+                content: t("disputes.upgradePlan"),
+                url: "/app/billing",
+              }}
               onDismiss={() => setQuotaError(null)}
             >
               <p>{quotaError}</p>
@@ -558,343 +325,75 @@ export default function DisputeDetailPage() {
           </Layout.Section>
         )}
 
-        {/* Dispute Status Stepper */}
+        {/* Tier 2: Evidence Pack Module */}
         <Layout.Section>
-          <DisputeStatusStepper steps={progressSteps} t={t} formatDate={formatDate} />
+          <EvidencePackModule
+            packs={packs}
+            latestPack={latestPack}
+            onGenerate={handleGenerate}
+            generating={generating}
+            templateCheckLoading={templateCheckLoading}
+          />
         </Layout.Section>
 
-        {/* Two-column: Dispute Summary (left) + Managed/Evidence (right) */}
+        {/* Tier 3: Key Dispute Facts */}
         <Layout.Section>
-          <div className={styles.twoColumnLayout}>
-            {/* LEFT: Dispute Summary */}
-            <Card padding="0">
-              <div
-                className={styles.collapsibleHeader}
-                onClick={() => setSummaryOpen((v) => !v)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSummaryOpen((v) => !v); }}
-              >
-                <Text as="h2" variant="headingSm">{t("disputes.disputeSummary")}</Text>
-                <span className={`${styles.collapsibleHeaderIcon} ${summaryOpen ? styles.collapsibleHeaderIconOpen : ""}`}>
-                  <Icon source={ChevronDownIcon} tone="subdued" />
-                </span>
-              </div>
-              <Collapsible open={summaryOpen} id="dispute-summary" transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
-                <div className={styles.summaryGrid}>
-                  <SummaryItem label={t("disputes.disputeId")} value={disputeNumericId} />
-                  <SummaryItem label={t("disputes.source")} value="Shopify Payments" />
-                  <SummaryItem label={t("disputes.transactionId")} value={dispute.dispute_evidence_gid?.split("/").pop()?.slice(0, 4) + "xx" || "—"} />
-                  <SummaryItem label={t("disputes.rrn")} value="—" />
-                  <SummaryItem label={t("disputes.openedOn")} value={formatDate(dispute.initiated_at)} />
-                  <SummaryItem
-                    label={t("table.status")}
-                    value={
-                      <Badge tone={statusTone(dispute.status)}>
-                        {statusLabel(dispute.status, t)}
-                      </Badge>
-                    }
-                  />
-                  <SummaryItem label={t("disputes.dueDate")} value={formatDate(dispute.due_at)} />
-                  <SummaryItem label={t("disputes.state")} value={deadline.urgent ? <span style={{ color: "#EF4444", fontWeight: 600 }}>{deadline.text}</span> : deadline.text} />
-                  <SummaryItem label={t("disputes.amount")} value={formatCurrency(dispute.amount, dispute.currency_code)} />
-                  <SummaryItem label={t("disputes.reason")} value={dispute.reason?.replace(/_/g, " ") ?? "—"} />
-                </div>
-              </Collapsible>
-            </Card>
-
-            {/* RIGHT: Managed + Evidence stacked */}
-            <div className={styles.rightColumn}>
-              {/* Handling mode card — always visible, content reflects actual mode */}
-              <Card padding="0">
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <InlineStack gap="200" blockAlign="center">
-                      <span style={{ display: "inline-flex", color: "var(--p-color-text-subdued)" }}>
-                        <Icon source={CheckCircleIcon} tone="subdued" />
-                      </span>
-                      <Text as="h2" variant="headingSm">{t("disputes.managedByDisputeDesk")}</Text>
-                    </InlineStack>
-                  </InlineStack>
-                </div>
-                <div className={styles.managedCardContent}>
-                  <div className={styles.managedAutomationRow}>
-                    <div className={styles.managedAutomationIcon}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className={styles.managedTitle}>
-                        {dispute.handling_mode === "automated"
-                          ? t("disputes.managedAutomatedTitle")
-                          : dispute.handling_mode === "review"
-                            ? t("disputes.managedReviewTitle")
-                            : t("disputes.managedManualTitle")}
-                      </p>
-                      <p className={styles.managedDesc}>
-                        {dispute.handling_mode === "automated"
-                          ? t("disputes.managedAutomatedDesc")
-                          : dispute.handling_mode === "review"
-                            ? t("disputes.managedReviewDesc")
-                            : t("disputes.managedManualDesc")}
-                      </p>
-                    </div>
-                  </div>
-                  {matchedRule && isAutomated && (
-                    <div className={styles.managedStatusRow}>
-                      <span className={styles.managedStatusDot} />
-                      <div>
-                        <p className={styles.managedStatusLabel}>{t("disputes.autoPackActive")}</p>
-                        <p className={styles.managedStatusRule}>
-                          {t("disputes.autoPackTriggered", { name: matchedRule.name ?? "Default" })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* More Evidence */}
-              <Card padding="0">
-                <div className={styles.moreEvidenceHeader}>
-                  <p className={styles.moreEvidenceTitle}>{t("disputes.moreEvidenceTitle")}</p>
-                  <span className={styles.moreEvidenceCount}>{t("disputes.moreEvidenceFileCount", { count: 0, max: 5 })}</span>
-                </div>
-                <div
-                  className={`${styles.moreEvidenceZone} ${!packForSupplemental ? styles.moreEvidenceZoneDisabled : ""}`}
-                >
-                  <div className={styles.moreEvidenceUploadIcon}>
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                  </div>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    {packForSupplemental
-                      ? t("disputes.moreEvidenceBody")
-                      : isSubmittedToBank
-                        ? t("disputes.uploadsSubmittedToBank")
-                        : t("disputes.uploadsUnavailable")}
-                  </Text>
-                  {packForSupplemental && (
-                    <div className={styles.moreEvidenceLink}>
-                      <Button
-                        url={withShopParams(`/app/packs/${packForSupplemental.id}`, searchParams)}
-                      >
-                        {t("disputes.moreEvidenceCta")}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.moreEvidenceFooter}>
-                  <p className={styles.moreEvidenceFooterText}>
-                    {t("disputes.uploadsAvailableHint")}
-                  </p>
-                </div>
-              </Card>
-            </div>
-          </div>
+          <KeyDisputeFacts dispute={dispute} deadline={deadline} />
         </Layout.Section>
 
-        {/* Order Data (collapsible) */}
+        {/* Tier 4: Details & History */}
         <Layout.Section>
-          <Card padding="0">
-            <div
-              className={styles.collapsibleHeader}
-              onClick={() => setOrderDataOpen((v) => !v)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOrderDataOpen((v) => !v); }}
-            >
-              <Text as="h2" variant="headingSm">{t("disputes.orderData")}</Text>
-              <span className={`${styles.collapsibleHeaderIcon} ${orderDataOpen ? styles.collapsibleHeaderIconOpen : ""}`}>
-                <Icon source={ChevronDownIcon} tone="subdued" />
-              </span>
-            </div>
-            <Collapsible open={orderDataOpen} id="order-data" transition={{ duration: "200ms", timingFunction: "ease-in-out" }}>
-              <Box padding="400">
-                <div className={styles.profileGrid}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                      <Icon source={PersonIcon} tone="subdued" />
-                      <Text as="h3" variant="headingSm">{t("disputes.customerInfo")}</Text>
-                    </div>
-                    <BlockStack gap="200">
-                      <ProfileRow label={t("disputes.name")} value={profile?.customerName ?? "—"} />
-                      <ProfileRow label={t("disputes.email")} value={profile?.email ?? "—"} />
-                      <ProfileRow label={t("disputes.phone")} value={profile?.phone ?? "—"} />
-                      <ProfileRow
-                        label={t("disputes.address")}
-                        value={formatAddress(profile?.displayAddress ?? profile?.shippingAddress)}
-                      />
-                    </BlockStack>
-                  </div>
-
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                      <Icon source={OrderIcon} tone="subdued" />
-                      <Text as="h3" variant="headingSm">{t("disputes.orderDetails")}</Text>
-                    </div>
-                    <BlockStack gap="200">
-                      <ProfileRow
-                        label={t("disputes.orderId")}
-                        value={
-                          profile?.orderName
-                            ? (shopDomain && orderNum ? (
-                                <a
-                                  href={`https://${shopDomain}/admin/orders/${orderNum}`}
-                                  target="_top"
-                                  style={{ color: "#1D4ED8", textDecoration: "none" }}
-                                >
-                                  {profile.orderName}
-                                </a>
-                              ) : profile.orderName)
-                            : orderNum ? `#${orderNum}` : "—"
-                        }
-                      />
-                      <ProfileRow label={t("disputes.date")} value={formatDate(profile?.createdAt ?? null)} />
-                      {profile?.total && (
-                        <ProfileRow
-                          label="Total"
-                          value={formatCurrency(parseFloat(profile.total.amount), profile.total.currencyCode)}
-                        />
-                      )}
-                      {profile?.fulfillments && profile.fulfillments.flatMap((f) => f.trackingInfo).length > 0 && (
-                        profile.fulfillments.flatMap((f) => f.trackingInfo).slice(0, 2).map((trk, i) => (
-                          <ProfileRow
-                            key={i}
-                            label={t("disputes.tracking")}
-                            value={
-                              trk.url ? (
-                                <a href={trk.url} target="_blank" rel="noopener noreferrer" style={{ color: "#1D4ED8", fontFamily: "monospace", fontSize: "12px" }}>
-                                  {trk.number}
-                                </a>
-                              ) : (
-                                <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{trk.number}</span>
-                              )
-                            }
-                          />
-                        ))
-                      )}
-                    </BlockStack>
-                  </div>
-                </div>
-              </Box>
-            </Collapsible>
-          </Card>
-        </Layout.Section>
-
-        {/* Dispute History & Timeline */}
-        <Layout.Section>
-          <DisputeTimeline disputeId={id as string} orderEvents={profile?.orderEvents ?? []} />
-        </Layout.Section>
-
-        {/* Evidence Packs */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between" blockAlign="center">
-                <InlineStack gap="200" blockAlign="center">
-                  <Icon source={NoteIcon} tone="subdued" />
-                  <Text as="h2" variant="headingSm">{t("disputes.evidencePacks")}</Text>
-                </InlineStack>
-                <Button onClick={handleGenerate} loading={generating || templateCheckLoading} size="slim">
-                  {t("disputes.generateNewPack")}
-                </Button>
-              </InlineStack>
-
-              {packs.length === 0 ? (
-                <>
-                  <Divider />
-                  <Text as="p" tone="subdued">{t("disputes.noPacks")}</Text>
-                </>
-              ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table className={styles.evidenceTable}>
-                    <thead>
-                      <tr>
-                        {[t("table.pack"), t("table.status"), t("table.score"), t("disputes.blockers"), t("table.created"), t("table.actions")].map((h) => (
-                          <th key={h} className={styles.evidenceTh}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {packs.map((p) => (
-                        <tr key={p.id}>
-                          <td className={styles.evidenceTd}>
-                            <a href={withShopParams(`/app/packs/${p.id}`, searchParams)} style={{ color: "#1D4ED8", fontWeight: 500, textDecoration: "none" }}>
-                              {p.id.slice(0, 8)}
-                            </a>
-                          </td>
-                          <td className={styles.evidenceTd}>
-                            <Badge tone={packStatusTone(p.status)}>{p.status.replace(/_/g, " ")}</Badge>
-                          </td>
-                          <td className={styles.evidenceTd}>
-                            {p.completeness_score != null ? (
-                              <span style={{ color: p.completeness_score >= 80 ? "#22C55E" : p.completeness_score >= 50 ? "#F59E0B" : "#EF4444", fontWeight: 500 }}>
-                                {p.completeness_score}%
-                              </span>
-                            ) : "—"}
-                          </td>
-                          <td className={styles.evidenceTd} style={{ color: "#667085" }}>
-                            {p.blockers && p.blockers.length > 0 ? p.blockers.length + " blocker(s)" : t("common.none")}
-                          </td>
-                          <td className={styles.evidenceTd} style={{ color: "#667085", whiteSpace: "nowrap" }}>
-                            {formatDate(p.created_at)}
-                          </td>
-                          <td className={styles.evidenceTd}>
-                            {p.status === "saved_to_shopify" && p.saved_to_shopify_at ? (
-                              <span style={{ fontSize: "12px", color: "#22C55E", display: "flex", alignItems: "center", gap: "4px" }}>
-                                <Icon source={CheckCircleIcon} tone="success" />
-                                {t("disputes.saved", { date: formatDate(p.saved_to_shopify_at) })}
-                              </span>
-                            ) : (
-                              <a href={withShopParams(`/app/packs/${p.id}`, searchParams)} style={{ color: "#1D4ED8", textDecoration: "none", fontSize: "13px" }}>
-                                {t("table.viewDetails")}
-                              </a>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </BlockStack>
-          </Card>
+          <DetailsAndHistory
+            dispute={dispute}
+            profile={profile}
+            matchedRule={matchedRule}
+            isAutomated={isAutomated}
+            shopDomain={shopDomain}
+            disputeId={id as string}
+          />
         </Layout.Section>
       </Layout>
 
+      {/* Template picker modal */}
       <Modal
         open={showTemplateModal}
         onClose={() => setShowTemplateModal(false)}
-        title={matchedTemplate ? t("disputes.templateFound") : t("disputes.noTemplate")}
+        title={
+          matchedTemplate
+            ? t("disputes.templateFound")
+            : t("disputes.noTemplate")
+        }
         primaryAction={
           matchedTemplate
             ? {
                 content: t("disputes.useTemplate"),
-                onAction: () => doGenerateFromTemplate(matchedTemplate.id),
+                onAction: () =>
+                  doGenerateFromTemplate(matchedTemplate.id),
                 loading: generating,
               }
             : {
                 content: t("disputes.goToTemplateLibrary"),
                 onAction: () => {
                   setShowTemplateModal(false);
-                  router.push(withShopParams("/app/packs", searchParams));
+                  router.push(
+                    withShopParams("/app/packs", searchParams),
+                  );
                 },
               }
         }
-        secondaryActions={[{
-          content: t("disputes.generateBasic"),
-          onAction: doGenerate,
-        }]}
+        secondaryActions={[
+          {
+            content: t("disputes.generateBasic"),
+            onAction: doGenerate,
+          },
+        ]}
       >
         <Modal.Section>
           <Text as="p" variant="bodyMd">
             {matchedTemplate
-              ? t("disputes.templateFoundBody", { name: matchedTemplate.name })
+              ? t("disputes.templateFoundBody", {
+                  name: matchedTemplate.name,
+                })
               : t("disputes.noTemplateBody")}
           </Text>
         </Modal.Section>
