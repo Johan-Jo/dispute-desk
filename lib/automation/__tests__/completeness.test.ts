@@ -109,11 +109,14 @@ describe("evaluateCompleteness", () => {
   });
 
   it("pack always gets a valid result even with no context", () => {
-    // Default context assumes fulfilled + card
+    // Default context assumes nothing conditionally available (conservative)
     const result = evaluateCompleteness("FRAUDULENT", new Set(["order_confirmation", "billing_address_match"]));
 
     expect(result.checklist.length).toBeGreaterThan(0);
     expect(result.score).toBeGreaterThan(0);
+    // Conditional fields should NOT be blockers with conservative default
+    expect(result.blockers).not.toContain("AVS / CVV Result");
+    expect(result.blockers).not.toContain("Shipping Tracking");
   });
 
   it("evidenceStrengthScore reflects collectable items only", () => {

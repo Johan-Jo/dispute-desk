@@ -173,10 +173,17 @@ export interface TemplateChecklistItem {
   requirement_mode?: RequirementMode;
 }
 
+/**
+ * Conservative default: assume conditional fields are NOT available.
+ * This prevents false blockers when the order couldn't be fetched or
+ * when a pack was built before context-aware evaluation was added.
+ * Better to under-require than to show alarming "blocked" states
+ * for data the merchant cannot provide.
+ */
 const DEFAULT_ORDER_CONTEXT: OrderContext = {
-  isFulfilled: true,
-  hasCardPayment: true,
-  avsCvvAvailable: true,
+  isFulfilled: false,
+  hasCardPayment: false,
+  avsCvvAvailable: false,
 };
 
 /**
