@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
-  previewEvidenceMapping,
-  type PackSection,
+  buildEvidenceInputFromRaw,
+  FIELD_MAPPINGS,
+  type RawPackSection,
 } from "@/lib/shopify/fieldMapping";
 
 export const runtime = "nodejs";
@@ -10,8 +11,9 @@ export const runtime = "nodejs";
 /**
  * GET /api/packs/:packId/submission-preview
  *
- * Compute the exact Shopify submission payload preview.
- * Does NOT submit — returns what would be sent.
+ * Returns a human-readable preview of exactly what will be sent
+ * to Shopify. Uses the same serialization as the actual submission
+ * so preview matches reality.
  */
 export async function GET(
   _req: NextRequest,
@@ -27,10 +29,7 @@ export async function GET(
     .single();
 
   if (error || !pack) {
-    return NextResponse.json(
-      { error: "Pack not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
   const packJson = pack.pack_json as {
@@ -46,51 +45,52 @@ export async function GET(
     return NextResponse.json({ fields: [] });
   }
 
-  // Build PackSection array from pack_json sections
-  const sections: PackSection[] = packJson.sections.map((s) => ({
-    key: s.type,
+  // Convert to RawPackSection format
+  const rawSections: RawPackSection[] = packJson.sections.map((s) => ({
+    type: s.type,
     label: s.label,
-    content: JSON.stringify(s.data, null, 2),
+    source: s.source,
+    data: s.data,
   }));
 
-  // Also check for rebuttal draft
+  // Use the real serialization engine (same as actual Shopify submission)
+  const evidenceInput = buildEvidenceInputFromRaw(rawSections);
+
+  // Also get rebuttal
   const { data: rebuttal } = await sb
     .from("rebuttal_drafts")
-    .select("sections, source")
+    .select("sections")
     .eq("pack_id", packId)
     .eq("locale", "en-US")
     .maybeSingle();
 
   if (rebuttal?.sections) {
-    const rebuttalSections = rebuttal.sections as Array<{
-      type: string;
-      text: string;
-    }>;
-    const rebuttalText = rebuttalSections
-      .map((s) => s.text)
-      .join("\n\n");
+    const rebuttalSections = rebuttal.sections as Array<{ text: string }>;
+    const rebuttalText = rebuttalSections.map((s) => s.text).join("\n\n");
     if (rebuttalText.trim()) {
-      sections.push({
-        key: "cancellation_rebuttal",
-        label: "Dispute Response Argument",
-        content: rebuttalText,
-      });
+      // Add to cancellationRebuttal or uncategorizedText
+      if (!evidenceInput.cancellationRebuttal) {
+        evidenceInput.cancellationRebuttal = rebuttalText;
+      } else {
+        evidenceInput.uncategorizedText =
+          (evidenceInput.uncategorizedText ? evidenceInput.uncategorizedText + "\n\n" : "") +
+          rebuttalText;
+      }
     }
   }
 
-  const preview = previewEvidenceMapping(sections);
-
-  const fields = preview.map((p) => ({
-    shopifyFieldName: p.shopifyField,
-    shopifyFieldLabel: p.label,
-    content: p.content,
-    contentPreview:
-      p.content.length > 200
-        ? p.content.slice(0, 200) + "..."
-        : p.content,
-    source: "auto",
-    included: p.enabled,
-  }));
+  // Build preview fields from the evidence input
+  const fields = FIELD_MAPPINGS.map((mapping) => {
+    const content = (evidenceInput as Record<string, string | undefined>)[mapping.shopifyField] ?? "";
+    return {
+      shopifyFieldName: mapping.shopifyField,
+      shopifyFieldLabel: mapping.label,
+      content,
+      contentPreview: content.length > 300 ? content.slice(0, 300) + "..." : content,
+      source: "auto",
+      included: content.length > 0,
+    };
+  }).filter((f) => f.included);
 
   return NextResponse.json({ fields });
 }
