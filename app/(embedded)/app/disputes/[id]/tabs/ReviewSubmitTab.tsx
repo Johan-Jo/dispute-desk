@@ -89,7 +89,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
 
   // Headline
   const headline = isReadOnly
-    ? "Evidence has been submitted"
+    ? "\u2713 Evidence has been submitted to Shopify"
     : isStrong
       ? "Your case is ready to submit"
       : caseStrength.overall === "moderate"
@@ -168,10 +168,13 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
             <Banner tone="success">
               <BlockStack gap="200">
                 <Text as="p" variant="bodySm" fontWeight="semibold">
-                  Evidence saved to Shopify
+                  {"\u2713 Evidence submitted to Shopify"}
                 </Text>
                 <Text as="p" variant="bodySm">
-                  {`Saved on ${pack.savedToShopifyAt ? new Date(pack.savedToShopifyAt).toLocaleDateString() : "\u2014"}. Submit your response in Shopify Admin, or it will be auto-submitted on the dispute deadline.`}
+                  {pack.savedToShopifyAt
+                    ? `Saved on ${new Date(pack.savedToShopifyAt).toLocaleDateString()}. `
+                    : "Your evidence is being processed. "}
+                  {"Submit your response in Shopify Admin, or it will be auto-submitted on the dispute deadline."}
                 </Text>
               </BlockStack>
             </Banner>

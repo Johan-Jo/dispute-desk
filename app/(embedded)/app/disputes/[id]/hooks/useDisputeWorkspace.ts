@@ -231,6 +231,7 @@ export interface WorkspaceClientState {
   saving: boolean;
   rendering: boolean;
   rebuttalDirty: boolean;
+  justSubmitted: boolean;
 }
 
 export interface DerivedState {
@@ -266,6 +267,7 @@ export function useDisputeWorkspace(disputeId: string) {
     saving: false,
     rendering: false,
     rebuttalDirty: false,
+    justSubmitted: false,
   });
 
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -442,15 +444,19 @@ export function useDisputeWorkspace(disputeId: string) {
       const excluded = Array.from(clientState.excludedFields);
       if (excluded.length > 0) body.excludedFields = excluded;
 
-      await fetch(`/api/packs/${data.pack.id}/save-to-shopify`, {
+      const res = await fetch(`/api/packs/${data.pack.id}/save-to-shopify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      await fetchAll();
-      setClientState((s) => ({ ...s, saving: false }));
+      if (res.ok) {
+        // Mark as submitted immediately — don't wait for job runner
+        setClientState((s) => ({ ...s, saving: false, justSubmitted: true }));
+      } else {
+        setClientState((s) => ({ ...s, saving: false }));
+      }
     },
-    [data?.pack, clientState.excludedFields, fetchAll],
+    [data?.pack, clientState.excludedFields],
   );
 
   const exportPdf = useCallback(async () => {
@@ -587,7 +593,7 @@ export function useDisputeWorkspace(disputeId: string) {
       risk,
       improvement,
       nextAction,
-      isReadOnly: isSaved ?? false,
+      isReadOnly: (isSaved ?? false) || clientState.justSubmitted,
       isBuilding: pack?.status === "queued" || pack?.status === "building",
     };
   })();
