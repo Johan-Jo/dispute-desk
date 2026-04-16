@@ -4,6 +4,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 import { generateArgumentMap } from "@/lib/argument/generateArgument";
 import { generateRebuttalDraft } from "@/lib/argument/generateRebuttal";
+import { selectRebuttalReason } from "@/lib/argument/rebuttalReason";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 export const runtime = "nodejs";
@@ -118,8 +119,11 @@ export async function POST(
   // Generate argument map
   const argumentMap = generateArgumentMap(dispute.reason, checklist);
 
+  // Auto-select rebuttal reason
+  const rebuttalReason = selectRebuttalReason(dispute.reason, checklist);
+
   // Generate rebuttal
-  const rebuttalDraft = generateRebuttalDraft(argumentMap);
+  const rebuttalDraft = generateRebuttalDraft(argumentMap, rebuttalReason);
 
   // Upsert argument map
   if (regenerate) {
@@ -170,6 +174,7 @@ export async function POST(
       counterclaims: argumentMap.counterclaims,
       overallStrength: argumentMap.overallStrength,
     },
+    rebuttalReason,
     rebuttalDraft: {
       sections: rebuttalDraft.sections,
       source: rebuttalDraft.source,

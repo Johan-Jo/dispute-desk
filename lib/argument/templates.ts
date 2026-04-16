@@ -20,7 +20,7 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
     ],
     strongestEvidence: [
       "AVS/CVV match",
-      "IP consistency",
+      "3D Secure authentication (if available)",
       "Delivery confirmation",
     ],
     counterclaims: [
@@ -28,7 +28,8 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
         id: "fraud-1",
         title: "Transaction was verified by payment processor",
         requiredEvidence: ["avs_cvv_match", "billing_address_match"],
-        supportingEvidence: ["customer_ip", "risk_analysis"],
+        // 3DS is supporting only — we cannot auto-collect it
+        supportingEvidence: ["threeds_authentication", "customer_ip", "risk_analysis"],
       },
       {
         id: "fraud-2",

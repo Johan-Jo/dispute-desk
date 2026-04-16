@@ -44,6 +44,8 @@ export interface ChecklistItemV2 {
   /** True only when submission literally cannot proceed without this. */
   blocking: boolean;
   source: EvidenceItemSource;
+  /** How this evidence is obtained. */
+  collectionType?: EvidenceCollectionType;
   /** Why the item is unavailable (only set when status = "unavailable"). */
   unavailableReason?: string;
   /** Waive metadata (only set when status = "waived"). */
@@ -129,6 +131,84 @@ export interface CompletenessResultV2 {
   legacyRecommendedActions: string[];
 }
 
+/* ── Evidence Collection Type ── */
+
+/** How evidence is obtained. More precise than source alone. */
+export type EvidenceCollectionType =
+  | "auto"                // Always auto-collected from Shopify
+  | "conditional_auto"    // Auto-collected when conditions are met (e.g., card payment for AVS)
+  | "manual"              // Merchant must upload or provide
+  | "unavailable";        // Cannot be auto-collected from current integrations
+
+/* ── Structured Rebuttal Reason ── */
+
+/** Primary reason why the dispute is invalid. */
+export type RebuttalReasonKey =
+  | "CUSTOMER_AUTHORIZED_TRANSACTION"
+  | "ORDER_WAS_FULFILLED_AND_DELIVERED"
+  | "ITEM_MATCHED_DESCRIPTION"
+  | "REFUND_ALREADY_ISSUED_OR_NOT_REQUIRED"
+  | "SUBSCRIPTION_OR_TERMS_WERE_ACCEPTED"
+  | "DIGITAL_GOODS_OR_SERVICE_WAS_DELIVERED"
+  | "DISPUTE_REFERENCES_WRONG_TRANSACTION"
+  | "CUSTOMER_USED_PRODUCT_OR_SERVICE"
+  | "CUSTOMER_DID_NOT_ATTEMPT_RESOLUTION"
+  | "OTHER_SUPPORTING_CONTEXT";
+
+export const REBUTTAL_REASONS: Record<RebuttalReasonKey, string> = {
+  CUSTOMER_AUTHORIZED_TRANSACTION: "Customer authorized the transaction",
+  ORDER_WAS_FULFILLED_AND_DELIVERED: "Order was fulfilled and delivered",
+  ITEM_MATCHED_DESCRIPTION: "Item matched its description",
+  REFUND_ALREADY_ISSUED_OR_NOT_REQUIRED: "Refund already issued or not required",
+  SUBSCRIPTION_OR_TERMS_WERE_ACCEPTED: "Subscription or terms were accepted",
+  DIGITAL_GOODS_OR_SERVICE_WAS_DELIVERED: "Digital goods or service was delivered",
+  DISPUTE_REFERENCES_WRONG_TRANSACTION: "Dispute references the wrong transaction",
+  CUSTOMER_USED_PRODUCT_OR_SERVICE: "Customer used the product or service",
+  CUSTOMER_DID_NOT_ATTEMPT_RESOLUTION: "Customer did not attempt resolution",
+  OTHER_SUPPORTING_CONTEXT: "Other supporting context",
+};
+
+export interface RebuttalReasonSelection {
+  key: RebuttalReasonKey;
+  label: string;
+  source: "auto" | "manual";
+  confidence: "high" | "medium" | "low";
+  why: string;
+}
+
+/* ── 3D Secure Evidence Model ── */
+
+/**
+ * 3D Secure authentication evidence.
+ *
+ * CRITICAL: Shopify does NOT provide a stable typed field for 3DS
+ * authentication results. We MUST NOT:
+ * - Infer 3DS from AVS/CVV codes
+ * - Parse receiptJson (gateway-defined, unstable)
+ * - Generate text claiming 3DS unless confirmed from a trusted source
+ */
+export interface ThreeDSecureEvidence {
+  /** Whether we have confirmed 3DS authentication data. */
+  availability: "confirmed" | "unknown" | "not_available_automatically";
+  /** Where the 3DS data came from. */
+  source: "shopify_typed" | "provider_specific" | "manual_upload" | "none";
+  /** Whether the system can auto-generate a 3DS claim. */
+  canAutoClaim: boolean;
+  /** How important this evidence is for the current dispute. */
+  strength: "critical" | "strong" | "supporting" | "none";
+}
+
+/**
+ * Default 3DS state. Conservative: unknown availability, no auto-claim.
+ * Only upgraded when a trusted source confirms authentication.
+ */
+export const DEFAULT_THREEDS: ThreeDSecureEvidence = {
+  availability: "not_available_automatically",
+  source: "none",
+  canAutoClaim: false,
+  strength: "none",
+};
+
 /* ── Reason template v2 ── */
 
 /** Per-field config in a reason template. */
@@ -146,4 +226,6 @@ export interface TemplateFieldV2 {
   /** True only for platform-mandated blockers. Almost always false. */
   blocking: boolean;
   expectedSource: EvidenceItemSource;
+  /** How this evidence is obtained. */
+  collectionType: EvidenceCollectionType;
 }
