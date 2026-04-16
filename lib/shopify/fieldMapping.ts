@@ -1,20 +1,37 @@
 import type { DisputeEvidenceUpdateInput } from "./mutations/disputeEvidenceUpdate";
 
+/**
+ * Legacy PackSection shape — used by preview and any callers that
+ * pre-serialize section data into { key, content }.
+ */
 export interface PackSection {
   key: string;
   label: string;
   content: string | null;
 }
 
+/**
+ * Raw pack_json section shape as produced by buildPack collectors.
+ * Each collector writes { type, label, source, data, fieldsProvided }.
+ */
+export interface RawPackSection {
+  type: string;
+  label: string;
+  source: string;
+  fieldsProvided?: string[];
+  data: Record<string, unknown>;
+}
+
 export interface FieldMapping {
   shopifyField: keyof DisputeEvidenceUpdateInput;
   label: string;
+  /** Match against PackSection.key OR RawPackSection.type */
   packSectionKeys: string[];
 }
 
 /**
- * Maps internal pack section keys to Shopify DisputeEvidenceUpdateInput fields.
- * Each mapping pulls content from one or more pack sections.
+ * Maps internal pack section keys/types to Shopify DisputeEvidenceUpdateInput fields.
+ * Keys cover both the legacy { key } format and the raw { type } format from collectors.
  */
 export const FIELD_MAPPINGS: FieldMapping[] = [
   {
@@ -25,17 +42,17 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
   {
     shopifyField: "accessActivityLog",
     label: "Order Timeline",
-    packSectionKeys: ["timeline", "order_activity", "access_log"],
+    packSectionKeys: ["order", "timeline", "order_activity", "access_log"],
   },
   {
     shopifyField: "cancellationPolicyDisclosure",
     label: "Cancellation Policy",
-    packSectionKeys: ["cancellation_policy", "refund_policy"],
+    packSectionKeys: ["cancellation_policy"],
   },
   {
     shopifyField: "refundPolicyDisclosure",
     label: "Refund Policy",
-    packSectionKeys: ["refund_policy_snapshot", "refund_policy"],
+    packSectionKeys: ["refund_policy", "refund_policy_snapshot", "policy"],
   },
   {
     shopifyField: "refundRefusalExplanation",
@@ -50,23 +67,152 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
   {
     shopifyField: "customerCommunication",
     label: "Customer Communication",
-    packSectionKeys: ["customer_comms", "customer_communication"],
+    packSectionKeys: ["comms", "customer_comms", "customer_communication"],
   },
   {
     shopifyField: "uncategorizedText",
     label: "Additional Evidence",
-    packSectionKeys: ["notes", "additional", "uncategorized"],
+    packSectionKeys: ["other", "notes", "additional", "uncategorized"],
   },
 ];
 
 /**
- * Build the Shopify evidence input from pack sections.
+ * Serialize a raw section's structured data into a plain text string
+ * suitable for the Shopify disputeEvidenceUpdate mutation.
+ */
+function serializeSectionData(section: RawPackSection): string {
+  const { data, label, type } = section;
+  if (!data || typeof data !== "object") return "";
+
+  const lines: string[] = [];
+
+  // Shipping / fulfillment sections
+  if (type === "shipping") {
+    if (data.overallStatus) lines.push(`Fulfillment Status: ${data.overallStatus}`);
+    const fulfillments = data.fulfillments as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(fulfillments)) {
+      for (const f of fulfillments) {
+        if (f.status) lines.push(`Status: ${f.status}`);
+        if (f.carrier) lines.push(`Carrier: ${f.carrier}`);
+        if (f.trackingNumber) lines.push(`Tracking Number: ${f.trackingNumber}`);
+        if (f.trackingUrl) lines.push(`Tracking URL: ${f.trackingUrl}`);
+        if (f.deliveredAt) lines.push(`Delivered: ${f.deliveredAt}`);
+        if (f.estimatedDeliveryAt) lines.push(`Estimated Delivery: ${f.estimatedDeliveryAt}`);
+        if (f.createdAt) lines.push(`Shipped: ${f.createdAt}`);
+        lines.push("");
+      }
+    }
+    return lines.filter(Boolean).join("\n").trim();
+  }
+
+  // Order sections
+  if (type === "order") {
+    if (data.orderName) lines.push(`Order: ${data.orderName}`);
+    if (data.createdAt) lines.push(`Date: ${data.createdAt}`);
+    if (data.totalAmount) lines.push(`Total: ${data.totalAmount} ${data.currencyCode ?? ""}`);
+    if (data.customerEmail) lines.push(`Customer Email: ${data.customerEmail}`);
+    if (data.billingAddress) lines.push(`Billing Address: ${formatAddress(data.billingAddress)}`);
+    if (data.shippingAddress) lines.push(`Shipping Address: ${formatAddress(data.shippingAddress)}`);
+    const items = data.lineItems as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(items) && items.length > 0) {
+      lines.push("\nLine Items:");
+      for (const item of items) {
+        lines.push(`  - ${item.name ?? item.title ?? "Item"} (qty: ${item.quantity ?? 1})`);
+      }
+    }
+    return lines.filter(Boolean).join("\n").trim();
+  }
+
+  // Policy sections
+  if (type === "policy") {
+    if (data.policyType) lines.push(`Policy: ${data.policyType}`);
+    if (data.title) lines.push(`Title: ${data.title}`);
+    if (data.body) lines.push(String(data.body));
+    if (data.url) lines.push(`URL: ${data.url}`);
+    return lines.filter(Boolean).join("\n").trim();
+  }
+
+  // Customer communication sections
+  if (type === "comms") {
+    if (data.emails && Array.isArray(data.emails)) {
+      for (const email of data.emails as Array<Record<string, unknown>>) {
+        if (email.subject) lines.push(`Subject: ${email.subject}`);
+        if (email.body) lines.push(String(email.body));
+        if (email.sentAt) lines.push(`Sent: ${email.sentAt}`);
+        lines.push("");
+      }
+    }
+    if (data.summary) lines.push(String(data.summary));
+    return lines.filter(Boolean).join("\n").trim();
+  }
+
+  // "other" type: payment verification, risk assessment, manual evidence, etc.
+  // Fallback: serialize key-value pairs
+  for (const [key, value] of Object.entries(data)) {
+    if (value == null) continue;
+    if (typeof value === "object") {
+      lines.push(`${formatKey(key)}: ${JSON.stringify(value)}`);
+    } else {
+      lines.push(`${formatKey(key)}: ${value}`);
+    }
+  }
+  return lines.join("\n").trim();
+}
+
+function formatKey(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/_/g, " ")
+    .replace(/^\w/, (c) => c.toUpperCase())
+    .trim();
+}
+
+function formatAddress(addr: unknown): string {
+  if (!addr || typeof addr !== "object") return String(addr ?? "");
+  const a = addr as Record<string, unknown>;
+  return [a.address1, a.city, a.province, a.zip, a.country]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/**
+ * Build the Shopify evidence input from raw pack_json sections.
+ * Serializes structured data into text and maps to Shopify fields.
+ */
+export function buildEvidenceInputFromRaw(
+  sections: RawPackSection[],
+  disabledFields: Set<string> = new Set(),
+): DisputeEvidenceUpdateInput {
+  const input: DisputeEvidenceUpdateInput = {};
+
+  for (const mapping of FIELD_MAPPINGS) {
+    if (disabledFields.has(mapping.shopifyField)) continue;
+
+    const matching = sections.filter((s) =>
+      mapping.packSectionKeys.includes(s.type),
+    );
+
+    if (matching.length > 0) {
+      const combined = matching
+        .map((s) => serializeSectionData(s))
+        .filter(Boolean)
+        .join("\n\n");
+      if (combined) {
+        input[mapping.shopifyField] = combined;
+      }
+    }
+  }
+
+  return input;
+}
+
+/**
+ * Build the Shopify evidence input from legacy PackSection format.
  * Returns only fields that have non-empty content.
- * `disabledFields` allows the merchant to toggle off specific fields before saving.
  */
 export function buildEvidenceInput(
   sections: PackSection[],
-  disabledFields: Set<string> = new Set()
+  disabledFields: Set<string> = new Set(),
 ): DisputeEvidenceUpdateInput {
   const input: DisputeEvidenceUpdateInput = {};
 
@@ -74,7 +220,7 @@ export function buildEvidenceInput(
     if (disabledFields.has(mapping.shopifyField)) continue;
 
     const matchingSections = sections.filter(
-      (s) => mapping.packSectionKeys.includes(s.key) && s.content?.trim()
+      (s) => mapping.packSectionKeys.includes(s.key) && s.content?.trim(),
     );
 
     if (matchingSections.length > 0) {
@@ -92,13 +238,20 @@ export function buildEvidenceInput(
  * Preview what would be sent to Shopify — returns mapped fields with their content.
  */
 export function previewEvidenceMapping(
-  sections: PackSection[]
-): Array<{ shopifyField: string; label: string; content: string; enabled: boolean }> {
+  sections: PackSection[],
+): Array<{
+  shopifyField: string;
+  label: string;
+  content: string;
+  enabled: boolean;
+}> {
   return FIELD_MAPPINGS.map((mapping) => {
     const matchingSections = sections.filter(
-      (s) => mapping.packSectionKeys.includes(s.key) && s.content?.trim()
+      (s) => mapping.packSectionKeys.includes(s.key) && s.content?.trim(),
     );
-    const content = matchingSections.map((s) => s.content!.trim()).join("\n\n");
+    const content = matchingSections
+      .map((s) => s.content!.trim())
+      .join("\n\n");
     return {
       shopifyField: mapping.shopifyField,
       label: mapping.label,

@@ -364,12 +364,20 @@ export default function PackPreviewPage() {
         return;
       }
       setSaving(true);
-      const body = { confirmWarnings: true };
-      await fetch(`/api/packs/${packId}/save-to-shopify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      try {
+        const body = { confirmWarnings: true };
+        const res = await fetch(`/api/packs/${packId}/save-to-shopify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          console.error("[save-to-shopify] API error:", res.status, data);
+        }
+      } catch (err) {
+        console.error("[save-to-shopify] fetch error:", err);
+      }
       setShowConfirmModal(false);
       await fetchPack();
       setSaving(false);

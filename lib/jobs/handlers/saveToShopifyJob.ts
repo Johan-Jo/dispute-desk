@@ -8,7 +8,7 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
-import { buildEvidenceInput, type PackSection } from "@/lib/shopify/fieldMapping";
+import { buildEvidenceInputFromRaw, type RawPackSection } from "@/lib/shopify/fieldMapping";
 import {
   DISPUTE_EVIDENCE_UPDATE_MUTATION,
   type DisputeEvidenceUpdateResult,
@@ -38,7 +38,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
 
   const { data: pack } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, sections")
+    .select("id, shop_id, dispute_id, pack_json")
     .eq("id", packId)
     .single();
   if (!pack) throw new Error(`Pack not found: ${packId}`);
@@ -64,8 +64,13 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   if (!session) throw new Error(`No offline session for shop ${pack.shop_id}`);
 
   const accessToken = decryptAccessToken(session.access_token_encrypted);
-  const sections: PackSection[] = Array.isArray(pack.sections) ? pack.sections : [];
-  const input = buildEvidenceInput(sections);
+  const packJson = pack.pack_json as { sections?: unknown[] } | null;
+  const rawSections = Array.isArray(packJson?.sections) ? packJson.sections : [];
+  const sections: RawPackSection[] = rawSections.filter(
+    (s): s is RawPackSection =>
+      typeof s === "object" && s !== null && "type" in s && "label" in s && "data" in s,
+  );
+  const input = buildEvidenceInputFromRaw(sections);
 
   // Inject customerPurchaseIp if available in evidence items.
   // Shopify's disputeEvidenceUpdate accepts this as a standalone field.
@@ -100,6 +105,16 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     variables: { id: dispute.dispute_evidence_gid, input },
     correlationId: `save-${job.id}`,
   });
+
+  // Check for GraphQL-level errors (auth failures, network issues, etc.)
+  if (result.errors?.length) {
+    const errMsg = result.errors.map((e: { message: string }) => e.message).join(", ");
+    await sb
+      .from("evidence_packs")
+      .update({ status: "save_failed", updated_at: new Date().toISOString() })
+      .eq("id", packId);
+    throw new Error(`Shopify GraphQL errors: ${errMsg}`);
+  }
 
   const mutation = result.data?.disputeEvidenceUpdate;
   const userErrors = mutation?.userErrors ?? [];

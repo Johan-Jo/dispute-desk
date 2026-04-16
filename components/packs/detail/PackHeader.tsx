@@ -74,6 +74,8 @@ export function PackHeader({
   }
 
   // Determine state message and CTA
+  // Submit actions live in the sidebar and page-level primary action only.
+  // This header shows status + non-submit CTAs (scroll to builder, open in Shopify).
   let statusMessage: string;
   let cta: { label: string; action: () => void; disabled?: boolean } | null =
     null;
@@ -90,24 +92,13 @@ export function PackHeader({
     }
   } else if (saveFailed) {
     statusMessage = "Save failed \u2014 try again";
-    cta = { label: "Retry submission", action: onSave };
   } else if (readiness === "blocked" && blockerCount > 0) {
     statusMessage = `Submission blocked \u2014 ${blockerCount} required ${blockerCount === 1 ? "item" : "items"} missing`;
     cta = { label: "Add required evidence", action: onScrollToBuilder };
   } else if (readiness === "ready_with_warnings" && warningCount > 0) {
     statusMessage = `Ready to submit \u2014 ${warningCount} high-impact ${warningCount === 1 ? "item" : "items"} could strengthen your case`;
-    cta = {
-      label: "Review & submit",
-      action: onSave,
-      disabled: isSaving,
-    };
   } else {
     statusMessage = "Ready to submit";
-    cta = {
-      label: "Submit to Shopify",
-      action: onSave,
-      disabled: isSaving,
-    };
   }
 
   return (
