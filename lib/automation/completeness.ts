@@ -478,7 +478,9 @@ export function evaluateCompletenessV2(
             source: resolved.collectable ? t.expectedSource : ("unavailable_from_source" as EvidenceItemSource),
             collectionType: t.collectionType,
             unavailableReason: t.collectionType === "unavailable" && !isPresent
-              ? "Not available automatically from Shopify \u2014 upload manually if you have it"
+              ? (t.field === "threeds_authentication"
+                ? "Shopify does not expose 3D Secure status via Admin API. Upload proof manually if available."
+                : "Not available automatically \u2014 upload manually if you have it")
               : resolved.unavailableReason,
             waiveReason: waivedItem?.reason,
             waiveNote: waivedItem?.note,

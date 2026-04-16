@@ -1,0 +1,2120 @@
+================================================================================
+DISPUTEDESK — COMPLETE HELP & KNOWLEDGE BASE
+For Tawk.to AI Chat Training
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1.  What Is DisputeDesk?
+2.  How DisputeDesk Works (The Big Picture)
+3.  Getting Started & Installation
+4.  Shopify App Store Installation
+5.  First-Time Setup Wizard
+6.  The Dashboard
+7.  Disputes — Overview
+8.  Dispute Lifecycle & Statuses
+9.  Dispute Detail Page
+10. Evidence Packs — Overview
+11. How Evidence Packs Are Built
+12. Evidence Sections & Collectors
+13. Completeness Score & Checklist
+14. Blockers & Recommended Actions
+15. Uploading Evidence Manually
+16. Approving & Saving Packs
+17. Auto-Save Gate (How Auto-Save Decisions Work)
+18. Downloading Evidence as PDF
+19. Automation Rules Engine
+20. Creating Rules
+21. Rule Matching Logic & Priority
+22. Rule Presets
+23. Store Policies
+24. Policy Templates
+25. Automation Settings
+26. Plans & Pricing
+27. Free Plan (Sandbox)
+28. Starter Plan
+29. Growth Plan
+30. Scale Plan
+31. Pack Top-Ups
+32. Trial Period
+33. Upgrading & Downgrading
+34. Billing & Subscription Management
+35. Team Management & Roles
+36. Multi-Store Support (Portal)
+37. The Portal vs. The Embedded App
+38. Portal Authentication (Sign Up, Sign In, Password Reset)
+39. Shopify OAuth & Permissions
+40. Help Center & Articles
+41. Resources Hub (Blog)
+42. Integrations (Gorgias)
+43. Notifications & Reminders
+44. Security & Data Handling
+45. Dispute Reasons Explained
+46. Inquiry vs. Chargeback
+47. What Happens After Saving to Shopify
+48. Why DisputeDesk Does NOT Submit to Card Networks
+49. Demo Mode
+50. Troubleshooting — Common Issues
+51. Troubleshooting — Connection Problems
+52. Troubleshooting — Packs Not Building
+53. Troubleshooting — Auto-Save Not Working
+54. Troubleshooting — Missing Evidence
+55. Troubleshooting — Billing & Quota Issues
+56. FAQ — General
+57. FAQ — Disputes
+58. FAQ — Evidence Packs
+59. FAQ — Automation
+60. FAQ — Billing
+61. FAQ — Security & Privacy
+62. Glossary of Terms
+63. Contact & Support
+
+
+================================================================================
+1. WHAT IS DISPUTEDESK?
+================================================================================
+
+DisputeDesk is an automation-first Shopify chargeback evidence management app.
+It connects to your Shopify store, automatically syncs disputes from Shopify
+Payments, auto-builds evidence packs from your order data, tracking info, and
+store policies, and saves the completed evidence back to Shopify — all without
+you lifting a finger.
+
+DisputeDesk does NOT submit evidence to card networks (Visa, Mastercard, etc.)
+on your behalf. That final submission step is done by you in the Shopify Admin.
+DisputeDesk handles everything leading up to that point: gathering evidence,
+organizing it, scoring its completeness, and saving it to Shopify so it's ready
+for you to submit.
+
+Key value propositions:
+- Save hours per dispute by automating evidence collection
+- Reduce errors with completeness scoring and blocker detection
+- Win more chargebacks with organized, thorough evidence packs
+- Control your automation — set rules, thresholds, and review gates
+- Works inside Shopify Admin (embedded app) or via standalone portal
+
+
+================================================================================
+2. HOW DISPUTEDESK WORKS (THE BIG PICTURE)
+================================================================================
+
+DisputeDesk runs a four-step automation pipeline:
+
+STEP 1: AUTO-SYNC
+  Disputes are automatically fetched from Shopify Payments every 5 minutes.
+  When Shopify creates or updates a dispute, DisputeDesk picks it up via
+  webhooks (instant) or cron sync (every 5 minutes as backup). No manual
+  import needed.
+
+STEP 2: AUTO-BUILD
+  When a new dispute is synced, DisputeDesk automatically builds an evidence
+  pack. It pulls data from multiple sources in parallel:
+  - Order details (items, amounts, customer info)
+  - Shipping & tracking (carrier, tracking number, delivery status)
+  - Store policies (refund policy, shipping policy, terms of service)
+  - Customer communications (order timeline, notes)
+  - Any files you've uploaded manually
+
+STEP 3: AUTO-SAVE
+  Once a pack meets your quality criteria (completeness score, no blockers),
+  DisputeDesk automatically saves the evidence to Shopify via the API. You
+  control the threshold — for example, only auto-save packs scoring 80% or
+  higher.
+
+STEP 4: YOU SUBMIT IN SHOPIFY
+  You open Shopify Admin, review the saved evidence, and click "Submit" to
+  send it to the card network. This step is always manual because Shopify
+  requires merchant authorization for final submission.
+
+Each step can be configured independently. You can turn off auto-build and
+build packs manually. You can turn off auto-save and approve each pack
+yourself. You're always in control.
+
+
+================================================================================
+3. GETTING STARTED & INSTALLATION
+================================================================================
+
+There are two ways to use DisputeDesk:
+
+OPTION A: SHOPIFY APP STORE (Recommended)
+  Install directly from the Shopify App Store. This opens DisputeDesk inside
+  your Shopify Admin as an embedded app. Best for merchants who want everything
+  in one place.
+
+OPTION B: STANDALONE PORTAL
+  Sign up at DisputeDesk.app, then connect your Shopify store via OAuth. This
+  gives you a separate dashboard at disputedesk.app/portal. Best for merchants
+  managing multiple stores or who prefer a dedicated interface.
+
+Both options connect to the same backend. Your data syncs across both surfaces.
+
+
+================================================================================
+4. SHOPIFY APP STORE INSTALLATION
+================================================================================
+
+Step-by-step:
+
+1. Go to the Shopify App Store and search for "DisputeDesk"
+2. Click "Add app" on the DisputeDesk listing
+3. Review the permissions DisputeDesk needs:
+   - Read orders: To access order details for evidence
+   - Read Shopify Payments disputes: To sync your disputes
+   - Write dispute evidences: To save evidence back to Shopify
+4. Click "Install app"
+5. You'll be redirected to the DisputeDesk setup wizard inside Shopify Admin
+
+Required Shopify permissions for your staff account:
+  - You must have "Manage orders information" permission in Shopify Admin
+  - Without this, DisputeDesk cannot save evidence to your disputes
+
+After installation, DisputeDesk will immediately begin syncing any existing
+disputes from your Shopify Payments account.
+
+
+================================================================================
+5. FIRST-TIME SETUP WIZARD
+================================================================================
+
+After installing, you'll go through a 4-step setup wizard:
+
+STEP 1: CONNECTION
+  Confirms your Shopify store is connected and permissions are granted. Shows
+  which scopes are active (orders, disputes, evidence). If anything is missing,
+  you'll see a prompt to re-authorize.
+
+STEP 2: COVERAGE RULES
+  Choose which dispute types DisputeDesk should handle automatically. You can:
+  - Enable coverage for all dispute reasons (recommended)
+  - Select specific reasons (e.g., only "Product Not Received")
+  - Skip this step and configure later
+
+STEP 3: AUTOMATION
+  Configure your automation preferences:
+  - Auto-build: Automatically generate evidence packs for new disputes (on/off)
+  - Auto-save: Automatically save completed packs to Shopify (on/off)
+  - Minimum completeness score: Only auto-save packs above this threshold (default 80%)
+  - Require manual review: Force a manual approval step before auto-save (on/off)
+  - Zero blockers gate: Block auto-save if any required evidence is missing (on/off)
+
+STEP 4: GOALS
+  Tell us about your goals (optional). This helps us tailor recommendations:
+  - Your expected dispute volume
+  - Your primary dispute reasons
+  - What you hope to achieve (higher win rate, time savings, etc.)
+
+After completing the wizard, you'll land on your dashboard and DisputeDesk
+starts working immediately.
+
+You can always go back and change these settings later from the Settings page.
+
+
+================================================================================
+6. THE DASHBOARD
+================================================================================
+
+The dashboard gives you a real-time overview of your dispute situation.
+
+KEY METRICS (KPI CARDS):
+  - Active Disputes: Number of open disputes requiring attention
+  - Win Rate: Percentage of resolved disputes won (evidence accepted)
+  - Evidence Packs: Total packs created this billing period
+  - Amount at Risk: Total dollar value of open disputes
+  - Amount Recovered: Total dollar value of disputes won
+  - Amount Lost: Total dollar value of disputes lost
+
+DISPUTES BY PHASE:
+  Breakdown showing how many disputes are in each phase:
+  - Inquiry (pre-chargeback, lower severity)
+  - Chargeback (formal dispute, higher severity)
+
+RECENT ACTIVITY:
+  A live feed showing recent events:
+  - New disputes synced
+  - Packs auto-built
+  - Packs saved to Shopify
+  - Disputes resolved (won/lost)
+
+RECENT DISPUTES TABLE:
+  Quick view of your most recent disputes with status, reason, amount, and
+  due date. Click any dispute to view its detail page.
+
+TREND CHART:
+  Win rate trend over time, so you can track improvement.
+
+DEMO MODE:
+  If you're on a trial or free plan, you may see demo data to explore the
+  interface before real disputes come in. Demo data is clearly labeled and
+  does not affect your real disputes.
+
+
+================================================================================
+7. DISPUTES — OVERVIEW
+================================================================================
+
+The Disputes page shows all disputes synced from your Shopify Payments account.
+
+FILTERING:
+  - By phase: Inquiry, Chargeback, or All
+  - By reason: Product Not Received, Fraudulent, Product Unacceptable, etc.
+  - By status: Open, Under Review, Won, Lost
+  - Search: Find by order name, customer name, or dispute ID
+
+SORTING:
+  - By date (newest first by default)
+  - By amount
+  - By due date (urgent first)
+
+PAGINATION:
+  Disputes are shown 10 per page. Use the pagination controls to navigate.
+
+EACH DISPUTE SHOWS:
+  - Order name (e.g., #1042)
+  - Customer name
+  - Dispute reason
+  - Amount & currency
+  - Current phase (Inquiry or Chargeback)
+  - Status badge (color-coded)
+  - Due date (when evidence must be submitted)
+  - Whether an evidence pack exists
+  - Pack completeness score (if applicable)
+
+
+================================================================================
+8. DISPUTE LIFECYCLE & STATUSES
+================================================================================
+
+A dispute goes through several stages:
+
+1. NEEDS_RESPONSE
+   The dispute is new. Evidence has not been submitted. Action required.
+
+2. UNDER_REVIEW
+   Evidence has been submitted to the card network and is being reviewed.
+   No further action possible.
+
+3. WON
+   The card network ruled in your favor. The chargeback amount is returned
+   to you.
+
+4. LOST
+   The card network ruled against you. The chargeback amount is deducted.
+
+PHASES:
+  - INQUIRY: A pre-chargeback notification. Less severe. You have more time
+    to respond. Resolving at this stage prevents a full chargeback.
+  - CHARGEBACK: A formal dispute. More severe. Shorter response window.
+    Failing to respond means automatic loss.
+
+IMPORTANT: Due dates are set by the card network, not by DisputeDesk. Missing
+a due date means you forfeit the dispute automatically. DisputeDesk sends
+reminders as the due date approaches.
+
+
+================================================================================
+9. DISPUTE DETAIL PAGE
+================================================================================
+
+Click any dispute to see its full detail page. This includes:
+
+STATUS STEPPER:
+  Visual progress bar showing where the dispute is in its lifecycle
+  (Needs Response → Under Review → Resolved).
+
+DISPUTE INFO:
+  - Order details (order name, date, items, total)
+  - Customer info (name, email)
+  - Dispute reason (why the customer disputed)
+  - Amount disputed
+  - Phase (Inquiry or Chargeback)
+  - Due date and time remaining
+
+EVIDENCE PACKS:
+  All packs associated with this dispute. Shows:
+  - Pack status (queued, building, ready, blocked, saved)
+  - Completeness score
+  - Created date
+  - Who created it (automation or manual)
+  Click a pack to view its detail.
+
+TIMELINE:
+  Chronological list of all events for this dispute:
+  - Dispute synced from Shopify
+  - Pack auto-build triggered
+  - Pack completed (with score)
+  - Pack approved by merchant
+  - Evidence saved to Shopify
+  - Dispute outcome (won/lost)
+
+NOTES:
+  Add internal notes about this dispute. Notes are private and not sent to
+  Shopify or the card network. Useful for team communication.
+
+
+================================================================================
+10. EVIDENCE PACKS — OVERVIEW
+================================================================================
+
+An evidence pack is a structured collection of evidence supporting your case
+against a chargeback. DisputeDesk organizes evidence into sections that map
+directly to what card networks expect.
+
+Each pack contains:
+  - Multiple evidence sections (order, shipping, policy, etc.)
+  - A completeness score (0-100%)
+  - A checklist of required and optional items
+  - Blockers (critical missing items)
+  - Recommended actions (optional items that would strengthen your case)
+
+Packs can be:
+  - Auto-built by the automation pipeline
+  - Manually created by you
+  - Based on a template (global or custom)
+
+
+================================================================================
+11. HOW EVIDENCE PACKS ARE BUILT
+================================================================================
+
+When a pack is built (automatically or manually), DisputeDesk runs multiple
+"collectors" in parallel to gather evidence from different sources:
+
+1. ORDER COLLECTOR
+   Fetches from Shopify: order ID, customer name, email, order date, line
+   items (SKU, title, price, quantity), order status, payment details.
+
+2. FULFILLMENT / SHIPPING COLLECTOR
+   Fetches from Shopify: tracking number, carrier name (USPS, UPS, FedEx,
+   DHL, etc.), tracking status (in transit, delivered, etc.), delivery date.
+
+3. POLICY COLLECTOR
+   Fetches from DisputeDesk: your stored refund policy, shipping policy,
+   cancellation policy, and terms of service. These are policies you've
+   uploaded or created in DisputeDesk.
+
+4. CUSTOMER COMMUNICATION COLLECTOR
+   Fetches from Shopify: order timeline events, notes, customer interactions.
+   If you've connected Gorgias, also fetches helpdesk ticket data.
+
+5. MANUAL UPLOAD COLLECTOR
+   Aggregates any files you've manually uploaded as evidence (screenshots,
+   signed delivery proofs, correspondence, etc.).
+
+All collectors run simultaneously for speed. If a collector fails (e.g.,
+tracking info not yet available), the pack is still built with whatever
+data is available, and the missing items appear as blockers or recommended
+actions.
+
+
+================================================================================
+12. EVIDENCE SECTIONS & COLLECTORS
+================================================================================
+
+Each dispute reason has different evidence requirements. DisputeDesk uses
+reason-specific checklists:
+
+FOR "PRODUCT NOT RECEIVED" DISPUTES:
+  Required:
+  - Order confirmation (auto-collected from Shopify)
+  - Shipping tracking info (auto-collected from Shopify)
+  - Delivery proof (auto-collected if delivered)
+  Optional:
+  - Shipping policy (from your stored policies)
+  - Customer communications (from order timeline)
+  - Supporting documents (your uploads)
+
+FOR "FRAUDULENT" DISPUTES:
+  Required:
+  - Order confirmation
+  - Billing address match verification
+  Optional:
+  - AVS/CVV verification result
+  - Customer communications
+  - Activity log
+  - Supporting documents
+
+FOR "PRODUCT UNACCEPTABLE" DISPUTES:
+  Required:
+  - Order confirmation
+  - Product description
+  - Refund policy
+  Optional:
+  - Customer communications
+  - Shipping tracking
+  - Supporting documents
+
+FOR "DUPLICATE" DISPUTES:
+  Required:
+  - Order confirmation
+  - Duplicate explanation (why this is not a duplicate charge)
+  Optional:
+  - Supporting documents
+
+FOR "SUBSCRIPTION CANCELED" DISPUTES:
+  Required:
+  - Order confirmation
+  - Cancellation policy
+  Optional:
+  - Customer communications
+  - Supporting documents
+
+FOR "GENERAL" / OTHER DISPUTES:
+  Required:
+  - Order confirmation
+  Optional:
+  - Shipping tracking
+  - Customer communications
+  - Refund policy
+  - Supporting documents
+
+
+================================================================================
+13. COMPLETENESS SCORE & CHECKLIST
+================================================================================
+
+Every evidence pack gets a completeness score from 0 to 100%.
+
+HOW IT'S CALCULATED:
+  The score is based on how many required checklist items are present.
+  Formula: (present required items / total required items) x 100
+
+  Example: If a "Product Not Received" pack has 3 required items and 2 are
+  present, the score is 67%.
+
+  Optional items do NOT affect the score but appear as recommended actions.
+
+THE CHECKLIST:
+  Each pack shows a visual checklist:
+  [x] Order confirmation — Present
+  [x] Shipping tracking — Present
+  [ ] Delivery proof — MISSING (blocker)
+  [x] Shipping policy — Present (optional)
+  [ ] Customer communications — Not provided (recommended)
+
+WHY IT MATTERS:
+  - Higher scores correlate with higher win rates
+  - Auto-save only triggers above your minimum threshold (default 80%)
+  - Blockers prevent auto-save if "zero blockers" gate is enabled
+  - The score helps you prioritize which disputes need manual attention
+
+You can always improve a pack's score by uploading missing evidence manually.
+
+
+================================================================================
+14. BLOCKERS & RECOMMENDED ACTIONS
+================================================================================
+
+BLOCKERS:
+  These are required evidence items that are missing from your pack. Blockers
+  prevent auto-save (if "enforce no blockers" is enabled) and indicate
+  critical gaps in your evidence.
+
+  Common blockers:
+  - Missing delivery proof (for "Product Not Received")
+  - Missing billing address match (for "Fraudulent")
+  - Missing refund policy (for "Product Unacceptable")
+
+  To resolve a blocker:
+  1. Go to the pack detail page
+  2. See which items are marked as blockers
+  3. Upload the missing evidence manually
+  4. The blocker clears and your score updates
+
+RECOMMENDED ACTIONS:
+  These are optional evidence items that would strengthen your case but aren't
+  required. They don't block auto-save but are worth adding if you have them.
+
+  Examples:
+  - "Add customer communication logs"
+  - "Upload shipping policy"
+  - "Add supporting screenshots"
+
+
+================================================================================
+15. UPLOADING EVIDENCE MANUALLY
+================================================================================
+
+You can upload files to any evidence pack to fill gaps or add supporting docs.
+
+SUPPORTED FILE TYPES:
+  - Images: PNG, JPG, JPEG, GIF, WebP
+  - Documents: PDF
+  - Maximum file size: varies by plan
+
+HOW TO UPLOAD:
+  1. Open the pack detail page
+  2. Scroll to the "Supporting Documents" section (or the section needing evidence)
+  3. Click "Upload" or drag-and-drop your file
+  4. The file is uploaded to secure storage
+  5. The pack's completeness score recalculates automatically
+  6. If the upload resolves a blocker, the blocker clears
+
+WHAT TO UPLOAD:
+  - Screenshots of delivery confirmation
+  - Signed proof of delivery
+  - Email correspondence with the customer
+  - Photos of the product as shipped
+  - Refund policy screenshots from your website
+  - Any other evidence supporting your case
+
+All uploaded files are stored securely in encrypted storage. They are only
+accessible to your team and are sent to Shopify when the pack is saved.
+
+
+================================================================================
+16. APPROVING & SAVING PACKS
+================================================================================
+
+There are two ways packs get saved to Shopify:
+
+AUTOMATIC (Auto-Save):
+  If auto-save is enabled and the pack meets all criteria:
+  - Completeness score >= your minimum threshold (default 80%)
+  - No blockers (if "enforce no blockers" is on)
+  - No manual review required (or already approved)
+  Then DisputeDesk automatically saves the evidence to Shopify.
+
+MANUAL APPROVAL:
+  If auto-save is off, or if manual review is required, you need to:
+  1. Open the pack detail page
+  2. Review the evidence sections and completeness score
+  3. Click "Approve" to approve the pack
+  4. Click "Save to Shopify" to push evidence to Shopify
+
+  Alternatively, approving a pack may automatically trigger the save if your
+  settings allow it.
+
+WHAT "SAVING TO SHOPIFY" MEANS:
+  DisputeDesk calls the Shopify API to attach your evidence to the dispute.
+  This makes the evidence visible in your Shopify Admin under the dispute.
+  After saving, you still need to click "Submit" in Shopify Admin to send
+  the evidence to the card network.
+
+PACK STATUSES AFTER SAVE:
+  - saved_to_shopify: Evidence has been pushed to Shopify successfully
+  - save_success: Confirmed saved
+  - save_failed: The Shopify API returned an error (see troubleshooting)
+
+
+================================================================================
+17. AUTO-SAVE GATE (HOW AUTO-SAVE DECISIONS WORK)
+================================================================================
+
+The auto-save gate evaluates each completed pack and decides what to do:
+
+DECISION TREE:
+
+  Is auto-save enabled?
+    NO → Pack is set to "ready" (manual approval needed)
+    YES ↓
+
+  Is completeness score >= minimum threshold?
+    NO → Pack is "blocked" (reason: score too low)
+    YES ↓
+
+  Is "enforce no blockers" on AND are there blockers?
+    YES → Pack is "blocked" (reason: blockers present)
+    NO ↓
+
+  Is "require manual review" on AND pack not yet approved?
+    YES → Pack is "parked for review" (manual approval needed)
+    NO ↓
+
+  → AUTO-SAVE: Evidence is saved to Shopify automatically.
+
+CONFIGURABLE SETTINGS:
+  - auto_save_enabled: Master toggle for auto-save
+  - auto_save_min_score: Minimum completeness score (0-100, default 80)
+  - enforce_no_blockers: Require zero blockers before auto-save (default on)
+  - require_review_before_save: Force manual approval step (default on for
+    Free and Starter plans)
+
+You can adjust all of these in Settings > Automation.
+
+
+================================================================================
+18. DOWNLOADING EVIDENCE AS PDF
+================================================================================
+
+You can download any evidence pack as a PDF document.
+
+HOW TO DOWNLOAD:
+  1. Open the pack detail page
+  2. Click "Download PDF"
+  3. DisputeDesk generates a formatted PDF with all evidence sections
+  4. The PDF downloads to your device
+
+THE PDF INCLUDES:
+  - Cover page with dispute summary (order, customer, reason, amount)
+  - Each evidence section with its data
+  - Completeness checklist
+  - Timestamps for when evidence was collected
+  - Uploaded files (images embedded, PDFs attached)
+
+USE CASES:
+  - Keep offline records of your evidence
+  - Share with legal counsel
+  - Reference during card network disputes
+  - Audit trail documentation
+
+
+================================================================================
+19. AUTOMATION RULES ENGINE
+================================================================================
+
+Rules let you customize how DisputeDesk handles different types of disputes.
+Instead of treating all disputes the same, you can create rules that match
+specific conditions and trigger specific actions.
+
+WHAT A RULE DOES:
+  When a dispute comes in, DisputeDesk checks your rules in priority order.
+  The first rule that matches determines how the dispute is handled.
+
+MATCH CONDITIONS (what triggers the rule):
+  - Dispute reason: Match specific reasons (e.g., "Fraudulent", "Product
+    Not Received")
+  - Dispute phase: Match inquiry, chargeback, or both
+  - Amount range: Match disputes within a dollar range (e.g., over $500)
+  - You can combine multiple conditions (all must match)
+
+ACTIONS (what happens when the rule matches):
+  - Auto-pack: Automatically build an evidence pack using a specific template
+  - Review first: Build the pack but require manual approval before saving
+  - Custom template: Use a specific evidence template for this rule
+
+RULE LIMITS BY PLAN:
+  - Free: 0 rules (automation rules not available)
+  - Starter: Up to 5 rules
+  - Growth: Unlimited rules
+  - Scale: Unlimited rules
+
+
+================================================================================
+20. CREATING RULES
+================================================================================
+
+HOW TO CREATE A RULE:
+
+1. Go to the Rules page (in embedded app or portal)
+2. Click "Create Rule"
+3. Fill in the form:
+
+   NAME: Give your rule a descriptive name
+   Example: "High-value fraud disputes"
+
+   MATCH CONDITIONS:
+   - Reason: Select one or more dispute reasons
+   - Phase: Select inquiry, chargeback, or both
+   - Amount: Optionally set a minimum and/or maximum amount
+
+   ACTION:
+   - Mode: Choose "Auto-pack" (build automatically) or "Review" (build but
+     hold for manual review)
+   - Template: Optionally select a pack template to use
+   - Required fields: Optionally enforce specific evidence fields as required
+
+4. Click "Save"
+
+The rule is now active and will be evaluated for all new disputes.
+
+EDITING RULES:
+  Click any rule to edit its conditions, action, or priority.
+
+DISABLING RULES:
+  Toggle the enable/disable switch to temporarily disable a rule without
+  deleting it.
+
+DELETING RULES:
+  Click "Delete" to permanently remove a rule.
+
+REORDERING RULES:
+  Rules are evaluated in priority order (lowest number = highest priority).
+  Drag and drop to reorder, or use the reorder controls.
+
+
+================================================================================
+21. RULE MATCHING LOGIC & PRIORITY
+================================================================================
+
+When a new dispute arrives, DisputeDesk evaluates your rules as follows:
+
+1. Rules are sorted by priority (ascending — lower number = checked first)
+2. For each enabled rule:
+   a. Check reason condition: Is the dispute's reason in the rule's reason list?
+      (If no reason specified, any reason matches)
+   b. Check phase condition: Does the dispute's phase match?
+      (If no phase specified, any phase matches)
+   c. Check amount condition: Is the dispute amount within the min/max range?
+      (If no range specified, any amount matches)
+3. ALL conditions must match for the rule to trigger
+4. The FIRST matching rule wins — remaining rules are not evaluated
+5. The winning rule's action is executed
+
+IF NO RULE MATCHES:
+  DisputeDesk falls back to default behavior based on your automation settings
+  (auto-build if enabled, using the default template for the dispute reason).
+
+TIPS:
+  - Put your most specific rules first (highest priority)
+  - Put catch-all rules last (lowest priority)
+  - Use amount ranges to handle high-value disputes differently
+  - Test rules by checking which rule matched in the dispute timeline
+
+
+================================================================================
+22. RULE PRESETS
+================================================================================
+
+DisputeDesk includes built-in rule presets to get you started quickly:
+
+FRAUD DETECTION PRESET:
+  Match: Reason = Fraudulent
+  Action: Auto-pack with fraud-specific template
+  Why: Fraud disputes need specific evidence (AVS/CVV, billing address match)
+
+PRODUCT NOT RECEIVED PRESET:
+  Match: Reason = Product Not Received
+  Action: Auto-pack with shipping-focused template
+  Why: PNR disputes need tracking info and delivery proof
+
+HIGH-RISK AMOUNT PRESET:
+  Match: Amount > $500
+  Action: Review first (build pack but hold for manual approval)
+  Why: High-value disputes deserve extra attention before auto-saving
+
+HOW TO USE PRESETS:
+  1. Go to the Rules page
+  2. Click "Browse Presets" or look for suggested rules
+  3. Click "Install" on any preset
+  4. The rule is added to your rules with default settings
+  5. Customize the rule as needed (adjust amount threshold, add conditions)
+
+
+================================================================================
+23. STORE POLICIES
+================================================================================
+
+Store policies are critical evidence in chargeback disputes. DisputeDesk stores
+your policies and automatically includes them in evidence packs.
+
+SUPPORTED POLICY TYPES:
+  - Refund Policy: Your return and refund terms
+  - Shipping Policy: Your shipping methods, timelines, and guarantees
+  - Terms of Service: Your general terms and conditions
+  - Custom Policies: Any other policy relevant to disputes
+
+HOW TO ADD POLICIES:
+  1. Go to the Policies page
+  2. Click "Add Policy" or select a policy type
+  3. Either:
+     a. Upload a file (PDF or image of your policy page)
+     b. Use a template and customize it
+     c. Paste your policy text directly (markdown supported)
+  4. Save the policy
+
+Once saved, policies are automatically included in relevant evidence packs.
+For example, your refund policy is included in "Product Unacceptable" disputes,
+and your shipping policy is included in "Product Not Received" disputes.
+
+UPDATING POLICIES:
+  You can update your policies at any time. Updated policies will be used in
+  all future packs. Existing packs that were already saved to Shopify will
+  not be retroactively updated.
+
+
+================================================================================
+24. POLICY TEMPLATES
+================================================================================
+
+DisputeDesk provides policy templates to help you get started:
+
+REFUND POLICY TEMPLATE:
+  A comprehensive refund policy covering:
+  - Refund eligibility windows
+  - Condition requirements for returns
+  - Refund processing timelines
+  - Non-refundable items
+  - Exchange procedures
+
+SHIPPING POLICY TEMPLATE:
+  Covers:
+  - Shipping methods and carriers
+  - Estimated delivery timelines
+  - International shipping terms
+  - Lost or damaged package procedures
+  - Tracking information
+
+TERMS OF SERVICE TEMPLATE:
+  Covers:
+  - Purchase agreement terms
+  - Payment terms
+  - Dispute resolution procedures
+  - Limitation of liability
+
+HOW TO USE TEMPLATES:
+  1. Go to Policies
+  2. Click "Use Template" for the policy type you need
+  3. Review and customize the template text for your store
+  4. Save
+
+Templates are starting points. Always customize them to match your actual
+business practices and consult legal counsel for compliance.
+
+
+================================================================================
+25. AUTOMATION SETTINGS
+================================================================================
+
+Control how DisputeDesk's automation works from Settings > Automation.
+
+AUTO-BUILD (on/off):
+  When ON: DisputeDesk automatically creates evidence packs for new disputes.
+  When OFF: You must manually create packs for each dispute.
+  Default: ON (after setup)
+  Requires: Starter plan or higher
+
+AUTO-SAVE (on/off):
+  When ON: Completed packs are automatically saved to Shopify (if they pass
+  the gate criteria).
+  When OFF: You must manually approve and save each pack.
+  Default: OFF
+  Requires: Growth plan or higher recommended; available on Starter+
+
+MINIMUM COMPLETENESS SCORE (0-100):
+  Only auto-save packs with a score at or above this threshold.
+  Default: 80%
+  Tip: Start at 80% and adjust based on your win rate
+
+ENFORCE NO BLOCKERS (on/off):
+  When ON: Packs with any blockers (missing required evidence) cannot be
+  auto-saved, regardless of score.
+  When OFF: Packs can be auto-saved even with blockers, as long as the
+  score threshold is met.
+  Default: ON
+
+REQUIRE MANUAL REVIEW (on/off):
+  When ON: Every pack must be manually approved before it can be saved to
+  Shopify, even if auto-save is enabled.
+  When OFF: Packs that pass all gate criteria are saved automatically.
+  Default: ON for Free and Starter plans
+
+
+================================================================================
+26. PLANS & PRICING
+================================================================================
+
+DisputeDesk offers four plans to match your needs:
+
+| Feature                    | Free      | Starter   | Growth    | Scale     |
+|----------------------------|-----------|-----------|-----------|-----------|
+| Price                      | $0/mo     | $29/mo    | $79/mo    | $149/mo   |
+| Evidence Packs             | 3 total   | 15/month  | 75/month  | 300/month |
+| Auto-Build Packs           | No        | Yes       | Yes       | Yes       |
+| Automation Rules           | 0         | 5         | Unlimited | Unlimited |
+| Auto-Save                  | No        | Yes       | Yes       | Yes       |
+| Multi-Store Priority       | No        | No        | No        | Yes       |
+| Trial Period               | —         | 14 days   | 14 days   | 14 days   |
+
+All paid plans include a 14-day free trial. No credit card required to start.
+
+
+================================================================================
+27. FREE PLAN (SANDBOX)
+================================================================================
+
+The Free plan lets you explore DisputeDesk without any commitment.
+
+WHAT'S INCLUDED:
+  - 3 evidence packs (lifetime, not monthly)
+  - Manual pack creation only (no auto-build)
+  - No automation rules
+  - No auto-save
+  - Full dashboard and dispute sync
+  - Help center access
+
+BEST FOR:
+  - Merchants who want to try DisputeDesk before committing
+  - Low-volume stores with very few disputes
+  - Exploring the interface and understanding the workflow
+
+LIMITATIONS:
+  - Only 3 packs total (once used, you must upgrade for more)
+  - No automation features
+  - Manual review required for all packs
+
+
+================================================================================
+28. STARTER PLAN
+================================================================================
+
+The Starter plan adds automation essentials.
+
+PRICE: $29/month
+
+WHAT'S INCLUDED:
+  - 15 evidence packs per month
+  - Auto-build packs for new disputes
+  - Up to 5 automation rules
+  - Auto-save capability
+  - Manual review required by default (can be turned off)
+  - Full dashboard, dispute sync, help center
+
+BEST FOR:
+  - Small to mid-size stores with moderate dispute volume
+  - Merchants who want basic automation but still want control
+  - Stores receiving 10-15 disputes per month
+
+TRIAL: 14 days free, then $29/month
+
+
+================================================================================
+29. GROWTH PLAN
+================================================================================
+
+The Growth plan removes limits on rules and increases pack volume.
+
+PRICE: $79/month
+
+WHAT'S INCLUDED:
+  - 75 evidence packs per month
+  - Auto-build packs
+  - Unlimited automation rules
+  - Auto-save with full gate control
+  - No mandatory manual review (optional)
+  - Full dashboard, dispute sync, help center
+
+BEST FOR:
+  - Growing stores with higher dispute volumes
+  - Merchants who want full automation with fine-grained rules
+  - Stores receiving 25-75 disputes per month
+
+TRIAL: 14 days free, then $79/month
+
+
+================================================================================
+30. SCALE PLAN
+================================================================================
+
+The Scale plan is for high-volume merchants and multi-store operations.
+
+PRICE: $149/month
+
+WHAT'S INCLUDED:
+  - 300 evidence packs per month
+  - Auto-build packs
+  - Unlimited automation rules
+  - Auto-save with full gate control
+  - Multi-store priority support
+  - Full dashboard, dispute sync, help center
+
+BEST FOR:
+  - High-volume stores with many disputes
+  - Multi-store merchants
+  - Stores receiving 100+ disputes per month
+  - Merchants who need priority support
+
+TRIAL: 14 days free, then $149/month
+
+
+================================================================================
+31. PACK TOP-UPS
+================================================================================
+
+If you run out of packs before your billing cycle renews, you can purchase
+top-ups:
+
+  +25 PACKS: $19 (one-time purchase)
+  +100 PACKS: $59 (one-time purchase)
+
+Top-up packs do not expire at the end of your billing cycle. They are used
+after your monthly allocation is exhausted.
+
+HOW TO PURCHASE:
+  1. Go to Billing
+  2. Click "Buy More Packs" or "Top Up"
+  3. Select your top-up amount
+  4. Confirm purchase
+  5. Packs are added to your balance immediately
+
+
+================================================================================
+32. TRIAL PERIOD
+================================================================================
+
+All paid plans come with a 14-day free trial.
+
+DURING YOUR TRIAL:
+  - Full access to all features of your selected plan
+  - No credit card required to start
+  - Your disputes sync and automation runs normally
+  - Packs are built and can be saved to Shopify
+
+AFTER YOUR TRIAL:
+  - If you subscribe: Your plan continues seamlessly
+  - If you don't subscribe: You're moved to the Free plan
+  - Your data (disputes, packs, policies, rules) is preserved
+  - You can upgrade later to resume automation
+
+TRIAL COUNTDOWN:
+  Your dashboard shows how many days remain in your trial.
+
+
+================================================================================
+33. UPGRADING & DOWNGRADING
+================================================================================
+
+UPGRADING:
+  1. Go to Billing
+  2. Click "Upgrade" on your desired plan
+  3. Confirm the subscription
+  4. If using Shopify: You'll be redirected to approve the subscription charge
+  5. Your new plan is active immediately
+  6. Unused packs from your current billing cycle carry over
+
+DOWNGRADING:
+  1. Go to Billing
+  2. Click "Change Plan"
+  3. Select a lower plan
+  4. The change takes effect at the end of your current billing cycle
+  5. Your current features remain active until the cycle ends
+
+CANCELING:
+  1. Go to Billing
+  2. Click "Cancel Subscription"
+  3. You'll be moved to the Free plan at the end of your billing cycle
+  4. Your data is preserved — you can resubscribe anytime
+
+
+================================================================================
+34. BILLING & SUBSCRIPTION MANAGEMENT
+================================================================================
+
+BILLING CYCLE:
+  Monthly billing from the date you subscribed.
+
+PAYMENT:
+  Processed through Shopify's billing system (for embedded app users).
+
+USAGE TRACKING:
+  - Packs used this month vs. your monthly limit
+  - Top-up balance remaining
+  - Billing history
+
+INVOICES:
+  Available through Shopify's billing section for embedded app users.
+
+BILLING PAGE SHOWS:
+  - Current plan name and price
+  - Packs used / limit
+  - Next billing date
+  - Trial days remaining (if applicable)
+  - Upgrade/downgrade options
+  - Top-up purchase button
+  - Billing history
+
+
+================================================================================
+35. TEAM MANAGEMENT & ROLES
+================================================================================
+
+Invite team members to collaborate on dispute management.
+
+ROLES:
+  - Owner: Full access, can manage billing and team
+  - Admin: Full access except billing management
+  - Team Member: Can view disputes, packs, and take actions; cannot change
+    settings or manage team
+
+HOW TO INVITE:
+  1. Go to Team page
+  2. Click "Invite Member"
+  3. Enter their email address
+  4. Select their role
+  5. They receive an email invitation to join
+
+Team management is available through the portal. The embedded app links to
+the portal for team management.
+
+REMOVING MEMBERS:
+  1. Go to Team page
+  2. Click the member you want to remove
+  3. Click "Remove" and confirm
+
+
+================================================================================
+36. MULTI-STORE SUPPORT (PORTAL)
+================================================================================
+
+The portal supports managing multiple Shopify stores from a single account.
+
+HOW IT WORKS:
+  1. Sign in to the portal
+  2. Connect additional Shopify stores via Settings > Connect Store
+  3. Each store goes through its own OAuth flow
+  4. Switch between stores using the store switcher in the navigation
+
+EACH STORE HAS ITS OWN:
+  - Disputes and evidence packs
+  - Automation rules and settings
+  - Policies
+  - Billing plan
+  - Team permissions
+
+The embedded app is always scoped to a single store (the one you opened it
+from in Shopify Admin).
+
+
+================================================================================
+37. THE PORTAL VS. THE EMBEDDED APP
+================================================================================
+
+DisputeDesk has two interfaces that access the same data:
+
+EMBEDDED APP (Inside Shopify Admin):
+  - Access: Open from your Shopify Admin apps menu
+  - Auth: Shopify session (automatic when in Shopify Admin)
+  - UI: Shopify Polaris design system (looks native to Shopify)
+  - Scope: Single store
+  - Best for: Day-to-day dispute management within your existing workflow
+
+PORTAL (Standalone Dashboard):
+  - Access: Visit disputedesk.app/portal
+  - Auth: Email/password or magic link
+  - UI: Custom design with Tailwind CSS
+  - Scope: Multi-store (switch between connected stores)
+  - Best for: Multi-store management, detailed analytics, team collaboration
+
+BOTH PROVIDE:
+  - Dashboard with KPIs
+  - Dispute list and detail pages
+  - Evidence pack management
+  - Rules and automation settings
+  - Policy management
+  - Billing management
+  - Help center
+
+PORTAL-ONLY FEATURES:
+  - Multi-store switching
+  - Full team management
+  - Password-based authentication
+
+
+================================================================================
+38. PORTAL AUTHENTICATION
+================================================================================
+
+SIGN UP:
+  1. Go to disputedesk.app/auth/sign-up
+  2. Enter your full name, email, and password
+  3. Click "Sign Up"
+  4. Check your email for a verification link
+  5. Click the link to verify your email
+  6. Sign in to access the portal
+
+SIGN IN:
+  Option A — Email & Password:
+    1. Go to disputedesk.app/auth/sign-in
+    2. Enter your email and password
+    3. Click "Sign In"
+
+  Option B — Magic Link:
+    1. Go to disputedesk.app/auth/sign-in
+    2. Click "Sign in with magic link"
+    3. Enter your email
+    4. Check your email for the link
+    5. Click the link to sign in
+
+FORGOT PASSWORD:
+  1. Go to disputedesk.app/auth/forgot-password
+  2. Enter your email
+  3. Check your email for a reset link
+  4. Click the link and set a new password
+
+PASSWORD RESET:
+  1. Click the reset link from your email
+  2. Enter your new password
+  3. Confirm the new password
+  4. Click "Reset Password"
+  5. You'll be redirected to sign in
+
+
+================================================================================
+39. SHOPIFY OAUTH & PERMISSIONS
+================================================================================
+
+When you connect your Shopify store, DisputeDesk requests three permissions:
+
+1. READ ORDERS (read_orders)
+   Why: To access order details (items, amounts, customer info, shipping) for
+   building evidence packs.
+
+2. READ SHOPIFY PAYMENTS DISPUTES (read_shopify_payments_disputes)
+   Why: To sync disputes from your Shopify Payments account.
+
+3. WRITE DISPUTE EVIDENCES (write_shopify_payments_dispute_evidences)
+   Why: To save completed evidence packs back to Shopify.
+
+IMPORTANT REQUIREMENTS:
+  - Your store must use Shopify Payments (disputes come from Shopify Payments)
+  - Your staff account must have "Manage orders information" permission
+  - Without "Manage orders information," DisputeDesk cannot save evidence
+
+OAUTH FLOW:
+  1. DisputeDesk redirects you to Shopify's authorization page
+  2. You review the requested permissions
+  3. You click "Install" or "Approve"
+  4. Shopify redirects back to DisputeDesk with an access token
+  5. The token is encrypted (AES-256-GCM) and stored securely
+  6. Connection is established — disputes begin syncing
+
+REVOKING ACCESS:
+  You can uninstall DisputeDesk from Shopify Admin > Apps at any time.
+  Uninstalling revokes all access tokens and stops all syncing.
+
+
+================================================================================
+40. HELP CENTER & ARTICLES
+================================================================================
+
+DisputeDesk includes a built-in help center with 50+ articles covering every
+aspect of the product.
+
+HELP CATEGORIES:
+  1. Getting Started — Installation, setup, first steps
+  2. Disputes — Viewing, filtering, understanding dispute states
+  3. Dispute Lifecycle — Inquiry vs. chargeback, timelines, outcomes
+  4. Evidence Packs — Building, scoring, managing evidence
+  5. Automation Rules — Creating, prioritizing, and managing rules
+  6. Billing — Plans, upgrades, top-ups, trials
+  7. Saving to Shopify — How evidence is saved, field mapping, what happens next
+
+ACCESSING HELP:
+  - Embedded app: Click "Help" in the navigation
+  - Portal: Click "Help" in the sidebar
+  - Each page may also have contextual help links
+
+HELP ARTICLES INCLUDE:
+  - Step-by-step instructions with screenshots
+  - Explanations of concepts and terminology
+  - Best practices and tips
+  - Troubleshooting guidance
+  - Links to related articles
+
+SEARCH:
+  Use the search bar in the help center to find articles by keyword.
+
+LANGUAGES:
+  Help content is available in English, German, Spanish, French, Portuguese,
+  and Swedish.
+
+
+================================================================================
+41. RESOURCES HUB (BLOG)
+================================================================================
+
+DisputeDesk maintains a public resources hub with educational content about
+chargeback management, fraud prevention, and ecommerce operations.
+
+CONTENT TOPICS:
+  - Chargeback management best practices
+  - Fraud prevention strategies
+  - Understanding dispute reasons and evidence
+  - Ecommerce operations tips
+  - Industry news and trends
+
+ACCESS:
+  Visit the Resources section on the DisputeDesk website. Content is public
+  and does not require a login.
+
+The resources hub is designed to help merchants understand the chargeback
+landscape and improve their dispute management practices, even if they're
+not yet using DisputeDesk.
+
+
+================================================================================
+42. INTEGRATIONS (GORGIAS)
+================================================================================
+
+DisputeDesk integrates with third-party tools to enhance evidence collection.
+
+GORGIAS INTEGRATION:
+  Gorgias is a customer support helpdesk popular with Shopify merchants.
+  Connecting Gorgias allows DisputeDesk to automatically pull customer
+  support tickets into evidence packs.
+
+  HOW IT HELPS:
+  - Customer communication is critical evidence in disputes
+  - Instead of manually copying support tickets, DisputeDesk auto-fetches them
+  - Tickets related to the disputed order are included in the pack
+  - Shows card networks that you communicated with the customer
+
+  HOW TO CONNECT:
+  1. Go to Settings > Integrations
+  2. Click "Connect" next to Gorgias
+  3. Enter your Gorgias subdomain
+  4. Authorize the connection via OAuth
+  5. DisputeDesk will now fetch tickets for disputed orders
+
+  HOW TO DISCONNECT:
+  1. Go to Settings > Integrations
+  2. Click "Disconnect" next to Gorgias
+  3. Confirm disconnection
+  4. Future packs will no longer include Gorgias data
+
+  TESTING THE CONNECTION:
+  1. Go to Settings > Integrations
+  2. Click "Test" next to Gorgias
+  3. DisputeDesk verifies it can reach your Gorgias account
+
+
+================================================================================
+43. NOTIFICATIONS & REMINDERS
+================================================================================
+
+DisputeDesk keeps you informed about important events:
+
+DISPUTE DUE DATE REMINDERS:
+  - Sent when a dispute's evidence deadline is approaching
+  - Frequency: Every 4 hours for disputes nearing due date
+  - Channel: Email (to the store owner / connected email)
+
+NEW DISPUTE ALERTS:
+  - When a new dispute is synced from Shopify
+  - Visible in the dashboard activity feed
+
+PACK STATUS UPDATES:
+  - When a pack is auto-built
+  - When a pack is saved to Shopify
+  - When a pack is blocked (needs attention)
+
+DISPUTE OUTCOME NOTIFICATIONS:
+  - When a dispute is resolved (won or lost)
+  - Visible in the dashboard and dispute timeline
+
+All notifications appear in the dashboard activity feed. Email notifications
+are sent for time-sensitive items (due date reminders).
+
+
+================================================================================
+44. SECURITY & DATA HANDLING
+================================================================================
+
+DisputeDesk takes security seriously. Here's how your data is protected:
+
+ENCRYPTION:
+  - Shopify access tokens are encrypted with AES-256-GCM encryption
+  - Encryption keys support rotation (multiple key versions)
+  - Uploaded files are stored in private, encrypted storage buckets
+
+ROW-LEVEL SECURITY (RLS):
+  - Database has RLS policies on all tables
+  - Each merchant can only see their own store's data
+  - Even if a query is malformed, RLS prevents cross-store data leaks
+
+AUTHENTICATION:
+  - Portal: Supabase Auth (email/password or magic link)
+  - Embedded: Shopify OAuth with HMAC validation
+  - All API routes verify authentication before processing
+
+WEBHOOK SECURITY:
+  - Shopify webhooks are validated using HMAC-SHA256
+  - Webhook secret is compared against the Shopify API secret
+  - Invalid webhooks are rejected
+
+AUDIT TRAIL:
+  - Every action is logged to an immutable audit trail
+  - Logs include: who did what, when, and to which entity
+  - Audit events cannot be deleted or modified
+
+WHAT WE NEVER STORE IN PLAIN TEXT:
+  - Access tokens (always encrypted)
+  - Passwords (hashed by Supabase Auth)
+  - API keys
+
+WHAT WE NEVER LOG:
+  - Access tokens
+  - Passwords
+  - Payment information
+  - API keys
+
+DATA RETENTION:
+  - Your data is retained as long as your account is active
+  - Uninstalling the app triggers a cleanup process
+  - You can request data deletion at any time
+
+
+================================================================================
+45. DISPUTE REASONS EXPLAINED
+================================================================================
+
+Shopify Payments disputes come with a reason code from the card network.
+Here's what each reason means and what evidence is most important:
+
+PRODUCT NOT RECEIVED
+  The customer claims they never received the product.
+  Key evidence: Tracking info, delivery confirmation, signed delivery proof,
+  shipping policy.
+  Tip: If you have proof of delivery (especially signed), your chances of
+  winning are very high.
+
+FRAUDULENT
+  The customer claims they did not authorize the purchase.
+  Key evidence: AVS/CVV verification, billing address match, customer account
+  activity, IP address, device fingerprint.
+  Tip: Orders with matching AVS and positive CVV checks are much harder for
+  customers to dispute.
+
+PRODUCT UNACCEPTABLE
+  The customer claims the product is defective, damaged, or not as described.
+  Key evidence: Product description as listed, photos of product as shipped,
+  refund/return policy, customer communications about the issue.
+  Tip: Clear product descriptions and photos in your store help prevent these.
+
+DUPLICATE
+  The customer claims they were charged twice for the same purchase.
+  Key evidence: Order records showing separate orders, itemized receipts,
+  explanation of why charges are distinct.
+  Tip: Include timestamps and order IDs to clearly distinguish charges.
+
+SUBSCRIPTION CANCELED
+  The customer claims they canceled a subscription but were still charged.
+  Key evidence: Cancellation policy, terms of service, records of when (or
+  if) cancellation was requested, subscription agreement.
+  Tip: Having clear cancellation terms and records is essential.
+
+GENERAL
+  A catch-all reason when the specific reason doesn't fit other categories.
+  Key evidence: Order confirmation, any relevant documentation, shipping
+  tracking if applicable, refund policy.
+  Tip: Build the strongest general case you can with all available evidence.
+
+
+================================================================================
+46. INQUIRY VS. CHARGEBACK
+================================================================================
+
+Disputes can be in one of two phases:
+
+INQUIRY (Pre-Chargeback):
+  - An early-stage notification that a customer has raised a concern
+  - Less severe — not yet a formal chargeback
+  - Typically longer response window
+  - Resolving at this stage prevents escalation to a full chargeback
+  - Not all card networks use the inquiry phase
+
+CHARGEBACK (Formal Dispute):
+  - A formal reversal of a charge by the card network
+  - More severe — the disputed amount is held or deducted
+  - Shorter response window (typically 7-21 days)
+  - Failing to respond means automatic loss
+  - Requires strong evidence to win
+
+WHY IT MATTERS:
+  - Respond to inquiries quickly — they're easier to resolve
+  - Chargebacks require thorough evidence packs
+  - DisputeDesk treats both phases, with appropriate urgency levels
+  - Your automation rules can differentiate between inquiry and chargeback
+    (e.g., auto-pack inquiries but review chargebacks manually)
+
+
+================================================================================
+47. WHAT HAPPENS AFTER SAVING TO SHOPIFY
+================================================================================
+
+After DisputeDesk saves evidence to Shopify, here's what happens:
+
+1. EVIDENCE APPEARS IN SHOPIFY ADMIN
+   Open the dispute in Shopify Admin (Settings > Payments > Disputes).
+   You'll see the evidence fields populated by DisputeDesk.
+
+2. YOU REVIEW THE EVIDENCE
+   Check that all evidence looks correct and complete.
+
+3. YOU CLICK "SUBMIT RESPONSE" IN SHOPIFY
+   This is the step that sends evidence to the card network (Visa, Mastercard,
+   etc.). Only you can do this — DisputeDesk cannot.
+
+4. THE CARD NETWORK REVIEWS
+   The card network reviews your evidence and makes a decision. This typically
+   takes 60-75 days but can vary.
+
+5. OUTCOME
+   The dispute is resolved as "Won" (in your favor) or "Lost" (against you).
+   DisputeDesk syncs the outcome and updates your dashboard.
+
+IMPORTANT NOTES:
+  - DO NOT delay submitting after saving — due dates are strict
+  - Shopify may show a preview of the evidence before you submit
+  - Once submitted, you cannot change the evidence
+  - DisputeDesk does NOT submit on your behalf — this is by design for
+    merchant control and Shopify policy compliance
+
+
+================================================================================
+48. WHY DISPUTEDESK DOES NOT SUBMIT TO CARD NETWORKS
+================================================================================
+
+DisputeDesk intentionally does not submit evidence to card networks. Here's why:
+
+1. SHOPIFY POLICY
+   Shopify's API allows saving evidence to disputes but requires merchants to
+   manually submit via Shopify Admin. This is Shopify's security measure.
+
+2. MERCHANT CONTROL
+   Submitting evidence is a legal action — you're essentially responding to a
+   financial dispute. You should always review evidence before it's submitted.
+
+3. ACCURACY
+   By requiring manual submission, you have a final checkpoint to catch errors,
+   add context, or hold off if the evidence isn't strong enough.
+
+4. LIABILITY
+   Once submitted, evidence cannot be changed. DisputeDesk ensures you have
+   that final review step.
+
+DisputeDesk automates everything UP TO the submit button. You press the button.
+
+
+================================================================================
+49. DEMO MODE
+================================================================================
+
+Demo mode lets you explore DisputeDesk's interface with sample data before
+real disputes come in.
+
+WHAT DEMO MODE SHOWS:
+  - Sample disputes with various reasons and amounts
+  - Example evidence packs with scores and checklists
+  - Simulated timeline events
+  - Sample dashboard metrics
+
+WHEN IT'S AVAILABLE:
+  - During your free trial
+  - On the Free plan
+  - Can be toggled on/off in settings
+
+HOW TO TOGGLE:
+  - Portal: Look for "Demo Mode" toggle in the dashboard or settings
+  - Demo data is clearly labeled so you won't confuse it with real data
+
+IMPORTANT:
+  - Demo data does NOT affect your real disputes or packs
+  - Demo packs do NOT count against your pack quota
+  - Demo data disappears when you toggle demo mode off
+
+
+================================================================================
+50. TROUBLESHOOTING — COMMON ISSUES
+================================================================================
+
+ISSUE: "I installed DisputeDesk but no disputes are showing"
+  Causes:
+  - You may not have any active disputes in Shopify Payments
+  - Your store may not use Shopify Payments (required)
+  - Initial sync takes up to 5 minutes
+  Solution: Wait 5 minutes for the first sync. Check that you have active
+  disputes in Shopify Admin > Settings > Payments > Disputes. If you don't
+  use Shopify Payments, DisputeDesk cannot sync disputes.
+
+ISSUE: "My evidence pack has a low completeness score"
+  Causes:
+  - Missing required evidence for the dispute reason
+  - Tracking info not yet available (order not shipped)
+  - Policies not uploaded to DisputeDesk
+  Solution: Check the blockers list on the pack detail page. Upload missing
+  evidence manually. Add your store policies in the Policies section.
+
+ISSUE: "I can't save evidence to Shopify"
+  Causes:
+  - Your staff account doesn't have "Manage orders information" permission
+  - The Shopify session has expired
+  - The dispute is already resolved or submitted
+  Solution: Check your Shopify Admin permissions. Re-open DisputeDesk from
+  Shopify Admin to refresh the session. Check if the dispute is still open.
+
+ISSUE: "Auto-save is not working"
+  See Section 53 for detailed auto-save troubleshooting.
+
+ISSUE: "I'm getting an error when connecting my store"
+  See Section 51 for connection troubleshooting.
+
+
+================================================================================
+51. TROUBLESHOOTING — CONNECTION PROBLEMS
+================================================================================
+
+ISSUE: "OAuth error when connecting Shopify"
+  Solution:
+  1. Make sure you're using a valid myshopify.com domain
+  2. Clear your browser cookies and try again
+  3. Make sure you have admin/owner access to the Shopify store
+  4. Check that the store is active (not paused, frozen, or closed)
+
+ISSUE: "Session expired" error in embedded app
+  Solution:
+  1. Close the DisputeDesk tab in Shopify Admin
+  2. Re-open DisputeDesk from Apps menu in Shopify Admin
+  3. This refreshes your Shopify session automatically
+
+ISSUE: "Insufficient permissions" error
+  Solution:
+  1. Go to Shopify Admin > Settings > Users and permissions
+  2. Find your staff account
+  3. Ensure "Manage orders information" is checked
+  4. If you're the store owner, this should be granted automatically
+
+ISSUE: "Store not found" error
+  Solution:
+  1. Verify your store URL (must be yourdomain.myshopify.com)
+  2. Make sure the store is active on a Shopify plan
+  3. Try the full URL format: https://yourdomain.myshopify.com
+
+ISSUE: "Already connected" error
+  Solution:
+  If your store is already connected, go directly to the dashboard.
+  If you need to reconnect, go to Settings > Connection and click
+  "Reconnect Store."
+
+
+================================================================================
+52. TROUBLESHOOTING — PACKS NOT BUILDING
+================================================================================
+
+ISSUE: "Auto-build is not triggering for new disputes"
+  Check:
+  1. Is auto-build enabled? (Settings > Automation > Auto-Build)
+  2. Are you on Starter plan or higher? (Free plan doesn't support auto-build)
+  3. Do you have remaining pack quota? (Check Billing > Usage)
+  4. Are your automation rules configured correctly?
+
+ISSUE: "Pack is stuck in 'queued' or 'building' status"
+  This usually resolves within a few minutes. If a pack remains stuck:
+  1. Wait 10 minutes for the background job to process
+  2. Check if other packs are building (system may be busy)
+  3. Try manually triggering a rebuild from the pack detail page
+  4. Contact support if the issue persists after 30 minutes
+
+ISSUE: "Pack build failed"
+  Common causes:
+  - Shopify API temporary error (usually resolves on retry)
+  - Order data not available (order may have been deleted in Shopify)
+  - Network timeout during evidence collection
+  Solution: Try creating a new pack manually. If the issue persists, contact
+  support with the dispute ID.
+
+ISSUE: "Pack has 0% completeness"
+  This means no evidence collectors found data. Check:
+  1. Is the order still in Shopify? (Deleted orders have no data)
+  2. Has the order been shipped? (Unshipped orders lack tracking)
+  3. Have you added store policies? (Policies section)
+  4. Try uploading evidence manually to boost the score
+
+
+================================================================================
+53. TROUBLESHOOTING — AUTO-SAVE NOT WORKING
+================================================================================
+
+Auto-save has multiple gates. Check each one:
+
+1. IS AUTO-SAVE ENABLED?
+   Go to Settings > Automation. Make sure "Auto-save" is toggled ON.
+
+2. IS THE COMPLETENESS SCORE HIGH ENOUGH?
+   Your minimum score threshold (default 80%) must be met. Check the pack's
+   score. If it's below the threshold, add more evidence.
+
+3. ARE THERE BLOCKERS?
+   If "Enforce No Blockers" is on (default), packs with any blockers cannot
+   auto-save. Resolve all blockers first.
+
+4. IS MANUAL REVIEW REQUIRED?
+   If "Require Manual Review" is on (default for Free/Starter), you must
+   approve the pack before it can save. Click "Approve" on the pack detail page.
+
+5. IS YOUR PLAN ELIGIBLE?
+   Auto-save works best on Growth plan and above. Starter plan has auto-save
+   but with manual review required by default.
+
+6. IS THERE A QUOTA?
+   You need remaining pack credits. Check Billing > Usage.
+
+DEBUGGING TIP:
+  Check the dispute timeline for the auto-save gate evaluation. It will show
+  exactly which condition blocked the auto-save and why.
+
+
+================================================================================
+54. TROUBLESHOOTING — MISSING EVIDENCE
+================================================================================
+
+ISSUE: "Order information is missing from my pack"
+  Cause: The order may have been deleted, archived, or the API returned an error.
+  Solution: Check if the order exists in Shopify Admin. If it was deleted,
+  you'll need to upload order evidence manually.
+
+ISSUE: "Tracking information is missing"
+  Cause: The order hasn't been shipped yet, or fulfillment hasn't been created.
+  Solution: Ship the order and add tracking in Shopify. DisputeDesk will pick
+  up the tracking info on the next sync (within 5 minutes).
+
+ISSUE: "Policies are not included in my pack"
+  Cause: You haven't uploaded policies to DisputeDesk yet.
+  Solution: Go to Policies, add your refund, shipping, and terms of service
+  policies. Future packs will include them automatically.
+
+ISSUE: "Customer communications are missing"
+  Cause: No timeline events or notes exist on the Shopify order.
+  Solution: If you communicated with the customer via email or another channel,
+  upload screenshots of those communications manually. If you use Gorgias,
+  connect the integration for automatic ticket import.
+
+ISSUE: "My uploaded files aren't showing in the pack"
+  Cause: Upload may have failed or the file format isn't supported.
+  Solution: Try uploading again. Supported formats: PNG, JPG, JPEG, GIF,
+  WebP, PDF. Check that the file isn't too large.
+
+
+================================================================================
+55. TROUBLESHOOTING — BILLING & QUOTA ISSUES
+================================================================================
+
+ISSUE: "I'm out of packs but my billing cycle hasn't renewed"
+  Solution: Purchase a top-up (+25 packs for $19 or +100 packs for $59).
+  Top-up packs are available immediately and don't expire.
+
+ISSUE: "My trial ended and I lost access to features"
+  Solution: Subscribe to a paid plan to restore access. Your data is preserved
+  — upgrading reactivates all features.
+
+ISSUE: "I was charged but my plan didn't upgrade"
+  Solution: This can happen if the payment was processed but the confirmation
+  webhook was delayed. Wait 15 minutes and refresh. If the issue persists,
+  contact support with your order confirmation.
+
+ISSUE: "I want a refund"
+  Solution: Contact support. Refund eligibility depends on usage and timing.
+
+ISSUE: "My pack count seems wrong"
+  Solution: Pack counts reset at the start of each billing cycle. Top-up packs
+  are counted separately. Check Billing > Usage for a breakdown.
+
+
+================================================================================
+56. FAQ — GENERAL
+================================================================================
+
+Q: What is DisputeDesk?
+A: DisputeDesk is a Shopify app that automates chargeback dispute evidence
+   management. It syncs disputes from Shopify Payments, builds evidence packs,
+   and saves them to Shopify so you can submit them to card networks.
+
+Q: Does DisputeDesk work with all Shopify stores?
+A: DisputeDesk requires Shopify Payments for dispute syncing. If you use a
+   third-party payment provider, DisputeDesk cannot sync disputes automatically.
+
+Q: Does DisputeDesk submit evidence to Visa/Mastercard/etc.?
+A: No. DisputeDesk prepares and saves evidence to Shopify. You submit it to
+   the card network by clicking "Submit Response" in Shopify Admin. This is
+   by design for security and compliance.
+
+Q: Can I use DisputeDesk on multiple stores?
+A: Yes. Through the portal, you can connect and manage multiple Shopify stores.
+   Each store has its own disputes, packs, rules, and billing plan.
+
+Q: What languages does DisputeDesk support?
+A: DisputeDesk is available in English, German, Spanish, French, Portuguese,
+   and Swedish. The interface, help articles, and notifications are all
+   translated.
+
+Q: Is there a mobile app?
+A: There is no standalone mobile app. DisputeDesk works within Shopify Admin
+   (which has a mobile app) and through the web portal (responsive design).
+
+Q: How is DisputeDesk different from other chargeback tools?
+A: DisputeDesk is automation-first and Shopify-native. It auto-syncs, auto-
+   builds, and auto-saves evidence without manual intervention. You control
+   the automation with rules, thresholds, and review gates.
+
+Q: Can I try DisputeDesk for free?
+A: Yes. The Free plan gives you 3 lifetime packs with no credit card required.
+   All paid plans include a 14-day free trial.
+
+
+================================================================================
+57. FAQ — DISPUTES
+================================================================================
+
+Q: How quickly are disputes synced from Shopify?
+A: Disputes are synced via webhooks (near-instant) and a backup cron job
+   (every 5 minutes). Most disputes appear within seconds.
+
+Q: Can I manually add a dispute?
+A: No. Disputes come from Shopify Payments. DisputeDesk syncs them automatically.
+   You cannot create disputes manually.
+
+Q: What if I have disputes from before I installed DisputeDesk?
+A: DisputeDesk syncs all active disputes when you first connect, including
+   existing open disputes.
+
+Q: Can I delete a dispute?
+A: No. Disputes are synced from Shopify and cannot be deleted in DisputeDesk.
+   They are archived when resolved (won or lost).
+
+Q: Why does my dispute show "Inquiry" instead of "Chargeback"?
+A: An inquiry is an early-stage dispute. It may escalate to a chargeback if
+   not resolved. Respond quickly to inquiries to prevent escalation.
+
+Q: What does "Amount at Risk" mean?
+A: It's the total dollar value of all your currently open (unresolved) disputes.
+   This is the maximum amount you could lose if all disputes are lost.
+
+Q: How is win rate calculated?
+A: Win Rate = (Disputes Won / Total Resolved Disputes) x 100%. Only resolved
+   disputes (won + lost) are included. Open disputes are not counted.
+
+
+================================================================================
+58. FAQ — EVIDENCE PACKS
+================================================================================
+
+Q: What is an evidence pack?
+A: An evidence pack is a structured collection of evidence that supports your
+   case against a chargeback. It includes order details, shipping info,
+   policies, customer communications, and any files you upload.
+
+Q: How are packs built automatically?
+A: When a new dispute is synced, DisputeDesk's automation pipeline runs
+   collectors that fetch data from Shopify (orders, tracking) and from your
+   stored policies. The data is organized into sections and scored.
+
+Q: What is the completeness score?
+A: A 0-100% score based on how many required evidence items are present.
+   Higher scores indicate stronger evidence. The default auto-save threshold
+   is 80%.
+
+Q: What are blockers?
+A: Required evidence items that are missing. Blockers indicate critical gaps
+   that should be filled before submitting evidence. If "enforce no blockers"
+   is enabled, packs with blockers cannot be auto-saved.
+
+Q: Can I edit a pack after it's been saved to Shopify?
+A: You can create a new pack or upload additional evidence, but once evidence
+   is saved to Shopify, the saved version cannot be modified. You would need
+   to save again with updated data (if the dispute is still open).
+
+Q: Can I have multiple packs for one dispute?
+A: Yes, but typically only one pack is saved to Shopify. You can create
+   additional packs for comparison or if the first one was insufficient.
+
+Q: What file types can I upload?
+A: PNG, JPG, JPEG, GIF, WebP, and PDF files are supported.
+
+Q: Do packs expire?
+A: No. Packs remain in your account indefinitely. However, your monthly pack
+   quota resets each billing cycle.
+
+
+================================================================================
+59. FAQ — AUTOMATION
+================================================================================
+
+Q: What is auto-build?
+A: Auto-build automatically creates evidence packs when new disputes are synced.
+   You don't have to manually trigger pack creation.
+
+Q: What is auto-save?
+A: Auto-save automatically pushes completed evidence packs to Shopify when they
+   meet your quality criteria (score threshold, no blockers, etc.).
+
+Q: Can I have auto-build on but auto-save off?
+A: Yes. This is a common configuration. Packs are built automatically, but you
+   review and save them manually.
+
+Q: What happens if auto-build is off?
+A: New disputes will appear in your disputes list, but no evidence packs will
+   be created until you manually build one.
+
+Q: What are automation rules?
+A: Rules let you customize how different disputes are handled. You can match
+   disputes by reason, phase, or amount, and specify actions like using a
+   specific template or requiring manual review.
+
+Q: How many rules can I have?
+A: Free: 0, Starter: 5, Growth: Unlimited, Scale: Unlimited.
+
+Q: Do rules apply to existing disputes or only new ones?
+A: Rules are evaluated when a dispute is first synced. They do not retroactively
+   apply to existing disputes.
+
+Q: What if no rule matches a dispute?
+A: DisputeDesk falls back to default behavior: auto-build with the default
+   template for that dispute reason (if auto-build is enabled).
+
+
+================================================================================
+60. FAQ — BILLING
+================================================================================
+
+Q: How much does DisputeDesk cost?
+A: Free ($0), Starter ($29/mo), Growth ($79/mo), Scale ($149/mo). All paid
+   plans include a 14-day free trial.
+
+Q: What counts as a "pack"?
+A: Each evidence pack built (whether auto or manual) counts as one pack
+   against your quota. Failed builds do not count.
+
+Q: Do unused packs roll over?
+A: Monthly pack allowances do not roll over. Top-up packs do not expire.
+
+Q: Can I change plans mid-cycle?
+A: Yes. Upgrades take effect immediately. Downgrades take effect at the end
+   of your current billing cycle.
+
+Q: Is there a contract or commitment?
+A: No. All plans are month-to-month. Cancel anytime.
+
+Q: How are payments processed?
+A: Through Shopify's billing system for embedded app users.
+
+Q: What happens if I run out of packs?
+A: Auto-build stops and you cannot create new packs until your cycle renews
+   or you purchase a top-up.
+
+
+================================================================================
+61. FAQ — SECURITY & PRIVACY
+================================================================================
+
+Q: Is my data secure?
+A: Yes. All access tokens are encrypted with AES-256-GCM. The database uses
+   row-level security (RLS) so you can only see your own data. All API calls
+   require authentication.
+
+Q: Who can see my data?
+A: Only you and your authorized team members. DisputeDesk staff can access
+   data for support purposes only with appropriate authorization.
+
+Q: Is my data stored in plain text?
+A: No. Sensitive data (access tokens, API keys) is always encrypted. Passwords
+   are hashed (never stored in plain text).
+
+Q: Can I request my data be deleted?
+A: Yes. Contact support to request full data deletion.
+
+Q: Does DisputeDesk store credit card numbers?
+A: No. DisputeDesk never handles or stores credit card numbers. Payment
+   processing is handled by Shopify.
+
+Q: Is there an audit trail?
+A: Yes. Every action in DisputeDesk is logged to an immutable audit trail.
+   Audit events cannot be deleted or modified.
+
+Q: What happens to my data if I uninstall?
+A: Uninstalling triggers a cleanup process that revokes access tokens. Your
+   historical data is retained for a period in case you reinstall. Contact
+   support for permanent deletion.
+
+
+================================================================================
+62. GLOSSARY OF TERMS
+================================================================================
+
+AUTO-BUILD: Automatic creation of evidence packs when disputes are synced.
+
+AUTO-SAVE: Automatic saving of completed packs to Shopify when quality
+criteria are met.
+
+AUTO-SAVE GATE: The decision logic that determines whether a pack should be
+auto-saved, parked for review, or blocked.
+
+BLOCKER: A required evidence item that is missing from a pack. Blockers
+indicate critical evidence gaps.
+
+CHARGEBACK: A formal dispute raised by a cardholder through their bank or
+card network. The disputed amount is reversed from the merchant.
+
+CHECKLIST: A list of evidence items (required and optional) that should be
+present in a pack for a given dispute reason.
+
+COLLECTOR: A module that fetches evidence from a specific source (Shopify
+orders, tracking, policies, etc.) during pack building.
+
+COMPLETENESS SCORE: A 0-100% score indicating how many required evidence
+items are present in a pack.
+
+DISPUTE: A challenge to a payment raised by a cardholder. May be an inquiry
+(pre-chargeback) or a formal chargeback.
+
+DISPUTE REASON: The reason code assigned by the card network (e.g., Product
+Not Received, Fraudulent, Product Unacceptable).
+
+DUE DATE: The deadline by which evidence must be submitted to the card
+network. Missing this means automatic loss.
+
+EVIDENCE: Documentation supporting your case against a chargeback (order
+details, tracking info, policies, communications, etc.).
+
+EVIDENCE PACK: A structured collection of evidence organized by section,
+scored for completeness, and formatted for submission.
+
+FULFILLMENT: A shipment of items from an order, including tracking info.
+
+INQUIRY: An early-stage dispute notification, less severe than a chargeback.
+Resolving at this stage prevents escalation.
+
+OAUTH: The authorization protocol used to connect your Shopify store to
+DisputeDesk securely.
+
+PACK TEMPLATE: A reusable blueprint for building packs, defining which
+evidence sections and items to include.
+
+PHASE: Whether a dispute is in the inquiry (pre-chargeback) or chargeback
+(formal) phase.
+
+POLARIS: Shopify's React component library used for the embedded app UI.
+
+PORTAL: The standalone DisputeDesk dashboard at disputedesk.app/portal.
+
+RLS (Row-Level Security): Database security that ensures each merchant can
+only access their own data.
+
+RULE: An automation rule that matches disputes by criteria (reason, phase,
+amount) and triggers an action (auto-pack, review, etc.).
+
+TOP-UP: Additional packs purchased one-time beyond your monthly allowance.
+
+WIN RATE: Percentage of resolved disputes that were decided in your favor.
+
+
+================================================================================
+63. CONTACT & SUPPORT
+================================================================================
+
+GETTING HELP:
+  - In-app help center: Click "Help" in the navigation
+  - Email support: Contact us through the app or website
+  - Resources hub: Free educational content about chargeback management
+
+SUPPORT HOURS:
+  We aim to respond to all support requests within 24 hours on business days.
+
+WHAT TO INCLUDE IN SUPPORT REQUESTS:
+  - Your store domain (e.g., yourstore.myshopify.com)
+  - The dispute ID or order number (if applicable)
+  - A description of the issue
+  - Screenshots if helpful
+  - Your plan type
+
+FEEDBACK:
+  We love hearing from merchants. Use the feedback option in the app to share
+  suggestions, report issues, or tell us what's working well.
+
+FEATURE REQUESTS:
+  Have an idea for DisputeDesk? Send us feedback through the app. We review
+  all feature requests and prioritize based on merchant impact.
+
+
+================================================================================
+END OF DISPUTEDESK HELP & KNOWLEDGE BASE
+================================================================================

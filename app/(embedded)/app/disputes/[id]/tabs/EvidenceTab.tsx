@@ -53,6 +53,7 @@ const WHY_TEXT: Record<string, string> = {
   duplicate_explanation: "Explains why charges are not duplicates",
   supporting_documents: "Additional proof that strengthens your case",
   activity_log: "Account activity proving legitimate engagement",
+  threeds_authentication: "3D Secure authentication \u2014 not available from Shopify API, upload manually if available",
 };
 
 /* ── Content Preview Renderers ── */

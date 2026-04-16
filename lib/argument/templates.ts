@@ -20,7 +20,7 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
     ],
     strongestEvidence: [
       "AVS/CVV match",
-      "3D Secure authentication (if available)",
+      "Customer purchase history",
       "Delivery confirmation",
     ],
     counterclaims: [

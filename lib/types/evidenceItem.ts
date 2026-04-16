@@ -181,26 +181,36 @@ export interface RebuttalReasonSelection {
 /**
  * 3D Secure authentication evidence.
  *
- * CRITICAL: Shopify does NOT provide a stable typed field for 3DS
- * authentication results. We MUST NOT:
- * - Infer 3DS from AVS/CVV codes
- * - Parse receiptJson (gateway-defined, unstable)
- * - Generate text claiming 3DS unless confirmed from a trusted source
+ * CONFIRMED BY SHOPIFY SUPPORT: Shopify Admin API does NOT expose
+ * 3DS authentication status. For Shopify Payments, 3DS is handled
+ * internally at the payment-platform level. We CANNOT query, confirm,
+ * or auto-claim 3DS from the Shopify Admin API.
+ *
+ * HARD RULES:
+ * - NEVER infer 3DS from AVS/CVV codes
+ * - NEVER infer 3DS from region or country
+ * - NEVER parse receiptJson (gateway-defined, unstable)
+ * - NEVER claim 3DS in generated text unless availability = "confirmed"
+ * - NEVER block submission because 3DS is missing
  */
 export interface ThreeDSecureEvidence {
   /** Whether we have confirmed 3DS authentication data. */
-  availability: "confirmed" | "unknown" | "not_available_automatically";
-  /** Where the 3DS data came from. */
-  source: "shopify_typed" | "provider_specific" | "manual_upload" | "none";
-  /** Whether the system can auto-generate a 3DS claim. */
+  availability: "confirmed" | "not_available_automatically";
+  /** Where the 3DS data came from. "manual_upload" is the only current path. */
+  source: "manual_upload" | "future_api" | "none";
+  /** Whether the system can auto-generate a 3DS claim. Always false today. */
   canAutoClaim: boolean;
   /** How important this evidence is for the current dispute. */
   strength: "critical" | "strong" | "supporting" | "none";
+  /** Optional summary when manually provided. */
+  summary?: string | null;
+  /** Optional detail when manually provided. */
+  detail?: string | null;
 }
 
 /**
- * Default 3DS state. Conservative: unknown availability, no auto-claim.
- * Only upgraded when a trusted source confirms authentication.
+ * Default 3DS state for Shopify Payments.
+ * Not available automatically — merchant must upload proof manually.
  */
 export const DEFAULT_THREEDS: ThreeDSecureEvidence = {
   availability: "not_available_automatically",

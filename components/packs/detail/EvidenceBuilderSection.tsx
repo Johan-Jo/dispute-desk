@@ -84,6 +84,8 @@ const WHY_TEXT: Record<string, string> = {
     "Explains why the charges are not duplicates \u2014 required for duplicate dispute responses",
   supporting_documents: "Additional proof that strengthens your case",
   activity_log: "Account activity that proves legitimate customer engagement",
+  threeds_authentication:
+    "3D Secure authentication \u2014 Shopify does not expose this via Admin API. Upload proof manually if available from your payment provider.",
 };
 
 function getWhyText(field: string): string {
