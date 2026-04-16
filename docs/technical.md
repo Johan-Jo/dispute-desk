@@ -567,6 +567,21 @@ The dispute detail page (`/app/disputes/:id`) is a **unified tabbed workspace** 
 
 **Key feature:** Argument map claims are clickable — clicking an evidence badge switches to the Evidence tab, expands the correct category, scrolls to the item, and highlights it.
 
+### Language requirement (English-only submission)
+
+All evidence submitted to Shopify must be in English. This includes:
+- Policy text (refund, shipping, cancellation, terms, privacy)
+- Rebuttal / dispute response argument text
+- Any merchant-provided text evidence (notes, explanations)
+- Order timeline descriptions
+
+Policy snapshots capture the store's current policy text, which may be in the store's default language. If policies are stored in a non-English language, the merchant must upload English versions before submission. The system should flag non-English content and prompt for replacement.
+
+This rule is enforced in:
+- `lib/shopify/fieldMapping.ts` — serialization layer
+- `lib/packs/sources/policySource.ts` — collector documentation
+- Evidence pack email preview scripts
+
 ## Evidence Pack Builder
 
 ### Build Pipeline (`lib/packs/buildPack.ts`)

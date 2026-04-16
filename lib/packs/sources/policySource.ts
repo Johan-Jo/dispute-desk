@@ -3,6 +3,11 @@
  *
  * Reads policy_snapshots from the database for the shop.
  * Contributes shipping_policy, refund_policy, cancellation_policy.
+ *
+ * IMPORTANT: All evidence submitted to Shopify must be in English.
+ * Policy snapshots capture the store's current policy text, which may
+ * be in the store's language. If policies are not in English, the
+ * merchant must upload English versions before submission.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";

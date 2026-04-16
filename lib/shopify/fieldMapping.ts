@@ -1,6 +1,13 @@
 import type { DisputeEvidenceUpdateInput } from "./mutations/disputeEvidenceUpdate";
 
 /**
+ * IMPORTANT: All evidence submitted to Shopify must be in English.
+ * This includes policy text, rebuttal arguments, and any merchant-provided
+ * text. Non-English content should be translated or replaced before
+ * submission. This is a Shopify requirement for dispute evidence.
+ */
+
+/**
  * Legacy PackSection shape — used by preview and any callers that
  * pre-serialize section data into { key, content }.
  */
