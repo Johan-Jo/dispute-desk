@@ -55,6 +55,17 @@ async function main() {
     console.log();
   }
 
+  // Show defense position classification
+  const dp = rebuttal.defensePosition;
+  console.log("=== DEFENSE POSITION ===");
+  console.log("Position:", dp.position);
+  console.log("Label:", dp.uiLabel);
+  console.log("Confidence:", dp.confidence);
+  console.log("Justification:", dp.justification);
+  console.log("Strongest evidence:", dp.strongestEvidence.join(", "));
+  console.log("Review required:", dp.reviewRequired, dp.reviewReason ?? "");
+  console.log();
+
   await sb.from("argument_maps").delete().eq("pack_id", packId);
   await sb.from("argument_maps").insert({
     dispute_id: disputeId,

@@ -29,8 +29,10 @@ export interface EvidenceFlags {
   customerHistory: boolean;
   policyAttached: boolean;
   refundIssued: boolean;
+  refundAmountMatches: boolean;
   cancellationRequest: boolean;
   cancellationConfirmed: boolean;
+  disputeWithdrawalEvidence: boolean;
   productDescription: boolean;
   digitalAccessLogs: boolean;
   duplicateChargeEvidence: boolean;
@@ -85,6 +87,225 @@ export function resolveReasonFamily(reason: string | null | undefined): ReasonFa
   if (!reason) return "general";
   const key = reason.toUpperCase().replace(/\s+/g, "_");
   return REASON_TO_FAMILY[key] ?? "general";
+}
+
+/* ── Defense Position Classification ── */
+
+export type DefensePosition =
+  | "legitimate_transaction"
+  | "refunded_or_credited"
+  | "dispute_withdrawn"
+  | "other";
+
+export type ClassificationConfidence = "high" | "medium" | "low";
+
+const POSITION_LABELS: Record<DefensePosition, string> = {
+  legitimate_transaction: "Purchase made by the legitimate cardholder",
+  refunded_or_credited: "Cardholder was refunded",
+  dispute_withdrawn: "Cardholder withdrew the dispute",
+  other: "Other",
+};
+
+export interface DefenseClassification {
+  position: DefensePosition;
+  uiLabel: string;
+  confidence: ClassificationConfidence;
+  justification: string;
+  strongestEvidence: string[];
+  alternativesRejected: Record<string, string>;
+  reviewRequired: boolean;
+  reviewReason: string | null;
+}
+
+/**
+ * Classify the defense position from evidence and dispute family.
+ *
+ * Hierarchy (strongest first):
+ * 1. dispute_withdrawn — if explicit evidence exists
+ * 2. refunded_or_credited — if actual refund evidence exists
+ * 3. legitimate_transaction — if evidence supports valid transaction
+ * 4. other — fallback
+ */
+export function classifyDefensePosition(
+  family: ReasonFamily,
+  flags: EvidenceFlags,
+): DefenseClassification {
+  // 1. Check for dispute withdrawal
+  if (flags.disputeWithdrawalEvidence) {
+    return {
+      position: "dispute_withdrawn",
+      uiLabel: POSITION_LABELS.dispute_withdrawn,
+      confidence: "high",
+      justification: "Direct evidence of dispute withdrawal exists.",
+      strongestEvidence: ["Dispute withdrawal documentation"],
+      alternativesRejected: {
+        legitimate_transaction: "Withdrawal is a stronger direct resolution",
+        refunded_or_credited: "Withdrawal takes precedence over refund defense",
+        other: "A stronger supported classification exists",
+      },
+      reviewRequired: false,
+      reviewReason: null,
+    };
+  }
+
+  // 2. Check for refund
+  if (flags.refundIssued) {
+    const confidence: ClassificationConfidence = flags.refundAmountMatches ? "high" : "medium";
+    return {
+      position: "refunded_or_credited",
+      uiLabel: POSITION_LABELS.refunded_or_credited,
+      confidence,
+      justification: "Refund evidence exists. The cardholder has been credited.",
+      strongestEvidence: [
+        "Refund issued",
+        ...(flags.refundAmountMatches ? ["Refund amount matches dispute amount"] : []),
+      ],
+      alternativesRejected: {
+        legitimate_transaction: "Refund resolution is more direct than argumentative defense",
+        dispute_withdrawn: "No withdrawal evidence found",
+        other: "A stronger supported classification exists",
+      },
+      reviewRequired: confidence === "medium",
+      reviewReason: confidence === "medium" ? "Refund exists but amount reconciliation is partial" : null,
+    };
+  }
+
+  // 3. Check for legitimate transaction
+  const legitimacySignals: string[] = [];
+
+  if (flags.avs) legitimacySignals.push("AVS match");
+  if (flags.cvv) legitimacySignals.push("CVV match");
+  if (flags.orderConfirmation) legitimacySignals.push("Order confirmation");
+  if (flags.billingShippingMatch) legitimacySignals.push("Billing/shipping address match");
+  if (flags.customerHistory) legitimacySignals.push("Customer purchase history");
+  if (flags.customerContact) legitimacySignals.push("Customer communication");
+  if (flags.deliveryConfirmed) legitimacySignals.push("Delivery confirmed");
+  if (flags.tracking) legitimacySignals.push("Shipping tracking");
+  if (flags.digitalAccessLogs) legitimacySignals.push("Digital access logs");
+  if (flags.policyAttached) legitimacySignals.push("Policies disclosed");
+  if (flags.duplicateChargeEvidence) legitimacySignals.push("Duplicate charge disproved");
+  if (flags.amountCorrectEvidence) legitimacySignals.push("Amount confirmed correct");
+  if (flags.cancellationConfirmed) legitimacySignals.push("Cancellation timeline documented");
+
+  // Family-specific confidence thresholds
+  let confidence: ClassificationConfidence;
+  let shouldSelect = false;
+
+  switch (family) {
+    case "fraud":
+      // Fraud needs payment verification OR strong behavioral signals
+      if (flags.avs || flags.cvv) {
+        confidence = legitimacySignals.length >= 3 ? "high" : "medium";
+        shouldSelect = true;
+      } else if (legitimacySignals.length >= 2) {
+        confidence = "medium";
+        shouldSelect = true;
+      } else {
+        confidence = "low";
+        shouldSelect = legitimacySignals.length >= 1;
+      }
+      break;
+
+    case "delivery":
+      // Delivery needs fulfillment evidence
+      if (flags.deliveryConfirmed) {
+        confidence = "high";
+        shouldSelect = true;
+      } else if (flags.tracking) {
+        confidence = "medium";
+        shouldSelect = true;
+      } else {
+        confidence = "low";
+        shouldSelect = legitimacySignals.length >= 2;
+      }
+      break;
+
+    case "product":
+      // Product disputes are harder to classify as "legitimate"
+      if (flags.productDescription && flags.policyAttached) {
+        confidence = "medium";
+        shouldSelect = true;
+      } else {
+        confidence = "low";
+        shouldSelect = false; // Prefer "other" for product disputes without strong proof
+      }
+      break;
+
+    case "subscription":
+      if (flags.cancellationConfirmed || (flags.policyAttached && flags.customerContact)) {
+        confidence = legitimacySignals.length >= 3 ? "high" : "medium";
+        shouldSelect = true;
+      } else {
+        confidence = "low";
+        shouldSelect = false;
+      }
+      break;
+
+    case "billing":
+      if (flags.duplicateChargeEvidence || flags.amountCorrectEvidence) {
+        confidence = "high";
+        shouldSelect = true;
+      } else if (flags.orderConfirmation) {
+        confidence = "medium";
+        shouldSelect = true;
+      } else {
+        confidence = "low";
+        shouldSelect = false;
+      }
+      break;
+
+    case "digital":
+      if (flags.digitalAccessLogs) {
+        confidence = "high";
+        shouldSelect = true;
+      } else if (flags.orderConfirmation && flags.customerContact) {
+        confidence = "medium";
+        shouldSelect = true;
+      } else {
+        confidence = "low";
+        shouldSelect = false;
+      }
+      break;
+
+    default:
+      confidence = legitimacySignals.length >= 3 ? "medium" : "low";
+      shouldSelect = legitimacySignals.length >= 2;
+  }
+
+  if (shouldSelect && confidence !== "low") {
+    return {
+      position: "legitimate_transaction",
+      uiLabel: POSITION_LABELS.legitimate_transaction,
+      confidence,
+      justification: `The evidence supports that the transaction was valid and properly authorized. ${legitimacySignals.length} supporting signals identified.`,
+      strongestEvidence: legitimacySignals.slice(0, 5),
+      alternativesRejected: {
+        refunded_or_credited: "No refund evidence found",
+        dispute_withdrawn: "No withdrawal evidence found",
+        other: "A stronger supported classification exists",
+      },
+      reviewRequired: confidence === "medium",
+      reviewReason: confidence === "medium" ? "Classification is supported but not conclusive" : null,
+    };
+  }
+
+  // 4. Fallback: other
+  return {
+    position: "other",
+    uiLabel: POSITION_LABELS.other,
+    confidence: "low",
+    justification: "Evidence does not cleanly support a stronger classification. Manual review recommended.",
+    strongestEvidence: legitimacySignals.slice(0, 3),
+    alternativesRejected: {
+      legitimate_transaction: legitimacySignals.length === 0
+        ? "No supporting evidence found"
+        : "Evidence is insufficient for confident classification",
+      refunded_or_credited: "No refund evidence found",
+      dispute_withdrawn: "No withdrawal evidence found",
+    },
+    reviewRequired: true,
+    reviewReason: "Weak evidence — manual position selection recommended",
+  };
 }
 
 /* ── Section builders ── */
@@ -414,11 +635,30 @@ function generalStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrate
 
 /* ── Main engine ── */
 
+/** Full engine output including response + classification. */
+export interface DisputeResponseOutput {
+  sections: RebuttalSection[];
+  defensePosition: DefenseClassification;
+  reasonFamily: ReasonFamily;
+}
+
+/**
+ * Generate the complete dispute response with defense position classification.
+ *
+ * The defense position influences the opening paragraph:
+ * - legitimate_transaction → assert valid authorized charge
+ * - refunded_or_credited → assert cardholder was already refunded
+ * - dispute_withdrawn → assert dispute was withdrawn
+ * - other → narrow factual defense
+ */
 export function generateDisputeResponse(
   reasonFamily: ReasonFamily,
   flags: EvidenceFlags,
   data: EvidenceData,
-): RebuttalSection[] {
+): DisputeResponseOutput {
+  // Classify defense position FIRST — it influences the response
+  const defensePosition = classifyDefensePosition(reasonFamily, flags);
+
   const strategies: Record<ReasonFamily, (f: EvidenceFlags, d: EvidenceData) => FamilyStrategy> = {
     fraud: fraudStrategy,
     delivery: deliveryStrategy,
@@ -432,13 +672,21 @@ export function generateDisputeResponse(
 
   const strategy = (strategies[reasonFamily] ?? strategies.general)(flags, data);
 
+  // Override summary based on defense position when a direct resolution exists
+  let summary = strategy.summary;
+  if (defensePosition.position === "dispute_withdrawn") {
+    summary = "We respectfully note that the cardholder has withdrawn this dispute. The documentation supporting the withdrawal is provided below.";
+  } else if (defensePosition.position === "refunded_or_credited") {
+    summary = "We respectfully note that a refund has been issued to the cardholder for this transaction. Documentation confirming the credit is provided below.";
+  }
+
   // Assemble: summary → claims (only those with evidence) → conclusion
   const sections: RebuttalSection[] = [];
 
   sections.push({
     id: "summary",
     type: "summary",
-    text: strategy.summary,
+    text: summary,
     evidenceRefs: [],
   });
 
@@ -455,7 +703,16 @@ export function generateDisputeResponse(
     evidenceRefs: [],
   });
 
-  return sections;
+  return { sections, defensePosition, reasonFamily };
+}
+
+/** Legacy wrapper — returns just sections for backward compat. */
+export function generateDisputeResponseSections(
+  reasonFamily: ReasonFamily,
+  flags: EvidenceFlags,
+  data: EvidenceData,
+): RebuttalSection[] {
+  return generateDisputeResponse(reasonFamily, flags, data).sections;
 }
 
 /* ── Helpers ── */

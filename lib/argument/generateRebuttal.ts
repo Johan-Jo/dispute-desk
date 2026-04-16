@@ -6,18 +6,24 @@
  * - Missing evidence sections completely omitted
  * - Response shaped to dispute reason family
  * - Zero generic filler or unsupported claims
+ * - Defense position classified from evidence hierarchy
  *
  * See lib/argument/responseEngine.ts for the full rule set.
  */
 
-import type { ArgumentMap, RebuttalDraft, RebuttalSection } from "./types";
+import type { ArgumentMap, RebuttalDraft } from "./types";
 import type { RebuttalReasonSelection } from "@/lib/types/evidenceItem";
 import {
   generateDisputeResponse,
   resolveReasonFamily,
   type EvidenceFlags,
   type EvidenceData,
+  type DefenseClassification,
 } from "./responseEngine";
+
+export interface RebuttalDraftWithClassification extends RebuttalDraft {
+  defensePosition: DefenseClassification;
+}
 
 /**
  * Build EvidenceFlags from the ArgumentMap's supporting evidence.
@@ -43,9 +49,11 @@ function buildFlags(argumentMap: ArgumentMap): EvidenceFlags {
       allSupporting.has("refund_policy") ||
       allSupporting.has("shipping_policy") ||
       allSupporting.has("cancellation_policy"),
-    refundIssued: false, // Not tracked in current evidence model
+    refundIssued: false,
+    refundAmountMatches: false,
     cancellationRequest: false,
     cancellationConfirmed: false,
+    disputeWithdrawalEvidence: false,
     productDescription: allSupporting.has("product_description"),
     digitalAccessLogs: false,
     duplicateChargeEvidence: allSupporting.has("duplicate_explanation"),
@@ -57,11 +65,15 @@ export function generateRebuttalDraft(
   argumentMap: ArgumentMap,
   _rebuttalReason?: RebuttalReasonSelection,
   evidenceData?: EvidenceData,
-): RebuttalDraft {
+): RebuttalDraftWithClassification {
   const family = resolveReasonFamily(argumentMap.issuerClaim.reasonCode);
   const flags = buildFlags(argumentMap);
 
-  const sections = generateDisputeResponse(family, flags, evidenceData ?? {});
+  const result = generateDisputeResponse(family, flags, evidenceData ?? {});
 
-  return { sections, source: "generated" };
+  return {
+    sections: result.sections,
+    source: "generated",
+    defensePosition: result.defensePosition,
+  };
 }
