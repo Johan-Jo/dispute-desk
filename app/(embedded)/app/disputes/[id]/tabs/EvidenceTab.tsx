@@ -450,19 +450,25 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
             if (systemItems.length === 0) return null;
             return (
               <Card>
-                <BlockStack gap="200">
+                <BlockStack gap="300">
                   <Text as="h3" variant="headingMd" tone="subdued">Collected automatically</Text>
                   {systemItems.map((item) => (
-                    <InlineStack key={item.field} gap="200" blockAlign="center" wrap>
-                      <Icon
-                        source={item.status === "available" ? CheckCircleIcon : MinusCircleIcon}
-                        tone={item.status === "available" ? "success" : "subdued"}
-                      />
-                      <Text as="span" variant="bodyMd">{item.label}</Text>
-                      <Badge tone={item.status === "available" ? "success" : undefined}>
-                        {item.status === "available" ? "Available" : "Not available"}
-                      </Badge>
-                    </InlineStack>
+                    <div key={item.field} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 0" }}>
+                      <div style={{ flexShrink: 0 }}>
+                        <Icon
+                          source={item.status === "available" ? CheckCircleIcon : MinusCircleIcon}
+                          tone={item.status === "available" ? "success" : "subdued"}
+                        />
+                      </div>
+                      <Text as="span" variant="bodyMd" breakWord={false}>
+                        {item.label}
+                      </Text>
+                      <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+                        <Badge tone={item.status === "available" ? "success" : undefined}>
+                          {item.status === "available" ? "Available" : "Not available"}
+                        </Badge>
+                      </div>
+                    </div>
                   ))}
                 </BlockStack>
               </Card>
