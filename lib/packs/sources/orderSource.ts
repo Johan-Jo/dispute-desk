@@ -104,5 +104,33 @@ export async function collectOrderEvidence(
     });
   }
 
+  // Activity log: customer tenure + order timeline.
+  // Maps to Shopify's accessActivityLog field and satisfies the
+  // "activity_log" completeness field.
+  if (order.customer || order.events?.edges?.length) {
+    const timelineEvents = (order.events?.edges ?? []).map((e) => ({
+      message: e.node.message,
+      createdAt: e.node.createdAt,
+    }));
+
+    sections.push({
+      type: "access_log",
+      label: "Customer activity log",
+      source: "shopify_order",
+      fieldsProvided: ["activity_log"],
+      data: {
+        customerTenure: order.customer
+          ? {
+              totalOrders: order.customer.numberOfOrders,
+              customerSince: order.customer.createdAt,
+              customerNote: order.customer.note,
+            }
+          : null,
+        timelineEvents: timelineEvents.slice(0, 20),
+        timelineEventCount: timelineEvents.length,
+      },
+    });
+  }
+
   return sections;
 }

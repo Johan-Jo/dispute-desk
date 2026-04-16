@@ -146,6 +146,24 @@ function serializeSectionData(section: RawPackSection): string {
     return lines.filter(Boolean).join("\n").trim();
   }
 
+  // Access / activity log sections
+  if (type === "access_log") {
+    const tenure = data.customerTenure as Record<string, unknown> | null;
+    if (tenure) {
+      if (tenure.totalOrders) lines.push(`Total Prior Orders: ${tenure.totalOrders}`);
+      if (tenure.customerSince) lines.push(`Customer Since: ${tenure.customerSince}`);
+      if (tenure.customerNote) lines.push(`Customer Note: ${tenure.customerNote}`);
+    }
+    const events = data.timelineEvents as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(events) && events.length > 0) {
+      lines.push("\nOrder Timeline:");
+      for (const evt of events.slice(0, 15)) {
+        lines.push(`  [${evt.createdAt ?? ""}] ${evt.message ?? ""}`);
+      }
+    }
+    return lines.filter(Boolean).join("\n").trim();
+  }
+
   // "other" type: payment verification, risk assessment, manual evidence, etc.
   // Fallback: serialize key-value pairs
   for (const [key, value] of Object.entries(data)) {

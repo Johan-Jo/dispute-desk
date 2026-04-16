@@ -5,7 +5,7 @@
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
 
 export interface EvidenceSection {
-  type: "order" | "shipping" | "tracking" | "policy" | "comms" | "other";
+  type: "order" | "shipping" | "tracking" | "policy" | "comms" | "other" | "access_log";
   label: string;
   source: string;
   data: Record<string, unknown>;
