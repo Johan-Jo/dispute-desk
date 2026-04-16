@@ -35,13 +35,15 @@ const FIELD_PRIORITY: Record<string, number> = {
   shipping_tracking: 1,
   avs_cvv_match: 2,
   billing_address_match: 3,
-  customer_communication: 4,
-  refund_policy: 5,
-  shipping_policy: 6,
-  cancellation_policy: 7,
-  product_description: 8,
-  order_confirmation: 9,
-  duplicate_explanation: 10,
+  risk_analysis: 4,
+  customer_ip: 5,
+  customer_communication: 6,
+  refund_policy: 7,
+  shipping_policy: 8,
+  cancellation_policy: 9,
+  product_description: 10,
+  order_confirmation: 11,
+  duplicate_explanation: 12,
   supporting_documents: 99,
 };
 
@@ -64,6 +66,10 @@ const WHY_TEXT: Record<string, string> = {
     "Matches the billing address to the order \u2014 critical for fraud disputes",
   avs_cvv_match:
     "Shows the card security checks passed \u2014 banks weigh this heavily in fraud cases",
+  risk_analysis:
+    "Shopify\u2019s fraud assessment for this order \u2014 supports your case when risk was flagged low",
+  customer_ip:
+    "The IP address used at checkout \u2014 helps prove the purchase came from the cardholder",
   product_description:
     "Proves the product matched what was advertised \u2014 key defense for \u2018not as described\u2019 disputes",
   refund_policy:
@@ -294,22 +300,24 @@ export function EvidenceBuilderSection({
                 Not available for this order
               </Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                {"These fields cannot be collected based on this order\u2019s context"}
+                {"These items don\u2019t apply or aren\u2019t accessible for this order \u2014 they won\u2019t affect your score"}
               </Text>
             </BlockStack>
             {unavailable.map((item) => (
               <div key={item.field} className={styles.evidenceRowIncluded}>
-                <InlineStack gap="200" blockAlign="center" wrap>
-                  <Icon source={AlertTriangleIcon} tone="subdued" />
-                  <Text as="span" variant="bodyMd" tone="subdued">
-                    {item.label}
-                  </Text>
+                <BlockStack gap="050">
+                  <InlineStack gap="200" blockAlign="center" wrap>
+                    <Icon source={AlertTriangleIcon} tone="subdued" />
+                    <Text as="span" variant="bodyMd" tone="subdued">
+                      {item.label}
+                    </Text>
+                  </InlineStack>
                   {item.unavailableReason && (
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      {`\u2014 ${item.unavailableReason}`}
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {item.unavailableReason}
                     </Text>
                   )}
-                </InlineStack>
+                </BlockStack>
               </div>
             ))}
           </BlockStack>

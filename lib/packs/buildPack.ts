@@ -235,7 +235,19 @@ export async function buildPack(
     order?.transactions?.some(
       (t) => t.paymentDetails?.__typename === "CardPaymentDetails",
     ) ?? false;
-  const orderContext: OrderContext = { isFulfilled, hasCardPayment };
+  // AVS/CVV is only "available" if a card transaction actually returned codes.
+  // External gateways (Stripe via Shopify, Adyen, etc.) often return null
+  // even for card payments — this must NOT block or penalize the pack.
+  const avsCvvAvailable =
+    order?.transactions?.some((t) => {
+      if (t.paymentDetails?.__typename !== "CardPaymentDetails") return false;
+      const d = t.paymentDetails as import("@/lib/shopify/queries/orders").CardPaymentDetails;
+      return (
+        (d.avsResultCode != null && d.avsResultCode !== "") ||
+        (d.cvvResultCode != null && d.cvvResultCode !== "")
+      );
+    }) ?? false;
+  const orderContext: OrderContext = { isFulfilled, hasCardPayment, avsCvvAvailable };
 
   const completeness = evaluateCompleteness(
     dispute.reason,

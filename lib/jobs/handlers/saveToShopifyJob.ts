@@ -67,6 +67,20 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   const sections: PackSection[] = Array.isArray(pack.sections) ? pack.sections : [];
   const input = buildEvidenceInput(sections);
 
+  // Inject customerPurchaseIp if available in evidence items.
+  // Shopify's disputeEvidenceUpdate accepts this as a standalone field.
+  const { data: ipItem } = await sb
+    .from("evidence_items")
+    .select("payload")
+    .eq("pack_id", packId)
+    .eq("label", "Customer Purchase IP")
+    .limit(1)
+    .maybeSingle();
+  const customerIp = (ipItem?.payload as { ip?: string } | null)?.ip;
+  if (customerIp) {
+    input.customerPurchaseIp = customerIp;
+  }
+
   if (Object.keys(input).length === 0) {
     throw new Error("No evidence fields to send — pack sections are empty");
   }

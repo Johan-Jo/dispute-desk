@@ -19,6 +19,7 @@ export const ORDER_DETAIL_QUERY = `
         displayFinancialStatus
         displayFulfillmentStatus
         note
+        clientIp
         customAttributes { key value }
         totalPriceSet { shopMoney { amount currencyCode } }
         subtotalPriceSet { shopMoney { amount currencyCode } }
@@ -89,6 +90,11 @@ export const ORDER_DETAIL_QUERY = `
             }
           }
         }
+        riskAssessments {
+          riskLevel
+          provider { title }
+          facts { description sentiment }
+        }
         transactions(first: 10) {
           id
           kind
@@ -99,8 +105,13 @@ export const ORDER_DETAIL_QUERY = `
             ... on CardPaymentDetails {
               avsResultCode
               cvvResultCode
+              bin
               company
               number
+              name
+              expirationMonth
+              expirationYear
+              wallet
             }
           }
         }
@@ -174,8 +185,24 @@ export interface CardPaymentDetails {
   __typename: "CardPaymentDetails";
   avsResultCode: string | null;
   cvvResultCode: string | null;
+  bin: string | null;
   company: string | null;
   number: string | null;
+  name: string | null;
+  expirationMonth: number | null;
+  expirationYear: number | null;
+  wallet: string | null;
+}
+
+export interface RiskAssessmentFact {
+  description: string;
+  sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+}
+
+export interface OrderRiskAssessment {
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "PENDING" | "NONE";
+  provider: { title: string } | null;
+  facts: RiskAssessmentFact[];
 }
 
 export interface OrderTransaction {
@@ -197,6 +224,7 @@ export interface OrderDetailNode {
   displayFinancialStatus: string | null;
   displayFulfillmentStatus: string | null;
   note: string | null;
+  clientIp: string | null;
   customAttributes: OrderCustomAttribute[];
   totalPriceSet: MoneySet;
   subtotalPriceSet: MoneySet;
@@ -220,6 +248,7 @@ export interface OrderDetailNode {
   fulfillments: OrderFulfillment[];
   refunds: OrderRefund[];
   transactions: OrderTransaction[];
+  riskAssessments: OrderRiskAssessment[];
   events: { edges: Array<{ node: OrderEventNode }> };
   customer: {
     numberOfOrders: string;

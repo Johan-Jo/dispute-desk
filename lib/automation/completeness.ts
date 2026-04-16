@@ -19,6 +19,13 @@ export type RequirementMode =
 export interface OrderContext {
   isFulfilled: boolean;
   hasCardPayment: boolean;
+  /**
+   * Whether AVS/CVV codes are actually present from the gateway.
+   * Card payments through external gateways often return null for
+   * AVS/CVV — this flag prevents treating missing codes as a gap
+   * when the data simply isn't available from the payment processor.
+   */
+  avsCvvAvailable: boolean;
 }
 
 export interface ChecklistItem {
@@ -59,6 +66,8 @@ const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
     { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always" },
     { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment" },
+    { field: "risk_analysis", label: "Fraud Risk Assessment", requirementMode: "recommended" },
+    { field: "customer_ip", label: "Customer Purchase IP", requirementMode: "recommended" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
     { field: "activity_log", label: "Activity Log", requirementMode: "optional" },
@@ -137,6 +146,13 @@ function resolveRequirement(
           unavailableReason: "No card payment on this order",
         };
       }
+      if (!ctx.avsCvvAvailable) {
+        return {
+          required: false,
+          collectable: false,
+          unavailableReason: "AVS/CVV not returned by payment gateway",
+        };
+      }
       return { required: true, collectable: true };
     case "recommended":
       return { required: false, collectable: true };
@@ -160,6 +176,7 @@ export interface TemplateChecklistItem {
 const DEFAULT_ORDER_CONTEXT: OrderContext = {
   isFulfilled: true,
   hasCardPayment: true,
+  avsCvvAvailable: true,
 };
 
 /**
@@ -283,6 +300,8 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify" },
     { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify" },
     { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify" },
+    { field: "risk_analysis", label: "Fraud Risk Assessment", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify" },
+    { field: "customer_ip", label: "Customer Purchase IP", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify" },
     { field: "activity_log", label: "Activity Log", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_shopify" },
@@ -363,6 +382,13 @@ function resolveItemStatus(
           status: "unavailable",
           collectable: false,
           unavailableReason: "No card payment on this order",
+        };
+      }
+      if (!ctx.avsCvvAvailable) {
+        return {
+          status: "unavailable",
+          collectable: false,
+          unavailableReason: "AVS/CVV not returned by payment gateway",
         };
       }
       break;

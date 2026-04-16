@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { evaluateCompleteness, type OrderContext } from "../completeness";
 
-const FULFILLED_CARD: OrderContext = { isFulfilled: true, hasCardPayment: true };
-const UNFULFILLED_CARD: OrderContext = { isFulfilled: false, hasCardPayment: true };
-const FULFILLED_NO_CARD: OrderContext = { isFulfilled: true, hasCardPayment: false };
-const UNFULFILLED_NO_CARD: OrderContext = { isFulfilled: false, hasCardPayment: false };
+const FULFILLED_CARD: OrderContext = { isFulfilled: true, hasCardPayment: true, avsCvvAvailable: true };
+const UNFULFILLED_CARD: OrderContext = { isFulfilled: false, hasCardPayment: true, avsCvvAvailable: true };
+const FULFILLED_NO_CARD: OrderContext = { isFulfilled: true, hasCardPayment: false, avsCvvAvailable: false };
+const UNFULFILLED_NO_CARD: OrderContext = { isFulfilled: false, hasCardPayment: false, avsCvvAvailable: false };
 
 describe("evaluateCompleteness", () => {
   it("returns 100% when all collectable fields present for PRODUCT_NOT_RECEIVED (fulfilled)", () => {
@@ -88,6 +88,8 @@ describe("evaluateCompleteness", () => {
       "order_confirmation",
       "billing_address_match",
       "avs_cvv_match",
+      "risk_analysis",
+      "customer_ip",
       "shipping_tracking",
       "customer_communication",
       "activity_log",
