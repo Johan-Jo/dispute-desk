@@ -125,4 +125,12 @@ export interface MissingItemWithContext {
   source: string;
   effort: "low" | "medium" | "high";
   recommendation: string;
+  /** How to add this evidence. */
+  actionType: "upload" | "paste" | "note";
+  /** Primary CTA label. */
+  ctaLabel: string;
+  /** Accepted formats. */
+  acceptedFormats: string;
+  /** Secondary option label. */
+  skipLabel: string;
 }

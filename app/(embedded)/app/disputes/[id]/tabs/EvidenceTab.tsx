@@ -175,7 +175,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   if (!data) return null;
 
   const { argumentMap, rebuttalDraft } = data;
-  const { categories, missingItems, whyWins } = derived;
+  const { categories, missingItems, effectiveChecklist, whyWins } = derived;
   const readOnly = derived.isReadOnly;
 
   return (
@@ -371,33 +371,80 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         />
       ))}
 
-      {/* E. Missing Evidence Panel */}
-      {missingItems.length > 0 && !readOnly && (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="h3" variant="headingMd">Add to strengthen your case</Text>
-            {missingItems.map((item) => (
-              <div key={item.field} className={styles.missingItem}>
-                <BlockStack gap="100">
-                  <InlineStack align="space-between" blockAlign="center" wrap>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      {item.label}
-                    </Text>
-                    <Badge tone={item.priority === "critical" ? "critical" : "attention"}>
-                      {item.priority === "critical" ? "High impact" : "Recommended"}
-                    </Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">{item.impact}</Text>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-                    <Text as="p" variant="bodySm" tone="subdued">Source: {item.source}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">Effort: {item.effort}</Text>
+      {/* E. Ways to strengthen this case */}
+      {!readOnly && (
+        <BlockStack gap="400">
+          {/* A. Add now — merchant-actionable items */}
+          {missingItems.length > 0 && (
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingMd">Ways to strengthen this case</Text>
+                {missingItems.map((item) => (
+                  <div key={item.field} className={styles.missingItem}>
+                    <BlockStack gap="200">
+                      <InlineStack align="space-between" blockAlign="center" wrap>
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">
+                          {item.label}
+                        </Text>
+                        <Badge tone={item.priority === "critical" ? "attention" : undefined}>
+                          {item.priority === "critical" ? "High impact" : "Recommended"}
+                        </Badge>
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">{item.impact}</Text>
+                      <InlineStack gap="200" wrap>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {`Format: ${item.acceptedFormats}`}
+                        </Text>
+                      </InlineStack>
+                      <InlineStack gap="200">
+                        <Button
+                          size="slim"
+                          onClick={() => actions.navigateToEvidence(item.field)}
+                        >
+                          {item.ctaLabel}
+                        </Button>
+                        <Button
+                          size="slim"
+                          variant="plain"
+                          onClick={() => actions.waiveItem(item.field, "evidence_unavailable")}
+                        >
+                          {item.skipLabel}
+                        </Button>
+                      </InlineStack>
+                    </BlockStack>
                   </div>
-                  <Text as="p" variant="bodySm" fontWeight="semibold">{item.recommendation}</Text>
+                ))}
+              </BlockStack>
+            </Card>
+          )}
+
+          {/* B. Added automatically — system-derived evidence status */}
+          {(() => {
+            const systemItems = effectiveChecklist.filter(
+              (c) => (c.collectionType === "auto" || c.collectionType === "conditional_auto"),
+            );
+            if (systemItems.length === 0) return null;
+            return (
+              <Card>
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd" tone="subdued">Collected automatically</Text>
+                  {systemItems.map((item) => (
+                    <InlineStack key={item.field} gap="200" blockAlign="center" wrap>
+                      <Icon
+                        source={item.status === "available" ? CheckCircleIcon : MinusCircleIcon}
+                        tone={item.status === "available" ? "success" : "subdued"}
+                      />
+                      <Text as="span" variant="bodyMd">{item.label}</Text>
+                      <Badge tone={item.status === "available" ? "success" : undefined}>
+                        {item.status === "available" ? "Available" : "Not available"}
+                      </Badge>
+                    </InlineStack>
+                  ))}
                 </BlockStack>
-              </div>
-            ))}
-          </BlockStack>
-        </Card>
+              </Card>
+            );
+          })()}
+        </BlockStack>
       )}
     </BlockStack>
   );

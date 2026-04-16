@@ -81,6 +81,49 @@ const SOURCE_MAP: Record<string, string> = {
   duplicate_explanation: "Upload transaction records",
 };
 
+/* ── Per-field action metadata for merchant-addable items ── */
+
+interface FieldAction {
+  actionType: "upload" | "paste" | "note";
+  ctaLabel: string;
+  acceptedFormats: string;
+  skipLabel: string;
+}
+
+const FIELD_ACTIONS: Record<string, FieldAction> = {
+  supporting_documents: {
+    actionType: "upload",
+    ctaLabel: "Upload file",
+    acceptedFormats: "Screenshot, PDF, or document",
+    skipLabel: "Skip for now",
+  },
+  customer_communication: {
+    actionType: "paste",
+    ctaLabel: "Paste conversation or upload screenshot",
+    acceptedFormats: "Pasted text, screenshot, or PDF",
+    skipLabel: "Skip for now",
+  },
+  product_description: {
+    actionType: "upload",
+    ctaLabel: "Upload product listing screenshot",
+    acceptedFormats: "Screenshot or PDF of product page",
+    skipLabel: "Skip for now",
+  },
+  duplicate_explanation: {
+    actionType: "paste",
+    ctaLabel: "Upload transaction records",
+    acceptedFormats: "Screenshot, PDF, or pasted text",
+    skipLabel: "Skip for now",
+  },
+};
+
+const DEFAULT_ACTION: FieldAction = {
+  actionType: "upload",
+  ctaLabel: "Upload proof",
+  acceptedFormats: "Screenshot, PDF, or document",
+  skipLabel: "Skip for now",
+};
+
 /* ── Derived state helpers ── */
 
 function deriveEvidenceWithStrength(
@@ -133,15 +176,22 @@ function deriveMissingItems(
     // System-derived evidence (auto/conditional_auto) is not something
     // the merchant can upload or fix — it should never appear as a CTA.
     .filter((c) => c.collectionType === "manual" || !c.collectionType)
-    .map((c) => ({
-      field: c.field,
-      label: c.label,
-      priority: c.priority,
-      impact: WHY_TEXT[c.field] ?? "Strengthens your dispute response",
-      source: SOURCE_MAP[c.field] ?? "Upload or provide manually",
-      effort: EFFORT_MAP[c.field] ?? "medium",
-      recommendation: c.priority === "critical" ? "Add before submitting" : "Recommended if available",
-    }));
+    .map((c) => {
+      const action = FIELD_ACTIONS[c.field] ?? DEFAULT_ACTION;
+      return {
+        field: c.field,
+        label: c.label,
+        priority: c.priority,
+        impact: WHY_TEXT[c.field] ?? "Strengthens your dispute response",
+        source: SOURCE_MAP[c.field] ?? "Upload or provide manually",
+        effort: EFFORT_MAP[c.field] ?? ("medium" as const),
+        recommendation: c.priority === "critical" ? "Would strengthen your case" : "Recommended if available",
+        actionType: action.actionType,
+        ctaLabel: action.ctaLabel,
+        acceptedFormats: action.acceptedFormats,
+        skipLabel: action.skipLabel,
+      };
+    });
 }
 
 function deriveCategories(
