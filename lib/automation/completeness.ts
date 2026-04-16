@@ -66,11 +66,10 @@ const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
     { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always" },
     { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment" },
-    { field: "risk_analysis", label: "Fraud Risk Assessment", requirementMode: "recommended" },
-    { field: "customer_ip", label: "Customer Purchase IP", requirementMode: "recommended" },
+    { field: "activity_log", label: "Customer Purchase History", requirementMode: "recommended" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled" },
+    { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "required_if_fulfilled" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
-    { field: "activity_log", label: "Activity Log", requirementMode: "optional" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
   ],
   PRODUCT_UNACCEPTABLE: [
@@ -307,12 +306,10 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
-    { field: "threeds_authentication", label: "3D Secure Authentication", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "unavailable" },
-    { field: "risk_analysis", label: "Fraud Risk Assessment", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
-    { field: "customer_ip", label: "Customer Purchase IP", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "activity_log", label: "Customer Purchase History", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
-    { field: "activity_log", label: "Activity Log", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
   PRODUCT_UNACCEPTABLE: [
@@ -478,9 +475,7 @@ export function evaluateCompletenessV2(
             source: resolved.collectable ? t.expectedSource : ("unavailable_from_source" as EvidenceItemSource),
             collectionType: t.collectionType,
             unavailableReason: t.collectionType === "unavailable" && !isPresent
-              ? (t.field === "threeds_authentication"
-                ? "Shopify does not expose 3D Secure status via Admin API. Upload proof manually if available."
-                : "Not available automatically \u2014 upload manually if you have it")
+              ? "Not available automatically \u2014 upload manually if you have it"
               : resolved.unavailableReason,
             waiveReason: waivedItem?.reason,
             waiveNote: waivedItem?.note,

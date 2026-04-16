@@ -25,8 +25,6 @@ const EVIDENCE_PHRASES: Record<string, string> = {
   supporting_documents: "additional supporting documentation",
   customer_ip: "customer purchase IP address records",
   risk_analysis: "fraud risk assessment data",
-  // 3DS: only referenced when confirmed available (never auto-claimed)
-  threeds_authentication: "3D Secure authentication confirmation",
 };
 
 function evidencePhrase(field: string): string {

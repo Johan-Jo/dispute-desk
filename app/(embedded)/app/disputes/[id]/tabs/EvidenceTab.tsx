@@ -52,8 +52,7 @@ const WHY_TEXT: Record<string, string> = {
   customer_communication: "Shows merchant attempted to resolve the issue",
   duplicate_explanation: "Explains why charges are not duplicates",
   supporting_documents: "Additional proof that strengthens your case",
-  activity_log: "Account activity proving legitimate engagement",
-  threeds_authentication: "3D Secure authentication \u2014 not available from Shopify API, upload manually if available",
+  activity_log: "Customer purchase history and account activity",
 };
 
 /* ── Content Preview Renderers ── */
@@ -268,11 +267,11 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
       {(whyWins.strengths.length > 0 || whyWins.weaknesses.length > 0) && (
         <div className={whyWins.overall === "weak" || whyWins.overall === "insufficient" ? styles.whyWinsCardWeak : styles.whyWinsCard}>
           <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">Why this case should win</Text>
+            <Text as="h3" variant="headingMd">Your current defense</Text>
             {whyWins.strengths.length > 0 && (
               <BlockStack gap="100">
                 <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">
-                  This case is {whyWins.overall} because:
+                  Based on current data, this case is {whyWins.overall}:
                 </Text>
                 {whyWins.strengths.map((s, i) => (
                   <Text key={i} as="p" variant="bodySm">{`\u2022 ${s}`}</Text>
@@ -361,7 +360,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
       {missingItems.length > 0 && !readOnly && (
         <Card>
           <BlockStack gap="300">
-            <Text as="h3" variant="headingMd">Missing evidence</Text>
+            <Text as="h3" variant="headingMd">Add to strengthen your case</Text>
             {missingItems.map((item) => (
               <div key={item.field} className={styles.missingItem}>
                 <BlockStack gap="100">

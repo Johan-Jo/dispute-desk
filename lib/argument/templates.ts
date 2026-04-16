@@ -14,34 +14,33 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
   FRAUDULENT: {
     disputeType: "Fraud \u2014 Unauthorized transaction",
     toWin: [
-      "Cardholder authorized the transaction",
-      "Identity matches buyer behavior",
-      "Delivery was successful",
+      "Transaction verification checks passed",
+      "Order was fulfilled and delivered",
+      "Customer behavior is consistent with legitimate purchase",
     ],
     strongestEvidence: [
       "AVS/CVV match",
-      "Customer purchase history",
       "Delivery confirmation",
+      "Customer purchase history",
     ],
     counterclaims: [
       {
         id: "fraud-1",
-        title: "Transaction was verified by payment processor",
-        requiredEvidence: ["avs_cvv_match", "billing_address_match"],
-        // 3DS is supporting only — we cannot auto-collect it
-        supportingEvidence: ["threeds_authentication", "customer_ip", "risk_analysis"],
+        title: "Transaction appears authorized based on verification checks",
+        requiredEvidence: ["avs_cvv_match"],
+        supportingEvidence: ["billing_address_match", "order_confirmation"],
       },
       {
         id: "fraud-2",
-        title: "Order was fulfilled to verified address",
-        requiredEvidence: ["shipping_tracking", "delivery_proof"],
-        supportingEvidence: ["billing_address_match"],
+        title: "Order was fulfilled and delivered",
+        requiredEvidence: ["shipping_tracking"],
+        supportingEvidence: ["delivery_proof", "billing_address_match"],
       },
       {
         id: "fraud-3",
-        title: "Customer has legitimate purchase history",
+        title: "Customer behavior is consistent with legitimate purchase",
         requiredEvidence: ["activity_log"],
-        supportingEvidence: ["customer_communication"],
+        supportingEvidence: ["customer_communication", "order_confirmation"],
       },
     ],
   },

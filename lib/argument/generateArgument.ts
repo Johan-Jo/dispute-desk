@@ -66,8 +66,8 @@ export function generateArgumentMap(
     fieldStatus.set(item.field, item.status);
   }
 
-  const counterclaims: CounterclaimNode[] = template.counterclaims.map(
-    (ct) => {
+  const counterclaims: CounterclaimNode[] = template.counterclaims
+    .map((ct) => {
       const allEvidence = [...ct.requiredEvidence, ...ct.supportingEvidence];
       const supporting: CounterclaimNode["supporting"] = [];
       const missing: CounterclaimNode["missing"] = [];
@@ -80,6 +80,8 @@ export function generateArgumentMap(
         if (status === "available" || status === "waived") {
           supporting.push({ field, label, status });
         } else if (status === "missing") {
+          // Only show missing items the merchant can actually act on
+          // (not unavailable/non-actionable signals)
           missing.push({
             field,
             label,
@@ -101,8 +103,9 @@ export function generateArgumentMap(
         supporting,
         missing,
       };
-    },
-  );
+    })
+    // Only include claims that have at least some evidence or actionable gaps
+    .filter((claim) => claim.supporting.length > 0 || claim.missing.length > 0);
 
   // Overall strength: weakest claim determines ceiling
   let overallStrength: CaseStrengthLevel = "strong";

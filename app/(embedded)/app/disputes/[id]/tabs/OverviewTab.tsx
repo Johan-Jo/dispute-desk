@@ -42,7 +42,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
           <BlockStack gap="100">
             <Text as="p" variant="bodySm" fontWeight="semibold">
-              To win this case, you must prove:
+              Your best available defense:
             </Text>
             <ul className={styles.toWinList}>
               {caseTypeInfo.toWin.map((item, i) => (
@@ -53,7 +53,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
           <BlockStack gap="100">
             <Text as="p" variant="bodySm" fontWeight="semibold">
-              Strongest evidence:
+              Best available evidence in this case:
             </Text>
             <div className={styles.strongestEvidence}>
               {caseTypeInfo.strongestEvidence.map((item, i) => (
@@ -171,7 +171,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       <Card>
         <BlockStack gap="200">
           <InlineStack align="space-between" blockAlign="center">
-            <Text as="h3" variant="headingMd">Case strength</Text>
+            <Text as="h3" variant="headingMd">Win likelihood based on current data</Text>
             <Badge
               tone={
                 caseStrength.overall === "strong" ? "success" :
