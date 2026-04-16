@@ -213,42 +213,62 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
         </BlockStack>
       </Card>
 
-      {/* 3. SUBMISSION CONTENT — collapsed by default */}
+      {/* 3. WHAT WILL BE SUBMITTED */}
       {!isReadOnly && (
         <Card>
-          <BlockStack gap="200">
-            <Button
-              variant="plain"
-              onClick={() => setPreviewOpen(v => !v)}
-              disclosure={previewOpen ? "up" : "down"}
-            >
-              {previewOpen ? "Hide submission details" : "View what will be submitted to Shopify"}
-            </Button>
-            <Collapsible open={previewOpen} id="submission-preview">
-              <BlockStack gap="300">
-                {previewLoading ? (
-                  <Text as="p" variant="bodySm" tone="subdued">Loading...</Text>
-                ) : fields.length === 0 ? (
-                  <Text as="p" variant="bodySm" tone="subdued">No evidence to submit.</Text>
-                ) : (
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Automatically included based on your evidence.
+          <BlockStack gap="400">
+            <Text as="h3" variant="headingMd">What will be submitted</Text>
+
+            {/* Rebuttal letter — the main thing the bank reads */}
+            {data.rebuttalDraft?.sections && data.rebuttalDraft.sections.length > 0 && (
+              <BlockStack gap="200">
+                <Text as="p" variant="bodySm" fontWeight="semibold">Dispute response</Text>
+                <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "12px 16px", border: "1px solid #e2e8f0" }}>
+                  {data.rebuttalDraft.sections.map((sec) => (
+                    <Text key={sec.id} as="p" variant="bodySm" tone="subdued">
+                      {sec.text}
+                      {sec.type !== "conclusion" ? "\n" : ""}
                     </Text>
-                    {fields.filter(f => f.included && f.content).map((field) => (
-                      <BlockStack key={field.shopifyFieldName} gap="050">
-                        <Text as="p" variant="bodySm" fontWeight="semibold">
-                          {field.shopifyFieldLabel}
-                        </Text>
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          {field.contentPreview || "\u2014"}
-                        </Text>
-                      </BlockStack>
-                    ))}
-                  </BlockStack>
-                )}
+                  ))}
+                </div>
               </BlockStack>
-            </Collapsible>
+            )}
+
+            <Divider />
+
+            {/* Evidence fields — what Shopify receives */}
+            <BlockStack gap="200">
+              <Button
+                variant="plain"
+                onClick={() => setPreviewOpen(v => !v)}
+                disclosure={previewOpen ? "up" : "down"}
+              >
+                {previewOpen ? "Hide Shopify field details" : "View Shopify evidence fields"}
+              </Button>
+              <Collapsible open={previewOpen} id="submission-preview">
+                <BlockStack gap="200">
+                  {previewLoading ? (
+                    <Text as="p" variant="bodySm" tone="subdued">Loading...</Text>
+                  ) : (
+                    <>
+                      {fields.filter(f => f.included && f.content).map((field) => (
+                        <BlockStack key={field.shopifyFieldName} gap="050">
+                          <Text as="p" variant="bodySm" fontWeight="semibold">
+                            {field.shopifyFieldLabel}
+                          </Text>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {field.contentPreview || "\u2014"}
+                          </Text>
+                        </BlockStack>
+                      ))}
+                      {fields.filter(f => f.included && f.content).length === 0 && (
+                        <Text as="p" variant="bodySm" tone="subdued">No evidence fields to submit.</Text>
+                      )}
+                    </>
+                  )}
+                </BlockStack>
+              </Collapsible>
+            </BlockStack>
           </BlockStack>
         </Card>
       )}
