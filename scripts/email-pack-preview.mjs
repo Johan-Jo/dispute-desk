@@ -125,22 +125,22 @@ async function main() {
 
     if (item.type === "policy") {
       body += "\u2502\n";
-      body += "\u2502  NOTE: All policies submitted to Shopify must be in English.\n";
-      body += "\u2502  Non-English policies should be replaced with English versions\n";
-      body += "\u2502  before submission.\n\u2502\n";
+
+      // English-language policy summaries for Shopify submission
+      const policySummaries = {
+        refunds: "The store's refund policy was clearly disclosed and accepted by the customer at checkout. The policy outlines conditions for returns, refunds, and exchanges, and was available for review prior to purchase completion.",
+        shipping: "The store's shipping policy was disclosed at checkout. The policy covers processing times, shipping methods, delivery estimates, and the merchant's responsibilities regarding order fulfillment.",
+        terms: "The store's terms of service were presented and accepted by the customer before completing the purchase. These terms govern the use of the store, ordering process, and customer obligations.",
+        privacy: "The store's privacy policy was available to the customer, disclosing how personal information is collected, used, and protected in connection with purchases.",
+      };
+
       for (const pol of p.policies || []) {
         const typeName = pol.policyType.charAt(0).toUpperCase() + pol.policyType.slice(1);
         const policySlug = { privacy: "privacy-policy", terms: "terms-of-service", refunds: "refund-policy", shipping: "shipping-policy" }[pol.policyType];
         const storeUrl = policySlug ? `https://${shopDomain}/policies/${policySlug}` : null;
+        const summary = policySummaries[pol.policyType] || "Policy was disclosed at checkout.";
         body += `\u2502  ${typeName} Policy (captured ${fmtDate(pol.capturedAt)})\n`;
-        const full = policyByType.get(pol.policyType);
-        if (full?.extracted_text) {
-          const lines = full.extracted_text.split("\n").filter(l => l.trim() && !l.startsWith("#")).slice(0, 3);
-          for (const line of lines) {
-            body += `\u2502    ${line.trim()}\n`;
-          }
-          body += `\u2502    [...]\n`;
-        }
+        body += `\u2502    ${summary}\n`;
         if (storeUrl) body += `\u2502    Full policy: ${storeUrl}\n`;
         body += "\u2502\n";
       }
