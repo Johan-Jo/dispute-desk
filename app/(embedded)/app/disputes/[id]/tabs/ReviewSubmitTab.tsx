@@ -166,18 +166,20 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
         <Card>
           <BlockStack gap="300">
             <Banner tone="success">
-              <BlockStack gap="200">
-                <Text as="p" variant="bodySm" fontWeight="semibold">
-                  {"\u2713 Evidence submitted to Shopify"}
-                </Text>
-                <Text as="p" variant="bodySm">
-                  {pack.savedToShopifyAt
-                    ? `Saved on ${new Date(pack.savedToShopifyAt).toLocaleDateString()}. `
-                    : "Your evidence is being processed. "}
-                  {"Submit your response in Shopify Admin, or it will be auto-submitted on the dispute deadline."}
-                </Text>
-              </BlockStack>
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                {"\u2713 Your evidence has been saved to Shopify"}
+              </Text>
             </Banner>
+
+            <BlockStack gap="200">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                Would you like to submit to the bank now?
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {"You can submit your response to the bank right now in Shopify Admin for faster resolution. If you prefer to wait, Shopify will automatically submit your evidence on the dispute deadline."}
+              </Text>
+            </BlockStack>
+
             {data.dispute.disputeGid && data.dispute.shopDomain && (
               <Button
                 variant="primary"
@@ -185,9 +187,13 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
                 url={`https://${data.dispute.shopDomain}/admin/shopify_payments/disputes/${data.dispute.disputeGid.split("/").pop()}`}
                 target="_blank"
               >
-                Submit now in Shopify Admin
+                Submit to bank now in Shopify Admin
               </Button>
             )}
+
+            <Text as="p" variant="bodySm" tone="subdued">
+              {"Or do nothing \u2014 Shopify will auto-submit on the deadline."}
+            </Text>
           </BlockStack>
         </Card>
       ) : (
