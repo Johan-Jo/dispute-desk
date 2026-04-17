@@ -222,10 +222,21 @@ async function main() {
   const missingCritical = checklistV2.filter(c => c.priority === "critical" && c.status === "missing").length;
   const readiness = missingCritical > 0 ? "ready_with_warnings" : "ready";
 
+  // Build pack_json (required for save-to-shopify job)
+  const packJsonSections = items.map(i => ({
+    type: i.type, label: i.label, source: i.source, fieldsProvided: [], data: i.payload,
+  }));
+  const packJson = {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    sections: packJsonSections,
+    completeness: { score, checklist },
+  };
+
   await sb.from("evidence_packs").update({
     status: "ready", completeness_score: score, checklist, checklist_v2: checklistV2,
     blockers: checklist.filter(c => c.required && !c.present).map(c => c.label),
-    submission_readiness: readiness, updated_at: new Date().toISOString(),
+    submission_readiness: readiness, pack_json: packJson, updated_at: new Date().toISOString(),
   }).eq("id", packId);
 
   // Clear argument map so it regenerates
