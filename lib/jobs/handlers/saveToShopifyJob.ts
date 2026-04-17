@@ -304,8 +304,10 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       correlationId: `verify-${job.id}`,
     });
 
-    const evidence = (verifyResult as unknown as { data: VerifyEvidenceResult }).data?.node?.disputeEvidence ??
-      (verifyResult as unknown as VerifyEvidenceResult).node?.disputeEvidence;
+    // requestShopifyGraphQL returns { data: { node: { disputeEvidence: {...} } } }
+    const rawResult = verifyResult as unknown as Record<string, unknown>;
+    const dataNode = (rawResult.data as Record<string, unknown> | undefined)?.node as Record<string, unknown> | undefined;
+    const evidence = dataNode?.disputeEvidence as Record<string, unknown> | undefined;
 
     if (evidence) {
       const fieldsConfirmed: string[] = [];
@@ -322,7 +324,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
           fieldsWriteOnly.push(key);
           continue;
         }
-        const shopifyValue = (evidence as Record<string, unknown>)[key];
+        const shopifyValue = evidence[key];
         if (shopifyValue && typeof shopifyValue === "string" && shopifyValue.trim().length > 0) {
           fieldsConfirmed.push(key);
         } else {
