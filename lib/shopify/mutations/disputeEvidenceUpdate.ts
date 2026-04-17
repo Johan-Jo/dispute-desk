@@ -32,7 +32,7 @@ export const DISPUTE_EVIDENCE_UPDATE_MUTATION = `
 
 /** File upload input for dispute evidence attachments. */
 export interface DisputeFileUploadInput {
-  /** The file's resource URL from staged upload. */
+  /** GID from REST dispute_file_uploads endpoint (gid://shopify/ShopifyPaymentsDisputeFileUpload/...). */
   id: string;
   /** Set to true to remove the file. */
   destroy?: boolean;

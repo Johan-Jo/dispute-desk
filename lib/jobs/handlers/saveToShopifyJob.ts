@@ -14,7 +14,6 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
-import { uploadDisputeFile } from "@/lib/shopify/disputeFileUpload";
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
 import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
 import {
@@ -73,17 +72,11 @@ const VERIFIABLE_FIELDS = new Set([
   "customerPurchaseIp",
 ]);
 
-/** Fields that are write-only or non-text (mutation accepts but can't be verified via read-back). */
+/** Fields that are write-only (mutation accepts but can't be verified via read-back). */
 const WRITE_ONLY_FIELDS = new Set([
-  "shippingDocumentation",
-  "shippingCarrier",
-  "shippingDate",
-  "shippingTrackingNumber",
-  "shippingAddress",
-  "serviceDate",
-  "serviceDocumentation",
-  "customerName",
   "submitEvidence",
+  "customerFirstName",
+  "customerLastName",
 ]);
 
 interface VerifyEvidenceResult {
@@ -241,24 +234,53 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  FILE UPLOADS: currently disabled
+  //  REST-ONLY FIELDS (not available via GraphQL)
   //
-  //  File upload requires the `shopify_payments_dispute_file_uploads`
-  //  scope which we don't have yet. The staged upload succeeds but
-  //  the resourceUrl cannot be used as a file ID in
-  //  disputeEvidenceUpdate — Shopify expects a GID from the
-  //  REST dispute_file_uploads endpoint.
+  //  Shopify's GraphQL schema rejects: product_description,
+  //  shipping_carrier, shipping_tracking_number, shipping_date.
+  //  But the REST PUT /dispute_evidences.json endpoint accepts them.
   //
-  //  TODO: Add scope, use REST API to create file uploads:
-  //  POST /admin/api/2026-01/shopify_payments/disputes/{id}/dispute_file_uploads.json
-  //  Then use returned ID in the GraphQL mutation.
+  //  File uploads via dispute_file_uploads endpoint are NOT available
+  //  (returns 404 — requires a scope that cannot be granted via OAuth).
+  //  All evidence is therefore text-only.
   // ═══════════════════════════════════════════════════════════
 
-  // FILE UPLOADS: disabled until shopify_payments_dispute_file_uploads scope is approved.
-  // The GraphQL file fields (customerCommunicationFile, etc.) require a Shopify GID
-  // from the REST dispute_file_uploads endpoint, which needs the additional scope.
-  // Text evidence is sent via the text fields above.
-  // TODO: Request scope approval, then enable REST-based file uploads.
+  const restOnlyFields: Record<string, string> = {};
+
+  // Product description from line items
+  const orderSections = sections.filter(s => s.type === "order");
+  for (const s of orderSections) {
+    const items = s.data?.lineItems as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(items) && items.length > 0) {
+      const desc = items.map(li => {
+        const parts: string[] = [];
+        if (li.title) parts.push(`Product name: ${String(li.title)}`);
+        if (li.variantTitle) parts.push(`Size: ${String(li.variantTitle)}`);
+        if (li.quantity) parts.push(`Quantity: ${String(li.quantity)}`);
+        if (li.price) parts.push(`Price: ${String(li.price)}`);
+        if (li.sku) parts.push(`SKU: ${String(li.sku)}`);
+        return parts.join("\n");
+      }).join("\n\n");
+      if (desc) restOnlyFields.product_description = desc;
+    }
+  }
+
+  // Shipping data from fulfillment sections
+  const shipSections = sections.filter(s => s.type === "shipping" || s.type === "fulfillment");
+  for (const s of shipSections) {
+    const fulfillments = s.data?.fulfillments as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(fulfillments)) continue;
+    for (const f of fulfillments) {
+      if (f.createdAt) restOnlyFields.shipping_date = String(f.createdAt).split("T")[0];
+      const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(tracking)) {
+        for (const t of tracking) {
+          if (t.carrier) restOnlyFields.shipping_carrier = String(t.carrier);
+          if (t.number) restOnlyFields.shipping_tracking_number = String(t.number);
+        }
+      }
+    }
+  }
 
   const inputKeys = Object.keys(input);
   if (inputKeys.length === 0) {
@@ -319,7 +341,44 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  5. MARK UNVERIFIED (mutation succeeded but not yet confirmed)
+  //  5. REST SUPPLEMENT — fields GraphQL doesn't support
+  // ═══════════════════════════════════════════════════════════
+
+  if (Object.keys(restOnlyFields).length > 0) {
+    try {
+      const { data: dForRest } = await sb
+        .from("disputes")
+        .select("dispute_gid")
+        .eq("id", pack.dispute_id)
+        .single();
+      const numericDisputeId = dForRest?.dispute_gid?.match(/\/(\d+)$/)?.[1];
+
+      if (numericDisputeId) {
+        const restUrl = `https://${shopDomain}/admin/api/2026-01/shopify_payments/disputes/${numericDisputeId}/dispute_evidences.json`;
+        const restRes = await fetch(restUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": accessToken,
+          },
+          body: JSON.stringify({ dispute_evidence: restOnlyFields }),
+        });
+
+        console.log(
+          `[saveToShopify] REST supplement (${Object.keys(restOnlyFields).join(", ")}): ${restRes.status}`,
+        );
+      }
+    } catch (restErr) {
+      // Non-fatal — GraphQL fields are already saved
+      console.error(
+        "[saveToShopify] REST supplement failed (non-fatal):",
+        restErr instanceof Error ? restErr.message : String(restErr),
+      );
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  6. MARK UNVERIFIED (mutation succeeded but not yet confirmed)
   // ═══════════════════════════════════════════════════════════
 
   const now = new Date().toISOString();
@@ -330,7 +389,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   }).eq("id", packId);
 
   // ═══════════════════════════════════════════════════════════
-  //  6. VERIFY — re-fetch evidence from Shopify and compare
+  //  7. VERIFY — re-fetch evidence from Shopify and compare
   // ═══════════════════════════════════════════════════════════
 
   let verified = false;

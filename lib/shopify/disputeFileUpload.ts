@@ -1,119 +1,118 @@
 /**
- * Dispute evidence file upload pipeline.
+ * Dispute evidence file upload via Shopify REST Admin API.
  *
  * Flow:
- * 1. stagedUploadsCreate with resource: DISPUTE_FILE_UPLOAD
- * 2. Upload file to Google Cloud Storage via multipart POST
- * 3. Return resourceUrl for use in disputeEvidenceUpdate file fields
+ * 1. POST base64-encoded file to /admin/api/{version}/shopify_payments/disputes/{id}/dispute_file_uploads.json
+ * 2. Shopify returns a GID (gid://shopify/ShopifyPaymentsDisputeFileUpload/...)
+ * 3. Use that GID in disputeEvidenceUpdate file fields (customerCommunicationFile, etc.)
  *
- * No additional scopes required beyond write_shopify_payments_dispute_evidences.
+ * Constraints:
+ * - Accepted formats: .png, .jpeg, .pdf
+ * - Max 4 MB total across all files per dispute
+ * - Uses write_shopify_payments_dispute_evidences scope (no extra scope needed)
  */
 
-import { requestShopifyGraphQL } from "./graphql";
+import { SHOPIFY_API_VERSION } from "./client";
 
-const STAGED_UPLOAD_MUTATION = `
-  mutation StagedUploadCreate($input: [StagedUploadInput!]!) {
-    stagedUploadsCreate(input: $input) {
-      stagedTargets {
-        url
-        resourceUrl
-        parameters {
-          name
-          value
-        }
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`;
+/** Valid document types for dispute file uploads. */
+export type DisputeDocumentType =
+  | "CANCELLATION_POLICY_FILE"
+  | "CUSTOMER_COMMUNICATION_FILE"
+  | "CUSTOMER_EMAIL_FILE"
+  | "REFUND_POLICY_FILE"
+  | "SERVICE_DOCUMENTATION_FILE"
+  | "SHIPPING_DOCUMENTATION_FILE"
+  | "UNCATEGORIZED_FILE";
 
-interface StagedTarget {
-  url: string;
-  resourceUrl: string;
-  parameters: Array<{ name: string; value: string }>;
-}
-
-interface StagedUploadResult {
-  stagedUploadsCreate: {
-    stagedTargets: StagedTarget[];
-    userErrors: Array<{ field: string[]; message: string }>;
+interface DisputeFileUploadResponse {
+  dispute_file_upload: {
+    id: number;
+    dispute_id: number;
+    document_type: string;
+    filename: string;
+    url: string;
   };
 }
 
+interface DisputeFileUploadErrorResponse {
+  errors?: Record<string, string[]> | string;
+}
+
 /**
- * Upload a file buffer to Shopify for dispute evidence.
+ * Extract numeric dispute ID from a Shopify GID.
+ * "gid://shopify/ShopifyPaymentsDispute/123456" → "123456"
+ */
+export function extractNumericId(gid: string): string {
+  const match = gid.match(/\/(\d+)$/);
+  if (!match) throw new Error(`Cannot extract numeric ID from GID: ${gid}`);
+  return match[1];
+}
+
+/**
+ * Upload a file to Shopify dispute evidence via REST API.
  *
- * @returns The resource URL to use in disputeEvidenceUpdate file fields,
+ * @returns The Shopify GID of the uploaded file for use in disputeEvidenceUpdate,
  *          or null if the upload failed.
  */
 export async function uploadDisputeFile(
   session: { shopDomain: string; accessToken: string },
+  disputeGid: string,
+  documentType: DisputeDocumentType,
   filename: string,
   mimeType: string,
   fileBuffer: Buffer,
   correlationId?: string,
 ): Promise<string | null> {
-  // Step 1: Create staged upload target
-  const result = await requestShopifyGraphQL<StagedUploadResult>({
-    session,
-    query: STAGED_UPLOAD_MUTATION,
-    variables: {
-      input: [{
-        resource: "DISPUTE_FILE_UPLOAD",
-        filename,
-        mimeType,
-        httpMethod: "POST",
-      }],
+  const disputeId = extractNumericId(disputeGid);
+  const base64Data = fileBuffer.toString("base64");
+
+  const url = `https://${session.shopDomain}/admin/api/${SHOPIFY_API_VERSION}/shopify_payments/disputes/${disputeId}/dispute_file_uploads.json`;
+
+  const body = {
+    dispute_file_upload: {
+      document_type: documentType,
+      filename,
+      mimetype: mimeType,
+      data: base64Data,
     },
-    correlationId: correlationId ? `staged-${correlationId}` : undefined,
-  });
+  };
 
-  const target = result.data?.stagedUploadsCreate?.stagedTargets?.[0];
-  const userErrors = result.data?.stagedUploadsCreate?.userErrors ?? [];
-
-  if (userErrors.length > 0) {
-    console.error(
-      `[disputeFileUpload] Staged upload error: ${userErrors.map(e => e.message).join(", ")}`,
-    );
-    return null;
-  }
-
-  if (!target) {
-    console.error("[disputeFileUpload] No staged target returned");
-    return null;
-  }
-
-  // Step 2: Upload file to Google Cloud Storage
-  const formData = new FormData();
-  for (const param of target.parameters) {
-    formData.append(param.name, param.value);
-  }
-  formData.append("file", new Blob([new Uint8Array(fileBuffer)], { type: mimeType }), filename);
+  const tag = correlationId ? `[disputeFileUpload:${correlationId}]` : "[disputeFileUpload]";
 
   try {
-    const uploadRes = await fetch(target.url, {
+    const res = await fetch(url, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": session.accessToken,
+        ...(correlationId ? { "X-Request-Id": correlationId } : {}),
+      },
+      body: JSON.stringify(body),
     });
 
-    if (!uploadRes.ok && uploadRes.status !== 201) {
-      console.error(
-        `[disputeFileUpload] Upload failed: ${uploadRes.status} ${uploadRes.statusText}`,
-      );
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({})) as DisputeFileUploadErrorResponse;
+      const errMsg = typeof errBody.errors === "string"
+        ? errBody.errors
+        : JSON.stringify(errBody.errors ?? res.statusText);
+      console.error(`${tag} REST upload failed (${res.status}): ${errMsg}`);
       return null;
     }
 
-    console.log(
-      `[disputeFileUpload] File uploaded: ${filename} → ${target.resourceUrl.slice(0, 80)}...`,
-    );
+    const json = await res.json() as DisputeFileUploadResponse;
+    const fileId = json.dispute_file_upload?.id;
 
-    return target.resourceUrl;
+    if (!fileId) {
+      console.error(`${tag} No file ID in response:`, JSON.stringify(json));
+      return null;
+    }
+
+    const gid = `gid://shopify/ShopifyPaymentsDisputeFileUpload/${fileId}`;
+    console.log(`${tag} File uploaded: ${filename} (${documentType}) → ${gid}`);
+    return gid;
   } catch (err) {
     console.error(
-      "[disputeFileUpload] Upload error:",
+      `${tag} Upload error:`,
       err instanceof Error ? err.message : String(err),
     );
     return null;

@@ -216,7 +216,7 @@ export function buildEvidenceForShopify(
     input.cancellationRebuttal = rebuttalText;
   }
 
-  // File fields are NOT set here — they require the staged upload pipeline
+  // File fields are set in saveToShopifyJob.ts via REST upload pipeline
   // (see lib/shopify/disputeFileUpload.ts)
 
   return input;
