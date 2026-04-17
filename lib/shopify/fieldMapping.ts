@@ -256,7 +256,7 @@ export function buildEvidenceInputFromRaw(
         .filter(Boolean)
         .join("\n\n");
       if (combined) {
-        input[mapping.shopifyField] = combined;
+        (input as Record<string, string>)[mapping.shopifyField] = combined;
       }
     }
   }
@@ -285,7 +285,7 @@ export function buildEvidenceInput(
       const combined = matchingSections
         .map((s) => s.content!.trim())
         .join("\n\n");
-      input[mapping.shopifyField] = combined;
+      (input as Record<string, string>)[mapping.shopifyField] = combined;
     }
   }
 

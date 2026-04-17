@@ -72,9 +72,17 @@ const VERIFIABLE_FIELDS = new Set([
   "customerPurchaseIp",
 ]);
 
-/** Fields that are write-only (mutation accepts but can't be read back as text). */
+/** Fields that are write-only or non-text (mutation accepts but can't be verified via read-back). */
 const WRITE_ONLY_FIELDS = new Set([
   "shippingDocumentation",
+  "shippingCarrier",
+  "shippingDate",
+  "shippingTrackingNumber",
+  "shippingAddress",
+  "serviceDate",
+  "serviceDocumentation",
+  "customerName",
+  "submitEvidence",
 ]);
 
 interface VerifyEvidenceResult {
@@ -205,6 +213,19 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     rebuttalText,
     dispute.reason,
   );
+
+  // Inject customer info from dispute
+  const { data: disputeExtra } = await sb
+    .from("disputes")
+    .select("customer_display_name, customer_email")
+    .eq("id", pack.dispute_id)
+    .single();
+  if (disputeExtra?.customer_display_name) {
+    input.customerName = disputeExtra.customer_display_name;
+  }
+  if (disputeExtra?.customer_email) {
+    input.customerEmailAddress = disputeExtra.customer_email;
+  }
 
   // Inject customerPurchaseIp
   const { data: ipItem } = await sb

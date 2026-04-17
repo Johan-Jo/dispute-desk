@@ -183,23 +183,46 @@ export function buildEvidenceForShopify(
     return lines.join("\n");
   }).filter(Boolean).join("\n\n");
 
+  // ── Extract structured fields for individual Shopify fields ──
+
+  // Customer info from order sections
+  const orderSection = sections.find(s => s.type === "order");
+  if (orderSection) {
+    const od = orderSection.data;
+    const tenure = od.customerTenure as Record<string, unknown> | undefined;
+    // customerEmailAddress is set separately by the caller if available
+  }
+
+  // Shipping details from fulfillment sections
+  const shippingSection = sections.find(s => s.type === "shipping" || s.type === "fulfillment");
+  if (shippingSection) {
+    const sd = shippingSection.data;
+    const fulfillments = sd.fulfillments as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(fulfillments) && fulfillments.length > 0) {
+      const f = fulfillments[0];
+      const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(tracking) && tracking.length > 0) {
+        const t = tracking[0];
+        if (t.carrier) input.shippingCarrier = safeString(t.carrier);
+        if (t.number) input.shippingTrackingNumber = safeString(t.number);
+      }
+      if (f.createdAt) input.shippingDate = safeString(f.createdAt).split("T")[0];
+      if (f.deliveredAt) input.serviceDate = safeString(f.deliveredAt).split("T")[0];
+    }
+  }
+
   // ── Route to Shopify fields based on dispute family ──
 
   // PRIMARY: uncategorizedText gets the main rebuttal for ALL dispute types
   // This is the most visible field in Shopify Admin ("Annat" / "Other")
-  const primaryParts: string[] = [];
-  if (rebuttalText) primaryParts.push(rebuttalText);
-  // For fraud, add payment verification summary after the rebuttal
-  if (family === "fraud" && paymentText) {
-    primaryParts.push("\n--- Payment Verification ---\n" + paymentText);
-  }
-  if (primaryParts.length > 0) {
-    input.uncategorizedText = primaryParts.join("\n\n");
+  if (rebuttalText) {
+    input.uncategorizedText = rebuttalText;
   }
 
-  // accessActivityLog: order details + activity
+  // accessActivityLog: order details + customer activity + payment verification
   const activityParts: string[] = [];
   if (orderText) activityParts.push(orderText);
+  if (paymentText) activityParts.push(paymentText);
   if (activityText) activityParts.push(activityText);
   if (activityParts.length > 0) {
     input.accessActivityLog = activityParts.join("\n\n");
@@ -222,6 +245,9 @@ export function buildEvidenceForShopify(
   if (rebuttalText && (family === "subscription" || family === "refund")) {
     input.cancellationRebuttal = rebuttalText;
   }
+
+  // Do NOT set submitEvidence — merchant decides when to submit
+  // input.submitEvidence is available but intentionally not set here
 
   return input;
 }

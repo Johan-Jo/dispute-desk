@@ -25,10 +25,18 @@ export interface DisputeEvidenceUpdateInput {
   cancellationPolicyDisclosure?: string;
   cancellationRebuttal?: string;
   customerEmailAddress?: string;
+  customerName?: string;
   customerPurchaseIp?: string;
   refundPolicyDisclosure?: string;
   refundRefusalExplanation?: string;
+  serviceDate?: string;
+  serviceDocumentation?: string;
+  shippingAddress?: string;
+  shippingCarrier?: string;
+  shippingDate?: string;
   shippingDocumentation?: string;
+  shippingTrackingNumber?: string;
+  submitEvidence?: boolean;
   uncategorizedText?: string;
 }
 
