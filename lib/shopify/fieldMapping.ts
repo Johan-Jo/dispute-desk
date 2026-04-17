@@ -91,7 +91,7 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
   {
     shopifyField: "uncategorizedText",
     label: "Additional Evidence",
-    packSectionKeys: ["other", "notes", "additional", "uncategorized", "comms", "customer_comms", "customer_communication"],
+    packSectionKeys: ["other", "notes", "additional", "uncategorized", "comms", "customer_comms", "customer_communication", "access_log"],
   },
 ];
 

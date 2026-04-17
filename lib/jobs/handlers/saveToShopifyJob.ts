@@ -73,7 +73,6 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   const input = buildEvidenceInputFromRaw(sections);
 
   // Inject customerPurchaseIp if available in evidence items.
-  // Shopify's disputeEvidenceUpdate accepts this as a standalone field.
   const { data: ipItem } = await sb
     .from("evidence_items")
     .select("payload")
@@ -84,6 +83,22 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   const customerIp = (ipItem?.payload as { ip?: string } | null)?.ip;
   if (customerIp) {
     input.customerPurchaseIp = customerIp;
+  }
+
+  // Inject rebuttal draft into cancellationRebuttal field.
+  // This is the dispute response text the bank reads.
+  const { data: rebuttalDraft } = await sb
+    .from("rebuttal_drafts")
+    .select("sections")
+    .eq("pack_id", packId)
+    .eq("locale", "en-US")
+    .maybeSingle();
+  if (rebuttalDraft?.sections) {
+    const rebuttalSections = rebuttalDraft.sections as Array<{ text: string }>;
+    const rebuttalText = rebuttalSections.map((s) => s.text).join("\n\n");
+    if (rebuttalText.trim()) {
+      input.cancellationRebuttal = rebuttalText;
+    }
   }
 
   if (Object.keys(input).length === 0) {
