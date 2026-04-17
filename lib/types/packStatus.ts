@@ -29,6 +29,8 @@ export const EVIDENCE_PACK_STATUSES = [
   "failed",
   "saving",
   "saved_to_shopify",
+  "saved_to_shopify_unverified",
+  "saved_to_shopify_verified",
   "save_failed",
 ] as const;
 
@@ -64,6 +66,8 @@ export function formatPackStatus(
     failed: "packs.statusFailedLabel",
     saving: "packs.statusSavingLabel",
     saved_to_shopify: "packs.statusSavedToShopifyLabel",
+    saved_to_shopify_unverified: "packs.statusSavedToShopifyLabel",
+    saved_to_shopify_verified: "packs.statusSavedToShopifyLabel",
     save_failed: "packs.statusSaveFailedLabel",
   };
   const key = map[status];

@@ -554,7 +554,9 @@ export function useDisputeWorkspace(disputeId: string) {
     const missingItems = deriveMissingItems(effectiveChecklist);
 
     // Readiness
-    const isSaved = pack?.status === "saved_to_shopify";
+    const isSaved = pack?.status === "saved_to_shopify" ||
+      pack?.status === "saved_to_shopify_unverified" ||
+      pack?.status === "saved_to_shopify_verified";
     let readiness: SubmissionReadiness;
     if (isSaved) {
       readiness = "submitted";

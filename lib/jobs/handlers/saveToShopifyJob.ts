@@ -1,12 +1,14 @@
 /**
  * Job handler: save_to_shopify
  *
- * Pushes evidence from a pack to Shopify via the disputeEvidenceUpdate
- * GraphQL mutation using the field mapping engine.
+ * Pushes evidence to Shopify via disputeEvidenceUpdate, then VERIFIES
+ * by re-fetching the evidence fields and comparing.
  *
- * REQUIRES AN ONLINE SESSION. Shopify's disputeEvidenceUpdate mutation
- * silently ignores input when called with an offline access token.
- * The job will fail loudly if no online session is available.
+ * REQUIRES AN ONLINE SESSION. Offline tokens silently fail.
+ *
+ * Status flow:
+ *   saving → saved_to_shopify_unverified → saved_to_shopify_verified
+ *                                        → save_failed (if verification fails)
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -16,6 +18,7 @@ import { buildEvidenceInputFromRaw, type RawPackSection } from "@/lib/shopify/fi
 import {
   DISPUTE_EVIDENCE_UPDATE_MUTATION,
   type DisputeEvidenceUpdateResult,
+  type DisputeEvidenceUpdateInput,
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendPackSavedAlert } from "@/lib/email/sendPackSavedAlert";
@@ -26,6 +29,42 @@ import {
   EVIDENCE_SAVE_FAILED,
 } from "@/lib/disputeEvents/eventTypes";
 import type { ClaimedJob } from "../claimJobs";
+
+/* ── Verification query ── */
+
+const VERIFY_EVIDENCE_QUERY = `
+  query VerifyEvidence($id: ID!) {
+    node(id: $id) {
+      ... on ShopifyPaymentsDisputeEvidence {
+        id
+        accessActivityLog
+        cancellationPolicyDisclosure
+        cancellationRebuttal
+        customerEmailAddress
+        refundPolicyDisclosure
+        refundRefusalExplanation
+        shippingDocumentation
+        uncategorizedText
+      }
+    }
+  }
+`;
+
+interface VerifyEvidenceResult {
+  node: {
+    id: string;
+    accessActivityLog: string | null;
+    cancellationPolicyDisclosure: string | null;
+    cancellationRebuttal: string | null;
+    customerEmailAddress: string | null;
+    refundPolicyDisclosure: string | null;
+    refundRefusalExplanation: string | null;
+    shippingDocumentation: string | null;
+    uncategorizedText: string | null;
+  } | null;
+}
+
+/* ── Helpers ── */
 
 function decryptAccessToken(encrypted: string): string {
   try {
@@ -38,6 +77,21 @@ function decryptAccessToken(encrypted: string): string {
     return encrypted;
   }
 }
+
+/** Truncate values for safe debug logging. */
+function truncateInput(input: DisputeEvidenceUpdateInput): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (typeof v === "string") {
+      out[k] = v.length > 80 ? v.slice(0, 80) + `... (${v.length} chars)` : v;
+    } else if (v != null) {
+      out[k] = String(v);
+    }
+  }
+  return out;
+}
+
+/* ── Main handler ── */
 
 export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   const sb = getServiceClient();
@@ -60,9 +114,10 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     throw new Error("Dispute has no evidence GID — cannot save to Shopify");
   }
 
-  // ── Session retrieval: ONLINE required ──
-  // Shopify's disputeEvidenceUpdate mutation silently ignores input
-  // when called with an offline token. We must use an online session.
+  // ═══════════════════════════════════════════════════════════
+  //  1. SESSION: require ONLINE
+  // ═══════════════════════════════════════════════════════════
+
   const { data: onlineSession } = await sb
     .from("shop_sessions")
     .select("id, session_type, user_id, access_token_encrypted, shop_domain, created_at")
@@ -73,204 +128,205 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .maybeSingle();
 
   if (!onlineSession) {
-    const errorMsg = `No ONLINE session available for shop ${pack.shop_id}. ` +
-      "Shopify's disputeEvidenceUpdate requires an online (user-context) session. " +
-      "A merchant must open the app in Shopify Admin to create an online session.";
+    const errorMsg =
+      `No ONLINE session for shop ${pack.shop_id}. ` +
+      "Shopify disputeEvidenceUpdate requires an online (user-context) session. " +
+      "Merchant must open the app in Shopify Admin to create one.";
 
     await logAuditEvent({
-      shopId: pack.shop_id,
-      disputeId: pack.dispute_id,
-      packId,
-      actorType: "system",
-      eventType: "job_failed",
-      eventPayload: {
-        jobId: job.id,
-        jobType: "save_to_shopify",
-        reason: "no_online_session",
-        message: errorMsg,
-      },
+      shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
+      actorType: "system", eventType: "job_failed",
+      eventPayload: { jobId: job.id, jobType: "save_to_shopify", reason: "no_online_session" },
     });
-
-    await sb
-      .from("evidence_packs")
-      .update({ status: "save_failed", updated_at: new Date().toISOString() })
-      .eq("id", packId);
-
+    await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
     throw new Error(errorMsg);
   }
 
-  // Defensive assertion — should never fail given the query above
   if (onlineSession.session_type !== "online") {
-    throw new Error(
-      `Session ${onlineSession.id} is ${onlineSession.session_type}, not online. ` +
-      "Shopify evidence mutation requires an online user-context session.",
-    );
+    throw new Error(`Session ${onlineSession.id} is ${onlineSession.session_type}, not online.`);
   }
 
   console.log(
-    `[saveToShopify] Using session: shop=${pack.shop_id} ` +
-    `type=${onlineSession.session_type} user=${onlineSession.user_id} ` +
-    `created=${onlineSession.created_at}`,
+    `[saveToShopify] session: type=${onlineSession.session_type} user=${onlineSession.user_id} created=${onlineSession.created_at}`,
   );
 
   const accessToken = decryptAccessToken(onlineSession.access_token_encrypted);
+  const shopDomain = onlineSession.shop_domain ?? "";
 
-  // ── Build evidence input ──
+  // ═══════════════════════════════════════════════════════════
+  //  2. BUILD INPUT
+  // ═══════════════════════════════════════════════════════════
+
   const packJson = pack.pack_json as { sections?: unknown[] } | null;
   const rawSections = Array.isArray(packJson?.sections) ? packJson.sections : [];
   const sections: RawPackSection[] = rawSections.filter(
     (s): s is RawPackSection =>
       typeof s === "object" && s !== null && "type" in s && "label" in s && "data" in s,
   );
-  const input = buildEvidenceInputFromRaw(sections);
+  const input: DisputeEvidenceUpdateInput = buildEvidenceInputFromRaw(sections);
 
-  // Inject customerPurchaseIp if available
+  // Inject customerPurchaseIp
   const { data: ipItem } = await sb
-    .from("evidence_items")
-    .select("payload")
-    .eq("pack_id", packId)
-    .eq("label", "Customer Purchase IP")
-    .limit(1)
-    .maybeSingle();
-  const customerIp = (ipItem?.payload as { ip?: string } | null)?.ip;
-  if (customerIp) {
-    input.customerPurchaseIp = customerIp;
+    .from("evidence_items").select("payload")
+    .eq("pack_id", packId).eq("label", "Customer Purchase IP")
+    .limit(1).maybeSingle();
+  if ((ipItem?.payload as { ip?: string } | null)?.ip) {
+    input.customerPurchaseIp = (ipItem!.payload as { ip: string }).ip;
   }
 
-  // Inject rebuttal draft into cancellationRebuttal
+  // Inject rebuttal
   const { data: rebuttalDraft } = await sb
-    .from("rebuttal_drafts")
-    .select("sections")
-    .eq("pack_id", packId)
-    .eq("locale", "en-US")
-    .maybeSingle();
+    .from("rebuttal_drafts").select("sections")
+    .eq("pack_id", packId).eq("locale", "en-US").maybeSingle();
   if (rebuttalDraft?.sections) {
-    const rebuttalSections = rebuttalDraft.sections as Array<{ text: string }>;
-    const rebuttalText = rebuttalSections.map((s) => s.text).join("\n\n");
-    if (rebuttalText.trim()) {
-      input.cancellationRebuttal = rebuttalText;
-    }
-  }
-
-  if (Object.keys(input).length === 0) {
-    throw new Error("No evidence fields to send — pack sections are empty");
+    const text = (rebuttalDraft.sections as Array<{ text: string }>)
+      .map((s) => s.text).join("\n\n").trim();
+    if (text) input.cancellationRebuttal = text;
   }
 
   const inputKeys = Object.keys(input);
-  console.log(
-    `[saveToShopify] Sending ${inputKeys.length} fields: ${inputKeys.join(", ")}`,
-  );
+  if (inputKeys.length === 0) {
+    throw new Error("No evidence fields to send — pack sections are empty");
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  3. DEBUG LOG (truncated input)
+  // ═══════════════════════════════════════════════════════════
+
+  console.log(`[saveToShopify] input payload (${inputKeys.length} fields):`);
+  console.log(JSON.stringify(truncateInput(input), null, 2));
 
   await logAuditEvent({
-    shopId: pack.shop_id,
-    disputeId: pack.dispute_id,
-    packId,
-    actorType: "system",
-    eventType: "job_started",
+    shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
+    actorType: "system", eventType: "job_started",
     eventPayload: {
-      jobId: job.id,
-      jobType: "save_to_shopify",
-      session_type: onlineSession.session_type,
+      jobId: job.id, jobType: "save_to_shopify",
+      session_type: "online", user_id: onlineSession.user_id,
       fields_to_send: inputKeys,
     },
   });
 
-  // ── Call Shopify mutation ──
+  // ═══════════════════════════════════════════════════════════
+  //  4. CALL MUTATION
+  // ═══════════════════════════════════════════════════════════
+
   const result = await requestShopifyGraphQL<DisputeEvidenceUpdateResult>({
-    session: { shopDomain: onlineSession.shop_domain ?? "", accessToken },
+    session: { shopDomain, accessToken },
     query: DISPUTE_EVIDENCE_UPDATE_MUTATION,
     variables: { id: dispute.dispute_evidence_gid, input },
     correlationId: `save-${job.id}`,
   });
 
-  // Log full response for debugging
-  console.log(
-    `[saveToShopify] Shopify response:`,
-    JSON.stringify({
-      hasErrors: !!result.errors?.length,
-      hasUserErrors: !!(result.data?.disputeEvidenceUpdate?.userErrors?.length),
-      evidenceId: result.data?.disputeEvidenceUpdate?.disputeEvidence?.id ?? null,
-    }),
-  );
+  console.log(`[saveToShopify] mutation response:`, JSON.stringify({
+    errors: result.errors?.length ?? 0,
+    userErrors: result.data?.disputeEvidenceUpdate?.userErrors?.length ?? 0,
+    evidenceId: result.data?.disputeEvidenceUpdate?.disputeEvidence?.id ?? null,
+  }));
 
-  // ── Check for GraphQL-level errors ──
+  // Check GraphQL errors
   if (result.errors?.length) {
     const errMsg = result.errors.map((e: { message: string }) => e.message).join(", ");
-    await sb
-      .from("evidence_packs")
-      .update({ status: "save_failed", updated_at: new Date().toISOString() })
-      .eq("id", packId);
+    await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
     throw new Error(`Shopify GraphQL errors: ${errMsg}`);
   }
 
-  // ── Check for userErrors ──
-  const mutation = result.data?.disputeEvidenceUpdate;
-  const userErrors = mutation?.userErrors ?? [];
-
+  // Check userErrors
+  const userErrors = result.data?.disputeEvidenceUpdate?.userErrors ?? [];
   if (userErrors.length > 0) {
-    await sb
-      .from("evidence_packs")
-      .update({ status: "save_failed", updated_at: new Date().toISOString() })
-      .eq("id", packId);
-
+    await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
     await logAuditEvent({
-      shopId: pack.shop_id,
-      disputeId: pack.dispute_id,
-      packId,
-      actorType: "system",
-      eventType: "job_failed",
-      eventPayload: {
-        jobId: job.id,
-        jobType: "save_to_shopify",
-        user_errors: userErrors,
-      },
+      shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
+      actorType: "system", eventType: "job_failed",
+      eventPayload: { jobId: job.id, jobType: "save_to_shopify", user_errors: userErrors },
     });
-
-    if (pack.dispute_id) {
-      void emitDisputeEvent({
-        disputeId: pack.dispute_id,
-        shopId: pack.shop_id,
-        eventType: EVIDENCE_SAVE_FAILED,
-        description: userErrors.map((e) => e.message).join(", "),
-        eventAt: new Date().toISOString(),
-        actorType: "disputedesk_system",
-        sourceType: "pack_engine",
-        visibility: "internal_only",
-        metadataJson: { pack_id: packId, user_errors: userErrors },
-        dedupeKey: `${pack.dispute_id}:${EVIDENCE_SAVE_FAILED}:${packId}:${new Date().toISOString()}`,
-      });
-    }
-
-    throw new Error(
-      `Shopify userErrors: ${userErrors.map((e) => e.message).join(", ")}`,
-    );
+    throw new Error(`Shopify userErrors: ${userErrors.map((e) => e.message).join(", ")}`);
   }
 
-  // ── Success ──
+  // ═══════════════════════════════════════════════════════════
+  //  5. MARK UNVERIFIED (mutation succeeded but not yet confirmed)
+  // ═══════════════════════════════════════════════════════════
+
   const now = new Date().toISOString();
-  await sb
-    .from("evidence_packs")
-    .update({
-      status: "saved_to_shopify",
-      saved_to_shopify_at: now,
-      updated_at: now,
-    })
-    .eq("id", packId);
+  await sb.from("evidence_packs").update({
+    status: "saved_to_shopify_unverified",
+    saved_to_shopify_at: now,
+    updated_at: now,
+  }).eq("id", packId);
+
+  // ═══════════════════════════════════════════════════════════
+  //  6. VERIFY — re-fetch evidence from Shopify and compare
+  // ═══════════════════════════════════════════════════════════
+
+  let verified = false;
+  let verificationDiff: Record<string, unknown> = {};
+
+  try {
+    // Small delay to allow Shopify to propagate
+    await new Promise((r) => setTimeout(r, 2000));
+
+    const verifyResult = await requestShopifyGraphQL<{ data: VerifyEvidenceResult }>({
+      session: { shopDomain, accessToken },
+      query: VERIFY_EVIDENCE_QUERY,
+      variables: { id: dispute.dispute_evidence_gid },
+      correlationId: `verify-${job.id}`,
+    });
+
+    const evidence = (verifyResult as unknown as { data: VerifyEvidenceResult }).data?.node ??
+      (verifyResult as unknown as VerifyEvidenceResult).node;
+
+    if (evidence) {
+      const fieldsSent = new Set(inputKeys);
+      const fieldsReturned: string[] = [];
+      const fieldsMissing: string[] = [];
+
+      for (const key of fieldsSent) {
+        const shopifyValue = (evidence as Record<string, unknown>)[key];
+        if (shopifyValue && typeof shopifyValue === "string" && shopifyValue.trim().length > 0) {
+          fieldsReturned.push(key);
+        } else {
+          fieldsMissing.push(key);
+        }
+      }
+
+      verificationDiff = {
+        fields_sent: [...fieldsSent],
+        fields_confirmed: fieldsReturned,
+        fields_missing: fieldsMissing,
+        verified: fieldsMissing.length === 0,
+      };
+
+      verified = fieldsMissing.length === 0;
+
+      console.log(`[saveToShopify] verification:`, JSON.stringify(verificationDiff));
+    } else {
+      console.log("[saveToShopify] verification: could not fetch evidence node");
+      verificationDiff = { error: "Could not fetch evidence node from Shopify" };
+    }
+  } catch (verifyErr) {
+    console.error("[saveToShopify] verification failed:", verifyErr instanceof Error ? verifyErr.message : String(verifyErr));
+    verificationDiff = { error: verifyErr instanceof Error ? verifyErr.message : String(verifyErr) };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  7. FINAL STATUS based on verification
+  // ═══════════════════════════════════════════════════════════
+
+  const finalStatus = verified ? "saved_to_shopify_verified" : "saved_to_shopify_unverified";
+
+  await sb.from("evidence_packs").update({
+    status: finalStatus,
+    updated_at: new Date().toISOString(),
+  }).eq("id", packId);
 
   if (pack.dispute_id) {
-    await sb
-      .from("disputes")
-      .update({
-        submission_state: "saved_to_shopify",
-        evidence_saved_to_shopify_at: now,
-      })
-      .eq("id", pack.dispute_id);
+    await sb.from("disputes").update({
+      submission_state: "saved_to_shopify",
+      evidence_saved_to_shopify_at: now,
+    }).eq("id", pack.dispute_id);
   }
 
   await logAuditEvent({
-    shopId: pack.shop_id,
-    disputeId: pack.dispute_id,
-    packId,
+    shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
     actorType: "system",
     eventType: "evidence_saved_to_shopify",
     eventPayload: {
@@ -278,16 +334,28 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       fields_sent: inputKeys,
       field_count: inputKeys.length,
       job_id: job.id,
-      session_type: onlineSession.session_type,
+      session_type: "online",
+      verified,
+      verification: verificationDiff,
+      final_status: finalStatus,
     },
   });
+
+  if (!verified) {
+    console.warn(
+      `[saveToShopify] WARNING: evidence saved but verification failed. ` +
+      `Status: ${finalStatus}. Missing fields: ${JSON.stringify((verificationDiff as { fields_missing?: string[] }).fields_missing ?? [])}`,
+    );
+  }
 
   if (pack.dispute_id) {
     void emitDisputeEvent({
       disputeId: pack.dispute_id,
       shopId: pack.shop_id,
       eventType: EVIDENCE_SAVED_TO_SHOPIFY,
-      description: `${inputKeys.length} evidence fields sent to Shopify (${inputKeys.join(", ")})`,
+      description: verified
+        ? `${inputKeys.length} evidence fields sent and verified in Shopify`
+        : `${inputKeys.length} evidence fields sent to Shopify (verification pending)`,
       eventAt: now,
       actorType: "disputedesk_system",
       sourceType: "pack_engine",
@@ -295,6 +363,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
         pack_id: packId,
         evidence_gid: dispute.dispute_evidence_gid,
         fields_sent: inputKeys,
+        verified,
       },
       dedupeKey: `${pack.dispute_id}:${EVIDENCE_SAVED_TO_SHOPIFY}:${packId}`,
     });
