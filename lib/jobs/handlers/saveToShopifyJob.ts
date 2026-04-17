@@ -32,35 +32,62 @@ import type { ClaimedJob } from "../claimJobs";
 
 /* ── Verification query ── */
 
+/**
+ * Verification query — reads back evidence fields from Shopify.
+ *
+ * NOTE: shippingDocumentation is WRITE-ONLY via the mutation.
+ * The readable equivalent is shippingDocumentationFile (file upload).
+ * Text fields we can verify: accessActivityLog, cancellationRebuttal,
+ * cancellationPolicyDisclosure, refundPolicyDisclosure, uncategorizedText.
+ */
 const VERIFY_EVIDENCE_QUERY = `
   query VerifyEvidence($id: ID!) {
     node(id: $id) {
-      ... on ShopifyPaymentsDisputeEvidence {
-        id
-        accessActivityLog
-        cancellationPolicyDisclosure
-        cancellationRebuttal
-        customerEmailAddress
-        refundPolicyDisclosure
-        refundRefusalExplanation
-        shippingDocumentation
-        uncategorizedText
+      ... on ShopifyPaymentsDispute {
+        disputeEvidence {
+          id
+          accessActivityLog
+          cancellationPolicyDisclosure
+          cancellationRebuttal
+          customerEmailAddress
+          refundPolicyDisclosure
+          refundRefusalExplanation
+          uncategorizedText
+        }
       }
     }
   }
 `;
 
+/** Fields that are readable via the Shopify API for verification. */
+const VERIFIABLE_FIELDS = new Set([
+  "accessActivityLog",
+  "cancellationPolicyDisclosure",
+  "cancellationRebuttal",
+  "customerEmailAddress",
+  "refundPolicyDisclosure",
+  "refundRefusalExplanation",
+  "uncategorizedText",
+  "customerPurchaseIp",
+]);
+
+/** Fields that are write-only (mutation accepts but can't be read back as text). */
+const WRITE_ONLY_FIELDS = new Set([
+  "shippingDocumentation",
+]);
+
 interface VerifyEvidenceResult {
   node: {
-    id: string;
-    accessActivityLog: string | null;
-    cancellationPolicyDisclosure: string | null;
-    cancellationRebuttal: string | null;
-    customerEmailAddress: string | null;
-    refundPolicyDisclosure: string | null;
-    refundRefusalExplanation: string | null;
-    shippingDocumentation: string | null;
-    uncategorizedText: string | null;
+    disputeEvidence: {
+      id: string;
+      accessActivityLog: string | null;
+      cancellationPolicyDisclosure: string | null;
+      cancellationRebuttal: string | null;
+      customerEmailAddress: string | null;
+      refundPolicyDisclosure: string | null;
+      refundRefusalExplanation: string | null;
+      uncategorizedText: string | null;
+    } | null;
   } | null;
 }
 
@@ -261,49 +288,64 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   let verificationDiff: Record<string, unknown> = {};
 
   try {
-    // Small delay to allow Shopify to propagate
     await new Promise((r) => setTimeout(r, 2000));
+
+    // Query via dispute GID (not evidence GID) — evidence is a nested field
+    const { data: disputeData } = await sb
+      .from("disputes")
+      .select("dispute_gid")
+      .eq("id", pack.dispute_id)
+      .single();
 
     const verifyResult = await requestShopifyGraphQL<{ data: VerifyEvidenceResult }>({
       session: { shopDomain, accessToken },
       query: VERIFY_EVIDENCE_QUERY,
-      variables: { id: dispute.dispute_evidence_gid },
+      variables: { id: disputeData?.dispute_gid ?? "" },
       correlationId: `verify-${job.id}`,
     });
 
-    const evidence = (verifyResult as unknown as { data: VerifyEvidenceResult }).data?.node ??
-      (verifyResult as unknown as VerifyEvidenceResult).node;
+    const evidence = (verifyResult as unknown as { data: VerifyEvidenceResult }).data?.node?.disputeEvidence ??
+      (verifyResult as unknown as VerifyEvidenceResult).node?.disputeEvidence;
 
     if (evidence) {
-      const fieldsSent = new Set(inputKeys);
-      const fieldsReturned: string[] = [];
+      const fieldsConfirmed: string[] = [];
       const fieldsMissing: string[] = [];
+      const fieldsWriteOnly: string[] = [];
 
-      for (const key of fieldsSent) {
+      for (const key of inputKeys) {
+        if (WRITE_ONLY_FIELDS.has(key)) {
+          // Can't verify write-only fields — trust the mutation success
+          fieldsWriteOnly.push(key);
+          continue;
+        }
+        if (!VERIFIABLE_FIELDS.has(key)) {
+          fieldsWriteOnly.push(key);
+          continue;
+        }
         const shopifyValue = (evidence as Record<string, unknown>)[key];
         if (shopifyValue && typeof shopifyValue === "string" && shopifyValue.trim().length > 0) {
-          fieldsReturned.push(key);
+          fieldsConfirmed.push(key);
         } else {
           fieldsMissing.push(key);
         }
       }
 
-      verificationDiff = {
-        fields_sent: [...fieldsSent],
-        fields_confirmed: fieldsReturned,
-        fields_missing: fieldsMissing,
-        verified: fieldsMissing.length === 0,
-      };
-
       verified = fieldsMissing.length === 0;
+      verificationDiff = {
+        fields_sent: inputKeys,
+        fields_confirmed: fieldsConfirmed,
+        fields_missing: fieldsMissing,
+        fields_write_only: fieldsWriteOnly,
+        verified,
+      };
 
       console.log(`[saveToShopify] verification:`, JSON.stringify(verificationDiff));
     } else {
-      console.log("[saveToShopify] verification: could not fetch evidence node");
-      verificationDiff = { error: "Could not fetch evidence node from Shopify" };
+      console.log("[saveToShopify] verification: could not fetch evidence from Shopify");
+      verificationDiff = { error: "Could not fetch evidence from Shopify" };
     }
   } catch (verifyErr) {
-    console.error("[saveToShopify] verification failed:", verifyErr instanceof Error ? verifyErr.message : String(verifyErr));
+    console.error("[saveToShopify] verification error:", verifyErr instanceof Error ? verifyErr.message : String(verifyErr));
     verificationDiff = { error: verifyErr instanceof Error ? verifyErr.message : String(verifyErr) };
   }
 
