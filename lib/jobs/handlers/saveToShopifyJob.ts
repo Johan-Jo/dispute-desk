@@ -14,6 +14,7 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import { uploadDisputeFile } from "@/lib/shopify/disputeFileUpload";
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
 import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
 import {
@@ -214,14 +215,17 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     dispute.reason,
   );
 
-  // Inject customer info from dispute
+  // Inject customer info from dispute (only schema-valid fields)
   const { data: disputeExtra } = await sb
     .from("disputes")
     .select("customer_display_name, customer_email")
     .eq("id", pack.dispute_id)
     .single();
   if (disputeExtra?.customer_display_name) {
-    input.customerName = disputeExtra.customer_display_name;
+    // customerName does NOT exist — split into firstName/lastName
+    const parts = disputeExtra.customer_display_name.split(" ");
+    input.customerFirstName = parts[0] ?? "";
+    input.customerLastName = parts.slice(1).join(" ") ?? "";
   }
   if (disputeExtra?.customer_email) {
     input.customerEmailAddress = disputeExtra.customer_email;
@@ -235,6 +239,114 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   if ((ipItem?.payload as { ip?: string } | null)?.ip) {
     input.customerPurchaseIp = (ipItem!.payload as { ip: string }).ip;
   }
+
+  // ═══════════════════════════════════════════════════════════
+  //  FILE UPLOADS: generate evidence PDFs and upload to Shopify
+  // ═══════════════════════════════════════════════════════════
+
+  const sessionForUpload = { shopDomain, accessToken };
+  const uploadedFiles: string[] = [];
+
+  // Customer communication file (timeline events + notes)
+  const commsSection = sections.find(s => s.type === "comms");
+  if (commsSection) {
+    const commsData = commsSection.data;
+    const commsLines: string[] = [];
+    if (commsData.orderNote) commsLines.push(`Order note: ${String(commsData.orderNote)}`);
+    const events = commsData.timelineEvents as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(events)) {
+      commsLines.push("\nOrder Timeline:");
+      for (const evt of events) {
+        const msg = String(evt.message ?? "").replace(/<[^>]+>/g, "");
+        if (msg) commsLines.push(`[${String(evt.createdAt ?? "").split("T")[0]}] ${msg}`);
+      }
+    }
+    if (commsLines.length > 0) {
+      const commsText = commsLines.join("\n");
+      const commsBuffer = Buffer.from(commsText, "utf-8");
+      const commsUrl = await uploadDisputeFile(
+        sessionForUpload, "customer-communication.txt", "text/plain",
+        commsBuffer, job.id,
+      );
+      if (commsUrl) {
+        input.customerCommunicationFile = { id: commsUrl };
+        uploadedFiles.push("customerCommunicationFile");
+      }
+    }
+  }
+
+  // Shipping documentation file (tracking + fulfillment data)
+  const shippingSection = sections.find(s => s.type === "shipping" || s.type === "fulfillment");
+  if (shippingSection) {
+    const sd = shippingSection.data;
+    const shippingLines: string[] = ["Shipping & Tracking Documentation\n"];
+    const fulfillments = sd.fulfillments as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(fulfillments)) {
+      for (const f of fulfillments) {
+        if (f.status) shippingLines.push(`Status: ${String(f.status)}`);
+        const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
+        if (Array.isArray(tracking)) {
+          for (const t of tracking) {
+            if (t.carrier) shippingLines.push(`Carrier: ${String(t.carrier)}`);
+            if (t.number) shippingLines.push(`Tracking Number: ${String(t.number)}`);
+            if (t.url) shippingLines.push(`Tracking URL: ${String(t.url)}`);
+          }
+        }
+        if (f.createdAt) shippingLines.push(`Shipped: ${String(f.createdAt)}`);
+        if (f.deliveredAt) shippingLines.push(`Delivered: ${String(f.deliveredAt)}`);
+      }
+    }
+    if (shippingLines.length > 1) {
+      const shippingText = shippingLines.join("\n");
+      const shippingBuffer = Buffer.from(shippingText, "utf-8");
+      const shippingUrl = await uploadDisputeFile(
+        sessionForUpload, "shipping-documentation.txt", "text/plain",
+        shippingBuffer, job.id,
+      );
+      if (shippingUrl) {
+        input.shippingDocumentationFile = { id: shippingUrl };
+        uploadedFiles.push("shippingDocumentationFile");
+      }
+    }
+  }
+
+  // Full evidence pack as uncategorized file
+  // Combine all formatted text into one document
+  const fullPackParts: string[] = [];
+  if (rebuttalText) fullPackParts.push("DISPUTE RESPONSE\n\n" + rebuttalText);
+  const orderSection = sections.find(s => s.type === "order");
+  if (orderSection) {
+    const od = orderSection.data;
+    const orderLines: string[] = ["\nORDER DETAILS"];
+    if (od.orderName) orderLines.push(`Order: ${String(od.orderName)}`);
+    if (od.createdAt) orderLines.push(`Date: ${String(od.createdAt)}`);
+    const totals = od.totals as Record<string, unknown> | undefined;
+    if (totals) orderLines.push(`Amount: ${String(totals.currency ?? "")} ${String(totals.total ?? "")}`);
+    fullPackParts.push(orderLines.join("\n"));
+  }
+  const paymentSection = sections.find(s => s.type === "other");
+  if (paymentSection) {
+    const pd = paymentSection.data;
+    const payLines: string[] = ["\nPAYMENT VERIFICATION"];
+    if (pd.avsResultCode) payLines.push(`AVS: ${String(pd.avsResultCode) === "Y" ? "Full match" : String(pd.avsResultCode)}`);
+    if (pd.cvvResultCode) payLines.push(`CVV: ${String(pd.cvvResultCode) === "M" ? "Match" : String(pd.cvvResultCode)}`);
+    if (pd.cardCompany) payLines.push(`Card: ${String(pd.cardCompany)}`);
+    fullPackParts.push(payLines.join("\n"));
+  }
+  if (fullPackParts.length > 0) {
+    const fullText = fullPackParts.join("\n\n");
+    const fullBuffer = Buffer.from(fullText, "utf-8");
+    const fullUrl = await uploadDisputeFile(
+      sessionForUpload, "evidence-pack.txt", "text/plain",
+      fullBuffer, job.id,
+    );
+    if (fullUrl) {
+      input.uncategorizedFile = { id: fullUrl };
+      uploadedFiles.push("uncategorizedFile");
+    }
+  }
+
+  console.log(`[saveToShopify] Files uploaded: ${uploadedFiles.length} (${uploadedFiles.join(", ") || "none"})`);
 
   const inputKeys = Object.keys(input);
   if (inputKeys.length === 0) {

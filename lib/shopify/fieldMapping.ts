@@ -56,11 +56,9 @@ export interface FieldMapping {
  * Keys cover both the legacy { key } format and the raw { type } format from collectors.
  */
 export const FIELD_MAPPINGS: FieldMapping[] = [
-  {
-    shopifyField: "shippingDocumentation",
-    label: "Shipping & Tracking",
-    packSectionKeys: ["fulfillment", "tracking", "shipping"],
-  },
+  // shippingDocumentation is NOT a valid text field in the GraphQL schema.
+  // Shipping evidence requires file upload via shippingDocumentationFile.
+  // This mapping is kept for the legacy preview endpoint only.
   {
     shopifyField: "accessActivityLog",
     label: "Order Timeline",

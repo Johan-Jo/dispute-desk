@@ -183,37 +183,12 @@ export function buildEvidenceForShopify(
     return lines.join("\n");
   }).filter(Boolean).join("\n\n");
 
-  // ── Extract structured fields for individual Shopify fields ──
+  // ── Route TEXT fields to Shopify based on dispute family ──
+  // NOTE: shippingDocumentation is NOT a valid text field.
+  // Shipping evidence requires file upload (shippingDocumentationFile).
+  // Same for customerCommunication — it's file-only (customerCommunicationFile).
 
-  // Customer info from order sections
-  const orderSection = sections.find(s => s.type === "order");
-  if (orderSection) {
-    const od = orderSection.data;
-    const tenure = od.customerTenure as Record<string, unknown> | undefined;
-    // customerEmailAddress is set separately by the caller if available
-  }
-
-  // Shipping details from fulfillment sections
-  const shippingSection = sections.find(s => s.type === "shipping" || s.type === "fulfillment");
-  if (shippingSection) {
-    const sd = shippingSection.data;
-    const fulfillments = sd.fulfillments as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(fulfillments) && fulfillments.length > 0) {
-      const f = fulfillments[0];
-      const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
-      if (Array.isArray(tracking) && tracking.length > 0) {
-        const t = tracking[0];
-        if (t.carrier) input.shippingCarrier = safeString(t.carrier);
-        if (t.number) input.shippingTrackingNumber = safeString(t.number);
-      }
-      if (f.createdAt) input.shippingDate = safeString(f.createdAt).split("T")[0];
-      if (f.deliveredAt) input.serviceDate = safeString(f.deliveredAt).split("T")[0];
-    }
-  }
-
-  // ── Route to Shopify fields based on dispute family ──
-
-  // PRIMARY: uncategorizedText gets the main rebuttal for ALL dispute types
+  // PRIMARY: uncategorizedText = main rebuttal for ALL dispute types
   // This is the most visible field in Shopify Admin ("Annat" / "Other")
   if (rebuttalText) {
     input.uncategorizedText = rebuttalText;
@@ -226,11 +201,6 @@ export function buildEvidenceForShopify(
   if (activityText) activityParts.push(activityText);
   if (activityParts.length > 0) {
     input.accessActivityLog = activityParts.join("\n\n");
-  }
-
-  // Shipping documentation (if fulfillment data exists)
-  if (shippingText) {
-    input.shippingDocumentation = shippingText;
   }
 
   // Policies — route based on dispute type
@@ -246,8 +216,8 @@ export function buildEvidenceForShopify(
     input.cancellationRebuttal = rebuttalText;
   }
 
-  // Do NOT set submitEvidence — merchant decides when to submit
-  // input.submitEvidence is available but intentionally not set here
+  // File fields are NOT set here — they require the staged upload pipeline
+  // (see lib/shopify/disputeFileUpload.ts)
 
   return input;
 }

@@ -46,10 +46,10 @@ describe("evaluateCompleteness", () => {
   });
 
   it("marks avs_cvv_match as unavailable when no card payment", () => {
-    const fields = new Set(["order_confirmation", "billing_address_match", "shipping_tracking"]);
+    const fields = new Set(["order_confirmation", "billing_address_match", "shipping_tracking", "delivery_proof"]);
     const result = evaluateCompleteness("FRAUDULENT", fields, null, FULFILLED_NO_CARD);
 
-    // avs_cvv not required (no card), shipping_tracking provided
+    // avs_cvv not required (no card), shipping + delivery provided
     expect(result.blockers).toHaveLength(0);
     const avsItem = result.checklist.find((c) => c.field === "avs_cvv_match");
     expect(avsItem?.unavailableReason).toBe("No card payment on this order");
@@ -88,11 +88,10 @@ describe("evaluateCompleteness", () => {
       "order_confirmation",
       "billing_address_match",
       "avs_cvv_match",
-      "risk_analysis",
-      "customer_ip",
-      "shipping_tracking",
-      "customer_communication",
       "activity_log",
+      "shipping_tracking",
+      "delivery_proof",
+      "customer_communication",
       "supporting_documents",
     ]);
     const result = evaluateCompleteness("FRAUDULENT", fields, null, FULFILLED_CARD);
