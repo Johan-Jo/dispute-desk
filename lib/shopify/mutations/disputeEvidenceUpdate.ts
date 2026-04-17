@@ -24,7 +24,6 @@ export interface DisputeEvidenceUpdateInput {
   accessActivityLog?: string;
   cancellationPolicyDisclosure?: string;
   cancellationRebuttal?: string;
-  customerCommunication?: string;
   customerEmailAddress?: string;
   customerPurchaseIp?: string;
   refundPolicyDisclosure?: string;

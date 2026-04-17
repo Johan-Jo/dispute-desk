@@ -86,15 +86,12 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
     label: "Cancellation Rebuttal",
     packSectionKeys: ["cancellation_rebuttal"],
   },
-  {
-    shopifyField: "customerCommunication",
-    label: "Customer Communication",
-    packSectionKeys: ["comms", "customer_comms", "customer_communication"],
-  },
+  // customerCommunication is NOT a valid Shopify field.
+  // Customer comms go into uncategorizedText instead.
   {
     shopifyField: "uncategorizedText",
     label: "Additional Evidence",
-    packSectionKeys: ["other", "notes", "additional", "uncategorized"],
+    packSectionKeys: ["other", "notes", "additional", "uncategorized", "comms", "customer_comms", "customer_communication"],
   },
 ];
 
