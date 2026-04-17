@@ -241,112 +241,24 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  FILE UPLOADS: generate evidence PDFs and upload to Shopify
+  //  FILE UPLOADS: currently disabled
+  //
+  //  File upload requires the `shopify_payments_dispute_file_uploads`
+  //  scope which we don't have yet. The staged upload succeeds but
+  //  the resourceUrl cannot be used as a file ID in
+  //  disputeEvidenceUpdate — Shopify expects a GID from the
+  //  REST dispute_file_uploads endpoint.
+  //
+  //  TODO: Add scope, use REST API to create file uploads:
+  //  POST /admin/api/2026-01/shopify_payments/disputes/{id}/dispute_file_uploads.json
+  //  Then use returned ID in the GraphQL mutation.
   // ═══════════════════════════════════════════════════════════
 
-  const sessionForUpload = { shopDomain, accessToken };
-  const uploadedFiles: string[] = [];
-
-  // Customer communication file (timeline events + notes)
-  const commsSection = sections.find(s => s.type === "comms");
-  if (commsSection) {
-    const commsData = commsSection.data;
-    const commsLines: string[] = [];
-    if (commsData.orderNote) commsLines.push(`Order note: ${String(commsData.orderNote)}`);
-    const events = commsData.timelineEvents as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(events)) {
-      commsLines.push("\nOrder Timeline:");
-      for (const evt of events) {
-        const msg = String(evt.message ?? "").replace(/<[^>]+>/g, "");
-        if (msg) commsLines.push(`[${String(evt.createdAt ?? "").split("T")[0]}] ${msg}`);
-      }
-    }
-    if (commsLines.length > 0) {
-      const commsText = commsLines.join("\n");
-      const commsBuffer = Buffer.from(commsText, "utf-8");
-      const commsUrl = await uploadDisputeFile(
-        sessionForUpload, "customer-communication.txt", "text/plain",
-        commsBuffer, job.id,
-      );
-      if (commsUrl) {
-        input.customerCommunicationFile = { id: commsUrl };
-        uploadedFiles.push("customerCommunicationFile");
-      }
-    }
-  }
-
-  // Shipping documentation file (tracking + fulfillment data)
-  const shippingSection = sections.find(s => s.type === "shipping" || s.type === "fulfillment");
-  if (shippingSection) {
-    const sd = shippingSection.data;
-    const shippingLines: string[] = ["Shipping & Tracking Documentation\n"];
-    const fulfillments = sd.fulfillments as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(fulfillments)) {
-      for (const f of fulfillments) {
-        if (f.status) shippingLines.push(`Status: ${String(f.status)}`);
-        const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
-        if (Array.isArray(tracking)) {
-          for (const t of tracking) {
-            if (t.carrier) shippingLines.push(`Carrier: ${String(t.carrier)}`);
-            if (t.number) shippingLines.push(`Tracking Number: ${String(t.number)}`);
-            if (t.url) shippingLines.push(`Tracking URL: ${String(t.url)}`);
-          }
-        }
-        if (f.createdAt) shippingLines.push(`Shipped: ${String(f.createdAt)}`);
-        if (f.deliveredAt) shippingLines.push(`Delivered: ${String(f.deliveredAt)}`);
-      }
-    }
-    if (shippingLines.length > 1) {
-      const shippingText = shippingLines.join("\n");
-      const shippingBuffer = Buffer.from(shippingText, "utf-8");
-      const shippingUrl = await uploadDisputeFile(
-        sessionForUpload, "shipping-documentation.txt", "text/plain",
-        shippingBuffer, job.id,
-      );
-      if (shippingUrl) {
-        input.shippingDocumentationFile = { id: shippingUrl };
-        uploadedFiles.push("shippingDocumentationFile");
-      }
-    }
-  }
-
-  // Full evidence pack as uncategorized file
-  // Combine all formatted text into one document
-  const fullPackParts: string[] = [];
-  if (rebuttalText) fullPackParts.push("DISPUTE RESPONSE\n\n" + rebuttalText);
-  const orderSection = sections.find(s => s.type === "order");
-  if (orderSection) {
-    const od = orderSection.data;
-    const orderLines: string[] = ["\nORDER DETAILS"];
-    if (od.orderName) orderLines.push(`Order: ${String(od.orderName)}`);
-    if (od.createdAt) orderLines.push(`Date: ${String(od.createdAt)}`);
-    const totals = od.totals as Record<string, unknown> | undefined;
-    if (totals) orderLines.push(`Amount: ${String(totals.currency ?? "")} ${String(totals.total ?? "")}`);
-    fullPackParts.push(orderLines.join("\n"));
-  }
-  const paymentSection = sections.find(s => s.type === "other");
-  if (paymentSection) {
-    const pd = paymentSection.data;
-    const payLines: string[] = ["\nPAYMENT VERIFICATION"];
-    if (pd.avsResultCode) payLines.push(`AVS: ${String(pd.avsResultCode) === "Y" ? "Full match" : String(pd.avsResultCode)}`);
-    if (pd.cvvResultCode) payLines.push(`CVV: ${String(pd.cvvResultCode) === "M" ? "Match" : String(pd.cvvResultCode)}`);
-    if (pd.cardCompany) payLines.push(`Card: ${String(pd.cardCompany)}`);
-    fullPackParts.push(payLines.join("\n"));
-  }
-  if (fullPackParts.length > 0) {
-    const fullText = fullPackParts.join("\n\n");
-    const fullBuffer = Buffer.from(fullText, "utf-8");
-    const fullUrl = await uploadDisputeFile(
-      sessionForUpload, "evidence-pack.txt", "text/plain",
-      fullBuffer, job.id,
-    );
-    if (fullUrl) {
-      input.uncategorizedFile = { id: fullUrl };
-      uploadedFiles.push("uncategorizedFile");
-    }
-  }
-
-  console.log(`[saveToShopify] Files uploaded: ${uploadedFiles.length} (${uploadedFiles.join(", ") || "none"})`);
+  // FILE UPLOADS: disabled until shopify_payments_dispute_file_uploads scope is approved.
+  // The GraphQL file fields (customerCommunicationFile, etc.) require a Shopify GID
+  // from the REST dispute_file_uploads endpoint, which needs the additional scope.
+  // Text evidence is sent via the text fields above.
+  // TODO: Request scope approval, then enable REST-based file uploads.
 
   const inputKeys = Object.keys(input);
   if (inputKeys.length === 0) {
