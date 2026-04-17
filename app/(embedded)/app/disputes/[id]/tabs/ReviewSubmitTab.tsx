@@ -184,7 +184,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
               <Button
                 variant="primary"
                 fullWidth
-                url={`https://${data.dispute.shopDomain}/admin/shopify_payments/disputes/${data.dispute.disputeGid.split("/").pop()}`}
+                url={`https://${data.dispute.shopDomain}/admin/settings/payments/shopify-payments/chargebacks/${data.dispute.disputeGid.split("/").pop()}`}
                 target="_blank"
               >
                 Submit to bank now in Shopify Admin
