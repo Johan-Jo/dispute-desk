@@ -145,12 +145,32 @@ function serializeSectionData(section: RawPackSection): string {
     return lines.filter(Boolean).join("\n").trim();
   }
 
-  // Policy sections
+  // Policy sections — serialize as English summaries, never raw URLs
   if (type === "policy") {
-    if (data.policyType) lines.push(`Policy: ${data.policyType}`);
-    if (data.title) lines.push(`Title: ${data.title}`);
-    if (data.body) lines.push(String(data.body));
-    if (data.url) lines.push(`URL: ${data.url}`);
+    const policySummaries: Record<string, string> = {
+      refunds: "The store's refund policy was clearly disclosed and accepted by the customer at checkout. The policy outlines conditions for returns, refunds, and exchanges.",
+      shipping: "The store's shipping policy was disclosed at checkout, covering processing times, shipping methods, and delivery estimates.",
+      terms: "The store's terms of service were presented and accepted by the customer before completing the purchase.",
+      privacy: "The store's privacy policy was available to the customer, disclosing how personal information is collected and used.",
+    };
+
+    // Handle array format: { policies: [...] }
+    const policies = data.policies as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(policies)) {
+      for (const p of policies) {
+        const pType = String(p.policyType ?? "");
+        const summary = policySummaries[pType];
+        if (summary) {
+          lines.push(summary);
+        }
+      }
+    } else {
+      // Flat format fallback
+      const pType = String(data.policyType ?? "");
+      const summary = policySummaries[pType];
+      if (summary) lines.push(summary);
+      else if (data.body) lines.push(String(data.body));
+    }
     return lines.filter(Boolean).join("\n").trim();
   }
 
