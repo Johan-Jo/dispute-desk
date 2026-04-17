@@ -14,7 +14,8 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
-import { buildEvidenceInputFromRaw, type RawPackSection } from "@/lib/shopify/fieldMapping";
+import { type RawPackSection } from "@/lib/shopify/fieldMapping";
+import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
 import {
   DISPUTE_EVIDENCE_UPDATE_MUTATION,
   type DisputeEvidenceUpdateResult,
@@ -190,7 +191,20 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     (s): s is RawPackSection =>
       typeof s === "object" && s !== null && "type" in s && "label" in s && "data" in s,
   );
-  const input: DisputeEvidenceUpdateInput = buildEvidenceInputFromRaw(sections);
+  // Get rebuttal text
+  const { data: rebuttalDraft } = await sb
+    .from("rebuttal_drafts").select("sections")
+    .eq("pack_id", packId).eq("locale", "en-US").maybeSingle();
+  const rebuttalText = rebuttalDraft?.sections
+    ? (rebuttalDraft.sections as Array<{ text: string }>).map((s) => s.text).join("\n\n").trim() || null
+    : null;
+
+  // Build evidence using reason-aware formatter
+  const input: DisputeEvidenceUpdateInput = buildEvidenceForShopify(
+    sections,
+    rebuttalText,
+    dispute.reason,
+  );
 
   // Inject customerPurchaseIp
   const { data: ipItem } = await sb
@@ -199,16 +213,6 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .limit(1).maybeSingle();
   if ((ipItem?.payload as { ip?: string } | null)?.ip) {
     input.customerPurchaseIp = (ipItem!.payload as { ip: string }).ip;
-  }
-
-  // Inject rebuttal
-  const { data: rebuttalDraft } = await sb
-    .from("rebuttal_drafts").select("sections")
-    .eq("pack_id", packId).eq("locale", "en-US").maybeSingle();
-  if (rebuttalDraft?.sections) {
-    const text = (rebuttalDraft.sections as Array<{ text: string }>)
-      .map((s) => s.text).join("\n\n").trim();
-    if (text) input.cancellationRebuttal = text;
   }
 
   const inputKeys = Object.keys(input);

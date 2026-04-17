@@ -167,17 +167,26 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
           <BlockStack gap="300">
             <Banner tone="success">
               <Text as="p" variant="bodySm" fontWeight="semibold">
-                {"\u2713 Your evidence has been saved to Shopify"}
+                {"\u2713 Your dispute response has been saved to Shopify"}
               </Text>
             </Banner>
 
-            <BlockStack gap="200">
-              <Text as="p" variant="bodyMd" fontWeight="semibold">
-                Would you like to submit to the bank now?
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {"You can submit your response to the bank right now in Shopify Admin for faster resolution. If you prefer to wait, Shopify will automatically submit your evidence on the dispute deadline."}
-              </Text>
+            <BlockStack gap="300">
+              <BlockStack gap="100">
+                <Text as="p" variant="bodySm" fontWeight="semibold">What was sent:</Text>
+                <Text as="p" variant="bodySm">{"\u2022 Dispute response letter \u2192 Annat / Other text field"}</Text>
+                <Text as="p" variant="bodySm">{"\u2022 Order details and customer activity \u2192 Activity log"}</Text>
+                <Text as="p" variant="bodySm">{"\u2022 Policy disclosures \u2192 Refund policy field"}</Text>
+              </BlockStack>
+
+              <BlockStack gap="100">
+                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                  Submit to the bank now?
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {"Open Shopify Admin to review and submit your response. Shopify will auto-submit on the deadline if you don\u2019t act sooner."}
+                </Text>
+              </BlockStack>
             </BlockStack>
 
             {data.dispute.disputeGid && data.dispute.shopDomain && (
@@ -187,13 +196,9 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
                 url={`https://${data.dispute.shopDomain}/admin/payments/dispute_evidences/${(data.dispute.disputeEvidenceGid ?? data.dispute.disputeGid).split("/").pop()}`}
                 target="_blank"
               >
-                Submit to bank now in Shopify Admin
+                Open in Shopify Admin
               </Button>
             )}
-
-            <Text as="p" variant="bodySm" tone="subdued">
-              {"Or do nothing \u2014 Shopify will auto-submit on the deadline."}
-            </Text>
           </BlockStack>
         </Card>
       ) : (
