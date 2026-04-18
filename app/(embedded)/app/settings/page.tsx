@@ -337,7 +337,7 @@ export default function EmbeddedSettingsPage() {
                   style={{
                     width: 32,
                     height: 32,
-                    background: "#EDE9FE",
+                    background: "#DBEAFE",
                     borderRadius: 8,
                     display: "flex",
                     alignItems: "center",

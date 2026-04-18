@@ -350,12 +350,12 @@ function DashboardKpis({ stats, loading, period, onPeriodChange }: {
                 width: "32px",
                 height: "32px",
                 borderRadius: "8px",
-                background: "#EDE9FE",
+                background: "#DBEAFE",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
-                color: "#7C3AED",
+                color: "#1D4ED8",
               }}>
                 <Icon source={card.icon} />
               </div>
@@ -888,9 +888,9 @@ function DashboardHelpCard() {
       <InlineStack gap="400" blockAlign="center" wrap={false}>
         <div style={{
           width: 36, height: 36, borderRadius: 8,
-          background: "#EDE9FE",
+          background: "#DBEAFE",
           display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0, color: "#7C3AED",
+          flexShrink: 0, color: "#1D4ED8",
         }}>
           <Icon source={QuestionCircleIcon} />
         </div>
