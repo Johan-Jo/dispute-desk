@@ -124,6 +124,16 @@ trade-off: merchants who alternate between stores in the same browser see a
 brief re-auth roundtrip on switch — correctness is preferred over a silent
 cross-tenant leak.
 
+**OAuth callback CSP:** The callback at `/api/auth/shopify/callback` loads
+inside the Shopify Admin iframe and returns an HTML page that uses
+`window.top.location.href = ...` to break out into the embedded app URL. For
+that breakout script to execute the response must be allowed to render in
+the iframe — so `next.config.js` applies `frame-ancestors
+https://*.myshopify.com https://admin.shopify.com` to
+`/api/auth/shopify/:path*` (covers both the OAuth start and the callback).
+Without this the default `frame-ancestors 'none'` would blank the iframe
+and the merchant would see a broken-file icon in Admin.
+
 ### Encryption Key Rotation
 
 - Keys named `TOKEN_ENCRYPTION_KEY_V1`, `TOKEN_ENCRYPTION_KEY_V2`, etc.

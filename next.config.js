@@ -142,8 +142,12 @@ const nextConfig = {
       ],
     },
     {
-      // Auth route in iframe: allow framing + App Bridge so breakout redirect works. MUST come after deny.
-      source: "/api/auth/shopify",
+      // Auth routes in iframe: allow framing + App Bridge so breakout redirect
+      // works. Covers both `/api/auth/shopify` (OAuth start) and
+      // `/api/auth/shopify/callback` (returns an HTML breakout page that uses
+      // `window.top.location` to leave the iframe — must render to run).
+      // MUST come after the deny rule; `:path*` matches zero-or-more segments.
+      source: "/api/auth/shopify/:path*",
       headers: [
         {
           key: "Content-Security-Policy",
