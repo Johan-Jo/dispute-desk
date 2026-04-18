@@ -109,6 +109,21 @@ so the browser sends them when the app is loaded inside Shopify Admin’s
 iframe (cross-origin). With `sameSite: "lax"`, cookies would not be sent
 in that context and the app would redirect to auth repeatedly.
 
+**Stale-cookie guard (multi-store):** These cookies are scoped to the
+DisputeDesk host, not per-shop, so opening two different Shopify Admin tabs
+(store A, then store B) in the same browser would otherwise let store B
+read store A's cookie pair and receive store A's disputes. The `/app/*`
+middleware branch compares the `shopify_shop` cookie against the `?shop=`
+query param Shopify sends on every Admin iframe load; on mismatch it clears
+both cookies and redirects to `/api/auth/shopify?shop=<param>` to restart
+OAuth for the correct shop. The `/api/*` branch applies the same check and
+returns `401 { code: "SHOP_MISMATCH" }` if they disagree — the client should
+reload `/app` to trigger re-auth. Comparison is case-insensitive. The
+predicate lives in `lib/middleware/shopMatch.ts` (unit-tested). Practical
+trade-off: merchants who alternate between stores in the same browser see a
+brief re-auth roundtrip on switch — correctness is preferred over a silent
+cross-tenant leak.
+
 ### Encryption Key Rotation
 
 - Keys named `TOKEN_ENCRYPTION_KEY_V1`, `TOKEN_ENCRYPTION_KEY_V2`, etc.

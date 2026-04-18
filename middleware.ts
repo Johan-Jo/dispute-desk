@@ -10,6 +10,7 @@ import {
 import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
+import { shopIdentityMatches } from "@/lib/middleware/shopMatch";
 import {
   enPrefixedHubPathRegex,
   hubPublicPathRegex,
@@ -133,6 +134,20 @@ export async function middleware(req: NextRequest) {
 
     let shopDomain = req.cookies.get("shopify_shop")?.value;
     let shopId = req.cookies.get("shopify_shop_id")?.value;
+
+    // If the caller passed ?shop= and it disagrees with the cookie, the cookie
+    // is stale (other-store tab). Refuse rather than return cross-shop data —
+    // the client should reload /app so the /app/* stale-cookie guard re-auths.
+    const apiShopParam = req.nextUrl.searchParams.get("shop");
+    if (!shopIdentityMatches(shopDomain, apiShopParam)) {
+      return NextResponse.json(
+        {
+          error: "Shop mismatch. Reload the app from Shopify Admin.",
+          code: "SHOP_MISMATCH",
+        },
+        { status: 401 }
+      );
+    }
 
     // Portal fallback: these APIs can use Supabase Auth + active_shop (see lib/middleware/portalApiPrefixes.ts)
     const isPortalApi = isPortalApiPath(pathname);
@@ -328,6 +343,21 @@ export async function middleware(req: NextRequest) {
       const sessionUrl = new URL("/app/session-required", req.url);
       sessionUrl.searchParams.set("returnTo", pathname + req.nextUrl.search);
       return NextResponse.redirect(sessionUrl);
+    }
+
+    // Stale-cookie guard: the `shopify_shop` cookie is scoped to our host, not
+    // per-shop. When a merchant opens Admin for store B after store A in the
+    // same browser, Shopify sends ?shop=B but cookies still point to A — and
+    // every downstream API would happily return A's data. Detect the mismatch
+    // and restart OAuth for the shop in the URL.
+    if (!shopIdentityMatches(shopDomain, shopParam)) {
+      const authUrl = new URL("/api/auth/shopify", req.url);
+      authUrl.searchParams.set("shop", shopParam!);
+      if (hostParam) authUrl.searchParams.set("host", hostParam);
+      const clearRes = NextResponse.redirect(authUrl);
+      clearRes.cookies.delete("shopify_shop");
+      clearRes.cookies.delete("shopify_shop_id");
+      return clearRes;
     }
 
     // When ?shop= is present (Shopify sends it on every install/open), verify
