@@ -77,6 +77,8 @@ interface DashboardStats {
   needsAttentionCount: number;
   statusBreakdown: Record<string, number>;
   outcomeBreakdown: Record<string, number>;
+  operationalBreakdown: Record<string, number>;
+  operationalClosedCount: number;
   submissionBreakdown: Record<string, number>;
   winRateTrend: number[];
   disputeCategories: { label: string; value: number }[];
@@ -106,6 +108,8 @@ const DEFAULT_STATS: DashboardStats = {
   needsAttentionCount: 0,
   statusBreakdown: {},
   outcomeBreakdown: {},
+  operationalBreakdown: {},
+  operationalClosedCount: 0,
   submissionBreakdown: {},
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],
@@ -186,9 +190,13 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
   const searchParams = useSearchParams();
   const s = stats;
 
-  const actionNeeded = (s.statusBreakdown["action_needed"] ?? 0) + (s.statusBreakdown["needs_review"] ?? 0);
-  const readyToSubmit = s.statusBreakdown["ready_to_submit"] ?? 0;
-  const waitingOnIssuer = s.statusBreakdown["waiting_on_issuer"] ?? 0;
+  // Operational counters reflect current workload — always all-time, never
+  // period-scoped. A dispute opened 40 days ago that's now waiting on the
+  // issuer must still count here even when the Performance overview is set
+  // to "30 days".
+  const actionNeeded = (s.operationalBreakdown["action_needed"] ?? 0) + (s.operationalBreakdown["needs_review"] ?? 0);
+  const readyToSubmit = s.operationalBreakdown["ready_to_submit"] ?? 0;
+  const waitingOnIssuer = s.operationalBreakdown["waiting_on_issuer"] ?? 0;
 
   // Primary CTA: action needed → ready to submit → view all
   let ctaLabel = t("dashboard.viewAllDisputes");
@@ -476,7 +484,7 @@ function RecentActivityFeed({ stats, loading }: { stats: DashboardStats; loading
       <BlockStack gap="300">
         <Text as="h2" variant="headingSm">{t("dashboard.recentActivity")}</Text>
         <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          {stats.recentActivity.map((item) => {
+          {stats.recentActivity.slice(0, 10).map((item) => {
             const eventLabel = safeEventLabel(tTimeline, item.eventType);
             const timeStr = new Date(item.eventAt).toLocaleDateString(dateLocale, {
               month: "short",

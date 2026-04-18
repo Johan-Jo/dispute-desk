@@ -32,10 +32,32 @@ export async function GET(req: NextRequest) {
   const period = (req.nextUrl.searchParams.get("period") ?? "30d") as PeriodKey;
   const periodFrom = sinceDate(period);
 
-  // ── Shared metrics ────────────────────────────────────────────────────
+  // ── Shared metrics (period-scoped — drives Performance overview) ──────
   const m = await computeDisputeMetrics({ shopId, periodFrom });
 
   const sb = getServiceClient();
+
+  // ── Operational breakdown (all-time, open disputes only) ──────────────
+  // The top operational summary (Action Needed / Ready to Submit / Waiting
+  // on Issuer / Closed) must reflect *current* workload, not what was
+  // created during the selected period — otherwise a dispute opened 40
+  // days ago and now waiting on the issuer disappears from the count.
+  const { data: opRows } = await sb
+    .from("disputes")
+    .select("normalized_status, closed_at")
+    .eq("shop_id", shopId);
+
+  const operationalBreakdown: Record<string, number> = {};
+  let operationalClosedCount = 0;
+  for (const r of opRows ?? []) {
+    const row = r as Record<string, unknown>;
+    if (row.closed_at) {
+      operationalClosedCount += 1;
+      continue;
+    }
+    const ns = String(row.normalized_status ?? "new");
+    operationalBreakdown[ns] = (operationalBreakdown[ns] ?? 0) + 1;
+  }
 
   // ── Submission state breakdown ────────────────────────────────────────
   const { data: subRows } = await sb
@@ -151,6 +173,8 @@ export async function GET(req: NextRequest) {
     packCount: packCount ?? 0,
 
     // ── New dashboard fields ──
+    operationalBreakdown,
+    operationalClosedCount,
     submissionBreakdown,
     recentActivity,
 
