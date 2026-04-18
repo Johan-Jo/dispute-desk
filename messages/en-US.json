@@ -1795,7 +1795,8 @@
     "stateHint": "Automation rules on the Automation page decide which playbook DisputeDesk uses for each dispute.",
     "activeCount": "{count} active",
     "draftCount": "{count} draft",
-    "uncoveredCount": "{count} uncovered"
+    "uncoveredCount": "{count} uncovered",
+    "familyColumn": "Family"
   },
   "templateCustomize": {
     "banner": "Template Setup Wizard — Complete these steps to activate your template",

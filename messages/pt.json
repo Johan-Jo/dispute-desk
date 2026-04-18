@@ -1787,7 +1787,8 @@
     "stateHint": "As regras de automação na página Automação decidem qual playbook o DisputeDesk usa para cada disputa.",
     "activeCount": "{count} ativo",
     "draftCount": "{count} rascunho",
-    "uncoveredCount": "{count} sem cobertura"
+    "uncoveredCount": "{count} sem cobertura",
+    "activate": "Ativar"
   },
   "templateLibrary": {
     "title": "Biblioteca de modelos",

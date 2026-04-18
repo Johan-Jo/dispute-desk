@@ -1787,7 +1787,8 @@
     "stateHint": "Automatisierungsregeln auf der Automatisierungsseite entscheiden, welches Playbook DisputeDesk für jeden Streitfall verwendet.",
     "activeCount": "{count} aktiv",
     "draftCount": "{count} Entwurf",
-    "uncoveredCount": "{count} nicht abgedeckt"
+    "uncoveredCount": "{count} nicht abgedeckt",
+    "activate": "Aktivieren"
   },
   "templateLibrary": {
     "title": "Vorlagenbibliothek",
