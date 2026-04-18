@@ -981,16 +981,16 @@ export default function EmbeddedDashboardPage() {
           <OutcomeBreakdown stats={stats} loading={statsLoading} />
         </Layout.Section>
 
-        {/* 6. Recent Activity Feed */}
-        <Layout.Section>
-          <RecentActivityFeed stats={stats} loading={statsLoading} />
-        </Layout.Section>
-
-        {/* 7. Recent Disputes Table */}
+        {/* 6. Recent Disputes Table */}
         <Layout.Section>
           <Suspense fallback={<Card><BlockStack gap="400" inlineAlign="center"><Spinner size="small" /></BlockStack></Card>}>
             <RecentDisputesTable />
           </Suspense>
+        </Layout.Section>
+
+        {/* 7. Recent Activity Feed */}
+        <Layout.Section>
+          <RecentActivityFeed stats={stats} loading={statsLoading} />
         </Layout.Section>
 
         {/* Charts */}
