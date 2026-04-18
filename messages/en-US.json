@@ -2980,7 +2980,18 @@
     "emptyStateTitle": "No dispute types are covered yet",
     "emptyStateBody": "Set up your first automation rule and install a playbook so DisputeDesk can handle disputes automatically when they arrive from Shopify.",
     "emptyStatePrimaryCta": "Create your first rule",
-    "inquiryInstallCta": "Install inquiry templates"
+    "inquiryInstallCta": "Install inquiry templates",
+    "chargebackLabel": "Chargeback",
+    "coveragePurpose": "How DisputeDesk handles each type of dispute for your store",
+    "fullyConfigured": "{count} fully configured",
+    "gapsFound": "{count} gaps",
+    "inquiryAndChargeback": "Inquiry & Chargeback",
+    "inquiryLabel": "Inquiry",
+    "lifecycleSubtitle": "See how inquiries and chargebacks are handled per dispute family",
+    "phaseGap": "Not configured",
+    "statusFullyCovered": "Fully Covered",
+    "statusNotCovered": "Not Covered",
+    "statusPartial": "Partial"
   },
   "disputeTimeline": {
     "title": "History",
