@@ -19,11 +19,13 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-function shieldSvg(size) {
-  // 1200x1200 canvas; rounded square background with brand blue gradient,
-  // centered white shield path (from the welcome page, upscaled).
-  const corner = Math.round(size * 0.22); // matches ~iOS app-icon curvature
-  // Shield path scaled to fill ~55% of the canvas, centered.
+function shieldSvg(size, { squareCorners = false } = {}) {
+  // Shopify's Partner Dashboard rejects icons with transparent pixels as
+  // "not 1200x1200" (it measures the opaque bounding box). The full-bleed
+  // variant fills the entire canvas with the brand gradient and lets
+  // Shopify round the corners itself. The rounded variant is still used
+  // for public/shield-icon.png where we want the pill shape baked in.
+  const corner = squareCorners ? 0 : Math.round(size * 0.22);
   const glyphSize = size * 0.55;
   const offset = (size - glyphSize) / 2;
   const stroke = Math.max(2, size * 0.045);
@@ -44,14 +46,22 @@ function shieldSvg(size) {
 </svg>`;
 }
 
-async function render(outPath, size) {
-  const svg = Buffer.from(shieldSvg(size));
-  await sharp(svg).png({ compressionLevel: 9 }).toFile(outPath);
-  console.log(`  ${outPath} (${size}x${size})`);
+async function render(outPath, size, opts = {}) {
+  const svg = Buffer.from(shieldSvg(size, opts));
+  // Flatten onto opaque white to strip the alpha channel. Shopify's app-icon
+  // validator rejects anything with transparency as "not 1200x1200".
+  // Our canvas is full-bleed blue, so the flatten color is never visible.
+  await sharp(svg)
+    .flatten({ background: "#1D4ED8" })
+    .png({ compressionLevel: 9 })
+    .toFile(outPath);
+  console.log(`  ${outPath} (${size}x${size})${opts.squareCorners ? " [square, no alpha]" : ""}`);
 }
 
 console.log("Generating DisputeDesk blue shield icon:");
-await render(resolve(root, "assets/disputedesk-app-icon-1200.png"), 1200);
-await render(resolve(root, "assets/disputedesk-icon-1200x1200.png"), 1200);
+// Shopify Partners: full-bleed square (Shopify rounds corners itself).
+await render(resolve(root, "assets/disputedesk-app-icon-1200.png"), 1200, { squareCorners: true });
+await render(resolve(root, "assets/disputedesk-icon-1200x1200.png"), 1200, { squareCorners: true });
+// In-app asset: keep the baked-in rounded corners for visual polish.
 await render(resolve(root, "public/shield-icon.png"), 512);
 console.log("Done.");
