@@ -159,13 +159,13 @@ SELECT pti.id, v.locale, v.label, v.guidance
 FROM pack_template_items pti
 JOIN (VALUES
   -- Template 1: Fraudulent / Unrecognized
-  ('b0000000-0001-0000-0000-000000000001', 'order_confirmation', 'pt-BR', 'E-mail de confirmação do pedido ou captura de tela', 'Inclua o número do pedido, data, itens e endereço de cobrança.'),
+  ('b0000000-0001-0000-0000-000000000001', 'order_confirmation', 'pt-BR', 'Confirmação do pedido', 'Número do pedido, data, itens e endereço de cobrança.'),
   ('b0000000-0001-0000-0000-000000000001', 'avs_cvv_match', 'pt-BR', 'Resultado da verificação AVS/CVV', 'Captura de tela do gateway de pagamento mostrando o status de correspondência AVS e CVV.'),
   ('b0000000-0001-0000-0000-000000000001', 'ip_geolocation', 'pt-BR', 'Dados de geolocalização do IP', 'Mostre que o endereço IP usado no checkout corresponde à região do titular do cartão.'),
   ('b0000000-0001-0000-0000-000000000001', 'device_fingerprint', 'pt-BR', 'Impressão digital do dispositivo ou histórico de compras anteriores', 'Se disponível, inclua a correspondência de ID do dispositivo com pedidos legítimos anteriores.'),
   ('b0000000-0001-0000-0000-000000000002', 'tracking_proof', 'pt-BR', 'Confirmação de rastreamento de envio', 'Rastreamento da transportadora mostrando entrega no endereço do pedido.'),
   ('b0000000-0001-0000-0000-000000000002', 'delivery_signature', 'pt-BR', 'Assinatura ou foto de entrega', 'Confirmação de assinatura ou foto de entrega da transportadora, se disponível.'),
-  ('b0000000-0001-0000-0000-000000000003', 'customer_emails', 'pt-BR', 'Correspondência por e-mail com o cliente', 'Quaisquer e-mails trocados com o cliente sobre este pedido.'),
+  ('b0000000-0001-0000-0000-000000000003', 'customer_emails', 'pt-BR', 'Correspondência com o cliente', 'Quaisquer mensagens trocadas com o cliente sobre este pedido.'),
   ('b0000000-0001-0000-0000-000000000003', 'customer_account_info', 'pt-BR', 'Detalhes da conta do cliente', 'Data de criação da conta, histórico de login, pedidos anteriores da mesma conta.'),
 
   -- Template 2: PNR With Tracking

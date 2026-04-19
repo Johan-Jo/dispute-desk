@@ -32,13 +32,13 @@ INSERT INTO pack_template_sections (id, template_id, title_key, title_default, s
 
 -- Items
 INSERT INTO pack_template_items (template_section_id, item_type, key, label_default, required, guidance_default, sort) VALUES
-('b0000000-0001-0000-0000-000000000001', 'DOC_REQUIREMENT', 'order_confirmation', 'Order confirmation email or screenshot', true, 'Include order number, date, items, and billing address.', 0),
+('b0000000-0001-0000-0000-000000000001', 'DOC_REQUIREMENT', 'order_confirmation', 'Order confirmation', true, 'Order number, date, items, and billing address.', 0),
 ('b0000000-0001-0000-0000-000000000001', 'DOC_REQUIREMENT', 'avs_cvv_match', 'AVS/CVV verification result', true, 'Screenshot from payment gateway showing AVS and CVV match status.', 1),
 ('b0000000-0001-0000-0000-000000000001', 'DOC_REQUIREMENT', 'ip_geolocation', 'IP geolocation data', false, 'Show IP address used at checkout maps to cardholder region.', 2),
 ('b0000000-0001-0000-0000-000000000001', 'NOTE', 'device_fingerprint', 'Device fingerprint or prior purchase history', false, 'If available, include device ID match with previous legitimate orders.', 3),
 ('b0000000-0001-0000-0000-000000000002', 'DOC_REQUIREMENT', 'tracking_proof', 'Shipping tracking confirmation', true, 'Carrier tracking showing delivery to the address on the order.', 0),
 ('b0000000-0001-0000-0000-000000000002', 'DOC_REQUIREMENT', 'delivery_signature', 'Delivery signature or photo', false, 'Signature confirmation or carrier delivery photo if available.', 1),
-('b0000000-0001-0000-0000-000000000003', 'DOC_REQUIREMENT', 'customer_emails', 'Customer email correspondence', false, 'Any emails exchanged with the customer regarding this order.', 0),
+('b0000000-0001-0000-0000-000000000003', 'DOC_REQUIREMENT', 'customer_emails', 'Customer correspondence', false, 'Any messages exchanged with the customer regarding this order.', 0),
 ('b0000000-0001-0000-0000-000000000003', 'DOC_REQUIREMENT', 'customer_account_info', 'Customer account details', false, 'Account creation date, login history, previous orders from same account.', 1);
 
 
