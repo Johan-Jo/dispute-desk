@@ -608,6 +608,18 @@ The Overview tab is structured as a **decision-oriented recommendation engine**,
 
 Rule: every section must explain *why* something matters and guide the user toward the next action. No raw scores, no system jargon, no generic dashboard phrasing. Assertive language only.
 
+### Evidence tab structure (decision-driven analysis)
+
+The Evidence tab is the analysis surface for a single dispute. It must answer three questions in order: *Will I win this case? Why? What should I do next?* Sections, in order:
+
+1. **Top summary card** (`EvidenceTab.tsx`) — outcome + confidence badges (`outcomeFromStrength()`, `confidenceFrom()`), a `Recommendation:` sentence, key strengths (top 3 from `whyWins.strengths`), and key gaps (top 3 from `missingItems` rendered through `impactSentence()`). Scannable in 3 seconds.
+2. **How strong your case is** (renamed from "Argument map") — counterclaims with strength badges and supporting/missing evidence. Field labels are routed through `FRIENDLY_FIELD_LABEL` (e.g., `avs_cvv_match` → "Card security checks"). Weak items always show an impact sentence rather than a bare "Insufficient" label.
+3. **Defense letter** (renamed from "Rebuttal letter") — collapsed by default to a 220-character excerpt of the summary section; full letter behind a `View full defense letter` disclosure (Polaris `Collapsible`).
+4. **Evidence categories** — unchanged. Per-category collapsible card with relevance badge, item rows with status / strength / Upload / Skip / Preview controls. This is the proof surface and is intentionally untouched.
+5. **Closing action guidance Banner** — `success` tone with *"No action needed. Your case is ready for submission."* when strong; otherwise `warning` tone with *"Add &lt;top gap&gt; to strengthen your case."*
+
+Removed in this rewrite to eliminate duplication: the standalone "Argument summary" card (folded into How-strong's intro line), the standalone "Case strength" card (covered by Top Summary), and the "Ways to strengthen this case" + "Collected automatically" cards (gaps now live inside How-strong's per-claim missing rows; auto-collected items appear inside Evidence categories).
+
 ### Language requirement (English-only submission)
 
 All evidence submitted to Shopify must be in English. This includes:
