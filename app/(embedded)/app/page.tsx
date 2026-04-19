@@ -196,7 +196,9 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
   // to "30 days".
   const actionNeeded = (s.operationalBreakdown["action_needed"] ?? 0) + (s.operationalBreakdown["needs_review"] ?? 0);
   const readyToSubmit = s.operationalBreakdown["ready_to_submit"] ?? 0;
-  const waitingOnIssuer = s.operationalBreakdown["waiting_on_issuer"] ?? 0;
+  const waitingOnIssuer =
+    (s.operationalBreakdown["waiting_on_issuer"] ?? 0) +
+    (s.operationalBreakdown["submitted_to_bank"] ?? 0);
 
   // Primary CTA: action needed → ready to submit → view all
   let ctaLabel = t("dashboard.viewAllDisputes");
@@ -242,7 +244,7 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
               label={t("dashboard.waitingOnIssuer")}
               count={waitingOnIssuer}
               tone="subdued"
-              url={withShopParams("/app/disputes?normalized_status=waiting_on_issuer", searchParams)}
+              url={withShopParams("/app/disputes?normalized_status=waiting_on_issuer,submitted_to_bank", searchParams)}
             />
             <SummaryCounter
               label={t("dashboard.closedInPeriod")}
@@ -389,7 +391,9 @@ const STATUS_COLORS: Record<string, string> = {
   ready_to_submit: "#8B5CF6",
   action_needed: "#EF4444",
   submitted: "#06B6D4",
+  submitted_to_shopify: "#06B6D4",
   waiting_on_issuer: "#6366F1",
+  submitted_to_bank: "#6366F1",
   won: "#10B981",
   lost: "#DC2626",
   accepted_not_contested: "#9CA3AF",
@@ -698,7 +702,9 @@ function RecentDisputesTable() {
       ready_to_submit: "attention",
       action_needed: "critical",
       submitted: "info",
+      submitted_to_shopify: "info",
       waiting_on_issuer: "info",
+      submitted_to_bank: "info",
       won: "success",
       lost: "critical",
       accepted_not_contested: undefined,

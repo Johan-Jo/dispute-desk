@@ -197,11 +197,14 @@ async function backfillDispute(dispute) {
   else if (status === "lost") { normalizedStatus = "lost"; statusReason = "Dispute lost"; }
   else if (status === "charge_refunded") { normalizedStatus = "closed_other"; statusReason = "Charge refunded"; }
   else if (status === "accepted") { normalizedStatus = "accepted_not_contested"; statusReason = "Dispute accepted"; }
-  else if (status === "under_review") { normalizedStatus = "waiting_on_issuer"; statusReason = "Waiting on issuer"; }
+  else if (status === "under_review") { normalizedStatus = "submitted_to_bank"; statusReason = "Submitted to bank"; }
   else if (subState === "submitted_confirmed") { normalizedStatus = "submitted"; statusReason = "Submitted"; }
-  else if (subState === "saved_to_shopify" || subState === "submission_uncertain") {
-    normalizedStatus = "action_needed"; statusReason = "Submission required"; needsAttention = true;
-    nextActionType = "submit_in_shopify"; nextActionText = "Submit the representment in Shopify Admin";
+  else if (subState === "saved_to_shopify") {
+    normalizedStatus = "submitted_to_shopify"; statusReason = "Submitted to Shopify";
+    nextActionType = "submit_in_shopify"; nextActionText = "Optional: submit in Shopify Admin before the deadline";
+  } else if (subState === "submission_uncertain") {
+    normalizedStatus = "action_needed"; statusReason = "Submission not confirmed"; needsAttention = true;
+    nextActionType = "verify_submission"; nextActionText = "Verify that the representment was submitted in Shopify Admin";
   } else if (packStatus === "blocked") {
     normalizedStatus = "action_needed"; statusReason = "Pack blocked"; needsAttention = true;
   } else if (packStatus === "ready") {

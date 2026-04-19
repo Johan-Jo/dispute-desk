@@ -64,7 +64,8 @@ export interface DisputeMetrics {
 
 const ACTIVE_NORMALIZED = [
   "new", "in_progress", "needs_review", "ready_to_submit",
-  "action_needed", "submitted", "waiting_on_issuer",
+  "action_needed", "submitted", "submitted_to_shopify",
+  "waiting_on_issuer", "submitted_to_bank",
 ];
 
 function pctChange(curr: number, prev: number | null): number | null {

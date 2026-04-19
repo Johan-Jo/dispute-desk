@@ -448,11 +448,16 @@ Append-only, immutable ledger (DB triggers reject UPDATE/DELETE). Each event has
 ### Normalized status model
 
 Snapshot columns on `disputes` for fast rendering without recalculating from events:
-- `normalized_status` — new, in_progress, needs_review, ready_to_submit, action_needed, submitted, waiting_on_issuer, won, lost, accepted_not_contested, closed_other
+- `normalized_status` — new, in_progress, needs_review, ready_to_submit, action_needed, submitted, submitted_to_shopify, waiting_on_issuer, submitted_to_bank, won, lost, accepted_not_contested, closed_other
 - `submission_state` — not_saved, saved_to_shopify, submitted_confirmed, submission_uncertain, manual_submission_reported
 - `final_outcome` — won, lost, partially_won, accepted, refunded, canceled, expired, closed_other, unknown
 
-**Key rule:** "submitted" only appears when we have a confirmed submission signal (Shopify `evidenceSentOn` or merchant self-report). Saving evidence to Shopify sets `submission_state = saved_to_shopify`, NOT `submitted_at`.
+**Merchant-facing status naming:**
+- `submitted_to_shopify` — evidence has been saved to the Shopify dispute (`submission_state = saved_to_shopify`). Shopify auto-submits at the deadline if the merchant doesn't click Submit in Shopify Admin first, so this is treated as a commit (info tone, not warning). Replaces the old `action_needed` branch for this submission state.
+- `submitted_to_bank` — Shopify has forwarded the representment to the card network (raw `status = under_review`). Replaces the jargony `waiting_on_issuer` label. The legacy `waiting_on_issuer` enum value is retained for backwards compat but is no longer emitted by active derivation.
+- `action_needed` still fires for genuine problems: `submission_state = submission_uncertain` or a blocked pack.
+
+**Key rule:** "submitted" (confirmed by Shopify `evidenceSentOn` or merchant self-report) is distinct from `submitted_to_shopify` (evidence saved but not yet confirmed/forwarded).
 
 ### Event emission points
 

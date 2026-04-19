@@ -10,7 +10,7 @@ import { getServiceClient } from "@/lib/supabase/server";
  *   phase — inquiry | chargeback
  *   needs_review — true | false
  *   due_before — ISO date
- *   normalized_status — comma-separated: new,in_progress,needs_review,ready_to_submit,action_needed,submitted,waiting_on_issuer,won,lost,accepted_not_contested,closed_other
+ *   normalized_status — comma-separated: new,in_progress,needs_review,ready_to_submit,action_needed,submitted,submitted_to_shopify,waiting_on_issuer,submitted_to_bank,won,lost,accepted_not_contested,closed_other
  *   final_outcome — comma-separated: won,lost,partially_won,accepted,refunded,canceled,expired,closed_other,unknown
  *   submission_state — comma-separated: not_saved,saved_to_shopify,submitted_confirmed,submission_uncertain,manual_submission_reported
  *   closed — true | false (filters on closed_at IS NOT NULL / IS NULL)

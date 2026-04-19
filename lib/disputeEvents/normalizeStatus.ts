@@ -36,11 +36,11 @@ export function deriveNormalizedStatus(
     );
   }
 
-  // Under review at issuer
+  // Under review at issuer (Shopify has forwarded the representment to the card network)
   if (shopifyStatus === "under_review") {
     return result(
-      "waiting_on_issuer",
-      "Waiting on issuer decision",
+      "submitted_to_bank",
+      "Submitted to bank \u2014 awaiting issuer decision",
       null,
       null,
       false,
@@ -63,14 +63,15 @@ export function deriveNormalizedStatus(
       );
     }
 
-    // Evidence saved but not submitted
+    // Evidence saved to Shopify. Shopify auto-submits at the deadline if the
+    // merchant doesn't click Submit sooner, so this is effectively a commit.
     if (submissionState === "saved_to_shopify") {
       return result(
-        "action_needed",
-        "Evidence saved to Shopify — submit in Shopify Admin",
+        "submitted_to_shopify",
+        "Submitted to Shopify — will auto-submit at the deadline",
         "submit_in_shopify",
-        "Submit the representment in Shopify Admin",
-        true,
+        "Optional: submit in Shopify Admin before the deadline",
+        false,
       );
     }
 

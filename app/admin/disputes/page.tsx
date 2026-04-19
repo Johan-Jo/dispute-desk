@@ -38,7 +38,9 @@ const STATUS_COLORS: Record<string, string> = {
   ready_to_submit: "bg-amber-100 text-amber-800",
   action_needed: "bg-orange-100 text-orange-800",
   submitted: "bg-indigo-100 text-indigo-800",
+  submitted_to_shopify: "bg-indigo-100 text-indigo-800",
   waiting_on_issuer: "bg-indigo-100 text-indigo-800",
+  submitted_to_bank: "bg-indigo-100 text-indigo-800",
   accepted_not_contested: "bg-green-100 text-green-800",
   closed_other: "bg-gray-100 text-gray-800",
 };

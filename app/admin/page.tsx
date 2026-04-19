@@ -77,14 +77,17 @@ function formatCurrency(amount: number, currency: string) {
 const STATUS_COLORS: Record<string, string> = {
   new: "#6B7280", in_progress: "#3B82F6", needs_review: "#F59E0B",
   ready_to_submit: "#8B5CF6", action_needed: "#EF4444", submitted: "#06B6D4",
-  waiting_on_issuer: "#6366F1", won: "#10B981", lost: "#DC2626",
+  submitted_to_shopify: "#06B6D4",
+  waiting_on_issuer: "#6366F1", submitted_to_bank: "#6366F1",
+  won: "#10B981", lost: "#DC2626",
   accepted_not_contested: "#9CA3AF", closed_other: "#9CA3AF",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   new: "New", in_progress: "In Progress", needs_review: "Needs Review",
   ready_to_submit: "Ready to Submit", action_needed: "Action Needed",
-  submitted: "Submitted", waiting_on_issuer: "Waiting on Issuer",
+  submitted: "Submitted", submitted_to_shopify: "Submitted to Shopify",
+  waiting_on_issuer: "Waiting on Issuer", submitted_to_bank: "Submitted to Bank",
   won: "Won", lost: "Lost", accepted_not_contested: "Accepted", closed_other: "Closed",
 };
 

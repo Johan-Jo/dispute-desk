@@ -77,7 +77,9 @@ interface DisputesResponse {
 const NORMALIZED_STATUS_TONE: Record<string, "success" | "critical" | "warning" | "info" | "attention" | undefined> = {
   won: "success", lost: "critical", new: "info", in_progress: "info",
   needs_review: "attention", ready_to_submit: "attention", action_needed: "warning",
-  submitted: "info", waiting_on_issuer: "info", accepted_not_contested: "success", closed_other: "success",
+  submitted: "info", submitted_to_shopify: "info",
+  waiting_on_issuer: "info", submitted_to_bank: "info",
+  accepted_not_contested: "success", closed_other: "success",
 };
 
 const OUTCOME_TONE: Record<string, "success" | "critical" | "warning" | undefined> = {
@@ -527,8 +529,8 @@ export default function DisputesListPage() {
                           { label: t("disputeTimeline.normalizedStatuses.needs_review"), value: "needs_review" },
                           { label: t("disputeTimeline.normalizedStatuses.ready_to_submit"), value: "ready_to_submit" },
                           { label: t("disputeTimeline.normalizedStatuses.action_needed"), value: "action_needed" },
-                          { label: t("disputeTimeline.normalizedStatuses.submitted"), value: "submitted" },
-                          { label: t("disputeTimeline.normalizedStatuses.waiting_on_issuer"), value: "waiting_on_issuer" },
+                          { label: t("disputeTimeline.normalizedStatuses.submitted_to_shopify"), value: "submitted_to_shopify" },
+                          { label: t("disputeTimeline.normalizedStatuses.submitted_to_bank"), value: "submitted_to_bank" },
                           { label: t("disputeTimeline.normalizedStatuses.won"), value: "won" },
                           { label: t("disputeTimeline.normalizedStatuses.lost"), value: "lost" },
                         ]}

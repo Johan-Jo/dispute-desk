@@ -55,7 +55,9 @@ const STATUS_BADGE_TONE: Record<string, "success" | "critical" | "warning" | "in
   ready_to_submit: "attention",
   action_needed: "warning",
   submitted: "info",
+  submitted_to_shopify: "info",
   waiting_on_issuer: "info",
+  submitted_to_bank: "info",
   accepted_not_contested: "success",
   closed_other: "success",
 };
