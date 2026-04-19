@@ -97,8 +97,16 @@ export async function buildPack(
   // customerCommSource). Before this, each collector was issuing the
   // same ORDER_DETAIL_QUERY independently — three round-trips per
   // pack build. Cache happens at the shared-context level.
+  //
+  // If this fetch fails, capture the structured error so the build
+  // record self-explains: collectors silently returning [] on null
+  // ctx.order is the most common cause of "score 0% / 1 item / pack
+  // blocked" pack states. Without this, the actual error lives only
+  // in console.warn and is lost when Vercel runtime logs roll over.
   let order: OrderDetailNode | null = null;
+  let orderFetchError: { message: string; durationMs: number; gid: string } | null = null;
   if (dispute.order_gid) {
+    const fetchStart = Date.now();
     try {
       const res = await requestShopifyGraphQL<OrderDetailResponse>({
         session: {
@@ -110,14 +118,36 @@ export async function buildPack(
         correlationId: opts?.correlationId,
       });
       order = (res.data?.node as OrderDetailNode | undefined) ?? null;
+      if (!order) {
+        orderFetchError = {
+          message: res.errors?.length
+            ? `Shopify returned errors: ${res.errors.map((e) => e.message).join("; ")}`
+            : "Shopify returned null for order node — order may be deleted or inaccessible",
+          durationMs: Date.now() - fetchStart,
+          gid: dispute.order_gid,
+        };
+      }
     } catch (err) {
-      // Non-fatal — collectors that need the order will receive null
-      // and return empty sections, the build continues with whatever
-      // policy + manual evidence exists.
+      orderFetchError = {
+        message: err instanceof Error ? err.message : String(err),
+        durationMs: Date.now() - fetchStart,
+        gid: dispute.order_gid,
+      };
+    }
+
+    if (orderFetchError) {
       console.warn(
-        "[buildPack] order fetch failed:",
-        err instanceof Error ? err.message : String(err),
+        `[buildPack] order fetch failed for pack ${packId} (${orderFetchError.durationMs}ms):`,
+        orderFetchError.message,
       );
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: dispute.id,
+        packId,
+        actorType: "system",
+        eventType: "order_fetch_failed",
+        eventPayload: orderFetchError,
+      });
     }
   }
 
@@ -145,6 +175,14 @@ export async function buildPack(
 
   const allSections: EvidenceSection[] = [];
   const collectorErrors: string[] = [];
+
+  // Surface the upstream order-fetch failure as a collector error so it
+  // shows up on the pack record alongside any individual collector throws.
+  if (orderFetchError) {
+    collectorErrors.push(
+      `order_fetch: ${orderFetchError.message} (${orderFetchError.durationMs}ms, gid=${orderFetchError.gid})`,
+    );
+  }
 
   for (const r of results) {
     if (r.status === "fulfilled") {

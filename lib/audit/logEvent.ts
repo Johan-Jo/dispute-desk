@@ -19,7 +19,8 @@ export type EventType =
   | "data_retained"
   | "evidence_waived"
   | "evidence_unwaived"
-  | "submitted_with_warnings";
+  | "submitted_with_warnings"
+  | "order_fetch_failed";
 
 export interface AuditLogInput {
   shopId: string;
