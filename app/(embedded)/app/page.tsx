@@ -615,9 +615,6 @@ interface DisputeRow {
   amount: string;
   reason: string | null;
   normalizedStatus: string | null;
-  submissionState: string | null;
-  nextAction: string | null;
-  lastEventAt: string | null;
   dueAt: string | null;
   initiatedAt: string | null;
   finalOutcome: string | null;
@@ -654,9 +651,6 @@ function RecentDisputesTable() {
             : "—",
           reason: (d.reason as string) ?? null,
           normalizedStatus: (d.normalized_status as string) ?? null,
-          submissionState: (d.submission_state as string) ?? null,
-          nextAction: (d.next_action_text as string) ?? null,
-          lastEventAt: (d.last_event_at as string) ?? null,
           dueAt: (d.due_at as string) ?? null,
           initiatedAt: (d.initiated_at as string) ?? null,
           finalOutcome: (d.final_outcome as string) ?? null,
@@ -717,24 +711,6 @@ function RecentDisputesTable() {
     );
   };
 
-  const submissionBadge = (state: string | null) => {
-    if (!state || state === "not_saved") return <Text as="span" variant="bodySm" tone="subdued">—</Text>;
-    const toneMap: Record<string, "success" | "critical" | "warning" | "attention" | "info" | undefined> = {
-      saved_to_shopify: "warning",
-      submitted_confirmed: "success",
-      submission_uncertain: "attention",
-      manual_submission_reported: "info",
-    };
-    let label: string;
-    try {
-      label = tTimeline(`submissionStates.${state}`);
-      if (label.startsWith("disputeTimeline.")) label = state.replace(/_/g, " ");
-    } catch {
-      label = state.replace(/_/g, " ");
-    }
-    return <Badge tone={toneMap[state]}>{label}</Badge>;
-  };
-
   const outcomeBadge = (outcome: string | null) => {
     if (!outcome) return null;
     const toneMap: Record<string, "success" | "critical" | "warning" | "attention" | "info" | undefined> = {
@@ -748,17 +724,6 @@ function RecentDisputesTable() {
   const formatShortDate = (iso: string | null) => {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
-  };
-
-  const formatRelativeTime = (iso: string | null) => {
-    if (!iso) return "—";
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return t("dashboard.minutesAgo", { count: Math.max(1, mins) });
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return t("dashboard.hoursAgo", { count: hours });
-    const days = Math.floor(hours / 24);
-    return t("dashboard.daysAgo", { count: days });
   };
 
   return (
@@ -776,7 +741,6 @@ function RecentDisputesTable() {
                 <th style={recentDisputesThStyle}>{t("table.amount")}</th>
                 <th style={recentDisputesThStyle}>{t("table.reason")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.statusCol")}</th>
-                <th style={recentDisputesThStyle}>{t("dashboard.submissionCol")}</th>
                 <th style={recentDisputesThStyle}>{t("table.date")}</th>
                 <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.outcomeCol")}</th>
@@ -802,7 +766,6 @@ function RecentDisputesTable() {
                     <Text as="span" variant="bodySm" tone="subdued">{formatReason(r.reason)}</Text>
                   </td>
                   <td style={recentDisputesTdStyle}>{normalizedStatusBadge(r.normalizedStatus)}</td>
-                  <td style={recentDisputesTdStyle}>{submissionBadge(r.submissionState)}</td>
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">
                       {r.initiatedAt ? new Date(r.initiatedAt).toLocaleString(dateLocale, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
