@@ -7,302 +7,445 @@ import {
   Text,
   Badge,
   Button,
-  Banner,
   ProgressBar,
+  Divider,
 } from "@shopify/polaris";
+import { useSearchParams } from "next/navigation";
+import { withShopParams } from "@/lib/withShopParams";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
-import styles from "../workspace.module.css";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
-/** Map internal strength to merchant-facing label. */
-function strengthLabel(s: string): string {
-  if (s === "strong") return "Strong";
-  if (s === "moderate") return "Medium";
-  return "Weak";
+const STRENGTH_LABEL: Record<string, string> = {
+  strong: "Strong",
+  moderate: "Moderate",
+  weak: "Weak",
+  insufficient: "Weak",
+};
+
+const WHY_EVIDENCE_MATTERS: Record<string, string> = {
+  order_confirmation: "Anchors the case — proves the order is real and tied to this customer.",
+  shipping_tracking: "Carrier records show the package left your hands.",
+  delivery_proof: "Confirms the customer received the package — the strongest defense against \u2018not received\u2019 claims.",
+  billing_address_match: "Ties the order to the cardholder\u2019s billing address — heavy weight in fraud cases.",
+  avs_cvv_match: "Bank security checks passed — banks weigh this heavily for fraud.",
+  product_description: "Shows the customer saw and accepted the product as advertised.",
+  refund_policy: "Proves the customer agreed to refund terms before purchase.",
+  shipping_policy: "Documents your shipping commitments for delivery timing disputes.",
+  cancellation_policy: "Proves the customer was informed of cancellation rules.",
+  customer_communication: "Banks favor merchants who try to resolve issues directly.",
+  duplicate_explanation: "Required to prove the charges are not duplicates.",
+  supporting_documents: "Extra proof that strengthens the overall case.",
+  activity_log: "Customer history that shows legitimate ongoing engagement.",
+};
+
+const CATEGORY_FIX_HINT: Record<string, string> = {
+  order: "Confirm the order record is synced from Shopify.",
+  payment: "Verify the gateway returned AVS/CVV results — strong fraud defense.",
+  fulfillment: "Add tracking and delivery confirmation \u2014 reduces win probability when missing.",
+  communication: "Attach customer messages or replies \u2014 banks reward engagement.",
+  policy: "Publish or upload your store policies so they can be referenced.",
+  identity: "Pull customer purchase history to show legitimate activity.",
+  merchant: "Upload product listings or supporting documents to round out the case.",
+};
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "\u2014";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "\u2014";
+  }
+}
+
+function strengthTone(level: string): "success" | "warning" | "critical" {
+  if (level === "strong") return "success";
+  if (level === "moderate") return "warning";
+  return "critical";
 }
 
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
-  const { data, derived, actions, clientState } = workspace;
+  const searchParams = useSearchParams();
+  const { data, derived, actions } = workspace;
   if (!data) return null;
 
-  const { dispute, caseTypeInfo, argumentMap } = data;
-  const { caseStrength, nextAction, missingItems, effectiveChecklist, categories } = derived;
+  const { dispute, argumentMap, rebuttalDraft, submissionFields } = data;
+  const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
 
-  // Deadline
+  const submitted = isReadOnly;
+  const submittedAt = data.pack?.savedToShopifyAt ?? null;
+
   const deadlineDays = dispute.dueAt
     ? Math.ceil((new Date(dispute.dueAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
   const deadlineUrgent = deadlineDays !== null && deadlineDays <= 2;
 
-  // Defense position (derived from evidence)
-  const hasAvs = effectiveChecklist.some(c => c.field === "avs_cvv_match" && c.status === "available");
-  const hasCvv = hasAvs; // same field
-  const hasOrder = effectiveChecklist.some(c => c.field === "order_confirmation" && c.status === "available");
-  const hasDelivery = effectiveChecklist.some(c => c.field === "delivery_proof" && c.status === "available");
-  const hasTracking = effectiveChecklist.some(c => c.field === "shipping_tracking" && c.status === "available");
-  const hasHistory = effectiveChecklist.some(c => c.field === "activity_log" && c.status === "available");
-  const hasComms = effectiveChecklist.some(c => c.field === "customer_communication" && c.status === "available");
+  const strengthKey = caseStrength.overall;
+  const strengthText = STRENGTH_LABEL[strengthKey] ?? "Weak";
 
-  const signals: string[] = [];
-  if (hasAvs) signals.push("AVS/CVV match");
-  if (hasOrder) signals.push("Order confirmed");
-  if (hasDelivery) signals.push("Delivery confirmed");
-  if (hasTracking && !hasDelivery) signals.push("Tracking confirmed");
-  if (hasHistory) signals.push("Customer history");
-  if (hasComms) signals.push("Customer notified");
-
-  const positionLabel = "Purchase made by the legitimate cardholder";
-  const confidence = signals.length >= 3 ? "High" : signals.length >= 2 ? "Medium" : "Low";
-
-  // Claims from argument map — only supported ones
-  const supportedClaims = argumentMap?.counterclaims.filter(c => c.supporting.length > 0) ?? [];
-  // Missing merchant-actionable items only
-  const actionableMissing = missingItems.filter(m => m.priority === "critical" || m.priority === "recommended");
-
-  // Supporting vs missing evidence badges
-  const presentItems = effectiveChecklist.filter(c => c.status === "available");
-  const missingChecklist = effectiveChecklist.filter(c =>
-    c.status === "missing" && (c.collectionType === "manual" || !c.collectionType),
+  const presentItems = effectiveChecklist.filter((c) => c.status === "available");
+  const missingChecklist = effectiveChecklist.filter(
+    (c) => c.status === "missing" && (c.collectionType === "manual" || !c.collectionType),
   );
 
-  // Strength
-  const strength = strengthLabel(caseStrength.overall);
-  const strengthTone = caseStrength.overall === "strong" ? "success" as const
-    : caseStrength.overall === "moderate" ? "warning" as const
-    : "critical" as const;
+  const totalEvidenceShown = presentItems.length + missingChecklist.length;
+  const coveragePct =
+    totalEvidenceShown > 0
+      ? Math.round((presentItems.length / totalEvidenceShown) * 100)
+      : 0;
+
+  // Recommendation sentence — single, decision-oriented.
+  let recommendation: string;
+  if (submitted) {
+    recommendation = `Your evidence pack was sent to Shopify on ${formatDate(submittedAt)}. The issuing bank typically responds within 30\u201375 days.`;
+  } else if (strengthKey === "strong") {
+    recommendation = "Submit now \u2014 your evidence is strong enough to defend this charge.";
+  } else if (strengthKey === "moderate") {
+    const top = missingItems[0];
+    recommendation = top
+      ? `You can submit, but adding ${top.label.toLowerCase()} would meaningfully improve your odds.`
+      : "You can submit now, but a small amount of additional evidence would improve your odds.";
+  } else {
+    const top = missingItems[0];
+    recommendation = top
+      ? `Add ${top.label.toLowerCase()} before submitting \u2014 the case is currently unlikely to win as-is.`
+      : "Strengthen the evidence before submitting \u2014 the case is currently unlikely to win as-is.";
+  }
+
+  // CTAs
+  const goToReview = () => actions.setActiveTab(2);
+  const goToEvidence = () => actions.setActiveTab(1);
+  const shopifyAdminUrl =
+    dispute.disputeGid && dispute.shopDomain
+      ? `https://${dispute.shopDomain}/admin/payments/dispute_evidences/${(dispute.disputeEvidenceGid ?? dispute.disputeGid).split("/").pop()}`
+      : null;
+  const policiesUrl = withShopParams("/app/policies", searchParams);
+
+  // Defense bullets — plain language counterclaim titles, only those with support.
+  const defenseBullets = (argumentMap?.counterclaims ?? []).map((c) => ({
+    id: c.id,
+    title: c.title,
+    supported: c.supporting.length > 0,
+  }));
+
+  // What Shopify will receive
+  const includedFieldCount = submissionFields.filter((f) => f.included).length || presentItems.length;
+  const summaryText =
+    rebuttalDraft?.sections.find((s) => s.type === "summary")?.text?.trim() ||
+    "A structured response letter that maps your evidence to each issuer claim.";
+  const keyHighlights = presentItems.slice(0, 3).map((i) => i.label);
+
+  // Page header
+  const pageHeader = submitted
+    ? "Your defense has been submitted to Shopify"
+    : "Review your defense before submitting to Shopify";
 
   return (
-    <BlockStack gap="400">
-      {/* 1. DEFENSE POSITION (top block) */}
+    <BlockStack gap="500">
+      {/* PAGE HEADER */}
+      <Text as="h1" variant="headingXl">
+        {pageHeader}
+      </Text>
+
+      {/* 1. CASE STATUS */}
       <Card>
-        <BlockStack gap="300">
-          <InlineStack align="space-between" blockAlign="start" wrap>
+        <BlockStack gap="400">
+          <Text as="h2" variant="headingMd">Case status</Text>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: "16px",
+            }}
+          >
             <BlockStack gap="100">
-              <Text as="h2" variant="headingLg">
-                {positionLabel}
-              </Text>
-              <InlineStack gap="200" blockAlign="center">
-                <Badge tone={confidence === "High" ? "success" : confidence === "Medium" ? "warning" : "critical"}>
-                  {`Confidence: ${confidence}`}
-                </Badge>
-                {deadlineDays !== null && deadlineDays > 0 && (
-                  <Text as="span" variant="bodySm" tone={deadlineUrgent ? "critical" : "subdued"}>
-                    {deadlineUrgent
-                      ? `Deadline approaching \u2014 ${deadlineDays}d left`
-                      : `${deadlineDays} days to respond`}
-                  </Text>
-                )}
-              </InlineStack>
+              <Text as="p" variant="bodySm" tone="subdued">Status</Text>
+              <Badge tone={submitted ? "info" : "attention"}>
+                {submitted ? "Submitted" : "Not submitted"}
+              </Badge>
             </BlockStack>
 
-            <Button
-              variant="primary"
-              onClick={() => {
-                if (nextAction.targetTab !== undefined) {
-                  actions.setActiveTab(nextAction.targetTab);
-                  if (nextAction.targetField) actions.navigateToEvidence(nextAction.targetField);
-                } else {
-                  actions.setActiveTab(2);
-                }
-              }}
-            >
-              {nextAction.label}
-            </Button>
-          </InlineStack>
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" tone="subdued">Strength</Text>
+              <Badge tone={strengthTone(strengthKey)}>{strengthText}</Badge>
+            </BlockStack>
 
-          {signals.length > 0 && (
-            <Text as="p" variant="bodySm" tone="subdued">
-              {`Based on: ${signals.join(", ")}`}
-            </Text>
-          )}
-
-          {confidence === "Low" && (
-            <Banner tone="warning" hideIcon>
-              <Text as="p" variant="bodySm">
-                This case may require manual review before submission.
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" tone="subdued">Deadline</Text>
+              <Text
+                as="p"
+                variant="bodyMd"
+                fontWeight="semibold"
+                tone={!submitted && deadlineUrgent ? "critical" : undefined}
+              >
+                {submitted
+                  ? `Submitted ${formatDate(submittedAt)}`
+                  : deadlineDays !== null && deadlineDays > 0
+                    ? `${deadlineDays} day${deadlineDays === 1 ? "" : "s"} remaining`
+                    : deadlineDays !== null && deadlineDays <= 0
+                      ? "Overdue"
+                      : "No deadline set"}
               </Text>
-            </Banner>
-          )}
+            </BlockStack>
+          </div>
+
+          <Divider />
+
+          <Text as="p" variant="bodyMd">{recommendation}</Text>
+
+          {/* PRIMARY CTA — visually dominant */}
+          <InlineStack gap="300" blockAlign="center">
+            <div style={{ minWidth: 220 }}>
+              {submitted ? (
+                <Button
+                  variant="primary"
+                  size="large"
+                  url={shopifyAdminUrl ?? undefined}
+                  target="_blank"
+                  disabled={!shopifyAdminUrl}
+                >
+                  View in Shopify
+                </Button>
+              ) : (
+                <Button variant="primary" size="large" onClick={goToReview}>
+                  Submit to Shopify
+                </Button>
+              )}
+            </div>
+            {submitted ? (
+              <Button url={policiesUrl}>Improve for future cases</Button>
+            ) : (
+              <Button onClick={goToEvidence}>Edit evidence</Button>
+            )}
+          </InlineStack>
         </BlockStack>
       </Card>
 
-      {/* 2. CASE STRENGTH */}
-      <Card>
-        <BlockStack gap="200">
-          <InlineStack align="space-between" blockAlign="center">
-            <Text as="h3" variant="headingMd">Case strength</Text>
-            <Badge tone={strengthTone}>{strength}</Badge>
-          </InlineStack>
-
-          {/* Improvement actions — only if not strong */}
-          {caseStrength.overall !== "strong" && actionableMissing.length > 0 && (
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" fontWeight="semibold">
-                To strengthen your case:
-              </Text>
-              {actionableMissing.slice(0, 3).map((item) => (
-                <InlineStack key={item.field} gap="200" blockAlign="center">
-                  <Text as="p" variant="bodySm">
-                    {`\u2022 ${item.label}`}
+      {/* 2. HOW WE DEFEND THIS CASE */}
+      {defenseBullets.length > 0 && (
+        <Card>
+          <BlockStack gap="300">
+            <Text as="h2" variant="headingMd">How we defend this case</Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              The argument we are making to the issuing bank, in plain language.
+            </Text>
+            <BlockStack gap="200">
+              {defenseBullets.map((b) => (
+                <InlineStack key={b.id} gap="200" blockAlign="start" wrap={false}>
+                  <Text as="span" variant="bodyMd" tone={b.supported ? "success" : "subdued"}>
+                    {b.supported ? "\u2713" : "\u25CB"}
                   </Text>
-                  <Badge tone={item.priority === "critical" ? "attention" : undefined}>
-                    {item.priority === "critical" ? "Critical" : "Recommended"}
-                  </Badge>
+                  <Text as="p" variant="bodyMd">{b.title}</Text>
                 </InlineStack>
               ))}
             </BlockStack>
-          )}
+          </BlockStack>
+        </Card>
+      )}
 
-          {caseStrength.strengthReason && (
-            <Text as="p" variant="bodySm" tone="subdued">
-              {caseStrength.strengthReason}
+      {/* 3. YOUR SUPPORTING EVIDENCE */}
+      <Card>
+        <BlockStack gap="300">
+          <Text as="h2" variant="headingMd">Your supporting evidence</Text>
+
+          {presentItems.length === 0 && missingChecklist.length === 0 && (
+            <Text as="p" variant="bodyMd" tone="subdued">
+              No evidence collected yet. Generate or build the evidence pack to begin.
             </Text>
           )}
-        </BlockStack>
-      </Card>
 
-      {/* 3. CLAIMS BREAKDOWN */}
-      {supportedClaims.length > 0 && (
-        <Card>
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">Claims</Text>
-            {supportedClaims.map((claim) => (
-              <InlineStack key={claim.id} gap="200" blockAlign="center" wrap>
-                <Text as="span" variant="bodySm" tone="success">{"\u2714"}</Text>
-                <Text as="span" variant="bodyMd">{claim.title}</Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {`\u2014 ${claim.supporting.map(s => s.label).join(", ")}`}
-                </Text>
-              </InlineStack>
-            ))}
-            {/* Show missing claims only as actionable gaps, not as failures */}
-            {missingChecklist.length > 0 && (
-              <>
-                {missingChecklist.slice(0, 2).map((item) => (
-                  <InlineStack key={item.field} gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodySm" tone="caution">{"\u2716"}</Text>
-                    <Text as="span" variant="bodyMd" tone="subdued">{item.label}</Text>
-                    <Text as="span" variant="bodySm" tone="subdued">{"\u2014 not added yet"}</Text>
+          {presentItems.map((item) => {
+            const strong = item.strength === "strong";
+            return (
+              <div
+                key={item.field}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderLeft: `4px solid ${strong ? "#16a34a" : "#d97706"}`,
+                  borderRadius: 8,
+                  padding: 12,
+                }}
+              >
+                <BlockStack gap="100">
+                  <InlineStack gap="200" blockAlign="center" wrap>
+                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
+                    <Badge tone="success">Included</Badge>
+                    <Badge tone={strong ? "success" : "warning"}>
+                      {strong ? "Strong" : "Moderate"}
+                    </Badge>
                   </InlineStack>
-                ))}
-              </>
-            )}
-          </BlockStack>
-        </Card>
-      )}
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
+                  </Text>
+                </BlockStack>
+              </div>
+            );
+          })}
 
-      {/* 4. EVIDENCE SUMMARY */}
+          {missingChecklist.map((item) => {
+            const critical = item.priority === "critical";
+            return (
+              <div
+                key={item.field}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderLeft: `4px solid ${critical ? "#dc2626" : "#9ca3af"}`,
+                  borderRadius: 8,
+                  padding: 12,
+                }}
+              >
+                <BlockStack gap="100">
+                  <InlineStack gap="200" blockAlign="center" wrap>
+                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
+                    <Badge tone={critical ? "critical" : undefined}>Missing</Badge>
+                    <Badge tone={critical ? "critical" : "warning"}>
+                      {critical ? "Weak without it" : "Helpful"}
+                    </Badge>
+                  </InlineStack>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}
+                  </Text>
+                  {!submitted && (
+                    <div>
+                      <Button
+                        size="slim"
+                        onClick={() => actions.navigateToEvidence(item.field)}
+                      >
+                        Add this evidence
+                      </Button>
+                    </div>
+                  )}
+                </BlockStack>
+              </div>
+            );
+          })}
+        </BlockStack>
+      </Card>
+
+      {/* 4. WHAT SHOPIFY WILL RECEIVE */}
       <Card>
-        <BlockStack gap="200">
-          <Text as="h3" variant="headingMd">Evidence</Text>
-          {presentItems.length > 0 && (
+        <BlockStack gap="300">
+          <Text as="h2" variant="headingMd">What Shopify will receive</Text>
+
+          <BlockStack gap="100">
+            <Text as="p" variant="bodySm" tone="subdued">Defense summary</Text>
+            <Text as="p" variant="bodyMd">{summaryText}</Text>
+          </BlockStack>
+
+          <InlineStack gap="400" wrap>
             <BlockStack gap="100">
-              <Text as="p" variant="bodySm" fontWeight="semibold" tone="success">Supporting</Text>
-              <InlineStack gap="200" wrap>
-                {presentItems.map((item) => (
-                  <Badge key={item.field} tone="success">{item.label}</Badge>
-                ))}
-              </InlineStack>
+              <Text as="p" variant="bodySm" tone="subdued">Evidence items</Text>
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                {`${includedFieldCount} item${includedFieldCount === 1 ? "" : "s"} attached`}
+              </Text>
             </BlockStack>
-          )}
-          {missingChecklist.length > 0 && (
             <BlockStack gap="100">
-              <Text as="p" variant="bodySm" fontWeight="semibold" tone="caution">Can be added</Text>
-              <InlineStack gap="200" wrap>
-                {missingChecklist.map((item) => (
-                  <Badge key={item.field}>{item.label}</Badge>
+              <Text as="p" variant="bodySm" tone="subdued">Format</Text>
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                Letter + structured Shopify fields
+              </Text>
+            </BlockStack>
+          </InlineStack>
+
+          {keyHighlights.length > 0 && (
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" tone="subdued">Key highlights</Text>
+              <BlockStack gap="050">
+                {keyHighlights.map((h) => (
+                  <Text key={h} as="p" variant="bodyMd">{`\u2022 ${h}`}</Text>
                 ))}
-              </InlineStack>
+              </BlockStack>
             </BlockStack>
           )}
         </BlockStack>
       </Card>
 
-      {/* 5. NEXT BEST ACTION */}
-      {nextAction.severity !== "info" && (
+      {/* 5. EVIDENCE BY CATEGORY */}
+      {categories.length > 0 && (
         <Card>
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">Best next step</Text>
-            <Text as="p" variant="bodyMd">{nextAction.description}</Text>
-            <Button
-              size="slim"
-              onClick={() => {
-                if (nextAction.targetTab !== undefined) {
-                  actions.setActiveTab(nextAction.targetTab);
-                  if (nextAction.targetField) actions.navigateToEvidence(nextAction.targetField);
-                }
-              }}
-            >
-              {nextAction.label}
-            </Button>
-          </BlockStack>
-        </Card>
-      )}
+          <BlockStack gap="300">
+            <Text as="h2" variant="headingMd">Evidence by category</Text>
+            <ProgressBar
+              progress={coveragePct}
+              tone={strengthKey === "strong" ? "success" : strengthKey === "moderate" ? "primary" : "critical"}
+              size="small"
+            />
+            <Text as="p" variant="bodySm" tone="subdued">
+              {`${presentItems.length} of ${totalEvidenceShown} addable items collected`}
+            </Text>
 
-      {/* 6. SUBMISSION MAPPING */}
-      <Card>
-        <BlockStack gap="100">
-          <Text as="h3" variant="headingMd">Submission</Text>
-          <Text as="p" variant="bodySm" tone="subdued">
-            This will be submitted as:
-          </Text>
-          <Text as="p" variant="bodyMd" fontWeight="semibold">
-            {`"${positionLabel}"`}
-          </Text>
-        </BlockStack>
-      </Card>
-
-      {/* 7. EVIDENCE PROGRESS (tied to claims, no numeric %) */}
-      <Card>
-        <BlockStack gap="200">
-          <Text as="h3" variant="headingMd">Evidence by category</Text>
-          <ProgressBar
-            progress={presentItems.length > 0 ? Math.round((presentItems.length / (presentItems.length + missingChecklist.length)) * 100) : 0}
-            tone={caseStrength.overall === "strong" ? "success" : "critical"}
-            size="small"
-          />
-          {categories.length > 0 && (
-            <InlineStack gap="200" wrap>
+            <BlockStack gap="200">
               {categories.map((cat) => {
-                const allAvailable = cat.items.every(i => i.status === "available" || i.status === "waived");
-                const hasMissing = cat.items.some(i => i.status === "missing" && (i.collectionType === "manual" || !i.collectionType));
-                if (cat.items.every(i => i.status === "unavailable")) return null;
+                const visible = cat.items.filter(
+                  (i) => i.status !== "unavailable",
+                );
+                if (visible.length === 0) return null;
+                const present = visible.filter((i) => i.status === "available" || i.status === "waived");
+                const missingActionable = visible.filter(
+                  (i) =>
+                    i.status === "missing" &&
+                    (i.collectionType === "manual" || !i.collectionType),
+                );
+                const allCovered = missingActionable.length === 0 && present.length > 0;
+                const tone = allCovered
+                  ? "success"
+                  : missingActionable.some((m) => m.priority === "critical")
+                    ? "critical"
+                    : "warning";
+
+                const suggestion = missingActionable[0]
+                  ? `Missing ${missingActionable[0].label.toLowerCase()} \u2014 ${
+                      WHY_EVIDENCE_MATTERS[missingActionable[0].field] ??
+                      CATEGORY_FIX_HINT[cat.category.key] ??
+                      "would strengthen this category."
+                    }`
+                  : null;
+
                 return (
-                  <Badge
+                  <div
                     key={cat.category.key}
-                    tone={allAvailable ? "success" : hasMissing ? "attention" : undefined}
+                    style={{
+                      borderLeft: `3px solid ${
+                        tone === "success" ? "#16a34a" : tone === "critical" ? "#dc2626" : "#d97706"
+                      }`,
+                      paddingLeft: 12,
+                    }}
                   >
-                    {`${allAvailable ? "\u2713" : hasMissing ? "\u2022" : "\u2014"} ${cat.category.label}`}
-                  </Badge>
+                    <BlockStack gap="100">
+                      <InlineStack gap="200" blockAlign="center" wrap>
+                        <Text as="span" variant="bodyMd" fontWeight="semibold">
+                          {cat.category.label}
+                        </Text>
+                        <Badge tone={tone}>
+                          {`${present.length}/${visible.length}`}
+                        </Badge>
+                      </InlineStack>
+                      {suggestion && !submitted && (
+                        <InlineStack gap="200" blockAlign="center" wrap>
+                          <Text as="p" variant="bodySm" tone="subdued">{suggestion}</Text>
+                          <Button
+                            size="micro"
+                            onClick={() =>
+                              actions.navigateToEvidence(missingActionable[0].field)
+                            }
+                          >
+                            Fix
+                          </Button>
+                        </InlineStack>
+                      )}
+                    </BlockStack>
+                  </div>
                 );
               })}
-            </InlineStack>
-          )}
-        </BlockStack>
-      </Card>
-
-      {/* Case summary (compact) */}
-      <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "8px" }}>
-          <div>
-            <Text as="p" variant="bodySm" tone="subdued">Order</Text>
-            <Text as="p" variant="bodyMd">{dispute.orderName || "\u2014"}</Text>
-          </div>
-          <div>
-            <Text as="p" variant="bodySm" tone="subdued">Amount</Text>
-            <Text as="p" variant="bodyMd">{`${dispute.currency} ${dispute.amount}`}</Text>
-          </div>
-          <div>
-            <Text as="p" variant="bodySm" tone="subdued">Customer</Text>
-            <Text as="p" variant="bodyMd">{dispute.customerName || "\u2014"}</Text>
-          </div>
-          <div>
-            <Text as="p" variant="bodySm" tone="subdued">Type</Text>
-            <Text as="p" variant="bodyMd">{caseTypeInfo.disputeType}</Text>
-          </div>
-        </div>
-      </Card>
+            </BlockStack>
+          </BlockStack>
+        </Card>
+      )}
     </BlockStack>
   );
 }

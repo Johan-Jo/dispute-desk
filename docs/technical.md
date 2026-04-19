@@ -593,6 +593,19 @@ The dispute detail page (`/app/disputes/:id`) is a **unified tabbed workspace** 
 
 **Key feature:** Argument map claims are clickable — clicking an evidence badge switches to the Evidence tab, expands the correct category, scrolls to the item, and highlights it.
 
+### Overview tab structure (recommendation engine)
+
+The Overview tab is structured as a **decision-oriented recommendation engine**, not a dashboard. It answers three questions only: *what is this page for, what is the current state, what should the user do next.* Sections, in order:
+
+1. **Page header** — `"Review your defense before submitting to Shopify"` when the pack has not been saved to Shopify, or `"Your defense has been submitted to Shopify"` after submission. Lives inside `OverviewTab` itself; the Polaris `Page` title (order + amount + deadline) remains as wayfinding.
+2. **Case status card** (top priority) — single block with four facts: status badge (Submitted / Not submitted), strength badge (Strong / Moderate / Weak), deadline (`X days remaining` or `Submitted on <date>`), and a single recommendation sentence that names the next concrete move (e.g., "You can submit, but adding delivery confirmation would meaningfully improve your odds."). The primary CTA lives in this card and is visually dominant: **Submit to Shopify** (→ Review & Submit tab) + **Edit evidence** (→ Evidence tab) when not submitted; **View in Shopify** (deep link to `admin/payments/dispute_evidences/:id`) + **Improve for future cases** (→ `/app/policies`) once submitted.
+3. **How we defend this case** — counterclaim titles from `argumentMap` rendered as plain-language bullets with a check (supported) or hollow circle (no supporting evidence). Replaces the prior "Claims" section.
+4. **Your supporting evidence** — one row per checklist item with three signals: status badge (Included / Missing), strength badge (Strong / Moderate / Weak without it / Helpful), and a one-sentence "why it matters" pulled from a per-field map. Missing items expose an inline "Add this evidence" button that jumps to the Evidence tab focused on the field.
+5. **What Shopify will receive** — replaces the prior "Submission" section. Surfaces the rebuttal summary, the count of attached evidence items (from `submissionFields`), and the top three present-evidence labels as "key highlights."
+6. **Evidence by category** — keeps the coverage progress bar and adds a per-category fix line ("Missing delivery confirmation — confirms the customer received the package, the strongest defense against 'not received' claims.") with an inline "Fix" button on any category that still has critical/recommended gaps.
+
+Rule: every section must explain *why* something matters and guide the user toward the next action. No raw scores, no system jargon, no generic dashboard phrasing.
+
 ### Language requirement (English-only submission)
 
 All evidence submitted to Shopify must be in English. This includes:
