@@ -248,6 +248,11 @@ export interface DerivedState {
   nextAction: NextAction;
   isReadOnly: boolean;
   isBuilding: boolean;
+  /** True when the build itself failed (system error), distinct from
+   *  evidence gaps. UIs should render a system-error banner and skip
+   *  the normal evidence-analysis surfaces. */
+  isFailed: boolean;
+  failureCode: string | null;
 }
 
 export function useDisputeWorkspace(disputeId: string) {
@@ -530,6 +535,8 @@ export function useDisputeWorkspace(disputeId: string) {
         nextAction: { label: "Loading...", description: "", severity: "info" },
         isReadOnly: false,
         isBuilding: false,
+        isFailed: false,
+        failureCode: null,
       };
     }
 
@@ -597,6 +604,8 @@ export function useDisputeWorkspace(disputeId: string) {
       nextAction,
       isReadOnly: (isSaved ?? false) || clientState.justSubmitted,
       isBuilding: pack?.status === "queued" || pack?.status === "building",
+      isFailed: pack?.status === "failed",
+      failureCode: pack?.failureCode ?? null,
     };
   })();
 

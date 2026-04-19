@@ -58,6 +58,10 @@ export interface WorkspacePack {
   pdfPath: string | null;
   savedToShopifyAt: string | null;
   activeBuildJob: { id: string; status: string } | null;
+  /** Machine-readable failure code, set when status === "failed". */
+  failureCode: string | null;
+  /** Internal full error text. Never render directly to merchants. */
+  failureReason: string | null;
 }
 
 export interface CaseTypeInfo {

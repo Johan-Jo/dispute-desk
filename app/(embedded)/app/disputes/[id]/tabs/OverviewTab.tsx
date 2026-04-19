@@ -8,6 +8,7 @@ import {
   Text,
   Badge,
   Button,
+  Banner,
   ProgressBar,
   Divider,
   Collapsible,
@@ -171,6 +172,24 @@ function formatAddress(
   return parts.length > 0 ? parts.join(", ") : "\u2014";
 }
 
+/**
+ * Merchant-safe copy for system failure codes. The internal
+ * failure_reason from the pack record is never rendered directly.
+ */
+const FAILURE_COPY: Record<string, { title: string; body: string }> = {
+  order_fetch_failed: {
+    title: "We couldn\u2019t retrieve the Shopify order data",
+    body:
+      "This pack couldn\u2019t be built because we weren\u2019t able to load the underlying order from Shopify. " +
+      "This is a system issue on our end \u2014 not missing evidence on yours.",
+  },
+};
+
+const FAILURE_FALLBACK = {
+  title: "We couldn\u2019t finish building this pack",
+  body: "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue.",
+};
+
 /** Calendar-day distance between an ISO timestamp and now (local time). */
 function calendarDaysSince(iso: string): number {
   const from = new Date(iso);
@@ -202,6 +221,81 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const { dispute, submissionFields, rebuttalDraft } = data;
   const orderPayload = extractOrderPayload(data.pack?.evidenceItems);
   const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
+
+  // System failure short-circuit. When the build itself failed (e.g.,
+  // Shopify order fetch failed), suppress the recommendation engine
+  // entirely. We still render the Case Summary above so the merchant
+  // sees what dispute they're looking at, but the Case Status / Defense
+  // / Evidence sections would be misleading on a build that never
+  // completed. Keep CTAs to "Retry build" only.
+  if (derived.isFailed) {
+    const copy = (derived.failureCode && FAILURE_COPY[derived.failureCode]) || FAILURE_FALLBACK;
+    return (
+      <BlockStack gap="500">
+        <Text as="h1" variant="headingXl">{copy.title}</Text>
+        <Card>
+          <BlockStack gap="300">
+            <Text as="h2" variant="headingSm" tone="subdued">Case summary</Text>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(180px, max-content) 1fr",
+                gap: "20px",
+                alignItems: "start",
+              }}
+            >
+              <BlockStack gap="050">
+                <Text as="p" variant="bodySm" tone="subdued">Amount at risk</Text>
+                <Text as="p" variant="heading2xl">
+                  {`${dispute.currency} ${dispute.amount}`}
+                </Text>
+              </BlockStack>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: "12px 24px",
+                }}
+              >
+                <BlockStack gap="050">
+                  <Text as="p" variant="bodySm" tone="subdued">Order</Text>
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {dispute.orderName || "\u2014"}
+                  </Text>
+                </BlockStack>
+                <BlockStack gap="050">
+                  <Text as="p" variant="bodySm" tone="subdued">Customer</Text>
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {dispute.customerName || "\u2014"}
+                  </Text>
+                </BlockStack>
+                <BlockStack gap="050">
+                  <Text as="p" variant="bodySm" tone="subdued">Dispute reason</Text>
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {merchantDisputeReasonLabel(dispute.reason)}
+                  </Text>
+                </BlockStack>
+              </div>
+            </div>
+          </BlockStack>
+        </Card>
+
+        <Banner tone="critical" title={copy.title}>
+          <BlockStack gap="300">
+            <Text as="p" variant="bodyMd">{copy.body}</Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              Try rebuilding. If it keeps failing, contact support and reference this dispute.
+            </Text>
+            <InlineStack gap="200">
+              <Button variant="primary" onClick={() => { void actions.generatePack(); }}>
+                Retry build
+              </Button>
+            </InlineStack>
+          </BlockStack>
+        </Banner>
+      </BlockStack>
+    );
+  }
 
   const submitted = isReadOnly;
   const submittedAt = data.pack?.savedToShopifyAt ?? null;

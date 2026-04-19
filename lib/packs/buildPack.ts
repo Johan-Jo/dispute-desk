@@ -44,6 +44,14 @@ function decryptAccessToken(encrypted: string): string {
   }
 }
 
+/**
+ * Machine-readable failure codes. Used by the merchant UI to map to
+ * safe copy. The internal `failure_reason` (full error text) is kept
+ * server-side and never rendered to merchants.
+ */
+export type PackFailureCode =
+  | "order_fetch_failed";
+
 export interface BuildResult {
   packId: string;
   status: "ready" | "failed";
@@ -51,6 +59,7 @@ export interface BuildResult {
   blockers: string[];
   sectionsCollected: number;
   itemsCreated: number;
+  failureCode: PackFailureCode | null;
 }
 
 export async function buildPack(
@@ -315,9 +324,15 @@ export async function buildPack(
     orderContext,
   );
 
-  // Packs are always "ready" after successful build. Blockers are
-  // metadata only — they gate auto-save, not pack creation.
-  const packStatus = "ready" as const;
+  // Pack status reflects whether the build itself succeeded as a
+  // *system operation*, not whether it has enough evidence:
+  //   - failed → upstream/system error (e.g., couldn't load the order
+  //     from Shopify). Evidence-gap UI is misleading here.
+  //   - ready → build completed; submission_readiness encodes whether
+  //     evidence is sufficient to submit.
+  const packStatus: "ready" | "failed" = orderFetchError ? "failed" : "ready";
+  const failureCode: PackFailureCode | null = orderFetchError ? "order_fetch_failed" : null;
+  const failureReason: string | null = orderFetchError ? orderFetchError.message : null;
 
   // Build the pack_json
   const packJson = {
@@ -342,7 +357,9 @@ export async function buildPack(
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 
-  // Update the pack row (dual-write: v1 checklist + v2 checklist)
+  // Update the pack row (dual-write: v1 checklist + v2 checklist).
+  // failure_code/failure_reason are written every time so a successful
+  // rebuild after a failure clears the prior failure markers.
   await sb
     .from("evidence_packs")
     .update({
@@ -354,6 +371,8 @@ export async function buildPack(
       recommended_actions: completenessV2.legacyRecommendedActions,
       checklist_v2: completenessV2.checklist,
       submission_readiness: completenessV2.submissionReadiness,
+      failure_code: failureCode,
+      failure_reason: failureReason,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);
@@ -365,5 +384,6 @@ export async function buildPack(
     blockers: completeness.blockers,
     sectionsCollected: allSections.length,
     itemsCreated,
+    failureCode,
   };
 }

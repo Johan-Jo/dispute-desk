@@ -161,6 +161,15 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
 
   if (error || !pack) throw new Error("Pack not found");
 
+  // System-level build failure (e.g., order fetch from Shopify failed):
+  // skip the auto-save gate entirely. Emitting "auto_save_blocked" here
+  // would mislead the merchant into thinking they need to add evidence
+  // when the real cause is upstream. The build job already emitted a
+  // PACK_BUILD_FAILED dispute event; nothing more to do.
+  if (pack.status === "failed") {
+    return { action: "block", details: "Pack build failed; skipping auto-save evaluation." };
+  }
+
   const settings = await getShopSettings(pack.shop_id);
 
   const gate = evaluateAutoSaveGate({

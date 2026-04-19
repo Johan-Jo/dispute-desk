@@ -211,6 +211,29 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/**
+ * Merchant-safe copy for system failure codes. The internal
+ * failure_reason is never rendered directly — we map the code to
+ * controlled wording here and keep the raw text in audit logs only.
+ */
+const FAILURE_COPY: Record<string, { title: string; body: string }> = {
+  order_fetch_failed: {
+    title: "We couldn\u2019t retrieve the Shopify order data",
+    body:
+      "This pack couldn\u2019t be built because we weren\u2019t able to load the underlying order from Shopify. " +
+      "This is a system issue on our end \u2014 not missing evidence on yours. " +
+      "Try rebuilding. If it keeps failing, contact support and reference this dispute.",
+  },
+};
+
+const FAILURE_FALLBACK = {
+  title: "We couldn\u2019t finish building this pack",
+  body:
+    "Something went wrong while assembling the evidence pack. " +
+    "This is a system issue, not a missing-evidence issue. " +
+    "Try rebuilding. If it keeps failing, contact support.",
+};
+
 /* ── Evidence Tab ── */
 
 export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
@@ -229,6 +252,34 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   }, [clientState.focusField, actions]);
 
   if (!data) return null;
+
+  // System failure short-circuit. When the build itself failed (e.g.,
+  // order fetch from Shopify failed), the rest of this tab — argument
+  // map, evidence categories, defense letter — is meaningless. Render
+  // a single banner that names the system-level cause and offers a
+  // retry. Never tell the merchant they're "missing evidence" when we
+  // never finished the build in the first place.
+  if (derived.isFailed) {
+    const copy = (derived.failureCode && FAILURE_COPY[derived.failureCode]) || FAILURE_FALLBACK;
+    return (
+      <BlockStack gap="400">
+        <Banner tone="critical" title={copy.title}>
+          <BlockStack gap="300">
+            <Text as="p" variant="bodyMd">{copy.body}</Text>
+            <InlineStack gap="200">
+              <Button
+                variant="primary"
+                loading={clientState.loading}
+                onClick={() => { void actions.generatePack(); }}
+              >
+                Retry build
+              </Button>
+            </InlineStack>
+          </BlockStack>
+        </Banner>
+      </BlockStack>
+    );
+  }
 
   const { argumentMap, rebuttalDraft } = data;
   const { categories, missingItems, whyWins } = derived;

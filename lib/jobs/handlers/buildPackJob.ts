@@ -45,55 +45,84 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       correlationId: job.id,
     });
 
+    const buildSucceeded = result.status === "ready";
+
     await logAuditEvent({
       shopId: job.shopId,
       packId,
       actorType: "system",
-      eventType: "pack_created",
+      eventType: buildSucceeded ? "pack_created" : "job_failed",
       eventPayload: {
         jobId: job.id,
         completenessScore: result.completenessScore,
         blockers: result.blockers,
         sectionsCollected: result.sectionsCollected,
         itemsCreated: result.itemsCreated,
+        ...(result.failureCode ? { failureCode: result.failureCode } : {}),
       },
     });
 
-    // Emit merchant-facing dispute event
+    // Emit merchant-facing dispute event. A system-level failure (e.g.,
+    // order fetch failed) emits PACK_BUILD_FAILED so the timeline tells
+    // the truth, instead of "Score 0%, 1 item collected" which reads as
+    // a merchant evidence gap.
     const { data: packRow } = await db
       .from("evidence_packs")
       .select("dispute_id")
       .eq("id", packId)
       .single();
     if (packRow?.dispute_id) {
-      void emitDisputeEvent({
-        disputeId: packRow.dispute_id,
-        shopId: job.shopId,
-        eventType: PACK_CREATED,
-        description: `Score: ${result.completenessScore}%, ${result.itemsCreated} evidence items collected`,
-        eventAt: new Date().toISOString(),
-        actorType: "disputedesk_system",
-        sourceType: "pack_engine",
-        metadataJson: {
-          pack_id: packId,
-          completeness_score: result.completenessScore,
-          items_created: result.itemsCreated,
-          blockers: result.blockers,
-        },
-        dedupeKey: `${packRow.dispute_id}:${PACK_CREATED}:${packId}`,
-      });
+      if (buildSucceeded) {
+        void emitDisputeEvent({
+          disputeId: packRow.dispute_id,
+          shopId: job.shopId,
+          eventType: PACK_CREATED,
+          description: `Score: ${result.completenessScore}%, ${result.itemsCreated} evidence items collected`,
+          eventAt: new Date().toISOString(),
+          actorType: "disputedesk_system",
+          sourceType: "pack_engine",
+          metadataJson: {
+            pack_id: packId,
+            completeness_score: result.completenessScore,
+            items_created: result.itemsCreated,
+            blockers: result.blockers,
+          },
+          dedupeKey: `${packRow.dispute_id}:${PACK_CREATED}:${packId}`,
+        });
+      } else {
+        void emitDisputeEvent({
+          disputeId: packRow.dispute_id,
+          shopId: job.shopId,
+          eventType: PACK_BUILD_FAILED,
+          description:
+            result.failureCode === "order_fetch_failed"
+              ? "Couldn\u2019t load order data from Shopify"
+              : "Pack build did not complete",
+          eventAt: new Date().toISOString(),
+          actorType: "disputedesk_system",
+          sourceType: "pack_engine",
+          metadataJson: {
+            pack_id: packId,
+            failure_code: result.failureCode,
+          },
+          dedupeKey: `${packRow.dispute_id}:${PACK_BUILD_FAILED}:${packId}`,
+        });
+      }
       void updateNormalizedStatus(packRow.dispute_id);
     }
 
-    // Automation: evaluate auto-save gate
-    await evaluateAndMaybeAutoSave(packId).catch(() => {
-      // Non-fatal: auto-save evaluation failure shouldn't fail the build
-    });
+    // Skip auto-save evaluation + manual-evidence email on a failed build:
+    // there is no merchant-actionable evidence path to recommend until the
+    // build is rerun successfully.
+    if (buildSucceeded) {
+      await evaluateAndMaybeAutoSave(packId).catch(() => {
+        // Non-fatal: auto-save evaluation failure shouldn't fail the build
+      });
 
-    // Send "manual evidence needed" email if the dispute type warrants it
-    await sendManualEvidenceAlert(db, job.shopId, packId).catch((err) => {
-      console.error("[buildPack] Evidence alert failed:", err);
-    });
+      await sendManualEvidenceAlert(db, job.shopId, packId).catch((err) => {
+        console.error("[buildPack] Evidence alert failed:", err);
+      });
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 

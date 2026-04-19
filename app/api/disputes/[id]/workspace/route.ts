@@ -143,6 +143,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         pdfPath: packRow.pdf_path ?? null,
         savedToShopifyAt: packRow.saved_to_shopify_at ?? null,
         activeBuildJob: buildJobRes.data ?? null,
+        // Surface system-failure metadata so the UI can render a
+        // system-error banner instead of misleading evidence-gap copy.
+        // failureReason is internal-only — the UI maps failureCode to
+        // safe merchant copy and never renders the raw reason.
+        failureCode: (packRow.failure_code as string | null) ?? null,
+        failureReason: (packRow.failure_reason as string | null) ?? null,
       }
     : null;
 

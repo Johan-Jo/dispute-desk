@@ -596,6 +596,23 @@ The dispute detail page (`/app/disputes/:id`) is a **unified tabbed workspace** 
 
 **DB tables:** `argument_maps` (dispute_id, pack_id, counterclaims jsonb, overall_strength), `rebuttal_drafts` (pack_id, sections jsonb, source), `submission_attempts` (full submission audit).
 
+### Pack status model — system failures vs evidence gaps
+
+`evidence_packs.status` reflects whether the build itself completed as a system operation, not whether evidence is sufficient:
+
+- **`failed`** — upstream/system error (e.g., couldn't load the order from Shopify). The merchant did nothing wrong. UI must render a system-error banner with a Retry CTA — never the evidence-gap surfaces.
+- **`ready`** — build completed; whether it can be submitted is encoded in `submission_readiness` (`ready` / `ready_with_warnings` / `blocked`).
+- **`saving`** / **`save_failed`** / **`saved_to_shopify`** — submission lifecycle.
+
+When a build fails, `evidence_packs.failure_code` (machine-readable, e.g. `order_fetch_failed`) and `evidence_packs.failure_reason` (internal full error text) are persisted. The merchant UI maps `failureCode` → safe copy via `FAILURE_COPY` in `OverviewTab.tsx` / `EvidenceTab.tsx`; `failureReason` is **never rendered** to merchants.
+
+Build pipeline contract (`lib/packs/buildPack.ts`, `lib/jobs/handlers/buildPackJob.ts`, `lib/automation/pipeline.ts`):
+
+1. `buildPack` sets `status = "failed"` + `failure_code` + `failure_reason` whenever the order fetch fails (caught error or null node returned by Shopify).
+2. `buildPackJob` emits `PACK_BUILD_FAILED` (not `PACK_CREATED`) on the dispute timeline when `result.status === "failed"`, so merchants see *"Couldn't load order data from Shopify"* rather than *"Score: 0%, 1 evidence items collected"*.
+3. `evaluateAndMaybeAutoSave` short-circuits on `pack.status === "failed"` and never emits `auto_save_blocked` — evidence-gap signals would be misleading on a build that never completed.
+4. `Retry build` is the merchant CTA in both Overview and Evidence tabs; it calls `actions.generatePack()` which `POST /api/disputes/:id/packs` (already filters `failed` packs out of the "active pack exists" check, so retries always create a fresh pack).
+
 **Key feature:** Argument map claims are clickable — clicking an evidence badge switches to the Evidence tab, expands the correct category, scrolls to the item, and highlights it.
 
 ### Overview tab structure (recommendation engine)
