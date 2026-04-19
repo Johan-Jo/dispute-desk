@@ -194,18 +194,29 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
   // period-scoped. A dispute opened 40 days ago that's now waiting on the
   // issuer must still count here even when the Performance overview is set
   // to "30 days".
-  const actionNeeded = (s.operationalBreakdown["action_needed"] ?? 0) + (s.operationalBreakdown["needs_review"] ?? 0);
+  // Freshly-synced `new` disputes still need merchant action (they haven't
+  // been normalized into needs_review/ready_to_submit/action_needed yet),
+  // so they belong in Action Needed — otherwise they're invisible to every tile.
+  const actionNeeded =
+    (s.operationalBreakdown["new"] ?? 0) +
+    (s.operationalBreakdown["action_needed"] ?? 0) +
+    (s.operationalBreakdown["needs_review"] ?? 0);
   const readyToSubmit = s.operationalBreakdown["ready_to_submit"] ?? 0;
   const waitingOnIssuer =
     (s.operationalBreakdown["waiting_on_issuer"] ?? 0) +
     (s.operationalBreakdown["submitted_to_bank"] ?? 0);
+
+  const actionNeededUrl = withShopParams(
+    "/app/disputes?normalized_status=new,action_needed,needs_review",
+    searchParams,
+  );
 
   // Primary CTA: action needed → ready to submit → view all
   let ctaLabel = t("dashboard.viewAllDisputes");
   let ctaUrl = withShopParams("/app/disputes", searchParams);
   if (actionNeeded > 0) {
     ctaLabel = t("dashboard.reviewActionNeeded", { count: actionNeeded });
-    ctaUrl = withShopParams("/app/disputes?normalized_status=action_needed,needs_review", searchParams);
+    ctaUrl = actionNeededUrl;
   } else if (readyToSubmit > 0) {
     ctaLabel = t("dashboard.submitReady", { count: readyToSubmit });
     ctaUrl = withShopParams("/app/disputes?normalized_status=ready_to_submit", searchParams);
@@ -232,7 +243,7 @@ function OperationalSummaryCard({ stats, loading }: { stats: DashboardStats; loa
               label={t("dashboard.actionNeeded")}
               count={actionNeeded}
               tone={actionNeeded > 0 ? "critical" : "subdued"}
-              url={withShopParams("/app/disputes?normalized_status=action_needed,needs_review", searchParams)}
+              url={actionNeededUrl}
             />
             <SummaryCounter
               label={t("dashboard.readyToSubmit")}
