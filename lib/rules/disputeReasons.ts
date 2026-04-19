@@ -61,6 +61,34 @@ export const DISPUTE_REASON_LABELS: Record<AllDisputeReasonCode, string> = {
   UNRECOGNIZED: "Unrecognized",
 };
 
+/**
+ * Merchant-facing labels for dispute reasons. Use in customer-visible
+ * UI (page titles, summaries, alerts). Plain English, not enum-style.
+ */
+export const MERCHANT_DISPUTE_REASON_LABELS: Record<AllDisputeReasonCode, string> = {
+  BANK_CANNOT_PROCESS: "Bank could not process",
+  CREDIT_NOT_PROCESSED: "Refund not processed",
+  CUSTOMER_INITIATED: "Customer-initiated dispute",
+  DEBIT_NOT_AUTHORIZED: "Debit not authorized",
+  DUPLICATE: "Duplicate charge",
+  FRAUDULENT: "Unauthorized transaction",
+  GENERAL: "General dispute",
+  INCORRECT_ACCOUNT_DETAILS: "Incorrect account details",
+  INSUFFICIENT_FUNDS: "Insufficient funds",
+  NONCOMPLIANT: "Noncompliant transaction",
+  PRODUCT_NOT_RECEIVED: "Item not received",
+  PRODUCT_UNACCEPTABLE: "Item not as described",
+  SUBSCRIPTION_CANCELED: "Subscription canceled",
+  UNRECOGNIZED: "Unrecognized charge",
+};
+
+/** Resolve a Shopify dispute reason to its merchant-facing label. */
+export function merchantDisputeReasonLabel(reason: string | null | undefined): string {
+  if (!reason) return "Dispute";
+  const key = reason.toUpperCase().replace(/\s+/g, "_") as AllDisputeReasonCode;
+  return MERCHANT_DISPUTE_REASON_LABELS[key] ?? "Dispute";
+}
+
 /** Family groupings for all 14 dispute reasons. */
 export const DISPUTE_REASON_FAMILIES: Record<AllDisputeReasonCode, string> = {
   BANK_CANNOT_PROCESS: "Technical",

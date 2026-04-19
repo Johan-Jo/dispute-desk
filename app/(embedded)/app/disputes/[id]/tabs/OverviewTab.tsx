@@ -12,6 +12,7 @@ import {
 } from "@shopify/polaris";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
+import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -269,6 +270,62 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   return (
     <BlockStack gap="500">
+      {/* CASE SUMMARY — what the dispute is */}
+      <Card>
+        <BlockStack gap="300">
+          <Text as="h2" variant="headingSm" tone="subdued">Case summary</Text>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(180px, max-content) 1fr",
+              gap: "20px",
+              alignItems: "start",
+            }}
+          >
+            <BlockStack gap="050">
+              <Text as="p" variant="bodySm" tone="subdued">Amount at risk</Text>
+              <Text as="p" variant="heading2xl">
+                {`${dispute.currency} ${dispute.amount}`}
+              </Text>
+            </BlockStack>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: "12px 24px",
+              }}
+            >
+              <BlockStack gap="050">
+                <Text as="p" variant="bodySm" tone="subdued">Order</Text>
+                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                  {dispute.orderName || "\u2014"}
+                </Text>
+              </BlockStack>
+              <BlockStack gap="050">
+                <Text as="p" variant="bodySm" tone="subdued">Customer</Text>
+                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                  {dispute.customerName || "\u2014"}
+                </Text>
+              </BlockStack>
+              <BlockStack gap="050">
+                <Text as="p" variant="bodySm" tone="subdued">Dispute reason</Text>
+                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                  {merchantDisputeReasonLabel(dispute.reason)}
+                </Text>
+              </BlockStack>
+              <BlockStack gap="050">
+                <Text as="p" variant="bodySm" tone="subdued">Submitted</Text>
+                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                  {submitted && submittedAt ? formatDate(submittedAt) : "Awaiting submission"}
+                </Text>
+              </BlockStack>
+            </div>
+          </div>
+        </BlockStack>
+      </Card>
+
       {/* PAGE HEADER */}
       <Text as="h1" variant="headingXl">
         {pageHeader}
