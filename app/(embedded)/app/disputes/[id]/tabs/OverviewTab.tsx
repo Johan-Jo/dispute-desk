@@ -119,6 +119,19 @@ function strengthTone(level: string): "success" | "warning" | "critical" {
   return "critical";
 }
 
+/** Map a Shopify dispute reason to the family id used by /app/rules. */
+function mapReasonToRulesFamily(reason: string | null | undefined): string {
+  if (!reason) return "general";
+  const key = reason.toUpperCase().replace(/\s+/g, "_");
+  if (key === "FRAUDULENT" || key === "UNRECOGNIZED") return "fraud";
+  if (key === "PRODUCT_NOT_RECEIVED") return "pnr";
+  if (key === "PRODUCT_UNACCEPTABLE" || key === "NOT_AS_DESCRIBED") return "not_as_described";
+  if (key === "SUBSCRIPTION_CANCELED") return "subscription";
+  if (key === "CREDIT_NOT_PROCESSED") return "refund";
+  if (key === "DUPLICATE") return "duplicate";
+  return "general";
+}
+
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
   const { data, derived, actions } = workspace;
@@ -161,7 +174,19 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       recommendation =
         "Recommendation: Monitor this case. Consider strengthening evidence for future disputes.";
     }
-    recommendationHelper = "The issuing bank typically responds within 30\u201375 days.";
+    if (submittedAt) {
+      const daysElapsed = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24)),
+      );
+      const dayLabel =
+        daysElapsed === 0
+          ? "submitted today"
+          : `${daysElapsed} day${daysElapsed === 1 ? "" : "s"} since submission`;
+      recommendationHelper = `${dayLabel}. The issuing bank typically responds within 30\u201375 days.`;
+    } else {
+      recommendationHelper = "The issuing bank typically responds within 30\u201375 days.";
+    }
   } else if (strengthKey === "strong") {
     recommendation =
       "Recommendation: Submit now \u2014 your evidence is strong enough to defend this charge.";
@@ -184,7 +209,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     dispute.disputeGid && dispute.shopDomain
       ? `https://${dispute.shopDomain}/admin/payments/dispute_evidences/${(dispute.disputeEvidenceGid ?? dispute.disputeGid).split("/").pop()}`
       : null;
-  const policiesUrl = withShopParams("/app/policies", searchParams);
+
+  // Post-submit secondary CTA — gated by what's actually missing in this case.
+  // Policy gaps win first (highest leverage: published policies auto-attach to
+  // every future pack); otherwise route to Automation Rules pre-filtered to
+  // this dispute's family; if nothing is missing, hide the CTA entirely.
+  const POLICY_FIELDS = ["refund_policy", "shipping_policy", "cancellation_policy"];
+  const missingPolicy = missingChecklist.find((m) => POLICY_FIELDS.includes(m.field));
+  const missingNonPolicy = missingChecklist.find((m) => !POLICY_FIELDS.includes(m.field));
+
+  let improveCta: { label: string; url: string } | null = null;
+  if (submitted) {
+    if (missingPolicy) {
+      improveCta = {
+        label: "Set up policies for future cases",
+        url: withShopParams("/app/policies", searchParams),
+      };
+    } else if (missingNonPolicy) {
+      const family = mapReasonToRulesFamily(dispute.reason);
+      improveCta = {
+        label: "Automate this for future cases",
+        url: withShopParams(`/app/rules?family=${family}`, searchParams),
+      };
+    }
+    // else nothing missing → no improvement CTA shown
+  }
 
   // Defense bullets — synthesized from present evidence so the language is direct and assertive.
   const defenseBullets = synthesizeDefenseBullets(presentFields);
@@ -290,7 +339,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               )}
             </div>
             {submitted ? (
-              <Button url={policiesUrl}>Improve for future cases</Button>
+              improveCta && <Button url={improveCta.url}>{improveCta.label}</Button>
             ) : (
               <Button onClick={goToEvidence}>Edit evidence</Button>
             )}
