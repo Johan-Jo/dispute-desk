@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Card,
   BlockStack,
@@ -9,6 +10,7 @@ import {
   Button,
   ProgressBar,
   Divider,
+  Collapsible,
 } from "@shopify/polaris";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
@@ -120,6 +122,55 @@ function strengthTone(level: string): "success" | "warning" | "critical" {
   return "critical";
 }
 
+/** Shape of the auto-collected Shopify order section. */
+interface OrderEvidencePayload {
+  orderId?: string;
+  orderName?: string;
+  createdAt?: string;
+  financialStatus?: string;
+  fulfillmentStatus?: string;
+  cancelledAt?: string | null;
+  lineItems?: Array<{
+    title?: string;
+    variant?: string | null;
+    quantity?: number;
+    total?: string;
+    currency?: string;
+    sku?: string | null;
+  }>;
+  totals?: {
+    subtotal?: string;
+    shipping?: string;
+    tax?: string;
+    discounts?: string;
+    total?: string;
+    refunded?: string;
+    currency?: string;
+  };
+  billingAddress?: { city?: string; provinceCode?: string; countryCode?: string; zipPrefix?: string | null } | null;
+  shippingAddress?: { city?: string; provinceCode?: string; countryCode?: string; zipPrefix?: string | null } | null;
+  customerTenure?: { totalOrders?: number; customerSince?: string } | null;
+}
+
+function extractOrderPayload(
+  evidenceItems: Array<{ type: string; payload: Record<string, unknown> }> | undefined,
+): OrderEvidencePayload | null {
+  if (!evidenceItems) return null;
+  // Pick the order section with line items (skips the refund-history sub-section).
+  const order = evidenceItems.find(
+    (e) => e.type === "order" && Array.isArray((e.payload as { lineItems?: unknown[] })?.lineItems),
+  );
+  return (order?.payload as OrderEvidencePayload | undefined) ?? null;
+}
+
+function formatAddress(
+  addr: OrderEvidencePayload["billingAddress"] | undefined,
+): string {
+  if (!addr) return "\u2014";
+  const parts = [addr.city, addr.provinceCode, addr.countryCode].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "\u2014";
+}
+
 /** Calendar-day distance between an ISO timestamp and now (local time). */
 function calendarDaysSince(iso: string): number {
   const from = new Date(iso);
@@ -144,10 +195,12 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
 
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const { data, derived, actions } = workspace;
   if (!data) return null;
 
   const { dispute, submissionFields, rebuttalDraft } = data;
+  const orderPayload = extractOrderPayload(data.pack?.evidenceItems);
   const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
 
   const submitted = isReadOnly;
@@ -323,6 +376,178 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </BlockStack>
             </div>
           </div>
+
+          {orderPayload && (
+            <>
+              <div>
+                <Button
+                  variant="plain"
+                  ariaExpanded={orderDetailsOpen}
+                  ariaControls="case-summary-order-details"
+                  disclosure={orderDetailsOpen ? "up" : "down"}
+                  onClick={() => setOrderDetailsOpen((v) => !v)}
+                >
+                  {orderDetailsOpen ? "Hide order details" : "Show order details"}
+                </Button>
+              </div>
+              <Collapsible
+                open={orderDetailsOpen}
+                id="case-summary-order-details"
+                transition={{ duration: "150ms", timingFunction: "ease-in-out" }}
+                expandOnPrint
+              >
+                <BlockStack gap="400">
+                  <Divider />
+
+                  {/* Line items */}
+                  {orderPayload.lineItems && orderPayload.lineItems.length > 0 && (
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodySm" tone="subdued" fontWeight="semibold">
+                        Items in this order
+                      </Text>
+                      <BlockStack gap="100">
+                        {orderPayload.lineItems.map((li, i) => {
+                          const subtitleParts = [
+                            li.variant,
+                            li.sku ? `SKU ${li.sku}` : null,
+                          ].filter(Boolean) as string[];
+                          return (
+                            <InlineStack
+                              key={`${li.title}-${i}`}
+                              gap="200"
+                              align="space-between"
+                              blockAlign="start"
+                              wrap={false}
+                            >
+                              <BlockStack gap="050">
+                                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                  {`${li.quantity ?? 1} \u00D7 ${li.title ?? "Item"}`}
+                                </Text>
+                                {subtitleParts.length > 0 && (
+                                  <Text as="p" variant="bodySm" tone="subdued">
+                                    {subtitleParts.join(" \u2022 ")}
+                                  </Text>
+                                )}
+                              </BlockStack>
+                              {li.total && (
+                                <Text as="p" variant="bodyMd">
+                                  {`${li.currency ?? orderPayload.totals?.currency ?? dispute.currency} ${li.total}`}
+                                </Text>
+                              )}
+                            </InlineStack>
+                          );
+                        })}
+                      </BlockStack>
+                    </BlockStack>
+                  )}
+
+                  {/* Totals */}
+                  {orderPayload.totals && (
+                    <>
+                      <Divider />
+                      <BlockStack gap="100">
+                        <Text as="p" variant="bodySm" tone="subdued" fontWeight="semibold">
+                          Order totals
+                        </Text>
+                        {([
+                          ["Subtotal", orderPayload.totals.subtotal],
+                          ["Shipping", orderPayload.totals.shipping],
+                          ["Tax", orderPayload.totals.tax],
+                          ["Discounts", orderPayload.totals.discounts],
+                          ["Refunded", orderPayload.totals.refunded],
+                        ] as Array<[string, string | undefined]>).map(([label, value]) => {
+                          if (!value || value === "0.00" || value === "0") return null;
+                          return (
+                            <InlineStack key={label} align="space-between" gap="200">
+                              <Text as="p" variant="bodySm" tone="subdued">{label}</Text>
+                              <Text as="p" variant="bodySm">
+                                {`${orderPayload.totals?.currency ?? dispute.currency} ${value}`}
+                              </Text>
+                            </InlineStack>
+                          );
+                        })}
+                        {orderPayload.totals.total && (
+                          <InlineStack align="space-between" gap="200">
+                            <Text as="p" variant="bodyMd" fontWeight="semibold">Total</Text>
+                            <Text as="p" variant="bodyMd" fontWeight="semibold">
+                              {`${orderPayload.totals.currency ?? dispute.currency} ${orderPayload.totals.total}`}
+                            </Text>
+                          </InlineStack>
+                        )}
+                      </BlockStack>
+                    </>
+                  )}
+
+                  {/* Order facts */}
+                  <Divider />
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: "12px 24px",
+                    }}
+                  >
+                    {orderPayload.createdAt && (
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodySm" tone="subdued">Order placed</Text>
+                        <Text as="p" variant="bodyMd">{formatDate(orderPayload.createdAt)}</Text>
+                      </BlockStack>
+                    )}
+                    {orderPayload.financialStatus && (
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodySm" tone="subdued">Payment status</Text>
+                        <Text as="p" variant="bodyMd">{orderPayload.financialStatus}</Text>
+                      </BlockStack>
+                    )}
+                    {orderPayload.fulfillmentStatus && (
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodySm" tone="subdued">Fulfillment</Text>
+                        <Text as="p" variant="bodyMd">{orderPayload.fulfillmentStatus}</Text>
+                      </BlockStack>
+                    )}
+                    {orderPayload.cancelledAt && (
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodySm" tone="subdued">Cancelled</Text>
+                        <Text as="p" variant="bodyMd">{formatDate(orderPayload.cancelledAt)}</Text>
+                      </BlockStack>
+                    )}
+                    {orderPayload.billingAddress && (
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodySm" tone="subdued">Billing</Text>
+                        <Text as="p" variant="bodyMd">{formatAddress(orderPayload.billingAddress)}</Text>
+                      </BlockStack>
+                    )}
+                    {orderPayload.shippingAddress && (
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodySm" tone="subdued">Shipping</Text>
+                        <Text as="p" variant="bodyMd">{formatAddress(orderPayload.shippingAddress)}</Text>
+                      </BlockStack>
+                    )}
+                    {orderPayload.customerTenure && (
+                      <>
+                        {typeof orderPayload.customerTenure.totalOrders === "number" && (
+                          <BlockStack gap="050">
+                            <Text as="p" variant="bodySm" tone="subdued">Customer total orders</Text>
+                            <Text as="p" variant="bodyMd">{orderPayload.customerTenure.totalOrders}</Text>
+                          </BlockStack>
+                        )}
+                        {orderPayload.customerTenure.customerSince && (
+                          <BlockStack gap="050">
+                            <Text as="p" variant="bodySm" tone="subdued">Customer since</Text>
+                            <Text as="p" variant="bodyMd">{formatDate(orderPayload.customerTenure.customerSince)}</Text>
+                          </BlockStack>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Pulled from Shopify order data. Address details are city-level only for privacy.
+                  </Text>
+                </BlockStack>
+              </Collapsible>
+            </>
+          )}
         </BlockStack>
       </Card>
 
