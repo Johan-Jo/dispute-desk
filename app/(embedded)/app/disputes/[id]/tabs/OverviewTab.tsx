@@ -119,6 +119,15 @@ function strengthTone(level: string): "success" | "warning" | "critical" {
   return "critical";
 }
 
+/** Calendar-day distance between an ISO timestamp and now (local time). */
+function calendarDaysSince(iso: string): number {
+  const from = new Date(iso);
+  const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.round((today.getTime() - fromDay.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
 /** Map a Shopify dispute reason to the family id used by /app/rules. */
 function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (!reason) return "general";
@@ -175,13 +184,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         "Recommendation: Monitor this case. Consider strengthening evidence for future disputes.";
     }
     if (submittedAt) {
-      const daysElapsed = Math.max(
-        0,
-        Math.floor((Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24)),
-      );
+      const daysElapsed = calendarDaysSince(submittedAt);
       const dayLabel =
         daysElapsed === 0
-          ? "submitted today"
+          ? "Submitted today"
           : `${daysElapsed} day${daysElapsed === 1 ? "" : "s"} since submission`;
       recommendationHelper = `${dayLabel}. The issuing bank typically responds within 30\u201375 days.`;
     } else {
