@@ -343,7 +343,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                 </Text>
                 {section.evidenceRefs.length > 0 && (
                   <InlineStack gap="100" wrap>
-                    {section.evidenceRefs.map((ref) => (
+                    {Array.from(new Set(section.evidenceRefs)).map((ref) => (
                       <span
                         key={ref}
                         className={`${styles.evidenceTag} ${styles.evidenceTagAvailable}`}

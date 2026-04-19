@@ -331,7 +331,7 @@ function paymentVerification(flags: EvidenceFlags, data: EvidenceData): Rebuttal
     type: "claim",
     claimId: "payment-verification",
     text,
-    evidenceRefs: [flags.avs ? "avs_cvv_match" : "", flags.cvv ? "avs_cvv_match" : ""].filter(Boolean),
+    evidenceRefs: (flags.avs || flags.cvv) ? ["avs_cvv_match"] : [],
   };
 }
 
