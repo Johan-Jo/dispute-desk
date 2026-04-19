@@ -23,31 +23,82 @@ const STRENGTH_LABEL: Record<string, string> = {
   insufficient: "Weak",
 };
 
+/** Outcome-driven, one-line "why it matters" per evidence field. */
 const WHY_EVIDENCE_MATTERS: Record<string, string> = {
-  order_confirmation: "Anchors the case — proves the order is real and tied to this customer.",
-  shipping_tracking: "Carrier records show the package left your hands.",
-  delivery_proof: "Confirms the customer received the package — the strongest defense against \u2018not received\u2019 claims.",
-  billing_address_match: "Ties the order to the cardholder\u2019s billing address — heavy weight in fraud cases.",
-  avs_cvv_match: "Bank security checks passed — banks weigh this heavily for fraud.",
-  product_description: "Shows the customer saw and accepted the product as advertised.",
-  refund_policy: "Proves the customer agreed to refund terms before purchase.",
-  shipping_policy: "Documents your shipping commitments for delivery timing disputes.",
-  cancellation_policy: "Proves the customer was informed of cancellation rules.",
-  customer_communication: "Banks favor merchants who try to resolve issues directly.",
-  duplicate_explanation: "Required to prove the charges are not duplicates.",
-  supporting_documents: "Extra proof that strengthens the overall case.",
-  activity_log: "Customer history that shows legitimate ongoing engagement.",
+  order_confirmation: "Confirms a real, fully recorded transaction tied to this customer.",
+  shipping_tracking: "Carrier records confirm the order left your warehouse.",
+  delivery_proof: "Delivery confirmed \u2014 the strongest defense against \u2018not received\u2019 claims.",
+  billing_address_match: "Billing matches the cardholder\u2019s address \u2014 heavy weight in fraud cases.",
+  avs_cvv_match: "Security checks passed \u2014 strong indicator of legitimate cardholder use.",
+  product_description: "Product was advertised exactly as delivered.",
+  refund_policy: "Customer agreed to refund terms before purchase.",
+  shipping_policy: "Shipping commitments were clearly disclosed before purchase.",
+  cancellation_policy: "Cancellation rules were disclosed before purchase.",
+  customer_communication: "Order timeline shows ongoing legitimate engagement with the customer.",
+  duplicate_explanation: "Documents that the charges are distinct, not duplicates.",
+  supporting_documents: "Additional proof reinforcing the overall defense.",
+  activity_log: "Purchase history shows a legitimate, repeat customer pattern.",
 };
 
 const CATEGORY_FIX_HINT: Record<string, string> = {
   order: "Confirm the order record is synced from Shopify.",
-  payment: "Verify the gateway returned AVS/CVV results — strong fraud defense.",
+  payment: "Pull AVS/CVV results from the payment gateway \u2014 strong fraud defense.",
   fulfillment: "Add tracking and delivery confirmation \u2014 reduces win probability when missing.",
   communication: "Attach customer messages or replies \u2014 banks reward engagement.",
   policy: "Publish or upload your store policies so they can be referenced.",
   identity: "Pull customer purchase history to show legitimate activity.",
   merchant: "Upload product listings or supporting documents to round out the case.",
 };
+
+/**
+ * Synthesize assertive defense bullets from the present evidence.
+ * Each rule fires only when its supporting fields are actually included.
+ */
+interface DefenseRule {
+  any: string[];
+  all?: string[];
+  bullet: string;
+}
+
+const DEFENSE_RULES: DefenseRule[] = [
+  { any: ["avs_cvv_match"], bullet: "Payment verification checks passed (AVS/CVV)" },
+  { any: ["billing_address_match"], bullet: "Billing address matches the cardholder on file" },
+  { any: ["delivery_proof", "shipping_tracking"], bullet: "Order was successfully fulfilled and delivered" },
+  { any: ["activity_log"], bullet: "Customer behavior matches previous legitimate purchases" },
+  { any: ["customer_communication"], bullet: "Customer was actively engaged through the order timeline" },
+  { any: ["product_description"], bullet: "Product was advertised exactly as delivered" },
+  { any: ["refund_policy", "shipping_policy", "cancellation_policy"], bullet: "Store policies were clearly disclosed at purchase" },
+  { any: ["duplicate_explanation"], bullet: "Each charge is documented as a distinct, separate transaction" },
+];
+
+function synthesizeDefenseBullets(presentFields: Set<string>): string[] {
+  const bullets: string[] = [];
+  for (const rule of DEFENSE_RULES) {
+    if (rule.any.some((f) => presentFields.has(f))) bullets.push(rule.bullet);
+  }
+  return bullets;
+}
+
+/** Top-level highlight statements for "What Shopify will receive". */
+interface HighlightRule {
+  fields: string[];
+  text: string;
+}
+
+const HIGHLIGHT_RULES: HighlightRule[] = [
+  { fields: ["avs_cvv_match", "billing_address_match"], text: "Payment verification passed" },
+  { fields: ["shipping_tracking", "delivery_proof"], text: "Order fulfilled and delivered" },
+  { fields: ["customer_communication", "activity_log"], text: "Customer actively participated" },
+  { fields: ["refund_policy", "shipping_policy", "cancellation_policy"], text: "Policies were disclosed at purchase" },
+];
+
+function synthesizeHighlights(presentFields: Set<string>): string[] {
+  const highlights: string[] = [];
+  for (const rule of HIGHLIGHT_RULES) {
+    if (rule.fields.some((f) => presentFields.has(f))) highlights.push(rule.text);
+  }
+  return highlights;
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return "\u2014";
@@ -73,7 +124,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const { data, derived, actions } = workspace;
   if (!data) return null;
 
-  const { dispute, argumentMap, rebuttalDraft, submissionFields } = data;
+  const { dispute, submissionFields } = data;
   const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
 
   const submitted = isReadOnly;
@@ -91,6 +142,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const missingChecklist = effectiveChecklist.filter(
     (c) => c.status === "missing" && (c.collectionType === "manual" || !c.collectionType),
   );
+  const presentFields = new Set(presentItems.map((p) => p.field));
 
   const totalEvidenceShown = presentItems.length + missingChecklist.length;
   const coveragePct =
@@ -98,22 +150,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       ? Math.round((presentItems.length / totalEvidenceShown) * 100)
       : 0;
 
-  // Recommendation sentence — single, decision-oriented.
+  // Recommendation line + helper.
   let recommendation: string;
+  let recommendationHelper: string | null = null;
   if (submitted) {
-    recommendation = `Your evidence pack was sent to Shopify on ${formatDate(submittedAt)}. The issuing bank typically responds within 30\u201375 days.`;
+    if (strengthKey === "strong" || strengthKey === "moderate") {
+      recommendation =
+        "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.";
+    } else {
+      recommendation =
+        "Recommendation: Monitor this case. Consider strengthening evidence for future disputes.";
+    }
+    recommendationHelper = "The issuing bank typically responds within 30\u201375 days.";
   } else if (strengthKey === "strong") {
-    recommendation = "Submit now \u2014 your evidence is strong enough to defend this charge.";
+    recommendation =
+      "Recommendation: Submit now \u2014 your evidence is strong enough to defend this charge.";
   } else if (strengthKey === "moderate") {
     const top = missingItems[0];
     recommendation = top
-      ? `You can submit, but adding ${top.label.toLowerCase()} would meaningfully improve your odds.`
-      : "You can submit now, but a small amount of additional evidence would improve your odds.";
+      ? `Recommendation: You can submit, but adding ${top.label.toLowerCase()} would meaningfully improve your odds.`
+      : "Recommendation: You can submit now, but a small amount of additional evidence would improve your odds.";
   } else {
     const top = missingItems[0];
     recommendation = top
-      ? `Add ${top.label.toLowerCase()} before submitting \u2014 the case is currently unlikely to win as-is.`
-      : "Strengthen the evidence before submitting \u2014 the case is currently unlikely to win as-is.";
+      ? `Recommendation: Add ${top.label.toLowerCase()} before submitting \u2014 the case is currently unlikely to win as-is.`
+      : "Recommendation: Strengthen the evidence before submitting \u2014 the case is currently unlikely to win as-is.";
   }
 
   // CTAs
@@ -125,19 +186,25 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       : null;
   const policiesUrl = withShopParams("/app/policies", searchParams);
 
-  // Defense bullets — plain language counterclaim titles, only those with support.
-  const defenseBullets = (argumentMap?.counterclaims ?? []).map((c) => ({
-    id: c.id,
-    title: c.title,
-    supported: c.supporting.length > 0,
-  }));
+  // Defense bullets — synthesized from present evidence so the language is direct and assertive.
+  const defenseBullets = synthesizeDefenseBullets(presentFields);
 
   // What Shopify will receive
   const includedFieldCount = submissionFields.filter((f) => f.included).length || presentItems.length;
-  const summaryText =
-    rebuttalDraft?.sections.find((s) => s.type === "summary")?.text?.trim() ||
-    "A structured response letter that maps your evidence to each issuer claim.";
-  const keyHighlights = presentItems.slice(0, 3).map((i) => i.label);
+  const summaryHighlights = synthesizeHighlights(presentFields);
+
+  // Coverage interpretation
+  const anyMissingCritical = missingChecklist.some((m) => m.priority === "critical");
+  const coverageInterpretation = (() => {
+    if (totalEvidenceShown === 0) return "No evidence has been collected yet.";
+    if (missingChecklist.length === 0) {
+      return "Coverage is complete. All required evidence categories are fully supported.";
+    }
+    if (anyMissingCritical) {
+      return "Coverage has critical gaps \u2014 see the categories below.";
+    }
+    return "Coverage is mostly complete \u2014 a few categories could be strengthened.";
+  })();
 
   // Page header
   const pageHeader = submitted
@@ -196,7 +263,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
           <Divider />
 
-          <Text as="p" variant="bodyMd">{recommendation}</Text>
+          <BlockStack gap="100">
+            <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendation}</Text>
+            {recommendationHelper && (
+              <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
+            )}
+          </BlockStack>
 
           {/* PRIMARY CTA — visually dominant */}
           <InlineStack gap="300" blockAlign="center">
@@ -231,16 +303,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         <Card>
           <BlockStack gap="300">
             <Text as="h2" variant="headingMd">How we defend this case</Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              The argument we are making to the issuing bank, in plain language.
+            <Text as="p" variant="bodyMd">
+              We are arguing that this transaction was legitimate based on:
             </Text>
             <BlockStack gap="200">
               {defenseBullets.map((b) => (
-                <InlineStack key={b.id} gap="200" blockAlign="start" wrap={false}>
-                  <Text as="span" variant="bodyMd" tone={b.supported ? "success" : "subdued"}>
-                    {b.supported ? "\u2713" : "\u25CB"}
-                  </Text>
-                  <Text as="p" variant="bodyMd">{b.title}</Text>
+                <InlineStack key={b} gap="200" blockAlign="start" wrap={false}>
+                  <Text as="span" variant="bodyMd" tone="success">{"\u2713"}</Text>
+                  <Text as="p" variant="bodyMd">{b}</Text>
                 </InlineStack>
               ))}
             </BlockStack>
@@ -332,10 +402,22 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">What Shopify will receive</Text>
 
-          <BlockStack gap="100">
-            <Text as="p" variant="bodySm" tone="subdued">Defense summary</Text>
-            <Text as="p" variant="bodyMd">{summaryText}</Text>
-          </BlockStack>
+          <Text as="p" variant="bodyMd">
+            This case demonstrates that the transaction was legitimate and properly verified.
+          </Text>
+
+          {summaryHighlights.length > 0 && (
+            <BlockStack gap="100">
+              {summaryHighlights.map((h) => (
+                <InlineStack key={h} gap="200" blockAlign="center" wrap={false}>
+                  <Text as="span" variant="bodyMd" tone="success">{"\u2713"}</Text>
+                  <Text as="p" variant="bodyMd">{h}</Text>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          )}
+
+          <Divider />
 
           <InlineStack gap="400" wrap>
             <BlockStack gap="100">
@@ -351,17 +433,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </Text>
             </BlockStack>
           </InlineStack>
-
-          {keyHighlights.length > 0 && (
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Key highlights</Text>
-              <BlockStack gap="050">
-                {keyHighlights.map((h) => (
-                  <Text key={h} as="p" variant="bodyMd">{`\u2022 ${h}`}</Text>
-                ))}
-              </BlockStack>
-            </BlockStack>
-          )}
         </BlockStack>
       </Card>
 
@@ -370,6 +441,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         <Card>
           <BlockStack gap="300">
             <Text as="h2" variant="headingMd">Evidence by category</Text>
+
+            <Text as="p" variant="bodyMd" fontWeight="semibold">
+              {coverageInterpretation}
+            </Text>
+
             <ProgressBar
               progress={coveragePct}
               tone={strengthKey === "strong" ? "success" : strengthKey === "moderate" ? "primary" : "critical"}
