@@ -146,7 +146,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const { data, derived, actions } = workspace;
   if (!data) return null;
 
-  const { dispute, submissionFields } = data;
+  const { dispute, submissionFields, rebuttalDraft } = data;
   const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
 
   const submitted = isReadOnly;
@@ -247,6 +247,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // What Shopify will receive
   const includedFieldCount = submissionFields.filter((f) => f.included).length || presentItems.length;
   const summaryHighlights = synthesizeHighlights(presentFields);
+  const rebuttalSummary = rebuttalDraft?.sections.find((s) => s.type === "summary")?.text?.trim() || null;
 
   // Coverage interpretation
   const anyMissingCritical = missingChecklist.some((m) => m.priority === "critical");
@@ -469,6 +470,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   <Text as="p" variant="bodyMd">{h}</Text>
                 </InlineStack>
               ))}
+            </BlockStack>
+          )}
+
+          {rebuttalSummary && (
+            <BlockStack gap="100">
+              <Text as="p" variant="bodySm" tone="subdued">Defense summary (from the rebuttal letter)</Text>
+              <Text as="p" variant="bodyMd">{rebuttalSummary}</Text>
             </BlockStack>
           )}
 
