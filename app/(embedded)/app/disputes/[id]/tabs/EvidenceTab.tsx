@@ -260,43 +260,8 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   const summarySection = rebuttalDraft?.sections.find((s) => s.type === "summary");
   const summaryExcerpt = summarySection?.text?.trim() ?? null;
 
-  // State-aware action guidance. DisputeDesk submits to Shopify; Shopify
-  // then auto-submits to the issuing bank on the response deadline. The
-  // banner copy must reflect *which* submission stage applies.
-  const guidance: { tone: "success" | "warning" | "info" | "critical"; text: string } = (() => {
-    if (readOnly) {
-      if (strengthKey === "strong" || strengthKey === "moderate") {
-        return {
-          tone: "success",
-          text: "Your case has been submitted to Shopify and is ready for submission to the bank.",
-        };
-      }
-      return {
-        tone: "warning",
-        text: "Your case has been submitted to Shopify. Monitor for the bank\u2019s response \u2014 consider strengthening evidence for future disputes.",
-      };
-    }
-    if (strengthKey === "strong") {
-      return {
-        tone: "success",
-        text: "No action needed. Your case is ready for submission.",
-      };
-    }
-    return {
-      tone: "warning",
-      text: topGap
-        ? `Add ${friendlyLabel(topGap.field, topGap.label).toLowerCase()} to strengthen your case.`
-        : "Add the missing evidence to strengthen your case.",
-    };
-  })();
-
   return (
     <BlockStack gap="400">
-      {/* 0. ACTION GUIDANCE — state-aware banner above everything */}
-      <Banner tone={guidance.tone}>
-        <Text as="p" variant="bodyMd">{guidance.text}</Text>
-      </Banner>
-
       {/* 1. TOP SUMMARY — outcome + confidence + recommendation */}
       <Card>
         <BlockStack gap="400">
