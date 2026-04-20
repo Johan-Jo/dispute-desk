@@ -88,6 +88,56 @@ permission.
 Both stored in `shop_sessions` with encrypted access tokens (AES-256-GCM)
 and key versioning for rotation.
 
+### Session Token Exchange (iOS mobile app, managed install)
+
+The Shopify iOS mobile app (WKWebView) and modern Managed Installation do
+**not** use the traditional `/admin/oauth/authorize` redirect — WKWebView
+can't complete the redirect out of the embedded context, and managed
+install considers scopes already granted. Shopify instead hands the app a
+**Shopify session token** (`id_token` query param) on every embedded load:
+an HS256 JWT signed with the app's client secret, with `dest` naming the
+shop and `aud` equal to our client_id.
+
+Flow on first load (`/app?id_token=…&shop=…&host=…&embedded=1`):
+
+1. `middleware.ts` — no `shopify_shop` cookie but `id_token` is present
+   and looks well-formed → 307 to `/api/auth/shopify/token-exchange` with
+   `id_token`, `shop`, `host`, and `return_to` preserved. (Format check
+   only; edge runtime has no `crypto.createHmac` for the full verify.)
+2. `app/api/auth/shopify/token-exchange/route.ts` —
+   `verifySessionToken` (`lib/shopify/sessionToken.ts`) cryptographically
+   validates the JWT (HS256 HMAC, `aud`, `exp`/`nbf`, `dest` is a
+   `.myshopify.com` URL). On success, upserts the `shops` row and looks
+   up any existing offline session.
+3. If no offline session exists, `POST https://<shop>/admin/oauth/access_token`
+   with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`,
+   `subject_token=<id_token>`,
+   `subject_token_type=urn:ietf:params:oauth:token-type:id_token`,
+   `requested_token_type=urn:shopify:params:oauth:token-type:offline-access-token`.
+   Store the returned access token + scopes in `shop_sessions` (same
+   `storeSession` path the legacy callback uses). Dispute webhooks are
+   registered out-of-band.
+4. 307 back to the original `return_to` (default `/app`) with
+   `shopify_shop` + `shopify_shop_id` cookies set (SameSite=None, Secure,
+   Partitioned). Middleware then sees the cookie and passes the request
+   through normally.
+
+Failure on any step renders a small inline error HTML (401) instead of
+redirecting to `/app` — prevents a tight loop in mobile WebViews that
+would otherwise re-trigger the id_token branch on every retry.
+
+`lib/shopify/sessionToken.ts` exposes `verifySessionToken(token)` for
+use in API routes, and `looksLikeSessionToken(token)` for the edge
+middleware's crypto-free format check (also inlined in `middleware.ts`
+since edge can't import modules that pull in `crypto`). Unit-tested in
+`tests/unit/sessionToken.test.ts` (bad signature, wrong aud,
+expired/not-yet-valid, non-myshopify dest, malformed, missing secret).
+
+The legacy `/api/auth/shopify` OAuth flow remains as a fallback for any
+client that does not send an `id_token` (e.g. direct desktop re-auth
+after uninstall) — priority in middleware is id_token → grace marker →
+legacy OAuth.
+
 ### Embedded session cookies
 
 After Shopify OAuth, the callback sets `shopify_shop` and `shopify_shop_id`

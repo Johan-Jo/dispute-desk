@@ -11,6 +11,18 @@ import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 import { shopIdentityMatches } from "@/lib/middleware/shopMatch";
+
+/**
+ * Cheap format check (JWT = three non-empty base64url parts). Real
+ * crypto verification happens in /api/auth/shopify/token-exchange where
+ * the nodejs runtime has crypto.createHmac. Inlined here because edge
+ * middleware can't import modules that pull in `crypto`.
+ */
+function looksLikeSessionToken(token: string | null | undefined): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  return parts.length === 3 && parts.every((p) => p.length > 0);
+}
 import {
   enPrefixedHubPathRegex,
   hubPublicPathRegex,
@@ -332,8 +344,26 @@ export async function middleware(req: NextRequest) {
     const shopDomain = req.cookies.get("shopify_shop")?.value;
     const shopParam = req.nextUrl.searchParams.get("shop");
     const oauthInProgress = req.cookies.get("dd_oauth_in_progress")?.value;
+    const idTokenParam = req.nextUrl.searchParams.get("id_token");
 
     if (!shopDomain) {
+      // Preferred auth path for iOS Shopify mobile app and modern managed
+      // install: Shopify hands us an id_token (HS256 JWT) in the URL. We
+      // hand it to /api/auth/shopify/token-exchange which verifies it,
+      // trades it for a long-lived offline access token server-to-server,
+      // stores the session, sets cookies, and 307s back here. Keeps us
+      // out of the /admin/oauth/authorize redirect that iOS WebView can't
+      // complete. Cryptographic verification happens in the node route,
+      // not here (edge runtime has no crypto.createHmac).
+      if (looksLikeSessionToken(idTokenParam) && shopParam) {
+        const exchangeUrl = new URL("/api/auth/shopify/token-exchange", req.url);
+        exchangeUrl.searchParams.set("id_token", idTokenParam!);
+        exchangeUrl.searchParams.set("shop", shopParam);
+        if (hostParam) exchangeUrl.searchParams.set("host", hostParam);
+        exchangeUrl.searchParams.set("return_to", pathname + req.nextUrl.search);
+        return NextResponse.redirect(exchangeUrl);
+      }
+
       // Post-callback grace: the OAuth callback just set Set-Cookie headers
       // for shopify_shop, but the immediate iframe reload can land before
       // the browser commits those cookies (CHIPS/partitioned timing). Let
