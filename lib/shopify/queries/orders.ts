@@ -90,11 +90,6 @@ export const ORDER_DETAIL_QUERY = `
             }
           }
         }
-        riskAssessments {
-          riskLevel
-          provider { title }
-          facts { description sentiment }
-        }
         transactions(first: 10) {
           id
           kind
@@ -194,17 +189,6 @@ export interface CardPaymentDetails {
   wallet: string | null;
 }
 
-export interface RiskAssessmentFact {
-  description: string;
-  sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
-}
-
-export interface OrderRiskAssessment {
-  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "PENDING" | "NONE";
-  provider: { title: string } | null;
-  facts: RiskAssessmentFact[];
-}
-
 export interface OrderTransaction {
   id: string;
   kind: string;
@@ -248,7 +232,6 @@ export interface OrderDetailNode {
   fulfillments: OrderFulfillment[];
   refunds: OrderRefund[];
   transactions: OrderTransaction[];
-  riskAssessments: OrderRiskAssessment[];
   events: { edges: Array<{ node: OrderEventNode }> };
   customer: {
     numberOfOrders: string;

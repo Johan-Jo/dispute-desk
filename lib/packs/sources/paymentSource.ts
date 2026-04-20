@@ -1,10 +1,9 @@
 /**
- * Payment / AVS+CVV / card metadata / risk / IP evidence source collector.
+ * Payment / AVS+CVV / card metadata / IP evidence source collector.
  *
  * Reads the pre-fetched OrderDetailNode from ctx.order and extracts:
  * - Card payment verification (AVS, CVV) — only when CardPaymentDetails present
  * - Card metadata (BIN, network, wallet, cardholder name)
- * - Risk assessments (level + facts from Shopify or third-party fraud apps)
  * - Customer IP (from order.clientIp — may be null on many stores)
  *
  * AVS/CVV availability is CONDITIONAL on gateway and payment type.
@@ -14,7 +13,6 @@
 import type {
   OrderTransaction,
   CardPaymentDetails,
-  OrderRiskAssessment,
 } from "@/lib/shopify/queries/orders";
 import type { EvidenceSection, BuildContext } from "../types";
 
@@ -48,16 +46,6 @@ export interface CardEvidenceData {
   gateway: string;
 }
 
-export interface RiskEvidenceData {
-  [key: string]: unknown;
-  overallLevel: string;
-  assessments: Array<{
-    riskLevel: string;
-    provider: string | null;
-    facts: Array<{ description: string; sentiment: string }>;
-  }>;
-}
-
 export interface IpEvidenceData {
   [key: string]: unknown;
   ip: string;
@@ -75,10 +63,6 @@ export async function collectPaymentEvidence(
   // ── Card payment evidence ──
   const cardSection = collectCardEvidence(order.transactions);
   if (cardSection) sections.push(cardSection);
-
-  // ── Risk assessment evidence ──
-  const riskSection = collectRiskEvidence(order.riskAssessments);
-  if (riskSection) sections.push(riskSection);
 
   // ── IP evidence ──
   const ipSection = collectIpEvidence(order.clientIp);
@@ -153,41 +137,6 @@ function collectCardEvidence(
     label: "Payment Verification (AVS/CVV)",
     source: "shopify_transactions",
     fieldsProvided: ["avs_cvv_match"],
-    data,
-  };
-}
-
-function collectRiskEvidence(
-  riskAssessments: OrderRiskAssessment[] | undefined,
-): EvidenceSection | null {
-  if (!riskAssessments?.length) return null;
-
-  // Derive overall level: highest severity wins
-  const levelOrder = { NONE: 0, PENDING: 1, LOW: 2, MEDIUM: 3, HIGH: 4 };
-  let overallLevel = "NONE";
-  for (const ra of riskAssessments) {
-    if ((levelOrder[ra.riskLevel] ?? 0) > (levelOrder[overallLevel as keyof typeof levelOrder] ?? 0)) {
-      overallLevel = ra.riskLevel;
-    }
-  }
-
-  const data: RiskEvidenceData = {
-    overallLevel,
-    assessments: riskAssessments.map((ra) => ({
-      riskLevel: ra.riskLevel,
-      provider: ra.provider?.title ?? null,
-      facts: ra.facts.map((f) => ({
-        description: f.description,
-        sentiment: f.sentiment,
-      })),
-    })),
-  };
-
-  return {
-    type: "other",
-    label: "Fraud Risk Assessment",
-    source: "shopify_risk",
-    fieldsProvided: ["risk_analysis"],
     data,
   };
 }

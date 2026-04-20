@@ -934,7 +934,7 @@ alter table submission_attempts enable row level security;
       id: "fraud-1",
       title: "Transaction was verified by payment processor",
       requiredEvidence: ["avs_cvv_match", "billing_address_match"],
-      supportingEvidence: ["customer_ip", "risk_analysis"],
+      supportingEvidence: ["customer_ip"],
     },
     {
       id: "fraud-2",
@@ -1102,7 +1102,7 @@ const EVIDENCE_CATEGORIES = [
   { key: "fulfillment",   label: "Fulfillment & Delivery",      fields: ["shipping_tracking", "delivery_proof"] },
   { key: "communication", label: "Customer Communication",      fields: ["customer_communication"] },
   { key: "policy",        label: "Policies & Disclosures",      fields: ["refund_policy", "shipping_policy", "cancellation_policy"] },
-  { key: "identity",      label: "Customer Identity & History",  fields: ["activity_log", "customer_ip", "risk_analysis"] },
+  { key: "identity",      label: "Customer Identity & History",  fields: ["activity_log", "customer_ip"] },
   { key: "merchant",      label: "Merchant Evidence",            fields: ["supporting_documents", "product_description", "duplicate_explanation"] },
 ];
 
