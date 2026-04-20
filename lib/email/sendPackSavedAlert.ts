@@ -161,7 +161,7 @@ export async function sendPackSavedAlert(
       sb.from("shops").select("shop_domain").eq("id", ctx.shopId).single(),
       sb
         .from("disputes")
-        .select("dispute_gid")
+        .select("dispute_gid, dispute_evidence_gid")
         .eq("id", ctx.disputeId)
         .single(),
     ]);
@@ -171,10 +171,9 @@ export async function sendPackSavedAlert(
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
 
     const disputeUrl = getEmbeddedAppUrl(shopDomain || null, `disputes/${ctx.disputeId}`);
-    const shopifyUrl =
-      shopDomain && dispute?.dispute_gid
-        ? getShopifyDisputeUrl(shopDomain, dispute.dispute_gid)
-        : null;
+    const shopifyUrl = shopDomain
+      ? getShopifyDisputeUrl(shopDomain, dispute?.dispute_evidence_gid ?? null)
+      : null;
 
     const subject = `[DisputeDesk] ${s.subject({ reason, amount: amountStr })}`;
 

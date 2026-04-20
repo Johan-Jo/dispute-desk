@@ -16,6 +16,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
 import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
+import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -360,8 +361,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const goToReview = () => actions.setActiveTab(2);
   const goToEvidence = () => actions.setActiveTab(1);
   const shopifyAdminUrl =
-    dispute.disputeGid && dispute.shopDomain
-      ? `https://${dispute.shopDomain}/admin/payments/dispute_evidences/${(dispute.disputeEvidenceGid ?? dispute.disputeGid).split("/").pop()}`
+    dispute.shopDomain && dispute.disputeEvidenceGid
+      ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
       : null;
 
   // Post-submit secondary CTA — gated by what's actually missing in this case.

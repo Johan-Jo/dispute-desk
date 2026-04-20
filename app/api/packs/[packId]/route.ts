@@ -267,7 +267,7 @@ export async function GET(
 
   const { data: row, error } = await db
     .from("evidence_packs")
-    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid, phase, reason)")
+    .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid, dispute_evidence_gid, phase, reason)")
     .eq("id", packId)
     .single();
 
@@ -276,10 +276,11 @@ export async function GET(
       ? (row as { shop: { shop_domain?: string }[] }).shop[0]
       : (row as { shop?: { shop_domain?: string } }).shop;
     const disputeRow = Array.isArray((row as { dispute?: unknown }).dispute)
-      ? (row as { dispute: { dispute_gid?: string; phase?: string; reason?: string }[] }).dispute[0]
-      : (row as { dispute?: { dispute_gid?: string; phase?: string; reason?: string } }).dispute;
+      ? (row as { dispute: { dispute_gid?: string; dispute_evidence_gid?: string; phase?: string; reason?: string }[] }).dispute[0]
+      : (row as { dispute?: { dispute_gid?: string; dispute_evidence_gid?: string; phase?: string; reason?: string } }).dispute;
     const shop_domain = shop?.shop_domain ?? null;
     const dispute_gid = disputeRow?.dispute_gid ?? null;
+    const dispute_evidence_gid = disputeRow?.dispute_evidence_gid ?? null;
     const dispute_phase = disputeRow?.phase ?? null;
     const dispute_reason = disputeRow?.reason ?? null;
     const { shop: _shop, dispute: _dispute, ...pack } = row as typeof row & { shop?: unknown; dispute?: unknown };
@@ -374,6 +375,7 @@ export async function GET(
       ...pack,
       shop_domain,
       dispute_gid,
+      dispute_evidence_gid,
       dispute_phase,
       evidence_items: itemsRes.data ?? [],
       audit_events: auditRes.data ?? [],
@@ -423,6 +425,7 @@ export async function GET(
     created_by: null,
     shop_domain: shop_domain ?? null,
     dispute_gid: null,
+    dispute_evidence_gid: null,
     dispute_phase: null,
     evidence_items: [],
     audit_events: [],

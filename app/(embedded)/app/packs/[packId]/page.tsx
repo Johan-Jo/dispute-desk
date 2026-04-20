@@ -87,6 +87,7 @@ interface PackData {
   dispute_type?: string | null;
   shop_domain?: string | null;
   dispute_gid?: string | null;
+  dispute_evidence_gid?: string | null;
   dispute_phase?: string | null;
   status: string;
   completeness_score: number | null;
@@ -454,8 +455,8 @@ export default function PackPreviewPage() {
         : "—";
 
   const disputeUrl =
-    pack.shop_domain && pack.dispute_gid && pack.dispute_id
-      ? getShopifyDisputeUrl(pack.shop_domain, pack.dispute_gid)
+    pack.shop_domain && pack.dispute_evidence_gid && pack.dispute_id
+      ? getShopifyDisputeUrl(pack.shop_domain, pack.dispute_evidence_gid)
       : null;
 
   const backUrl = withShopParams(

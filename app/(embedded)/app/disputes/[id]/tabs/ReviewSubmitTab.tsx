@@ -15,6 +15,7 @@ import {
   Select,
   TextField,
 } from "@shopify/polaris";
+import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { SubmissionField } from "../workspace-components/types";
 
@@ -189,16 +190,21 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
               </BlockStack>
             </BlockStack>
 
-            {data.dispute.disputeGid && data.dispute.shopDomain && (
-              <Button
-                variant="primary"
-                fullWidth
-                url={`https://${data.dispute.shopDomain}/admin/payments/dispute_evidences/${(data.dispute.disputeEvidenceGid ?? data.dispute.disputeGid).split("/").pop()}`}
-                target="_blank"
-              >
-                Open in Shopify Admin
-              </Button>
-            )}
+            {(() => {
+              const url =
+                data.dispute.shopDomain && data.dispute.disputeEvidenceGid
+                  ? getShopifyDisputeUrl(
+                      data.dispute.shopDomain,
+                      data.dispute.disputeEvidenceGid,
+                    )
+                  : null;
+              if (!url) return null;
+              return (
+                <Button variant="primary" fullWidth url={url} target="_blank">
+                  Open in Shopify Admin
+                </Button>
+              );
+            })()}
           </BlockStack>
         </Card>
       ) : (
