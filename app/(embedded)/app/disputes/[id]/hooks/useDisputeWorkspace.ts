@@ -230,6 +230,9 @@ export interface WorkspaceClientState {
   showOverrideModal: boolean;
   saving: boolean;
   rendering: boolean;
+  /** In-flight flag for generatePack. Used to disable retry buttons
+   *  and prevent double-click duplicate pack creation after a failure. */
+  retrying: boolean;
   rebuttalDirty: boolean;
   justSubmitted: boolean;
 }
@@ -271,6 +274,7 @@ export function useDisputeWorkspace(disputeId: string) {
     showOverrideModal: false,
     saving: false,
     rendering: false,
+    retrying: false,
     rebuttalDirty: false,
     justSubmitted: false,
   });
@@ -332,19 +336,27 @@ export function useDisputeWorkspace(disputeId: string) {
 
   const generatePack = useCallback(
     async (templateId?: string) => {
-      const body = templateId ? { template_id: templateId } : {};
-      const res = await fetch(`/api/disputes/${disputeId}/packs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        pollRef.current = setInterval(fetchAll, 3000);
-        await fetchAll();
+      // Guard against double-clicks / concurrent retries. Without this,
+      // a merchant who clicks "Retry build" twice can queue two packs.
+      if (clientState.retrying) return undefined;
+      setClientState((s) => ({ ...s, retrying: true }));
+      try {
+        const body = templateId ? { template_id: templateId } : {};
+        const res = await fetch(`/api/disputes/${disputeId}/packs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          pollRef.current = setInterval(fetchAll, 3000);
+          await fetchAll();
+        }
+        return res;
+      } finally {
+        setClientState((s) => ({ ...s, retrying: false }));
       }
-      return res;
     },
-    [disputeId, fetchAll],
+    [disputeId, fetchAll, clientState.retrying],
   );
 
   const uploadEvidence = useCallback(

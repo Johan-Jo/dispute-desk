@@ -35,6 +35,21 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     );
   }
 
+  // Hard status gate. Only a successfully built pack (status === "ready")
+  // can be approved for save. Packs in "failed", "queued", "building",
+  // "saving", "saved_to_shopify*", or "save_failed" must not be
+  // approvable — their evidence-derived fields are either stale or invalid.
+  if (pack.status !== "ready") {
+    return NextResponse.json(
+      {
+        error: "PACK_NOT_READY",
+        status: pack.status,
+        message: "Pack is not in an approvable state. Only successfully built packs can be approved.",
+      },
+      { status: 409 }
+    );
+  }
+
   const now = new Date().toISOString();
 
   await sb

@@ -87,6 +87,19 @@ export function deriveNormalizedStatus(
     }
 
     // Pack states
+    // System-level build failure — the pack itself is not a submittable
+    // artifact. Do NOT fall through to "new" (which would suggest the
+    // merchant simply needs to generate a pack). The merchant needs to
+    // retry the build.
+    if (packStatus === "failed") {
+      return result(
+        "action_needed",
+        "Pack build did not complete",
+        "rebuild_pack",
+        "Retry the evidence pack build",
+        true,
+      );
+    }
     if (packStatus === "blocked") {
       return result(
         "action_needed",

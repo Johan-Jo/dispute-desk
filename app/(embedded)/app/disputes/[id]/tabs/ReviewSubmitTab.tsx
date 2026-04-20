@@ -77,6 +77,21 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
     );
   }
 
+  // System-failure short-circuit. When the build itself failed, evidence-
+  // derived fields are invalid and the pack is NOT submittable. Show a
+  // banner only — no submit button, no readiness messaging, no override
+  // modal entry points.
+  if (derived.isFailed) {
+    return (
+      <Banner tone="critical" title="This pack can\u2019t be submitted">
+        <Text as="p" variant="bodyMd">
+          The evidence pack build did not complete, so there is nothing to submit yet.
+          Retry the build from the Overview tab. If it keeps failing, contact support.
+        </Text>
+      </Banner>
+    );
+  }
+
   const isReadOnly = derived.isReadOnly;
   const isSaving = clientState.saving;
   const canSubmit = readiness !== "blocked" && !isReadOnly;

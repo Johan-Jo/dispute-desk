@@ -269,7 +269,8 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
             <InlineStack gap="200">
               <Button
                 variant="primary"
-                loading={clientState.loading}
+                loading={clientState.loading || clientState.retrying}
+                disabled={clientState.retrying}
                 onClick={() => { void actions.generatePack(); }}
               >
                 Retry build

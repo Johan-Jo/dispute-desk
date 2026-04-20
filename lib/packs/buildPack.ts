@@ -360,17 +360,25 @@ export async function buildPack(
   // Update the pack row (dual-write: v1 checklist + v2 checklist).
   // failure_code/failure_reason are written every time so a successful
   // rebuild after a failure clears the prior failure markers.
+  //
+  // INVARIANT: evidence-derived fields (completeness_score, checklist,
+  // blockers, recommended_actions, checklist_v2, submission_readiness)
+  // are meaningful ONLY when status === "ready". When the build failed
+  // as a system operation, we must null these out — otherwise stale or
+  // partial values can flow to UIs and auto-save gates and make a
+  // failed pack look actionable.
+  const isFailed = packStatus === "failed";
   await sb
     .from("evidence_packs")
     .update({
       status: packStatus as string,
       pack_json: packJson,
-      completeness_score: completenessV2.completenessScore,
-      checklist: completenessV2.legacyChecklist,
-      blockers: completenessV2.legacyBlockers,
-      recommended_actions: completenessV2.legacyRecommendedActions,
-      checklist_v2: completenessV2.checklist,
-      submission_readiness: completenessV2.submissionReadiness,
+      completeness_score: isFailed ? 0 : completenessV2.completenessScore,
+      checklist: isFailed ? null : completenessV2.legacyChecklist,
+      blockers: isFailed ? null : completenessV2.legacyBlockers,
+      recommended_actions: isFailed ? null : completenessV2.legacyRecommendedActions,
+      checklist_v2: isFailed ? null : completenessV2.checklist,
+      submission_readiness: isFailed ? null : completenessV2.submissionReadiness,
       failure_code: failureCode,
       failure_reason: failureReason,
       updated_at: new Date().toISOString(),
@@ -380,8 +388,8 @@ export async function buildPack(
   return {
     packId,
     status: packStatus,
-    completenessScore: completeness.score,
-    blockers: completeness.blockers,
+    completenessScore: isFailed ? 0 : completeness.score,
+    blockers: isFailed ? [] : completeness.blockers,
     sectionsCollected: allSections.length,
     itemsCreated,
     failureCode,

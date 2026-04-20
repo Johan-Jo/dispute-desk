@@ -216,7 +216,7 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
-  const { data, derived, actions } = workspace;
+  const { data, derived, actions, clientState } = workspace;
   if (!data) return null;
 
   const { dispute, submissionFields, rebuttalDraft } = data;
@@ -288,7 +288,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               Try rebuilding. If it keeps failing, contact support and reference this dispute.
             </Text>
             <InlineStack gap="200">
-              <Button variant="primary" onClick={() => { void actions.generatePack(); }}>
+              <Button
+                variant="primary"
+                onClick={() => { void actions.generatePack(); }}
+                disabled={clientState.retrying}
+                loading={clientState.retrying}
+              >
                 Retry build
               </Button>
             </InlineStack>

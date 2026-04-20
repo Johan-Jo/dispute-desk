@@ -28,6 +28,22 @@ export async function POST(
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
+  // Hard status gate. Only a successfully built pack (status === "ready")
+  // can be submitted. Packs in "failed", "queued", "building", "saving",
+  // "saved_to_shopify*", or "save_failed" must not be submittable.
+  // Evidence-derived fields (submission_readiness, completeness_score)
+  // are only meaningful when status === "ready".
+  if (pack.status !== "ready") {
+    return NextResponse.json(
+      {
+        error: "PACK_NOT_READY",
+        status: pack.status,
+        message: "Pack is not in a submittable state. Only successfully built packs can be submitted.",
+      },
+      { status: 409 }
+    );
+  }
+
   // Server-side gate — use v2 readiness when available, fall back to legacy
   const score = pack.completeness_score ?? 0;
   const readiness = (pack.submission_readiness as string) ?? null;

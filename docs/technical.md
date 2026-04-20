@@ -618,6 +618,7 @@ Build pipeline contract (`lib/packs/buildPack.ts`, `lib/jobs/handlers/buildPackJ
 
 - `buildPack` NULLs all evidence-derived fields (`submission_readiness`, `checklist`, `checklist_v2`, `blockers`, `recommended_actions`) and zeroes `completeness_score` whenever `status === "failed"`. Evidence-derived fields are meaningful iff `status === "ready"`.
 - `POST /api/packs/:packId/save-to-shopify` and `POST /api/packs/:packId/approve` return **409 `PACK_NOT_READY`** when `pack.status !== "ready"`. A failed (or still-building/saving) pack can never enter the submission flow.
+- **Job-layer defense-in-depth:** `saveToShopifyJob` refuses to call Shopify when the pack's status at job-start is not in `{ "ready", "saving", "saved_to_shopify" }`. This catches direct job inserts (admin tools, future code paths, race conditions) that bypass the API gate. The job logs a `job_failed` audit event with `reason: "pack_status_failed"` and throws before any Shopify call is made.
 - `deriveNormalizedStatus` maps `packStatus === "failed"` → `action_needed` with `next_action = "rebuild_pack"` (never falls through to `new`).
 - `ReviewSubmitTab` early-returns a failure Banner when `derived.isFailed` — no submit button, no readiness messaging.
 

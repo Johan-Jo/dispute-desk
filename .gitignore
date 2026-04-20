@@ -41,5 +41,6 @@ next-env.d.ts
 # Tool state / generated dumps
 .omc/
 .claude/worktrees/
+.claude/scheduled_tasks.lock
 admin-all-code.txt
 embedded-app-all-code.txt

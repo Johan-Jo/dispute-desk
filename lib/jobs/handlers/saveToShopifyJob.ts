@@ -130,10 +130,53 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
 
   const { data: pack } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, pack_json")
+    .select("id, shop_id, dispute_id, status, pack_json")
     .eq("id", packId)
     .single();
   if (!pack) throw new Error(`Pack not found: ${packId}`);
+
+  // ═══════════════════════════════════════════════════════════
+  //  DEFENSE-IN-DEPTH STATUS GUARD
+  //
+  //  The API routes (save-to-shopify, approve) already reject
+  //  pack.status !== "ready". But a job can also be inserted
+  //  directly (internal admin tool, race conditions, future code
+  //  paths). Failed packs must never reach Shopify.
+  //
+  //  Allowed statuses at job-start time:
+  //    - "ready"               → approve flow (status unchanged)
+  //    - "saving"              → save-to-shopify API flips to this
+  //    - "saved_to_shopify"    → pipeline auto-save flips to this
+  //
+  //  Everything else (failed, queued, building, archived,
+  //  save_failed, saved_to_shopify_verified, saved_to_shopify_unverified)
+  //  indicates either an invariant violation or a duplicate
+  //  submission — bail safely, never call Shopify.
+  // ═══════════════════════════════════════════════════════════
+
+  const ALLOWED_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
+  if (!ALLOWED_STATUSES.has(pack.status as string)) {
+    const reason =
+      pack.status === "failed"
+        ? "pack_status_failed"
+        : "pack_status_not_submittable";
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "job_failed",
+      eventPayload: {
+        jobId: job.id,
+        jobType: "save_to_shopify",
+        reason,
+        pack_status: pack.status,
+      },
+    });
+    throw new Error(
+      `Refusing to save to Shopify: pack status is "${pack.status}", not a submittable state. Shopify was NOT called.`,
+    );
+  }
 
   const { data: dispute } = await sb
     .from("disputes")
