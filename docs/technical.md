@@ -622,7 +622,7 @@ The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: w
 
 ### Risk Assessment Collection
 
-`ORDER_DETAIL_QUERY` fetches `riskAssessments { riskLevel, provider { title }, facts { description, sentiment } }`. The `paymentSource.ts` collector extracts the overall risk level (highest severity across assessments), provider name, and individual risk facts. The `risk_analysis` field is `recommended` priority, `blocking: false` — supporting evidence for fraud disputes, not deterministic proof.
+Risk assessment collection removed (2026-04-20). `Order.riskAssessments` does not exist on Shopify Admin API `2026-01` and caused every pack build with an `order_gid` to fail. The `risk_analysis` field is no longer emitted by the collector; it was `recommended`/`blocking: false`, so its absence does not affect completeness scoring. Migration to `orderRisks` is a follow-up.
 
 ### Customer IP Collection
 
@@ -1093,6 +1093,30 @@ Tailwind CSS with shared components in `components/ui/`.
 | `class-variance-authority` | Type-safe component variants |
 | `lucide-react` | Icon library (consistent with design) |
 | `clsx` + `tailwind-merge` | Conditional + deduplicated class names |
+
+### Embedded app mobile mode (triage-first)
+
+The embedded surface (`app/(embedded)/app/**`) is Polaris-only and must be usable inside the Shopify mobile Admin app. Pages with list/table layouts branch between a desktop and a mobile render using Polaris's `useBreakpoints()` hook — never `matchMedia` or `window.innerWidth`.
+
+```tsx
+import { useBreakpoints } from "@shopify/polaris";
+const { smDown } = useBreakpoints();
+return smDown ? <MobileXList … /> : <DesktopXTable … />;
+```
+
+**Design stance:** mobile is not a compressed desktop. The Shopify mobile app is used for triage — a merchant opens it to see what needs action *now*. Mobile variants therefore lead with **urgency/action** and **amount**, with customer, phase, and status demoted to secondary badges. Reason family and other audit-grade columns are omitted on mobile; they live on the detail page.
+
+Reference implementation — disputes list (`app/(embedded)/app/disputes/`):
+- `DesktopDisputesTable.tsx` — unchanged 9-column Figma-matched HTML table
+- `MobileDisputeCard.tsx` — full-width tappable card; row 1 is urgency badge ↔ amount; row 2 is emphasised due timing; row 3 is the identity block (dispute ID · order, then customer); row 4 is small muted phase/status/outcome badges
+- `MobileDisputesList.tsx` — stack of cards inside `<Card padding="0">`, cards self-separate via `border-bottom`
+- `disputeListHelpers.ts` — shared helpers + `formatDueTiming(d, tab, t, locale)` and `resolveSort(sortMode, tab)`
+
+**Mobile actions bar** stacks search full-width, then pairs Filter + Sort 50/50 — Export is desktop-only. Sort (`sortMode` state in the page) maps to the existing `/api/disputes?sort=…&sort_dir=…` query params; desktop keeps the default tab-derived ordering so fetch behavior is byte-identical.
+
+**Hard constraints** enforced at 320 / 375 / 393 px: no tables on mobile, no `overflow-x` anywhere, `document.scrollingElement.scrollWidth === clientWidth`, `:active` press state on every tappable card (not just `:hover`).
+
+This pattern is the template for the remaining embedded pages (dashboard, packs, rules, policies, coverage, settings, analytics, detail workspace tabs); each is its own small PR.
 
 ## Governance Controls & Review Queue
 
