@@ -906,8 +906,47 @@ export default function EmbeddedDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
   const [statsLoading, setStatsLoading] = useState(true);
   const [setupDone, setSetupDone] = useState<boolean | null>(null);
+  const [redirecting, setRedirecting] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return new URL(window.location.href).searchParams.has("ddredirect");
+  });
+
+  // Email CTAs (and other external launchers) can't construct a deep path with
+  // valid Shopify host/shop params, so getEmbeddedAppUrl points them at the
+  // app root with `?ddredirect=<intended-path>`. Admin opens the iframe with
+  // host/shop attached; we read ddredirect here and navigate client-side.
+  useEffect(() => {
+    const raw = searchParams.get("ddredirect");
+    if (!raw) return;
+    let target: string;
+    try {
+      target = decodeURIComponent(raw);
+    } catch {
+      target = raw;
+    }
+    // Reject absolute URLs and protocol-relative targets — ddredirect must be
+    // an in-app sub-path so we can't be weaponized as an open redirect.
+    if (!target.startsWith("/") || target.startsWith("//")) {
+      setRedirecting(false);
+      return;
+    }
+    const prefix = target.startsWith("/app/") || target === "/app" ? "" : "/app";
+    const full = `${prefix}${target}`;
+    // Preserve the inherited host/shop/embedded params so App Bridge stays
+    // authenticated through the navigation.
+    const carry = new URLSearchParams();
+    for (const key of ["host", "shop", "embedded", "locale", "id_token"]) {
+      const v = searchParams.get(key);
+      if (v) carry.set(key, v);
+    }
+    const sep = full.includes("?") ? "&" : "?";
+    const qs = carry.toString();
+    const next = qs ? `${full}${sep}${qs}` : full;
+    router.replace(next);
+  }, [router, searchParams]);
 
   useEffect(() => {
+    if (redirecting) return;
     let cancelled = false;
     fetch("/api/setup/state")
       .then((res) => (res.ok ? res.json() : null))
@@ -920,7 +959,7 @@ export default function EmbeddedDashboardPage() {
         }
       });
     return () => { cancelled = true; };
-  }, [router, searchParams]);
+  }, [router, searchParams, redirecting]);
 
   useEffect(() => {
     if (!setupDone) return;
@@ -935,7 +974,7 @@ export default function EmbeddedDashboardPage() {
     return () => { cancelled = true; };
   }, [period, setupDone]);
 
-  if (!setupDone) {
+  if (redirecting || !setupDone) {
     return (
       <Page title="DisputeDesk">
         <Layout>
