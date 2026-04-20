@@ -20,6 +20,12 @@ const LOCALE_PREFIXES: Record<string, string> = {
 
 function localeUrl(path: string, locale: string): string {
   const prefix = LOCALE_PREFIXES[locale] ?? "";
+  // Home path under a prefixed locale must NOT carry a trailing slash
+  // (e.g. `/sv/` 308-redirects to `/sv`, which Google flags as "Page with redirect").
+  // For the default (unprefixed) locale, keep `/` as the canonical root.
+  if (path === "/") {
+    return prefix ? `${BASE_URL}${prefix}` : `${BASE_URL}/`;
+  }
   return `${BASE_URL}${prefix}${path}`;
 }
 
