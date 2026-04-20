@@ -1063,6 +1063,8 @@ When `syncDisputes()` detects a new dispute:
 - `auto_pack` → triggers `runAutomationPipeline()`.
 - `review` → sets `needs_review = true` on the dispute row.
 
+**New-dispute alert dedupe (`disputes.new_dispute_alert_sent_at`, migration `20260420100000`):** the existence-check SELECT in `syncDisputes` previously fired `sendNewDisputeAlert` whenever `existing` came back null — including the transient PostgREST case `{ data: null, error: <msg> }`, where the row exists but the SELECT silently failed. This re-fired the "New dispute" email and `rule_applied` audit event hours to days after the real dispute arrived. The fix: (1) bail with `result.errors.push(...)` when `existingErr !== null`, and (2) atomically claim the alert via `UPDATE disputes SET new_dispute_alert_sent_at = now() WHERE id = $1 AND new_dispute_alert_sent_at IS NULL RETURNING id` — the email only sends when the UPDATE returns a row, so a second pass on the same dispute is a no-op even if the existence check misses again. Regression test: `tests/unit/syncDisputesNewAlertDedupe.test.ts`.
+
 ### Review Queue
 
 Both embedded and portal dispute pages have an "All Disputes" / "Review Queue" tab.

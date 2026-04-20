@@ -195,13 +195,28 @@ export async function syncDisputes(
     for (const edge of edges) {
       const d = edge.node;
       try {
-        // Check if row already exists (include fields for change detection)
-        const { data: existing } = await sb
+        // Check if row already exists (include fields for change detection).
+        // `new_dispute_alert_sent_at` is the dedupe guard for the new-dispute
+        // email: even if this SELECT flakes and `existing` comes back null,
+        // the guard below only fires the alert when the column is still NULL.
+        const { data: existing, error: existingErr } = await sb
           .from("disputes")
-          .select("id, status, due_at, submitted_at, final_outcome, submission_state")
+          .select(
+            "id, status, due_at, submitted_at, final_outcome, submission_state, new_dispute_alert_sent_at",
+          )
           .eq("shop_id", shopId)
           .eq("dispute_gid", d.id)
           .maybeSingle();
+
+        // A transient PostgREST error would silently return `{ data: null }`
+        // and trick the code into treating a known dispute as brand new,
+        // re-firing the alert + rule_applied + pipeline. Bail instead.
+        if (existingErr) {
+          result.errors.push(
+            `${d.id}: existence check failed — ${existingErr.message}`,
+          );
+          continue;
+        }
 
         const row = {
           shop_id: shopId,
@@ -464,17 +479,30 @@ export async function syncDisputes(
 
         // Notify merchant of new dispute (fire-and-forget; respects the
         // newDispute notification preference set in TeamNotificationsStep).
+        // Dedupe via an atomic `UPDATE … WHERE new_dispute_alert_sent_at IS
+        // NULL RETURNING id`: only the first call wins, so even if `existing`
+        // came back null on a transient error (and this branch fires a second
+        // time), the UPDATE finds the column already stamped and returns no
+        // rows — skipping the email.
         if (!existing && upserted) {
-          void sendNewDisputeAlert({
-            shopId,
-            disputeId: upserted.id,
-            reason: d.reasonDetails?.reason ?? null,
-            phase: d.type?.toLowerCase() ?? null,
-            amount: d.amount ? parseFloat(d.amount.amount) : null,
-            currencyCode: d.amount?.currencyCode ?? null,
-            dueAt: d.evidenceDueBy ?? null,
-            orderName: d.order?.name ?? null,
-          });
+          const { data: claimed } = await sb
+            .from("disputes")
+            .update({ new_dispute_alert_sent_at: new Date().toISOString() })
+            .eq("id", upserted.id)
+            .is("new_dispute_alert_sent_at", null)
+            .select("id");
+          if (claimed && claimed.length > 0) {
+            void sendNewDisputeAlert({
+              shopId,
+              disputeId: upserted.id,
+              reason: d.reasonDetails?.reason ?? null,
+              phase: d.type?.toLowerCase() ?? null,
+              amount: d.amount ? parseFloat(d.amount.amount) : null,
+              currencyCode: d.amount?.currencyCode ?? null,
+              dueAt: d.evidenceDueBy ?? null,
+              orderName: d.order?.name ?? null,
+            });
+          }
         }
 
         // For new disputes: evaluate rules, then trigger automation or set needs_review
