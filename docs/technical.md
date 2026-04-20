@@ -20,41 +20,28 @@
 
 ### Scopes
 
-```
-read_orders
-read_customers
-read_products
-read_fulfillments
-read_shipping
-read_shopify_payments_disputes
-read_shopify_payments_dispute_evidences
-write_shopify_payments_dispute_evidences
-read_files
-write_files
-```
+**Source of truth:** `shopify.app.toml` `[access_scopes].scopes`. `.env.example`
+mirrors the same list as `SHOPIFY_SCOPES`, and `lib/shopify/auth.ts`
+`buildAuthUrl` reads that env var verbatim — there is no hard-coded fallback,
+and a missing env throws at boot. A vitest in `tests/unit/shopifyScopes.test.ts`
+parses both files and fails the suite if the two ever diverge. This guards
+against the install-time 400/redirect-loop that results from OAuth requesting
+a scope set different from what managed install grants.
 
-> **Approved (2026-03-02):** `read_shopify_payments_dispute_evidences` and
-> `write_shopify_payments_dispute_evidences` were approved by Shopify App
-> Review (Reggie F.). However, the Shopify CLI deploy pipeline rejects
-> these scopes in `shopify.app.toml` ([Shopify/cli#4288](https://github.com/Shopify/cli/issues/4288) —
-> restricted to "Payments Apps" category). **Workaround:** the evidence
-> scopes are requested only in the custom OAuth flow (`SHOPIFY_SCOPES` env
-> var) and Shopify grants them at install/re-auth time. They are NOT in the
-> TOML `[access_scopes]`.
-
-### Additional Scopes (seed script only)
-
-The test store seed script (`scripts/shopify/seed-teststore.mjs`) requires
-these extra scopes in `shopify.app.toml`, deployed via `shopify app deploy`:
+Current 17 scopes (reflected in both TOML and `.env.example`):
 
 ```
-write_orders
-write_products
+read_orders, write_orders, read_customers, read_products, write_products,
+read_fulfillments, read_shipping, read_shopify_payments_disputes,
+read_shopify_payments_dispute_evidences, write_shopify_payments_dispute_evidences,
+read_files, write_files, write_draft_orders, write_fulfillments,
+write_merchant_managed_fulfillment_orders, read_locations, read_inventory,
 write_inventory
-write_draft_orders
-write_fulfillments
-write_merchant_managed_fulfillment_orders
 ```
+
+The `write_*` scopes (`write_orders`, `write_products`, `write_inventory`,
+`write_draft_orders`, `write_fulfillments`, `write_merchant_managed_fulfillment_orders`)
+are also used by the test-store seed script (`scripts/shopify/seed-teststore.mjs`).
 
 The seed script first creates products (GraphQL `productCreate`, then
 `inventorySetQuantities` so variants are in stock), then creates orders
@@ -104,10 +91,24 @@ and key versioning for rotation.
 ### Embedded session cookies
 
 After Shopify OAuth, the callback sets `shopify_shop` and `shopify_shop_id`
-as HTTP-only, secure cookies with **`sameSite: "none"`**. This is required
-so the browser sends them when the app is loaded inside Shopify Admin’s
-iframe (cross-origin). With `sameSite: "lax"`, cookies would not be sent
-in that context and the app would redirect to auth repeatedly.
+as HTTP-only, secure cookies with **`sameSite: "none"` and `partitioned: true`**.
+Both attributes are required so the browser sends them when the app is loaded
+inside Shopify Admin’s iframe (cross-origin). Chrome's CHIPS restrictions
+require `Partitioned` for third-party cookies to be readable from within an
+embedded iframe context; without it, the iframe reload that follows
+`window.top.location.href` after install sees no cookie and the `/app/*`
+middleware bounces the request back through OAuth, rendering a white screen.
+
+**Post-callback grace marker.** The callback additionally sets a short-lived
+(~60s) `dd_oauth_in_progress` cookie with the same partitioned attributes.
+When the Admin iframe reloads the app at `/app?shop=…&host=…&embedded=1`,
+`middleware.ts` checks for this marker: if present alongside `shop` and
+`host` query params, it lets the request through once (deleting the marker
+as a single-use ticket) even when the `shopify_shop` cookie hasn't yet
+committed in the new frame context. This closes a narrow race where Set-Cookie
+headers from the callback have not yet landed when Shopify Admin loads the
+next frame. All other middleware guards (HMAC, stale-cookie shop-mismatch,
+session-exists readback) remain unchanged.
 
 **Stale-cookie guard (multi-store):** These cookies are scoped to the
 DisputeDesk host, not per-shop, so opening two different Shopify Admin tabs
@@ -611,7 +612,14 @@ Build pipeline contract (`lib/packs/buildPack.ts`, `lib/jobs/handlers/buildPackJ
 1. `buildPack` sets `status = "failed"` + `failure_code` + `failure_reason` whenever the order fetch fails (caught error or null node returned by Shopify).
 2. `buildPackJob` emits `PACK_BUILD_FAILED` (not `PACK_CREATED`) on the dispute timeline when `result.status === "failed"`, so merchants see *"Couldn't load order data from Shopify"* rather than *"Score: 0%, 1 evidence items collected"*.
 3. `evaluateAndMaybeAutoSave` short-circuits on `pack.status === "failed"` and never emits `auto_save_blocked` — evidence-gap signals would be misleading on a build that never completed.
-4. `Retry build` is the merchant CTA in both Overview and Evidence tabs; it calls `actions.generatePack()` which `POST /api/disputes/:id/packs` (already filters `failed` packs out of the "active pack exists" check, so retries always create a fresh pack).
+4. `Retry build` is the merchant CTA in both Overview and Evidence tabs; it calls `actions.generatePack()` which `POST /api/disputes/:id/packs` (already filters `failed` packs out of the "active pack exists" check, so retries always create a fresh pack). The workspace hook tracks a `retrying` flag so the retry button is disabled while a pack-creation request is in flight — prevents double-submit and duplicate pack rows.
+
+**Failed-pack invariants (enforced end-to-end):**
+
+- `buildPack` NULLs all evidence-derived fields (`submission_readiness`, `checklist`, `checklist_v2`, `blockers`, `recommended_actions`) and zeroes `completeness_score` whenever `status === "failed"`. Evidence-derived fields are meaningful iff `status === "ready"`.
+- `POST /api/packs/:packId/save-to-shopify` and `POST /api/packs/:packId/approve` return **409 `PACK_NOT_READY`** when `pack.status !== "ready"`. A failed (or still-building/saving) pack can never enter the submission flow.
+- `deriveNormalizedStatus` maps `packStatus === "failed"` → `action_needed` with `next_action = "rebuild_pack"` (never falls through to `new`).
+- `ReviewSubmitTab` early-returns a failure Banner when `derived.isFailed` — no submit button, no readiness messaging.
 
 **Key feature:** Argument map claims are clickable — clicking an evidence badge switches to the Evidence tab, expands the correct category, scrolls to the item, and highlights it.
 
@@ -1772,6 +1780,9 @@ In `vercel.json`:
 - All published `content_localizations` with `hreflang` alternates per locale.
 - Static pages: root, resources, glossary, templates, case studies.
 - Locale URL prefixes: en-US = root, de-DE = `/de`, fr-FR = `/fr`, es-ES = `/es`, pt-BR = `/pt`, sv-SE = `/sv`.
+- Prefixed locale home uses the bare prefix (e.g. `/sv`, not `/sv/`) — trailing slash 308-redirects would make Google flag sitemap entries as "Page with redirect" in GSC.
+
+**hreflang is sitemap-only:** `i18n/routing.ts` sets `alternateLinks: false` so next-intl does NOT emit a `Link: rel=alternate; hreflang=…` response header. The middleware-generated alternates assume path-identical slugs across locales, but Resources Hub articles use per-locale slugs (DE slug differs from ES slug). Emitting path-identical alternates would advertise URLs that 308-redirect. The sitemap's per-article `alternates.languages` map — built from each locale's own `content_localizations.slug` — is the single source of truth for hreflang.
 
 ### Robots.txt
 

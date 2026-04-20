@@ -204,6 +204,7 @@ export async function GET(req: NextRequest) {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      partitioned: true,
       maxAge: 60 * 60 * 24 * 30,
       path: "/",
     });
@@ -211,7 +212,20 @@ export async function GET(req: NextRequest) {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      partitioned: true,
       maxAge: 60 * 60 * 24 * 30,
+      path: "/",
+    });
+    // Short-lived grace marker. The embedded iframe reload that follows
+    // window.top.location.href can race ahead of the Set-Cookie commit in
+    // some browsers (CHIPS timing), so middleware uses this single-use
+    // marker to avoid bouncing the iframe back through OAuth.
+    res.cookies.set("dd_oauth_in_progress", "1", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      partitioned: true,
+      maxAge: 60,
       path: "/",
     });
     return res;

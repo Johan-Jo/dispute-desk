@@ -2,7 +2,11 @@ import crypto from "crypto";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
-const SHOPIFY_SCOPES = process.env.SHOPIFY_SCOPES ?? "read_orders,read_customers,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences";
+// Scopes must match shopify.app.toml [access_scopes] exactly — Shopify
+// managed install grants the TOML scope set, and an OAuth URL requesting
+// a different set causes install to 400 / loop. No hard-coded fallback:
+// a missing env is surfaced at boot (see assertScopesConfigured below).
+const SHOPIFY_SCOPES = process.env.SHOPIFY_SCOPES ?? "";
 const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ?? "";
 
 /**
@@ -12,6 +16,11 @@ const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ?? "";
  * @param isOnline - true for online (user-scoped) token, false for offline (shop-wide)
  */
 export function buildAuthUrl(shop: string, state: string, isOnline: boolean = false): string {
+  if (!SHOPIFY_SCOPES) {
+    throw new Error(
+      "SHOPIFY_SCOPES env is not set. It must match shopify.app.toml [access_scopes].scopes exactly.",
+    );
+  }
   const redirectUri = `${SHOPIFY_APP_URL.replace(/\/$/, "")}/api/auth/shopify/callback`;
   const accessMode = isOnline ? "&grant_options[]=per-user" : "";
 

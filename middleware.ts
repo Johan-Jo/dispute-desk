@@ -331,8 +331,27 @@ export async function middleware(req: NextRequest) {
 
     const shopDomain = req.cookies.get("shopify_shop")?.value;
     const shopParam = req.nextUrl.searchParams.get("shop");
+    const oauthInProgress = req.cookies.get("dd_oauth_in_progress")?.value;
 
     if (!shopDomain) {
+      // Post-callback grace: the OAuth callback just set Set-Cookie headers
+      // for shopify_shop, but the immediate iframe reload can land before
+      // the browser commits those cookies (CHIPS/partitioned timing). Let
+      // one request through so the embedded shell can render; the marker
+      // is single-use (~60s TTL) and deleted on this pass-through.
+      if (oauthInProgress && shopParam && hostParam) {
+        const res = NextResponse.next({ request: { headers: requestHeaders } });
+        res.cookies.delete("dd_oauth_in_progress");
+        if (localeParam) {
+          res.cookies.set("dd_locale", localeParam, {
+            path: "/",
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: "lax",
+          });
+        }
+        return res;
+      }
+
       if (shopParam) {
         const authUrl = new URL("/api/auth/shopify", req.url);
         authUrl.searchParams.set("shop", shopParam);
