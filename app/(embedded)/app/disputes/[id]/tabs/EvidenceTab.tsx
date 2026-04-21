@@ -428,18 +428,30 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         </BlockStack>
       </Card>
 
-      {/* 2. WHY THIS CASE IS LIKELY TO WIN — reasoning signals only.
-            Never red; never implies the case is weak when the headline
-            outcome is "Likely to win". */}
-      {argumentMap && (
+      {/* 2. WHAT SUPPORTS THIS CASE — only actual contributing signals.
+            Shows strong + moderate counterclaims; insufficient / weak are
+            excluded. Never contains missing-item rows or red treatment. */}
+      {argumentMap && (() => {
+        const supporting = argumentMap.counterclaims.filter(
+          (c) => c.strength === "strong" || c.strength === "moderate",
+        );
+        return (
         <Card>
           <BlockStack gap="300">
-            <Text as="h3" variant="headingMd">Why this case is likely to win</Text>
+            <Text as="h3" variant="headingMd">What supports this case</Text>
             <Text as="p" variant="bodySm" tone="subdued">
               {argumentMap.issuerClaim.text}
             </Text>
 
-            {argumentMap.counterclaims.map((claim) => {
+            {supporting.length === 0 && (
+              <Text as="p" variant="bodyMd" tone="subdued">
+                This case is currently evaluated based on available transaction
+                data. Additional supporting signals are not required for a
+                successful outcome.
+              </Text>
+            )}
+
+            {supporting.map((claim) => {
               const signal = claimSignalLabel(claim.strength);
 
               return (
@@ -447,8 +459,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                   key={claim.id}
                   className={`${styles.claimCard} ${
                     claim.strength === "strong" ? styles.claimStrong :
-                    claim.strength === "moderate" ? styles.claimModerate :
-                    styles.claimInsufficient
+                    styles.claimModerate
                   }`}
                 >
                   <BlockStack gap="200">
@@ -471,33 +482,17 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                       </InlineStack>
                     )}
 
-                    {claim.missing.length > 0 && (
-                      <BlockStack gap="100">
-                        {claim.missing.map((m) => (
-                          <InlineStack key={m.field} gap="200" blockAlign="start" wrap={false}>
-                            <Text as="span" variant="bodySm" tone="subdued">{"\u25CB"}</Text>
-                            <BlockStack gap="050">
-                              <Text as="p" variant="bodySm">{impactSentence(m.field)}</Text>
-                              {!readOnly && (
-                                <span
-                                  className={`${styles.evidenceTag} ${styles.evidenceTagMissing}`}
-                                  onClick={() => actions.navigateToEvidence(m.field)}
-                                >
-                                  Add {friendlyLabel(m.field, m.label).toLowerCase()}
-                                </span>
-                              )}
-                            </BlockStack>
-                          </InlineStack>
-                        ))}
-                      </BlockStack>
-                    )}
+                    {/* Missing items intentionally omitted here — this
+                         section only names what supports the case. Gaps
+                         live in the Evidence inventory card below. */}
                   </BlockStack>
                 </div>
               );
             })}
           </BlockStack>
         </Card>
-      )}
+        );
+      })()}
 
       {/* 3. EVIDENCE INVENTORY — completeness, separated from strength */}
       {effectiveChecklist.length > 0 && (() => {

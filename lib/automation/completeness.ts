@@ -424,6 +424,7 @@ export function evaluateCompletenessV2(
   }
 
   // Build v2 checklist
+  const reasonTemplate = getTemplateV2(reason);
   const checklist: ChecklistItemV2[] =
     templateItems && templateItems.length > 0
       ? templateItems.map((t) => {
@@ -437,12 +438,28 @@ export function evaluateCompletenessV2(
           const waivedItem = waiveMap.get(field);
           const resolved = resolveItemStatus(mode, ctx, isPresent, waivedItem);
 
-          // Derive priority from requirement mode for template-based items
-          let priority: EvidenceItemPriority = "optional";
-          if (mode === "required_always" || mode === "required_if_fulfilled" || mode === "required_if_card_payment") {
+          // Priority comes from the reason-specific template when it carries
+          // one for this field. DB-backed templates don't encode reason
+          // criticality, and a blanket "required_if_fulfilled → critical"
+          // mapping mislabels shipping/delivery as a Critical gap on
+          // unauthorized-transaction (FRAUDULENT) disputes, where payment
+          // verification is the true critical signal. When the reason
+          // template doesn't cover the field, fall back to mode-based
+          // inference, biasing conditional modes toward "recommended".
+          const reasonField = reasonTemplate.find((r) => r.field === field);
+          let priority: EvidenceItemPriority;
+          if (reasonField) {
+            priority = reasonField.priority;
+          } else if (mode === "required_always") {
             priority = "critical";
-          } else if (mode === "recommended") {
+          } else if (
+            mode === "required_if_fulfilled" ||
+            mode === "required_if_card_payment" ||
+            mode === "recommended"
+          ) {
             priority = "recommended";
+          } else {
+            priority = "optional";
           }
 
           return {
