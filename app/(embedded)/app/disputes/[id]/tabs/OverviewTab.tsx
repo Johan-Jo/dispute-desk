@@ -72,20 +72,29 @@ interface DefenseRule {
 }
 
 const DEFENSE_RULES: DefenseRule[] = [
+  { any: ["order_confirmation"], bullet: "Complete order record confirms items, amount, and customer details" },
   { any: ["avs_cvv_match"], bullet: "Payment verification checks passed (AVS/CVV)" },
   { any: ["billing_address_match"], bullet: "Billing address matches the cardholder on file" },
   { any: ["delivery_proof", "shipping_tracking"], bullet: "Order was successfully fulfilled and delivered" },
   { any: ["activity_log"], bullet: "Customer behavior matches previous legitimate purchases" },
+  { any: ["customer_account_info"], bullet: "Customer account history supports a legitimate profile" },
   { any: ["customer_communication"], bullet: "Customer was actively engaged through the order timeline" },
   { any: ["product_description"], bullet: "Product was advertised exactly as delivered" },
   { any: ["refund_policy", "shipping_policy", "cancellation_policy"], bullet: "Store policies were clearly disclosed at purchase" },
   { any: ["duplicate_explanation"], bullet: "Each charge is documented as a distinct, separate transaction" },
+  { any: ["device_session_consistency"], bullet: "Device and session signals are consistent with a legitimate purchase" },
+  { any: ["ip_location_check"], bullet: "Purchase location is consistent with the cardholder" },
+  { any: ["supporting_documents"], bullet: "Additional documentation reinforces the overall defense" },
 ];
 
-function synthesizeDefenseBullets(presentFields: Set<string>): string[] {
+function synthesizeDefenseBullets(presentFields: Set<string>, ipUnfavorable: boolean): string[] {
   const bullets: string[] = [];
   for (const rule of DEFENSE_RULES) {
-    if (rule.any.some((f) => presentFields.has(f))) bullets.push(rule.bullet);
+    if (!rule.any.some((f) => presentFields.has(f))) continue;
+    // Skip the IP bullet when the IP check came back unfavorable — we must not
+    // claim "consistent with the cardholder" when the finding contradicts it.
+    if (rule.any.includes("ip_location_check") && ipUnfavorable) continue;
+    bullets.push(rule.bullet);
   }
   return bullets;
 }
@@ -462,7 +471,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   }
 
   // Defense bullets — synthesized from present evidence so the language is direct and assertive.
-  const defenseBullets = synthesizeDefenseBullets(presentFields);
+  const defenseBullets = synthesizeDefenseBullets(presentFields, ipUnfavorable);
 
   // What Shopify will receive
   const includedFieldCount = submissionFields.filter((f) => f.included).length || presentItems.length;
