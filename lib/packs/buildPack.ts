@@ -385,11 +385,16 @@ export async function buildPack(
     })
     .eq("id", packId);
 
+  // Return v2 score + blockers so downstream consumers (buildPackJob
+  // audit events + activity feed) show the same number as the DB column
+  // and the auto-save gate. The legacy v1 engine is still computed above
+  // for dual-write parity, but its score/blockers must never leak to the
+  // merchant-facing activity feed alongside v2's different numbers.
   return {
     packId,
     status: packStatus,
-    completenessScore: isFailed ? 0 : completeness.score,
-    blockers: isFailed ? [] : completeness.blockers,
+    completenessScore: isFailed ? 0 : completenessV2.completenessScore,
+    blockers: isFailed ? [] : completenessV2.legacyBlockers,
     sectionsCollected: allSections.length,
     itemsCreated,
     failureCode,
