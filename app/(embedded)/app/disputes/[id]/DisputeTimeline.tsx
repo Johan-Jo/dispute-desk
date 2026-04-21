@@ -302,6 +302,10 @@ export default function DisputeTimeline({ disputeId, orderEvents = [] }: { dispu
                     ? (event.metadata_json?.appTitle as string) ?? "Shopify"
                     : "";
 
+                  const subText = isShopifyEvent
+                    ? null
+                    : event.description ?? deriveSubTextFromMetadata(event);
+
                   return (
                     <div
                       key={event.id}
@@ -323,8 +327,8 @@ export default function DisputeTimeline({ disputeId, orderEvents = [] }: { dispu
                         <p className={styles.timelineLabel}>
                           {isShopifyEvent ? shopifyMessage : safeT(t, `eventTypes.${event.event_type}`, event.event_type)}
                         </p>
-                        {event.description && !isShopifyEvent && (
-                          <p className={styles.timelineSub}>{event.description}</p>
+                        {subText && (
+                          <p className={styles.timelineSub}>{subText}</p>
                         )}
                       </div>
                     </div>
@@ -345,6 +349,25 @@ export default function DisputeTimeline({ disputeId, orderEvents = [] }: { dispu
       )}
     </BlockStack>
   );
+}
+
+/**
+ * Fallback: derive a human sub-line for events whose `description` column
+ * was persisted as null but whose `metadata_json` carries the reason.
+ * Older `parked_for_review` rows only had the reason in metadata; newer
+ * rows populate `description` directly.
+ */
+function deriveSubTextFromMetadata(event: TimelineEvent): string | null {
+  const meta = event.metadata_json ?? {};
+  if (event.event_type === "parked_for_review") {
+    const r = meta.reason;
+    if (typeof r === "string" && r.trim()) return r;
+  }
+  if (event.event_type === "pack_blocked") {
+    const r = meta.reasons;
+    if (Array.isArray(r) && r.length > 0) return r.filter((x) => typeof x === "string").join("; ");
+  }
+  return null;
 }
 
 /** Safely try a translation key, returning fallback if the key doesn't exist. */

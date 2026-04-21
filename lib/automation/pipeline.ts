@@ -248,6 +248,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         disputeId: pack.dispute_id,
         shopId: pack.shop_id,
         eventType: PARKED_FOR_REVIEW,
+        description: gate.reason,
         eventAt: new Date().toISOString(),
         actorType: "disputedesk_system",
         sourceType: "pack_engine",
