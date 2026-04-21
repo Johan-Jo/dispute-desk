@@ -4,16 +4,25 @@
  * Pushes evidence to Shopify via disputeEvidenceUpdate, then VERIFIES
  * by re-fetching the evidence fields and comparing.
  *
- * REQUIRES AN ONLINE SESSION. Offline tokens silently fail.
+ * Uses the shop's durable OFFLINE session via `getShopBackgroundSession`.
+ * Earlier code insisted this mutation required an ONLINE session, but
+ * verified 2026-04-21 (see scripts/verify-offline-evidence-update.mjs):
+ * offline tokens successfully call `disputeEvidenceUpdate` with
+ * empty `userErrors` — the online requirement was not real.
  *
  * Status flow:
  *   saving → saved_to_shopify_unverified → saved_to_shopify_verified
- *                                        → save_failed (if verification fails)
+ *                                        → save_failed (if verification fails
+ *                                          or Shopify returns userErrors)
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import {
+  assertNotAuthInvalid,
+  getShopBackgroundSession,
+  ShopifyAuthInvalidError,
+} from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
 import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
 import {
@@ -96,18 +105,6 @@ interface VerifyEvidenceResult {
 
 /* ── Helpers ── */
 
-function decryptAccessToken(encrypted: string): string {
-  try {
-    return decrypt(deserializeEncrypted(encrypted));
-  } catch (err) {
-    console.error(
-      "[saveToShopify] Failed to decrypt access token:",
-      err instanceof Error ? err.message : String(err),
-    );
-    return encrypted;
-  }
-}
-
 /** Truncate values for safe debug logging. */
 function truncateInput(input: DisputeEvidenceUpdateInput): Record<string, string> {
   const out: Record<string, string> = {};
@@ -188,43 +185,12 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  1. SESSION: require ONLINE
+  //  1. SESSION: durable shop-level (offline) — this is background work
   // ═══════════════════════════════════════════════════════════
 
-  const { data: onlineSession } = await sb
-    .from("shop_sessions")
-    .select("id, session_type, user_id, access_token_encrypted, shop_domain, created_at")
-    .eq("shop_id", pack.shop_id)
-    .eq("session_type", "online")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!onlineSession) {
-    const errorMsg =
-      `No ONLINE session for shop ${pack.shop_id}. ` +
-      "Shopify disputeEvidenceUpdate requires an online (user-context) session. " +
-      "Merchant must open the app in Shopify Admin to create one.";
-
-    await logAuditEvent({
-      shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
-      actorType: "system", eventType: "job_failed",
-      eventPayload: { jobId: job.id, jobType: "save_to_shopify", reason: "no_online_session" },
-    });
-    await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
-    throw new Error(errorMsg);
-  }
-
-  if (onlineSession.session_type !== "online") {
-    throw new Error(`Session ${onlineSession.id} is ${onlineSession.session_type}, not online.`);
-  }
-
-  console.log(
-    `[saveToShopify] session: type=${onlineSession.session_type} user=${onlineSession.user_id} created=${onlineSession.created_at}`,
-  );
-
-  const accessToken = decryptAccessToken(onlineSession.access_token_encrypted);
-  const shopDomain = onlineSession.shop_domain ?? "";
+  const session = await getShopBackgroundSession(pack.shop_id);
+  const accessToken = session.accessToken;
+  const shopDomain = session.shopDomain;
 
   // ═══════════════════════════════════════════════════════════
   //  2. BUILD INPUT
@@ -342,7 +308,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     actorType: "system", eventType: "job_started",
     eventPayload: {
       jobId: job.id, jobType: "save_to_shopify",
-      session_type: "online", user_id: onlineSession.user_id,
+      session_type: session.sessionType, user_id: session.userId,
       fields_to_send: inputKeys,
     },
   });
@@ -364,7 +330,39 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     evidenceId: result.data?.disputeEvidenceUpdate?.disputeEvidence?.id ?? null,
   }));
 
-  // Check GraphQL errors
+  // Auth-class errors get their own dedicated code path so the failure
+  // mode is unambiguous (distinguishable from userErrors or other
+  // Shopify-side rejections). On match, persist save_failed with a
+  // stable reason and rethrow the typed error.
+  try {
+    assertNotAuthInvalid(pack.shop_id, session.sessionType, {
+      errors: result.errors,
+    });
+  } catch (err) {
+    if (err instanceof ShopifyAuthInvalidError) {
+      console.error(
+        `[saveToShopify] auth invalid mode=${err.sessionType} shop=${err.shopId}: ${err.rawMessage}`,
+      );
+      await sb
+        .from("evidence_packs")
+        .update({ status: "save_failed", updated_at: new Date().toISOString() })
+        .eq("id", packId);
+      await logAuditEvent({
+        shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
+        actorType: "system", eventType: "job_failed",
+        eventPayload: {
+          jobId: job.id,
+          jobType: "save_to_shopify",
+          reason: "shopify_auth_invalid",
+          session_type: err.sessionType,
+          shopify_message: err.rawMessage,
+        },
+      });
+    }
+    throw err;
+  }
+
+  // Check GraphQL errors (non-auth)
   if (result.errors?.length) {
     const errMsg = result.errors.map((e: { message: string }) => e.message).join(", ");
     await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
