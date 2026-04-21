@@ -31,6 +31,7 @@ export type EvidenceItemSource =
   | "manual_upload" // merchant uploaded a file
   | "manual_note" // merchant typed a note
   | "auto_policy" // pulled from policy_snapshots
+  | "auto_ipinfo" // enriched from IPinfo (Device & Location Consistency)
   | "unavailable_from_source"; // source exists but data is not available
 
 /* ── Checklist item ── */

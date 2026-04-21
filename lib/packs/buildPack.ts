@@ -28,6 +28,7 @@ import { collectPolicyEvidence } from "./sources/policySource";
 import { collectManualEvidence } from "./sources/manualSource";
 import { collectCustomerCommEvidence } from "./sources/customerCommSource";
 import { collectPaymentEvidence } from "./sources/paymentSource";
+import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import type { EvidenceSection, BuildContext } from "./types";
 import type { OrderContext } from "@/lib/automation/completeness";
 
@@ -180,6 +181,7 @@ export async function buildPack(
     collectCustomerCommEvidence(ctx),
     collectManualEvidence(ctx),
     collectPaymentEvidence(ctx),
+    collectDeviceLocationEvidence(ctx),
   ]);
 
   const allSections: EvidenceSection[] = [];
@@ -334,6 +336,24 @@ export async function buildPack(
   const failureCode: PackFailureCode | null = orderFetchError ? "order_fetch_failed" : null;
   const failureReason: string | null = orderFetchError ? orderFetchError.message : null;
 
+  // Flat summary of the Device & Location Consistency section, surfaced
+  // as `pack_json.device_location` so portal UI and audit events can read
+  // it without traversing `sections`. The full data still lives on the
+  // corresponding section inside `sections`.
+  const deviceLocSection = allSections.find((s) =>
+    s.fieldsProvided.includes("device_location_consistency"),
+  );
+  const deviceLocSummary = deviceLocSection
+    ? {
+        score: deviceLocSection.data.score,
+        locationMatch: deviceLocSection.data.locationMatch,
+        riskLevel: deviceLocSection.data.riskLevel,
+        ipConsistencyLevel: deviceLocSection.data.ipConsistencyLevel,
+        ipReuseCount: deviceLocSection.data.ipReuseCount,
+        bankEligible: deviceLocSection.data.bankEligible,
+      }
+    : null;
+
   // Build the pack_json
   const packJson = {
     version: 1,
@@ -354,6 +374,7 @@ export async function buildPack(
       blockers: completeness.blockers,
       recommended_actions: completeness.recommended_actions,
     },
+    device_location: deviceLocSummary,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 

@@ -307,6 +307,7 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "activity_log", label: "Customer Purchase History", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "device_location_consistency", label: "Device & Location Consistency", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_ipinfo", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },

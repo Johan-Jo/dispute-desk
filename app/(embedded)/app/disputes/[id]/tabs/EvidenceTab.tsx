@@ -52,6 +52,7 @@ const WHY_TEXT: Record<string, string> = {
   duplicate_explanation: "Explains why charges are not duplicates",
   supporting_documents: "Additional proof that strengthens your case",
   activity_log: "Customer purchase history and account activity",
+  device_location_consistency: "Shows IP origin supports customer legitimacy",
 };
 
 /* Plain-language label for each evidence field — used in "How strong your case is". */
@@ -70,6 +71,7 @@ const FRIENDLY_FIELD_LABEL: Record<string, string> = {
   duplicate_explanation: "Duplicate-charge explanation",
   supporting_documents: "Extra supporting documents",
   activity_log: "Customer purchase history",
+  device_location_consistency: "Device & Location",
 };
 
 /* Plain-language impact statement for missing evidence. */
@@ -88,6 +90,7 @@ const MISSING_IMPACT: Record<string, string> = {
   duplicate_explanation: "the bank assumes the charges are duplicates.",
   activity_log: "the bank can\u2019t see legitimate purchase history.",
   supporting_documents: "the case has fewer corroborating signals.",
+  device_location_consistency: "no IP geolocation signal is available — this is optional evidence and the case isn\u2019t weaker without it.",
 };
 
 function friendlyLabel(field: string, fallback: string): string {
@@ -200,6 +203,84 @@ function renderContent(field: string, content: Record<string, unknown> | null): 
         {total !== null ? <Row label="Total orders" value={String(total)} /> : null}
         {since ? <Row label="Customer since" value={formatDate(since)} /> : null}
       </div>
+    );
+  }
+
+  // Device & Location Consistency — conclusion-first, human-readable only.
+  // Never renders org/ASN/provider even though they are stored on the
+  // payload for internal debugging.
+  if (field === "device_location_consistency") {
+    const ipinfo = content.ipinfo as
+      | { city?: string | null; country?: string | null; privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } }
+      | null
+      | undefined;
+    const summary = typeof content.summary === "string" ? content.summary : null;
+    const merchantGuidance = typeof content.merchantGuidance === "string" ? content.merchantGuidance : null;
+    const locationMatch = String(content.locationMatch ?? "unknown");
+    const consistency = String(content.ipConsistencyLevel ?? "first_seen");
+    const reuseCount = typeof content.ipReuseCount === "number" ? content.ipReuseCount : 0;
+    const vpn = Boolean(ipinfo?.privacy?.vpn);
+    const proxy = Boolean(ipinfo?.privacy?.proxy);
+    const hosting = Boolean(ipinfo?.privacy?.hosting);
+
+    const matchLabel: Record<string, string> = {
+      same_city: "Same city as shipping",
+      same_country: "Same country as shipping",
+      different_country: "Different country from shipping",
+      unknown: "Location unknown",
+    };
+    const matchTone: Record<string, "success" | "warning" | "critical" | undefined> = {
+      same_city: "success",
+      same_country: "success",
+      different_country: "critical",
+      unknown: undefined,
+    };
+    const consistencyLabel: Record<string, string> = {
+      consistent: "Consistent with prior orders",
+      first_seen: "First IP recorded for this customer",
+      variable: "Multiple IPs used across orders",
+    };
+
+    return (
+      <BlockStack gap="200">
+        {summary ? (
+          <Text as="p" variant="bodyMd" fontWeight="semibold">
+            {summary}
+          </Text>
+        ) : null}
+
+        <InlineStack gap="100" wrap>
+          <Badge tone={matchTone[locationMatch]}>{matchLabel[locationMatch] ?? "Location unknown"}</Badge>
+          <Badge tone={consistency === "variable" ? "warning" : undefined}>
+            {consistencyLabel[consistency] ?? "Consistency unknown"}
+          </Badge>
+          {vpn ? <Badge tone="warning">VPN</Badge> : null}
+          {proxy ? <Badge tone="warning">Proxy</Badge> : null}
+          {hosting ? <Badge tone="warning">Data-center</Badge> : null}
+        </InlineStack>
+
+        {ipinfo?.city || ipinfo?.country ? (
+          <div className={styles.contentPreview}>
+            <Row
+              label="IP origin"
+              value={[ipinfo.city, ipinfo.country].filter(Boolean).join(", ") || "\u2014"}
+            />
+            {reuseCount > 0 ? (
+              <Row label="Reuse count" value={`${reuseCount} prior order${reuseCount === 1 ? "" : "s"}`} />
+            ) : null}
+          </div>
+        ) : null}
+
+        {merchantGuidance ? (
+          <Banner tone="info">
+            <Text as="p" variant="bodySm">{merchantGuidance}</Text>
+          </Banner>
+        ) : null}
+
+        <Text as="p" variant="bodySm" tone="subdued">
+          Supports customer legitimacy.
+        </Text>
+      </BlockStack>
     );
   }
 

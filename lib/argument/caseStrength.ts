@@ -24,7 +24,16 @@ import { resolveReasonFamily, type ReasonFamily } from "./responseEngine";
 
 /* ── Evidence tier definitions per family ── */
 
-type EvidenceTier = "critical" | "strong" | "supporting" | "optional";
+/**
+ * Evidence tier values.
+ *
+ * `supporting_only` is a new (2026-04-21) special tier: contributes to
+ * the checklist display but carries **zero weight** in the case-strength
+ * aggregator. Fields tagged this way can never elevate a case to Strong
+ * — they are purely corroborative. Used today for
+ * `device_location_consistency`.
+ */
+type EvidenceTier = "critical" | "strong" | "supporting" | "optional" | "supporting_only";
 
 interface FamilyWeights {
   [field: string]: EvidenceTier;
@@ -39,6 +48,7 @@ const FAMILY_WEIGHTS: Record<ReasonFamily, FamilyWeights> = {
     customer_communication: "strong",
     shipping_tracking: "supporting",
     delivery_proof: "supporting",
+    device_location_consistency: "supporting_only",
     refund_policy: "optional",
     shipping_policy: "optional",
     supporting_documents: "optional",
@@ -111,6 +121,10 @@ const TIER_SCORE: Record<EvidenceTier, number> = {
   strong: 25,
   supporting: 10,
   optional: 5,
+  // supporting_only fields are excluded from the strength tally so they
+  // cannot elevate a case to Strong by themselves. They still appear in
+  // the checklist; only their contribution to case-strength is zero.
+  supporting_only: 0,
 };
 
 /* ── Field labels ── */

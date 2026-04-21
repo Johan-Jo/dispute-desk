@@ -75,6 +75,7 @@ export type ReasonFamily =
 
 const REASON_TO_FAMILY: Record<string, ReasonFamily> = {
   FRAUDULENT: "fraud",
+  UNRECOGNIZED: "fraud",
   PRODUCT_NOT_RECEIVED: "delivery",
   PRODUCT_UNACCEPTABLE: "product",
   SUBSCRIPTION_CANCELED: "subscription",

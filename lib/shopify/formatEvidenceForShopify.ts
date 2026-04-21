@@ -216,8 +216,63 @@ export function buildEvidenceForShopify(
     input.cancellationRebuttal = rebuttalText;
   }
 
-  // File fields are set in saveToShopifyJob.ts via REST upload pipeline
-  // (see lib/shopify/disputeFileUpload.ts)
+  // ── Device & Location Consistency — bank-gated + neutral fallbacks ──
+  //
+  // Fires only for fraud-family disputes. The positive paragraph is
+  // submitted ONLY when the signal is unambiguously positive (all three
+  // of: location match, clean privacy, non-variable consistency). Any
+  // negative signal surfaces in the merchant UI but never reaches the
+  // bank — instead a neutral fallback sentence is appended to maintain
+  // narrative completeness without introducing risk.
+  //
+  // The two fallback strings are literals exported as constants so tests
+  // can snapshot them and catch accidental edits that could leak
+  // negative framing into submitted text.
+  if (family === "fraud") {
+    const deviceLocSection = sections.find(
+      (s) => s.type === "other" && (s.fieldsProvided ?? []).includes("device_location_consistency"),
+    );
+    const data = deviceLocSection?.data as
+      | { bankEligible?: boolean; bankParagraph?: string | null }
+      | undefined;
+
+    let deviceLine: string | null = null;
+    if (
+      data?.bankEligible &&
+      typeof data.bankParagraph === "string" &&
+      data.bankParagraph.length > 0
+    ) {
+      // Positive signal — submit the full bank paragraph.
+      deviceLine = data.bankParagraph;
+    } else if (deviceLocSection) {
+      // IP data exists but signal is not positive — neutral placeholder.
+      deviceLine = DEVICE_LOCATION_NEUTRAL_REVIEWED;
+    } else {
+      // No section at all — IP unavailable or enrichment failed.
+      deviceLine = DEVICE_LOCATION_NEUTRAL_MISSING;
+    }
+
+    if (deviceLine) {
+      input.accessActivityLog = input.accessActivityLog
+        ? `${input.accessActivityLog}\n\n${deviceLine}`
+        : deviceLine;
+    }
+  }
+
+  // File fields are not set — see lib/shopify/disputeFileUpload.ts for why
+  // (no public Shopify API path to produce a valid DisputeFileUpload GID).
 
   return input;
 }
+
+/**
+ * Neutral fallback sentences used when the Device & Location Consistency
+ * signal is not safe to submit as a positive paragraph. Exposed for tests
+ * and to document exactly what lands in Shopify in the non-positive and
+ * missing cases. Do not edit without snapshot-test updates — the wording
+ * is deliberately vague so no merchant weakness leaks to the bank.
+ */
+export const DEVICE_LOCATION_NEUTRAL_REVIEWED =
+  "Device and access patterns were reviewed as part of the transaction assessment.";
+export const DEVICE_LOCATION_NEUTRAL_MISSING =
+  "Device-level location data was not available for this transaction.";

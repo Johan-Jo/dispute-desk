@@ -1,10 +1,11 @@
 /**
- * Payment / AVS+CVV / card metadata / IP evidence source collector.
+ * Payment / AVS+CVV / card metadata evidence source collector.
  *
  * Reads the pre-fetched OrderDetailNode from ctx.order and extracts:
  * - Card payment verification (AVS, CVV) — only when CardPaymentDetails present
  * - Card metadata (BIN, network, wallet, cardholder name)
- * - Customer IP (from order.clientIp — may be null on many stores)
+ *
+ * Customer IP evidence moved to `deviceLocationSource.ts` (2026-04-21).
  *
  * AVS/CVV availability is CONDITIONAL on gateway and payment type.
  * Missing AVS/CVV is NOT an error — it's recorded as unavailable_from_gateway.
@@ -46,12 +47,6 @@ export interface CardEvidenceData {
   gateway: string;
 }
 
-export interface IpEvidenceData {
-  [key: string]: unknown;
-  ip: string;
-  source: "order_client_ip" | "manual_input";
-}
-
 export async function collectPaymentEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
@@ -63,10 +58,6 @@ export async function collectPaymentEvidence(
   // ── Card payment evidence ──
   const cardSection = collectCardEvidence(order.transactions);
   if (cardSection) sections.push(cardSection);
-
-  // ── IP evidence ──
-  const ipSection = collectIpEvidence(order.clientIp);
-  if (ipSection) sections.push(ipSection);
 
   return sections;
 }
@@ -141,22 +132,3 @@ function collectCardEvidence(
   };
 }
 
-function collectIpEvidence(
-  clientIp: string | null | undefined,
-): EvidenceSection | null {
-  // clientIp may be null on many stores (Shopify restriction)
-  if (!clientIp) return null;
-
-  const data: IpEvidenceData = {
-    ip: clientIp,
-    source: "order_client_ip",
-  };
-
-  return {
-    type: "other",
-    label: "Customer Purchase IP",
-    source: "shopify_order",
-    fieldsProvided: ["customer_ip"],
-    data,
-  };
-}
