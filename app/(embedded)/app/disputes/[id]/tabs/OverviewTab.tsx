@@ -270,7 +270,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const { data, derived, actions, clientState } = workspace;
   if (!data) return null;
 
-  const { dispute, submissionFields, rebuttalDraft } = data;
+  const { dispute, submissionFields, rebuttalDraft, appliedRule } = data;
   const orderPayload = extractOrderPayload(data.pack?.evidenceItems);
   const ipLocPayload = extractIpLocationPayload(data.pack?.evidenceItems);
   const ipUnfavorable = ipLocPayload?.bankEligible === false;
@@ -451,24 +451,39 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // this dispute's family; if nothing is missing, hide the CTA entirely.
   const POLICY_FIELDS = ["refund_policy", "shipping_policy", "cancellation_policy"];
   const missingPolicy = missingChecklist.find((m) => POLICY_FIELDS.includes(m.field));
-  const missingNonPolicy = missingChecklist.find((m) => !POLICY_FIELDS.includes(m.field));
 
+  // Post-submit improvement CTA — policy-only. The "Automate this for future
+  // cases" link used to live here too, but the new Automation-rule row in
+  // the Case status card already exposes a "Change rule" button, so this CTA
+  // is now scoped to policy gaps (a different destination).
   let improveCta: { label: string; url: string } | null = null;
-  if (submitted) {
-    if (missingPolicy) {
-      improveCta = {
-        label: "Set up policies for future cases",
-        url: withShopParams("/app/policies", searchParams),
-      };
-    } else if (missingNonPolicy) {
-      const family = mapReasonToRulesFamily(dispute.reason);
-      improveCta = {
-        label: "Automate this for future cases",
-        url: withShopParams(`/app/rules?family=${family}`, searchParams),
-      };
-    }
-    // else nothing missing → no improvement CTA shown
+  if (submitted && missingPolicy) {
+    improveCta = {
+      label: "Set up policies for future cases",
+      url: withShopParams("/app/policies", searchParams),
+    };
   }
+
+  // Automation rule applied to this dispute — surfaced in the Case status
+  // card so the merchant can see which rule routed it here and jump to the
+  // Rules page to change the setting for future disputes of the same family.
+  const disputeFamily = mapReasonToRulesFamily(dispute.reason);
+  const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
+  const appliedModeLabel = (() => {
+    const mode = appliedRule?.mode ?? "manual";
+    if (mode === "auto_pack") return "Auto-Pack";
+    if (mode === "review") return "Send to Review";
+    if (mode === "notify") return "Notify Only";
+    return "Manual";
+  })();
+  const appliedModeHelp =
+    appliedRule?.mode === "auto_pack"
+      ? "DisputeDesk auto-built and saved the evidence pack."
+      : appliedRule?.mode === "review"
+        ? "DisputeDesk built the pack and held it for your review before saving."
+        : appliedRule?.mode === "notify"
+          ? "DisputeDesk notified you but did not build a pack automatically."
+          : "No rule matched — this dispute was handled manually.";
 
   // Defense bullets — synthesized from present evidence so the language is direct and assertive.
   const defenseBullets = synthesizeDefenseBullets(presentFields, ipUnfavorable);
@@ -810,6 +825,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
             )}
           </BlockStack>
+
+          {/* AUTOMATION RULE APPLIED — surfaces the Rules page setting that
+               governed this dispute, with a CTA to change it. */}
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <BlockStack gap="050">
+              <InlineStack gap="200" blockAlign="center">
+                <Text as="p" variant="bodyMd">Automation rule:</Text>
+                <Badge tone={appliedRule?.mode === "auto_pack" ? "success" : appliedRule?.mode === "review" ? "attention" : undefined}>
+                  {appliedModeLabel}
+                </Badge>
+              </InlineStack>
+              <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
+            </BlockStack>
+            <div style={{ marginLeft: "auto" }}>
+              <Button url={rulesUrl}>Change rule</Button>
+            </div>
+          </InlineStack>
 
           {/* PRIMARY CTA — visually dominant */}
           <InlineStack gap="300" blockAlign="center">

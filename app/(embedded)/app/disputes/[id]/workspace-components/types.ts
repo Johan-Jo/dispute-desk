@@ -79,12 +79,20 @@ export interface SubmissionField {
   included: boolean;
 }
 
+export type AppliedRuleMode = "auto_pack" | "review" | "manual" | "notify";
+
+export interface AppliedRule {
+  mode: AppliedRuleMode;
+}
+
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
   pack: WorkspacePack | null;
   argumentMap: ArgumentMap | null;
   rebuttalDraft: RebuttalDraft | null;
   submissionFields: SubmissionField[];
+  /** The rule decision for this dispute (from the latest rule_applied event). */
+  appliedRule: AppliedRule | null;
   caseTypeInfo: CaseTypeInfo;
 }
 

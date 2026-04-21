@@ -54,6 +54,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     buildJobRes,
     argumentRes,
     rebuttalRes,
+    ruleAppliedRes,
   ] = await Promise.all([
     // Evidence items
     packId
@@ -104,6 +105,17 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           .eq("locale", "en-US")
           .maybeSingle()
       : Promise.resolve({ data: null }),
+
+    // Latest rule_applied event — source of truth for "what automation
+    // decided on this dispute". Null when no rule matched (manual default).
+    sb
+      .from("audit_events")
+      .select("event_payload, created_at")
+      .eq("dispute_id", disputeId)
+      .eq("event_type", "rule_applied")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   // ── 4. Build case type info from argument templates ───────────────
@@ -166,12 +178,26 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ? { sections: rebRow.sections, source: rebRow.source }
     : null;
 
+  const ruleAppliedPayload =
+    (ruleAppliedRes.data?.event_payload as
+      | { resulting_action?: { mode?: string } }
+      | undefined) ?? null;
+  const appliedMode = ruleAppliedPayload?.resulting_action?.mode;
+  const appliedRule =
+    appliedMode === "auto_pack" ||
+    appliedMode === "review" ||
+    appliedMode === "notify" ||
+    appliedMode === "manual"
+      ? { mode: appliedMode }
+      : null;
+
   return NextResponse.json({
     dispute,
     pack,
     argumentMap,
     rebuttalDraft,
     submissionFields: [],
+    appliedRule,
     caseTypeInfo: {
       disputeType: template.disputeType,
       toWin: template.toWin,
