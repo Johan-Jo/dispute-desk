@@ -485,6 +485,38 @@ export function evaluateCompletenessV2(
           };
         });
 
+  // Always-include fields: evidence that the collector produces regardless
+  // of template (e.g. Device & Location Consistency is a system-wide signal,
+  // not template-owned). If the collector wrote the field into the pack
+  // AND the checklist doesn't already carry a row for it, append one so the
+  // UI renders the card. Priority is `recommended` / `supporting_only` —
+  // never critical — because these fields never block submission.
+  const ALWAYS_INCLUDE_IF_COLLECTED: Array<{
+    field: string;
+    label: string;
+    priority: EvidenceItemPriority;
+    source: EvidenceItemSource;
+  }> = [
+    {
+      field: "device_location_consistency",
+      label: "Device & Location Consistency",
+      priority: "recommended",
+      source: "auto_ipinfo",
+    },
+  ];
+  for (const extra of ALWAYS_INCLUDE_IF_COLLECTED) {
+    if (!presentFields.has(extra.field)) continue;
+    if (checklist.some((c) => c.field === extra.field)) continue;
+    checklist.push({
+      field: extra.field,
+      label: extra.label,
+      status: "available",
+      priority: extra.priority,
+      blocking: false,
+      source: extra.source,
+    });
+  }
+
   // Scoring: waived + available count as "present"
   const scorableItems = checklist.filter(
     (c) => c.status !== "unavailable",
