@@ -144,46 +144,51 @@ describe("computeBankEligible", () => {
   });
 });
 
-describe("generateSummary (conclusion-first, no org/ASN)", () => {
-  it("leads with 'Supports legitimate' on same_city clean + first_seen", () => {
-    const s = generateSummary(
-      ipinfo({ city: "São Paulo", country: "BR" }),
-      { country: "BR" },
-      "same_city",
-      CLEAN,
-      "first_seen",
-    );
-    expect(s).toMatch(/^Supports legitimate customer activity — IP origin matches shipping location \(São Paulo, BR\)\.$/);
-    expect(s).not.toContain("AS");
-    expect(s).not.toContain("Google");
+describe("generateSummary (interpreted, plain English, no raw IP/org/city)", () => {
+  it("same_city clean + consistent → 'matches billing country and prior customer activity'", () => {
+    const s = generateSummary(ipinfo(), { country: "US" }, "same_city", CLEAN, "consistent");
+    expect(s).toBe("Location matches billing country and prior customer activity.");
   });
 
-  it("leads with 'Location mismatch' on different_country", () => {
+  it("same_city clean + first_seen → 'matches billing country' (no consistency line on this row)", () => {
+    const s = generateSummary(ipinfo(), { country: "US" }, "same_city", CLEAN, "first_seen");
+    expect(s).toBe("Location matches billing country.");
+  });
+
+  it("same_country clean + variable → 'matches billing country' (variable downgrade not exposed on IP row)", () => {
+    const s = generateSummary(ipinfo(), { country: "US" }, "same_country", CLEAN, "variable");
+    expect(s).toBe("Location matches billing country.");
+  });
+
+  it("different_country clean → 'Purchase location differs from billing country.'", () => {
+    const s = generateSummary(ipinfo({ country: "PT" }), { country: "BR" }, "different_country", CLEAN, "consistent");
+    expect(s).toBe("Purchase location differs from billing country.");
+  });
+
+  it("any privacy flag adds a second reliability line", () => {
+    const s = generateSummary(ipinfo(), { country: "US" }, "same_city", VPN, "consistent");
+    expect(s).toBe(
+      "Location matches billing country and prior customer activity.\nVPN or proxy detected — location reliability reduced.",
+    );
+  });
+
+  it("never includes raw IP, org/ASN, city, or country code", () => {
     const s = generateSummary(
-      ipinfo({ city: "Lisbon", country: "PT" }),
+      ipinfo({ city: "São Paulo", country: "BR", org: "AS28573 Claro" }),
       { country: "BR" },
-      "different_country",
+      "same_city",
       CLEAN,
       "consistent",
     );
-    expect(s).toMatch(/^Location mismatch — IP origin \(Lisbon, PT\) differs from shipping address \(BR\)\.$/);
+    expect(s).not.toContain("São Paulo");
+    expect(s).not.toContain("BR");
+    expect(s).not.toContain("AS28573");
+    expect(s).not.toContain("Claro");
+    expect(s).not.toContain("1.2.3.4");
   });
 
-  it("leads with 'Network reliability reduced' when any privacy flag set", () => {
-    const s = generateSummary(ipinfo(), { country: "US" }, "same_city", VPN, "consistent");
-    expect(s).toMatch(/^Network reliability reduced/);
-  });
-
-  it("mentions variable consistency when same_city + variable", () => {
-    const s = generateSummary(
-      ipinfo({ city: "Austin", country: "US" }),
-      { country: "US" },
-      "same_city",
-      CLEAN,
-      "variable",
-    );
-    expect(s).toContain("with caveats");
-    expect(s).toContain("used multiple IPs");
+  it("returns empty string when ipinfo is null", () => {
+    expect(generateSummary(null, { country: "US" }, "unknown", CLEAN, "first_seen")).toBe("");
   });
 });
 
@@ -204,8 +209,30 @@ describe("generateMerchantGuidance", () => {
   });
 });
 
-describe("generateBankParagraph (only called when eligible)", () => {
-  it("leads with 'support customer legitimacy' and never mentions org/ASN", () => {
+describe("generateBankParagraph (only called when eligible) — bank-grade short form", () => {
+  it("returns the rule-5G sentence and nothing else", () => {
+    const p = generateBankParagraph(
+      ipinfo({ city: "São Paulo", country: "BR", org: "AS28573 Claro" }),
+      3,
+      "consistent",
+      "same_city",
+      { country: "BR" },
+    );
+    expect(p).toBe(
+      "The purchase originated from a location consistent with the customer's billing details and prior activity.",
+    );
+  });
+
+  it("returns the same sentence regardless of reuse count or match level", () => {
+    const a = generateBankParagraph(ipinfo(), 0, "first_seen", "same_city", { country: "US" });
+    const b = generateBankParagraph(ipinfo(), 5, "consistent", "same_country", { country: "US" });
+    expect(a).toBe(b);
+    expect(a).toBe(
+      "The purchase originated from a location consistent with the customer's billing details and prior activity.",
+    );
+  });
+
+  it("never includes raw IP, org/ASN, city, or country", () => {
     const p = generateBankParagraph(
       ipinfo({ city: "São Paulo", country: "BR", org: "AS28573 Claro" }),
       3,
@@ -213,37 +240,16 @@ describe("generateBankParagraph (only called when eligible)", () => {
       "same_city",
       { country: "BR" },
     )!;
-    expect(p).toMatch(/^These signals support customer legitimacy\./);
-    expect(p).toContain("São Paulo, BR");
-    expect(p).toContain("matching the shipping location");
-    expect(p).toContain("3 prior orders");
-    expect(p).toContain("No VPN, proxy, or data-center flags");
+    expect(p).not.toContain("São Paulo");
+    expect(p).not.toContain("BR");
     expect(p).not.toContain("AS28573");
     expect(p).not.toContain("Claro");
-    expect(p).not.toContain("fraud");
-    expect(p).not.toContain("proves");
+    expect(p).not.toMatch(/\d+ prior order/);
   });
 
-  it("uses 'first order' for first_seen", () => {
-    const p = generateBankParagraph(ipinfo(), 0, "first_seen", "same_city", { country: "US" })!;
-    expect(p).toContain("first order recorded from this IP");
-  });
-
-  it("singular 'prior order' for reuseCount === 1", () => {
-    const p = generateBankParagraph(ipinfo(), 1, "consistent", "same_city", { country: "US" })!;
-    expect(p).toContain("1 prior order");
-    expect(p).not.toContain("1 prior orders");
-  });
-
-  it("same_country phrasing omits city", () => {
-    const p = generateBankParagraph(
-      ipinfo({ city: "Dallas", country: "US" }),
-      2,
-      "consistent",
-      "same_country",
-      { country: "US" },
-    )!;
-    expect(p).toContain("resolves to US — the same country as the shipping address");
-    expect(p).not.toContain("Dallas");
+  it("returns null when ipinfo is null", () => {
+    expect(
+      generateBankParagraph(null, 0, "first_seen", "unknown", { country: null }),
+    ).toBeNull();
   });
 });

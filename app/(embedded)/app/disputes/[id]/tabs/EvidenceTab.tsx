@@ -37,41 +37,47 @@ const WAIVE_REASON_LABELS: Record<WaiveReason, string> = {
   other: "Other reason",
 };
 
+/* Plain-English description for each evidence row, used in both EvidenceTab
+ * and OverviewTab (kept in sync via WHY_EVIDENCE_MATTERS). Bank-grade
+ * wording — what the row actually proves to the bank, in plain language. */
 const WHY_TEXT: Record<string, string> = {
-  order_confirmation: "Proves the transaction is legitimate",
-  shipping_tracking: "Shows the carrier confirmed shipment",
-  delivery_proof: "Confirms the customer received the package",
+  order_confirmation: "A complete record of the order, including items, amount, and customer details.",
+  shipping_tracking: "Carrier confirmation that the order was shipped and delivered.",
+  delivery_proof: "Proof of delivery through signature or photographic confirmation.",
   billing_address_match: "Matches the billing address to the order",
-  avs_cvv_match: "Shows card security checks passed",
+  avs_cvv_match: "Card security checks confirming the purchaser had access to billing details.",
   product_description: "Proves the product matched its description",
   refund_policy: "Shows customer agreed to refund terms",
   shipping_policy: "Documents shipping commitments",
   cancellation_policy: "Proves cancellation rules were disclosed",
-  customer_communication: "Shows merchant attempted to resolve the issue",
-  customer_account_info: "Account age and order history signal a legitimate repeat customer",
+  customer_communication: "Messages or emails showing engagement before or after the purchase.",
+  customer_account_info: "Account age and activity supporting a legitimate customer profile.",
   duplicate_explanation: "Explains why charges are not duplicates",
   supporting_documents: "Additional proof that strengthens your case",
-  activity_log: "Customer purchase history and account activity",
-  device_location_consistency: "Shows IP origin supports customer legitimacy",
+  activity_log: "Evidence of prior successful transactions from the same customer.",
+  device_session_consistency: "Technical signals showing consistent device and session behavior.",
+  ip_location_check: "Verification of purchase location compared to billing details and prior activity.",
 };
 
-/* Plain-language label for each evidence field — used in "How strong your case is". */
+/* Plain-language label for each evidence field — used in "How strong your case is".
+ * Bank-grade titles per the 2026-04-21 evidence-model rename. */
 const FRIENDLY_FIELD_LABEL: Record<string, string> = {
-  order_confirmation: "Order record",
-  shipping_tracking: "Shipping tracking",
-  delivery_proof: "Delivery confirmation",
+  order_confirmation: "Transaction Record",
+  shipping_tracking: "Shipping Confirmation",
+  delivery_proof: "Delivery Confirmation (Signature / Photo)",
   billing_address_match: "Billing address match",
-  avs_cvv_match: "Card security checks",
+  avs_cvv_match: "Payment Verification (AVS & CVV)",
   product_description: "Product listing",
   refund_policy: "Refund policy",
   shipping_policy: "Shipping policy",
   cancellation_policy: "Cancellation policy",
-  customer_communication: "Customer messages",
-  customer_account_info: "Customer account details",
+  customer_communication: "Customer Communication",
+  customer_account_info: "Customer Account Profile",
   duplicate_explanation: "Duplicate-charge explanation",
   supporting_documents: "Extra supporting documents",
-  activity_log: "Customer purchase history",
-  device_location_consistency: "Device & Location",
+  activity_log: "Customer History",
+  device_session_consistency: "Device & Session Consistency",
+  ip_location_check: "IP & Location Check",
 };
 
 /* Plain-language impact statement for missing evidence. */
@@ -90,7 +96,8 @@ const MISSING_IMPACT: Record<string, string> = {
   duplicate_explanation: "the bank assumes the charges are duplicates.",
   activity_log: "the bank can\u2019t see legitimate purchase history.",
   supporting_documents: "the case has fewer corroborating signals.",
-  device_location_consistency: "no IP geolocation signal is available — this is optional evidence and the case isn\u2019t weaker without it.",
+  ip_location_check: "no location verification data was available for this order \u2014 this is optional evidence and the case isn\u2019t weaker without it.",
+  device_session_consistency: "no device or session signal was available for this order.",
 };
 
 function friendlyLabel(field: string, fallback: string): string {
@@ -206,80 +213,27 @@ function renderContent(field: string, content: Record<string, unknown> | null): 
     );
   }
 
-  // Device & Location Consistency — conclusion-first, human-readable only.
-  // Never renders org/ASN/provider even though they are stored on the
-  // payload for internal debugging.
-  if (field === "device_location_consistency") {
-    const ipinfo = content.ipinfo as
-      | { city?: string | null; country?: string | null; privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } }
-      | null
-      | undefined;
-    const summary = typeof content.summary === "string" ? content.summary : null;
+  // IP & Location Check — interpreted-signal sentences only.
+  // Never renders raw IP, org/ASN, or coordinates. Two lines max:
+  // primary verdict + optional reliability note.
+  if (field === "ip_location_check") {
+    const summary = typeof content.summary === "string" ? content.summary : "";
     const merchantGuidance = typeof content.merchantGuidance === "string" ? content.merchantGuidance : null;
-    const locationMatch = String(content.locationMatch ?? "unknown");
-    const consistency = String(content.ipConsistencyLevel ?? "first_seen");
-    const reuseCount = typeof content.ipReuseCount === "number" ? content.ipReuseCount : 0;
-    const vpn = Boolean(ipinfo?.privacy?.vpn);
-    const proxy = Boolean(ipinfo?.privacy?.proxy);
-    const hosting = Boolean(ipinfo?.privacy?.hosting);
-
-    const matchLabel: Record<string, string> = {
-      same_city: "Same city as shipping",
-      same_country: "Same country as shipping",
-      different_country: "Different country from shipping",
-      unknown: "Location unknown",
-    };
-    const matchTone: Record<string, "success" | "warning" | "critical" | undefined> = {
-      same_city: "success",
-      same_country: "success",
-      different_country: "critical",
-      unknown: undefined,
-    };
-    const consistencyLabel: Record<string, string> = {
-      consistent: "Consistent with prior orders",
-      first_seen: "First IP recorded for this customer",
-      variable: "Multiple IPs used across orders",
-    };
+    const lines = summary ? summary.split("\n").filter((l) => l.trim().length > 0) : [];
 
     return (
       <BlockStack gap="200">
-        {summary ? (
-          <Text as="p" variant="bodyMd" fontWeight="semibold">
-            {summary}
+        {lines.map((line, i) => (
+          <Text key={i} as="p" variant="bodyMd" fontWeight={i === 0 ? "semibold" : "regular"}>
+            {line}
           </Text>
-        ) : null}
-
-        <InlineStack gap="100" wrap>
-          <Badge tone={matchTone[locationMatch]}>{matchLabel[locationMatch] ?? "Location unknown"}</Badge>
-          <Badge tone={consistency === "variable" ? "warning" : undefined}>
-            {consistencyLabel[consistency] ?? "Consistency unknown"}
-          </Badge>
-          {vpn ? <Badge tone="warning">VPN</Badge> : null}
-          {proxy ? <Badge tone="warning">Proxy</Badge> : null}
-          {hosting ? <Badge tone="warning">Data-center</Badge> : null}
-        </InlineStack>
-
-        {ipinfo?.city || ipinfo?.country ? (
-          <div className={styles.contentPreview}>
-            <Row
-              label="IP origin"
-              value={[ipinfo.city, ipinfo.country].filter(Boolean).join(", ") || "\u2014"}
-            />
-            {reuseCount > 0 ? (
-              <Row label="Reuse count" value={`${reuseCount} prior order${reuseCount === 1 ? "" : "s"}`} />
-            ) : null}
-          </div>
-        ) : null}
+        ))}
 
         {merchantGuidance ? (
           <Banner tone="info">
             <Text as="p" variant="bodySm">{merchantGuidance}</Text>
           </Banner>
         ) : null}
-
-        <Text as="p" variant="bodySm" tone="subdued">
-          Supports customer legitimacy.
-        </Text>
       </BlockStack>
     );
   }

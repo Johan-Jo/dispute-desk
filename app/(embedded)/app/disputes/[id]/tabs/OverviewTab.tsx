@@ -17,6 +17,7 @@ import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
 import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
+import { evidenceStrengthLabel } from "@/lib/argument/evidenceStrength";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -28,22 +29,26 @@ const STRENGTH_LABEL: Record<string, string> = {
   insufficient: "Weak",
 };
 
-/** Outcome-driven, one-line "why it matters" per evidence field. */
+/** Plain-English description per evidence field — kept in sync with
+ * WHY_TEXT in EvidenceTab.tsx so both tabs surface identical bank-grade
+ * wording. Updated 2026-04-21 for the evidence-model rename. */
 const WHY_EVIDENCE_MATTERS: Record<string, string> = {
-  order_confirmation: "Confirms a real, fully recorded transaction tied to this customer.",
-  shipping_tracking: "Carrier records confirm the order left your warehouse.",
-  delivery_proof: "Delivery confirmed \u2014 the strongest defense against \u2018not received\u2019 claims.",
+  order_confirmation: "A complete record of the order, including items, amount, and customer details.",
+  shipping_tracking: "Carrier confirmation that the order was shipped and delivered.",
+  delivery_proof: "Proof of delivery through signature or photographic confirmation.",
   billing_address_match: "Billing matches the cardholder\u2019s address \u2014 heavy weight in fraud cases.",
-  avs_cvv_match: "Security checks passed \u2014 strong indicator of legitimate cardholder use.",
+  avs_cvv_match: "Card security checks confirming the purchaser had access to billing details.",
   product_description: "Product was advertised exactly as delivered.",
   refund_policy: "Customer agreed to refund terms before purchase.",
   shipping_policy: "Shipping commitments were clearly disclosed before purchase.",
   cancellation_policy: "Cancellation rules were disclosed before purchase.",
-  customer_communication: "Order timeline shows ongoing legitimate engagement with the customer.",
-  customer_account_info: "Account age and order history signal a legitimate repeat customer \u2014 strong fraud defense.",
+  customer_communication: "Messages or emails showing engagement before or after the purchase.",
+  customer_account_info: "Account age and activity supporting a legitimate customer profile.",
   duplicate_explanation: "Documents that the charges are distinct, not duplicates.",
   supporting_documents: "Additional proof reinforcing the overall defense.",
-  activity_log: "Purchase history shows a legitimate, repeat customer pattern.",
+  activity_log: "Evidence of prior successful transactions from the same customer.",
+  device_session_consistency: "Technical signals showing consistent device and session behavior.",
+  ip_location_check: "Verification of purchase location compared to billing details and prior activity.",
 };
 
 const CATEGORY_FIX_HINT: Record<string, string> = {
@@ -819,7 +824,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           )}
 
           {presentItems.map((item) => {
-            const strong = item.strength === "strong";
+            const strengthLabel = evidenceStrengthLabel(item.field);
+            const strong = strengthLabel === "Strong evidence";
             return (
               <div
                 key={item.field}
@@ -834,9 +840,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
                     <Badge tone="success">Included</Badge>
-                    <Badge tone={strong ? "success" : "warning"}>
-                      {strong ? "Strong" : "Moderate"}
-                    </Badge>
+                    <Badge tone={strong ? "success" : "info"}>{strengthLabel}</Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
                     {WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
@@ -847,13 +851,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           })}
 
           {missingChecklist.map((item) => {
-            const critical = item.priority === "critical";
+            const strengthLabel = evidenceStrengthLabel(item.field);
+            const strong = strengthLabel === "Strong evidence";
             return (
               <div
                 key={item.field}
                 style={{
                   border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${critical ? "#dc2626" : "#9ca3af"}`,
+                  borderLeft: `4px solid ${strong ? "#dc2626" : "#9ca3af"}`,
                   borderRadius: 8,
                   padding: 12,
                 }}
@@ -861,10 +866,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={critical ? "critical" : undefined}>Missing</Badge>
-                    <Badge tone={critical ? "critical" : "warning"}>
-                      {critical ? "Weak without it" : "Helpful"}
-                    </Badge>
+                    <Badge tone={strong ? "critical" : undefined}>Missing</Badge>
+                    <Badge tone={strong ? "critical" : "info"}>{strengthLabel}</Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
                     {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}

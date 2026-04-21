@@ -1,10 +1,15 @@
 /**
- * Device & Location Consistency collector.
+ * IP & Location Check collector.
  *
  * Replaces the old raw "Customer Purchase IP" section from paymentSource.ts.
  * Reads ctx.order.clientIp + ctx.order.shippingAddress, enriches the IP via
  * IPinfo, computes location match / IP consistency / risk level / field
  * score, and generates merchant-facing copy plus a BANK-GATED paragraph.
+ *
+ * Field key: `ip_location_check`. Section label: "IP & Location Check".
+ * Renamed from `device_location_consistency` on 2026-04-21 — the data
+ * shape is unchanged but the surfaced text is now bank-grade and split
+ * cleanly from the future "Device & Session Consistency" row.
  *
  * The bank paragraph is populated ONLY when all three positive conditions
  * hold (same_city or same_country, no privacy flags, consistent or
@@ -115,38 +120,42 @@ export function computeBankEligible(
   return true;
 }
 
+/**
+ * Build the merchant-facing line(s) for the IP & Location Check row.
+ * Returns up to two lines: a primary verdict + an optional reliability note.
+ *
+ * Never includes raw IP, org/ASN, coordinates, or city-name specifics.
+ * `consistency === "variable"` is intentionally NOT exposed here — that
+ * downgrade lives on the separate "Customer History" row.
+ */
 export function generateSummary(
   ipinfo: IpinfoResponse | null,
-  shipping: { country: string | null } | null,
+  _shipping: { country: string | null } | null,
   match: LocationMatch,
   privacy: IpinfoPrivacy,
   consistency: IpConsistencyLevel,
 ): string {
   if (!ipinfo) return "";
-  const city = ipinfo.city ?? "unknown city";
-  const country = ipinfo.country ?? "unknown country";
-  const shipCountry = shipping?.country ?? "unknown country";
   const anyFlag = privacy.vpn || privacy.proxy || privacy.hosting;
 
+  // Primary verdict
+  let primary: string;
   if (match === "different_country") {
-    return `Location mismatch — IP origin (${city}, ${country}) differs from shipping address (${shipCountry}).`;
+    primary = "Purchase location differs from billing country.";
+  } else if (match === "same_city" || match === "same_country") {
+    primary =
+      consistency === "consistent"
+        ? "Location matches billing country and prior customer activity."
+        : "Location matches billing country.";
+  } else {
+    return "";
   }
+
+  // Optional second line for reliability concerns
   if (anyFlag) {
-    return "Network reliability reduced — IP routes through a VPN, proxy, or data-center.";
+    return `${primary}\nVPN or proxy detected — location reliability reduced.`;
   }
-  if (match === "same_city") {
-    if (consistency === "variable") {
-      return `Supports legitimate customer activity with caveats — IP origin matches shipping location (${city}, ${country}), but the customer has used multiple IPs across orders.`;
-    }
-    return `Supports legitimate customer activity — IP origin matches shipping location (${city}, ${country}).`;
-  }
-  if (match === "same_country") {
-    if (consistency === "variable") {
-      return `Mixed signal — IP origin in the same country (${country}), but the customer has used multiple IPs across orders.`;
-    }
-    return `Supports legitimate customer activity — IP origin in the same country as shipping address (${country}).`;
-  }
-  return "";
+  return primary;
 }
 
 export function generateMerchantGuidance(
@@ -180,48 +189,24 @@ export function generateMerchantGuidance(
   return lines.join("\n\n");
 }
 
+/**
+ * Bank-style sentence (rule 5G) submitted to Shopify when the signal is
+ * positive. Caller gates on bankEligible; non-positive cases get one of
+ * the two neutral fallback constants in formatEvidenceForShopify.ts and
+ * never see this generator.
+ *
+ * Deliberately vague — no city, no country, no IP, no org/ASN, no
+ * coordinates. Bank receives a single neutral-positive statement.
+ */
 export function generateBankParagraph(
   ipinfo: IpinfoResponse | null,
-  ipReuseCount: number,
-  consistency: IpConsistencyLevel,
-  match: LocationMatch,
-  shipping: { country: string | null } | null,
+  _ipReuseCount: number,
+  _consistency: IpConsistencyLevel,
+  _match: LocationMatch,
+  _shipping: { country: string | null } | null,
 ): string | null {
-  // Only generated for positive cases — caller gates on bankEligible
   if (!ipinfo) return null;
-
-  const city = ipinfo.city ?? "an undisclosed city";
-  const country = ipinfo.country ?? "an undisclosed country";
-  const shipCountry = shipping?.country ?? "the shipping country";
-
-  // Location sentence
-  let locationSentence: string;
-  if (match === "same_city") {
-    locationSentence = `The customer's purchase IP resolves to ${city}, ${country} — matching the shipping location.`;
-  } else if (match === "same_country") {
-    locationSentence = `The customer's purchase IP resolves to ${country} — the same country as the shipping address.`;
-  } else {
-    // Not reachable when bankEligible=true, but guard anyway
-    locationSentence = `The customer's purchase IP resolves to ${city}, ${country}; the shipping address is in ${shipCountry}.`;
-  }
-
-  // Consistency sentence
-  let consistencySentence: string;
-  if (consistency === "consistent") {
-    const noun = ipReuseCount === 1 ? "prior order" : "prior orders";
-    consistencySentence = `This IP matches the one used on ${ipReuseCount} ${noun} from the same customer.`;
-  } else if (consistency === "first_seen") {
-    consistencySentence = "This is the first order recorded from this IP for this customer.";
-  } else {
-    // Not reachable when bankEligible=true
-    consistencySentence =
-      "The customer has used multiple IP addresses across orders, which reduces consistency of the activity pattern.";
-  }
-
-  // Privacy sentence — always positive here since bankEligible requires all flags false
-  const privacySentence = "No VPN, proxy, or data-center flags are set on this IP.";
-
-  return `These signals support customer legitimacy. ${locationSentence} ${consistencySentence} ${privacySentence}`;
+  return "The purchase originated from a location consistent with the customer's billing details and prior activity.";
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -253,7 +238,7 @@ async function fetchConsistency(
   const { data: rows, error } = await sb
     .from("evidence_items")
     .select("payload, pack_id, evidence_packs!inner(id, disputes!inner(shop_id, customer_email, customer_display_name))")
-    .in("label", ["Device & Location Consistency", "Customer Purchase IP"])
+    .in("label", ["IP & Location Check", "Device & Location Consistency", "Customer Purchase IP"])
     .eq("evidence_packs.disputes.shop_id", shopId)
     .neq("pack_id", currentPackId);
 
@@ -377,9 +362,9 @@ export async function collectDeviceLocationEvidence(
   return [
     {
       type: "other",
-      label: "Device & Location Consistency",
+      label: "IP & Location Check",
       source: ipinfo ? "ipinfo_io" : "order_client_ip",
-      fieldsProvided: ["device_location_consistency"],
+      fieldsProvided: ["ip_location_check"],
       data,
     },
   ];

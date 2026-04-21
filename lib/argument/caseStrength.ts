@@ -48,7 +48,7 @@ const FAMILY_WEIGHTS: Record<ReasonFamily, FamilyWeights> = {
     customer_communication: "strong",
     shipping_tracking: "supporting",
     delivery_proof: "supporting",
-    device_location_consistency: "supporting_only",
+    ip_location_check: "supporting_only",
     refund_policy: "optional",
     shipping_policy: "optional",
     supporting_documents: "optional",

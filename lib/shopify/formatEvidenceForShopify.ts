@@ -229,9 +229,16 @@ export function buildEvidenceForShopify(
   // can snapshot them and catch accidental edits that could leak
   // negative framing into submitted text.
   if (family === "fraud") {
-    const deviceLocSection = sections.find(
-      (s) => s.type === "other" && (s.fieldsProvided ?? []).includes("device_location_consistency"),
-    );
+    // Backward-compat: accept both the new key (`ip_location_check`) and the
+    // legacy key (`device_location_consistency`) so packs persisted with the
+    // old `fieldsProvided` value continue to submit correctly during the
+    // transition. Old packs flow through the same gate; rebuilding writes
+    // the new key.
+    const deviceLocSection = sections.find((s) => {
+      if (s.type !== "other") return false;
+      const fp = s.fieldsProvided ?? [];
+      return fp.includes("ip_location_check") || fp.includes("device_location_consistency");
+    });
     const data = deviceLocSection?.data as
       | { bankEligible?: boolean; bankParagraph?: string | null }
       | undefined;

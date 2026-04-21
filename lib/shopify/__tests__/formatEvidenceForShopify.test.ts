@@ -22,12 +22,15 @@ describe("DEVICE_LOCATION_NEUTRAL_* constants", () => {
   });
 });
 
-function deviceLocSection(data: Record<string, unknown>): RawPackSection {
+function deviceLocSection(
+  data: Record<string, unknown>,
+  opts: { legacyKey?: boolean } = {},
+): RawPackSection {
   return {
     type: "other",
-    label: "Device & Location Consistency",
+    label: opts.legacyKey ? "Device & Location Consistency" : "IP & Location Check",
     source: "ipinfo_io",
-    fieldsProvided: ["device_location_consistency"],
+    fieldsProvided: opts.legacyKey ? ["device_location_consistency"] : ["ip_location_check"],
     data,
   };
 }
@@ -79,6 +82,21 @@ describe("buildEvidenceForShopify — device-location submission gate", () => {
   it("falls back to 'missing' for UNRECOGNIZED (fraud family) when no section is present", () => {
     const input = buildEvidenceForShopify([], null, "UNRECOGNIZED");
     expect(input.accessActivityLog).toContain(DEVICE_LOCATION_NEUTRAL_MISSING);
+  });
+
+  it("backward-compat: legacy `device_location_consistency` fieldsProvided still resolves to the same outcome", () => {
+    const positive = deviceLocSection(
+      {
+        bankEligible: true,
+        bankParagraph:
+          "The purchase originated from a location consistent with the customer's billing details and prior activity.",
+      },
+      { legacyKey: true },
+    );
+    const input = buildEvidenceForShopify([positive], null, "FRAUDULENT");
+    expect(input.accessActivityLog).toContain(
+      "The purchase originated from a location consistent with the customer's billing details and prior activity.",
+    );
   });
 
   it("joins the positive paragraph to existing accessActivityLog with a blank line", () => {

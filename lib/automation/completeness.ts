@@ -303,13 +303,13 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
   FRAUDULENT: [
-    { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "order_confirmation", label: "Transaction Record", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
-    { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
-    { field: "activity_log", label: "Customer Purchase History", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
-    { field: "device_location_consistency", label: "Device & Location Consistency", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_ipinfo", collectionType: "auto" },
-    { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
-    { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "avs_cvv_match", label: "Payment Verification (AVS & CVV)", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "activity_log", label: "Customer History", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "ip_location_check", label: "IP & Location Check", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_ipinfo", collectionType: "auto" },
+    { field: "shipping_tracking", label: "Shipping Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "delivery_proof", label: "Delivery Confirmation (Signature / Photo)", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
@@ -498,8 +498,17 @@ export function evaluateCompletenessV2(
     source: EvidenceItemSource;
   }> = [
     {
-      field: "device_location_consistency",
-      label: "Device & Location Consistency",
+      field: "ip_location_check",
+      label: "IP & Location Check",
+      priority: "recommended",
+      source: "auto_ipinfo",
+    },
+    // Reserved slot for the future Device & Session Consistency collector.
+    // No collector writes this today, so the row is naturally hidden
+    // (presentFields.has(...) is false → checklist push skipped).
+    {
+      field: "device_session_consistency",
+      label: "Device & Session Consistency",
       priority: "recommended",
       source: "auto_ipinfo",
     },

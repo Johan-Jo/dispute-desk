@@ -340,7 +340,10 @@ export async function buildPack(
   // as `pack_json.device_location` so portal UI and audit events can read
   // it without traversing `sections`. The full data still lives on the
   // corresponding section inside `sections`.
+  // Accept both new (`ip_location_check`) and legacy (`device_location_consistency`)
+  // keys so an in-progress build picks up either collector output.
   const deviceLocSection = allSections.find((s) =>
+    s.fieldsProvided.includes("ip_location_check") ||
     s.fieldsProvided.includes("device_location_consistency"),
   );
   const deviceLocSummary = deviceLocSection
