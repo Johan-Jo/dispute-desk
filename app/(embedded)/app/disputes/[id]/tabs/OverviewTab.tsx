@@ -171,6 +171,23 @@ function extractOrderPayload(
   return (order?.payload as OrderEvidencePayload | undefined) ?? null;
 }
 
+interface IpLocationPayload {
+  bankEligible?: boolean;
+  locationMatch?: string;
+}
+
+function extractIpLocationPayload(
+  evidenceItems: Array<{ type: string; payload: Record<string, unknown> }> | undefined,
+): IpLocationPayload | null {
+  if (!evidenceItems) return null;
+  // The IP & Location Check section is the only "other" section that
+  // exposes a `locationMatch` enum — uniquely identifiable.
+  const ip = evidenceItems.find(
+    (e) => e.type === "other" && typeof (e.payload as { locationMatch?: unknown })?.locationMatch === "string",
+  );
+  return (ip?.payload as IpLocationPayload | undefined) ?? null;
+}
+
 function formatAddress(
   addr: OrderEvidencePayload["billingAddress"] | undefined,
 ): string {
@@ -227,6 +244,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const { dispute, submissionFields, rebuttalDraft } = data;
   const orderPayload = extractOrderPayload(data.pack?.evidenceItems);
+  const ipLocPayload = extractIpLocationPayload(data.pack?.evidenceItems);
+  const ipUnfavorable = ipLocPayload?.bankEligible === false;
   const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
 
   // System failure short-circuit. When the build itself failed (e.g.,
@@ -826,12 +845,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           {presentItems.map((item) => {
             const strengthLabel = evidenceStrengthLabel(item.field);
             const strong = strengthLabel === "Strong evidence";
+            // The IP & Location Check row is special: it's "available" because
+            // we ran the check, but the result may be unfavorable (mismatch /
+            // VPN / proxy). When that's the case we render with warning treatment
+            // so the merchant doesn't see a green "Included / Success" badge for
+            // a signal that actually weakens the case.
+            const isIpRow = item.field === "ip_location_check";
+            const negativeIp = isIpRow && ipUnfavorable;
+            const borderColor = negativeIp ? "#d97706" : strong ? "#16a34a" : "#d97706";
             return (
               <div
                 key={item.field}
                 style={{
                   border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${strong ? "#16a34a" : "#d97706"}`,
+                  borderLeft: `4px solid ${borderColor}`,
                   borderRadius: 8,
                   padding: 12,
                 }}
@@ -839,8 +866,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone="success">Included</Badge>
-                    <Badge tone={strong ? "success" : "info"}>{strengthLabel}</Badge>
+                    {negativeIp ? (
+                      <Badge tone="warning">Reviewed</Badge>
+                    ) : (
+                      <Badge tone="success">Included</Badge>
+                    )}
+                    <Badge tone={negativeIp ? "warning" : strong ? "success" : "info"}>{strengthLabel}</Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
                     {WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
