@@ -4,7 +4,6 @@ export interface ShopSettings {
   shop_id: string;
   auto_build_enabled: boolean;
   auto_save_enabled: boolean;
-  require_review_before_save: boolean;
   auto_save_min_score: number;
   enforce_no_blockers: boolean;
   created_at: string;
@@ -28,7 +27,6 @@ export async function updateShopSettings(
       ShopSettings,
       | "auto_build_enabled"
       | "auto_save_enabled"
-      | "require_review_before_save"
       | "auto_save_min_score"
       | "enforce_no_blockers"
     >

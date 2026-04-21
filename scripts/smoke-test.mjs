@@ -77,7 +77,7 @@ async function run() {
   assert(settings[0].auto_build_enabled === true, "auto_build_enabled defaults to true");
   // Reset to default if row existed from prior run
   await client.query(
-    `UPDATE shop_settings SET auto_save_enabled = false, require_review_before_save = true WHERE shop_id = $1`,
+    `UPDATE shop_settings SET auto_save_enabled = false WHERE shop_id = $1`,
     [shopId]
   );
   const { rows: freshSettings } = await client.query(

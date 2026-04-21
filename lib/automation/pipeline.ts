@@ -173,19 +173,18 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
 
   const settings = await getShopSettings(pack.shop_id);
 
-  // The merchant's Rules page intent must override the global
-  // `require_review_before_save` default. Otherwise a dispute family
-  // explicitly set to "Auto" still parks for manual review, which
-  // makes the Rules page non-functional. We re-evaluate rules against
-  // the dispute at save-time:
+  // The Rules page is the source of truth for whether to automate.
+  // We re-evaluate the shop's rules against the dispute at save-time:
   //
-  //   - auto_pack → merchant wants hands-off; bypass the review gate.
-  //   - review    → merchant wants manual check; force the review gate.
-  //   - other/no match → fall back to global shop settings.
+  //   - auto_pack → merchant opted in; run the quality gate and save
+  //                  immediately if criteria pass.
+  //   - review    → merchant wants to inspect; park for review.
+  //   - manual/notify/no match → pack sits ready; merchant acts.
   //
-  // This keeps global settings as a safety floor while letting per-family
-  // rules drive the actual decision.
-  let effectiveSettings = settings;
+  // There is no separate "require_review_before_save" toggle — that was
+  // removed because it silently overrode the Rules page decision and
+  // made auto rules non-functional.
+  let ruleMode: "auto_pack" | "review" | "manual" | "notify" = "manual";
   if (pack.dispute_id) {
     const { data: dispute } = await sb
       .from("disputes")
@@ -206,20 +205,55 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         amount: dispute.amount,
         phase: phaseForRules,
       });
-      const ruleMode = evalResult.action.mode;
-      if (ruleMode === "auto_pack") {
-        effectiveSettings = { ...settings, require_review_before_save: false };
-      } else if (ruleMode === "review") {
-        effectiveSettings = { ...settings, require_review_before_save: true };
-      }
+      ruleMode = evalResult.action.mode;
     }
   }
 
+  // review / manual / notify → merchant approval required, park the pack.
+  if (ruleMode !== "auto_pack") {
+    const reason =
+      ruleMode === "review"
+        ? "Rule action is review — awaiting merchant approval"
+        : "No auto rule matched — awaiting merchant approval";
+    await sb
+      .from("evidence_packs")
+      .update({ status: "ready", updated_at: new Date().toISOString() })
+      .eq("id", packId);
+
+    await sb.from("audit_events").insert({
+      shop_id: pack.shop_id,
+      dispute_id: pack.dispute_id,
+      pack_id: packId,
+      actor_type: "system",
+      event_type: "parked_for_review",
+      event_payload: { reason, rule_mode: ruleMode },
+    });
+
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: PARKED_FOR_REVIEW,
+        description: reason,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        metadataJson: { pack_id: packId, reason, rule_mode: ruleMode },
+        dedupeKey: `${pack.dispute_id}:${PARKED_FOR_REVIEW}:${packId}`,
+      });
+      void updateNormalizedStatus(pack.dispute_id);
+    }
+
+    return { action: "park_for_review", details: reason };
+  }
+
+  // auto_pack → run the quality gate.
   const gate = evaluateAutoSaveGate({
-    settings: effectiveSettings,
+    autoSaveEnabled: settings.auto_save_enabled,
+    autoSaveMinScore: settings.auto_save_min_score,
+    enforceNoBlockers: settings.enforce_no_blockers,
     completenessScore: pack.completeness_score ?? 0,
     blockers: (pack.blockers as string[]) ?? [],
-    isApproved: false,
     submissionReadiness: (pack.submission_readiness as "ready" | "ready_with_warnings" | "blocked" | "submitted") ?? undefined,
   });
 
@@ -271,41 +305,9 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "auto_save", details: "Enqueued save to Shopify" };
   }
 
-  if (gate.action === "park_for_review") {
-    await sb
-      .from("evidence_packs")
-      .update({ status: "ready", updated_at: new Date().toISOString() })
-      .eq("id", packId);
-
-    await sb.from("audit_events").insert({
-      shop_id: pack.shop_id,
-      dispute_id: pack.dispute_id,
-      pack_id: packId,
-      actor_type: "system",
-      event_type: "parked_for_review",
-      event_payload: { reason: gate.reason },
-    });
-
-    if (pack.dispute_id) {
-      void emitDisputeEvent({
-        disputeId: pack.dispute_id,
-        shopId: pack.shop_id,
-        eventType: PARKED_FOR_REVIEW,
-        description: gate.reason,
-        eventAt: new Date().toISOString(),
-        actorType: "disputedesk_system",
-        sourceType: "pack_engine",
-        metadataJson: { pack_id: packId, reason: gate.reason },
-        dedupeKey: `${pack.dispute_id}:${PARKED_FOR_REVIEW}:${packId}`,
-      });
-      void updateNormalizedStatus(pack.dispute_id);
-    }
-
-    return { action: "park_for_review", details: gate.reason };
-  }
-
-  // Auto-save blocked — pack stays "ready", blockers are metadata only.
-  // The merchant can still view and manually act on the pack.
+  // gate.action === "block" — the rule said auto_pack but the pack
+  // doesn't meet the quality criteria (completeness / blockers).
+  // Pack stays "ready" so the merchant can fill the gap and retry.
   await sb.from("audit_events").insert({
     shop_id: pack.shop_id,
     dispute_id: pack.dispute_id,

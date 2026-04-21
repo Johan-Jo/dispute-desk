@@ -46,7 +46,6 @@ export async function PATCH(req: NextRequest) {
   const allowed = [
     "auto_build_enabled",
     "auto_save_enabled",
-    "require_review_before_save",
     "auto_save_min_score",
     "enforce_no_blockers",
   ];
