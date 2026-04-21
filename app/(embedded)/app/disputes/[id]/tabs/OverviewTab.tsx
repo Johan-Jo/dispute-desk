@@ -40,6 +40,7 @@ const WHY_EVIDENCE_MATTERS: Record<string, string> = {
   shipping_policy: "Shipping commitments were clearly disclosed before purchase.",
   cancellation_policy: "Cancellation rules were disclosed before purchase.",
   customer_communication: "Order timeline shows ongoing legitimate engagement with the customer.",
+  customer_account_info: "Account age and order history signal a legitimate repeat customer \u2014 strong fraud defense.",
   duplicate_explanation: "Documents that the charges are distinct, not duplicates.",
   supporting_documents: "Additional proof reinforcing the overall defense.",
   activity_log: "Purchase history shows a legitimate, repeat customer pattern.",

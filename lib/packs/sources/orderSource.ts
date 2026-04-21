@@ -132,5 +132,28 @@ export async function collectOrderEvidence(
     });
   }
 
+  // Customer account info: standalone section that satisfies the
+  // `customer_account_info` template requirement. Distinct from
+  // `customer_communication` (timeline messages) and `activity_log`
+  // (combined tenure + timeline) — this section isolates the account
+  // profile so the merchant sees order history and account age as
+  // their own fraud-defense signal, not a side-note buried under
+  // timeline events.
+  if (order.customer) {
+    const totalOrders = Number(order.customer.numberOfOrders ?? 0);
+    sections.push({
+      type: "other",
+      label: "Customer account details",
+      source: "shopify_order",
+      fieldsProvided: ["customer_account_info"],
+      data: {
+        totalOrders: Number.isFinite(totalOrders) ? totalOrders : 0,
+        customerSince: order.customer.createdAt,
+        customerNote: order.customer.note,
+        isRepeatCustomer: totalOrders > 1,
+      },
+    });
+  }
+
   return sections;
 }

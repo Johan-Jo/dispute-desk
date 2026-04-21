@@ -48,6 +48,7 @@ const WHY_TEXT: Record<string, string> = {
   shipping_policy: "Documents shipping commitments",
   cancellation_policy: "Proves cancellation rules were disclosed",
   customer_communication: "Shows merchant attempted to resolve the issue",
+  customer_account_info: "Account age and order history signal a legitimate repeat customer",
   duplicate_explanation: "Explains why charges are not duplicates",
   supporting_documents: "Additional proof that strengthens your case",
   activity_log: "Customer purchase history and account activity",
@@ -65,6 +66,7 @@ const FRIENDLY_FIELD_LABEL: Record<string, string> = {
   shipping_policy: "Shipping policy",
   cancellation_policy: "Cancellation policy",
   customer_communication: "Customer messages",
+  customer_account_info: "Customer account details",
   duplicate_explanation: "Duplicate-charge explanation",
   supporting_documents: "Extra supporting documents",
   activity_log: "Customer purchase history",
@@ -82,6 +84,7 @@ const MISSING_IMPACT: Record<string, string> = {
   shipping_policy: "delivery timing claims are harder to defend.",
   cancellation_policy: "cancellation timing claims are harder to defend.",
   customer_communication: "the bank doesn\u2019t see your engagement with the customer.",
+  customer_account_info: "the bank can\u2019t tell whether this is a first-time buyer or an established repeat customer.",
   duplicate_explanation: "the bank assumes the charges are duplicates.",
   activity_log: "the bank can\u2019t see legitimate purchase history.",
   supporting_documents: "the case has fewer corroborating signals.",
@@ -181,6 +184,23 @@ function renderContent(field: string, content: Record<string, unknown> | null): 
         </div>
       );
     }
+  }
+
+  // Customer account info
+  if (field === "customer_account_info") {
+    const total = typeof content.totalOrders === "number" ? content.totalOrders : null;
+    const since = typeof content.customerSince === "string" ? content.customerSince : null;
+    const repeat = Boolean(content.isRepeatCustomer);
+    return (
+      <div className={styles.contentPreview}>
+        <Row
+          label="Status"
+          value={repeat ? "Repeat customer" : total === 1 ? "First-time customer" : "\u2014"}
+        />
+        {total !== null ? <Row label="Total orders" value={String(total)} /> : null}
+        {since ? <Row label="Customer since" value={formatDate(since)} /> : null}
+      </div>
+    );
   }
 
   return <GenericPreview data={content} />;

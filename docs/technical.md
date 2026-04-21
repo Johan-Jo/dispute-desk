@@ -736,10 +736,12 @@ This rule is enforced in:
 
 | Collector | File | Fields Provided |
 |-----------|------|-----------------|
-| Order | `orderSource.ts` | `order_confirmation`, `billing_address_match` |
+| Order | `orderSource.ts` | `order_confirmation`, `billing_address_match`, `activity_log`, `customer_account_info` |
 | Fulfillment | `fulfillmentSource.ts` | `shipping_tracking`, `delivery_proof` |
 | Policy | `policySource.ts` | `shipping_policy`, `refund_policy`, `cancellation_policy` (terms, refunds, shipping; privacy/contact stored but not yet mapped to Shopify evidence) |
 | Manual | `manualSource.ts` | `customer_communication` |
+
+The `customer_account_info` section (2026-04-20) is distinct from `activity_log`: activity_log bundles customer tenure *and* timeline events for Shopify's `accessActivityLog` evidence field; customer_account_info is the account-profile signal in isolation (order count, account age, repeat-customer flag) so the "Customer account details" checklist row renders its own preview rather than duplicating the "Customer correspondence" preview. Pre-fix, migration `20260411120000` pointed both `customer_emails` and `customer_account_info` template keys at `customer_communication`, which produced two checklist rows with identical preview text. Migration `20260420120000_split_customer_account_info_collector.sql` remaps `customer_account_info` to its own collector field.
 
 ### GraphQL Queries
 
