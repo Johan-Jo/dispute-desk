@@ -1127,7 +1127,7 @@ Dashboard (`app/(embedded)/app/`):
 - `dashboardHelpers.ts` — lifted types (`DashboardStats`, `PeriodKey`), `DEFAULT_STATS`, `useDateLocale`, `useFormatCurrency`, `safeStatusLabel`, `safeOutcomeLabel`
 - `dashboard.module.css` — mobile-only CSS (`kpiTileMobile`, `kpiHeroTileRisk`, `mobileGrid2`, `summaryCounterMobile`, `helpCardMobile`). Desktop inline styles untouched.
 
-**Triage-first section order (applies to both desktop and mobile):** Operational Summary → Recent Disputes → Performance Overview (KPIs) → Outcome Breakdown → Recent Activity → Charts → Help. Recent Disputes sits directly below the Operational Summary CTA because triage beats KPIs on every surface, not just on phones.
+**Section order (identical on desktop and mobile):** Operational Summary → Performance Overview (KPIs) → Outcome Breakdown → Recent Disputes → Recent Activity → Charts → Help. The Operational Summary card owns the primary triage CTA ("Review N cases"), so Recent Disputes doesn't need to jump ahead of the KPIs.
 
 **Mobile actions bar** stacks search full-width, then pairs Filter + Sort 50/50 — Export is desktop-only. Sort (`sortMode` state in the page) maps to the existing `/api/disputes?sort=…&sort_dir=…` query params; desktop keeps the default tab-derived ordering so fetch behavior is byte-identical.
 

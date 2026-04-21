@@ -7,9 +7,10 @@
  * last_event_at, needs_attention.
  *
  * Desktop and mobile share state, data fetch, and section order
- * (triage-first: operational summary → recent disputes → KPIs → …).
- * useBreakpoints() inside each extracted sub-component drives the
- * internal layout choices (stacked cards vs. grid, hero KPI tile, etc.).
+ * (operational summary → KPIs → outcome breakdown → recent disputes →
+ * activity → charts → help). useBreakpoints() inside each extracted
+ * sub-component drives the internal layout choices (stacked cards vs.
+ * grid, hero KPI tile, etc.).
  */
 "use client";
 
@@ -438,11 +439,6 @@ export default function EmbeddedDashboardPage() {
           <DashboardOperationalSummary stats={stats} loading={statsLoading} />
         </Layout.Section>
 
-        {/* Triage-first order on both desktop and mobile: Recent Disputes
-            sits directly below the Operational Summary CTA, ahead of the
-            Performance Overview KPIs. */}
-        {recentDisputesPreview}
-
         <Layout.Section>
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
@@ -450,6 +446,8 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section>
           <OutcomeBreakdown stats={stats} loading={statsLoading} />
         </Layout.Section>
+
+        {recentDisputesPreview}
 
         <Layout.Section>
           <RecentActivityFeed stats={stats} loading={statsLoading} />
