@@ -631,7 +631,7 @@ Risk assessment collection removed (2026-04-20). `Order.riskAssessments` does no
 
 ### Customer IP Collection
 
-`ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. The `customerPurchaseIp` field on `ShopifyPaymentsDisputeEvidenceUpdateInput` is supported — the save-to-Shopify job injects it when IP evidence exists. Priority: `recommended` for fraud disputes.
+`ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. Shopify's `ShopifyPaymentsDisputeEvidenceUpdateInput` does **not** have a dedicated `customerPurchaseIp` field (verified via introspection 2026-04-21; earlier codebase claim was stale). When IP evidence exists the save-to-Shopify job appends `Customer purchase IP: <ip>` to `accessActivityLog` so the IP still reaches the bank in the "Activity logs" field. Priority: `recommended` for fraud disputes.
 
 ## Dispute Workspace
 

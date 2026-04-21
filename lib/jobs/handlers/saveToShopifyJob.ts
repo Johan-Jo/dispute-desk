@@ -78,7 +78,6 @@ const VERIFIABLE_FIELDS = new Set([
   "refundPolicyDisclosure",
   "refundRefusalExplanation",
   "uncategorizedText",
-  "customerPurchaseIp",
 ]);
 
 /** Fields that are write-only (mutation accepts but can't be verified via read-back). */
@@ -233,13 +232,21 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     input.customerEmailAddress = disputeExtra.customer_email;
   }
 
-  // Inject customerPurchaseIp
+  // Customer purchase IP — Shopify's ShopifyPaymentsDisputeEvidenceUpdateInput
+  // does NOT accept a dedicated `customerPurchaseIp` field (verified via
+  // introspection 2026-04-21). Append it to accessActivityLog instead so the
+  // evidence reaches the bank in the "Activity logs" field, which is where
+  // IPs naturally belong.
   const { data: ipItem } = await sb
     .from("evidence_items").select("payload")
     .eq("pack_id", packId).eq("label", "Customer Purchase IP")
     .limit(1).maybeSingle();
-  if ((ipItem?.payload as { ip?: string } | null)?.ip) {
-    input.customerPurchaseIp = (ipItem!.payload as { ip: string }).ip;
+  const customerPurchaseIp = (ipItem?.payload as { ip?: string } | null)?.ip;
+  if (customerPurchaseIp) {
+    const ipLine = `Customer purchase IP: ${customerPurchaseIp}`;
+    input.accessActivityLog = input.accessActivityLog
+      ? `${input.accessActivityLog}\n\n${ipLine}`
+      : ipLine;
   }
 
   // ═══════════════════════════════════════════════════════════

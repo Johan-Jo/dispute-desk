@@ -2,18 +2,23 @@
  * disputeEvidenceUpdate mutation.
  *
  * Requires scope: write_shopify_payments_dispute_evidences
- * Requires an ONLINE session (user-context).
+ * Works with the shop's durable OFFLINE session (verified 2026-04-21 via
+ * scripts/verify-offline-evidence-update.mjs — earlier "requires ONLINE"
+ * claim was not supported by the API).
  *
- * VERIFIED SCHEMA (introspected 2026-04-17):
- * - 10 text fields
+ * VERIFIED SCHEMA (re-introspected 2026-04-21, API 2025-04):
+ * - 9 text fields
  * - 6 file fields (ShopifyPaymentsDisputeFileUploadUpdateInput)
- * - 1 address field (MailingAddressInput)
+ * - 1 address field (MailingAddressInput) — shippingAddress
  * - 1 control field (submitEvidence: Boolean)
  *
  * DOES NOT EXIST (confirmed rejected by API):
- * customerName, shippingCarrier, shippingDate, shippingTrackingNumber,
- * productDescription, serviceDate, serviceDocumentation,
- * shippingDocumentation (text), customerCommunication (text)
+ *   customerName, shippingCarrier, shippingDate, shippingTrackingNumber,
+ *   productDescription, serviceDate, serviceDocumentation,
+ *   shippingDocumentation (text), customerCommunication (text),
+ *   customerPurchaseIp (removed from type 2026-04-21 after Shopify returned
+ *     "Field is not defined on ShopifyPaymentsDisputeEvidenceUpdateInput";
+ *     the IP is now appended to accessActivityLog in saveToShopifyJob).
  */
 
 export const DISPUTE_EVIDENCE_UPDATE_MUTATION = `
@@ -43,14 +48,13 @@ export interface DisputeFileUploadInput {
  * Only fields confirmed to exist in the actual GraphQL schema.
  */
 export interface DisputeEvidenceUpdateInput {
-  // Text fields
+  // Text fields (9)
   accessActivityLog?: string;
   cancellationPolicyDisclosure?: string;
   cancellationRebuttal?: string;
   customerEmailAddress?: string;
   customerFirstName?: string;
   customerLastName?: string;
-  customerPurchaseIp?: string;
   refundPolicyDisclosure?: string;
   refundRefusalExplanation?: string;
   uncategorizedText?: string;
