@@ -99,27 +99,6 @@ function synthesizeDefenseBullets(presentFields: Set<string>, ipUnfavorable: boo
   return bullets;
 }
 
-/** Top-level highlight statements for "What Shopify will receive". */
-interface HighlightRule {
-  fields: string[];
-  text: string;
-}
-
-const HIGHLIGHT_RULES: HighlightRule[] = [
-  { fields: ["avs_cvv_match", "billing_address_match"], text: "Payment verification passed" },
-  { fields: ["shipping_tracking", "delivery_proof"], text: "Order fulfilled and delivered" },
-  { fields: ["customer_communication", "activity_log"], text: "Customer actively participated" },
-  { fields: ["refund_policy", "shipping_policy", "cancellation_policy"], text: "Policies were disclosed at purchase" },
-];
-
-function synthesizeHighlights(presentFields: Set<string>): string[] {
-  const highlights: string[] = [];
-  for (const rule of HIGHLIGHT_RULES) {
-    if (rule.fields.some((f) => presentFields.has(f))) highlights.push(rule.text);
-  }
-  return highlights;
-}
-
 function formatDate(iso: string | null): string {
   if (!iso) return "\u2014";
   try {
@@ -270,7 +249,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const { data, derived, actions, clientState } = workspace;
   if (!data) return null;
 
-  const { dispute, submissionFields, rebuttalDraft, appliedRule } = data;
+  const { dispute, appliedRule } = data;
   const orderPayload = extractOrderPayload(data.pack?.evidenceItems);
   const ipLocPayload = extractIpLocationPayload(data.pack?.evidenceItems);
   const ipUnfavorable = ipLocPayload?.bankEligible === false;
@@ -487,11 +466,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   // Defense bullets — synthesized from present evidence so the language is direct and assertive.
   const defenseBullets = synthesizeDefenseBullets(presentFields, ipUnfavorable);
-
-  // What Shopify will receive
-  const includedFieldCount = submissionFields.filter((f) => f.included).length || presentItems.length;
-  const summaryHighlights = synthesizeHighlights(presentFields);
-  const rebuttalSummary = rebuttalDraft?.sections.find((s) => s.type === "summary")?.text?.trim() || null;
 
   // Coverage interpretation
   const anyMissingCritical = missingChecklist.some((m) => m.priority === "critical");
@@ -996,53 +970,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </BlockStack>
       </Card>
 
-      {/* 4. WHAT SHOPIFY WILL RECEIVE */}
-      <Card>
-        <BlockStack gap="300">
-          <Text as="h2" variant="headingMd">What Shopify will receive</Text>
-
-          <Text as="p" variant="bodyMd">
-            This case demonstrates that the transaction was legitimate and properly verified.
-          </Text>
-
-          {summaryHighlights.length > 0 && (
-            <BlockStack gap="100">
-              {summaryHighlights.map((h) => (
-                <InlineStack key={h} gap="200" blockAlign="center" wrap={false}>
-                  <Text as="span" variant="bodyMd" tone="success">{"\u2713"}</Text>
-                  <Text as="p" variant="bodyMd">{h}</Text>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          )}
-
-          {rebuttalSummary && (
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Defense summary (from the rebuttal letter)</Text>
-              <Text as="p" variant="bodyMd">{rebuttalSummary}</Text>
-            </BlockStack>
-          )}
-
-          <Divider />
-
-          <InlineStack gap="400" wrap>
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Evidence items</Text>
-              <Text as="p" variant="bodyMd" fontWeight="semibold">
-                {`${includedFieldCount} item${includedFieldCount === 1 ? "" : "s"} attached`}
-              </Text>
-            </BlockStack>
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Format</Text>
-              <Text as="p" variant="bodyMd" fontWeight="semibold">
-                Letter + structured Shopify fields
-              </Text>
-            </BlockStack>
-          </InlineStack>
-        </BlockStack>
-      </Card>
-
-      {/* 5. EVIDENCE BY CATEGORY */}
+      {/* 4. EVIDENCE BY CATEGORY */}
       {categories.length > 0 && (
         <Card>
           <BlockStack gap="300">
