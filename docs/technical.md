@@ -565,6 +565,11 @@ when disputes are detected:
    - Decision: `auto_save` | `park_for_review` | `block`.
 5. If `auto_save` → enqueue `save_to_shopify` job.
 
+When the gate decision is `block`, the pipeline writes the gate's `reasons` to both the `auto_save_blocked` audit event (`event_payload.reasons`) and the `pack_blocked` dispute event (`description` + `metadata_json.reasons`). The embedded app surfaces this in two places so the merchant is never left guessing why auto-submit stopped:
+
+- **Dispute Overview tab** — renders a "Auto-submit paused" warning banner above the Case status card when the most recent pack audit event is `auto_save_blocked` (see `app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx`, `autoSaveBlock` derivation). The banner lists the gate reasons, names the biggest missing evidence field, and exposes "Add missing evidence" / "Submit now anyway" CTAs.
+- **Dashboard Recent Activity + dispute-detail timeline** — the `pack_blocked` row shows the gate reasons inline. Dashboard rows localize the common "Completeness score X% is below threshold Y%" reason via `eventDescriptions.pack_blocked_score`; unknown reasons fall through to the raw English description.
+
 ### Key modules
 
 | Module | Path | Purpose |
@@ -1112,11 +1117,21 @@ Reference implementation — disputes list (`app/(embedded)/app/disputes/`):
 - `MobileDisputesList.tsx` — stack of cards inside `<Card padding="0">`, cards self-separate via `border-bottom`
 - `disputeListHelpers.ts` — shared helpers + `formatDueTiming(d, tab, t, locale)` and `resolveSort(sortMode, tab)`
 
+Dashboard (`app/(embedded)/app/`):
+- `DashboardOperationalSummary.tsx` — mobile header stacks title → attention badge → full-width CTA; counters collapse from `minmax(140px, 1fr)` to a 2×2 grid
+- `DashboardKpis.tsx` — mobile reshapes the 5-tile grid into a hero tile (Amount at Risk, background tinted critical when `> 0`) over two 2-col rows (Win Rate / Active · Recovered / Lost); icon chip shrinks 32→24 px, value font 24→22 px, padding 16→12 px
+- `DashboardRecentDisputesPreview.tsx` — desktop keeps the 8-column table; mobile reuses `MobileDisputesList` directly (fetch returns raw `Dispute[]`, both branches read from the same state)
+- `DashboardHelpCard.tsx` — mobile stacks icon + text + link vertically with a full-width link button
+- `dashboardHelpers.ts` — lifted types (`DashboardStats`, `PeriodKey`), `DEFAULT_STATS`, `useDateLocale`, `useFormatCurrency`, `safeStatusLabel`, `safeOutcomeLabel`
+- `dashboard.module.css` — mobile-only CSS (`kpiTileMobile`, `kpiHeroTileRisk`, `mobileGrid2`, `summaryCounterMobile`, `helpCardMobile`). Desktop inline styles untouched.
+
+**Section-reorder precedent:** on mobile the dashboard stack puts Recent Disputes directly below the Operational Summary (above KPIs), because triage beats KPIs on a phone. Desktop order is unchanged. Future embedded-page mobile redesigns may reorder sections similarly when the desktop top-down order doesn't match a phone merchant's triage intent.
+
 **Mobile actions bar** stacks search full-width, then pairs Filter + Sort 50/50 — Export is desktop-only. Sort (`sortMode` state in the page) maps to the existing `/api/disputes?sort=…&sort_dir=…` query params; desktop keeps the default tab-derived ordering so fetch behavior is byte-identical.
 
 **Hard constraints** enforced at 320 / 375 / 393 px: no tables on mobile, no `overflow-x` anywhere, `document.scrollingElement.scrollWidth === clientWidth`, `:active` press state on every tappable card (not just `:hover`).
 
-This pattern is the template for the remaining embedded pages (dashboard, packs, rules, policies, coverage, settings, analytics, detail workspace tabs); each is its own small PR.
+This pattern is the template for the remaining embedded pages (packs, rules, policies, coverage, settings, analytics, detail workspace tabs); each is its own small PR.
 
 ## Governance Controls & Review Queue
 

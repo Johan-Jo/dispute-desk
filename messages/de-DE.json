@@ -3151,6 +3151,7 @@
       "status_changed": "{from} → {to}",
       "due_date_changed": "Fälligkeitsdatum geändert auf {date}",
       "pack_created": "Bewertung: {score}%, {count} Beweise gesammelt",
+      "pack_blocked_score": "Automatischer Versand pausiert — Bewertung {score}% liegt unter Ihrem Schwellenwert von {threshold}%",
       "evidence_saved_to_shopify": "{count} Beweisfelder an Shopify gesendet",
       "support_note_added": "Notiz hinzugefügt von {role}",
       "dispute_resynced": "Neu synchronisiert von {role}"

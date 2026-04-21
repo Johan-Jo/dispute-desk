@@ -3151,6 +3151,7 @@
       "status_changed": "{from} → {to}",
       "due_date_changed": "Date limite modifiée au {date}",
       "pack_created": "Score : {score}%, {count} preuves collectées",
+      "pack_blocked_score": "Envoi automatique suspendu — le score {score}% est inférieur à votre seuil de {threshold}%",
       "evidence_saved_to_shopify": "{count} champs de preuves envoyés à Shopify",
       "support_note_added": "Note ajoutée par {role}",
       "dispute_resynced": "Resynchronisé par {role}"

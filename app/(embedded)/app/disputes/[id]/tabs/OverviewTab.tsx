@@ -326,6 +326,28 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       ? Math.round((presentItems.length / totalEvidenceShown) * 100)
       : 0;
 
+  // Auto-submit denied visibility. When auto-save fires during pack build it
+  // records an `auto_save_blocked` audit event with the gate's reasons. If the
+  // most-recent audit event for this pack is that block (and the pack hasn't
+  // since been submitted), the merchant needs to understand why DisputeDesk
+  // did NOT push the pack to Shopify automatically.
+  const autoSaveBlock = !submitted
+    ? (() => {
+        const events = data.pack?.auditEvents ?? [];
+        const lastBlock = [...events]
+          .reverse()
+          .find((e) => e.event_type === "auto_save_blocked");
+        if (!lastBlock) return null;
+        const payload = (lastBlock.event_payload ?? {}) as { reasons?: unknown };
+        const reasons = Array.isArray(payload.reasons)
+          ? (payload.reasons as unknown[]).filter((r): r is string => typeof r === "string")
+          : [];
+        return { reasons };
+      })()
+    : null;
+
+  const topMissingLabel = missingItems[0]?.label ?? null;
+
   // Recommendation line + helper.
   let recommendation: string;
   let recommendationHelper: string | null = null;
@@ -655,6 +677,34 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       <Text as="h1" variant="headingXl">
         {pageHeader}
       </Text>
+
+      {/* AUTO-SUBMIT DENIED — why DisputeDesk did not push to Shopify */}
+      {autoSaveBlock && (
+        <Banner tone="warning" title="Auto-submit paused \u2014 your review needed">
+          <BlockStack gap="200">
+            <Text as="p" variant="bodyMd">
+              DisputeDesk builds your defense automatically, but only auto-submits when the
+              pack meets your auto-submit threshold. This pack didn\u2019t clear the bar, so
+              we stopped and handed it to you.
+            </Text>
+            {autoSaveBlock.reasons.length > 0 && (
+              <Text as="p" variant="bodySm">
+                Why: {autoSaveBlock.reasons.join(" \u2022 ")}
+              </Text>
+            )}
+            {topMissingLabel && (
+              <Text as="p" variant="bodySm">
+                Biggest gap: {topMissingLabel}. Adding it strengthens the case
+                before you submit.
+              </Text>
+            )}
+            <InlineStack gap="200">
+              <Button onClick={goToEvidence}>Add missing evidence</Button>
+              <Button variant="primary" onClick={goToReview}>Submit now anyway</Button>
+            </InlineStack>
+          </BlockStack>
+        </Banner>
+      )}
 
       {/* 1. CASE STATUS */}
       <Card>

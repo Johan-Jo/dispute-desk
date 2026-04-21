@@ -2622,6 +2622,7 @@
       "status_changed": "{from} → {to}",
       "due_date_changed": "Due date changed to {date}",
       "pack_created": "Score: {score}%, {count} evidence items collected",
+      "pack_blocked_score": "Auto-submit paused — score {score}% is below your {threshold}% threshold",
       "evidence_saved_to_shopify": "{count} evidence fields sent to Shopify",
       "support_note_added": "Note added by {role}",
       "dispute_resynced": "Resynced by {role}"

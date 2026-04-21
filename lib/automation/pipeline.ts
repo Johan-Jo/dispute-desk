@@ -280,6 +280,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       actorType: "disputedesk_system",
       sourceType: "pack_engine",
       visibility: "merchant_and_internal",
+      description: (gate.reasons as string[]).join("; "),
       metadataJson: { pack_id: packId, reasons: gate.reasons },
       dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
     });

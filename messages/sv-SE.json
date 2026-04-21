@@ -3152,6 +3152,7 @@
       "status_changed": "{from} → {to}",
       "due_date_changed": "Förfallodatum ändrat till {date}",
       "pack_created": "Poäng: {score}%, {count} bevis insamlade",
+      "pack_blocked_score": "Automatisk inskickning pausad — poäng {score}% är under din tröskel på {threshold}%",
       "evidence_saved_to_shopify": "{count} bevisfält skickade till Shopify",
       "support_note_added": "Anteckning tillagd av {role}",
       "dispute_resynced": "Omsynkad av {role}"
