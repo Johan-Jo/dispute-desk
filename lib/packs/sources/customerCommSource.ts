@@ -1,22 +1,26 @@
 /**
  * Customer-communication evidence source collector.
  *
- * Pulls merchant/customer communication traces from the order and
+ * Pulls merchant ↔ customer communication traces from the order and
  * customer record in Shopify:
  *
- *   - Order.note           — merchant staff notes on the order
+ *   - Order.note            — merchant staff notes on the order
  *   - Order.customAttributes — buyer-provided attributes at checkout
  *                              (e.g. "please leave at door")
- *   - Order.events         — the order timeline: system events like
- *                              "Order confirmation email sent" plus any
- *                              merchant-added timeline comments
- *   - Customer.note        — merchant staff notes on the customer
+ *   - Order.events          — order timeline; we ONLY count merchant
+ *                              comments here (system events and the
+ *                              automated confirmation email do not
+ *                              demonstrate two-way engagement)
+ *   - Customer.note         — merchant staff notes on the customer
  *
- * Emits `customer_communication` in fieldsProvided when at least one
- * of these signals carries content. Without real data the collector
- * returns an empty array and the field stays unsatisfied (or gets
- * satisfied later by manualSource's uploads, which also emit
- * `customer_communication` for backwards-compatibility).
+ * Emits `customer_communication` in fieldsProvided ONLY when at least
+ * one of: staff note, customer note, buyer attribute, or merchant
+ * timeline comment is present. System events and the auto-confirmation
+ * email do NOT trigger inclusion — those exist on every Shopify order
+ * and would make the checklist row falsely "Included" for every dispute.
+ *
+ * (Updated 2026-04-21 — previously a non-empty timeline of system events
+ * counted as engagement, which produced misleading "Included" rows.)
  *
  * Reads the pre-fetched OrderDetailNode from ctx.order (populated by
  * buildPack.ts). No independent Shopify round-trip.
@@ -88,24 +92,24 @@ export async function collectCustomerCommEvidence(
 
   const signals = extract(order);
 
-  // Count the signals that carry actual content. If none, skip this
-  // section entirely so the field can still be satisfied by an upload.
-  const signalCount =
-    (signals.staffNote ? 1 : 0) +
-    (signals.customerNote ? 1 : 0) +
-    (signals.buyerAttributes.length > 0 ? 1 : 0) +
-    (signals.timelineEvents.length > 0 ? 1 : 0);
-
-  if (signalCount === 0) return [];
-
-  // Count customer-facing confirmation events separately so the
-  // payload shows "how many notifications Shopify sent" at a glance.
-  const confirmationEvents = signals.timelineEvents.filter(
-    (e) => e.source === "customer_confirmation_email",
-  ).length;
+  // Count the signals that carry actual two-way engagement. System
+  // timeline events and the auto-confirmation email are excluded
+  // because every Shopify order has them — counting them as engagement
+  // would falsely mark this row "Included" on every dispute.
   const merchantComments = signals.timelineEvents.filter(
     (e) => e.source === "merchant_comment",
   ).length;
+  const confirmationEvents = signals.timelineEvents.filter(
+    (e) => e.source === "customer_confirmation_email",
+  ).length;
+
+  const realEngagementCount =
+    (signals.staffNote ? 1 : 0) +
+    (signals.customerNote ? 1 : 0) +
+    (signals.buyerAttributes.length > 0 ? 1 : 0) +
+    merchantComments;
+
+  if (realEngagementCount === 0) return [];
 
   return [
     {
