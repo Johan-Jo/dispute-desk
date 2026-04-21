@@ -66,9 +66,26 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: evErr.message }, { status: 500 });
   }
 
+  // Filter spurious due_date_changed rows. Historically syncDisputes
+  // compared raw ISO strings, so a Shopify response with a non-UTC
+  // offset (e.g. "…-04:00") produced a timeline event against our
+  // stored UTC value for the same instant. The sync code now compares
+  // by epoch ms, but the dispute_events table is append-only (enforced
+  // by DB trigger) so the existing rows can't be deleted — we hide
+  // them at the read boundary instead.
+  const filteredEvents = (events ?? []).filter((e) => {
+    if (e.event_type !== "due_date_changed") return true;
+    const meta = (e.metadata_json ?? {}) as { old_due_at?: string; new_due_at?: string };
+    if (!meta.old_due_at || !meta.new_due_at) return true;
+    const oldMs = new Date(meta.old_due_at).getTime();
+    const newMs = new Date(meta.new_due_at).getTime();
+    if (!Number.isFinite(oldMs) || !Number.isFinite(newMs)) return true;
+    return oldMs !== newMs;
+  });
+
   const d = dispute;
   return NextResponse.json({
-    events: events ?? [],
+    events: filteredEvents,
     summary: {
       normalizedStatus: d.normalized_status ?? null,
       statusReason: d.status_reason ?? null,

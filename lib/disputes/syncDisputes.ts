@@ -316,22 +316,33 @@ export async function syncDisputes(
             }
           }
 
-          // Detect due date changes
-          if (disputeId && existing.due_at !== d.evidenceDueBy && d.evidenceDueBy) {
-            void emitDisputeEvent({
-              disputeId,
-              shopId,
-              eventType: DUE_DATE_CHANGED,
-              description: `Due date changed to ${d.evidenceDueBy}`,
-              eventAt: nowIso,
-              actorType: "shopify",
-              sourceType: "shopify_sync",
-              metadataJson: {
-                old_due_at: existing.due_at,
-                new_due_at: d.evidenceDueBy,
-              },
-              dedupeKey: `${disputeId}:${DUE_DATE_CHANGED}:${d.evidenceDueBy}`,
-            });
+          // Detect due date changes. Compare by epoch ms, not raw strings:
+          // Shopify returns "2026-04-28T19:00:00-04:00" while we store the
+          // same instant as "2026-04-28T23:00:00+00:00", so a string !=
+          // fires on every sync even when the deadline never moved.
+          if (disputeId && d.evidenceDueBy) {
+            const oldMs = existing.due_at ? new Date(existing.due_at).getTime() : null;
+            const newMs = new Date(d.evidenceDueBy).getTime();
+            const changed = Number.isFinite(newMs) && oldMs !== newMs;
+            if (changed) {
+              void emitDisputeEvent({
+                disputeId,
+                shopId,
+                eventType: DUE_DATE_CHANGED,
+                description: `Due date changed to ${new Date(newMs).toISOString()}`,
+                eventAt: nowIso,
+                actorType: "shopify",
+                sourceType: "shopify_sync",
+                metadataJson: {
+                  old_due_at: existing.due_at,
+                  new_due_at: d.evidenceDueBy,
+                },
+                // Dedupe on the canonical instant (epoch ms) so the same
+                // deadline never produces two events just because Shopify
+                // returned a different tz offset representation.
+                dedupeKey: `${disputeId}:${DUE_DATE_CHANGED}:${newMs}`,
+              });
+            }
           }
 
           // Detect confirmed submission via Shopify evidenceSentOn
