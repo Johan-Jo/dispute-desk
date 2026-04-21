@@ -215,14 +215,17 @@ async function sendManualEvidenceAlert(
 
   // Get team email
   const teamEmail = teamPayload?.teamEmail as string | undefined;
-  // Fallback: shop contact email from shops table
+  // Shop row — needed for shop_domain to build the Admin deep link. The
+  // `contact_email` column does NOT exist on `shops`; loading it silently
+  // nulled the entire row and made the email link fall back to
+  // https://disputedesk.app/... instead of the Shopify Admin URL.
   const { data: shop } = await db
     .from("shops")
-    .select("contact_email, shop_domain")
+    .select("shop_domain")
     .eq("id", shopId)
     .single();
 
-  const to = teamEmail || shop?.contact_email;
+  const to = teamEmail;
   if (!to) return;
 
   const amount = dispute.amount != null ? String(dispute.amount) : null;
