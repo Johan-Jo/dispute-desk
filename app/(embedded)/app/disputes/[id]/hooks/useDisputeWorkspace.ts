@@ -572,10 +572,16 @@ export function useDisputeWorkspace(disputeId: string) {
     const categories = deriveCategories(items, reasonKey);
     const missingItems = deriveMissingItems(effectiveChecklist);
 
-    // Readiness
-    const isSaved = pack?.status === "saved_to_shopify" ||
+    // Readiness. A pack is "saved" when its status reflects a successful
+    // save OR it carries a saved_to_shopify_at timestamp. The timestamp is
+    // the authoritative signal: status can be overwritten on a rebuild, but
+    // the save really did happen and the merchant must not be told "Not
+    // submitted" in that case.
+    const isSaved =
+      pack?.status === "saved_to_shopify" ||
       pack?.status === "saved_to_shopify_unverified" ||
-      pack?.status === "saved_to_shopify_verified";
+      pack?.status === "saved_to_shopify_verified" ||
+      !!pack?.savedToShopifyAt;
     let readiness: SubmissionReadiness;
     if (isSaved) {
       readiness = "submitted";

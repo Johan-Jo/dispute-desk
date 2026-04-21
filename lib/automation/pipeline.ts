@@ -215,10 +215,26 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       ruleMode === "review"
         ? "Rule action is review — awaiting merchant approval"
         : "No auto rule matched — awaiting merchant approval";
-    await sb
-      .from("evidence_packs")
-      .update({ status: "ready", updated_at: new Date().toISOString() })
-      .eq("id", packId);
+    // Never downgrade a pack that has already been saved to Shopify.
+    // A rebuild of an already-submitted pack can legitimately re-enter this
+    // branch (rules re-evaluated, new build scored below threshold), but the
+    // pack is still submitted — flipping status back to "ready" would make
+    // the UI say "Not submitted" even though saved_to_shopify_at is set.
+    const alreadySaved =
+      pack.status === "saved_to_shopify" ||
+      pack.status === "saved_to_shopify_unverified" ||
+      pack.status === "saved_to_shopify_verified";
+    if (!alreadySaved) {
+      await sb
+        .from("evidence_packs")
+        .update({ status: "ready", updated_at: new Date().toISOString() })
+        .eq("id", packId);
+    } else {
+      await sb
+        .from("evidence_packs")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", packId);
+    }
 
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,
