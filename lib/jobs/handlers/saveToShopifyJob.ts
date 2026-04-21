@@ -232,22 +232,13 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     input.customerEmailAddress = disputeExtra.customer_email;
   }
 
-  // Customer purchase IP — Shopify's ShopifyPaymentsDisputeEvidenceUpdateInput
-  // does NOT accept a dedicated `customerPurchaseIp` field (verified via
-  // introspection 2026-04-21). Append it to accessActivityLog instead so the
-  // evidence reaches the bank in the "Activity logs" field, which is where
-  // IPs naturally belong.
-  const { data: ipItem } = await sb
-    .from("evidence_items").select("payload")
-    .eq("pack_id", packId).eq("label", "Customer Purchase IP")
-    .limit(1).maybeSingle();
-  const customerPurchaseIp = (ipItem?.payload as { ip?: string } | null)?.ip;
-  if (customerPurchaseIp) {
-    const ipLine = `Customer purchase IP: ${customerPurchaseIp}`;
-    input.accessActivityLog = input.accessActivityLog
-      ? `${input.accessActivityLog}\n\n${ipLine}`
-      : ipLine;
-  }
+  // The raw `customerPurchaseIp` injection that used to live here was
+  // removed on 2026-04-21. The IP & Location Check evidence block now
+  // owns all IP-related submission text via `formatEvidenceForShopify.ts`,
+  // which gates output through `bankEligible`. Raw-dumping the IP string
+  // would bypass that gate and leak negative signals (e.g. a Brazilian IP
+  // on a US-shipping order) into the bank's view of the case.
+
 
   // ═══════════════════════════════════════════════════════════
   //  REST-ONLY FIELDS (not available via GraphQL)
