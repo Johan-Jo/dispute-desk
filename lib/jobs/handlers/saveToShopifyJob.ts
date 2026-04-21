@@ -256,9 +256,12 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   //  shipping_carrier, shipping_tracking_number, shipping_date.
   //  But the REST PUT /dispute_evidences.json endpoint accepts them.
   //
-  //  File uploads via dispute_file_uploads endpoint are NOT available
-  //  (returns 404 — requires a scope that cannot be granted via OAuth).
-  //  All evidence is therefore text-only.
+  //  File uploads are not available via any currently-public Shopify
+  //  API path (verified 2026-04-21). REST
+  //  /shopify_payments/disputes/:id/dispute_file_uploads.json returns
+  //  HTTP 404 on 2024-10 / 2025-04 / 2026-01. GraphQL stagedUploadsCreate
+  //  rejects the DISPUTE_FILE_UPLOAD resource. All evidence is therefore
+  //  text-only. See lib/shopify/disputeFileUpload.ts for the full record.
   // ═══════════════════════════════════════════════════════════
 
   const restOnlyFields: Record<string, string> = {};

@@ -1248,9 +1248,21 @@ The **embedded** Rules page (`app/(embedded)/app/rules/page.tsx`) is a per-famil
 ### Save Pipeline
 
 1. `POST /api/packs/:packId/save-to-shopify` — enqueues `save_to_shopify` job, sets status to `saving`.
-2. Job handler loads pack sections + decrypted offline session token.
+2. Job handler loads pack sections + decrypted offline session token (`getShopBackgroundSession`).
 3. Calls `disputeEvidenceUpdate` mutation with the dispute's `dispute_evidence_gid`.
-4. On success → `saved_to_shopify` status + timestamp. On error → `save_failed` + audit log.
+4. On success → `saved_to_shopify` status + timestamp. On error → `save_failed` + audit log. Auth-class failures throw `ShopifyAuthInvalidError` so they are distinguishable from other errors in `jobs.last_error`.
+
+### Why evidence is text-only
+
+`ShopifyPaymentsDisputeEvidenceUpdateInput` has 6 file fields (`uncategorizedFile`, `customerCommunicationFile`, `shippingDocumentationFile`, etc.), but as of 2026-04-21 there is **no currently-public Shopify Admin API path** for a third-party app to produce a valid `ShopifyPaymentsDisputeFileUpload` GID to put in those fields. Verified:
+
+- REST `/admin/api/{2024-10|2025-04|2026-01}/shopify_payments/disputes/:id/dispute_file_uploads.json` → HTTP 404.
+- GraphQL `stagedUploadsCreate` → rejects `resource: "DISPUTE_FILE_UPLOAD"` as an invalid enum value (valid resources are COLLECTION_IMAGE, FILE, IMAGE, MODEL_3D, PRODUCT_IMAGE, SHOP_IMAGE, VIDEO, BULK_MUTATION_VARIABLES, RETURN_LABEL, URL_REDIRECT_IMPORT — nothing dispute-scoped).
+- `DisputeFileUploadInput.id` is `ID!` — strictly a GID, not a URL. A prior attempt (git `7e4bcb6`) passed the staged-upload GCS URL as the id, which Shopify rejected with `Invalid global id '…storage.googleapis.com/…'`.
+
+All evidence is therefore routed into the 9 text fields (`uncategorizedText` as the primary rebuttal destination; `accessActivityLog` for order + payment + activity; `cancellationPolicyDisclosure` / `refundPolicyDisclosure` for policies; etc.). Files merchants upload inside Shopify Admin's UI still attach to the dispute — that path is inside Shopify, not through our app.
+
+The stub `lib/shopify/disputeFileUpload.ts` is kept as a documentation artifact of what was tried; it exports nothing and is not called. If Shopify ever adds a supported upload path, re-introspect first, confirm the returned identifier shape matches `DisputeFileUploadInput.id: ID!`, and rebuild from scratch.
 
 ### Save Safeguards
 
