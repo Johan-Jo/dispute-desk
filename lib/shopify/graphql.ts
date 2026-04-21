@@ -113,7 +113,20 @@ export async function requestShopifyGraphQL<T = unknown>(
       }
     }
 
-    const json: GraphQLResponse<T> = await res.json();
+    const rawJson = await res.json();
+
+    // Shopify's GraphQL response sometimes returns `errors` as a string
+    // (e.g. "Access denied" on scope/token failures) instead of the
+    // documented array shape. Normalize it so downstream `.some()` /
+    // `.map()` calls never throw on a non-array.
+    if (rawJson && rawJson.errors != null && !Array.isArray(rawJson.errors)) {
+      const text =
+        typeof rawJson.errors === "string"
+          ? rawJson.errors
+          : JSON.stringify(rawJson.errors);
+      rawJson.errors = [{ message: text }];
+    }
+    const json: GraphQLResponse<T> = rawJson;
 
     const throttled = json.errors?.some(
       (e) => e.extensions?.code === "THROTTLED"
