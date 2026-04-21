@@ -174,6 +174,10 @@ function extractOrderPayload(
 interface IpLocationPayload {
   bankEligible?: boolean;
   locationMatch?: string;
+  summary?: string;
+  merchantGuidance?: string | null;
+  ipConsistencyLevel?: string;
+  ipinfo?: { privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } } | null;
 }
 
 function extractIpLocationPayload(
@@ -186,6 +190,21 @@ function extractIpLocationPayload(
     (e) => e.type === "other" && typeof (e.payload as { locationMatch?: unknown })?.locationMatch === "string",
   );
   return (ip?.payload as IpLocationPayload | undefined) ?? null;
+}
+
+/**
+ * Short, specific status badge for the IP & Location Check row. Tells the
+ * merchant at a glance WHAT the check found, not just that it ran.
+ */
+function ipStatusBadgeLabel(p: IpLocationPayload | null): string {
+  if (!p) return "Reviewed";
+  const privacy = p.ipinfo?.privacy ?? {};
+  if (privacy.vpn || privacy.proxy) return "Network risk";
+  if (privacy.hosting) return "Data-center IP";
+  if (p.locationMatch === "different_country") return "Location mismatch";
+  if (p.ipConsistencyLevel === "variable") return "Multiple IPs used";
+  if (p.locationMatch === "same_city" || p.locationMatch === "same_country") return "Match";
+  return "Reviewed";
 }
 
 function formatAddress(
@@ -848,11 +867,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             // The IP & Location Check row is special: it's "available" because
             // we ran the check, but the result may be unfavorable (mismatch /
             // VPN / proxy). When that's the case we render with warning treatment
-            // so the merchant doesn't see a green "Included / Success" badge for
-            // a signal that actually weakens the case.
+            // and surface the actual verdict + guidance instead of the generic
+            // description, so the merchant sees WHAT was found, not just that
+            // we looked.
             const isIpRow = item.field === "ip_location_check";
             const negativeIp = isIpRow && ipUnfavorable;
             const borderColor = negativeIp ? "#d97706" : strong ? "#16a34a" : "#d97706";
+
+            // For the IP row, prefer the case-specific verdict over the
+            // generic explainer. The verdict already reads conclusion-first
+            // ("Purchase location differs from billing country.").
+            const ipVerdict = isIpRow ? ipLocPayload?.summary?.split("\n")[0] ?? null : null;
+            const ipGuidance = isIpRow ? ipLocPayload?.merchantGuidance ?? null : null;
+            const ipBadgeLabel = isIpRow ? ipStatusBadgeLabel(ipLocPayload) : null;
+
             return (
               <div
                 key={item.field}
@@ -866,16 +894,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    {negativeIp ? (
-                      <Badge tone="warning">Reviewed</Badge>
+                    {isIpRow ? (
+                      <Badge tone={negativeIp ? "warning" : "success"}>
+                        {ipBadgeLabel ?? "Reviewed"}
+                      </Badge>
                     ) : (
                       <Badge tone="success">Included</Badge>
                     )}
                     <Badge tone={negativeIp ? "warning" : strong ? "success" : "info"}>{strengthLabel}</Badge>
                   </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
+                  <Text as="p" variant="bodySm" tone={negativeIp ? undefined : "subdued"}>
+                    {ipVerdict ?? WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
                   </Text>
+                  {ipGuidance ? (
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {ipGuidance}
+                    </Text>
+                  ) : null}
                 </BlockStack>
               </div>
             );
