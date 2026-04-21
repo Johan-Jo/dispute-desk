@@ -11,6 +11,7 @@ import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import { evaluateRules } from "@/lib/rules/evaluateRules";
 import {
   AUTO_BUILD_TRIGGERED,
   AUTO_SAVE_TRIGGERED,
@@ -172,8 +173,50 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
 
   const settings = await getShopSettings(pack.shop_id);
 
+  // The merchant's Rules page intent must override the global
+  // `require_review_before_save` default. Otherwise a dispute family
+  // explicitly set to "Auto" still parks for manual review, which
+  // makes the Rules page non-functional. We re-evaluate rules against
+  // the dispute at save-time:
+  //
+  //   - auto_pack → merchant wants hands-off; bypass the review gate.
+  //   - review    → merchant wants manual check; force the review gate.
+  //   - other/no match → fall back to global shop settings.
+  //
+  // This keeps global settings as a safety floor while letting per-family
+  // rules drive the actual decision.
+  let effectiveSettings = settings;
+  if (pack.dispute_id) {
+    const { data: dispute } = await sb
+      .from("disputes")
+      .select("reason, status, amount, phase")
+      .eq("id", pack.dispute_id)
+      .single();
+    if (dispute) {
+      const phaseLower = (dispute.phase ?? "").toLowerCase();
+      const phaseForRules =
+        phaseLower === "inquiry" || phaseLower === "chargeback"
+          ? (phaseLower as "inquiry" | "chargeback")
+          : null;
+      const evalResult = await evaluateRules({
+        id: pack.dispute_id,
+        shop_id: pack.shop_id,
+        reason: dispute.reason,
+        status: dispute.status,
+        amount: dispute.amount,
+        phase: phaseForRules,
+      });
+      const ruleMode = evalResult.action.mode;
+      if (ruleMode === "auto_pack") {
+        effectiveSettings = { ...settings, require_review_before_save: false };
+      } else if (ruleMode === "review") {
+        effectiveSettings = { ...settings, require_review_before_save: true };
+      }
+    }
+  }
+
   const gate = evaluateAutoSaveGate({
-    settings,
+    settings: effectiveSettings,
     completenessScore: pack.completeness_score ?? 0,
     blockers: (pack.blockers as string[]) ?? [],
     isApproved: false,
