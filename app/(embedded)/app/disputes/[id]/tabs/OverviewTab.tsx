@@ -681,16 +681,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
       {/* AUTO-SUBMIT DENIED — why DisputeDesk did not push to Shopify */}
       {autoSaveBlock && (
-        <Banner tone="warning" title="Auto-submit paused \u2014 your review needed">
+        <Banner tone="warning" title="Auto-submit paused — your review needed">
           <BlockStack gap="200">
             <Text as="p" variant="bodyMd">
               DisputeDesk builds your defense automatically, but only auto-submits when the
-              pack meets your auto-submit threshold. This pack didn\u2019t clear the bar, so
+              pack meets your auto-submit threshold. This pack didn’t clear the bar, so
               we stopped and handed it to you.
             </Text>
             {autoSaveBlock.reasons.length > 0 && (
               <Text as="p" variant="bodySm">
-                Why: {autoSaveBlock.reasons.join(" \u2022 ")}
+                Why: {autoSaveBlock.reasons.join(" • ")}
               </Text>
             )}
             {topMissingLabel && (
