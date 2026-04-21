@@ -25,6 +25,12 @@ import {
 } from "@shopify/polaris-icons";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { EvidenceItemWithStrength, WaiveReason } from "../workspace-components/types";
+import {
+  EVIDENCE_EVALUATION_HELPER,
+  categoryImpactLabel,
+  claimSignalLabel,
+  evidenceRowStatus,
+} from "@/lib/argument/evidenceStatus";
 import styles from "../workspace.module.css";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -338,7 +344,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   }
 
   const { argumentMap, rebuttalDraft } = data;
-  const { categories, missingItems, whyWins } = derived;
+  const { categories, missingItems, whyWins, effectiveChecklist } = derived;
   const readOnly = derived.isReadOnly;
 
   const strengthKey = derived.caseStrength.overall;
@@ -387,6 +393,9 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
             <Text as="p" variant="bodyMd" fontWeight="semibold">
               {`Recommendation: ${recommendation}`}
             </Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {EVIDENCE_EVALUATION_HELPER}
+            </Text>
           </BlockStack>
 
           {whyWins.strengths.length > 0 && (
@@ -409,7 +418,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
               <BlockStack gap="050">
                 {missingItems.slice(0, 3).map((m) => (
                   <InlineStack key={m.field} gap="200" blockAlign="start" wrap={false}>
-                    <Text as="span" variant="bodyMd" tone="critical">{"\u25CB"}</Text>
+                    <Text as="span" variant="bodyMd" tone="subdued">{"\u25CB"}</Text>
                     <Text as="p" variant="bodyMd">{impactSentence(m.field)}</Text>
                   </InlineStack>
                 ))}
@@ -419,25 +428,19 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         </BlockStack>
       </Card>
 
-      {/* 2. HOW STRONG YOUR CASE IS — was "Argument map" */}
+      {/* 2. WHY THIS CASE IS LIKELY TO WIN — reasoning signals only.
+            Never red; never implies the case is weak when the headline
+            outcome is "Likely to win". */}
       {argumentMap && (
         <Card>
           <BlockStack gap="300">
-            <Text as="h3" variant="headingMd">How strong your case is</Text>
+            <Text as="h3" variant="headingMd">Why this case is likely to win</Text>
             <Text as="p" variant="bodySm" tone="subdued">
               {argumentMap.issuerClaim.text}
             </Text>
 
             {argumentMap.counterclaims.map((claim) => {
-              const claimTone =
-                claim.strength === "strong" ? "success" :
-                claim.strength === "moderate" ? "warning" :
-                "critical";
-              const claimLabel =
-                claim.strength === "strong" ? "Strong" :
-                claim.strength === "moderate" ? "Moderate" :
-                claim.strength === "weak" ? "Weak" :
-                "Needs evidence";
+              const signal = claimSignalLabel(claim.strength);
 
               return (
                 <div
@@ -445,14 +448,13 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                   className={`${styles.claimCard} ${
                     claim.strength === "strong" ? styles.claimStrong :
                     claim.strength === "moderate" ? styles.claimModerate :
-                    claim.strength === "weak" ? styles.claimWeak :
                     styles.claimInsufficient
                   }`}
                 >
                   <BlockStack gap="200">
                     <InlineStack align="space-between" blockAlign="center" wrap>
                       <Text as="p" variant="bodyMd" fontWeight="semibold">{claim.title}</Text>
-                      <Badge tone={claimTone}>{claimLabel}</Badge>
+                      <Badge tone={signal.tone}>{signal.label}</Badge>
                     </InlineStack>
 
                     {claim.supporting.length > 0 && (
@@ -473,7 +475,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                       <BlockStack gap="100">
                         {claim.missing.map((m) => (
                           <InlineStack key={m.field} gap="200" blockAlign="start" wrap={false}>
-                            <Text as="span" variant="bodySm" tone="critical">{"\u25CB"}</Text>
+                            <Text as="span" variant="bodySm" tone="subdued">{"\u25CB"}</Text>
                             <BlockStack gap="050">
                               <Text as="p" variant="bodySm">{impactSentence(m.field)}</Text>
                               {!readOnly && (
@@ -497,7 +499,111 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         </Card>
       )}
 
-      {/* 3. DEFENSE LETTER — collapsed by default */}
+      {/* 3. EVIDENCE INVENTORY — completeness, separated from strength */}
+      {effectiveChecklist.length > 0 && (() => {
+        const visible = effectiveChecklist.filter((c) => c.status !== "unavailable");
+        const included = visible.filter((c) => c.status === "available" || c.status === "waived");
+        const recommended = visible.filter(
+          (c) => c.status === "missing" && c.priority !== "optional",
+        );
+        const optional = visible.filter(
+          (c) => c.status === "missing" && c.priority === "optional",
+        );
+
+        return (
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h3" variant="headingMd">Evidence inventory</Text>
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                {`Included: ${included.length} of ${visible.length} recommended items`}
+              </Text>
+
+              {included.length > 0 && (
+                <BlockStack gap="200">
+                  {included.map((item) => {
+                    const row = evidenceRowStatus(item);
+                    return (
+                      <InlineStack
+                        key={`inv-inc-${item.field}`}
+                        align="space-between"
+                        blockAlign="start"
+                        gap="200"
+                        wrap
+                      >
+                        <BlockStack gap="050">
+                          <Text as="p" variant="bodyMd" fontWeight="semibold">
+                            {friendlyLabel(item.field, item.label)}
+                          </Text>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {WHY_TEXT[item.field] ?? "Strengthens the overall response."}
+                          </Text>
+                        </BlockStack>
+                        <Badge tone={row.tone}>{row.label}</Badge>
+                      </InlineStack>
+                    );
+                  })}
+                </BlockStack>
+              )}
+
+              {recommended.length > 0 && (
+                <BlockStack gap="200">
+                  {recommended.map((item) => {
+                    const row = evidenceRowStatus(item);
+                    return (
+                      <InlineStack
+                        key={`inv-rec-${item.field}`}
+                        align="space-between"
+                        blockAlign="start"
+                        gap="200"
+                        wrap
+                      >
+                        <BlockStack gap="050">
+                          <Text as="p" variant="bodyMd" fontWeight="semibold">
+                            {friendlyLabel(item.field, item.label)}
+                          </Text>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {WHY_TEXT[item.field] ?? "Would strengthen the overall response."}
+                          </Text>
+                        </BlockStack>
+                        <Badge tone={row.tone}>{row.label}</Badge>
+                      </InlineStack>
+                    );
+                  })}
+                </BlockStack>
+              )}
+
+              {optional.length > 0 && (
+                <BlockStack gap="200">
+                  {optional.map((item) => {
+                    const row = evidenceRowStatus(item);
+                    return (
+                      <InlineStack
+                        key={`inv-opt-${item.field}`}
+                        align="space-between"
+                        blockAlign="start"
+                        gap="200"
+                        wrap
+                      >
+                        <BlockStack gap="050">
+                          <Text as="p" variant="bodyMd" fontWeight="semibold">
+                            {friendlyLabel(item.field, item.label)}
+                          </Text>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {WHY_TEXT[item.field] ?? "Supportive, not required."}
+                          </Text>
+                        </BlockStack>
+                        <Badge tone={row.tone}>{row.label}</Badge>
+                      </InlineStack>
+                    );
+                  })}
+                </BlockStack>
+              )}
+            </BlockStack>
+          </Card>
+        );
+      })()}
+
+      {/* 4. DEFENSE LETTER — collapsed by default */}
       {rebuttalDraft && (
         <Card>
           <BlockStack gap="300">
@@ -617,18 +723,17 @@ function EvidenceCategorySection({
   itemRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
 }) {
   const availableCount = items.filter((i) => i.status === "available" || i.status === "waived").length;
+  const impact = categoryImpactLabel(relevance);
 
   return (
     <Card>
       <BlockStack gap="200">
         <div className={styles.categoryHeader} onClick={onToggle}>
           <InlineStack align="space-between" blockAlign="center">
-            <InlineStack gap="200" blockAlign="center">
+            <InlineStack gap="200" blockAlign="center" wrap>
               <Text as="h3" variant="headingMd">{category.label}</Text>
               <Badge>{`${availableCount}/${items.length}`}</Badge>
-              <Badge tone={relevance === "high" ? "success" : relevance === "medium" ? "attention" : undefined}>
-                {`${relevance} relevance`}
-              </Badge>
+              <Badge tone={impact.tone}>{impact.label}</Badge>
             </InlineStack>
             <Icon source={expanded ? ChevronUpIcon : ChevronDownIcon} />
           </InlineStack>
@@ -735,28 +840,10 @@ function EvidenceItemInline({
               }
             />
             <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-            <Badge tone={
-              item.status === "available" ? "success" :
-              item.status === "waived" ? undefined :
-              item.status === "unavailable" ? undefined :
-              (item.collectionType === "auto" || item.collectionType === "conditional_auto")
-                ? undefined :
-              item.priority === "critical" ? "attention" :
-              "attention"
-            }>
-              {item.status === "available" ? "Available" :
-               item.status === "waived" ? "Waived" :
-               item.status === "unavailable" ? "Not available" :
-               (item.collectionType === "auto" || item.collectionType === "conditional_auto")
-                 ? "Not available" :
-               item.priority === "critical" ? "Add to strengthen" :
-               "Recommended"}
-            </Badge>
-            {item.strength !== "none" && item.status === "available" && (
-              <Badge tone={item.strength === "strong" ? "success" : item.strength === "moderate" ? "warning" : "critical"}>
-                {item.strength}
-              </Badge>
-            )}
+            {(() => {
+              const row = evidenceRowStatus(item);
+              return <Badge tone={row.tone}>{row.label}</Badge>;
+            })()}
           </InlineStack>
 
           <InlineStack gap="200">

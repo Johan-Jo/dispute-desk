@@ -17,7 +17,11 @@ import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
 import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
-import { evidenceStrengthLabel } from "@/lib/argument/evidenceStrength";
+import {
+  EVIDENCE_EVALUATION_HELPER,
+  categoryImpactLabel,
+  evidenceRowStatus,
+} from "@/lib/argument/evidenceStatus";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -178,21 +182,6 @@ function extractIpLocationPayload(
     (e) => e.type === "other" && typeof (e.payload as { locationMatch?: unknown })?.locationMatch === "string",
   );
   return (ip?.payload as IpLocationPayload | undefined) ?? null;
-}
-
-/**
- * Short, specific status badge for the IP & Location Check row. Tells the
- * merchant at a glance WHAT the check found, not just that it ran.
- */
-function ipStatusBadgeLabel(p: IpLocationPayload | null): string {
-  if (!p) return "Reviewed";
-  const privacy = p.ipinfo?.privacy ?? {};
-  if (privacy.vpn || privacy.proxy) return "Network risk";
-  if (privacy.hosting) return "Data-center IP";
-  if (p.locationMatch === "different_country") return "Location mismatch";
-  if (p.ipConsistencyLevel === "variable") return "Multiple IPs used";
-  if (p.locationMatch === "same_city" || p.locationMatch === "same_country") return "Match";
-  return "Reviewed";
 }
 
 function formatAddress(
@@ -798,6 +787,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             {recommendationHelper && (
               <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
             )}
+            <Text as="p" variant="bodySm" tone="subdued">
+              {EVIDENCE_EVALUATION_HELPER}
+            </Text>
           </BlockStack>
 
           {/* AUTOMATION RULE APPLIED — surfaces the Rules page setting that
@@ -877,31 +869,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           )}
 
           {presentItems.map((item) => {
-            const strengthLabel = evidenceStrengthLabel(item.field);
-            const strong = strengthLabel === "Strong evidence";
-            // The IP & Location Check row is special: it's "available" because
-            // we ran the check, but the result may be unfavorable (mismatch /
-            // VPN / proxy). When that's the case we render with warning treatment
-            // and surface the actual verdict + guidance instead of the generic
-            // description, so the merchant sees WHAT was found, not just that
-            // we looked.
+            const row = evidenceRowStatus(item);
+            // IP & Location Check: the item is "Included" (we ran the check),
+            // but the finding itself — match / mismatch / network risk —
+            // belongs in the description so the merchant sees WHAT we found,
+            // not just that we looked. The badge stays the neutral "Included".
             const isIpRow = item.field === "ip_location_check";
-            const negativeIp = isIpRow && ipUnfavorable;
-            const borderColor = negativeIp ? "#d97706" : strong ? "#16a34a" : "#d97706";
-
-            // For the IP row, prefer the case-specific verdict over the
-            // generic explainer. The verdict already reads conclusion-first
-            // ("Purchase location differs from billing country.").
             const ipVerdict = isIpRow ? ipLocPayload?.summary?.split("\n")[0] ?? null : null;
             const ipGuidance = isIpRow ? ipLocPayload?.merchantGuidance ?? null : null;
-            const ipBadgeLabel = isIpRow ? ipStatusBadgeLabel(ipLocPayload) : null;
 
             return (
               <div
                 key={item.field}
                 style={{
                   border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${borderColor}`,
+                  borderLeft: "4px solid #16a34a",
                   borderRadius: 8,
                   padding: 12,
                 }}
@@ -909,16 +891,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    {isIpRow ? (
-                      <Badge tone={negativeIp ? "warning" : "success"}>
-                        {ipBadgeLabel ?? "Reviewed"}
-                      </Badge>
-                    ) : (
-                      <Badge tone="success">Included</Badge>
-                    )}
-                    <Badge tone={negativeIp ? "warning" : strong ? "success" : "info"}>{strengthLabel}</Badge>
+                    <Badge tone={row.tone}>{row.label}</Badge>
                   </InlineStack>
-                  <Text as="p" variant="bodySm" tone={negativeIp ? undefined : "subdued"}>
+                  <Text as="p" variant="bodySm" tone="subdued">
                     {ipVerdict ?? WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
                   </Text>
                   {ipGuidance ? (
@@ -932,14 +907,19 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           })}
 
           {missingChecklist.map((item) => {
-            const strengthLabel = evidenceStrengthLabel(item.field);
-            const strong = strengthLabel === "Strong evidence";
+            const row = evidenceRowStatus(item);
+            const borderColor =
+              row.label === "Critical gap"
+                ? "#dc2626"
+                : row.label === "Recommended"
+                  ? "#2563eb"
+                  : "#9ca3af";
             return (
               <div
                 key={item.field}
                 style={{
                   border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${strong ? "#dc2626" : "#9ca3af"}`,
+                  borderLeft: `4px solid ${borderColor}`,
                   borderRadius: 8,
                   padding: 12,
                 }}
@@ -947,8 +927,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={strong ? "critical" : undefined}>Missing</Badge>
-                    <Badge tone={strong ? "critical" : "info"}>{strengthLabel}</Badge>
+                    <Badge tone={row.tone}>{row.label}</Badge>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">
                     {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}
@@ -1001,12 +980,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     i.status === "missing" &&
                     (i.collectionType === "manual" || !i.collectionType),
                 );
-                const allCovered = missingActionable.length === 0 && present.length > 0;
-                const tone = allCovered
-                  ? "success"
-                  : missingActionable.some((m) => m.priority === "critical")
-                    ? "critical"
-                    : "warning";
+                // Category badges reflect IMPACT, not completeness. Red only
+                // surfaces when there's a genuine Critical gap (missing item
+                // with priority=critical the merchant can act on).
+                const impact = categoryImpactLabel(cat.relevance);
+                const hasCriticalGap = missingActionable.some(
+                  (m) => m.priority === "critical",
+                );
+                const borderColor = hasCriticalGap
+                  ? "#dc2626"
+                  : impact.tone === "success"
+                    ? "#16a34a"
+                    : impact.tone === "info"
+                      ? "#2563eb"
+                      : "#9ca3af";
 
                 const suggestion = missingActionable[0]
                   ? `Missing ${missingActionable[0].label.toLowerCase()} \u2014 ${
@@ -1020,9 +1007,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   <div
                     key={cat.category.key}
                     style={{
-                      borderLeft: `3px solid ${
-                        tone === "success" ? "#16a34a" : tone === "critical" ? "#dc2626" : "#d97706"
-                      }`,
+                      borderLeft: `3px solid ${borderColor}`,
                       paddingLeft: 12,
                     }}
                   >
@@ -1031,9 +1016,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                         <Text as="span" variant="bodyMd" fontWeight="semibold">
                           {cat.category.label}
                         </Text>
-                        <Badge tone={tone}>
-                          {`${present.length}/${visible.length}`}
-                        </Badge>
+                        <Badge tone={impact.tone}>{impact.label}</Badge>
+                        <Badge>{`${present.length}/${visible.length}`}</Badge>
+                        {hasCriticalGap && (
+                          <Badge tone="critical">Critical gap</Badge>
+                        )}
                       </InlineStack>
                       {suggestion && !submitted && (
                         <InlineStack gap="200" blockAlign="center" wrap>
