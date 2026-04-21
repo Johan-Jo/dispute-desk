@@ -6,10 +6,10 @@
  * submitted_at, closed_at, outcome_amount_recovered/lost,
  * last_event_at, needs_attention.
  *
- * Desktop and mobile share state and data fetch. useBreakpoints() drives
- * section layout choices inside each extracted sub-component, plus a
- * smDown reorder of the top-level stack here so "Recent disputes" lands
- * directly under the operational-summary CTA on phones (triage-first).
+ * Desktop and mobile share state, data fetch, and section order
+ * (triage-first: operational summary → recent disputes → KPIs → …).
+ * useBreakpoints() inside each extracted sub-component drives the
+ * internal layout choices (stacked cards vs. grid, hero KPI tile, etc.).
  */
 "use client";
 
@@ -25,7 +25,6 @@ import {
   Spinner,
   ProgressBar,
   Box,
-  useBreakpoints,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { SetupStateResponse } from "@/lib/setup/types";
@@ -328,7 +327,6 @@ export default function EmbeddedDashboardPage() {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { smDown } = useBreakpoints();
   const [period, setPeriod] = useState<PeriodKey>("30d");
   const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -440,10 +438,10 @@ export default function EmbeddedDashboardPage() {
           <DashboardOperationalSummary stats={stats} loading={statsLoading} />
         </Layout.Section>
 
-        {/* Mobile (smDown): Recent Disputes appears directly below the
-            Operational Summary CTA — triage-first. Desktop keeps it below
-            Outcome Breakdown, matching the pre-mobile layout. */}
-        {smDown && recentDisputesPreview}
+        {/* Triage-first order on both desktop and mobile: Recent Disputes
+            sits directly below the Operational Summary CTA, ahead of the
+            Performance Overview KPIs. */}
+        {recentDisputesPreview}
 
         <Layout.Section>
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
@@ -452,8 +450,6 @@ export default function EmbeddedDashboardPage() {
         <Layout.Section>
           <OutcomeBreakdown stats={stats} loading={statsLoading} />
         </Layout.Section>
-
-        {!smDown && recentDisputesPreview}
 
         <Layout.Section>
           <RecentActivityFeed stats={stats} loading={statsLoading} />
