@@ -496,7 +496,22 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
 
       {/* 3. EVIDENCE INVENTORY — completeness, separated from strength */}
       {effectiveChecklist.length > 0 && (() => {
-        const visible = effectiveChecklist.filter((c) => c.status !== "unavailable");
+        // "Included" must match the argument layer's truth: a row is only
+        // cited as supporting defense evidence when the field appears in
+        // argumentMap.counterclaims[].supporting. Collected-but-not-cited
+        // signals (e.g. IP & Location Check with a location mismatch) are
+        // filtered out of the inventory so Overview and Evidence agree.
+        const citedFields = new Set<string>(
+          (argumentMap?.counterclaims ?? []).flatMap((c) =>
+            c.supporting.map((s) => s.field),
+          ),
+        );
+        const isCollectedUncited = (c: EvidenceItemWithStrength): boolean =>
+          (c.status === "available" || c.status === "waived") &&
+          !citedFields.has(c.field);
+        const visible = effectiveChecklist.filter(
+          (c) => c.status !== "unavailable" && !isCollectedUncited(c),
+        );
         const included = visible.filter((c) => c.status === "available" || c.status === "waived");
         const recommended = visible.filter(
           (c) => c.status === "missing" && c.priority !== "optional",
