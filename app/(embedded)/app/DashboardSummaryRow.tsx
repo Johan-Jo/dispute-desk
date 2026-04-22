@@ -2,110 +2,143 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Badge, Card, InlineGrid, BlockStack, Text } from "@shopify/polaris";
+import {
+  BlockStack,
+  Box,
+  Button,
+  Card,
+  InlineGrid,
+  InlineStack,
+  Text,
+} from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
-import { useFormatCurrency, type DashboardStats } from "./dashboardHelpers";
-import Link from "next/link";
+import type { DashboardStats } from "./dashboardHelpers";
 
 interface Props {
   stats: DashboardStats;
   loading: boolean;
 }
 
-interface TileProps {
-  label: string;
+interface StatTileProps {
   value: string;
-  tone?: "critical" | "warning" | "subdued";
-  url?: string;
+  label: string;
+  sublabel: string;
+  bg: string;
+  color: string;
 }
 
-function SummaryTile({ label, value, tone, url }: TileProps) {
-  const badgeTone =
-    tone === "critical" ? "critical" : tone === "warning" ? "warning" : undefined;
-
-  const content = (
-    <Card>
-      <BlockStack gap="200">
-        <Text as="span" variant="bodySm" tone="subdued">
-          {label}
+function StatTile({ value, label, sublabel, bg, color }: StatTileProps) {
+  return (
+    <div
+      style={{
+        background: bg,
+        borderRadius: "var(--p-border-radius-200)",
+        padding: "12px 16px",
+        minWidth: 0,
+      }}
+    >
+      <BlockStack gap="050">
+        <Text as="p" variant="headingLg">
+          <span style={{ color }}>{value}</span>
         </Text>
-        {badgeTone ? (
-          <Badge tone={badgeTone} size="large">
-            {value}
-          </Badge>
-        ) : (
-          <Text as="p" variant="headingLg">
-            {value}
-          </Text>
-        )}
+        <Text as="span" variant="bodySm" fontWeight="semibold">
+          <span style={{ color }}>{label}</span>
+        </Text>
+        <Text as="span" variant="bodySm">
+          <span style={{ color, opacity: 0.8 }}>{sublabel}</span>
+        </Text>
       </BlockStack>
-    </Card>
+    </div>
   );
-
-  if (url) {
-    return (
-      <Link href={url} style={{ textDecoration: "none", color: "inherit" }}>
-        {content}
-      </Link>
-    );
-  }
-  return content;
 }
 
 export function DashboardSummaryRow({ stats, loading }: Props) {
   const t = useTranslations("dashboard");
   const searchParams = useSearchParams();
-  const formatCurrency = useFormatCurrency(stats.currencyCode);
+  const sp = searchParams ?? new URLSearchParams();
 
   const ob = stats.operationalBreakdown;
   const actionNeeded =
     (ob["new"] ?? 0) + (ob["action_needed"] ?? 0) + (ob["needs_review"] ?? 0);
-  const inProgress =
-    (ob["in_progress"] ?? 0) +
-    (ob["ready_to_submit"] ?? 0) +
-    (ob["submitted"] ?? 0) +
-    (ob["submitted_to_shopify"] ?? 0) +
-    (ob["waiting_on_issuer"] ?? 0) +
-    (ob["submitted_to_bank"] ?? 0);
 
-  const sp = searchParams ?? new URLSearchParams();
+  const reviewUrl = withShopParams(
+    "/app/disputes?normalized_status=new,action_needed,needs_review",
+    sp,
+  );
+
+  const tiles = (
+    <InlineGrid columns={3} gap="300">
+      <StatTile
+        value={loading ? "—" : String(actionNeeded)}
+        label={t("needAction")}
+        sublabel={
+          loading
+            ? "—"
+            : t("dueTodaySub", { count: stats.dueTodayCount })
+        }
+        bg={actionNeeded > 0 ? "#FEF2F2" : "#F3F4F6"}
+        color={actionNeeded > 0 ? "#DC2626" : "#374151"}
+      />
+      <StatTile
+        value={loading ? "—" : String(stats.missingEvidenceCount)}
+        label={t("missingEvidence")}
+        sublabel={t("addEvidence")}
+        bg={stats.missingEvidenceCount > 0 ? "#FFF7ED" : "#F3F4F6"}
+        color={stats.missingEvidenceCount > 0 ? "#EA580C" : "#374151"}
+      />
+      <StatTile
+        value={loading ? "—" : String(stats.deadlinesSoonCount)}
+        label={t("deadlinesSoon")}
+        sublabel={t("dueThisWeek")}
+        bg={stats.deadlinesSoonCount > 0 ? "#FFF7ED" : "#F3F4F6"}
+        color={stats.deadlinesSoonCount > 0 ? "#EA580C" : "#374151"}
+      />
+    </InlineGrid>
+  );
+
+  if (actionNeeded === 0 && !loading) {
+    return tiles;
+  }
 
   return (
-    <InlineGrid columns={{ xs: 2, md: 4 }} gap="300">
-      <SummaryTile
-        label={t("actionNeeded")}
-        value={loading ? "—" : String(actionNeeded)}
-        tone={actionNeeded > 0 ? "critical" : undefined}
-        url={
-          actionNeeded > 0
-            ? withShopParams(
-                "/app/disputes?normalized_status=new,action_needed,needs_review",
-                sp,
-              )
-            : undefined
-        }
-      />
-      <SummaryTile
-        label={t("inProgress")}
-        value={loading ? "—" : String(inProgress)}
-        url={
-          inProgress > 0
-            ? withShopParams(
-                "/app/disputes?normalized_status=in_progress,ready_to_submit,submitted,submitted_to_shopify,waiting_on_issuer,submitted_to_bank",
-                sp,
-              )
-            : undefined
-        }
-      />
-      <SummaryTile
-        label={t("amountAtRisk")}
-        value={loading ? "—" : formatCurrency(stats.amountAtRisk)}
-      />
-      <SummaryTile
-        label={t("deadlinesSoon")}
-        value={loading ? "—" : String(stats.deadlinesSoonCount)}
-        tone={stats.deadlinesSoonCount > 0 ? "warning" : undefined}
-      />
+    <InlineGrid columns={{ xs: 1, md: "2fr 1fr" }} gap="300">
+      <Card>
+        <BlockStack gap="300">
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Box>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "#FEF3C7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                ⚠
+              </div>
+            </Box>
+            <BlockStack gap="050">
+              <Text as="p" variant="headingSm">
+                {t("disputesNeedAttention", { count: actionNeeded })}
+              </Text>
+              <Text as="span" variant="bodySm" tone="subdued">
+                {t("reviewToImproveWinRate")}
+              </Text>
+            </BlockStack>
+          </InlineStack>
+          <div>
+            <Button variant="primary" url={reviewUrl}>
+              {t("reviewDisputesNow")}
+            </Button>
+          </div>
+        </BlockStack>
+      </Card>
+      {tiles}
     </InlineGrid>
   );
 }

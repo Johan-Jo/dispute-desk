@@ -40,8 +40,15 @@ export interface DashboardStats {
   operationalClosedCount: number;
   submissionBreakdown: Record<string, number>;
   deadlinesSoonCount: number;
+  missingEvidenceCount: number;
+  dueTodayCount: number;
+  submissionRate: number;
+  submissionRateChange: number | null;
+  deadlineMissRate: number;
+  deadlineMissRateChange: number | null;
+  totalDisputes: number;
   winRateTrend: number[];
-  disputeCategories: { label: string; value: number }[];
+  disputeCategories: { label: string; count: number; value: number }[];
   recentActivity: ActivityItem[];
 }
 
@@ -72,6 +79,13 @@ export const DEFAULT_STATS: DashboardStats = {
   operationalClosedCount: 0,
   submissionBreakdown: {},
   deadlinesSoonCount: 0,
+  missingEvidenceCount: 0,
+  dueTodayCount: 0,
+  submissionRate: 0,
+  submissionRateChange: null,
+  deadlineMissRate: 0,
+  deadlineMissRateChange: null,
+  totalDisputes: 0,
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],
   recentActivity: [],

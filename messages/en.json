@@ -237,7 +237,41 @@
     "dueTomorrow": "Due tomorrow",
     "dueInDays": "In {count} days",
     "dueToday": "Due today",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "needAction": "Need action",
+    "dueTodaySub": "{count} due today",
+    "missingEvidence": "Missing evidence",
+    "addEvidence": "Add evidence",
+    "dueThisWeek": "Due this week",
+    "disputesNeedAttention": "{count} disputes need your attention",
+    "reviewToImproveWinRate": "Review and take action to improve your win rate.",
+    "reviewDisputesNow": "Review disputes now",
+    "winRateSubmitted": "Win rate (submitted)",
+    "recoveryRate": "Recovery rate",
+    "submissionRate": "Submission rate",
+    "deadlineMissRate": "Deadline miss rate",
+    "yourPerformance": "Your performance",
+    "winChanceCol": "Win chance",
+    "viewAllNeedingAttention": "View all needing attention",
+    "reviewAction": "Review",
+    "issueMissingEvidence": "Missing evidence",
+    "issueNeedsReview": "Needs review",
+    "issueActionNeeded": "Action needed",
+    "issueDeadlineSoon": "Deadline soon",
+    "issueDeliveryProof": "Delivery proof",
+    "issueCustomerAuth": "Customer auth",
+    "issueSubmitEvidence": "Submit evidence",
+    "winChanceLow": "Low",
+    "winChanceMedium": "Medium",
+    "winChanceHigh": "High",
+    "winBoostIfCompleted": "+{pct}% if completed",
+    "winBoostIfSubmitted": "+{pct}% if submitted",
+    "viewAllInProgress": "View all in progress",
+    "submittedToShopify": "Submitted to Shopify",
+    "submittedToBank": "Submitted to Bank",
+    "decisionPending": "Decision pending",
+    "overdueProg": "Overdue",
+    "dueIn1Day": "Due in 1 day"
   },
   "disputes": {
     "title": "Disputes",
@@ -1467,7 +1501,7 @@
       },
       "understandingDashboard": {
         "title": "Understanding the dashboard",
-        "body": "The dashboard gives you an at-a-glance overview of your dispute operations.\n\nAt the top, four summary tiles show:\n- Action Needed: disputes requiring your attention (new, needs review, or action needed).\n- In Progress: disputes being worked on or awaiting issuer decision.\n- Amount at Risk: total value of open disputes.\n- Deadlines Soon: disputes with a deadline within 3 days.\n\nBelow the summary, the main section shows disputes that need your attention. If nothing needs attention, the section shows your in-progress disputes instead.\n\nThe Performance Overview section shows key metrics for the selected time period: Active Disputes, Win Rate, Amount Recovered, and Amount at Risk. Use the period selector to view different time ranges.\n\nThe Dispute Categories section shows a breakdown of your disputes by reason type.\n\nClick any dispute row to see full details and manage evidence."
+        "body": "The dashboard gives you an at-a-glance overview of your dispute operations.\n\nAt the top, a summary area highlights disputes that need your attention. When there are disputes requiring action, a warning banner shows the count along with three stat tiles: Need action (with how many are due today), Missing evidence, and Deadlines soon.\n\nBelow the summary, the Needs your attention table shows disputes with their order, amount, reason, issue, deadline, win chance, and a Review action. Win chance is estimated from your evidence completeness. If nothing needs attention, the In Progress table is shown instead with submission status and next steps.\n\nThe Your Performance section shows five key metrics: Win rate (submitted), Recovery rate, Submission rate, Deadline miss rate, and Total disputes. Use the period dropdown to view different time ranges.\n\nThe Dispute Categories section shows a donut chart breakdown of your disputes by reason type with counts and percentages.\n\nClick any dispute row to see full details and manage evidence."
       },
       "firstDisputeSync": {
         "title": "Your first dispute sync",
@@ -1623,7 +1657,7 @@
         },
         "understandingDashboard": {
           "title": "Understanding the dashboard in this app",
-          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nFour summary tiles at the top show: Action Needed, In Progress, Amount at Risk, and Deadlines Soon.\n\nWhen disputes need your attention, a table shows them with their reason, issue, deadline, and amount so you can review each one. When nothing needs attention, the dashboard shows your in-progress disputes instead.\n\nThe Performance Overview shows Active Disputes, Win Rate, Amount Recovered, and Amount at Risk for your selected time period.\n\nUse the Disputes link in the app to view and filter all disputes, or click Review or View details on any row to manage evidence."
+          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nAt the top, a summary area highlights what needs your attention: a warning banner with a review CTA, plus three stat tiles showing Need action, Missing evidence, and Deadlines soon.\n\nThe Needs your attention table shows disputes with order, amount, reason, issue, deadline, win chance, and a Review action. Win chance is estimated from your evidence completeness. When nothing needs attention, the In Progress table is shown instead.\n\nYour Performance shows Win rate, Recovery rate, Submission rate, Deadline miss rate, and Total disputes for the selected period.\n\nThe Dispute Categories donut chart shows a breakdown by reason type.\n\nUse the Disputes link to view all disputes, or click Review on any row to manage evidence."
         },
         "afterSaving": {
           "title": "What happens after saving evidence",

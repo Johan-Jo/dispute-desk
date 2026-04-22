@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -19,27 +18,46 @@ import type { Dispute } from "./disputes/disputeListHelpers";
 import {
   formatCurrency,
   orderLabel,
-  translateReason,
   NORMALIZED_STATUS_TONE,
 } from "./disputes/disputeListHelpers";
 import { safeStatusLabel, useDateLocale } from "./dashboardHelpers";
 
-function submissionBadge(
-  state: string | null | undefined,
+function issueBadge(
+  d: Dispute,
   t: ReturnType<typeof useTranslations>,
 ): { label: string; tone: "success" | "info" | "attention" | undefined } {
-  switch (state) {
+  switch (d.submission_state) {
     case "saved_to_shopify":
-      return { label: t("dashboard.savedToShopify"), tone: "success" };
+      return { label: t("dashboard.submittedToShopify"), tone: "info" };
     case "submitted_confirmed":
-      return { label: t("status.complete"), tone: "success" };
+      return { label: t("dashboard.submittedToBank"), tone: "success" };
     case "submission_uncertain":
       return { label: t("status.pending"), tone: "attention" };
     case "manual_submission_reported":
-      return { label: t("status.complete"), tone: "success" };
+      return { label: t("dashboard.submittedToBank"), tone: "success" };
     default:
       return { label: t("status.pending"), tone: undefined };
   }
+}
+
+function nextStepLabel(
+  d: Dispute,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (
+    d.submission_state === "submitted_confirmed" ||
+    d.submission_state === "manual_submission_reported"
+  ) {
+    return t("dashboard.decisionPending");
+  }
+  if (d.due_at) {
+    const diffMs = new Date(d.due_at).getTime() - Date.now();
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (days <= 0) return t("dashboard.overdue");
+    if (days === 1) return t("dashboard.dueIn1Day");
+    return t("dashboard.dueInDays", { count: days });
+  }
+  return t("dashboard.decisionPending");
 }
 
 export function DashboardInProgressTable() {
@@ -84,12 +102,11 @@ export function DashboardInProgressTable() {
 
   const headings: [{ title: string }, ...{ title: string }[]] = [
     { title: tDash("orderCol") },
-    { title: tDash("reasonCol") },
     { title: tDash("amountCol") },
+    { title: tDash("issueCol") },
     { title: tDash("submittedDateCol") },
-    { title: tDash("submissionStatusCol") },
+    { title: tDash("nextStepCol") },
     { title: tDash("statusCol") },
-    { title: tDash("actionsCol") },
   ];
 
   const formatDate = (iso: string | null | undefined) => {
@@ -106,7 +123,7 @@ export function DashboardInProgressTable() {
       <BlockStack gap="300">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingMd">
-            {tDash("inProgress")}
+            {tDash("inProgress")} ({disputes.length})
           </Text>
           <Button
             variant="plain"
@@ -125,7 +142,7 @@ export function DashboardInProgressTable() {
           selectable={false}
         >
           {disputes.map((d, idx) => {
-            const sub = submissionBadge(d.submission_state, t);
+            const issue = issueBadge(d, t);
             const statusTone =
               NORMALIZED_STATUS_TONE[d.normalized_status ?? ""] ?? undefined;
             return (
@@ -136,14 +153,12 @@ export function DashboardInProgressTable() {
                   </Text>
                 </IndexTable.Cell>
                 <IndexTable.Cell>
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {translateReason(d.reason, t)}
-                  </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
                   <Text as="span" variant="bodySm" fontWeight="semibold">
                     {formatCurrency(d.amount, d.currency_code, dateLocale)}
                   </Text>
+                </IndexTable.Cell>
+                <IndexTable.Cell>
+                  <Badge tone={issue.tone}>{issue.label}</Badge>
                 </IndexTable.Cell>
                 <IndexTable.Cell>
                   <Text as="span" variant="bodySm" tone="subdued">
@@ -151,27 +166,32 @@ export function DashboardInProgressTable() {
                   </Text>
                 </IndexTable.Cell>
                 <IndexTable.Cell>
-                  <Badge tone={sub.tone}>{sub.label}</Badge>
+                  <Text as="span" variant="bodySm" tone={
+                    nextStepLabel(d, t).includes("1 day") || nextStepLabel(d, t) === t("dashboard.overdue")
+                      ? "critical"
+                      : "subdued"
+                  }>
+                    {nextStepLabel(d, t)}
+                  </Text>
                 </IndexTable.Cell>
                 <IndexTable.Cell>
                   <Badge tone={statusTone}>
                     {safeStatusLabel(tTimeline, d.normalized_status ?? "new")}
                   </Badge>
                 </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Link
-                    href={withShopParams(`/app/disputes/${d.id}`, sp)}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <Button size="slim" variant="plain">
-                      {t("table.viewDetails")}
-                    </Button>
-                  </Link>
-                </IndexTable.Cell>
               </IndexTable.Row>
             );
           })}
         </IndexTable>
+        <Button
+          variant="plain"
+          url={withShopParams(
+            "/app/disputes?normalized_status=in_progress,ready_to_submit,submitted,submitted_to_shopify,waiting_on_issuer,submitted_to_bank",
+            sp,
+          )}
+        >
+          {tDash("viewAllInProgress")} →
+        </Button>
       </BlockStack>
     </Card>
   );

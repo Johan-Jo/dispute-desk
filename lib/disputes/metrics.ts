@@ -49,12 +49,18 @@ export interface DisputeMetrics {
   chargebackCount: number;
   needsAttentionCount: number;
 
+  // Submission & deadline rates
+  submissionRate: number;
+  deadlineMissRate: number;
+
   // Period-over-period (null when no comparison available)
   activeDisputesChange: number | null;
   winRateChange: number | null;
   amountAtRiskChange: number | null;
   disputesWonChange: number | null;
   amountRecoveredChange: number | null;
+  submissionRateChange: number | null;
+  deadlineMissRateChange: number | null;
 
   // Admin-only (null when shop-scoped)
   overriddenCount: number | null;
@@ -84,7 +90,7 @@ export async function computeDisputeMetrics(
   // ── Fetch current period disputes ─────────────────────────────────────
   let q = sb
     .from("disputes")
-    .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, closed_at, initiated_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
+    .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, closed_at, initiated_at, due_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
 
   if (shopId) q = q.eq("shop_id", shopId);
   if (periodFrom) q = q.gte("created_at", periodFrom);
@@ -100,7 +106,7 @@ export async function computeDisputeMetrics(
     const prevFrom = new Date(new Date(periodFrom).getTime() - periodMs).toISOString();
     let pq = sb
       .from("disputes")
-      .select("id, status, amount, normalized_status, final_outcome, outcome_amount_recovered");
+      .select("id, status, amount, normalized_status, final_outcome, outcome_amount_recovered, submission_state, submitted_at, due_at");
     if (shopId) pq = pq.eq("shop_id", shopId);
     pq = pq.gte("created_at", prevFrom).lt("created_at", periodFrom);
     const { data: prev } = await pq;
@@ -184,6 +190,28 @@ export async function computeDisputeMetrics(
   const currencyCode = Object.entries(currencyCounts)
     .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
 
+  // ── Submission rate (% of active disputes with evidence submitted) ───
+  const submittedEvidence = active.filter((d) => {
+    const ss = d.submission_state as string | null;
+    return ss && ss !== "not_saved";
+  }).length;
+  const submissionRate = activeDisputes > 0
+    ? Math.round((submittedEvidence / activeDisputes) * 100)
+    : 0;
+
+  // ── Deadline miss rate (% of disputes with due dates that were missed)
+  const now = new Date();
+  const withDueDate = list.filter((d) => d.due_at != null);
+  const missedDeadline = withDueDate.filter((d) => {
+    const due = new Date(String(d.due_at));
+    if (due >= now) return false;
+    const sa = d.submitted_at ? new Date(String(d.submitted_at)) : null;
+    return !sa || sa > due;
+  }).length;
+  const deadlineMissRate = withDueDate.length > 0
+    ? Math.round((missedDeadline / withDueDate.length) * 100)
+    : 0;
+
   // ── Period-over-period ────────────────────────────────────────────────
   const prevActive = prevList.filter((d) =>
     ACTIVE_NORMALIZED.includes(String(d.normalized_status ?? "new")),
@@ -201,6 +229,30 @@ export async function computeDisputeMetrics(
   const prevRecovered = periodFrom
     ? prevList.reduce((s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0)
     : null;
+
+  const prevSubmittedEvidence = periodFrom
+    ? prevActive.filter((d) => {
+        const ss = d.submission_state as string | null;
+        return ss && ss !== "not_saved";
+      }).length
+    : null;
+  const prevSubmissionRate = periodFrom && prevActive.length > 0
+    ? Math.round(((prevSubmittedEvidence ?? 0) / prevActive.length) * 100)
+    : periodFrom ? 0 : null;
+
+  const prevWithDueDate = periodFrom
+    ? prevList.filter((d) => d.due_at != null)
+    : [];
+  const prevMissed = prevWithDueDate.filter((d) => {
+    const due = new Date(String(d.due_at));
+    const prevPeriodEnd = new Date(periodFrom!);
+    if (due >= prevPeriodEnd) return false;
+    const sa = d.submitted_at ? new Date(String(d.submitted_at)) : null;
+    return !sa || sa > due;
+  }).length;
+  const prevDeadlineMissRate = periodFrom && prevWithDueDate.length > 0
+    ? Math.round((prevMissed / prevWithDueDate.length) * 100)
+    : periodFrom ? 0 : null;
 
   // ── Admin-only metrics (cross-shop) ───────────────────────────────────
   let overriddenCount: number | null = null;
@@ -243,6 +295,10 @@ export async function computeDisputeMetrics(
     amountAtRiskChange: pctChange(amountAtRisk, prevAmountAtRisk),
     disputesWonChange: pctChange(disputesWon, periodFrom ? prevWon : null),
     amountRecoveredChange: pctChange(amountRecovered, prevRecovered),
+    submissionRate,
+    deadlineMissRate,
+    submissionRateChange: prevSubmissionRate !== null ? submissionRate - prevSubmissionRate : null,
+    deadlineMissRateChange: prevDeadlineMissRate !== null ? deadlineMissRate - prevDeadlineMissRate : null,
     overriddenCount,
     syncIssueCount,
     disputesWithNotesCount,

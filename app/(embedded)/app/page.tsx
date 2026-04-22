@@ -8,7 +8,6 @@ import {
   Text,
   BlockStack,
   Spinner,
-  Banner,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { SetupStateResponse } from "@/lib/setup/types";
@@ -154,18 +153,7 @@ export default function EmbeddedDashboardPage() {
           <DashboardSummaryRow stats={stats} loading={statsLoading} />
         </Layout.Section>
 
-        {/* 2. Zero-state message when nothing needs attention */}
-        {!statsLoading && actionNeededCount === 0 && (
-          <Layout.Section>
-            <Banner tone="info">
-              <Text as="span" variant="bodySm">
-                {t("dashboard.nothingNeedsAttention")}
-              </Text>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {/* 3. Primary section — conditional */}
+        {/* 2. Primary section — conditional */}
         {actionNeededCount > 0 && (
           <Layout.Section>
             <Suspense

@@ -130,8 +130,32 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  let enrichedData = data;
+  if (sp.get("include_pack_score") === "true" && data && data.length > 0) {
+    const ids = data.map((d: Record<string, unknown>) => d.id as string);
+    const { data: packRows } = await sb
+      .from("evidence_packs")
+      .select("dispute_id, completeness_score, created_at")
+      .in("dispute_id", ids)
+      .eq("status", "ready")
+      .order("created_at", { ascending: false });
+
+    const scoreMap: Record<string, number> = {};
+    for (const r of packRows ?? []) {
+      const row = r as Record<string, unknown>;
+      const did = row.dispute_id as string;
+      if (!(did in scoreMap)) {
+        scoreMap[did] = Number(row.completeness_score) || 0;
+      }
+    }
+    enrichedData = data.map((d: Record<string, unknown>) => ({
+      ...d,
+      pack_completeness_score: scoreMap[d.id as string] ?? null,
+    }));
+  }
+
   return NextResponse.json({
-    disputes: data,
+    disputes: enrichedData,
     pagination: {
       page,
       per_page: perPage,
