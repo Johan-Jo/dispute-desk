@@ -120,17 +120,17 @@ export function DashboardKpis({
   ];
 
   return (
-    <Card>
-      <BlockStack gap="400">
-        <InlineStack align="space-between" blockAlign="center" wrap>
-          <Text as="h2" variant="headingMd">
-            {t("dashboard.performanceOverview")}
-          </Text>
-          <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
-        </InlineStack>
-        <InlineGrid columns={{ xs: 2, md: 4 }} gap="400">
-          {metrics.map((m) => (
-            <BlockStack key={m.label} gap="100">
+    <BlockStack gap="300">
+      <InlineStack align="space-between" blockAlign="center" wrap>
+        <Text as="h2" variant="headingMd">
+          {t("dashboard.performanceOverview")}
+        </Text>
+        <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
+      </InlineStack>
+      <InlineGrid columns={{ xs: 2, md: 4 }} gap="300">
+        {metrics.map((m) => (
+          <Card key={m.label}>
+            <BlockStack gap="100">
               <Text as="span" variant="bodySm" tone="subdued">
                 {m.label}
               </Text>
@@ -139,9 +139,9 @@ export function DashboardKpis({
               </Text>
               <ChangeIndicator value={m.change} label={vsLabel} />
             </BlockStack>
-          ))}
-        </InlineGrid>
-      </BlockStack>
-    </Card>
+          </Card>
+        ))}
+      </InlineGrid>
+    </BlockStack>
   );
 }
