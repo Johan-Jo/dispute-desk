@@ -15,6 +15,7 @@ import {
   Select,
   TextField,
 } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { SubmissionField } from "../workspace-components/types";
@@ -29,6 +30,7 @@ function strengthLabel(s: string): string {
 
 export default function ReviewSubmitTab({ workspace }: { workspace: Workspace }) {
   const { data, clientState, derived, actions } = workspace;
+  const t = useTranslations("review.whatWasSent");
 
   const [fields, setFields] = useState<SubmissionField[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -189,10 +191,21 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
 
             <BlockStack gap="300">
               <BlockStack gap="100">
-                <Text as="p" variant="bodySm" fontWeight="semibold">What was sent:</Text>
-                <Text as="p" variant="bodySm">{"\u2022 Dispute response letter \u2192 Annat / Other text field"}</Text>
-                <Text as="p" variant="bodySm">{"\u2022 Order details and customer activity \u2192 Activity log"}</Text>
-                <Text as="p" variant="bodySm">{"\u2022 Policy disclosures \u2192 Refund policy field"}</Text>
+                <Text as="p" variant="bodySm" fontWeight="semibold">{t("heading")}</Text>
+                {previewLoading ? (
+                  <Text as="p" variant="bodySm" tone="subdued">{t("loading")}</Text>
+                ) : fields.length === 0 ? (
+                  <Text as="p" variant="bodySm" tone="subdued">{t("emptyFallback")}</Text>
+                ) : (
+                  fields.map((f) => (
+                    <Text key={f.shopifyFieldName} as="p" variant="bodySm">
+                      {`\u2022 ${f.shopifyFieldLabel} \u2192 ${f.shopifyFieldName}`}
+                    </Text>
+                  ))
+                )}
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("verificationNote")}
+                </Text>
               </BlockStack>
 
               <BlockStack gap="100">

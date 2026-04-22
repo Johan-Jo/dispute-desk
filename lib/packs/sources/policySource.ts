@@ -13,7 +13,9 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import type { EvidenceSection, BuildContext } from "../types";
 
-const POLICY_FIELD_MAP: Record<string, string> = {
+type PolicyFieldKey = "refund_policy" | "shipping_policy" | "cancellation_policy";
+
+const POLICY_FIELD_MAP: Record<string, PolicyFieldKey> = {
   shipping: "shipping_policy",
   refunds: "refund_policy",
   terms: "cancellation_policy",
@@ -58,6 +60,41 @@ export async function collectPolicyEvidence(
     });
   }
 
+  // Per-type display-only sections so the Evidence tab can render
+  // individual policy rows (refund / shipping / cancellation). These
+  // carry no fieldsProvided because the combined section above already
+  // owns that signal, and they intentionally produce empty output from
+  // the Shopify serializer so they don't double-emit into Shopify
+  // (see the empty-string filter in buildEvidenceInputFromRaw).
+  const PER_TYPE_LABEL: Record<string, string> = {
+    refunds: "Refund Policy",
+    shipping: "Shipping Policy",
+    terms: "Cancellation Policy",
+  };
+  const perTypeSections: EvidenceSection[] = [];
+  for (const [type, policy] of latest) {
+    const field = POLICY_FIELD_MAP[type];
+    if (!field) continue;
+    perTypeSections.push({
+      type: field,
+      label: PER_TYPE_LABEL[type] ?? field,
+      source: "policy_snapshots",
+      fieldsProvided: [],
+      data: {
+        __displayOnly: true,
+        policies: [
+          {
+            policySnapshotId: policy.id,
+            policyType: type,
+            url: policy.url,
+            capturedAt: policy.captured_at,
+            textPreview: policy.extracted_text?.slice(0, 500) ?? null,
+          },
+        ],
+      },
+    });
+  }
+
   return [
     {
       type: "policy",
@@ -66,5 +103,6 @@ export async function collectPolicyEvidence(
       fieldsProvided,
       data: { policies: policyEntries },
     },
+    ...perTypeSections,
   ];
 }

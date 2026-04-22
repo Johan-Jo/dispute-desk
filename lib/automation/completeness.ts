@@ -311,6 +311,9 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "shipping_tracking", label: "Shipping Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "delivery_proof", label: "Delivery Confirmation (Signature / Photo)", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "refund_policy", label: "Refund Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
+    { field: "shipping_policy", label: "Shipping Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
+    { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
   PRODUCT_UNACCEPTABLE: [

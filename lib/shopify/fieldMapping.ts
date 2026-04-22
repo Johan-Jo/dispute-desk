@@ -102,6 +102,13 @@ function serializeSectionData(section: RawPackSection): string {
   const { data, label, type } = section;
   if (!data || typeof data !== "object") return "";
 
+  // Display-only sections (e.g. per-type policy rows emitted by
+  // policySource for the Evidence tab) must not contribute to the
+  // Shopify payload — the combined "policy" section already owns
+  // serialization, and double-emitting would duplicate text in
+  // refundPolicyDisclosure.
+  if ((data as Record<string, unknown>).__displayOnly === true) return "";
+
   const lines: string[] = [];
 
   // Shipping / fulfillment sections

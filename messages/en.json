@@ -2671,5 +2671,13 @@
   "auth": {
     "shopifyBanner": "DisputeDesk runs inside Shopify Admin. Open it from your store's Apps menu, or continue below if you have a web portal account.",
     "shopifyBannerCta": "Learn more"
+  },
+  "review": {
+    "whatWasSent": {
+      "heading": "What was sent:",
+      "loading": "Loading\u2026",
+      "emptyFallback": "\u2022 (no evidence fields were populated \u2014 contact support)",
+      "verificationNote": "Some evidence may be stored by Shopify in structured fields that are not clearly visible in this Admin view. In this case, merchant-visible verification is limited to the fields shown here."
+    }
   }
 }

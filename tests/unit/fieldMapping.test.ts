@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { buildEvidenceInput, type PackSection } from "@/lib/shopify/fieldMapping";
+import {
+  buildEvidenceInput,
+  buildEvidenceInputFromRaw,
+  type PackSection,
+  type RawPackSection,
+} from "@/lib/shopify/fieldMapping";
 
 describe("buildEvidenceInput", () => {
   it("maps pack sections to Shopify evidence fields", () => {
@@ -34,5 +39,67 @@ describe("buildEvidenceInput", () => {
     ];
     const input = buildEvidenceInput(sections);
     expect(Object.keys(input)).toHaveLength(0);
+  });
+});
+
+describe("buildEvidenceInputFromRaw", () => {
+  /** The combined policy section that owns Shopify serialization. */
+  const combinedPolicy: RawPackSection = {
+    type: "policy",
+    label: "Store Policies (3)",
+    source: "policy_snapshots",
+    data: {
+      policies: [
+        { policyType: "refunds" },
+        { policyType: "shipping" },
+        { policyType: "terms" },
+      ],
+    },
+  };
+
+  /**
+   * Display-only per-policy-type sections emitted by policySource so the
+   * Evidence tab can render individual rows. These carry __displayOnly and
+   * MUST NOT contribute to the Shopify payload — otherwise refundPolicyDisclosure
+   * would double-emit the refund-policy summary.
+   */
+  const displayOnlyPerType: RawPackSection[] = [
+    {
+      type: "refund_policy",
+      label: "Refund Policy",
+      source: "policy_snapshots",
+      data: { __displayOnly: true, policies: [{ policyType: "refunds" }] },
+    },
+    {
+      type: "shipping_policy",
+      label: "Shipping Policy",
+      source: "policy_snapshots",
+      data: { __displayOnly: true, policies: [{ policyType: "shipping" }] },
+    },
+    {
+      type: "cancellation_policy",
+      label: "Cancellation Policy",
+      source: "policy_snapshots",
+      data: { __displayOnly: true, policies: [{ policyType: "terms" }] },
+    },
+  ];
+
+  it("combined-only and combined+display-only produce identical refundPolicyDisclosure", () => {
+    const combinedOnly = buildEvidenceInputFromRaw([combinedPolicy]);
+    const combinedPlusDisplay = buildEvidenceInputFromRaw([
+      combinedPolicy,
+      ...displayOnlyPerType,
+    ]);
+
+    expect(combinedOnly.refundPolicyDisclosure).toBeTruthy();
+    expect(combinedPlusDisplay.refundPolicyDisclosure).toBe(
+      combinedOnly.refundPolicyDisclosure,
+    );
+  });
+
+  it("display-only sections contribute nothing when present alone", () => {
+    const input = buildEvidenceInputFromRaw(displayOnlyPerType);
+    expect(input.refundPolicyDisclosure).toBeUndefined();
+    expect(input.cancellationPolicyDisclosure).toBeUndefined();
   });
 });
