@@ -185,7 +185,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
           <BlockStack gap="300">
             <Banner tone="success">
               <Text as="p" variant="bodySm" fontWeight="semibold">
-                {"\u2713 Your dispute response has been saved to Shopify"}
+                Your dispute response has been saved to Shopify
               </Text>
             </Banner>
 
