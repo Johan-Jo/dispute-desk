@@ -54,7 +54,7 @@ export function DashboardInProgressTable() {
   useEffect(() => {
     let cancelled = false;
     fetch(
-      "/api/disputes?normalized_status=in_progress,ready_to_submit,submitted,submitted_to_shopify,waiting_on_issuer,submitted_to_bank&sort=due_at&sort_dir=asc&per_page=10",
+      "/api/disputes?normalized_status=in_progress,ready_to_submit,submitted,submitted_to_shopify,waiting_on_issuer,submitted_to_bank&sort=created_at&sort_dir=desc&per_page=10",
     )
       .then((r) => (r.ok ? r.json() : { disputes: [] }))
       .then((data: { disputes?: Dispute[] }) => {
