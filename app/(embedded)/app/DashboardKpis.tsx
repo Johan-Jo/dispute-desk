@@ -6,7 +6,6 @@ import {
   Card,
   InlineGrid,
   InlineStack,
-  Select,
   Text,
 } from "@shopify/polaris";
 import {
@@ -14,6 +13,47 @@ import {
   type DashboardStats,
   type PeriodKey,
 } from "./dashboardHelpers";
+
+function PeriodSelector({
+  period,
+  onChange,
+  t,
+}: {
+  period: PeriodKey;
+  onChange: (p: PeriodKey) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const periodLabel = (key: PeriodKey) =>
+    t(`dashboard.period${key === "all" ? "All" : key}`);
+  return (
+    <InlineStack gap="200">
+      {(["24h", "7d", "30d", "all"] as const).map((key) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          style={{
+            padding: "4px 10px",
+            borderRadius: "6px",
+            border: period === key ? "none" : "1px solid var(--p-color-border)",
+            background:
+              period === key
+                ? "var(--p-color-bg-fill-brand)"
+                : "transparent",
+            color:
+              period === key
+                ? "var(--p-color-text-brand-on-bg-fill)"
+                : "var(--p-color-text)",
+            fontSize: "13px",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          {periodLabel(key)}
+        </button>
+      ))}
+    </InlineStack>
+  );
+}
 
 function ChangeIndicator({
   value,
@@ -23,18 +63,13 @@ function ChangeIndicator({
   label: string;
 }) {
   if (value === null || value === undefined) return null;
-  const isPositive = value > 0;
-  const isNegative = value < 0;
-  const color = isPositive
-    ? "var(--p-color-text-success)"
-    : isNegative
-      ? "var(--p-color-text-critical)"
-      : undefined;
-  const arrow = isPositive ? "↑" : isNegative ? "↓" : "";
+  const tone =
+    value > 0 ? "success" : value < 0 ? "critical" : "subdued";
   return (
-    <Text as="span" variant="bodySm" tone="subdued">
-      <span style={{ color }}>
-        {arrow} {Math.abs(value)}% {label}
+    <Text as="span" variant="bodySm" tone={tone === "success" ? undefined : tone}>
+      <span style={{ color: value > 0 ? "var(--p-color-text-success)" : undefined }}>
+        {value > 0 ? "+" : ""}
+        {value}% {label}
       </span>
     </Text>
   );
@@ -47,13 +82,6 @@ interface Props {
   onPeriodChange: (p: PeriodKey) => void;
 }
 
-const PERIOD_OPTIONS: { label: string; value: PeriodKey }[] = [
-  { label: "Last 24 hours", value: "24h" },
-  { label: "Last 7 days", value: "7d" },
-  { label: "This month", value: "30d" },
-  { label: "All time", value: "all" },
-];
-
 export function DashboardKpis({
   stats,
   loading,
@@ -64,40 +92,30 @@ export function DashboardKpis({
   const formatCurrency = useFormatCurrency(stats.currencyCode);
   const vsLabel = t("dashboard.vsLastMonth");
 
-  const periodOptions = PERIOD_OPTIONS.map((o) => ({
-    label: t(`dashboard.period${o.value === "all" ? "All" : o.value}`),
-    value: o.value,
-  }));
-
   const metrics: {
     label: string;
     value: string;
     change: number | null;
   }[] = [
     {
-      label: t("dashboard.winRateSubmitted"),
+      label: t("dashboard.activeDisputes"),
+      value: String(stats.activeDisputes),
+      change: stats.activeDisputesChange,
+    },
+    {
+      label: t("dashboard.winRate"),
       value: `${stats.winRate}%`,
       change: stats.winRateChange,
     },
     {
-      label: t("dashboard.recoveryRate"),
+      label: t("dashboard.amountRecovered"),
       value: formatCurrency(stats.amountRecovered),
       change: stats.amountRecoveredChange,
     },
     {
-      label: t("dashboard.submissionRate"),
-      value: `${stats.submissionRate}%`,
-      change: stats.submissionRateChange,
-    },
-    {
-      label: t("dashboard.deadlineMissRate"),
-      value: `${stats.deadlineMissRate}%`,
-      change: stats.deadlineMissRateChange,
-    },
-    {
-      label: t("dashboard.totalDisputes"),
-      value: String(stats.totalDisputes),
-      change: stats.activeDisputesChange,
+      label: t("dashboard.amountAtRisk"),
+      value: formatCurrency(stats.amountAtRisk),
+      change: stats.amountAtRiskChange,
     },
   ];
 
@@ -106,19 +124,11 @@ export function DashboardKpis({
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center" wrap>
           <Text as="h2" variant="headingMd">
-            {t("dashboard.yourPerformance")}
+            {t("dashboard.performanceOverview")}
           </Text>
-          <div style={{ minWidth: 160 }}>
-            <Select
-              label=""
-              labelHidden
-              options={periodOptions}
-              value={period}
-              onChange={(v) => onPeriodChange(v as PeriodKey)}
-            />
-          </div>
+          <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
         </InlineStack>
-        <InlineGrid columns={{ xs: 2, md: 5 }} gap="400">
+        <InlineGrid columns={{ xs: 2, md: 4 }} gap="400">
           {metrics.map((m) => (
             <BlockStack key={m.label} gap="100">
               <Text as="span" variant="bodySm" tone="subdued">

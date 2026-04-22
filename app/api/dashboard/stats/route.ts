@@ -69,24 +69,6 @@ export async function GET(req: NextRequest) {
     .not("due_at", "is", null)
     .lte("due_at", threeDaysFromNow);
 
-  // ── Missing evidence count (open disputes without saved evidence) ────
-  const { count: missingEvidenceCount } = await sb
-    .from("disputes")
-    .select("id", { count: "exact", head: true })
-    .eq("shop_id", shopId)
-    .is("closed_at", null)
-    .or("submission_state.is.null,submission_state.eq.not_saved");
-
-  // ── Due today count (open disputes with due_at within 24h) ──────────
-  const oneDayFromNow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  const { count: dueTodayCount } = await sb
-    .from("disputes")
-    .select("id", { count: "exact", head: true })
-    .eq("shop_id", shopId)
-    .is("closed_at", null)
-    .not("due_at", "is", null)
-    .lte("due_at", oneDayFromNow);
-
   // ── Submission state breakdown ────────────────────────────────────────
   const { data: subRows } = await sb
     .from("disputes")
@@ -173,10 +155,9 @@ export async function GET(req: NextRequest) {
     reasonCounts[r] = (reasonCounts[r] ?? 0) + 1;
   }
   const disputeCategories = Object.entries(reasonCounts)
-    .map(([label, cnt]) => ({
+    .map(([label, count]) => ({
       label,
-      count: cnt,
-      value: totalDisputes > 0 ? Math.round((cnt / totalDisputes) * 100) : 0,
+      value: totalDisputes > 0 ? Math.round((count / totalDisputes) * 100) : 0,
     }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
@@ -207,8 +188,6 @@ export async function GET(req: NextRequest) {
     submissionBreakdown,
     recentActivity,
     deadlinesSoonCount: deadlinesSoonCount ?? 0,
-    missingEvidenceCount: missingEvidenceCount ?? 0,
-    dueTodayCount: dueTodayCount ?? 0,
 
     // ── Legacy fields (backward compat) ──
     totalDisputes,
