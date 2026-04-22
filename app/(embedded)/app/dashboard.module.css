@@ -1,0 +1,90 @@
+/* Mobile-only rules for the embedded dashboard (smDown branch).
+   Desktop continues to use inline styles in page.tsx and the extracted components. */
+
+.kpiTileMobile {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  box-sizing: border-box;
+}
+.kpiTileMobile .label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+}
+.kpiTileMobile .value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+.kpiTileMobile .iconChip {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.kpiTileMobile .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.kpiHeroTileRisk {
+  background: var(--p-color-bg-surface-critical-subdued);
+  border-color: var(--p-color-border-critical-subdued);
+}
+
+.mobileGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.mobileStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.mobileFullWidth {
+  width: 100%;
+}
+
+.mobileFullWidth > button,
+.mobileFullWidth > a {
+  width: 100%;
+}
+
+.summaryCounterMobile {
+  padding: 12px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+.summaryCounterMobile .label {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+.summaryCounterMobile .count {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+
+.helpCardMobile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}

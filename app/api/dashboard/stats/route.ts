@@ -59,16 +59,6 @@ export async function GET(req: NextRequest) {
     operationalBreakdown[ns] = (operationalBreakdown[ns] ?? 0) + 1;
   }
 
-  // ── Deadlines soon (open disputes with due_at within 3 days) ────────
-  const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
-  const { count: deadlinesSoonCount } = await sb
-    .from("disputes")
-    .select("id", { count: "exact", head: true })
-    .eq("shop_id", shopId)
-    .is("closed_at", null)
-    .not("due_at", "is", null)
-    .lte("due_at", threeDaysFromNow);
-
   // ── Submission state breakdown ────────────────────────────────────────
   const { data: subRows } = await sb
     .from("disputes")
@@ -187,7 +177,6 @@ export async function GET(req: NextRequest) {
     operationalClosedCount,
     submissionBreakdown,
     recentActivity,
-    deadlinesSoonCount: deadlinesSoonCount ?? 0,
 
     // ── Legacy fields (backward compat) ──
     totalDisputes,
