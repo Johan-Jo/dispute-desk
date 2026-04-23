@@ -14,7 +14,16 @@ import type { Rule } from "../types";
  * gets a prepared pack and a notification (never a silent drop).
  */
 
-const baseRule = (overrides: Partial<Rule>): Rule =>
+/**
+ * These tests feed legacy mode strings (auto_pack, notify, manual) on purpose
+ * to exercise the normalization layer. The factory accepts a widened override
+ * shape so we don't have to `as unknown as Rule` on every case.
+ */
+type RuleOverride = Omit<Partial<Rule>, "action"> & {
+  action?: { mode: string; pack_template_id?: string | null };
+};
+
+const baseRule = (overrides: RuleOverride): Rule =>
   ({
     id: "r1",
     shop_id: "s1",
@@ -25,7 +34,7 @@ const baseRule = (overrides: Partial<Rule>): Rule =>
     created_at: "",
     updated_at: "",
     ...overrides,
-  }) as Rule;
+  }) as unknown as Rule;
 
 describe("pickAutomationAction", () => {
   it("returns review when no rules match (never silently drops)", () => {

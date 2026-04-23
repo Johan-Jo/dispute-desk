@@ -59,9 +59,11 @@ export async function GET(req: NextRequest) {
     if (fromRules[p.id]) {
       pack_modes[p.id] = fromRules[p.id];
     } else {
-      // Fall back to coverage-level rules from the wizard
+      // Fall back to coverage-level rules from the wizard. When no coverage
+      // rule is configured we default to "review" — the safest outcome under
+      // the two-mode model (build pack, hold for merchant approval).
       const reason = disputeTypeToPrimaryReason(p.dispute_type);
-      pack_modes[p.id] = coverageModes.get(reason) ?? "manual";
+      pack_modes[p.id] = coverageModes.get(reason) ?? "review";
     }
   }
 

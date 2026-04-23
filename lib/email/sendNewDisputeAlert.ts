@@ -63,8 +63,16 @@ interface ModeStrings {
   listLabel: string;
   /** List rows. For `auto` these are past-tense steps; for `review` these are next-action steps. */
   listItems: string[];
-  /** Optional callout shown below the list (used by review to reinforce "nothing submitted yet"). */
-  callout?: { label: string; body: string };
+  /**
+   * Optional callout shown below the list. `body` may be a plain string or a
+   * function receiving the formatted due date — the AUTO variant uses the
+   * function form to embed the Shopify forwarding date in the copy, while
+   * every other locale/variant still uses a plain string.
+   */
+  callout?: {
+    label: string;
+    body: string | ((p: { dueDate: string }) => string);
+  };
   cta: string;
 }
 
@@ -96,11 +104,13 @@ const STRINGS: Record<Locale, EmailStrings> = {
       listItems: [
         "We collected the available evidence",
         "We prepared the response",
-        "We submitted it on your behalf",
+        "We submitted it to Shopify on your behalf",
       ],
       callout: {
-        label: "What to do next",
-        body: "No action is required. You can open the dispute in DisputeDesk to review what was submitted.",
+        label: "What happens next",
+        body: ({ dueDate }) =>
+          `Shopify will forward your response to the card network on <b>${dueDate}</b>. No action is required from your side. ` +
+          `Want a faster resolution? Open the dispute in your Shopify Admin and submit it from there — Shopify will forward it to the bank immediately.`,
       },
       cta: "Open dispute →",
     },
@@ -474,17 +484,25 @@ export async function sendNewDisputeAlert(
       )
       .join("");
 
-    const calloutHtml = variant.callout
-      ? `
+    const dueDateDisplay = formatDate(ctx.dueAt);
+    const calloutBody = variant.callout
+      ? typeof variant.callout.body === "function"
+        ? variant.callout.body({ dueDate: dueDateDisplay })
+        : variant.callout.body
+      : null;
+
+    const calloutHtml =
+      variant.callout && calloutBody !== null
+        ? `
       <div style="background:${ctx.resolvedMode === "review" ? "#FEF3C7;border:1px solid #FCD34D" : "#EFF6FF;border:1px solid #BFDBFE"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
         <p style="font-size:13px;font-weight:600;color:${ctx.resolvedMode === "review" ? "#92400E" : "#1E40AF"};margin:0 0 4px">
           ${variant.callout.label}
         </p>
         <p style="font-size:13px;color:${ctx.resolvedMode === "review" ? "#92400E" : "#1E40AF"};margin:0;line-height:1.5">
-          ${variant.callout.body}
+          ${calloutBody}
         </p>
       </div>`
-      : "";
+        : "";
 
     const html = `<!DOCTYPE html>
 <html>
@@ -551,7 +569,7 @@ ${ctx.orderName ? `${shared.order}: ${ctx.orderName}\n` : ""}${shared.due}: ${fo
 
 ${variant.listLabel}:
 ${variant.listItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}
-${variant.callout ? `\n${variant.callout.label}: ${variant.callout.body}\n` : ""}
+${variant.callout && calloutBody !== null ? `\n${variant.callout.label}: ${calloutBody.replace(/<\/?b>/g, "")}\n` : ""}
 ${phaseHint}
 
 ${variant.cta.replace(" →", "")}: ${disputeUrl}
