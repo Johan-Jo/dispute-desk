@@ -39,6 +39,13 @@ export interface NewDisputeAlertContext {
    * variant is sent. Must already be normalized to "auto" | "review".
    */
   resolvedMode: AutomationMode;
+  /**
+   * Shopify DisputeEvidence GID (e.g. `gid://shopify/DisputeEvidence/10484056121`).
+   * Used to build the "Submit in Shopify Admin" secondary CTA shown in the
+   * AUTO variant. When absent (or when the shop domain isn't available) the
+   * email gracefully falls back to a single primary CTA.
+   */
+  shopifyDisputeEvidenceGid?: string | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -74,6 +81,13 @@ interface ModeStrings {
     body: string | ((p: { dueDate: string }) => string);
   };
   cta: string;
+  /**
+   * Optional secondary CTA label. When present AND the caller supplied a
+   * valid Shopify admin URL, the email renders a second (outlined) button
+   * linking directly to the dispute in Shopify Admin. Currently only the
+   * English AUTO variant opts in.
+   */
+  ctaSecondary?: string;
 }
 
 interface EmailStrings {
@@ -109,10 +123,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       callout: {
         label: "What happens next",
         body: ({ dueDate }) =>
-          `Shopify will forward your response to the card network on <b>${dueDate}</b>. No action is required from your side. ` +
-          `Want a faster resolution? Open the dispute in your Shopify Admin and submit it from there — Shopify will forward it to the bank immediately.`,
+          `Shopify will forward your response to the card network on <b>${dueDate}</b>. No action is required from you — but if you'd like to resolve this sooner, you can submit directly in Shopify Admin.`,
       },
-      cta: "Open dispute →",
+      cta: "Open in DisputeDesk →",
+      ctaSecondary: "Submit in Shopify Admin ↗",
     },
     review: {
       subject: ({ shortId }) => `Dispute #${shortId} is ready for your review`,
@@ -417,6 +431,27 @@ function shortDisputeId(id: string): string {
   return id.length > 8 ? id.slice(0, 8) : id;
 }
 
+/**
+ * Build the Shopify Admin URL where a merchant can submit the dispute
+ * response directly. Expected format:
+ *   https://admin.shopify.com/store/{handle}/payments/dispute_evidences/{numericId}
+ *
+ * Returns null if either the shop domain or evidence GID is missing or
+ * malformed — the email then gracefully degrades to a single primary CTA.
+ */
+function getShopifyAdminUrl(
+  shopDomain: string | null | undefined,
+  evidenceGid: string | null | undefined,
+): string | null {
+  if (!shopDomain || !evidenceGid) return null;
+  const handle = shopDomain.replace(/\.myshopify\.com$/i, "").trim();
+  if (!handle) return null;
+  const match = /\/(\d+)(?:\?.*)?$/.exec(evidenceGid);
+  const numericId = match?.[1];
+  if (!numericId) return null;
+  return `https://admin.shopify.com/store/${handle}/payments/dispute_evidences/${numericId}`;
+}
+
 export async function sendNewDisputeAlert(
   ctx: NewDisputeAlertContext,
 ): Promise<void> {
@@ -463,6 +498,11 @@ export async function sendNewDisputeAlert(
       shop?.shop_domain ?? null,
       `disputes/${ctx.disputeId}`,
     );
+    const shopifyAdminUrl = getShopifyAdminUrl(
+      shop?.shop_domain ?? null,
+      ctx.shopifyDisputeEvidenceGid ?? null,
+    );
+    const showSecondaryCta = Boolean(variant.ctaSecondary && shopifyAdminUrl);
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
     const reason = reasonLabel(ctx.reason);
     const phaseHint =
@@ -547,9 +587,32 @@ export async function sendNewDisputeAlert(
         </p>
       </div>
 
-      <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">
-        ${variant.cta}
-      </a>
+      ${
+        showSecondaryCta
+          ? `<table role="presentation" style="border-collapse:collapse;max-width:100%">
+        <tr>
+          <td style="padding:0 10px 0 0;vertical-align:middle;white-space:nowrap">
+            <a href="${disputeUrl}" style="display:inline-block;padding:12px 20px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;white-space:nowrap">
+            ${variant.cta}
+            </a>
+          </td>
+          <td style="padding:0;vertical-align:middle;white-space:nowrap">
+            <a href="${shopifyAdminUrl}" style="display:inline-block;padding:11px 19px;background:#fff;color:#1D4ED8;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;border:1px solid #1D4ED8;white-space:nowrap">
+            ${variant.ctaSecondary}
+            </a>
+          </td>
+        </tr>
+      </table>`
+          : `<table role="presentation" style="border-collapse:collapse">
+        <tr>
+          <td style="padding:0;vertical-align:middle">
+            <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">
+            ${variant.cta}
+            </a>
+          </td>
+        </tr>
+      </table>`
+      }
     </div>
 
     <p style="font-size:12px;color:#8C9196;text-align:center;margin:0">
@@ -572,7 +635,11 @@ ${variant.listItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}
 ${variant.callout && calloutBody !== null ? `\n${variant.callout.label}: ${calloutBody.replace(/<\/?b>/g, "")}\n` : ""}
 ${phaseHint}
 
-${variant.cta.replace(" →", "")}: ${disputeUrl}
+${variant.cta.replace(" →", "")}: ${disputeUrl}${
+      showSecondaryCta
+        ? `\n${(variant.ctaSecondary ?? "").replace(" ↗", "")}: ${shopifyAdminUrl}`
+        : ""
+    }
 
 ---
 ${shared.footer}`;

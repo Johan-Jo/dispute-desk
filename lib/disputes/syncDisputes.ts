@@ -537,6 +537,7 @@ export async function syncDisputes(
               dueAt: d.evidenceDueBy ?? null,
               orderName: d.order?.name ?? null,
               resolvedMode,
+              shopifyDisputeEvidenceGid: d.disputeEvidence?.id ?? null,
             });
           }
 
