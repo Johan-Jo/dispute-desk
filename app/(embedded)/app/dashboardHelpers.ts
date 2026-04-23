@@ -38,6 +38,7 @@ export interface DashboardStats {
   outcomeBreakdown: Record<string, number>;
   operationalBreakdown: Record<string, number>;
   operationalClosedCount: number;
+  actionNeededDisputeId: string | null;
   submissionBreakdown: Record<string, number>;
   winRateTrend: number[];
   disputeCategories: { label: string; value: number }[];
@@ -69,6 +70,7 @@ export const DEFAULT_STATS: DashboardStats = {
   outcomeBreakdown: {},
   operationalBreakdown: {},
   operationalClosedCount: 0,
+  actionNeededDisputeId: null,
   submissionBreakdown: {},
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],

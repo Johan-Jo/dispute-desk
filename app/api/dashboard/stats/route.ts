@@ -44,11 +44,12 @@ export async function GET(req: NextRequest) {
   // days ago and now waiting on the issuer disappears from the count.
   const { data: opRows } = await sb
     .from("disputes")
-    .select("normalized_status, closed_at")
+    .select("id, normalized_status, closed_at")
     .eq("shop_id", shopId);
 
   const operationalBreakdown: Record<string, number> = {};
   let operationalClosedCount = 0;
+  const actionNeededIds: string[] = [];
   for (const r of opRows ?? []) {
     const row = r as Record<string, unknown>;
     if (row.closed_at) {
@@ -57,7 +58,12 @@ export async function GET(req: NextRequest) {
     }
     const ns = String(row.normalized_status ?? "new");
     operationalBreakdown[ns] = (operationalBreakdown[ns] ?? 0) + 1;
+    if (ns === "new" || ns === "action_needed" || ns === "needs_review") {
+      actionNeededIds.push(String(row.id));
+    }
   }
+  const actionNeededDisputeId =
+    actionNeededIds.length === 1 ? actionNeededIds[0] : null;
 
   // ── Submission state breakdown ────────────────────────────────────────
   const { data: subRows } = await sb
@@ -175,6 +181,7 @@ export async function GET(req: NextRequest) {
     // ── New dashboard fields ──
     operationalBreakdown,
     operationalClosedCount,
+    actionNeededDisputeId,
     submissionBreakdown,
     recentActivity,
 

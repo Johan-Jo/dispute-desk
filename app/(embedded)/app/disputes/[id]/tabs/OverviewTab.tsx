@@ -437,21 +437,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // Rules page to change the setting for future disputes of the same family.
   const disputeFamily = mapReasonToRulesFamily(dispute.reason);
   const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
-  const appliedModeLabel = (() => {
-    const mode = appliedRule?.mode ?? "manual";
-    if (mode === "auto_pack") return "Auto-Pack";
-    if (mode === "review") return "Send to Review";
-    if (mode === "notify") return "Notify Only";
-    return "Manual";
-  })();
+  // Only two merchant-facing modes exist now. The API already normalizes
+  // legacy audit rows (auto_pack / notify / manual) to "auto" or "review"
+  // before they reach the workspace props, so the UI branches on just those
+  // two values and defaults to "review" if the field is somehow missing.
+  const appliedMode = appliedRule?.mode ?? "review";
+  const appliedModeLabel =
+    appliedMode === "auto" ? "Automatic" : "Review before submit";
   const appliedModeHelp =
-    appliedRule?.mode === "auto_pack"
-      ? "DisputeDesk auto-built and saved the evidence pack."
-      : appliedRule?.mode === "review"
-        ? "DisputeDesk built the pack and held it for your review before saving."
-        : appliedRule?.mode === "notify"
-          ? "DisputeDesk notified you but did not build a pack automatically."
-          : "No rule matched — this dispute was handled manually.";
+    appliedMode === "auto"
+      ? "DisputeDesk prepared the evidence pack and submitted it automatically."
+      : "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline.";
 
   // Defense bullets — synthesized from present evidence so the language is direct and assertive.
   const defenseBullets = synthesizeDefenseBullets(presentFields, ipUnfavorable);
@@ -798,7 +794,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             <BlockStack gap="050">
               <InlineStack gap="200" blockAlign="center">
                 <Text as="p" variant="bodyMd">Automation rule:</Text>
-                <Badge tone={appliedRule?.mode === "auto_pack" ? "success" : appliedRule?.mode === "review" ? "attention" : undefined}>
+                <Badge tone={appliedRule?.mode === "auto" ? "success" : appliedRule?.mode === "review" ? "attention" : undefined}>
                   {appliedModeLabel}
                 </Badge>
               </InlineStack>

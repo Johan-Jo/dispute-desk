@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { validateBody, ruleCreateSchema } from "@/lib/middleware/validate";
+import { normalizeMode } from "@/lib/rules/normalizeMode";
 
 export const runtime = "nodejs";
 
@@ -58,13 +59,19 @@ export async function POST(req: NextRequest) {
   }
 
   const sb = getServiceClient();
+  // Belt-and-braces: the zod schema already rejects legacy values, but run
+  // a final normalizeMode pass so writes never persist anything outside the
+  // canonical two-mode set.
+  const safeAction = action
+    ? { ...action, mode: normalizeMode(action.mode) }
+    : { mode: "review" as const };
   const { data, error } = await sb
     .from("rules")
     .insert({
       shop_id,
       name: name ?? null,
       match: match ?? {},
-      action: action ?? { mode: "review" },
+      action: safeAction,
       enabled: enabled ?? true,
       priority: priority ?? 0,
     })

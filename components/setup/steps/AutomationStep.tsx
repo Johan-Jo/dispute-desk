@@ -79,7 +79,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
   const [reviewThreshold, setReviewThreshold] = useState("500");
   const [automatedCount, setAutomatedCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
-  const [notifyCount, setNotifyCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,9 +97,15 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
           | Record<string, string>
           | undefined;
 
-        let automationValues: string[];
+        // Normalize any stored value (legacy "automated"/"notify" included) to
+        // the canonical two-mode set so the sidebar counts match what the
+        // Coverage step actually wrote.
+        const toCanonical = (v: string): "auto" | "review" =>
+          v === "auto" || v === "automated" || v === "auto_pack" ? "auto" : "review";
+
+        let automationValues: Array<"auto" | "review">;
         if (coverageSettings && Object.keys(coverageSettings).length > 0) {
-          automationValues = Object.values(coverageSettings);
+          automationValues = Object.values(coverageSettings).map(toCanonical);
         } else {
           // Derive from store profile if coverage step not yet completed
           const profilePayload = state?.steps?.store_profile?.payload;
@@ -118,19 +123,18 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
           const recs = recommendTemplates(profile).filter((r) => r.isDefault);
           // Derive automation mode per family using same logic as CoverageStep
           const familySet = new Set(recs.map((r) => r.disputeFamily));
-          automationValues = [...familySet].map((family) => {
-            if (family === "general") return "notify";
-            if (confidence === "high") return "automated";
+          automationValues = [...familySet].map((family): "auto" | "review" => {
+            if (family === "general") return "review";
+            if (confidence === "high") return "auto";
             if (confidence === "medium") {
               if (family === "not_as_described" || family === "refund") return "review";
-              return "automated";
+              return "auto";
             }
             return "review";
           });
         }
-        setAutomatedCount(automationValues.filter((v) => v === "automated").length);
+        setAutomatedCount(automationValues.filter((v) => v === "auto").length);
         setReviewCount(automationValues.filter((v) => v === "review").length);
-        setNotifyCount(automationValues.filter((v) => v === "notify").length);
 
         // Load previously saved safeguards if re-entering
         const automationPayload = state?.steps?.automation?.payload;
@@ -270,7 +274,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "14px 0",
-                borderBottom: "1px solid #E1E3E5",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="#F59E0B">
@@ -280,22 +283,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
                   <span style={{ fontSize: 13, color: "#6D7175" }}>{t("sidebarReview")}</span>
                 </div>
                 <span style={{ fontSize: 18, fontWeight: 700, color: "#F59E0B" }}>{reviewCount}</span>
-              </div>
-
-              {/* Notify Only */}
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 0",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="#EF4444">
-                    <path d="M10 2L2 18h16L10 2zm0 6v4m0 2v1" fill="none" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <span style={{ fontSize: 13, color: "#6D7175" }}>{t("sidebarNotify")}</span>
-                </div>
-                <span style={{ fontSize: 18, fontWeight: 700, color: "#EF4444" }}>{notifyCount}</span>
               </div>
             </div>
 

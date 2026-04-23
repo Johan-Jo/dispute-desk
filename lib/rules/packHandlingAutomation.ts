@@ -6,7 +6,8 @@ import {
   type ReasonRowState,
   type SafeguardsState,
 } from "@/lib/rules/setupAutomation";
-import type { Rule, RuleAction } from "@/lib/rules/types";
+import { normalizeMode } from "@/lib/rules/normalizeMode";
+import type { Rule } from "@/lib/rules/types";
 
 /** Stored as rules named `__dd_setup__:pack:{uuid}` */
 export const packRuleName = (packId: string) =>
@@ -20,7 +21,11 @@ export const packRuleName = (packId: string) =>
 export const packInquiryRuleName = (packId: string) =>
   `${SETUP_RULE_PREFIX}pack:${packId}:inquiry`;
 
-export type PackHandlingUiMode = "manual" | "auto" | "notify";
+/**
+ * Per-pack UI mode. Matches the canonical two-mode automation model exactly:
+ * "auto" submits automatically, "review" prepares the pack for merchant review.
+ */
+export type PackHandlingUiMode = "auto" | "review";
 
 /**
  * Map library/template dispute_type to primary Shopify Payments reason code.
@@ -34,20 +39,10 @@ export function disputeTypeToPrimaryReason(disputeType: string): string {
   return disputeType || "GENERAL";
 }
 
-function normalizeAction(action: Rule["action"]): RuleAction {
-  const a = action as RuleAction;
-  const mode = a.mode ?? "manual";
-  if (mode === "auto_pack" || mode === "review" || mode === "manual" || mode === "notify") {
-    return {
-      mode,
-      pack_template_id: a.pack_template_id ?? null,
-    };
-  }
-  return { mode: "manual", pack_template_id: null };
-}
-
 /**
  * Read per-pack modes from setup rules. Missing packs default in the UI.
+ * Legacy stored values (auto_pack / notify / manual) are normalized via the
+ * single normalizeMode boundary.
  */
 export function parsePackModesFromRules(rules: Rule[]): Record<string, PackHandlingUiMode> {
   const prefix = `${SETUP_RULE_PREFIX}pack:`;
@@ -59,8 +54,7 @@ export function parsePackModesFromRules(rules: Rule[]): Record<string, PackHandl
     // the chargeback rule it pairs with.
     if (name.endsWith(":inquiry")) continue;
     const id = name.slice(prefix.length);
-    const mode = normalizeAction(r.action).mode;
-    out[id] = mode === "auto_pack" ? "auto" : mode === "notify" ? "notify" : "manual";
+    out[id] = normalizeMode(r.action?.mode);
   }
   return out;
 }
@@ -76,8 +70,7 @@ export function parseCoverageModesFromRules(rules: Rule[]): Map<string, PackHand
     const name = r.name ?? "";
     if (!name.startsWith(coveragePrefix)) continue;
     if (!r.enabled) continue;
-    const mode = normalizeAction(r.action).mode;
-    const uiMode: PackHandlingUiMode = mode === "auto_pack" ? "auto" : mode === "notify" ? "notify" : "manual";
+    const uiMode = normalizeMode(r.action?.mode);
     const reasons = (r.match as { reason?: string[] })?.reason ?? [];
     for (const reason of reasons) {
       reasonToMode.set(reason, uiMode);
@@ -88,6 +81,8 @@ export function parseCoverageModesFromRules(rules: Rule[]): Map<string, PackHand
 
 /**
  * Synthetic reason rows for validators / legacy readers: first matching pack per reason wins.
+ * "auto" requires an installed template; fall back to "review" when missing so we never
+ * silently emit a mode that can't actually auto-build.
  */
 export function buildCollapsedReasonRowsFromPacks(
   packsOrdered: Pack[],
@@ -99,12 +94,9 @@ export function buildCollapsedReasonRowsFromPacks(
       (p) => disputeTypeToPrimaryReason(p.dispute_type) === reason
     );
     if (!winning) {
-      return { reason, mode: "manual" as const, pack_template_id: null };
+      return { reason, mode: "review" as const, pack_template_id: null };
     }
-    const m = packModes[winning.id] ?? "manual";
-    if (m === "notify") {
-      return { reason, mode: "notify" as const, pack_template_id: null };
-    }
+    const m: PackHandlingUiMode = packModes[winning.id] ?? "review";
     if (m === "auto") {
       const tid = winning.template_id;
       if (!tid || !installedTemplateIds.has(tid)) {
@@ -112,7 +104,7 @@ export function buildCollapsedReasonRowsFromPacks(
       }
       return {
         reason,
-        mode: "auto_build" as const,
+        mode: "auto" as const,
         pack_template_id: tid,
       };
     }
@@ -147,7 +139,7 @@ export function validatePackModes(
   installed: Set<string>
 ): string | null {
   for (const p of packs) {
-    const m = packModes[p.id] ?? "manual";
+    const m: PackHandlingUiMode = packModes[p.id] ?? "review";
     if (m === "auto") {
       if (!p.template_id) return "pack_auto_requires_template";
       if (!installed.has(p.template_id)) return "validationTemplateInstalled";

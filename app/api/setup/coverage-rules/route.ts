@@ -2,20 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
+import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 
 export const runtime = "nodejs";
 
 const COVERAGE_RULE_PREFIX = `${SETUP_RULE_PREFIX}coverage:`;
 
-type WizardMode = "automated" | "review" | "notify";
-
-function mapWizardMode(mode: WizardMode): string {
-  switch (mode) {
-    case "automated": return "auto_pack";
-    case "review": return "review";
-    case "notify": return "notify";
-    default: return "manual";
-  }
+/**
+ * Accept both the new canonical wizard vocabulary (auto/review) and the
+ * pre-migration values (automated/notify) so in-flight wizards don't break.
+ * Every incoming value is collapsed to the two-mode canonical set.
+ */
+function mapWizardMode(mode: string): AutomationMode {
+  if (mode === "automated") return "auto";
+  return normalizeMode(mode);
 }
 
 /**
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       enabled: true,
       name: `${COVERAGE_RULE_PREFIX}${familyId}`,
       match: { reason: family.reasons },
-      action: { mode: mapWizardMode(mode as WizardMode) },
+      action: { mode: mapWizardMode(mode) },
       priority: 10,
     });
   }

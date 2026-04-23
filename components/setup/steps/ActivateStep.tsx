@@ -28,12 +28,24 @@ interface PackInfo {
 function deriveFamilyAutomation(
   family: string,
   confidence: "high" | "medium" | "low"
-): string {
-  if (family === "general") return "notify";
-  if (confidence === "high") return "automated";
+): "auto" | "review" {
+  if (family === "general") return "review";
+  if (confidence === "high") return "auto";
   if (confidence === "medium") {
     if (family === "not_as_described" || family === "refund") return "review";
-    return "automated";
+    return "auto";
+  }
+  return "review";
+}
+
+/**
+ * Coverage settings may still contain legacy values ("automated", "notify")
+ * from rows saved before the two-mode migration. Normalize here so the
+ * sidebar counts always match the two merchant-facing options.
+ */
+function toCanonicalMode(value: string): "auto" | "review" {
+  if (value === "auto" || value === "automated" || value === "auto_pack") {
+    return "auto";
   }
   return "review";
 }
@@ -76,9 +88,9 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
           | Record<string, string>
           | undefined;
 
-        let automationValues: string[];
+        let automationValues: Array<"auto" | "review">;
         if (coverageSettings && Object.keys(coverageSettings).length > 0) {
-          automationValues = Object.values(coverageSettings);
+          automationValues = Object.values(coverageSettings).map(toCanonicalMode);
           setFamilyCount(Object.keys(coverageSettings).length);
         } else {
           const profilePayload = state?.steps?.store_profile?.payload;
@@ -101,10 +113,8 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
           );
         }
 
-        setAutoCount(automationValues.filter((v) => v === "automated").length);
-        setReviewCount(
-          automationValues.filter((v) => v === "review" || v === "notify").length
-        );
+        setAutoCount(automationValues.filter((v) => v === "auto").length);
+        setReviewCount(automationValues.filter((v) => v === "review").length);
       } finally {
         if (!cancelled) setLoading(false);
       }

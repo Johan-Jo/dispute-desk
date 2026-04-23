@@ -7,22 +7,27 @@ export interface PackModeSegmentedControlProps {
   onChange: (next: PackHandlingUiMode) => void;
   disabled?: boolean;
   disabledAuto?: boolean;
-  manualLabel: string;
+  reviewLabel: string;
   autoLabel: string;
-  manualHint: string;
+  reviewHint: string;
   autoHint: string;
   autoDisabledReason?: string;
 }
 
-/** Pill segmented control: manual review vs automatic (no native select). */
+/**
+ * Pill segmented control for the two-mode automation model: "Review before
+ * submit" vs "Automatic". Both modes always build the evidence pack — the
+ * only question the merchant answers here is whether DisputeDesk submits
+ * automatically or hands the pack back for review.
+ */
 export function PackModeSegmentedControl({
   value,
   onChange,
   disabled,
   disabledAuto,
-  manualLabel,
+  reviewLabel,
   autoLabel,
-  manualHint,
+  reviewHint,
   autoHint,
   autoDisabledReason,
 }: PackModeSegmentedControlProps) {
@@ -51,25 +56,25 @@ export function PackModeSegmentedControl({
     opacity: disabled ? 0.65 : 1,
   };
 
-  const selManual = value === "manual";
+  const selReview = value === "review";
   const selAuto = value === "auto";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-      <div style={track} role="group" aria-label={manualLabel + " / " + autoLabel}>
+      <div style={track} role="group" aria-label={reviewLabel + " / " + autoLabel}>
         <button
           type="button"
           disabled={disabled}
-          aria-pressed={selManual}
-          onClick={() => onChange("manual")}
+          aria-pressed={selReview}
+          onClick={() => onChange("review")}
           style={{
             ...baseBtn,
-            background: selManual ? "#FFFFFF" : "transparent",
-            color: selManual ? "#0F172A" : "#64748B",
-            boxShadow: selManual ? "0 1px 3px rgba(15, 23, 42, 0.12)" : "none",
+            background: selReview ? "#FFFFFF" : "transparent",
+            color: selReview ? "#0F172A" : "#64748B",
+            boxShadow: selReview ? "0 1px 3px rgba(15, 23, 42, 0.12)" : "none",
           }}
         >
-          {manualLabel}
+          {reviewLabel}
         </button>
         <button
           type="button"
@@ -99,7 +104,7 @@ export function PackModeSegmentedControl({
           textAlign: "right",
         }}
       >
-        {selManual ? manualHint : autoHint}
+        {selReview ? reviewHint : autoHint}
       </p>
     </div>
   );

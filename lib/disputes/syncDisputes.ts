@@ -15,6 +15,7 @@ import {
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
+import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
 import { sendUnknownReasonAlert } from "@/lib/email/sendUnknownReasonAlert";
 import { sendNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
@@ -488,14 +489,37 @@ export async function syncDisputes(
           }
         }
 
-        // Notify merchant of new dispute (fire-and-forget; respects the
-        // newDispute notification preference set in TeamNotificationsStep).
-        // Dedupe via an atomic `UPDATE … WHERE new_dispute_alert_sent_at IS
-        // NULL RETURNING id`: only the first call wins, so even if `existing`
-        // came back null on a transient error (and this branch fires a second
-        // time), the UPDATE finds the column already stamped and returns no
-        // rows — skipping the email.
+        // For new disputes: resolve automation mode, fire the mode-aware
+        // alert email, and (when automation is enabled) trigger the pack
+        // pipeline. The alert is dedupe-guarded by an atomic UPDATE on
+        // disputes.new_dispute_alert_sent_at so it only ever fires once.
         if (!existing && upserted) {
+          const phaseForRules =
+            phaseLower === "inquiry" || phaseLower === "chargeback"
+              ? phaseLower
+              : null;
+
+          // Resolve mode up-front so the email we send matches the action
+          // the pipeline will take. Default to "review" if evaluation fails —
+          // never silently drop the notification.
+          let resolvedMode: AutomationMode = "review";
+          let evalResult: Awaited<ReturnType<typeof evaluateRules>> | null = null;
+          try {
+            evalResult = await evaluateRules({
+              id: upserted.id,
+              shop_id: shopId,
+              reason: d.reasonDetails?.reason ?? null,
+              status: d.status?.toLowerCase() ?? null,
+              amount: d.amount ? parseFloat(d.amount.amount) : null,
+              phase: phaseForRules,
+            });
+            resolvedMode = normalizeMode(evalResult.action.mode);
+          } catch (err) {
+            result.errors.push(
+              `rules(${d.id}): ${err instanceof Error ? err.message : String(err)}`
+            );
+          }
+
           const { data: claimed } = await sb
             .from("disputes")
             .update({ new_dispute_alert_sent_at: new Date().toISOString() })
@@ -512,45 +536,37 @@ export async function syncDisputes(
               currencyCode: d.amount?.currencyCode ?? null,
               dueAt: d.evidenceDueBy ?? null,
               orderName: d.order?.name ?? null,
+              resolvedMode,
             });
           }
-        }
 
-        // For new disputes: evaluate rules, then trigger automation or set needs_review
-        if (!existing && triggerAutomation && upserted) {
-          try {
-            const phaseForRules =
-              phaseLower === "inquiry" || phaseLower === "chargeback"
-                ? phaseLower
-                : null;
-            const evalResult = await evaluateRules({
-              id: upserted.id,
-              shop_id: shopId,
-              reason: d.reasonDetails?.reason ?? null,
-              status: d.status?.toLowerCase() ?? null,
-              amount: d.amount ? parseFloat(d.amount.amount) : null,
-              phase: phaseForRules,
-            });
-
-            if (evalResult.action.mode === "review") {
-              await sb
-                .from("disputes")
-                .update({ needs_review: true, updated_at: new Date().toISOString() })
-                .eq("id", upserted.id);
-            } else if (evalResult.action.mode === "auto_pack") {
+          // Trigger the automation pipeline only when the caller asked for
+          // it. Both modes run the pipeline so a pack is always built; the
+          // pipeline's save-time logic uses the rule mode to decide whether
+          // to auto-submit (auto) or park for merchant review (review).
+          if (triggerAutomation && evalResult) {
+            try {
+              if (resolvedMode === "review") {
+                await sb
+                  .from("disputes")
+                  .update({ needs_review: true, updated_at: new Date().toISOString() })
+                  .eq("id", upserted.id);
+              }
               await runAutomationPipeline({
                 id: upserted.id,
                 shop_id: shopId,
                 reason: d.reasonDetails?.reason ?? null,
                 phase: phaseForRules,
-                pack_template_id: evalResult.packTemplateId ?? evalResult.action.pack_template_id ?? null,
+                pack_template_id:
+                  evalResult.packTemplateId ??
+                  evalResult.action.pack_template_id ??
+                  null,
               });
+            } catch (err) {
+              result.errors.push(
+                `automation(${d.id}): ${err instanceof Error ? err.message : String(err)}`
+              );
             }
-            // manual: no needs_review, no pipeline
-          } catch (err) {
-            result.errors.push(
-              `automation(${d.id}): ${err instanceof Error ? err.message : String(err)}`
-            );
           }
         }
       } catch (err) {

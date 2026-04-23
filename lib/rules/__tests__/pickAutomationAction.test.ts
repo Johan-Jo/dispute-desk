@@ -2,13 +2,25 @@ import { describe, it, expect } from "vitest";
 import { pickAutomationAction } from "../pickAutomationAction";
 import type { Rule } from "../types";
 
+/**
+ * The automation model only exposes two merchant-facing modes: "auto" and
+ * "review". Legacy stored values (auto_pack, notify, manual, old review) must
+ * be normalized on read:
+ *   auto_pack -> auto
+ *   notify    -> review
+ *   manual    -> review
+ *   review    -> review
+ * When no rule matches, we default to "review" so the merchant always
+ * gets a prepared pack and a notification (never a silent drop).
+ */
+
 const baseRule = (overrides: Partial<Rule>): Rule =>
   ({
     id: "r1",
     shop_id: "s1",
     enabled: true,
     match: {},
-    action: { mode: "manual" },
+    action: { mode: "review" },
     priority: 0,
     created_at: "",
     updated_at: "",
@@ -16,7 +28,7 @@ const baseRule = (overrides: Partial<Rule>): Rule =>
   }) as Rule;
 
 describe("pickAutomationAction", () => {
-  it("returns manual when no rules match", () => {
+  it("returns review when no rules match (never silently drops)", () => {
     const rules = [
       baseRule({
         id: "a",
@@ -32,11 +44,72 @@ describe("pickAutomationAction", () => {
       status: null,
       amount: 50,
     });
-    expect(r.action.mode).toBe("manual");
+    expect(r.action.mode).toBe("review");
     expect(r.matchedRule).toBeNull();
   });
 
-  it("tier 0: high-amount review overrides tier 1 fraud auto", () => {
+  it("normalizes legacy auto_pack to auto on match", () => {
+    const rules = [
+      baseRule({
+        id: "fraud",
+        match: { reason: ["FRAUDULENT"] },
+        action: { mode: "auto_pack", pack_template_id: "t-f" },
+        priority: 20,
+      }),
+    ];
+    const r = pickAutomationAction(rules, {
+      id: "d1",
+      shop_id: "s1",
+      reason: "FRAUDULENT",
+      status: null,
+      amount: 50,
+    });
+    expect(r.matchedRule?.id).toBe("fraud");
+    expect(r.action.mode).toBe("auto");
+    expect(r.packTemplateId).toBe("t-f");
+  });
+
+  it("normalizes legacy notify to review (notify is no longer a mode)", () => {
+    const rules = [
+      baseRule({
+        id: "fraud-notify",
+        match: { reason: ["FRAUDULENT"] },
+        action: { mode: "notify" },
+        priority: 20,
+      }),
+    ];
+    const r = pickAutomationAction(rules, {
+      id: "d1",
+      shop_id: "s1",
+      reason: "FRAUDULENT",
+      status: null,
+      amount: 50,
+    });
+    expect(r.matchedRule?.id).toBe("fraud-notify");
+    expect(r.action.mode).toBe("review");
+  });
+
+  it("normalizes legacy manual to review", () => {
+    const rules = [
+      baseRule({
+        id: "fraud-manual",
+        match: { reason: ["FRAUDULENT"] },
+        action: { mode: "manual" },
+        priority: 20,
+      }),
+    ];
+    const r = pickAutomationAction(rules, {
+      id: "d1",
+      shop_id: "s1",
+      reason: "FRAUDULENT",
+      status: null,
+      amount: 50,
+    });
+    expect(r.matchedRule?.id).toBe("fraud-manual");
+    expect(r.action.mode).toBe("review");
+  });
+
+  it("tier 0: high-amount review overrides tier 1 auto-pack", () => {
     const rules = [
       baseRule({
         id: "fraud",
@@ -85,7 +158,7 @@ describe("pickAutomationAction", () => {
       amount: 50,
     });
     expect(r.matchedRule?.id).toBe("fraud");
-    expect(r.action.mode).toBe("auto_pack");
+    expect(r.action.mode).toBe("auto");
   });
 
   describe("phase matching", () => {
@@ -107,7 +180,7 @@ describe("pickAutomationAction", () => {
         phase: "chargeback",
       });
       expect(onChargeback.matchedRule).toBeNull();
-      expect(onChargeback.action.mode).toBe("manual");
+      expect(onChargeback.action.mode).toBe("review");
 
       const onInquiry = pickAutomationAction(rules, {
         id: "d2",
@@ -118,6 +191,7 @@ describe("pickAutomationAction", () => {
         phase: "inquiry",
       });
       expect(onInquiry.matchedRule?.id).toBe("fraud-inq");
+      expect(onInquiry.action.mode).toBe("auto");
       expect(onInquiry.packTemplateId).toBe("t-fraud-inq");
     });
 

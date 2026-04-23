@@ -20,14 +20,15 @@ interface DisputeContext {
 }
 
 const DEFAULT_ACTION: RuleEvalResult["action"] = {
-  mode: "manual",
+  mode: "review",
   pack_template_id: null,
 };
 
 /**
  * Evaluate shop rules against a dispute using tiered precedence:
  * amount safeguards → per-reason rules → catch-all.
- * Default when no rule matches: manual (no auto-build, no review flag from rules).
+ * Default when no rule matches: review (build the pack, let the merchant
+ * approve and submit). DisputeDesk never silently drops a new dispute.
  */
 export async function evaluateRules(
   dispute: DisputeContext

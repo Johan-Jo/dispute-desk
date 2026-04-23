@@ -3,6 +3,7 @@ import {
   type DisputePhase,
   type AllDisputeReasonCode,
 } from "@/lib/rules/disputeReasons";
+import { normalizeMode } from "@/lib/rules/normalizeMode";
 import type { HandlingMode } from "@/lib/types/dispute";
 
 /** Look up the reason family, defaulting to "General". */
@@ -13,19 +14,16 @@ export function deriveFamily(reason: string | null): string {
   );
 }
 
-/** Derive handling mode from matched rule. */
+/**
+ * Derive handling mode from matched rule. Runs stored values (including
+ * legacy auto_pack / notify / manual) through the single normalization
+ * boundary so callers always see the canonical two-mode union.
+ */
 export function deriveHandlingMode(
   matchedRule: { mode: string } | null | undefined,
 ): HandlingMode {
-  if (!matchedRule) return "manual";
-  switch (matchedRule.mode) {
-    case "auto_pack":
-      return "automated";
-    case "review":
-      return "review";
-    default:
-      return "manual";
-  }
+  if (!matchedRule) return "review";
+  return normalizeMode(matchedRule.mode);
 }
 
 /** Badge tone for the phase badge. Null defaults to chargeback tone. */

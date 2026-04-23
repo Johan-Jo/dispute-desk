@@ -1,6 +1,12 @@
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
+import type { AutomationMode } from "@/lib/rules/normalizeMode";
 
-export type HandlingMode = "automated" | "review" | "manual";
+/**
+ * Merchant-facing handling mode derived from the matched automation rule.
+ * Mirrors the canonical AutomationMode exactly: the dispute was either
+ * handled automatically ("auto") or prepared for merchant review ("review").
+ */
+export type HandlingMode = AutomationMode;
 
 /**
  * Lifecycle metadata derived at query time for a dispute.

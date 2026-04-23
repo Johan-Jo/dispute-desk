@@ -8,7 +8,12 @@
 
 export const SETUP_RULE_PREFIX = "__dd_setup__:";
 
-export type HandlingModeUi = "auto_build" | "review" | "manual" | "notify";
+/**
+ * UI-facing handling mode in the setup wizard. Mirrors the canonical
+ * AutomationMode exactly — the wizard offers only the two merchant-facing
+ * choices.
+ */
+export type HandlingModeUi = "auto" | "review";
 
 export interface ReasonRowState {
   reason: string;

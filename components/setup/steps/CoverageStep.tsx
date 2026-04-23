@@ -34,7 +34,7 @@ interface TemplateInfo {
   is_recommended: boolean;
 }
 
-type AutomationMode = "automated" | "review" | "notify";
+type AutomationMode = "auto" | "review";
 
 interface FamilyRow {
   family: string;
@@ -47,11 +47,14 @@ function deriveDefaultAutomation(
   family: string,
   confidence: "high" | "medium" | "low"
 ): AutomationMode {
-  if (family === "general") return "notify";
-  if (confidence === "high") return "automated";
+  // "General / edge-case" disputes default to review so the merchant can
+  // eyeball anything we're not confident in. Everything else leans on
+  // coverage confidence to decide between auto-submit and review.
+  if (family === "general") return "review";
+  if (confidence === "high") return "auto";
   if (confidence === "medium") {
     if (family === "not_as_described" || family === "refund") return "review";
-    return "automated";
+    return "auto";
   }
   return "review";
 }
@@ -255,9 +258,8 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
   };
 
   // Stats
-  const automatedCount = familyRows.filter((r) => r.automation === "automated").length;
+  const automatedCount = familyRows.filter((r) => r.automation === "auto").length;
   const reviewCount = familyRows.filter((r) => r.automation === "review").length;
-  const notifyCount = familyRows.filter((r) => r.automation === "notify").length;
 
   // Count inquiry templates the merchant already has installed (silently
   // paired during a previous save). Used by the read-only inquiry coverage
@@ -306,10 +308,6 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: "#F59E0B" }}>{reviewCount}</div>
             <div style={{ fontSize: 11, color: "#6D7175" }}>{tCoverage("statReview")}</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#6D7175" }}>{notifyCount}</div>
-            <div style={{ fontSize: 11, color: "#6D7175" }}>{tCoverage("statNotify")}</div>
           </div>
         </div>
       </div>
@@ -388,9 +386,8 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
                         outline: "none",
                       }}
                     >
-                      <option value="automated">{tCoverage("modeAutomated")}</option>
+                      <option value="auto">{tCoverage("modeAutomated")}</option>
                       <option value="review">{tCoverage("modeReview")}</option>
-                      <option value="notify">{tCoverage("modeNotify")}</option>
                     </select>
                   </td>
 

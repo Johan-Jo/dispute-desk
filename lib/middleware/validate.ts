@@ -40,7 +40,7 @@ export const ruleCreateSchema = z.object({
     }).optional(),
   }).optional().default({}),
   action: z.object({
-    mode: z.enum(["auto_pack", "review", "manual"]),
+    mode: z.enum(["auto", "review"]),
     pack_template_id: z.string().uuid().nullable().optional(),
     require_fields: z.array(z.string()).optional(),
   }).optional().default({ mode: "review" }),
@@ -59,7 +59,7 @@ export const ruleUpdateSchema = z.object({
     }).optional(),
   }).optional(),
   action: z.object({
-    mode: z.enum(["auto_pack", "review", "manual"]),
+    mode: z.enum(["auto", "review"]),
     pack_template_id: z.string().uuid().nullable().optional(),
     require_fields: z.array(z.string()).optional(),
   }).optional(),

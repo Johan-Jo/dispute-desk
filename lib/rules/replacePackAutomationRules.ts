@@ -29,7 +29,7 @@ function buildPackAndFallbackRules(
 
   for (let i = 0; i < packsOrdered.length; i++) {
     const pack = packsOrdered[i];
-    const mode = packModes[pack.id] ?? "manual";
+    const mode: PackHandlingUiMode = packModes[pack.id] ?? "review";
     const reason = disputeTypeToPrimaryReason(pack.dispute_type);
     const priority = 20 + i * 5;
     const useAuto = mode === "auto" && pack.template_id;
@@ -39,16 +39,7 @@ function buildPackAndFallbackRules(
     const hasInquirySiblingInstalled =
       !!inquirySiblingId && installedInquiryTemplateIds.has(inquirySiblingId);
 
-    if (mode === "notify") {
-      rows.push({
-        shop_id: shopId,
-        enabled: true,
-        name: packRuleName(pack.id),
-        match: { reason: [reason] },
-        action: { mode: "notify", pack_template_id: null },
-        priority,
-      });
-    } else if (useAuto) {
+    if (useAuto) {
       // Chargeback-phase rule. If we have an inquiry sibling installed we
       // restrict this rule to the chargeback phase so the inquiry rule
       // (written next) can take over for inquiry disputes.
@@ -60,7 +51,7 @@ function buildPackAndFallbackRules(
           ? { reason: [reason], phase: ["chargeback"] }
           : { reason: [reason] },
         action: {
-          mode: "auto_pack",
+          mode: "auto",
           pack_template_id: pack.template_id!,
         },
         priority,
@@ -73,7 +64,7 @@ function buildPackAndFallbackRules(
           name: packInquiryRuleName(pack.id),
           match: { reason: [reason], phase: ["inquiry"] },
           action: {
-            mode: "auto_pack",
+            mode: "auto",
             pack_template_id: inquirySiblingId!,
           },
           priority,
@@ -90,12 +81,14 @@ function buildPackAndFallbackRules(
       });
     }
   }
+  // Catch-all fallback — no rule matched means "prepare a pack, let the
+  // merchant approve". Never silently drop.
   rows.push({
     shop_id: shopId,
     enabled: true,
     name: FALLBACK_RULE_NAME,
     match: {},
-    action: { mode: "manual", pack_template_id: null },
+    action: { mode: "review", pack_template_id: null },
     priority: 100_000,
   });
   return rows;

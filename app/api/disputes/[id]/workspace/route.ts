@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
+import { normalizeMode } from "@/lib/rules/normalizeMode";
 
 export const runtime = "nodejs";
 
@@ -182,14 +183,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     (ruleAppliedRes.data?.event_payload as
       | { resulting_action?: { mode?: string } }
       | undefined) ?? null;
-  const appliedMode = ruleAppliedPayload?.resulting_action?.mode;
-  const appliedRule =
-    appliedMode === "auto_pack" ||
-    appliedMode === "review" ||
-    appliedMode === "notify" ||
-    appliedMode === "manual"
-      ? { mode: appliedMode }
-      : null;
+  const rawAppliedMode = ruleAppliedPayload?.resulting_action?.mode;
+  // Surface the normalized (two-mode) value to the workspace UI. Legacy
+  // audit rows recorded auto_pack / notify / manual — those collapse to
+  // auto / review at the read boundary.
+  const appliedRule = rawAppliedMode != null
+    ? { mode: normalizeMode(rawAppliedMode) }
+    : null;
 
   return NextResponse.json({
     dispute,

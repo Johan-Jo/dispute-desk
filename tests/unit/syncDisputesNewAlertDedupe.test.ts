@@ -29,7 +29,7 @@ vi.mock("@/lib/automation/pipeline", () => ({
 vi.mock("@/lib/rules/evaluateRules", () => ({
   evaluateRules: vi
     .fn()
-    .mockResolvedValue({ action: { mode: "manual" }, packTemplateId: null }),
+    .mockResolvedValue({ action: { mode: "review" }, packTemplateId: null }),
 }));
 vi.mock("@/lib/email/sendUnknownReasonAlert", () => ({
   sendUnknownReasonAlert: vi.fn(),

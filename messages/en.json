@@ -967,8 +967,8 @@
     "maxAmount": "Max Amount ($)",
     "noLimit": "No limit",
     "action": "Action",
-    "autoPack": "Auto-Pack",
-    "review": "Send to Review",
+    "autoPack": "Automatic",
+    "review": "Review before submit",
     "createRule": "Create Rule",
     "unnamedRule": "Unnamed Rule",
     "matchesAll": "Matches all disputes",
@@ -1049,10 +1049,10 @@
     "firstMatchWinsHint": "Rules are checked top to bottom. The first match wins.",
     "noPlaybookBadge": "No playbook",
     "playbooksInUse": "Using: {names}",
-    "quickAutoAll": "Auto-pack all",
+    "quickAutoAll": "Automate all",
     "quickReviewAll": "Review all",
-    "quickNotifyAll": "Notify only all",
-    "notifyOnly": "Notify Only",
+    "quickNotifyAll": "Review all",
+    "notifyOnly": "Review before submit",
     "safeguardTitle": "Safeguards",
     "safeguardToggle": "Review high-value disputes before sending",
     "safeguardAmountLabel": "Minimum amount",
@@ -1535,15 +1535,15 @@
       },
       "configuringAutomation": {
         "title": "Dispute routing and automation settings",
-        "body": "**During setup — Automation & review step**\n\nAfter you install evidence pack templates (Packs step), the **Automation & review** step explains what happens when a **new** dispute syncs from Shopify:\n\n- **Installed library packs:** One row per template-backed pack (**draft** or **active** — not archived), with **Manual review** or **Automatic** handling. Draft packs appear as soon as you install a template, even before you activate the pack on the Packs page. Status badges distinguish active vs draft.\n- **Starting presets:** Manual, Review first, or Automatic (Automatic requires installed templates). Manual is suggested for a safe first setup.\n- **Default rule (General):** Fallback when no per-reason override applies — choose handling (Manual, Review first, or Auto-build) and a pack template when relevant.\n- **Exceptions by reason:** Optional overrides per Shopify dispute reason (e.g. fraud, product not received), each in its own card.\n- **Safeguards:** Switches for high-value review and catch-all review. When active, these **override** the default and per-reason rules when their conditions match.\n- **Live summary:** A short recap of your effective choices before you save.\n\nThe **Evidence packs** step emphasizes **activated** packs in its summary; the Automation step lists **all** installed template-backed packs so you can set routing for drafts too.\n\nYou need at least one **installed** pack template before you can assign templates or use the full Automatic path; the setup screen shows a clear message if packs are missing.\n\n**How routing is evaluated:** Amount safeguards → rule for the dispute reason → default (General) → catch-all safeguards (see technical docs: `pickAutomationAction`).\n\n**After setup — Settings > Automation**\n\nStore-wide toggles: auto-build evidence packs, auto-save evidence to Shopify, require review before auto-save, enforce zero blockers, and minimum completeness score (0–100, default 80) for auto-save.\n\n**Rules page**\n\nFor custom rules with drag-and-drop order and amount ranges, use **Rules** after setup. See also \"Creating your first rule\" and \"Rule priority.\""
+        "body": "**During setup — Automation & review step**\n\nAfter you install evidence pack templates (Packs step), the **Automation & review** step explains what happens when a **new** dispute syncs from Shopify. DisputeDesk has **two** automation modes:\n\n- **Automatic** — build the evidence pack and submit it to Shopify automatically. You get an email that the dispute was handled for you.\n- **Review before submit** — build the evidence pack, flag the dispute as needing review, and email you so you can review and submit before the deadline.\n\nBoth modes always build a pack. \"Review\" is never \"do nothing\" — it is a staged automation so you keep control of the final submit.\n\nThe step presents:\n\n- **Installed library packs:** One row per template-backed pack (**draft** or **active** — not archived), with **Review before submit** or **Automatic** handling. Draft packs appear as soon as you install a template, even before you activate the pack on the Packs page. Status badges distinguish active vs draft.\n- **Starting presets:** Review all, Automate all, or Mix (per-family choice). Review is suggested for a safe first setup.\n- **Default rule (General):** Fallback when no per-reason override applies — choose **Automatic** or **Review before submit** and a pack template when relevant.\n- **Exceptions by reason:** Optional overrides per Shopify dispute reason (e.g. fraud, product not received), each in its own card.\n- **Safeguards:** Switches for high-value review. When active, these **override** the per-reason choice and force **Review before submit** for the matching dispute.\n- **Live summary:** A short recap of your effective choices before you save.\n\nThe **Evidence packs** step emphasizes **activated** packs in its summary; the Automation step lists **all** installed template-backed packs so you can set routing for drafts too.\n\nYou need at least one **installed** pack template before you can assign templates or use the full Automatic path; the setup screen shows a clear message if packs are missing.\n\n**How routing is evaluated:** Amount safeguards → rule for the dispute reason → default (General). If no rule matches, the dispute falls through to **Review before submit** by default — never a silent drop.\n\n**After setup — Settings > Automation**\n\nStore-wide toggles: auto-build evidence packs, auto-save evidence to Shopify, enforce zero blockers, and minimum completeness score (0–100, default 80) for auto-save. The Rules page is the single source of truth for per-dispute routing.\n\n**Rules page**\n\nFor custom rules with drag-and-drop order and amount ranges, use **Rules** after setup. See also \"Creating your first rule\" and \"Rule priority.\""
       },
       "creatingFirstRule": {
         "title": "Creating your first rule",
-        "body": "Rules let you control how disputes are routed — either to auto-pack or to the review queue.\n\nTo create a rule:\n1. Go to the Rules page.\n2. Click \"Add Rule.\"\n3. Fill in the details:\n   - Name: a label for your reference (e.g. \"High-value review\").\n   - Match Reasons: select which dispute reasons this rule applies to (leave empty to match all).\n   - Amount range: set a minimum and/or maximum dispute amount.\n   - Action: choose \"Auto-Pack\" (automatic processing) or \"Send to Review\" (manual queue).\n4. Click \"Create Rule.\"\n\nExample: create a rule that sends all disputes over $500 to review:\n- Name: \"High-value review\"\n- Min Amount: 500\n- Action: Send to Review\n\nRules are available on Starter and Pro plans. Free plan users can upgrade from the Billing page."
+        "body": "Rules let you control how each dispute is handled. Every rule has one of two actions:\n\n- **Automatic** — build the evidence pack and submit it to Shopify automatically.\n- **Review before submit** — build the pack and email you, but wait for you to submit.\n\nBoth actions always build a pack. The difference is whether DisputeDesk submits it for you or holds it for your review.\n\nTo create a rule:\n1. Go to the Rules page.\n2. Click \"Add Rule.\"\n3. Fill in the details:\n   - Name: a label for your reference (e.g. \"High-value review\").\n   - Match Reasons: select which dispute reasons this rule applies to (leave empty to match all).\n   - Amount range: set a minimum and/or maximum dispute amount.\n   - Action: choose **Automatic** or **Review before submit**.\n4. Click \"Create Rule.\"\n\nExample: send all disputes over $500 to your review queue before submit:\n- Name: \"High-value review\"\n- Min Amount: 500\n- Action: Review before submit\n\nRules are available on Starter and Pro plans. Free plan users can upgrade from the Billing page."
       },
       "rulePriority": {
         "title": "Rule priority and evaluation order",
-        "body": "Rules are evaluated top to bottom. The first rule that matches a dispute wins — no further rules are checked.\n\nHow matching works:\n- If a rule specifies match reasons, the dispute must have one of those reasons.\n- If a rule specifies an amount range, the dispute amount must fall within that range.\n- If a rule has no conditions (empty reasons, no amount range), it matches all disputes.\n\nTo reorder rules, drag and drop them on the Rules page. Put your most specific rules at the top and catch-all rules at the bottom.\n\nIf no rule matches a dispute, it goes to the Review Queue by default.\n\nTip: create a catch-all \"Auto-Pack\" rule at the bottom to automate everything, and put specific \"Send to Review\" rules above it for high-value or unusual disputes."
+        "body": "Rules are evaluated top to bottom. The first rule that matches a dispute wins — no further rules are checked.\n\nHow matching works:\n- If a rule specifies match reasons, the dispute must have one of those reasons.\n- If a rule specifies an amount range, the dispute amount must fall within that range.\n- If a rule has no conditions (empty reasons, no amount range), it matches all disputes.\n\nTo reorder rules, drag and drop them on the Rules page. Put your most specific rules at the top and catch-all rules at the bottom.\n\nIf no rule matches a dispute, DisputeDesk falls through to **Review before submit** by default — the pack is still built, but held for you to review.\n\nTip: create a catch-all **Automatic** rule at the bottom to auto-submit everything, and put specific **Review before submit** rules above it for high-value or unusual disputes."
       },
       "completenessBlockerGates": {
         "title": "Completeness and blocker gates",
@@ -1551,11 +1551,11 @@
       },
       "rulePresets": {
         "title": "Rule presets and suggested rules",
-        "body": "DisputeDesk ships four **suggested starter rules** (fraud, product not received, high-value amount, catch-all). They match the definitions in the product (`lib/rules/presets.ts`).\n\n**Embedded app (Shopify Admin) — Rules**\n\nThe Rules screen shows **Automate Your Dispute Workflow** with those four rows. Each row has a **Routing** control: **Auto-Pack** or **Send to Review**. Click **Save starter rules** to create or update the matching rules in your store. Above that, if you have any **ACTIVE** evidence packs in your library, they are listed for context (same data as the Packs page).\n\n**Portal — Rules**\n\nWhen you have no rules (and your plan supports rules), you may see an empty state with preset cards and **Install Suggested Rules** to add all at once. Presets are idempotent: installing again won't create duplicates.\n\n**Setup wizard**\n\nThe **Automation & review** step uses the richer per-reason + safeguards flow (see \"Dispute routing and automation settings\") and lists **every installed template-backed library pack** (draft or active) for per-pack handling. The embedded Rules starter list is a faster path to the same four presets with two actions each.\n\nRules are evaluated in priority order (portal: reorder on the Rules page). Rule presets are a good starting point; you can edit or delete any rule after installation. Rules require a Starter or Pro plan."
+        "body": "DisputeDesk ships four **suggested starter rules** (fraud, product not received, high-value amount, catch-all). They match the definitions in the product (`lib/rules/presets.ts`).\n\n**Embedded app (Shopify Admin) — Rules**\n\nThe Rules screen shows **Automate Your Dispute Workflow** with those four rows. Each row has a **Routing** control with two options: **Automatic** (build and submit) or **Review before submit** (build and hold for you). Click **Save starter rules** to create or update the matching rules in your store. Above that, if you have any **ACTIVE** evidence packs in your library, they are listed for context (same data as the Packs page).\n\n**Portal — Rules**\n\nWhen you have no rules (and your plan supports rules), you may see an empty state with preset cards and **Install Suggested Rules** to add all at once. Presets are idempotent: installing again won't create duplicates.\n\n**Setup wizard**\n\nThe **Automation & review** step uses the richer per-reason + safeguards flow (see \"Dispute routing and automation settings\") and lists **every installed template-backed library pack** (draft or active) for per-pack handling. The embedded Rules starter list is a faster path to the same four presets with two actions each.\n\nRules are evaluated in priority order (portal: reorder on the Rules page). Rule presets are a good starting point; you can edit or delete any rule after installation. Rules require a Starter or Pro plan."
       },
       "planComparison": {
         "title": "Comparing Free, Starter, and Pro plans",
-        "body": "DisputeDesk offers three plans:\n\nFree ($0/month):\n- 3 evidence packs per month.\n- Manual pack generation only.\n- PDF export.\n- Save evidence to Shopify.\n\nStarter ($29/month):\n- 50 evidence packs per month.\n- Auto-pack on dispute sync.\n- Custom routing rules.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nPro ($79/month):\n- Unlimited evidence packs.\n- Auto-pack on dispute sync.\n- Custom routing rules.\n- Priority support.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nAll plans include the core features: evidence collection, completeness scoring, PDF export, and saving to Shopify. Paid plans add automation, rules, and higher quotas."
+        "body": "DisputeDesk offers three plans:\n\nFree ($0/month):\n- 3 evidence packs per month.\n- Manual pack generation only.\n- PDF export.\n- Save evidence to Shopify.\n\nStarter ($29/month):\n- 50 evidence packs per month.\n- Automatic pack building on dispute sync.\n- Custom routing rules.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nPro ($79/month):\n- Unlimited evidence packs.\n- Automatic pack building on dispute sync.\n- Custom routing rules.\n- Priority support.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nAll plans include the core features: evidence collection, completeness scoring, PDF export, and saving to Shopify. Paid plans add automation, rules, and higher quotas."
       },
       "upgradingPlan": {
         "title": "How to upgrade your plan",
@@ -2096,10 +2096,10 @@
     "familyRefund": "Refund / Credit Not Processed",
     "familyDuplicate": "Duplicate Charge",
     "familyGeneral": "General or Edge-Case",
-    "modeAutomated": "Automated",
-    "modeReviewFirst": "Review First",
-    "modeManual": "Manual",
-    "modeNotify": "Notify only",
+    "modeAutomated": "Automatic",
+    "modeReviewFirst": "Review before submit",
+    "modeManual": "Review before submit",
+    "modeNotify": "Review before submit",
     "modeNone": "Not Covered",
     "modeManualPlaybookReady": "Manual — playbook ready",
     "covered": "Covered",
@@ -2515,9 +2515,9 @@
       "colHandling": "Recommended Handling",
       "colAutomation": "Automation",
       "colConfidence": "Confidence",
-      "modeAutomated": "Automated",
-      "modeReview": "Review First",
-      "modeNotify": "Notify Only",
+      "modeAutomated": "Automatic",
+      "modeReview": "Review before submit",
+      "modeNotify": "Review before submit",
       "confidence_high": "High",
       "confidence_medium": "Medium",
       "confidence_low": "Low",
@@ -2569,8 +2569,8 @@
       "ruleNoOrderDesc": "Disputes without a matching order in your system need manual review",
       "ruleEdgeCases": "Require review for edge cases",
       "ruleEdgeCasesDesc": "Unusual dispute types or patterns get human review",
-      "ruleAmbiguous": "Notify only for the most ambiguous cases",
-      "ruleAmbiguousDesc": "Get alerts for cases that need your decision before any action",
+      "ruleAmbiguous": "Send to review for the most ambiguous cases",
+      "ruleAmbiguousDesc": "The pack is built automatically, but held for your review before it's submitted",
       "sidebarTitle": "How this affects your workflow",
       "sidebarAutomated": "Automated",
       "sidebarReview": "Review First",

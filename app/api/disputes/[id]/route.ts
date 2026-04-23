@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
+import { normalizeMode } from "@/lib/rules/normalizeMode";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,18 +50,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       .limit(1);
     if (rules && rules.length > 0) {
       const action = rules[0].action as { mode?: string } | null;
-      matchedRule = { name: rules[0].name, mode: action?.mode ?? "manual" };
+      matchedRule = { name: rules[0].name, mode: normalizeMode(action?.mode) };
     }
   }
 
   const family =
     DISPUTE_REASON_FAMILIES[dispute.reason as AllDisputeReasonCode] ?? "General";
-  const handling_mode =
-    matchedRule?.mode === "auto_pack"
-      ? "automated"
-      : matchedRule?.mode === "review"
-        ? "review"
-        : "manual";
+  const handling_mode = normalizeMode(matchedRule?.mode);
 
   return NextResponse.json({
     dispute: { ...dispute, family, handling_mode },

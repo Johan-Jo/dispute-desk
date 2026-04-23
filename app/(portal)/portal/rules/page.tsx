@@ -16,7 +16,7 @@ interface Rule {
   name: string | null;
   enabled: boolean;
   match: { reason?: string[]; status?: string[]; amount_range?: { min?: number; max?: number } };
-  action: { mode: "auto_pack" | "review"; require_fields?: string[] };
+  action: { mode: "auto" | "review"; require_fields?: string[] };
   priority: number;
 }
 
@@ -84,7 +84,7 @@ export default function RulesSettingsPage() {
 
   const [formName, setFormName] = useState("");
   const [formReasons, setFormReasons] = useState<string[]>([]);
-  const [formMode, setFormMode] = useState<"auto_pack" | "review">("auto_pack");
+  const [formMode, setFormMode] = useState<"auto" | "review">("auto");
   const [formMinAmount, setFormMinAmount] = useState("");
   const [formMaxAmount, setFormMaxAmount] = useState("");
 
@@ -122,7 +122,7 @@ export default function RulesSettingsPage() {
     });
 
     setShowForm(false);
-    setFormName(""); setFormReasons([]); setFormMode("auto_pack"); setFormMinAmount(""); setFormMaxAmount("");
+    setFormName(""); setFormReasons([]); setFormMode("auto"); setFormMinAmount(""); setFormMaxAmount("");
     await fetchRules();
   };
 
@@ -178,7 +178,7 @@ export default function RulesSettingsPage() {
                 <div>
                   <label className="block text-sm font-medium text-[#667085] mb-1">{t("action")}</label>
                   <div className="flex gap-3">
-                    <button onClick={() => setFormMode("auto_pack")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto_pack" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
+                    <button onClick={() => setFormMode("auto")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
                     <button onClick={() => setFormMode("review")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "review" ? "bg-[#F59E0B] text-white border-[#F59E0B]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#F59E0B]"}`}>{t("review")}</button>
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export default function RulesSettingsPage() {
             <div className="border border-[#E5E7EB] rounded-lg p-4 bg-[#F7F8FA]">
               <h4 className="font-semibold text-[#0B1220] mb-3">{t("action")}</h4>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setFormMode("auto_pack")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto_pack" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
+                <button type="button" onClick={() => setFormMode("auto")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "auto" ? "bg-[#1D4ED8] text-white border-[#1D4ED8]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#1D4ED8]"}`}>{t("autoPack")}</button>
                 <button type="button" onClick={() => setFormMode("review")} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${formMode === "review" ? "bg-[#F59E0B] text-white border-[#F59E0B]" : "bg-white text-[#667085] border-[#E5E7EB] hover:border-[#F59E0B]"}`}>{t("review")}</button>
               </div>
             </div>
@@ -432,8 +432,8 @@ export default function RulesSettingsPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono text-[#94A3B8]">#{idx + 1}</span>
                     <span className="font-medium text-[#0B1220] text-sm truncate">{rule.name || t("unnamedRule")}</span>
-                    <Badge variant={rule.action.mode === "auto_pack" ? "success" : "warning"}>
-                      {rule.action.mode === "auto_pack" ? t("autoPack") : t("review")}
+                    <Badge variant={rule.action.mode === "auto" ? "success" : "warning"}>
+                      {rule.action.mode === "auto" ? t("autoPack") : t("review")}
                     </Badge>
                   </div>
                   <p className="text-xs text-[#667085]">{matchSummary(rule.match, t, tr as any)}</p>

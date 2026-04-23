@@ -1,3 +1,7 @@
+import type { AutomationMode } from "./normalizeMode";
+
+export type { AutomationMode, LegacyRuleMode } from "./normalizeMode";
+
 export type DisputePhaseMatch = "inquiry" | "chargeback";
 
 export interface RuleMatch {
@@ -9,7 +13,7 @@ export interface RuleMatch {
 }
 
 export interface RuleAction {
-  mode: "auto_pack" | "review" | "manual" | "notify";
+  mode: AutomationMode;
   pack_template_id?: string | null;
   require_fields?: string[];
 }

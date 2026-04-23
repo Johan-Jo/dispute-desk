@@ -12,6 +12,7 @@ import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
+import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import {
   AUTO_BUILD_TRIGGERED,
   AUTO_SAVE_TRIGGERED,
@@ -176,15 +177,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // The Rules page is the source of truth for whether to automate.
   // We re-evaluate the shop's rules against the dispute at save-time:
   //
-  //   - auto_pack → merchant opted in; run the quality gate and save
-  //                  immediately if criteria pass.
-  //   - review    → merchant wants to inspect; park for review.
-  //   - manual/notify/no match → pack sits ready; merchant acts.
+  //   - auto   → merchant opted in; run the quality gate and save
+  //              immediately if criteria pass.
+  //   - review → merchant wants to inspect; park for review.
   //
-  // There is no separate "require_review_before_save" toggle — that was
-  // removed because it silently overrode the Rules page decision and
-  // made auto rules non-functional.
-  let ruleMode: "auto_pack" | "review" | "manual" | "notify" = "manual";
+  // No rule match resolves to "review" inside evaluateRules — we never
+  // silently drop a pack that reached the gate.
+  let ruleMode: AutomationMode = "review";
   if (pack.dispute_id) {
     const { data: dispute } = await sb
       .from("disputes")
@@ -205,16 +204,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         amount: dispute.amount,
         phase: phaseForRules,
       });
-      ruleMode = evalResult.action.mode;
+      ruleMode = normalizeMode(evalResult.action.mode);
     }
   }
 
-  // review / manual / notify → merchant approval required, park the pack.
-  if (ruleMode !== "auto_pack") {
-    const reason =
-      ruleMode === "review"
-        ? "Rule action is review — awaiting merchant approval"
-        : "No auto rule matched — awaiting merchant approval";
+  // review → merchant approval required, park the pack.
+  if (ruleMode === "review") {
+    const reason = "Rule action is review — awaiting merchant approval";
     // Never downgrade a pack that has already been saved to Shopify.
     // A rebuild of an already-submitted pack can legitimately re-enter this
     // branch (rules re-evaluated, new build scored below threshold), but the
@@ -263,7 +259,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "park_for_review", details: reason };
   }
 
-  // auto_pack → run the quality gate.
+  // auto → run the quality gate.
   const gate = evaluateAutoSaveGate({
     autoSaveEnabled: settings.auto_save_enabled,
     autoSaveMinScore: settings.auto_save_min_score,
@@ -321,9 +317,9 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "auto_save", details: "Enqueued save to Shopify" };
   }
 
-  // gate.action === "block" — the rule said auto_pack but the pack
-  // doesn't meet the quality criteria (completeness / blockers).
-  // Pack stays "ready" so the merchant can fill the gap and retry.
+  // gate.action === "block" — the rule said auto but the pack doesn't
+  // meet the quality criteria (completeness / blockers). Pack stays
+  // "ready" so the merchant can fill the gap and retry.
   await sb.from("audit_events").insert({
     shop_id: pack.shop_id,
     dispute_id: pack.dispute_id,

@@ -167,9 +167,9 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
               modes[p.id] = "auto";
             } else if (evidenceConfidence === "medium") {
               const dt = (p.dispute_type ?? "").toUpperCase();
-              modes[p.id] = (dt === "FRAUD" || dt === "PNR") ? "auto" : "manual";
+              modes[p.id] = (dt === "FRAUD" || dt === "PNR") ? "auto" : "review";
             } else {
-              modes[p.id] = "manual";
+              modes[p.id] = "review";
             }
           }
         }
@@ -204,7 +204,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
         const can =
           p.template_id != null && installedSet.has(p.template_id);
         if (next[p.id] === "auto" && !can) {
-          next[p.id] = "manual";
+          next[p.id] = "review";
           changed = true;
         }
       }
@@ -394,7 +394,7 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
 
               <BlockStack gap="400">
                 {activePacks.map((pack, index) => {
-                  const mode = packModes[pack.id] ?? "manual";
+                  const mode = packModes[pack.id] ?? "review";
                   const canAuto =
                     pack.template_id != null &&
                     installedSet.has(pack.template_id);
@@ -454,16 +454,16 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
                       </div>
                       <div style={{ flexShrink: 0, alignSelf: "center" }}>
                         <PackModeSegmentedControl
-                          value={mode === "auto" && !canAuto ? "manual" : mode}
+                          value={mode === "auto" && !canAuto ? "review" : mode}
                           onChange={(next) => {
                             if (next === "auto" && !canAuto) return;
                             setMode(pack.id, next);
                           }}
                           disabled={false}
                           disabledAuto={!canAuto}
-                          manualLabel={t("segmentManual")}
+                          reviewLabel={t("segmentManual")}
                           autoLabel={t("segmentAuto")}
-                          manualHint={t("segmentManualHint")}
+                          reviewHint={t("segmentManualHint")}
                           autoHint={t("segmentAutoHint")}
                           autoDisabledReason={t("packAutoDisabledHint")}
                         />

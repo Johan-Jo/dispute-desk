@@ -131,6 +131,9 @@ function packInquiryRuleName(packId) {
 }
 
 function parsePackModesFromRules(rules) {
+  // Mirrors lib/rules/normalizeMode.ts: only "auto" or "auto_pack" collapse
+  // to "auto"; everything else (legacy notify/manual/review, unknown) is
+  // treated as "review".
   const prefix = `${SETUP_RULE_PREFIX}pack:`;
   const out = {};
   for (const r of rules) {
@@ -138,8 +141,8 @@ function parsePackModesFromRules(rules) {
     if (!name.startsWith(prefix)) continue;
     if (name.endsWith(":inquiry")) continue;
     const id = name.slice(prefix.length);
-    const mode = r.action?.mode === "auto_pack" ? "auto" : "manual";
-    out[id] = mode;
+    const raw = r.action?.mode;
+    out[id] = raw === "auto" || raw === "auto_pack" ? "auto" : "review";
   }
   return out;
 }
@@ -179,7 +182,7 @@ async function rewritePhasePairedRules(shopId) {
   const rows = [];
   for (let i = 0; i < packsOrdered.length; i++) {
     const pack = packsOrdered[i];
-    const mode = packModes[pack.id] ?? "manual";
+    const mode = packModes[pack.id] ?? "review";
     const reason = disputeTypeToPrimaryReason(pack.dispute_type);
     const priority = 20 + i * 5;
     const useAuto = mode === "auto" && pack.template_id;
@@ -197,7 +200,7 @@ async function rewritePhasePairedRules(shopId) {
         match: hasInquirySiblingInstalled
           ? { reason: [reason], phase: ["chargeback"] }
           : { reason: [reason] },
-        action: { mode: "auto_pack", pack_template_id: pack.template_id },
+        action: { mode: "auto", pack_template_id: pack.template_id },
         priority,
       });
       if (hasInquirySiblingInstalled) {
@@ -206,7 +209,7 @@ async function rewritePhasePairedRules(shopId) {
           enabled: true,
           name: packInquiryRuleName(pack.id),
           match: { reason: [reason], phase: ["inquiry"] },
-          action: { mode: "auto_pack", pack_template_id: inquirySiblingId },
+          action: { mode: "auto", pack_template_id: inquirySiblingId },
           priority,
         });
       }
@@ -221,12 +224,16 @@ async function rewritePhasePairedRules(shopId) {
       });
     }
   }
+  // Catch-all fallback defaults to "review" so a dispute that matches no
+  // per-reason rule still produces a pack + review email (never a silent
+  // drop). Never write legacy "manual" again — the CHECK constraint on
+  // rules.action->>'mode' will reject it.
   rows.push({
     shop_id: shopId,
     enabled: true,
     name: `${SETUP_RULE_PREFIX}fallback:default`,
     match: {},
-    action: { mode: "manual", pack_template_id: null },
+    action: { mode: "review", pack_template_id: null },
     priority: 100_000,
   });
 

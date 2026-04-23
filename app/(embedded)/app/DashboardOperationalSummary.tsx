@@ -91,7 +91,13 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
 
   let ctaLabel = t("dashboard.viewAllDisputes");
   let ctaUrl = withShopParams("/app/disputes", searchParams ?? new URLSearchParams());
-  if (actionNeeded > 0) {
+  if (actionNeeded === 1 && s.actionNeededDisputeId) {
+    ctaLabel = t("dashboard.reviewActionNeeded", { count: 1 });
+    ctaUrl = withShopParams(
+      `/app/disputes/${s.actionNeededDisputeId}`,
+      searchParams ?? new URLSearchParams(),
+    );
+  } else if (actionNeeded > 0) {
     ctaLabel = t("dashboard.reviewActionNeeded", { count: actionNeeded });
     ctaUrl = actionNeededUrl;
   } else if (readyToSubmit > 0) {

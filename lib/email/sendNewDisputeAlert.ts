@@ -3,12 +3,21 @@
  *
  * Triggered in syncDisputes when a dispute is upserted for the first time.
  * Checks the `newDispute` notification preference before sending.
+ *
+ * The email body is selected by `resolvedMode`:
+ *   - "auto"   → "we handled it automatically" confirmation (submission already happened)
+ *   - "review" → "your response is ready, please review and submit" call-to-action
+ *
+ * Callers must pass the mode their automation pipeline actually resolved to
+ * (after normalizeMode). Legacy modes should never reach this function.
+ *
  * Fire-and-forget — never throws.
  */
 
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
+import type { AutomationMode } from "@/lib/rules/normalizeMode";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
@@ -25,102 +34,334 @@ export interface NewDisputeAlertContext {
   currencyCode: string | null;
   dueAt: string | null;
   orderName: string | null;
+  /**
+   * Resolved automation mode for this dispute. Determines which email
+   * variant is sent. Must already be normalized to "auto" | "review".
+   */
+  resolvedMode: AutomationMode;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
 
-interface EmailStrings {
-  subject: (p: { reason: string; amount: string }) => string;
-  heading: string;
-  intro: (p: { phase: string; shop: string }) => string;
+interface SharedStrings {
   reason: string;
   amount: string;
   order: string;
   due: string;
   phaseHintInquiry: string;
   phaseHintChargeback: string;
-  cta: string;
   footer: string;
+}
+
+interface ModeStrings {
+  /** Subject line. Receives the dispute short id and the order name (if any). */
+  subject: (p: { shortId: string; orderName: string | null }) => string;
+  heading: string;
+  /** First paragraph of body copy. Receives the order name (already HTML-safe). */
+  bodyP1: (p: { orderName: string }) => string;
+  /** Label above the "what happened / what to do next" list. */
+  listLabel: string;
+  /** List rows. For `auto` these are past-tense steps; for `review` these are next-action steps. */
+  listItems: string[];
+  /** Optional callout shown below the list (used by review to reinforce "nothing submitted yet"). */
+  callout?: { label: string; body: string };
+  cta: string;
+}
+
+interface EmailStrings {
+  shared: SharedStrings;
+  auto: ModeStrings;
+  review: ModeStrings;
 }
 
 const STRINGS: Record<Locale, EmailStrings> = {
   en: {
-    subject: ({ reason, amount }) => `New ${reason} dispute — ${amount}`,
-    heading: "New dispute detected",
-    intro: ({ phase, shop }) => `A new <strong>${phase}</strong> dispute just arrived for ${shop}.`,
-    reason: "Reason",
-    amount: "Amount",
-    order: "Order",
-    due: "Response due",
-    phaseHintInquiry: "This is a soft inquiry — respond quickly to prevent escalation to a chargeback.",
-    phaseHintChargeback: "Evidence must be submitted before the deadline.",
-    cta: "View dispute →",
-    footer: "You received this because new-dispute alerts are enabled in DisputeDesk settings.",
+    shared: {
+      reason: "Reason",
+      amount: "Amount",
+      order: "Order",
+      due: "Response due",
+      phaseHintInquiry:
+        "This is a soft inquiry — respond quickly to prevent escalation to a chargeback.",
+      phaseHintChargeback: "Evidence must be submitted before the deadline.",
+      footer:
+        "You received this because new-dispute alerts are enabled in DisputeDesk settings.",
+    },
+    auto: {
+      subject: ({ shortId }) => `Dispute #${shortId} was handled automatically`,
+      heading: "We detected a dispute and handled it automatically",
+      bodyP1: ({ orderName }) =>
+        `A new dispute was detected for order ${orderName}. Based on your automation settings, DisputeDesk prepared and submitted the response automatically.`,
+      listLabel: "What happened",
+      listItems: [
+        "We collected the available evidence",
+        "We prepared the response",
+        "We submitted it on your behalf",
+      ],
+      callout: {
+        label: "What to do next",
+        body: "No action is required. You can open the dispute in DisputeDesk to review what was submitted.",
+      },
+      cta: "Open dispute →",
+    },
+    review: {
+      subject: ({ shortId }) => `Dispute #${shortId} is ready for your review`,
+      heading: "Your response is ready — review and submit",
+      bodyP1: ({ orderName }) =>
+        `A new dispute was detected for order ${orderName}. DisputeDesk has prepared your response, but it has not been submitted yet.`,
+      listLabel: "What to do next",
+      listItems: [
+        "Open the dispute",
+        "Review the prepared evidence",
+        "Add anything missing if needed",
+        "Submit before the deadline",
+      ],
+      callout: {
+        label: "Important",
+        body: "Nothing has been submitted yet. This dispute still requires your approval.",
+      },
+      cta: "Review dispute →",
+    },
   },
   es: {
-    subject: ({ reason, amount }) => `Nueva disputa ${reason} — ${amount}`,
-    heading: "Nueva disputa detectada",
-    intro: ({ phase, shop }) => `Una nueva disputa de tipo <strong>${phase}</strong> acaba de llegar para ${shop}.`,
-    reason: "Razón",
-    amount: "Monto",
-    order: "Pedido",
-    due: "Fecha límite",
-    phaseHintInquiry: "Esta es una consulta suave — responde rápido para evitar que escale a un chargeback.",
-    phaseHintChargeback: "La evidencia debe enviarse antes de la fecha límite.",
-    cta: "Ver disputa →",
-    footer: "Recibiste esto porque las alertas de nuevas disputas están activadas en la configuración de DisputeDesk.",
+    shared: {
+      reason: "Razón",
+      amount: "Monto",
+      order: "Pedido",
+      due: "Fecha límite",
+      phaseHintInquiry:
+        "Esta es una consulta suave — responde rápido para evitar que escale a un chargeback.",
+      phaseHintChargeback: "La evidencia debe enviarse antes de la fecha límite.",
+      footer:
+        "Recibiste esto porque las alertas de nuevas disputas están activadas en la configuración de DisputeDesk.",
+    },
+    auto: {
+      subject: ({ shortId }) => `Disputa #${shortId} gestionada automáticamente`,
+      heading: "Detectamos una disputa y la gestionamos automáticamente",
+      bodyP1: ({ orderName }) =>
+        `Se detectó una nueva disputa para el pedido ${orderName}. Según tu configuración de automatización, DisputeDesk preparó y envió la respuesta automáticamente.`,
+      listLabel: "Qué hicimos",
+      listItems: [
+        "Recopilamos la evidencia disponible",
+        "Preparamos la respuesta",
+        "La enviamos en tu nombre",
+      ],
+      callout: {
+        label: "Qué hacer ahora",
+        body: "No se requiere acción. Puedes abrir la disputa en DisputeDesk para ver lo que se envió.",
+      },
+      cta: "Abrir disputa →",
+    },
+    review: {
+      subject: ({ shortId }) => `Disputa #${shortId} lista para tu revisión`,
+      heading: "Tu respuesta está lista — revisa y envía",
+      bodyP1: ({ orderName }) =>
+        `Se detectó una nueva disputa para el pedido ${orderName}. DisputeDesk preparó tu respuesta, pero aún no se ha enviado.`,
+      listLabel: "Qué hacer ahora",
+      listItems: [
+        "Abre la disputa",
+        "Revisa la evidencia preparada",
+        "Añade lo que falte si es necesario",
+        "Envía antes de la fecha límite",
+      ],
+      callout: {
+        label: "Importante",
+        body: "Todavía no se ha enviado nada. Esta disputa aún requiere tu aprobación.",
+      },
+      cta: "Revisar disputa →",
+    },
   },
   pt: {
-    subject: ({ reason, amount }) => `Nova disputa ${reason} — ${amount}`,
-    heading: "Nova disputa detectada",
-    intro: ({ phase, shop }) => `Uma nova disputa do tipo <strong>${phase}</strong> chegou para ${shop}.`,
-    reason: "Razão",
-    amount: "Valor",
-    order: "Pedido",
-    due: "Prazo de resposta",
-    phaseHintInquiry: "Esta é uma consulta leve — responda rapidamente para evitar que escale para um chargeback.",
-    phaseHintChargeback: "A evidência deve ser enviada antes do prazo.",
-    cta: "Ver disputa →",
-    footer: "Você recebeu isto porque os alertas de novas disputas estão ativados nas configurações do DisputeDesk.",
+    shared: {
+      reason: "Razão",
+      amount: "Valor",
+      order: "Pedido",
+      due: "Prazo de resposta",
+      phaseHintInquiry:
+        "Esta é uma consulta leve — responda rapidamente para evitar que escale para um chargeback.",
+      phaseHintChargeback: "A evidência deve ser enviada antes do prazo.",
+      footer:
+        "Você recebeu isto porque os alertas de novas disputas estão ativados nas configurações do DisputeDesk.",
+    },
+    auto: {
+      subject: ({ shortId }) => `Disputa #${shortId} tratada automaticamente`,
+      heading: "Detectamos uma disputa e tratamos automaticamente",
+      bodyP1: ({ orderName }) =>
+        `Uma nova disputa foi detectada para o pedido ${orderName}. Com base nas suas configurações de automação, o DisputeDesk preparou e enviou a resposta automaticamente.`,
+      listLabel: "O que fizemos",
+      listItems: [
+        "Coletamos as evidências disponíveis",
+        "Preparamos a resposta",
+        "Enviamos em seu nome",
+      ],
+      callout: {
+        label: "O que fazer agora",
+        body: "Nenhuma ação é necessária. Você pode abrir a disputa no DisputeDesk para revisar o que foi enviado.",
+      },
+      cta: "Abrir disputa →",
+    },
+    review: {
+      subject: ({ shortId }) => `Disputa #${shortId} pronta para sua revisão`,
+      heading: "Sua resposta está pronta — revise e envie",
+      bodyP1: ({ orderName }) =>
+        `Uma nova disputa foi detectada para o pedido ${orderName}. O DisputeDesk preparou sua resposta, mas ela ainda não foi enviada.`,
+      listLabel: "O que fazer agora",
+      listItems: [
+        "Abra a disputa",
+        "Revise as evidências preparadas",
+        "Adicione o que estiver faltando se necessário",
+        "Envie antes do prazo",
+      ],
+      callout: {
+        label: "Importante",
+        body: "Nada foi enviado ainda. Esta disputa ainda requer sua aprovação.",
+      },
+      cta: "Revisar disputa →",
+    },
   },
   fr: {
-    subject: ({ reason, amount }) => `Nouveau litige ${reason} — ${amount}`,
-    heading: "Nouveau litige détecté",
-    intro: ({ phase, shop }) => `Un nouveau litige de type <strong>${phase}</strong> vient d'arriver pour ${shop}.`,
-    reason: "Raison",
-    amount: "Montant",
-    order: "Commande",
-    due: "Date limite",
-    phaseHintInquiry: "Il s'agit d'une consultation — répondez rapidement pour éviter une escalade en chargeback.",
-    phaseHintChargeback: "Les preuves doivent être soumises avant la date limite.",
-    cta: "Voir le litige →",
-    footer: "Vous recevez ceci car les alertes de nouveaux litiges sont activées dans les paramètres DisputeDesk.",
+    shared: {
+      reason: "Raison",
+      amount: "Montant",
+      order: "Commande",
+      due: "Date limite",
+      phaseHintInquiry:
+        "Il s'agit d'une consultation — répondez rapidement pour éviter une escalade en chargeback.",
+      phaseHintChargeback: "Les preuves doivent être soumises avant la date limite.",
+      footer:
+        "Vous recevez ceci car les alertes de nouveaux litiges sont activées dans les paramètres DisputeDesk.",
+    },
+    auto: {
+      subject: ({ shortId }) => `Litige #${shortId} traité automatiquement`,
+      heading: "Nous avons détecté un litige et l'avons traité automatiquement",
+      bodyP1: ({ orderName }) =>
+        `Un nouveau litige a été détecté pour la commande ${orderName}. Selon vos paramètres d'automatisation, DisputeDesk a préparé et envoyé la réponse automatiquement.`,
+      listLabel: "Ce que nous avons fait",
+      listItems: [
+        "Nous avons collecté les preuves disponibles",
+        "Nous avons préparé la réponse",
+        "Nous l'avons soumise en votre nom",
+      ],
+      callout: {
+        label: "Ce que vous devez faire",
+        body: "Aucune action n'est requise. Vous pouvez ouvrir le litige dans DisputeDesk pour consulter ce qui a été envoyé.",
+      },
+      cta: "Ouvrir le litige →",
+    },
+    review: {
+      subject: ({ shortId }) => `Litige #${shortId} prêt à être examiné`,
+      heading: "Votre réponse est prête — examinez et soumettez",
+      bodyP1: ({ orderName }) =>
+        `Un nouveau litige a été détecté pour la commande ${orderName}. DisputeDesk a préparé votre réponse, mais elle n'a pas encore été soumise.`,
+      listLabel: "Ce que vous devez faire",
+      listItems: [
+        "Ouvrez le litige",
+        "Examinez les preuves préparées",
+        "Ajoutez ce qui manque si nécessaire",
+        "Soumettez avant la date limite",
+      ],
+      callout: {
+        label: "Important",
+        body: "Rien n'a encore été soumis. Ce litige nécessite toujours votre approbation.",
+      },
+      cta: "Examiner le litige →",
+    },
   },
   de: {
-    subject: ({ reason, amount }) => `Neue Reklamation ${reason} — ${amount}`,
-    heading: "Neue Reklamation erkannt",
-    intro: ({ phase, shop }) => `Eine neue <strong>${phase}</strong>-Reklamation ist für ${shop} eingegangen.`,
-    reason: "Grund",
-    amount: "Betrag",
-    order: "Bestellung",
-    due: "Frist",
-    phaseHintInquiry: "Dies ist eine Anfrage — antworten Sie schnell, um eine Eskalation zum Chargeback zu vermeiden.",
-    phaseHintChargeback: "Beweise müssen vor Ablauf der Frist eingereicht werden.",
-    cta: "Reklamation ansehen →",
-    footer: "Sie erhalten diese E-Mail, weil Benachrichtigungen für neue Reklamationen in den DisputeDesk-Einstellungen aktiviert sind.",
+    shared: {
+      reason: "Grund",
+      amount: "Betrag",
+      order: "Bestellung",
+      due: "Frist",
+      phaseHintInquiry:
+        "Dies ist eine Anfrage — antworten Sie schnell, um eine Eskalation zum Chargeback zu vermeiden.",
+      phaseHintChargeback: "Beweise müssen vor Ablauf der Frist eingereicht werden.",
+      footer:
+        "Sie erhalten diese E-Mail, weil Benachrichtigungen für neue Reklamationen in den DisputeDesk-Einstellungen aktiviert sind.",
+    },
+    auto: {
+      subject: ({ shortId }) => `Reklamation #${shortId} automatisch bearbeitet`,
+      heading: "Wir haben eine Reklamation erkannt und automatisch bearbeitet",
+      bodyP1: ({ orderName }) =>
+        `Eine neue Reklamation wurde für die Bestellung ${orderName} erkannt. Gemäß Ihren Automatisierungseinstellungen hat DisputeDesk die Antwort automatisch vorbereitet und eingereicht.`,
+      listLabel: "Was wir getan haben",
+      listItems: [
+        "Wir haben die verfügbaren Beweise gesammelt",
+        "Wir haben die Antwort vorbereitet",
+        "Wir haben sie in Ihrem Namen eingereicht",
+      ],
+      callout: {
+        label: "Was Sie tun sollten",
+        body: "Es ist keine Aktion erforderlich. Sie können die Reklamation in DisputeDesk öffnen, um die eingereichte Antwort zu überprüfen.",
+      },
+      cta: "Reklamation öffnen →",
+    },
+    review: {
+      subject: ({ shortId }) => `Reklamation #${shortId} bereit zur Prüfung`,
+      heading: "Ihre Antwort ist bereit — prüfen und einreichen",
+      bodyP1: ({ orderName }) =>
+        `Eine neue Reklamation wurde für die Bestellung ${orderName} erkannt. DisputeDesk hat Ihre Antwort vorbereitet, sie wurde jedoch noch nicht eingereicht.`,
+      listLabel: "Was Sie tun sollten",
+      listItems: [
+        "Öffnen Sie die Reklamation",
+        "Prüfen Sie die vorbereiteten Beweise",
+        "Ergänzen Sie fehlende Informationen bei Bedarf",
+        "Reichen Sie vor Ablauf der Frist ein",
+      ],
+      callout: {
+        label: "Wichtig",
+        body: "Es wurde noch nichts eingereicht. Diese Reklamation erfordert weiterhin Ihre Freigabe.",
+      },
+      cta: "Reklamation prüfen →",
+    },
   },
   sv: {
-    subject: ({ reason, amount }) => `Ny tvist ${reason} — ${amount}`,
-    heading: "Ny tvist upptäckt",
-    intro: ({ phase, shop }) => `En ny <strong>${phase}</strong>-tvist har kommit in för ${shop}.`,
-    reason: "Orsak",
-    amount: "Belopp",
-    order: "Order",
-    due: "Svarsfrist",
-    phaseHintInquiry: "Detta är en mjuk förfrågan — svara snabbt för att undvika eskalering till en tvist.",
-    phaseHintChargeback: "Bevis måste skickas in före tidsfristen.",
-    cta: "Visa tvist →",
-    footer: "Du fick detta eftersom aviseringar för nya tvister är aktiverade i DisputeDesk-inställningarna.",
+    shared: {
+      reason: "Orsak",
+      amount: "Belopp",
+      order: "Order",
+      due: "Svarsfrist",
+      phaseHintInquiry:
+        "Detta är en mjuk förfrågan — svara snabbt för att undvika eskalering till en tvist.",
+      phaseHintChargeback: "Bevis måste skickas in före tidsfristen.",
+      footer:
+        "Du fick detta eftersom aviseringar för nya tvister är aktiverade i DisputeDesk-inställningarna.",
+    },
+    auto: {
+      subject: ({ shortId }) => `Tvist #${shortId} hanterad automatiskt`,
+      heading: "Vi upptäckte en tvist och hanterade den automatiskt",
+      bodyP1: ({ orderName }) =>
+        `En ny tvist upptäcktes för order ${orderName}. Baserat på dina automationsinställningar förberedde och skickade DisputeDesk svaret automatiskt.`,
+      listLabel: "Vad vi gjorde",
+      listItems: [
+        "Vi samlade in tillgänglig bevisning",
+        "Vi förberedde svaret",
+        "Vi skickade in det å dina vägnar",
+      ],
+      callout: {
+        label: "Vad du ska göra",
+        body: "Ingen åtgärd krävs. Du kan öppna tvisten i DisputeDesk för att granska vad som skickades.",
+      },
+      cta: "Öppna tvist →",
+    },
+    review: {
+      subject: ({ shortId }) => `Tvist #${shortId} redo för din granskning`,
+      heading: "Ditt svar är redo — granska och skicka in",
+      bodyP1: ({ orderName }) =>
+        `En ny tvist upptäcktes för order ${orderName}. DisputeDesk har förberett ditt svar, men det har inte skickats in ännu.`,
+      listLabel: "Vad du ska göra",
+      listItems: [
+        "Öppna tvisten",
+        "Granska den förberedda bevisningen",
+        "Lägg till det som saknas vid behov",
+        "Skicka in före tidsfristen",
+      ],
+      callout: {
+        label: "Viktigt",
+        body: "Inget har skickats in ännu. Denna tvist kräver fortfarande ditt godkännande.",
+      },
+      cta: "Granska tvist →",
+    },
   },
 };
 
@@ -157,9 +398,13 @@ function reasonLabel(reason: string | null): string {
   return reason.replace(/_/g, " ").toLowerCase();
 }
 
-function phaseLabel(phase: string | null): string {
-  if (phase === "inquiry") return "inquiry";
-  return "chargeback";
+/**
+ * Shortens a dispute UUID to the first 8 characters for user-facing display.
+ * Full UUIDs are noisy in subject lines; the prefix is still unique enough
+ * for a merchant to correlate the email with the dispute in the app.
+ */
+function shortDisputeId(id: string): string {
+  return id.length > 8 ? id.slice(0, 8) : id;
 }
 
 export async function sendNewDisputeAlert(
@@ -195,22 +440,51 @@ export async function sendNewDisputeAlert(
     ) ?? null;
     const locale = resolveLocale(storeLocale);
     const s = STRINGS[locale];
+    const shared = s.shared;
+    const variant = ctx.resolvedMode === "auto" ? s.auto : s.review;
 
     const { data: shop } = await sb
       .from("shops")
       .select("shop_domain")
       .eq("id", ctx.shopId)
       .single();
-    const shopName = shop?.shop_domain ?? "your store";
 
-    const disputeUrl = getEmbeddedAppUrl(shop?.shop_domain ?? null, `disputes/${ctx.disputeId}`);
+    const disputeUrl = getEmbeddedAppUrl(
+      shop?.shop_domain ?? null,
+      `disputes/${ctx.disputeId}`,
+    );
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
     const reason = reasonLabel(ctx.reason);
-    const phase = phaseLabel(ctx.phase);
     const phaseHint =
-      ctx.phase === "inquiry" ? s.phaseHintInquiry : s.phaseHintChargeback;
+      ctx.phase === "inquiry"
+        ? shared.phaseHintInquiry
+        : shared.phaseHintChargeback;
+    const shortId = shortDisputeId(ctx.disputeId);
+    const orderNameDisplay = ctx.orderName ?? "—";
 
-    const subject = `[DisputeDesk] ${s.subject({ reason, amount: amountStr })}`;
+    const subject = `[DisputeDesk] ${variant.subject({
+      shortId,
+      orderName: ctx.orderName,
+    })}`;
+
+    const listItemsHtml = variant.listItems
+      .map(
+        (item) =>
+          `<li style="margin:0 0 6px;font-size:14px;color:#202223;line-height:1.5">${item}</li>`,
+      )
+      .join("");
+
+    const calloutHtml = variant.callout
+      ? `
+      <div style="background:${ctx.resolvedMode === "review" ? "#FEF3C7;border:1px solid #FCD34D" : "#EFF6FF;border:1px solid #BFDBFE"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
+        <p style="font-size:13px;font-weight:600;color:${ctx.resolvedMode === "review" ? "#92400E" : "#1E40AF"};margin:0 0 4px">
+          ${variant.callout.label}
+        </p>
+        <p style="font-size:13px;color:${ctx.resolvedMode === "review" ? "#92400E" : "#1E40AF"};margin:0;line-height:1.5">
+          ${variant.callout.body}
+        </p>
+      </div>`
+      : "";
 
     const html = `<!DOCTYPE html>
 <html>
@@ -227,55 +501,71 @@ export async function sendNewDisputeAlert(
       </tr></table>
 
       <h1 style="font-size:20px;font-weight:600;color:#202223;margin:0 0 8px">
-        ${s.heading}
+        ${variant.heading}
       </h1>
       <p style="font-size:14px;color:#6D7175;margin:0 0 20px;line-height:1.5">
-        ${s.intro({ phase, shop: shopName })}
+        ${variant.bodyP1({ orderName: orderNameDisplay })}
       </p>
 
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-        <tr><td style="padding:8px 0;font-size:13px;color:#6D7175;width:120px">${s.reason}</td><td style="padding:8px 0;font-size:14px;color:#202223;font-weight:500">${reason}</td></tr>
-        <tr><td style="padding:8px 0;font-size:13px;color:#6D7175">${s.amount}</td><td style="padding:8px 0;font-size:14px;color:#202223;font-weight:600">${amountStr}</td></tr>
-        ${ctx.orderName ? `<tr><td style="padding:8px 0;font-size:13px;color:#6D7175">${s.order}</td><td style="padding:8px 0;font-size:14px;color:#202223">${ctx.orderName}</td></tr>` : ""}
-        <tr><td style="padding:8px 0;font-size:13px;color:#6D7175">${s.due}</td><td style="padding:8px 0;font-size:14px;color:#202223">${formatDate(ctx.dueAt)}</td></tr>
+        <tr><td style="padding:8px 0;font-size:13px;color:#6D7175;width:120px">${shared.reason}</td><td style="padding:8px 0;font-size:14px;color:#202223;font-weight:500">${reason}</td></tr>
+        <tr><td style="padding:8px 0;font-size:13px;color:#6D7175">${shared.amount}</td><td style="padding:8px 0;font-size:14px;color:#202223;font-weight:600">${amountStr}</td></tr>
+        ${ctx.orderName ? `<tr><td style="padding:8px 0;font-size:13px;color:#6D7175">${shared.order}</td><td style="padding:8px 0;font-size:14px;color:#202223">${ctx.orderName}</td></tr>` : ""}
+        <tr><td style="padding:8px 0;font-size:13px;color:#6D7175">${shared.due}</td><td style="padding:8px 0;font-size:14px;color:#202223">${formatDate(ctx.dueAt)}</td></tr>
       </table>
 
-      <div style="background:${ctx.phase === "inquiry" ? "#EFF6FF;border:1px solid #BFDBFE" : "#FEF3C7;border:1px solid #FCD34D"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
-        <p style="font-size:13px;color:${ctx.phase === "inquiry" ? "#1E40AF" : "#92400E"};margin:0;line-height:1.5">
+      <p style="font-size:13px;font-weight:600;color:#202223;margin:0 0 8px">
+        ${variant.listLabel}
+      </p>
+      <ul style="margin:0 0 20px;padding-left:18px">
+        ${listItemsHtml}
+      </ul>
+
+      ${calloutHtml}
+
+      <div style="background:${ctx.phase === "inquiry" ? "#EFF6FF;border:1px solid #BFDBFE" : "#F6F6F7;border:1px solid #E1E3E5"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
+        <p style="font-size:12px;color:${ctx.phase === "inquiry" ? "#1E40AF" : "#6D7175"};margin:0;line-height:1.5">
           ${phaseHint}
         </p>
       </div>
 
       <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">
-        ${s.cta}
+        ${variant.cta}
       </a>
     </div>
 
     <p style="font-size:12px;color:#8C9196;text-align:center;margin:0">
-      ${s.footer}
+      ${shared.footer}
     </p>
   </div>
 </body>
 </html>`;
 
-    const text = `${s.heading}
+    const text = `${variant.heading}
 
-${reason} — ${amountStr}
-${ctx.orderName ? `${s.order}: ${ctx.orderName}` : ""}
-${s.due}: ${formatDate(ctx.dueAt)}
+${variant.bodyP1({ orderName: orderNameDisplay })}
 
+${shared.reason}: ${reason}
+${shared.amount}: ${amountStr}
+${ctx.orderName ? `${shared.order}: ${ctx.orderName}\n` : ""}${shared.due}: ${formatDate(ctx.dueAt)}
+
+${variant.listLabel}:
+${variant.listItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}
+${variant.callout ? `\n${variant.callout.label}: ${variant.callout.body}\n` : ""}
 ${phaseHint}
 
-${s.cta.replace(" →", "")}: ${disputeUrl}
+${variant.cta.replace(" →", "")}: ${disputeUrl}
 
 ---
-${s.footer}`;
+${shared.footer}`;
 
     const resend = new Resend(RESEND_API_KEY);
     await resend.emails.send({
       from: FROM_EMAIL,
       replyTo: REPLY_TO,
-      to: teamEmail.includes(",") ? teamEmail.split(",").map((e) => e.trim()) : teamEmail,
+      to: teamEmail.includes(",")
+        ? teamEmail.split(",").map((e) => e.trim())
+        : teamEmail,
       subject,
       html,
       text,

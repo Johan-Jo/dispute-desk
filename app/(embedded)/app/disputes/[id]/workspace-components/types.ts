@@ -79,7 +79,12 @@ export interface SubmissionField {
   included: boolean;
 }
 
-export type AppliedRuleMode = "auto_pack" | "review" | "manual" | "notify";
+/**
+ * Normalized applied-rule mode as surfaced by the workspace API. Matches the
+ * canonical AutomationMode — legacy values from historical audit rows are
+ * collapsed at the API boundary before they reach the UI.
+ */
+export type AppliedRuleMode = "auto" | "review";
 
 export interface AppliedRule {
   mode: AppliedRuleMode;

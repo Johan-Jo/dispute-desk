@@ -1,3 +1,4 @@
+import { normalizeMode } from "./normalizeMode";
 import type {
   DisputePhaseMatch,
   Rule,
@@ -34,16 +35,12 @@ function isCatchAllRule(match: RuleMatch): boolean {
 }
 
 function normalizeAction(action: Rule["action"]): RuleAction {
-  const a = action as RuleAction;
-  const mode = a.mode ?? "manual";
-  if (mode === "auto_pack" || mode === "review" || mode === "manual") {
-    return {
-      mode,
-      pack_template_id: a.pack_template_id ?? null,
-      require_fields: a.require_fields,
-    };
-  }
-  return { mode: "manual", pack_template_id: null };
+  const a = (action ?? {}) as Rule["action"];
+  return {
+    mode: normalizeMode(a.mode),
+    pack_template_id: a.pack_template_id ?? null,
+    require_fields: a.require_fields,
+  };
 }
 
 function finish(rule: Rule): RuleEvalResult {
@@ -55,15 +52,18 @@ function finish(rule: Rule): RuleEvalResult {
   };
 }
 
-/** Same priority: phase-specific beats phase-blind, review beats auto-build, then manual. */
+/**
+ * Same priority: phase-specific beats phase-blind; review beats auto at equal
+ * priority (merchant-safe default — prefer review/park over auto-submit when
+ * two rules tie).
+ */
 function sortRulesByPriorityThenMode(a: Rule, b: Rule): number {
   const d = a.priority - b.priority;
   if (d !== 0) return d;
   const phaseRank = (r: Rule) => (r.match.phase?.length ? 0 : 1);
   const pd = phaseRank(a) - phaseRank(b);
   if (pd !== 0) return pd;
-  const rank = (m: string) =>
-    m === "review" ? 0 : m === "auto_pack" ? 1 : 2;
+  const rank = (m: RuleAction["mode"]) => (m === "review" ? 0 : 1);
   const am = normalizeAction(a.action).mode;
   const bm = normalizeAction(b.action).mode;
   return rank(am) - rank(bm);
@@ -71,7 +71,7 @@ function sortRulesByPriorityThenMode(a: Rule, b: Rule): number {
 
 /**
  * Pure evaluation: tier 0 = amount safeguards, tier 1 = per-reason, tier 2 = catch-all.
- * Default when nothing matches: manual (no auto-build, no review queue).
+ * Default when nothing matches: review (build the pack, let the merchant approve).
  */
 export function pickAutomationAction(
   rules: Rule[],
@@ -83,7 +83,7 @@ export function pickAutomationAction(
   if (matches.length === 0) {
     return {
       matchedRule: null,
-      action: { mode: "manual", pack_template_id: null },
+      action: { mode: "review", pack_template_id: null },
       packTemplateId: null,
     };
   }
@@ -113,7 +113,7 @@ export function pickAutomationAction(
 
   return {
     matchedRule: null,
-    action: { mode: "manual", pack_template_id: null },
+    action: { mode: "review", pack_template_id: null },
     packTemplateId: null,
   };
 }

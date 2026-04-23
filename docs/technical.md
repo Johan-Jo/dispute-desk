@@ -938,7 +938,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - **Tier 3 — KeyDisputeFacts** (`components/KeyDisputeFacts.tsx`): Compact 2-column grid with 6 essential facts: Amount, Deadline, Reason, Status, Source, Created. Non-collapsible reference card. Reuses `summaryGrid`/`summaryItem` CSS classes. i18n keys: `disputes.facts.*`.
 - **Tier 4 — DetailsAndHistory** (`components/DetailsAndHistory.tsx`): Secondary information. Handling mode card (only for automated/review modes), collapsible Order Data (customer + order details, default closed), and `DisputeTimeline` component. Low visual emphasis.
 - **Shared utilities** (`components/utils.ts`): Types (`Dispute`, `Pack`, `MatchedRule`, `DisputeProfile`) and formatting helpers (`formatCurrency`, `formatDate`, `statusTone`, `statusLabel`, `packStatusTone`, `daysUntilInfo`) shared across all tier components.
-- **Page chrome:** Title is phase-aware: **`Inquiry {id}`** / **`Chargeback {id}`** / **`Case {id}`** (unknown phase), with a blue **⚡ Automated** pill badge when an auto_pack rule matches. Subtitle shows **`Order date: {date}`**. Page-level `primaryAction` mirrors the hero CTA for quick access when scrolled. Secondary actions: Re-sync, Open in Shopify.
+- **Page chrome:** Title is phase-aware: **`Inquiry {id}`** / **`Chargeback {id}`** / **`Case {id}`** (unknown phase), with a blue **⚡ Automated** pill badge when the resolved automation mode is `auto`. Subtitle shows **`Order date: {date}`**. Page-level `primaryAction` mirrors the hero CTA for quick access when scrolled. Secondary actions: Re-sync, Open in Shopify.
 - **Navigation / i18n:** `fetchData` depends on `[id, searchParams]` so changing `?locale=` refetches the profile with the correct `Accept-Language`. All links use `withShopParams` to preserve `?shop`, `?host`, and `?locale`.
 - **Open dispute in Shopify:** links to `https://admin.shopify.com/store/{handle}/finances/disputes/{id}` (note: `/finances/disputes/`, not the deprecated `/payments/disputes/`).
 - **Help:** Merchants can read **Dispute detail page** / **Dispute detail in this app** in embedded Help (`dispute-detail-page` article; i18n: `help.articles.disputeDetailPage` and `help.embedded.articles.disputeDetailPage`).
@@ -963,7 +963,7 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 Shop context is provided by either (1) Shopify session cookies (embedded app) or (2) Supabase Auth + active_shop (portal) for the routes listed under "Portal API prefixes" above.
 
 - `GET /api/disputes` — list disputes. Supports: `shop_id`, `status`, `phase`, `needs_review`, `due_before`, `normalized_status`, `final_outcome`, `submission_state`, `closed` (true/false), `date_field` (initiated_at|submitted_at|closed_at), `date_from`, `date_to`, `amount_min`, `amount_max`, `sort` (due_at|initiated_at|closed_at|submitted_at|amount), `sort_dir` (asc|desc), `page`, `per_page`.
-- `GET /api/disputes/:id` — single dispute. Response includes `family` (from `DISPUTE_REASON_FAMILIES`) and `handling_mode` (`automated`|`review`|`manual`).
+- `GET /api/disputes/:id` — single dispute. Response includes `family` (from `DISPUTE_REASON_FAMILIES`) and `handling_mode` (`auto`|`review` — legacy stored values `auto_pack` / `notify` / `manual` are normalized on read via `lib/rules/normalizeMode.ts`).
 - `POST /api/disputes/sync` — run sync for shop (portal: body `{ shop_id }`; runs synchronously, not job)
 - `POST /api/disputes/:id/sync` — re-sync one dispute
 - `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
@@ -1009,8 +1009,9 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 
 - **Pack templates** (`POST /api/templates/:id/install`): Creates shop **library** rows in `packs`, `pack_sections`, narratives, etc. (`installTemplate` in `lib/db/packs.ts`). **Silent inquiry pairing:** when a chargeback template is installed, the endpoint also installs the matching inquiry-phase sibling from `CHARGEBACK_TO_INQUIRY_TEMPLATE` (in `lib/setup/recommendTemplates.ts`) so pre-chargeback inquiries are automatically covered. The pairing is idempotent — if the inquiry pack already exists for the shop, it is skipped. `digital_goods` has no inquiry pair by design (falls back to `general_inquiry` via `reason_template_mappings`). **Localization:** `installTemplate` resolves the shop's `locale` from the `shops` table and names the pack using the matching `pack_template_i18n` row (falls back to `en-US`). When the Packs wizard step completes, installed template IDs are stored in `shop_setup.steps.packs.payload.installedTemplates`.
 - **Automation setup — library pack list:** `listLibraryPacksForAutomationRules` (`lib/db/packs.ts`) returns template-backed library packs for the shop: `status` is **not** `ARCHIVED`, `template_id` is set, ordered by `created_at` ascending. That includes **DRAFT** and **ACTIVE** rows so every installed template (even before activation) appears on the **Automation & review** step. The Packs step may still emphasize **ACTIVE** rows in its own UI; do not assume the two lists use the same filter.
-- **Setup automation** (`GET` / `POST /api/setup/automation`): `GET` returns `activePacks` (the library list above), `pack_modes` (per-pack handling keyed by `packs.id`: `manual` | `review` | `auto_pack`), `installedTemplateIds`, and merged `reason_rows` / safeguards derived from pack modes plus existing setup rules (`buildAutomationPayloadFromPackModes` in `lib/rules/packHandlingAutomation.ts`). `POST` with `{ shop_id, pack_modes }` validates modes against that pack list and installed templates, then persists via `replacePackBasedAutomationRules`. The legacy body with `reason_rows` / `safeguards` still goes through `replaceSetupAutomationRules` when `pack_modes` is omitted (see `lib/rules/setupAutomation.ts`). Setup-managed rows use the `__dd_setup__:` prefix; saving replaces setup-managed rules and removes legacy `install-preset` rows with the old fixed names.
-- **Evaluation** (`pickAutomationAction` in `lib/rules/pickAutomationAction.ts`, used by `evaluateRules`): Tier order is **amount safeguards → per-reason rules → catch-all** `match: {}`. Default when nothing matches: **manual** (no pipeline, no `needs_review`). Within the same tier and priority, **review** sorts before **auto_pack**. On **new dispute** sync (`syncDisputes.ts`), `review` sets `needs_review`; `auto_pack` runs `runAutomationPipeline` and stores `pack_template_id` on the new `evidence_packs` row (`029_evidence_packs_pack_template.sql`); `manual` does neither.
+- **Setup automation** (`GET` / `POST /api/setup/automation`): `GET` returns `activePacks` (the library list above), `pack_modes` (per-pack handling keyed by `packs.id`: `auto` | `review`), `installedTemplateIds`, and merged `reason_rows` / safeguards derived from pack modes plus existing setup rules (`buildAutomationPayloadFromPackModes` in `lib/rules/packHandlingAutomation.ts`). `POST` with `{ shop_id, pack_modes }` validates modes against that pack list and installed templates, then persists via `replacePackBasedAutomationRules`. The legacy body with `reason_rows` / `safeguards` still goes through `replaceSetupAutomationRules` when `pack_modes` is omitted (see `lib/rules/setupAutomation.ts`). Setup-managed rows use the `__dd_setup__:` prefix; saving replaces setup-managed rules and removes legacy `install-preset` rows with the old fixed names.
+- **Automation mode model (2026-04 simplification):** Merchant-facing modes are narrowed to **two** values: `auto` (build pack and submit) and `review` (build pack, park for merchant approval, set `needs_review`). The single source-of-truth type `AutomationMode` and compatibility helper `normalizeMode` live in `lib/rules/normalizeMode.ts`. Legacy stored values are normalized on read: `auto_pack` → `auto`; `notify`, `manual`, old `review`, and anything unrecognized → `review`. Write paths (`/api/rules`, `ruleCreateSchema` / `ruleUpdateSchema` in `lib/middleware/validate.ts`, `replacePackAutomationRules`, `/api/setup/coverage-rules`) accept **only** `auto` | `review`; legacy values are rejected by zod before persistence. A cleanup migration that rewrites existing `rules.action->>mode` rows in place is the recommended follow-up; until then `normalizeMode` keeps behavior deterministic.
+- **Evaluation** (`pickAutomationAction` in `lib/rules/pickAutomationAction.ts`, used by `evaluateRules`): Tier order is **amount safeguards → per-reason rules → catch-all** `match: {}`. **Default when nothing matches: `review`** — DisputeDesk never silently drops a new dispute, so a pack is always prepared and the merchant always gets the review email. Within the same tier and priority, **review** sorts before **auto** (merchant-safe tiebreaker). Both modes drive the same pipeline in `syncDisputes.ts` → `runAutomationPipeline`: a pack is built and `pack_template_id` is stored on the new `evidence_packs` row (`029_evidence_packs_pack_template.sql`). The difference is at save time: `auto` auto-submits when quality gates pass, `review` parks the pack and sets `needs_review = true`.
 - **Important:** `lib/packs/buildPack.ts` still assembles evidence via **collectors** only; `evidence_packs.pack_template_id` records which catalog template the merchant chose for that automation path. Teaching `buildPack` to merge library checklist/sections from that template is a follow-up.
 
 ### Integrations (Shopify session required)
@@ -1124,15 +1125,14 @@ Reference implementation — disputes list (`app/(embedded)/app/disputes/`):
 - `disputeListHelpers.ts` — shared helpers + `formatDueTiming(d, tab, t, locale)` and `resolveSort(sortMode, tab)`
 
 Dashboard (`app/(embedded)/app/`):
-- `DashboardSummaryRow.tsx` — 4-tile `InlineGrid` (Action Needed, In Progress, Amount at Risk, Deadlines Soon) using Polaris `Card`, `Badge`, `Text`. Responsive: 2 cols on xs, 4 on md+
-- `DashboardNeedsAttentionTable.tsx` — Polaris `IndexTable` fetching `normalized_status=new,action_needed,needs_review`. Columns: Order, Reason, Issue, Deadline, Amount, Review CTA. Returns `null` when empty (parent controls conditional rendering)
-- `DashboardInProgressTable.tsx` — Polaris `IndexTable` fetching `normalized_status=in_progress,ready_to_submit,submitted,submitted_to_shopify,waiting_on_issuer,submitted_to_bank`. Columns: Order, Reason, Amount, Submitted date, Submission status, Status badge, View details
-- `DashboardKpis.tsx` — single Polaris `Card` with `InlineGrid`: Active Disputes, Win Rate, Amount Recovered, Amount at Risk. Period selector in header
-- `DashboardCategories.tsx` — dispute categories `ProgressBar` breakdown, rendered below KPIs
-- `DashboardHelpCard.tsx` — mobile stacks icon + text + link vertically with a full-width link button
-- `dashboardHelpers.ts` — lifted types (`DashboardStats`, `PeriodKey`), `DEFAULT_STATS`, `useDateLocale`, `useFormatCurrency`, `safeStatusLabel`, `safeOutcomeLabel`
+- `DashboardOperationalSummary.tsx` — single Polaris `Card` with headline ("Operational Summary" + optional critical `Badge` with attention count) and a contextual primary CTA (Review {n} action needed / Submit {n} ready / View all). Below, 4 coloured counter tiles (Action Needed critical, Ready to Submit warning, Waiting on Issuer subdued, Closed in period subdued). Mobile uses `dashboard.module.css` (`mobileGrid2`, `summaryCounterMobile`) for a 2-column tile grid and a full-width CTA. Each tile deep-links to the matching `normalized_status` filter on the disputes list.
+- `DashboardKpis.tsx` — single Polaris `Card` with `InlineGrid`: Active Disputes, Win Rate, Amount Recovered, Amount at Risk. Period selector (`24h | 7d | 30d | All time`) in the card header drives `/api/dashboard/stats?period=…`.
+- `DashboardRecentDisputesPreview.tsx` — compact preview of the most recent active disputes, fetched via `/api/disputes` (read-only, links to the detail page).
+- `DashboardHelpCard.tsx` — "How to read your dashboard" CTA card; mobile stacks icon + text + link vertically with a full-width link button.
+- `dashboardHelpers.ts` — lifted types (`DashboardStats`, `PeriodKey`, `ActivityItem`), `DEFAULT_STATS`, `useDateLocale`, `useFormatCurrency`, `safeStatusLabel`, `safeOutcomeLabel`.
+- Inline in `page.tsx`: `OutcomeBreakdown` (outcome distribution with coloured dots + `ProgressBar`), `RecentActivityFeed` (last 10 events with per-event `STATUS_COLORS` dots, localised event labels/descriptions, tappable to the dispute), and `DashboardCharts` (two `Layout.Section variant="oneHalf"` cards: Win Rate Trend 6-bucket `ProgressBar` series + Dispute Categories `ProgressBar` per reason).
 
-**Section order (identical on desktop and mobile):** Summary Row → [Needs Attention table, if actionNeededCount > 0] → In Progress table → Performance Overview (KPIs) → Dispute Categories → Help. When `actionNeededCount === 0`, a small `Banner` replaces the needs-attention section. When both action-needed and in-progress are 0, a compact "No active disputes" card is shown.
+**Section order (identical on desktop and mobile):** Operational Summary → KPIs → Outcome Breakdown → Recent Disputes Preview → Recent Activity Feed → Charts (Win Rate Trend + Dispute Categories, side-by-side on desktop) → Help.
 
 **Mobile actions bar** stacks search full-width, then pairs Filter + Sort 50/50 — Export is desktop-only. Sort (`sortMode` state in the page) maps to the existing `/api/disputes?sort=…&sort_dir=…` query params; desktop keeps the default tab-derived ordering so fetch behavior is byte-identical.
 
@@ -1164,9 +1164,11 @@ This pattern is the template for the remaining embedded pages (packs, rules, pol
 ### Sync Integration
 
 When `syncDisputes()` detects a new dispute:
-- Calls `evaluateRules()` with dispute context.
-- `auto_pack` → triggers `runAutomationPipeline()`.
-- `review` → sets `needs_review = true` on the dispute row.
+- Calls `evaluateRules()` with dispute context. Result mode is normalized via `normalizeMode` so legacy stored values (`auto_pack` / `notify` / `manual` / old `review`) collapse to `auto` | `review` before anything downstream runs.
+- `auto` → triggers `runAutomationPipeline()` which builds the pack and auto-submits when quality gates pass; the "handled automatically" email variant of `sendNewDisputeAlert` is fired.
+- `review` → triggers the same `runAutomationPipeline()` so a pack is still built; the dispute row is flagged `needs_review = true`, the pack is parked awaiting merchant approval, and the "ready for your review" email variant is fired.
+- `sendNewDisputeAlert(ctx)` receives `resolvedMode: "auto" | "review"` and picks the matching subject/heading/body/CTA. Callers must pass a normalized mode — legacy values must never reach this function.
+- Fallback: if rule evaluation throws, `resolvedMode` defaults to `review`, so the merchant still receives a notification and the pipeline still builds a pack.
 
 **New-dispute alert dedupe (`disputes.new_dispute_alert_sent_at`, migration `20260420100000`):** the existence-check SELECT in `syncDisputes` previously fired `sendNewDisputeAlert` whenever `existing` came back null — including the transient PostgREST case `{ data: null, error: <msg> }`, where the row exists but the SELECT silently failed. This re-fired the "New dispute" email and `rule_applied` audit event hours to days after the real dispute arrived. The fix: (1) bail with `result.errors.push(...)` when `existingErr !== null`, and (2) atomically claim the alert via `UPDATE disputes SET new_dispute_alert_sent_at = now() WHERE id = $1 AND new_dispute_alert_sent_at IS NULL RETURNING id` — the email only sends when the UPDATE returns a row, so a second pass on the same dispute is a no-op even if the existence check misses again. Regression test: `tests/unit/syncDisputesNewAlertDedupe.test.ts`.
 
@@ -1654,14 +1656,14 @@ On save: installs the recommended chargeback templates plus any extras the merch
 5. **Safeguards** — Visually separated “safety” block: **switch-style** controls (not plain checkboxes) for high-value review threshold and catch-all review. Helper copy states these **override** the default and per-reason rules when conditions match.
 6. **Live summary** — Read-only recap of effective configuration (default line, per-reason lines, safeguard lines).
 
-**Data & API:** Loads via `GET /api/setup/automation` (`activePacks`, `pack_modes`, `installedTemplateIds`). The step shows one row per template-backed library pack with a segmented control (**Manual review** / **Automatic**). Saves with `POST` `{ shop_id, pack_modes }` (keys = `packs.id`). The embedded `/app/rules` page uses the same API, presenting a per-family view of the same data.
+**Data & API:** Loads via `GET /api/setup/automation` (`activePacks`, `pack_modes`, `installedTemplateIds`). The step shows one row per template-backed library pack with a segmented control (**Review before submit** / **Automatic**) — the only two merchant-facing options since the 2026-04 mode simplification. Saves with `POST` `{ shop_id, pack_modes }` (keys = `packs.id`, values = `"auto" | "review"`). The embedded `/app/rules` page uses the same API, presenting a per-family view of the same data.
 
 **Evaluation order** (unchanged; see `lib/rules/pickAutomationAction.ts`): amount safeguards → per-reason rule → default (General) → catch-all. Merchant-facing help article: `help.articles.configuringAutomation`.
 
 **Evidence-aware defaults:** On first load (no existing pack_modes), defaults are set based on `steps.coverage.payload.evidenceConfidence`:
-- `high` → all packs default to "auto"
-- `medium` → fraud/PNR packs to "auto", others to "manual"
-- `low` → all packs default to "manual"
+- `high` → all packs default to `auto`
+- `medium` → fraud/PNR packs to `auto`, others to `review`
+- `low` → all packs default to `review`
 
 ### Step 5: Policies (`BusinessPoliciesStep`)
 
@@ -1678,7 +1680,7 @@ On save: installs the recommended chargeback templates plus any extras the merch
 **UI:** Three summary cards:
 1. **Evidence sources** — X of 7 Shopify evidence groups enabled, plus "Other: manual upload"
 2. **Coverage** — X templates installed covering Y dispute families, with template names
-3. **Automation** — X packs on automatic, Y on manual review
+3. **Automation** — X packs on automatic, Y on review before submit
 
 Info banner explaining what activation does. On save: patches all DRAFT packs to ACTIVE via `PATCH /api/packs/:packId`, saves step payload with `activatedAt`. Shell navigates to `/app/setup/complete`.
 
@@ -1713,7 +1715,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | ConnectionStep | `components/setup/steps/ConnectionStep.tsx` | Step 1: live readiness checks (connection, scopes, webhooks, store data) |
 | StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style, Shopify evidence config |
 | CoverageStep | `components/setup/steps/CoverageStep.tsx` | Step 3: evidence summary + template recommendations + install |
-| AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Step 4: per-pack manual/auto toggle with evidence-aware defaults |
+| AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Step 4: per-pack auto / review toggle with evidence-aware defaults |
 | BusinessPoliciesStep | `components/setup/steps/BusinessPoliciesStep.tsx` | Step 5: shipping/refund/terms/privacy policy setup (own / template / mixed flows) |
 | ActivateStep | `components/setup/steps/ActivateStep.tsx` | Step 6: config summary + bulk pack activation |
 
