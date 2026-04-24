@@ -87,7 +87,7 @@ export async function POST(
   }
 
   const ext = file.name.split(".").pop() ?? "bin";
-  const storagePath = `evidence-uploads/${pack.shop_id}/${packId}/${Date.now()}.${ext}`;
+  const storagePath = `${pack.shop_id}/${packId}/${Date.now()}.${ext}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
