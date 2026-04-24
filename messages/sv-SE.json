@@ -1531,7 +1531,7 @@
       },
       "uploadingEvidence": {
         "title": "Ladda upp ytterligare bevis",
-        "body": "Du kan ladda upp filer för att stärka ditt bevispaket:\n\n1. Öppna bevispaketets detaljsida.\n2. Scrolla till \"Ladda upp bevis\".\n3. Klicka för att ladda upp eller dra och släpp filer.\n4. Format som stöds: bilder (JPG, PNG) och PDF.\n5. Maximal filstorlek: 10 MB per fil.\n\nVanliga uppladdningar:\n- Skärmbilder av kundkommunikation.\n- Leveransbekräftelser.\n- Signerade kvitton eller fakturor."
+        "body": "Du kan ladda upp filer för att stärka ditt bevispaket:\n\n1. Öppna bevispaketets detaljsida.\n2. Scrolla till \"Ladda upp bevis\".\n3. Klicka för att ladda upp eller dra och släpp filer.\n4. Format som stöds: bilder (JPG, PNG) och PDF.\n5. Maximal filstorlek: 10 MB per fil.\n\nSå når uppladdningarna banken: Shopifys API tillåter inte att tredjepartsappar bifogar filer till ett dispute. Därför lägger vi in en säker DisputeDesk-länk för varje uppladdning i den bevistext som skickas till Shopify. Granskaren hos kortutgivaren klickar på länken och filen serveras direkt från disputedesk.app. Länkarna upphör 180 dagar efter att beviset sparats till Shopify.\n\nVanliga uppladdningar:\n- Skärmbilder av kundkommunikation.\n- Leveransbekräftelser.\n- Signerade kvitton eller fakturor."
       },
       "evidenceChecklist": {
         "title": "Bevischecklistan förklarad",
@@ -1583,7 +1583,7 @@
       },
       "howEvidenceSaved": {
         "title": "Hur bevis sparas till Shopify",
-        "body": "När du sparar bevis skickar DisputeDesk strukturerad data till Shopify via disputeEvidenceUpdate GraphQL API.\n\nVad som sparas:\n- Frakt- och spårningsdokumentation.\n- Kundkommunikation och orderdetaljer.\n- Retur- och avbokningspolicytext.\n- Uppladdade filer.\n\nViktigt: att spara bevis till Shopify är INTE samma sak som att skicka in till kortnätverket."
+        "body": "När du sparar bevis skickar DisputeDesk strukturerad data till Shopify via disputeEvidenceUpdate GraphQL API.\n\nSparas som text:\n- Frakt- och spårningsdokumentation.\n- Kundkommunikation och orderdetaljer.\n- Retur- och avbokningspolicytext.\n\nSparas som säkra länkar:\n- Varje uppladdad fil och bevispaketets PDF inkluderas som en DisputeDesk-länk (https://disputedesk.app/e/...) i bevistexten. Shopifys API accepterar inte bilagor från tredjepartsappar, så granskaren hos kortutgivaren klickar på länken och filen serveras från vår domän. Länkarna upphör 180 dagar efter sparningen.\n\nViktigt: att spara bevis till Shopify är INTE samma sak som att skicka in till kortnätverket."
       },
       "fieldMapping": {
         "title": "Hur bevisfält mappas till Shopify",

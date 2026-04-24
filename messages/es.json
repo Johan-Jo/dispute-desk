@@ -1470,7 +1470,7 @@
       },
       "uploadingEvidence": {
         "title": "Subir evidencia adicional",
-        "body": "Puede subir archivos:\n\n1. Abra la página de detalles del paquete.\n2. Vaya a \"Subir evidencia\".\n3. Haga clic o arrastre archivos.\n4. Formatos: JPG, PNG, PDF.\n5. Tamaño máximo: 10 MB por archivo.\n\nSubidas comunes: capturas de pantalla, confirmaciones de entrega, recibos."
+        "body": "Puede subir archivos:\n\n1. Abra la página de detalles del paquete.\n2. Vaya a \"Subir evidencia\".\n3. Haga clic o arrastre archivos.\n4. Formatos: JPG, PNG, PDF.\n5. Tamaño máximo: 10 MB por archivo.\n\nCómo llegan los archivos al banco: la API de Shopify no permite que aplicaciones de terceros adjunten archivos a una disputa, por lo que incluimos un enlace seguro de DisputeDesk para cada archivo dentro del texto de evidencia enviado a Shopify. El revisor del emisor de la tarjeta hace clic en el enlace y el archivo se sirve directamente desde disputedesk.app. Los enlaces caducan 180 días después de guardar la evidencia.\n\nSubidas comunes: capturas de pantalla, confirmaciones de entrega, recibos."
       },
       "evidenceChecklist": {
         "title": "La lista de verificación de evidencia explicada",
@@ -1522,7 +1522,7 @@
       },
       "howEvidenceSaved": {
         "title": "Cómo se guarda la evidencia en Shopify",
-        "body": "DisputeDesk envía datos estructurados a Shopify vía la API disputeEvidenceUpdate.\n\nQué se guarda: documentación de envío, comunicación con el cliente, políticas y archivos subidos.\n\nImportante: guardar en Shopify NO es lo mismo que enviar a la red de tarjetas."
+        "body": "DisputeDesk envía datos estructurados a Shopify vía la API disputeEvidenceUpdate.\n\nQué se guarda como texto: documentación de envío, comunicación con el cliente y políticas.\n\nQué se guarda como enlaces seguros: cada archivo subido y el PDF completo del paquete se incluyen como un enlace de DisputeDesk (https://disputedesk.app/e/...) dentro del texto de evidencia. La API de Shopify no acepta adjuntos de aplicaciones de terceros, así que el revisor del emisor de la tarjeta abre el enlace y el archivo se sirve desde nuestro dominio. Los enlaces caducan 180 días después de guardar.\n\nImportante: guardar en Shopify NO es lo mismo que enviar a la red de tarjetas."
       },
       "fieldMapping": {
         "title": "Cómo se mapean los campos a Shopify",

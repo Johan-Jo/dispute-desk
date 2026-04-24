@@ -1470,7 +1470,7 @@
       },
       "uploadingEvidence": {
         "title": "Zusätzliche Beweise hochladen",
-        "body": "Sie können Dateien hochladen:\n\n1. Öffnen Sie die Paket-Detailseite.\n2. Gehen Sie zu \"Beweise hochladen\".\n3. Klicken oder ziehen Sie Dateien.\n4. Unterstützte Formate: JPG, PNG, PDF.\n5. Maximale Dateigröße: 10 MB.\n\nHäufige Uploads: Kundenkommunikation, Lieferbestätigungen, Quittungen."
+        "body": "Sie können Dateien hochladen:\n\n1. Öffnen Sie die Paket-Detailseite.\n2. Gehen Sie zu \"Beweise hochladen\".\n3. Klicken oder ziehen Sie Dateien.\n4. Unterstützte Formate: JPG, PNG, PDF.\n5. Maximale Dateigröße: 10 MB.\n\nSo erreichen Uploads die Bank: Shopifys API erlaubt es Drittanbieter-Apps nicht, Dateien an einen Dispute anzuhängen. Wir fügen deshalb für jeden Upload einen sicheren DisputeDesk-Link in den an Shopify übermittelten Beweistext ein. Der Prüfer beim Kartenaussteller klickt auf den Link und die Datei wird direkt von disputedesk.app ausgeliefert. Links laufen 180 Tage nach dem Speichern der Beweise ab.\n\nHäufige Uploads: Kundenkommunikation, Lieferbestätigungen, Quittungen."
       },
       "evidenceChecklist": {
         "title": "Die Beweischeckliste erklärt",
@@ -1522,7 +1522,7 @@
       },
       "howEvidenceSaved": {
         "title": "Wie Beweise bei Shopify gespeichert werden",
-        "body": "DisputeDesk sendet strukturierte Daten an Shopify über die disputeEvidenceUpdate GraphQL-API.\n\nGespeichert werden: Versand-/Tracking-Dokumentation, Kundenkommunikation, Richtlinientexte und hochgeladene Dateien.\n\nWichtig: Speichern bei Shopify ist NICHT dasselbe wie Einreichen beim Kartennetzwerk."
+        "body": "DisputeDesk sendet strukturierte Daten an Shopify über die disputeEvidenceUpdate GraphQL-API.\n\nAls Text gespeichert: Versand-/Tracking-Dokumentation, Kundenkommunikation, Richtlinientexte.\n\nAls sichere Links gespeichert: jede hochgeladene Datei und das vollständige Beweis-PDF werden als DisputeDesk-Link (https://disputedesk.app/e/...) in den Beweistext eingebettet. Shopifys API erlaubt keine Dateianhänge durch Drittanbieter-Apps, daher klickt der Prüfer beim Kartenaussteller den Link an und die Datei wird von unserer Domain ausgeliefert. Links laufen 180 Tage nach dem Speichern ab.\n\nWichtig: Speichern bei Shopify ist NICHT dasselbe wie Einreichen beim Kartennetzwerk."
       },
       "fieldMapping": {
         "title": "Wie Beweisfelder Shopify zugeordnet werden",

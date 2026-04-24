@@ -1530,7 +1530,7 @@
       },
       "uploadingEvidence": {
         "title": "Télécharger des preuves supplémentaires",
-        "body": "Vous pouvez télécharger des fichiers :\n\n1. Ouvrez la page de détails du dossier.\n2. Allez à \"Télécharger des preuves\".\n3. Cliquez ou glissez des fichiers.\n4. Formats : JPG, PNG, PDF.\n5. Taille max : 10 Mo par fichier.\n\nTéléchargements courants : captures d'écran, confirmations de livraison, reçus."
+        "body": "Vous pouvez télécharger des fichiers :\n\n1. Ouvrez la page de détails du dossier.\n2. Allez à \"Télécharger des preuves\".\n3. Cliquez ou glissez des fichiers.\n4. Formats : JPG, PNG, PDF.\n5. Taille max : 10 Mo par fichier.\n\nComment les fichiers parviennent à la banque : l'API de Shopify n'autorise pas les applications tierces à joindre des fichiers à un litige. Nous incluons donc, pour chaque fichier, un lien DisputeDesk sécurisé dans le texte de preuves envoyé à Shopify. L'examinateur chez l'émetteur de la carte clique sur le lien et le fichier est servi directement depuis disputedesk.app. Les liens expirent 180 jours après l'enregistrement des preuves.\n\nTéléchargements courants : captures d'écran, confirmations de livraison, reçus."
       },
       "evidenceChecklist": {
         "title": "La liste de contrôle des preuves expliquée",
@@ -1582,7 +1582,7 @@
       },
       "howEvidenceSaved": {
         "title": "Comment les preuves sont enregistrées sur Shopify",
-        "body": "DisputeDesk envoie des données structurées à Shopify via l'API disputeEvidenceUpdate.\n\nCe qui est enregistré : documentation d'expédition, communication client, politiques et fichiers téléchargés.\n\nImportant : enregistrer sur Shopify n'est PAS la même chose que soumettre au réseau de cartes."
+        "body": "DisputeDesk envoie des données structurées à Shopify via l'API disputeEvidenceUpdate.\n\nEnregistré sous forme de texte : documentation d'expédition, communication client et politiques.\n\nEnregistré sous forme de liens sécurisés : chaque fichier téléchargé et le PDF complet du dossier sont inclus comme un lien DisputeDesk (https://disputedesk.app/e/...) dans le texte de preuves. L'API de Shopify n'accepte pas de pièces jointes d'applications tierces ; l'examinateur chez l'émetteur de la carte clique sur le lien et le fichier est servi depuis notre domaine. Les liens expirent 180 jours après l'enregistrement.\n\nImportant : enregistrer sur Shopify n'est PAS la même chose que soumettre au réseau de cartes."
       },
       "fieldMapping": {
         "title": "Comment les champs sont associés à Shopify",
