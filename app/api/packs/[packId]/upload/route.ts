@@ -101,6 +101,18 @@ export async function POST(
     });
 
   if (uploadErr) {
+    // Surface the real Supabase error in server logs so we can diagnose bucket/policy
+    // issues without asking merchants to retry blindly.
+    console.error("[packs/upload] storage upload failed", {
+      bucket: MANUAL_UPLOAD_STORAGE_BUCKET,
+      storagePath,
+      shopId: pack.shop_id,
+      packId,
+      fileType: file.type,
+      fileSize: file.size,
+      errorMessage: uploadErr.message,
+      errorName: uploadErr.name,
+    });
     return NextResponse.json(
       { error: `Upload failed: ${uploadErr.message}` },
       { status: 500 }
