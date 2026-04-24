@@ -43,6 +43,13 @@ const submissionBlockStyle: CSSProperties = {
   color: "#1a1a1a",
 };
 
+function submissionFieldHeading(field: SubmissionField): string {
+  if (field.shopifyFieldName === "uncategorizedText") {
+    return "Additional evidence and supporting documents";
+  }
+  return field.shopifyFieldLabel;
+}
+
 export default function ReviewSubmitTab({ workspace }: { workspace: Workspace }) {
   const { data, clientState, derived, actions } = workspace;
   const t = useTranslations("review.whatWasSent");
@@ -216,7 +223,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
                     {fields.map((f, idx) => (
                       <div key={f.shopifyFieldName}>
                         <div style={{ fontWeight: 600, marginBottom: "4px" }}>
-                          {`${f.shopifyFieldLabel} \u2192 ${f.shopifyFieldName}`}
+                          {submissionFieldHeading(f)}
                         </div>
                         <div>{f.content}</div>
                         {idx < fields.length - 1 && (
@@ -317,7 +324,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
                   fields.map((f, idx) => (
                     <div key={f.shopifyFieldName}>
                       <div style={{ fontWeight: 600, marginBottom: "4px" }}>
-                        {`${f.shopifyFieldLabel} \u2192 ${f.shopifyFieldName}`}
+                        {submissionFieldHeading(f)}
                       </div>
                       <div>{f.content}</div>
                       {idx < fields.length - 1 && (

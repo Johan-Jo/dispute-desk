@@ -1,5 +1,8 @@
 import type { DisputeEvidenceUpdateInput } from "./mutations/disputeEvidenceUpdate";
 
+const DEVICE_LOCATION_NEUTRAL_REVIEWED =
+  "Device and access patterns were reviewed as part of the transaction assessment.";
+
 /**
  * STRICT SUBMISSION RULES (NON-NEGOTIABLE):
  *
@@ -210,6 +213,9 @@ function serializeSectionData(section: RawPackSection): string {
   }
 
   // "other" type: payment verification, risk assessment, manual evidence, etc.
+  const ipLocationText = formatIpLocationEvidence(section);
+  if (ipLocationText) return ipLocationText;
+
   // Fallback: serialize key-value pairs
   for (const [key, value] of Object.entries(data)) {
     if (value == null) continue;
@@ -220,6 +226,62 @@ function serializeSectionData(section: RawPackSection): string {
     }
   }
   return lines.join("\n").trim();
+}
+
+function formatIpLocationEvidence(section: RawPackSection): string | null {
+  const fieldsProvided = section.fieldsProvided ?? [];
+  const isIpLocationSection =
+    fieldsProvided.includes("ip_location_check") ||
+    fieldsProvided.includes("device_location_consistency") ||
+    section.source === "auto_ipinfo" ||
+    section.source === "ipinfo_io" ||
+    section.label === "IP & Location Check" ||
+    section.label === "Device & Location Consistency";
+
+  if (section.type !== "other" || !isIpLocationSection) return null;
+
+  const data = section.data;
+  const match = typeof data.locationMatch === "string" ? data.locationMatch : "";
+  if (data.bankEligible === false || match === "different_country" || match === "unknown") {
+    return DEVICE_LOCATION_NEUTRAL_REVIEWED;
+  }
+
+  const ipinfo = isRecord(data.ipinfo) ? data.ipinfo : null;
+  if (!ipinfo) {
+    return typeof data.bankParagraph === "string" && data.bankParagraph.trim()
+      ? data.bankParagraph.trim()
+      : DEVICE_LOCATION_NEUTRAL_REVIEWED;
+  }
+
+  const privacy = isRecord(ipinfo.privacy) ? ipinfo.privacy : {};
+  if (privacy.vpn === true || privacy.proxy === true || privacy.hosting === true) {
+    return DEVICE_LOCATION_NEUTRAL_REVIEWED;
+  }
+
+  const location = [ipinfo.city, ipinfo.region, ipinfo.country]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(", ");
+  const org = typeof ipinfo.org === "string" ? ipinfo.org.trim() : "";
+
+  const lines = ["Device / IP evidence:"];
+  if (location && org) {
+    lines.push(`The customer session was associated with ${location} on network ${org}.`);
+  } else if (location) {
+    lines.push(`The customer session was associated with ${location}.`);
+  } else if (org) {
+    lines.push(`The customer session used network ${org}.`);
+  } else if (typeof data.bankParagraph === "string" && data.bankParagraph.trim()) {
+    lines.push(data.bankParagraph.trim());
+  } else {
+    return DEVICE_LOCATION_NEUTRAL_REVIEWED;
+  }
+
+  lines.push("IP intelligence did not identify VPN, proxy, or hosting infrastructure.");
+  return lines.join("\n");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function formatKey(key: string): string {

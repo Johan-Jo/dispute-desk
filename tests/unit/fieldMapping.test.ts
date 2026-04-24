@@ -102,4 +102,67 @@ describe("buildEvidenceInputFromRaw", () => {
     expect(input.refundPolicyDisclosure).toBeUndefined();
     expect(input.cancellationPolicyDisclosure).toBeUndefined();
   });
+
+  it("formats IPinfo evidence as bank-facing prose instead of raw JSON", () => {
+    const input = buildEvidenceInputFromRaw([
+      {
+        type: "other",
+        label: "IP & Location Check",
+        source: "ipinfo_io",
+        fieldsProvided: ["ip_location_check"],
+        data: {
+          bankEligible: true,
+          locationMatch: "same_country",
+          ip: "2804:1b3:7000:b37c:51a8:8de9:3646:e9a8",
+          ipinfo: {
+            ip: "2804:1b3:7000:b37c:51a8:8de9:3646:e9a8",
+            loc: "-22.9064,-43.1822",
+            org: "AS18881 TELEFÔNICA BRASIL S.A",
+            city: "Rio de Janeiro",
+            region: "Rio de Janeiro",
+            country: "BR",
+            privacy: { vpn: false, proxy: false, hosting: false },
+          },
+        },
+      },
+    ]);
+
+    expect(input.uncategorizedText).toBe(
+      [
+        "Device / IP evidence:",
+        "The customer session was associated with Rio de Janeiro, Rio de Janeiro, BR on network AS18881 TELEFÔNICA BRASIL S.A.",
+        "IP intelligence did not identify VPN, proxy, or hosting infrastructure.",
+      ].join("\n"),
+    );
+    expect(input.uncategorizedText).not.toContain("Ipinfo:");
+    expect(input.uncategorizedText).not.toContain("{");
+    expect(input.uncategorizedText).not.toContain("2804:1b3");
+    expect(input.uncategorizedText).not.toContain("-22.9064");
+  });
+
+  it("does not submit negative IPinfo details from the generic raw serializer", () => {
+    const input = buildEvidenceInputFromRaw([
+      {
+        type: "other",
+        label: "IP & Location Check",
+        source: "ipinfo_io",
+        fieldsProvided: ["ip_location_check"],
+        data: {
+          bankEligible: false,
+          locationMatch: "different_country",
+          ipinfo: {
+            city: "Unknown",
+            country: "ZZ",
+            privacy: { vpn: true, proxy: false, hosting: false },
+          },
+        },
+      },
+    ]);
+
+    expect(input.uncategorizedText).toBe(
+      "Device and access patterns were reviewed as part of the transaction assessment.",
+    );
+    expect(input.uncategorizedText).not.toMatch(/different.country|VPN|proxy|hosting|Unknown|ZZ/i);
+    expect(input.uncategorizedText).not.toContain("{");
+  });
 });
