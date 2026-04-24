@@ -14,13 +14,14 @@
  *
  *   Supporting documents (secure access links):
  *
+ *   Fulfillment & Delivery:
  *   <Label>:
  *   - <filename>
  *     https://disputedesk.app/e/<token>
  *   - <filename>
  *     https://disputedesk.app/e/<token>
  *
- *   <Other Label>:
+ *   Customer Communication:
  *   - <filename>
  *     https://disputedesk.app/e/<token>
  *
@@ -79,6 +80,16 @@ const DEFAULT_SECTION_LABEL = "Supporting documents";
 const PDF_SECTION_LABEL = "Full evidence pack (PDF)";
 const PDF_FILE_LABEL = "Evidence pack";
 
+const CATEGORY_LABELS = [
+  "Order Facts",
+  "Payment Verification",
+  "Customer Identity & History",
+  "Fulfillment & Delivery",
+  "Customer Communication",
+  "Merchant Evidence",
+  "Policies & Disclosures",
+] as const;
+
 /**
  * Strip emoji/pictographic characters from filenames before rendering.
  * Kept intentionally conservative: matches the Unicode
@@ -104,6 +115,67 @@ function resolveSectionLabel(
   if (!trimmed) return DEFAULT_SECTION_LABEL;
   if (trimmed === sanitizedFileName) return DEFAULT_SECTION_LABEL;
   return trimmed;
+}
+
+function resolveCategoryLabel(rawLabel: string | null | undefined): string | null {
+  const label = rawLabel?.trim();
+  if (!label) return null;
+  const lower = label.toLowerCase();
+
+  const exactCategory = CATEGORY_LABELS.find(
+    (category) => category.toLowerCase() === lower,
+  );
+  if (exactCategory) return exactCategory;
+
+  if (
+    lower.includes("delivery") ||
+    lower.includes("fulfillment") ||
+    lower.includes("shipping") ||
+    lower.includes("tracking")
+  ) {
+    return "Fulfillment & Delivery";
+  }
+  if (
+    lower.includes("communication") ||
+    lower.includes("email") ||
+    lower.includes("message") ||
+    lower.includes("chat")
+  ) {
+    return "Customer Communication";
+  }
+  if (
+    lower.includes("customer history") ||
+    lower.includes("identity") ||
+    lower.includes("activity") ||
+    lower.includes("ip") ||
+    lower.includes("location")
+  ) {
+    return "Customer Identity & History";
+  }
+  if (
+    lower.includes("payment") ||
+    lower.includes("avs") ||
+    lower.includes("cvv")
+  ) {
+    return "Payment Verification";
+  }
+  if (
+    lower.includes("policy") ||
+    lower.includes("disclosure") ||
+    lower.includes("terms")
+  ) {
+    return "Policies & Disclosures";
+  }
+  if (
+    lower.includes("merchant") ||
+    lower.includes("product") ||
+    lower.includes("duplicate") ||
+    lower.includes("supporting document")
+  ) {
+    return "Merchant Evidence";
+  }
+
+  return null;
 }
 
 function dedupeKeyFor(u: ManualAttachmentInput): string {
@@ -132,26 +204,50 @@ export function formatManualAttachmentsBlock(
     unique.push(u);
   }
 
-  const groups: Array<{ label: string; items: ManualAttachmentInput[] }> = [];
+  const groups: Array<{
+    categoryLabel: string | null;
+    sections: Array<{ label: string; items: ManualAttachmentInput[] }>;
+  }> = [];
   const groupIndex = new Map<string, number>();
+  const sectionIndex = new Map<string, number>();
   for (const u of unique) {
     const fileName = sanitizeFilename(u.fileName);
+    const categoryLabel = resolveCategoryLabel(u.label);
     const sectionLabel = resolveSectionLabel(u.label, fileName);
-    let idx = groupIndex.get(sectionLabel);
-    if (idx === undefined) {
-      idx = groups.length;
-      groupIndex.set(sectionLabel, idx);
-      groups.push({ label: sectionLabel, items: [] });
+    const groupKey = categoryLabel ?? sectionLabel;
+    let groupIdx = groupIndex.get(groupKey);
+    if (groupIdx === undefined) {
+      groupIdx = groups.length;
+      groupIndex.set(groupKey, groupIdx);
+      groups.push({ categoryLabel, sections: [] });
     }
-    groups[idx].items.push(u);
+
+    const sectionKey = `${groupIdx}:${sectionLabel}`;
+    let sectionIdx = sectionIndex.get(sectionKey);
+    if (sectionIdx === undefined) {
+      sectionIdx = groups[groupIdx].sections.length;
+      sectionIndex.set(sectionKey, sectionIdx);
+      groups[groupIdx].sections.push({ label: sectionLabel, items: [] });
+    }
+    groups[groupIdx].sections[sectionIdx].items.push(u);
   }
 
   const sections: string[] = [];
   for (const g of groups) {
-    const lines: string[] = [`${g.label}:`];
-    for (const u of g.items) {
-      lines.push(`- ${sanitizeFilename(u.fileName)}`);
-      lines.push(`  ${u.url}`);
+    const lines: string[] = [];
+    if (g.categoryLabel) lines.push(`${g.categoryLabel}:`);
+    for (const section of g.sections) {
+      if (
+        !g.categoryLabel ||
+        section.label.toLowerCase() !== g.categoryLabel.toLowerCase()
+      ) {
+        if (lines.length > 0) lines.push("");
+        lines.push(`${section.label}:`);
+      }
+      for (const u of section.items) {
+        lines.push(`- ${sanitizeFilename(u.fileName)}`);
+        lines.push(`  ${u.url}`);
+      }
     }
     sections.push(lines.join("\n"));
   }

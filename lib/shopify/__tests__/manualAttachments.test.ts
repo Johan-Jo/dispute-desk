@@ -64,6 +64,8 @@ describe("formatManualAttachmentsBlock", () => {
 
     expect(block).toContain(
       [
+        "Fulfillment & Delivery:",
+        "",
         "Delivery confirmation:",
         "- delivery.jpg",
         "  https://disputedesk.app/e/d1",
@@ -72,8 +74,8 @@ describe("formatManualAttachmentsBlock", () => {
       ].join("\n"),
     );
 
-    const deliveryIdx = block!.indexOf("Delivery confirmation:");
-    const commsIdx = block!.indexOf("Customer communication:");
+    const deliveryIdx = block!.indexOf("Fulfillment & Delivery:");
+    const commsIdx = block!.indexOf("Customer Communication:");
     expect(commsIdx).toBeGreaterThan(deliveryIdx);
   });
 
@@ -338,13 +340,15 @@ describe("formatManualAttachmentsBlock", () => {
     const expected = [
       "Supporting documents (secure access links):",
       "",
+      "Fulfillment & Delivery:",
+      "",
       "Delivery confirmation:",
       "- delivery.jpg",
       "  https://disputedesk.app/e/d1",
       "- delivery-2.jpg",
       "  https://disputedesk.app/e/d2",
       "",
-      "Customer communication:",
+      "Customer Communication:",
       "- email-thread.png",
       "  https://disputedesk.app/e/c1",
       "",
