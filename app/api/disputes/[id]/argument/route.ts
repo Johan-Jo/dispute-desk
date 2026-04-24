@@ -5,6 +5,7 @@ import { parseJsonBody } from "@/lib/http/parseJsonBody";
 import { generateArgumentMap } from "@/lib/argument/generateArgument";
 import { generateRebuttalDraft } from "@/lib/argument/generateRebuttal";
 import { selectRebuttalReason } from "@/lib/argument/rebuttalReason";
+import { extractEvidenceDataFromPack } from "@/lib/argument/evidenceDataFromPack";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 export const runtime = "nodejs";
@@ -88,10 +89,12 @@ export async function POST(
     );
   }
 
-  // Load pack checklist
+  // Load pack checklist + raw sections (sections feed the bank-grade
+  // rebuttal extractor so AVS/CVV codes and IP narrative cite real
+  // pack data instead of generic placeholders).
   const { data: pack } = await sb
     .from("evidence_packs")
-    .select("id, checklist_v2, checklist, shop_id")
+    .select("id, checklist_v2, checklist, shop_id, pack_json")
     .eq("id", packId)
     .single();
 
@@ -122,8 +125,21 @@ export async function POST(
   // Auto-select rebuttal reason
   const rebuttalReason = selectRebuttalReason(dispute.reason, checklist);
 
+  // Extract bank-grade evidence (AVS/CVV codes, auth/capture, IP
+  // narrative) from the persisted pack so the new template can cite
+  // real signals rather than fall back to generic wording.
+  const packJson = (pack.pack_json ?? null) as { sections?: unknown[] } | null;
+  const rawSections = Array.isArray(packJson?.sections)
+    ? (packJson.sections as Array<Record<string, unknown>>)
+    : [];
+  const evidenceData = extractEvidenceDataFromPack(rawSections, {
+    id: dispute.id,
+    reason: dispute.reason,
+    shop_id: dispute.shop_id,
+  });
+
   // Generate rebuttal
-  const rebuttalDraft = generateRebuttalDraft(argumentMap, rebuttalReason);
+  const rebuttalDraft = generateRebuttalDraft(argumentMap, rebuttalReason, evidenceData);
 
   // Upsert argument map
   if (regenerate) {

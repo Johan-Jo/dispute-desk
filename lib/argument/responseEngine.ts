@@ -59,6 +59,21 @@ export interface EvidenceData {
   deliveredDate?: string | null;
   policyTypes?: string[];
   shopDomain?: string | null;
+  // ── Bank-grade rebuttal signals (added 2026-04-24) ──
+  // Populated by extractEvidenceDataFromPack so the new template can
+  // cite real authorization/capture state and IP narrative without
+  // inventing facts. Each field stays optional — when absent, the
+  // corresponding sentence is suppressed by buildBankGradeSections.
+  authorizationSucceeded?: boolean | null;
+  captureSucceeded?: boolean | null;
+  ipCity?: string | null;
+  ipRegion?: string | null;
+  ipCountry?: string | null;
+  ipOrg?: string | null;
+  /** True iff ipinfo.privacy.{vpn, proxy, hosting} are all explicitly false. */
+  ipNoVpnProxyHosting?: boolean | null;
+  /** true / false / null — null means unknown, suppresses neutralizing clause. */
+  ipCountryMatchesShipping?: boolean | null;
 }
 
 /* ── Reason families ── */
@@ -522,6 +537,176 @@ function digitalAccess(flags: EvidenceFlags, _data: EvidenceData): RebuttalSecti
   };
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+ *  Bank-grade dispute template (FRAUDULENT, UNRECOGNIZED,
+ *  PRODUCT_NOT_RECEIVED, DUPLICATE, GENERAL)
+ *
+ *  Six sections in fixed order. Wording is mandated by product spec —
+ *  do NOT paraphrase. Each subsection is conditionally emitted based
+ *  only on signals that actually exist in the pack.
+ *
+ *  Refund / subscription / product / digital families intentionally
+ *  keep their existing family-specific helpers above — they argue a
+ *  different defense (refund processed, cancellation timeline,
+ *  product conformity) and would regress under a legitimacy template.
+ * ────────────────────────────────────────────────────────────────────── */
+
+const BANK_GRADE_OPENING =
+  "We formally dispute this chargeback and request that the issuer reverse the claim based on clear evidence that the transaction was completed by the legitimate cardholder.";
+
+const BANK_GRADE_CLOSING =
+  "Based on the successful authorization, verified payment credentials, and normal transaction flow, the evidence demonstrates that this transaction was completed by the legitimate cardholder. We request that the issuer reverse this chargeback and return the disputed funds to the merchant.";
+
+const TRANSACTION_LEGITIMACY_TEXT =
+  "The transaction was completed through the merchant's standard online checkout and was successfully authorized and captured using valid cardholder credentials.";
+
+const CUSTOMER_BEHAVIOR_TEXT =
+  "The order was placed through the merchant's online store using the standard checkout process. An order confirmation was generated immediately and a confirmation email was sent to the customer.";
+
+const IP_VPN_CLEAN_SENTENCE =
+  "No VPN, proxy, or hosting indicators were detected, indicating a standard consumer network.";
+
+const IP_MISMATCH_NEUTRALIZER =
+  "While the purchase location differs from the shipping destination, this is consistent with legitimate cross-border purchasing behavior and does not indicate unauthorized use.";
+
+function transactionLegitimacy(
+  flags: EvidenceFlags,
+  data: EvidenceData,
+): RebuttalSection | null {
+  // Suppressed entirely when no payment signal exists — prevents the
+  // "successfully authorized and captured" claim from running unsupported.
+  const hasAnyPaymentSignal =
+    flags.avs ||
+    flags.cvv ||
+    data.authorizationSucceeded === true ||
+    data.captureSucceeded === true;
+  if (!hasAnyPaymentSignal) return null;
+
+  return {
+    id: "transaction-legitimacy",
+    type: "claim",
+    claimId: "transaction-legitimacy",
+    text: TRANSACTION_LEGITIMACY_TEXT,
+    evidenceRefs: flags.avs || flags.cvv ? ["avs_cvv_match"] : [],
+  };
+}
+
+function paymentVerificationBankGrade(
+  _flags: EvidenceFlags,
+  data: EvidenceData,
+): RebuttalSection | null {
+  const lines: string[] = [];
+
+  if (data.authorizationSucceeded === true) {
+    lines.push("The transaction was successfully authorized by the issuer.");
+  }
+  if (data.captureSucceeded === true) {
+    lines.push("The payment was subsequently captured without error.");
+  }
+  // Full AVS/CVV sentences only when the issuer returned the strong match codes.
+  if (data.avsCode === "Y") {
+    lines.push(
+      "Address Verification Service (AVS) returned a match (Y), confirming that the billing address matched the issuer's records.",
+    );
+  }
+  if (data.cvvCode === "M") {
+    lines.push(
+      "Card Verification Value (CVV) returned a match (M), confirming that the correct card security code was provided.",
+    );
+  }
+
+  if (lines.length === 0) return null;
+
+  const citesAvsCvv = data.avsCode === "Y" || data.cvvCode === "M";
+
+  return {
+    id: "payment-verification",
+    type: "claim",
+    claimId: "payment-verification",
+    text: lines.join(" "),
+    evidenceRefs: citesAvsCvv ? ["avs_cvv_match"] : [],
+  };
+}
+
+function customerCheckoutBehavior(
+  flags: EvidenceFlags,
+): RebuttalSection | null {
+  if (!flags.orderConfirmation) return null;
+
+  return {
+    id: "customer-checkout-behavior",
+    type: "claim",
+    claimId: "customer-checkout-behavior",
+    text: CUSTOMER_BEHAVIOR_TEXT,
+    evidenceRefs: ["order_confirmation"],
+  };
+}
+
+function deviceAndLocation(data: EvidenceData): RebuttalSection | null {
+  const hasIp =
+    Boolean(data.ipCity) ||
+    Boolean(data.ipRegion) ||
+    Boolean(data.ipCountry) ||
+    Boolean(data.ipOrg);
+  if (!hasIp) return null;
+
+  const geoBits = [data.ipCity, data.ipRegion, data.ipCountry]
+    .map((s) => (s ?? "").trim())
+    .filter(Boolean);
+  const geo = geoBits.length > 0 ? geoBits.join(", ") : null;
+  const org = (data.ipOrg ?? "").trim() || null;
+
+  let geoSentence: string;
+  if (geo && org) {
+    geoSentence = `The transaction originated from an IP address located in ${geo}, associated with ${org}.`;
+  } else if (geo) {
+    geoSentence = `The transaction originated from an IP address located in ${geo}.`;
+  } else if (org) {
+    geoSentence = `The transaction originated from an IP address associated with ${org}.`;
+  } else {
+    return null;
+  }
+
+  const parts: string[] = [geoSentence];
+
+  if (data.ipNoVpnProxyHosting === true) {
+    parts.push(IP_VPN_CLEAN_SENTENCE);
+  }
+
+  if (data.ipCountryMatchesShipping === false) {
+    parts.push(IP_MISMATCH_NEUTRALIZER);
+  }
+
+  return {
+    id: "device-location",
+    type: "claim",
+    claimId: "device-location",
+    text: parts.join(" "),
+    evidenceRefs: ["ip_location_check"],
+  };
+}
+
+/**
+ * Build the four middle sections of the bank-grade rebuttal (legitimacy,
+ * payment verification, customer/checkout behavior, device & location).
+ *
+ * The Opening / Closing paragraphs ride on FamilyStrategy.summary and
+ * FamilyStrategy.conclusion — they are wrapped as `summary` / `conclusion`
+ * sections in generateDisputeResponse and always emit. The middle
+ * sections are conditionally emitted based on real evidence.
+ */
+export function buildBankGradeSections(
+  flags: EvidenceFlags,
+  data: EvidenceData,
+): (RebuttalSection | null)[] {
+  return [
+    transactionLegitimacy(flags, data),
+    paymentVerificationBankGrade(flags, data),
+    customerCheckoutBehavior(flags),
+    deviceAndLocation(data),
+  ];
+}
+
 /* ── Family-specific assembly ── */
 
 interface FamilyStrategy {
@@ -530,29 +715,31 @@ interface FamilyStrategy {
   sections: (RebuttalSection | null)[];
 }
 
+/**
+ * Fraud-family strategy — uses the bank-grade six-section template.
+ * Applies to FRAUDULENT and UNRECOGNIZED. The argument is shaped as a
+ * legitimacy/authorization defense, which matches what these reason
+ * codes actually require the merchant to prove.
+ */
 function fraudStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
   return {
-    summary: "We respectfully dispute this claim. The transaction was successfully authorized and completed following all standard payment verification procedures. The evidence provided demonstrates that the cardholder actively participated in the transaction and that all security checks were passed.",
-    conclusion: "All available evidence supports that this transaction was completed by the legitimate cardholder using valid payment credentials. The successful verification checks and normal purchase flow confirm authorization. We respectfully request that this dispute be resolved in favor of the merchant.",
-    sections: [
-      paymentVerification(flags, data),
-      orderFlow(flags, data),
-      customerBehavior(flags, data),
-      deliveryConfirmation(flags, data),
-    ],
+    summary: BANK_GRADE_OPENING,
+    conclusion: BANK_GRADE_CLOSING,
+    sections: buildBankGradeSections(flags, data),
   };
 }
 
+/**
+ * Delivery-family strategy — uses the bank-grade template.
+ * Applies to PRODUCT_NOT_RECEIVED. The legitimacy + IP + behavior
+ * evidence is what an issuer reviews even on PNR claims; carrier
+ * records ride along via the manual-attachment block.
+ */
 function deliveryStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
   return {
-    summary: "We respectfully dispute this claim. The order was fulfilled and delivered as confirmed by carrier records. All shipping commitments were met in accordance with the store's disclosed policies.",
-    conclusion: "The evidence confirms that the order was shipped, tracked, and delivered as promised. We respectfully request that this dispute be resolved in favor of the merchant.",
-    sections: [
-      deliveryConfirmation(flags, data),
-      orderFlow(flags, data),
-      customerCommunication(flags, data),
-      policyAgreement(flags, data),
-    ],
+    summary: BANK_GRADE_OPENING,
+    conclusion: BANK_GRADE_CLOSING,
+    sections: buildBankGradeSections(flags, data),
   };
 }
 
@@ -595,15 +782,17 @@ function subscriptionStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyS
   };
 }
 
+/**
+ * Billing-family strategy — uses the bank-grade template.
+ * Applies to DUPLICATE. Authorization + capture proof of a single,
+ * properly authorized transaction is the strongest defense to a
+ * "duplicate charge" claim and is what the new template emphasises.
+ */
 function billingStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
   return {
-    summary: "We respectfully dispute this claim. Transaction records confirm that all charges were processed correctly and correspond to valid orders.",
-    conclusion: "The billing records confirm that the charges were accurate and properly processed. We respectfully request that this dispute be resolved in favor of the merchant.",
-    sections: [
-      billingAccuracy(flags, data),
-      orderFlow(flags, data),
-      paymentVerification(flags, data),
-    ],
+    summary: BANK_GRADE_OPENING,
+    conclusion: BANK_GRADE_CLOSING,
+    sections: buildBankGradeSections(flags, data),
   };
 }
 
@@ -620,17 +809,17 @@ function digitalStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrate
   };
 }
 
+/**
+ * General-family strategy — uses the bank-grade template.
+ * Applies to GENERAL (no specific reason code). The legitimacy +
+ * authorization + IP narrative is the strongest neutral defense
+ * available regardless of the issuer's underlying complaint.
+ */
 function generalStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
   return {
-    summary: "We respectfully dispute this claim. The transaction was properly authorized, the order was fulfilled as described, and all relevant store policies were disclosed at checkout.",
-    conclusion: "The evidence supports that this transaction was legitimate and properly fulfilled. We respectfully request that this dispute be resolved in favor of the merchant.",
-    sections: [
-      paymentVerification(flags, data),
-      orderFlow(flags, data),
-      deliveryConfirmation(flags, data),
-      customerCommunication(flags, data),
-      policyAgreement(flags, data),
-    ],
+    summary: BANK_GRADE_OPENING,
+    conclusion: BANK_GRADE_CLOSING,
+    sections: buildBankGradeSections(flags, data),
   };
 }
 

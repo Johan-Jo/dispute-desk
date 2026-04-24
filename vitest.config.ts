@@ -11,6 +11,10 @@ export default defineConfig({
   },
   test: {
     globals: false,
-    include: ["tests/**/*.test.ts", "lib/**/__tests__/**/*.test.ts"],
+    include: [
+      "tests/**/*.test.ts",
+      "lib/**/__tests__/**/*.test.ts",
+      "lib/**/tests/**/*.test.ts",
+    ],
   },
 });
