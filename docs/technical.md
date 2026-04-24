@@ -762,9 +762,13 @@ The `customer_account_info` section (2026-04-20) is distinct from `activity_log`
 - Endpoint: `POST /api/packs/:packId/upload` (multipart)
 - Storage: Supabase Storage bucket **`evidence-packs`** (same bucket as rendered pack PDFs), object key **`{shopId}/{packId}/manual-{timestamp}.{ext}`** — path is relative to the bucket only (no extra bucket-name prefix in the key).
 - `evidence_items.payload` includes `storagePath` and `storageBucket` (`evidence-packs`) for new rows. Older rows may omit `storageBucket` or point at legacy paths.
-- Legacy bucket **`evidence-uploads`** is provisioned and kept MIME-open via migration `20260424150000_evidence_uploads_bucket.sql` (dashboard-only buckets had caused Storage **400** when `allowed_mime_types` blocked JPEGs, etc.).
-- Max 10 MB, types: PNG, JPEG, GIF, WebP, PDF, TXT, CSV
-- Creates `evidence_items` row with `source: manual_upload`
+- **Bucket MIME / size is controlled in-repo**, not via the Supabase dashboard. Two migrations upsert each bucket as private with `allowed_mime_types = null` and `file_size_limit >= 10 MB`:
+  - `20260424150000_evidence_uploads_bucket.sql` — legacy `evidence-uploads`.
+  - `20260424170000_evidence_packs_bucket_mime.sql` — active `evidence-packs`.
+  Both buckets had been created in the dashboard with `allowed_mime_types` restricted to `application/pdf` (chosen at creation time because the only writer then was `renderPdfJob`). That restriction made Storage return **400** when merchants later uploaded JPEGs / PNGs through `/api/packs/:packId/upload`. MIME allowlisting is now enforced in the API (`ALLOWED_TYPES`), not at the bucket.
+- Max 10 MB, types: PNG, JPEG, GIF, WebP, PDF, TXT, CSV.
+- Creates `evidence_items` row with `source: manual_upload`.
+- **Merchant-safe errors (2026-04-24):** on Supabase Storage failures the API maps the raw error to controlled copy (`merchantUploadMessage` in `app/api/packs/[packId]/upload/route.ts`) — MIME restriction, size limit, and duplicate-name get distinct messages; everything else gets a generic "try again / contact support". The raw Supabase message (`errorMessage`, `errorName`, `bucket`, `storagePath`, `fileType`, `fileSize`) is still logged server-side under `[packs/upload] storage upload failed`. The dispute workspace hook (`useDisputeWorkspace.uploadEvidence`) reads the response `{ error }` and shows it as the inline banner instead of the previous generic "Upload failed — try again" string.
 
 ### Pack detail page: template vs dispute mode
 

@@ -80,10 +80,11 @@ Both pages link from the dispute detail page.
 ### 2.7 — Manual File Upload
 
 - Endpoint: `POST /api/packs/:packId/upload` (multipart form)
-- Storage: Supabase Storage bucket **`evidence-packs`** at `{shopId}/{packId}/manual-{timestamp}.{ext}` (shared with pack PDFs; payload stores `storageBucket`). Migration `20260424150000_evidence_uploads_bucket.sql` maintains optional **`evidence-uploads`** bucket config for legacy compatibility.
+- Storage: Supabase Storage bucket **`evidence-packs`** at `{shopId}/{packId}/manual-{timestamp}.{ext}` (shared with pack PDFs; payload stores `storageBucket`). Bucket MIME / size constraints are managed in-repo via migrations `20260424150000_evidence_uploads_bucket.sql` and `20260424170000_evidence_packs_bucket_mime.sql` (both set `allowed_mime_types = null`, `file_size_limit >= 10 MB`). Neither bucket restricts MIME types anymore — the API allowlist is the single source of truth.
 - Validation: 10 MB max, allowed types (PNG, JPEG, GIF, WebP, PDF, TXT, CSV)
 - Creates `evidence_items` row with `source: manual_upload`
 - Logs audit event (`item_added`)
+- **Error surfacing:** Supabase Storage errors (MIME / size / duplicate) are mapped to merchant-safe copy by `merchantUploadMessage`; raw SDK messages are logged only. The dispute workspace hook reads the JSON `error` field and renders it inline.
 
 ## Key Files
 
