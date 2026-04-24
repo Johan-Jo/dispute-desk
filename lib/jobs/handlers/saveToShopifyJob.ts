@@ -26,6 +26,17 @@ import {
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
 import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
 import {
+  formatManualAttachmentsBlock,
+  type ManualAttachmentInput,
+  type PackPdfInput,
+} from "@/lib/shopify/manualAttachments";
+import {
+  ATTACHMENT_LINK_TTL_DAYS,
+  buildAttachmentUrl,
+  requireEvidenceLinkSecret,
+  signAttachmentToken,
+} from "@/lib/links/attachmentLinks";
+import {
   DISPUTE_EVIDENCE_UPDATE_MUTATION,
   type DisputeEvidenceUpdateResult,
   type DisputeEvidenceUpdateInput,
@@ -238,6 +249,73 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   // which gates output through `bankEligible`. Raw-dumping the IP string
   // would bypass that gate and leak negative signals (e.g. a Brazilian IP
   // on a US-shipping order) into the bank's view of the case.
+
+
+  // ═══════════════════════════════════════════════════════════
+  //  MANUAL ATTACHMENTS → DisputeDesk URLs in uncategorizedText
+  //
+  //  Shopify's public Admin API does not let third-party apps attach
+  //  files to disputes (see lib/shopify/disputeFileUpload.ts). Instead
+  //  we cite time-limited DisputeDesk URLs (`https://disputedesk.app/e/<token>`)
+  //  that stream bytes through our origin via `app/e/[token]/route.ts`.
+  //  The Supabase storage host is never exposed to the bank.
+  //
+  //  evidence_items is queried here — not pack_json.sections — because
+  //  pack_json is a build-time snapshot and does not include files the
+  //  merchant uploaded after the initial build.
+  // ═══════════════════════════════════════════════════════════
+
+  const linkSecret = requireEvidenceLinkSecret();
+  const linkExp =
+    Math.floor(Date.now() / 1000) + ATTACHMENT_LINK_TTL_DAYS * 24 * 60 * 60;
+
+  const { data: manualItems } = await sb
+    .from("evidence_items")
+    .select("id, label, payload, created_at")
+    .eq("pack_id", packId)
+    .eq("source", "manual_upload")
+    .order("created_at", { ascending: false });
+
+  const manualAttachments: ManualAttachmentInput[] = (manualItems ?? []).map(
+    (item) => {
+      const meta = (item.payload ?? {}) as Record<string, unknown>;
+      const token = signAttachmentToken(
+        { k: "item", id: String(item.id), p: packId, exp: linkExp },
+        linkSecret,
+      );
+      return {
+        label: (item.label as string | null) ?? null,
+        fileName: typeof meta.fileName === "string" ? meta.fileName : null,
+        fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,
+        createdAt: (item.created_at as string | null) ?? null,
+        url: buildAttachmentUrl(token),
+      };
+    },
+  );
+
+  let pdfAttachment: PackPdfInput | null = null;
+  const { data: packForPdf } = await sb
+    .from("evidence_packs")
+    .select("pdf_path")
+    .eq("id", packId)
+    .single();
+  if (packForPdf?.pdf_path) {
+    const token = signAttachmentToken(
+      { k: "pdf", id: packId, p: packId, exp: linkExp },
+      linkSecret,
+    );
+    pdfAttachment = { url: buildAttachmentUrl(token) };
+  }
+
+  const attachmentsBlock = formatManualAttachmentsBlock(
+    manualAttachments,
+    pdfAttachment,
+  );
+  if (attachmentsBlock) {
+    input.uncategorizedText = input.uncategorizedText
+      ? `${input.uncategorizedText}\n\n${attachmentsBlock}`
+      : attachmentsBlock;
+  }
 
 
   // ═══════════════════════════════════════════════════════════
@@ -532,6 +610,8 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       verified,
       verification: verificationDiff,
       final_status: finalStatus,
+      manual_attachment_count: manualAttachments.length,
+      pdf_attached: pdfAttachment !== null,
     },
   });
 

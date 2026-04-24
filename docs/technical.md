@@ -1281,6 +1281,30 @@ All evidence is therefore routed into the 9 text fields (`uncategorizedText` as 
 
 The stub `lib/shopify/disputeFileUpload.ts` is kept as a documentation artifact of what was tried; it exports nothing and is not called. If Shopify ever adds a supported upload path, re-introspect first, confirm the returned identifier shape matches `DisputeFileUploadInput.id: ID!`, and rebuild from scratch.
 
+### Manual attachments via DisputeDesk-hosted links
+
+Because Shopify cannot accept files from third-party apps (see section above), manual uploads and the rendered pack PDF are reachable by the issuing bank through **DisputeDesk-hosted** URLs rather than raw Supabase storage links. The bank-facing origin is always our canonical domain; the Supabase storage host never appears in any response, redirect, or header.
+
+**URL shape:** `https://disputedesk.app/e/<token>` where `<token>` is `<base64url(payload)>.<base64url(hmac-sha256)>`. The payload is `{ k: "item" | "pdf", id, p, exp }` — `k` is the target kind, `id` is the row id (`evidence_items.id` for `item`, pack id for `pdf`), `p` is the pack id (defence-in-depth cross-check at download), and `exp` is an absolute unix-seconds expiry. `ATTACHMENT_LINK_TTL_DAYS = 180`.
+
+**Secret:** `EVIDENCE_LINK_SECRET` (≥32 chars). Used as the HMAC key. If missing at submission time, `requireEvidenceLinkSecret()` throws and the `save_to_shopify` job fails loud — no dead links are ever shipped. Rotating the secret invalidates every previously-issued link; acceptable because dispute review windows are finite.
+
+**Route (`app/e/[token]/route.ts`):** verifies the HMAC and expiry, resolves the target row in Postgres, calls `sb.storage.from(bucket).download(path)` to read the bytes via the service role, and returns them with `Content-Type`, `Content-Disposition: inline; filename="<sanitized>"`, `Content-Length`, `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`. **No `createSignedUrl` call anywhere** — we never mint a Supabase URL, so it can't leak via redirects, proxy logs, or compliance tooling. Any failure returns `404 Not Found` to avoid disclosing why.
+
+**Submission format:** the job handler (`lib/jobs/handlers/saveToShopifyJob.ts`) queries `evidence_items` with `source = "manual_upload"` for the pack (NOT `pack_json.sections`, because that is a build-time snapshot and misses post-build uploads), signs one token per row plus one for the pack PDF, and appends a text block built by `formatManualAttachmentsBlock` (`lib/shopify/manualAttachments.ts`) to **`input.uncategorizedText` only**. Header is pinned at `Supporting documents (secure access links):`. No other Shopify field is modified. The `evidence_saved_to_shopify` audit event records `manual_attachment_count` and `pdf_attached` for traceability.
+
+**Security model:**
+
+| Property | Guarantee |
+|---|---|
+| Integrity | HMAC-SHA256 prevents forgery. Any edit to `id`, `p`, `exp`, or `k` invalidates the signature. |
+| Expiry | Token's own `exp` field is checked server-side. Expired tokens 404. |
+| Confidentiality | Same class as a signed URL: possession grants access. No per-reviewer auth (issuing banks don't have accounts with us). |
+| Host hygiene | Supabase is never contacted by the bank's client. Bytes are served from `disputedesk.app`. |
+| Revocation | Global only (rotate `EVIDENCE_LINK_SECRET`). Per-token revocation would need a `revoked_at` column — not implemented. |
+
+**Known pre-existing gap (tracked, not fixed here):** `GET /api/packs/:packId/download` is unauthenticated today. Anyone who can guess a pack id can fetch a short-lived signed URL for the pack PDF. This predates the `/e/<token>` work and is a separate follow-up; it does not compromise the `/e/<token>` model.
+
 ### Save Safeguards
 
 The API and the client enforce three gates before a save is allowed:
