@@ -11,6 +11,7 @@ import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import { claimAndSendDeferredNewDisputeReviewAlert } from "@/lib/email/sendNewDisputeAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import {
@@ -254,6 +255,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${PARKED_FOR_REVIEW}:${packId}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
+    }
+
+    // "Your response is ready" new-dispute email: only after automated evidence
+    // is collected (deferred from first sync when a build was enqueued).
+    if (pack.dispute_id && !alreadySaved) {
+      void claimAndSendDeferredNewDisputeReviewAlert(pack.dispute_id).catch(
+        () => {
+          /* non-fatal */
+        },
+      );
     }
 
     return { action: "park_for_review", details: reason };

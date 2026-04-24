@@ -1095,7 +1095,7 @@
     "email": "E-mail",
     "saveChanges": "Salvar alterações",
     "newDisputeAlerts": "Alertas de novas disputas",
-    "newDisputeAlertsDesc": "Receba notificações quando novos chargebacks aparecerem",
+    "newDisputeAlertsDesc": "Receba avisos sobre novos chargebacks e consultas. Em revisão, o e-mail é enviado quando seu pacote automático estiver pronto.",
     "deadlineReminders": "Lembretes de prazo",
     "deadlineRemindersDesc": "E-mails de lembrete antes dos prazos de resposta",
     "packCompletion": "Conclusão de pacotes",
@@ -1150,7 +1150,7 @@
     "teamEmailDesc": "Alertas e notificações de disputas são enviados para este endereço.",
     "emailSaveError": "Não foi possível salvar o e-mail. Tente novamente.",
     "notifNewDispute": "Novas disputas",
-    "notifNewDisputeDesc": "Seja notificado quando uma nova disputa chegar",
+    "notifNewDisputeDesc": "Seja notificado quando uma nova disputa precisar de atenção. Se suas regras enviarem para revisão, o e-mail é enviado após a coleta automática de evidências.",
     "notifBeforeDue": "Antes do prazo",
     "notifBeforeDueDesc": "Lembrete 24 horas antes do prazo da disputa",
     "notifEvidenceReady": "Evidência pronta",
@@ -1490,7 +1490,7 @@
       },
       "automationOverview": {
         "title": "Como a automação funciona",
-        "body": "O DisputeDesk é focado em automação. Veja o fluxo:\n\n1. Uma nova disputa aparece no Shopify.\n2. O DisputeDesk a detecta (via webhook ou sincronização agendada).\n3. Suas regras são avaliadas para decidir: pacote automático ou enviar para fila de revisão.\n4. Se pacote automático: um pacote de evidências é gerado automaticamente a partir dos dados do pedido, informações de rastreamento e políticas da loja.\n5. A pontuação de completude é calculada. Se atingir o limite configurado e não houver bloqueios, as evidências são salvas no Shopify automaticamente.\n6. Se revisão for necessária: o pacote aparece na sua Fila de Revisão para aprovação manual.\n\n**Biblioteca de pacotes vs regras de roteamento:** Os modelos que você instala em Pacotes ficam na sua biblioteca de evidências (seções e narrativas editáveis). **As regras de automação** só decidem se uma disputa nova passa pelo fluxo padrão de geração automática ou vai primeiro para a fila de revisão—não escolhem um modelo da biblioteca para essa geração automática. A geração automática usa coletores de pedido, rastreamento e políticas.\n\nVocê controla cada etapa através das configurações de automação e regras. A automação pode ser totalmente ativada, parcialmente ativada (geração automática mas salvamento manual) ou totalmente desativada."
+        "body": "O DisputeDesk é focado em automação. Veja o fluxo:\n\n1. Uma nova disputa aparece no Shopify.\n2. O DisputeDesk a detecta (via webhook ou sincronização agendada).\n3. Suas regras são avaliadas para decidir: pacote automático ou enviar para fila de revisão.\n4. Se pacote automático: um pacote de evidências é gerado automaticamente a partir dos dados do pedido, informações de rastreamento e políticas da loja.\n5. A pontuação de completude é calculada. Se atingir o limite configurado e não houver bloqueios, as evidências são salvas no Shopify automaticamente.\n6. Se revisão for necessária: o pacote aparece na sua Fila de Revisão para aprovação manual.\n\n**Biblioteca de pacotes vs regras de roteamento:** Os modelos que você instala em Pacotes ficam na sua biblioteca de evidências (seções e narrativas editáveis). **As regras de automação** só decidem se uma disputa nova passa pelo fluxo padrão de geração automática ou vai primeiro para a fila de revisão—não escolhem um modelo da biblioteca para essa geração automática. A geração automática usa coletores de pedido, rastreamento e políticas.\n\nVocê controla cada etapa através das configurações de automação e regras. A automação pode ser totalmente ativada, parcialmente ativada (geração automática mas salvamento manual) ou totalmente desativada.\n\n**E-mail (modo revisão):** quando uma disputa vai para revisão e a geração do pacote é enfileirada, o e-mail “pronto para revisar” só é enviado depois que as evidências automáticas forem coletadas e o pacote estiver pronto — não no instante em que a disputa é detectada. Se a geração não começar (por exemplo, auto-build desligado ou limite de pacotes), você ainda pode ser notificado na detecção. Ligue ou desligue em Configurações → Notificações (novas disputas)."
       },
       "viewingFilteringDisputes": {
         "title": "Visualizando e filtrando disputas",
@@ -2679,7 +2679,7 @@
       "sendInvite": "Enviar convite",
       "emailNotifications": "Notificações por e-mail",
       "newDispute": "Nova disputa",
-      "newDisputeDesc": "Notificar para cada nova disputa",
+      "newDisputeDesc": "Aviso quando uma disputa precisar de atenção. Em revisão, e-mail após o pacote de evidências estar pronto.",
       "beforeDue": "Antes do prazo",
       "beforeDueDesc": "Lembrete 3 dias antes do vencimento",
       "evidenceReady": "Evidência pronta",

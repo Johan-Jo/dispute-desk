@@ -1044,7 +1044,7 @@
     "email": "Correo electrónico",
     "saveChanges": "Guardar cambios",
     "newDisputeAlerts": "Alertas de nuevas disputas",
-    "newDisputeAlertsDesc": "Recibir notificación cuando aparezcan nuevos contracargos",
+    "newDisputeAlertsDesc": "Recibe avisos por nuevos contracargos y consultas. En revisión, el correo llega cuando tu paquete automático esté listo.",
     "deadlineReminders": "Recordatorios de fechas límite",
     "deadlineRemindersDesc": "Recordatorios por correo antes de las fechas límite",
     "packCompletion": "Paquete completado",
@@ -1100,7 +1100,7 @@
     "teamEmailDesc": "Las alertas y notificaciones de disputas se envían a esta dirección.",
     "emailSaveError": "No se pudo guardar el correo electrónico. Inténtelo de nuevo.",
     "notifNewDispute": "Nuevas disputas",
-    "notifNewDisputeDesc": "Recibe una notificación cuando llegue una nueva disputa",
+    "notifNewDisputeDesc": "Recibe un aviso cuando una disputa nueva requiera tu atención. Si tus reglas la envían a revisión, el correo se envía tras recopilar la evidencia automáticamente.",
     "notifBeforeDue": "Antes del vencimiento",
     "notifBeforeDueDesc": "Recordatorio 24 horas antes del plazo de la disputa",
     "notifEvidenceReady": "Evidencia lista",
@@ -1430,7 +1430,7 @@
       },
       "automationOverview": {
         "title": "Cómo funciona la automatización",
-        "body": "DisputeDesk prioriza la automatización:\n\n1. Una nueva disputa aparece en Shopify.\n2. DisputeDesk la detecta.\n3. Se evalúan sus reglas.\n4. Si auto-paquete: se crea un paquete automáticamente.\n5. Se calcula la puntuación de completitud.\n6. Si requiere revisión: el paquete va a la cola de revisión.\n\nUsted controla cada paso a través de su configuración y reglas."
+        "body": "DisputeDesk prioriza la automatización:\n\n1. Una nueva disputa aparece en Shopify.\n2. DisputeDesk la detecta.\n3. Se evalúan sus reglas.\n4. Si auto-paquete: se crea un paquete automáticamente.\n5. Se calcula la puntuación de completitud.\n6. Si requiere revisión: el paquete va a la cola de revisión.\n\nUsted controla cada paso a través de su configuración y reglas.\n\n**Correo (modo revisión):** si una disputa va a revisión y se encola la generación del paquete, el correo de «listo para revisar» se envía solo tras recopilar la evidencia automáticamente y cuando el paquete está listo, no en el instante de la detección. Si no se inicia la generación (p. ej., auto-construcción desactivada o límite de paquetes), aún puedes recibir un aviso al detectarse. Activa o desactívalo en Ajustes → Notificaciones (nuevas disputas)."
       },
       "viewingFilteringDisputes": {
         "title": "Ver y filtrar disputas",

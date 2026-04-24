@@ -1095,7 +1095,7 @@
     "email": "E-mail",
     "saveChanges": "Enregistrer les modifications",
     "newDisputeAlerts": "Alertes nouveaux litiges",
-    "newDisputeAlertsDesc": "Être notifié quand de nouvelles rétrofacturations apparaissent",
+    "newDisputeAlertsDesc": "Soyez notifié pour les rétrofacturations et demandes. En validation, l'e-mail part lorsque votre paquet automatisé est prêt.",
     "deadlineReminders": "Rappels de dates limites",
     "deadlineRemindersDesc": "Rappels par e-mail avant les dates limites",
     "packCompletion": "Dossier terminé",
@@ -1150,7 +1150,7 @@
     "teamEmailDesc": "Les alertes et notifications de litiges sont envoyées à cette adresse.",
     "emailSaveError": "Impossible d'enregistrer l'e-mail. Veuillez réessayer.",
     "notifNewDispute": "Nouveaux litiges",
-    "notifNewDisputeDesc": "Soyez notifié à l'arrivée d'un nouveau litige",
+    "notifNewDisputeDesc": "Soyez notifié lorsqu'un nouveau litige requiert votre attention. Si vos règles l'envoient en validation, l'e-mail part après la collecte automatique des preuves.",
     "notifBeforeDue": "Avant l'échéance",
     "notifBeforeDueDesc": "Rappel 24 heures avant la date limite",
     "notifEvidenceReady": "Preuves prêtes",
@@ -1490,7 +1490,7 @@
       },
       "automationOverview": {
         "title": "Comment fonctionne l'automatisation",
-        "body": "DisputeDesk est conçu pour l'automatisation :\n\n1. Un nouveau litige apparaît dans Shopify.\n2. DisputeDesk le détecte.\n3. Vos règles sont évaluées.\n4. Si auto-dossier : un dossier est créé automatiquement.\n5. Le score de complétude est calculé.\n6. Si examen requis : le dossier va en file d'attente.\n\n**Bibliothèque de packs vs règles de routage :** Les modèles installés sous Packs constituent votre bibliothèque de preuves (sections et textes modifiables). **Les règles d'automatisation** décident seulement si un nouveau litige exécute le pipeline standard de génération automatique ou est envoyé d'abord en file d'examen—elles ne sélectionnent pas un modèle de bibliothèque pour cette génération. La génération auto utilise les collecteurs de commande, de suivi et de politiques.\n\nVous contrôlez chaque étape via vos paramètres et règles."
+        "body": "DisputeDesk est conçu pour l'automatisation :\n\n1. Un nouveau litige apparaît dans Shopify.\n2. DisputeDesk le détecte.\n3. Vos règles sont évaluées.\n4. Si auto-dossier : un dossier est créé automatiquement.\n5. Le score de complétude est calculé.\n6. Si examen requis : le dossier va en file d'attente.\n\n**Bibliothèque de packs vs règles de routage :** Les modèles installés sous Packs constituent votre bibliothèque de preuves (sections et textes modifiables). **Les règles d'automatisation** décident seulement si un nouveau litige exécute le pipeline standard de génération automatique ou est envoyé d'abord en file d'examen—elles ne sélectionnent pas un modèle de bibliothèque pour cette génération. La génération auto utilise les collecteurs de commande, de suivi et de politiques.\n\nVous contrôlez chaque étape via vos paramètres et règles.\n\n**E-mail (mode validation) :** lorsqu'un litige est routé vers la validation et qu'une génération de paquet est lancée, l'e-mail « prêt à examiner » n'est envoyé qu'après la collecte automatique des preuves et lorsque le paquet est prêt — pas à la détection. Si aucune génération ne démarre (auto-build désactivé ou quota dépassé), une notification à la détection reste possible. Paramètres → Notifications (nouveaux litiges)."
       },
       "viewingFilteringDisputes": {
         "title": "Afficher et filtrer les litiges",
@@ -2662,7 +2662,7 @@
       "sendInvite": "Envoyer l'invitation",
       "emailNotifications": "Notifications par e-mail",
       "newDispute": "Nouveau litige",
-      "newDisputeDesc": "Notifier pour chaque nouveau litige",
+      "newDisputeDesc": "Notification lorsqu'un litige requiert votre attention. En validation, e-mail après que le paquet soit prêt.",
       "beforeDue": "Avant la date limite",
       "beforeDueDesc": "Rappel 3 jours avant l'échéance",
       "evidenceReady": "Preuve prête",

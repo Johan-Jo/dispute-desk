@@ -1,12 +1,16 @@
 /**
  * Send "new dispute detected" email to the merchant.
  *
- * Triggered in syncDisputes when a dispute is upserted for the first time.
- * Checks the `newDispute` notification preference before sending.
+ * Triggered in syncDisputes when a dispute is upserted for the first time,
+ * or from evaluateAndMaybeAutoSave when a review-mode build finishes
+ * (see claimAndSendDeferredNewDisputeReviewAlert). Checks the `newDispute`
+ * notification preference before sending.
  *
  * The email body is selected by `resolvedMode`:
  *   - "auto"   → "we handled it automatically" confirmation (submission already happened)
  *   - "review" → "your response is ready, please review and submit" call-to-action
+ *     (deferred when automation enqueued a build so this only sends after
+ *     evidence is collected and the pack is parked for review)
  *
  * Callers must pass the mode their automation pipeline actually resolved to
  * (after normalizeMode). Legacy modes should never reach this function.
@@ -658,6 +662,49 @@ ${shared.footer}`;
   } catch (err) {
     console.error(
       "[email] New dispute alert failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+/**
+ * Claim `new_dispute_alert_sent_at` and send the review variant of the
+ * new-dispute email after the automated pack build has finished and the pack
+ * is parked for review. No-op if the alert was already sent or the claim fails.
+ * Fire-and-forget friendly — use void + .catch in callers.
+ */
+export async function claimAndSendDeferredNewDisputeReviewAlert(
+  disputeId: string,
+): Promise<void> {
+  try {
+    const sb = getServiceClient();
+    const { data: row, error } = await sb
+      .from("disputes")
+      .update({ new_dispute_alert_sent_at: new Date().toISOString() })
+      .eq("id", disputeId)
+      .is("new_dispute_alert_sent_at", null)
+      .select(
+        "id, shop_id, reason, phase, amount, currency_code, due_at, order_name, dispute_evidence_gid",
+      )
+      .maybeSingle();
+
+    if (error || !row) return;
+
+    await sendNewDisputeAlert({
+      shopId: row.shop_id,
+      disputeId: row.id,
+      reason: row.reason,
+      phase: row.phase,
+      amount: row.amount,
+      currencyCode: row.currency_code,
+      dueAt: row.due_at,
+      orderName: row.order_name,
+      resolvedMode: "review",
+      shopifyDisputeEvidenceGid: row.dispute_evidence_gid,
+    });
+  } catch (err) {
+    console.error(
+      "[email] Deferred new-dispute (review) alert failed:",
       err instanceof Error ? err.message : err,
     );
   }

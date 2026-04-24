@@ -23,8 +23,11 @@ vi.mock("@/lib/security/encryption", () => ({
   deserializeEncrypted: vi.fn().mockReturnValue({}),
   decrypt: vi.fn().mockReturnValue("token-decrypted"),
 }));
-vi.mock("@/lib/automation/pipeline", () => ({
+const { runAutomationPipeline: mockRunPipeline } = vi.hoisted(() => ({
   runAutomationPipeline: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/automation/pipeline", () => ({
+  runAutomationPipeline: mockRunPipeline,
 }));
 vi.mock("@/lib/rules/evaluateRules", () => ({
   evaluateRules: vi
@@ -192,6 +195,7 @@ function buildFakeClient(opts: {
 describe("syncDisputes — new-dispute alert dedupe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRunPipeline.mockResolvedValue(undefined);
     mockGraphQL.mockResolvedValue({
       data: {
         disputes: {
@@ -253,5 +257,34 @@ describe("syncDisputes — new-dispute alert dedupe", () => {
         reason: "FRAUDULENT",
       }),
     );
+  });
+
+  it("does NOT send the review email at sync when automation enqueued a build (deferred until pack is ready)", async () => {
+    mockRunPipeline.mockResolvedValue({ action: "pack_enqueued" });
+    mockGetServiceClient.mockReturnValue(
+      buildFakeClient({
+        existingBehavior: "null-no-error",
+        alertAlreadySent: false,
+      }),
+    );
+
+    await syncDisputes(SHOP_ID, { triggerAutomation: true });
+
+    expect(mockRunPipeline).toHaveBeenCalled();
+    expect(mockSendAlert).not.toHaveBeenCalled();
+  });
+
+  it("still sends at sync for review when the pipeline does not enqueue a build", async () => {
+    mockRunPipeline.mockResolvedValue({ action: "skipped_auto_build_off" });
+    mockGetServiceClient.mockReturnValue(
+      buildFakeClient({
+        existingBehavior: "null-no-error",
+        alertAlreadySent: false,
+      }),
+    );
+
+    await syncDisputes(SHOP_ID, { triggerAutomation: true });
+
+    expect(mockSendAlert).toHaveBeenCalledTimes(1);
   });
 });

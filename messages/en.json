@@ -447,7 +447,7 @@
     "stateSomeUrgent": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {urgent, plural, one {1 needs} other {# need}} immediate attention — overdue or due soon.",
     "stateNeedsReview": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {review, plural, one {1 is flagged} other {# are flagged}} for your review before DisputeDesk can proceed.",
     "stateNeedsSync": "You have {total, plural, one {1 dispute} other {# disputes}}. {sync, plural, one {1 hasn't} other {# haven't}} been classified yet — run a sync to catch up.",
-    "alertsNudge": "Want email alerts when new disputes arrive? Add your team email in Settings.",
+    "alertsNudge": "Want an email when a dispute is ready to review? Add your team email in Settings.",
     "alertsNudgeLink": "Open Settings",
     "csvOrder": "Order",
     "csvId": "ID",
@@ -1087,13 +1087,13 @@
     "teamEmailDesc": "Dispute alerts and notifications are sent to this address.",
     "emailSaveError": "Failed to save email. Please try again.",
     "notifNewDispute": "New dispute alerts",
-    "notifNewDisputeDesc": "Get notified when a new dispute arrives",
+    "notifNewDisputeDesc": "Get notified when a new dispute needs your attention. If your rules send a dispute to review, the email is sent after automated evidence is collected.",
     "notifBeforeDue": "Before due date",
     "notifBeforeDueDesc": "Reminder before dispute deadline",
     "notifEvidenceReady": "Evidence ready",
     "notifEvidenceReadyDesc": "When evidence pack is complete and ready to submit",
     "newDisputeAlerts": "New dispute alerts",
-    "newDisputeAlertsDesc": "Get notified when new inquiries or chargebacks appear",
+    "newDisputeAlertsDesc": "Get notified about new chargebacks and inquiries. If a dispute is sent to review, the email is sent after your automated pack is ready.",
     "deadlineReminders": "Deadline reminders",
     "deadlineRemindersDesc": "Reminder emails before response deadlines",
     "packCompletion": "Playbook completion",
@@ -1475,7 +1475,7 @@
       },
       "automationOverview": {
         "title": "How automation works",
-        "body": "DisputeDesk is automation-first. Here's the flow:\n\n1. A new dispute appears in Shopify.\n2. DisputeDesk detects it (via webhook or scheduled sync).\n3. Your rules are evaluated to decide: auto-pack or send to review queue.\n4. If auto-pack: an evidence pack is built automatically from your order data, tracking info, and store policies.\n5. The completeness score is calculated. If it meets your threshold and there are no blockers, the evidence is saved to Shopify automatically.\n6. If review is required: the pack appears in your Review Queue for manual approval.\n\nYou control every step through your automation settings and rules. Automation can be fully enabled, partially enabled (auto-build but manual save), or disabled entirely."
+        "body": "DisputeDesk is automation-first. Here's the flow:\n\n1. A new dispute appears in Shopify.\n2. DisputeDesk detects it (via webhook or scheduled sync).\n3. Your rules are evaluated to decide: auto-pack or send to review queue.\n4. If auto-pack: an evidence pack is built automatically from your order data, tracking info, and store policies.\n5. The completeness score is calculated. If it meets your threshold and there are no blockers, the evidence is saved to Shopify automatically.\n6. If review is required: the pack appears in your Review Queue for manual approval.\n\nYou control every step through your automation settings and rules. Automation can be fully enabled, partially enabled (auto-build but manual save), or disabled entirely.\n\n**New dispute email (review mode):** When a dispute is routed to review and a pack build is queued, the “ready to review” email is only sent after automated evidence is collected and the pack is ready—not the moment the dispute is first detected. If a build is not started (for example, auto-build is off or you are over your pack limit), you may still be notified at detection time. Turn emails on or off in Settings → Notifications (new dispute alerts)."
       },
       "viewingFilteringDisputes": {
         "title": "Viewing and filtering disputes",
@@ -2367,7 +2367,7 @@
       "sendInvite": "Send invite",
       "emailNotifications": "Email notifications",
       "newDispute": "New dispute detected",
-      "newDisputeDesc": "Get notified when a new dispute arrives",
+      "newDisputeDesc": "Get notified when a new dispute needs your attention. For the review queue, we email after your evidence pack is ready.",
       "beforeDue": "48h before due date",
       "beforeDueDesc": "Reminder to submit evidence",
       "evidenceReady": "Evidence pack ready",

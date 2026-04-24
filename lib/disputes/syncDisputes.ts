@@ -489,9 +489,13 @@ export async function syncDisputes(
           }
         }
 
-        // For new disputes: resolve automation mode, fire the mode-aware
-        // alert email, and (when automation is enabled) trigger the pack
-        // pipeline. The alert is dedupe-guarded by an atomic UPDATE on
+        // For new disputes: resolve automation mode, run the pack pipeline
+        // (when enabled), then fire the mode-aware alert email unless the
+        // review flow deferred it (see below). The "response ready" review
+        // variant is sent only after the build job runs and the pack is
+        // parked for review — not while the async build is still running.
+        //
+        // The alert is dedupe-guarded by an atomic UPDATE on
         // disputes.new_dispute_alert_sent_at so it only ever fires once.
         if (!existing && upserted) {
           const phaseForRules =
@@ -520,31 +524,12 @@ export async function syncDisputes(
             );
           }
 
-          const { data: claimed } = await sb
-            .from("disputes")
-            .update({ new_dispute_alert_sent_at: new Date().toISOString() })
-            .eq("id", upserted.id)
-            .is("new_dispute_alert_sent_at", null)
-            .select("id");
-          if (claimed && claimed.length > 0) {
-            void sendNewDisputeAlert({
-              shopId,
-              disputeId: upserted.id,
-              reason: d.reasonDetails?.reason ?? null,
-              phase: d.type?.toLowerCase() ?? null,
-              amount: d.amount ? parseFloat(d.amount.amount) : null,
-              currencyCode: d.amount?.currencyCode ?? null,
-              dueAt: d.evidenceDueBy ?? null,
-              orderName: d.order?.name ?? null,
-              resolvedMode,
-              shopifyDisputeEvidenceGid: d.disputeEvidence?.id ?? null,
-            });
-          }
+          let pipelineResult: Awaited<ReturnType<typeof runAutomationPipeline>> | null =
+            null;
 
-          // Trigger the automation pipeline only when the caller asked for
-          // it. Both modes run the pipeline so a pack is always built; the
-          // pipeline's save-time logic uses the rule mode to decide whether
-          // to auto-submit (auto) or park for merchant review (review).
+          // Run the pipeline before the new-dispute email so we can skip the
+          // sync-time send when review automation enqueued a build (email is
+          // sent from evaluateAndMaybeAutoSave when the pack is ready).
           if (triggerAutomation && evalResult) {
             try {
               if (resolvedMode === "review") {
@@ -553,7 +538,7 @@ export async function syncDisputes(
                   .update({ needs_review: true, updated_at: new Date().toISOString() })
                   .eq("id", upserted.id);
               }
-              await runAutomationPipeline({
+              pipelineResult = await runAutomationPipeline({
                 id: upserted.id,
                 shop_id: shopId,
                 reason: d.reasonDetails?.reason ?? null,
@@ -567,6 +552,32 @@ export async function syncDisputes(
               result.errors.push(
                 `automation(${d.id}): ${err instanceof Error ? err.message : String(err)}`
               );
+            }
+          }
+
+          const deferReviewReadyEmail =
+            resolvedMode === "review" && pipelineResult?.action === "pack_enqueued";
+
+          if (!deferReviewReadyEmail) {
+            const { data: claimed } = await sb
+              .from("disputes")
+              .update({ new_dispute_alert_sent_at: new Date().toISOString() })
+              .eq("id", upserted.id)
+              .is("new_dispute_alert_sent_at", null)
+              .select("id");
+            if (claimed && claimed.length > 0) {
+              void sendNewDisputeAlert({
+                shopId,
+                disputeId: upserted.id,
+                reason: d.reasonDetails?.reason ?? null,
+                phase: d.type?.toLowerCase() ?? null,
+                amount: d.amount ? parseFloat(d.amount.amount) : null,
+                currencyCode: d.amount?.currencyCode ?? null,
+                dueAt: d.evidenceDueBy ?? null,
+                orderName: d.order?.name ?? null,
+                resolvedMode,
+                shopifyDisputeEvidenceGid: d.disputeEvidence?.id ?? null,
+              });
             }
           }
         }

@@ -1096,7 +1096,7 @@
     "email": "E-post",
     "saveChanges": "Spara ändringar",
     "newDisputeAlerts": "Nya tvistvarningar",
-    "newDisputeAlertsDesc": "Bli meddelad när nya återkrav dyker upp",
+    "newDisputeAlertsDesc": "Avisering vid nya återkrav och förfrågningar. Vid granskning skickas mejlet när ditt automatiska paket är klart.",
     "deadlineReminders": "Påminnelser om tidsfrister",
     "deadlineRemindersDesc": "Påminnelser via e-post innan svarstidsfrister",
     "packCompletion": "Paket klart",
@@ -1151,7 +1151,7 @@
     "teamEmailDesc": "Tvistmeddelanden och notifieringar skickas till denna adress.",
     "emailSaveError": "Kunde inte spara e-post. Försök igen.",
     "notifNewDispute": "Nya tvister",
-    "notifNewDisputeDesc": "Bli aviserad när en ny tvist inkommer",
+    "notifNewDisputeDesc": "Få avisering när en ny tvist behöver din uppmärksamhet. Om dina regler skickar den till granskning skickas mejlet när automatiska bevis har samlats in.",
     "notifBeforeDue": "Innan förfallodatum",
     "notifBeforeDueDesc": "Påminnelse 24 timmar innan tvisttiden löper ut",
     "notifEvidenceReady": "Bevis klart",
@@ -1491,7 +1491,7 @@
       },
       "automationOverview": {
         "title": "Hur automation fungerar",
-        "body": "DisputeDesk är automationsföst. Så här fungerar flödet:\n\n1. En ny tvist uppstår i Shopify.\n2. DisputeDesk upptäcker den (via webhook eller schemalagd synk).\n3. Dina regler utvärderas för att avgöra: autopaket eller granskningskö.\n4. Om autopaket: ett bevispaket byggs automatiskt från orderdata, spårningsinfo och butikspolicyer.\n5. Fullständighetspoängen beräknas. Om den uppfyller ditt tröskelvärde och det inte finns några blockeringar, sparas beviset automatiskt till Shopify.\n6. Om granskning krävs: paketet visas i din granskningskö för manuellt godkännande.\n\n**Paketbibliotek vs styrningsregler:** Mallar du installerar under Paket hamnar i ditt bevisbibliotek (avsnitt och texter att redigera). **Automatiseringsregler** avgör bara om en ny tvist kör standardflödet för autobygg eller skickas till granskningskö först—de väljer inte en biblioteksmall för just det automatiska bygget. Autobygg använder insamlare för order, spårning och policyer.\n\nDu kontrollerar varje steg genom dina automationsinställningar och regler."
+        "body": "DisputeDesk är automationsföst. Så här fungerar flödet:\n\n1. En ny tvist uppstår i Shopify.\n2. DisputeDesk upptäcker den (via webhook eller schemalagd synk).\n3. Dina regler utvärderas för att avgöra: autopaket eller granskningskö.\n4. Om autopaket: ett bevispaket byggs automatiskt från orderdata, spårningsinfo och butikspolicyer.\n5. Fullständighetspoängen beräknas. Om den uppfyller ditt tröskelvärde och det inte finns några blockeringar, sparas beviset automatiskt till Shopify.\n6. Om granskning krävs: paketet visas i din granskningskö för manuellt godkännande.\n\n**Paketbibliotek vs styrningsregler:** Mallar du installerar under Paket hamnar i ditt bevisbibliotek (avsnitt och texter att redigera). **Automatiseringsregler** avgör bara om en ny tvist kör standardflödet för autobygg eller skickas till granskningskö först—de väljer inte en biblioteksmall för just det automatiska bygget. Autobygg använder insamlare för order, spårning och policyer.\n\nDu kontrollerar varje steg genom dina automationsinställningar och regler.\n\n**E-post (granskningsläge):** när en tvist skickas till granskning och paketbygge köas skickas mejlet ”klar att granska” först efter att automatiska bevis samlats in och paketet är klart – inte i samma stund som tvisten upptäcks. Om bygget inte startar (t.ex. auto-avstängd eller pott slut) kan du ändå få en avisering vid upptäckt. På/Av under Inställningar → Aviseringar (nya tvister)."
       },
       "viewingFilteringDisputes": {
         "title": "Visa och filtrera tvister",
@@ -2527,7 +2527,7 @@
       "sendInvite": "Skicka inbjudan",
       "emailNotifications": "E-postaviseringar",
       "newDispute": "Ny tvist",
-      "newDisputeDesc": "Meddela för varje ny tvist",
+      "newDisputeDesc": "Avisering när en tvist behöver uppmärksamhet. Vid granskning: mejl när bevispaketet är klart.",
       "beforeDue": "Före förfallodatum",
       "beforeDueDesc": "Påminnelse 3 dagar före förfallodatum",
       "evidenceReady": "Bevis redo",

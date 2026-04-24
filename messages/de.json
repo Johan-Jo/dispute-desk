@@ -1044,7 +1044,7 @@
     "email": "E-Mail",
     "saveChanges": "Änderungen speichern",
     "newDisputeAlerts": "Neue Streitfall-Benachrichtigungen",
-    "newDisputeAlertsDesc": "Benachrichtigung bei neuen Chargebacks",
+    "newDisputeAlertsDesc": "Benachrichtigung bei neuen Chargebacks und Anfragen. Bei Prüfung erfolgt die E-Mail, sobald Ihr automatisiertes Paket bereit ist.",
     "deadlineReminders": "Fristen-Erinnerungen",
     "deadlineRemindersDesc": "E-Mail-Erinnerungen vor Antwortfristen",
     "packCompletion": "Paket fertiggestellt",
@@ -1100,7 +1100,7 @@
     "teamEmailDesc": "Streitfall-Benachrichtigungen werden an diese Adresse gesendet.",
     "emailSaveError": "E-Mail konnte nicht gespeichert werden. Bitte erneut versuchen.",
     "notifNewDispute": "Neue Streitfälle",
-    "notifNewDisputeDesc": "Benachrichtigung bei neuen Streitfällen",
+    "notifNewDisputeDesc": "Benachrichtigung, wenn ein neuer Streitfall Ihre Aufmerksamkeit braucht. Bei Routing zur Prüfung erfolgt die E-Mail nach automatischer Beweisaufnahme.",
     "notifBeforeDue": "Vor Fälligkeit",
     "notifBeforeDueDesc": "Erinnerung 24 Stunden vor dem Abgabetermin",
     "notifEvidenceReady": "Beweise bereit",
@@ -1430,7 +1430,7 @@
       },
       "automationOverview": {
         "title": "Wie Automatisierung funktioniert",
-        "body": "DisputeDesk ist automatisierungsorientiert:\n\n1. Ein neuer Streitfall erscheint in Shopify.\n2. DisputeDesk erkennt ihn.\n3. Ihre Regeln werden ausgewertet.\n4. Bei Auto-Paket: ein Beweispaket wird automatisch erstellt.\n5. Die Vollständigkeitspunktzahl wird berechnet.\n6. Bei erforderlicher Prüfung: das Paket erscheint in der Warteschlange.\n\nSie kontrollieren jeden Schritt über Ihre Einstellungen und Regeln."
+        "body": "DisputeDesk ist automatisierungsorientiert:\n\n1. Ein neuer Streitfall erscheint in Shopify.\n2. DisputeDesk erkennt ihn.\n3. Ihre Regeln werden ausgewertet.\n4. Bei Auto-Paket: ein Beweispaket wird automatisch erstellt.\n5. Die Vollständigkeitspunktzahl wird berechnet.\n6. Bei erforderlicher Prüfung: das Paket erscheint in der Warteschlange.\n\nSie kontrollieren jeden Schritt über Ihre Einstellungen und Regeln.\n\n**E-Mail (Prüfmodus):** Wird ein Streitfall zur Prüfung eingereiht und ein Paket-Build gestartet, wird die E-Mail mit „bereit zur Prüfung“ erst nach automatischer Beweisaufnahme und wenn das Paket bereit ist gesendet – nicht in dem Moment der ersten Erkennung. Wird kein Build gestartet (z. B. Auto-Build aus oder Kontingent überschritten), können Sie trotzdem schon bei der Erkennung benachrichtigt werden. Ein/aus in Einstellungen → Benachrichtigungen (neue Streitfälle)."
       },
       "viewingFilteringDisputes": {
         "title": "Streitfälle anzeigen und filtern",
