@@ -17,6 +17,29 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 /**
+ * Map a Supabase Storage error to merchant-safe copy. Supabase returns
+ * 400 for two distinct reasons here:
+ *   - `allowed_mime_types` blocks the file type (dashboard-configured
+ *     restriction, not something the merchant can fix).
+ *   - `file_size_limit` is below the API's 10 MB cap.
+ * Anything else falls through to a generic message; the raw text is
+ * still logged server-side for support.
+ */
+function merchantUploadMessage(err: { message?: string }, fileType: string): string {
+  const raw = (err?.message ?? "").toLowerCase();
+  if (raw.includes("mime type") || raw.includes("invalid_mime_type")) {
+    return `This Shopify store hasn't allowed ${fileType || "this file type"} uploads in evidence storage yet. Contact DisputeDesk support — it's a one-time setting.`;
+  }
+  if (raw.includes("exceeded the maximum allowed size") || raw.includes("payload too large")) {
+    return "This file is larger than your storage limit allows. Try a file under 10 MB or contact support.";
+  }
+  if (raw.includes("duplicate") || raw.includes("already exists")) {
+    return "A file with this name already exists for this pack. Rename it and try again.";
+  }
+  return "We couldn't save this file to evidence storage. Please try again, or contact support if it keeps failing.";
+}
+
+/**
  * POST /api/packs/:packId/upload
  *
  * Upload a file as manual evidence for a pack.
@@ -114,7 +137,7 @@ export async function POST(
       errorName: uploadErr.name,
     });
     return NextResponse.json(
-      { error: `Upload failed: ${uploadErr.message}` },
+      { error: merchantUploadMessage(uploadErr, file.type) },
       { status: 500 }
     );
   }

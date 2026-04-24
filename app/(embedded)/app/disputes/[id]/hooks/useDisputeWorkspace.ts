@@ -367,6 +367,7 @@ export function useDisputeWorkspace(disputeId: string) {
         uploadingField: field,
         failedFields: new Map([...s.failedFields].filter(([k]) => k !== field)),
       }));
+      let serverMessage: string | null = null;
       try {
         for (const file of files) {
           const form = new FormData();
@@ -377,7 +378,13 @@ export function useDisputeWorkspace(disputeId: string) {
             method: "POST",
             body: form,
           });
-          if (!res.ok) throw new Error("Upload failed");
+          if (!res.ok) {
+            const body = (await res.json().catch(() => null)) as { error?: string } | null;
+            serverMessage = typeof body?.error === "string" && body.error.trim().length > 0
+              ? body.error
+              : null;
+            throw new Error(serverMessage ?? "Upload failed");
+          }
         }
         setClientState((s) => ({
           ...s,
@@ -386,7 +393,10 @@ export function useDisputeWorkspace(disputeId: string) {
       } catch {
         setClientState((s) => ({
           ...s,
-          failedFields: new Map(s.failedFields).set(field, "Upload failed \u2014 try again"),
+          failedFields: new Map(s.failedFields).set(
+            field,
+            serverMessage ?? "Upload failed \u2014 try again",
+          ),
         }));
       } finally {
         setClientState((s) => ({ ...s, uploadingField: null }));
