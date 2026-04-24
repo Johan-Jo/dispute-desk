@@ -460,7 +460,14 @@
       "viewPack": "View Evidence Pack",
       "noPacksYet": "No evidence pack has been generated yet.",
       "generatePack": "Generate Evidence Pack",
-      "otherPacks": "{count} older {count, plural, one {pack} other {packs}}"
+      "otherPacks": "{count} older {count, plural, one {pack} other {packs}}",
+      "defenseLetterTitle": "Defense letter",
+      "defenseLetterHint": "Issuer-facing draft from this pack, included when you save to Shopify. Fraud, unrecognized, not received, duplicate, and general disputes use a structured narrative and only state payment and location facts that appear in the pack. Subscription, credit-not-processed, product-unacceptable, and digital disputes use arguments matched to those defenses.",
+      "viewFullDefenseLetter": "View full defense letter",
+      "hideFullDefenseLetter": "Hide full defense letter",
+      "defenseSectionSummary": "Summary",
+      "defenseSectionConclusion": "Conclusion",
+      "defenseSectionArgument": "Argument"
     },
     "facts": {
       "title": "Case Details",
@@ -1514,6 +1521,10 @@
       "evidenceChecklist": {
         "title": "Evidence checklist explained",
         "body": "The Evidence Checklist shows what evidence has been collected and what's still missing.\n\nEach item in the checklist is marked as:\n- Collected (green check): this evidence has been found and included.\n- Required but missing (red, labeled \"required\"): this is a blocker — you need to provide this evidence.\n- Recommended (yellow): not strictly required, but providing it would strengthen your case.\n\nThe checklist is tailored to each dispute's reason code. For example:\n- Product Not Received: prioritizes tracking, delivery proof, and shipping policy.\n- Fraudulent: prioritizes order verification, customer details, and AVS/CVV match.\n- Credit Not Processed: prioritizes refund records and refund policy.\n\nFocusing on required items first will improve your completeness score and remove blockers that prevent auto-saving."
+      },
+      "defenseLetterRebuttal": {
+        "title": "Defense letter and automated rebuttal text",
+        "body": "On the Evidence tab, **Defense letter** is the draft narrative DisputeDesk attaches when you save evidence to Shopify (together with the structured fields and any secure file links).\n\n**Which disputes use the structured issuer narrative**\n\nFor these Shopify reason families, the letter follows a fixed six-part flow: opening (chargeback dispute and reversal request), transaction legitimacy (when payment signals exist), payment verification lines (only for data that is actually in the pack), customer and checkout (when order confirmation exists), device and location (when IP enrichment exists, with neutral wording if the country differs from shipping), and closing (reversal request).\n\n- Fraudulent\n- Unrecognized\n- Product not received\n- Duplicate\n- General\n\n**Payment lines**\n\nAuthorization and capture sentences appear only when the pack supports them. AVS and CVV lines use the strong match codes only (Y and M respectively); other codes do not produce a generic AVS/CVV sentence, so the letter does not overclaim.\n\n**Which disputes keep a different argument**\n\nCredit not processed, subscription canceled, product unacceptable, and digital disputes keep family-specific arguments (for example refund processed, cancellation timeline, or product conformity) instead of the fraud-style legitimacy template.\n\n**Data source**\n\nThe text is built from your evidence pack (order, payment verification, IP check, checklist). It does not expose internal scores, \"bank eligible\" flags, or raw JSON. After you change evidence or regenerate the pack, regenerate the argument if you need the letter refreshed."
       },
       "evidencePackTemplates": {
         "title": "Using evidence pack templates",

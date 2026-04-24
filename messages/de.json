@@ -485,7 +485,14 @@
       "viewPack": "Beweispaket ansehen",
       "noPacksYet": "Es wurde noch kein Beweispaket generiert.",
       "generatePack": "Beweispaket generieren",
-      "otherPacks": "{count} ältere {count, plural, one {Paket} other {Pakete}}"
+      "otherPacks": "{count} ältere {count, plural, one {Paket} other {Pakete}}",
+      "defenseLetterTitle": "Verteidigungsschreiben",
+      "defenseLetterHint": "Aus diesem Paket erzeugter Text für den Kartenaussteller, wird beim Speichern in Shopify mitgesendet. Betrug, nicht erkannt, nicht erhalten, Duplikat und allgemein nutzen eine feste Struktur und nennen nur Zahlungs- und Standortangaben, die im Paket stehen. Abo gekündigt, Gutschrift ausstehend, Produkt inakzeptabel und digitale Fälle nutzen passende Argumentationen.",
+      "viewFullDefenseLetter": "Vollständiges Verteidigungsschreiben anzeigen",
+      "hideFullDefenseLetter": "Verteidigungsschreiben ausblenden",
+      "defenseSectionSummary": "Zusammenfassung",
+      "defenseSectionConclusion": "Schluss",
+      "defenseSectionArgument": "Argument"
     },
     "facts": {
       "title": "Falldetails",
@@ -1475,6 +1482,10 @@
       "evidenceChecklist": {
         "title": "Die Beweischeckliste erklärt",
         "body": "Die Checkliste zeigt gesammelte und fehlende Beweise.\n\nMarkierungen:\n- Gesammelt (grüner Haken): Beweis gefunden.\n- Pflicht, aber fehlend (rot): Blockierung.\n- Empfohlen (gelb): nicht Pflicht, aber hilfreich.\n\nDie Checkliste ist auf den Streitfallgrund zugeschnitten."
+      },
+      "defenseLetterRebuttal": {
+        "title": "Verteidigungsschreiben und automatischer Widerredestext",
+        "body": "On the Evidence tab, **Defense letter** is the draft narrative DisputeDesk attaches when you save evidence to Shopify (together with the structured fields and any secure file links).\n\n**Which disputes use the structured issuer narrative**\n\nFor these Shopify reason families, the letter follows a fixed six-part flow: opening (chargeback dispute and reversal request), transaction legitimacy (when payment signals exist), payment verification lines (only for data that is actually in the pack), customer and checkout (when order confirmation exists), device and location (when IP enrichment exists, with neutral wording if the country differs from shipping), and closing (reversal request).\n\n- Fraudulent\n- Unrecognized\n- Product not received\n- Duplicate\n- General\n\n**Payment lines**\n\nAuthorization and capture sentences appear only when the pack supports them. AVS and CVV lines use the strong match codes only (Y and M respectively); other codes do not produce a generic AVS/CVV sentence, so the letter does not overclaim.\n\n**Which disputes keep a different argument**\n\nCredit not processed, subscription canceled, product unacceptable, and digital disputes keep family-specific arguments (for example refund processed, cancellation timeline, or product conformity) instead of the fraud-style legitimacy template.\n\n**Data source**\n\nThe text is built from your evidence pack (order, payment verification, IP check, checklist). It does not expose internal scores, \"bank eligible\" flags, or raw JSON. After you change evidence or regenerate the pack, regenerate the argument if you need the letter refreshed."
       },
       "evidencePackTemplates": {
         "title": "Bewispaket-Vorlagen verwenden",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Card,
   BlockStack,
@@ -299,6 +300,7 @@ const FAILURE_FALLBACK = {
 
 export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   const { data, clientState, derived, actions } = workspace;
+  const tEvidence = useTranslations("disputes.evidence");
   const [letterOpen, setLetterOpen] = useState(false);
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -618,7 +620,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         <Card>
           <BlockStack gap="300">
             <InlineStack align="space-between" blockAlign="center" wrap>
-              <Text as="h3" variant="headingMd">Defense letter</Text>
+              <Text as="h3" variant="headingMd">{tEvidence("defenseLetterTitle")}</Text>
               <Button
                 variant="plain"
                 ariaExpanded={letterOpen}
@@ -626,7 +628,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                 disclosure={letterOpen ? "up" : "down"}
                 onClick={() => setLetterOpen((v) => !v)}
               >
-                {letterOpen ? "Hide full defense letter" : "View full defense letter"}
+                {letterOpen ? tEvidence("hideFullDefenseLetter") : tEvidence("viewFullDefenseLetter")}
               </Button>
             </InlineStack>
 
@@ -646,9 +648,9 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                 {rebuttalDraft.sections.map((section) => (
                   <BlockStack key={section.id} gap="100">
                     <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                      {section.type === "summary" ? "Summary" :
-                       section.type === "conclusion" ? "Conclusion" :
-                       argumentMap?.counterclaims.find((c) => c.id === section.claimId)?.title ?? "Argument"}
+                      {section.type === "summary" ? tEvidence("defenseSectionSummary") :
+                       section.type === "conclusion" ? tEvidence("defenseSectionConclusion") :
+                       argumentMap?.counterclaims.find((c) => c.id === section.claimId)?.title ?? tEvidence("defenseSectionArgument")}
                     </Text>
                     <Text as="p" variant="bodyMd">{section.text}</Text>
                     {section.evidenceRefs.length > 0 && (

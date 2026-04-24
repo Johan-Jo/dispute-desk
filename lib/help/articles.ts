@@ -147,6 +147,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tags: ["checklist", "required", "recommended", "items"],
   },
   {
+    slug: "defense-letter-rebuttal",
+    category: "evidence-packs",
+    titleKey: "help.articles.defenseLetterRebuttal.title",
+    bodyKey: "help.articles.defenseLetterRebuttal.body",
+    relatedSlugs: ["evidence-checklist", "how-evidence-saved", "field-mapping"],
+    tags: ["rebuttal", "defense letter", "issuer", "chargeback", "AVS", "CVV", "narrative"],
+  },
+  {
     slug: "evidence-pack-templates",
     category: "evidence-packs",
     titleKey: "help.articles.evidencePackTemplates.title",

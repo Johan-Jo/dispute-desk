@@ -519,7 +519,14 @@
       "viewPack": "Visa bevispaket",
       "noPacksYet": "Inget bevispaket har genererats ännu.",
       "generatePack": "Generera bevispaket",
-      "otherPacks": "{count} äldre {count, plural, one {paket} other {paket}}"
+      "otherPacks": "{count} äldre {count, plural, one {paket} other {paket}}",
+      "defenseLetterTitle": "Försvarsbreve",
+      "defenseLetterHint": "Utkast riktat till kortutgivaren från detta paket, bifogas när du sparar till Shopify. Bedrägeri, ej igenkänd, inte mottagen, duplicerad och allmän använder en strukturerad berättelse och anger endast betalnings- och platsfakta som finns i paketet. Prenumeration, kredit ej behandlad, oacceptabel produkt och digitala tvister använder argument som passar just dessa försvar.",
+      "viewFullDefenseLetter": "Visa hela försvarsbreve",
+      "hideFullDefenseLetter": "Dölj försvarsbreve",
+      "defenseSectionSummary": "Sammanfattning",
+      "defenseSectionConclusion": "Slutsats",
+      "defenseSectionArgument": "Argument"
     },
     "facts": {
       "title": "Ärendedetaljer",
@@ -1536,6 +1543,10 @@
       "evidenceChecklist": {
         "title": "Bevischecklistan förklarad",
         "body": "Bevischecklistan visar vilka bevis som samlats in och vad som saknas.\n\nVarje post markeras som:\n- Insamlat (grön bock): beviset har hittats och inkluderats.\n- Obligatoriskt men saknas (röd): detta är en blockering.\n- Rekommenderat (gul): inte strikt obligatoriskt, men stärker ditt ärende.\n\nChecklistan anpassas efter tvistens orsakskod."
+      },
+      "defenseLetterRebuttal": {
+        "title": "Försvarsbreve och automatisk motsvarotext",
+        "body": "På fliken **Bevis** är **Försvarsbreve** det utkast till berättelse som DisputeDesk bifogar när du sparar bevis till Shopify (tillsammans med de strukturerade fälten och eventuella säkra fillänkar).\n\n**Vilka tvister som använder den strukturerade utgivarberättelsen**\n\nFör dessa Shopify-orsaksfamiljer följer brevet ett fast sexdelat flöde: inledning (chargeback-tvist och begäran om återföring), transaktionslegitimitet (när betalningssignaler finns), rader om betalningsverifiering (endast för data som faktiskt finns i paketet), kund och kassa (när orderbekräftelse finns), enhet och plats (när IP-berikelse finns, med neutral formulering om land skiljer sig från leverans), och avslutning (begäran om återföring).\n\n- Bedrägeri\n- Ej igenkänd\n- Produkt inte mottagen\n- Duplicerad\n- Allmän\n\n**Betalningsrader**\n\nMeningar om auktorisering och capture visas endast när paketet stöder dem. AVS- och CVV-rader använder endast starka matchningskoder (Y respektive M); andra koder ger ingen generisk AVS/CVV-mening, så att brevet inte överdriver.\n\n**Vilka tvister som behåller ett annat argument**\n\nKredit ej behandlad, uppsagd prenumeration, oacceptabel produkt och digitala tvister behåller familjpecifika argument (t.ex. genomförd återbetalning, tidslinje för uppsägning eller produktöverensstämmelse) i stället för legitimitetsmallen i bedrägeristil.\n\n**Datakälla**\n\nTexten byggs från ditt bevispaket (order, betalningsverifikation, IP-kontroll, checklista). Den exponerar inte interna poäng, flaggor för bankklarhet eller rå JSON. När du ändrar bevis eller regenererar paketet, regenerera argumentet om brevet ska uppdateras."
       },
       "evidencePackTemplates": {
         "title": "Använda bevispaketmallar",

@@ -706,7 +706,7 @@ The Evidence tab is the analysis surface for a single dispute. It must answer th
 
 1. **Top summary card** (`EvidenceTab.tsx`) — outcome + confidence badges (`outcomeFromStrength()`, `confidenceFrom()`), a `Recommendation:` sentence, key strengths (top 3 from `whyWins.strengths`), and key gaps (top 3 from `missingItems` rendered through `impactSentence()`). Scannable in 3 seconds.
 2. **How strong your case is** (renamed from "Argument map") — counterclaims with strength badges and supporting/missing evidence. Field labels are routed through `FRIENDLY_FIELD_LABEL` (e.g., `avs_cvv_match` → "Card security checks"). Weak items always show an impact sentence rather than a bare "Insufficient" label.
-3. **Defense letter** (renamed from "Rebuttal letter") — collapsed by default to a 220-character excerpt of the summary section; full letter behind a `View full defense letter` disclosure (Polaris `Collapsible`).
+3. **Defense letter** (renamed from "Rebuttal letter") — collapsed by default to a 220-character excerpt of the summary section; full letter behind a disclosure control (Polaris `Collapsible`). Heading, toggle, and section labels (`Summary` / `Conclusion` / `Argument` fallback) are localized via `next-intl` keys under `disputes.evidence` in `EvidenceTab.tsx` (`defenseLetterTitle`, `viewFullDefenseLetter`, `hideFullDefenseLetter`, `defenseSectionSummary`, `defenseSectionConclusion`, `defenseSectionArgument`; `defenseLetterHint` is available for explanatory copy).
 4. **Evidence categories** — unchanged. Per-category collapsible card with relevance badge, item rows with status / strength / Upload / Skip / Preview controls. This is the proof surface and is intentionally untouched.
 5. **Closing action guidance Banner** — `success` tone with *"No action needed. Your case is ready for submission."* when strong; otherwise `warning` tone with *"Add &lt;top gap&gt; to strengthen your case."*
 
@@ -1303,6 +1303,8 @@ Because Shopify cannot accept files from third-party apps (see section above), m
 
 **Pack-to-EvidenceData plumbing:** `app/api/disputes/[id]/argument/route.ts` reads `pack_json.sections[]` and calls `extractEvidenceDataFromPack(sections, dispute)` (`lib/argument/evidenceDataFromPack.ts`, pure, no I/O) before `generateRebuttalDraft`. The dispute argument is reserved for correlation / future enrichment; extraction today is section-driven. The extractor pulls AVS/CVV codes from the `Payment Verification (AVS/CVV)` section, derives `authorizationSucceeded` from `avsCvvStatus ∈ {available, unavailable_from_gateway}`, derives `captureSucceeded` from the order's `displayFinancialStatus ∈ {PAID, PARTIALLY_PAID, PARTIALLY_REFUNDED}`, and converts `IP & Location Check` `ipinfo` into narrative fields (no raw JSON in the rebuttal). Raw IP addresses, coordinates, and the privacy object are not copied into issuer-facing rebuttal text.
 
+**Merchant help and i18n:** The Help Center article **`defense-letter-rebuttal`** is registered in `lib/help/articles.ts` with i18n keys `help.articles.defenseLetterRebuttal.title` / `.body` in all locale files. It is included in the Shopify embedded app help (`EMBEDDED_ARTICLE_SLUGS` in `lib/help/embedded.ts`) so merchants can read the same explanation in-app as on the portal. Related articles: `evidence-checklist`, `how-evidence-saved`, `field-mapping`.
+
 **Security model:**
 
 | Property | Guarantee |
@@ -1846,7 +1848,7 @@ includes `./content/policy-templates/**/*.md` for the
 ## Help System (EPIC 10)
 
 ### Architecture
-- 29 articles defined in `lib/help/articles.ts` (slug, category, title/body keys, tags); categories in `lib/help/categories.ts`.
+- Articles are defined in `lib/help/articles.ts` (slug, category, title/body keys, tags); categories in `lib/help/categories.ts`. The array length is the source of truth for the current catalog size.
 - Content is rendered via `next-intl` i18n keys — article titles and bodies live in `messages/{locale}.json` (BCP-47) under the `help.articles.{slug}.title` and `help.articles.{slug}.body` namespace.
 - All 12 locales must include translations for every article to support the Help Center in all languages.
 

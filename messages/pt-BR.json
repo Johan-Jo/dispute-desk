@@ -518,7 +518,14 @@
       "viewPack": "Ver pacote de evidências",
       "noPacksYet": "Nenhum pacote de evidências foi gerado ainda.",
       "generatePack": "Gerar pacote de evidências",
-      "otherPacks": "{count} {count, plural, one {pacote anterior} other {pacotes anteriores}}"
+      "otherPacks": "{count} {count, plural, one {pacote anterior} other {pacotes anteriores}}",
+      "defenseLetterTitle": "Carta de defesa",
+      "defenseLetterHint": "Rascunho para o emissor gerado a partir deste pacote; incluído ao salvar na Shopify. Fraude, não reconhecido, não recebido, duplicado e geral usam uma narrativa estruturada e só citam fatos de pagamento e localização presentes no pacote. Crédito não processado, assinatura cancelada, produto inaceitável e digital usam argumentos adequados a esses casos.",
+      "viewFullDefenseLetter": "Ver carta de defesa completa",
+      "hideFullDefenseLetter": "Ocultar carta de defesa",
+      "defenseSectionSummary": "Resumo",
+      "defenseSectionConclusion": "Conclusão",
+      "defenseSectionArgument": "Argumento"
     },
     "facts": {
       "title": "Detalhes do caso",
@@ -1535,6 +1542,10 @@
       "evidenceChecklist": {
         "title": "Checklist de evidências explicado",
         "body": "O Checklist de Evidências mostra quais evidências foram coletadas e o que ainda está faltando.\n\nCada item no checklist é marcado como:\n- Coletado (check verde): esta evidência foi encontrada e incluída.\n- Obrigatório mas ausente (vermelho, rotulado \"obrigatório\"): este é um bloqueio — você precisa fornecer esta evidência.\n- Recomendado (amarelo): não estritamente obrigatório, mas fornecê-lo fortaleceria seu caso.\n\nO checklist é adaptado ao código de motivo de cada disputa. Por exemplo:\n- Produto Não Recebido: prioriza rastreamento, comprovante de entrega e política de envio.\n- Fraude: prioriza verificação do pedido, dados do cliente e correspondência AVS/CVV.\n- Crédito Não Processado: prioriza registros de reembolso e política de reembolso.\n\nFocar nos itens obrigatórios primeiro melhorará sua pontuação de completude e removerá bloqueios que impedem o salvamento automático."
+      },
+      "defenseLetterRebuttal": {
+        "title": "Carta de defesa e contestação automática",
+        "body": "On the Evidence tab, **Defense letter** is the draft narrative DisputeDesk attaches when you save evidence to Shopify (together with the structured fields and any secure file links).\n\n**Which disputes use the structured issuer narrative**\n\nFor these Shopify reason families, the letter follows a fixed six-part flow: opening (chargeback dispute and reversal request), transaction legitimacy (when payment signals exist), payment verification lines (only for data that is actually in the pack), customer and checkout (when order confirmation exists), device and location (when IP enrichment exists, with neutral wording if the country differs from shipping), and closing (reversal request).\n\n- Fraudulent\n- Unrecognized\n- Product not received\n- Duplicate\n- General\n\n**Payment lines**\n\nAuthorization and capture sentences appear only when the pack supports them. AVS and CVV lines use the strong match codes only (Y and M respectively); other codes do not produce a generic AVS/CVV sentence, so the letter does not overclaim.\n\n**Which disputes keep a different argument**\n\nCredit not processed, subscription canceled, product unacceptable, and digital disputes keep family-specific arguments (for example refund processed, cancellation timeline, or product conformity) instead of the fraud-style legitimacy template.\n\n**Data source**\n\nThe text is built from your evidence pack (order, payment verification, IP check, checklist). It does not expose internal scores, \"bank eligible\" flags, or raw JSON. After you change evidence or regenerate the pack, regenerate the argument if you need the letter refreshed."
       },
       "evidencePackTemplates": {
         "title": "Usar modelos de pacotes de evidência",
