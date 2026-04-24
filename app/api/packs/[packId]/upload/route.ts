@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
-import { evaluateCompleteness, MANUAL_UPLOAD_FIELD } from "@/lib/automation/completeness";
+import {
+  evaluateCompletenessV2,
+  MANUAL_UPLOAD_FIELD,
+} from "@/lib/automation/completeness";
+import type { WaivedItemRecord } from "@/lib/types/evidenceItem";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Same bucket as pack PDFs (`renderPdfJob`); `evidence-uploads` is not provisioned in migrations and may 400 in prod. */
@@ -92,6 +96,14 @@ export async function POST(
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const label = (formData.get("label") as string) || "Manual upload";
+  const fieldRaw = formData.get("field");
+  // The dispute workspace attaches `field` so the server can mark that specific
+  // checklist row (e.g. `shipping_tracking`) as satisfied. Other callers (library
+  // pack uploads) omit it — those still count as a generic supporting document.
+  const uploadedField: string | null =
+    typeof fieldRaw === "string" && fieldRaw.trim().length > 0
+      ? fieldRaw.trim()
+      : null;
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -181,15 +193,24 @@ export async function POST(
     },
   });
 
-  // Recompute completeness so the progress bar updates (include manual uploads as supporting_documents)
+  // Recompute completeness so the UI (v2 checklist) reflects the upload.
+  // The workspace reads `checklist_v2` — updating only the legacy `checklist`
+  // caused uploaded rows to flicker "Included" (optimistic local state) then
+  // revert to "Missing" once the next poll overwrote the local overlay.
   const { data: packRow } = await db
     .from("evidence_packs")
-    .select("checklist")
+    .select("checklist, waived_items")
     .eq("id", packId)
     .single();
   const checklist = (packRow?.checklist ?? []) as Array<{ field: string; present?: boolean }>;
-  const presentFields = new Set(checklist.filter((c) => c.present).map((c) => c.field));
+  const waivedItems = (packRow?.waived_items ?? []) as WaivedItemRecord[];
+  const presentFields = new Set(
+    checklist.filter((c) => c.present).map((c) => c.field),
+  );
+  // Always count manual uploads as satisfying the generic "supporting documents"
+  // row, plus the specific checklist field the merchant was uploading for.
   presentFields.add(MANUAL_UPLOAD_FIELD);
+  if (uploadedField) presentFields.add(uploadedField);
 
   let disputeReason: string | null = null;
   if (pack.dispute_id) {
@@ -200,15 +221,22 @@ export async function POST(
       .single();
     disputeReason = dispute?.reason ?? null;
   }
-  const result = evaluateCompleteness(disputeReason, presentFields);
+  const result = evaluateCompletenessV2(
+    disputeReason,
+    presentFields,
+    waivedItems,
+    null,
+  );
 
   await db
     .from("evidence_packs")
     .update({
-      completeness_score: result.score,
-      checklist: result.checklist,
-      blockers: result.blockers,
-      recommended_actions: result.recommended_actions,
+      completeness_score: result.completenessScore,
+      checklist: result.legacyChecklist,
+      checklist_v2: result.checklist,
+      blockers: result.legacyBlockers,
+      recommended_actions: result.legacyRecommendedActions,
+      submission_readiness: result.submissionReadiness,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);
