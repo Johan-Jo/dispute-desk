@@ -96,6 +96,8 @@ export interface WorkspaceData {
   argumentMap: ArgumentMap | null;
   rebuttalDraft: RebuttalDraft | null;
   submissionFields: SubmissionField[];
+  /** True when the pack was updated after the saved rebuttal draft — regenerate argument to refresh the letter. */
+  rebuttalOutdated?: boolean;
   /** The rule decision for this dispute (from the latest rule_applied event). */
   appliedRule: AppliedRule | null;
   caseTypeInfo: CaseTypeInfo;

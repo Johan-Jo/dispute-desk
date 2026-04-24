@@ -96,9 +96,44 @@ function formatPaymentVerification(data: Record<string, unknown>): string {
     lines.push(`CVV (Card Verification): ${desc}`);
   }
   if (data.cardCompany) lines.push(`Card: ${safeString(data.cardCompany)}${data.lastFour ? " ending " + safeString(data.lastFour).replace(/[^0-9]/g, "") : ""}`);
+  const bin = safeString(data.bin);
+  if (bin) lines.push(`Card BIN on file: ${bin}.`);
+  const holder = safeString(data.cardholderName);
+  if (holder) lines.push(`Cardholder name on file: ${holder}.`);
   if (data.gateway) lines.push(`Payment processor: ${safeString(data.gateway).replace(/_/g, " ")}`);
 
   return lines.join("\n");
+}
+
+/** Primary checkout order row (excludes refund-history-only order sections). */
+function isPrimaryOrderSection(s: RawPackSection): boolean {
+  if (s.type !== "order") return false;
+  const d = s.data as Record<string, unknown>;
+  return "orderName" in d || "financialStatus" in d;
+}
+
+function isPaymentVerificationSection(s: RawPackSection): boolean {
+  if (s.type !== "other") return false;
+  const fp = s.fieldsProvided ?? [];
+  if (fp.includes("ip_location_check") || fp.includes("device_location_consistency")) {
+    return false;
+  }
+  if (fp.includes("customer_account_info") || fp.includes("supporting_documents")) {
+    return false;
+  }
+  if (fp.includes("avs_cvv_match")) return true;
+  const label = (s.label ?? "").toLowerCase();
+  return label.includes("payment verification") || label.includes("avs");
+}
+
+function formatCustomerAccountSummary(data: Record<string, unknown>): string {
+  const raw = data.totalOrders;
+  const total = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(total) || total < 0) return "";
+  if (total <= 1) {
+    return "Customer profile: this purchase is consistent with a new or first-time buyer record at the time of checkout.";
+  }
+  return `Customer profile: ${total} prior orders on record with the store at the time of checkout.`;
 }
 
 function formatActivityLog(data: Record<string, unknown>): string {
@@ -157,9 +192,23 @@ export function buildEvidenceForShopify(
   const input: DisputeEvidenceUpdateInput = {};
   const family = resolveReasonFamily(disputeReason);
 
-  // Format each section
-  const orderText = sections.filter(s => s.type === "order").map(s => formatOrderSection(s.data)).filter(Boolean).join("\n\n");
-  const paymentText = sections.filter(s => s.type === "other").map(s => formatPaymentVerification(s.data)).filter(Boolean).join("\n\n");
+  // Format each section — only true payment-verification `other` rows (not IP,
+  // customer account, or manual-upload summaries) feed paymentText.
+  const orderText = sections
+    .filter(isPrimaryOrderSection)
+    .map((s) => formatOrderSection(s.data))
+    .filter(Boolean)
+    .join("\n\n");
+  const paymentText = sections
+    .filter(isPaymentVerificationSection)
+    .map((s) => formatPaymentVerification(s.data))
+    .filter(Boolean)
+    .join("\n\n");
+  const customerAccountText = sections
+    .filter((s) => s.type === "other" && (s.fieldsProvided ?? []).includes("customer_account_info"))
+    .map((s) => formatCustomerAccountSummary(s.data))
+    .filter(Boolean)
+    .join("\n\n");
   const activityText = sections.filter(s => s.type === "access_log").map(s => formatActivityLog(s.data)).filter(Boolean).join("\n\n");
   const commsText = sections.filter(s => s.type === "comms").map(s => formatComms(s.data)).filter(Boolean).join("\n\n");
   const policyText = sections.filter(s => s.type === "policy").map(s => formatPolicies(s.data)).filter(Boolean).join("\n\n");
@@ -194,10 +243,11 @@ export function buildEvidenceForShopify(
     input.uncategorizedText = rebuttalText;
   }
 
-  // accessActivityLog: order details + customer activity + payment verification
+  // accessActivityLog: order details + payment verification + customer profile + activity
   const activityParts: string[] = [];
   if (orderText) activityParts.push(orderText);
   if (paymentText) activityParts.push(paymentText);
+  if (customerAccountText) activityParts.push(customerAccountText);
   if (activityText) activityParts.push(activityText);
   if (activityParts.length > 0) {
     input.accessActivityLog = activityParts.join("\n\n");

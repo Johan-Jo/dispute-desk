@@ -179,6 +179,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ? { sections: rebRow.sections, source: rebRow.source }
     : null;
 
+  const rebuttalOutdated =
+    Boolean(packRow?.updated_at) &&
+    Boolean(rebRow?.updated_at) &&
+    Boolean(argMap) &&
+    new Date(packRow!.updated_at as string).getTime() >
+      new Date(rebRow!.updated_at as string).getTime();
+
   const ruleAppliedPayload =
     (ruleAppliedRes.data?.event_payload as
       | { resulting_action?: { mode?: string } }
@@ -196,6 +203,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     pack,
     argumentMap,
     rebuttalDraft,
+    rebuttalOutdated,
     submissionFields: [],
     appliedRule,
     caseTypeInfo: {
