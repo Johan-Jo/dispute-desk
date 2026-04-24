@@ -546,6 +546,22 @@ export function evaluateCompletenessV2(
     });
   }
 
+  const metrics = deriveCompletenessMetrics(checklist);
+  return { checklist, ...metrics };
+}
+
+/**
+ * Derive score, submission readiness, and legacy mirrors from a v2 checklist.
+ *
+ * Pure function over the checklist — no order context, no template lookup.
+ * Extracted so callers that need to patch an existing `checklist_v2` (e.g.
+ * the manual-upload route, which has no Shopify order context on hand)
+ * can update a single row's status without re-resolving order-context-
+ * sensitive fields like `required_if_fulfilled` back to `unavailable`.
+ */
+export function deriveCompletenessMetrics(
+  checklist: ChecklistItemV2[],
+): Omit<CompletenessResultV2, "checklist"> {
   // Scoring: waived + available count as "present"
   const scorableItems = checklist.filter(
     (c) => c.status !== "unavailable",
@@ -621,7 +637,6 @@ export function evaluateCompletenessV2(
   return {
     completenessScore,
     evidenceStrengthScore,
-    checklist,
     submissionReadiness,
     blockers,
     warnings,

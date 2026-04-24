@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
-  evaluateCompletenessV2,
+  deriveCompletenessMetrics,
   MANUAL_UPLOAD_FIELD,
 } from "@/lib/automation/completeness";
-import type { WaivedItemRecord } from "@/lib/types/evidenceItem";
+import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Same bucket as pack PDFs (`renderPdfJob`); `evidence-uploads` is not provisioned in migrations and may 400 in prod. */
@@ -193,50 +193,43 @@ export async function POST(
     },
   });
 
-  // Recompute completeness so the UI (v2 checklist) reflects the upload.
-  // The workspace reads `checklist_v2` — updating only the legacy `checklist`
-  // caused uploaded rows to flicker "Included" (optimistic local state) then
-  // revert to "Missing" once the next poll overwrote the local overlay.
+  // Patch the existing `checklist_v2` so the uploaded row flips to "available"
+  // while every other row keeps the status the build step resolved with the
+  // real Shopify order context. Rebuilding the v2 checklist here would use the
+  // default order context (isFulfilled=false), which incorrectly re-resolves
+  // `required_if_fulfilled` rows (e.g. delivery_proof) to "unavailable" and
+  // hides their Upload button in the workspace.
   const { data: packRow } = await db
     .from("evidence_packs")
-    .select("checklist, waived_items")
+    .select("checklist_v2")
     .eq("id", packId)
     .single();
-  const checklist = (packRow?.checklist ?? []) as Array<{ field: string; present?: boolean }>;
-  const waivedItems = (packRow?.waived_items ?? []) as WaivedItemRecord[];
-  const presentFields = new Set(
-    checklist.filter((c) => c.present).map((c) => c.field),
-  );
-  // Always count manual uploads as satisfying the generic "supporting documents"
-  // row, plus the specific checklist field the merchant was uploading for.
-  presentFields.add(MANUAL_UPLOAD_FIELD);
-  if (uploadedField) presentFields.add(uploadedField);
+  const priorChecklist = (packRow?.checklist_v2 ?? []) as ChecklistItemV2[];
 
-  let disputeReason: string | null = null;
-  if (pack.dispute_id) {
-    const { data: dispute } = await db
-      .from("disputes")
-      .select("reason")
-      .eq("id", pack.dispute_id)
-      .single();
-    disputeReason = dispute?.reason ?? null;
-  }
-  const result = evaluateCompletenessV2(
-    disputeReason,
-    presentFields,
-    waivedItems,
-    null,
+  // Fields this upload has now satisfied: the specific row the merchant was
+  // uploading for (sent by the dispute workspace as `field`) plus the generic
+  // supporting-documents slot that every manual upload contributes to.
+  const fieldsNowPresent = new Set<string>();
+  fieldsNowPresent.add(MANUAL_UPLOAD_FIELD);
+  if (uploadedField) fieldsNowPresent.add(uploadedField);
+
+  const patchedChecklist: ChecklistItemV2[] = priorChecklist.map((c) =>
+    fieldsNowPresent.has(c.field) && c.status !== "waived"
+      ? { ...c, status: "available" as const, unavailableReason: undefined }
+      : c,
   );
+
+  const metrics = deriveCompletenessMetrics(patchedChecklist);
 
   await db
     .from("evidence_packs")
     .update({
-      completeness_score: result.completenessScore,
-      checklist: result.legacyChecklist,
-      checklist_v2: result.checklist,
-      blockers: result.legacyBlockers,
-      recommended_actions: result.legacyRecommendedActions,
-      submission_readiness: result.submissionReadiness,
+      completeness_score: metrics.completenessScore,
+      checklist: metrics.legacyChecklist,
+      checklist_v2: patchedChecklist,
+      blockers: metrics.legacyBlockers,
+      recommended_actions: metrics.legacyRecommendedActions,
+      submission_readiness: metrics.submissionReadiness,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);
