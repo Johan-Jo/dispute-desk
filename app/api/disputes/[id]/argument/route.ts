@@ -78,7 +78,7 @@ export async function POST(
   // Load dispute reason
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, reason, shop_id")
+    .select("id, reason, shop_id, customer_email")
     .eq("id", disputeId)
     .single();
 
@@ -136,6 +136,7 @@ export async function POST(
     id: dispute.id,
     reason: dispute.reason,
     shop_id: dispute.shop_id,
+    customer_email: dispute.customer_email,
   });
 
   // Generate rebuttal

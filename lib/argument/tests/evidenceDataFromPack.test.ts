@@ -76,6 +76,9 @@ describe("extractEvidenceDataFromPack", () => {
     expect(result.ipCountry).toBeNull();
     expect(result.ipNoVpnProxyHosting).toBeNull();
     expect(result.ipCountryMatchesShipping).toBeNull();
+    expect(result.hasOrderConfirmation).toBeUndefined();
+    expect(result.hasCustomerEmail).toBeUndefined();
+    expect(result.hasSupportingDocs).toBeUndefined();
   });
 
   it("handles null/undefined sections", () => {
@@ -83,15 +86,17 @@ describe("extractEvidenceDataFromPack", () => {
     expect(extractEvidenceDataFromPack(undefined).captureSucceeded).toBeUndefined();
   });
 
-  it("optional dispute argument does not change extraction", () => {
+  it("optional dispute argument enriches hasCustomerEmail when pack omits email", () => {
     const sections = [paymentSection(), orderSection()];
-    expect(extractEvidenceDataFromPack(sections)).toEqual(
+    expect(extractEvidenceDataFromPack(sections).hasCustomerEmail).toBeUndefined();
+    expect(
       extractEvidenceDataFromPack(sections, {
         id: "dispute-1",
         reason: "FRAUDULENT",
         shop_id: "shop-1",
-      }),
-    );
+        customer_email: "synced@example.com",
+      }).hasCustomerEmail,
+    ).toBe(true);
   });
 
   it("extracts AVS and CVV codes from the payment-verification section", () => {
@@ -275,5 +280,32 @@ describe("extractEvidenceDataFromPack", () => {
     ]);
     expect(result.ipCity).toBe("Stockholm");
     expect(result.ipCountry).toBe("SE");
+  });
+
+  it("sets hasOrderConfirmation when an order section exists", () => {
+    expect(extractEvidenceDataFromPack([orderSection()]).hasOrderConfirmation).toBe(true);
+  });
+
+  it("sets hasCustomerEmail when order has customerEmail", () => {
+    const result = extractEvidenceDataFromPack([
+      orderSection({
+        data: {
+          financialStatus: "PAID",
+          customerEmail: "buyer@example.com",
+          shippingAddress: { city: "Stockholm", countryCode: "SE" },
+        },
+      }),
+    ]);
+    expect(result.hasCustomerEmail).toBe(true);
+  });
+
+  it("sets hasSupportingDocs when a manual_upload section exists", () => {
+    const manual: RawSection = {
+      type: "other",
+      label: "Manual uploads",
+      source: "manual_upload",
+      data: { files: [] },
+    };
+    expect(extractEvidenceDataFromPack([manual]).hasSupportingDocs).toBe(true);
   });
 });

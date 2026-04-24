@@ -59,13 +59,11 @@ export interface EvidenceData {
   deliveredDate?: string | null;
   policyTypes?: string[];
   shopDomain?: string | null;
-  // ── Bank-grade rebuttal signals (added 2026-04-24) ──
-  // Populated by extractEvidenceDataFromPack so the new template can
-  // cite real authorization/capture state and IP narrative without
-  // inventing facts. Each field stays optional — when absent, the
-  // corresponding sentence is suppressed by buildBankGradeSections.
-  authorizationSucceeded?: boolean | null;
-  captureSucceeded?: boolean | null;
+  // ── Bank-grade rebuttal signals (pack + dispute extract) ──
+  // Populated by extractEvidenceDataFromPack; optional fields suppress
+  // the matching production sentence in buildBankGradeRebuttal.
+  authorizationSucceeded?: boolean;
+  captureSucceeded?: boolean;
   ipCity?: string | null;
   ipRegion?: string | null;
   ipCountry?: string | null;
@@ -74,6 +72,12 @@ export interface EvidenceData {
   ipNoVpnProxyHosting?: boolean | null;
   /** true / false / null — null means unknown, suppresses neutralizing clause. */
   ipCountryMatchesShipping?: boolean | null;
+  /** Order/checkout evidence present in the pack (standard online flow). */
+  hasOrderConfirmation?: boolean;
+  /** Customer email on the order record (confirmation email sentence). */
+  hasCustomerEmail?: boolean;
+  /** Manual-upload / supporting document sections present in the pack. */
+  hasSupportingDocs?: boolean;
 }
 
 /* ── Reason families ── */
@@ -557,154 +561,179 @@ const BANK_GRADE_OPENING =
 const BANK_GRADE_CLOSING =
   "Based on the successful authorization, verified payment credentials, and normal transaction flow, the evidence demonstrates that this transaction was completed by the legitimate cardholder. We request that the issuer reverse this chargeback and return the disputed funds to the merchant.";
 
-const TRANSACTION_LEGITIMACY_TEXT =
-  "The transaction was completed through the merchant's standard online checkout and was successfully authorized and captured using valid cardholder credentials.";
-
-const CUSTOMER_BEHAVIOR_TEXT =
-  "The order was placed through the merchant's online store using the standard checkout process. An order confirmation was generated immediately and a confirmation email was sent to the customer.";
-
 const IP_VPN_CLEAN_SENTENCE =
   "No VPN, proxy, or hosting indicators were detected, indicating a standard consumer network.";
 
 const IP_MISMATCH_NEUTRALIZER =
   "While the purchase location differs from the shipping destination, this is consistent with legitimate cross-border purchasing behavior and does not indicate unauthorized use.";
 
-function transactionLegitimacy(
+const SUPPORTING_DOCS_PARAGRAPH =
+  "Supporting documentation is provided to reinforce the legitimacy of the transaction, including identity-linked materials and transaction-related records associated with the order. These documents are consistent with the customer information used during checkout and support that the purchase was made by the authorized cardholder.";
+
+export type BankGradeMiddleKind = "payment" | "transaction" | "device" | "supporting";
+
+function hasDeviceLocationBlock(data: EvidenceData): boolean {
+  return (
+    Boolean((data.ipCity ?? "").trim()) ||
+    Boolean((data.ipRegion ?? "").trim()) ||
+    Boolean((data.ipCountry ?? "").trim()) ||
+    Boolean((data.ipOrg ?? "").trim())
+  );
+}
+
+/**
+ * Merge checklist-derived flags into pack-extracted evidence so the
+ * issuer template still fires when the argument map has order/supporting
+ * signals but the pack snapshot omits optional extractor fields.
+ */
+export function mergeBankGradeEvidenceData(
   flags: EvidenceFlags,
   data: EvidenceData,
-): RebuttalSection | null {
-  // Suppressed entirely when no payment signal exists — prevents the
-  // "successfully authorized and captured" claim from running unsupported.
-  const hasAnyPaymentSignal =
-    flags.avs ||
-    flags.cvv ||
-    data.authorizationSucceeded === true ||
-    data.captureSucceeded === true;
-  if (!hasAnyPaymentSignal) return null;
-
+): EvidenceData {
   return {
-    id: "transaction-legitimacy",
-    type: "claim",
-    claimId: "transaction-legitimacy",
-    text: TRANSACTION_LEGITIMACY_TEXT,
-    evidenceRefs: flags.avs || flags.cvv ? ["avs_cvv_match"] : [],
-  };
-}
-
-function paymentVerificationBankGrade(
-  _flags: EvidenceFlags,
-  data: EvidenceData,
-): RebuttalSection | null {
-  const lines: string[] = [];
-
-  if (data.authorizationSucceeded === true) {
-    lines.push("The transaction was successfully authorized by the issuer.");
-  }
-  if (data.captureSucceeded === true) {
-    lines.push("The payment was subsequently captured without error.");
-  }
-  // Full AVS/CVV sentences only when the issuer returned the strong match codes.
-  if (data.avsCode === "Y") {
-    lines.push(
-      "Address Verification Service (AVS) returned a match (Y), confirming that the billing address matched the issuer's records.",
-    );
-  }
-  if (data.cvvCode === "M") {
-    lines.push(
-      "Card Verification Value (CVV) returned a match (M), confirming that the correct card security code was provided.",
-    );
-  }
-
-  if (lines.length === 0) return null;
-
-  const citesAvsCvv = data.avsCode === "Y" || data.cvvCode === "M";
-
-  return {
-    id: "payment-verification",
-    type: "claim",
-    claimId: "payment-verification",
-    text: lines.join(" "),
-    evidenceRefs: citesAvsCvv ? ["avs_cvv_match"] : [],
-  };
-}
-
-function customerCheckoutBehavior(
-  flags: EvidenceFlags,
-): RebuttalSection | null {
-  if (!flags.orderConfirmation) return null;
-
-  return {
-    id: "customer-checkout-behavior",
-    type: "claim",
-    claimId: "customer-checkout-behavior",
-    text: CUSTOMER_BEHAVIOR_TEXT,
-    evidenceRefs: ["order_confirmation"],
-  };
-}
-
-function deviceAndLocation(data: EvidenceData): RebuttalSection | null {
-  const hasIp =
-    Boolean(data.ipCity) ||
-    Boolean(data.ipRegion) ||
-    Boolean(data.ipCountry) ||
-    Boolean(data.ipOrg);
-  if (!hasIp) return null;
-
-  const geoBits = [data.ipCity, data.ipRegion, data.ipCountry]
-    .map((s) => (s ?? "").trim())
-    .filter(Boolean);
-  const geo = geoBits.length > 0 ? geoBits.join(", ") : null;
-  const org = (data.ipOrg ?? "").trim() || null;
-
-  let geoSentence: string;
-  if (geo && org) {
-    geoSentence = `The transaction originated from an IP address located in ${geo}, associated with ${org}.`;
-  } else if (geo) {
-    geoSentence = `The transaction originated from an IP address located in ${geo}.`;
-  } else if (org) {
-    geoSentence = `The transaction originated from an IP address associated with ${org}.`;
-  } else {
-    return null;
-  }
-
-  const parts: string[] = [geoSentence];
-
-  if (data.ipNoVpnProxyHosting === true) {
-    parts.push(IP_VPN_CLEAN_SENTENCE);
-  }
-
-  if (data.ipCountryMatchesShipping === false) {
-    parts.push(IP_MISMATCH_NEUTRALIZER);
-  }
-
-  return {
-    id: "device-location",
-    type: "claim",
-    claimId: "device-location",
-    text: parts.join(" "),
-    evidenceRefs: ["ip_location_check"],
+    ...data,
+    hasOrderConfirmation: data.hasOrderConfirmation ?? flags.orderConfirmation,
   };
 }
 
 /**
- * Build the four middle sections of the bank-grade rebuttal (legitimacy,
- * payment verification, customer/checkout behavior, device & location).
- *
- * The Opening / Closing paragraphs ride on FamilyStrategy.summary and
- * FamilyStrategy.conclusion — they are wrapped as `summary` / `conclusion`
- * sections in generateDisputeResponse and always emit. The middle
- * sections are conditionally emitted based on real evidence.
+ * Internal structure for bank-grade output — keeps paragraph order and
+ * evidence-ref kinds aligned.
  */
+export function buildBankGradeStructure(data: EvidenceData): {
+  opening: string;
+  closing: string;
+  middles: { kind: BankGradeMiddleKind; text: string }[];
+} {
+  const middles: { kind: BankGradeMiddleKind; text: string }[] = [];
+
+  // ── Section 2 — Payment authentication (one paragraph) ──
+  const paySentences: string[] = [];
+  if (data.authorizationSucceeded === true) {
+    paySentences.push("The transaction was successfully authorized by the issuer.");
+  }
+  if (data.captureSucceeded === true) {
+    paySentences.push("The payment was subsequently captured without error.");
+  }
+  if (data.avsCode === "Y") {
+    paySentences.push(
+      "Address Verification Service (AVS) returned a full match (Y), confirming that the billing address matched the issuer's records.",
+    );
+  }
+  if (data.cvvCode === "M") {
+    paySentences.push(
+      "Card Verification Value (CVV) returned a match (M), confirming that the correct card security code was provided.",
+    );
+  }
+  if (paySentences.length > 0) {
+    paySentences.push(
+      "These verification results demonstrate that the purchaser had possession of the card details at the time of the transaction.",
+    );
+    middles.push({ kind: "payment", text: paySentences.join(" ") });
+  }
+
+  // ── Section 3 — Transaction behavior (one paragraph) ──
+  if (data.hasOrderConfirmation === true) {
+    const trans: string[] = [
+      "The order was placed through the merchant's standard online checkout and followed a normal customer-driven purchase flow.",
+      "An order confirmation was generated immediately after checkout.",
+    ];
+    if (data.hasCustomerEmail === true) {
+      trans.push("A confirmation email was sent to the customer's registered email address.");
+    }
+    trans.push(
+      "The payment progressed from authorization to capture without any anomalies or indicators of irregular activity.",
+    );
+    middles.push({ kind: "transaction", text: trans.join(" ") });
+  }
+
+  // ── Section 4 — Device & location (one paragraph) ──
+  if (hasDeviceLocationBlock(data)) {
+    const city = (data.ipCity ?? "").trim();
+    const region = (data.ipRegion ?? "").trim();
+    const country = (data.ipCountry ?? "").trim();
+    const org = (data.ipOrg ?? "").trim();
+    const geoBits = [city, region, country].filter(Boolean);
+    const geo = geoBits.length > 0 ? geoBits.join(", ") : "";
+
+    let base: string;
+    if (geo && org) {
+      base = `The transaction originated from an IP address located in ${geo}, associated with ${org}.`;
+    } else if (geo) {
+      base = `The transaction originated from an IP address located in ${geo}.`;
+    } else {
+      base = `The transaction originated from an IP address associated with ${org}.`;
+    }
+
+    const devParts: string[] = [base];
+    if (data.ipNoVpnProxyHosting === true) {
+      devParts.push(IP_VPN_CLEAN_SENTENCE);
+    }
+    if (data.ipCountryMatchesShipping === false) {
+      devParts.push(IP_MISMATCH_NEUTRALIZER);
+    }
+    middles.push({ kind: "device", text: devParts.join(" ") });
+  }
+
+  // ── Section 5 — Supporting documentation ──
+  if (data.hasSupportingDocs === true) {
+    middles.push({ kind: "supporting", text: SUPPORTING_DOCS_PARAGRAPH });
+  }
+
+  return { opening: BANK_GRADE_OPENING, closing: BANK_GRADE_CLOSING, middles };
+}
+
+/**
+ * Single Shopify-ready plain-text body: opening, conditional middle
+ * paragraphs, closing — each section one paragraph, blank lines between.
+ */
+export function buildBankGradeRebuttal(data: EvidenceData): string {
+  const s = buildBankGradeStructure(data);
+  return [s.opening, ...s.middles.map((m) => m.text), s.closing].join("\n\n");
+}
+
+function evidenceRefsForBankGradeKind(
+  kind: BankGradeMiddleKind,
+  data: EvidenceData,
+): string[] {
+  if (kind === "payment") {
+    return data.avsCode === "Y" || data.cvvCode === "M" ? ["avs_cvv_match"] : [];
+  }
+  if (kind === "transaction") return ["order_confirmation"];
+  if (kind === "device") return ["ip_location_check"];
+  return ["supporting_documents"];
+}
+
+function bankGradeFamilyStrategy(merged: EvidenceData): FamilyStrategy {
+  const s = buildBankGradeStructure(merged);
+  const sections: (RebuttalSection | null)[] = s.middles.map((m) => ({
+    id: `bank-grade-${m.kind}`,
+    type: "claim" as const,
+    claimId: `bank-grade-${m.kind}`,
+    text: m.text,
+    evidenceRefs: evidenceRefsForBankGradeKind(m.kind, merged),
+  }));
+  return {
+    summary: s.opening,
+    conclusion: s.closing,
+    sections,
+  };
+}
+
+/** @deprecated Use buildBankGradeRebuttal / buildBankGradeStructure instead. */
 export function buildBankGradeSections(
   flags: EvidenceFlags,
   data: EvidenceData,
 ): (RebuttalSection | null)[] {
-  return [
-    transactionLegitimacy(flags, data),
-    paymentVerificationBankGrade(flags, data),
-    customerCheckoutBehavior(flags),
-    deviceAndLocation(data),
-  ];
+  const merged = mergeBankGradeEvidenceData(flags, data);
+  const s = buildBankGradeStructure(merged);
+  return s.middles.map((m) => ({
+    id: `bank-grade-${m.kind}`,
+    type: "claim",
+    claimId: `bank-grade-${m.kind}`,
+    text: m.text,
+    evidenceRefs: evidenceRefsForBankGradeKind(m.kind, merged),
+  }));
 }
 
 /* ── Family-specific assembly ── */
@@ -722,11 +751,7 @@ interface FamilyStrategy {
  * codes actually require the merchant to prove.
  */
 function fraudStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
-  return {
-    summary: BANK_GRADE_OPENING,
-    conclusion: BANK_GRADE_CLOSING,
-    sections: buildBankGradeSections(flags, data),
-  };
+  return bankGradeFamilyStrategy(mergeBankGradeEvidenceData(flags, data));
 }
 
 /**
@@ -736,11 +761,7 @@ function fraudStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy
  * records ride along via the manual-attachment block.
  */
 function deliveryStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
-  return {
-    summary: BANK_GRADE_OPENING,
-    conclusion: BANK_GRADE_CLOSING,
-    sections: buildBankGradeSections(flags, data),
-  };
+  return bankGradeFamilyStrategy(mergeBankGradeEvidenceData(flags, data));
 }
 
 function productStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
@@ -789,11 +810,7 @@ function subscriptionStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyS
  * "duplicate charge" claim and is what the new template emphasises.
  */
 function billingStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
-  return {
-    summary: BANK_GRADE_OPENING,
-    conclusion: BANK_GRADE_CLOSING,
-    sections: buildBankGradeSections(flags, data),
-  };
+  return bankGradeFamilyStrategy(mergeBankGradeEvidenceData(flags, data));
 }
 
 function digitalStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
@@ -816,11 +833,7 @@ function digitalStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrate
  * available regardless of the issuer's underlying complaint.
  */
 function generalStrategy(flags: EvidenceFlags, data: EvidenceData): FamilyStrategy {
-  return {
-    summary: BANK_GRADE_OPENING,
-    conclusion: BANK_GRADE_CLOSING,
-    sections: buildBankGradeSections(flags, data),
-  };
+  return bankGradeFamilyStrategy(mergeBankGradeEvidenceData(flags, data));
 }
 
 /* ── Main engine ── */

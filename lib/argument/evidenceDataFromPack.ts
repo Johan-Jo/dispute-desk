@@ -2,7 +2,7 @@
  * Extract bank-grade EvidenceData fields from the persisted pack_json.
  *
  * The bank-grade rebuttal template added in 2026-04-24 (see
- * `responseEngine.ts → buildBankGradeSections`) cites real signals
+ * `responseEngine.ts → buildBankGradeRebuttal`) cites real signals
  * such as the AVS/CVV codes returned by the issuer, whether the
  * payment was authorized and captured, and a narrative summary of
  * the IPinfo enrichment.
@@ -27,11 +27,12 @@
 
 import type { EvidenceData } from "./responseEngine";
 
-/** Minimal dispute row passed from the API route for future enrichment; currently unused. */
+/** Dispute row slice passed from the API route for email enrichment (no extra Shopify calls). */
 export type DisputeExtractContext = {
   id?: string;
   reason?: string | null;
   shop_id?: string | null;
+  customer_email?: string | null;
 };
 
 interface RawSection {
@@ -115,14 +116,22 @@ function findIpLocationSection(sections: RawSection[]): RawSection | null {
   return null;
 }
 
-/** Find the order section. orderSource emits type === "order". */
-function findOrderSection(sections: RawSection[]): RawSection | null {
+/**
+ * Primary order section (excludes secondary `order` rows such as refund history
+ * that omit checkout fields).
+ */
+function findMainOrderSection(sections: RawSection[]): RawSection | null {
   for (const s of sections) {
-    if (s.type === "order" && asObject(s.data)?.financialStatus !== undefined) {
-      return s;
-    }
+    if (s.type !== "order") continue;
+    const d = asObject(s.data);
+    if (!d) continue;
+    if ("financialStatus" in d || "orderName" in d) return s;
   }
   return null;
+}
+
+function hasManualUploadSection(sections: RawSection[]): boolean {
+  return sections.some((s) => s.source === "manual_upload");
 }
 
 /**
@@ -241,13 +250,13 @@ function deriveIpFields(ipSection: RawSection | null, order: RawSection | null):
  */
 export function extractEvidenceDataFromPack(
   sections: RawSection[] | null | undefined,
-  _dispute?: DisputeExtractContext | null,
+  dispute?: DisputeExtractContext | null,
 ): EvidenceData {
   const safeSections = Array.isArray(sections) ? sections : [];
 
   const payment = findPaymentSection(safeSections);
   const ipSection = findIpLocationSection(safeSections);
-  const order = findOrderSection(safeSections);
+  const order = findMainOrderSection(safeSections);
 
   const paymentData = asObject(payment?.data);
   const avsCode = asString(paymentData?.avsResultCode);
@@ -256,6 +265,11 @@ export function extractEvidenceDataFromPack(
   const authorizationSucceeded = deriveAuthorizationSucceeded(payment);
   const captureSucceeded = deriveCaptureSucceeded(order);
   const ipFields = deriveIpFields(ipSection, order);
+
+  const orderData = asObject(order?.data);
+  const customerEmailFromOrder = orderData ? asString(orderData.customerEmail) : null;
+  const customerEmailFromDispute = dispute ? asString(dispute.customer_email) : null;
+  const resolvedEmail = customerEmailFromOrder ?? customerEmailFromDispute;
 
   return {
     avsCode,
@@ -268,5 +282,8 @@ export function extractEvidenceDataFromPack(
     ipOrg: ipFields.ipOrg,
     ipNoVpnProxyHosting: ipFields.ipNoVpnProxyHosting,
     ipCountryMatchesShipping: ipFields.ipCountryMatchesShipping,
+    hasOrderConfirmation: order != null ? true : undefined,
+    hasCustomerEmail: resolvedEmail != null ? true : undefined,
+    hasSupportingDocs: hasManualUploadSection(safeSections) ? true : undefined,
   };
 }

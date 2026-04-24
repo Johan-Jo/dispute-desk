@@ -70,17 +70,20 @@ const FULL_FRAUD_DATA: EvidenceData = {
   ipOrg: "AS18881 TELEFÔNICA BRASIL S.A",
   ipNoVpnProxyHosting: true,
   ipCountryMatchesShipping: true,
+  hasOrderConfirmation: true,
+  hasCustomerEmail: true,
+  hasSupportingDocs: true,
 };
 
 describe("bank-grade rebuttal template — fraud family with full signals", () => {
-  it("emits all six sections in the canonical order", () => {
+  it("emits opening, middle blocks, and closing in the canonical order", () => {
     const ids = getSectionIds("fraud", FULL_FRAUD_FLAGS, FULL_FRAUD_DATA);
     expect(ids).toEqual([
       "summary",
-      "transaction-legitimacy",
-      "payment-verification",
-      "customer-checkout-behavior",
-      "device-location",
+      "bank-grade-payment",
+      "bank-grade-transaction",
+      "bank-grade-device",
+      "bank-grade-supporting",
       "conclusion",
     ]);
   });
@@ -99,15 +102,25 @@ describe("bank-grade rebuttal template — fraud family with full signals", () =
     expect(last.text).toContain("this transaction was completed by the legitimate cardholder");
   });
 
-  it("includes all four payment-verification sentences when every signal is present", () => {
+  it("includes all payment-authentication sentences when every signal is present", () => {
     const text = joinSections("fraud", FULL_FRAUD_FLAGS, FULL_FRAUD_DATA);
     expect(text).toContain("The transaction was successfully authorized by the issuer.");
     expect(text).toContain("The payment was subsequently captured without error.");
     expect(text).toContain(
-      "Address Verification Service (AVS) returned a match (Y), confirming that the billing address matched the issuer's records.",
+      "Address Verification Service (AVS) returned a full match (Y), confirming that the billing address matched the issuer's records.",
     );
     expect(text).toContain(
       "Card Verification Value (CVV) returned a match (M), confirming that the correct card security code was provided.",
+    );
+    expect(text).toContain(
+      "These verification results demonstrate that the purchaser had possession of the card details at the time of the transaction.",
+    );
+  });
+
+  it("includes the supporting-documentation paragraph when hasSupportingDocs is true", () => {
+    const text = joinSections("fraud", FULL_FRAUD_FLAGS, FULL_FRAUD_DATA);
+    expect(text).toContain(
+      "Supporting documentation is provided to reinforce the legitimacy of the transaction",
     );
   });
 
@@ -127,7 +140,7 @@ describe("bank-grade rebuttal template — payment-line gating", () => {
     const flags: EvidenceFlags = { ...EMPTY_FLAGS, avs: true };
     const data: EvidenceData = { avsCode: "Y" };
     const text = joinSections("fraud", flags, data);
-    expect(text).toContain("Address Verification Service (AVS) returned a match (Y)");
+    expect(text).toContain("Address Verification Service (AVS) returned a full match (Y)");
     expect(text).not.toContain("Card Verification Value");
     expect(text).not.toContain("successfully authorized by the issuer");
     expect(text).not.toContain("subsequently captured without error");
@@ -157,10 +170,9 @@ describe("bank-grade rebuttal template — payment-line gating", () => {
     expect(text).not.toContain("successfully authorized by the issuer");
   });
 
-  it("omits payment-verification and transaction-legitimacy when no payment signals exist", () => {
+  it("omits bank-grade-payment when no payment signals exist", () => {
     const ids = getSectionIds("fraud", EMPTY_FLAGS, EMPTY_DATA);
-    expect(ids).not.toContain("transaction-legitimacy");
-    expect(ids).not.toContain("payment-verification");
+    expect(ids).not.toContain("bank-grade-payment");
   });
 
   it("does not emit an AVS sentence when avsCode is not Y even if flags.avs is true", () => {
@@ -179,26 +191,38 @@ describe("bank-grade rebuttal template — payment-line gating", () => {
 });
 
 describe("bank-grade rebuttal template — customer/checkout gating", () => {
-  it("emits customer-checkout-behavior only when orderConfirmation is true", () => {
+  it("emits transaction behavior when orderConfirmation flag is true (merged into EvidenceData)", () => {
     const ids = getSectionIds(
       "fraud",
       { ...EMPTY_FLAGS, orderConfirmation: true },
       EMPTY_DATA,
     );
-    expect(ids).toContain("customer-checkout-behavior");
+    expect(ids).toContain("bank-grade-transaction");
     const text = joinSections("fraud", { ...EMPTY_FLAGS, orderConfirmation: true }, EMPTY_DATA);
-    expect(text).toContain("a confirmation email was sent to the customer.");
+    expect(text).toContain(
+      "The order was placed through the merchant's standard online checkout and followed a normal customer-driven purchase flow.",
+    );
+    expect(text).toContain("An order confirmation was generated immediately after checkout.");
     expect(text).not.toContain("registered email address");
   });
 
-  it("omits customer-checkout-behavior when orderConfirmation is false", () => {
+  it("includes confirmation email sentence only when hasCustomerEmail is true", () => {
+    const text = joinSections(
+      "fraud",
+      { ...EMPTY_FLAGS, orderConfirmation: true },
+      { hasOrderConfirmation: true, hasCustomerEmail: true },
+    );
+    expect(text).toContain("A confirmation email was sent to the customer's registered email address.");
+  });
+
+  it("omits bank-grade-transaction when order confirmation is absent", () => {
     const ids = getSectionIds("fraud", EMPTY_FLAGS, EMPTY_DATA);
-    expect(ids).not.toContain("customer-checkout-behavior");
+    expect(ids).not.toContain("bank-grade-transaction");
   });
 });
 
 describe("bank-grade rebuttal template — device & location gating", () => {
-  it("omits device-location when no IP narrative fields exist", () => {
+  it("omits bank-grade-device when no IP narrative fields exist", () => {
     const ids = getSectionIds("fraud", FULL_FRAUD_FLAGS, {
       ...FULL_FRAUD_DATA,
       ipCity: null,
@@ -206,16 +230,16 @@ describe("bank-grade rebuttal template — device & location gating", () => {
       ipCountry: null,
       ipOrg: null,
     });
-    expect(ids).not.toContain("device-location");
+    expect(ids).not.toContain("bank-grade-device");
   });
 
-  it("emits device-location when IP data is present", () => {
+  it("emits bank-grade-device when IP data is present", () => {
     const data: EvidenceData = {
       ipCity: "Stockholm",
       ipCountry: "SE",
       ipOrg: "Telia",
     };
-    expect(getSectionIds("fraud", EMPTY_FLAGS, data)).toContain("device-location");
+    expect(getSectionIds("fraud", EMPTY_FLAGS, data)).toContain("bank-grade-device");
   });
 
   it("uses the exact mismatch neutralizer from the spec", () => {
@@ -282,6 +306,7 @@ describe("bank-grade rebuttal template — safety constraints", () => {
     expect(text).not.toMatch(/\brisk\b/i);
     expect(text).not.toMatch(/\buncertain\b/i);
     expect(text).not.toMatch(/\bappears\b/i);
+    expect(text).not.toMatch(/\bsuggests\b/i);
   });
 
   it("never leaks internal diagnostics", () => {
@@ -296,10 +321,10 @@ describe("bank-grade rebuttal template — safety constraints", () => {
 describe("bank-grade rebuttal template — delivery, billing, general", () => {
   const canonical = [
     "summary",
-    "transaction-legitimacy",
-    "payment-verification",
-    "customer-checkout-behavior",
-    "device-location",
+    "bank-grade-payment",
+    "bank-grade-transaction",
+    "bank-grade-device",
+    "bank-grade-supporting",
     "conclusion",
   ] as const;
 
