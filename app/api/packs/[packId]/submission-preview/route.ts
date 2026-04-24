@@ -35,13 +35,24 @@ export async function GET(
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select("id, pack_json, pdf_path")
+    .select("id, pack_json, pdf_path, dispute_id")
     .eq("id", packId)
     .single();
 
   if (error || !pack) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
+
+  // Reason is needed so the manual-attachments formatter can pick the
+  // same primary category for multi-purpose evidence as the save-to-
+  // shopify job will. Missing reason → formatter falls back to its
+  // default priority order, so a 404/null here is non-fatal.
+  const { data: disputeForReason } = await sb
+    .from("disputes")
+    .select("reason")
+    .eq("id", pack.dispute_id)
+    .maybeSingle();
+  const disputeReason: string | null = disputeForReason?.reason ?? null;
 
   const packJson = pack.pack_json as {
     sections?: Array<{
@@ -120,6 +131,7 @@ export async function GET(
   const attachmentsBlock = formatManualAttachmentsBlock(
     manualAttachments,
     pdfAttachment,
+    disputeReason,
   );
   if (attachmentsBlock) {
     evidenceInput.uncategorizedText = evidenceInput.uncategorizedText

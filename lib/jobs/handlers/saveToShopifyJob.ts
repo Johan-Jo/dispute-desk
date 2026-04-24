@@ -310,6 +310,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   const attachmentsBlock = formatManualAttachmentsBlock(
     manualAttachments,
     pdfAttachment,
+    dispute.reason,
   );
   if (attachmentsBlock) {
     input.uncategorizedText = input.uncategorizedText

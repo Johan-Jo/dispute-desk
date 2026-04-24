@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MANUAL_ATTACHMENTS_HEADER,
   formatManualAttachmentsBlock,
+  selectPrimaryCategory,
 } from "../manualAttachments";
 
 describe("formatManualAttachmentsBlock", () => {
@@ -30,7 +31,7 @@ describe("formatManualAttachmentsBlock", () => {
     );
   });
 
-  it("groups multiple uploads under one shared label as a single section", () => {
+  it("groups uploads by primary category and prefixes each file with its evidence type", () => {
     const block = formatManualAttachmentsBlock(
       [
         {
@@ -59,23 +60,31 @@ describe("formatManualAttachmentsBlock", () => {
     );
     expect(block).not.toBeNull();
 
-    const deliveryHeaders = block!.match(/^Delivery confirmation:$/gm) ?? [];
-    expect(deliveryHeaders).toHaveLength(1);
-
     expect(block).toContain(
       [
         "Fulfillment & Delivery:",
-        "",
-        "Delivery confirmation:",
-        "- delivery.jpg",
+        "- Delivery confirmation - delivery.jpg",
         "  https://disputedesk.app/e/d1",
-        "- delivery-2.jpg",
+        "- Delivery confirmation - delivery-2.jpg",
         "  https://disputedesk.app/e/d2",
+      ].join("\n"),
+    );
+
+    // Old per-label sub-header `Delivery confirmation:` must not appear.
+    expect(block).not.toMatch(/^Delivery confirmation:$/m);
+
+    // Label that exactly matches its category heading collapses (no prefix).
+    expect(block).toContain(
+      [
+        "Customer Communication:",
+        "- email-thread.png",
+        "  https://disputedesk.app/e/c1",
       ].join("\n"),
     );
 
     const deliveryIdx = block!.indexOf("Fulfillment & Delivery:");
     const commsIdx = block!.indexOf("Customer Communication:");
+    expect(deliveryIdx).toBeGreaterThan(-1);
     expect(commsIdx).toBeGreaterThan(deliveryIdx);
   });
 
@@ -100,7 +109,7 @@ describe("formatManualAttachmentsBlock", () => {
       null,
     );
     expect(block).not.toBeNull();
-    expect(block).toContain("- delivery.jpg");
+    expect(block).toContain("- Delivery confirmation - delivery.jpg");
     expect(block).toContain("- email-thread.png");
     expect(block).not.toContain("uploaded 2026-04-24");
     expect(block).toContain("  https://disputedesk.app/e/d1");
@@ -122,7 +131,7 @@ describe("formatManualAttachmentsBlock", () => {
     expect(block).not.toBeNull();
     expect(block).not.toMatch(/\bMB\b/);
     expect(block).not.toMatch(/\bKB\b/);
-    expect(block).toContain("- delivery.jpg");
+    expect(block).toContain("- Delivery confirmation - delivery.jpg");
     expect(block).not.toContain("uploaded 2026-04-24");
     expect(block).toContain("  https://disputedesk.app/e/token-1");
   });
@@ -150,7 +159,8 @@ describe("formatManualAttachmentsBlock", () => {
     expect(block).not.toBeNull();
     expect(block).toContain("https://disputedesk.app/e/first");
     expect(block).not.toContain("https://disputedesk.app/e/dupe");
-    const fileLines = block!.match(/^- delivery\.jpg$/gm) ?? [];
+    const fileLines =
+      block!.match(/^- Delivery confirmation - delivery\.jpg$/gm) ?? [];
     expect(fileLines).toHaveLength(1);
   });
 
@@ -159,7 +169,7 @@ describe("formatManualAttachmentsBlock", () => {
       [
         {
           id: "stable-abc",
-          label: "A",
+          label: "Order receipt",
           fileName: "a.pdf",
           fileSize: 1,
           createdAt: "2026-04-24T00:00:00Z",
@@ -167,7 +177,7 @@ describe("formatManualAttachmentsBlock", () => {
         },
         {
           id: "stable-abc",
-          label: "A",
+          label: "Order receipt",
           fileName: "totally-different-name.pdf",
           fileSize: 9_999,
           createdAt: "2026-05-01T00:00:00Z",
@@ -195,16 +205,19 @@ describe("formatManualAttachmentsBlock", () => {
       null,
     );
     expect(block).not.toBeNull();
-    expect(block).toContain("Supporting documents:");
-    expect(block).not.toMatch(/^invoice\.pdf:$/m);
+    // "invoice" matches the Order Facts category, so the group heading
+    // is the category itself; the prefix is suppressed because the label
+    // equals the filename.
+    expect(block).toContain("Order Facts:");
     expect(block).toContain("- invoice.pdf");
+    expect(block).not.toMatch(/^- invoice\.pdf - invoice\.pdf$/m);
   });
 
   it("collapses to `Supporting documents` when the label equals the filename with an emoji prefix", () => {
-    // Emoji stripping is no longer visible in the rendered text, but it
-    // still affects the label/filename collapse: if the merchant typed
+    // Emoji stripping is not visible in the rendered text, but it still
+    // affects the label/filename collapse: if the merchant typed
     // "CONTRATO.pdf" as the label and uploaded "📄 CONTRATO.pdf", we must
-    // treat those as equal so we don't emit a filename-style heading.
+    // treat those as equal so we don't emit a redundant inline prefix.
     const block = formatManualAttachmentsBlock(
       [
         {
@@ -219,8 +232,8 @@ describe("formatManualAttachmentsBlock", () => {
     );
     expect(block).not.toBeNull();
     expect(block).toContain("Supporting documents:");
-    expect(block).not.toMatch(/^CONTRATO\.pdf:$/m);
     expect(block).toContain("- CONTRATO.pdf");
+    expect(block).not.toMatch(/^- CONTRATO\.pdf - CONTRATO\.pdf$/m);
     expect(block).not.toContain("\uD83D\uDCC4");
   });
 
@@ -266,14 +279,14 @@ describe("formatManualAttachmentsBlock", () => {
     const block = formatManualAttachmentsBlock(
       [
         {
-          label: "A",
+          label: "Receipt",
           fileName: "a.pdf",
           fileSize: null,
           createdAt: "2026-04-20T00:00:00Z",
           url: "https://disputedesk.app/e/a",
         },
         {
-          label: "B",
+          label: "Email thread",
           fileName: "b.png",
           fileSize: null,
           createdAt: "2026-04-21T00:00:00Z",
@@ -290,12 +303,13 @@ describe("formatManualAttachmentsBlock", () => {
         "  https://disputedesk.app/e/pdf",
       ].join("\n"),
     );
-    const aIdx = block!.indexOf("A:");
-    const bIdx = block!.indexOf("B:");
+    const orderIdx = block!.indexOf("Order Facts:");
+    const commsIdx = block!.indexOf("Customer Communication:");
     const pdfIdx = block!.indexOf("Full evidence pack (PDF):");
-    expect(aIdx).toBeGreaterThan(-1);
-    expect(bIdx).toBeGreaterThan(aIdx);
-    expect(pdfIdx).toBeGreaterThan(bIdx);
+    expect(orderIdx).toBeGreaterThan(-1);
+    expect(commsIdx).toBeGreaterThan(-1);
+    expect(pdfIdx).toBeGreaterThan(orderIdx);
+    expect(pdfIdx).toBeGreaterThan(commsIdx);
   });
 
   it("renders the PDF section even when there are no uploads", () => {
@@ -341,11 +355,9 @@ describe("formatManualAttachmentsBlock", () => {
       "Supporting documents (secure access links):",
       "",
       "Fulfillment & Delivery:",
-      "",
-      "Delivery confirmation:",
-      "- delivery.jpg",
+      "- Delivery confirmation - delivery.jpg",
       "  https://disputedesk.app/e/d1",
-      "- delivery-2.jpg",
+      "- Delivery confirmation - delivery-2.jpg",
       "  https://disputedesk.app/e/d2",
       "",
       "Customer Communication:",
@@ -357,5 +369,168 @@ describe("formatManualAttachmentsBlock", () => {
       "  https://disputedesk.app/e/pdf",
     ].join("\n");
     expect(block).toBe(expected);
+  });
+
+  describe("reason-aware primary category for multi-purpose evidence", () => {
+    const dualPurposeUpload = {
+      label: "Delivery confirmation email",
+      fileName: "delivery-email.pdf",
+      fileSize: null,
+      createdAt: "2026-04-24T00:00:00Z",
+      url: "https://disputedesk.app/e/dual",
+    };
+
+    it("places dual-purpose evidence under Fulfillment for a FRAUDULENT dispute", () => {
+      const block = formatManualAttachmentsBlock(
+        [dualPurposeUpload],
+        null,
+        "FRAUDULENT",
+      );
+      expect(block).toContain("Fulfillment & Delivery:");
+      expect(block).toContain(
+        "- Delivery confirmation email - delivery-email.pdf",
+      );
+      expect(block).not.toContain("Customer Communication:");
+    });
+
+    it("places dual-purpose evidence under Communication for a SUBSCRIPTION_CANCELED dispute", () => {
+      const block = formatManualAttachmentsBlock(
+        [dualPurposeUpload],
+        null,
+        "SUBSCRIPTION_CANCELED",
+      );
+      expect(block).toContain("Customer Communication:");
+      expect(block).toContain(
+        "- Delivery confirmation email - delivery-email.pdf",
+      );
+      expect(block).not.toContain("Fulfillment & Delivery:");
+    });
+
+    it("places dual-purpose evidence under Communication for a PRODUCT_UNACCEPTABLE dispute", () => {
+      const block = formatManualAttachmentsBlock(
+        [dualPurposeUpload],
+        null,
+        "PRODUCT_UNACCEPTABLE",
+      );
+      expect(block).toContain("Customer Communication:");
+      expect(block).not.toContain("Fulfillment & Delivery:");
+    });
+
+    it("falls back to default priority order when the reason is unknown or null", () => {
+      const block = formatManualAttachmentsBlock(
+        [dualPurposeUpload],
+        null,
+        null,
+      );
+      // Default order: Fulfillment beats Communication.
+      expect(block).toContain("Fulfillment & Delivery:");
+      expect(block).not.toContain("Customer Communication:");
+    });
+
+    it("never duplicates a multi-purpose upload across categories", () => {
+      const block = formatManualAttachmentsBlock(
+        [dualPurposeUpload],
+        null,
+        "FRAUDULENT",
+      );
+      expect(block).not.toBeNull();
+      const links =
+        block!.match(/https:\/\/disputedesk\.app\/e\/dual/g) ?? [];
+      expect(links).toHaveLength(1);
+    });
+  });
+
+  describe("inline evidence-type prefix", () => {
+    it("renders the prefix for typical merchant labels", () => {
+      const block = formatManualAttachmentsBlock(
+        [
+          {
+            label: "Tracking screenshot",
+            fileName: "ups.png",
+            fileSize: null,
+            createdAt: null,
+            url: "https://disputedesk.app/e/u",
+          },
+        ],
+        null,
+      );
+      expect(block).toContain("Fulfillment & Delivery:");
+      expect(block).toContain("- Tracking screenshot - ups.png");
+    });
+
+    it("suppresses the prefix when the label equals the resolved category heading", () => {
+      // Label "Customer Communication" equals the category heading
+      // (case-insensitive), so the prefix would be redundant.
+      const block = formatManualAttachmentsBlock(
+        [
+          {
+            label: "Customer Communication",
+            fileName: "thread.png",
+            fileSize: null,
+            createdAt: null,
+            url: "https://disputedesk.app/e/x",
+          },
+        ],
+        null,
+      );
+      expect(block).toContain("Customer Communication:");
+      expect(block).toContain("- thread.png");
+      expect(block).not.toMatch(
+        /^- Customer Communication - thread\.png$/m,
+      );
+    });
+
+    it("strips emoji from the rendered prefix", () => {
+      const block = formatManualAttachmentsBlock(
+        [
+          {
+            label: "\uD83D\uDCE6 Shipping label",
+            fileName: "label.png",
+            fileSize: null,
+            createdAt: null,
+            url: "https://disputedesk.app/e/y",
+          },
+        ],
+        null,
+      );
+      expect(block).toContain("- Shipping label - label.png");
+      expect(block).not.toContain("\uD83D\uDCE6");
+    });
+  });
+});
+
+describe("selectPrimaryCategory", () => {
+  it("returns null when the label matches no category", () => {
+    expect(selectPrimaryCategory("Random gibberish", null)).toBeNull();
+    expect(selectPrimaryCategory(null, null)).toBeNull();
+    expect(selectPrimaryCategory("", "FRAUDULENT")).toBeNull();
+  });
+
+  it("returns the single matching category when the label is unambiguous", () => {
+    expect(selectPrimaryCategory("Tracking number", null)).toBe(
+      "Fulfillment & Delivery",
+    );
+    expect(selectPrimaryCategory("Email thread", null)).toBe(
+      "Customer Communication",
+    );
+  });
+
+  it("breaks multi-category ties using the dispute reason family", () => {
+    const dual = "Delivery confirmation email";
+    expect(selectPrimaryCategory(dual, "FRAUDULENT")).toBe(
+      "Fulfillment & Delivery",
+    );
+    expect(selectPrimaryCategory(dual, "PRODUCT_NOT_RECEIVED")).toBe(
+      "Fulfillment & Delivery",
+    );
+    expect(selectPrimaryCategory(dual, "SUBSCRIPTION_CANCELED")).toBe(
+      "Customer Communication",
+    );
+    expect(selectPrimaryCategory(dual, "PRODUCT_UNACCEPTABLE")).toBe(
+      "Customer Communication",
+    );
+    expect(selectPrimaryCategory(dual, "CREDIT_NOT_PROCESSED")).toBe(
+      "Customer Communication",
+    );
   });
 });
