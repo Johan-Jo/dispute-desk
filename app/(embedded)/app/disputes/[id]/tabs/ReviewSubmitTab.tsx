@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type CSSProperties } from "react";
 import {
   Card,
   BlockStack,
@@ -27,6 +27,21 @@ function strengthLabel(s: string): string {
   if (s === "moderate") return "Medium";
   return "Weak";
 }
+
+// Shared visual shell for any rendered Shopify-evidence block (both the pre-
+// submit preview and the post-submit receipt use this). Monospace + pre-wrap
+// so the text matches what the bank will actually receive.
+const submissionBlockStyle: CSSProperties = {
+  background: "#f8fafc",
+  borderRadius: "8px",
+  padding: "20px 24px",
+  border: "1px solid #e2e8f0",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontSize: "13px",
+  lineHeight: 1.6,
+  whiteSpace: "pre-wrap",
+  color: "#1a1a1a",
+};
 
 export default function ReviewSubmitTab({ workspace }: { workspace: Workspace }) {
   const { data, clientState, derived, actions } = workspace;
@@ -190,18 +205,26 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
             </Banner>
 
             <BlockStack gap="300">
-              <BlockStack gap="100">
+              <BlockStack gap="200">
                 <Text as="p" variant="bodySm" fontWeight="semibold">{t("heading")}</Text>
                 {previewLoading ? (
                   <Text as="p" variant="bodySm" tone="subdued">{t("loading")}</Text>
                 ) : fields.length === 0 ? (
                   <Text as="p" variant="bodySm" tone="subdued">{t("emptyFallback")}</Text>
                 ) : (
-                  fields.map((f) => (
-                    <Text key={f.shopifyFieldName} as="p" variant="bodySm">
-                      {`\u2022 ${f.shopifyFieldLabel} \u2192 ${f.shopifyFieldName}`}
-                    </Text>
-                  ))
+                  <div style={submissionBlockStyle}>
+                    {fields.map((f, idx) => (
+                      <div key={f.shopifyFieldName}>
+                        <div style={{ fontWeight: 600, marginBottom: "4px" }}>
+                          {`${f.shopifyFieldLabel} \u2192 ${f.shopifyFieldName}`}
+                        </div>
+                        <div>{f.content}</div>
+                        {idx < fields.length - 1 && (
+                          <div style={{ borderTop: "1px solid #d1d5db", margin: "16px 0" }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
                 <Text as="p" variant="bodySm" tone="subdued">
                   {t("verificationNote")}
@@ -285,109 +308,24 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
             </Button>
 
             <Collapsible open={detailsOpen} id="submission-details">
-              <div style={{
-                background: "#f8fafc",
-                borderRadius: "8px",
-                padding: "20px 24px",
-                border: "1px solid #e2e8f0",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                fontSize: "13px",
-                lineHeight: "1.6",
-                whiteSpace: "pre-wrap",
-                color: "#1a1a1a",
-              }}>
-                {/* Rebuttal */}
-                {data.rebuttalDraft?.sections && data.rebuttalDraft.sections.length > 0 && (
-                  <>
-                    {data.rebuttalDraft.sections.map((sec) => (
-                      <div key={sec.id} style={{ marginBottom: "12px" }}>
-                        {sec.text}
+              <div style={submissionBlockStyle}>
+                {previewLoading ? (
+                  <div style={{ color: "#64748b" }}>Loading submission preview\u2026</div>
+                ) : fields.length === 0 ? (
+                  <div style={{ color: "#64748b" }}>No evidence fields to submit yet.</div>
+                ) : (
+                  fields.map((f, idx) => (
+                    <div key={f.shopifyFieldName}>
+                      <div style={{ fontWeight: 600, marginBottom: "4px" }}>
+                        {`${f.shopifyFieldLabel} \u2192 ${f.shopifyFieldName}`}
                       </div>
-                    ))}
-                    <div style={{ borderTop: "1px solid #d1d5db", margin: "16px 0" }} />
-                    <div style={{ fontWeight: 600, marginBottom: "12px" }}>SUPPORTING EVIDENCE</div>
-                  </>
+                      <div>{f.content}</div>
+                      {idx < fields.length - 1 && (
+                        <div style={{ borderTop: "1px solid #d1d5db", margin: "16px 0" }} />
+                      )}
+                    </div>
+                  ))
                 )}
-
-                {/* Evidence items — rendered like the email */}
-                {pack.evidenceItems.map((item) => {
-                  const p = item.payload as Record<string, unknown>;
-
-                  if (item.type === "order") {
-                    const totals = typeof p.totals === "object" ? p.totals as Record<string, unknown> : null;
-                    const billing = typeof p.billingAddress === "object" ? p.billingAddress as Record<string, unknown> : null;
-                    const shipping = typeof p.shippingAddress === "object" ? p.shippingAddress as Record<string, unknown> : null;
-                    const items = Array.isArray(p.lineItems) ? p.lineItems as Array<Record<string, unknown>> : [];
-                    const addrMatch = billing && shipping && billing.city === shipping.city;
-                    return (
-                      <div key={item.id} style={{ marginBottom: "16px" }}>
-                        <div style={{ fontWeight: 600, marginBottom: "4px" }}>ORDER DETAILS</div>
-                        {typeof p.orderName === "string" ? <div>{`  Order: ${p.orderName}`}</div> : null}
-                        {typeof p.createdAt === "string" ? <div>{`  Date: ${fmtDate(p.createdAt)}`}</div> : null}
-                        {typeof p.financialStatus === "string" ? <div>{`  Status: ${p.financialStatus}`}</div> : null}
-                        {totals ? <div>{`  Amount: ${String(totals.currency ?? "")} ${String(totals.total ?? "")}`}</div> : null}
-                        {billing ? <div>{`  Billing address: ${fmtAddr(billing)}`}</div> : null}
-                        {shipping ? <div>{`  Shipping address: ${fmtAddr(shipping)}`}</div> : null}
-                        {addrMatch ? <div>{"  Address verification: Billing and shipping addresses match"}</div> : null}
-                        {items.length > 0 ? (
-                          <>
-                            <div style={{ marginTop: "8px" }}>{"  Items ordered:"}</div>
-                            {items.map((li, idx) => (
-                              <div key={idx}>{`    \u2022 ${String(li.title ?? "")}${li.variantTitle ? ` (${String(li.variantTitle)})` : ""} \u00d7 ${String(li.quantity ?? 1)}`}</div>
-                            ))}
-                          </>
-                        ) : null}
-                      </div>
-                    );
-                  }
-
-                  if (item.type === "other" && p.avsResultCode !== undefined) {
-                    const avsDesc = p.avsResultCode === "Y" ? "Full match" : String(p.avsResultCode ?? "N/A");
-                    const cvvDesc = p.cvvResultCode === "M" ? "Match" : String(p.cvvResultCode ?? "N/A");
-                    return (
-                      <div key={item.id} style={{ marginBottom: "16px" }}>
-                        <div style={{ fontWeight: 600, marginBottom: "4px" }}>PAYMENT VERIFICATION</div>
-                        <div>{`  AVS (Address Verification): ${avsDesc}`}</div>
-                        <div>{`  CVV (Card Verification): ${cvvDesc}`}</div>
-                        {typeof p.cardCompany === "string" ? <div>{`  Card: ${p.cardCompany}${typeof p.lastFour === "string" ? ` ending ${p.lastFour.replace(/[^0-9]/g, "")}` : ""}`}</div> : null}
-                        {typeof p.gateway === "string" ? <div>{`  Payment processor: ${p.gateway.replace(/_/g, " ")}`}</div> : null}
-                      </div>
-                    );
-                  }
-
-                  if (item.type === "comms") {
-                    const events = Array.isArray(p.timelineEvents)
-                      ? (p.timelineEvents as Array<Record<string, unknown>>).filter((e) => {
-                          const msg = String(e.message ?? "").toLowerCase();
-                          return msg.includes("confirmation") || msg.includes("email was sent") ||
-                                 msg.includes("placed this order") || msg.includes("authorized") ||
-                                 msg.includes("captured");
-                        })
-                      : [];
-                    if (events.length === 0) return null;
-                    return (
-                      <div key={item.id} style={{ marginBottom: "16px" }}>
-                        <div style={{ fontWeight: 600, marginBottom: "4px" }}>CUSTOMER NOTIFICATIONS</div>
-                        {events.map((e, idx) => (
-                          <div key={idx}>{`  [${fmtDateTime(String(e.createdAt ?? ""))}] ${String(e.message ?? "").replace(/<[^>]+>/g, "")}`}</div>
-                        ))}
-                      </div>
-                    );
-                  }
-
-                  if (item.type === "access_log" && p.customerTenure && typeof p.customerTenure === "object") {
-                    const tenure = p.customerTenure as Record<string, unknown>;
-                    return (
-                      <div key={item.id} style={{ marginBottom: "16px" }}>
-                        <div style={{ fontWeight: 600, marginBottom: "4px" }}>CUSTOMER ACCOUNT</div>
-                        {typeof tenure.customerSince === "string" ? <div>{`  Account created: ${fmtDate(tenure.customerSince)}`}</div> : null}
-                        {parseInt(String(tenure.totalOrders ?? "0")) > 0 ? <div>{`  Prior orders: ${String(tenure.totalOrders)}`}</div> : null}
-                      </div>
-                    );
-                  }
-
-                  return null;
-                })}
               </div>
             </Collapsible>
           </BlockStack>
@@ -474,16 +412,3 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
   );
 }
 
-function fmtDate(iso: string): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-}
-
-function fmtDateTime(iso: string): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-function fmtAddr(a: Record<string, unknown>): string {
-  return [a.city, a.provinceCode, a.countryCode].filter(Boolean).join(", ");
-}

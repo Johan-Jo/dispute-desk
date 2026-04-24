@@ -5,8 +5,19 @@ import {
   FIELD_MAPPINGS,
   type RawPackSection,
 } from "@/lib/shopify/fieldMapping";
+import {
+  formatManualAttachmentsBlock,
+  type ManualAttachmentInput,
+  type PackPdfInput,
+} from "@/lib/shopify/manualAttachments";
 
 export const runtime = "nodejs";
+
+// Placeholder shown in the preview where the save-to-shopify job will later
+// substitute a real HMAC-signed DisputeDesk URL. Keeping the tokens out of the
+// preview avoids leaking 180-day credentials through an authenticated UI
+// endpoint — the merchant only needs to see that links will be emitted.
+const PLACEHOLDER_ATTACHMENT_URL = "https://disputedesk.app/e/<secure-link>";
 
 /**
  * GET /api/packs/:packId/submission-preview
@@ -24,7 +35,7 @@ export async function GET(
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
-    .select("id, pack_json")
+    .select("id, pack_json, pdf_path")
     .eq("id", packId)
     .single();
 
@@ -77,6 +88,43 @@ export async function GET(
           rebuttalText;
       }
     }
+  }
+
+  // Mirror saveToShopifyJob: append the "Supporting documents" block so the
+  // preview matches what the bank will see byte-for-byte (modulo the URL
+  // token, which is swapped for a placeholder here — see top of file).
+  const { data: manualItems } = await sb
+    .from("evidence_items")
+    .select("id, label, payload, created_at")
+    .eq("pack_id", packId)
+    .eq("source", "manual_upload")
+    .order("created_at", { ascending: false });
+
+  const manualAttachments: ManualAttachmentInput[] = (manualItems ?? []).map(
+    (item) => {
+      const meta = (item.payload ?? {}) as Record<string, unknown>;
+      return {
+        label: (item.label as string | null) ?? null,
+        fileName: typeof meta.fileName === "string" ? meta.fileName : null,
+        fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,
+        createdAt: (item.created_at as string | null) ?? null,
+        url: PLACEHOLDER_ATTACHMENT_URL,
+      };
+    },
+  );
+
+  const pdfAttachment: PackPdfInput | null = pack.pdf_path
+    ? { url: PLACEHOLDER_ATTACHMENT_URL }
+    : null;
+
+  const attachmentsBlock = formatManualAttachmentsBlock(
+    manualAttachments,
+    pdfAttachment,
+  );
+  if (attachmentsBlock) {
+    evidenceInput.uncategorizedText = evidenceInput.uncategorizedText
+      ? `${evidenceInput.uncategorizedText}\n\n${attachmentsBlock}`
+      : attachmentsBlock;
   }
 
   // Build preview fields from the evidence input
