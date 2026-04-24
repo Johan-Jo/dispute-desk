@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import {
-  buildEvidenceInputFromRaw,
-  FIELD_MAPPINGS,
-  type RawPackSection,
-} from "@/lib/shopify/fieldMapping";
+import { FIELD_MAPPINGS, type RawPackSection } from "@/lib/shopify/fieldMapping";
+import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
 import {
   formatManualAttachmentsBlock,
   type ManualAttachmentInput,
@@ -67,18 +64,21 @@ export async function GET(
     return NextResponse.json({ fields: [] });
   }
 
-  // Convert to RawPackSection format
-  const rawSections: RawPackSection[] = packJson.sections.map((s) => ({
-    type: s.type,
-    label: s.label,
-    source: s.source,
-    data: s.data,
-  }));
+  // Convert to RawPackSection format (include fieldsProvided for IP / device gates)
+  const rawSections: RawPackSection[] = packJson.sections.map((s) => {
+    const rec = s as Record<string, unknown>;
+    const fieldsProvided = rec.fieldsProvided;
+    return {
+      type: s.type,
+      label: s.label,
+      source: s.source,
+      data: s.data,
+      ...(Array.isArray(fieldsProvided)
+        ? { fieldsProvided: fieldsProvided as string[] }
+        : {}),
+    };
+  });
 
-  // Use the real serialization engine (same as actual Shopify submission)
-  const evidenceInput = buildEvidenceInputFromRaw(rawSections);
-
-  // Also get rebuttal
   const { data: rebuttal } = await sb
     .from("rebuttal_drafts")
     .select("sections")
@@ -86,20 +86,19 @@ export async function GET(
     .eq("locale", "en-US")
     .maybeSingle();
 
-  if (rebuttal?.sections) {
-    const rebuttalSections = rebuttal.sections as Array<{ text: string }>;
-    const rebuttalText = rebuttalSections.map((s) => s.text).join("\n\n");
-    if (rebuttalText.trim()) {
-      // Add to cancellationRebuttal or uncategorizedText
-      if (!evidenceInput.cancellationRebuttal) {
-        evidenceInput.cancellationRebuttal = rebuttalText;
-      } else {
-        evidenceInput.uncategorizedText =
-          (evidenceInput.uncategorizedText ? evidenceInput.uncategorizedText + "\n\n" : "") +
-          rebuttalText;
-      }
-    }
-  }
+  const rebuttalText = rebuttal?.sections
+    ? (rebuttal.sections as Array<{ text: string }>)
+        .map((s) => s.text)
+        .join("\n\n")
+        .trim() || null
+    : null;
+
+  // Same builder as saveToShopifyJob — avoids mis-labeling fraud rebuttal as cancellationRebuttal
+  const evidenceInput = buildEvidenceForShopify(
+    rawSections,
+    rebuttalText,
+    disputeReason,
+  );
 
   // Mirror saveToShopifyJob: append the "Supporting documents" block so the
   // preview matches what the bank will see byte-for-byte (modulo the URL
