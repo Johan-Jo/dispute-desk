@@ -84,13 +84,14 @@ See [`docs/technical.md`](technical.md) for the full component catalog.
                   ┌───────────┼────────────┐
                   │           │            │
                   ▼           ▼            ▼
-            ┌──────┐    ┌────────┐   ┌──────────────────┐   ┌────────┐
-            │Shopify│    │Supabase│   │Supabase Storage  │   │External│
-            │GraphQL│    │Postgres│   │(evidence-packs,  │   │APIs    │
-            │Admin  │    │+ Auth  │   │ evidence-uploads,│   │(Gorgias│
-            │API    │    │(RLS)   │               │ evidence-samples,│   │ etc.)  │
-            │ policy-uploads) │   │        │
-            └──────┘    └────────┘   └──────────────────┘   └────────┘
+            ┌──────┐    ┌────────┐   ┌────────────────────────┐   ┌────────┐
+            │Shopify│    │Supabase│   │ Supabase Storage       │   │External│
+            │GraphQL│    │Postgres│   │ evidence-packs (PDF +  │   │APIs    │
+            │Admin  │    │+ Auth  │   │ manual dispute files), │   │(Gorgias│
+            │API    │    │(RLS)   │   │ evidence-uploads,      │   │ etc.)  │
+            │       │    │        │   │ evidence-samples,      │   │
+            │       │    │        │   │ policy-uploads         │   │
+            └──────┘    └────────┘   └────────────────────────┘   └────────┘
 ```
 
 ## Auth Model
@@ -301,7 +302,7 @@ DisputeDesk includes a guided setup wizard (`/app/setup/[step]`). After optional
 
 - **Packs:** Installing a template creates the shop’s **pack library** (`packs`, sections, narratives). IDs are stored in `shop_setup.steps.packs.payload.installedTemplates` when the step completes. The **Evidence packs** wizard step highlights **activated** rows (`packs.status = ACTIVE`) where the UI shows what is “live.” Installs can remain **DRAFT** until activation.
 - **Automation & review (setup):** Lists **every template-backed library pack** that is not archived (`listLibraryPacksForAutomationRules` — **DRAFT** and **ACTIVE**), ordered oldest-first, with per-pack handling (**Review before submit** vs **Automatic**) so merchants configure routing for each installed template, not only activated packs.
-- **Rules:** Starter rules in the `rules` table are evaluated when a **new** dispute syncs. Only two modes are persisted: `auto` (build the pack and submit it) and `review` (build the pack, flag `needs_review`, email the merchant to review before submit). Both modes always build a pack — `review` is never “do nothing.” Legacy values (`auto_pack`, `notify`, `manual`, old `review`) are collapsed by `lib/rules/normalizeMode.ts` on read and rejected at write time by the `rules_action_mode_valid` CHECK constraint. See [`docs/technical.md`](technical.md) § *Automation evaluation (two-mode model)*. The first-sync **new dispute** email (`lib/email/sendNewDisputeAlert.ts`) uses the same resolved mode for subject/body; the auto-handled variant can include a second CTA to open the dispute in Shopify Admin (English today) — see *Email (Resend)* in technical.md.
+- **Rules:** Starter rules in the `rules` table are evaluated when a **new** dispute syncs. Only two modes are persisted: `auto` (build the pack and submit it) and `review` (build the pack, flag `needs_review`, email the merchant to review before submit). Both modes always build a pack — `review` is never “do nothing.” Legacy values (`auto_pack`, `notify`, `manual`, old `review`) are collapsed by `lib/rules/normalizeMode.ts` on read and rejected at write time by the `rules_action_mode_valid` CHECK constraint. See [`docs/technical.md`](technical.md) § *Automation evaluation (two-mode model)*. The **new dispute** email (`lib/email/sendNewDisputeAlert.ts`) uses the same resolved mode for subject/body; the review (“response ready”) variant is sent after automated evidence collection when a build was enqueued. The auto-handled variant can include a second CTA to open the dispute in Shopify Admin (English today) — see *Email (Resend)* in technical.md.
 - **Embedded Rules page** (`/app/rules` in the Shopify app): Presents the four **suggested starter rules** from `lib/rules/presets.ts` with per-rule **Automatic** vs **Review before submit** and **Save starter rules**; optional **Other rules** lists custom portal-created rules. Also lists **ACTIVE** library packs for context (narrower than the setup automation list).
 - **Onboarding UI (Automation & review step):** The setup wizard presents routing as **presets → default (General) → optional per-reason cards → safeguards → live summary**, plus **per installed library pack** handling, so first-time merchants see a decision flow instead of a single settings table. At least one installed pack template is required before template assignment and the full **Automatic** preset is enabled. See [`docs/technical.md`](technical.md) § *Step 6: Automation Rules*.
 - **Build:** `buildPack` uses source collectors; it does not currently merge library template structure into automated per-dispute builds. See [`docs/technical.md`](technical.md) (*Rules vs library packs*).

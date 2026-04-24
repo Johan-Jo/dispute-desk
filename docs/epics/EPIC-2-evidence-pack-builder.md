@@ -80,7 +80,7 @@ Both pages link from the dispute detail page.
 ### 2.7 — Manual File Upload
 
 - Endpoint: `POST /api/packs/:packId/upload` (multipart form)
-- Storage: Supabase Storage bucket `evidence-uploads/{shopId}/{packId}/`
+- Storage: Supabase Storage bucket **`evidence-packs`** at `{shopId}/{packId}/manual-{timestamp}.{ext}` (shared with pack PDFs; payload stores `storageBucket`). Migration `20260424150000_evidence_uploads_bucket.sql` maintains optional **`evidence-uploads`** bucket config for legacy compatibility.
 - Validation: 10 MB max, allowed types (PNG, JPEG, GIF, WebP, PDF, TXT, CSV)
 - Creates `evidence_items` row with `source: manual_upload`
 - Logs audit event (`item_added`)
