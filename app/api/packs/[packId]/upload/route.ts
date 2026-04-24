@@ -4,6 +4,8 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { evaluateCompleteness, MANUAL_UPLOAD_FIELD } from "@/lib/automation/completeness";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+/** Same bucket as pack PDFs (`renderPdfJob`); `evidence-uploads` is not provisioned in migrations and may 400 in prod. */
+const MANUAL_UPLOAD_STORAGE_BUCKET = "evidence-packs";
 const ALLOWED_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -87,12 +89,12 @@ export async function POST(
   }
 
   const ext = file.name.split(".").pop() ?? "bin";
-  const storagePath = `${pack.shop_id}/${packId}/${Date.now()}.${ext}`;
+  const storagePath = `${pack.shop_id}/${packId}/manual-${Date.now()}.${ext}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error: uploadErr } = await db.storage
-    .from("evidence-uploads")
+    .from(MANUAL_UPLOAD_STORAGE_BUCKET)
     .upload(storagePath, buffer, {
       contentType: file.type,
       upsert: false,
@@ -117,6 +119,7 @@ export async function POST(
         fileType: file.type,
         fileSize: file.size,
         storagePath,
+        storageBucket: MANUAL_UPLOAD_STORAGE_BUCKET,
       },
     })
     .select("id")
