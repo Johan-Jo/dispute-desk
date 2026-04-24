@@ -862,7 +862,7 @@ function EvidenceItemInline({
                 {showContent ? "Hide" : "Preview"}
               </Button>
             )}
-            {item.status === "missing" && !readOnly && !uploading && (item.collectionType === "manual" || !item.collectionType) && (
+            {item.status === "missing" && !readOnly && !uploading && item.collectionType !== "auto" && (
               <>
                 <Button size="slim" onClick={() => setShowUpload((v) => !v)}>
                   {error ? "Retry" : "Upload"}
