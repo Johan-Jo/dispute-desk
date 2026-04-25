@@ -134,7 +134,17 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   type RawEvidenceItem = {
     id: string;
     type?: string;
-    payload?: { fieldsProvided?: string[]; [k: string]: unknown } | null;
+    label?: string | null;
+    source?: string | null;
+    payload?: {
+      fieldsProvided?: string[];
+      fileId?: string;
+      fileName?: string;
+      fileSize?: number;
+      mimeType?: string;
+      checklistField?: string;
+      [k: string]: unknown;
+    } | null;
     [k: string]: unknown;
   };
   const evidenceItemsByField: Record<string, RawEvidenceItem> = {};
@@ -145,6 +155,39 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       // earliest-collected item for a given field is the canonical source.
       if (!(f in evidenceItemsByField)) evidenceItemsByField[f] = it;
     }
+  }
+
+  // Derived attachments[] — first-class file inventory for the dispute
+  // detail Review tab (R5 "Supporting documents"). Plan v3 §3.A.4.
+  // Sourced from `evidence_items.payload.fileId`. Empty array (not
+  // null) so the UI can render an explicit empty state without
+  // ambiguity.
+  type WorkspaceAttachment = {
+    id: string;
+    evidenceFieldKey: string | null;
+    label: string | null;
+    fileName: string | null;
+    sizeBytes: number | null;
+    mimeType: string | null;
+    source: string | null;
+    fileId: string;
+  };
+  const attachments: WorkspaceAttachment[] = [];
+  for (const it of (itemsRes.data ?? []) as RawEvidenceItem[]) {
+    const p = it.payload ?? {};
+    const fileId = typeof p.fileId === "string" ? p.fileId : null;
+    if (!fileId) continue;
+    attachments.push({
+      id: it.id,
+      evidenceFieldKey:
+        typeof p.checklistField === "string" ? p.checklistField : null,
+      label: it.label ?? null,
+      fileName: typeof p.fileName === "string" ? p.fileName : null,
+      sizeBytes: typeof p.fileSize === "number" ? p.fileSize : null,
+      mimeType: typeof p.mimeType === "string" ? p.mimeType : null,
+      source: it.source ?? null,
+      fileId,
+    });
   }
 
   // ── 6. Shape the response ─────────────────────────────────────────
@@ -267,6 +310,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     rebuttalDraft,
     rebuttalOutdated,
     submissionFields: [],
+    // Derived first-class attachment inventory for the dispute Review
+    // tab. Always an array (never null) — empty array is the explicit
+    // empty state. Plan v3 §3.A.4.
+    attachments,
     appliedRule,
     caseTypeInfo: {
       disputeType: template.disputeType,
