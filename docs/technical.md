@@ -1340,7 +1340,7 @@ The API and the client enforce three gates before a save is allowed:
 | Condition | Server response | Client behaviour |
 |---|---|---|
 | `submission_readiness === "blocked"` | 422 `PACK_BLOCKED` | Critical banner shown; no API call made |
-| `submission_readiness === "ready_with_warnings"` or `completeness_score < 80` without `confirmWarnings: true` | 422 `PACK_HAS_WARNINGS` (includes `score`, `readiness`) | Polaris `Modal` shown for merchant confirmation; on confirm, resends with `{ confirmWarnings: true }` |
+| `submission_readiness === "ready_with_warnings"` or `completeness_score < 80` without `confirmWarnings: true` | 422 `PACK_HAS_WARNINGS` (includes `score`, `readiness`) | Polaris `Modal` ("Submit with current evidence?") shown for merchant confirmation; on confirm, resends with `{ confirmWarnings: true }`. Modal banner names the specific reason: warnings path lists `submitOverrideGaps` (critical-but-not-blocking missing checklist items); weak-strength path states the case rating, the `improvementHint`, and `whyWins.weaknesses` so merchants see *why* the override is needed before acknowledging it. |
 | `completeness_score === 0` | 422 `PACK_INCOMPLETE` | No evidence collected at all |
 | `status === "queued"` or `"building"` | — (client gate only) | Save button replaced by spinner + "Generating evidence…" label |
 | `completeness_score >= 80` | Proceeds normally | Button enabled, no modal |

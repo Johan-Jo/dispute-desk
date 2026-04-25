@@ -417,14 +417,31 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
               <BlockStack gap="200">
                 <Text as="p" variant="bodySm">
                   {isWeak
-                    ? "This case is weak. Submitting now may significantly reduce your chances of winning."
+                    ? `This case is rated ${strengthLabel(caseStrength.overall).toLowerCase()}${caseStrength.improvementHint ? ` because ${caseStrength.improvementHint}` : ""}. Submitting now may significantly reduce your chances of winning.`
                     : "Your evidence template still marks the items below as missing. They are required for a complete checklist score but are not treated as hard blockers — submitting is allowed after you confirm."}
                 </Text>
                 {submitOverrideGaps.length > 0 && (
                   <BlockStack gap="100">
+                    {isWeak && (
+                      <Text as="p" variant="bodySm" fontWeight="semibold">
+                        Missing checklist items:
+                      </Text>
+                    )}
                     {submitOverrideGaps.map((g) => (
                       <Text key={g.field} as="p" variant="bodySm">
                         {`\u2022 ${g.label}`}
+                      </Text>
+                    ))}
+                  </BlockStack>
+                )}
+                {isWeak && whyWins.weaknesses.length > 0 && (
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodySm" fontWeight="semibold">
+                      Why this case is weak:
+                    </Text>
+                    {whyWins.weaknesses.map((w, i) => (
+                      <Text key={i} as="p" variant="bodySm">
+                        {`\u2022 ${w}`}
                       </Text>
                     ))}
                   </BlockStack>
