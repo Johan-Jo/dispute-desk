@@ -251,6 +251,76 @@ export function calculateCaseStrength(
   };
 }
 
+/* ── Contributions for "What supports your case" (plan v3 §P2.6) ── */
+
+/** A single row in the "What supports your case" surface. Maps 1:1 to
+ *  a canonical signalId and a single category. NO summary rows, NO
+ *  multi-signal grouping (Argument Purity Rule, P2.6). */
+export interface CaseStrengthContribution {
+  /** Stable cross-collection ID used by the UI for keys. */
+  signalId: SignalId;
+  /** Effective category for this signal (after dedup). Always
+   *  `strong` or `moderate` — supporting and invalid never reach
+   *  these lists. */
+  category: "strong" | "moderate";
+  /** Merchant-facing label from the canonical registry. */
+  label: string;
+  /** The first contributing `evidenceFieldKey` (when a single
+   *  signalId is reachable through multiple keys). Used by deep-link
+   *  CTAs. */
+  evidenceFieldKey: string;
+}
+
+export interface CaseStrengthContributions {
+  strong: CaseStrengthContribution[];
+  moderate: CaseStrengthContribution[];
+}
+
+/**
+ * Compute the "What supports your case" rows for the dispute Overview.
+ * Plan v3 §P2.6 — one row per canonical signalId with effective
+ * category `strong` or `moderate`, deduplicated, no synthesis. Only
+ * AVAILABLE / WAIVED items contribute.
+ */
+export function computeContributions(
+  checklist: ChecklistItemV2[],
+  payloadSource?: EvidencePayloadSource,
+): CaseStrengthContributions {
+  // Per signalId: track the highest category seen + the first field
+  // that contributed it (deterministic by checklist iteration order).
+  type Acc = { category: EvidenceCategory; field: string };
+  const RANK: Record<EvidenceCategory, number> = { strong: 3, moderate: 2, supporting: 1, invalid: 0 };
+  const bySignal = new Map<SignalId, Acc>();
+
+  for (const item of checklist) {
+    if (item.status !== "available" && item.status !== "waived") continue;
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue;
+    const category = categoryFor({ fieldKey: item.field, payload: payloadFor(payloadSource, item.field) });
+    if (category !== "strong" && category !== "moderate") continue;
+    const prev = bySignal.get(spec.signalId);
+    if (!prev || RANK[category] > RANK[prev.category]) {
+      bySignal.set(spec.signalId, { category, field: item.field });
+    }
+  }
+
+  const strong: CaseStrengthContribution[] = [];
+  const moderate: CaseStrengthContribution[] = [];
+  for (const [signalId, acc] of bySignal) {
+    const spec = CANONICAL_EVIDENCE[acc.field];
+    const row: CaseStrengthContribution = {
+      signalId,
+      category: acc.category as "strong" | "moderate",
+      label: spec?.label ?? acc.field,
+      evidenceFieldKey: acc.field,
+    };
+    if (acc.category === "strong") strong.push(row);
+    else moderate.push(row);
+  }
+
+  return { strong, moderate };
+}
+
 /**
  * Highest-leverage missing-evidence improvement suggestion.
  * Now keyed by canonical category instead of family weights.

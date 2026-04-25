@@ -14,7 +14,6 @@
  * Present / Missing / Not applicable / System unavailable / Waived.
  */
 
-import { useMemo } from "react";
 import {
   BlockStack,
   InlineStack,
@@ -36,7 +35,7 @@ import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import type { CounterclaimNode } from "@/lib/argument/types";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -122,17 +121,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
   const { data, derived, actions, clientState } = workspace;
 
-  // ID-keyed counterclaim lookup — declared at the top so the hook
-  // call order is stable across every render (rules-of-hooks). The
-  // factory tolerates `data === null` by returning an empty map.
-  const counterclaimsById: Record<string, CounterclaimNode> = useMemo(() => {
-    const argMap = data?.argumentMap;
-    if (argMap?.counterclaimsById) return argMap.counterclaimsById;
-    const map: Record<string, CounterclaimNode> = {};
-    for (const c of argMap?.counterclaims ?? []) map[c.id] = c;
-    return map;
-  }, [data?.argumentMap]);
-
   if (!data) return null;
 
   const { dispute, appliedRule } = data;
@@ -142,7 +130,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     isReadOnly,
     recommendationText,
     recommendationHelperText,
-    whyWins,
+    contributions,
     missingItems,
   } = derived;
 
@@ -407,64 +395,47 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* O3: What supports your case — pill-style row cards per Figma.
-          Title = counterclaim.title (resolved via counterclaimsById, NOT
-          by text matching). Subtitle = whyWins entry text. Strength pill
-          mapped from counterclaim.strength: strong → "Strong" (green),
-          moderate → "Supporting" (amber), else → "Helpful" (neutral). */}
+      {/* O3: What supports your case — one row per canonical signalId
+          (plan v3 §P2.6 Argument Purity Rule). Iterates
+          `derived.contributions.strong[]` then `.moderate[]`. NO
+          counterclaim title resolution, NO text matching, NO summary
+          rows that fold multiple signals. Supporting items are
+          excluded from this surface entirely (P2.6a Field Visibility
+          Decision — they appear in the Evidence tab only). */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
         <BlockStack gap="300">
           <Text as="h3" variant="headingSm">What supports your case</Text>
-          {whyWins.strengths.length === 0 ? (
+          {contributions.strong.length === 0 && contributions.moderate.length === 0 ? (
             <Text as="p" variant="bodySm" tone="subdued">
-              Evidence is still being collected. Add evidence to surface defense reasons.
+              No strong or moderate evidence collected yet. Add evidence to surface defense reasons.
             </Text>
           ) : (
             <BlockStack gap="200">
-              {whyWins.strengths.map((s) => {
-                const cc = counterclaimsById[s.counterclaimId];
-                const title = cc?.title ?? s.text;
-                const subtitle = cc ? s.text : "";
-                const pillLabel = cc?.strength === "strong"
-                  ? "Strong"
-                  : cc?.strength === "moderate"
-                    ? "Supporting"
-                    : "Helpful";
-                const pillBg = cc?.strength === "strong"
-                  ? "#D1FAE5"
-                  : cc?.strength === "moderate"
-                    ? "#FEF3C7"
-                    : "#F1F2F4";
-                const pillColor = cc?.strength === "strong"
-                  ? "#065F46"
-                  : cc?.strength === "moderate"
-                    ? "#92400E"
-                    : "#6D7175";
+              {[...contributions.strong, ...contributions.moderate].map((row) => {
+                const isStrong = row.category === "strong";
+                const pillLabel = isStrong ? "Strong" : "Moderate";
+                const pillBg = isStrong ? "#D1FAE5" : "#FEF3C7";
+                const pillColor = isStrong ? "#065F46" : "#92400E";
                 return (
                   <div
-                    key={s.counterclaimId + s.text}
+                    key={row.signalId}
                     style={{
                       background: "#F6F8FB",
                       border: "1px solid #E1E3E5",
                       borderRadius: 8,
                       padding: 16,
                       display: "flex",
-                      alignItems: "flex-start",
+                      alignItems: "center",
                       gap: 12,
                     }}
                   >
-                    <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0 }}>
                       <Icon source={CheckCircleIcon} />
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0 }}>
-                        {title}
+                        {row.label}
                       </p>
-                      {subtitle && (
-                        <p style={{ fontSize: 13, color: "#6D7175", margin: "4px 0 0", lineHeight: 1.5 }}>
-                          {subtitle}
-                        </p>
-                      )}
                     </div>
                     <span
                       style={{
@@ -486,70 +457,85 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             </BlockStack>
           )}
 
-          {/* Missing signals — never silently dropped. Same pill-card
-              treatment but with red icon + Missing pill so the merchant
-              sees what's pulling the case down. */}
-          {whyWins.weaknesses.length > 0 && (
-            <BlockStack gap="200">
-              <Divider />
-              <Text as="p" variant="bodySm" fontWeight="semibold">Missing signals</Text>
-              {whyWins.weaknesses.map((w) => {
-                const cc = counterclaimsById[w.counterclaimId];
-                const title = cc?.title ?? w.text;
-                const subtitle = cc ? w.text : "";
-                // Find the first missing field for this counterclaim so the
-                // CTA jumps to the correct evidence row.
-                const firstMissingField = cc?.missing[0]?.evidenceFieldKey ?? cc?.missing[0]?.field ?? null;
-                return (
-                  <div
-                    key={w.counterclaimId + w.text}
-                    style={{
-                      background: "#FEF2F2",
-                      border: "1px solid #FCA5A5",
-                      borderRadius: 8,
-                      padding: 16,
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 12,
-                    }}
-                  >
-                    <span style={{ width: 20, height: 20, color: "#DC2626", flexShrink: 0, marginTop: 2 }}>
-                      <Icon source={AlertCircleIcon} />
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>{title}</p>
-                      {subtitle && (
-                        <p style={{ fontSize: 13, color: "#991B1B", margin: "4px 0 0", lineHeight: 1.5 }}>
-                          {subtitle}
-                        </p>
-                      )}
-                      {!submitted && firstMissingField && (
-                        <div style={{ marginTop: 8 }}>
-                          <Button size="slim" onClick={() => actions.navigateToEvidence(firstMissingField)}>
-                            Add this evidence
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <span
+          {/* Missing signals — drawn directly from the canonical
+              registry (no whyWins.weaknesses lookup). A field surfaces
+              here only when its DEFAULT category is strong or moderate
+              AND it is missing AND it's merchant-actionable.
+              Supporting fields are excluded — they don't affect
+              strength so prompting the merchant to add them would be
+              misleading. */}
+          {(() => {
+            const missingActionable = effectiveChecklist.filter((c) => {
+              if (c.status !== "missing") return false;
+              if (c.collectionType && c.collectionType !== "manual") return false;
+              const spec = c.field as string;
+              const cat = (data.pack?.evidenceItemsByField && spec in data.pack.evidenceItemsByField)
+                ? null
+                : null; // missing items have no payload — fall through to default category
+              void cat;
+              return true;
+            }).filter((c) => {
+              // Only show missing rows whose default category would
+              // be strong or moderate (would actually help the case).
+              const fieldKey = c.field;
+              // Resolved via canonical registry — supporting fields skipped.
+              const spec = (CANONICAL_EVIDENCE as Record<string, { category: string } | undefined>)[fieldKey];
+              return spec?.category === "strong" || spec?.category === "moderate";
+            });
+            if (missingActionable.length === 0) return null;
+            return (
+              <BlockStack gap="200">
+                <Divider />
+                <Text as="p" variant="bodySm" fontWeight="semibold">Missing signals</Text>
+                {missingActionable.map((c) => {
+                  const spec = (CANONICAL_EVIDENCE as Record<string, { label: string; category: string } | undefined>)[c.field];
+                  const label = spec?.label ?? c.label;
+                  return (
+                    <div
+                      key={c.field}
                       style={{
-                        flexShrink: 0,
-                        padding: "2px 10px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: "#FEE2E2",
-                        color: "#991B1B",
-                        whiteSpace: "nowrap",
+                        background: "#FEF2F2",
+                        border: "1px solid #FCA5A5",
+                        borderRadius: 8,
+                        padding: 16,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
                       }}
                     >
-                      Missing
-                    </span>
-                  </div>
-                );
-              })}
-            </BlockStack>
-          )}
+                      <span style={{ width: 20, height: 20, color: "#DC2626", flexShrink: 0 }}>
+                        <Icon source={AlertCircleIcon} />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>{label}</p>
+                        {!submitted && (
+                          <div style={{ marginTop: 8 }}>
+                            <Button size="slim" onClick={() => actions.navigateToEvidence(c.field)}>
+                              Add this evidence
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          padding: "2px 10px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: "#FEE2E2",
+                          color: "#991B1B",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Missing
+                      </span>
+                    </div>
+                  );
+                })}
+              </BlockStack>
+            );
+          })()}
         </BlockStack>
       </div>
 

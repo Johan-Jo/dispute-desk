@@ -25,7 +25,12 @@ import {
   CATEGORY_RELEVANCE,
 } from "../workspace-components/types";
 import { computeNextAction } from "@/lib/argument/nextAction";
-import { calculateCaseStrength, calculateImprovement } from "@/lib/argument/caseStrength";
+import {
+  calculateCaseStrength,
+  calculateImprovement,
+  computeContributions,
+  type CaseStrengthContributions,
+} from "@/lib/argument/caseStrength";
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
@@ -263,6 +268,11 @@ export interface DerivedState {
    *  the recommendation logic in JSX. */
   recommendationText: string;
   recommendationHelperText: string | null;
+  /** "What supports your case" rows. Plan v3 §P2.6: one row per
+   *  canonical signalId with effective category `strong` or
+   *  `moderate`. The Overview UI iterates this directly — no UI
+   *  inference, no text-based dedupe. */
+  contributions: CaseStrengthContributions;
   isReadOnly: boolean;
   isBuilding: boolean;
   /** True when the build itself failed (system error), distinct from
@@ -602,6 +612,7 @@ export function useDisputeWorkspace(disputeId: string) {
         nextAction: { label: "Loading...", description: "", severity: "info" },
         recommendationText: "",
         recommendationHelperText: null,
+        contributions: { strong: [], moderate: [] },
         isReadOnly: false,
         isBuilding: false,
         isFailed: false,
@@ -662,6 +673,7 @@ export function useDisputeWorkspace(disputeId: string) {
       ? { kind: "byField" as const, map: data.pack.evidenceItemsByField }
       : undefined;
     const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource);
+    const contributions = computeContributions(effectiveChecklist, payloadSource);
     const whyWins = generateWhyWins(data.argumentMap, effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(data.argumentMap, effectiveChecklist);
     const improvement = calculateImprovement(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource);
@@ -702,6 +714,7 @@ export function useDisputeWorkspace(disputeId: string) {
       nextAction,
       recommendationText,
       recommendationHelperText,
+      contributions,
       isReadOnly,
       isBuilding: pack?.status === "queued" || pack?.status === "building",
       isFailed: pack?.status === "failed",
