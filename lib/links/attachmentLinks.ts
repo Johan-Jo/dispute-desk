@@ -1,6 +1,15 @@
 /**
  * HMAC-signed tokens for public, bank-facing evidence-attachment URLs.
  *
+ * NOTE (2026-04-25): Legacy / verifier-only. New code mints
+ * DB-backed short codes via `lib/links/shortLinks.ts` because the
+ * HMAC envelope below produces ~220-char URLs that are visually noisy
+ * in bank-facing evidence text. The route handler at
+ * `app/e/[token]/route.ts` keeps the verifier wired in as a fallback
+ * so live tokens already submitted to Shopify continue to work
+ * through their 180-day TTL. After that window the signing helpers
+ * here become dead code and can be deleted.
+ *
  * Issues tokens of shape `<base64url(payload)>.<base64url(hmac)>` that
  * are embedded in URLs on our canonical origin (e.g.
  * `https://disputedesk.app/e/<token>`). Payload carries the target

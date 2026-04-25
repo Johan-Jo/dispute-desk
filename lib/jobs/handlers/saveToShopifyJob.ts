@@ -34,12 +34,11 @@ import {
   loadChecklistFieldByEvidenceItemIdFromAudit,
   resolveChecklistFieldForManualItem,
 } from "@/lib/shopify/manualUploadChecklistFromAudit";
+import { ATTACHMENT_LINK_TTL_DAYS } from "@/lib/links/attachmentLinks";
 import {
-  ATTACHMENT_LINK_TTL_DAYS,
-  buildAttachmentUrl,
-  requireEvidenceLinkSecret,
-  signAttachmentToken,
-} from "@/lib/links/attachmentLinks";
+  buildShortAttachmentUrl,
+  createShortLink,
+} from "@/lib/links/shortLinks";
 import {
   DISPUTE_EVIDENCE_UPDATE_MUTATION,
   type DisputeEvidenceUpdateResult,
@@ -269,9 +268,9 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   //  merchant uploaded after the initial build.
   // ═══════════════════════════════════════════════════════════
 
-  const linkSecret = requireEvidenceLinkSecret();
-  const linkExp =
-    Math.floor(Date.now() / 1000) + ATTACHMENT_LINK_TTL_DAYS * 24 * 60 * 60;
+  const linkExpiresAt = new Date(
+    Date.now() + ATTACHMENT_LINK_TTL_DAYS * 24 * 60 * 60 * 1000,
+  );
 
   const { data: manualItems } = await sb
     .from("evidence_items")
@@ -289,33 +288,36 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     checklistField: string;
   }> = [];
 
-  const manualAttachments: ManualAttachmentInput[] = (manualItems ?? []).map(
-    (item) => {
-      const meta = (item.payload ?? {}) as Record<string, unknown>;
-      const token = signAttachmentToken(
-        { k: "item", id: String(item.id), p: packId, exp: linkExp },
-        linkSecret,
-      );
-      const checklistField = resolveChecklistFieldForManualItem(
-        String(item.id),
-        meta,
-        auditChecklistByItemId,
-      );
-      const hadPayloadField =
-        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0;
-      if (!hadPayloadField && checklistField) {
-        toBackfill.push({ id: String(item.id), meta, checklistField });
-      }
-      return {
-        checklistField,
-        label: (item.label as string | null) ?? null,
-        fileName: typeof meta.fileName === "string" ? meta.fileName : null,
-        fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,
-        createdAt: (item.created_at as string | null) ?? null,
-        url: buildAttachmentUrl(token),
-      };
-    },
-  );
+  const manualAttachments: ManualAttachmentInput[] = [];
+  for (const item of manualItems ?? []) {
+    const meta = (item.payload ?? {}) as Record<string, unknown>;
+    const code = await createShortLink(sb, {
+      kind: "item",
+      entityId: String(item.id),
+      packId,
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id ?? null,
+      expiresAt: linkExpiresAt,
+    });
+    const checklistField = resolveChecklistFieldForManualItem(
+      String(item.id),
+      meta,
+      auditChecklistByItemId,
+    );
+    const hadPayloadField =
+      typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0;
+    if (!hadPayloadField && checklistField) {
+      toBackfill.push({ id: String(item.id), meta, checklistField });
+    }
+    manualAttachments.push({
+      checklistField,
+      label: (item.label as string | null) ?? null,
+      fileName: typeof meta.fileName === "string" ? meta.fileName : null,
+      fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,
+      createdAt: (item.created_at as string | null) ?? null,
+      url: buildShortAttachmentUrl(code),
+    });
+  }
 
   for (const row of toBackfill) {
     await sb
@@ -333,11 +335,15 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .eq("id", packId)
     .single();
   if (packForPdf?.pdf_path) {
-    const token = signAttachmentToken(
-      { k: "pdf", id: packId, p: packId, exp: linkExp },
-      linkSecret,
-    );
-    pdfAttachment = { url: buildAttachmentUrl(token) };
+    const code = await createShortLink(sb, {
+      kind: "pdf",
+      entityId: packId,
+      packId,
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id ?? null,
+      expiresAt: linkExpiresAt,
+    });
+    pdfAttachment = { url: buildShortAttachmentUrl(code) };
   }
 
   const attachmentsBlock = formatManualAttachmentsBlock(

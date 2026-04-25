@@ -2,15 +2,22 @@
  * Public, bank-facing evidence-attachment route.
  *
  * Handles `GET /e/<token>` from external reviewers (issuing banks,
- * Shopify's dispute view, etc.). Verifies the HMAC token, resolves the
- * target file in Supabase Storage using the service client's
- * `.download(path)` method, and returns the bytes through our origin.
+ * Shopify's dispute view, etc.). Resolves the target file in Supabase
+ * Storage using the service client and returns the bytes through our
+ * origin. The Supabase storage host is never minted into a URL,
+ * redirected to, or exposed in any response header.
  *
- * The Supabase storage host is never minted into a URL, never
- * redirected to, and never exposed in any response header. The bank
- * sees only `disputedesk.app/e/<token>` end to end.
+ * Two link formats are supported in the same path so old links keep
+ * working through their TTL:
  *
- * See `lib/links/attachmentLinks.ts` for the token format and model.
+ *   1. NEW — DB-backed Crockford Base32 short codes
+ *      (`/e/Q7K2HXRJ9P`). See `lib/links/shortLinks.ts`. All new save
+ *      jobs mint these.
+ *
+ *   2. LEGACY — HMAC-signed JWT-like tokens
+ *      (`/e/<base64.payload>.<base64.signature>`). See
+ *      `lib/links/attachmentLinks.ts`. Kept until existing live
+ *      tokens expire (180 days from mint).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,6 +26,8 @@ import {
   requireEvidenceLinkSecret,
   verifyAttachmentToken,
 } from "@/lib/links/attachmentLinks";
+import { resolveShortLink, SHORT_CODE_RE } from "@/lib/links/shortLinks";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
@@ -42,41 +51,30 @@ function notFound(): NextResponse {
   return new NextResponse("Not found", { status: 404 });
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ token: string }> },
-) {
-  const { token } = await params;
+interface ResolvedTarget {
+  kind: "item" | "pdf";
+  entityId: string;
+  packId: string;
+}
 
-  let secret: string;
-  try {
-    secret = requireEvidenceLinkSecret();
-  } catch {
-    // Missing secret is an ops misconfiguration, not something the bank
-    // can diagnose — surface as 404 so we never leak "why" to an
-    // external caller.
-    return notFound();
-  }
-
-  const payload = verifyAttachmentToken(token, secret);
-  if (!payload) return notFound();
-
-  const db = getServiceClient();
-
+async function loadAndStream(
+  db: SupabaseClient,
+  target: ResolvedTarget,
+): Promise<NextResponse> {
   let bucket: string;
   let path: string;
   let fileName: string | null = null;
   let contentType = "application/octet-stream";
 
-  if (payload.k === "item") {
+  if (target.kind === "item") {
     const { data: item } = await db
       .from("evidence_items")
       .select("pack_id, source, payload")
-      .eq("id", payload.id)
+      .eq("id", target.entityId)
       .single();
     if (
       !item ||
-      item.pack_id !== payload.p ||
+      item.pack_id !== target.packId ||
       item.source !== "manual_upload"
     ) {
       return notFound();
@@ -91,7 +89,7 @@ export async function GET(
     const { data: pack } = await db
       .from("evidence_packs")
       .select("id, pdf_path")
-      .eq("id", payload.p)
+      .eq("id", target.packId)
       .single();
     if (!pack?.pdf_path) return notFound();
     bucket = "evidence-packs";
@@ -116,5 +114,45 @@ export async function GET(
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },
+  });
+}
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
+  const { token } = await params;
+  const db = getServiceClient();
+
+  // 1. Short-code path (new). Cheap shape check first to avoid an
+  //    unnecessary DB roundtrip on legacy HMAC tokens.
+  if (SHORT_CODE_RE.test(token)) {
+    const target = await resolveShortLink(db, token);
+    if (target) {
+      return loadAndStream(db, target);
+    }
+    // Shape matched but row missing/expired/revoked — deny.
+    return notFound();
+  }
+
+  // 2. Legacy HMAC-signed token path. Kept until existing live tokens
+  //    expire (180 days from mint).
+  let secret: string;
+  try {
+    secret = requireEvidenceLinkSecret();
+  } catch {
+    // Missing secret is an ops misconfiguration, not something the bank
+    // can diagnose — surface as 404 so we never leak "why" to an
+    // external caller.
+    return notFound();
+  }
+
+  const payload = verifyAttachmentToken(token, secret);
+  if (!payload) return notFound();
+
+  return loadAndStream(db, {
+    kind: payload.k,
+    entityId: payload.id,
+    packId: payload.p,
   });
 }

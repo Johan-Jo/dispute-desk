@@ -75,9 +75,15 @@ describe("attachmentLinks", () => {
       SECRET_A,
     );
     const [payload, sig] = token.split(".");
-    const last = sig.slice(-1);
-    const flipped = last === "A" ? "B" : "A";
-    const tampered = `${payload}.${sig.slice(0, -1)}${flipped}`;
+    // Flip a char in the middle of the signature, not the last char —
+    // base64url's final char of an HMAC-SHA256 signature only encodes
+    // 4 meaningful bits (the rest is padding-implicit zero bits), so
+    // flipping it can leave the decoded MAC bytes unchanged. A
+    // mid-signature flip always changes a full 6-bit byte boundary.
+    const mid = Math.floor(sig.length / 2);
+    const midChar = sig[mid];
+    const flipped = midChar === "A" ? "B" : "A";
+    const tampered = `${payload}.${sig.slice(0, mid)}${flipped}${sig.slice(mid + 1)}`;
     expect(verifyAttachmentToken(tampered, SECRET_A)).toBeNull();
   });
 
