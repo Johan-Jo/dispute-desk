@@ -41,7 +41,6 @@ import type {
   WhyWinsItem,
 } from "@/lib/argument/types";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
-import type { EvidenceItemFull } from "../workspace-components/types";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -154,9 +153,21 @@ const TAXONOMY_TONE: Record<TaxonomyState, "success" | "critical" | "warning" | 
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
   const { data, derived, actions, clientState } = workspace;
+
+  // ID-keyed counterclaim lookup — declared at the top so the hook
+  // call order is stable across every render (rules-of-hooks). The
+  // factory tolerates `data === null` by returning an empty map.
+  const counterclaimsById: Record<string, CounterclaimNode> = useMemo(() => {
+    const argMap = data?.argumentMap;
+    if (argMap?.counterclaimsById) return argMap.counterclaimsById;
+    const map: Record<string, CounterclaimNode> = {};
+    for (const c of argMap?.counterclaims ?? []) map[c.id] = c;
+    return map;
+  }, [data?.argumentMap]);
+
   if (!data) return null;
 
-  const { dispute, appliedRule, argumentMap } = data;
+  const { dispute, appliedRule } = data;
   const {
     caseStrength,
     effectiveChecklist,
@@ -215,26 +226,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         return { reasons };
       })()
     : null;
-
-  /* ── ID-keyed maps from the workspace API. NO IMPLICIT MAPPING. ── */
-  const counterclaimsById: Record<string, CounterclaimNode> = useMemo(() => {
-    if (argumentMap?.counterclaimsById) return argumentMap.counterclaimsById;
-    const map: Record<string, CounterclaimNode> = {};
-    for (const c of argumentMap?.counterclaims ?? []) map[c.id] = c;
-    return map;
-  }, [argumentMap]);
-
-  const evidenceItemsByField: Record<string, EvidenceItemFull> = useMemo(() => {
-    if (data.pack?.evidenceItemsByField) return data.pack.evidenceItemsByField;
-    const map: Record<string, EvidenceItemFull> = {};
-    for (const it of data.pack?.evidenceItems ?? []) {
-      const fields = ((it.payload as { fieldsProvided?: string[] } | null)?.fieldsProvided ?? []) as string[];
-      for (const f of fields) {
-        if (!(f in map)) map[f] = it;
-      }
-    }
-    return map;
-  }, [data.pack]);
 
   /* ── Hero ── */
   const strengthKey = caseStrength.overall;

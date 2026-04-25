@@ -689,13 +689,46 @@ Build pipeline contract (`lib/packs/buildPack.ts`, `lib/jobs/handlers/buildPackJ
 
 **Key feature:** Argument map claims are clickable — clicking an evidence badge switches to the Evidence tab, expands the correct category, scrolls to the item, and highlights it.
 
-### Overview tab structure (recommendation engine)
+### Overview tab structure (backend-driven, audit-grade)
 
-**Dispute detail header + Overview tab redesign (2026-04-25):** The dispute detail layout was rebuilt to match the Figma reference and the project's *embedded-pages-rew* design brief, which explicitly forbids gradients in favour of "clean white surfaces, light borders, subtle shadows only where needed". A first-pass redesign that used red and green gradient cards was reverted on the same day after the merchant flagged the wrong source. The current layout has two concerns:
+**Plan v3 rebuild (2026-04-25):** The Overview tab was rewritten end-to-end to satisfy the spec rule that *the UI is a debuggable surface of the backend, not a simplified dashboard*. Every render value cites a backend field; cross-collection references resolve through stable IDs only. The full plan and audit checklist live in `.cursor/plans/figma-dispute-detail-3tabs.plan.md` (v3 patch 1).
 
-1. **Shared header card (`WorkspaceShell.tsx`)** — a single clean white card (`#ffffff`, `1px solid #E1E3E5`, 12 px radius, very faint shadow) rendered above the Polaris `Tabs` so Overview, Evidence, and Review & Submit all share the same identity block. The card holds: title `"Dispute #<id8> — <reason>"` (using `merchantDisputeReasonLabel`), two status pills (Submitted/Needs review, plus a strength pill — Strong/Moderate/Weak case — derived from `derived.caseStrength.overall`), and a 4-column responsive facts grid (Amount, Customer, Date filed, Dispute reason). The Polaris `Page` `title` prop is preserved so Shopify Admin's outer title bar continues to show the dispute reference.
+**Backend prerequisites shipped before the UI rebuild:**
+- **3.A.5 — Stable cross-collection IDs (commit `7493b3c`).** Workspace API now exposes `argumentMap.counterclaimsById: Record<id, CounterclaimNode>` and `pack.evidenceItemsByField: Record<evidenceFieldKey, EvidenceItem>`. Every `counterclaim.supporting/missing/systemUnavailable[*]` row gets an `evidenceFieldKey` alias for its existing `field` (back-compat — both keys present). `WhyWinsResult.strengths/weaknesses` are now `Array<{ text, counterclaimId }>` instead of bare strings, so consumers resolve back to the surfacing counterclaim by ID rather than by description text.
+- **3.A.2 — Single-source mutation payload + raw preview (commit `119914b`).** New `lib/shopify/composeShopifyMutationPayload.ts` is the only place that builds the `disputeEvidenceUpdate.input` payload; both `saveToShopifyJob.ts` and the submission-preview API call it. `GET /api/packs/:id/submission-preview?format=raw` returns the actual mutation payload, byte-equivalent to what the submit job sends. Guaranteed by 7 unit tests (purity, customer-name splitting, single-word fallback, all-null omission, the 6 reason families, attachments append, URL-as-input).
+- **3.A.6 — Backend-derived recommendation copy (commit `9b07cf5`).** New `lib/argument/recommendation.ts` produces the merchant-facing `Recommendation:` sentence + helper line. `useDisputeWorkspace.ts` exposes `derived.recommendationText` and `derived.recommendationHelperText`; the Overview tab renders both verbatim. The previous inline composition in `OverviewTab.tsx:382-415` is gone.
+- **3.A.4 — First-class attachments[] (commit `565ae72`).** Workspace API derives `attachments[]` from `pack.evidenceItems[*].payload.fileId`. Always an array; empty array is the explicit empty state for the Review tab's Supporting-documents section.
+- **3.A.3 — Rebuttal section provenance (commit `9a60ea2`).** `RebuttalSection.evidenceRefs[]` is normalized at the API boundary so the Review tab can always render per-claim "Citing:" footnotes (or the explicit "Per-claim provenance unavailable" empty state for legacy drafts that lack the field).
 
-2. **Overview tab body (`OverviewTab.tsx`)** — Case Summary moved out (now in the shared header), so the tab opens with the page-level recommendation header, the auto-save-blocked banner (when applicable), then plain Polaris `Card`s for **Case status** (Status / Strength / Deadline grid, recommendation copy, automation rule row with "Change rule" CTA, primary "Submit to Shopify" / "View in Shopify" CTA), **How we defend this case** (defense bullets), **Your supporting evidence** (per-field rows with status badges and "Add this evidence" CTAs on missing fields), and **Evidence by category** (interpretation copy, progress bar, per-category rows with Fix CTA on critical gaps). All helpers, hooks, derived data, the failure short-circuit, the auto-save-blocked banner, the recommendation engine, and every CTA were preserved unchanged — only the JSX wrapping changed.
+**Overview tab body (`tabs/OverviewTab.tsx`, commit `23904a1`).** Sections in plan order:
+
+1. **F1 — Failure short-circuit.** When `derived.isFailed`, render the safe `FAILURE_COPY[failureCode]` Banner and a Retry button. Internal `failure_reason` is never shown to merchants.
+2. **F2 — Auto-save denied Banner.** Driven by the latest `auto_save_blocked` audit event; lists `reasons[]` and exposes Add-missing / Submit-anyway CTAs.
+3. **O1 — Hero card.** Adaptive green/amber/red palette keyed off `caseStrength.overall`. Title from a 1:1 mapping (`Likely to win` / `Could win` / `Hard to win`). Coverage pill `Evidence coverage: {score}/100` from `caseStrength.score` — explicitly **not** "confidence" (the backend produces no such number). Body: `caseStrength.strengthReason`, `caseStrength.improvementHint`, `derived.recommendationText`, `derived.recommendationHelperText`, `EVIDENCE_EVALUATION_HELPER`, deadline line.
+4. **O2 — "What happens now" timeline.** Three-step state machine over `submitted` and `dispute.finalOutcome`. Pre-submit: Build → Review & submit → Bank review. Submitted: Submitted ✓ → Bank review ⏰ → Outcome (turns green when `finalOutcome` is set).
+5. **O3 — "What supports your case".** Iterates `derived.whyWins.strengths[]`. For each entry: resolves `argumentMap.counterclaimsById[counterclaimId]` for the strength pill, then iterates `counterclaim.supporting[].evidenceFieldKey` to render every backing field with a §3.E taxonomy state pill. The Missing-signals subsection iterates `whyWins.weaknesses[]` and `counterclaim.missing[]` the same way. Merchant-actionable rows expose `Add this evidence` → `actions.navigateToEvidence(evidenceFieldKey)`. **No claim is rendered without provenance, no weakness is silently dropped.**
+6. **O4 — Evidence coverage.** Headline reflects critical-missing count; bar driven by `pack.completenessScore` (server-computed). Critical / Supporting / Optional priority breakdown filtered from `effectiveChecklist`. "View all evidence" link to the Evidence tab.
+7. **Automation rule card.** Applied-mode pill + helper from `appliedRule.mode` + `Change rule` button → `/app/rules?family={mapReasonToRulesFamily(reason)}`.
+8. **Footer CTAs.** Pre-submit: `Edit evidence` + `Submit to Shopify`. Post-submit: `Set up policies for future cases` (only when `missingItems` includes a refund/shipping/cancellation policy) + `View in Shopify Admin` (deep link via `getShopifyDisputeUrl`).
+
+**§3.E empty-state taxonomy.** Every rendered evidence/payload field uses exactly one of: `Present` / `Missing` / `Not applicable` / `System unavailable` / `Waived`. Mapping rules from `ChecklistItemV2`:
+- `status === "available"` → **Present** (success tone).
+- `status === "missing"` AND `collectionType ∈ {"auto", "conditional_auto", "unavailable"}` → **System unavailable** (the source can't supply it; not a merchant gap).
+- `status === "missing"` AND `collectionType === "manual"` → **Missing** (critical tone, with `Add this evidence` CTA when not submitted).
+- `status === "waived"` → **Waived**.
+- Default: **Missing**.
+
+**What was removed from the previous OverviewTab.** `synthesizeDefenseBullets` + `DEFENSE_RULES` (UI synthesis), the local `WHY_EVIDENCE_MATTERS` description map (UI synthesis), `STRENGTH_LABEL` and `strengthTone` helpers (no UI strength classification), `extractIpLocationPayload` (IP verdict surfaces from the per-row taxonomy state), the inline status/strength/deadline grid + recommendation block (replaced by O1 hero reading the same fields from `derived.*`).
+
+**Shared header card (`WorkspaceShell.tsx`, unchanged from commit `60273c8`).** A single clean white card above the Polaris `Tabs` — title `Dispute #<id8> — <reason>`, two pills (Submitted/Needs review + Strong/Moderate/Weak case from `derived.caseStrength.overall`), and a 4-column responsive facts grid (Amount, Customer, Date filed, Dispute reason). Shared by Overview, Evidence, and Review & Submit.
+
+**Decision rule.** Backend prerequisites land before any UI rebuild. The UI never synthesises strength labels, defense claims, or numeric confidence values. Anything not visible in this section's source list is not allowed in the JSX.
+
+---
+
+### Overview tab structure (legacy decision-engine description, retained for context)
+
+The earlier (pre–v3 rebuild) Overview tab was structured as a **decision-oriented recommendation engine**. Its sections — Case Summary card, Page header, Case Status with recommendation, How we defend this case, Your supporting evidence, Evidence by category — described below for historical context. The merchant-facing copy (recommendation strings, taxonomy labels, automation rule helpers) is preserved in the new layout via the backend prerequisites listed above.
 
 The Overview tab is structured as a **decision-oriented recommendation engine**, not a dashboard. It answers three questions only: *what is this page for, what is the current state, what should the user do next.* Sections, in order:
 
