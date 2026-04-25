@@ -38,3 +38,40 @@ jobs:
             exit 1
           fi
           echo "No forbidden copy found"
+
+      # Plan v3 §P2.4b — Canonical Registry Lock.
+      # No code outside lib/argument/canonicalEvidence.ts may assign a
+      # canonical evidence category. Tests and the scoring engine read
+      # the category through `categoryFor()` and produce strings via
+      # `computeContributions`, but they NEVER write the literal
+      # `category: "strong" | "moderate" | "supporting" | "invalid"`.
+      - name: Category source-of-truth guard
+        run: |
+          MATCHES=$(grep -rn -E '"category"\s*:\s*"(strong|moderate|supporting|invalid)"' \
+            --include="*.ts" --include="*.tsx" \
+            app/ lib/ 2>/dev/null \
+            | grep -v -E "lib/argument/canonicalEvidence\.ts|lib/argument/__tests__/|lib/argument/caseStrength\.ts" \
+            || true)
+          if [ -n "$MATCHES" ]; then
+            echo "ERROR: canonical evidence category assigned outside the registry:"
+            echo "$MATCHES"
+            echo ""
+            echo "Plan v3 §P2.4b: only lib/argument/canonicalEvidence.ts may assign category."
+            exit 1
+          fi
+          echo "No category assignments outside the registry"
+
+      # Plan v3 §P2.6 — Argument Purity Rule.
+      # Vague summary rows like "Order details verified" or
+      # "Transaction record" must not appear in rendered UI. They
+      # fold multiple signals into a single claim, which the new
+      # evidence-classification system explicitly forbids.
+      - name: Argument purity copy check
+        run: |
+          if grep -rn -E "Order details verified|Transaction record verified" \
+            --include="*.tsx" --include="*.ts" --include="*.json" \
+            app/ components/ lib/ messages/ 2>/dev/null; then
+            echo "ERROR: vague summary copy found — see plan §P2.6 (Argument Purity Rule)"
+            exit 1
+          fi
+          echo "No vague summary copy found"

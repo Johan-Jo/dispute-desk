@@ -15,20 +15,28 @@ import type {
   CaseStrengthLevel,
 } from "./types";
 
-/** Human-readable strength descriptions per evidence field. */
+/** Human-readable strength descriptions per evidence field.
+ *
+ *  NOTE (plan v3 §P2.6): The Overview tab no longer iterates this map.
+ *  The "What supports your case" surface now consumes
+ *  `derived.contributions` (strict per-canonical-signalId). This map
+ *  remains for legacy callers (Evidence tab, Review & Submit tab) until
+ *  those tabs are rebuilt under the v3 plan. Vague summary phrases are
+ *  forbidden per the Argument Purity Rule (P2.6) — fields that map to
+ *  a supporting-only canonical category (e.g. `order_confirmation`)
+ *  intentionally lack a description here so they cannot accidentally
+ *  surface as a "strength" anywhere. */
 const STRENGTH_DESCRIPTIONS: Record<string, string> = {
   avs_cvv_match: "AVS and CVV passed",
   billing_address_match: "Billing address matches order",
   shipping_tracking: "Shipment confirmed with tracking",
   delivery_proof: "Delivery confirmed by carrier",
-  customer_communication: "Customer communication documented",
-  order_confirmation: "Order details verified",
-  refund_policy: "Refund policy was disclosed",
-  shipping_policy: "Shipping policy was disclosed",
-  cancellation_policy: "Cancellation policy was disclosed",
-  product_description: "Product description matches listing",
-  activity_log: "Customer account activity verified",
-  duplicate_explanation: "Separate transactions documented",
+  // Note: customer_communication, order_confirmation, refund_policy,
+  // shipping_policy, cancellation_policy, product_description,
+  // activity_log, duplicate_explanation are all SUPPORTING fields
+  // per the canonical registry. They never elevate strength so we
+  // do NOT emit a description here — that prevents them from leaking
+  // into any "strength" surface.
 };
 
 const WEAKNESS_DESCRIPTIONS: Record<string, string> = {
