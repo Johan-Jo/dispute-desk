@@ -1,98 +1,157 @@
 "use client";
 
 import {
-  Card,
   BlockStack,
   InlineStack,
   Text,
   Badge,
   Button,
   Banner,
-  ProgressBar,
-  Divider,
+  Icon,
 } from "@shopify/polaris";
-import { useSearchParams } from "next/navigation";
-import { withShopParams } from "@/lib/withShopParams";
-import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
-import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import {
-  EVIDENCE_EVALUATION_HELPER,
-  categoryImpactLabel,
-  evidenceRowStatus,
-} from "@/lib/argument/evidenceStatus";
+  CheckCircleIcon,
+  ClockIcon,
+  ShieldCheckMarkIcon,
+  AlertCircleIcon,
+} from "@shopify/polaris-icons";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
-const STRENGTH_LABEL: Record<string, string> = {
-  strong: "Strong",
-  moderate: "Moderate",
-  weak: "Weak",
-  insufficient: "Weak",
+/** Confidence label + numeric badge per case strength. */
+const CONFIDENCE_BY_STRENGTH: Record<
+  string,
+  { title: string; pct: number; tone: "success" | "warning" | "critical"; bg: string; border: string; iconColor: string }
+> = {
+  strong: {
+    title: "Likely to win",
+    pct: 85,
+    tone: "success",
+    bg: "#ECFDF5",
+    border: "#A7F3D0",
+    iconColor: "#22C55E",
+  },
+  moderate: {
+    title: "Could win",
+    pct: 60,
+    tone: "warning",
+    bg: "#FFFBEB",
+    border: "#FDE68A",
+    iconColor: "#D97706",
+  },
+  weak: {
+    title: "Hard to win",
+    pct: 30,
+    tone: "critical",
+    bg: "#FEF2F2",
+    border: "#FCA5A5",
+    iconColor: "#DC2626",
+  },
+  insufficient: {
+    title: "Hard to win",
+    pct: 15,
+    tone: "critical",
+    bg: "#FEF2F2",
+    border: "#FCA5A5",
+    iconColor: "#DC2626",
+  },
 };
 
-/** Plain-English description per evidence field — kept in sync with
- * WHY_TEXT in EvidenceTab.tsx so both tabs surface identical bank-grade
- * wording. Updated 2026-04-21 for the evidence-model rename. */
-const WHY_EVIDENCE_MATTERS: Record<string, string> = {
-  order_confirmation: "A complete record of the order, including items, amount, and customer details.",
-  shipping_tracking: "Carrier confirmation that the order was shipped and delivered.",
-  delivery_proof: "Proof of delivery through signature or photographic confirmation.",
-  billing_address_match: "Billing matches the cardholder’s address — heavy weight in fraud cases.",
-  avs_cvv_match: "Card security checks confirming the purchaser had access to billing details.",
-  product_description: "Product was advertised exactly as delivered.",
-  refund_policy: "Customer agreed to refund terms before purchase.",
-  shipping_policy: "Shipping commitments were clearly disclosed before purchase.",
-  cancellation_policy: "Cancellation rules were disclosed before purchase.",
-  customer_communication: "Messages or emails showing engagement before or after the purchase.",
-  customer_account_info: "Account age and activity supporting a legitimate customer profile.",
-  duplicate_explanation: "Documents that the charges are distinct, not duplicates.",
-  supporting_documents: "Additional proof reinforcing the overall defense.",
-  activity_log: "Evidence of prior successful transactions from the same customer.",
-  device_session_consistency: "Technical signals showing consistent device and session behavior.",
-  ip_location_check: "Verification of purchase location compared to billing details and prior activity.",
-};
-
-const CATEGORY_FIX_HINT: Record<string, string> = {
-  order: "Confirm the order record is synced from Shopify.",
-  payment: "Pull AVS/CVV results from the payment gateway — strong fraud defense.",
-  fulfillment: "Add tracking and delivery confirmation — reduces win probability when missing.",
-  communication: "Attach customer messages or replies — banks reward engagement.",
-  policy: "Publish or upload your store policies so they can be referenced.",
-  identity: "Pull customer purchase history to show legitimate activity.",
-  merchant: "Upload product listings or supporting documents to round out the case.",
-};
-
-interface DefenseRule {
+interface DefenseReason {
   any: string[];
-  all?: string[];
-  bullet: string;
+  title: string;
+  description: string;
+  /** Strength shown as a pill. */
+  strength: "Strong" | "Supporting" | "Helpful";
 }
 
-const DEFENSE_RULES: DefenseRule[] = [
-  { any: ["order_confirmation"], bullet: "Complete order record confirms items, amount, and customer details" },
-  { any: ["avs_cvv_match"], bullet: "Payment verification checks passed (AVS/CVV)" },
-  { any: ["billing_address_match"], bullet: "Billing address matches the cardholder on file" },
-  { any: ["delivery_proof", "shipping_tracking"], bullet: "Order was successfully fulfilled and delivered" },
-  { any: ["activity_log"], bullet: "Customer behavior matches previous legitimate purchases" },
-  { any: ["customer_account_info"], bullet: "Customer account history supports a legitimate profile" },
-  { any: ["customer_communication"], bullet: "Customer was actively engaged through the order timeline" },
-  { any: ["product_description"], bullet: "Product was advertised exactly as delivered" },
-  { any: ["refund_policy", "shipping_policy", "cancellation_policy"], bullet: "Store policies were clearly disclosed at purchase" },
-  { any: ["duplicate_explanation"], bullet: "Each charge is documented as a distinct, separate transaction" },
-  { any: ["device_session_consistency"], bullet: "Device and session signals are consistent with a legitimate purchase" },
-  { any: ["ip_location_check"], bullet: "Purchase location is consistent with the cardholder" },
-  { any: ["supporting_documents"], bullet: "Additional documentation reinforces the overall defense" },
+/** Defense reasons surfaced when the relevant evidence field is present. */
+const DEFENSE_REASONS: DefenseReason[] = [
+  {
+    any: ["avs_cvv_match"],
+    title: "Payment verified",
+    description: "AVS and CVV checks passed, indicating cardholder authorization.",
+    strength: "Strong",
+  },
+  {
+    any: ["billing_address_match"],
+    title: "Billing address matches",
+    description: "Billing matches the cardholder’s address on file.",
+    strength: "Strong",
+  },
+  {
+    any: ["delivery_proof", "shipping_tracking"],
+    title: "Delivered with tracking",
+    description: "Package delivered to billing address with carrier confirmation.",
+    strength: "Strong",
+  },
+  {
+    any: ["order_confirmation"],
+    title: "Complete order record",
+    description: "Order details confirm items, amount, and customer identity.",
+    strength: "Strong",
+  },
+  {
+    any: ["activity_log"],
+    title: "Customer activity consistent",
+    description: "Repeat customer with prior successful purchases.",
+    strength: "Supporting",
+  },
+  {
+    any: ["customer_account_info"],
+    title: "Established customer profile",
+    description: "Account history supports a legitimate customer.",
+    strength: "Supporting",
+  },
+  {
+    any: ["customer_communication"],
+    title: "Customer engagement",
+    description: "Customer was actively engaged through the order timeline.",
+    strength: "Supporting",
+  },
+  {
+    any: ["product_description"],
+    title: "Product as described",
+    description: "Product was advertised exactly as delivered.",
+    strength: "Supporting",
+  },
+  {
+    any: ["refund_policy", "shipping_policy", "cancellation_policy"],
+    title: "Store policies disclosed",
+    description: "Refund, shipping, and cancellation policies were clearly disclosed at purchase.",
+    strength: "Supporting",
+  },
+  {
+    any: ["duplicate_explanation"],
+    title: "Charges are distinct",
+    description: "Each charge is documented as a separate, non-duplicate transaction.",
+    strength: "Strong",
+  },
+  {
+    any: ["ip_location_check"],
+    title: "Purchase location consistent",
+    description: "Purchase location is consistent with the cardholder.",
+    strength: "Helpful",
+  },
+  {
+    any: ["device_session_consistency"],
+    title: "Consistent device signals",
+    description: "Device and session signals match a legitimate purchase.",
+    strength: "Helpful",
+  },
+  {
+    any: ["supporting_documents"],
+    title: "Additional documentation",
+    description: "Supplementary documents reinforce the overall defense.",
+    strength: "Helpful",
+  },
 ];
 
-function synthesizeDefenseBullets(presentFields: Set<string>, ipUnfavorable: boolean): string[] {
-  const bullets: string[] = [];
-  for (const rule of DEFENSE_RULES) {
-    if (!rule.any.some((f) => presentFields.has(f))) continue;
-    if (rule.any.includes("ip_location_check") && ipUnfavorable) continue;
-    bullets.push(rule.bullet);
-  }
-  return bullets;
+function strengthTone(s: DefenseReason["strength"]): "success" | "warning" | undefined {
+  if (s === "Strong") return "success";
+  if (s === "Supporting") return "warning";
+  return undefined;
 }
 
 function formatDate(iso: string | null): string {
@@ -108,29 +167,27 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function strengthTone(level: string): "success" | "warning" | "critical" {
-  if (level === "strong") return "success";
-  if (level === "moderate") return "warning";
-  return "critical";
-}
-
-interface IpLocationPayload {
-  bankEligible?: boolean;
-  locationMatch?: string;
-  summary?: string;
-  merchantGuidance?: string | null;
-  ipConsistencyLevel?: string;
-  ipinfo?: { privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } } | null;
-}
-
-function extractIpLocationPayload(
-  evidenceItems: Array<{ type: string; payload: Record<string, unknown> }> | undefined,
-): IpLocationPayload | null {
-  if (!evidenceItems) return null;
-  const ip = evidenceItems.find(
-    (e) => e.type === "other" && typeof (e.payload as { locationMatch?: unknown })?.locationMatch === "string",
-  );
-  return (ip?.payload as IpLocationPayload | undefined) ?? null;
+/** Synthesize a one-paragraph case description from the present defense reasons. */
+function synthesizeHeroDescription(activeReasons: DefenseReason[]): string {
+  if (activeReasons.length === 0) {
+    return "Evidence collection is in progress. Add evidence to strengthen the defense.";
+  }
+  const fragments: string[] = [];
+  if (activeReasons.some((r) => r.any.includes("avs_cvv_match") || r.any.includes("billing_address_match"))) {
+    fragments.push("payment verification passed");
+  }
+  if (activeReasons.some((r) => r.any.includes("delivery_proof") || r.any.includes("shipping_tracking"))) {
+    fragments.push("delivery was confirmed with tracking");
+  }
+  if (activeReasons.some((r) => r.any.includes("activity_log") || r.any.includes("customer_account_info"))) {
+    fragments.push("customer activity is consistent with a legitimate purchase");
+  }
+  if (fragments.length === 0) {
+    fragments.push("supporting evidence has been collected");
+  }
+  return `This dispute has strong evidence supporting authorization. ${fragments
+    .map((f, i) => (i === 0 ? f.charAt(0).toUpperCase() + f.slice(1) : f))
+    .join(", ")}.`;
 }
 
 const FAILURE_COPY: Record<string, { title: string; body: string }> = {
@@ -147,41 +204,14 @@ const FAILURE_FALLBACK = {
   body: "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue.",
 };
 
-function calendarDaysSince(iso: string): number {
-  const from = new Date(iso);
-  const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.max(0, Math.round((today.getTime() - fromDay.getTime()) / (1000 * 60 * 60 * 24)));
-}
-
-function mapReasonToRulesFamily(reason: string | null | undefined): string {
-  if (!reason) return "general";
-  const key = reason.toUpperCase().replace(/\s+/g, "_");
-  if (key === "FRAUDULENT" || key === "UNRECOGNIZED") return "fraud";
-  if (key === "PRODUCT_NOT_RECEIVED") return "pnr";
-  if (key === "PRODUCT_UNACCEPTABLE" || key === "NOT_AS_DESCRIBED") return "not_as_described";
-  if (key === "SUBSCRIPTION_CANCELED") return "subscription";
-  if (key === "CREDIT_NOT_PROCESSED") return "refund";
-  if (key === "DUPLICATE") return "duplicate";
-  return "general";
-}
-
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
-  const searchParams = useSearchParams();
   const { data, derived, actions, clientState } = workspace;
   if (!data) return null;
 
-  const { dispute, appliedRule } = data;
-  const ipLocPayload = extractIpLocationPayload(data.pack?.evidenceItems);
-  const ipUnfavorable = ipLocPayload?.bankEligible === false;
-  const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
+  const { dispute } = data;
+  const { caseStrength, effectiveChecklist, isReadOnly } = derived;
 
-  // System failure short-circuit. When the build itself failed (e.g.,
-  // Shopify order fetch failed), suppress the recommendation engine
-  // entirely. Identity (title/amount/customer/reason) is already in the
-  // shared header card rendered by WorkspaceShell, so the failed-build
-  // body just shows the failure banner and a Retry CTA.
+  // System failure short-circuit (preserved).
   if (derived.isFailed) {
     const copy = (derived.failureCode && FAILURE_COPY[derived.failureCode]) || FAILURE_FALLBACK;
     return (
@@ -211,27 +241,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const submitted = isReadOnly;
   const submittedAt = data.pack?.savedToShopifyAt ?? null;
 
-  const deadlineDays = dispute.dueAt
-    ? Math.ceil((new Date(dispute.dueAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
-  const deadlineUrgent = deadlineDays !== null && deadlineDays <= 2;
-
-  const strengthKey = caseStrength.overall;
-  const strengthText = STRENGTH_LABEL[strengthKey] ?? "Weak";
-
-  const presentItems = effectiveChecklist.filter((c) => c.status === "available");
-  const missingChecklist = effectiveChecklist.filter(
-    (c) => c.status === "missing" && (c.collectionType === "manual" || !c.collectionType),
-  );
-  const presentFields = new Set(presentItems.map((p) => p.field));
-
-  const totalEvidenceShown = presentItems.length + missingChecklist.length;
-  const coveragePct =
-    totalEvidenceShown > 0
-      ? Math.round((presentItems.length / totalEvidenceShown) * 100)
-      : 0;
-
-  // Auto-submit denied visibility.
+  // Auto-save denied banner (preserved).
   const autoSaveBlock = !submitted
     ? (() => {
         const events = data.pack?.auditEvents ?? [];
@@ -245,95 +255,101 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       })()
     : null;
 
-  const topMissingLabel = missingItems[0]?.label ?? null;
+  // Hero card (Likely to win / Could win / Hard to win)
+  const strengthKey = caseStrength.overall;
+  const confidence = CONFIDENCE_BY_STRENGTH[strengthKey] ?? CONFIDENCE_BY_STRENGTH.weak;
 
-  // Recommendation line + helper.
-  let recommendation: string;
-  let recommendationHelper: string | null = null;
-  if (submitted) {
-    if (strengthKey === "strong" || strengthKey === "moderate") {
-      recommendation =
-        "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.";
-    } else {
-      recommendation =
-        "Recommendation: Monitor this case. Consider strengthening evidence for future disputes.";
-    }
-    if (submittedAt) {
-      const daysElapsed = calendarDaysSince(submittedAt);
-      const dayLabel =
-        daysElapsed === 0
-          ? "Submitted today"
-          : `${daysElapsed} day${daysElapsed === 1 ? "" : "s"} since submission`;
-      recommendationHelper = `${dayLabel}. The issuing bank typically responds within 30–75 days.`;
-    } else {
-      recommendationHelper = "The issuing bank typically responds within 30–75 days.";
-    }
-  } else if (strengthKey === "strong") {
-    recommendation =
-      "Recommendation: Submit now — your evidence is strong enough to defend this charge.";
-  } else if (strengthKey === "moderate") {
-    const top = missingItems[0];
-    recommendation = top
-      ? `Recommendation: You can submit, but adding ${top.label.toLowerCase()} would meaningfully improve your odds.`
-      : "Recommendation: You can submit now, but a small amount of additional evidence would improve your odds.";
-  } else {
-    const top = missingItems[0];
-    recommendation = top
-      ? `Recommendation: Add ${top.label.toLowerCase()} before submitting — the case is currently unlikely to win as-is.`
-      : "Recommendation: Strengthen the evidence before submitting — the case is currently unlikely to win as-is.";
-  }
+  const presentItems = effectiveChecklist.filter((c) => c.status === "available");
+  const presentFields = new Set(presentItems.map((p) => p.field));
+
+  // Active defense reasons — only those backed by present evidence.
+  const activeReasons = DEFENSE_REASONS.filter((r) =>
+    r.any.some((f) => presentFields.has(f)),
+  );
+
+  const heroDescription = synthesizeHeroDescription(activeReasons);
 
   const goToReview = () => actions.setActiveTab(2);
   const goToEvidence = () => actions.setActiveTab(1);
-  const shopifyAdminUrl =
-    dispute.shopDomain && dispute.disputeEvidenceGid
-      ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
-      : null;
 
-  const POLICY_FIELDS = ["refund_policy", "shipping_policy", "cancellation_policy"];
-  const missingPolicy = missingChecklist.find((m) => POLICY_FIELDS.includes(m.field));
+  // Coverage by priority bucket.
+  type Bucket = "critical" | "recommended" | "optional";
+  const buckets: Bucket[] = ["critical", "recommended", "optional"];
+  const bucketLabel: Record<Bucket, string> = {
+    critical: "Critical evidence",
+    recommended: "Supporting evidence",
+    optional: "Optional",
+  };
+  const bucketDot: Record<Bucket, string> = {
+    critical: "#DC2626",
+    recommended: "#D97706",
+    optional: "#9CA3AF",
+  };
 
-  let improveCta: { label: string; url: string } | null = null;
-  if (submitted && missingPolicy) {
-    improveCta = {
-      label: "Set up policies for future cases",
-      url: withShopParams("/app/policies", searchParams),
-    };
-  }
+  const visibleChecklist = effectiveChecklist.filter((c) => c.status !== "unavailable");
+  const totalIncluded = visibleChecklist.filter((c) => c.status === "available" || c.status === "waived").length;
+  const totalCount = visibleChecklist.length;
 
-  const disputeFamily = mapReasonToRulesFamily(dispute.reason);
-  const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
-  const appliedMode = appliedRule?.mode ?? "review";
-  const appliedModeLabel = appliedMode === "auto" ? "Automatic" : "Review before submit";
-  const appliedModeHelp =
-    appliedMode === "auto"
-      ? "DisputeDesk prepared the evidence pack and submitted it automatically."
-      : "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline.";
+  const bucketStats = buckets.map((b) => {
+    const items = visibleChecklist.filter((c) => (c.priority as string) === b);
+    const complete = items.filter((c) => c.status === "available" || c.status === "waived").length;
+    return { bucket: b, complete, total: items.length };
+  }).filter((row) => row.total > 0);
 
-  const defenseBullets = synthesizeDefenseBullets(presentFields, ipUnfavorable);
+  const coveragePct = totalCount > 0 ? Math.round((totalIncluded / totalCount) * 100) : 0;
 
-  const anyMissingCritical = missingChecklist.some((m) => m.priority === "critical");
-  const coverageInterpretation = (() => {
-    if (totalEvidenceShown === 0) return "No evidence has been collected yet.";
-    if (missingChecklist.length === 0) {
-      return "Coverage is complete. All required evidence categories are fully supported.";
-    }
-    if (anyMissingCritical) {
-      return "Coverage has critical gaps — see the categories below.";
-    }
-    return "Coverage is mostly complete — a few categories could be strengthened.";
-  })();
+  // Timeline steps.
+  type TimelineStep = {
+    state: "done" | "active" | "pending";
+    title: string;
+    helper: string;
+  };
 
-  const pageHeader = submitted
-    ? "Your defense has been submitted to Shopify"
-    : "Review your defense before submitting to Shopify";
+  const timeline: TimelineStep[] = submitted
+    ? [
+        {
+          state: "done",
+          title: "Evidence submitted",
+          helper: submittedAt
+            ? `Submitted to Shopify on ${formatDate(submittedAt)}`
+            : "Submitted to Shopify",
+        },
+        {
+          state: "active",
+          title: "Bank review in progress",
+          helper: "Expected duration: 30–75 days",
+        },
+        {
+          state: "pending",
+          title: "Outcome notification",
+          helper: "You’ll be notified by email when a decision is made",
+        },
+      ]
+    : [
+        {
+          state: data.pack ? "done" : "active",
+          title: "Evidence pack built",
+          helper: data.pack
+            ? "DisputeDesk assembled the evidence available for this case."
+            : "Generate the evidence pack to begin.",
+        },
+        {
+          state: data.pack ? "active" : "pending",
+          title: "Review and submit",
+          helper: dispute.dueAt
+            ? `Submission deadline: ${formatDate(dispute.dueAt)}`
+            : "Review the pack and submit to Shopify before the deadline.",
+        },
+        {
+          state: "pending",
+          title: "Bank review",
+          helper: "Once submitted, the issuing bank typically responds within 30–75 days.",
+        },
+      ];
 
   return (
-    <BlockStack gap="500">
-      {/* PAGE HEADER */}
-      <Text as="h1" variant="headingXl">{pageHeader}</Text>
-
-      {/* AUTO-SUBMIT DENIED */}
+    <BlockStack gap="400">
+      {/* AUTO-SUBMIT DENIED (preserved) */}
       {autoSaveBlock && (
         <Banner tone="warning" title="Auto-submit paused — your review needed">
           <BlockStack gap="200">
@@ -347,11 +363,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 Why: {autoSaveBlock.reasons.join(" • ")}
               </Text>
             )}
-            {topMissingLabel && (
-              <Text as="p" variant="bodySm">
-                Biggest gap: {topMissingLabel}. Adding it strengthens the case before you submit.
-              </Text>
-            )}
             <InlineStack gap="200">
               <Button onClick={goToEvidence}>Add missing evidence</Button>
               <Button variant="primary" onClick={goToReview}>Submit now anyway</Button>
@@ -360,301 +371,241 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* CASE STATUS */}
-      <Card>
-        <BlockStack gap="400">
-          <Text as="h2" variant="headingMd">Case status</Text>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Status</Text>
-              <Badge tone={submitted ? "info" : "attention"}>
-                {submitted ? "Submitted" : "Not submitted"}
-              </Badge>
-            </BlockStack>
-
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Strength</Text>
-              <Badge tone={strengthTone(strengthKey)}>{strengthText}</Badge>
-            </BlockStack>
-
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Deadline</Text>
-              <Text
-                as="p"
-                variant="bodyMd"
-                fontWeight="semibold"
-                tone={!submitted && deadlineUrgent ? "critical" : undefined}
-              >
-                {submitted
-                  ? `Submitted ${formatDate(submittedAt)}`
-                  : deadlineDays !== null && deadlineDays > 0
-                    ? `${deadlineDays} day${deadlineDays === 1 ? "" : "s"} remaining`
-                    : deadlineDays !== null && deadlineDays <= 0
-                      ? "Overdue"
-                      : "No deadline set"}
-              </Text>
-            </BlockStack>
+      {/* 1. HERO — "Likely to win" */}
+      <div
+        style={{
+          background: confidence.bg,
+          border: `1px solid ${confidence.border}`,
+          borderRadius: 12,
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "16px",
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: "#ffffff",
+            border: `1px solid ${confidence.border}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: confidence.iconColor,
+            flexShrink: 0,
+          }}
+        >
+          <Icon source={ShieldCheckMarkIcon} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <InlineStack gap="200" blockAlign="center" wrap>
+            <Text as="h2" variant="headingMd">{confidence.title}</Text>
+            <Badge tone={confidence.tone}>{`${confidence.pct}% confidence`}</Badge>
+          </InlineStack>
+          <div style={{ marginTop: 4 }}>
+            <Text as="p" variant="bodySm" tone="subdued">{heroDescription}</Text>
           </div>
+        </div>
+      </div>
 
-          <Divider />
-
-          <BlockStack gap="100">
-            <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendation}</Text>
-            {recommendationHelper && (
-              <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
-            )}
-            <Text as="p" variant="bodySm" tone="subdued">
-              {EVIDENCE_EVALUATION_HELPER}
-            </Text>
-          </BlockStack>
-
-          {/* AUTOMATION RULE */}
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <BlockStack gap="050">
-              <InlineStack gap="200" blockAlign="center">
-                <Text as="p" variant="bodyMd">Automation rule:</Text>
-                <Badge
-                  tone={
-                    appliedRule?.mode === "auto"
-                      ? "success"
-                      : appliedRule?.mode === "review"
-                        ? "attention"
-                        : undefined
-                  }
-                >
-                  {appliedModeLabel}
-                </Badge>
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
-            </BlockStack>
-            <div style={{ marginLeft: "auto" }}>
-              <Button url={rulesUrl}>Change rule</Button>
-            </div>
-          </InlineStack>
-
-          {/* PRIMARY CTA */}
-          <InlineStack gap="300" blockAlign="center">
-            <div style={{ minWidth: 220 }}>
-              {submitted ? (
-                <Button
-                  variant="primary"
-                  size="large"
-                  url={shopifyAdminUrl ?? undefined}
-                  target="_blank"
-                  disabled={!shopifyAdminUrl}
-                >
-                  View in Shopify
-                </Button>
-              ) : (
-                <Button variant="primary" size="large" onClick={goToReview}>
-                  Submit to Shopify
-                </Button>
-              )}
-            </div>
-            {submitted ? (
-              improveCta && <Button url={improveCta.url}>{improveCta.label}</Button>
-            ) : (
-              <Button onClick={goToEvidence}>Edit evidence</Button>
-            )}
-          </InlineStack>
-        </BlockStack>
-      </Card>
-
-      {/* HOW WE DEFEND THIS CASE */}
-      {defenseBullets.length > 0 && (
-        <Card>
+      {/* 2. WHAT HAPPENS NOW timeline */}
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #E1E3E5",
+          borderRadius: 12,
+          padding: 20,
+        }}
+      >
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">What happens now</Text>
           <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">How we defend this case</Text>
-            <Text as="p" variant="bodyMd">
-              We are arguing that this transaction was legitimate based on:
+            {timeline.map((step, i) => {
+              const isLast = i === timeline.length - 1;
+              const dotBg =
+                step.state === "done"
+                  ? "#D1FAE5"
+                  : step.state === "active"
+                    ? "#DBEAFE"
+                    : "#F1F2F4";
+              const dotColor =
+                step.state === "done"
+                  ? "#22C55E"
+                  : step.state === "active"
+                    ? "#1D4ED8"
+                    : "#6B7280";
+              const iconSrc =
+                step.state === "done"
+                  ? CheckCircleIcon
+                  : step.state === "active"
+                    ? ClockIcon
+                    : null;
+
+              return (
+                <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 999,
+                        background: dotBg,
+                        color: dotColor,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {iconSrc ? (
+                        <Icon source={iconSrc} />
+                      ) : (
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 999,
+                            background: dotColor,
+                          }}
+                        />
+                      )}
+                    </div>
+                    {!isLast && (
+                      <div
+                        style={{
+                          width: 1,
+                          flex: 1,
+                          minHeight: 16,
+                          background: "#E1E3E5",
+                          marginTop: 4,
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, paddingBottom: isLast ? 0 : 8 }}>
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">{step.title}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{step.helper}</Text>
+                  </div>
+                </div>
+              );
+            })}
+          </BlockStack>
+        </BlockStack>
+      </div>
+
+      {/* 3. WHY THIS CASE IS DEFENSIBLE */}
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #E1E3E5",
+          borderRadius: 12,
+          padding: 20,
+        }}
+      >
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">Why this case is defensible</Text>
+          {activeReasons.length === 0 ? (
+            <Text as="p" variant="bodySm" tone="subdued">
+              Evidence is still being collected. Add evidence to surface defense reasons.
             </Text>
-            <BlockStack gap="200">
-              {defenseBullets.map((b) => (
-                <InlineStack key={b} gap="200" blockAlign="start" wrap={false}>
-                  <Text as="span" variant="bodyMd" tone="success">{"✓"}</Text>
-                  <Text as="p" variant="bodyMd">{b}</Text>
-                </InlineStack>
+          ) : (
+            <BlockStack gap="300">
+              {activeReasons.map((r) => (
+                <div key={r.title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ width: 18, height: 18, color: "#22C55E", flexShrink: 0, marginTop: 2 }}>
+                    <Icon source={CheckCircleIcon} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">{r.title}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{r.description}</Text>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    <Badge tone={strengthTone(r.strength)}>{r.strength}</Badge>
+                  </div>
+                </div>
               ))}
             </BlockStack>
-          </BlockStack>
-        </Card>
-      )}
-
-      {/* YOUR SUPPORTING EVIDENCE */}
-      <Card>
-        <BlockStack gap="300">
-          <Text as="h2" variant="headingMd">Your supporting evidence</Text>
-
-          {presentItems.length === 0 && missingChecklist.length === 0 && (
-            <Text as="p" variant="bodyMd" tone="subdued">
-              No evidence collected yet. Generate or build the evidence pack to begin.
-            </Text>
           )}
-
-          {presentItems.map((item) => {
-            const row = evidenceRowStatus(item);
-            const isIpRow = item.field === "ip_location_check";
-            const ipVerdict = isIpRow ? ipLocPayload?.summary?.split("\n")[0] ?? null : null;
-            const ipGuidance = isIpRow ? ipLocPayload?.merchantGuidance ?? null : null;
-
-            return (
-              <div
-                key={item.field}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderLeft: "4px solid #16a34a",
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
-                <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={row.tone}>{row.label}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {ipVerdict ?? WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
-                  </Text>
-                  {ipGuidance ? (
-                    <Text as="p" variant="bodySm" tone="subdued">{ipGuidance}</Text>
-                  ) : null}
-                </BlockStack>
-              </div>
-            );
-          })}
-
-          {missingChecklist.map((item) => {
-            const row = evidenceRowStatus(item);
-            const borderColor =
-              row.label === "Critical gap"
-                ? "#dc2626"
-                : row.label === "Recommended"
-                  ? "#2563eb"
-                  : "#9ca3af";
-            return (
-              <div
-                key={item.field}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${borderColor}`,
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
-                <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={row.tone}>{row.label}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}
-                  </Text>
-                  {!submitted && (
-                    <div>
-                      <Button
-                        size="slim"
-                        onClick={() => actions.navigateToEvidence(item.field)}
-                      >
-                        Add this evidence
-                      </Button>
-                    </div>
-                  )}
-                </BlockStack>
-              </div>
-            );
-          })}
         </BlockStack>
-      </Card>
+      </div>
 
-      {/* EVIDENCE BY CATEGORY */}
-      {categories.length > 0 && (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">Evidence by category</Text>
+      {/* 4. EVIDENCE COVERAGE */}
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #E1E3E5",
+          borderRadius: 12,
+          padding: 20,
+        }}
+      >
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">Evidence coverage</Text>
 
-            <Text as="p" variant="bodyMd" fontWeight="semibold">{coverageInterpretation}</Text>
+          <div>
+            <InlineStack align="space-between" blockAlign="center">
+              <Text as="p" variant="bodySm" tone="subdued">Coverage completeness</Text>
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                {`${totalIncluded}/${totalCount} included`}
+              </Text>
+            </InlineStack>
+            <div
+              style={{
+                marginTop: 6,
+                height: 6,
+                background: "#F1F2F4",
+                borderRadius: 9999,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${coveragePct}%`,
+                  height: "100%",
+                  background: coveragePct >= 80 ? "#22C55E" : coveragePct >= 50 ? "#F59E0B" : "#DC2626",
+                  borderRadius: 9999,
+                }}
+              />
+            </div>
+          </div>
 
-            <ProgressBar
-              progress={coveragePct}
-              tone={strengthKey === "strong" ? "success" : strengthKey === "moderate" ? "primary" : "critical"}
-              size="small"
-            />
-            <Text as="p" variant="bodySm" tone="subdued">
-              {`${presentItems.length} of ${totalEvidenceShown} addable items collected`}
-            </Text>
-
-            <BlockStack gap="200">
-              {categories.map((cat) => {
-                const visible = cat.items.filter((i) => i.status !== "unavailable");
-                if (visible.length === 0) return null;
-                const present = visible.filter(
-                  (i) => i.status === "available" || i.status === "waived",
-                );
-                const missingActionable = visible.filter(
-                  (i) =>
-                    i.status === "missing" &&
-                    (i.collectionType === "manual" || !i.collectionType),
-                );
-                const impact = categoryImpactLabel(cat.relevance);
-                const hasCriticalGap = missingActionable.some((m) => m.priority === "critical");
-                const borderColor = hasCriticalGap
-                  ? "#dc2626"
-                  : impact.tone === "success"
-                    ? "#16a34a"
-                    : impact.tone === "info"
-                      ? "#2563eb"
-                      : "#9ca3af";
-
-                const suggestion = missingActionable[0]
-                  ? `Missing ${missingActionable[0].label.toLowerCase()} — ${
-                      WHY_EVIDENCE_MATTERS[missingActionable[0].field] ??
-                      CATEGORY_FIX_HINT[cat.category.key] ??
-                      "would strengthen this category."
-                    }`
-                  : null;
-
-                return (
-                  <div
-                    key={cat.category.key}
+          <BlockStack gap="200">
+            {bucketStats.map((row) => (
+              <InlineStack key={row.bucket} align="space-between" blockAlign="center">
+                <InlineStack gap="200" blockAlign="center">
+                  <span
                     style={{
-                      borderLeft: `3px solid ${borderColor}`,
-                      paddingLeft: 12,
+                      width: 8,
+                      height: 8,
+                      borderRadius: 9999,
+                      background: bucketDot[row.bucket],
+                      display: "inline-block",
                     }}
-                  >
-                    <BlockStack gap="100">
-                      <InlineStack gap="200" blockAlign="center" wrap>
-                        <Text as="span" variant="bodyMd" fontWeight="semibold">
-                          {cat.category.label}
-                        </Text>
-                        <Badge tone={impact.tone}>{impact.label}</Badge>
-                        <Badge>{`${present.length}/${visible.length}`}</Badge>
-                        {hasCriticalGap && <Badge tone="critical">Critical gap</Badge>}
-                      </InlineStack>
-                      {suggestion && !submitted && (
-                        <InlineStack gap="200" blockAlign="center" wrap>
-                          <Text as="p" variant="bodySm" tone="subdued">{suggestion}</Text>
-                          <Button
-                            size="micro"
-                            onClick={() => actions.navigateToEvidence(missingActionable[0].field)}
-                          >
-                            Fix
-                          </Button>
-                        </InlineStack>
-                      )}
-                    </BlockStack>
-                  </div>
-                );
-              })}
-            </BlockStack>
+                  />
+                  <Text as="span" variant="bodySm">{bucketLabel[row.bucket]}</Text>
+                </InlineStack>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {row.complete === row.total
+                    ? `${row.complete}/${row.total} complete`
+                    : `${row.complete}/${row.total}`}
+                </Text>
+              </InlineStack>
+            ))}
           </BlockStack>
-        </Card>
+        </BlockStack>
+      </div>
+
+      {/* PRE-SUBMIT CTA — only when not yet submitted, low-emphasis. */}
+      {!submitted && (
+        <InlineStack gap="200" align="end">
+          <Button onClick={goToEvidence} icon={AlertCircleIcon}>
+            Edit evidence
+          </Button>
+          <Button variant="primary" onClick={goToReview} icon={ShieldCheckMarkIcon}>
+            Review &amp; submit
+          </Button>
+        </InlineStack>
       )}
     </BlockStack>
   );
