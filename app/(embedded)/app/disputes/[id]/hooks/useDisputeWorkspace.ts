@@ -243,6 +243,12 @@ export interface DerivedState {
   effectiveChecklist: EvidenceItemWithStrength[];
   categories: Array<{ category: EvidenceCategory; items: EvidenceItemWithStrength[]; relevance: "high" | "medium" | "low" }>;
   missingItems: MissingItemWithContext[];
+  /**
+   * Checklist rows that trigger "submit with override" — critical priority,
+   * not a blocker, still missing. Includes auto/conditional rows (e.g. IP)
+   * that are omitted from `missingItems`.
+   */
+  submitOverrideGaps: Array<{ field: string; label: string }>;
   readiness: SubmissionReadiness;
   blockerCount: number;
   warningCount: number;
@@ -579,6 +585,7 @@ export function useDisputeWorkspace(disputeId: string) {
         effectiveChecklist: [],
         categories: [],
         missingItems: [],
+        submitOverrideGaps: [],
         readiness: "blocked" as SubmissionReadiness,
         blockerCount: 0,
         warningCount: 0,
@@ -635,6 +642,9 @@ export function useDisputeWorkspace(disputeId: string) {
 
     const blockerCount = effectiveChecklist.filter((c) => c.blocking && c.status === "missing").length;
     const warningCount = effectiveChecklist.filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing").length;
+    const submitOverrideGaps = effectiveChecklist
+      .filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing")
+      .map((c) => ({ field: c.field, label: c.label }));
 
     const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason);
     const whyWins = generateWhyWins(data.argumentMap, effectiveChecklist, caseStrength.overall);
@@ -654,6 +664,7 @@ export function useDisputeWorkspace(disputeId: string) {
       effectiveChecklist: items,
       categories,
       missingItems,
+      submitOverrideGaps,
       readiness,
       blockerCount,
       warningCount,

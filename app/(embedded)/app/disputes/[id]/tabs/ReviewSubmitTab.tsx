@@ -90,7 +90,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
 
   if (!data) return null;
 
-  const { caseStrength, improvement, whyWins, missingItems } = derived;
+  const { caseStrength, improvement, whyWins, missingItems, submitOverrideGaps } = derived;
 
   if (!pack) {
     return (
@@ -172,13 +172,20 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
             </BlockStack>
           )}
 
-          {/* Missing / improvement */}
-          {!isStrong && missingItems.length > 0 && !isReadOnly && (
+          {/* Missing / improvement — show override gaps even when case strength is Strong (those rows still trigger the confirm modal). */}
+          {!isReadOnly &&
+            (missingItems.length > 0 || submitOverrideGaps.length > 0) &&
+            (!isStrong || submitOverrideGaps.length > 0) && (
             <BlockStack gap="100">
               <Text as="p" variant="bodySm" fontWeight="semibold" tone="caution">
-                Not included in this submission:
+                {submitOverrideGaps.length > 0
+                  ? "Checklist still shows these as missing (you can submit with confirmation):"
+                  : "Not included in this submission:"}
               </Text>
-              {missingItems.slice(0, 3).map((item) => (
+              {(submitOverrideGaps.length > 0
+                ? submitOverrideGaps
+                : missingItems.slice(0, 6).map((m) => ({ field: m.field, label: m.label }))
+              ).map((item) => (
                 <Text key={item.field} as="p" variant="bodySm" tone="subdued">
                   {`\u2022 ${item.label}`}
                 </Text>
@@ -407,11 +414,22 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
         <Modal.Section>
           <BlockStack gap="300">
             <Banner tone="warning">
-              <Text as="p" variant="bodySm">
-                {isWeak
-                  ? "This case is weak. Submitting now may significantly reduce your chances of winning."
-                  : "Some recommended evidence is missing. Adding it could improve your outcome."}
-              </Text>
+              <BlockStack gap="200">
+                <Text as="p" variant="bodySm">
+                  {isWeak
+                    ? "This case is weak. Submitting now may significantly reduce your chances of winning."
+                    : "Your evidence template still marks the items below as missing. They are required for a complete checklist score but are not treated as hard blockers — submitting is allowed after you confirm."}
+                </Text>
+                {submitOverrideGaps.length > 0 && (
+                  <BlockStack gap="100">
+                    {submitOverrideGaps.map((g) => (
+                      <Text key={g.field} as="p" variant="bodySm">
+                        {`\u2022 ${g.label}`}
+                      </Text>
+                    ))}
+                  </BlockStack>
+                )}
+              </BlockStack>
             </Banner>
 
             <Select
