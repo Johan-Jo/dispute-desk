@@ -36,10 +36,7 @@ import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import type {
-  CounterclaimNode,
-  WhyWinsItem,
-} from "@/lib/argument/types";
+import type { CounterclaimNode } from "@/lib/argument/types";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -118,35 +115,6 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (key === "DUPLICATE") return "duplicate";
   return "general";
 }
-
-/* ── §3.E empty-state taxonomy resolver ── */
-
-type TaxonomyState = "Present" | "Missing" | "System unavailable" | "Waived" | "Not applicable";
-
-function taxonomyForChecklistItem(item: ChecklistItemV2): TaxonomyState {
-  if (item.status === "available") return "Present";
-  if (item.status === "waived") return "Waived";
-  if (item.status === "missing") {
-    // `auto` and `conditional_auto` collection types come from system
-    // integrations. When still missing, the source can't supply it
-    // (e.g. IPinfo returned bankEligible=false, or no card payment so
-    // AVS/CVV doesn't apply). `unavailable` means no integration can
-    // collect this — also a system constraint, not a merchant gap.
-    if (item.collectionType === "auto" || item.collectionType === "conditional_auto" || item.collectionType === "unavailable") {
-      return "System unavailable";
-    }
-    return "Missing";
-  }
-  return "Missing";
-}
-
-const TAXONOMY_TONE: Record<TaxonomyState, "success" | "critical" | "warning" | "attention" | undefined> = {
-  Present: "success",
-  Missing: "critical",
-  Waived: undefined,
-  "System unavailable": undefined,
-  "Not applicable": undefined,
-};
 
 /* ── Component ── */
 
@@ -252,27 +220,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         { state: "pending", title: "Bank review", helper: "Once submitted, the issuing bank typically responds within 30–75 days." },
       ];
 
-  /* ── O3 row resolution: ID-keyed only ── */
-  type RowEvidence = { evidenceFieldKey: string; label: string; status: "available" | "waived" | "missing" };
-  function resolveSupportingRows(item: WhyWinsItem): RowEvidence[] {
-    const cc = counterclaimsById[item.counterclaimId];
-    if (!cc) return [];
-    return cc.supporting.map((s) => ({
-      evidenceFieldKey: s.evidenceFieldKey ?? s.field,
-      label: s.label,
-      status: s.status,
-    }));
-  }
-  function resolveMissingRows(item: WhyWinsItem): RowEvidence[] {
-    const cc = counterclaimsById[item.counterclaimId];
-    if (!cc) return [];
-    return cc.missing.map((m) => ({
-      evidenceFieldKey: m.evidenceFieldKey ?? m.field,
-      label: m.label,
-      status: "missing" as const,
-    }));
-  }
-
   /* ── O4 Coverage breakdown by priority ── */
   const visibleChecklist = effectiveChecklist.filter((c) => c.status !== "unavailable");
   const completenessScore = data.pack?.completenessScore ?? 0;
@@ -338,15 +285,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* O1: Hero — strict backend rendering (label + score + strengthReason + improvementHint + recommendation + helper + EVIDENCE_EVALUATION_HELPER + deadline) */}
+      {/* O1: Hero — minimal per Figma: label + confidence pill + 1-line summary.
+          Recommendation / improvement / helper / deadline copy moves to the
+          dedicated Recommendation card below. */}
       <div
         style={{
           background: heroTone.bg,
-          border: `2px solid ${heroTone.border}`,
+          border: `1px solid ${heroTone.border}`,
           borderRadius: 8,
           padding: 24,
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           gap: 16,
         }}
       >
@@ -361,55 +310,28 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           <Icon source={ShieldCheckMarkIcon} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 20, fontWeight: 700, color: heroTone.titleColor, lineHeight: 1.3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 24, fontWeight: 700, color: heroTone.titleColor, lineHeight: 1.2 }}>
               {strengthLabel}
             </span>
             <span
               style={{
-                padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+                padding: "2px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600,
                 background: heroTone.pillBg, color: heroTone.pillColor,
               }}
             >
-              {`Evidence coverage: ${caseStrength.score}/100`}
+              {`${caseStrength.score}% confidence`}
             </span>
           </div>
           {caseStrength.strengthReason && (
-            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: "0 0 8px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
               {caseStrength.strengthReason}
             </p>
           )}
-          {caseStrength.improvementHint && (
-            <p style={{ fontSize: 13, color: heroTone.bodyColor, opacity: 0.8, margin: "0 0 12px", lineHeight: 1.5 }}>
-              {caseStrength.improvementHint}
-            </p>
-          )}
-          {recommendationText && (
-            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: "0 0 4px", lineHeight: 1.5, fontWeight: 500 }}>
-              {recommendationText}
-            </p>
-          )}
-          {recommendationHelperText && (
-            <p style={{ fontSize: 13, color: heroTone.bodyColor, opacity: 0.7, margin: "0 0 12px", lineHeight: 1.5 }}>
-              {recommendationHelperText}
-            </p>
-          )}
-          <p style={{ fontSize: 12, color: heroTone.bodyColor, opacity: 0.7, margin: "0 0 8px", lineHeight: 1.5 }}>
-            {EVIDENCE_EVALUATION_HELPER}
-          </p>
-          <p style={{ fontSize: 13, color: heroTone.bodyColor, margin: 0 }}>
-            {submitted
-              ? `Submitted ${formatDate(submittedAt)}`
-              : deadlineDays !== null && deadlineDays > 0
-                ? `Submission deadline in ${deadlineDays} day${deadlineDays === 1 ? "" : "s"} (${formatDate(dispute.dueAt)})${deadlineUrgent ? " — urgent" : ""}`
-                : deadlineDays !== null && deadlineDays <= 0
-                  ? `Submission deadline: Overdue (${formatDate(dispute.dueAt)})`
-                  : "No deadline set"}
-          </p>
         </div>
       </div>
 
-      {/* O2: Timeline */}
+      {/* O2: Timeline — step titles colored per state (green/blue/gray) per Figma */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
         <BlockStack gap="300">
           <Text as="h3" variant="headingSm">What happens now</Text>
@@ -418,6 +340,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               const isLast = i === timeline.length - 1;
               const dotBg = step.state === "done" ? "#D1FAE5" : step.state === "active" ? "#DBEAFE" : "#F1F2F4";
               const dotColor = step.state === "done" ? "#059669" : step.state === "active" ? "#1D4ED8" : "#6B7280";
+              const titleColor = step.state === "done" ? "#059669" : step.state === "active" ? "#1E40AF" : "#6D7175";
               const iconSrc = step.state === "done" ? CheckCircleIcon : step.state === "active" ? ClockIcon : null;
               return (
                 <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
@@ -443,7 +366,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0, paddingTop: 4, paddingBottom: isLast ? 0 : 16 }}>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: step.state === "pending" ? "#6D7175" : "#202223", margin: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: titleColor, margin: 0 }}>
                       {step.title}
                     </p>
                     <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>{step.helper}</p>
@@ -455,7 +378,40 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </BlockStack>
       </div>
 
-      {/* O3: What supports your case (whyWins.strengths resolved by counterclaimId) */}
+      {/* Recommendation card — preserves the merchant-action copy that
+          was previously stuffed into the hero. Stays compact and below
+          the timeline so the hero matches Figma's minimal design. */}
+      {(recommendationText || caseStrength.improvementHint || dispute.dueAt) && (
+        <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+          <BlockStack gap="200">
+            {recommendationText && (
+              <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendationText}</Text>
+            )}
+            {recommendationHelperText && (
+              <Text as="p" variant="bodySm" tone="subdued">{recommendationHelperText}</Text>
+            )}
+            {caseStrength.improvementHint && (
+              <Text as="p" variant="bodySm" tone="subdued">{caseStrength.improvementHint}</Text>
+            )}
+            <Text as="p" variant="bodySm" tone="subdued">
+              {submitted
+                ? `Submitted ${formatDate(submittedAt)}`
+                : deadlineDays !== null && deadlineDays > 0
+                  ? `Submission deadline in ${deadlineDays} day${deadlineDays === 1 ? "" : "s"} (${formatDate(dispute.dueAt)})${deadlineUrgent ? " — urgent" : ""}`
+                  : deadlineDays !== null && deadlineDays <= 0
+                    ? `Submission deadline: Overdue (${formatDate(dispute.dueAt)})`
+                    : "No deadline set"}
+            </Text>
+            <Text as="p" variant="bodySm" tone="subdued">{EVIDENCE_EVALUATION_HELPER}</Text>
+          </BlockStack>
+        </div>
+      )}
+
+      {/* O3: What supports your case — pill-style row cards per Figma.
+          Title = counterclaim.title (resolved via counterclaimsById, NOT
+          by text matching). Subtitle = whyWins entry text. Strength pill
+          mapped from counterclaim.strength: strong → "Strong" (green),
+          moderate → "Supporting" (amber), else → "Helpful" (neutral). */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
         <BlockStack gap="300">
           <Text as="h3" variant="headingSm">What supports your case</Text>
@@ -464,88 +420,131 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               Evidence is still being collected. Add evidence to surface defense reasons.
             </Text>
           ) : (
-            <div>
-              {whyWins.strengths.map((s, idx) => {
+            <BlockStack gap="200">
+              {whyWins.strengths.map((s) => {
                 const cc = counterclaimsById[s.counterclaimId];
-                const supportingRows = resolveSupportingRows(s);
-                const isLast = idx === whyWins.strengths.length - 1;
+                const title = cc?.title ?? s.text;
+                const subtitle = cc ? s.text : "";
+                const pillLabel = cc?.strength === "strong"
+                  ? "Strong"
+                  : cc?.strength === "moderate"
+                    ? "Supporting"
+                    : "Helpful";
+                const pillBg = cc?.strength === "strong"
+                  ? "#D1FAE5"
+                  : cc?.strength === "moderate"
+                    ? "#FEF3C7"
+                    : "#F1F2F4";
+                const pillColor = cc?.strength === "strong"
+                  ? "#065F46"
+                  : cc?.strength === "moderate"
+                    ? "#92400E"
+                    : "#6D7175";
                 return (
                   <div
                     key={s.counterclaimId + s.text}
                     style={{
-                      paddingBottom: isLast ? 0 : 16,
-                      marginBottom: isLast ? 0 : 16,
-                      borderBottom: isLast ? "none" : "1px solid #E1E3E5",
+                      background: "#F6F8FB",
+                      border: "1px solid #E1E3E5",
+                      borderRadius: 8,
+                      padding: 16,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
                     }}
                   >
-                    <div style={{ display: "flex", gap: 16, alignItems: "flex-start", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flex: 1, minWidth: 0 }}>
-                        <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0, marginTop: 2 }}>
-                          <Icon source={CheckCircleIcon} />
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 14, fontWeight: 500, color: "#202223", margin: "0 0 4px" }}>
-                            {s.text}
-                          </p>
-                          {/* Per-evidence raw breakdown — every supporting field
-                              with its taxonomy state from §3.E. */}
-                          {supportingRows.length > 0 && (
-                            <BlockStack gap="050">
-                              {supportingRows.map((row) => {
-                                const checklist = effectiveChecklist.find((c) => c.field === row.evidenceFieldKey);
-                                const tax: TaxonomyState = checklist
-                                  ? taxonomyForChecklistItem(checklist)
-                                  : "Present";
-                                return (
-                                  <InlineStack key={row.evidenceFieldKey} gap="200" blockAlign="center" wrap>
-                                    <Text as="span" variant="bodySm" tone="subdued">{row.label}:</Text>
-                                    <Badge tone={TAXONOMY_TONE[tax]}>{tax}</Badge>
-                                  </InlineStack>
-                                );
-                              })}
-                            </BlockStack>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ flexShrink: 0 }}>
-                        {cc ? <Badge tone={cc.strength === "strong" ? "success" : cc.strength === "moderate" ? "warning" : "critical"}>{cc.strength}</Badge> : null}
-                      </div>
+                    <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0, marginTop: 2 }}>
+                      <Icon source={CheckCircleIcon} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0 }}>
+                        {title}
+                      </p>
+                      {subtitle && (
+                        <p style={{ fontSize: 13, color: "#6D7175", margin: "4px 0 0", lineHeight: 1.5 }}>
+                          {subtitle}
+                        </p>
+                      )}
                     </div>
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        padding: "2px 10px",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: pillBg,
+                        color: pillColor,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {pillLabel}
+                    </span>
                   </div>
                 );
               })}
-            </div>
+            </BlockStack>
           )}
 
-          {/* Missing signals — never silently dropped */}
+          {/* Missing signals — never silently dropped. Same pill-card
+              treatment but with red icon + Missing pill so the merchant
+              sees what's pulling the case down. */}
           {whyWins.weaknesses.length > 0 && (
             <BlockStack gap="200">
               <Divider />
               <Text as="p" variant="bodySm" fontWeight="semibold">Missing signals</Text>
               {whyWins.weaknesses.map((w) => {
-                const missingRows = resolveMissingRows(w);
+                const cc = counterclaimsById[w.counterclaimId];
+                const title = cc?.title ?? w.text;
+                const subtitle = cc ? w.text : "";
+                // Find the first missing field for this counterclaim so the
+                // CTA jumps to the correct evidence row.
+                const firstMissingField = cc?.missing[0]?.evidenceFieldKey ?? cc?.missing[0]?.field ?? null;
                 return (
-                  <div key={w.counterclaimId + w.text} style={{ paddingLeft: 32 }}>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: "#7F1D1D", margin: "0 0 4px" }}>{w.text}</p>
-                    {missingRows.length > 0 && (
-                      <BlockStack gap="050">
-                        {missingRows.map((row) => {
-                          const checklist = effectiveChecklist.find((c) => c.field === row.evidenceFieldKey);
-                          const tax: TaxonomyState = checklist ? taxonomyForChecklistItem(checklist) : "Missing";
-                          return (
-                            <InlineStack key={row.evidenceFieldKey} gap="200" blockAlign="center" wrap>
-                              <Text as="span" variant="bodySm" tone="subdued">{row.label}:</Text>
-                              <Badge tone={TAXONOMY_TONE[tax]}>{tax}</Badge>
-                              {!submitted && tax === "Missing" && (
-                                <Button size="micro" onClick={() => actions.navigateToEvidence(row.evidenceFieldKey)}>
-                                  Add this evidence
-                                </Button>
-                              )}
-                            </InlineStack>
-                          );
-                        })}
-                      </BlockStack>
-                    )}
+                  <div
+                    key={w.counterclaimId + w.text}
+                    style={{
+                      background: "#FEF2F2",
+                      border: "1px solid #FCA5A5",
+                      borderRadius: 8,
+                      padding: 16,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ width: 20, height: 20, color: "#DC2626", flexShrink: 0, marginTop: 2 }}>
+                      <Icon source={AlertCircleIcon} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>{title}</p>
+                      {subtitle && (
+                        <p style={{ fontSize: 13, color: "#991B1B", margin: "4px 0 0", lineHeight: 1.5 }}>
+                          {subtitle}
+                        </p>
+                      )}
+                      {!submitted && firstMissingField && (
+                        <div style={{ marginTop: 8 }}>
+                          <Button size="slim" onClick={() => actions.navigateToEvidence(firstMissingField)}>
+                            Add this evidence
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        padding: "2px 10px",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: "#FEE2E2",
+                        color: "#991B1B",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Missing
+                    </span>
                   </div>
                 );
               })}
