@@ -129,12 +129,10 @@ export function DesktopDisputesTable({
                 <td>
                   <span className={styles.cellMuted}>
                     {d.initiated_at
-                      ? new Date(d.initiated_at).toLocaleString(dateLocale, {
+                      ? new Date(d.initiated_at).toLocaleDateString(dateLocale, {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
                         })
                       : "—"}
                   </span>
