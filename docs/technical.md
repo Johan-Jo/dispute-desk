@@ -965,6 +965,17 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 - `PATCH /api/shop/preferences` — body `{ shop_id, notifications: { newDispute?, beforeDue?, evidenceReady? } }`. Merges into team step payload and upserts `shop_setup`. Used to persist notification toggles.
 - `POST /api/setup/invite` — body `{ email }`. Sends a teammate invite email via Resend pointing to the portal sign-up page. Used by the "Send invite" button in the Setup Wizard Team & Notifications step.
 
+### Due-date reminder cron
+- `GET /api/cron/dispute-reminders` ([app/api/cron/dispute-reminders/route.ts](app/api/cron/dispute-reminders/route.ts)) — daily Vercel Cron (09:00 UTC). For each dispute due within 48h that hasn't been reminded yet, sends a "due in Nh" email via [lib/email/sendDueReminder.ts](lib/email/sendDueReminder.ts) when the shop has `team.payload.notifications.beforeDue !== false`. Marks `disputes.reminder_sent_at` after successful send.
+- **Filter rules (must all hold for a row to be eligible):**
+  - `due_at` between `now()` and `now() + 48h`
+  - `reminder_sent_at IS NULL`
+  - `submitted_at IS NULL` and `evidence_saved_to_shopify_at IS NULL`
+  - `status IN ('needs_response', 'open')`
+  - `normalized_status IS NULL` or `normalized_status IN ('new','in_progress','needs_review','ready_to_submit','action_needed')`
+- **Why both `status` and `normalized_status`:** Shopify keeps the raw `status` at `needs_response` until issuer resolution, so a merchant who already saved/submitted evidence still has `status = 'needs_response'`. The merchant-facing `normalized_status` (derived in [lib/disputeEvents/normalizeStatus.ts](lib/disputeEvents/normalizeStatus.ts)) reflects merchant action — values like `submitted`, `submitted_to_shopify`, `submitted_to_bank`, `won`, `lost`, `accepted_not_contested`, `closed_other` indicate no further action is needed and the reminder must be suppressed.
+- **Pack-status hint:** `packStatusHint` in `sendDueReminder.ts` recognizes all three "saved" pack states (`saved_to_shopify`, `saved_to_shopify_unverified`, `saved_to_shopify_verified`) and renders `packSaved` ("Evidence has already been saved to Shopify"); only truly missing/unknown packs render `packNotStarted`.
+
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings (`auto_build_enabled`, `auto_save_enabled`, `auto_save_min_score`, `enforce_no_blockers`)
 - `PATCH /api/automation/settings` — update any subset of the four automation fields. Called by the embedded Settings page Automation section (four controls: Auto Build toggle, Auto Save toggle, Min Score number input, Blocker Gate toggle + Save button).

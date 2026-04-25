@@ -23,14 +23,29 @@ export async function GET(req: NextRequest) {
   const sb = getServiceClient();
 
   // Disputes due within 48h that haven't been reminded yet.
+  // Exclude rows where the merchant has already saved/submitted evidence —
+  // Shopify keeps `status` at `needs_response` until resolution, so we must
+  // gate on `normalized_status` (which reflects merchant action).
   const cutoff = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const merchantActionableStatuses = [
+    "new",
+    "in_progress",
+    "needs_review",
+    "ready_to_submit",
+    "action_needed",
+  ];
   const { data: disputes, error } = await sb
     .from("disputes")
     .select("id, shop_id, reason, phase, amount, currency_code, due_at, order_name")
     .gt("due_at", new Date().toISOString())
     .lte("due_at", cutoff)
     .is("reminder_sent_at", null)
-    .in("status", ["needs_response", "open"]);
+    .is("submitted_at", null)
+    .is("evidence_saved_to_shopify_at", null)
+    .in("status", ["needs_response", "open"])
+    .or(
+      `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")})`,
+    );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -151,7 +151,13 @@ function reasonLabel(reason: string | null): string {
 function packStatusHint(s: S, status: string | null): string {
   if (!status) return s.packNotStarted;
   if (status === "ready") return s.packReady;
-  if (status === "saved_to_shopify") return s.packSaved;
+  if (
+    status === "saved_to_shopify" ||
+    status === "saved_to_shopify_unverified" ||
+    status === "saved_to_shopify_verified"
+  ) {
+    return s.packSaved;
+  }
   if (status === "queued" || status === "building") return s.packBuilding;
   return s.packNotStarted;
 }
