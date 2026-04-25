@@ -64,7 +64,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const submitted = derived.isReadOnly;
   const reasonLabel = merchantDisputeReasonLabel(dispute.reason);
   const headerTitle = `Dispute #${dispute.id.slice(0, 8).toUpperCase()} — ${reasonLabel}`;
-  const pageTitle = `Dispute ${dispute.orderName || `#${dispute.id.slice(0, 8)}`} — ${reasonLabel}`;
 
   const strengthKey = derived.caseStrength.overall;
   const strengthText = STRENGTH_LABEL[strengthKey] ?? "Weak case";
@@ -78,7 +77,6 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
 
   return (
     <Page
-      title={pageTitle}
       backAction={{
         content: t("disputes.backToDisputes"),
         url: withShopParams("/app/disputes", searchParams),
