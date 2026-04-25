@@ -12,7 +12,15 @@ import {
   ProgressBar,
   Divider,
   Collapsible,
+  Icon,
 } from "@shopify/polaris";
+import {
+  AlertCircleIcon,
+  CheckCircleIcon,
+  CalendarIcon,
+  XCircleIcon,
+  QuestionCircleIcon,
+} from "@shopify/polaris-icons";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
 import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
@@ -40,7 +48,7 @@ const WHY_EVIDENCE_MATTERS: Record<string, string> = {
   order_confirmation: "A complete record of the order, including items, amount, and customer details.",
   shipping_tracking: "Carrier confirmation that the order was shipped and delivered.",
   delivery_proof: "Proof of delivery through signature or photographic confirmation.",
-  billing_address_match: "Billing matches the cardholder\u2019s address \u2014 heavy weight in fraud cases.",
+  billing_address_match: "Billing matches the cardholder’s address — heavy weight in fraud cases.",
   avs_cvv_match: "Card security checks confirming the purchaser had access to billing details.",
   product_description: "Product was advertised exactly as delivered.",
   refund_policy: "Customer agreed to refund terms before purchase.",
@@ -57,9 +65,9 @@ const WHY_EVIDENCE_MATTERS: Record<string, string> = {
 
 const CATEGORY_FIX_HINT: Record<string, string> = {
   order: "Confirm the order record is synced from Shopify.",
-  payment: "Pull AVS/CVV results from the payment gateway \u2014 strong fraud defense.",
-  fulfillment: "Add tracking and delivery confirmation \u2014 reduces win probability when missing.",
-  communication: "Attach customer messages or replies \u2014 banks reward engagement.",
+  payment: "Pull AVS/CVV results from the payment gateway — strong fraud defense.",
+  fulfillment: "Add tracking and delivery confirmation — reduces win probability when missing.",
+  communication: "Attach customer messages or replies — banks reward engagement.",
   policy: "Publish or upload your store policies so they can be referenced.",
   identity: "Pull customer purchase history to show legitimate activity.",
   merchant: "Upload product listings or supporting documents to round out the case.",
@@ -104,7 +112,7 @@ function synthesizeDefenseBullets(presentFields: Set<string>, ipUnfavorable: boo
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "\u2014";
+  if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString(undefined, {
       year: "numeric",
@@ -112,7 +120,7 @@ function formatDate(iso: string | null): string {
       day: "numeric",
     });
   } catch {
-    return "\u2014";
+    return "—";
   }
 }
 
@@ -187,9 +195,9 @@ function extractIpLocationPayload(
 function formatAddress(
   addr: OrderEvidencePayload["billingAddress"] | undefined,
 ): string {
-  if (!addr) return "\u2014";
+  if (!addr) return "—";
   const parts = [addr.city, addr.provinceCode, addr.countryCode].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "\u2014";
+  return parts.length > 0 ? parts.join(", ") : "—";
 }
 
 /**
@@ -198,15 +206,15 @@ function formatAddress(
  */
 const FAILURE_COPY: Record<string, { title: string; body: string }> = {
   order_fetch_failed: {
-    title: "We couldn\u2019t retrieve the Shopify order data",
+    title: "We couldn’t retrieve the Shopify order data",
     body:
-      "This pack couldn\u2019t be built because we weren\u2019t able to load the underlying order from Shopify. " +
-      "This is a system issue on our end \u2014 not missing evidence on yours.",
+      "This pack couldn’t be built because we weren’t able to load the underlying order from Shopify. " +
+      "This is a system issue on our end — not missing evidence on yours.",
   },
 };
 
 const FAILURE_FALLBACK = {
-  title: "We couldn\u2019t finish building this pack",
+  title: "We couldn’t finish building this pack",
   body: "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue.",
 };
 
@@ -282,13 +290,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <BlockStack gap="050">
                   <Text as="p" variant="bodySm" tone="subdued">Order</Text>
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    {dispute.orderName || "\u2014"}
+                    {dispute.orderName || "—"}
                   </Text>
                 </BlockStack>
                 <BlockStack gap="050">
                   <Text as="p" variant="bodySm" tone="subdued">Customer</Text>
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    {dispute.customerName || "\u2014"}
+                    {dispute.customerName || "—"}
                   </Text>
                 </BlockStack>
                 <BlockStack gap="050">
@@ -386,13 +394,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         daysElapsed === 0
           ? "Submitted today"
           : `${daysElapsed} day${daysElapsed === 1 ? "" : "s"} since submission`;
-      recommendationHelper = `${dayLabel}. The issuing bank typically responds within 30\u201375 days.`;
+      recommendationHelper = `${dayLabel}. The issuing bank typically responds within 30–75 days.`;
     } else {
-      recommendationHelper = "The issuing bank typically responds within 30\u201375 days.";
+      recommendationHelper = "The issuing bank typically responds within 30–75 days.";
     }
   } else if (strengthKey === "strong") {
     recommendation =
-      "Recommendation: Submit now \u2014 your evidence is strong enough to defend this charge.";
+      "Recommendation: Submit now — your evidence is strong enough to defend this charge.";
   } else if (strengthKey === "moderate") {
     const top = missingItems[0];
     recommendation = top
@@ -401,8 +409,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   } else {
     const top = missingItems[0];
     recommendation = top
-      ? `Recommendation: Add ${top.label.toLowerCase()} before submitting \u2014 the case is currently unlikely to win as-is.`
-      : "Recommendation: Strengthen the evidence before submitting \u2014 the case is currently unlikely to win as-is.";
+      ? `Recommendation: Add ${top.label.toLowerCase()} before submitting — the case is currently unlikely to win as-is.`
+      : "Recommendation: Strengthen the evidence before submitting — the case is currently unlikely to win as-is.";
   }
 
   // CTAs
@@ -460,9 +468,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       return "Coverage is complete. All required evidence categories are fully supported.";
     }
     if (anyMissingCritical) {
-      return "Coverage has critical gaps \u2014 see the categories below.";
+      return "Coverage has critical gaps — see the categories below.";
     }
-    return "Coverage is mostly complete \u2014 a few categories could be strengthened.";
+    return "Coverage is mostly complete — a few categories could be strengthened.";
   })();
 
   // Page header
@@ -470,85 +478,187 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     ? "Your defense has been submitted to Shopify"
     : "Review your defense before submitting to Shopify";
 
+  // Visual state for the case-status card
+  const isReady = !submitted && (strengthKey === "strong" || strengthKey === "moderate");
+  const statusCardBg = submitted || isReady
+    ? "linear-gradient(to bottom right, #D1FAE5, #FFFFFF)"
+    : "#FFFFFF";
+  const statusCardBorder = submitted || isReady ? "1px solid #86EFAC" : "1px solid #E1E3E5";
+  const statusIconBg = submitted || isReady ? "#FFFFFF" : "#FEF3C7";
+  const statusIconColor = submitted || isReady ? "#22C55E" : "#D97706";
+  const statusIconSource = submitted || isReady ? CheckCircleIcon : AlertCircleIcon;
+  const statusHeadline = submitted
+    ? "Evidence submitted to Shopify"
+    : isReady
+      ? "Evidence ready for submission"
+      : "Evidence needs strengthening";
+
   return (
     <BlockStack gap="500">
-      {/* CASE SUMMARY — what the dispute is */}
-      <Card>
-        <BlockStack gap="300">
-          <Text as="h2" variant="headingSm" tone="subdued">Case summary</Text>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(180px, max-content) 1fr",
-              gap: "20px",
-              alignItems: "start",
-            }}
-          >
-            <BlockStack gap="050">
-              <Text as="p" variant="bodySm" tone="subdued">Amount at risk</Text>
-              <Text as="p" variant="heading2xl">
-                {`${dispute.currency} ${dispute.amount}`}
-              </Text>
-            </BlockStack>
-
+      {/* RED-GRADIENT HEADER — case summary, restyled per Figma */}
+      <div
+        style={{
+          background: "linear-gradient(to bottom right, #FEE2E2, #FFFFFF)",
+          border: "1px solid #FCA5A5",
+          borderRadius: "12px",
+          padding: "24px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "16px",
+            marginBottom: "16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", flex: 1, minWidth: 0 }}>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                gap: "12px 24px",
+                width: 48,
+                height: 48,
+                borderRadius: 8,
+                background: "#fff",
+                border: "1px solid #FCA5A5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#DC2626",
+                flexShrink: 0,
               }}
             >
-              <BlockStack gap="050">
-                <Text as="p" variant="bodySm" tone="subdued">Order</Text>
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {dispute.orderName || "\u2014"}
+              <Icon source={AlertCircleIcon} tone="critical" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <InlineStack gap="200" blockAlign="center" wrap>
+                <Text as="h1" variant="headingLg" tone="critical">
+                  {`Dispute for Order ${dispute.orderName || `#${dispute.id.slice(0, 8)}`}`}
                 </Text>
-              </BlockStack>
-              <BlockStack gap="050">
-                <Text as="p" variant="bodySm" tone="subdued">Customer</Text>
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {dispute.customerName || "\u2014"}
+                <Badge tone="critical">{dispute.phase === "chargeback" ? "Chargeback" : "Inquiry"}</Badge>
+                <Badge tone={submitted ? "success" : deadlineUrgent ? "critical" : "attention"}>
+                  {submitted ? "Submitted" : deadlineUrgent ? "Action needed" : "Needs review"}
+                </Badge>
+              </InlineStack>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "8px",
+                }}
+              >
+                <Text as="span" variant="bodyMd" fontWeight="semibold" tone="critical">
+                  {`${dispute.currency} ${dispute.amount}`}
                 </Text>
-              </BlockStack>
-              <BlockStack gap="050">
-                <Text as="p" variant="bodySm" tone="subdued">Dispute reason</Text>
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {merchantDisputeReasonLabel(dispute.reason)}
+                <span style={{ color: "#7F1D1D", opacity: 0.5 }}>•</span>
+                <Text as="span" variant="bodyMd" tone="critical">
+                  {dispute.customerName || "—"}
                 </Text>
-              </BlockStack>
-              <BlockStack gap="050">
-                <Text as="p" variant="bodySm" tone="subdued">Submitted</Text>
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {submitted && submittedAt ? formatDate(submittedAt) : "Awaiting submission"}
+                <span style={{ color: "#7F1D1D", opacity: 0.5 }}>•</span>
+                <Text as="span" variant="bodySm" tone="critical">
+                  {`Filed ${formatDate(dispute.openedAt)}`}
                 </Text>
-              </BlockStack>
+              </div>
+              {!submitted && deadlineDays !== null && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 12px",
+                    background: deadlineUrgent ? "#FEE2E2" : "#FEF3C7",
+                    border: `1px solid ${deadlineUrgent ? "#FCA5A5" : "#FDE047"}`,
+                    borderRadius: 8,
+                  }}
+                >
+                  <span
+                    style={{ width: 16, height: 16, color: deadlineUrgent ? "#991B1B" : "#92400E" }}
+                  >
+                    <Icon source={CalendarIcon} />
+                  </span>
+                  <Text
+                    as="span"
+                    variant="bodySm"
+                    fontWeight="medium"
+                    tone={deadlineUrgent ? "critical" : undefined}
+                  >
+                    {deadlineDays > 0
+                      ? `Submit evidence within ${deadlineDays} day${deadlineDays === 1 ? "" : "s"}`
+                      : deadlineDays === 0
+                        ? "Deadline today"
+                        : "Overdue"}
+                  </Text>
+                </div>
+              )}
             </div>
           </div>
+          {!submitted && (
+            <InlineStack gap="200" wrap={false}>
+              <Button onClick={goToEvidence}>Edit evidence</Button>
+              <Button variant="primary" onClick={goToReview}>Submit evidence</Button>
+            </InlineStack>
+          )}
+        </div>
 
-          {orderPayload && (
-            <>
-              <div>
-                <Button
-                  variant="plain"
-                  ariaExpanded={orderDetailsOpen}
-                  ariaControls="case-summary-order-details"
-                  disclosure={orderDetailsOpen ? "up" : "down"}
-                  onClick={() => setOrderDetailsOpen((v) => !v)}
-                >
-                  {orderDetailsOpen ? "Hide order details" : "Show order details"}
-                </Button>
-              </div>
-              <Collapsible
-                open={orderDetailsOpen}
-                id="case-summary-order-details"
-                transition={{ duration: "150ms", timingFunction: "ease-in-out" }}
-                expandOnPrint
-              >
+        <Divider />
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: "16px",
+            marginTop: "16px",
+          }}
+        >
+          <BlockStack gap="050">
+            <Text as="p" variant="bodySm" tone="critical">Amount at risk</Text>
+            <Text as="p" variant="bodyLg" fontWeight="semibold">
+              {`${dispute.currency} ${dispute.amount}`}
+            </Text>
+          </BlockStack>
+          <BlockStack gap="050">
+            <Text as="p" variant="bodySm" tone="critical">Order</Text>
+            <Text as="p" variant="bodyMd" fontWeight="semibold">{dispute.orderName || "—"}</Text>
+          </BlockStack>
+          <BlockStack gap="050">
+            <Text as="p" variant="bodySm" tone="critical">Dispute reason</Text>
+            <Text as="p" variant="bodyMd" fontWeight="semibold">
+              {merchantDisputeReasonLabel(dispute.reason)}
+            </Text>
+          </BlockStack>
+          <BlockStack gap="050">
+            <Text as="p" variant="bodySm" tone="critical">Submitted</Text>
+            <Text as="p" variant="bodyMd" fontWeight="semibold">
+              {submitted && submittedAt ? formatDate(submittedAt) : "Awaiting submission"}
+            </Text>
+          </BlockStack>
+        </div>
+
+        {orderPayload && (
+          <div style={{ marginTop: 16 }}>
+            <Button
+              variant="plain"
+              ariaExpanded={orderDetailsOpen}
+              ariaControls="case-summary-order-details"
+              disclosure={orderDetailsOpen ? "up" : "down"}
+              onClick={() => setOrderDetailsOpen((v) => !v)}
+            >
+              {orderDetailsOpen ? "Hide order details" : "Show order details"}
+            </Button>
+            <Collapsible
+              open={orderDetailsOpen}
+              id="case-summary-order-details"
+              transition={{ duration: "150ms", timingFunction: "ease-in-out" }}
+              expandOnPrint
+            >
+              <div style={{ marginTop: 12 }}>
                 <BlockStack gap="400">
                   <Divider />
 
-                  {/* Line items */}
                   {orderPayload.lineItems && orderPayload.lineItems.length > 0 && (
                     <BlockStack gap="200">
                       <Text as="p" variant="bodySm" tone="subdued" fontWeight="semibold">
@@ -570,11 +680,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                             >
                               <BlockStack gap="050">
                                 <Text as="p" variant="bodyMd" fontWeight="semibold">
-                                  {`${li.quantity ?? 1} \u00D7 ${li.title ?? "Item"}`}
+                                  {`${li.quantity ?? 1} × ${li.title ?? "Item"}`}
                                 </Text>
                                 {subtitleParts.length > 0 && (
                                   <Text as="p" variant="bodySm" tone="subdued">
-                                    {subtitleParts.join(" \u2022 ")}
+                                    {subtitleParts.join(" • ")}
                                   </Text>
                                 )}
                               </BlockStack>
@@ -590,7 +700,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     </BlockStack>
                   )}
 
-                  {/* Totals */}
                   {orderPayload.totals && (
                     <>
                       <Divider />
@@ -627,7 +736,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     </>
                   )}
 
-                  {/* Order facts */}
                   <Divider />
                   <div
                     style={{
@@ -694,18 +802,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     Pulled from Shopify order data. Address details are city-level only for privacy.
                   </Text>
                 </BlockStack>
-              </Collapsible>
-            </>
-          )}
-        </BlockStack>
-      </Card>
+              </div>
+            </Collapsible>
+          </div>
+        )}
+      </div>
 
       {/* PAGE HEADER */}
-      <Text as="h1" variant="headingXl">
-        {pageHeader}
-      </Text>
+      <Text as="h1" variant="headingXl">{pageHeader}</Text>
 
-      {/* AUTO-SUBMIT DENIED — why DisputeDesk did not push to Shopify */}
+      {/* AUTO-SUBMIT DENIED */}
       {autoSaveBlock && (
         <Banner tone="warning" title="Auto-submit paused — your review needed">
           <BlockStack gap="200">
@@ -721,8 +827,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             )}
             {topMissingLabel && (
               <Text as="p" variant="bodySm">
-                Biggest gap: {topMissingLabel}. Adding it strengthens the case
-                before you submit.
+                Biggest gap: {topMissingLabel}. Adding it strengthens the case before you submit.
               </Text>
             )}
             <InlineStack gap="200">
@@ -733,312 +838,450 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* 1. CASE STATUS */}
-      <Card>
-        <BlockStack gap="400">
-          <Text as="h2" variant="headingMd">Case status</Text>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Status</Text>
-              <Badge tone={submitted ? "info" : "attention"}>
-                {submitted ? "Submitted" : "Not submitted"}
-              </Badge>
-            </BlockStack>
-
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Strength</Text>
-              <Badge tone={strengthTone(strengthKey)}>{strengthText}</Badge>
-            </BlockStack>
-
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Deadline</Text>
-              <Text
-                as="p"
-                variant="bodyMd"
-                fontWeight="semibold"
-                tone={!submitted && deadlineUrgent ? "critical" : undefined}
+      {/* MAIN + SIDEBAR LAYOUT */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: "20px",
+          gridAutoFlow: "row",
+        }}
+      >
+        <div style={{ gridColumn: "span 2", minWidth: 0 }}>
+          <BlockStack gap="500">
+            {/* CASE STATUS — green gradient when ready/submitted */}
+            <div
+              style={{
+                background: statusCardBg,
+                border: statusCardBorder,
+                borderRadius: 12,
+                padding: 20,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  marginBottom: 16,
+                }}
               >
-                {submitted
-                  ? `Submitted ${formatDate(submittedAt)}`
-                  : deadlineDays !== null && deadlineDays > 0
-                    ? `${deadlineDays} day${deadlineDays === 1 ? "" : "s"} remaining`
-                    : deadlineDays !== null && deadlineDays <= 0
-                      ? "Overdue"
-                      : "No deadline set"}
-              </Text>
-            </BlockStack>
-          </div>
-
-          <Divider />
-
-          <BlockStack gap="100">
-            <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendation}</Text>
-            {recommendationHelper && (
-              <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
-            )}
-            <Text as="p" variant="bodySm" tone="subdued">
-              {EVIDENCE_EVALUATION_HELPER}
-            </Text>
-          </BlockStack>
-
-          {/* AUTOMATION RULE APPLIED — surfaces the Rules page setting that
-               governed this dispute, with a CTA to change it. */}
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <BlockStack gap="050">
-              <InlineStack gap="200" blockAlign="center">
-                <Text as="p" variant="bodyMd">Automation rule:</Text>
-                <Badge tone={appliedRule?.mode === "auto" ? "success" : appliedRule?.mode === "review" ? "attention" : undefined}>
-                  {appliedModeLabel}
-                </Badge>
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
-            </BlockStack>
-            <div style={{ marginLeft: "auto" }}>
-              <Button url={rulesUrl}>Change rule</Button>
-            </div>
-          </InlineStack>
-
-          {/* PRIMARY CTA — visually dominant */}
-          <InlineStack gap="300" blockAlign="center">
-            <div style={{ minWidth: 220 }}>
-              {submitted ? (
-                <Button
-                  variant="primary"
-                  size="large"
-                  url={shopifyAdminUrl ?? undefined}
-                  target="_blank"
-                  disabled={!shopifyAdminUrl}
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 8,
+                    background: statusIconBg,
+                    border: "1px solid rgba(0,0,0,0.06)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: statusIconColor,
+                    flexShrink: 0,
+                  }}
                 >
-                  View in Shopify
-                </Button>
-              ) : (
-                <Button variant="primary" size="large" onClick={goToReview}>
-                  Submit to Shopify
-                </Button>
-              )}
-            </div>
-            {submitted ? (
-              improveCta && <Button url={improveCta.url}>{improveCta.label}</Button>
-            ) : (
-              <Button onClick={goToEvidence}>Edit evidence</Button>
-            )}
-          </InlineStack>
-        </BlockStack>
-      </Card>
+                  <Icon source={statusIconSource} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <Text as="h2" variant="headingMd">{statusHeadline}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Strength · Deadline · Recommendation
+                  </Text>
+                </div>
+              </div>
 
-      {/* 2. HOW WE DEFEND THIS CASE */}
-      {defenseBullets.length > 0 && (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">How we defend this case</Text>
-            <Text as="p" variant="bodyMd">
-              We are arguing that this transaction was legitimate based on:
-            </Text>
-            <BlockStack gap="200">
-              {defenseBullets.map((b) => (
-                <InlineStack key={b} gap="200" blockAlign="start" wrap={false}>
-                  <Text as="span" variant="bodyMd" tone="success">{"\u2713"}</Text>
-                  <Text as="p" variant="bodyMd">{b}</Text>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          </BlockStack>
-        </Card>
-      )}
-
-      {/* 3. YOUR SUPPORTING EVIDENCE */}
-      <Card>
-        <BlockStack gap="300">
-          <Text as="h2" variant="headingMd">Your supporting evidence</Text>
-
-          {presentItems.length === 0 && missingChecklist.length === 0 && (
-            <Text as="p" variant="bodyMd" tone="subdued">
-              No evidence collected yet. Generate or build the evidence pack to begin.
-            </Text>
-          )}
-
-          {presentItems.map((item) => {
-            const row = evidenceRowStatus(item);
-            // IP & Location Check: the item is "Included" (we ran the check),
-            // but the finding itself — match / mismatch / network risk —
-            // belongs in the description so the merchant sees WHAT we found,
-            // not just that we looked. The badge stays the neutral "Included".
-            const isIpRow = item.field === "ip_location_check";
-            const ipVerdict = isIpRow ? ipLocPayload?.summary?.split("\n")[0] ?? null : null;
-            const ipGuidance = isIpRow ? ipLocPayload?.merchantGuidance ?? null : null;
-
-            return (
               <div
-                key={item.field}
                 style={{
-                  border: "1px solid #e5e7eb",
-                  borderLeft: "4px solid #16a34a",
-                  borderRadius: 8,
-                  padding: 12,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: "16px",
+                  marginBottom: 16,
                 }}
               >
                 <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={row.tone}>{row.label}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {ipVerdict ?? WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
-                  </Text>
-                  {ipGuidance ? (
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {ipGuidance}
-                    </Text>
-                  ) : null}
+                  <Text as="p" variant="bodySm" tone="subdued">Status</Text>
+                  <Badge tone={submitted ? "info" : "attention"}>
+                    {submitted ? "Submitted" : "Not submitted"}
+                  </Badge>
                 </BlockStack>
-              </div>
-            );
-          })}
-
-          {missingChecklist.map((item) => {
-            const row = evidenceRowStatus(item);
-            const borderColor =
-              row.label === "Critical gap"
-                ? "#dc2626"
-                : row.label === "Recommended"
-                  ? "#2563eb"
-                  : "#9ca3af";
-            return (
-              <div
-                key={item.field}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${borderColor}`,
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
                 <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={row.tone}>{row.label}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}
-                  </Text>
-                  {!submitted && (
-                    <div>
-                      <Button
-                        size="slim"
-                        onClick={() => actions.navigateToEvidence(item.field)}
-                      >
-                        Add this evidence
-                      </Button>
-                    </div>
-                  )}
+                  <Text as="p" variant="bodySm" tone="subdued">Strength</Text>
+                  <Badge tone={strengthTone(strengthKey)}>{strengthText}</Badge>
                 </BlockStack>
-              </div>
-            );
-          })}
-        </BlockStack>
-      </Card>
-
-      {/* 4. EVIDENCE BY CATEGORY */}
-      {categories.length > 0 && (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">Evidence by category</Text>
-
-            <Text as="p" variant="bodyMd" fontWeight="semibold">
-              {coverageInterpretation}
-            </Text>
-
-            <ProgressBar
-              progress={coveragePct}
-              tone={strengthKey === "strong" ? "success" : strengthKey === "moderate" ? "primary" : "critical"}
-              size="small"
-            />
-            <Text as="p" variant="bodySm" tone="subdued">
-              {`${presentItems.length} of ${totalEvidenceShown} addable items collected`}
-            </Text>
-
-            <BlockStack gap="200">
-              {categories.map((cat) => {
-                const visible = cat.items.filter(
-                  (i) => i.status !== "unavailable",
-                );
-                if (visible.length === 0) return null;
-                const present = visible.filter((i) => i.status === "available" || i.status === "waived");
-                const missingActionable = visible.filter(
-                  (i) =>
-                    i.status === "missing" &&
-                    (i.collectionType === "manual" || !i.collectionType),
-                );
-                // Category badges reflect IMPACT, not completeness. Red only
-                // surfaces when there's a genuine Critical gap (missing item
-                // with priority=critical the merchant can act on).
-                const impact = categoryImpactLabel(cat.relevance);
-                const hasCriticalGap = missingActionable.some(
-                  (m) => m.priority === "critical",
-                );
-                const borderColor = hasCriticalGap
-                  ? "#dc2626"
-                  : impact.tone === "success"
-                    ? "#16a34a"
-                    : impact.tone === "info"
-                      ? "#2563eb"
-                      : "#9ca3af";
-
-                const suggestion = missingActionable[0]
-                  ? `Missing ${missingActionable[0].label.toLowerCase()} \u2014 ${
-                      WHY_EVIDENCE_MATTERS[missingActionable[0].field] ??
-                      CATEGORY_FIX_HINT[cat.category.key] ??
-                      "would strengthen this category."
-                    }`
-                  : null;
-
-                return (
-                  <div
-                    key={cat.category.key}
-                    style={{
-                      borderLeft: `3px solid ${borderColor}`,
-                      paddingLeft: 12,
-                    }}
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodySm" tone="subdued">Deadline</Text>
+                  <Text
+                    as="p"
+                    variant="bodyMd"
+                    fontWeight="semibold"
+                    tone={!submitted && deadlineUrgent ? "critical" : undefined}
                   >
-                    <BlockStack gap="100">
-                      <InlineStack gap="200" blockAlign="center" wrap>
-                        <Text as="span" variant="bodyMd" fontWeight="semibold">
-                          {cat.category.label}
-                        </Text>
-                        <Badge tone={impact.tone}>{impact.label}</Badge>
-                        <Badge>{`${present.length}/${visible.length}`}</Badge>
-                        {hasCriticalGap && (
-                          <Badge tone="critical">Critical gap</Badge>
-                        )}
-                      </InlineStack>
-                      {suggestion && !submitted && (
-                        <InlineStack gap="200" blockAlign="center" wrap>
-                          <Text as="p" variant="bodySm" tone="subdued">{suggestion}</Text>
-                          <Button
-                            size="micro"
-                            onClick={() =>
-                              actions.navigateToEvidence(missingActionable[0].field)
-                            }
-                          >
-                            Fix
-                          </Button>
-                        </InlineStack>
-                      )}
-                    </BlockStack>
+                    {submitted
+                      ? `Submitted ${formatDate(submittedAt)}`
+                      : deadlineDays !== null && deadlineDays > 0
+                        ? `${deadlineDays} day${deadlineDays === 1 ? "" : "s"} remaining`
+                        : deadlineDays !== null && deadlineDays <= 0
+                          ? "Overdue"
+                          : "No deadline set"}
+                  </Text>
+                </BlockStack>
+              </div>
+
+              <Divider />
+
+              <div style={{ marginTop: 16 }}>
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendation}</Text>
+                  {recommendationHelper && (
+                    <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
+                  )}
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {EVIDENCE_EVALUATION_HELPER}
+                  </Text>
+                </BlockStack>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <InlineStack gap="200" blockAlign="center" wrap={false}>
+                  <BlockStack gap="050">
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="p" variant="bodyMd">Automation rule:</Text>
+                      <Badge
+                        tone={
+                          appliedRule?.mode === "auto"
+                            ? "success"
+                            : appliedRule?.mode === "review"
+                              ? "attention"
+                              : undefined
+                        }
+                      >
+                        {appliedModeLabel}
+                      </Badge>
+                    </InlineStack>
+                    <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
+                  </BlockStack>
+                  <div style={{ marginLeft: "auto" }}>
+                    <Button url={rulesUrl}>Change rule</Button>
                   </div>
-                );
-              })}
-            </BlockStack>
+                </InlineStack>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <InlineStack gap="300" blockAlign="center">
+                  <div style={{ minWidth: 220 }}>
+                    {submitted ? (
+                      <Button
+                        variant="primary"
+                        size="large"
+                        url={shopifyAdminUrl ?? undefined}
+                        target="_blank"
+                        disabled={!shopifyAdminUrl}
+                      >
+                        View in Shopify
+                      </Button>
+                    ) : (
+                      <Button variant="primary" size="large" onClick={goToReview}>
+                        Submit to Shopify
+                      </Button>
+                    )}
+                  </div>
+                  {submitted ? (
+                    improveCta && <Button url={improveCta.url}>{improveCta.label}</Button>
+                  ) : (
+                    <Button onClick={goToEvidence}>Edit evidence</Button>
+                  )}
+                </InlineStack>
+              </div>
+            </div>
+
+            {/* HOW WE DEFEND THIS CASE */}
+            {defenseBullets.length > 0 && (
+              <Card>
+                <BlockStack gap="300">
+                  <Text as="h2" variant="headingMd">How we defend this case</Text>
+                  <Text as="p" variant="bodyMd">
+                    We are arguing that this transaction was legitimate based on:
+                  </Text>
+                  <BlockStack gap="200">
+                    {defenseBullets.map((b) => (
+                      <InlineStack key={b} gap="200" blockAlign="start" wrap={false}>
+                        <Text as="span" variant="bodyMd" tone="success">{"✓"}</Text>
+                        <Text as="p" variant="bodyMd">{b}</Text>
+                      </InlineStack>
+                    ))}
+                  </BlockStack>
+                </BlockStack>
+              </Card>
+            )}
+
+            {/* YOUR SUPPORTING EVIDENCE */}
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h2" variant="headingMd">Your supporting evidence</Text>
+
+                {presentItems.length === 0 && missingChecklist.length === 0 && (
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    No evidence collected yet. Generate or build the evidence pack to begin.
+                  </Text>
+                )}
+
+                {presentItems.map((item) => {
+                  const row = evidenceRowStatus(item);
+                  const isIpRow = item.field === "ip_location_check";
+                  const ipVerdict = isIpRow ? ipLocPayload?.summary?.split("\n")[0] ?? null : null;
+                  const ipGuidance = isIpRow ? ipLocPayload?.merchantGuidance ?? null : null;
+
+                  return (
+                    <div
+                      key={item.field}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderLeft: "4px solid #16a34a",
+                        borderRadius: 8,
+                        padding: 12,
+                      }}
+                    >
+                      <BlockStack gap="100">
+                        <InlineStack gap="200" blockAlign="center" wrap>
+                          <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
+                          <Badge tone={row.tone}>{row.label}</Badge>
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {ipVerdict ?? WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
+                        </Text>
+                        {ipGuidance ? (
+                          <Text as="p" variant="bodySm" tone="subdued">{ipGuidance}</Text>
+                        ) : null}
+                      </BlockStack>
+                    </div>
+                  );
+                })}
+
+                {missingChecklist.map((item) => {
+                  const row = evidenceRowStatus(item);
+                  const borderColor =
+                    row.label === "Critical gap"
+                      ? "#dc2626"
+                      : row.label === "Recommended"
+                        ? "#2563eb"
+                        : "#9ca3af";
+                  return (
+                    <div
+                      key={item.field}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderLeft: `4px solid ${borderColor}`,
+                        borderRadius: 8,
+                        padding: 12,
+                      }}
+                    >
+                      <BlockStack gap="100">
+                        <InlineStack gap="200" blockAlign="center" wrap>
+                          <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
+                          <Badge tone={row.tone}>{row.label}</Badge>
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}
+                        </Text>
+                        {!submitted && (
+                          <div>
+                            <Button
+                              size="slim"
+                              onClick={() => actions.navigateToEvidence(item.field)}
+                            >
+                              Add this evidence
+                            </Button>
+                          </div>
+                        )}
+                      </BlockStack>
+                    </div>
+                  );
+                })}
+              </BlockStack>
+            </Card>
+
+            {/* EVIDENCE BY CATEGORY */}
+            {categories.length > 0 && (
+              <Card>
+                <BlockStack gap="300">
+                  <Text as="h2" variant="headingMd">Evidence by category</Text>
+
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {coverageInterpretation}
+                  </Text>
+
+                  <ProgressBar
+                    progress={coveragePct}
+                    tone={strengthKey === "strong" ? "success" : strengthKey === "moderate" ? "primary" : "critical"}
+                    size="small"
+                  />
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {`${presentItems.length} of ${totalEvidenceShown} addable items collected`}
+                  </Text>
+
+                  <BlockStack gap="200">
+                    {categories.map((cat) => {
+                      const visible = cat.items.filter((i) => i.status !== "unavailable");
+                      if (visible.length === 0) return null;
+                      const present = visible.filter(
+                        (i) => i.status === "available" || i.status === "waived",
+                      );
+                      const missingActionable = visible.filter(
+                        (i) =>
+                          i.status === "missing" &&
+                          (i.collectionType === "manual" || !i.collectionType),
+                      );
+                      const impact = categoryImpactLabel(cat.relevance);
+                      const hasCriticalGap = missingActionable.some((m) => m.priority === "critical");
+                      const borderColor = hasCriticalGap
+                        ? "#dc2626"
+                        : impact.tone === "success"
+                          ? "#16a34a"
+                          : impact.tone === "info"
+                            ? "#2563eb"
+                            : "#9ca3af";
+
+                      const suggestion = missingActionable[0]
+                        ? `Missing ${missingActionable[0].label.toLowerCase()} — ${
+                            WHY_EVIDENCE_MATTERS[missingActionable[0].field] ??
+                            CATEGORY_FIX_HINT[cat.category.key] ??
+                            "would strengthen this category."
+                          }`
+                        : null;
+
+                      return (
+                        <div
+                          key={cat.category.key}
+                          style={{
+                            borderLeft: `3px solid ${borderColor}`,
+                            paddingLeft: 12,
+                          }}
+                        >
+                          <BlockStack gap="100">
+                            <InlineStack gap="200" blockAlign="center" wrap>
+                              <Text as="span" variant="bodyMd" fontWeight="semibold">
+                                {cat.category.label}
+                              </Text>
+                              <Badge tone={impact.tone}>{impact.label}</Badge>
+                              <Badge>{`${present.length}/${visible.length}`}</Badge>
+                              {hasCriticalGap && <Badge tone="critical">Critical gap</Badge>}
+                            </InlineStack>
+                            {suggestion && !submitted && (
+                              <InlineStack gap="200" blockAlign="center" wrap>
+                                <Text as="p" variant="bodySm" tone="subdued">{suggestion}</Text>
+                                <Button
+                                  size="micro"
+                                  onClick={() =>
+                                    actions.navigateToEvidence(missingActionable[0].field)
+                                  }
+                                >
+                                  Fix
+                                </Button>
+                              </InlineStack>
+                            )}
+                          </BlockStack>
+                        </div>
+                      );
+                    })}
+                  </BlockStack>
+                </BlockStack>
+              </Card>
+            )}
           </BlockStack>
-        </Card>
-      )}
+        </div>
+
+        {/* SIDEBAR */}
+        <div style={{ minWidth: 0 }}>
+          <BlockStack gap="500">
+            <Card>
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingSm">Dispute information</Text>
+                <BlockStack gap="200">
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodySm" tone="subdued">Dispute ID</Text>
+                    <Text as="p" variant="bodySm">
+                      <code style={{ fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>
+                        {dispute.id.slice(0, 8).toUpperCase()}
+                      </code>
+                    </Text>
+                  </BlockStack>
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodySm" tone="subdued">Type</Text>
+                    <div>
+                      <Badge tone={dispute.phase === "chargeback" ? "critical" : "attention"}>
+                        {dispute.phase === "chargeback" ? "Chargeback" : "Inquiry"}
+                      </Badge>
+                    </div>
+                  </BlockStack>
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodySm" tone="subdued">Filed</Text>
+                    <Text as="p" variant="bodyMd">{formatDate(dispute.openedAt)}</Text>
+                  </BlockStack>
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodySm" tone="subdued">Submission deadline</Text>
+                    {dispute.dueAt ? (
+                      <InlineStack gap="100" blockAlign="center">
+                        <span
+                          style={{ width: 14, height: 14, color: deadlineUrgent ? "#DC2626" : "#F59E0B" }}
+                        >
+                          <Icon source={CalendarIcon} />
+                        </span>
+                        <Text
+                          as="span"
+                          variant="bodyMd"
+                          fontWeight="semibold"
+                          tone={deadlineUrgent ? "critical" : undefined}
+                        >
+                          {formatDate(dispute.dueAt)}
+                        </Text>
+                      </InlineStack>
+                    ) : (
+                      <Text as="span" variant="bodyMd">No deadline set</Text>
+                    )}
+                  </BlockStack>
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodySm" tone="subdued">Possible outcomes</Text>
+                    <BlockStack gap="100">
+                      <InlineStack gap="100" blockAlign="center">
+                        <span style={{ width: 14, height: 14, color: "#22C55E" }}>
+                          <Icon source={CheckCircleIcon} />
+                        </span>
+                        <Text as="span" variant="bodySm">Won — Funds returned</Text>
+                      </InlineStack>
+                      <InlineStack gap="100" blockAlign="center">
+                        <span style={{ width: 14, height: 14, color: "#EF4444" }}>
+                          <Icon source={XCircleIcon} />
+                        </span>
+                        <Text as="span" variant="bodySm">Lost — Funds withheld</Text>
+                      </InlineStack>
+                    </BlockStack>
+                  </BlockStack>
+                </BlockStack>
+              </BlockStack>
+            </Card>
+
+            <Card>
+              <BlockStack gap="200">
+                <InlineStack gap="200" blockAlign="center">
+                  <span style={{ width: 16, height: 16, color: "#005BD3" }}>
+                    <Icon source={QuestionCircleIcon} />
+                  </span>
+                  <Text as="h3" variant="headingSm">Need help?</Text>
+                </InlineStack>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Learn best practices for responding to disputes and maximizing your win rate.
+                </Text>
+                <Button
+                  variant="plain"
+                  url={withShopParams("/app/help/dispute-detail-overview", searchParams)}
+                >
+                  View dispute guide
+                </Button>
+              </BlockStack>
+            </Card>
+          </BlockStack>
+        </div>
+      </div>
     </BlockStack>
   );
 }
