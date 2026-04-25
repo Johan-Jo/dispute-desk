@@ -35,6 +35,7 @@ interface S {
   intro: (p: { reason: string; amount: string; shop: string }) => string;
   nextStep: string;
   autoSubmitNote: string;
+  dueLabel: string;
   ctaShopify: string;
   ctaDispute: string;
   footer: string;
@@ -47,6 +48,7 @@ const STRINGS: Record<Locale, S> = {
     intro: ({ reason, amount, shop }) => `The evidence pack for the <strong>${reason}</strong> dispute (${amount}) on ${shop} has been saved to Shopify.`,
     nextStep: "Want to speed things up? Submit your response now in Shopify Admin instead of waiting for the deadline.",
     autoSubmitNote: "If you don't submit manually, Shopify will auto-submit your evidence on the dispute due date.",
+    dueLabel: "Due",
     ctaShopify: "Submit now in Shopify Admin →",
     ctaDispute: "View dispute in DisputeDesk →",
     footer: "You received this because evidence alerts are enabled in DisputeDesk settings.",
@@ -57,6 +59,7 @@ const STRINGS: Record<Locale, S> = {
     intro: ({ reason, amount, shop }) => `El paquete de evidencia para la disputa <strong>${reason}</strong> (${amount}) en ${shop} ha sido guardado en Shopify.`,
     nextStep: "¿Quieres acelerar el proceso? Envía tu respuesta ahora en Shopify Admin en lugar de esperar la fecha límite.",
     autoSubmitNote: "Si no envías manualmente, Shopify enviará automáticamente tu evidencia en la fecha límite de la disputa.",
+    dueLabel: "Vence",
     ctaShopify: "Enviar ahora en Shopify Admin →",
     ctaDispute: "Ver disputa en DisputeDesk →",
     footer: "Recibiste esto porque las alertas de evidencia están activadas en DisputeDesk.",
@@ -67,6 +70,7 @@ const STRINGS: Record<Locale, S> = {
     intro: ({ reason, amount, shop }) => `O pacote de evidência para a disputa <strong>${reason}</strong> (${amount}) em ${shop} foi salvo no Shopify.`,
     nextStep: "Quer agilizar? Envie sua resposta agora no Shopify Admin em vez de esperar o prazo.",
     autoSubmitNote: "Se você não enviar manualmente, o Shopify enviará automaticamente sua evidência na data limite da disputa.",
+    dueLabel: "Prazo",
     ctaShopify: "Enviar agora no Shopify Admin →",
     ctaDispute: "Ver disputa no DisputeDesk →",
     footer: "Você recebeu isto porque os alertas de evidência estão ativados nas configurações do DisputeDesk.",
@@ -77,6 +81,7 @@ const STRINGS: Record<Locale, S> = {
     intro: ({ reason, amount, shop }) => `Le dossier de preuves pour le litige <strong>${reason}</strong> (${amount}) sur ${shop} a été enregistré sur Shopify.`,
     nextStep: "Vous voulez accélérer le processus ? Soumettez votre réponse maintenant dans Shopify Admin au lieu d'attendre la date limite.",
     autoSubmitNote: "Si vous ne soumettez pas manuellement, Shopify soumettra automatiquement vos preuves à la date limite du litige.",
+    dueLabel: "Échéance",
     ctaShopify: "Soumettre maintenant dans Shopify Admin →",
     ctaDispute: "Voir le litige dans DisputeDesk →",
     footer: "Vous recevez ceci car les alertes de preuves sont activées dans les paramètres DisputeDesk.",
@@ -87,6 +92,7 @@ const STRINGS: Record<Locale, S> = {
     intro: ({ reason, amount, shop }) => `Das Beweispaket für die <strong>${reason}</strong>-Reklamation (${amount}) bei ${shop} wurde in Shopify gespeichert.`,
     nextStep: "Möchten Sie den Vorgang beschleunigen? Reichen Sie Ihre Antwort jetzt in Shopify Admin ein, anstatt auf die Frist zu warten.",
     autoSubmitNote: "Wenn Sie nicht manuell einreichen, wird Shopify Ihre Beweise am Fristdatum der Reklamation automatisch einreichen.",
+    dueLabel: "Fällig",
     ctaShopify: "Jetzt in Shopify Admin einreichen →",
     ctaDispute: "Reklamation in DisputeDesk ansehen →",
     footer: "Sie erhalten dies, weil Beweisbenachrichtigungen in den DisputeDesk-Einstellungen aktiviert sind.",
@@ -97,6 +103,7 @@ const STRINGS: Record<Locale, S> = {
     intro: ({ reason, amount, shop }) => `Bevispaketet för <strong>${reason}</strong>-tvisten (${amount}) på ${shop} har sparats i Shopify.`,
     nextStep: "Vill du snabba på processen? Skicka in ditt svar nu i Shopify Admin istället för att vänta på tidsfristen.",
     autoSubmitNote: "Om du inte skickar in manuellt kommer Shopify att automatiskt skicka in dina bevis på tvistens förfallodatum.",
+    dueLabel: "Förfaller",
     ctaShopify: "Skicka in nu i Shopify Admin →",
     ctaDispute: "Visa tvist i DisputeDesk →",
     footer: "Du fick detta eftersom bevisaviseringar är aktiverade i DisputeDesk-inställningarna.",
@@ -161,7 +168,7 @@ export async function sendPackSavedAlert(
       sb.from("shops").select("shop_domain").eq("id", ctx.shopId).single(),
       sb
         .from("disputes")
-        .select("dispute_gid, dispute_evidence_gid")
+        .select("dispute_gid, dispute_evidence_gid, due_at")
         .eq("id", ctx.disputeId)
         .single(),
     ]);
@@ -173,6 +180,11 @@ export async function sendPackSavedAlert(
     const disputeUrl = getEmbeddedAppUrl(shopDomain || null, `disputes/${ctx.disputeId}`);
     const shopifyUrl = shopDomain
       ? getShopifyDisputeUrl(shopDomain, dispute?.dispute_evidence_gid ?? null)
+      : null;
+
+    const dueAt = dispute?.due_at ?? null;
+    const dueDate = dueAt
+      ? new Date(dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       : null;
 
     const subject = `[DisputeDesk] ${s.subject({ reason, amount: amountStr })}`;
@@ -210,9 +222,10 @@ export async function sendPackSavedAlert(
         <p style="font-size:13px;color:#1E40AF;margin:0 0 8px;line-height:1.5;font-weight:600">
           ${s.nextStep}
         </p>
-        <p style="font-size:12px;color:#6B7280;margin:0;line-height:1.4">
+        <p style="font-size:12px;color:#6B7280;margin:0 0 ${dueDate ? "8px" : "0"};line-height:1.4">
           ${s.autoSubmitNote}
         </p>
+        ${dueDate ? `<p style="font-size:13px;color:#1E40AF;margin:0;line-height:1.4;font-weight:600">${s.dueLabel}: ${dueDate}</p>` : ""}
       </div>
 
       <div>
@@ -230,7 +243,7 @@ export async function sendPackSavedAlert(
 ${s.intro({ reason, amount: amountStr, shop: shopName }).replace(/<[^>]+>/g, "")}
 
 ${s.nextStep}
-${s.autoSubmitNote}
+${s.autoSubmitNote}${dueDate ? `\n${s.dueLabel}: ${dueDate}` : ""}
 
 ${shopifyUrl ? `${s.ctaShopify.replace(" →", "")}: ${shopifyUrl}` : ""}
 ${s.ctaDispute.replace(" →", "")}: ${disputeUrl}
