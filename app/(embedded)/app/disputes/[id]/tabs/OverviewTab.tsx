@@ -19,42 +19,69 @@ import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
-/** Confidence label + numeric badge per case strength. */
-const CONFIDENCE_BY_STRENGTH: Record<
-  string,
-  { title: string; pct: number; tone: "success" | "warning" | "critical"; bg: string; border: string; iconColor: string }
-> = {
+/** Confidence label + visual styling per case strength.
+ *  Submitted-strong/moderate maps to the Figma green hero; weak/pre-submit
+ *  fall back to amber/red while keeping the same structural layout. */
+interface ConfidenceStyle {
+  title: string;
+  pct: number;
+  bg: string;
+  border: string;
+  iconBg: string;
+  iconColor: string;
+  titleColor: string;
+  bodyColor: string;
+  pillBg: string;
+  pillColor: string;
+}
+const CONFIDENCE_BY_STRENGTH: Record<string, ConfidenceStyle> = {
   strong: {
     title: "Likely to win",
     pct: 85,
-    tone: "success",
-    bg: "#ECFDF5",
-    border: "#A7F3D0",
-    iconColor: "#22C55E",
+    bg: "#F0FDF4",
+    border: "#86EFAC",
+    iconBg: "#D1FAE5",
+    iconColor: "#059669",
+    titleColor: "#065F46",
+    bodyColor: "#065F46",
+    pillBg: "#D1FAE5",
+    pillColor: "#065F46",
   },
   moderate: {
     title: "Could win",
     pct: 60,
-    tone: "warning",
     bg: "#FFFBEB",
     border: "#FDE68A",
+    iconBg: "#FEF3C7",
     iconColor: "#D97706",
+    titleColor: "#78350F",
+    bodyColor: "#92400E",
+    pillBg: "#FEF3C7",
+    pillColor: "#92400E",
   },
   weak: {
     title: "Hard to win",
     pct: 30,
-    tone: "critical",
     bg: "#FEF2F2",
     border: "#FCA5A5",
+    iconBg: "#FEE2E2",
     iconColor: "#DC2626",
+    titleColor: "#7F1D1D",
+    bodyColor: "#991B1B",
+    pillBg: "#FEE2E2",
+    pillColor: "#991B1B",
   },
   insufficient: {
     title: "Hard to win",
     pct: 15,
-    tone: "critical",
     bg: "#FEF2F2",
     border: "#FCA5A5",
+    iconBg: "#FEE2E2",
     iconColor: "#DC2626",
+    titleColor: "#7F1D1D",
+    bodyColor: "#991B1B",
+    pillBg: "#FEE2E2",
+    pillColor: "#991B1B",
   },
 };
 
@@ -371,25 +398,24 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* 1. HERO — "Likely to win" */}
+      {/* 1. HERO — "Likely to win" / "Could win" / "Hard to win" (Figma: bg #F0FDF4, border-2 #86EFAC) */}
       <div
         style={{
           background: confidence.bg,
-          border: `1px solid ${confidence.border}`,
-          borderRadius: 12,
-          padding: "20px 24px",
+          border: `2px solid ${confidence.border}`,
+          borderRadius: 8,
+          padding: 24,
           display: "flex",
           alignItems: "flex-start",
-          gap: "16px",
+          gap: 16,
         }}
       >
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: 48,
+            height: 48,
             borderRadius: 8,
-            background: "#ffffff",
-            border: `1px solid ${confidence.border}`,
+            background: confidence.iconBg,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -400,13 +426,26 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           <Icon source={ShieldCheckMarkIcon} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <InlineStack gap="200" blockAlign="center" wrap>
-            <Text as="h2" variant="headingMd">{confidence.title}</Text>
-            <Badge tone={confidence.tone}>{`${confidence.pct}% confidence`}</Badge>
-          </InlineStack>
-          <div style={{ marginTop: 4 }}>
-            <Text as="p" variant="bodySm" tone="subdued">{heroDescription}</Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: confidence.titleColor, lineHeight: 1.3 }}>
+              {confidence.title}
+            </span>
+            <span
+              style={{
+                padding: "2px 8px",
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                background: confidence.pillBg,
+                color: confidence.pillColor,
+              }}
+            >
+              {`${confidence.pct}% confidence`}
+            </span>
           </div>
+          <p style={{ fontSize: 14, color: confidence.bodyColor, margin: 0, lineHeight: 1.5 }}>
+            {heroDescription}
+          </p>
         </div>
       </div>
 
@@ -444,30 +483,34 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     : null;
 
               return (
-                <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                     <div
                       style={{
-                        width: 28,
-                        height: 28,
+                        width: 32,
+                        height: 32,
                         borderRadius: 999,
                         background: dotBg,
                         color: dotColor,
+                        border: "2px solid #FFFFFF",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        flexShrink: 0,
+                        position: "relative",
+                        zIndex: 1,
                       }}
                     >
                       {iconSrc ? (
-                        <Icon source={iconSrc} />
+                        <span style={{ width: 16, height: 16, display: "inline-flex" }}>
+                          <Icon source={iconSrc} />
+                        </span>
                       ) : (
                         <span
                           style={{
                             width: 8,
                             height: 8,
                             borderRadius: 999,
-                            background: dotColor,
+                            background: "#8C9196",
                           }}
                         />
                       )}
@@ -475,18 +518,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     {!isLast && (
                       <div
                         style={{
-                          width: 1,
+                          width: 2,
                           flex: 1,
-                          minHeight: 16,
+                          minHeight: 24,
                           background: "#E1E3E5",
-                          marginTop: 4,
+                          marginTop: 0,
                         }}
                       />
                     )}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, paddingBottom: isLast ? 0 : 8 }}>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">{step.title}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">{step.helper}</Text>
+                  <div style={{ flex: 1, minWidth: 0, paddingTop: 4, paddingBottom: isLast ? 0 : 16 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: step.state === "pending" ? "#6D7175" : "#202223", margin: 0 }}>
+                      {step.title}
+                    </p>
+                    <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>{step.helper}</p>
                   </div>
                 </div>
               );
@@ -511,22 +556,40 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               Evidence is still being collected. Add evidence to surface defense reasons.
             </Text>
           ) : (
-            <BlockStack gap="300">
-              {activeReasons.map((r) => (
-                <div key={r.title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <span style={{ width: 18, height: 18, color: "#22C55E", flexShrink: 0, marginTop: 2 }}>
-                    <Icon source={CheckCircleIcon} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">{r.title}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">{r.description}</Text>
+            <div>
+              {activeReasons.map((r, i) => {
+                const isLast = i === activeReasons.length - 1;
+                return (
+                  <div
+                    key={r.title}
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      paddingBottom: isLast ? 0 : 16,
+                      marginBottom: isLast ? 0 : 16,
+                      borderBottom: isLast ? "none" : "1px solid #E1E3E5",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flex: 1, minWidth: 0 }}>
+                      <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0, marginTop: 2 }}>
+                        <Icon source={CheckCircleIcon} />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 14, fontWeight: 500, color: "#202223", margin: "0 0 4px" }}>
+                          {r.title}
+                        </p>
+                        <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{r.description}</p>
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      <Badge tone={strengthTone(r.strength)}>{r.strength}</Badge>
+                    </div>
                   </div>
-                  <div style={{ flexShrink: 0 }}>
-                    <Badge tone={strengthTone(r.strength)}>{r.strength}</Badge>
-                  </div>
-                </div>
-              ))}
-            </BlockStack>
+                );
+              })}
+            </div>
           )}
         </BlockStack>
       </div>
@@ -570,29 +633,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             </div>
           </div>
 
-          <BlockStack gap="200">
-            {bucketStats.map((row) => (
-              <InlineStack key={row.bucket} align="space-between" blockAlign="center">
-                <InlineStack gap="200" blockAlign="center">
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 9999,
-                      background: bucketDot[row.bucket],
-                      display: "inline-block",
-                    }}
-                  />
-                  <Text as="span" variant="bodySm">{bucketLabel[row.bucket]}</Text>
+          <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
+            <BlockStack gap="300">
+              {bucketStats.map((row) => (
+                <InlineStack key={row.bucket} align="space-between" blockAlign="center">
+                  <InlineStack gap="200" blockAlign="center">
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 9999,
+                        background: bucketDot[row.bucket],
+                        display: "inline-block",
+                      }}
+                    />
+                    <Text as="span" variant="bodyMd">{bucketLabel[row.bucket]}</Text>
+                  </InlineStack>
+                  <Text as="span" variant="bodyMd" fontWeight="medium">
+                    {row.complete === row.total
+                      ? `${row.complete}/${row.total} complete`
+                      : `${row.complete}/${row.total}`}
+                  </Text>
                 </InlineStack>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {row.complete === row.total
-                    ? `${row.complete}/${row.total} complete`
-                    : `${row.complete}/${row.total}`}
-                </Text>
-              </InlineStack>
-            ))}
-          </BlockStack>
+              ))}
+            </BlockStack>
+          </div>
         </BlockStack>
       </div>
 
