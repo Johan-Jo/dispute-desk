@@ -205,7 +205,12 @@ export async function buildPack(
     }
   }
 
-  // Insert evidence_items for each section
+  // Insert evidence_items for each section. Plan §P2.4a — the workspace
+  // API normalises category on read by routing through the canonical
+  // categorizer (which is the source of truth). We persist
+  // `fieldsProvided` inside `payload` so the workspace's
+  // `evidenceItemsByField` map can resolve canonical signals back to
+  // their evidence item without scanning the array.
   let itemsCreated = 0;
   for (const section of allSections) {
     const { error: itemErr } = await sb.from("evidence_items").insert({
@@ -213,7 +218,7 @@ export async function buildPack(
       type: section.type,
       label: section.label,
       source: section.source,
-      payload: section.data,
+      payload: { ...section.data, fieldsProvided: section.fieldsProvided },
     });
 
     if (!itemErr) {

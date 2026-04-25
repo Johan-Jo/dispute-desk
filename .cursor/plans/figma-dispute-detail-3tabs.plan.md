@@ -1,6 +1,252 @@
 # Figma dispute-detail integration — all 3 tabs
 
-**Status:** DRAFT v3 (PATCH 1 applied 2026-04-25) — awaiting approval. No code lands until decisions are signed off.
+**Status:** DRAFT v3 (PATCH 1 applied 2026-04-25; PATCH 2 drafted 2026-04-25 with Patch 2A surgical correction applied 2026-04-25 — awaiting approval).
+
+---
+
+## PATCH 2 — Evidence classification & scoring rewrite (2026-04-25)
+
+> The current implementation over-labels evidence as "strong", counts duplicate signals, treats presence as strength, and lets supporting evidence elevate a case to Strong. This patch rebuilds the system to align with how issuing banks actually evaluate disputes. Strict, non-inflated, defensible.
+
+### P2.0 Audit findings (current state, before this patch)
+
+| # | Finding | Source |
+|---|---------|--------|
+| C1 | Per-item strength is **inferred client-side** in `useDisputeWorkspace.ts:130-169` (`deriveEvidenceWithStrength`). Backend never persists per-item category. | `useDisputeWorkspace.ts:130-169` |
+| C2 | Case-level strength uses **ratio math** (`actualScore / maxScore ≥ 0.6 → strong`) plus a per-family `criticalPresent` gate — not the count-based formula the new spec requires. | `caseStrength.ts:261-279` |
+| C3 | Family-tier weights mix `critical` (40), `strong` (25), `supporting` (10), `optional` (5), `supporting_only` (0). Same field gets different tiers per dispute family (e.g. `shipping_tracking` is `supporting` in fraud but `critical` in delivery). | `caseStrength.ts:42-115` |
+| C4 | `ip_location_check` is **already `supporting_only` (weight 0)** — keep this guarantee and extend it to `customer_communication`, `customer_behavior`, `device_location_consistency`. | `caseStrength.ts:51` |
+| C5 | Delivery distinguishes nothing today — `delivery_proof` is one boolean field. No code path branches on signature / photo / label-only. | `lib/packs/sources/fulfillmentSource.ts`, `caseStrength.ts` |
+| C6 | `whyThisCaseWins.ts` dedupes strengths/weaknesses **by description text** (`seenStrengths.has(desc)`) — the implicit-text-matching pattern already forbidden by Patch 1's NO IMPLICIT UI MAPPING rule. | `whyThisCaseWins.ts:60-83` |
+| C7 | Same evidence signal can appear under multiple counterclaims (`order_confirmation` is in 7 of 8 family templates). No canonical-once registry. | `lib/argument/templates.ts` (FAMILY_TEMPLATES) |
+
+### P2.1 New evidence-tier definitions (canonical, per item — NOT per family)
+
+A `evidenceFieldKey` has **one** category, set by the backend, regardless of dispute family. The category is conditioned on the underlying data (signature present? tracking only?), not on dispute reason.
+
+| Tier | Weight | Definition | Member fields |
+|------|--------|------------|---------------|
+| **strong** | 3 | Directly proves authorization or delivery to the cardholder. | `avs_cvv_match` (when both AVS and CVV match), `billing_address_match`, `delivery_proof` (when `signature_confirmed === true` OR shipping address matches verified billing), `tds_authentication` (new — when 3DS data is available) |
+| **moderate** | 2 | Supports but is not decisive. | `delivery_proof` (when delivered without signature, e.g. carrier-confirmed delivery to general address), `shipping_tracking` (when delivered, no signature), `ip_location_check` (when location matches and not VPN/proxy), `device_session_consistency` (when consistent) |
+| **supporting** | 0 | Context only. **Never elevates case strength.** | `customer_communication`, `customer_account_info`, `activity_log`, `order_confirmation`, `product_description`, `refund_policy`, `shipping_policy`, `cancellation_policy`, `duplicate_explanation`, `supporting_documents` |
+| **invalid** | n/a | Excluded from the system entirely. | `shipping_tracking` when only the carrier label was created (no delivery scan), `delivery_proof` when no scan/signature/photo at all, any field whose data is null. These do **not** appear in `evidenceItems[].category`. |
+
+**Hard rule (`supporting_only = true`):** every field whose tier is `supporting` carries `supportingOnly: true` in the type. The aggregator MUST NOT count these toward `strong_count` or `moderate_count`.
+
+**P2.1.1 Supporting hard exclusion (Patch 2A).** Replaces the looser "supporting_only" wording everywhere it appears.
+
+- If `category === "supporting"`:
+  - `weight = 0` (always — no per-family override).
+  - `excludedFromStrength = true` (typed flag on every entry).
+- Supporting items MUST:
+  - Never increment `strong_count`.
+  - Never increment `moderate_count`.
+  - Never affect `overall` classification under any condition.
+- **Invariant:** `supporting_only` items cannot elevate case strength regardless of count, presence, recency, or any other input. Enforced as a runtime invariant + the test in P2.9 #13.
+
+### P2.2 New scoring formula (count-based, deterministic)
+
+```ts
+// Pure function in lib/argument/scoring.ts — no UI calls this directly.
+function computeCaseStrength(items: ScoredEvidenceItem[]): CaseStrengthResult {
+  const strong   = items.filter(i => i.category === "strong").length;
+  const moderate = items.filter(i => i.category === "moderate").length;
+
+  let overall: "Strong" | "Moderate" | "Weak";
+  if (strong >= 2)                          overall = "Strong";
+  else if (strong === 1 && moderate >= 1)   overall = "Moderate";
+  else                                      overall = "Weak";
+
+  return { overall, strongCount: strong, moderateCount: moderate, supportingCount: <count>, score: strong * 3 + moderate * 2 };
+}
+```
+
+**Replaces** today's ratio-based + per-family-gate logic. The current `caseStrength.score` (0-100 ratio) is **deprecated in favour of `score = strong*3 + moderate*2`** (raw weighted sum). The 0-100 ratio is **kept as a separate `coveragePercent` field** so the existing UI's Evidence-coverage pill keeps rendering, but is **no longer the basis for `overall`**.
+
+### P2.3 Conditional delivery categorization
+
+The fulfillment collector already has access to carrier scans. The pack pipeline writes a `proofType` discriminator on `delivery_proof.payload` and the categorizer maps it **exactly** to one of the four states below. No other path may set the `delivery_proof` category.
+
+**Patch 2A — extended proofType (4 states, replaces the 3-state version).**
+
+`delivery_proof.payload.proofType: "signature_confirmed" | "delivered_confirmed" | "delivered_unverified" | "label_created"`.
+
+| `proofType` | Condition | Resulting category for `delivery_proof` |
+|-------------|-----------|----------------------------------------|
+| `signature_confirmed` | Carrier event with signature scan OR `proof_of_delivery_with_recipient_name` | **strong** |
+| `delivered_confirmed` | Carrier `delivered` event with timestamp + recipient location, no signature/photo | **moderate** |
+| `delivered_unverified` | Carrier `delivered` flag with no corroborating data (no recipient location, no signature, no photo) | **supporting** |
+| `label_created` | `pre_transit` / `info_received` / `label_created` events only | **invalid** (omitted from items entirely) |
+
+If `proofType` is absent on the payload, default to `label_created` (invalid). The categorizer is the single allowed mapper from these strings to a category — no other code may translate them.
+
+### P2.4 Canonical evidence registry (deduplication)
+
+Single source of truth: `lib/argument/canonicalEvidence.ts`.
+
+```ts
+export const CANONICAL_EVIDENCE: Record<EvidenceFieldKey, CanonicalSpec> = {
+  avs_cvv_match:  { signalId: "payment_auth",  label: "Payment authentication (AVS + CVV)", category: "strong",   supportingOnly: false, excludedFromStrength: false, conditions: [...] },
+  delivery_proof: { signalId: "delivery",      label: "Delivery confirmation",              category: "moderate", supportingOnly: false, excludedFromStrength: false, conditions: [...] },
+  shipping_tracking: { signalId: "delivery",   label: "Shipping tracking",                  category: "moderate", supportingOnly: false, excludedFromStrength: false, conditions: [...] },
+  // ...
+};
+```
+
+- Categories assigned **by data condition**, evaluated server-side.
+- Each `evidenceFieldKey` exists exactly once. No dispute-family overrides.
+- `argumentMap.counterclaims[*].supporting/missing/systemUnavailable` continues to point to fields **by `evidenceFieldKey`** (already in place from Patch 1's 3.A.5), but the registry is now the canonical category source — the `supporting[*].label` and category come from `CANONICAL_EVIDENCE[evidenceFieldKey]`, not from the family template.
+
+**Patch 2A — Signal-level deduping.** Each registry entry MUST carry a `signalId: string`. Multiple `evidenceFieldKey`s MAY map to the same `signalId` when they describe the same underlying evidentiary signal (e.g., `delivery_proof` and `shipping_tracking` both ⇒ `signalId: "delivery"`). The scorer dedupes on `signalId`, NOT only on `evidenceFieldKey`:
+
+- For each unique `signalId` whose contributing items contain at least one `available` entry, take the **highest-tier category** (strong > moderate > supporting) among those items as the signal's effective category.
+- Each `signalId` contributes at most once to `strong_count` / `moderate_count`.
+
+**Rule (Patch 2A):** *"If multiple `evidenceFieldKey`s map to the same `signalId`, the scorer counts them ONCE."* Enforced by the test in P2.9 #11.
+
+### P2.4a Category source of truth (Patch 2A — NEW)
+
+- Evidence category MUST be derived from `canonicalEvidence.ts` + runtime conditions (e.g. `proofType` for delivery, AVS/CVV both-match check for payment auth, `bankEligible` for IP location). No other source is authoritative.
+- The `category` value persisted to `pack.evidenceItems[*].category` is a **cache, not authority**. It exists for fast reads and audit logs.
+- On **every pack build** the categorizer recomputes the category. Stored values are overwritten.
+- The registry exposes a `categoryVersion: number` constant. Each persisted item carries the `categoryVersion` it was computed under.
+  - When `pack.evidenceItems[*].categoryVersion !== CANONICAL_EVIDENCE_VERSION`, the workspace API recomputes the category on read (back-compat for older packs after a registry change) and emits a `category_recomputed_on_read` audit-log entry.
+- UI and scoring **MUST NEVER trust the stored `category` blindly** — they call `categoryFor(item)` which short-circuits to the persisted value only when `categoryVersion === CANONICAL_EVIDENCE_VERSION`, otherwise re-derives.
+
+### P2.4b Canonical registry lock (Patch 2A — NEW)
+
+**No overrides outside the registry.** The only file allowed to assign a category, weight, or strength capability is `lib/argument/canonicalEvidence.ts`.
+
+- Forbidden anywhere else in the codebase:
+  - Inline `category: "strong" | ...` literal assignments to evidence items.
+  - Per-family or per-reason overrides of category.
+  - Conditional strength logic that bypasses `categoryFor()`.
+- **CI enforcement:** add a build-time guard. Roughly:
+  ```bash
+  # Fail the build if any production source assigns category outside the registry.
+  rg -l '"category"\s*:\s*"(strong|moderate|supporting|invalid)"' \
+    --type ts \
+    | grep -v -E "lib/argument/canonicalEvidence\.ts|lib/argument/__tests__|lib/argument/scoring\.ts" \
+    && exit 1 || exit 0
+  ```
+  Wired into the existing CI workflow (`.github/workflows/ci.yml`) as a new "category-source-truth" step.
+
+### P2.5 Per-item strength moves to backend
+
+Today's `EvidenceItemWithStrength` is computed client-side. Eliminate the client computation; the API surfaces the category directly.
+
+| Before | After |
+|--------|-------|
+| `useDisputeWorkspace.ts:130-169` runs `deriveEvidenceWithStrength` client-side, mapping each checklist item to a strength via the counterclaim it appears in. | Backend persists `category: "strong" \| "moderate" \| "supporting"` per evidence item (in `pack.evidenceItems[*].category`, computed by the build pipeline using `CANONICAL_EVIDENCE` + the conditional checks). UI reads it directly. `deriveEvidenceWithStrength` is deleted. |
+
+### P2.6 "What supports your case" rebuild (one row = one unique argument)
+
+Today's UI iterates `whyWins.strengths[]`, which is per-evidence-field with text-based dedupe. Replace with **one row per canonical strength contribution** keyed by `signalId`:
+
+- **Strong row** for each `signalId` whose effective category is `strong` AND has at least one contributing item with `status === "available"`.
+- **Moderate row** for each `signalId` whose effective category is `moderate` AND has at least one contributing available item.
+- **Supporting row** is omitted from "What supports your case" entirely (supporting items appear in the Evidence tab, never in the case-strength surface).
+
+Removed: the vague summary rows ("Order details verified", "Transaction record"). Those map to `order_confirmation`, which is `supporting` under the new tier system and therefore not in this list.
+
+**Patch 2A — Argument purity rule.** Every "What supports your case" row MUST:
+- Map to **exactly one `signalId`** (resolved via the canonical registry).
+- Have **exactly one `category`** (the effective category for that signal).
+- **Not combine multiple signals** in a single row, even when their text could be summarised into one sentence.
+
+Forbidden:
+- Grouping multiple signals into a single row.
+- Merging categories across signals.
+- Composite/summary rows like "Order details verified" or "Transaction record" that fold several underlying signals into a single claim.
+
+### P2.6a Field visibility decision (Patch 2A — NEW)
+
+**Adopt OPTION A (STRICT).**
+
+Supporting evidence:
+- **Visible** in the Evidence tab only.
+- **Excluded** from every case-strength surface — Overview hero, "What supports your case", Evidence-coverage breakdown's strong/moderate counts, and any bank-facing summary derived from these.
+- **Labelled** with the explicit string **"Does not affect case strength"** wherever it surfaces in the Evidence tab, so the merchant cannot mistake its presence for a contribution to the score.
+
+### P2.7 UI rules under the new system
+
+- ❌ **No** UI-side strength inference. Delete `deriveEvidenceWithStrength`. Per-item category comes from `pack.evidenceItems[*].category`.
+- ❌ **No** UI-side text-dedup of strengths. The backend returns one row per canonical evidence contribution.
+- ❌ **No** UI elevation of `supporting` items into a strength row.
+- ✅ The Overview hero pill reads `caseStrength.overall` (one of "Strong" / "Moderate" / "Weak" — note the new strict 3-state system; "insufficient" is dropped). Coverage pill reads `caseStrength.coveragePercent` (0-100, the legacy ratio retained for visualisation only).
+- ✅ "What supports your case" iterates `derived.strongContributions[]` and `derived.moderateContributions[]` returned by the backend.
+
+### P2.8 Migration plan
+
+| Step | What | Risk |
+|------|------|------|
+| 1 | Add `lib/argument/canonicalEvidence.ts` with `CANONICAL_EVIDENCE` registry + `categorizeEvidenceField(field, payload): "strong" \| "moderate" \| "supporting" \| "invalid"`. | Low — new module. |
+| 2 | Extend `lib/packs/sources/fulfillmentSource.ts` to expose `proofType` on `delivery_proof.payload`. | Medium — touches the build pipeline. New tests required for the three delivery states. |
+| 3 | Add `category` field to `pack.evidenceItems[*]`. The build pipeline calls `categorizeEvidenceField` per item before persisting. | Medium — schema + build code. Existing rows lack `category`; the workspace API normalizes by re-categorising on read for back-compat. |
+| 4 | Rewrite `lib/argument/caseStrength.ts:calculateCaseStrength` to call the new `computeCaseStrength` (count-based formula). Keep the legacy `score` field as `coveragePercent`. | High — core engine. New unit tests required for: 0 strong / 1 strong / 2+ strong / 1 strong + 0 moderate / 1 strong + 1 moderate edge cases, plus all-supporting cases. |
+| 5 | Rewrite `lib/argument/whyThisCaseWins.ts` to return `strongContributions[]` + `moderateContributions[]` keyed by `evidenceFieldKey`, with one row per canonical contribution. Drop the description-text dedupe. | Medium — type change ripples to `WhyWinsResult` consumers. |
+| 6 | Update `OverviewTab.tsx` to render `derived.strongContributions[]` / `moderateContributions[]` (no `whyWins.strengths[]`). Strong rows show green checkmark + "Strong" pill; moderate rows show amber + "Moderate" pill. | Low — UI swap. |
+| 7 | Delete `useDisputeWorkspace.ts:deriveEvidenceWithStrength` and any `EvidenceItemWithStrength` consumers. | Medium — touches Evidence tab too; will be revisited when Evidence tab is rebuilt under v3. |
+| 8 | Add forbidden-string grep: `"Order details verified"` must not appear in any rendered string after this patch. Plus a runtime invariant test that `case.strength = "Strong"` ⇒ `strong_count >= 2`. | Low. |
+
+### P2.9 Validation tests (new, mandatory)
+
+`lib/argument/__tests__/scoring.test.ts`:
+
+- [ ] 2 strong → `Strong`
+- [ ] 1 strong + 1 moderate → `Moderate`
+- [ ] 1 strong + 0 moderate → `Weak`
+- [ ] 0 strong + 5 supporting → `Weak` (supporting must never elevate)
+- [ ] Same `evidenceFieldKey` referenced by two counterclaims counts only once toward `strong_count` (canonical-once)
+- [ ] `delivery_proof` with `proofType: "signature"` → strong
+- [ ] `delivery_proof` with `proofType: "delivery"` → moderate
+- [ ] `delivery_proof` with `proofType: "label_only"` → not in items at all (invalid)
+- [ ] `customer_communication` with all sub-conditions → always `supporting`, never strong
+- [ ] `ip_location_check` with positive match → `moderate` (not strong); with VPN flag → `supporting`
+- [ ] **#11 (Patch 2A) — Duplicate signal via multiple keys.** Same `signalId` reachable through two different `evidenceFieldKey`s, both `available`, must contribute exactly **once** to `strong_count` (or `moderate_count`). Concrete fixture: `delivery_proof` (proofType=`signature_confirmed`) + `shipping_tracking` (delivered) both mapping to `signalId: "delivery"` → `strong_count = 1`, not 2.
+- [ ] **#12 (Patch 2A) — Category recomputation on registry change.** A pack persisted under `categoryVersion: 1` is read after the registry bumps to `categoryVersion: 2`. The workspace API must recompute every item's category and emit a `category_recomputed_on_read` audit entry. Persisted cache is overwritten on the next build.
+- [ ] **#13 (Patch 2A) — Supporting exclusion under any input.** Build a fixture with N supporting-only items present (`customer_communication`, `customer_account_info`, `activity_log`, `order_confirmation`, all `available`), zero strong, zero moderate. Assert `overall === "Weak"` for any N (1, 5, 50). Supporting items must never elevate strength.
+- [ ] **#14 (Patch 2A) — Delivery proofType strict mapping.** Each of the four `proofType` values (`signature_confirmed`, `delivered_confirmed`, `delivered_unverified`, `label_created`) maps to exactly one category (strong / moderate / supporting / invalid). Anything else → `invalid`.
+- [ ] **#15 (Patch 2A) — Argument purity.** Snapshot every row produced for "What supports your case". Each row MUST carry exactly one `signalId` and one `category`. Composite/summary rows fail the test.
+
+### P2.10 Decisions
+
+| # | Decision | Recommendation |
+|---|----------|----------------|
+| P2-D1 | Strict 3-state overall (`Strong` / `Moderate` / `Weak`), drop `insufficient` | **Accept** — current `insufficient` is an artifact of "no critical present"; under the count formula, that case is just `Weak`. |
+| P2-D2 | Hard cutover or back-compat shim for `caseStrength.score` (0-100) | **Back-compat shim** — keep the legacy field as `coveragePercent`. UI's coverage pill keeps rendering; no Vercel-side breakage during the rebuild. |
+| P2-D3 | Persist `category` per evidence item in DB or compute on read | **Persist** — write `category` into `pack.evidenceItems` on build. Lets future reads/exports stay strict. Back-fill by re-categorising existing rows on next build. |
+| P2-D4 | Delete `EvidenceItemWithStrength` immediately or stage | **Stage** — keep the type alive temporarily as `EvidenceItemWithCategory` (renamed, sourced from backend). Full deletion of the client-side derivation happens in Step 7 after consumers migrate. |
+| P2-D5 | Where do supporting items render? | **Evidence tab only.** They appear under their counterclaim's full row but never in the Overview "What supports your case" surface. |
+
+### P2.11 Approval gate
+
+This patch lands in this order, each step a separate commit:
+
+1. P2-Step 1 + 2 + 3: canonical registry + delivery proofType + persist `category` per item.
+2. P2-Step 4: rewrite `caseStrength.ts` with the new count-based formula + back-compat `coveragePercent`. New scoring tests.
+3. P2-Step 5: rewrite `whyThisCaseWins.ts` to emit `strongContributions[]` / `moderateContributions[]` keyed by `evidenceFieldKey`.
+4. P2-Step 6: Overview tab UI swap.
+5. P2-Step 7: delete `deriveEvidenceWithStrength`.
+6. P2-Step 8: forbidden-string grep + runtime invariant.
+
+Reply **"(plan v3 patch 2 accepted)"** to start. If any decision in P2.10 needs rework (e.g., hard cutover instead of back-compat shim), name it.
+
+### P2.12 Final integrity enforcement (Patch 2A — NEW)
+
+The system MUST guarantee, on every push:
+
+- ✅ Category is always derived from the canonical registry (`lib/argument/canonicalEvidence.ts` + runtime conditions). No exceptions, no overrides.
+- ✅ No category-assignment logic exists outside `canonicalEvidence.ts`. Enforced by the CI grep guard in P2.4b.
+- ✅ Deduplication uses `signalId`, not `evidenceFieldKey` alone.
+- ✅ Supporting items never affect scoring. Verified by P2.9 #13 across any input volume.
+- ✅ Every "What supports your case" row maps 1:1 to a `signalId` and a `category`. Verified by P2.9 #15 snapshot.
+- ✅ Delivery classification strictly follows the 4-state `proofType` table in P2.3. No alternate paths.
+- ✅ No UI or intermediate layer overrides strength. The UI consumes `pack.evidenceItems[*].category` (recomputed when stale) and `caseStrength.overall`; nothing else.
+
+Failure of any of these guarantees blocks the push. The blocker is recorded in the commit body.
+
+---
 
 **Source of truth (Figma):** `.cursor/plans/figma-shopify-dispute-detail.tsx` (41562 bytes, fetched 2026-04-25 via Figma MCP `resources/read`).
 
