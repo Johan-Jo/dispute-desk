@@ -35,7 +35,7 @@ import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -538,6 +538,154 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           })()}
         </BlockStack>
       </div>
+
+      {/* Evidence collected — shows everything in the pack, not just
+          argument-winning signals. "What supports your case" above is
+          intentionally limited to strong/moderate per the Argument
+          Purity Rule (P2.6); supporting evidence still belongs on the
+          Overview so a populated pack never reads as empty. */}
+      {(() => {
+        const collectedRows = effectiveChecklist
+          .filter((c) => CANONICAL_EVIDENCE[c.field])
+          .map((c) => {
+            const spec = CANONICAL_EVIDENCE[c.field]!;
+            const payload =
+              data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null;
+            const realizedCategory =
+              c.status === "available" || c.status === "waived"
+                ? categoryFor({ fieldKey: c.field, payload: payload as Record<string, unknown> | null })
+                : spec.category;
+            return { item: c, spec, realizedCategory };
+          });
+        const manualUploads = (data.attachments ?? []).filter(
+          (a) => a.source === "manual_upload",
+        );
+        const hasAnything = collectedRows.length > 0 || manualUploads.length > 0;
+        if (!hasAnything) return null;
+
+        const STATUS_BADGE: Record<string, { label: string; bg: string; color: string }> = {
+          collected: { label: "Collected", bg: "#D1FAE5", color: "#065F46" },
+          waived: { label: "Waived", bg: "#E5E7EB", color: "#374151" },
+          missing: { label: "Missing", bg: "#FEE2E2", color: "#991B1B" },
+          invalid: { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" },
+        };
+        const STRENGTH_BADGE: Record<string, { label: string; bg: string; color: string }> = {
+          strong: { label: "Strong", bg: "#D1FAE5", color: "#065F46" },
+          moderate: { label: "Moderate", bg: "#FEF3C7", color: "#92400E" },
+          supporting: { label: "Supporting", bg: "#E5E7EB", color: "#374151" },
+          invalid: { label: "Supporting", bg: "#E5E7EB", color: "#374151" },
+        };
+        const SOURCE_NOTE: Record<string, string> = {
+          auto_shopify: "From Shopify order data",
+          auto_policy: "From store policies",
+          auto_ipinfo: "From IP intelligence",
+          manual_upload: "Uploaded manually",
+          unavailable_from_source: "Not available from source",
+        };
+
+        return (
+          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+            <BlockStack gap="300">
+              <BlockStack gap="100">
+                <Text as="h3" variant="headingSm">Evidence collected</Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  These items were collected for the evidence pack. Some strengthen the argument directly, while others support completeness, context, or Shopify submission fields.
+                </Text>
+              </BlockStack>
+
+              <BlockStack gap="200">
+                {collectedRows.map(({ item, spec, realizedCategory }) => {
+                  const statusKey =
+                    item.status === "available"
+                      ? "collected"
+                      : item.status === "waived"
+                        ? "waived"
+                        : item.status === "unavailable"
+                          ? "invalid"
+                          : "missing";
+                  const status = STATUS_BADGE[statusKey];
+                  const isPresent = item.status === "available" || item.status === "waived";
+                  const strength = isPresent
+                    ? STRENGTH_BADGE[realizedCategory] ?? STRENGTH_BADGE.supporting
+                    : null;
+                  const sourceNote = SOURCE_NOTE[item.source ?? ""] ?? null;
+                  return (
+                    <div
+                      key={item.field}
+                      style={{
+                        background: "#F6F8FB",
+                        border: "1px solid #E1E3E5",
+                        borderRadius: 8,
+                        padding: 14,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0 }}>
+                          {spec.label}
+                        </p>
+                        {sourceNote && (
+                          <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>
+                            {sourceNote}
+                          </p>
+                        )}
+                      </div>
+                      <InlineStack gap="200" blockAlign="center" wrap={false}>
+                        {strength && (
+                          <span
+                            style={{
+                              padding: "2px 10px",
+                              borderRadius: 6,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              background: strength.bg,
+                              color: strength.color,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {strength.label}
+                          </span>
+                        )}
+                        <span
+                          style={{
+                            padding: "2px 10px",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: status.bg,
+                            color: status.color,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {status.label}
+                        </span>
+                      </InlineStack>
+                    </div>
+                  );
+                })}
+              </BlockStack>
+
+              {manualUploads.length > 0 && (
+                <BlockStack gap="150">
+                  <Divider />
+                  <Text as="p" variant="bodySm" fontWeight="semibold">
+                    {`+${manualUploads.length} attached file${manualUploads.length === 1 ? "" : "s"} included`}
+                  </Text>
+                  <BlockStack gap="100">
+                    {manualUploads.map((a) => (
+                      <Text key={a.id} as="p" variant="bodySm" tone="subdued">
+                        {a.fileName ?? a.label ?? "Attached file"}
+                      </Text>
+                    ))}
+                  </BlockStack>
+                </BlockStack>
+              )}
+            </BlockStack>
+          </div>
+        );
+      })()}
 
       {/* O4: Evidence coverage */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>

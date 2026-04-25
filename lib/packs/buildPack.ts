@@ -14,8 +14,13 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   evaluateCompleteness,
   evaluateCompletenessV2,
+  deriveCompletenessMetrics,
   type TemplateChecklistItem,
 } from "@/lib/automation/completeness";
+import {
+  collectedFieldsFromPack,
+  reconcileChecklistWithCollectedFields,
+} from "./checklistReconcile";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import {
   ORDER_DETAIL_QUERY,
@@ -323,13 +328,29 @@ export async function buildPack(
     .single();
   const waivedItems = (existingPack?.waived_items ?? []) as import("@/lib/types/evidenceItem").WaivedItemRecord[];
 
-  const completenessV2 = evaluateCompletenessV2(
+  const completenessV2Raw = evaluateCompletenessV2(
     dispute.reason,
     collectedFields,
     waivedItems,
     templateItems,
     orderContext,
   );
+
+  // Reconcile checklist status with the fields the collectors actually
+  // produced. Without this, a template path can leave a row as
+  // `missing` for a field that is present in `pack_json.sections[*].fieldsProvided`
+  // (e.g. policies, ip_location_check). The Evidence coverage buckets
+  // and the Overview's "Evidence collected" panel must reflect what
+  // was collected, not stale template-driven status.
+  const reconciledChecklist = reconcileChecklistWithCollectedFields(
+    completenessV2Raw.checklist,
+    collectedFields,
+  );
+  const reconciledMetrics = deriveCompletenessMetrics(reconciledChecklist);
+  const completenessV2 = {
+    checklist: reconciledChecklist,
+    ...reconciledMetrics,
+  };
 
   // Pack status reflects whether the build itself succeeded as a
   // *system operation*, not whether it has enough evidence:

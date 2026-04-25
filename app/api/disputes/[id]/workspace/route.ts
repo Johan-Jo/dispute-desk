@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
 import { normalizeMode } from "@/lib/rules/normalizeMode";
+import {
+  collectedFieldsFromPack,
+  reconcileChecklistWithCollectedFields,
+} from "@/lib/packs/checklistReconcile";
+import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 export const runtime = "nodejs";
 
@@ -210,13 +215,32 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     finalOutcome: row.final_outcome ?? null,
   };
 
+  // Reconcile persisted checklist_v2 against fields actually carried by
+  // the pack. Older packs (built before the buildPack-side reconcile
+  // landed) can have rows still flagged `missing` for evidence the
+  // collectors did produce — Overview surfaces would then look empty
+  // even though pack_json.sections has the data. Pure normalization on
+  // read; no DB write.
+  type RawSection = { fieldsProvided?: string[] | null };
+  const sections = (
+    (packRow?.pack_json as { sections?: RawSection[] } | null)?.sections ?? []
+  );
+  const collectedForRead = collectedFieldsFromPack({
+    sections,
+    evidenceItems: itemsRes.data ?? [],
+  });
+  const reconciledChecklistV2 = reconcileChecklistWithCollectedFields(
+    (packRow?.checklist_v2 ?? null) as ChecklistItemV2[] | null,
+    collectedForRead,
+  );
+
   const pack = packRow
     ? {
         id: packRow.id,
         status: packRow.status,
         completenessScore: packRow.completeness_score ?? null,
         submissionReadiness: packRow.submission_readiness ?? null,
-        checklistV2: packRow.checklist_v2 ?? null,
+        checklistV2: reconciledChecklistV2,
         waivedItems: packRow.waived_items ?? [],
         evidenceItems: itemsRes.data ?? [],
         // ID-keyed lookup: evidenceFieldKey → first evidence item
