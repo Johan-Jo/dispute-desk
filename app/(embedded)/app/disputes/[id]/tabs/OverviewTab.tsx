@@ -147,14 +147,6 @@ const FAILURE_FALLBACK = {
   body: "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue.",
 };
 
-function calendarDaysSince(iso: string): number {
-  const from = new Date(iso);
-  const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.max(0, Math.round((today.getTime() - fromDay.getTime()) / (1000 * 60 * 60 * 24)));
-}
-
 function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (!reason) return "general";
   const key = reason.toUpperCase().replace(/\s+/g, "_");
@@ -247,41 +239,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const topMissingLabel = missingItems[0]?.label ?? null;
 
-  // Recommendation line + helper.
-  let recommendation: string;
-  let recommendationHelper: string | null = null;
-  if (submitted) {
-    if (strengthKey === "strong" || strengthKey === "moderate") {
-      recommendation =
-        "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.";
-    } else {
-      recommendation =
-        "Recommendation: Monitor this case. Consider strengthening evidence for future disputes.";
-    }
-    if (submittedAt) {
-      const daysElapsed = calendarDaysSince(submittedAt);
-      const dayLabel =
-        daysElapsed === 0
-          ? "Submitted today"
-          : `${daysElapsed} day${daysElapsed === 1 ? "" : "s"} since submission`;
-      recommendationHelper = `${dayLabel}. The issuing bank typically responds within 30–75 days.`;
-    } else {
-      recommendationHelper = "The issuing bank typically responds within 30–75 days.";
-    }
-  } else if (strengthKey === "strong") {
-    recommendation =
-      "Recommendation: Submit now — your evidence is strong enough to defend this charge.";
-  } else if (strengthKey === "moderate") {
-    const top = missingItems[0];
-    recommendation = top
-      ? `Recommendation: You can submit, but adding ${top.label.toLowerCase()} would meaningfully improve your odds.`
-      : "Recommendation: You can submit now, but a small amount of additional evidence would improve your odds.";
-  } else {
-    const top = missingItems[0];
-    recommendation = top
-      ? `Recommendation: Add ${top.label.toLowerCase()} before submitting — the case is currently unlikely to win as-is.`
-      : "Recommendation: Strengthen the evidence before submitting — the case is currently unlikely to win as-is.";
-  }
+  // Recommendation copy is now sourced from the shared backend module
+  // `lib/argument/recommendation.ts` via `derived.recommendationText` /
+  // `derived.recommendationHelperText`. Plan v3 §3.A.6 — no inline
+  // composition in this component.
+  const recommendation = derived.recommendationText;
+  const recommendationHelper = derived.recommendationHelperText;
 
   const goToReview = () => actions.setActiveTab(2);
   const goToEvidence = () => actions.setActiveTab(1);

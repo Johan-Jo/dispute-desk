@@ -28,6 +28,7 @@ import { computeNextAction } from "@/lib/argument/nextAction";
 import { calculateCaseStrength, calculateImprovement } from "@/lib/argument/caseStrength";
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
+import { generateRecommendation } from "@/lib/argument/recommendation";
 
 /* ── WHY text for evidence items ── */
 
@@ -257,6 +258,11 @@ export interface DerivedState {
   risk: RiskResult;
   improvement: ImprovementSignal | null;
   nextAction: NextAction;
+  /** Backend-derived merchant-facing recommendation. Plan v3 §3.A.6.
+   *  OverviewTab renders these strings verbatim — never reconstructs
+   *  the recommendation logic in JSX. */
+  recommendationText: string;
+  recommendationHelperText: string | null;
   isReadOnly: boolean;
   isBuilding: boolean;
   /** True when the build itself failed (system error), distinct from
@@ -594,6 +600,8 @@ export function useDisputeWorkspace(disputeId: string) {
         risk: { expectedOutcome: "insufficient", risks: [] },
         improvement: null,
         nextAction: { label: "Loading...", description: "", severity: "info" },
+        recommendationText: "",
+        recommendationHelperText: null,
         isReadOnly: false,
         isBuilding: false,
         isFailed: false,
@@ -660,6 +668,18 @@ export function useDisputeWorkspace(disputeId: string) {
       savedToShopifyAt: pack?.savedToShopifyAt ?? null,
     });
 
+    // Recommendation copy — produced by the shared backend module
+    // `lib/argument/recommendation.ts`. Plan v3 §3.A.6: the UI must
+    // not synthesise these strings inline.
+    const isReadOnly = (isSaved ?? false) || clientState.justSubmitted;
+    const { text: recommendationText, helperText: recommendationHelperText } =
+      generateRecommendation({
+        submitted: isReadOnly,
+        strength: caseStrength.overall,
+        topMissing: missingItems[0] ?? null,
+        submittedAt: pack?.savedToShopifyAt ?? null,
+      });
+
     return {
       effectiveChecklist: items,
       categories,
@@ -673,7 +693,9 @@ export function useDisputeWorkspace(disputeId: string) {
       risk,
       improvement,
       nextAction,
-      isReadOnly: (isSaved ?? false) || clientState.justSubmitted,
+      recommendationText,
+      recommendationHelperText,
+      isReadOnly,
       isBuilding: pack?.status === "queued" || pack?.status === "building",
       isFailed: pack?.status === "failed",
       failureCode: pack?.failureCode ?? null,
