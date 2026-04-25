@@ -283,7 +283,12 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
         { k: "item", id: String(item.id), p: packId, exp: linkExp },
         linkSecret,
       );
+      const checklistField =
+        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
+          ? meta.checklistField.trim()
+          : null;
       return {
+        checklistField,
         label: (item.label as string | null) ?? null,
         fileName: typeof meta.fileName === "string" ? meta.fileName : null,
         fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,

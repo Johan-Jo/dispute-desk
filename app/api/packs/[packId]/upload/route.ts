@@ -167,6 +167,8 @@ export async function POST(
         fileSize: file.size,
         storagePath,
         storageBucket: MANUAL_UPLOAD_STORAGE_BUCKET,
+        /** Checklist row the merchant uploaded from (Evidence tab). Drives bank-facing section headings. */
+        checklistField: uploadedField ?? MANUAL_UPLOAD_FIELD,
       },
     })
     .select("id")

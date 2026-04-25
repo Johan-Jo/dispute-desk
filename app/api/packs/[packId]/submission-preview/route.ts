@@ -113,7 +113,12 @@ export async function GET(
   const manualAttachments: ManualAttachmentInput[] = (manualItems ?? []).map(
     (item) => {
       const meta = (item.payload ?? {}) as Record<string, unknown>;
+      const checklistField =
+        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
+          ? meta.checklistField.trim()
+          : null;
       return {
+        checklistField,
         label: (item.label as string | null) ?? null,
         fileName: typeof meta.fileName === "string" ? meta.fileName : null,
         fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,

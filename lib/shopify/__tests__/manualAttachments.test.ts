@@ -31,6 +31,49 @@ describe("formatManualAttachmentsBlock", () => {
     );
   });
 
+  it("uses checklistField for section headings when filenames carry no category cues (matches Evidence tab row)", () => {
+    const block = formatManualAttachmentsBlock(
+      [
+        {
+          checklistField: "delivery_proof",
+          label: "new dash.png",
+          fileName: "new dash.png",
+          fileSize: null,
+          createdAt: null,
+          url: "https://disputedesk.app/e/a1",
+        },
+        {
+          checklistField: "customer_communication",
+          label: "faceJohan.jpeg",
+          fileName: "faceJohan.jpeg",
+          fileSize: null,
+          createdAt: null,
+          url: "https://disputedesk.app/e/a2",
+        },
+        {
+          checklistField: "supporting_documents",
+          label: "CONTRATO DE INTERMEDIAÇÃO IMOBILIÁRIA.pdf",
+          fileName: "CONTRATO DE INTERMEDIAÇÃO IMOBILIÁRIA.pdf",
+          fileSize: null,
+          createdAt: null,
+          url: "https://disputedesk.app/e/a3",
+        },
+      ],
+      null,
+    );
+    expect(block).not.toBeNull();
+    expect(block).toContain("Delivery proof:");
+    expect(block).toContain("Customer Communication:");
+    expect(block).toContain("Supporting Documents:");
+    expect(block).not.toMatch(/^Supporting documents:\s*$/m);
+    const deliveryIdx = block!.indexOf("Delivery proof:");
+    const commsIdx = block!.indexOf("Customer Communication:");
+    const suppIdx = block!.indexOf("Supporting Documents:");
+    expect(deliveryIdx).toBeGreaterThan(-1);
+    expect(commsIdx).toBeGreaterThan(deliveryIdx);
+    expect(suppIdx).toBeGreaterThan(commsIdx);
+  });
+
   it("groups uploads by primary category and prefixes each file with its evidence type", () => {
     const block = formatManualAttachmentsBlock(
       [

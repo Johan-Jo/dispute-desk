@@ -28,7 +28,15 @@
  *   - Evidence pack
  *     https://disputedesk.app/e/<token>
  *
- * Multi-purpose evidence handling:
+ * Section headings:
+ *   Each `ManualAttachmentInput` may include `checklistField` (stored on
+ *   upload as `evidence_items.payload.checklistField`). That drives the
+ *   printed heading so it matches the Evidence-tab row (e.g. "Delivery proof",
+ *   "Supporting Documents"). When `checklistField` is absent (legacy rows),
+ *   we fall back to label heuristics + dispute-reason priority, then the
+ *   generic "Supporting documents" group.
+ *
+ * Multi-purpose evidence handling (legacy / label-only rows):
  *   A merchant's upload label often spans more than one category — e.g.
  *   "Delivery confirmation email" is both Fulfillment and Communication.
  *   We list each upload **once**, under the most decisive category for
@@ -48,6 +56,12 @@ import {
 } from "@/lib/rules/disputeReasons";
 
 export interface ManualAttachmentInput {
+  /**
+   * Checklist field key from the Evidence tab row (e.g. `delivery_proof`,
+   * `supporting_documents`). When set, grouping uses this — not filename
+   * heuristics — so bank-facing headings match where the merchant uploaded.
+   */
+  checklistField?: string | null;
   /** Human-readable label entered by the merchant at upload time. */
   label: string | null;
   /** Original filename as uploaded. */
@@ -108,6 +122,72 @@ const CATEGORY_LABELS = [
 ] as const;
 
 type EvidenceCategory = (typeof CATEGORY_LABELS)[number];
+
+/**
+ * Map checklist `field` values (workspace / `evidence_items.payload.checklistField`)
+ * to Evidence-tab **category** headings for sort order and fallback display.
+ */
+const CHECKLIST_FIELD_TO_CATEGORY: Record<string, EvidenceCategory> = {
+  order_confirmation: "Order Facts",
+  billing_address_match: "Order Facts",
+  avs_cvv_match: "Payment Verification",
+  shipping_tracking: "Fulfillment & Delivery",
+  delivery_proof: "Fulfillment & Delivery",
+  shipping_policy: "Policies & Disclosures",
+  customer_communication: "Customer Communication",
+  refund_policy: "Policies & Disclosures",
+  cancellation_policy: "Policies & Disclosures",
+  activity_log: "Customer Identity & History",
+  ip_location_check: "Customer Identity & History",
+  device_session_consistency: "Customer Identity & History",
+  supporting_documents: "Merchant Evidence",
+  product_description: "Merchant Evidence",
+  duplicate_explanation: "Merchant Evidence",
+};
+
+/**
+ * Per-row headings shown on the Evidence tab for manual (or manual-capable)
+ * fields — used as the **printed section title** before each file/link block.
+ * When absent, we fall back to the category heading above.
+ */
+const CHECKLIST_FIELD_TO_SUBMISSION_HEADING: Record<string, string> = {
+  supporting_documents: "Supporting Documents",
+  product_description: "Product Description",
+  duplicate_explanation: "Duplicate Explanation",
+  delivery_proof: "Delivery proof",
+  shipping_tracking: "Shipping & tracking",
+  customer_communication: "Customer Communication",
+  refund_policy: "Refund Policy",
+  shipping_policy: "Shipping Policy",
+  cancellation_policy: "Cancellation Policy",
+  billing_address_match: "Billing address match",
+  order_confirmation: "Order confirmation",
+  activity_log: "Customer history",
+  avs_cvv_match: "Payment verification (AVS/CVV)",
+  ip_location_check: "IP & location check",
+  device_session_consistency: "Device session consistency",
+};
+
+/**
+ * Exported for tests. Returns the Evidence-tab category for a checklist field.
+ */
+export function categoryFromChecklistField(
+  field: string | null | undefined,
+): EvidenceCategory | null {
+  if (!field || !field.trim()) return null;
+  return CHECKLIST_FIELD_TO_CATEGORY[field.trim()] ?? null;
+}
+
+function submissionHeadingFromChecklistField(
+  field: string | null | undefined,
+): string | null {
+  if (!field || !field.trim()) return null;
+  const key = field.trim();
+  const row = CHECKLIST_FIELD_TO_SUBMISSION_HEADING[key];
+  if (row) return row;
+  const cat = CHECKLIST_FIELD_TO_CATEGORY[key];
+  return cat ?? null;
+}
 
 /**
  * Priority order per dispute-reason family — highest-priority category
@@ -411,22 +491,28 @@ export function formatManualAttachmentsBlock(
   const groups = new Map<string, RenderGroup>();
   for (const u of unique) {
     const fileName = sanitizeFilename(u.fileName);
-    const primary = selectPrimaryCategory(u.label, disputeReason);
-    const groupLabel = primary ?? DEFAULT_GROUP_LABEL;
-    const sortKey = primary ? priority.indexOf(primary) : fallbackSortKey;
-    const prefix = resolveInlinePrefix(u.label, fileName, groupLabel);
+    const categoryFromField = categoryFromChecklistField(u.checklistField);
+    const categoryFromLabel = selectPrimaryCategory(u.label, disputeReason);
+    const categoryForSort = categoryFromField ?? categoryFromLabel;
+    const groupHeading =
+      submissionHeadingFromChecklistField(u.checklistField) ??
+      categoryForSort ??
+      DEFAULT_GROUP_LABEL;
+    const sortKey = categoryForSort ? priority.indexOf(categoryForSort) : fallbackSortKey;
+    const prefix = resolveInlinePrefix(u.label, fileName, groupHeading);
 
-    let group = groups.get(groupLabel);
+    let group = groups.get(groupHeading);
     if (!group) {
-      group = { label: groupLabel, sortKey, items: [] };
-      groups.set(groupLabel, group);
+      group = { label: groupHeading, sortKey, items: [] };
+      groups.set(groupHeading, group);
     }
     group.items.push({ upload: u, fileName, prefix });
   }
 
-  const orderedGroups = Array.from(groups.values()).sort(
-    (a, b) => a.sortKey - b.sortKey,
-  );
+  const orderedGroups = Array.from(groups.values()).sort((a, b) => {
+    if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+    return a.label.localeCompare(b.label);
+  });
 
   const sections: string[] = [];
   for (const g of orderedGroups) {
