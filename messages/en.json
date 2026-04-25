@@ -237,7 +237,20 @@
     "dueTomorrow": "Due tomorrow",
     "dueInDays": "In {count} days",
     "dueToday": "Due today",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "attentionBannerMessage": "{count, plural, =1 {# dispute needs attention} other {# disputes need attention}}",
+    "attentionBannerCta": "Review now",
+    "actionNeededDesc": "Needs manual review",
+    "readyToSubmitDesc": "Evidence complete",
+    "waitingOnIssuerDesc": "Submitted to bank",
+    "closedInPeriodDesc": "Historical cases",
+    "reviewCases": "Review cases",
+    "submitNow": "Submit now",
+    "insightsTitle": "Insights",
+    "insightsSubtitle": "Win rate and dispute categories",
+    "quickActionManageCases": "Manage cases",
+    "quickActionConfigurePacks": "Configure evidence packs",
+    "quickActionAutomationRules": "Automation rules"
   },
   "disputes": {
     "title": "Disputes",
@@ -2708,8 +2721,8 @@
   "review": {
     "whatWasSent": {
       "heading": "What was sent:",
-      "loading": "Loading\u2026",
-      "emptyFallback": "\u2022 (no evidence fields were populated \u2014 contact support)",
+      "loading": "Loading…",
+      "emptyFallback": "• (no evidence fields were populated — contact support)",
       "verificationNote": "Some evidence may be stored by Shopify in structured fields that are not clearly visible in this Admin view. In this case, merchant-visible verification is limited to the fields shown here."
     }
   }

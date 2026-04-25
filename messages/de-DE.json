@@ -248,7 +248,20 @@
     "dueTomorrow": "Due tomorrow",
     "dueInDays": "In {count} days",
     "dueToday": "Due today",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "attentionBannerMessage": "{count, plural, =1 {# Widerspruch erfordert Aufmerksamkeit} other {# Widersprüche erfordern Aufmerksamkeit}}",
+    "attentionBannerCta": "Jetzt prüfen",
+    "actionNeededDesc": "Manuelle Prüfung nötig",
+    "readyToSubmitDesc": "Beweise vollständig",
+    "waitingOnIssuerDesc": "An Bank gesendet",
+    "closedInPeriodDesc": "Historische Fälle",
+    "reviewCases": "Fälle prüfen",
+    "submitNow": "Jetzt einreichen",
+    "insightsTitle": "Insights",
+    "insightsSubtitle": "Gewinnrate und Streitkategorien",
+    "quickActionManageCases": "Fälle verwalten",
+    "quickActionConfigurePacks": "Beweispakete konfigurieren",
+    "quickActionAutomationRules": "Automatisierungsregeln"
   },
   "disputes": {
     "title": "Streitfälle",

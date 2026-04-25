@@ -176,7 +176,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     change: stats.amountAtRiskChange,
   };
 
-  const desktopCards = [active, winRate, recovered, lost, atRisk];
+  const desktopCards = [active, winRate, recovered, atRisk];
 
   return (
     <div style={{

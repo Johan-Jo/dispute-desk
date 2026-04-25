@@ -25,7 +25,6 @@ import {
   InlineStack,
   Spinner,
   ProgressBar,
-  Box,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { SetupStateResponse } from "@/lib/setup/types";
@@ -42,6 +41,9 @@ import { DashboardOperationalSummary } from "./DashboardOperationalSummary";
 import { DashboardKpis } from "./DashboardKpis";
 import { DashboardRecentDisputesPreview } from "./DashboardRecentDisputesPreview";
 import { DashboardHelpCard } from "./DashboardHelpCard";
+import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
+import { DashboardInsights } from "./DashboardInsights";
+import { DashboardQuickActions } from "./DashboardQuickActions";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -253,75 +255,6 @@ function RecentActivityFeed({ stats, loading }: { stats: DashboardStats; loading
   );
 }
 
-// ─── Charts ───────────────────────────────────────────────────────────────
-
-function DashboardCharts({ stats, loading }: { stats: DashboardStats; loading: boolean }) {
-  const t = useTranslations();
-  const tPacks = useTranslations("packs");
-
-  const translateCategory = (label: string) => {
-    try {
-      return tPacks(`disputeTypeLabel.${label}`);
-    } catch {
-      /* fallback */
-    }
-    return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  };
-
-  return (
-    <>
-      <Layout.Section variant="oneHalf">
-        <Card>
-          <BlockStack gap="400">
-            <Text as="h2" variant="headingMd">{t("dashboard.winRateTrend")}</Text>
-            {loading ? (
-              <Spinner size="small" />
-            ) : (
-              <BlockStack gap="200">
-                {stats.winRateTrend.map((pct, i) => (
-                  <InlineStack key={i} gap="300" blockAlign="center">
-                    <Box minWidth="32px">
-                      <Text as="span" variant="bodySm" tone="subdued">W{i + 1}</Text>
-                    </Box>
-                    <Box minWidth="120px">
-                      <ProgressBar progress={pct} size="small" />
-                    </Box>
-                    <Text as="span" variant="bodySm">{pct}%</Text>
-                  </InlineStack>
-                ))}
-              </BlockStack>
-            )}
-          </BlockStack>
-        </Card>
-      </Layout.Section>
-      <Layout.Section variant="oneHalf">
-        <Card>
-          <BlockStack gap="400">
-            <Text as="h2" variant="headingMd">{t("dashboard.disputeCategories")}</Text>
-            {loading ? (
-              <Spinner size="small" />
-            ) : stats.disputeCategories.length === 0 ? (
-              <Text as="p" variant="bodySm" tone="subdued">{t("dashboard.noDisputesYetDesc")}</Text>
-            ) : (
-              <BlockStack gap="300">
-                {stats.disputeCategories.map(({ label, value }) => (
-                  <BlockStack key={label} gap="100">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="span" variant="bodyMd">{translateCategory(label)}</Text>
-                      <Text as="span" variant="bodyMd" tone="subdued">{value}%</Text>
-                    </InlineStack>
-                    <ProgressBar progress={value} size="small" />
-                  </BlockStack>
-                ))}
-              </BlockStack>
-            )}
-          </BlockStack>
-        </Card>
-      </Layout.Section>
-    </>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────
 
 export default function EmbeddedDashboardPage() {
@@ -436,6 +369,10 @@ export default function EmbeddedDashboardPage() {
     >
       <Layout>
         <Layout.Section>
+          <DashboardAttentionBanner stats={stats} />
+        </Layout.Section>
+
+        <Layout.Section>
           <DashboardOperationalSummary stats={stats} loading={statsLoading} />
         </Layout.Section>
 
@@ -443,17 +380,23 @@ export default function EmbeddedDashboardPage() {
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
-        <Layout.Section>
-          <OutcomeBreakdown stats={stats} loading={statsLoading} />
-        </Layout.Section>
-
         {recentDisputesPreview}
 
-        <Layout.Section>
+        <Layout.Section variant="oneHalf">
           <RecentActivityFeed stats={stats} loading={statsLoading} />
         </Layout.Section>
 
-        <DashboardCharts stats={stats} loading={statsLoading} />
+        <Layout.Section variant="oneHalf">
+          <DashboardInsights stats={stats} loading={statsLoading} />
+        </Layout.Section>
+
+        <Layout.Section>
+          <DashboardQuickActions />
+        </Layout.Section>
+
+        <Layout.Section>
+          <OutcomeBreakdown stats={stats} loading={statsLoading} />
+        </Layout.Section>
 
         <Layout.Section>
           <DashboardHelpCard />

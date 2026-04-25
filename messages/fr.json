@@ -216,7 +216,20 @@
     "dueTomorrow": "Due tomorrow",
     "dueInDays": "In {count} days",
     "dueToday": "Due today",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "attentionBannerMessage": "{count, plural, =1 {# litige nécessite votre attention} other {# litiges nécessitent votre attention}}",
+    "attentionBannerCta": "Examiner maintenant",
+    "actionNeededDesc": "Examen manuel requis",
+    "readyToSubmitDesc": "Preuves complètes",
+    "waitingOnIssuerDesc": "Soumis à la banque",
+    "closedInPeriodDesc": "Cas historiques",
+    "reviewCases": "Examiner les cas",
+    "submitNow": "Soumettre maintenant",
+    "insightsTitle": "Insights",
+    "insightsSubtitle": "Taux de réussite et catégories de litiges",
+    "quickActionManageCases": "Gérer les cas",
+    "quickActionConfigurePacks": "Configurer les preuves",
+    "quickActionAutomationRules": "Règles d'automatisation"
   },
   "disputes": {
     "title": "Litiges",

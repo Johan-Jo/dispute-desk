@@ -249,7 +249,20 @@
     "dueTomorrow": "Due tomorrow",
     "dueInDays": "In {count} days",
     "dueToday": "Due today",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "attentionBannerMessage": "{count, plural, =1 {# tvist behöver uppmärksamhet} other {# tvister behöver uppmärksamhet}}",
+    "attentionBannerCta": "Granska nu",
+    "actionNeededDesc": "Kräver manuell granskning",
+    "readyToSubmitDesc": "Bevis kompletta",
+    "waitingOnIssuerDesc": "Skickat till bank",
+    "closedInPeriodDesc": "Historiska fall",
+    "reviewCases": "Granska fall",
+    "submitNow": "Skicka in nu",
+    "insightsTitle": "Insights",
+    "insightsSubtitle": "Vinstgrad och tvistkategorier",
+    "quickActionManageCases": "Hantera fall",
+    "quickActionConfigurePacks": "Konfigurera bevispaket",
+    "quickActionAutomationRules": "Automatiseringsregler"
   },
   "disputes": {
     "title": "Tvister",
