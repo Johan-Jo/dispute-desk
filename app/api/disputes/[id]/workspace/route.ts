@@ -279,9 +279,29 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
     : null;
 
+  // Rebuttal draft — sections are persisted as JSONB by
+  // `responseEngine.ts`, which populates `evidenceRefs[]` per section.
+  // Old drafts predating that work may lack `evidenceRefs`, so we
+  // normalize every section to guarantee the field is always an array
+  // (never undefined). Plan v3 §3.A.3.
   const rebRow = rebuttalRes.data;
+  type RawRebuttalSection = {
+    id: string;
+    type: "summary" | "claim" | "conclusion";
+    claimId?: string;
+    text: string;
+    evidenceRefs?: string[] | null;
+  };
   const rebuttalDraft = rebRow
-    ? { sections: rebRow.sections, source: rebRow.source }
+    ? {
+        sections: ((rebRow.sections as RawRebuttalSection[] | null) ?? []).map(
+          (s) => ({
+            ...s,
+            evidenceRefs: Array.isArray(s.evidenceRefs) ? s.evidenceRefs : [],
+          }),
+        ),
+        source: rebRow.source,
+      }
     : null;
 
   const rebuttalOutdated =
