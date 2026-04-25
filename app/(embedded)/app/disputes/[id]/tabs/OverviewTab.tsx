@@ -1,137 +1,51 @@
 "use client";
 
+/**
+ * Dispute detail — Overview tab.
+ *
+ * Strict implementation of plan v3 §2.1. Every rendered value comes
+ * from a backend output (`derived.*`, `data.*`, or a function in
+ * `lib/argument/`); nothing is synthesized in this component. Cross-
+ * collection references resolve through stable IDs only — never by
+ * label, title, or array position.
+ *
+ * No client-side strength classification. No summary-only rendering.
+ * Empty/missing values surface with one of the §3.E taxonomy states:
+ * Present / Missing / Not applicable / System unavailable / Waived.
+ */
+
+import { useMemo } from "react";
 import {
-  Card,
   BlockStack,
   InlineStack,
   Text,
   Badge,
   Button,
   Banner,
-  ProgressBar,
+  Icon,
   Divider,
 } from "@shopify/polaris";
+import {
+  AlertCircleIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  ShieldCheckMarkIcon,
+} from "@shopify/polaris-icons";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
-import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
-import {
-  EVIDENCE_EVALUATION_HELPER,
-  categoryImpactLabel,
-  evidenceRowStatus,
-} from "@/lib/argument/evidenceStatus";
+import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
+import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import type {
+  CounterclaimNode,
+  WhyWinsItem,
+} from "@/lib/argument/types";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
+import type { EvidenceItemFull } from "../workspace-components/types";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
-const STRENGTH_LABEL: Record<string, string> = {
-  strong: "Strong",
-  moderate: "Moderate",
-  weak: "Weak",
-  insufficient: "Weak",
-};
-
-/** Plain-English description per evidence field — kept in sync with
- * WHY_TEXT in EvidenceTab.tsx so both tabs surface identical bank-grade
- * wording. Updated 2026-04-21 for the evidence-model rename. */
-const WHY_EVIDENCE_MATTERS: Record<string, string> = {
-  order_confirmation: "A complete record of the order, including items, amount, and customer details.",
-  shipping_tracking: "Carrier confirmation that the order was shipped and delivered.",
-  delivery_proof: "Proof of delivery through signature or photographic confirmation.",
-  billing_address_match: "Billing matches the cardholder’s address — heavy weight in fraud cases.",
-  avs_cvv_match: "Card security checks confirming the purchaser had access to billing details.",
-  product_description: "Product was advertised exactly as delivered.",
-  refund_policy: "Customer agreed to refund terms before purchase.",
-  shipping_policy: "Shipping commitments were clearly disclosed before purchase.",
-  cancellation_policy: "Cancellation rules were disclosed before purchase.",
-  customer_communication: "Messages or emails showing engagement before or after the purchase.",
-  customer_account_info: "Account age and activity supporting a legitimate customer profile.",
-  duplicate_explanation: "Documents that the charges are distinct, not duplicates.",
-  supporting_documents: "Additional proof reinforcing the overall defense.",
-  activity_log: "Evidence of prior successful transactions from the same customer.",
-  device_session_consistency: "Technical signals showing consistent device and session behavior.",
-  ip_location_check: "Verification of purchase location compared to billing details and prior activity.",
-};
-
-const CATEGORY_FIX_HINT: Record<string, string> = {
-  order: "Confirm the order record is synced from Shopify.",
-  payment: "Pull AVS/CVV results from the payment gateway — strong fraud defense.",
-  fulfillment: "Add tracking and delivery confirmation — reduces win probability when missing.",
-  communication: "Attach customer messages or replies — banks reward engagement.",
-  policy: "Publish or upload your store policies so they can be referenced.",
-  identity: "Pull customer purchase history to show legitimate activity.",
-  merchant: "Upload product listings or supporting documents to round out the case.",
-};
-
-interface DefenseRule {
-  any: string[];
-  all?: string[];
-  bullet: string;
-}
-
-const DEFENSE_RULES: DefenseRule[] = [
-  { any: ["order_confirmation"], bullet: "Complete order record confirms items, amount, and customer details" },
-  { any: ["avs_cvv_match"], bullet: "Payment verification checks passed (AVS/CVV)" },
-  { any: ["billing_address_match"], bullet: "Billing address matches the cardholder on file" },
-  { any: ["delivery_proof", "shipping_tracking"], bullet: "Order was successfully fulfilled and delivered" },
-  { any: ["activity_log"], bullet: "Customer behavior matches previous legitimate purchases" },
-  { any: ["customer_account_info"], bullet: "Customer account history supports a legitimate profile" },
-  { any: ["customer_communication"], bullet: "Customer was actively engaged through the order timeline" },
-  { any: ["product_description"], bullet: "Product was advertised exactly as delivered" },
-  { any: ["refund_policy", "shipping_policy", "cancellation_policy"], bullet: "Store policies were clearly disclosed at purchase" },
-  { any: ["duplicate_explanation"], bullet: "Each charge is documented as a distinct, separate transaction" },
-  { any: ["device_session_consistency"], bullet: "Device and session signals are consistent with a legitimate purchase" },
-  { any: ["ip_location_check"], bullet: "Purchase location is consistent with the cardholder" },
-  { any: ["supporting_documents"], bullet: "Additional documentation reinforces the overall defense" },
-];
-
-function synthesizeDefenseBullets(presentFields: Set<string>, ipUnfavorable: boolean): string[] {
-  const bullets: string[] = [];
-  for (const rule of DEFENSE_RULES) {
-    if (!rule.any.some((f) => presentFields.has(f))) continue;
-    if (rule.any.includes("ip_location_check") && ipUnfavorable) continue;
-    bullets.push(rule.bullet);
-  }
-  return bullets;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
-
-function strengthTone(level: string): "success" | "warning" | "critical" {
-  if (level === "strong") return "success";
-  if (level === "moderate") return "warning";
-  return "critical";
-}
-
-interface IpLocationPayload {
-  bankEligible?: boolean;
-  locationMatch?: string;
-  summary?: string;
-  merchantGuidance?: string | null;
-  ipConsistencyLevel?: string;
-  ipinfo?: { privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } } | null;
-}
-
-function extractIpLocationPayload(
-  evidenceItems: Array<{ type: string; payload: Record<string, unknown> }> | undefined,
-): IpLocationPayload | null {
-  if (!evidenceItems) return null;
-  const ip = evidenceItems.find(
-    (e) => e.type === "other" && typeof (e.payload as { locationMatch?: unknown })?.locationMatch === "string",
-  );
-  return (ip?.payload as IpLocationPayload | undefined) ?? null;
-}
+/* ── Failure copy (merchant-safe) ── */
 
 const FAILURE_COPY: Record<string, { title: string; body: string }> = {
   order_fetch_failed: {
@@ -147,6 +61,53 @@ const FAILURE_FALLBACK = {
   body: "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue.",
 };
 
+/* ── 1:1 mappings from backend categorical → display labels ── */
+
+const HERO_LABEL_BY_STRENGTH: Record<string, string> = {
+  strong: "Likely to win",
+  moderate: "Could win",
+  weak: "Hard to win",
+  insufficient: "Hard to win",
+};
+
+const HERO_TONE_BY_STRENGTH: Record<
+  string,
+  { bg: string; border: string; iconBg: string; iconColor: string; titleColor: string; bodyColor: string; pillBg: string; pillColor: string }
+> = {
+  strong: {
+    bg: "#F0FDF4", border: "#86EFAC", iconBg: "#D1FAE5", iconColor: "#059669",
+    titleColor: "#065F46", bodyColor: "#065F46", pillBg: "#D1FAE5", pillColor: "#065F46",
+  },
+  moderate: {
+    bg: "#FFFBEB", border: "#FDE68A", iconBg: "#FEF3C7", iconColor: "#D97706",
+    titleColor: "#78350F", bodyColor: "#92400E", pillBg: "#FEF3C7", pillColor: "#92400E",
+  },
+  weak: {
+    bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
+    titleColor: "#7F1D1D", bodyColor: "#991B1B", pillBg: "#FEE2E2", pillColor: "#991B1B",
+  },
+  insufficient: {
+    bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
+    titleColor: "#7F1D1D", bodyColor: "#991B1B", pillBg: "#FEE2E2", pillColor: "#991B1B",
+  },
+};
+
+/* ── Pure helpers ── */
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+/** Map a Shopify dispute reason to the family id used by /app/rules. */
 function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (!reason) return "general";
   const key = reason.toUpperCase().replace(/\s+/g, "_");
@@ -159,25 +120,58 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
   return "general";
 }
 
+/* ── §3.E empty-state taxonomy resolver ── */
+
+type TaxonomyState = "Present" | "Missing" | "System unavailable" | "Waived" | "Not applicable";
+
+function taxonomyForChecklistItem(item: ChecklistItemV2): TaxonomyState {
+  if (item.status === "available") return "Present";
+  if (item.status === "waived") return "Waived";
+  if (item.status === "missing") {
+    // `auto` and `conditional_auto` collection types come from system
+    // integrations. When still missing, the source can't supply it
+    // (e.g. IPinfo returned bankEligible=false, or no card payment so
+    // AVS/CVV doesn't apply). `unavailable` means no integration can
+    // collect this — also a system constraint, not a merchant gap.
+    if (item.collectionType === "auto" || item.collectionType === "conditional_auto" || item.collectionType === "unavailable") {
+      return "System unavailable";
+    }
+    return "Missing";
+  }
+  return "Missing";
+}
+
+const TAXONOMY_TONE: Record<TaxonomyState, "success" | "critical" | "warning" | "attention" | undefined> = {
+  Present: "success",
+  Missing: "critical",
+  Waived: undefined,
+  "System unavailable": undefined,
+  "Not applicable": undefined,
+};
+
+/* ── Component ── */
+
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
   const { data, derived, actions, clientState } = workspace;
   if (!data) return null;
 
-  const { dispute, appliedRule } = data;
-  const ipLocPayload = extractIpLocationPayload(data.pack?.evidenceItems);
-  const ipUnfavorable = ipLocPayload?.bankEligible === false;
-  const { caseStrength, effectiveChecklist, categories, missingItems, isReadOnly } = derived;
+  const { dispute, appliedRule, argumentMap } = data;
+  const {
+    caseStrength,
+    effectiveChecklist,
+    isReadOnly,
+    recommendationText,
+    recommendationHelperText,
+    whyWins,
+    missingItems,
+  } = derived;
 
-  // System failure short-circuit. When the build itself failed (e.g.,
-  // Shopify order fetch failed), suppress the recommendation engine
-  // entirely. Identity (title/amount/customer/reason) is already in the
-  // shared header card rendered by WorkspaceShell, so the failed-build
-  // body just shows the failure banner and a Retry CTA.
+  /* ── F1: Failure short-circuit ── */
   if (derived.isFailed) {
     const copy = (derived.failureCode && FAILURE_COPY[derived.failureCode]) || FAILURE_FALLBACK;
     return (
-      <BlockStack gap="500">
+      <BlockStack gap="400">
         <Banner tone="critical" title={copy.title}>
           <BlockStack gap="300">
             <Text as="p" variant="bodyMd">{copy.body}</Text>
@@ -208,22 +202,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     : null;
   const deadlineUrgent = deadlineDays !== null && deadlineDays <= 2;
 
-  const strengthKey = caseStrength.overall;
-  const strengthText = STRENGTH_LABEL[strengthKey] ?? "Weak";
-
-  const presentItems = effectiveChecklist.filter((c) => c.status === "available");
-  const missingChecklist = effectiveChecklist.filter(
-    (c) => c.status === "missing" && (c.collectionType === "manual" || !c.collectionType),
-  );
-  const presentFields = new Set(presentItems.map((p) => p.field));
-
-  const totalEvidenceShown = presentItems.length + missingChecklist.length;
-  const coveragePct =
-    totalEvidenceShown > 0
-      ? Math.round((presentItems.length / totalEvidenceShown) * 100)
-      : 0;
-
-  // Auto-submit denied visibility.
+  /* ── F2: Auto-save denied banner ── */
   const autoSaveBlock = !submitted
     ? (() => {
         const events = data.pack?.auditEvents ?? [];
@@ -237,66 +216,118 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       })()
     : null;
 
-  const topMissingLabel = missingItems[0]?.label ?? null;
+  /* ── ID-keyed maps from the workspace API. NO IMPLICIT MAPPING. ── */
+  const counterclaimsById: Record<string, CounterclaimNode> = useMemo(() => {
+    if (argumentMap?.counterclaimsById) return argumentMap.counterclaimsById;
+    const map: Record<string, CounterclaimNode> = {};
+    for (const c of argumentMap?.counterclaims ?? []) map[c.id] = c;
+    return map;
+  }, [argumentMap]);
 
-  // Recommendation copy is now sourced from the shared backend module
-  // `lib/argument/recommendation.ts` via `derived.recommendationText` /
-  // `derived.recommendationHelperText`. Plan v3 §3.A.6 — no inline
-  // composition in this component.
-  const recommendation = derived.recommendationText;
-  const recommendationHelper = derived.recommendationHelperText;
+  const evidenceItemsByField: Record<string, EvidenceItemFull> = useMemo(() => {
+    if (data.pack?.evidenceItemsByField) return data.pack.evidenceItemsByField;
+    const map: Record<string, EvidenceItemFull> = {};
+    for (const it of data.pack?.evidenceItems ?? []) {
+      const fields = ((it.payload as { fieldsProvided?: string[] } | null)?.fieldsProvided ?? []) as string[];
+      for (const f of fields) {
+        if (!(f in map)) map[f] = it;
+      }
+    }
+    return map;
+  }, [data.pack]);
 
-  const goToReview = () => actions.setActiveTab(2);
-  const goToEvidence = () => actions.setActiveTab(1);
-  const shopifyAdminUrl =
-    dispute.shopDomain && dispute.disputeEvidenceGid
-      ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
-      : null;
+  /* ── Hero ── */
+  const strengthKey = caseStrength.overall;
+  const strengthLabel = HERO_LABEL_BY_STRENGTH[strengthKey] ?? "Hard to win";
+  const heroTone = HERO_TONE_BY_STRENGTH[strengthKey] ?? HERO_TONE_BY_STRENGTH.weak;
 
-  const POLICY_FIELDS = ["refund_policy", "shipping_policy", "cancellation_policy"];
-  const missingPolicy = missingChecklist.find((m) => POLICY_FIELDS.includes(m.field));
+  /* ── Timeline ── */
+  type TimelineStep = { state: "done" | "active" | "pending"; title: string; helper: string };
+  const timeline: TimelineStep[] = submitted
+    ? [
+        { state: "done", title: "Evidence submitted", helper: submittedAt ? `Submitted to Shopify on ${formatDate(submittedAt)}` : "Submitted to Shopify" },
+        { state: dispute.finalOutcome ? "done" : "active", title: "Bank review in progress", helper: "Expected duration: 30–75 days" },
+        {
+          state: dispute.finalOutcome ? "done" : "pending",
+          title: "Outcome notification",
+          helper: dispute.finalOutcome
+            ? `Outcome: ${dispute.finalOutcome}`
+            : "You’ll be notified by email when a decision is made",
+        },
+      ]
+    : [
+        { state: data.pack ? "done" : "active", title: "Evidence pack built", helper: data.pack ? "DisputeDesk assembled the evidence available for this case." : "Generate the evidence pack to begin." },
+        { state: data.pack ? "active" : "pending", title: "Review and submit", helper: dispute.dueAt ? `Submission deadline: ${formatDate(dispute.dueAt)}` : "Review the pack and submit to Shopify before the deadline." },
+        { state: "pending", title: "Bank review", helper: "Once submitted, the issuing bank typically responds within 30–75 days." },
+      ];
 
-  let improveCta: { label: string; url: string } | null = null;
-  if (submitted && missingPolicy) {
-    improveCta = {
-      label: "Set up policies for future cases",
-      url: withShopParams("/app/policies", searchParams),
-    };
+  /* ── O3 row resolution: ID-keyed only ── */
+  type RowEvidence = { evidenceFieldKey: string; label: string; status: "available" | "waived" | "missing" };
+  function resolveSupportingRows(item: WhyWinsItem): RowEvidence[] {
+    const cc = counterclaimsById[item.counterclaimId];
+    if (!cc) return [];
+    return cc.supporting.map((s) => ({
+      evidenceFieldKey: s.evidenceFieldKey ?? s.field,
+      label: s.label,
+      status: s.status,
+    }));
+  }
+  function resolveMissingRows(item: WhyWinsItem): RowEvidence[] {
+    const cc = counterclaimsById[item.counterclaimId];
+    if (!cc) return [];
+    return cc.missing.map((m) => ({
+      evidenceFieldKey: m.evidenceFieldKey ?? m.field,
+      label: m.label,
+      status: "missing" as const,
+    }));
   }
 
+  /* ── O4 Coverage breakdown by priority ── */
+  const visibleChecklist = effectiveChecklist.filter((c) => c.status !== "unavailable");
+  const completenessScore = data.pack?.completenessScore ?? 0;
+  type Bucket = { key: "critical" | "recommended" | "optional"; label: string; items: ChecklistItemV2[]; complete: number };
+  const buckets: Bucket[] = (["critical", "recommended", "optional"] as const).map((key) => {
+    const items = visibleChecklist.filter((c) => (c.priority as string) === key);
+    const complete = items.filter((c) => c.status === "available" || c.status === "waived").length;
+    return {
+      key,
+      label: key === "critical" ? "Critical evidence" : key === "recommended" ? "Supporting evidence" : "Optional",
+      items,
+      complete,
+    };
+  }).filter((b) => b.items.length > 0);
+  const criticalMissing = (buckets.find((b) => b.key === "critical")?.items ?? []).filter(
+    (c) => c.status === "missing",
+  );
+  const totalIncluded = visibleChecklist.filter((c) => c.status === "available" || c.status === "waived").length;
+  const totalCount = visibleChecklist.length;
+
+  /* ── Automation rule + Footer CTAs ── */
   const disputeFamily = mapReasonToRulesFamily(dispute.reason);
   const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
   const appliedMode = appliedRule?.mode ?? "review";
   const appliedModeLabel = appliedMode === "auto" ? "Automatic" : "Review before submit";
-  const appliedModeHelp =
-    appliedMode === "auto"
-      ? "DisputeDesk prepared the evidence pack and submitted it automatically."
-      : "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline.";
+  const appliedModeHelp = appliedMode === "auto"
+    ? "DisputeDesk prepared the evidence pack and submitted it automatically."
+    : "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline.";
 
-  const defenseBullets = synthesizeDefenseBullets(presentFields, ipUnfavorable);
+  const goToReview = () => actions.setActiveTab(2);
+  const goToEvidence = () => actions.setActiveTab(1);
+  const shopifyAdminUrl = dispute.shopDomain && dispute.disputeEvidenceGid
+    ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
+    : null;
 
-  const anyMissingCritical = missingChecklist.some((m) => m.priority === "critical");
-  const coverageInterpretation = (() => {
-    if (totalEvidenceShown === 0) return "No evidence has been collected yet.";
-    if (missingChecklist.length === 0) {
-      return "Coverage is complete. All required evidence categories are fully supported.";
-    }
-    if (anyMissingCritical) {
-      return "Coverage has critical gaps — see the categories below.";
-    }
-    return "Coverage is mostly complete — a few categories could be strengthened.";
-  })();
-
-  const pageHeader = submitted
-    ? "Your defense has been submitted to Shopify"
-    : "Review your defense before submitting to Shopify";
+  // Post-submit secondary CTA — surface only when there's an actual
+  // policy gap on this case.
+  const POLICY_FIELDS = new Set(["refund_policy", "shipping_policy", "cancellation_policy"]);
+  const hasMissingPolicy = missingItems.some((m) => POLICY_FIELDS.has(m.field));
+  const policyCta = submitted && hasMissingPolicy
+    ? { label: "Set up policies for future cases", url: withShopParams("/app/policies", searchParams) }
+    : null;
 
   return (
-    <BlockStack gap="500">
-      {/* PAGE HEADER */}
-      <Text as="h1" variant="headingXl">{pageHeader}</Text>
-
-      {/* AUTO-SUBMIT DENIED */}
+    <BlockStack gap="400">
+      {/* F2: Auto-save denied banner — preserved from existing logic */}
       {autoSaveBlock && (
         <Banner tone="warning" title="Auto-submit paused — your review needed">
           <BlockStack gap="200">
@@ -306,14 +337,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               we stopped and handed it to you.
             </Text>
             {autoSaveBlock.reasons.length > 0 && (
-              <Text as="p" variant="bodySm">
-                Why: {autoSaveBlock.reasons.join(" • ")}
-              </Text>
-            )}
-            {topMissingLabel && (
-              <Text as="p" variant="bodySm">
-                Biggest gap: {topMissingLabel}. Adding it strengthens the case before you submit.
-              </Text>
+              <Text as="p" variant="bodySm">Why: {autoSaveBlock.reasons.join(" • ")}</Text>
             )}
             <InlineStack gap="200">
               <Button onClick={goToEvidence}>Add missing evidence</Button>
@@ -323,302 +347,312 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* CASE STATUS */}
-      <Card>
-        <BlockStack gap="400">
-          <Text as="h2" variant="headingMd">Case status</Text>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Status</Text>
-              <Badge tone={submitted ? "info" : "attention"}>
-                {submitted ? "Submitted" : "Not submitted"}
-              </Badge>
-            </BlockStack>
-
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Strength</Text>
-              <Badge tone={strengthTone(strengthKey)}>{strengthText}</Badge>
-            </BlockStack>
-
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">Deadline</Text>
-              <Text
-                as="p"
-                variant="bodyMd"
-                fontWeight="semibold"
-                tone={!submitted && deadlineUrgent ? "critical" : undefined}
-              >
-                {submitted
-                  ? `Submitted ${formatDate(submittedAt)}`
-                  : deadlineDays !== null && deadlineDays > 0
-                    ? `${deadlineDays} day${deadlineDays === 1 ? "" : "s"} remaining`
-                    : deadlineDays !== null && deadlineDays <= 0
-                      ? "Overdue"
-                      : "No deadline set"}
-              </Text>
-            </BlockStack>
+      {/* O1: Hero — strict backend rendering (label + score + strengthReason + improvementHint + recommendation + helper + EVIDENCE_EVALUATION_HELPER + deadline) */}
+      <div
+        style={{
+          background: heroTone.bg,
+          border: `2px solid ${heroTone.border}`,
+          borderRadius: 8,
+          padding: 24,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            width: 48, height: 48, borderRadius: 8,
+            background: heroTone.iconBg, color: heroTone.iconColor,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Icon source={ShieldCheckMarkIcon} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: heroTone.titleColor, lineHeight: 1.3 }}>
+              {strengthLabel}
+            </span>
+            <span
+              style={{
+                padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+                background: heroTone.pillBg, color: heroTone.pillColor,
+              }}
+            >
+              {`Evidence coverage: ${caseStrength.score}/100`}
+            </span>
           </div>
-
-          <Divider />
-
-          <BlockStack gap="100">
-            <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendation}</Text>
-            {recommendationHelper && (
-              <Text as="p" variant="bodySm" tone="subdued">{recommendationHelper}</Text>
-            )}
-            <Text as="p" variant="bodySm" tone="subdued">
-              {EVIDENCE_EVALUATION_HELPER}
-            </Text>
-          </BlockStack>
-
-          {/* AUTOMATION RULE */}
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <BlockStack gap="050">
-              <InlineStack gap="200" blockAlign="center">
-                <Text as="p" variant="bodyMd">Automation rule:</Text>
-                <Badge
-                  tone={
-                    appliedRule?.mode === "auto"
-                      ? "success"
-                      : appliedRule?.mode === "review"
-                        ? "attention"
-                        : undefined
-                  }
-                >
-                  {appliedModeLabel}
-                </Badge>
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
-            </BlockStack>
-            <div style={{ marginLeft: "auto" }}>
-              <Button url={rulesUrl}>Change rule</Button>
-            </div>
-          </InlineStack>
-
-          {/* PRIMARY CTA */}
-          <InlineStack gap="300" blockAlign="center">
-            <div style={{ minWidth: 220 }}>
-              {submitted ? (
-                <Button
-                  variant="primary"
-                  size="large"
-                  url={shopifyAdminUrl ?? undefined}
-                  target="_blank"
-                  disabled={!shopifyAdminUrl}
-                >
-                  View in Shopify
-                </Button>
-              ) : (
-                <Button variant="primary" size="large" onClick={goToReview}>
-                  Submit to Shopify
-                </Button>
-              )}
-            </div>
-            {submitted ? (
-              improveCta && <Button url={improveCta.url}>{improveCta.label}</Button>
-            ) : (
-              <Button onClick={goToEvidence}>Edit evidence</Button>
-            )}
-          </InlineStack>
-        </BlockStack>
-      </Card>
-
-      {/* HOW WE DEFEND THIS CASE */}
-      {defenseBullets.length > 0 && (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">How we defend this case</Text>
-            <Text as="p" variant="bodyMd">
-              We are arguing that this transaction was legitimate based on:
-            </Text>
-            <BlockStack gap="200">
-              {defenseBullets.map((b) => (
-                <InlineStack key={b} gap="200" blockAlign="start" wrap={false}>
-                  <Text as="span" variant="bodyMd" tone="success">{"✓"}</Text>
-                  <Text as="p" variant="bodyMd">{b}</Text>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          </BlockStack>
-        </Card>
-      )}
-
-      {/* YOUR SUPPORTING EVIDENCE */}
-      <Card>
-        <BlockStack gap="300">
-          <Text as="h2" variant="headingMd">Your supporting evidence</Text>
-
-          {presentItems.length === 0 && missingChecklist.length === 0 && (
-            <Text as="p" variant="bodyMd" tone="subdued">
-              No evidence collected yet. Generate or build the evidence pack to begin.
-            </Text>
+          {caseStrength.strengthReason && (
+            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: "0 0 8px", lineHeight: 1.5 }}>
+              {caseStrength.strengthReason}
+            </p>
           )}
+          {caseStrength.improvementHint && (
+            <p style={{ fontSize: 13, color: heroTone.bodyColor, opacity: 0.8, margin: "0 0 12px", lineHeight: 1.5 }}>
+              {caseStrength.improvementHint}
+            </p>
+          )}
+          {recommendationText && (
+            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: "0 0 4px", lineHeight: 1.5, fontWeight: 500 }}>
+              {recommendationText}
+            </p>
+          )}
+          {recommendationHelperText && (
+            <p style={{ fontSize: 13, color: heroTone.bodyColor, opacity: 0.7, margin: "0 0 12px", lineHeight: 1.5 }}>
+              {recommendationHelperText}
+            </p>
+          )}
+          <p style={{ fontSize: 12, color: heroTone.bodyColor, opacity: 0.7, margin: "0 0 8px", lineHeight: 1.5 }}>
+            {EVIDENCE_EVALUATION_HELPER}
+          </p>
+          <p style={{ fontSize: 13, color: heroTone.bodyColor, margin: 0 }}>
+            {submitted
+              ? `Submitted ${formatDate(submittedAt)}`
+              : deadlineDays !== null && deadlineDays > 0
+                ? `Submission deadline in ${deadlineDays} day${deadlineDays === 1 ? "" : "s"} (${formatDate(dispute.dueAt)})${deadlineUrgent ? " — urgent" : ""}`
+                : deadlineDays !== null && deadlineDays <= 0
+                  ? `Submission deadline: Overdue (${formatDate(dispute.dueAt)})`
+                  : "No deadline set"}
+          </p>
+        </div>
+      </div>
 
-          {presentItems.map((item) => {
-            const row = evidenceRowStatus(item);
-            const isIpRow = item.field === "ip_location_check";
-            const ipVerdict = isIpRow ? ipLocPayload?.summary?.split("\n")[0] ?? null : null;
-            const ipGuidance = isIpRow ? ipLocPayload?.merchantGuidance ?? null : null;
-
-            return (
-              <div
-                key={item.field}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderLeft: "4px solid #16a34a",
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
-                <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={row.tone}>{row.label}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {ipVerdict ?? WHY_EVIDENCE_MATTERS[item.field] ?? "Strengthens the overall response."}
-                  </Text>
-                  {ipGuidance ? (
-                    <Text as="p" variant="bodySm" tone="subdued">{ipGuidance}</Text>
-                  ) : null}
-                </BlockStack>
-              </div>
-            );
-          })}
-
-          {missingChecklist.map((item) => {
-            const row = evidenceRowStatus(item);
-            const borderColor =
-              row.label === "Critical gap"
-                ? "#dc2626"
-                : row.label === "Recommended"
-                  ? "#2563eb"
-                  : "#9ca3af";
-            return (
-              <div
-                key={item.field}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  borderLeft: `4px solid ${borderColor}`,
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
-                <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center" wrap>
-                    <Text as="span" variant="bodyMd" fontWeight="semibold">{item.label}</Text>
-                    <Badge tone={row.tone}>{row.label}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {WHY_EVIDENCE_MATTERS[item.field] ?? "Would strengthen the overall response."}
-                  </Text>
-                  {!submitted && (
-                    <div>
-                      <Button
-                        size="slim"
-                        onClick={() => actions.navigateToEvidence(item.field)}
-                      >
-                        Add this evidence
-                      </Button>
-                    </div>
-                  )}
-                </BlockStack>
-              </div>
-            );
-          })}
-        </BlockStack>
-      </Card>
-
-      {/* EVIDENCE BY CATEGORY */}
-      {categories.length > 0 && (
-        <Card>
+      {/* O2: Timeline */}
+      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">What happens now</Text>
           <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">Evidence by category</Text>
+            {timeline.map((step, i) => {
+              const isLast = i === timeline.length - 1;
+              const dotBg = step.state === "done" ? "#D1FAE5" : step.state === "active" ? "#DBEAFE" : "#F1F2F4";
+              const dotColor = step.state === "done" ? "#059669" : step.state === "active" ? "#1D4ED8" : "#6B7280";
+              const iconSrc = step.state === "done" ? CheckCircleIcon : step.state === "active" ? ClockIcon : null;
+              return (
+                <div key={i} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                    <div
+                      style={{
+                        width: 32, height: 32, borderRadius: 999,
+                        background: dotBg, color: dotColor,
+                        border: "2px solid #FFFFFF",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      {iconSrc ? (
+                        <span style={{ width: 16, height: 16, display: "inline-flex" }}>
+                          <Icon source={iconSrc} />
+                        </span>
+                      ) : (
+                        <span style={{ width: 8, height: 8, borderRadius: 999, background: "#8C9196" }} />
+                      )}
+                    </div>
+                    {!isLast && (
+                      <div style={{ width: 2, flex: 1, minHeight: 24, background: "#E1E3E5" }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, paddingTop: 4, paddingBottom: isLast ? 0 : 16 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: step.state === "pending" ? "#6D7175" : "#202223", margin: 0 }}>
+                      {step.title}
+                    </p>
+                    <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>{step.helper}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </BlockStack>
+        </BlockStack>
+      </div>
 
-            <Text as="p" variant="bodyMd" fontWeight="semibold">{coverageInterpretation}</Text>
-
-            <ProgressBar
-              progress={coveragePct}
-              tone={strengthKey === "strong" ? "success" : strengthKey === "moderate" ? "primary" : "critical"}
-              size="small"
-            />
+      {/* O3: What supports your case (whyWins.strengths resolved by counterclaimId) */}
+      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">What supports your case</Text>
+          {whyWins.strengths.length === 0 ? (
             <Text as="p" variant="bodySm" tone="subdued">
-              {`${presentItems.length} of ${totalEvidenceShown} addable items collected`}
+              Evidence is still being collected. Add evidence to surface defense reasons.
             </Text>
-
-            <BlockStack gap="200">
-              {categories.map((cat) => {
-                const visible = cat.items.filter((i) => i.status !== "unavailable");
-                if (visible.length === 0) return null;
-                const present = visible.filter(
-                  (i) => i.status === "available" || i.status === "waived",
-                );
-                const missingActionable = visible.filter(
-                  (i) =>
-                    i.status === "missing" &&
-                    (i.collectionType === "manual" || !i.collectionType),
-                );
-                const impact = categoryImpactLabel(cat.relevance);
-                const hasCriticalGap = missingActionable.some((m) => m.priority === "critical");
-                const borderColor = hasCriticalGap
-                  ? "#dc2626"
-                  : impact.tone === "success"
-                    ? "#16a34a"
-                    : impact.tone === "info"
-                      ? "#2563eb"
-                      : "#9ca3af";
-
-                const suggestion = missingActionable[0]
-                  ? `Missing ${missingActionable[0].label.toLowerCase()} — ${
-                      WHY_EVIDENCE_MATTERS[missingActionable[0].field] ??
-                      CATEGORY_FIX_HINT[cat.category.key] ??
-                      "would strengthen this category."
-                    }`
-                  : null;
-
+          ) : (
+            <div>
+              {whyWins.strengths.map((s, idx) => {
+                const cc = counterclaimsById[s.counterclaimId];
+                const supportingRows = resolveSupportingRows(s);
+                const isLast = idx === whyWins.strengths.length - 1;
                 return (
                   <div
-                    key={cat.category.key}
+                    key={s.counterclaimId + s.text}
                     style={{
-                      borderLeft: `3px solid ${borderColor}`,
-                      paddingLeft: 12,
+                      paddingBottom: isLast ? 0 : 16,
+                      marginBottom: isLast ? 0 : 16,
+                      borderBottom: isLast ? "none" : "1px solid #E1E3E5",
                     }}
                   >
-                    <BlockStack gap="100">
-                      <InlineStack gap="200" blockAlign="center" wrap>
-                        <Text as="span" variant="bodyMd" fontWeight="semibold">
-                          {cat.category.label}
-                        </Text>
-                        <Badge tone={impact.tone}>{impact.label}</Badge>
-                        <Badge>{`${present.length}/${visible.length}`}</Badge>
-                        {hasCriticalGap && <Badge tone="critical">Critical gap</Badge>}
-                      </InlineStack>
-                      {suggestion && !submitted && (
-                        <InlineStack gap="200" blockAlign="center" wrap>
-                          <Text as="p" variant="bodySm" tone="subdued">{suggestion}</Text>
-                          <Button
-                            size="micro"
-                            onClick={() => actions.navigateToEvidence(missingActionable[0].field)}
-                          >
-                            Fix
-                          </Button>
-                        </InlineStack>
-                      )}
-                    </BlockStack>
+                    <div style={{ display: "flex", gap: 16, alignItems: "flex-start", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flex: 1, minWidth: 0 }}>
+                        <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0, marginTop: 2 }}>
+                          <Icon source={CheckCircleIcon} />
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 500, color: "#202223", margin: "0 0 4px" }}>
+                            {s.text}
+                          </p>
+                          {/* Per-evidence raw breakdown — every supporting field
+                              with its taxonomy state from §3.E. */}
+                          {supportingRows.length > 0 && (
+                            <BlockStack gap="050">
+                              {supportingRows.map((row) => {
+                                const checklist = effectiveChecklist.find((c) => c.field === row.evidenceFieldKey);
+                                const tax: TaxonomyState = checklist
+                                  ? taxonomyForChecklistItem(checklist)
+                                  : "Present";
+                                return (
+                                  <InlineStack key={row.evidenceFieldKey} gap="200" blockAlign="center" wrap>
+                                    <Text as="span" variant="bodySm" tone="subdued">{row.label}:</Text>
+                                    <Badge tone={TAXONOMY_TONE[tax]}>{tax}</Badge>
+                                  </InlineStack>
+                                );
+                              })}
+                            </BlockStack>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ flexShrink: 0 }}>
+                        {cc ? <Badge tone={cc.strength === "strong" ? "success" : cc.strength === "moderate" ? "warning" : "critical"}>{cc.strength}</Badge> : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Missing signals — never silently dropped */}
+          {whyWins.weaknesses.length > 0 && (
+            <BlockStack gap="200">
+              <Divider />
+              <Text as="p" variant="bodySm" fontWeight="semibold">Missing signals</Text>
+              {whyWins.weaknesses.map((w) => {
+                const missingRows = resolveMissingRows(w);
+                return (
+                  <div key={w.counterclaimId + w.text} style={{ paddingLeft: 32 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: "#7F1D1D", margin: "0 0 4px" }}>{w.text}</p>
+                    {missingRows.length > 0 && (
+                      <BlockStack gap="050">
+                        {missingRows.map((row) => {
+                          const checklist = effectiveChecklist.find((c) => c.field === row.evidenceFieldKey);
+                          const tax: TaxonomyState = checklist ? taxonomyForChecklistItem(checklist) : "Missing";
+                          return (
+                            <InlineStack key={row.evidenceFieldKey} gap="200" blockAlign="center" wrap>
+                              <Text as="span" variant="bodySm" tone="subdued">{row.label}:</Text>
+                              <Badge tone={TAXONOMY_TONE[tax]}>{tax}</Badge>
+                              {!submitted && tax === "Missing" && (
+                                <Button size="micro" onClick={() => actions.navigateToEvidence(row.evidenceFieldKey)}>
+                                  Add this evidence
+                                </Button>
+                              )}
+                            </InlineStack>
+                          );
+                        })}
+                      </BlockStack>
+                    )}
                   </div>
                 );
               })}
             </BlockStack>
+          )}
+        </BlockStack>
+      </div>
+
+      {/* O4: Evidence coverage */}
+      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">Evidence coverage</Text>
+
+          <div>
+            <InlineStack align="space-between" blockAlign="center">
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                {criticalMissing.length === 0
+                  ? "All critical evidence present"
+                  : `${criticalMissing.length} critical ${criticalMissing.length === 1 ? "item" : "items"} missing`}
+              </Text>
+              <Text as="span" variant="bodySm" tone="subdued">{`${totalIncluded}/${totalCount} included`}</Text>
+            </InlineStack>
+            <div style={{ marginTop: 8, height: 6, background: "#E1E3E5", borderRadius: 9999, overflow: "hidden" }}>
+              <div
+                style={{
+                  width: `${completenessScore}%`,
+                  height: "100%",
+                  background: strengthKey === "strong" ? "#059669" : strengthKey === "moderate" ? "#F59E0B" : "#DC2626",
+                  borderRadius: 9999,
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
+            <BlockStack gap="200">
+              {buckets.map((b) => (
+                <InlineStack key={b.key} align="space-between" blockAlign="center">
+                  <InlineStack gap="200" blockAlign="center">
+                    <span
+                      style={{
+                        width: 8, height: 8, borderRadius: 9999, display: "inline-block",
+                        background: b.key === "critical" ? "#DC2626" : b.key === "recommended" ? "#D97706" : "#6D7175",
+                      }}
+                    />
+                    <Text as="span" variant="bodyMd">{b.label}</Text>
+                  </InlineStack>
+                  <Text as="span" variant="bodyMd" fontWeight="medium">
+                    {`${b.complete}/${b.items.length} complete`}
+                  </Text>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          </div>
+
+          <Button variant="plain" onClick={goToEvidence}>View all evidence</Button>
+        </BlockStack>
+      </div>
+
+      {/* Automation rule card */}
+      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+        <InlineStack gap="200" blockAlign="center" wrap={false}>
+          <BlockStack gap="050">
+            <InlineStack gap="200" blockAlign="center">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">Automation rule:</Text>
+              <Badge tone={appliedRule?.mode === "auto" ? "success" : appliedRule?.mode === "review" ? "attention" : undefined}>
+                {appliedModeLabel}
+              </Badge>
+            </InlineStack>
+            <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
           </BlockStack>
-        </Card>
-      )}
+          <div style={{ marginLeft: "auto" }}>
+            <Button url={rulesUrl}>Change rule</Button>
+          </div>
+        </InlineStack>
+      </div>
+
+      {/* Footer CTAs */}
+      <InlineStack gap="200" align="end">
+        {!submitted && (
+          <>
+            <Button onClick={goToEvidence} icon={AlertCircleIcon}>Edit evidence</Button>
+            <Button variant="primary" onClick={goToReview} icon={ShieldCheckMarkIcon} size="large">
+              Submit to Shopify
+            </Button>
+          </>
+        )}
+        {submitted && (
+          <>
+            {policyCta && <Button url={policyCta.url}>{policyCta.label}</Button>}
+            {shopifyAdminUrl && (
+              <Button variant="primary" url={shopifyAdminUrl} target="_blank" size="large">
+                View in Shopify Admin
+              </Button>
+            )}
+          </>
+        )}
+      </InlineStack>
     </BlockStack>
   );
 }

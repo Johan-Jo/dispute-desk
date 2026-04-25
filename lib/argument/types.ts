@@ -13,6 +13,11 @@ export interface ArgumentMap {
     reasonCode: string;
   };
   counterclaims: CounterclaimNode[];
+  /** Server-built ID-keyed lookup. Plan v3 §3.A.5: cross-collection
+   *  references must resolve through this map, never by `title`,
+   *  array position, or substring matching. Optional for back-compat
+   *  with consumers that still scan the array. */
+  counterclaimsById?: Record<string, CounterclaimNode>;
   overallStrength: CaseStrengthLevel;
 }
 
@@ -21,18 +26,27 @@ export interface CounterclaimNode {
   title: string;
   strength: CaseStrengthLevel;
   supporting: Array<{
+    /** @deprecated use `evidenceFieldKey`. Retained for back-compat. */
     field: string;
+    /** Stable cross-collection ID. Plan v3 §3.A.5. */
+    evidenceFieldKey?: string;
     label: string;
     status: "available" | "waived";
   }>;
   /** System-derived evidence that is not present (informational, not actionable). */
   systemUnavailable: Array<{
+    /** @deprecated use `evidenceFieldKey`. Retained for back-compat. */
     field: string;
+    /** Stable cross-collection ID. Plan v3 §3.A.5. */
+    evidenceFieldKey?: string;
     label: string;
   }>;
   /** Merchant-actionable evidence that can be added. */
   missing: Array<{
+    /** @deprecated use `evidenceFieldKey`. Retained for back-compat. */
     field: string;
+    /** Stable cross-collection ID. Plan v3 §3.A.5. */
+    evidenceFieldKey?: string;
     label: string;
     impact: "high" | "medium" | "low";
   }>;

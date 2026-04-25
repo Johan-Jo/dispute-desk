@@ -54,6 +54,10 @@ export interface WorkspacePack {
   checklistV2: ChecklistItemV2[];
   waivedItems: WaivedItemRecord[];
   evidenceItems: EvidenceItemFull[];
+  /** Server-built ID-keyed lookup: `evidenceFieldKey` → first
+   *  evidence item exposing that field via payload.fieldsProvided.
+   *  Plan v3 §3.A.5. Optional — older API responses may omit it. */
+  evidenceItemsByField?: Record<string, EvidenceItemFull>;
   auditEvents: AuditEvent[];
   pdfPath: string | null;
   savedToShopifyAt: string | null;
@@ -62,6 +66,20 @@ export interface WorkspacePack {
   failureCode: string | null;
   /** Internal full error text. Never render directly to merchants. */
   failureReason: string | null;
+}
+
+export interface WorkspaceAttachment {
+  id: string;
+  /** Resolves through `counterclaim.supporting/missing/systemUnavailable[*].evidenceFieldKey`
+   *  and `pack.evidenceItemsByField`. Null for attachments that
+   *  weren't tagged to a checklist field. */
+  evidenceFieldKey: string | null;
+  label: string | null;
+  fileName: string | null;
+  sizeBytes: number | null;
+  mimeType: string | null;
+  source: string | null;
+  fileId: string;
 }
 
 export interface CaseTypeInfo {
@@ -96,6 +114,11 @@ export interface WorkspaceData {
   argumentMap: ArgumentMap | null;
   rebuttalDraft: RebuttalDraft | null;
   submissionFields: SubmissionField[];
+  /** First-class file inventory derived from
+   *  `pack.evidenceItems[*].payload.fileId`. Plan v3 §3.A.4. Always
+   *  an array; empty array is the explicit empty state for the
+   *  Review tab's "Supporting documents" section. */
+  attachments?: WorkspaceAttachment[];
   /** True when the pack was updated after the saved rebuttal draft — regenerate argument to refresh the letter. */
   rebuttalOutdated?: boolean;
   /** The rule decision for this dispute (from the latest rule_applied event). */
