@@ -69,9 +69,22 @@ export interface CaseStrengthResult {
 
 /* ── Why This Case Wins ── */
 
+/** A single defense or weakness item paired with the counterclaim that
+ *  surfaced it. The ID enables the UI to resolve back to the counterclaim
+ *  (for strength pill, supporting/missing field lists) without matching
+ *  by display text — which is forbidden under the NO IMPLICIT UI MAPPING
+ *  rule (see plan v3 §0). */
+export interface WhyWinsItem {
+  /** Human-readable description (e.g. "AVS and CVV passed"). */
+  text: string;
+  /** ID of the counterclaim that surfaced this item. Resolves through
+   *  `argumentMap.counterclaimsById` on the workspace API response. */
+  counterclaimId: string;
+}
+
 export interface WhyWinsResult {
-  strengths: string[];
-  weaknesses: string[];
+  strengths: WhyWinsItem[];
+  weaknesses: WhyWinsItem[];
   overall: CaseStrengthLevel;
 }
 

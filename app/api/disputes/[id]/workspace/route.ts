@@ -123,7 +123,31 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const template = getArgumentTemplate(row.reason);
   const issuerClaimText = getIssuerClaimText(row.reason);
 
-  // ── 5. Shape the response ─────────────────────────────────────────
+  // ── 5. Build cross-collection ID-keyed maps ───────────────────────
+  // Per plan v3 §3.A.5 (NO IMPLICIT UI MAPPING). Computed here so the
+  // shapes below can reference them without forward-declaration issues.
+
+  // Evidence-items-by-field map — every checklist entry resolves through
+  // `pack.evidenceItemsByField[evidenceFieldKey]` for raw payload values
+  // without scanning. Items without a `fieldsProvided` array are skipped
+  // (they're not checklist-addressable).
+  type RawEvidenceItem = {
+    id: string;
+    type?: string;
+    payload?: { fieldsProvided?: string[]; [k: string]: unknown } | null;
+    [k: string]: unknown;
+  };
+  const evidenceItemsByField: Record<string, RawEvidenceItem> = {};
+  for (const it of (itemsRes.data ?? []) as RawEvidenceItem[]) {
+    const fields = (it.payload?.fieldsProvided as string[] | undefined) ?? [];
+    for (const f of fields) {
+      // First write wins — collectors run in deterministic order, so the
+      // earliest-collected item for a given field is the canonical source.
+      if (!(f in evidenceItemsByField)) evidenceItemsByField[f] = it;
+    }
+  }
+
+  // ── 6. Shape the response ─────────────────────────────────────────
   const dispute = {
     id: row.id,
     reason: row.reason,
@@ -152,6 +176,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         checklistV2: packRow.checklist_v2 ?? null,
         waivedItems: packRow.waived_items ?? [],
         evidenceItems: itemsRes.data ?? [],
+        // ID-keyed lookup: evidenceFieldKey → first evidence item
+        // exposing that field via payload.fieldsProvided. Used by the
+        // dispute-detail UI for O(1) raw-value lookups (plan v3 §3.A.5).
+        evidenceItemsByField,
         auditEvents: auditRes.data ?? [],
         pdfPath: packRow.pdf_path ?? null,
         savedToShopifyAt: packRow.saved_to_shopify_at ?? null,
@@ -165,11 +193,45 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
     : null;
 
+  // Argument map — augment counterclaim entries with `evidenceFieldKey`
+  // alias for `field`, and build a server-side `counterclaimsById` map.
+  // Both are required by the dispute-detail UI per plan v3 §3.A.5
+  // (NO IMPLICIT UI MAPPING — cross-collection refs must resolve by ID).
   const argMap = argumentRes.data;
+  type RawCounterclaimRow = {
+    field: string;
+    label: string;
+    [k: string]: unknown;
+  };
+  type RawCounterclaim = {
+    id: string;
+    title: string;
+    strength: string;
+    supporting?: RawCounterclaimRow[];
+    missing?: (RawCounterclaimRow & { impact?: string })[];
+    systemUnavailable?: RawCounterclaimRow[];
+  };
+  const augmentRow = <T extends RawCounterclaimRow>(r: T): T & { evidenceFieldKey: string } => ({
+    ...r,
+    evidenceFieldKey: r.field,
+  });
+  const augmentedCounterclaims = argMap
+    ? (argMap.counterclaims as RawCounterclaim[] | null ?? []).map((c) => ({
+        ...c,
+        supporting: (c.supporting ?? []).map(augmentRow),
+        missing: (c.missing ?? []).map(augmentRow),
+        systemUnavailable: (c.systemUnavailable ?? []).map(augmentRow),
+      }))
+    : [];
+  const counterclaimsById: Record<string, (typeof augmentedCounterclaims)[number]> = {};
+  for (const c of augmentedCounterclaims) {
+    counterclaimsById[c.id] = c;
+  }
   const argumentMap = argMap
     ? {
         issuerClaim: argMap.issuer_claim,
-        counterclaims: argMap.counterclaims,
+        counterclaims: augmentedCounterclaims,
+        counterclaimsById,
         overallStrength: argMap.overall_strength,
       }
     : null;

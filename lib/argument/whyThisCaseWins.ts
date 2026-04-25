@@ -1,9 +1,19 @@
 /**
  * Generate "Why This Case Should Win" — strengths and weaknesses.
+ *
+ * Each returned item carries the originating `counterclaimId` so the UI
+ * can resolve back to `argumentMap.counterclaimsById[id]` for strength
+ * pill and supporting/missing field lists — without text-matching, per
+ * the NO IMPLICIT UI MAPPING rule (plan v3 §0).
  */
 
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import type { ArgumentMap, WhyWinsResult, CaseStrengthLevel } from "./types";
+import type {
+  ArgumentMap,
+  WhyWinsResult,
+  WhyWinsItem,
+  CaseStrengthLevel,
+} from "./types";
 
 /** Human-readable strength descriptions per evidence field. */
 const STRENGTH_DESCRIPTIONS: Record<string, string> = {
@@ -43,23 +53,30 @@ export function generateWhyWins(
     return { strengths: [], weaknesses: [], overall: "insufficient" };
   }
 
-  const strengths: string[] = [];
-  const weaknesses: string[] = [];
+  const strengths: WhyWinsItem[] = [];
+  const weaknesses: WhyWinsItem[] = [];
+  // Dedupe by description text — first counterclaim that surfaces a given
+  // description claims it. Subsequent counterclaims do not produce a
+  // duplicate row but still have their own provenance via `counterclaim.supporting[]`
+  // when the UI iterates the counterclaim directly.
+  const seenStrengths = new Set<string>();
+  const seenWeaknesses = new Set<string>();
 
-  // Collect all evidence fields across all claims
   for (const claim of argumentMap.counterclaims) {
     for (const s of claim.supporting) {
       const desc = STRENGTH_DESCRIPTIONS[s.field];
-      if (desc && !strengths.includes(desc)) {
-        strengths.push(desc);
+      if (desc && !seenStrengths.has(desc)) {
+        seenStrengths.add(desc);
+        strengths.push({ text: desc, counterclaimId: claim.id });
       }
     }
-    // Only include weaknesses from merchant-actionable missing items
+    // Only include weaknesses from merchant-actionable missing items.
     for (const m of claim.missing) {
       if (m.impact === "high" || m.impact === "medium") {
         const desc = WEAKNESS_DESCRIPTIONS[m.field];
-        if (desc && !weaknesses.includes(desc)) {
-          weaknesses.push(desc);
+        if (desc && !seenWeaknesses.has(desc)) {
+          seenWeaknesses.add(desc);
+          weaknesses.push({ text: desc, counterclaimId: claim.id });
         }
       }
     }

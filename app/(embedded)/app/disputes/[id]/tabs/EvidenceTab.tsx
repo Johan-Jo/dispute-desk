@@ -404,10 +404,10 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
             <BlockStack gap="100">
               <Text as="p" variant="bodySm" fontWeight="semibold">Key strengths</Text>
               <BlockStack gap="050">
-                {whyWins.strengths.slice(0, 3).map((s, i) => (
-                  <InlineStack key={i} gap="200" blockAlign="start" wrap={false}>
+                {whyWins.strengths.slice(0, 3).map((s) => (
+                  <InlineStack key={s.counterclaimId + s.text} gap="200" blockAlign="start" wrap={false}>
                     <Text as="span" variant="bodyMd" tone="success">{"\u2713"}</Text>
-                    <Text as="p" variant="bodyMd">{s}</Text>
+                    <Text as="p" variant="bodyMd">{s.text}</Text>
                   </InlineStack>
                 ))}
               </BlockStack>

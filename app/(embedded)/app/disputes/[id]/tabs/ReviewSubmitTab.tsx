@@ -166,8 +166,8 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
               <Text as="p" variant="bodySm" fontWeight="semibold">
                 Your defense is supported by:
               </Text>
-              {whyWins.strengths.map((s, i) => (
-                <Text key={i} as="p" variant="bodySm">{`\u2022 ${s}`}</Text>
+              {whyWins.strengths.map((s) => (
+                <Text key={s.counterclaimId + s.text} as="p" variant="bodySm">{`\u2022 ${s.text}`}</Text>
               ))}
             </BlockStack>
           )}
@@ -439,9 +439,9 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
                     <Text as="p" variant="bodySm" fontWeight="semibold">
                       Why this case is weak:
                     </Text>
-                    {whyWins.weaknesses.map((w, i) => (
-                      <Text key={i} as="p" variant="bodySm">
-                        {`\u2022 ${w}`}
+                    {whyWins.weaknesses.map((w) => (
+                      <Text key={w.counterclaimId + w.text} as="p" variant="bodySm">
+                        {`\u2022 ${w.text}`}
                       </Text>
                     ))}
                   </BlockStack>
