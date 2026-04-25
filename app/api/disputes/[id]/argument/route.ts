@@ -76,32 +76,38 @@ export async function POST(
   }
 
   // Load dispute reason
-  const { data: dispute } = await sb
+  const { data: dispute, error: disputeErr } = await sb
     .from("disputes")
     .select("id, reason, shop_id, customer_email")
     .eq("id", disputeId)
     .single();
 
-  if (!dispute) {
+  if (disputeErr) {
+    if (disputeErr.code === "PGRST116") {
+      return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
+    }
     return NextResponse.json(
-      { error: "Dispute not found" },
-      { status: 404 },
+      { error: "Failed to load dispute", detail: disputeErr.message },
+      { status: 500 },
     );
   }
 
   // Load pack checklist + raw sections (sections feed the bank-grade
   // rebuttal extractor so AVS/CVV codes and IP narrative cite real
   // pack data instead of generic placeholders).
-  const { data: pack } = await sb
+  const { data: pack, error: packErr } = await sb
     .from("evidence_packs")
     .select("id, checklist_v2, checklist, shop_id, pack_json")
     .eq("id", packId)
     .single();
 
-  if (!pack) {
+  if (packErr) {
+    if (packErr.code === "PGRST116") {
+      return NextResponse.json({ error: "Pack not found" }, { status: 404 });
+    }
     return NextResponse.json(
-      { error: "Pack not found" },
-      { status: 404 },
+      { error: "Failed to load evidence pack", detail: packErr.message },
+      { status: 500 },
     );
   }
 
@@ -144,23 +150,35 @@ export async function POST(
 
   // Upsert argument map
   if (regenerate) {
-    await sb
+    const { error: delErr } = await sb
       .from("argument_maps")
       .delete()
       .eq("dispute_id", disputeId)
       .eq("pack_id", packId);
+    if (delErr) {
+      return NextResponse.json(
+        { error: "Failed to clear prior argument map", detail: delErr.message },
+        { status: 500 },
+      );
+    }
   }
 
-  await sb.from("argument_maps").insert({
+  const { error: mapErr } = await sb.from("argument_maps").insert({
     dispute_id: disputeId,
     pack_id: packId,
     issuer_claim: argumentMap.issuerClaim,
     counterclaims: argumentMap.counterclaims,
     overall_strength: argumentMap.overallStrength,
   });
+  if (mapErr) {
+    return NextResponse.json(
+      { error: "Failed to save argument map", detail: mapErr.message },
+      { status: 500 },
+    );
+  }
 
   // Upsert rebuttal draft
-  await sb.from("rebuttal_drafts").upsert(
+  const { error: draftErr } = await sb.from("rebuttal_drafts").upsert(
     {
       pack_id: packId,
       locale: "en-US",
@@ -171,6 +189,12 @@ export async function POST(
     },
     { onConflict: "pack_id,locale" },
   );
+  if (draftErr) {
+    return NextResponse.json(
+      { error: "Failed to save defense letter", detail: draftErr.message },
+      { status: 500 },
+    );
+  }
 
   await logAuditEvent({
     shopId: dispute.shop_id,

@@ -231,6 +231,7 @@ export async function syncDisputes(
             d.disputeEvidence?.shippingAddress?.name?.trim() ||
             d.disputeEvidence?.billingAddress?.name?.trim() ||
             null,
+          customer_email: d.disputeEvidence?.customerEmailAddress?.trim() || null,
           phase: d.type?.toLowerCase() ?? null,
           status: d.status?.toLowerCase() ?? null,
           reason: d.reasonDetails?.reason ?? null,

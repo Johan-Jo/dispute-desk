@@ -57,6 +57,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
   const [fields, setFields] = useState<SubmissionField[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideNote, setOverrideNote] = useState("");
 
@@ -309,13 +310,23 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
             {data.rebuttalOutdated && (
               <Banner tone="warning" title="Defense letter may be out of date">
                 <BlockStack gap="200">
+                  {regenerateError && (
+                    <Text as="p" variant="bodySm" tone="critical">
+                      {regenerateError}
+                    </Text>
+                  )}
                   <Text as="p" variant="bodySm">
                     This pack was updated after your last defense letter was generated. Regenerate the argument on the Evidence tab so the submission preview matches the latest issuer-grade template and pack data (including IP narrative in the letter when present).
                   </Text>
                   <Button
                     variant="primary"
+                    loading={clientState.regeneratingArgument}
+                    disabled={clientState.regeneratingArgument}
                     onClick={() => {
-                      void actions.regenerateArgument().then(() => actions.fetchAll());
+                      setRegenerateError(null);
+                      void actions.regenerateArgument().then((result) => {
+                        if (!result.ok) setRegenerateError(result.error);
+                      });
                     }}
                   >
                     Regenerate defense letter

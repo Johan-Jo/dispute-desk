@@ -235,6 +235,8 @@ export interface WorkspaceClientState {
   retrying: boolean;
   rebuttalDirty: boolean;
   justSubmitted: boolean;
+  /** POST /argument in flight (regenerate defense letter). */
+  regeneratingArgument: boolean;
 }
 
 export interface DerivedState {
@@ -277,6 +279,7 @@ export function useDisputeWorkspace(disputeId: string) {
     retrying: false,
     rebuttalDirty: false,
     justSubmitted: false,
+    regeneratingArgument: false,
   });
 
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -444,22 +447,51 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, disputeId, fetchAll],
   );
 
-  const regenerateArgument = useCallback(async () => {
-    if (!data?.pack) return;
-    const res = await fetch(`/api/disputes/${disputeId}/argument`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ packId: data.pack.id, regenerate: true }),
-    });
-    if (res.ok) {
-      const argData = await res.json();
-      setData((prev) =>
-        prev
-          ? { ...prev, argumentMap: argData.argumentMap, rebuttalDraft: argData.rebuttalDraft }
-          : prev,
-      );
+  const regenerateArgument = useCallback(async (): Promise<
+    { ok: true } | { ok: false; error: string }
+  > => {
+    if (!data?.pack) return { ok: false, error: "No evidence pack loaded." };
+    setClientState((s) => ({ ...s, regeneratingArgument: true }));
+    try {
+      const res = await fetch(`/api/disputes/${disputeId}/argument`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packId: data.pack.id, regenerate: true }),
+      });
+      let message = `Could not regenerate (${res.status}). Try again or reload the app.`;
+      if (res.ok) {
+        const argData = (await res.json()) as {
+          argumentMap?: WorkspaceData["argumentMap"];
+          rebuttalDraft?: WorkspaceData["rebuttalDraft"];
+        };
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                argumentMap: argData.argumentMap ?? prev.argumentMap,
+                rebuttalDraft: argData.rebuttalDraft ?? prev.rebuttalDraft,
+              }
+            : prev,
+        );
+        await fetchAll();
+        return { ok: true };
+      }
+      try {
+        const j = (await res.json()) as { error?: string; detail?: string; code?: string };
+        if (j.code === "SHOP_MISMATCH" || j.code === "SESSION_REQUIRED") {
+          message = j.error ?? message;
+        } else if (typeof j.error === "string" && j.error.length > 0) {
+          message = j.detail ? `${j.error}: ${j.detail}` : j.error;
+        }
+      } catch {
+        /* use default message */
+      }
+      return { ok: false, error: message };
+    } finally {
+      setClientState((s) => ({ ...s, regeneratingArgument: false }));
     }
-  }, [data?.pack, disputeId]);
+  }, [data?.pack, disputeId, fetchAll]);
 
   const submitToShopify = useCallback(
     async (overrideReason?: string, overrideNote?: string) => {
