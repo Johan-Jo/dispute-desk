@@ -31,6 +31,10 @@ import {
   type PackPdfInput,
 } from "@/lib/shopify/manualAttachments";
 import {
+  loadChecklistFieldByEvidenceItemIdFromAudit,
+  resolveChecklistFieldForManualItem,
+} from "@/lib/shopify/manualUploadChecklistFromAudit";
+import {
   ATTACHMENT_LINK_TTL_DAYS,
   buildAttachmentUrl,
   requireEvidenceLinkSecret,
@@ -276,6 +280,15 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .eq("source", "manual_upload")
     .order("created_at", { ascending: false });
 
+  const auditChecklistByItemId =
+    await loadChecklistFieldByEvidenceItemIdFromAudit(sb, packId);
+
+  const toBackfill: Array<{
+    id: string;
+    meta: Record<string, unknown>;
+    checklistField: string;
+  }> = [];
+
   const manualAttachments: ManualAttachmentInput[] = (manualItems ?? []).map(
     (item) => {
       const meta = (item.payload ?? {}) as Record<string, unknown>;
@@ -283,10 +296,16 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
         { k: "item", id: String(item.id), p: packId, exp: linkExp },
         linkSecret,
       );
-      const checklistField =
-        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
-          ? meta.checklistField.trim()
-          : null;
+      const checklistField = resolveChecklistFieldForManualItem(
+        String(item.id),
+        meta,
+        auditChecklistByItemId,
+      );
+      const hadPayloadField =
+        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0;
+      if (!hadPayloadField && checklistField) {
+        toBackfill.push({ id: String(item.id), meta, checklistField });
+      }
       return {
         checklistField,
         label: (item.label as string | null) ?? null,
@@ -297,6 +316,15 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       };
     },
   );
+
+  for (const row of toBackfill) {
+    await sb
+      .from("evidence_items")
+      .update({
+        payload: { ...row.meta, checklistField: row.checklistField },
+      })
+      .eq("id", row.id);
+  }
 
   let pdfAttachment: PackPdfInput | null = null;
   const { data: packForPdf } = await sb

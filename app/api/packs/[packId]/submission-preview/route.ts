@@ -7,6 +7,10 @@ import {
   type ManualAttachmentInput,
   type PackPdfInput,
 } from "@/lib/shopify/manualAttachments";
+import {
+  loadChecklistFieldByEvidenceItemIdFromAudit,
+  resolveChecklistFieldForManualItem,
+} from "@/lib/shopify/manualUploadChecklistFromAudit";
 
 export const runtime = "nodejs";
 
@@ -110,13 +114,17 @@ export async function GET(
     .eq("source", "manual_upload")
     .order("created_at", { ascending: false });
 
+  const auditChecklistByItemId =
+    await loadChecklistFieldByEvidenceItemIdFromAudit(sb, packId);
+
   const manualAttachments: ManualAttachmentInput[] = (manualItems ?? []).map(
     (item) => {
       const meta = (item.payload ?? {}) as Record<string, unknown>;
-      const checklistField =
-        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
-          ? meta.checklistField.trim()
-          : null;
+      const checklistField = resolveChecklistFieldForManualItem(
+        String(item.id),
+        meta,
+        auditChecklistByItemId,
+      );
       return {
         checklistField,
         label: (item.label as string | null) ?? null,

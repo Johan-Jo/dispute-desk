@@ -192,6 +192,8 @@ export async function POST(
       label,
       fileName: file.name,
       fileSize: file.size,
+      evidenceItemId: item.id,
+      checklistField: uploadedField ?? MANUAL_UPLOAD_FIELD,
     },
   });
 
