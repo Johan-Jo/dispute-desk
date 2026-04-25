@@ -24,9 +24,8 @@ import {
   ShopifyAuthInvalidError,
 } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
-import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
+import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
 import {
-  formatManualAttachmentsBlock,
   type ManualAttachmentInput,
   type PackPdfInput,
 } from "@/lib/shopify/manualAttachments";
@@ -223,28 +222,12 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     ? (rebuttalDraft.sections as Array<{ text: string }>).map((s) => s.text).join("\n\n").trim() || null
     : null;
 
-  // Build evidence using reason-aware formatter
-  const input: DisputeEvidenceUpdateInput = buildEvidenceForShopify(
-    sections,
-    rebuttalText,
-    dispute.reason,
-  );
-
-  // Inject customer info from dispute (only schema-valid fields)
+  // Customer info (schema only accepts firstName + lastName + email)
   const { data: disputeExtra } = await sb
     .from("disputes")
     .select("customer_display_name, customer_email")
     .eq("id", pack.dispute_id)
     .single();
-  if (disputeExtra?.customer_display_name) {
-    // customerName does NOT exist — split into firstName/lastName
-    const parts = disputeExtra.customer_display_name.split(" ");
-    input.customerFirstName = parts[0] ?? "";
-    input.customerLastName = parts.slice(1).join(" ") ?? "";
-  }
-  if (disputeExtra?.customer_email) {
-    input.customerEmailAddress = disputeExtra.customer_email;
-  }
 
   // The raw `customerPurchaseIp` injection that used to live here was
   // removed on 2026-04-21. The IP & Location Check evidence block now
@@ -346,16 +329,23 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     pdfAttachment = { url: buildShortAttachmentUrl(code) };
   }
 
-  const attachmentsBlock = formatManualAttachmentsBlock(
+  // Compose the final GraphQL mutation payload via the shared
+  // `composeShopifyMutationPayload` builder. The submission-preview
+  // endpoint calls the same function so the merchant's "raw view" is
+  // byte-equivalent to what's about to ship (modulo the URL tokens,
+  // which are inputs to this function — not transformations performed
+  // inside it). Plan v3 §3.A.2.
+  const input: DisputeEvidenceUpdateInput = composeShopifyMutationPayload({
+    sections,
+    rebuttalText,
+    disputeReason: dispute.reason,
+    customer: {
+      displayName: disputeExtra?.customer_display_name ?? null,
+      email: disputeExtra?.customer_email ?? null,
+    },
     manualAttachments,
     pdfAttachment,
-    dispute.reason,
-  );
-  if (attachmentsBlock) {
-    input.uncategorizedText = input.uncategorizedText
-      ? `${input.uncategorizedText}\n\n${attachmentsBlock}`
-      : attachmentsBlock;
-  }
+  });
 
 
   // ═══════════════════════════════════════════════════════════

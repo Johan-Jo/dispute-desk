@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { FIELD_MAPPINGS, type RawPackSection } from "@/lib/shopify/fieldMapping";
-import { buildEvidenceForShopify } from "@/lib/shopify/formatEvidenceForShopify";
+import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
 import {
-  formatManualAttachmentsBlock,
   type ManualAttachmentInput,
   type PackPdfInput,
 } from "@/lib/shopify/manualAttachments";
@@ -21,17 +20,29 @@ export const runtime = "nodejs";
 const PLACEHOLDER_ATTACHMENT_URL = "https://disputedesk.app/e/<secure-link>";
 
 /**
- * GET /api/packs/:packId/submission-preview
+ * GET /api/packs/:packId/submission-preview[?format=raw]
  *
- * Returns a human-readable preview of exactly what will be sent
- * to Shopify. Uses the same serialization as the actual submission
- * so preview matches reality.
+ * Returns the merchant-facing preview of what will be sent to Shopify.
+ * Uses `composeShopifyMutationPayload` — the same builder the submit
+ * job (`saveToShopifyJob`) calls — so given the same inputs, both
+ * produce byte-equivalent payloads.
+ *
+ * Default response: `{ fields: SubmissionField[] }` (mapped from the
+ * mutation payload via FIELD_MAPPINGS).
+ *
+ * `?format=raw`: includes `mutationPayload` — the actual
+ * `disputeEvidenceUpdate.input` GraphQL variable. The only intentional
+ * difference vs the submit job is the URL token in
+ * manualAttachments / PDF — placeholder here, real short-link there
+ * (caller-supplied input, not a transformation inside the builder).
+ * Plan v3 §3.A.2.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ packId: string }> },
 ) {
   const { packId } = await params;
+  const format = req.nextUrl.searchParams.get("format");
   const sb = getServiceClient();
 
   const { data: pack, error } = await sb
@@ -44,16 +55,14 @@ export async function GET(
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
-  // Reason is needed so the manual-attachments formatter can pick the
-  // same primary category for multi-purpose evidence as the save-to-
-  // shopify job will. Missing reason → formatter falls back to its
-  // default priority order, so a 404/null here is non-fatal.
-  const { data: disputeForReason } = await sb
+  // Customer info + reason — fetched in one round-trip so the preview
+  // mirrors saveToShopifyJob's payload composition exactly.
+  const { data: disputeRow } = await sb
     .from("disputes")
-    .select("reason")
+    .select("reason, customer_display_name, customer_email")
     .eq("id", pack.dispute_id)
     .maybeSingle();
-  const disputeReason: string | null = disputeForReason?.reason ?? null;
+  const disputeReason: string | null = disputeRow?.reason ?? null;
 
   const packJson = pack.pack_json as {
     sections?: Array<{
@@ -65,7 +74,9 @@ export async function GET(
   } | null;
 
   if (!packJson?.sections) {
-    return NextResponse.json({ fields: [] });
+    return format === "raw"
+      ? NextResponse.json({ fields: [], mutationPayload: {} })
+      : NextResponse.json({ fields: [] });
   }
 
   // Convert to RawPackSection format (include fieldsProvided for IP / device gates)
@@ -97,16 +108,9 @@ export async function GET(
         .trim() || null
     : null;
 
-  // Same builder as saveToShopifyJob — avoids mis-labeling fraud rebuttal as cancellationRebuttal
-  const evidenceInput = buildEvidenceForShopify(
-    rawSections,
-    rebuttalText,
-    disputeReason,
-  );
-
-  // Mirror saveToShopifyJob: append the "Supporting documents" block so the
-  // preview matches what the bank will see byte-for-byte (modulo the URL
-  // token, which is swapped for a placeholder here — see top of file).
+  // Manual attachments — preview uses placeholder URLs in place of the
+  // real short-link tokens that saveToShopifyJob mints. Everything else
+  // (label, filename, size, checklistField resolution) matches the job.
   const { data: manualItems } = await sb
     .from("evidence_items")
     .select("id, label, payload, created_at")
@@ -140,20 +144,24 @@ export async function GET(
     ? { url: PLACEHOLDER_ATTACHMENT_URL }
     : null;
 
-  const attachmentsBlock = formatManualAttachmentsBlock(
+  // Single source of truth — same builder, same input shape, same field
+  // omission rules as `saveToShopifyJob`. See plan v3 §3.A.2 and the
+  // byte-equivalence test in `lib/shopify/__tests__/composeShopifyMutationPayload.test.ts`.
+  const mutationPayload = composeShopifyMutationPayload({
+    sections: rawSections,
+    rebuttalText,
+    disputeReason,
+    customer: {
+      displayName: disputeRow?.customer_display_name ?? null,
+      email: disputeRow?.customer_email ?? null,
+    },
     manualAttachments,
     pdfAttachment,
-    disputeReason,
-  );
-  if (attachmentsBlock) {
-    evidenceInput.uncategorizedText = evidenceInput.uncategorizedText
-      ? `${evidenceInput.uncategorizedText}\n\n${attachmentsBlock}`
-      : attachmentsBlock;
-  }
+  });
 
-  // Build preview fields from the evidence input
+  // Field-by-field structured view derived from the same payload.
   const fields = FIELD_MAPPINGS.map((mapping) => {
-    const content = (evidenceInput as Record<string, string | undefined>)[mapping.shopifyField] ?? "";
+    const content = (mutationPayload as Record<string, string | undefined>)[mapping.shopifyField] ?? "";
     return {
       shopifyFieldName: mapping.shopifyField,
       shopifyFieldLabel: mapping.label,
@@ -164,5 +172,8 @@ export async function GET(
     };
   }).filter((f) => f.included);
 
+  if (format === "raw") {
+    return NextResponse.json({ fields, mutationPayload });
+  }
   return NextResponse.json({ fields });
 }
