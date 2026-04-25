@@ -595,7 +595,7 @@ export function useDisputeWorkspace(disputeId: string) {
         readiness: "blocked" as SubmissionReadiness,
         blockerCount: 0,
         warningCount: 0,
-        caseStrength: { overall: "insufficient", score: 0, supportedClaims: 0, totalClaims: 0, improvementHint: null },
+        caseStrength: { overall: "insufficient", score: 0, coveragePercent: 0, strongCount: 0, moderateCount: 0, supportingCount: 0, supportedClaims: 0, totalClaims: 0, improvementHint: null },
         whyWins: { strengths: [], weaknesses: [], overall: "insufficient" },
         risk: { expectedOutcome: "insufficient", risks: [] },
         improvement: null,
@@ -654,10 +654,17 @@ export function useDisputeWorkspace(disputeId: string) {
       .filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing")
       .map((c) => ({ field: c.field, label: c.label }));
 
-    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason);
+    // Pass the workspace's evidenceItemsByField map so the canonical
+    // categorizer can read payloads (delivery proofType, AVS/CVV codes,
+    // IP location flags) instead of falling back to default categories.
+    // Plan v3 §P2 step 4.
+    const payloadSource = data.pack?.evidenceItemsByField
+      ? { kind: "byField" as const, map: data.pack.evidenceItemsByField }
+      : undefined;
+    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource);
     const whyWins = generateWhyWins(data.argumentMap, effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(data.argumentMap, effectiveChecklist);
-    const improvement = calculateImprovement(data.argumentMap, effectiveChecklist, data.dispute.reason);
+    const improvement = calculateImprovement(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource);
 
     const nextAction = computeNextAction({
       packExists: !!pack,

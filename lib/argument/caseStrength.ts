@@ -1,16 +1,31 @@
 /**
- * Weighted, reason-aware case strength engine.
+ * Case strength engine — count-based, canonical-registry-driven.
  *
- * Replaces the rigid "weakest claim = overall" model with
- * family-specific evidence weighting. Missing delivery does NOT
- * automatically make a fraud case weak when payment verification
- * is strong.
+ * Plan v3 §P2.2 + P2.4 + P2.4a + P2.4b.
  *
- * Evidence tiers per family:
- * - Critical: missing usually makes case weak
- * - Strong: heavily improves, often needed for medium+
- * - Supporting: helpful but won't tank the case
- * - Optional: nice to have
+ * Replaces the prior ratio-based + per-family-weights model. Scoring
+ * is now strict and signal-deduplicated:
+ *
+ *   strong_count    = unique signalIds whose effective category is `strong`
+ *                     among AVAILABLE checklist items
+ *   moderate_count  = same for `moderate`
+ *   supporting_count = same for `supporting`  (informational only)
+ *
+ *   IF strong_count >= 2                              → "strong"
+ *   ELSE IF strong_count === 1 AND moderate_count >= 1 → "moderate"
+ *   ELSE                                              → "weak"
+ *
+ *   weighted_score  = strong_count * 3 + moderate_count * 2   (P2.1 weights)
+ *   coveragePercent = (presentItems / registeredItems) * 100  (legacy UI pill)
+ *
+ * Hard rules enforced here:
+ *   - Categories come ONLY from `lib/argument/canonicalEvidence.ts`.
+ *     No per-family overrides, no inline assignments. (P2.4b)
+ *   - Supporting items NEVER affect strength under any condition. (P2.1.1)
+ *   - Signal-level dedup: multiple `evidenceFieldKey`s sharing a
+ *     `signalId` count once. (P2.4)
+ *   - Persisted `category` on evidence items is a cache; the engine
+ *     re-derives via `categoryFor()` on every call. (P2.4a)
  */
 
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
@@ -20,132 +35,18 @@ import type {
   CaseStrengthLevel,
   ImprovementSignal,
 } from "./types";
+import {
+  CANONICAL_EVIDENCE,
+  CATEGORY_WEIGHT,
+  affectsStrength,
+  categoryFor,
+  type EvidenceCategory,
+  type SignalId,
+} from "./canonicalEvidence";
 import { resolveReasonFamily, type ReasonFamily } from "./responseEngine";
 
-/* ── Evidence tier definitions per family ── */
-
-/**
- * Evidence tier values.
- *
- * `supporting_only` is a new (2026-04-21) special tier: contributes to
- * the checklist display but carries **zero weight** in the case-strength
- * aggregator. Fields tagged this way can never elevate a case to Strong
- * — they are purely corroborative. Used today for
- * `device_location_consistency`.
- */
-type EvidenceTier = "critical" | "strong" | "supporting" | "optional" | "supporting_only";
-
-interface FamilyWeights {
-  [field: string]: EvidenceTier;
-}
-
-const FAMILY_WEIGHTS: Record<ReasonFamily, FamilyWeights> = {
-  fraud: {
-    avs_cvv_match: "critical",
-    order_confirmation: "critical",
-    billing_address_match: "strong",
-    activity_log: "strong",
-    customer_communication: "strong",
-    shipping_tracking: "supporting",
-    delivery_proof: "supporting",
-    ip_location_check: "supporting_only",
-    refund_policy: "optional",
-    shipping_policy: "optional",
-    supporting_documents: "optional",
-  },
-  delivery: {
-    shipping_tracking: "critical",
-    delivery_proof: "critical",
-    order_confirmation: "strong",
-    customer_communication: "strong",
-    shipping_policy: "supporting",
-    refund_policy: "supporting",
-    billing_address_match: "optional",
-    avs_cvv_match: "optional",
-    activity_log: "optional",
-  },
-  product: {
-    product_description: "critical",
-    refund_policy: "critical",
-    customer_communication: "strong",
-    order_confirmation: "strong",
-    supporting_documents: "strong",
-    shipping_tracking: "supporting",
-    delivery_proof: "supporting",
-    avs_cvv_match: "optional",
-  },
-  refund: {
-    order_confirmation: "critical",
-    refund_policy: "strong",
-    customer_communication: "strong",
-    supporting_documents: "supporting",
-    avs_cvv_match: "optional",
-  },
-  subscription: {
-    cancellation_policy: "critical",
-    customer_communication: "strong",
-    activity_log: "strong",
-    order_confirmation: "supporting",
-    refund_policy: "supporting",
-    supporting_documents: "optional",
-  },
-  billing: {
-    order_confirmation: "critical",
-    duplicate_explanation: "critical",
-    avs_cvv_match: "supporting",
-    customer_communication: "supporting",
-    supporting_documents: "supporting",
-  },
-  digital: {
-    activity_log: "critical",
-    order_confirmation: "strong",
-    customer_communication: "strong",
-    supporting_documents: "supporting",
-    refund_policy: "optional",
-  },
-  general: {
-    order_confirmation: "critical",
-    avs_cvv_match: "strong",
-    shipping_tracking: "strong",
-    customer_communication: "supporting",
-    refund_policy: "supporting",
-    activity_log: "supporting",
-    supporting_documents: "optional",
-  },
-};
-
-/* ── Tier weights for scoring ── */
-
-const TIER_SCORE: Record<EvidenceTier, number> = {
-  critical: 40,
-  strong: 25,
-  supporting: 10,
-  optional: 5,
-  // supporting_only fields are excluded from the strength tally so they
-  // cannot elevate a case to Strong by themselves. They still appear in
-  // the checklist; only their contribution to case-strength is zero.
-  supporting_only: 0,
-};
-
-/* ── Field labels ── */
-
-const FIELD_LABELS: Record<string, string> = {
-  order_confirmation: "order confirmation",
-  billing_address_match: "billing address match",
-  avs_cvv_match: "AVS/CVV verification",
-  shipping_tracking: "shipping tracking",
-  delivery_proof: "delivery confirmation",
-  customer_communication: "customer communication",
-  activity_log: "customer purchase history",
-  refund_policy: "refund policy",
-  shipping_policy: "shipping policy",
-  cancellation_policy: "cancellation policy",
-  product_description: "product description",
-  duplicate_explanation: "duplicate charge explanation",
-  supporting_documents: "supporting documents",
-};
-
-/* ── Strength explanation templates ── */
+/* ── Per-family merchant-facing copy (template strings only — no
+ *     scoring logic) ── */
 
 const STRENGTH_REASONS: Record<ReasonFamily, Record<CaseStrengthLevel, string>> = {
   fraud: {
@@ -198,20 +99,54 @@ const STRENGTH_REASONS: Record<ReasonFamily, Record<CaseStrengthLevel, string>> 
   },
 };
 
-/* ── Main strength calculator ── */
+/* ── Public API ── */
+
+/**
+ * Sources for an evidence item's payload — accepts either a per-field
+ * map (workspace API style) or an array (raw evidence_items rows).
+ * Both ultimately yield `payload` for `categorizeEvidenceField()`.
+ */
+export type EvidencePayloadSource =
+  | { kind: "byField"; map: Record<string, { payload?: Record<string, unknown> | null } | null | undefined> }
+  | { kind: "list"; items: Array<{ payload?: { fieldsProvided?: string[] } & Record<string, unknown> | null }> };
+
+function payloadFor(
+  source: EvidencePayloadSource | undefined,
+  fieldKey: string,
+): Record<string, unknown> | null {
+  if (!source) return null;
+  if (source.kind === "byField") {
+    return (source.map[fieldKey]?.payload ?? null) as Record<string, unknown> | null;
+  }
+  // List form — find the first item that lists this field.
+  for (const it of source.items) {
+    const fields = (it.payload?.fieldsProvided as string[] | undefined) ?? [];
+    if (fields.includes(fieldKey)) return (it.payload ?? null) as Record<string, unknown> | null;
+  }
+  return null;
+}
 
 export function calculateCaseStrength(
   argumentMap: ArgumentMap | null,
   checklist: ChecklistItemV2[],
   reason?: string | null,
+  /** Optional payload source for conditional categorization (delivery
+   *  proofType, AVS/CVV codes, IP location flags). When omitted,
+   *  conditional fields collapse to their best-case default category
+   *  per the canonical registry. Pass the workspace's
+   *  `pack.evidenceItemsByField` map for accurate scoring. */
+  payloadSource?: EvidencePayloadSource,
 ): CaseStrengthResult {
   const family = resolveReasonFamily(reason ?? argumentMap?.issuerClaim?.reasonCode);
-  const weights = FAMILY_WEIGHTS[family] ?? FAMILY_WEIGHTS.general;
 
   if (!checklist.length) {
     return {
       overall: "insufficient",
       score: 0,
+      coveragePercent: 0,
+      strongCount: 0,
+      moderateCount: 0,
+      supportingCount: 0,
       supportedClaims: 0,
       totalClaims: argumentMap?.counterclaims.length ?? 0,
       improvementHint: null,
@@ -219,79 +154,97 @@ export function calculateCaseStrength(
     };
   }
 
-  // Score each evidence item by its tier weight
-  let maxScore = 0;
-  let actualScore = 0;
-  let criticalPresent = 0;
-  let criticalTotal = 0;
-  let strongPresent = 0;
-  let strongTotal = 0;
-  let highestMissingTier: EvidenceTier | null = null;
-  let highestMissingField: string | null = null;
+  // Track the BEST category seen per signalId, deduplicating across
+  // evidence fields that share a signal (P2.4 dedup rule).
+  // strong > moderate > supporting.
+  const RANK: Record<EvidenceCategory, number> = {
+    strong: 3,
+    moderate: 2,
+    supporting: 1,
+    invalid: 0,
+  };
+  const bestBySignal = new Map<SignalId, EvidenceCategory>();
+
+  let registeredItems = 0; // canonical fields visible in the checklist
+  let presentItems = 0;    // available or waived
+  let missingActionableTopField: { field: string; category: EvidenceCategory } | null = null;
+  const missingRank = (c: EvidenceCategory): number => (c === "strong" ? 3 : c === "moderate" ? 2 : 0);
 
   for (const item of checklist) {
-    const tier = weights[item.field];
-    if (!tier) continue; // Not relevant to this family
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue; // Field not in the registry — ignored everywhere.
+    registeredItems++;
 
-    const tierScore = TIER_SCORE[tier];
-    maxScore += tierScore;
+    const isAvailable = item.status === "available" || item.status === "waived";
+    const isMissing = item.status === "missing";
 
-    const isPresent = item.status === "available" || item.status === "waived";
-
-    if (isPresent) {
-      actualScore += tierScore;
-    } else if (item.status === "missing" && (item.collectionType === "manual" || !item.collectionType)) {
-      // Track highest-value missing actionable item
-      if (!highestMissingTier || TIER_SCORE[tier] > TIER_SCORE[highestMissingTier]) {
-        highestMissingTier = tier;
-        highestMissingField = item.field;
+    if (isAvailable) {
+      presentItems++;
+      const category = categoryFor({ fieldKey: item.field, payload: payloadFor(payloadSource, item.field) });
+      // Supporting and invalid contribute nothing to scoring.
+      if (!affectsStrength(category)) continue;
+      const prev = bestBySignal.get(spec.signalId) ?? "invalid";
+      if (RANK[category] > RANK[prev]) bestBySignal.set(spec.signalId, category);
+    } else if (isMissing && (item.collectionType === "manual" || !item.collectionType)) {
+      // Track the highest-default-category missing actionable field for
+      // the improvement hint. We use the spec's default category (best
+      // case) since we don't have a payload to evaluate.
+      const candidateCat = spec.category;
+      if (!affectsStrength(candidateCat)) continue;
+      if (!missingActionableTopField || missingRank(candidateCat) > missingRank(missingActionableTopField.category)) {
+        missingActionableTopField = { field: item.field, category: candidateCat };
       }
     }
-
-    if (tier === "critical") {
-      criticalTotal++;
-      if (isPresent) criticalPresent++;
-    }
-    if (tier === "strong") {
-      strongTotal++;
-      if (isPresent) strongPresent++;
-    }
   }
 
-  // Determine overall strength
+  let strongCount = 0;
+  let moderateCount = 0;
+  for (const cat of bestBySignal.values()) {
+    if (cat === "strong") strongCount++;
+    else if (cat === "moderate") moderateCount++;
+  }
+
+  // Supporting count — informational; not used by the scorer.
+  let supportingCount = 0;
+  for (const item of checklist) {
+    if (item.status !== "available" && item.status !== "waived") continue;
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue;
+    const cat = categoryFor({ fieldKey: item.field, payload: payloadFor(payloadSource, item.field) });
+    if (cat === "supporting") supportingCount++;
+  }
+
+  // Strict count-based formula (P2.2).
   let overall: CaseStrengthLevel;
-  const ratio = maxScore > 0 ? actualScore / maxScore : 0;
+  if (strongCount >= 2) overall = "strong";
+  else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
+  else overall = "weak";
 
-  if (criticalTotal > 0 && criticalPresent === 0) {
-    // No critical evidence at all → weak
-    overall = "weak";
-  } else if (criticalPresent >= criticalTotal && ratio >= 0.6) {
-    // All critical evidence present + good coverage → strong
-    overall = "strong";
-  } else if (criticalPresent > 0 && ratio >= 0.35) {
-    // Some critical present + decent coverage → moderate
-    overall = "moderate";
-  } else if (criticalPresent > 0) {
-    // Some critical but low coverage → still moderate (not weak if critical exists)
-    overall = "moderate";
-  } else {
-    overall = "weak";
-  }
+  // Weighted sum (P2.1 weights). Replaces the legacy 0-100 ratio
+  // semantically — but the legacy 0-100 lives on as `coveragePercent`
+  // for the UI's coverage pill.
+  const score = strongCount * CATEGORY_WEIGHT.strong + moderateCount * CATEGORY_WEIGHT.moderate;
+  const coveragePercent = registeredItems > 0
+    ? Math.round((presentItems / registeredItems) * 100)
+    : 0;
 
-  // Build improvement hint from highest-value missing actionable item
+  // Improvement hint (highest-default-category missing actionable).
   let improvementHint: string | null = null;
-  if (overall !== "strong" && highestMissingField) {
-    const label = FIELD_LABELS[highestMissingField] ?? highestMissingField;
-    const tierLabel = highestMissingTier === "critical" ? "critical" : "recommended";
-    improvementHint = `Add ${label} (${tierLabel}) to strengthen your case.`;
+  if (overall !== "strong" && missingActionableTopField) {
+    const label = CANONICAL_EVIDENCE[missingActionableTopField.field]?.label ?? missingActionableTopField.field;
+    improvementHint = `Add ${label.toLowerCase()} to strengthen your case.`;
   }
 
   const strengthReason = STRENGTH_REASONS[family][overall];
 
   return {
     overall,
-    score: Math.round(ratio * 100),
-    supportedClaims: argumentMap?.counterclaims.filter(c => c.supporting.length > 0).length ?? 0,
+    score,
+    coveragePercent,
+    strongCount,
+    moderateCount,
+    supportingCount,
+    supportedClaims: argumentMap?.counterclaims.filter((c) => c.supporting.length > 0).length ?? 0,
     totalClaims: argumentMap?.counterclaims.length ?? 0,
     improvementHint,
     strengthReason,
@@ -299,48 +252,52 @@ export function calculateCaseStrength(
 }
 
 /**
- * Calculate the single highest-value improvement action.
+ * Highest-leverage missing-evidence improvement suggestion.
+ * Now keyed by canonical category instead of family weights.
  */
 export function calculateImprovement(
   argumentMap: ArgumentMap | null,
   checklist: ChecklistItemV2[],
   reason: string | null | undefined,
+  payloadSource?: EvidencePayloadSource,
 ): ImprovementSignal | null {
-  const family = resolveReasonFamily(reason ?? argumentMap?.issuerClaim?.reasonCode);
-  const weights = FAMILY_WEIGHTS[family] ?? FAMILY_WEIGHTS.general;
-
-  // Find the highest-tier missing actionable item
+  // Find the missing actionable field whose canonical default category
+  // is highest (strong > moderate). Supporting fields don't help
+  // strength so we skip them entirely.
   let bestField: string | null = null;
-  let bestTier: EvidenceTier | null = null;
-  let bestScore = 0;
+  let bestCategory: EvidenceCategory | null = null;
+  const rank = (c: EvidenceCategory): number => (c === "strong" ? 3 : c === "moderate" ? 2 : 0);
 
   for (const item of checklist) {
     if (item.status !== "missing") continue;
     if (item.collectionType !== "manual" && item.collectionType) continue;
-
-    const tier = weights[item.field];
-    if (!tier) continue;
-
-    const score = TIER_SCORE[tier];
-    if (score > bestScore) {
-      bestScore = score;
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue;
+    const cat = spec.category;
+    if (!affectsStrength(cat)) continue;
+    if (!bestCategory || rank(cat) > rank(bestCategory)) {
+      bestCategory = cat;
       bestField = item.field;
-      bestTier = tier;
     }
   }
 
-  if (!bestField) return null;
+  if (!bestField || !bestCategory) return null;
 
-  const label = FIELD_LABELS[bestField] ?? bestField;
-
-  // Estimate strength change
-  const current = calculateCaseStrength(argumentMap, checklist, reason);
+  const label = CANONICAL_EVIDENCE[bestField]?.label ?? bestField;
+  const current = calculateCaseStrength(argumentMap, checklist, reason, payloadSource);
   if (current.overall === "strong") return null;
 
-  const potential: CaseStrengthLevel =
-    current.overall === "weak" && bestTier === "critical" ? "moderate" :
-    current.overall === "moderate" ? "strong" :
-    "moderate";
+  // Estimate next strength under the count formula. Adding a single
+  // strong takes a 0-strong case to 1-strong (still weak unless a
+  // moderate is also present). Adding a single moderate to a 1-strong
+  // case produces "moderate" overall.
+  const potential: CaseStrengthLevel = (() => {
+    const ns = current.strongCount + (bestCategory === "strong" ? 1 : 0);
+    const nm = current.moderateCount + (bestCategory === "moderate" ? 1 : 0);
+    if (ns >= 2) return "strong";
+    if (ns === 1 && nm >= 1) return "moderate";
+    return "weak";
+  })();
 
   return {
     currentStrength: current.overall,

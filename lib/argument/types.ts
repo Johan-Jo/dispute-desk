@@ -73,7 +73,24 @@ export interface RebuttalSection {
 
 export interface CaseStrengthResult {
   overall: CaseStrengthLevel;
+  /** Weighted sum: strongCount * 3 + moderateCount * 2.
+   *  Plan v3 §P2.1 weights. Replaces the legacy 0-100 ratio
+   *  semantically; the ratio is preserved as `coveragePercent`. */
   score: number;
+  /** Legacy 0-100 evidence-coverage ratio (presentItems /
+   *  registeredItems). Plan v3 §P2.10 D2 — kept as a back-compat
+   *  shim so the UI's coverage pill keeps rendering. NOT used to
+   *  decide `overall`. */
+  coveragePercent: number;
+  /** Unique `signalId`s whose effective category is `strong` among
+   *  AVAILABLE checklist items. The basis for `overall`. */
+  strongCount: number;
+  /** Unique `signalId`s whose effective category is `moderate`
+   *  among AVAILABLE checklist items. */
+  moderateCount: number;
+  /** Unique AVAILABLE supporting items (informational only —
+   *  cannot affect `overall`). Plan v3 §P2.1.1. */
+  supportingCount: number;
   supportedClaims: number;
   totalClaims: number;
   /** Merchant-facing explanation of why this strength was assigned. */
