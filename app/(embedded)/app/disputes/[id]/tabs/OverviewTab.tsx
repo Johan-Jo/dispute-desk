@@ -36,6 +36,7 @@ import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
+import { categoryBadge } from "@/lib/argument/categoryBadge";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -569,12 +570,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           missing: { label: "Missing", bg: "#FEE2E2", color: "#991B1B" },
           invalid: { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" },
         };
-        const STRENGTH_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-          strong: { label: "Strong", bg: "#D1FAE5", color: "#065F46" },
-          moderate: { label: "Moderate", bg: "#FEF3C7", color: "#92400E" },
-          supporting: { label: "Supporting", bg: "#E5E7EB", color: "#374151" },
-          invalid: { label: "Supporting", bg: "#E5E7EB", color: "#374151" },
-        };
         const SOURCE_NOTE: Record<string, string> = {
           auto_shopify: "From Shopify order data",
           auto_policy: "From store policies",
@@ -605,9 +600,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                           : "missing";
                   const status = STATUS_BADGE[statusKey];
                   const isPresent = item.status === "available" || item.status === "waived";
-                  const strength = isPresent
-                    ? STRENGTH_BADGE[realizedCategory] ?? STRENGTH_BADGE.supporting
-                    : null;
+                  const strength = isPresent ? categoryBadge(realizedCategory) : null;
                   const sourceNote = SOURCE_NOTE[item.source ?? ""] ?? null;
                   return (
                     <div

@@ -28,10 +28,11 @@ import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { EvidenceItemWithStrength, WaiveReason } from "../workspace-components/types";
 import {
   EVIDENCE_EVALUATION_HELPER,
-  categoryImpactLabel,
   claimSignalLabel,
   evidenceRowStatus,
 } from "@/lib/argument/evidenceStatus";
+import { categoryFor } from "@/lib/argument/canonicalEvidence";
+import { categoryBadge } from "@/lib/argument/categoryBadge";
 import styles from "../workspace.module.css";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -680,7 +681,6 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
           key={cat.category.key}
           category={cat.category}
           items={cat.items}
-          relevance={cat.relevance}
           expanded={clientState.expandedCategories.has(cat.category.key)}
           onToggle={() => {
             const next = new Set(clientState.expandedCategories);
@@ -708,7 +708,6 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
 function EvidenceCategorySection({
   category,
   items,
-  relevance,
   expanded,
   onToggle,
   focusField,
@@ -722,7 +721,6 @@ function EvidenceCategorySection({
 }: {
   category: { key: string; label: string };
   items: EvidenceItemWithStrength[];
-  relevance: "high" | "medium" | "low";
   expanded: boolean;
   onToggle: () => void;
   focusField: string | null;
@@ -735,7 +733,6 @@ function EvidenceCategorySection({
   itemRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
 }) {
   const availableCount = items.filter((i) => i.status === "available" || i.status === "waived").length;
-  const impact = categoryImpactLabel(relevance);
 
   return (
     <Card>
@@ -745,7 +742,6 @@ function EvidenceCategorySection({
             <InlineStack gap="200" blockAlign="center" wrap>
               <Text as="h3" variant="headingMd">{category.label}</Text>
               <Badge>{`${availableCount}/${items.length}`}</Badge>
-              <Badge tone={impact.tone}>{impact.label}</Badge>
             </InlineStack>
             <Icon source={expanded ? ChevronUpIcon : ChevronDownIcon} />
           </InlineStack>
@@ -855,6 +851,11 @@ function EvidenceItemInline({
             {(() => {
               const row = evidenceRowStatus(item);
               return <Badge tone={row.tone}>{row.label}</Badge>;
+            })()}
+            {(item.status === "available" || item.status === "waived") && (() => {
+              const cat = categoryFor({ fieldKey: item.field, payload: item.payload });
+              const badge = categoryBadge(cat);
+              return <Badge tone={badge.tone}>{badge.label}</Badge>;
             })()}
           </InlineStack>
 

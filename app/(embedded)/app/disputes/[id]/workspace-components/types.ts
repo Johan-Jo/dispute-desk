@@ -136,6 +136,10 @@ export interface EvidenceItemWithStrength extends ChecklistItemV2 {
   strength: "strong" | "moderate" | "weak" | "none";
   impact: "critical" | "significant" | "minor" | "negligible";
   content: Record<string, unknown> | null;
+  /** Raw payload from `pack.evidenceItemsByField[field]` — fed to
+   *  `categoryFor()` so the per-row strength pill reflects the canonical
+   *  registry rather than dispute-reason heuristics. Plan v3 §P2.7. */
+  payload: Record<string, unknown> | null;
 }
 
 export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
@@ -148,11 +152,3 @@ export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
   { key: "merchant", label: "Merchant Evidence", fields: ["supporting_documents", "product_description", "duplicate_explanation"] },
 ];
 
-export const CATEGORY_RELEVANCE: Record<string, Record<string, "high" | "medium" | "low">> = {
-  FRAUDULENT: { order: "high", payment: "high", fulfillment: "medium", communication: "medium", policy: "low", identity: "high", merchant: "medium" },
-  PRODUCT_NOT_RECEIVED: { order: "high", payment: "low", fulfillment: "high", communication: "medium", policy: "medium", identity: "low", merchant: "medium" },
-  PRODUCT_UNACCEPTABLE: { order: "high", payment: "low", fulfillment: "medium", communication: "high", policy: "high", identity: "low", merchant: "high" },
-  SUBSCRIPTION_CANCELED: { order: "high", payment: "low", fulfillment: "low", communication: "high", policy: "high", identity: "low", merchant: "medium" },
-  DUPLICATE: { order: "high", payment: "low", fulfillment: "low", communication: "low", policy: "low", identity: "low", merchant: "high" },
-  GENERAL: { order: "high", payment: "low", fulfillment: "medium", communication: "medium", policy: "medium", identity: "low", merchant: "medium" },
-};

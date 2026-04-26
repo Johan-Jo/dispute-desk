@@ -75,3 +75,20 @@ jobs:
             exit 1
           fi
           echo "No vague summary copy found"
+
+      # Plan v3 §P2.7 — Dispute-detail strength pills MUST come from the
+      # canonical registry (`categoryFor` + `categoryBadge`). The legacy
+      # CATEGORY_RELEVANCE / categoryImpactLabel system is removed.
+      - name: Evidence-pill source-of-truth guard
+        run: |
+          MATCHES=$(grep -rn -E "CATEGORY_RELEVANCE|categoryImpactLabel|\"High impact\"" \
+            --include="*.ts" --include="*.tsx" \
+            "app/(embedded)/app/disputes/" 2>/dev/null || true)
+          if [ -n "$MATCHES" ]; then
+            echo "ERROR: dispute-detail UI references the deprecated relevance system:"
+            echo "$MATCHES"
+            echo ""
+            echo "Plan v3 §P2.7: pill labels come from categoryBadge(categoryFor(...))."
+            exit 1
+          fi
+          echo "Dispute detail uses the canonical registry"

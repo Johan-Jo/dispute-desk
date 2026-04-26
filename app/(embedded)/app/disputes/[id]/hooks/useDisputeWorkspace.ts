@@ -20,10 +20,7 @@ import type {
   ImprovementSignal,
   SubmissionField,
 } from "../workspace-components/types";
-import {
-  EVIDENCE_CATEGORIES,
-  CATEGORY_RELEVANCE,
-} from "../workspace-components/types";
+import { EVIDENCE_CATEGORIES } from "../workspace-components/types";
 import { computeNextAction } from "@/lib/argument/nextAction";
 import {
   calculateCaseStrength,
@@ -136,6 +133,9 @@ function deriveEvidenceWithStrength(
   checklist: ChecklistItemV2[],
   argumentMap: ArgumentMap | null,
   evidenceItems: Array<{ type: string; payload: Record<string, unknown> }>,
+  evidenceItemsByField:
+    | Record<string, { payload?: Record<string, unknown> | null }>
+    | undefined,
 ): EvidenceItemWithStrength[] {
   const contentMap = new Map<string, Record<string, unknown>>();
   for (const ei of evidenceItems) {
@@ -169,6 +169,7 @@ function deriveEvidenceWithStrength(
       strength,
       impact,
       content: contentMap.get(item.field) ?? null,
+      payload: evidenceItemsByField?.[item.field]?.payload ?? null,
     };
   });
 }
@@ -202,24 +203,17 @@ function deriveMissingItems(
 
 function deriveCategories(
   items: EvidenceItemWithStrength[],
-  reasonKey: string,
-): Array<{ category: EvidenceCategory; items: EvidenceItemWithStrength[]; relevance: "high" | "medium" | "low" }> {
-  const relevanceMap = CATEGORY_RELEVANCE[reasonKey] ?? CATEGORY_RELEVANCE.GENERAL;
-
+): Array<{ category: EvidenceCategory; items: EvidenceItemWithStrength[] }> {
+  // Layout-only grouping. Per-row strength is rendered from the
+  // canonical registry (`categoryFor` + `categoryBadge`) — group order
+  // follows the static `EVIDENCE_CATEGORIES` array, not a dispute-reason
+  // relevance heuristic. Plan v3 §P2.6 / P2.7.
   return EVIDENCE_CATEGORIES
-    .map((cat) => {
-      const catItems = items.filter((i) => cat.fields.includes(i.field));
-      return {
-        category: cat,
-        items: catItems,
-        relevance: (relevanceMap[cat.key] ?? "low") as "high" | "medium" | "low",
-      };
-    })
-    .filter((c) => c.items.length > 0)
-    .sort((a, b) => {
-      const order = { high: 0, medium: 1, low: 2 };
-      return order[a.relevance] - order[b.relevance];
-    });
+    .map((cat) => ({
+      category: cat,
+      items: items.filter((i) => cat.fields.includes(i.field)),
+    }))
+    .filter((c) => c.items.length > 0);
 }
 
 /* ── Hook ── */
@@ -247,7 +241,7 @@ export interface WorkspaceClientState {
 
 export interface DerivedState {
   effectiveChecklist: EvidenceItemWithStrength[];
-  categories: Array<{ category: EvidenceCategory; items: EvidenceItemWithStrength[]; relevance: "high" | "medium" | "low" }>;
+  categories: Array<{ category: EvidenceCategory; items: EvidenceItemWithStrength[] }>;
   missingItems: MissingItemWithContext[];
   /**
    * Checklist rows that trigger "submit with override" — critical priority,
@@ -622,7 +616,6 @@ export function useDisputeWorkspace(disputeId: string) {
 
     const pack = data.pack;
     const checklist = pack?.checklistV2 ?? [];
-    const reasonKey = data.dispute.reason?.toUpperCase().replace(/\s+/g, "_") ?? "GENERAL";
 
     // Apply optimistic completedFields
     const effectiveChecklist = checklist.map((c): ChecklistItemV2 =>
@@ -635,9 +628,10 @@ export function useDisputeWorkspace(disputeId: string) {
       effectiveChecklist,
       data.argumentMap,
       pack?.evidenceItems ?? [],
+      pack?.evidenceItemsByField,
     );
 
-    const categories = deriveCategories(items, reasonKey);
+    const categories = deriveCategories(items);
     const missingItems = deriveMissingItems(effectiveChecklist);
 
     // Readiness. A pack is "saved" when its status reflects a successful

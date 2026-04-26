@@ -75,14 +75,3 @@ export function evidenceRowStatus(
   return { label: "Not included", tone: undefined };
 }
 
-/* ─── Category impact (card: "Evidence details by category") ────────── */
-
-export type CategoryImpactLabel = "High impact" | "Supporting" | "Optional";
-
-export function categoryImpactLabel(
-  relevance: "high" | "medium" | "low" | string,
-): { label: CategoryImpactLabel; tone: PolarisTone } {
-  if (relevance === "high") return { label: "High impact", tone: "success" };
-  if (relevance === "medium") return { label: "Supporting", tone: "info" };
-  return { label: "Optional", tone: undefined };
-}
