@@ -169,7 +169,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     isReadOnly,
     recommendationText,
     recommendationHelperText,
-    contributions,
     missingItems,
   } = derived;
 
@@ -447,155 +446,18 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* O3: What supports your case — one row per canonical signalId
-          (plan v3 §P2.6 Argument Purity Rule). Iterates
-          `derived.contributions.strong[]` then `.moderate[]`. NO
-          counterclaim title resolution, NO text matching, NO summary
-          rows that fold multiple signals. Supporting items are
-          excluded from this surface entirely (P2.6a Field Visibility
-          Decision — they appear in the Evidence tab only). */}
-      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
-        <BlockStack gap="300">
-          <Text as="h3" variant="headingSm">What supports your case</Text>
-          {contributions.strong.length === 0 && contributions.moderate.length === 0 ? (
-            <Text as="p" variant="bodySm" tone="subdued">
-              No strong or moderate evidence collected yet. Add evidence to surface defense reasons.
-            </Text>
-          ) : (
-            <BlockStack gap="200">
-              {[...contributions.strong, ...contributions.moderate].map((row) => {
-                const isStrong = row.category === "strong";
-                const pillLabel = isStrong ? "Strong" : "Moderate";
-                const pillBg = isStrong ? "#D1FAE5" : "#FEF3C7";
-                const pillColor = isStrong ? "#065F46" : "#92400E";
-                return (
-                  <div
-                    key={row.signalId}
-                    style={{
-                      background: "#F6F8FB",
-                      border: "1px solid #E1E3E5",
-                      borderRadius: 8,
-                      padding: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    <span style={{ width: 20, height: 20, color: "#059669", flexShrink: 0 }}>
-                      <Icon source={CheckCircleIcon} />
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0 }}>
-                        {row.label}
-                      </p>
-                    </div>
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        padding: "2px 10px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: pillBg,
-                        color: pillColor,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {pillLabel}
-                    </span>
-                  </div>
-                );
-              })}
-            </BlockStack>
-          )}
-
-          {/* Missing signals — drawn directly from the canonical
-              registry (no whyWins.weaknesses lookup). A field surfaces
-              here only when its DEFAULT category is strong or moderate
-              AND it is missing AND it's merchant-actionable.
-              Supporting fields are excluded — they don't affect
-              strength so prompting the merchant to add them would be
-              misleading. */}
-          {(() => {
-            const missingActionable = effectiveChecklist.filter((c) => {
-              if (c.status !== "missing") return false;
-              if (c.collectionType && c.collectionType !== "manual") return false;
-              const spec = c.field as string;
-              const cat = (data.pack?.evidenceItemsByField && spec in data.pack.evidenceItemsByField)
-                ? null
-                : null; // missing items have no payload — fall through to default category
-              void cat;
-              return true;
-            }).filter((c) => {
-              // Only show missing rows whose default category would
-              // be strong or moderate (would actually help the case).
-              const fieldKey = c.field;
-              // Resolved via canonical registry — supporting fields skipped.
-              const spec = (CANONICAL_EVIDENCE as Record<string, { category: string } | undefined>)[fieldKey];
-              return spec?.category === "strong" || spec?.category === "moderate";
-            });
-            if (missingActionable.length === 0) return null;
-            return (
-              <BlockStack gap="200">
-                <Divider />
-                <Text as="p" variant="bodySm" fontWeight="semibold">Missing signals</Text>
-                {missingActionable.map((c) => {
-                  const spec = (CANONICAL_EVIDENCE as Record<string, { label: string; category: string } | undefined>)[c.field];
-                  const label = spec?.label ?? c.label;
-                  return (
-                    <div
-                      key={c.field}
-                      style={{
-                        background: "#FEF2F2",
-                        border: "1px solid #FCA5A5",
-                        borderRadius: 8,
-                        padding: 16,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                      }}
-                    >
-                      <span style={{ width: 20, height: 20, color: "#DC2626", flexShrink: 0 }}>
-                        <Icon source={AlertCircleIcon} />
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>{label}</p>
-                        {!submitted && (
-                          <div style={{ marginTop: 8 }}>
-                            <Button size="slim" onClick={() => actions.navigateToEvidence(c.field)}>
-                              Add this evidence
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      <span
-                        style={{
-                          flexShrink: 0,
-                          padding: "2px 10px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: "#FEE2E2",
-                          color: "#991B1B",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Missing
-                      </span>
-                    </div>
-                  );
-                })}
-              </BlockStack>
-            );
-          })()}
-        </BlockStack>
-      </div>
+      {/* "What supports your case" was removed — its content
+          duplicated the strong/moderate rows now surfaced at the top
+          of "Evidence collected" (which is ordered strongest-first).
+          The actionable "Add this evidence" CTA for missing
+          high-value signals moved inline into the Evidence collected
+          missing rows below. */}
 
       {/* Evidence collected — shows everything in the pack, not just
-          argument-winning signals. "What supports your case" above is
-          intentionally limited to strong/moderate per the Argument
-          Purity Rule (P2.6); supporting evidence still belongs on the
-          Overview so a populated pack never reads as empty.
+          argument-winning signals. The single-list, strongest-first
+          ordering replaces the prior "What supports your case" card,
+          so strong/moderate rows are still the first thing the
+          merchant sees, but without duplicating them.
 
           Single ordered list — strongest first. Row sort key:
           strong (0) → moderate (1) → supporting (2) → missing (3) →
@@ -704,12 +566,24 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               ? "#8C9196"
               : "#059669";
           const pill = pillFor(row);
+          // Inline "Add this evidence" CTA — only on missing rows
+          // whose default category is strong or moderate (would
+          // actually help the case), only when manually collectable,
+          // and only pre-submit. Replaces the standalone "Missing
+          // signals" subsection that used to live in the removed
+          // "What supports your case" card.
+          const defaultCat = (CANONICAL_EVIDENCE as Record<string, { category: string } | undefined>)[item.field]?.category;
+          const showAddCta =
+            !submitted &&
+            isMissing &&
+            (defaultCat === "strong" || defaultCat === "moderate") &&
+            (!item.collectionType || item.collectionType === "manual");
           return (
             <div
               key={item.field}
               style={{
-                background: "#F6F8FB",
-                border: "1px solid #E1E3E5",
+                background: isMissing ? "#FEF2F2" : "#F6F8FB",
+                border: isMissing ? "1px solid #FCA5A5" : "1px solid #E1E3E5",
                 borderRadius: 8,
                 padding: 16,
                 display: "flex",
@@ -730,13 +604,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <Icon source={iconSrc} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0, lineHeight: 1.4 }}>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: isMissing ? "#7F1D1D" : "#202223",
+                    margin: 0,
+                    lineHeight: 1.4,
+                  }}
+                >
                   {spec.label}
                 </p>
                 {sourceNote && (
                   <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0", lineHeight: 1.4 }}>
                     {sourceNote}
                   </p>
+                )}
+                {showAddCta && (
+                  <div style={{ marginTop: 8 }}>
+                    <Button
+                      size="slim"
+                      onClick={() => actions.navigateToEvidence(item.field)}
+                    >
+                      Add this evidence
+                    </Button>
+                  </div>
                 )}
               </div>
               <span
