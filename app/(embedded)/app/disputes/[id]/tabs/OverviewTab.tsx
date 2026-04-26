@@ -36,7 +36,7 @@ import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
-import { categoryBadge, classifyEvidenceRow } from "@/lib/argument/categoryBadge";
+import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -76,11 +76,24 @@ type HeroVariant = "likely_to_win" | "could_win" | "needs_strengthening" | "hard
 // Labels per PRD §10. Both moderate variants (could_win and
 // needs_strengthening) collapse to the same label — the underlying
 // tone difference still surfaces via palette + body copy.
-const HERO_LABEL_BY_VARIANT: Record<HeroVariant, string> = {
+//
+// Two label sets — pre-submit copy prompts a merchant decision
+// ("Strong case to challenge", "Review before challenging"); once the
+// pack has been submitted to Shopify the decision is already made, so
+// the hero shifts to a status framing that describes the case strength
+// without dangling a stale CTA.
+const HERO_LABEL_BY_VARIANT_PRE_SUBMIT: Record<HeroVariant, string> = {
   likely_to_win: "Strong case to challenge",
   could_win: "Review before challenging",
   needs_strengthening: "Review before challenging",
   hard_to_win: "Low likelihood case",
+  covered: "Covered by Shopify",
+};
+const HERO_LABEL_BY_VARIANT_SUBMITTED: Record<HeroVariant, string> = {
+  likely_to_win: "Likely to win",
+  could_win: "Moderate case submitted",
+  needs_strengthening: "Moderate case submitted",
+  hard_to_win: "Low-likelihood case submitted",
   covered: "Covered by Shopify",
 };
 
@@ -211,7 +224,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   /* ── Hero ── */
   const heroVariant: HeroVariant = (caseStrength.heroVariant as HeroVariant | undefined) ?? "hard_to_win";
-  const strengthLabel = HERO_LABEL_BY_VARIANT[heroVariant];
+  const strengthLabel = submitted
+    ? HERO_LABEL_BY_VARIANT_SUBMITTED[heroVariant]
+    : HERO_LABEL_BY_VARIANT_PRE_SUBMIT[heroVariant];
   const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
 
   /* ── Timeline ── */
@@ -337,9 +352,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               {`${caseStrength.coveragePercent}% evidence collected`}
             </span>
           </div>
-          {caseStrength.strengthReason && (
+          {caseStrength.strengthReason && !submitted && (
             <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
               {caseStrength.strengthReason}
+            </p>
+          )}
+          {submitted && (
+            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
+              {submittedAt
+                ? `Submitted to Shopify on ${formatDate(submittedAt)} — bank review in progress.`
+                : "Submitted to Shopify — bank review in progress."}
             </p>
           )}
         </div>
@@ -394,17 +416,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
       {/* Recommendation card — preserves the merchant-action copy that
           was previously stuffed into the hero. Stays compact and below
-          the timeline so the hero matches Figma's minimal design. */}
-      {(recommendationText || caseStrength.improvementHint || dispute.dueAt) && (
+          the timeline so the hero matches Figma's minimal design.
+          Pre-submit advice (recommendationText, improvementHint) is
+          suppressed once the pack is submitted because the merchant
+          can no longer act on it — the card collapses to the
+          submission/deadline line plus the evaluation helper. */}
+      {((!submitted && (recommendationText || caseStrength.improvementHint)) || dispute.dueAt || submitted) && (
         <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
           <BlockStack gap="200">
-            {recommendationText && (
+            {!submitted && recommendationText && (
               <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendationText}</Text>
             )}
-            {recommendationHelperText && (
+            {!submitted && recommendationHelperText && (
               <Text as="p" variant="bodySm" tone="subdued">{recommendationHelperText}</Text>
             )}
-            {caseStrength.improvementHint && (
+            {!submitted && caseStrength.improvementHint && (
               <Text as="p" variant="bodySm" tone="subdued">{caseStrength.improvementHint}</Text>
             )}
             <Text as="p" variant="bodySm" tone="subdued">
@@ -569,7 +595,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           argument-winning signals. "What supports your case" above is
           intentionally limited to strong/moderate per the Argument
           Purity Rule (P2.6); supporting evidence still belongs on the
-          Overview so a populated pack never reads as empty. */}
+          Overview so a populated pack never reads as empty.
+
+          Single ordered list — strongest first. Row sort key:
+          strong (0) → moderate (1) → supporting (2) → missing (3) →
+          not_applicable / waived (4). Within each tier rows preserve
+          checklist order. Each row carries exactly ONE pill: when
+          collected, the pill is the strength category (Strong /
+          Moderate / Supporting); when not, the pill is the status
+          (Missing / Not applicable / Waived). The redundant
+          "Collected" pill has been dropped — presence in the list
+          implies collected unless the pill says otherwise. */}
       {(() => {
         const collectedRows = effectiveChecklist
           .filter((c) => CANONICAL_EVIDENCE[c.field])
@@ -592,12 +628,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         const hasAnything = collectedRows.length > 0 || manualUploads.length > 0;
         if (!hasAnything) return null;
 
-        const STATUS_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-          collected: { label: "Collected", bg: "#D1FAE5", color: "#065F46" },
-          waived: { label: "Waived", bg: "#E5E7EB", color: "#374151" },
-          missing: { label: "Missing", bg: "#FEE2E2", color: "#991B1B" },
-          not_applicable: { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" },
-        };
         const SOURCE_NOTE: Record<string, string> = {
           auto_shopify: "From Shopify order data",
           auto_policy: "From store policies",
@@ -606,79 +636,140 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           unavailable_from_source: "Not available from source",
         };
 
+        type Row = (typeof collectedRows)[number];
+
+        // Single ordered list — sort by tier then preserve checklist
+        // order within tier (Array.prototype.sort is stable).
+        const tierOf = ({ classification }: Row): number => {
+          if (classification.status === "missing") return 3;
+          if (
+            classification.status === "not_applicable" ||
+            classification.status === "waived"
+          ) {
+            return 4;
+          }
+          // Collected — defer to category.
+          if (classification.category === "strong") return 0;
+          if (classification.category === "moderate") return 1;
+          return 2; // supporting (and the rare invalid soft-landed in classifyEvidenceRow)
+        };
+        const orderedRows = [...collectedRows].sort(
+          (a, b) => tierOf(a) - tierOf(b),
+        );
+
+        // ── One pill per row. Strength wins when collected; status
+        //    wins when missing / not applicable / waived. Palette
+        //    mirrors Figma `shopify-dispute-detail.tsx`. ──
+        const pillFor = ({
+          classification,
+        }: Row): { label: string; bg: string; color: string } => {
+          if (classification.status === "missing") {
+            return { label: "Missing", bg: "#FEE2E2", color: "#991B1B" };
+          }
+          if (classification.status === "not_applicable") {
+            return { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" };
+          }
+          if (classification.status === "waived") {
+            return { label: "Waived", bg: "#E5E7EB", color: "#374151" };
+          }
+          // Collected — strength label.
+          switch (classification.category) {
+            case "strong":
+              return { label: "Strong", bg: "#D1FAE5", color: "#065F46" };
+            case "moderate":
+              return { label: "Moderate", bg: "#FEF3C7", color: "#92400E" };
+            case "invalid":
+              return { label: "Invalid", bg: "#FEE2E2", color: "#991B1B" };
+            default:
+              return { label: "Supporting", bg: "#E5E7EB", color: "#374151" };
+          }
+        };
+
+        // Row visual matches the "What supports your case" pattern from
+        // Figma's shopify-dispute-detail.tsx (Make file):
+        //   bg #F6F8FB · border #E1E3E5 · rounded-lg · padding 16px,
+        //   leading icon (5x5) · title (14/600) + descriptor (12/subdued)
+        //   · trailing pill self-aligned.
+        const renderRow = (row: Row) => {
+          const { item, spec, classification } = row;
+          const sourceNote = SOURCE_NOTE[item.source ?? ""] ?? null;
+          const isMissing = classification.status === "missing";
+          const isNeutral =
+            classification.status === "not_applicable" ||
+            classification.status === "waived";
+          const iconSrc = isMissing ? AlertCircleIcon : CheckCircleIcon;
+          const iconColor = isMissing
+            ? "#DC2626"
+            : isNeutral
+              ? "#8C9196"
+              : "#059669";
+          const pill = pillFor(row);
+          return (
+            <div
+              key={item.field}
+              style={{
+                background: "#F6F8FB",
+                border: "1px solid #E1E3E5",
+                borderRadius: 8,
+                padding: 16,
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <span
+                style={{
+                  width: 20,
+                  height: 20,
+                  color: iconColor,
+                  flexShrink: 0,
+                  marginTop: 1,
+                  display: "inline-flex",
+                }}
+              >
+                <Icon source={iconSrc} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0, lineHeight: 1.4 }}>
+                  {spec.label}
+                </p>
+                {sourceNote && (
+                  <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0", lineHeight: 1.4 }}>
+                    {sourceNote}
+                  </p>
+                )}
+              </div>
+              <span
+                style={{
+                  flexShrink: 0,
+                  padding: "2px 10px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: pill.bg,
+                  color: pill.color,
+                  whiteSpace: "nowrap",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {pill.label}
+              </span>
+            </div>
+          );
+        };
+
         return (
           <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
             <BlockStack gap="300">
               <BlockStack gap="100">
                 <Text as="h3" variant="headingSm">Evidence collected</Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  These items were collected for the evidence pack. Some strengthen the argument directly, while others support completeness, context, or Shopify submission fields.
+                  Ordered by how much each item strengthens the case. Strongest first.
                 </Text>
               </BlockStack>
 
               <BlockStack gap="200">
-                {collectedRows.map(({ item, spec, classification }) => {
-                  const status = STATUS_BADGE[classification.status];
-                  const strength = classification.category
-                    ? categoryBadge(classification.category)
-                    : null;
-                  const sourceNote = SOURCE_NOTE[item.source ?? ""] ?? null;
-                  return (
-                    <div
-                      key={item.field}
-                      style={{
-                        background: "#F6F8FB",
-                        border: "1px solid #E1E3E5",
-                        borderRadius: 8,
-                        padding: 14,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: 0 }}>
-                          {spec.label}
-                        </p>
-                        {sourceNote && (
-                          <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0" }}>
-                            {sourceNote}
-                          </p>
-                        )}
-                      </div>
-                      <InlineStack gap="200" blockAlign="center" wrap={false}>
-                        {strength && (
-                          <span
-                            style={{
-                              padding: "2px 10px",
-                              borderRadius: 6,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              background: strength.bg,
-                              color: strength.color,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {strength.label}
-                          </span>
-                        )}
-                        <span
-                          style={{
-                            padding: "2px 10px",
-                            borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            background: status.bg,
-                            color: status.color,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {status.label}
-                        </span>
-                      </InlineStack>
-                    </div>
-                  );
-                })}
+                {orderedRows.map(renderRow)}
               </BlockStack>
 
               {manualUploads.length > 0 && (
