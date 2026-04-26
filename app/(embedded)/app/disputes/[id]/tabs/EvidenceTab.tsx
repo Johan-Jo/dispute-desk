@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Card,
   BlockStack,
   InlineStack,
   Text,
@@ -23,12 +22,17 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
   MinusCircleIcon,
+  CreditCardIcon,
+  DeliveryIcon,
+  PersonIcon,
+  GlobeIcon,
+  LockIcon,
 } from "@shopify/polaris-icons";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { EvidenceItemWithStrength, WaiveReason } from "../workspace-components/types";
+import type { CounterclaimNode } from "@/lib/argument/types";
 import {
   EVIDENCE_EVALUATION_HELPER,
-  claimSignalLabel,
   evidenceRowStatus,
 } from "@/lib/argument/evidenceStatus";
 import { categoryFor } from "@/lib/argument/canonicalEvidence";
@@ -129,6 +133,34 @@ function confidenceFrom(level: string, score: number): { label: string; tone: "s
   if (level === "strong" && score >= 70) return { label: "High", tone: "success" };
   if (level === "weak" || level === "insufficient" || score < 40) return { label: "Low", tone: "critical" };
   return { label: "Medium", tone: "warning" };
+}
+
+/* ── Argument-block icon mapping ── *
+ * Picks a leading icon for a counterclaim by inspecting which evidence
+ * fields support it. Falls back to Lock for "payment-feeling" / generic
+ * blocks so the visual still aligns with the Figma argument-block
+ * pattern (CreditCard / Delivery / Person / Globe / Lock).
+ */
+function counterclaimIcon(supportingFields: string[]): typeof CreditCardIcon {
+  const set = new Set(supportingFields);
+  if (set.has("avs_cvv_match") || set.has("billing_address_match")) return CreditCardIcon;
+  if (set.has("shipping_tracking") || set.has("delivery_proof")) return DeliveryIcon;
+  if (
+    set.has("customer_account_info") ||
+    set.has("activity_log") ||
+    set.has("customer_communication")
+  ) {
+    return PersonIcon;
+  }
+  if (set.has("ip_location_check") || set.has("device_session_consistency")) return GlobeIcon;
+  return LockIcon;
+}
+
+/** Flat strength pill (matches Figma `px-2 py-0.5 rounded-md text-xs`). */
+function strengthPillStyle(strength: string): { bg: string; color: string; label: string } {
+  if (strength === "strong") return { bg: "#D1FAE5", color: "#065F46", label: "Strong" };
+  if (strength === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: "Moderate" };
+  return { bg: "#FEF3C7", color: "#92400E", label: "Supporting" };
 }
 
 /* ── Content Preview Renderers ── */
@@ -376,10 +408,156 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   const summarySection = rebuttalDraft?.sections.find((s) => s.type === "summary");
   const summaryExcerpt = summarySection?.text?.trim() ?? null;
 
+  // Strongest counterclaim title — used as the "Our defense" headline in the
+  // claim-vs-defense card. Falls back to the first counterclaim, then to a
+  // safe generic if argumentMap exists but has no counterclaims.
+  const defenseTitle: string | null = (() => {
+    if (!argumentMap || argumentMap.counterclaims.length === 0) return null;
+    const ranked = [...argumentMap.counterclaims].sort((a, b) => {
+      const r = (s: string) => (s === "strong" ? 0 : s === "moderate" ? 1 : 2);
+      return r(a.strength) - r(b.strength);
+    });
+    return ranked[0]?.title ?? null;
+  })();
+
   return (
     <BlockStack gap="400">
+      {/* Strength legend — quick read of what Strong vs Supporting mean.
+          Pure presentation; no data wiring. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 24,
+          padding: "0 4px",
+          fontSize: 12,
+          color: "#6D7175",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              padding: "2px 8px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              background: "#D1FAE5",
+              color: "#065F46",
+              lineHeight: 1.4,
+            }}
+          >
+            Strong
+          </span>
+          <span>Direct proof of authorization or delivery</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              padding: "2px 8px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              background: "#FEF3C7",
+              color: "#92400E",
+              lineHeight: 1.4,
+            }}
+          >
+            Supporting
+          </span>
+          <span>Reinforces transaction legitimacy</span>
+        </div>
+      </div>
+
+      {/* Claim vs defense — surfaces argumentMap.issuerClaim.text on the
+          left (red) and the strongest counterclaim title on the right
+          (green). Renders only when argumentMap is populated. */}
+      {argumentMap && defenseTitle && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#FEF2F2",
+              border: "2px solid #FCA5A5",
+              borderRadius: 8,
+              padding: 20,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#991B1B",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                margin: 0,
+                marginBottom: 8,
+              }}
+            >
+              Customer claim
+            </p>
+            <p
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#7F1D1D",
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {argumentMap.issuerClaim.text}
+            </p>
+          </div>
+          <div
+            style={{
+              background: "#F0FDF4",
+              border: "2px solid #86EFAC",
+              borderRadius: 8,
+              padding: 20,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#065F46",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                margin: 0,
+                marginBottom: 8,
+              }}
+            >
+              Our defense
+            </p>
+            <p
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#065F46",
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {defenseTitle}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP SUMMARY — outcome + confidence + recommendation */}
-      <Card>
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #E1E3E5",
+          borderRadius: 8,
+          padding: 20,
+          boxShadow: "0 1px 2px 0 rgba(22, 29, 37, 0.05)",
+        }}
+      >
         <BlockStack gap="400">
           <InlineStack gap="300" blockAlign="center" wrap>
             <BlockStack gap="050">
@@ -429,71 +607,56 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
             </BlockStack>
           )}
         </BlockStack>
-      </Card>
+      </div>
 
       {/* 2. WHAT SUPPORTS THIS CASE — only actual contributing signals.
             Shows strong + moderate counterclaims; insufficient / weak are
             excluded. Never contains missing-item rows or red treatment. */}
       {argumentMap && (() => {
-        const supporting = argumentMap.counterclaims.filter(
-          (c) => c.strength === "strong" || c.strength === "moderate",
-        );
+        const supporting = argumentMap.counterclaims
+          .filter((c) => c.strength === "strong" || c.strength === "moderate")
+          .sort((a, b) => {
+            const r = (s: string) => (s === "strong" ? 0 : s === "moderate" ? 1 : 2);
+            return r(a.strength) - r(b.strength);
+          });
         return (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="h3" variant="headingMd">What supports this case</Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {argumentMap.issuerClaim.text}
-            </Text>
-
-            {supporting.length === 0 && (
-              <Text as="p" variant="bodyMd" tone="subdued">
-                This case is currently evaluated based on available transaction
-                data. Additional supporting signals are not required for a
-                successful outcome.
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #E1E3E5",
+              borderRadius: 8,
+              padding: 20,
+              boxShadow: "0 1px 2px 0 rgba(22, 29, 37, 0.05)",
+            }}
+          >
+            <BlockStack gap="300">
+              <Text as="h3" variant="headingMd">What supports this case</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {argumentMap.issuerClaim.text}
               </Text>
-            )}
 
-            {supporting.map((claim) => {
-              const signal = claimSignalLabel(claim.strength);
+              {supporting.length === 0 && (
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  This case is currently evaluated based on available transaction
+                  data. Additional supporting signals are not required for a
+                  successful outcome.
+                </Text>
+              )}
 
-              return (
-                <div
+              {supporting.map((claim, i) => (
+                <ArgumentBlock
                   key={claim.id}
-                  className={`${styles.claimCard} ${
-                    claim.strength === "strong" ? styles.claimStrong :
-                    styles.claimModerate
-                  }`}
-                >
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between" blockAlign="center" wrap>
-                      <Text as="p" variant="bodyMd" fontWeight="semibold">{claim.title}</Text>
-                      <Badge tone={signal.tone}>{signal.label}</Badge>
-                    </InlineStack>
+                  claim={claim}
+                  defaultOpen={i < 2}
+                  onTagClick={(field) => actions.navigateToEvidence(field)}
+                />
+              ))}
 
-                    {claim.supporting.length > 0 && (
-                      <InlineStack gap="200" wrap>
-                        {claim.supporting.map((s) => (
-                          <span
-                            key={s.field}
-                            className={`${styles.evidenceTag} ${s.status === "available" ? styles.evidenceTagAvailable : styles.evidenceTagWaived}`}
-                            onClick={() => actions.navigateToEvidence(s.field)}
-                          >
-                            {s.status === "available" ? "\u2713" : "\u2014"} {friendlyLabel(s.field, s.label)}
-                          </span>
-                        ))}
-                      </InlineStack>
-                    )}
-
-                    {/* Missing items intentionally omitted here — this
-                         section only names what supports the case. Gaps
-                         live in the Evidence inventory card below. */}
-                  </BlockStack>
-                </div>
-              );
-            })}
-          </BlockStack>
-        </Card>
+              {/* Missing items intentionally omitted here — this
+                  section only names what supports the case. Gaps
+                  live in the Evidence inventory card below. */}
+            </BlockStack>
+          </div>
         );
       })()}
 
@@ -524,7 +687,15 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         );
 
         return (
-          <Card>
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #E1E3E5",
+              borderRadius: 8,
+              padding: 20,
+              boxShadow: "0 1px 2px 0 rgba(22, 29, 37, 0.05)",
+            }}
+          >
             <BlockStack gap="300">
               <Text as="h3" variant="headingMd">Evidence inventory</Text>
               <Text as="p" variant="bodyMd" fontWeight="semibold">
@@ -612,13 +783,21 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                 </BlockStack>
               )}
             </BlockStack>
-          </Card>
+          </div>
         );
       })()}
 
       {/* 4. DEFENSE LETTER — collapsed by default */}
       {rebuttalDraft && (
-        <Card>
+        <div
+          style={{
+            background: "#ffffff",
+            border: "1px solid #E1E3E5",
+            borderRadius: 8,
+            padding: 20,
+            boxShadow: "0 1px 2px 0 rgba(22, 29, 37, 0.05)",
+          }}
+        >
           <BlockStack gap="300">
             <InlineStack align="space-between" blockAlign="center" wrap>
               <Text as="h3" variant="headingMd">{tEvidence("defenseLetterTitle")}</Text>
@@ -672,7 +851,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
               </BlockStack>
             </Collapsible>
           </BlockStack>
-        </Card>
+        </div>
       )}
 
       {/* 4. EVIDENCE CATEGORIES — proof, unchanged */}
@@ -735,20 +914,73 @@ function EvidenceCategorySection({
   const availableCount = items.filter((i) => i.status === "available" || i.status === "waived").length;
 
   return (
-    <Card>
-      <BlockStack gap="200">
-        <div className={styles.categoryHeader} onClick={onToggle}>
-          <InlineStack align="space-between" blockAlign="center">
-            <InlineStack gap="200" blockAlign="center" wrap>
-              <Text as="h3" variant="headingMd">{category.label}</Text>
-              <Badge>{`${availableCount}/${items.length}`}</Badge>
-            </InlineStack>
-            <Icon source={expanded ? ChevronUpIcon : ChevronDownIcon} />
-          </InlineStack>
-        </div>
-
-        <Collapsible open={expanded} id={`cat-${category.key}`}>
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #E1E3E5",
+        borderRadius: 8,
+        boxShadow: "0 1px 2px 0 rgba(22, 29, 37, 0.05)",
+        overflow: "hidden",
+      }}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={`cat-${category.key}`}
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: 0,
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textAlign: "left",
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#202223",
+              lineHeight: 1.4,
+            }}
+          >
+            {category.label}
+          </span>
+          <span
+            style={{
+              padding: "2px 10px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              background: "#F1F2F4",
+              color: "#4B5563",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {`${availableCount}/${items.length}`}
+          </span>
+        </span>
+        <span style={{ width: 20, height: 20, color: "#6D7175", display: "inline-flex", flexShrink: 0 }}>
+          <Icon source={expanded ? ChevronUpIcon : ChevronDownIcon} />
+        </span>
+      </button>
+      <Collapsible open={expanded} id={`cat-${category.key}`}>
+        <div style={{ padding: "0 20px 16px", borderTop: "1px solid #E1E3E5" }}>
           <BlockStack gap="200">
+            <div style={{ paddingTop: 12 }} />
             {items.map((item) => (
               <EvidenceItemInline
                 key={item.field}
@@ -767,9 +999,9 @@ function EvidenceCategorySection({
               />
             ))}
           </BlockStack>
-        </Collapsible>
-      </BlockStack>
-    </Card>
+        </div>
+      </Collapsible>
+    </div>
   );
 }
 
@@ -923,6 +1155,159 @@ function EvidenceItemInline({
           </Collapsible>
         )}
       </BlockStack>
+    </div>
+  );
+}
+
+/* ── Argument Block (Figma `shopify-dispute-detail` lines 302-415) ── *
+ *
+ * One block per counterclaim. Header carries the leading icon + bold
+ * title + flat strength pill + chevron. Body lists the supporting
+ * evidence as bullet rows, click-through to the field via
+ * `actions.navigateToEvidence`. State is local — collapsed by default
+ * past the second block (top 2 open, rest collapsed) so the merchant
+ * can scan strong claims first without an explosion of vertical space.
+ *
+ * No new logic: same source data (`CounterclaimNode.supporting[]`),
+ * same navigation. Replaces the prior flat tag list with a Figma-style
+ * collapsible card.
+ */
+function ArgumentBlock({
+  claim,
+  defaultOpen,
+  onTagClick,
+}: {
+  claim: CounterclaimNode;
+  defaultOpen: boolean;
+  onTagClick: (field: string) => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const supportingFields = claim.supporting.map((s) => s.field);
+  const IconSrc = counterclaimIcon(supportingFields);
+  const pill = strengthPillStyle(claim.strength);
+
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #E1E3E5",
+        borderRadius: 8,
+        overflow: "hidden",
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={`arg-block-${claim.id}`}
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: 0,
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textAlign: "left",
+        }}
+      >
+        <span
+          style={{
+            width: 20,
+            height: 20,
+            color: "#005BD3",
+            flexShrink: 0,
+            display: "inline-flex",
+          }}
+        >
+          <Icon source={IconSrc} />
+        </span>
+        <span
+          style={{
+            flex: 1,
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#202223",
+            lineHeight: 1.4,
+          }}
+        >
+          {claim.title}
+        </span>
+        <span
+          style={{
+            padding: "2px 10px",
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 600,
+            background: pill.bg,
+            color: pill.color,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {pill.label}
+        </span>
+        <span style={{ width: 20, height: 20, color: "#6D7175", display: "inline-flex", flexShrink: 0 }}>
+          <Icon source={open ? ChevronUpIcon : ChevronDownIcon} />
+        </span>
+      </button>
+      <Collapsible open={open} id={`arg-block-${claim.id}`}>
+        <div style={{ padding: "0 20px 16px", borderTop: "1px solid #E1E3E5" }}>
+          {claim.supporting.length === 0 ? (
+            <p style={{ fontSize: 13, color: "#6D7175", margin: "12px 0 0" }}>
+              No supporting evidence cited yet.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 12 }}>
+              {claim.supporting.map((s) => (
+                <button
+                  key={s.field}
+                  type="button"
+                  onClick={() => onTagClick(s.field)}
+                  style={{
+                    appearance: "none",
+                    background: "transparent",
+                    border: 0,
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      color: s.status === "available" ? "#059669" : "#8C9196",
+                      flexShrink: 0,
+                      marginTop: 2,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <Icon source={s.status === "available" ? CheckCircleIcon : MinusCircleIcon} />
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      color: "#202223",
+                      lineHeight: 1.4,
+                      textDecoration: "underline",
+                      textDecorationColor: "transparent",
+                      transition: "text-decoration-color 100ms",
+                    }}
+                  >
+                    {friendlyLabel(s.field, s.label)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Collapsible>
     </div>
   );
 }
