@@ -88,6 +88,7 @@ write_shopify_payments_dispute_evidences
 - Saving evidence requires merchant to have "Manage orders information" in Shopify Admin
 - CI runs: typecheck + lint + build → vitest → forbidden copy grep (no "submit response" language in UI) → npm audit
 - Supabase project ref: `sddzuglxdnkhcnjmcpbj`
+- **3-D Secure / `receiptJson`:** 3DS is NOT in the Admin GraphQL typed schema (verified across the full `PaymentDetails` union in 2026-01). Auto-collected by `lib/packs/sources/threeDSecureSource.ts` from `OrderTransaction.receiptJson` for **Shopify Payments only** (the JSON shape is provider-specific) and classified **Moderate, never Strong** — the receipt contract is gateway-defined and "not a stable contract" per Shopify. Receipts arrive as JSON **strings** in 2026-01; parse defensively. Walk path: `latest_charge.payment_method_details.card.three_d_secure.authenticated` (modern) with `payment_method_details.card.three_d_secure.authenticated` as legacy fallback. The collector emits ONLY when `authenticated === true` — absence of 3DS is never a negative signal. Never widen the gateway allow-list, never elevate to Strong without merchant confirmation (`tdsVerified === true` from manual upload), never auto-write 3DS into bank-rebuttal text from the receipt-read path alone. See `docs/technical.md` § *3-D Secure Collection*.
 
 ## Branding Note
 The name "DisputeDesk" may overlap with disputedesk.co — consider **DisputeDesk.app** for public branding (non-blocking).

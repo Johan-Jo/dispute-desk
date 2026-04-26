@@ -287,6 +287,57 @@ describe("rubric — conditional upgrades to strong", () => {
   });
 });
 
+describe("tds_authentication — strong/moderate/invalid mapping", () => {
+  it("merchant-confirmed (tdsVerified=true) → strong", () => {
+    expect(categorizeEvidenceField("tds_authentication", { tdsVerified: true })).toBe("strong");
+  });
+
+  it("Shopify Payments receipt read (tdsAuthenticated=true + verifiedSource=shopify_receipt) → moderate", () => {
+    expect(
+      categorizeEvidenceField("tds_authentication", {
+        tdsAuthenticated: true,
+        verifiedSource: "shopify_receipt",
+      }),
+    ).toBe("moderate");
+  });
+
+  it("authenticated=true without trusted source → invalid (do not auto-classify on raw flag)", () => {
+    expect(
+      categorizeEvidenceField("tds_authentication", { tdsAuthenticated: true }),
+    ).toBe("invalid");
+    expect(
+      categorizeEvidenceField("tds_authentication", {
+        tdsAuthenticated: true,
+        verifiedSource: "none",
+      }),
+    ).toBe("invalid");
+  });
+
+  it("explicit authenticated=false → invalid (absence is never decisive)", () => {
+    expect(
+      categorizeEvidenceField("tds_authentication", {
+        tdsAuthenticated: false,
+        verifiedSource: "shopify_receipt",
+      }),
+    ).toBe("invalid");
+  });
+
+  it("merchant-confirmed wins over receipt read", () => {
+    expect(
+      categorizeEvidenceField("tds_authentication", {
+        tdsVerified: true,
+        tdsAuthenticated: false,
+        verifiedSource: "shopify_receipt",
+      }),
+    ).toBe("strong");
+  });
+
+  it("missing payload → invalid", () => {
+    expect(categorizeEvidenceField("tds_authentication", null)).toBe("invalid");
+    expect(categorizeEvidenceField("tds_authentication", {})).toBe("invalid");
+  });
+});
+
 describe("unknown fields", () => {
   it("unregistered evidenceFieldKey → invalid", () => {
     expect(categorizeEvidenceField("not_a_field", { foo: "bar" })).toBe("invalid");

@@ -95,6 +95,7 @@ export const ORDER_DETAIL_QUERY = `
           kind
           status
           gateway
+          receiptJson
           paymentDetails {
             __typename
             ... on CardPaymentDetails {
@@ -194,6 +195,16 @@ export interface OrderTransaction {
   kind: string;
   status: string;
   gateway: string;
+  /**
+   * Gateway-specific receipt blob. The Admin API returns it as a JSON
+   * scalar — in practice a JSON STRING for Shopify Payments orders;
+   * older proxies may pre-parse to an object. Either way the shape is
+   * NOT a stable contract per Shopify docs. Only read defensively
+   * (parse + narrow paths). For Shopify Payments orders this mirrors
+   * Stripe's PaymentIntent and includes
+   * `latest_charge.payment_method_details.card.three_d_secure.authenticated`.
+   */
+  receiptJson: string | Record<string, unknown> | null;
   paymentDetails: CardPaymentDetails | { __typename: string } | null;
 }
 

@@ -54,7 +54,7 @@ export const CATEGORY_WEIGHT: Record<EvidenceCategory, number> = {
  * each evidence item so the workspace API can detect stale caches and
  * recompute on read. Plan §P2.4a.
  */
-export const CANONICAL_EVIDENCE_VERSION = 1;
+export const CANONICAL_EVIDENCE_VERSION = 2;
 
 /** Persisted alongside an evidence item so we know which registry
  *  version classified it. */
@@ -120,7 +120,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Strong when 3DS verified. Invalid when 3DS data not available.",
+    note: "Strong only when merchant-confirmed (tdsVerified=true). Moderate when read from Shopify receiptJson best-effort (tdsAuthenticated=true, verifiedSource=shopify_receipt) — receipt shape is gateway-defined and unstable, so we never auto-claim it as STRONG. Invalid otherwise.",
   },
 
   // ── Billing match ──
@@ -329,8 +329,22 @@ export function categorizeEvidenceField(
   }
 
   // ── tds_authentication ──
+  // STRONG  → merchant-confirmed manual upload (tdsVerified === true).
+  //           Set only by the manual-confirmation flow, never by the
+  //           automatic receipt collector. This is the path that may
+  //           cite 3DS as "verified" in bank-rebuttal text.
+  // MODERATE → best-effort read from Shopify Payments receiptJson
+  //           (tdsAuthenticated === true && verifiedSource === "shopify_receipt").
+  //           The contract is unstable and unverifiable, so we contribute
+  //           to scoring but never claim verification in submitted text.
+  // INVALID  → no decisive payload. Absence of 3DS is never a negative
+  //           signal — it's just not present.
   if (fieldKey === "tds_authentication") {
-    return p.tdsVerified === true ? "strong" : "invalid";
+    if (p.tdsVerified === true) return "strong";
+    if (p.tdsAuthenticated === true && p.verifiedSource === "shopify_receipt") {
+      return "moderate";
+    }
+    return "invalid";
   }
 
   // ── billing_address_match ──

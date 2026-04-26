@@ -182,17 +182,32 @@ export interface RebuttalReasonSelection {
 /**
  * 3D Secure authentication evidence.
  *
- * CONFIRMED BY SHOPIFY SUPPORT: Shopify Admin API does NOT expose
- * 3DS authentication status. For Shopify Payments, 3DS is handled
- * internally at the payment-platform level. We CANNOT query, confirm,
- * or auto-claim 3DS from the Shopify Admin API.
+ * The Shopify Admin GraphQL **typed schema** does NOT expose 3DS
+ * status (verified across the full PaymentDetails union in 2026-01).
+ * However, for Shopify Payments orders specifically, the boolean
+ * `payment_method_details.card.three_d_secure.authenticated` is
+ * present inside `OrderTransaction.receiptJson`. Shopify documents
+ * receiptJson as gateway-defined and "not a stable contract".
+ *
+ * Policy:
+ *   - The auto-collector (lib/packs/sources/threeDSecureSource.ts)
+ *     reads receiptJson defensively and tags the evidence with
+ *     `verifiedSource: "shopify_receipt"`. The categorizer treats
+ *     this as MODERATE — not STRONG — because we cannot verify the
+ *     read and the contract is unstable.
+ *   - STRONG is reserved for the manual-confirmation flow, where
+ *     the merchant has cross-checked the order timeline / gateway
+ *     info themselves (`tdsVerified: true`, source: "manual_upload").
  *
  * HARD RULES:
- * - NEVER infer 3DS from AVS/CVV codes
- * - NEVER infer 3DS from region or country
- * - NEVER parse receiptJson (gateway-defined, unstable)
- * - NEVER claim 3DS in generated text unless availability = "confirmed"
- * - NEVER block submission because 3DS is missing
+ * - NEVER infer 3DS from AVS/CVV codes.
+ * - NEVER infer 3DS from region or country.
+ * - NEVER read receiptJson on non-Shopify-Payments gateways
+ *   (the JSON shape is provider-specific).
+ * - NEVER auto-write a 3DS claim into bank-rebuttal text from a
+ *   receipt read alone — only the STRONG/manual-confirmed path
+ *   may surface in submitted evidence text.
+ * - NEVER block submission because 3DS is missing.
  */
 export interface ThreeDSecureEvidence {
   /** Whether we have confirmed 3DS authentication data. */

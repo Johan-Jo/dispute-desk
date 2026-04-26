@@ -33,6 +33,7 @@ import { collectPolicyEvidence } from "./sources/policySource";
 import { collectManualEvidence } from "./sources/manualSource";
 import { collectCustomerCommEvidence } from "./sources/customerCommSource";
 import { collectPaymentEvidence } from "./sources/paymentSource";
+import { collectThreeDSecureEvidence } from "./sources/threeDSecureSource";
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import type { EvidenceSection, BuildContext } from "./types";
 import type { OrderContext } from "@/lib/automation/completeness";
@@ -186,6 +187,7 @@ export async function buildPack(
     collectCustomerCommEvidence(ctx),
     collectManualEvidence(ctx),
     collectPaymentEvidence(ctx),
+    collectThreeDSecureEvidence(ctx),
     collectDeviceLocationEvidence(ctx),
   ]);
 

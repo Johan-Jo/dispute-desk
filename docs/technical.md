@@ -583,6 +583,7 @@ When the gate decision is `block`, the pipeline writes the gate's `reasons` to b
 | Auto-Save Gate | `lib/automation/autoSaveGate.ts` | Decision logic for auto-save |
 | Pipeline | `lib/automation/pipeline.ts` | Orchestrator: trigger build + evaluate gate |
 | Payment Source | `lib/packs/sources/paymentSource.ts` | Card evidence (AVS/CVV/BIN/wallet), risk assessments, customer IP |
+| 3-D Secure Source | `lib/packs/sources/threeDSecureSource.ts` | 3DS authentication signal, best-effort read from Shopify Payments `receiptJson` |
 
 ### Pack Status Flow
 
@@ -634,6 +635,26 @@ The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: w
 ### Risk Assessment Collection
 
 Risk assessment collection removed (2026-04-20). `Order.riskAssessments` does not exist on Shopify Admin API `2026-01` and caused every pack build with an `order_gid` to fail. The `risk_analysis` field is no longer emitted by the collector; it was `recommended`/`blocking: false`, so its absence does not affect completeness scoring. Migration to `orderRisks` is a follow-up.
+
+### 3-D Secure Collection
+
+`threeDSecureSource.ts` reads 3DS authentication signals from `OrderTransaction.receiptJson` for **Shopify Payments only**. The Admin GraphQL typed schema does NOT expose 3DS on any `PaymentDetails` union member in 2026-01 (verified across `CardPaymentDetails`, `PaypalWalletPaymentDetails`, `ShopPayInstallmentsPaymentDetails`, `LocalPaymentMethodsPaymentDetails`); the data only lives inside the JSON-scalar receipt blob, which Shopify documents as gateway-defined and explicitly *not a stable contract*.
+
+**Wire shape:** `receiptJson` arrives as a JSON **string** that mirrors Stripe's PaymentIntent. The collector parses it defensively and walks `latest_charge.payment_method_details.card.three_d_secure.authenticated` (modern shape) with a fallback to `payment_method_details.card.three_d_secure.authenticated` (legacy charge-level shape). `three_d_secure: null` is the normal "3DS not used" state on test cards / non-3DS rails.
+
+**Emission rule:** the collector ONLY emits a `tds_authentication` evidence row when `authenticated === true`. Absence of 3DS is never a negative signal — `null`, `false`, missing path, malformed receipt, or non-Shopify-Payments gateway all collapse to "no signal" (no row emitted).
+
+**Classification rule (in `canonicalEvidence.ts → categorizeEvidenceField('tds_authentication')`):**
+
+| Payload | Category | Source path |
+|---|---|---|
+| `tdsVerified === true` | **Strong** | Manual merchant confirmation (uploaded gateway receipt + ticked the verify box) |
+| `tdsAuthenticated === true && verifiedSource === "shopify_receipt"` | **Moderate** | Auto-collected from receiptJson |
+| anything else | Invalid | — |
+
+The auto-collector is downgraded one tier (Moderate, not Strong) on purpose: the receipt contract is unstable, and we cannot independently verify the read. The merchant-facing UI may surface a "Verify in Shopify Admin → order timeline → Information from gateway" hint to upgrade auto-Moderate → manual-Strong. Bank-rebuttal text never auto-claims 3DS from the receipt-read path alone.
+
+**Why it's only Shopify Payments:** receipt JSON shape is provider-specific. The `SUPPORTED_GATEWAYS` set in the collector is the single gate; never widen it without a separate verified probe of that gateway's receipt shape.
 
 ### Customer IP Collection
 
@@ -725,7 +746,7 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 7. `activity_log` — `decisiveSessionProof === true` OR `digitalAccessUsed === true`.
 8. `refund_policy` / `shipping_policy` / `cancellation_policy` — `acceptedAtCheckout === true` AND `acceptanceTimestamp` set.
 9. `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.
-10. `tds_authentication` — `tdsVerified === true`.
+10. `tds_authentication` — `tdsVerified === true` (merchant-confirmed manual upload only; the auto-collector never sets this).
 11. `billing_address_match` — `match === true`.
 
 **Moderate (weight 2) — useful but not decisive alone:**
@@ -733,6 +754,7 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 - `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` without `deliveredToVerifiedAddress`.
 - `ip_location_check` — clean match, no VPN/proxy/hosting flags, `bankEligible !== false`.
 - `device_session_consistency` — `consistent === true` only.
+- `tds_authentication` — `tdsAuthenticated === true` AND `verifiedSource === "shopify_receipt"` (auto-collected from `OrderTransaction.receiptJson` — see below).
 
 **Supporting (weight 0) — never elevates the hero:**
 - `order_confirmation`, `product_description`, `duplicate_explanation` — strict `supportingOnly: true`. Always supporting regardless of payload.
@@ -742,7 +764,7 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 - `avs_cvv_match` — both codes present, neither matches.
 - `shipping_tracking` / `delivery_proof` — `proofType === "label_created"` (label only, no movement).
 - `billing_address_match` — `match === false`.
-- `tds_authentication` — `tdsVerified === false`.
+- `tds_authentication` — payload is present but neither `tdsVerified === true` nor (`tdsAuthenticated === true` AND `verifiedSource === "shopify_receipt"`). Absence of 3DS is *not* invalid — the auto-collector never emits a row when 3DS was not used, so a missing `tds_authentication` row is the normal "no signal" state.
 - Unknown / unregistered field keys (filtered out before reaching the UI).
 
 The categorizer NEVER returns Invalid because payload is missing. The UI wrapper `classifyEvidenceRow()` further enforces this for display: when the discriminator key isn't present in payload, the row falls back to Supporting, never Invalid. **Collected ≠ Strong; Supporting ≠ bad; Invalid only fires on explicit harmful/unusable data.**
