@@ -231,6 +231,43 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     }
   }
 
+  // Fatal-loss Gate (PRD §3 step 2 / §5). Sits between Coverage Gate
+  // and the strength gate. When triggered, auto-mode never submits
+  // regardless of completeness or strength — the case is structurally
+  // unwinnable. Review-mode falls through and parks normally so the
+  // merchant can still see the pack and decide for themselves.
+  // Source field: `pack_json.fatal_loss` (persisted by buildPack).
+  const fatalLoss = (pack.pack_json as { fatal_loss?: { triggered?: boolean; reason?: string | null; message?: string | null } } | null)?.fatal_loss;
+  if (ruleMode === "auto" && fatalLoss?.triggered === true) {
+    const reason =
+      fatalLoss.message ??
+      `Auto-submit blocked — fatal-loss condition (${fatalLoss.reason ?? "unknown"}) per PRD §5`;
+    await sb.from("audit_events").insert({
+      shop_id: pack.shop_id,
+      dispute_id: pack.dispute_id,
+      pack_id: packId,
+      actor_type: "system",
+      event_type: "auto_save_blocked",
+      event_payload: { reasons: [reason], fatal_loss: fatalLoss.reason },
+    });
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: PACK_BLOCKED,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        visibility: "merchant_and_internal",
+        description: reason,
+        metadataJson: { pack_id: packId, reasons: [reason], fatal_loss: fatalLoss.reason },
+        dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
+      });
+      void updateNormalizedStatus(pack.dispute_id);
+    }
+    return { action: "block", details: reason };
+  }
+
   // PRD §9 strength gate (auto-mode only). The PRD principle "Auto mode
   // executes ONLY on Strong cases" forbids auto-submission of weaker
   // evidence regardless of completeness:

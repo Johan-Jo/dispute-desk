@@ -731,6 +731,45 @@ ruleMode === "auto" + strong + completeness gate fails → block (existing)
 - Never silently flip legacy-pack behavior. Packs without `case_strength` on `pack_json` (built before the P2 commit `24235cc`) keep the existing quality-gate-only behavior. Rebuild a pack to opt in to the new strength gate.
 - The strength gate is `ruleMode === "auto"` only — review-mode behavior is untouched.
 
+### Fatal-loss Gate (PRD §3 step 2 / §5)
+
+**Routing primitive: PRD v1.1 §5.** Sits between the Coverage Gate and the strength gate. Detects cases where evidence-strength scoring is misleading because the case is structurally unwinnable. When triggered:
+
+- `caseStrength.overall` is capped at `"weak"` (UI hero turns red, label "Low likelihood case" per PRD §10).
+- `strengthReason` is replaced with a fatal-loss-specific merchant-facing message.
+- `auto`-mode in `evaluateAndMaybeAutoSave` returns `block` regardless of completeness or strength.
+- `review`-mode falls through and parks normally — the merchant still sees the pack and decides for themselves.
+
+**Triggers (LOCKED scope, v1):**
+
+| Trigger | Detection rule |
+|---|---|
+| `refund_issued` | `order.totalRefundedSet.amount >= dispute.amount` AND `dispute.amount > 0` |
+| `inr_no_fulfillment` | `dispute.reason ∈ {PRODUCT_NOT_RECEIVED, ITEM_NOT_RECEIVED}` AND `order.displayFulfillmentStatus === "UNFULFILLED"` AND `order.fulfillments.length === 0` |
+
+The refund check requires a non-null `dispute.amount` to avoid false positives on legacy disputes (we don't trigger when amount is unknown). The detector matches reasons case-insensitively. Refund check is evaluated first when both could match.
+
+**Out of scope for v1 (deferred to a future P4.1+):**
+- "Valid cancellation before billing" — no clean source today.
+- "Confirmed fraud accepted by merchant" — no UI for this today.
+- "Evidence contradiction" — needs a contradiction model.
+
+**Source field:** `pack_json.fatal_loss = { triggered, reason, message }`, persisted by `buildPack` via `detectFatalLoss(order, dispute.reason, dispute.amount)`. Pure function over the order + dispute context — no I/O.
+
+**Precedence (verified by `lib/automation/__tests__/pipelineMatrix.test.ts` and `lib/argument/__tests__/caseStrength.test.ts`):**
+
+```
+covered_shopify   → skip_covered                (PRD §4 — coverage beats fatal-loss)
+auto + fatal_loss → block                       (PRD §5)
+review + fatal_loss → park_for_review           (review is absolute)
+```
+
+**Hard rules:**
+- The fatal-loss gate only ever makes auto-mode stricter. Never loosen the rule based on it.
+- Never trigger refund_issued without a positive `dispute.amount` — partial refunds on legacy disputes risk false positives.
+- The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
+- Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
+
 ### Customer IP Collection
 
 `ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. Shopify's `ShopifyPaymentsDisputeEvidenceUpdateInput` does **not** have a dedicated `customerPurchaseIp` field (verified via introspection 2026-04-21; earlier codebase claim was stale). When IP evidence exists the save-to-Shopify job appends `Customer purchase IP: <ip>` to `accessActivityLog` so the IP still reaches the bank in the "Activity logs" field. Priority: `recommended` for fraud disputes.

@@ -245,6 +245,16 @@ export interface CaseCoverageInput {
     | null;
 }
 
+/** Optional Fatal-loss Gate input (PRD §5). Caps `overall` at "weak"
+ *  and replaces `strengthReason` with the fatal-loss copy. Coverage
+ *  beats fatal-loss (a covered case is never "fatal"; Shopify pays).
+ *  Otherwise this triggers regardless of the underlying evidence. */
+export interface CaseFatalLossInput {
+  triggered: boolean;
+  reason: "refund_issued" | "inr_no_fulfillment" | null;
+  message: string | null;
+}
+
 const COVERED_STRENGTH_REASON =
   "This dispute is protected under Shopify's payment protection. No action is required from you.";
 
@@ -262,13 +272,19 @@ export function calculateCaseStrength(
    *  variant is forced to `covered` and the strength reason is replaced
    *  with the covered-by-Shopify copy. */
   coverage?: CaseCoverageInput,
+  /** Optional Fatal-loss Gate input. When `triggered === true` AND
+   *  coverage is not active, `overall` is capped at "weak", `heroVariant`
+   *  becomes "hard_to_win", and `strengthReason` is replaced with the
+   *  fatal-loss message. */
+  fatalLoss?: CaseFatalLossInput,
 ): CaseStrengthResult {
   const family = resolveReasonFamily(reason ?? argumentMap?.issuerClaim?.reasonCode);
 
   if (!checklist.length) {
     const earlyCovered = coverage?.state === "covered_shopify";
+    const earlyFatal = !earlyCovered && fatalLoss?.triggered === true;
     return {
-      overall: "insufficient",
+      overall: earlyFatal ? "weak" : "insufficient",
       score: 0,
       coveragePercent: 0,
       strongCount: 0,
@@ -278,8 +294,13 @@ export function calculateCaseStrength(
       totalClaims: argumentMap?.counterclaims.length ?? 0,
       improvementHint: null,
       heroVariant: earlyCovered ? "covered" : "hard_to_win",
-      strengthReason: earlyCovered ? COVERED_STRENGTH_REASON : STRENGTH_REASONS[family].insufficient,
+      strengthReason: earlyCovered
+        ? COVERED_STRENGTH_REASON
+        : earlyFatal
+          ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
+          : STRENGTH_REASONS[family].insufficient,
       coverage: coverage ?? undefined,
+      fatalLoss: fatalLoss ?? undefined,
     };
   }
 
@@ -432,13 +453,30 @@ export function calculateCaseStrength(
   // Coverage Gate (PRD §4) takes precedence over everything: when
   // Shopify Protect is actively underwriting the dispute, the hero
   // shows the "Covered" state regardless of underlying evidence.
+  // Fatal-loss Gate (PRD §5) is next-priority — coverage beats fatal-
+  // loss, but otherwise a triggered fatal-loss caps overall at "weak"
+  // and forces hard_to_win.
   const isCovered = coverage?.state === "covered_shopify";
+  const isFatalLoss = !isCovered && fatalLoss?.triggered === true;
+
+  if (isFatalLoss) {
+    overall = "weak";
+    isFraudAvsOnlyStrong = false;
+  }
+
   let heroVariant: NonNullable<CaseStrengthResult["heroVariant"]>;
   if (isCovered) heroVariant = "covered";
+  else if (isFatalLoss) heroVariant = "hard_to_win";
   else if (overall === "strong") heroVariant = "likely_to_win";
   else if (overall === "moderate") {
     heroVariant = isFraudAvsOnlyStrong ? "needs_strengthening" : "could_win";
   } else heroVariant = "hard_to_win";
+
+  const finalStrengthReason = isCovered
+    ? COVERED_STRENGTH_REASON
+    : isFatalLoss
+      ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
+      : strengthReason;
 
   return {
     overall,
@@ -449,10 +487,11 @@ export function calculateCaseStrength(
     supportingCount,
     supportedClaims: argumentMap?.counterclaims.filter((c) => c.supporting.length > 0).length ?? 0,
     totalClaims: argumentMap?.counterclaims.length ?? 0,
-    improvementHint: isCovered ? null : improvementHint,
+    improvementHint: isCovered || isFatalLoss ? null : improvementHint,
     heroVariant,
-    strengthReason: isCovered ? COVERED_STRENGTH_REASON : strengthReason,
+    strengthReason: finalStrengthReason,
     coverage: coverage ?? undefined,
+    fatalLoss: fatalLoss ?? undefined,
   };
 }
 

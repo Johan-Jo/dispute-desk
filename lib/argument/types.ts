@@ -122,6 +122,16 @@ export interface CaseStrengthResult {
       | "PROTECTED"
       | null;
   };
+  /** Fatal-loss gate state (PRD §5). When `triggered === true`,
+   *  `overall` is capped at "weak", `heroVariant` becomes "hard_to_win",
+   *  and `strengthReason` is replaced with the fatal-loss copy. The
+   *  pipeline blocks auto-submission for these cases regardless of the
+   *  underlying evidence. */
+  fatalLoss?: {
+    triggered: boolean;
+    reason: "refund_issued" | "inr_no_fulfillment" | null;
+    message: string | null;
+  };
 }
 
 /* ── Why This Case Wins ── */

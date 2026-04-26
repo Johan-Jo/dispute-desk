@@ -42,51 +42,34 @@ todos:
 
   - id: p4
     content: |
-      P4 — Fatal-loss gate (limited scope).
+      P4 — Fatal-loss gate (limited scope).  ✅ SHIPPED 2026-04-26.
 
-      Goal: short-circuit cases where evidence-strength scoring is
-      misleading because the case is structurally unwinnable. Lives at
-      PRD §3 step 2 (between Coverage Gate and Evidence Strength).
+      Locked v1 triggers:
+        - refund_issued       (totalRefundedSet >= dispute.amount, amount > 0)
+        - inr_no_fulfillment  (INR reason + UNFULFILLED + 0 fulfillments)
 
-      LOCKED scope — only two triggers in v1:
-        1. refundIssued     — pack.refunds[] shows a successful refund
-                              for the disputed amount (or full).
-        2. INR + no fulfillment
-                            — reason ∈ {PRODUCT_NOT_RECEIVED, ITEM_NOT_RECEIVED}
-                              AND order has no successful fulfillment
-                              (displayFulfillmentStatus === "UNFULFILLED",
-                              fulfillments.length === 0).
+      Wiring:
+        - lib/automation/fatalLoss.ts — pure detector
+        - buildPack persists pack_json.fatal_loss = { triggered, reason, message }
+        - calculateCaseStrength accepts fatalLoss; caps overall at "weak",
+          forces heroVariant=hard_to_win, swaps strengthReason
+        - evaluateAndMaybeAutoSave: auto + fatal_loss → block;
+          review + fatal_loss → park (review is absolute)
+        - Coverage beats fatal-loss (covered cases never block)
 
-      Behavior when triggered:
-        - caseStrength.overall capped at "weak"
-        - autoBlocked = true (new field)
-        - reason = "fatal_loss" (new field on caseStrength)
-        - heroVariant = "hard_to_win" (no new variant — re-use the red
-          palette; the §10 "Low likelihood case" label still applies)
-        - Pipeline: even if rule-mode is auto, do NOT auto-submit.
+      Tests:
+        - lib/automation/__tests__/fatalLoss.test.ts (16 detector cases)
+        - lib/automation/__tests__/pipelineMatrix.test.ts (6 fatal-loss rows)
+        - lib/argument/__tests__/caseStrength.test.ts (6 fatal-loss rows)
 
-      EXPLICITLY OUT OF SCOPE for v1 (defer to a future P4.1+):
-        - "Valid cancellation before billing" — no clean source today
-        - "Confirmed fraud accepted by merchant" — no UI for this today
-        - "Evidence contradiction" — needs a contradiction model
+      Bank-rebuttal hard rule documented: text generation NEVER cites
+      "we refunded" — the fatal-loss message is merchant-UI-only.
 
-      Implementation outline:
-        - New helper `lib/automation/fatalLoss.ts` returning
-          { triggered: bool, reason: "refund_issued" | "inr_no_fulfillment" | null }.
-        - Wire into `calculateCaseStrength` after coverage check, before
-          the existing fraud/default scoring branches.
-        - Wire into `evaluateAndMaybeAutoSave` after the Coverage Gate
-          short-circuit, before the rule-mode resolution.
-        - Add the FATAL_LOSS rows to docs/technical.md and CLAUDE.md.
-        - Tests: each trigger fires; non-triggers don't fire; auto+fatal
-          → block, never auto_save.
-
-      Risk: medium-low. The gate only ever makes auto stricter, never
-      looser, so false positives manifest as "missed auto-submit" not
-      "bad submission". Effort: a few hours. ~1 commit.
-
-      Trigger to start: after P2 lands.
-    status: pending
+      Out-of-scope deferrals (future P4.1+):
+        - Valid cancellation before billing
+        - Merchant-confirmed fraud
+        - Evidence contradiction
+    status: completed
 
   - id: p5
     content: |

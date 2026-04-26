@@ -42,6 +42,7 @@ import {
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
+import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
 import type { EvidenceSection, BuildContext } from "./types";
 import type { OrderContext } from "@/lib/automation/completeness";
 
@@ -92,7 +93,7 @@ export async function buildPack(
 
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, reason, order_gid, dispute_gid")
+    .select("id, reason, order_gid, dispute_gid, amount")
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
@@ -399,6 +400,23 @@ export async function buildPack(
   // state without re-walking sections.
   const coverageSummary: CoverageSummary = summarizeCoverage(order);
 
+  // Fatal-loss summary — PRD §3 step 2 / §5. Detects structurally
+  // unwinnable cases (refund issued, INR with no fulfillment) so the
+  // pipeline can refuse auto-submission and the case-strength engine
+  // can cap overall at "weak" with a fatal-loss explanation. Pure
+  // function over the already-fetched order + dispute context.
+  const disputeAmountNum =
+    typeof dispute.amount === "number"
+      ? dispute.amount
+      : dispute.amount != null
+        ? Number(dispute.amount)
+        : null;
+  const fatalLossSummary: FatalLossSummary = detectFatalLoss(
+    order,
+    dispute.reason,
+    Number.isFinite(disputeAmountNum) ? (disputeAmountNum as number) : null,
+  );
+
   // Case-strength summary — PRD §6 + §9. Computed server-side here so
   // `evaluateAndMaybeAutoSave` can gate auto-mode on strength without
   // re-loading the argument map (the UI hook still computes its own
@@ -410,7 +428,7 @@ export async function buildPack(
   // build path. That collapses `supportedClaims/totalClaims` to 0 here,
   // but those counters are diagnostic only — the gate uses `overall`,
   // and `overall` is independent of the argument map (it depends on
-  // checklist + payloads + reason + coverage).
+  // checklist + payloads + reason + coverage + fatalLoss).
   const caseStrengthPayloadSource = {
     kind: "list" as const,
     items: allSections.map((s) => ({
@@ -428,6 +446,7 @@ export async function buildPack(
       state: coverageSummary.state,
       shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
     },
+    fatalLossSummary,
   );
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
@@ -464,6 +483,7 @@ export async function buildPack(
     device_location: deviceLocSummary,
     coverage: coverageSummary,
     case_strength: caseStrengthSummary,
+    fatal_loss: fatalLossSummary,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 

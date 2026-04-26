@@ -326,3 +326,104 @@ describe("evaluateAndMaybeAutoSave — PRD §9 matrix", () => {
     expect(r.action).toBe("park_for_review");
   });
 });
+
+describe("evaluateAndMaybeAutoSave — Fatal-loss Gate (PRD §5)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("auto + fatal_loss=refund_issued → block", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+          fatal_loss: { triggered: true, reason: "refund_issued", message: "A refund covering this charge has already been issued — disputing the chargeback after a refund is unlikely to succeed." },
+        },
+      },
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("block");
+    expect(r.details).toMatch(/refund/i);
+  });
+
+  it("auto + fatal_loss=inr_no_fulfillment → block (even with strong other evidence)", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+          fatal_loss: { triggered: true, reason: "inr_no_fulfillment", message: "This dispute references an order that was never fulfilled — there is no shipping evidence available to defend an item-not-received claim." },
+        },
+      },
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("block");
+    expect(r.details).toMatch(/fulfilled|shipping/i);
+  });
+
+  it("review + fatal_loss → park_for_review (merchant still gets to see the pack)", async () => {
+    setupMocks({
+      ruleMode: "review",
+      pack: {
+        pack_json: {
+          case_strength: { overall: "weak", strongCount: 0, moderateCount: 0, supportingCount: 0 },
+          fatal_loss: { triggered: true, reason: "refund_issued", message: "..." },
+        },
+      },
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("park_for_review");
+  });
+
+  it("Coverage Gate beats fatal-loss (covered case never falls into fatal-loss block)", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        pack_json: {
+          coverage: { state: "covered_shopify", shopifyProtectStatus: "PROTECTED" },
+          fatal_loss: { triggered: true, reason: "refund_issued", message: "..." },
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+        },
+      },
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("skip_covered");
+  });
+
+  it("auto + fatal_loss=triggered:false → falls through to strength gate", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+          fatal_loss: { triggered: false, reason: null, message: null },
+        },
+      },
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("auto_save");
+  });
+
+  it("auto + missing fatal_loss field (legacy pack) → falls through to strength gate", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+          // no fatal_loss key
+        },
+      },
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("auto_save");
+  });
+});

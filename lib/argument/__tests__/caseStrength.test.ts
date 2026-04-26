@@ -537,3 +537,99 @@ describe("calculateCaseStrength — Coverage Gate (PRD §4)", () => {
     expect(result.improvementHint).toBeNull();
   });
 });
+
+describe("calculateCaseStrength — Fatal-loss Gate (PRD §5)", () => {
+  it("triggered fatal-loss caps overall at weak even with strong evidence", () => {
+    const checklist = [item("avs_cvv_match"), item("billing_address_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        billing_address_match: { match: true },
+      }),
+      undefined,
+      { triggered: true, reason: "refund_issued", message: "Refund issued message." },
+    );
+    // Underlying counts still tallied for diagnostics.
+    expect(result.strongCount).toBe(2);
+    // But overall capped, hero red, message swapped.
+    expect(result.overall).toBe("weak");
+    expect(result.heroVariant).toBe("hard_to_win");
+    expect(result.strengthReason).toBe("Refund issued message.");
+    expect(result.fatalLoss?.triggered).toBe(true);
+    expect(result.fatalLoss?.reason).toBe("refund_issued");
+  });
+
+  it("Coverage beats fatal-loss (covered case stays covered)", () => {
+    const checklist = [item("avs_cvv_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({ avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" } }),
+      { state: "covered_shopify", shopifyProtectStatus: "PROTECTED" },
+      { triggered: true, reason: "refund_issued", message: "Refund issued message." },
+    );
+    expect(result.heroVariant).toBe("covered");
+    expect(result.strengthReason).toContain("protected under Shopify");
+  });
+
+  it("triggered=false passes through to normal hero variants", () => {
+    const checklist = [item("avs_cvv_match"), item("billing_address_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        billing_address_match: { match: true },
+      }),
+      undefined,
+      { triggered: false, reason: null, message: null },
+    );
+    expect(result.heroVariant).toBe("likely_to_win");
+    expect(result.fatalLoss?.triggered).toBe(false);
+  });
+
+  it("fatal-loss suppresses improvementHint", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match", "missing")],
+      "FRAUDULENT",
+      undefined,
+      undefined,
+      { triggered: true, reason: "inr_no_fulfillment", message: "INR message." },
+    );
+    expect(result.improvementHint).toBeNull();
+  });
+
+  it("fatal-loss on empty checklist still emits weak + fatal message", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [],
+      "PRODUCT_NOT_RECEIVED",
+      undefined,
+      undefined,
+      { triggered: true, reason: "inr_no_fulfillment", message: "INR message." },
+    );
+    expect(result.overall).toBe("weak");
+    expect(result.heroVariant).toBe("hard_to_win");
+    expect(result.strengthReason).toBe("INR message.");
+  });
+
+  it("fatal-loss disables fraud needs_strengthening hero (no AVS-only amber path)", () => {
+    // AVS-strong-alone on fraud would normally produce needs_strengthening
+    // — fatal-loss must downgrade to hard_to_win.
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match")],
+      "FRAUDULENT",
+      payloadFor({ avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" } }),
+      undefined,
+      { triggered: true, reason: "refund_issued", message: "..." },
+    );
+    expect(result.heroVariant).toBe("hard_to_win");
+  });
+});
