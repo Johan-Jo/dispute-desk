@@ -156,10 +156,13 @@ function readAuthenticatedFlag(
 ): boolean | null {
   try {
     const candidates: Array<unknown> = [
-      // Modern PaymentIntent shape (live-probe verified 2026-04-26)
+      // Modern PaymentIntent shape — only path observed in live samples
+      // on 2026-01 (verified across 18 transactions, 2026-04-26).
       (receipt.latest_charge as Record<string, unknown> | undefined)
         ?.payment_method_details,
-      // Legacy charge-level shape
+      // Legacy charge-level shape — defensive fallback, never observed
+      // in 2026-01 samples. Kept as cheap insurance against shape drift
+      // on older orders or future API changes.
       receipt.payment_method_details,
     ];
     for (const pmd of candidates) {
