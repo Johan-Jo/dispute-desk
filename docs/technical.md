@@ -747,7 +747,24 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 
 The categorizer NEVER returns Invalid because payload is missing. The UI wrapper `classifyEvidenceRow()` further enforces this for display: when the discriminator key isn't present in payload, the row falls back to Supporting, never Invalid. **Collected ≠ Strong; Supporting ≠ bad; Invalid only fires on explicit harmful/unusable data.**
 
-The strength formula remains: `strongCount >= 2 → Strong`; `strongCount === 1 && moderateCount >= 1 → Moderate`; `else → Weak`. Supporting items NEVER affect strength regardless of volume (P2.1.1). Signal-level dedup means multiple `evidenceFieldKey`s sharing a `signalId` (e.g., `delivery_proof` + `shipping_tracking`, `avs_cvv_match` + `tds_authentication`, `activity_log` + `customer_account_info`) count once.
+**Family-specific scoring.** Default formula (every reason except fraud): `strongCount >= 2 → Strong`; `strongCount === 1 && moderateCount >= 1 → Moderate`; `else → Weak`. Supporting items NEVER affect strength regardless of volume (P2.1.1). Signal-level dedup means multiple `evidenceFieldKey`s sharing a `signalId` (e.g., `delivery_proof` + `shipping_tracking`, `avs_cvv_match` + `tds_authentication`, `activity_log` + `customer_account_info`) count once.
+
+**Fraud / unauthorized-transaction rule (overrides the default formula when `family === "fraud"`).** Payment authentication is the decisive signal for these disputes; the rule reflects that:
+
+- **Strong** —  
+  `strongCount >= 2`  
+  OR `avs_cvv_match` Strong + delivery (signalId `delivery`) Strong/Moderate  
+  OR `avs_cvv_match` Strong + device/session (signalId `device_session`) Strong/Moderate  
+  OR `avs_cvv_match` Strong + customer communication (signalId `communication`) Strong
+- **Moderate** —  
+  `avs_cvv_match` Strong (alone — no other Strong/Moderate corroboration)  
+  OR `strongCount === 1 && moderateCount >= 1`  
+  OR `moderateCount >= 2`
+- **Weak** — otherwise (no Strong AND fewer than 2 Moderate signals).
+
+The "AVS-Strong-alone" path is special-cased so the hero never reads as "Hard to win" while AVS+CVV match — the case is shown as **Needs strengthening** (amber tone, distinct from "Could win") with the body copy *"Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case."*
+
+`caseStrength.heroVariant` exposes this UI accent (`likely_to_win` / `could_win` / `needs_strengthening` / `hard_to_win`) so `OverviewTab.tsx` can pick the right label + tone without re-deriving from `overall + strongCount + family`.
 7. **O4 — Evidence coverage.** Headline reflects critical-missing count; bar driven by `pack.completenessScore` (server-computed). Critical / Supporting / Optional priority breakdown filtered from `effectiveChecklist`. "View all evidence" link to the Evidence tab.
 
 **Checklist reconciliation (`lib/packs/checklistReconcile.ts`).** Pure helper. `collectedFieldsFromPack({sections, evidenceItems})` unions every `fieldsProvided` entry; `reconcileChecklistWithCollectedFields(checklist, collected)` flips rows from `missing` → `available` for fields the pack actually carries. `unavailable`, `waived`, and already-`available` rows are preserved. Wired in two places: (a) `buildPack.ts` runs it after `evaluateCompletenessV2` so the persisted `checklist_v2` and metrics match the collected sections; (b) the workspace API runs it on read so older packs (built before the build-time wiring) normalize for the UI without a rebuild. This fixes the regression where pack-template paths could leave policies / IP / supporting fields flagged `missing` even though the collectors had produced them, making the Overview look empty for evidence-rich packs.

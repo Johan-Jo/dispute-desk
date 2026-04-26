@@ -96,6 +96,17 @@ export interface CaseStrengthResult {
   /** Merchant-facing explanation of why this strength was assigned. */
   strengthReason?: string;
   improvementHint: string | null;
+  /** Hero label hint. Lets the UI distinguish:
+   *   - `likely_to_win` — overall === "strong"
+   *   - `could_win` — overall === "moderate" via the standard formula
+   *   - `needs_strengthening` — fraud + avs_cvv_match Strong alone (one
+   *     decisive signal, but no corroboration). Same amber tone as
+   *     `could_win` but a different accent on what's needed next.
+   *   - `hard_to_win` — overall === "weak" or "insufficient"
+   * The UI is the only consumer; backend logic should keep using
+   * `overall` for branching.
+   */
+  heroVariant?: "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win";
 }
 
 /* ── Why This Case Wins ── */

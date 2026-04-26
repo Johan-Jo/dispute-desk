@@ -152,8 +152,12 @@ function composeStrengthReason(args: {
   family: ReasonFamily;
   strong: ContributionRow[];
   moderate: ContributionRow[];
+  /** Set when fraud-specific scoring upgraded a case from weak to
+   *  moderate solely on avs_cvv_match Strong. Triggers the user-
+   *  authored "Payment authentication supports this defense …" copy. */
+  isFraudAvsOnlyStrong?: boolean;
 }): string {
-  const { overall, family, strong, moderate } = args;
+  const { overall, family, strong, moderate, isFraudAvsOnlyStrong } = args;
 
   if (overall === "insufficient") {
     return STRENGTH_REASONS[family].insufficient;
@@ -167,6 +171,12 @@ function composeStrengthReason(args: {
   }
 
   if (overall === "moderate") {
+    // Fraud + avs_cvv_match-Strong-alone: this is the canonical
+    // "Needs strengthening" case. Tell the merchant what would tip it
+    // into Strong.
+    if (isFraudAvsOnlyStrong) {
+      return "Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case.";
+    }
     const strongLabel = strong[0]?.label;
     const moderateLabel = moderate[0]?.label;
     if (strongLabel && moderateLabel) {
@@ -321,11 +331,47 @@ export function calculateCaseStrength(
     if (cat === "supporting") supportingCount++;
   }
 
-  // Strict count-based formula (P2.2).
+  // Family-specific scoring. Fraud / unauthorized-transaction disputes
+  // are decided primarily by payment authentication; if AVS+CVV is
+  // Strong the case can never be Weak even when no other decisive
+  // signal exists. Other families fall back to the strict count-based
+  // formula (P2.2).
+  const strongSignalIds = new Set(strongRows.map((r) => r.signalId));
+  const moderateSignalIds = new Set(moderateRows.map((r) => r.signalId));
+  const hasAvsStrong = strongSignalIds.has("payment_auth");
+  const hasDeliverySupport =
+    strongSignalIds.has("delivery") || moderateSignalIds.has("delivery");
+  const hasDeviceSupport =
+    strongSignalIds.has("device_session") || moderateSignalIds.has("device_session");
+  const hasCommunicationStrong = strongSignalIds.has("communication");
+
   let overall: CaseStrengthLevel;
-  if (strongCount >= 2) overall = "strong";
-  else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
-  else overall = "weak";
+  let isFraudAvsOnlyStrong = false;
+  if (family === "fraud") {
+    if (
+      strongCount >= 2 ||
+      (hasAvsStrong && (hasDeliverySupport || hasDeviceSupport || hasCommunicationStrong))
+    ) {
+      overall = "strong";
+    } else if (
+      hasAvsStrong ||
+      (strongCount === 1 && moderateCount >= 1) ||
+      moderateCount >= 2
+    ) {
+      overall = "moderate";
+      // Flag the AVS-Strong-alone path so the hero can show "Needs
+      // strengthening" instead of "Could win" — same tone, different
+      // accent on what's required next.
+      isFraudAvsOnlyStrong =
+        hasAvsStrong && strongCount === 1 && moderateCount === 0;
+    } else {
+      overall = "weak";
+    }
+  } else {
+    if (strongCount >= 2) overall = "strong";
+    else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
+    else overall = "weak";
+  }
 
   // Weighted sum (P2.1 weights). Replaces the legacy 0-100 ratio
   // semantically — but the legacy 0-100 lives on as `coveragePercent`
@@ -350,7 +396,18 @@ export function calculateCaseStrength(
     family,
     strong: strongRows,
     moderate: moderateRows,
+    isFraudAvsOnlyStrong,
   });
+
+  // UI hero variant. `needs_strengthening` is the fraud-specific
+  // moderate-from-avs path: one decisive signal but no corroboration
+  // — same amber tone as could_win, but the label tells the merchant
+  // what's required next. Other variants follow `overall`.
+  let heroVariant: NonNullable<CaseStrengthResult["heroVariant"]>;
+  if (overall === "strong") heroVariant = "likely_to_win";
+  else if (overall === "moderate") {
+    heroVariant = isFraudAvsOnlyStrong ? "needs_strengthening" : "could_win";
+  } else heroVariant = "hard_to_win";
 
   return {
     overall,
@@ -362,6 +419,7 @@ export function calculateCaseStrength(
     supportedClaims: argumentMap?.counterclaims.filter((c) => c.supporting.length > 0).length ?? 0,
     totalClaims: argumentMap?.counterclaims.length ?? 0,
     improvementHint,
+    heroVariant,
     strengthReason,
   };
 }

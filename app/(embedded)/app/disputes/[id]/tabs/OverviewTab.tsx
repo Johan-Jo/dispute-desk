@@ -59,30 +59,45 @@ const FAILURE_FALLBACK = {
 
 /* ── 1:1 mappings from backend categorical → display labels ── */
 
-const HERO_LABEL_BY_STRENGTH: Record<string, string> = {
-  strong: "Likely to win",
-  moderate: "Could win",
-  weak: "Hard to win",
-  insufficient: "Hard to win",
+/**
+ * Hero label + tone are driven entirely by `caseStrength.heroVariant`
+ * (set by the backend in `lib/argument/caseStrength.ts`). The four
+ * variants:
+ *   - `likely_to_win` — overall "strong"
+ *   - `could_win` — overall "moderate" via the standard formula
+ *   - `needs_strengthening` — fraud + avs_cvv_match Strong alone (one
+ *     decisive signal but no corroboration). Same amber tone as
+ *     could_win, different accent on what's required next.
+ *   - `hard_to_win` — overall "weak" or "insufficient", no decisive
+ *     signal collected
+ */
+type HeroVariant = "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win";
+
+const HERO_LABEL_BY_VARIANT: Record<HeroVariant, string> = {
+  likely_to_win: "Likely to win",
+  could_win: "Could win",
+  needs_strengthening: "Needs strengthening",
+  hard_to_win: "Hard to win",
 };
 
-const HERO_TONE_BY_STRENGTH: Record<
-  string,
+const HERO_TONE_BY_VARIANT: Record<
+  HeroVariant,
   { bg: string; border: string; iconBg: string; iconColor: string; titleColor: string; bodyColor: string; pillBg: string; pillColor: string }
 > = {
-  strong: {
+  likely_to_win: {
     bg: "#F0FDF4", border: "#86EFAC", iconBg: "#D1FAE5", iconColor: "#059669",
     titleColor: "#065F46", bodyColor: "#065F46", pillBg: "#D1FAE5", pillColor: "#065F46",
   },
-  moderate: {
+  could_win: {
     bg: "#FFFBEB", border: "#FDE68A", iconBg: "#FEF3C7", iconColor: "#D97706",
     titleColor: "#78350F", bodyColor: "#92400E", pillBg: "#FEF3C7", pillColor: "#92400E",
   },
-  weak: {
-    bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
-    titleColor: "#7F1D1D", bodyColor: "#991B1B", pillBg: "#FEE2E2", pillColor: "#991B1B",
+  // Same amber palette as could_win — only the label differs.
+  needs_strengthening: {
+    bg: "#FFFBEB", border: "#FDE68A", iconBg: "#FEF3C7", iconColor: "#D97706",
+    titleColor: "#78350F", bodyColor: "#92400E", pillBg: "#FEF3C7", pillColor: "#92400E",
   },
-  insufficient: {
+  hard_to_win: {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#991B1B", pillBg: "#FEE2E2", pillColor: "#991B1B",
   },
@@ -185,9 +200,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     : null;
 
   /* ── Hero ── */
-  const strengthKey = caseStrength.overall;
-  const strengthLabel = HERO_LABEL_BY_STRENGTH[strengthKey] ?? "Hard to win";
-  const heroTone = HERO_TONE_BY_STRENGTH[strengthKey] ?? HERO_TONE_BY_STRENGTH.weak;
+  const heroVariant: HeroVariant = (caseStrength.heroVariant as HeroVariant | undefined) ?? "hard_to_win";
+  const strengthLabel = HERO_LABEL_BY_VARIANT[heroVariant];
+  const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
 
   /* ── Timeline ── */
   type TimelineStep = { state: "done" | "active" | "pending"; title: string; helper: string };
@@ -695,7 +710,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 style={{
                   width: `${completenessScore}%`,
                   height: "100%",
-                  background: strengthKey === "strong" ? "#059669" : strengthKey === "moderate" ? "#F59E0B" : "#DC2626",
+                  background: heroVariant === "likely_to_win" ? "#059669" : heroVariant === "hard_to_win" ? "#DC2626" : "#F59E0B",
                   borderRadius: 9999,
                 }}
               />

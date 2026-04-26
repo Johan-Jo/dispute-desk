@@ -70,9 +70,12 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
     expect(result.overall).toBe("moderate");
   });
 
-  it("#3 — 1 strong, 0 moderate → Weak", () => {
+  it("#3 — 1 strong, 0 moderate → Weak (non-fraud generic formula)", () => {
+    // Use a non-fraud reason so the generic count formula applies. The
+    // fraud-specific rule (#3a) lifts AVS-only-Strong to Moderate; this
+    // test still pins the baseline count formula for other families.
     const checklist = [item("avs_cvv_match")];
-    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "PRODUCT_NOT_RECEIVED", payloadFor({
       avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
     }));
     expect(result.strongCount).toBe(1);
@@ -164,9 +167,11 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
     expect(result.overall).toBe("strong");
   });
 
-  it("#7 — delivery_proof delivered_confirmed → moderate path", () => {
+  it("#7 — delivery_proof delivered_confirmed → moderate path (non-fraud generic formula)", () => {
+    // Non-fraud reason → generic formula. Under fraud, AVS Strong +
+    // delivery Moderate qualifies for Strong (see #7a).
     const checklist = [item("delivery_proof"), item("avs_cvv_match")];
-    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "PRODUCT_NOT_RECEIVED", payloadFor({
       delivery_proof: { proofType: "delivered_confirmed" },
       avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
     }));
@@ -175,9 +180,9 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
     expect(result.overall).toBe("moderate");
   });
 
-  it("#8 — delivery_proof label_created → not counted", () => {
+  it("#8 — delivery_proof label_created → not counted (non-fraud generic formula)", () => {
     const checklist = [item("delivery_proof"), item("avs_cvv_match")];
-    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "PRODUCT_NOT_RECEIVED", payloadFor({
       delivery_proof: { proofType: "label_created" },
       avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
     }));
@@ -203,10 +208,10 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
     expect(result.overall).toBe("strong");
   });
 
-  it("#10 — ip_location_check positive → moderate; VPN → supporting", () => {
+  it("#10 — ip_location_check positive → moderate; VPN → supporting (non-fraud generic formula)", () => {
     const checklist = [item("ip_location_check"), item("avs_cvv_match")];
 
-    const positive = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+    const positive = calculateCaseStrength(emptyArgMap(), checklist, "PRODUCT_NOT_RECEIVED", payloadFor({
       ip_location_check: { bankEligible: true, locationMatch: "match", ipinfo: { privacy: { vpn: false } } },
       avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
     }));
@@ -214,7 +219,7 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
     expect(positive.moderateCount).toBe(1);
     expect(positive.overall).toBe("moderate");
 
-    const vpn = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+    const vpn = calculateCaseStrength(emptyArgMap(), checklist, "PRODUCT_NOT_RECEIVED", payloadFor({
       ip_location_check: { bankEligible: true, locationMatch: "match", ipinfo: { privacy: { vpn: true } } },
       avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
     }));
@@ -267,12 +272,16 @@ describe("calculateCaseStrength — strengthReason cannot contradict contributio
       avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
     }));
     expect(result.strongCount).toBe(1);
-    expect(result.overall).toBe("weak");
+    // Fraud rule lifts AVS-Strong-alone from weak → moderate so the
+    // hero is amber (Needs strengthening), never red.
+    expect(result.overall).toBe("moderate");
+    expect(result.heroVariant).toBe("needs_strengthening");
     // Critical invariant: the body copy must reference the actually-collected
     // strong contribution, not claim it as missing.
     expect(result.strengthReason).toContain("Payment authentication");
     expect(result.strengthReason).not.toMatch(/payment verification evidence is missing/i);
     expect(result.strengthReason).not.toMatch(/key payment verification/i);
+    expect(result.strengthReason).not.toMatch(/hard to win/i);
   });
 
   it("strong overall — names the strong contributions in the reason", () => {
@@ -338,5 +347,112 @@ describe("calculateCaseStrength — strengthReason cannot contradict contributio
         expect(result.strengthReason, `${reason}/${field}`).toContain(label);
       }
     }
+  });
+});
+
+describe("calculateCaseStrength — fraud-specific scoring rules", () => {
+  it("FRAUD: avs_cvv_match Strong alone → Moderate (Needs strengthening)", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match")],
+      "FRAUDULENT",
+      payloadFor({ avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" } }),
+    );
+    expect(result.overall).toBe("moderate");
+    expect(result.heroVariant).toBe("needs_strengthening");
+    expect(result.strengthReason).toContain("Payment authentication");
+    expect(result.strengthReason).not.toMatch(/hard to win|missing/i);
+  });
+
+  it("FRAUD: avs_cvv_match Strong + delivery Moderate → Strong (rubric)", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match"), item("delivery_proof")],
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        delivery_proof: { proofType: "delivered_confirmed" },
+      }),
+    );
+    expect(result.overall).toBe("strong");
+    expect(result.heroVariant).toBe("likely_to_win");
+  });
+
+  it("FRAUD: avs_cvv_match Strong + device_session Moderate → Strong (rubric)", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match"), item("device_session_consistency")],
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        device_session_consistency: { consistent: true },
+      }),
+    );
+    expect(result.overall).toBe("strong");
+  });
+
+  it("FRAUD: avs_cvv_match Strong + customer_communication Strong → Strong (rubric)", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match"), item("customer_communication")],
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        customer_communication: { customerConfirmsOrder: true },
+      }),
+    );
+    expect(result.overall).toBe("strong");
+  });
+
+  it("FRAUD: 2+ Moderate signals (no Strong) → Moderate (rubric)", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("ip_location_check"), item("device_session_consistency")],
+      "FRAUDULENT",
+      payloadFor({
+        ip_location_check: {
+          bankEligible: true,
+          locationMatch: "match",
+          ipinfo: { privacy: { vpn: false } },
+        },
+        device_session_consistency: { consistent: true },
+      }),
+    );
+    expect(result.strongCount).toBe(0);
+    expect(result.moderateCount).toBe(2);
+    expect(result.overall).toBe("moderate");
+    expect(result.heroVariant).toBe("could_win");
+  });
+
+  it("FRAUD: no Strong + no Moderate → Weak (formula floor)", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match", "missing")],
+      "FRAUDULENT",
+      payloadFor({}),
+    );
+    expect(result.overall).toBe("weak");
+    expect(result.heroVariant).toBe("hard_to_win");
+  });
+
+  it("FRAUD: avs_cvv_match Strong + ip_location Moderate → Moderate (ip_location does NOT qualify for Strong)", () => {
+    // The rubric only lists delivery, device_session, and
+    // communication as the signals that combine with AVS to produce
+    // Strong. ip_location alone is NOT in that set.
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match"), item("ip_location_check")],
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        ip_location_check: {
+          bankEligible: true,
+          locationMatch: "match",
+          ipinfo: { privacy: { vpn: false } },
+        },
+      }),
+    );
+    expect(result.overall).toBe("moderate");
+    expect(result.heroVariant).toBe("could_win");
   });
 });
