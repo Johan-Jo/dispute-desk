@@ -244,18 +244,54 @@ behavior is fully automatic; merchants configure gates and thresholds.
 3. **Build** — worker collects sources (order, fulfillment, policies),
    writes `evidence_items` + `audit_events`, runs the completeness engine
    (per-reason templates → score + blockers + recommended actions).
-4. **Auto-save gate** — `evaluateAndMaybeAutoSave()` checks:
-   - `auto_save_enabled` on store settings
-   - `completeness_score >= auto_save_min_score`
-   - `blockers == 0` (if `enforce_no_blockers`)
-   - `require_review_before_save` (parks pack for manual approval)
-5. **Save** — if gates pass, enqueues `save_to_shopify` job → worker
-   calls `disputeEvidenceUpdate` with evidence GID → logs audit event →
-   updates pack status to `saved_to_shopify`.
-6. **Review queue** — if review is required, pack stays in `ready`
-   status. Merchant clicks "Approve & Save" → triggers save job.
+4. **Auto-save decision** — `evaluateAndMaybeAutoSave()` runs a
+   layered gate stack in this strict precedence order (PRD v1.1 §3):
+   1. **System failure** — `pack.status === "failed"` → `block`
+      (upstream system error; merchant sees a system-error banner,
+      never an evidence-gap message).
+   2. **Coverage Gate (PRD §4)** — `pack_json.coverage.state ===
+      "covered_shopify"` (Shopify Protect status `PROTECTED` or
+      `ACTIVE`) → `skip_covered`. No further gates run; merchant has
+      no workflow.
+   3. **Fatal-loss Gate (PRD §5)** — `pack_json.fatal_loss.triggered
+      === true` AND `ruleMode === "auto"` → `block`. Triggers
+      currently: `refund_issued`, `inr_no_fulfillment`. Review-mode
+      falls through and parks normally.
+   4. **Strength Gate (PRD §9)** — `pack_json.case_strength.overall`
+      under `ruleMode === "auto"`:
+      - `strong` → fall through to step 5.
+      - `moderate` → `park_for_review`.
+      - `weak` / `insufficient` → `block`.
+      - missing (legacy pack) → fall through (back-compat).
+   5. **Review-mode** — `ruleMode === "review"` → `park_for_review`
+      (always; "User control is absolute" per PRD §1).
+   6. **Quality gate** — `evaluateAutoSaveGate()` checks
+      `auto_save_enabled`, `completeness_score >= auto_save_min_score`,
+      `submission_readiness !== "blocked"`. Pass → `auto_save`.
+      Fail → `block`.
+5. **Save** — if the stack returns `auto_save`, enqueues
+   `save_to_shopify` job → worker calls `disputeEvidenceUpdate` with
+   evidence GID → logs audit event → updates pack status to
+   `saved_to_shopify`.
+6. **Review queue** — if the stack returned `park_for_review`, pack
+   stays in `ready` status. Merchant clicks "Approve & Save" →
+   triggers save job.
 7. **Submit** — merchant finalizes in Shopify Admin (or Shopify
    auto-submits on the dispute due date).
+
+**Hard rules across the stack:**
+- Coverage beats everything (skip_covered short-circuits before any
+  other gate runs).
+- Review-mode is absolute — strength and fatal-loss never block a
+  review-mode pack from parking; they only ever block auto-mode
+  submission.
+- Bank-rebuttal text generation NEVER cites the fatal-loss reason
+  (e.g. "we already refunded") — fatal-loss copy is merchant-UI-only.
+- Legacy packs (missing `case_strength` / `fatal_loss` on `pack_json`)
+  fall through to the existing quality gate; rebuild a pack to opt in.
+
+Detailed sources of truth: `docs/technical.md` § *Coverage Gate
+(Shopify Protect)*, § *PRD §9 Strength Gate*, § *Fatal-loss Gate*.
 
 ### Manual overrides
 
