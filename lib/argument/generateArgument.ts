@@ -101,14 +101,29 @@ export function generateArgumentMap(
         // "unavailable" items are omitted — can't be collected
       }
 
-      const requiredPresent = ct.requiredEvidence.filter((f) => {
+      const presentRequired = ct.requiredEvidence.filter((f) => {
         const s = fieldStatus.get(f);
         return s === "available" || s === "waived";
-      }).length;
+      });
+      const requiredPresent = presentRequired.length;
+
+      // Pick a partial-evidence title when the full set isn't backed.
+      // Key = sorted comma-joined list of present-required fields.
+      // Falls back to ct.title when no partial entry matches (or when
+      // all required is present, which is the canonical title case).
+      let title = ct.title;
+      if (
+        ct.partialTitles &&
+        requiredPresent > 0 &&
+        requiredPresent < ct.requiredEvidence.length
+      ) {
+        const key = [...presentRequired].sort().join(",");
+        if (ct.partialTitles[key]) title = ct.partialTitles[key];
+      }
 
       return {
         id: ct.id,
-        title: ct.title,
+        title,
         strength: claimStrength(ct.requiredEvidence.length, requiredPresent),
         supporting,
         systemUnavailable,

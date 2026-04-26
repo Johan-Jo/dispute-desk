@@ -192,9 +192,26 @@ export interface ArgumentTemplate {
 
 export interface CounterclaimTemplate {
   id: string;
+  /**
+   * Title used when ALL `requiredEvidence` is present (fully-supported
+   * claim). Must accurately describe what every required field
+   * collectively proves. If the title asserts multiple facts, ALL of
+   * those facts must be backed by entries in `requiredEvidence`.
+   */
   title: string;
   requiredEvidence: string[];
   supportingEvidence: string[];
+  /**
+   * Optional fallback titles when only a subset of `requiredEvidence`
+   * is present. Key = sorted, comma-joined list of present-required
+   * fields. Lets a claim re-headline when partial evidence forces a
+   * Moderate rating, so the merchant never reads a title that
+   * over-states the proof. Example for FRAUDULENT fraud-2:
+   *   { "shipping_tracking": "Order was shipped to the customer" }
+   * applies when only tracking is present (no delivery_proof). When
+   * no entry matches, falls back to `title`.
+   */
+  partialTitles?: Record<string, string>;
 }
 
 /* ── Missing Item Context ── */

@@ -27,6 +27,10 @@ import {
   PersonIcon,
   GlobeIcon,
   LockIcon,
+  OrderIcon,
+  ChatIcon,
+  NoteIcon,
+  FileIcon,
 } from "@shopify/polaris-icons";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { EvidenceItemWithStrength, WaiveReason } from "../workspace-components/types";
@@ -155,6 +159,17 @@ function counterclaimIcon(supportingFields: string[]): typeof CreditCardIcon {
   if (set.has("ip_location_check") || set.has("device_session_consistency")) return GlobeIcon;
   return LockIcon;
 }
+
+/** Per-category leading icon (matches the argument-block visual pattern). */
+const CATEGORY_ICON: Record<string, typeof CreditCardIcon> = {
+  order: OrderIcon,
+  payment: CreditCardIcon,
+  fulfillment: DeliveryIcon,
+  communication: ChatIcon,
+  policy: NoteIcon,
+  identity: PersonIcon,
+  merchant: FileIcon,
+};
 
 /** Flat strength pill (matches Figma `px-2 py-0.5 rounded-md text-xs`). */
 function strengthPillStyle(strength: string): { bg: string; color: string; label: string } {
@@ -912,6 +927,7 @@ function EvidenceCategorySection({
   itemRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
 }) {
   const availableCount = items.filter((i) => i.status === "available" || i.status === "waived").length;
+  const HeaderIcon = CATEGORY_ICON[category.key] ?? FileIcon;
 
   return (
     <div
@@ -941,6 +957,17 @@ function EvidenceCategorySection({
           textAlign: "left",
         }}
       >
+        <span
+          style={{
+            width: 20,
+            height: 20,
+            color: "#005BD3",
+            flexShrink: 0,
+            display: "inline-flex",
+          }}
+        >
+          <Icon source={HeaderIcon} />
+        </span>
         <span
           style={{
             flex: 1,

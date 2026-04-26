@@ -42,9 +42,18 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
         // drops to Moderate (1/2) when only tracking is present,
         // matching reality. Bank-grade rebuttal stays honest: never
         // claim delivery without a delivery signal.
+        //
+        // partialTitles: when only one of the two required fields is
+        // present, re-headline the claim so the title doesn't
+        // overstate the proof. Tracking alone proves the order was
+        // shipped, not that it was delivered.
         title: "Order was fulfilled and delivered",
         requiredEvidence: ["shipping_tracking", "delivery_proof"],
         supportingEvidence: ["billing_address_match"],
+        partialTitles: {
+          shipping_tracking: "Order was shipped to the customer",
+          delivery_proof: "Delivery to the customer is confirmed",
+        },
       },
       {
         id: "fraud-3",
@@ -70,9 +79,17 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
     counterclaims: [
       {
         id: "pnr-1",
+        // Title-to-requirement contract: title asserts BOTH shipped and
+        // delivered → both must be required. Partial titles re-headline
+        // when only one half is backed so we don't claim delivery
+        // without a delivery signal.
         title: "Order was shipped and delivered",
         requiredEvidence: ["shipping_tracking", "delivery_proof"],
         supportingEvidence: [],
+        partialTitles: {
+          shipping_tracking: "Order was shipped to the customer",
+          delivery_proof: "Delivery to the customer is confirmed",
+        },
       },
       {
         id: "pnr-2",
