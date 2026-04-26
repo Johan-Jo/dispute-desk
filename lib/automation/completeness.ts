@@ -26,6 +26,16 @@ export interface OrderContext {
    * when the data simply isn't available from the payment processor.
    */
   avsCvvAvailable: boolean;
+  /**
+   * Whether the order has at least one fulfillment record carrying a
+   * tracking number/URL, even if `displayFulfillmentStatus` is
+   * `UNFULFILLED`. Distinguishes "no shipment at all" from "shipped
+   * but delivery not yet confirmed" — only affects the reason text
+   * shown for `delivery_proof` rows so we don't tell merchants the
+   * order is unfulfilled when tracking already exists.
+   * Optional for back-compat; defaults to `false`.
+   */
+  hasShippingEvidence?: boolean;
 }
 
 export interface ChecklistItem {
@@ -183,6 +193,7 @@ const DEFAULT_ORDER_CONTEXT: OrderContext = {
   isFulfilled: false,
   hasCardPayment: false,
   avsCvvAvailable: false,
+  hasShippingEvidence: false,
 };
 
 /**
@@ -366,6 +377,7 @@ function resolveItemStatus(
   ctx: OrderContext,
   isPresent: boolean,
   waivedItem?: WaivedItemRecord,
+  field?: string,
 ): { status: EvidenceItemStatus; collectable: boolean; unavailableReason?: string } {
   if (waivedItem) {
     return { status: "waived", collectable: true };
@@ -378,10 +390,20 @@ function resolveItemStatus(
   switch (mode) {
     case "required_if_fulfilled":
       if (!ctx.isFulfilled) {
+        // When the order is structurally `UNFULFILLED` but has at
+        // least one fulfillment record with tracking, "Order is
+        // unfulfilled" misrepresents reality — the merchant has
+        // shipped something, just not yet seen delivery confirmed.
+        // Only swap the reason for `delivery_proof`; `shipping_tracking`
+        // can never reach this branch with `hasShippingEvidence === true`
+        // (it would have been `available` via `isPresent` short-circuit).
+        const inTransit = field === "delivery_proof" && ctx.hasShippingEvidence === true;
         return {
           status: "unavailable",
           collectable: false,
-          unavailableReason: "Order is unfulfilled",
+          unavailableReason: inTransit
+            ? "Awaiting delivery confirmation"
+            : "Order is unfulfilled",
         };
       }
       break;
@@ -439,7 +461,7 @@ export function evaluateCompletenessV2(
               ? presentFields.has(t.collector_key)
               : presentFields.has(MANUAL_UPLOAD_FIELD);
           const waivedItem = waiveMap.get(field);
-          const resolved = resolveItemStatus(mode, ctx, isPresent, waivedItem);
+          const resolved = resolveItemStatus(mode, ctx, isPresent, waivedItem, field);
 
           // Priority comes from the reason-specific template when it carries
           // one for this field. DB-backed templates don't encode reason
@@ -482,7 +504,7 @@ export function evaluateCompletenessV2(
       : getTemplateV2(reason).map((t) => {
           const isPresent = presentFields.has(t.field);
           const waivedItem = waiveMap.get(t.field);
-          const resolved = resolveItemStatus(t.requirementMode, ctx, isPresent, waivedItem);
+          const resolved = resolveItemStatus(t.requirementMode, ctx, isPresent, waivedItem, t.field);
           return {
             field: t.field,
             label: t.label,

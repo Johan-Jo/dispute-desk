@@ -32,9 +32,19 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
       },
       {
         id: "fraud-2",
+        // The title asserts BOTH fulfilment and delivery, so the claim
+        // must require evidence of both. Previously `delivery_proof`
+        // sat in `supportingEvidence`, which let a fraud dispute on an
+        // unfulfilled-but-tracked order rate as Strong on the basis of
+        // tracking alone — directly contradicting the row-level
+        // checklist (where `delivery_proof.unavailable / "Order is
+        // unfulfilled"`). With `delivery_proof` required, the claim
+        // drops to Moderate (1/2) when only tracking is present,
+        // matching reality. Bank-grade rebuttal stays honest: never
+        // claim delivery without a delivery signal.
         title: "Order was fulfilled and delivered",
-        requiredEvidence: ["shipping_tracking"],
-        supportingEvidence: ["delivery_proof", "billing_address_match"],
+        requiredEvidence: ["shipping_tracking", "delivery_proof"],
+        supportingEvidence: ["billing_address_match"],
       },
       {
         id: "fraud-3",

@@ -322,7 +322,22 @@ export async function buildPack(
         (d.cvvResultCode != null && d.cvvResultCode !== "")
       );
     }) ?? false;
-  const orderContext: OrderContext = { isFulfilled, hasCardPayment, avsCvvAvailable };
+  // Has at least one fulfillment record carrying tracking — used to
+  // distinguish "Order is unfulfilled" from "Awaiting delivery
+  // confirmation" when the order ships but Shopify hasn't moved
+  // displayFulfillmentStatus off UNFULFILLED yet (partial shipments,
+  // 3PL handoffs, etc.). The collector emits `shipping_tracking` for
+  // exactly this condition.
+  const hasShippingEvidence =
+    order?.fulfillments?.some((f) =>
+      f.trackingInfo?.some((t) => t.number || t.url),
+    ) ?? false;
+  const orderContext: OrderContext = {
+    isFulfilled,
+    hasCardPayment,
+    avsCvvAvailable,
+    hasShippingEvidence,
+  };
 
   const completeness = evaluateCompleteness(
     dispute.reason,
