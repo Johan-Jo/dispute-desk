@@ -35,8 +35,8 @@ import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
-import { categoryBadge } from "@/lib/argument/categoryBadge";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { categoryBadge, classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -309,7 +309,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 background: heroTone.pillBg, color: heroTone.pillColor,
               }}
             >
-              {`${caseStrength.score}% confidence`}
+              {`${caseStrength.coveragePercent}% evidence collected`}
             </span>
           </div>
           {caseStrength.strengthReason && (
@@ -551,12 +551,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           .map((c) => {
             const spec = CANONICAL_EVIDENCE[c.field]!;
             const payload =
-              data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null;
-            const realizedCategory =
-              c.status === "available" || c.status === "waived"
-                ? categoryFor({ fieldKey: c.field, payload: payload as Record<string, unknown> | null })
-                : spec.category;
-            return { item: c, spec, realizedCategory };
+              (data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null) as
+                | Record<string, unknown>
+                | null;
+            const classification = classifyEvidenceRow({
+              fieldKey: c.field,
+              status: c.status,
+              payload,
+            });
+            return { item: c, spec, classification };
           });
         const manualUploads = (data.attachments ?? []).filter(
           (a) => a.source === "manual_upload",
@@ -568,7 +571,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           collected: { label: "Collected", bg: "#D1FAE5", color: "#065F46" },
           waived: { label: "Waived", bg: "#E5E7EB", color: "#374151" },
           missing: { label: "Missing", bg: "#FEE2E2", color: "#991B1B" },
-          invalid: { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" },
+          not_applicable: { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" },
         };
         const SOURCE_NOTE: Record<string, string> = {
           auto_shopify: "From Shopify order data",
@@ -589,18 +592,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </BlockStack>
 
               <BlockStack gap="200">
-                {collectedRows.map(({ item, spec, realizedCategory }) => {
-                  const statusKey =
-                    item.status === "available"
-                      ? "collected"
-                      : item.status === "waived"
-                        ? "waived"
-                        : item.status === "unavailable"
-                          ? "invalid"
-                          : "missing";
-                  const status = STATUS_BADGE[statusKey];
-                  const isPresent = item.status === "available" || item.status === "waived";
-                  const strength = isPresent ? categoryBadge(realizedCategory) : null;
+                {collectedRows.map(({ item, spec, classification }) => {
+                  const status = STATUS_BADGE[classification.status];
+                  const strength = classification.category
+                    ? categoryBadge(classification.category)
+                    : null;
                   const sourceNote = SOURCE_NOTE[item.source ?? ""] ?? null;
                   return (
                     <div

@@ -162,6 +162,36 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
   }
 
+  // Fallback for older packs whose evidence_items rows were inserted
+  // before payload.fieldsProvided was persisted. The data still exists
+  // in pack_json.sections — synthesize ID-keyed entries from the raw
+  // section so the categorizer can read avs_cvv_match codes,
+  // ip_location_check signals, delivery proofType, etc. Without this,
+  // an evidence-rich submitted pack reads as "0% confidence" because
+  // every conditional field falls through the categorizer's
+  // explicit-fail branch.
+  type RawSection = {
+    type?: string;
+    label?: string;
+    source?: string;
+    fieldsProvided?: string[];
+    data?: Record<string, unknown>;
+  };
+  const packJsonSections =
+    ((packRow?.pack_json as { sections?: RawSection[] } | null)?.sections ?? []);
+  for (const s of packJsonSections) {
+    for (const f of s.fieldsProvided ?? []) {
+      if (f in evidenceItemsByField) continue;
+      evidenceItemsByField[f] = {
+        id: `pack-section:${f}`,
+        type: s.type,
+        label: s.label ?? null,
+        source: s.source ?? null,
+        payload: { ...(s.data ?? {}), fieldsProvided: s.fieldsProvided },
+      };
+    }
+  }
+
   // Derived attachments[] — first-class file inventory for the dispute
   // detail Review tab (R5 "Supporting documents"). Plan v3 §3.A.4.
   // Sourced from `evidence_items.payload.fileId`. Empty array (not
@@ -220,13 +250,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // landed) can have rows still flagged `missing` for evidence the
   // collectors did produce — Overview surfaces would then look empty
   // even though pack_json.sections has the data. Pure normalization on
-  // read; no DB write.
-  type RawSection = { fieldsProvided?: string[] | null };
-  const sections = (
-    (packRow?.pack_json as { sections?: RawSection[] } | null)?.sections ?? []
-  );
+  // read; no DB write. Uses the same packJsonSections collected above
+  // for the evidenceItemsByField fallback.
   const collectedForRead = collectedFieldsFromPack({
-    sections,
+    sections: packJsonSections,
     evidenceItems: itemsRes.data ?? [],
   });
   const reconciledChecklistV2 = reconcileChecklistWithCollectedFields(
