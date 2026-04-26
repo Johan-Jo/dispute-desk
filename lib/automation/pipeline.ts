@@ -231,6 +231,98 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     }
   }
 
+  // PRD §9 strength gate (auto-mode only). The PRD principle "Auto mode
+  // executes ONLY on Strong cases" forbids auto-submission of weaker
+  // evidence regardless of completeness:
+  //   auto + strong       → fall through to the existing quality gate
+  //   auto + moderate     → park_for_review
+  //   auto + weak         → block
+  //   auto + insufficient → block
+  // Source field: `pack_json.case_strength.overall` (persisted in
+  // buildPack since the previous commit). Older packs built before
+  // that commit have no case_strength entry — we leave the existing
+  // behavior intact for them rather than silently flipping decisions.
+  const caseStrength = (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength;
+  const strengthOverall = caseStrength?.overall ?? null;
+  if (ruleMode === "auto" && strengthOverall === "moderate") {
+    const reason = "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
+    const alreadySaved =
+      pack.status === "saved_to_shopify" ||
+      pack.status === "saved_to_shopify_unverified" ||
+      pack.status === "saved_to_shopify_verified";
+    if (!alreadySaved) {
+      await sb
+        .from("evidence_packs")
+        .update({ status: "ready", updated_at: new Date().toISOString() })
+        .eq("id", packId);
+    } else {
+      await sb
+        .from("evidence_packs")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", packId);
+    }
+    await sb.from("audit_events").insert({
+      shop_id: pack.shop_id,
+      dispute_id: pack.dispute_id,
+      pack_id: packId,
+      actor_type: "system",
+      event_type: "parked_for_review",
+      event_payload: { reason, rule_mode: ruleMode, case_strength: strengthOverall },
+    });
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: PARKED_FOR_REVIEW,
+        description: reason,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        metadataJson: { pack_id: packId, reason, rule_mode: ruleMode, case_strength: strengthOverall },
+        dedupeKey: `${pack.dispute_id}:${PARKED_FOR_REVIEW}:${packId}`,
+      });
+      void updateNormalizedStatus(pack.dispute_id);
+    }
+    if (pack.dispute_id && !alreadySaved) {
+      void claimAndSendDeferredNewDisputeReviewAlert(pack.dispute_id).catch(
+        () => {
+          /* non-fatal */
+        },
+      );
+    }
+    return { action: "park_for_review", details: reason };
+  }
+  if (
+    ruleMode === "auto" &&
+    (strengthOverall === "weak" || strengthOverall === "insufficient")
+  ) {
+    const reason = `Auto-mode case strength is ${strengthOverall === "weak" ? "Weak" : "Insufficient"} — auto-submit blocked per PRD §9`;
+    await sb.from("audit_events").insert({
+      shop_id: pack.shop_id,
+      dispute_id: pack.dispute_id,
+      pack_id: packId,
+      actor_type: "system",
+      event_type: "auto_save_blocked",
+      event_payload: { reasons: [reason], case_strength: strengthOverall },
+    });
+    if (pack.dispute_id) {
+      void emitDisputeEvent({
+        disputeId: pack.dispute_id,
+        shopId: pack.shop_id,
+        eventType: PACK_BLOCKED,
+        eventAt: new Date().toISOString(),
+        actorType: "disputedesk_system",
+        sourceType: "pack_engine",
+        visibility: "merchant_and_internal",
+        description: reason,
+        metadataJson: { pack_id: packId, reasons: [reason], case_strength: strengthOverall },
+        dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
+      });
+      void updateNormalizedStatus(pack.dispute_id);
+    }
+    return { action: "block", details: reason };
+  }
+
   // review → merchant approval required, park the pack.
   if (ruleMode === "review") {
     const reason = "Rule action is review — awaiting merchant approval";
