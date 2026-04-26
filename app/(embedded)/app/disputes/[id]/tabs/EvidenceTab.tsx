@@ -125,18 +125,24 @@ function impactSentence(field: string): string {
   return `Missing ${friendlyLabel(field, field).toLowerCase()} \u2014 without it, ${tail}`;
 }
 
-/* ── Outcome / confidence helpers ── */
-
+/* ── Outcome helper ── *
+ *
+ * The Evidence tab shows ONE verdict at the top, derived directly
+ * from `derived.caseStrength.overall` — the canonical engine output.
+ * The previous design also showed a "Confidence" pill via
+ * `confidenceFrom(level, score)`, but those thresholds were written
+ * against the legacy 0-100 ratio; after the P2.1 scoring rewrite
+ * `score` became a count-based weighted sum (`strongCount * 3 +
+ * moderateCount * 2`, typically 0-N), so a moderate case landed in
+ * the `score < 40 → "Low"` branch and contradicted the header
+ * "Moderate case" pill. Removed in 2026-04-26 (option B). The
+ * follow-up unification will move every tab to
+ * `caseStrength.heroVariant` for a single, app-wide verdict.
+ */
 function outcomeFromStrength(level: string): { label: string; tone: "success" | "warning" | "critical" } {
   if (level === "strong") return { label: "Likely to win", tone: "success" };
   if (level === "moderate") return { label: "Moderate", tone: "warning" };
   return { label: "Weak", tone: "critical" };
-}
-
-function confidenceFrom(level: string, score: number): { label: string; tone: "success" | "warning" | "critical" } {
-  if (level === "strong" && score >= 70) return { label: "High", tone: "success" };
-  if (level === "weak" || level === "insufficient" || score < 40) return { label: "Low", tone: "critical" };
-  return { label: "Medium", tone: "warning" };
 }
 
 /* ── Argument-block icon mapping ── *
@@ -398,9 +404,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
   const readOnly = derived.isReadOnly;
 
   const strengthKey = derived.caseStrength.overall;
-  const score = derived.caseStrength.score ?? 0;
   const outcome = outcomeFromStrength(strengthKey);
-  const confidence = confidenceFrom(strengthKey, score);
 
   const topGap = missingItems[0];
   const recommendation: string = (() => {
@@ -563,7 +567,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* 1. TOP SUMMARY — outcome + confidence + recommendation */}
+      {/* 1. TOP SUMMARY — outcome + recommendation */}
       <div
         style={{
           background: "#ffffff",
@@ -578,10 +582,6 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
             <BlockStack gap="050">
               <Text as="p" variant="bodySm" tone="subdued">Likely outcome</Text>
               <Badge tone={outcome.tone}>{outcome.label}</Badge>
-            </BlockStack>
-            <BlockStack gap="050">
-              <Text as="p" variant="bodySm" tone="subdued">Confidence</Text>
-              <Badge tone={confidence.tone}>{confidence.label}</Badge>
             </BlockStack>
           </InlineStack>
 
