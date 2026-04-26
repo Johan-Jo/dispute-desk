@@ -663,6 +663,7 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                   key={claim.id}
                   claim={claim}
                   defaultOpen={i < 2}
+                  readOnly={readOnly}
                   onTagClick={(field) => actions.navigateToEvidence(field)}
                 />
               ))}
@@ -1202,16 +1203,19 @@ function EvidenceItemInline({
 function ArgumentBlock({
   claim,
   defaultOpen,
+  readOnly,
   onTagClick,
 }: {
   claim: CounterclaimNode;
   defaultOpen: boolean;
+  readOnly: boolean;
   onTagClick: (field: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const supportingFields = claim.supporting.map((s) => s.field);
   const IconSrc = counterclaimIcon(supportingFields);
   const pill = strengthPillStyle(claim.strength);
+  const hasGaps = claim.systemUnavailable.length > 0 || claim.missing.length > 0;
 
   return (
     <div
@@ -1281,7 +1285,7 @@ function ArgumentBlock({
       </button>
       <Collapsible open={open} id={`arg-block-${claim.id}`}>
         <div style={{ padding: "0 20px 16px", borderTop: "1px solid #E1E3E5" }}>
-          {claim.supporting.length === 0 ? (
+          {claim.supporting.length === 0 && !hasGaps ? (
             <p style={{ fontSize: 13, color: "#6D7175", margin: "12px 0 0" }}>
               No supporting evidence cited yet.
             </p>
@@ -1331,6 +1335,103 @@ function ArgumentBlock({
                   </span>
                 </button>
               ))}
+
+              {/* Gaps inside the same block — informational rows for
+                  evidence the system can't supply (e.g. delivery
+                  confirmation when carrier hasn't reported delivered)
+                  and merchant-actionable rows that can be uploaded.
+                  Surfacing the gap inline makes the Strong→Moderate
+                  transition self-explanatory: the merchant sees both
+                  what's backing the claim and what's missing without
+                  cross-referencing another card. */}
+              {claim.systemUnavailable.map((s) => (
+                <div
+                  key={`sys-${s.field}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      color: "#8C9196",
+                      flexShrink: 0,
+                      marginTop: 2,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <Icon source={MinusCircleIcon} />
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      color: "#6D7175",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {friendlyLabel(s.field, s.label)}{" "}
+                    <span style={{ fontStyle: "italic" }}>— not yet available</span>
+                  </span>
+                </div>
+              ))}
+              {claim.missing.map((m) => {
+                const Tag = readOnly ? "div" : "button";
+                return (
+                  <Tag
+                    key={`missing-${m.field}`}
+                    {...(readOnly
+                      ? {}
+                      : {
+                          type: "button" as const,
+                          onClick: () => onTagClick(m.field),
+                        })}
+                    style={{
+                      appearance: "none",
+                      background: "transparent",
+                      border: 0,
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      cursor: readOnly ? "default" : "pointer",
+                      fontFamily: "inherit",
+                      textAlign: "left" as const,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 16,
+                        height: 16,
+                        color: "#DC2626",
+                        flexShrink: 0,
+                        marginTop: 2,
+                        display: "inline-flex",
+                      }}
+                    >
+                      <Icon source={AlertTriangleIcon} />
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        color: "#7F1D1D",
+                        lineHeight: 1.4,
+                        textDecoration: readOnly ? "none" : "underline",
+                        textDecorationColor: "transparent",
+                      }}
+                    >
+                      {friendlyLabel(m.field, m.label)}{" "}
+                      {!readOnly && (
+                        <span style={{ color: "#DC2626", fontWeight: 500 }}>
+                          — add this evidence
+                        </span>
+                      )}
+                    </span>
+                  </Tag>
+                );
+              })}
             </div>
           )}
         </div>
