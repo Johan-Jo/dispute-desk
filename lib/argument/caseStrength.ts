@@ -99,6 +99,99 @@ const STRENGTH_REASONS: Record<ReasonFamily, Record<CaseStrengthLevel, string>> 
   },
 };
 
+/* ── strengthReason composition ──
+ *
+ * The hero copy must agree with the canonical contribution result. A
+ * static `STRENGTH_REASONS[family][overall]` lookup cannot — it returns
+ * "Key payment verification evidence is missing." even when AVS+CVV is
+ * the one Strong contribution we collected. Compose the sentence from
+ * the actual rows instead so the hero, "What supports your case", and
+ * "Evidence collected" are guaranteed to agree.
+ */
+
+interface ContributionRow {
+  signalId: SignalId;
+  category: "strong" | "moderate";
+  label: string;
+}
+
+/** Per-family hint about decisive evidence the merchant could still
+ *  add. Used in composed strings — never claims something is "missing"
+ *  if it's already present. */
+function decisiveHintFor(family: ReasonFamily): string {
+  switch (family) {
+    case "fraud":
+      return "delivery confirmation, signature on file, or device-session consistency";
+    case "delivery":
+      return "carrier signature confirmation or matching billing/IP signals";
+    case "product":
+      return "the product listing as advertised and your refund policy disclosure";
+    case "refund":
+      return "documented refund processing or merchant communication";
+    case "subscription":
+      return "the cancellation policy and customer communication timeline";
+    case "billing":
+      return "transaction records and AVS+CVV verification";
+    case "digital":
+      return "access logs proving the customer used the digital good";
+    case "general":
+    default:
+      return "additional decisive evidence";
+  }
+}
+
+function joinLabels(labels: string[], conj: "and" | "with" = "and"): string {
+  if (labels.length === 0) return "";
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} ${conj} ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, ${conj} ${labels[labels.length - 1]}`;
+}
+
+function composeStrengthReason(args: {
+  overall: CaseStrengthLevel;
+  family: ReasonFamily;
+  strong: ContributionRow[];
+  moderate: ContributionRow[];
+}): string {
+  const { overall, family, strong, moderate } = args;
+
+  if (overall === "insufficient") {
+    return STRENGTH_REASONS[family].insufficient;
+  }
+
+  if (overall === "strong") {
+    const labels = strong.map((c) => c.label);
+    return labels.length >= 2
+      ? `${joinLabels(labels.slice(0, 3))} all support this defense decisively.`
+      : `${labels[0] ?? "Strong evidence"} supports this defense decisively.`;
+  }
+
+  if (overall === "moderate") {
+    const strongLabel = strong[0]?.label;
+    const moderateLabel = moderate[0]?.label;
+    if (strongLabel && moderateLabel) {
+      return `${strongLabel} and ${moderateLabel} support this defense; additional decisive evidence would strengthen the case.`;
+    }
+    if (strongLabel) {
+      return `${strongLabel} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case.`;
+    }
+    return STRENGTH_REASONS[family].moderate;
+  }
+
+  // overall === "weak"
+  if (strong.length === 1 && moderate.length === 0) {
+    return `${strong[0].label} supports this defense, but additional decisive evidence (such as ${decisiveHintFor(family)}) would strengthen the case.`;
+  }
+  if (strong.length === 0 && moderate.length >= 1) {
+    const labels = moderate.slice(0, 2).map((c) => c.label);
+    return `${joinLabels(labels)} provide partial support. A strong signal such as ${decisiveHintFor(family)} would significantly strengthen the case.`;
+  }
+  // strong=0 AND moderate=0 — true "weak". Use the family fallback,
+  // which is the only case where it's accurate to say a category of
+  // decisive evidence is missing.
+  return STRENGTH_REASONS[family].weak;
+}
+
 /* ── Public API ── */
 
 /**
@@ -163,7 +256,10 @@ export function calculateCaseStrength(
     supporting: 1,
     invalid: 0,
   };
-  const bestBySignal = new Map<SignalId, EvidenceCategory>();
+  // Per-signal accumulator: best category + label of the first
+  // contributing evidence field (used for strengthReason composition).
+  type SignalAcc = { category: EvidenceCategory; label: string };
+  const bestBySignalDetailed = new Map<SignalId, SignalAcc>();
 
   let registeredItems = 0; // canonical fields visible in the checklist
   let presentItems = 0;    // available or waived
@@ -183,8 +279,10 @@ export function calculateCaseStrength(
       const category = categoryFor({ fieldKey: item.field, payload: payloadFor(payloadSource, item.field) });
       // Supporting and invalid contribute nothing to scoring.
       if (!affectsStrength(category)) continue;
-      const prev = bestBySignal.get(spec.signalId) ?? "invalid";
-      if (RANK[category] > RANK[prev]) bestBySignal.set(spec.signalId, category);
+      const prev = bestBySignalDetailed.get(spec.signalId);
+      if (!prev || RANK[category] > RANK[prev.category]) {
+        bestBySignalDetailed.set(spec.signalId, { category, label: spec.label });
+      }
     } else if (isMissing && (item.collectionType === "manual" || !item.collectionType)) {
       // Track the highest-default-category missing actionable field for
       // the improvement hint. We use the spec's default category (best
@@ -197,12 +295,21 @@ export function calculateCaseStrength(
     }
   }
 
-  let strongCount = 0;
-  let moderateCount = 0;
-  for (const cat of bestBySignal.values()) {
-    if (cat === "strong") strongCount++;
-    else if (cat === "moderate") moderateCount++;
+  // Build contribution row lists for strengthReason composition.
+  // Same data the workspace UI reads via `computeContributions` —
+  // guaranteed to agree with "What supports your case" and "Evidence
+  // collected" because it comes from the same per-signal verdict.
+  const strongRows: ContributionRow[] = [];
+  const moderateRows: ContributionRow[] = [];
+  for (const [signalId, acc] of bestBySignalDetailed) {
+    if (acc.category === "strong") {
+      strongRows.push({ signalId, category: "strong", label: acc.label });
+    } else if (acc.category === "moderate") {
+      moderateRows.push({ signalId, category: "moderate", label: acc.label });
+    }
   }
+  const strongCount = strongRows.length;
+  const moderateCount = moderateRows.length;
 
   // Supporting count — informational; not used by the scorer.
   let supportingCount = 0;
@@ -235,7 +342,15 @@ export function calculateCaseStrength(
     improvementHint = `Add ${label.toLowerCase()} to strengthen your case.`;
   }
 
-  const strengthReason = STRENGTH_REASONS[family][overall];
+  // Compose strengthReason from the actual contributions instead of a
+  // static per-family table. Guarantees the hero copy never claims a
+  // signal is "missing" when it's already in the contribution list.
+  const strengthReason = composeStrengthReason({
+    overall,
+    family,
+    strong: strongRows,
+    moderate: moderateRows,
+  });
 
   return {
     overall,

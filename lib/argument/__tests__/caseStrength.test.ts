@@ -249,3 +249,89 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
     expect(result.coveragePercent).toBe(50);
   });
 });
+
+describe("calculateCaseStrength — strengthReason cannot contradict contributions", () => {
+  it("does NOT claim payment verification is missing when avs_cvv_match is the strong contribution (regression for dispute aee832ad)", () => {
+    const checklist = [
+      item("avs_cvv_match", "available"),
+      item("billing_address_match", "missing"),
+      item("activity_log", "available"),
+      item("refund_policy", "available"),
+    ];
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+      avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+    }));
+    expect(result.strongCount).toBe(1);
+    expect(result.overall).toBe("weak");
+    // Critical invariant: the body copy must reference the actually-collected
+    // strong contribution, not claim it as missing.
+    expect(result.strengthReason).toContain("Payment authentication");
+    expect(result.strengthReason).not.toMatch(/payment verification evidence is missing/i);
+    expect(result.strengthReason).not.toMatch(/key payment verification/i);
+  });
+
+  it("strong overall — names the strong contributions in the reason", () => {
+    const checklist = [
+      item("avs_cvv_match", "available"),
+      item("billing_address_match", "available"),
+    ];
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+      avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+      billing_address_match: { match: true },
+    }));
+    expect(result.overall).toBe("strong");
+    expect(result.strengthReason).toContain("Payment authentication");
+    expect(result.strengthReason).toContain("Billing address match");
+  });
+
+  it("moderate overall — names both the strong and the moderate contribution", () => {
+    const checklist = [
+      item("avs_cvv_match", "available"),
+      item("ip_location_check", "available"),
+    ];
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
+      avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+      ip_location_check: {
+        bankEligible: true,
+        locationMatch: "match",
+        ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+      },
+    }));
+    expect(result.overall).toBe("moderate");
+    expect(result.strengthReason).toContain("Payment authentication");
+    expect(result.strengthReason).toContain("IP & location");
+  });
+
+  it("zero strong + zero moderate — falls back to family copy (only case allowed to claim 'missing')", () => {
+    const checklist = [
+      item("avs_cvv_match", "missing"),
+      item("billing_address_match", "missing"),
+    ];
+    const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({}));
+    expect(result.strongCount).toBe(0);
+    expect(result.moderateCount).toBe(0);
+    expect(result.strengthReason).toBe("Key payment verification evidence is missing.");
+  });
+
+  it("invariant: any strong contribution → its label appears in the reason", () => {
+    // Run across all reason families to confirm the composer never
+    // erases the contribution it just listed.
+    const families: Array<[string, string, Record<string, unknown>]> = [
+      ["FRAUDULENT", "avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" }],
+      ["PRODUCT_NOT_RECEIVED", "billing_address_match", { match: true }],
+      ["GENERAL", "billing_address_match", { match: true }],
+    ];
+    for (const [reason, field, payload] of families) {
+      const result = calculateCaseStrength(
+        emptyArgMap(),
+        [item(field, "available")],
+        reason,
+        payloadFor({ [field]: payload }),
+      );
+      if (result.strongCount > 0) {
+        const label = field === "avs_cvv_match" ? "Payment authentication" : "Billing address match";
+        expect(result.strengthReason, `${reason}/${field}`).toContain(label);
+      }
+    }
+  });
+});
