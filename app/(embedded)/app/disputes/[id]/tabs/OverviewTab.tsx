@@ -446,117 +446,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* What supports your case — top 3 collected strong/moderate
-          rows. Restored to match Figma's overview layout: a focused
-          summary of what's actually winning the case, separate from
-          the full per-row evidence list below. Only renders when
-          there's at least one strong/moderate row to surface. */}
-      {(() => {
-        const supportingRows = effectiveChecklist
-          .filter((c) => CANONICAL_EVIDENCE[c.field])
-          .map((c) => {
-            const spec = CANONICAL_EVIDENCE[c.field]!;
-            const payload =
-              (data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null) as
-                | Record<string, unknown>
-                | null;
-            const classification = classifyEvidenceRow({
-              fieldKey: c.field,
-              status: c.status,
-              payload,
-            });
-            return { item: c, spec, classification };
-          })
-          .filter(
-            (r) =>
-              r.classification.status !== "missing" &&
-              r.classification.status !== "not_applicable" &&
-              r.classification.status !== "waived" &&
-              (r.classification.category === "strong" ||
-                r.classification.category === "moderate"),
-          )
-          .sort((a, b) => {
-            const rank = (cat: string | null) => (cat === "strong" ? 0 : cat === "moderate" ? 1 : 2);
-            return rank(a.classification.category) - rank(b.classification.category);
-          })
-          .slice(0, 3);
-
-        if (supportingRows.length === 0) return null;
-
-        const pillFor = (cat: string | null): { label: string; bg: string; color: string } => {
-          if (cat === "strong") return { label: "Strong", bg: "#D1FAE5", color: "#065F46" };
-          if (cat === "moderate") return { label: "Moderate", bg: "#FEF3C7", color: "#92400E" };
-          return { label: "Supporting", bg: "#FEF3C7", color: "#92400E" };
-        };
-
-        return (
-          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingSm">What supports your case</Text>
-              <BlockStack gap="200">
-                {supportingRows.map(({ item, spec, classification }) => {
-                  const pill = pillFor(classification.category);
-                  return (
-                    <div
-                      key={item.field}
-                      style={{
-                        background: "#F6F8FB",
-                        border: "1px solid #E1E3E5",
-                        borderRadius: 8,
-                        padding: 16,
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 12,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 20,
-                          height: 20,
-                          color: "#059669",
-                          flexShrink: 0,
-                          marginTop: 1,
-                          display: "inline-flex",
-                        }}
-                      >
-                        <Icon source={CheckCircleIcon} />
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: "#202223",
-                            margin: 0,
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {spec.label}
-                        </p>
-                      </div>
-                      <span
-                        style={{
-                          flexShrink: 0,
-                          padding: "2px 10px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: pill.bg,
-                          color: pill.color,
-                          whiteSpace: "nowrap",
-                          alignSelf: "flex-start",
-                        }}
-                      >
-                        {pill.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </BlockStack>
-            </BlockStack>
-          </div>
-        );
-      })()}
+      {/* "What supports your case" is intentionally NOT a separate
+          card — the strong/moderate rows already render at the top of
+          "Evidence collected" below (single-list, strongest-first
+          ordering). A separate card duplicated those rows visually
+          without adding new information. */}
 
       {/* Evidence collected — shows everything in the pack, not just
           argument-winning signals. The single-list, strongest-first
@@ -659,7 +553,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         //   · trailing pill self-aligned.
         const renderRow = (row: Row) => {
           const { item, spec, classification } = row;
-          const sourceNote = SOURCE_NOTE[item.source ?? ""] ?? null;
+          // Prefer the row-specific reason copy when the row is
+          // structurally unavailable (e.g. "Order is unfulfilled" for
+          // delivery_proof on an unfulfilled order) — much more
+          // informative than the generic source descriptor. Falls back
+          // to SOURCE_NOTE for collected / missing rows.
+          const sourceNote =
+            classification.status === "not_applicable" && item.unavailableReason
+              ? item.unavailableReason
+              : (SOURCE_NOTE[item.source ?? ""] ?? null);
           const isMissing = classification.status === "missing";
           const isNeutral =
             classification.status === "not_applicable" ||
