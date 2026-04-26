@@ -1,6 +1,6 @@
 "use client";
 
-import { Page, Tabs, Spinner, BlockStack, InlineStack, Text, Badge } from "@shopify/polaris";
+import { Page, Spinner, BlockStack, InlineStack, Text, Badge } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
@@ -38,10 +38,10 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const workspace = useDisputeWorkspace(disputeId);
   const { data, derived, clientState, actions } = workspace;
 
-  const tabs = [
-    { id: "overview", content: "Overview", panelID: "overview-panel" },
-    { id: "evidence", content: "Evidence", panelID: "evidence-panel" },
-    { id: "submit", content: "Review & Submit", panelID: "submit-panel" },
+  const tabs: Array<{ id: string; label: string; panelId: string }> = [
+    { id: "overview", label: "Overview", panelId: "overview-panel" },
+    { id: "evidence", label: "Evidence", panelId: "evidence-panel" },
+    { id: "submit", label: "Review & Submit", panelId: "submit-panel" },
   ];
 
   if (clientState.loading || !data) {
@@ -122,21 +122,78 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
           </BlockStack>
         </div>
 
-        <Tabs
-          tabs={tabs}
-          selected={clientState.activeTab}
-          onSelect={(index) => actions.setActiveTab(index as 0 | 1 | 2)}
-        >
-          {clientState.activeTab === 0 && (
-            <OverviewTab workspace={workspace} />
-          )}
-          {clientState.activeTab === 1 && (
-            <EvidenceTab workspace={workspace} />
-          )}
-          {clientState.activeTab === 2 && (
-            <ReviewSubmitTab workspace={workspace} />
-          )}
-        </Tabs>
+        {/* Figma-style tab strip: connected white card, blue underline on
+            active tab. Replaces Polaris <Tabs> so the tab bar visually
+            joins the panel below into a single rounded card. */}
+        <div>
+          <div
+            role="tablist"
+            aria-label="Dispute sections"
+            style={{
+              background: "#ffffff",
+              border: "1px solid #E1E3E5",
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              borderBottom: 0,
+              display: "flex",
+            }}
+          >
+            {tabs.map((tab, index) => {
+              const isActive = clientState.activeTab === index;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={tab.panelId}
+                  id={`${tab.id}-tab`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => actions.setActiveTab(index as 0 | 1 | 2)}
+                  style={{
+                    appearance: "none",
+                    background: "transparent",
+                    border: 0,
+                    borderBottom: `2px solid ${isActive ? "#005BD3" : "transparent"}`,
+                    padding: "12px 24px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: isActive ? "#005BD3" : "#6D7175",
+                    cursor: "pointer",
+                    lineHeight: 1.4,
+                    fontFamily: "inherit",
+                    marginBottom: -1,
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            role="tabpanel"
+            id={tabs[clientState.activeTab]?.panelId}
+            aria-labelledby={`${tabs[clientState.activeTab]?.id}-tab`}
+            style={{
+              background: "#ffffff",
+              border: "1px solid #E1E3E5",
+              borderTop: "1px solid #E1E3E5",
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+              padding: 20,
+            }}
+          >
+            {clientState.activeTab === 0 && (
+              <OverviewTab workspace={workspace} />
+            )}
+            {clientState.activeTab === 1 && (
+              <EvidenceTab workspace={workspace} />
+            )}
+            {clientState.activeTab === 2 && (
+              <ReviewSubmitTab workspace={workspace} />
+            )}
+          </div>
+        </div>
       </BlockStack>
     </Page>
   );

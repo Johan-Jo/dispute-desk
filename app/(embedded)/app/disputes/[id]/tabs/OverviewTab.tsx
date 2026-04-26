@@ -319,7 +319,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       <div
         style={{
           background: heroTone.bg,
-          border: `1px solid ${heroTone.border}`,
+          border: `2px solid ${heroTone.border}`,
           borderRadius: 8,
           padding: 24,
           display: "flex",
@@ -446,12 +446,117 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* "What supports your case" was removed — its content
-          duplicated the strong/moderate rows now surfaced at the top
-          of "Evidence collected" (which is ordered strongest-first).
-          The actionable "Add this evidence" CTA for missing
-          high-value signals moved inline into the Evidence collected
-          missing rows below. */}
+      {/* What supports your case — top 3 collected strong/moderate
+          rows. Restored to match Figma's overview layout: a focused
+          summary of what's actually winning the case, separate from
+          the full per-row evidence list below. Only renders when
+          there's at least one strong/moderate row to surface. */}
+      {(() => {
+        const supportingRows = effectiveChecklist
+          .filter((c) => CANONICAL_EVIDENCE[c.field])
+          .map((c) => {
+            const spec = CANONICAL_EVIDENCE[c.field]!;
+            const payload =
+              (data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null) as
+                | Record<string, unknown>
+                | null;
+            const classification = classifyEvidenceRow({
+              fieldKey: c.field,
+              status: c.status,
+              payload,
+            });
+            return { item: c, spec, classification };
+          })
+          .filter(
+            (r) =>
+              r.classification.status !== "missing" &&
+              r.classification.status !== "not_applicable" &&
+              r.classification.status !== "waived" &&
+              (r.classification.category === "strong" ||
+                r.classification.category === "moderate"),
+          )
+          .sort((a, b) => {
+            const rank = (cat: string | null) => (cat === "strong" ? 0 : cat === "moderate" ? 1 : 2);
+            return rank(a.classification.category) - rank(b.classification.category);
+          })
+          .slice(0, 3);
+
+        if (supportingRows.length === 0) return null;
+
+        const pillFor = (cat: string | null): { label: string; bg: string; color: string } => {
+          if (cat === "strong") return { label: "Strong", bg: "#D1FAE5", color: "#065F46" };
+          if (cat === "moderate") return { label: "Moderate", bg: "#FEF3C7", color: "#92400E" };
+          return { label: "Supporting", bg: "#FEF3C7", color: "#92400E" };
+        };
+
+        return (
+          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+            <BlockStack gap="300">
+              <Text as="h3" variant="headingSm">What supports your case</Text>
+              <BlockStack gap="200">
+                {supportingRows.map(({ item, spec, classification }) => {
+                  const pill = pillFor(classification.category);
+                  return (
+                    <div
+                      key={item.field}
+                      style={{
+                        background: "#F6F8FB",
+                        border: "1px solid #E1E3E5",
+                        borderRadius: 8,
+                        padding: 16,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 12,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          color: "#059669",
+                          flexShrink: 0,
+                          marginTop: 1,
+                          display: "inline-flex",
+                        }}
+                      >
+                        <Icon source={CheckCircleIcon} />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "#202223",
+                            margin: 0,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {spec.label}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          padding: "2px 10px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: pill.bg,
+                          color: pill.color,
+                          whiteSpace: "nowrap",
+                          alignSelf: "flex-start",
+                        }}
+                      >
+                        {pill.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </BlockStack>
+            </BlockStack>
+          </div>
+        );
+      })()}
 
       {/* Evidence collected — shows everything in the pack, not just
           argument-winning signals. The single-list, strongest-first
@@ -684,63 +789,81 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         );
       })()}
 
-      {/* O4: Evidence coverage */}
-      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
-        <BlockStack gap="300">
-          <Text as="h3" variant="headingSm">Evidence coverage</Text>
+      {/* O4: Evidence coverage — compact per Figma. Headline + count
+          + progress bar + a single bottom row that flips between
+          "Supporting evidence complete ✓" and the count of missing
+          supporting items. The detailed bucket breakdown and
+          "View all evidence" button were removed — full coverage
+          surfaces in the Evidence tab. */}
+      {(() => {
+        const supportingBucket = buckets.find((b) => b.key === "recommended");
+        const supportingComplete =
+          supportingBucket && supportingBucket.complete === supportingBucket.items.length;
+        const supportingLabel = supportingComplete
+          ? "Supporting evidence complete"
+          : supportingBucket
+            ? `${supportingBucket.items.length - supportingBucket.complete} supporting ${
+                supportingBucket.items.length - supportingBucket.complete === 1 ? "item" : "items"
+              } missing`
+            : null;
+        const barColor =
+          heroVariant === "covered"
+            ? "#1D4ED8"
+            : heroVariant === "likely_to_win"
+              ? "#059669"
+              : heroVariant === "hard_to_win"
+                ? "#DC2626"
+                : "#F59E0B";
+        return (
+          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+            <BlockStack gap="300">
+              <Text as="h3" variant="headingSm">Evidence coverage</Text>
 
-          <div>
-            <InlineStack align="space-between" blockAlign="center">
-              <Text as="p" variant="bodySm" fontWeight="semibold">
-                {criticalMissing.length === 0
-                  ? "All critical evidence present"
-                  : `${criticalMissing.length} critical ${criticalMissing.length === 1 ? "item" : "items"} missing`}
-              </Text>
-              <Text as="span" variant="bodySm" tone="subdued">{`${totalIncluded}/${totalCount} included`}</Text>
-            </InlineStack>
-            <div style={{ marginTop: 8, height: 6, background: "#E1E3E5", borderRadius: 9999, overflow: "hidden" }}>
-              <div
-                style={{
-                  width: `${completenessScore}%`,
-                  height: "100%",
-                  background:
-                    heroVariant === "covered"
-                      ? "#1D4ED8"
-                      : heroVariant === "likely_to_win"
-                        ? "#059669"
-                        : heroVariant === "hard_to_win"
-                          ? "#DC2626"
-                          : "#F59E0B",
-                  borderRadius: 9999,
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
-            <BlockStack gap="200">
-              {buckets.map((b) => (
-                <InlineStack key={b.key} align="space-between" blockAlign="center">
-                  <InlineStack gap="200" blockAlign="center">
-                    <span
-                      style={{
-                        width: 8, height: 8, borderRadius: 9999, display: "inline-block",
-                        background: b.key === "critical" ? "#DC2626" : b.key === "recommended" ? "#D97706" : "#6D7175",
-                      }}
-                    />
-                    <Text as="span" variant="bodyMd">{b.label}</Text>
-                  </InlineStack>
-                  <Text as="span" variant="bodyMd" fontWeight="medium">
-                    {`${b.complete}/${b.items.length} complete`}
+              <div>
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text as="p" variant="bodySm" fontWeight="semibold">
+                    {criticalMissing.length === 0
+                      ? "All critical evidence present"
+                      : `${criticalMissing.length} critical ${criticalMissing.length === 1 ? "item" : "items"} missing`}
                   </Text>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: criticalMissing.length === 0 ? "#059669" : "#6D7175",
+                    }}
+                  >
+                    {`${totalIncluded}/${totalCount} collected`}
+                  </span>
                 </InlineStack>
-              ))}
+                <div style={{ marginTop: 8, height: 8, background: "#E1E3E5", borderRadius: 9999, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${completenessScore}%`,
+                      height: "100%",
+                      background: barColor,
+                      borderRadius: 9999,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {supportingLabel && (
+                <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="span" variant="bodySm" tone="subdued">{supportingLabel}</Text>
+                    {supportingComplete && (
+                      <span style={{ width: 16, height: 16, color: "#059669", display: "inline-flex" }}>
+                        <Icon source={CheckCircleIcon} />
+                      </span>
+                    )}
+                  </InlineStack>
+                </div>
+              )}
             </BlockStack>
           </div>
-
-          <Button variant="plain" onClick={goToEvidence}>View all evidence</Button>
-        </BlockStack>
-      </div>
+        );
+      })()}
 
       {/* Automation rule card */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
