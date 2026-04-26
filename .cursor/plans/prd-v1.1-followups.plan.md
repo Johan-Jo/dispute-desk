@@ -13,28 +13,32 @@ overview: |
 todos:
   - id: p2
     content: |
-      P2 — Automation matrix audit.
+      P2 — Automation matrix audit.  ✅ SHIPPED 2026-04-26.
 
-      Goal: verify `lib/automation/pipeline.ts > evaluateAndMaybeAutoSave`
-      and `lib/automation/autoSaveGate.ts` honor the §9 matrix as
-      tested invariants:
+      Audit found drift: the gate read completeness + readiness only,
+      never strength. Cases with high completeness but Moderate or Weak
+      strength were auto-submitting in violation of PRD §1
+      ("Auto mode executes ONLY on Strong cases").
 
-        - mode === review               → park_for_review (always, no exception)
-        - mode === auto + strong + gate ok → auto_save
-        - mode === auto + moderate      → park_for_review
-        - mode === auto + weak          → block
-        - coverage === covered_shopify  → skip_covered (already shipped, P1)
+      Tightening shipped in two commits per the locked plan (option b):
+        - 24235cc: feat(packs): persist case_strength on pack_json (additive)
+        - 85910c7: feat(automation): pipeline gates auto-mode on case strength
 
-      Read end-to-end. Document any drift from the matrix. Add a test
-      that exercises each row deterministically (mock the rule + gate
-      inputs; assert action). No new behavior expected; if the matrix
-      and code agree the deliverable is the test file. If they disagree,
-      tighten the code — the matrix is the source of truth per the
-      "User control is absolute" PRD principle.
+      The P2 strength gate enforces:
+        auto + strong + gate ok    → auto_save                (existing)
+        auto + moderate            → park_for_review          (NEW)
+        auto + weak                → block                    (NEW)
+        auto + insufficient        → block                    (NEW)
+        review                     → park_for_review          (always — unchanged)
+        covered_shopify            → skip_covered             (P1, beats strength)
+        legacy pack (no strength)  → existing gate            (back-compat)
 
-      Risk: low. Effort: ~30 min read + 0–2 small fixes + ~50 LOC test file.
-      Trigger to start: any time, no prerequisites.
-    status: pending
+      Tests: lib/automation/__tests__/pipelineMatrix.test.ts — 12 rows,
+      all PRD §9 paths plus precedence rules (covered beats strength;
+      review beats strength).
+
+      Docs: docs/technical.md § "PRD §9 Strength Gate".
+    status: completed
 
   - id: p4
     content: |
