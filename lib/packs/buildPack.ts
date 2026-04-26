@@ -40,6 +40,8 @@ import {
   type CoverageSummary,
 } from "./sources/coverageSource";
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
+import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import type { CaseStrengthLevel } from "@/lib/argument/types";
 import type { EvidenceSection, BuildContext } from "./types";
 import type { OrderContext } from "@/lib/automation/completeness";
 
@@ -397,6 +399,48 @@ export async function buildPack(
   // state without re-walking sections.
   const coverageSummary: CoverageSummary = summarizeCoverage(order);
 
+  // Case-strength summary — PRD §6 + §9. Computed server-side here so
+  // `evaluateAndMaybeAutoSave` can gate auto-mode on strength without
+  // re-loading the argument map (the UI hook still computes its own
+  // for the supportedClaims/totalClaims diagnostics, which need the
+  // argumentMap). Per PRD §9: auto + strong → auto-submit;
+  // auto + moderate → review; auto + weak → block.
+  //
+  // We pass `null` for `argumentMap` because it is not loaded in the
+  // build path. That collapses `supportedClaims/totalClaims` to 0 here,
+  // but those counters are diagnostic only — the gate uses `overall`,
+  // and `overall` is independent of the argument map (it depends on
+  // checklist + payloads + reason + coverage).
+  const caseStrengthPayloadSource = {
+    kind: "list" as const,
+    items: allSections.map((s) => ({
+      payload: { ...s.data, fieldsProvided: s.fieldsProvided } as
+        & { fieldsProvided?: string[] }
+        & Record<string, unknown>,
+    })),
+  };
+  const caseStrengthForGate = calculateCaseStrength(
+    null,
+    reconciledChecklist,
+    dispute.reason,
+    caseStrengthPayloadSource,
+    {
+      state: coverageSummary.state,
+      shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
+    },
+  );
+  const caseStrengthSummary: {
+    overall: CaseStrengthLevel;
+    strongCount: number;
+    moderateCount: number;
+    supportingCount: number;
+  } = {
+    overall: caseStrengthForGate.overall,
+    strongCount: caseStrengthForGate.strongCount,
+    moderateCount: caseStrengthForGate.moderateCount,
+    supportingCount: caseStrengthForGate.supportingCount,
+  };
+
   // Build the pack_json
   const packJson = {
     version: 1,
@@ -419,6 +463,7 @@ export async function buildPack(
     },
     device_location: deviceLocSummary,
     coverage: coverageSummary,
+    case_strength: caseStrengthSummary,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 
