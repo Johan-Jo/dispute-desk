@@ -25,13 +25,45 @@ describe("canonical evidence registry — invariants", () => {
     }
   });
 
-  it("supporting fields ALWAYS have weight 0 + excludedFromStrength true (P2.1.1)", () => {
+  it("supportingOnly fields are strict — supportingOnly === true ⇒ category 'supporting' AND excludedFromStrength true (P2.1.1)", () => {
     for (const [field, spec] of Object.entries(CANONICAL_EVIDENCE)) {
-      if (spec.category === "supporting") {
-        expect(spec.supportingOnly, field).toBe(true);
+      if (spec.supportingOnly) {
+        expect(spec.category, field).toBe("supporting");
         expect(spec.excludedFromStrength, field).toBe(true);
-        expect(CATEGORY_WEIGHT.supporting, field).toBe(0);
       }
+    }
+    expect(CATEGORY_WEIGHT.supporting).toBe(0);
+  });
+
+  it("conditional supporting fields (default 'supporting' but supportingOnly: false) can upgrade per the rubric", () => {
+    // Rubric: customer_communication, activity_log, customer_account_info,
+    // supporting_documents, refund/shipping/cancellation_policy default to
+    // supporting but upgrade to strong when payload carries the decisive
+    // discriminator. They are NOT supportingOnly.
+    const conditionalSupporting = [
+      "customer_communication",
+      "activity_log",
+      "customer_account_info",
+      "supporting_documents",
+      "refund_policy",
+      "shipping_policy",
+      "cancellation_policy",
+    ];
+    for (const field of conditionalSupporting) {
+      const spec = CANONICAL_EVIDENCE[field];
+      expect(spec.category, field).toBe("supporting");
+      expect(spec.supportingOnly, field).toBe(false);
+      expect(spec.excludedFromStrength, field).toBe(false);
+    }
+  });
+
+  it("strict supporting-only fields (rubric: never elevate)", () => {
+    // Rubric GRAY: order record, product listing, duplicate explanation
+    // never upgrade regardless of payload.
+    const strict = ["order_confirmation", "product_description", "duplicate_explanation"];
+    for (const field of strict) {
+      const spec = CANONICAL_EVIDENCE[field];
+      expect(spec.supportingOnly, field).toBe(true);
     }
   });
 
@@ -120,32 +152,138 @@ describe("ip_location_check", () => {
   });
 });
 
-describe("supporting-only fields (#13 invariant — never elevates)", () => {
-  it("customer_communication is always supporting regardless of payload", () => {
+describe("rubric — conditional supporting fields stay supporting without decisive payload", () => {
+  it("customer_communication without customerConfirmsOrder → supporting", () => {
     expect(categorizeEvidenceField("customer_communication", { messages: 100 })).toBe("supporting");
     expect(categorizeEvidenceField("customer_communication", {})).toBe("supporting");
+    expect(categorizeEvidenceField("customer_communication", null)).toBe("supporting");
   });
 
-  it("customer_account_info is always supporting", () => {
-    expect(categorizeEvidenceField("customer_account_info", { totalOrders: 50 })).toBe("supporting");
+  it("customer_account_info with totalOrders=0 (no prior orders) → supporting", () => {
+    expect(categorizeEvidenceField("customer_account_info", { totalOrders: 0 })).toBe("supporting");
+    expect(categorizeEvidenceField("customer_account_info", {})).toBe("supporting");
   });
 
-  it("activity_log is always supporting", () => {
+  it("activity_log without decisive session/digital-access proof → supporting", () => {
     expect(categorizeEvidenceField("activity_log", { events: 100 })).toBe("supporting");
   });
 
-  it("order_confirmation is always supporting (P2.6 — no vague summaries elevate)", () => {
+  it("order_confirmation is always supporting (rubric GRAY — no vague summaries elevate)", () => {
     expect(categorizeEvidenceField("order_confirmation", { orderName: "#1234" })).toBe("supporting");
   });
 
-  it("policies are always supporting", () => {
+  it("policies without explicit acceptance are supporting (text only)", () => {
     expect(categorizeEvidenceField("refund_policy", { url: "..." })).toBe("supporting");
     expect(categorizeEvidenceField("shipping_policy", { url: "..." })).toBe("supporting");
     expect(categorizeEvidenceField("cancellation_policy", { url: "..." })).toBe("supporting");
   });
 
-  it("null payload on supporting field → invalid (item omitted entirely)", () => {
-    expect(categorizeEvidenceField("customer_communication", null)).toBe("invalid");
+  it("supporting_documents without signedContract → supporting", () => {
+    expect(categorizeEvidenceField("supporting_documents", { fileName: "screenshot.png" })).toBe(
+      "supporting",
+    );
+  });
+});
+
+describe("rubric — conditional upgrades to strong", () => {
+  it("rubric #6 — customer_communication with customerConfirmsOrder=true → strong", () => {
+    expect(
+      categorizeEvidenceField("customer_communication", { customerConfirmsOrder: true }),
+    ).toBe("strong");
+  });
+
+  it("rubric #5 — customer_account_info with priorUndisputedOrders >= 1 → strong", () => {
+    expect(
+      categorizeEvidenceField("customer_account_info", { priorUndisputedOrders: 3 }),
+    ).toBe("strong");
+    // totalOrders alone (and disputeFreeHistory not falsified) also upgrades
+    expect(categorizeEvidenceField("customer_account_info", { totalOrders: 5 })).toBe("strong");
+  });
+
+  it("rubric #5 — disputeFreeHistory: false suppresses any upgrade", () => {
+    expect(
+      categorizeEvidenceField("customer_account_info", {
+        totalOrders: 10,
+        priorUndisputedOrders: 0,
+        disputeFreeHistory: false,
+      }),
+    ).toBe("supporting");
+  });
+
+  it("rubric #4 — activity_log with decisiveSessionProof=true → strong", () => {
+    expect(
+      categorizeEvidenceField("activity_log", { decisiveSessionProof: true }),
+    ).toBe("strong");
+  });
+
+  it("rubric #7 — activity_log with digitalAccessUsed=true → strong (digital products)", () => {
+    expect(categorizeEvidenceField("activity_log", { digitalAccessUsed: true })).toBe("strong");
+  });
+
+  it("rubric #3 — supporting_documents with signedContract=true → strong", () => {
+    expect(
+      categorizeEvidenceField("supporting_documents", { signedContract: true, fileName: "agreement.pdf" }),
+    ).toBe("strong");
+  });
+
+  it("rubric #8 — policies with acceptedAtCheckout AND acceptanceTimestamp → strong", () => {
+    const accepted = { acceptedAtCheckout: true, acceptanceTimestamp: "2026-04-25T00:00:00Z" };
+    expect(categorizeEvidenceField("refund_policy", accepted)).toBe("strong");
+    expect(categorizeEvidenceField("shipping_policy", accepted)).toBe("strong");
+    expect(categorizeEvidenceField("cancellation_policy", accepted)).toBe("strong");
+  });
+
+  it("rubric #8 — accepted without timestamp → supporting (cannot prove acceptance was for this order)", () => {
+    expect(
+      categorizeEvidenceField("refund_policy", { acceptedAtCheckout: true }),
+    ).toBe("supporting");
+  });
+
+  it("rubric #4 — device_session_consistency with consistent + login + IP match → strong", () => {
+    expect(
+      categorizeEvidenceField("device_session_consistency", {
+        consistent: true,
+        loginPresent: true,
+        ipMatch: true,
+      }),
+    ).toBe("strong");
+  });
+
+  it("rubric — device_session_consistency with consistent only → moderate", () => {
+    expect(
+      categorizeEvidenceField("device_session_consistency", { consistent: true }),
+    ).toBe("moderate");
+  });
+
+  it("rubric #9 — shipping_tracking delivered_confirmed + deliveredToVerifiedAddress → strong", () => {
+    expect(
+      categorizeEvidenceField("shipping_tracking", {
+        proofType: "delivered_confirmed",
+        deliveredToVerifiedAddress: true,
+      }),
+    ).toBe("strong");
+    expect(
+      categorizeEvidenceField("delivery_proof", {
+        proofType: "delivered_confirmed",
+        deliveredToVerifiedAddress: true,
+      }),
+    ).toBe("strong");
+  });
+
+  it("rubric #9 — delivered_confirmed alone (no verified address) → moderate", () => {
+    expect(
+      categorizeEvidenceField("shipping_tracking", { proofType: "delivered_confirmed" }),
+    ).toBe("moderate");
+  });
+
+  it("strict supporting-only fields stay supporting even with rich payload", () => {
+    expect(categorizeEvidenceField("order_confirmation", { everyKey: "true" })).toBe("supporting");
+    expect(categorizeEvidenceField("product_description", { signedContract: true })).toBe(
+      "supporting",
+    );
+    expect(categorizeEvidenceField("duplicate_explanation", { customerConfirmsOrder: true })).toBe(
+      "supporting",
+    );
   });
 });
 

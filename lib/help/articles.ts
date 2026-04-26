@@ -143,8 +143,16 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "evidence-packs",
     titleKey: "help.articles.evidenceChecklist.title",
     bodyKey: "help.articles.evidenceChecklist.body",
-    relatedSlugs: ["completeness-score", "how-packs-built"],
+    relatedSlugs: ["completeness-score", "how-packs-built", "evidence-strength-rubric"],
     tags: ["checklist", "required", "recommended", "items"],
+  },
+  {
+    slug: "evidence-strength-rubric",
+    category: "evidence-packs",
+    titleKey: "help.articles.evidenceStrengthRubric.title",
+    bodyKey: "help.articles.evidenceStrengthRubric.body",
+    relatedSlugs: ["evidence-checklist", "completeness-score", "how-packs-built"],
+    tags: ["strong", "moderate", "supporting", "invalid", "rubric", "categorization", "AVS", "CVV", "delivery", "policy"],
   },
   {
     slug: "defense-letter-rebuttal",

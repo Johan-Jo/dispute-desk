@@ -72,6 +72,8 @@ function payloadIsInformative(
   if (!payload) return false;
   const p = payload;
   switch (fieldKey) {
+    // ── Decisive-only fields: only invalid on explicit negative
+    //     evidence; the wrapper softens to supporting otherwise. ──
     case "avs_cvv_match":
       return Boolean(p.avsResultCode) || Boolean(p.cvvResultCode);
     case "tds_authentication":
@@ -89,6 +91,18 @@ function payloadIsInformative(
       );
     case "device_session_consistency":
       return typeof p.consistent === "boolean";
+    // ── Conditional supporting fields (rubric upgrades). The
+    //     categorizer returns supporting OR strong here, never invalid,
+    //     so any payload — even just `{}` — is "informative enough" to
+    //     defer. The wrapper's softening is unnecessary. ──
+    case "customer_communication":
+    case "customer_account_info":
+    case "activity_log":
+    case "supporting_documents":
+    case "refund_policy":
+    case "shipping_policy":
+    case "cancellation_policy":
+      return true;
     default:
       return true;
   }

@@ -89,9 +89,14 @@ describe("calculateCaseStrength — count-based formula (plan §P2.9)", () => {
       item("refund_policy"),
       item("shipping_policy"),
     ];
+    // Payloads here intentionally do NOT carry the rubric's
+    // strong-upgrade discriminators (no customerConfirmsOrder, no
+    // priorUndisputedOrders, no decisiveSessionProof, no
+    // acceptedAtCheckout). Each row stays supporting, so even a high
+    // volume must NOT elevate the case.
     const result = calculateCaseStrength(emptyArgMap(), checklist, "FRAUDULENT", payloadFor({
       customer_communication: { messages: 50 },
-      customer_account_info: { totalOrders: 100 },
+      customer_account_info: { tenureDays: 100 },
       activity_log: { events: 100 },
       order_confirmation: { orderName: "#1234" },
       refund_policy: { url: "..." },

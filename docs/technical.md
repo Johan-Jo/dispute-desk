@@ -710,6 +710,44 @@ Build pipeline contract (`lib/packs/buildPack.ts`, `lib/jobs/handlers/buildPackJ
 6. **O3a — "Evidence collected".** Separate from O3 and intentionally broader: lists every canonical field in the checklist (supporting items included) with a status badge (Collected / Waived / Missing / Not applicable) and, for collected rows, a strength badge. Categorization runs through `classifyEvidenceRow({fieldKey, status, payload})` (`lib/argument/categoryBadge.ts`), the safe wrapper that — unlike `categorizeEvidenceField` — never lets missing/incomplete payload surface as "Invalid". Always-supporting fields always classify as Supporting; conditional fields (avs/cvv, delivery proofType, ip_location_check, billing_address_match, tds_authentication, device_session_consistency) only classify as Invalid when the payload carries explicit negative evidence (label-only shipment, both-fail AVS, etc.). Strength labels come from `categoryBadge`: exactly **Strong / Moderate / Supporting / Invalid**. Manual uploads from `data.attachments[]` (filtered `source === "manual_upload"`) render as a `+N attached file(s) included` line with filenames. **Argument Purity Rule (P2.6) is preserved — supporting evidence does not appear in O3, but it appears here so a populated pack never reads as empty.**
 
 **Workspace API payload fallback (`app/api/disputes/[id]/workspace/route.ts`).** The `evidenceItemsByField` map preferentially keys off `evidence_items.payload.fieldsProvided` (set by `buildPack` since the persistence fix). For older packs whose evidence_items rows predate that fix, the API now falls back to `pack_json.sections[*].fieldsProvided` and synthesizes pseudo-evidence-item entries with the section's `data` as the payload. Without this fallback, the UI categorizer sees null payloads, AVS/CVV/IP signals classify as Invalid by default, and `caseStrength.score` collapses to 0 — turning evidence-rich submitted packs into "Hard to win / 0% confidence" hero pills. This fix restores payload reachability for every legacy pack on read.
+
+### Evidence strength rubric (P2.7)
+
+Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/argument/canonicalEvidence.ts`. The rubric below is the **canonical contract** every category badge in the embedded UI agrees with — Overview "What supports your case", Overview "Evidence collected", Evidence tab pills, and the strengthReason composer in `caseStrength.ts`. Merchant-facing version of this rubric lives in `messages/{locale}.json` under `help.articles.evidenceStrengthRubric.body` and is rendered by the embedded help drawer (slug `evidence-strength-rubric`).
+
+**Strong (weight 3) — materially improves likelihood of winning:**
+1. `avs_cvv_match` — AVS match AND CVV match (both).
+2. `shipping_tracking` / `delivery_proof` — `proofType === "signature_confirmed"`.
+3. `supporting_documents` — `payload.signedContract === true` (signed customer agreement uploaded).
+4. `device_session_consistency` — `consistent && loginPresent && ipMatch` all true.
+5. `customer_account_info` — `priorUndisputedOrders >= 1` OR (`totalOrders >= 1` AND `disputeFreeHistory !== false`).
+6. `customer_communication` — `payload.customerConfirmsOrder === true`.
+7. `activity_log` — `decisiveSessionProof === true` OR `digitalAccessUsed === true`.
+8. `refund_policy` / `shipping_policy` / `cancellation_policy` — `acceptedAtCheckout === true` AND `acceptanceTimestamp` set.
+9. `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.
+10. `tds_authentication` — `tdsVerified === true`.
+11. `billing_address_match` — `match === true`.
+
+**Moderate (weight 2) — useful but not decisive alone:**
+- `avs_cvv_match` — exactly one of AVS / CVV matches.
+- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` without `deliveredToVerifiedAddress`.
+- `ip_location_check` — clean match, no VPN/proxy/hosting flags, `bankEligible !== false`.
+- `device_session_consistency` — `consistent === true` only.
+
+**Supporting (weight 0) — never elevates the hero:**
+- `order_confirmation`, `product_description`, `duplicate_explanation` — strict `supportingOnly: true`. Always supporting regardless of payload.
+- All conditional fields without their decisive payload discriminator: policy text only, account info without prior orders, activity log without session proof, customer communication without explicit confirmation, supporting documents without `signedContract`, IP data with privacy flags or `bankEligible: false`, `delivered_unverified` shipments.
+
+**Invalid (weight 0) — only on explicit negative evidence:**
+- `avs_cvv_match` — both codes present, neither matches.
+- `shipping_tracking` / `delivery_proof` — `proofType === "label_created"` (label only, no movement).
+- `billing_address_match` — `match === false`.
+- `tds_authentication` — `tdsVerified === false`.
+- Unknown / unregistered field keys (filtered out before reaching the UI).
+
+The categorizer NEVER returns Invalid because payload is missing. The UI wrapper `classifyEvidenceRow()` further enforces this for display: when the discriminator key isn't present in payload, the row falls back to Supporting, never Invalid. **Collected ≠ Strong; Supporting ≠ bad; Invalid only fires on explicit harmful/unusable data.**
+
+The strength formula remains: `strongCount >= 2 → Strong`; `strongCount === 1 && moderateCount >= 1 → Moderate`; `else → Weak`. Supporting items NEVER affect strength regardless of volume (P2.1.1). Signal-level dedup means multiple `evidenceFieldKey`s sharing a `signalId` (e.g., `delivery_proof` + `shipping_tracking`, `avs_cvv_match` + `tds_authentication`, `activity_log` + `customer_account_info`) count once.
 7. **O4 — Evidence coverage.** Headline reflects critical-missing count; bar driven by `pack.completenessScore` (server-computed). Critical / Supporting / Optional priority breakdown filtered from `effectiveChecklist`. "View all evidence" link to the Evidence tab.
 
 **Checklist reconciliation (`lib/packs/checklistReconcile.ts`).** Pure helper. `collectedFieldsFromPack({sections, evidenceItems})` unions every `fieldsProvided` entry; `reconcileChecklistWithCollectedFields(checklist, collected)` flips rows from `missing` → `available` for fields the pack actually carries. `unavailable`, `waived`, and already-`available` rows are preserved. Wired in two places: (a) `buildPack.ts` runs it after `evaluateCompletenessV2` so the persisted `checklist_v2` and metrics match the collected sections; (b) the workspace API runs it on read so older packs (built before the build-time wiring) normalize for the UI without a rebuild. This fixes the regression where pack-template paths could leave policies / IP / supporting fields flagged `missing` even though the collectors had produced them, making the Overview look empty for evidence-rich packs.

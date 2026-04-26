@@ -239,6 +239,92 @@ describe("classifyEvidenceRow — unknown fields", () => {
   });
 });
 
+describe("classifyEvidenceRow — rubric conditional upgrades", () => {
+  it("rubric #6 — customer_communication with customerConfirmsOrder → Strong badge", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "customer_communication",
+        status: "available",
+        payload: { customerConfirmsOrder: true, text: "Yes I received it." },
+      }).category,
+    ).toBe("strong");
+  });
+
+  it("rubric #5 — customer_account_info with priorUndisputedOrders → Strong badge", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "customer_account_info",
+        status: "available",
+        payload: { priorUndisputedOrders: 4 },
+      }).category,
+    ).toBe("strong");
+  });
+
+  it("rubric #4 — activity_log with decisiveSessionProof → Strong badge", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "activity_log",
+        status: "available",
+        payload: { decisiveSessionProof: true },
+      }).category,
+    ).toBe("strong");
+  });
+
+  it("rubric #3 — supporting_documents with signedContract → Strong badge", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "supporting_documents",
+        status: "available",
+        payload: { signedContract: true, fileName: "agreement.pdf" },
+      }).category,
+    ).toBe("strong");
+  });
+
+  it("rubric #8 — refund_policy with acceptance + timestamp → Strong badge", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "refund_policy",
+        status: "available",
+        payload: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-04-01T00:00:00Z" },
+      }).category,
+    ).toBe("strong");
+  });
+
+  it("rubric — same fields default to Supporting without their discriminator (text only / no decisive payload)", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "refund_policy",
+        status: "available",
+        payload: { url: "..." },
+      }).category,
+    ).toBe("supporting");
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "supporting_documents",
+        status: "available",
+        payload: { fileName: "screenshot.png" },
+      }).category,
+    ).toBe("supporting");
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "customer_communication",
+        status: "available",
+        payload: { messages: 5 },
+      }).category,
+    ).toBe("supporting");
+  });
+
+  it("strict supporting-only fields stay Supporting regardless of payload (rubric GRAY)", () => {
+    expect(
+      classifyEvidenceRow({
+        fieldKey: "order_confirmation",
+        status: "available",
+        payload: { customerConfirmsOrder: true, signedContract: true },
+      }).category,
+    ).toBe("supporting");
+  });
+});
+
 describe("classifyEvidenceRow — dispute aee832ad scenario", () => {
   it("none of the 8 supporting fields render as Invalid (regression for the submitted-pack screenshot bug)", () => {
     const fields = [
