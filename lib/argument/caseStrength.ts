@@ -229,6 +229,25 @@ function payloadFor(
   return null;
 }
 
+/** Optional Coverage Gate input (PRD §4). Highest-priority routing
+ *  signal — when `state === "covered_shopify"` the hero variant is
+ *  forced to `covered` and `strengthReason` is replaced with covered
+ *  copy. Underlying `overall` / counts are still computed normally so
+ *  diagnostics keep working; UI consumers must read coverage first. */
+export interface CaseCoverageInput {
+  state: "covered_shopify" | "not_covered";
+  shopifyProtectStatus:
+    | "ACTIVE"
+    | "INACTIVE"
+    | "NOT_PROTECTED"
+    | "PENDING"
+    | "PROTECTED"
+    | null;
+}
+
+const COVERED_STRENGTH_REASON =
+  "This dispute is protected under Shopify's payment protection. No action is required from you.";
+
 export function calculateCaseStrength(
   argumentMap: ArgumentMap | null,
   checklist: ChecklistItemV2[],
@@ -239,10 +258,15 @@ export function calculateCaseStrength(
    *  per the canonical registry. Pass the workspace's
    *  `pack.evidenceItemsByField` map for accurate scoring. */
   payloadSource?: EvidencePayloadSource,
+  /** Optional Coverage Gate input. When `covered_shopify`, the hero
+   *  variant is forced to `covered` and the strength reason is replaced
+   *  with the covered-by-Shopify copy. */
+  coverage?: CaseCoverageInput,
 ): CaseStrengthResult {
   const family = resolveReasonFamily(reason ?? argumentMap?.issuerClaim?.reasonCode);
 
   if (!checklist.length) {
+    const earlyCovered = coverage?.state === "covered_shopify";
     return {
       overall: "insufficient",
       score: 0,
@@ -253,7 +277,9 @@ export function calculateCaseStrength(
       supportedClaims: 0,
       totalClaims: argumentMap?.counterclaims.length ?? 0,
       improvementHint: null,
-      strengthReason: STRENGTH_REASONS[family].insufficient,
+      heroVariant: earlyCovered ? "covered" : "hard_to_win",
+      strengthReason: earlyCovered ? COVERED_STRENGTH_REASON : STRENGTH_REASONS[family].insufficient,
+      coverage: coverage ?? undefined,
     };
   }
 
@@ -403,8 +429,13 @@ export function calculateCaseStrength(
   // moderate-from-avs path: one decisive signal but no corroboration
   // — same amber tone as could_win, but the label tells the merchant
   // what's required next. Other variants follow `overall`.
+  // Coverage Gate (PRD §4) takes precedence over everything: when
+  // Shopify Protect is actively underwriting the dispute, the hero
+  // shows the "Covered" state regardless of underlying evidence.
+  const isCovered = coverage?.state === "covered_shopify";
   let heroVariant: NonNullable<CaseStrengthResult["heroVariant"]>;
-  if (overall === "strong") heroVariant = "likely_to_win";
+  if (isCovered) heroVariant = "covered";
+  else if (overall === "strong") heroVariant = "likely_to_win";
   else if (overall === "moderate") {
     heroVariant = isFraudAvsOnlyStrong ? "needs_strengthening" : "could_win";
   } else heroVariant = "hard_to_win";
@@ -418,9 +449,10 @@ export function calculateCaseStrength(
     supportingCount,
     supportedClaims: argumentMap?.counterclaims.filter((c) => c.supporting.length > 0).length ?? 0,
     totalClaims: argumentMap?.counterclaims.length ?? 0,
-    improvementHint,
+    improvementHint: isCovered ? null : improvementHint,
     heroVariant,
-    strengthReason,
+    strengthReason: isCovered ? COVERED_STRENGTH_REASON : strengthReason,
+    coverage: coverage ?? undefined,
   };
 }
 

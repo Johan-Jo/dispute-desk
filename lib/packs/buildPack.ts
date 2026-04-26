@@ -34,6 +34,11 @@ import { collectManualEvidence } from "./sources/manualSource";
 import { collectCustomerCommEvidence } from "./sources/customerCommSource";
 import { collectPaymentEvidence } from "./sources/paymentSource";
 import { collectThreeDSecureEvidence } from "./sources/threeDSecureSource";
+import {
+  collectCoverageEvidence,
+  summarizeCoverage,
+  type CoverageSummary,
+} from "./sources/coverageSource";
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import type { EvidenceSection, BuildContext } from "./types";
 import type { OrderContext } from "@/lib/automation/completeness";
@@ -188,6 +193,7 @@ export async function buildPack(
     collectManualEvidence(ctx),
     collectPaymentEvidence(ctx),
     collectThreeDSecureEvidence(ctx),
+    collectCoverageEvidence(ctx),
     collectDeviceLocationEvidence(ctx),
   ]);
 
@@ -385,6 +391,12 @@ export async function buildPack(
       }
     : null;
 
+  // Coverage summary — Shopify Protect / Coverage Gate (PRD §4).
+  // Surfaced at the top of `pack_json` so the pipeline can short-circuit
+  // auto-save and the workspace API can flip the hero into the "Covered"
+  // state without re-walking sections.
+  const coverageSummary: CoverageSummary = summarizeCoverage(order);
+
   // Build the pack_json
   const packJson = {
     version: 1,
@@ -406,6 +418,7 @@ export async function buildPack(
       recommended_actions: completeness.recommended_actions,
     },
     device_location: deviceLocSummary,
+    coverage: coverageSummary,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 

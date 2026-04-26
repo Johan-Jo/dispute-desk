@@ -66,6 +66,19 @@ export interface WorkspacePack {
   failureCode: string | null;
   /** Internal full error text. Never render directly to merchants. */
   failureReason: string | null;
+  /** Coverage Gate (PRD §4) — when `state === "covered_shopify"` the
+   *  hero swaps to the "Covered by Shopify" state and no merchant
+   *  workflow is required. Surfaced from `pack_json.coverage`. */
+  coverage: {
+    state: "covered_shopify" | "not_covered";
+    shopifyProtectStatus:
+      | "ACTIVE"
+      | "INACTIVE"
+      | "NOT_PROTECTED"
+      | "PENDING"
+      | "PROTECTED"
+      | null;
+  } | null;
 }
 
 export interface WorkspaceAttachment {

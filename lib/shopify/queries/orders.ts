@@ -116,6 +116,9 @@ export const ORDER_DETAIL_QUERY = `
           createdAt
           note
         }
+        shopifyProtect {
+          status
+        }
       }
     }
   }
@@ -248,6 +251,14 @@ export interface OrderDetailNode {
     numberOfOrders: string;
     createdAt: string;
     note: string | null;
+  } | null;
+  /** Shopify Protect summary. Null when the program is not applicable
+   *  (non-Shopify-Payments order, ineligible region, or older order). */
+  shopifyProtect: {
+    /** PROTECTED = chargeback already covered. ACTIVE = eligible & live.
+     *  PENDING = decision pending. INACTIVE = ineligible.
+     *  NOT_PROTECTED = chargeback received but not covered. */
+    status: "ACTIVE" | "INACTIVE" | "NOT_PROTECTED" | "PENDING" | "PROTECTED";
   } | null;
 }
 

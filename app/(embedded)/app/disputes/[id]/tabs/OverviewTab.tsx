@@ -71,13 +71,17 @@ const FAILURE_FALLBACK = {
  *   - `hard_to_win` — overall "weak" or "insufficient", no decisive
  *     signal collected
  */
-type HeroVariant = "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win";
+type HeroVariant = "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win" | "covered";
 
+// Labels per PRD §10. Both moderate variants (could_win and
+// needs_strengthening) collapse to the same label — the underlying
+// tone difference still surfaces via palette + body copy.
 const HERO_LABEL_BY_VARIANT: Record<HeroVariant, string> = {
-  likely_to_win: "Likely to win",
-  could_win: "Could win",
-  needs_strengthening: "Needs strengthening",
-  hard_to_win: "Hard to win",
+  likely_to_win: "Strong case to challenge",
+  could_win: "Review before challenging",
+  needs_strengthening: "Review before challenging",
+  hard_to_win: "Low likelihood case",
+  covered: "Covered by Shopify",
 };
 
 const HERO_TONE_BY_VARIANT: Record<
@@ -100,6 +104,12 @@ const HERO_TONE_BY_VARIANT: Record<
   hard_to_win: {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#991B1B", pillBg: "#FEE2E2", pillColor: "#991B1B",
+  },
+  // Covered = Shopify Protect active. Distinct cool-blue palette so the
+  // merchant immediately reads "no action" rather than green-go.
+  covered: {
+    bg: "#EFF6FF", border: "#BFDBFE", iconBg: "#DBEAFE", iconColor: "#1D4ED8",
+    titleColor: "#1E3A8A", bodyColor: "#1E40AF", pillBg: "#DBEAFE", pillColor: "#1E40AF",
   },
 };
 
@@ -710,7 +720,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 style={{
                   width: `${completenessScore}%`,
                   height: "100%",
-                  background: heroVariant === "likely_to_win" ? "#059669" : heroVariant === "hard_to_win" ? "#DC2626" : "#F59E0B",
+                  background:
+                    heroVariant === "covered"
+                      ? "#1D4ED8"
+                      : heroVariant === "likely_to_win"
+                        ? "#059669"
+                        : heroVariant === "hard_to_win"
+                          ? "#DC2626"
+                          : "#F59E0B",
                   borderRadius: 9999,
                 }}
               />

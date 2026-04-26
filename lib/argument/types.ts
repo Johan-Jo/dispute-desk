@@ -103,10 +103,25 @@ export interface CaseStrengthResult {
    *     decisive signal, but no corroboration). Same amber tone as
    *     `could_win` but a different accent on what's needed next.
    *   - `hard_to_win` — overall === "weak" or "insufficient"
+   *   - `covered` — Coverage Gate is active (Shopify Protect). Hero
+   *     overrides everything else; merchant takes no action.
    * The UI is the only consumer; backend logic should keep using
    * `overall` for branching.
    */
-  heroVariant?: "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win";
+  heroVariant?: "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win" | "covered";
+  /** Coverage gate state. When `state === "covered_shopify"`, the
+   *  merchant has no workflow — `heroVariant` is forced to `covered`
+   *  and `strengthReason` is replaced with the covered copy. */
+  coverage?: {
+    state: "covered_shopify" | "not_covered";
+    shopifyProtectStatus:
+      | "ACTIVE"
+      | "INACTIVE"
+      | "NOT_PROTECTED"
+      | "PENDING"
+      | "PROTECTED"
+      | null;
+  };
 }
 
 /* ── Why This Case Wins ── */

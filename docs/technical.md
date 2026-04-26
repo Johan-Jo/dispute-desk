@@ -584,6 +584,7 @@ When the gate decision is `block`, the pipeline writes the gate's `reasons` to b
 | Pipeline | `lib/automation/pipeline.ts` | Orchestrator: trigger build + evaluate gate |
 | Payment Source | `lib/packs/sources/paymentSource.ts` | Card evidence (AVS/CVV/BIN/wallet), risk assessments, customer IP |
 | 3-D Secure Source | `lib/packs/sources/threeDSecureSource.ts` | 3DS authentication signal, best-effort read from Shopify Payments `receiptJson` |
+| Coverage Source | `lib/packs/sources/coverageSource.ts` | Shopify Protect status — Coverage Gate input |
 
 ### Pack Status Flow
 
@@ -659,6 +660,39 @@ The auto-collector is downgraded one tier (Moderate, not Strong) on purpose: the
 **Path-stability evidence (2026-04-26).** Verified across 18 SUCCESS transactions on 2026-01 (10 via `orders(query:"financial_status:paid")`, 8 via dispute-tied real orders): `three_d_secure` was located at `latest_charge.payment_method_details.card.three_d_secure` on every single transaction, and the dynamic recursive walker (`scripts/test-3ds-extraction.mjs`) agreed with the hardcoded modern path on every receipt. The legacy charge-level path (`payment_method_details.card.three_d_secure` at the receipt root) never resolved in the sample — it remains in the collector as defensive insurance only. The populated-object case (`authenticated: true`) was *not* observed in the sample (Stripe test cards do not trigger real 3DS challenges), so the live verification confirms field/path stability but not the live-extraction path. The REST endpoint `/admin/api/{ver}/orders/{id}/transactions.json` returned identical receipt shapes — kept as a future GraphQL-removal fallback, not currently wired in.
 
 **Re-running the verification.** `node scripts/test-3ds-extraction.mjs [shopId] [orderLimit]` runs the recursive walker + REST cross-check + structured reliability report against any shop with an offline session. Re-run after any Shopify API version bump or whenever 3DS scoring behavior is questioned.
+
+### Coverage Gate (Shopify Protect)
+
+**Source: `lib/packs/sources/coverageSource.ts`. Routing primitive: PRD v1.1 §3 step 1.**
+
+The Coverage Gate is the highest-priority routing decision in the pipeline. When Shopify Protect actively underwrites a dispute, there is no merchant workflow — no auto-save, no review, no block. It runs *before* the rule-mode resolution and the auto-save quality gate.
+
+**Source field:** `Order.shopifyProtect.status` (Admin GraphQL, 2026-01). Surfaced as a typed enum on `OrderDetailNode`. Null when the program isn't applicable (non-Shopify-Payments order, ineligible region, older order). Verified queryable on the live API; `eligibility { ... }` is intentionally not queried until its sub-shape is verified.
+
+**Status → coverage mapping** (in `summarizeCoverage()`):
+
+| `shopifyProtect.status` | Coverage state | Meaning |
+|---|---|---|
+| `PROTECTED` | `covered_shopify` | Chargeback already covered — Shopify reimbursed |
+| `ACTIVE` | `covered_shopify` | Order is eligible & live in the program |
+| `PENDING` | `not_covered` | Decision not made yet — fall through to normal flow |
+| `INACTIVE` | `not_covered` | Order didn't meet eligibility |
+| `NOT_PROTECTED` | `not_covered` | Chargeback received without coverage |
+| null | `not_covered` | Program not applicable to this order |
+
+**Persisted on `pack_json.coverage`** (parallel to `pack_json.device_location`) so consumers — pipeline + workspace API — read it without re-walking sections.
+
+**Pipeline short-circuit (`evaluateAndMaybeAutoSave` in `lib/automation/pipeline.ts`):** when `coverage.state === "covered_shopify"`, returns `{ action: "skip_covered" }` and emits a `covered_by_shopify` audit event. Pack stays `status: "ready"` so the merchant can still see what was collected. The rule-mode resolution and auto-save gate do NOT run for covered packs.
+
+**Case strength surface (`calculateCaseStrength` in `lib/argument/caseStrength.ts`):** accepts an optional `coverage` parameter. When `state === "covered_shopify"`, `heroVariant` is forced to `"covered"` and `strengthReason` is replaced with the covered copy ("This dispute is protected under Shopify's payment protection. No action is required from you."). Underlying `overall` / counts are still computed for diagnostics, but UI consumers should branch on `heroVariant` first.
+
+**UI (`OverviewTab.tsx`):** new `"covered"` hero variant with a distinct cool-blue palette so the merchant doesn't read it as green-go. Strength label per PRD §10: "Covered by Shopify". No layout changes — only label + tone.
+
+**Hard rules:**
+- Never auto-save a covered pack (pipeline short-circuits before the gate).
+- Never widen the `COVERED_STATUSES` set beyond `PROTECTED` and `ACTIVE` — `PENDING` must fall through to normal flow until Shopify decides.
+- Never override coverage based on user automation mode (Coverage Gate runs before mode resolution).
+- Never reuse the green "Strong case to challenge" palette for covered — they are semantically different.
 
 ### Customer IP Collection
 

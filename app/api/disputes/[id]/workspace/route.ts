@@ -284,6 +284,23 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         // safe merchant copy and never renders the raw reason.
         failureCode: (packRow.failure_code as string | null) ?? null,
         failureReason: (packRow.failure_reason as string | null) ?? null,
+        // Coverage Gate (PRD §4) — surfaced from `pack_json.coverage`
+        // so the hook can pass it through to `calculateCaseStrength`
+        // and the hero flips to the "Covered" state without re-walking
+        // sections.
+        coverage:
+          ((packRow.pack_json as { coverage?: unknown } | null)?.coverage as
+            | {
+                state: "covered_shopify" | "not_covered";
+                shopifyProtectStatus:
+                  | "ACTIVE"
+                  | "INACTIVE"
+                  | "NOT_PROTECTED"
+                  | "PENDING"
+                  | "PROTECTED"
+                  | null;
+              }
+            | undefined) ?? null,
       }
     : null;
 

@@ -666,7 +666,15 @@ export function useDisputeWorkspace(disputeId: string) {
     const payloadSource = data.pack?.evidenceItemsByField
       ? { kind: "byField" as const, map: data.pack.evidenceItemsByField }
       : undefined;
-    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource);
+    // Coverage Gate input (PRD §4). Read from the workspace pack's
+    // coverage summary; null when the order is not on Shopify Protect.
+    const coverageInput = data.pack?.coverage
+      ? {
+          state: data.pack.coverage.state,
+          shopifyProtectStatus: data.pack.coverage.shopifyProtectStatus,
+        }
+      : undefined;
+    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
     const contributions = computeContributions(effectiveChecklist, payloadSource);
     const whyWins = generateWhyWins(data.argumentMap, effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(data.argumentMap, effectiveChecklist);

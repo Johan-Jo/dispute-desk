@@ -456,3 +456,84 @@ describe("calculateCaseStrength — fraud-specific scoring rules", () => {
     expect(result.heroVariant).toBe("could_win");
   });
 });
+
+describe("calculateCaseStrength — Coverage Gate (PRD §4)", () => {
+  it("covered_shopify forces heroVariant=covered regardless of evidence", () => {
+    const checklist = [item("avs_cvv_match"), item("billing_address_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        billing_address_match: { match: true },
+      }),
+      { state: "covered_shopify", shopifyProtectStatus: "PROTECTED" },
+    );
+    // Underlying evidence still tallied for diagnostics — but hero
+    // overrides everything per the PRD.
+    expect(result.strongCount).toBe(2);
+    expect(result.overall).toBe("strong");
+    expect(result.heroVariant).toBe("covered");
+    expect(result.strengthReason).toContain("protected under Shopify");
+    expect(result.coverage?.state).toBe("covered_shopify");
+    expect(result.coverage?.shopifyProtectStatus).toBe("PROTECTED");
+  });
+
+  it("not_covered passes through to standard hero variants", () => {
+    const checklist = [item("avs_cvv_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({ avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" } }),
+      { state: "not_covered", shopifyProtectStatus: "NOT_PROTECTED" },
+    );
+    // Single AVS-strong on fraud is the canonical needs_strengthening case.
+    expect(result.heroVariant).toBe("needs_strengthening");
+    expect(result.coverage?.state).toBe("not_covered");
+  });
+
+  it("missing coverage param keeps existing behavior (no regression)", () => {
+    const checklist = [item("avs_cvv_match"), item("billing_address_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        billing_address_match: { match: true },
+      }),
+    );
+    expect(result.heroVariant).toBe("likely_to_win");
+    expect(result.coverage).toBeUndefined();
+  });
+
+  it("covered short-circuit also fires on empty checklist", () => {
+    const result = calculateCaseStrength(emptyArgMap(), [], "FRAUDULENT", undefined, {
+      state: "covered_shopify",
+      shopifyProtectStatus: "ACTIVE",
+    });
+    expect(result.heroVariant).toBe("covered");
+    expect(result.strengthReason).toContain("protected under Shopify");
+  });
+
+  it("ACTIVE status also flips to covered", () => {
+    const result = calculateCaseStrength(emptyArgMap(), [item("avs_cvv_match")], "FRAUDULENT", undefined, {
+      state: "covered_shopify",
+      shopifyProtectStatus: "ACTIVE",
+    });
+    expect(result.heroVariant).toBe("covered");
+  });
+
+  it("covered case suppresses improvementHint", () => {
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      [item("avs_cvv_match", "missing")],
+      "FRAUDULENT",
+      undefined,
+      { state: "covered_shopify", shopifyProtectStatus: "PROTECTED" },
+    );
+    expect(result.improvementHint).toBeNull();
+  });
+});

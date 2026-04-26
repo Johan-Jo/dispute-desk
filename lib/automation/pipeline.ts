@@ -149,7 +149,7 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
  * Called at the end of the buildPack job handler.
  */
 export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
-  action: "auto_save" | "park_for_review" | "block";
+  action: "auto_save" | "park_for_review" | "block" | "skip_covered";
   details: string;
 }> {
   const sb = getServiceClient();
@@ -157,7 +157,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status"
+      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json"
     )
     .eq("id", packId)
     .single();
@@ -171,6 +171,28 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // PACK_BUILD_FAILED dispute event; nothing more to do.
   if (pack.status === "failed") {
     return { action: "block", details: "Pack build failed; skipping auto-save evaluation." };
+  }
+
+  // Coverage Gate (PRD §4) — runs before everything else in the
+  // automation flow. When Shopify Protect is actively underwriting
+  // this dispute (status PROTECTED or ACTIVE), there is no merchant
+  // workflow: no auto-save, no review, no block. The pack stays
+  // "ready" so the merchant can still see what was collected, but
+  // we emit a single audit event so the action is traceable.
+  const coverage = (pack.pack_json as { coverage?: { state?: string; shopifyProtectStatus?: string } } | null)?.coverage;
+  if (coverage?.state === "covered_shopify") {
+    const reason = `Covered by Shopify Protect (${coverage.shopifyProtectStatus ?? "unknown"}) — no merchant action required`;
+    await sb.from("audit_events").insert({
+      shop_id: pack.shop_id,
+      dispute_id: pack.dispute_id,
+      pack_id: packId,
+      actor_type: "system",
+      event_type: "covered_by_shopify",
+      event_payload: {
+        shopify_protect_status: coverage.shopifyProtectStatus,
+      },
+    });
+    return { action: "skip_covered", details: reason };
   }
 
   const settings = await getShopSettings(pack.shop_id);
