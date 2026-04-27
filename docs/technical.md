@@ -956,6 +956,34 @@ The Evidence tab is the analysis surface for a single dispute. It must answer th
 
 **Removed in earlier rewrites:** the standalone "Argument summary" card, "Case strength" card, "Ways to strengthen this case", "Collected automatically" cards, and the closing-action guidance Banner. The 2026-04-26 Figma alignment did not remove any further logic — only swapped Polaris `<Card>` chrome for inline div styling and converted the per-counterclaim flat tag list into expand/collapse argument blocks.
 
+### Review & Submit tab structure (Figma alignment 2026-04-27)
+
+The Review & Submit tab (`ReviewSubmitTab.tsx`) is the merchant's last decision surface — pre-submit it asks "Should I submit?", post-submit it answers "What did we send?" Two distinct compositions render off `derived.isReadOnly`:
+
+**Pre-submit composition** (no behavior change from prior version, only card chrome restyled to match Overview/Evidence — `border-radius: 8`, `padding: 20`, `box-shadow: 0 1px 2px 0 rgba(22,29,37,.05)`):
+
+1. **Decision Block** — readiness pill (Submitted / Blocked / Risky / Ready to submit, flat rounded-md spans, not Polaris `<Badge>`) + strength pill (Strong/Medium/Weak), dynamic `headline` keyed off `caseStrength.overall`, `whyWins.strengths[]` bullets, missing/`submitOverrideGaps` bullets (with the existing dual-source rule — if any override gap is present render those, else slice top 6 of `missingItems`), `improvement.action` next-step line.
+2. **Primary action row** — "Submit evidence to Shopify" (gated by `canSubmit && !isSaving`, loading via `clientState.saving`); secondary "Improve case first" navigates via `actions.navigateToEvidence(improvement.field)` or `actions.setActiveTab(1)` fallback. `handleSubmit` routes weak/`ready_with_warnings`/`warningCount > 0` cases through the override modal.
+3. **"What will be submitted" collapsible** — rebuttal-outdated warning Banner with `actions.regenerateArgument()` + local `regenerateError`; disclosure showing the same monospace `submissionMonoBlockStyle` block fed by `GET /api/packs/:packId/submission-preview`.
+4. **Override Modal** — Polaris `Modal` (untouched). 5-reason `Select`, conditional "Other" `TextField`, weakness list when `isWeak`, `submitOverrideGaps` list, "Submit anyway" (destructive) calls `actions.submitToShopify(overrideReason, overrideNote)`. Disabled until reason is selected.
+
+**Submitted composition** (Figma `shopify-dispute-detail` lines 535-834, refetch 2026-04-27):
+
+1. **Submission Status Hero** — green card (`bg #F0FDF4 border-2 #86EFAC rounded-lg p-5`), CheckCircle 48×48 icon block, title "Evidence submitted to Shopify" + dark-green "Submitted" pill, formatted timestamp from `pack.savedToShopifyAt` (locale-aware, "Apr 20, 2026 at 3:42 PM"), white "View in Shopify Admin" anchor reusing `getShopifyDisputeUrl(shopDomain, disputeEvidenceGid)` — hidden when URL is null.
+2. **Exact Data Sent to Shopify** — blue 2-px outlined card with a Formatted ⇄ Raw toggle. Formatted view renders `SubmissionField[]` as label/value rows with subdued labels and `contentPreview` values (right-aligned, word-break-word). Raw view lazy-fetches `?format=raw` (already supported by `app/api/packs/[packId]/submission-preview/route.ts:33-38`) once and caches `mutationPayload` in component state, then renders `JSON.stringify(payload, null, 2)` in a `<pre>` block. Raw fetch shows a Banner on error.
+3. **What Was Sent (structured)** — soft-derived topic accordions built by `buildTopics(pack, fields)` from `pack.evidenceItemsByField` payloads (`order_confirmation`, `avs_cvv_match`, `customer_account_info`) and `SubmissionField[]` (policies). Each topic is silently skipped when its source data is empty. The first topic opens by default; only one open at a time. Layout matches Figma's native `<details>` pattern using a custom button + Polaris `Collapsible` so the chevron rotation animates.
+4. **Final Statement Submitted to Bank** — blue 2-px outlined card. Renders `data.rebuttalDraft.sections.map(s => s.text).join("\n\n")` in a `bg #F6F8FB border-2 #E1E3E5 rounded-lg p-5` block. "Copy" button on the header runs `navigator.clipboard.writeText(rebuttalText)` and flips its label to "Copied" for 2 seconds (silent fallback in non-https contexts). Card is skipped entirely when `rebuttalDraft` is null.
+5. **Supporting Documents** — iterates `data.attachments?.filter(a => a.source === "manual_upload")`. Per-row: leading icon picked by mime type (`ImageIcon` for `image/*`, `EmailIcon` for `message/rfc822`, `FileIcon` otherwise), filename, `"{TYPE} · {sizeFormatted} · Included in submission"` caption. No external-link action — there is no signed-download endpoint yet; the row is informational only. Card is skipped when `manualUploads.length === 0`.
+6. **Important Disclaimer** — amber box (`bg #FEF3C7 border #FDE047 rounded-lg p-4`), `InfoIcon`, "Some evidence data (like IP address and device fingerprint) is not visible in Shopify Admin but has been submitted to the card network for review." Always renders post-submit.
+
+**Activity Log** renders below both compositions when relevant audit events exist (`evidence_waived` / `evidence_unwaived` / `submitted_with_warnings` / `evidence_saved_to_shopify` / `admin_override`), capped at 5 most recent.
+
+**System-failure short-circuit (preserved):** `derived.isFailed` returns a single critical Banner ("This pack can't be submitted"); no other surface renders.
+
+**No-pack guard (preserved):** when `pack` is null, render a single subdued card prompting pack generation.
+
+**State matrix preserved end-to-end:** failure → no-pack → submitted-vs-pre-submit branch → blocked / weak / warnings / saving / rebuttal-outdated. The submission gate (`canSubmit = readiness !== "blocked" && !isReadOnly`), override audit logging, and `submitToShopify` arguments are unchanged. No changes to `useDisputeWorkspace`, the submission-preview route, or any DB migration.
+
 ### Language requirement (English-only submission)
 
 All evidence submitted to Shopify must be in English. This includes:
