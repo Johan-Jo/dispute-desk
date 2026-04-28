@@ -676,7 +676,12 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         );
       })()}
 
-      {/* 3. EVIDENCE INVENTORY — completeness, separated from strength */}
+      {/* 3. EVIDENCE INVENTORY — Figma alignment 2026-04-27.
+          Subdued-container card, status pill in header, single
+          flat list of rows with binary Included / Not included
+          pills. Same data, same filters as before — collapsed
+          three-subsection layout into one ordered list (collected
+          first, then missing rows in priority order). */}
       {effectiveChecklist.length > 0 && (() => {
         // "Included" must match the argument layer's truth: a row is only
         // cited as supporting defense evidence when the field appears in
@@ -694,110 +699,176 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         const visible = effectiveChecklist.filter(
           (c) => c.status !== "unavailable" && !isCollectedUncited(c),
         );
-        const included = visible.filter((c) => c.status === "available" || c.status === "waived");
-        const recommended = visible.filter(
-          (c) => c.status === "missing" && c.priority !== "optional",
-        );
-        const optional = visible.filter(
-          (c) => c.status === "missing" && c.priority === "optional",
+        const includedCount = visible.filter(
+          (c) => c.status === "available" || c.status === "waived",
+        ).length;
+        const totalCount = visible.length;
+
+        // Single ordered list — collected (available/waived) first,
+        // then missing in priority order (critical/recommended →
+        // optional). Within each tier, checklist order is preserved
+        // (Array.prototype.sort is stable).
+        const tierOf = (c: EvidenceItemWithStrength): number => {
+          if (c.status === "available" || c.status === "waived") return 0;
+          if (c.priority === "optional") return 2;
+          return 1; // critical / recommended missing
+        };
+        const orderedRows = [...visible].sort(
+          (a, b) => tierOf(a) - tierOf(b),
         );
 
         return (
           <div
             style={{
-              background: "#ffffff",
+              background: "#F6F8FB",
               border: "1px solid #E1E3E5",
               borderRadius: 8,
               padding: 20,
-              boxShadow: "0 1px 2px 0 rgba(22, 29, 37, 0.05)",
             }}
           >
             <BlockStack gap="300">
-              <Text as="h3" variant="headingMd">Evidence inventory</Text>
-              <Text as="p" variant="bodyMd" fontWeight="semibold">
-                {`Included: ${included.length} of ${visible.length} recommended items`}
-              </Text>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Text as="h3" variant="headingMd">Evidence inventory</Text>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 9999,
+                      background:
+                        includedCount === totalCount && totalCount > 0
+                          ? "#059669"
+                          : includedCount > 0
+                            ? "#F59E0B"
+                            : "#DC2626",
+                      display: "inline-block",
+                    }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 500, color: "#202223" }}>
+                    {`${includedCount} of ${totalCount} included`}
+                  </span>
+                </div>
+              </div>
 
-              {included.length > 0 && (
-                <BlockStack gap="200">
-                  {included.map((item) => {
-                    const row = evidenceRowStatus(item);
-                    return (
-                      <InlineStack
-                        key={`inv-inc-${item.field}`}
-                        align="space-between"
-                        blockAlign="start"
-                        gap="200"
-                        wrap
+              <BlockStack gap="200">
+                {orderedRows.map((item) => {
+                  const isIncluded =
+                    item.status === "available" || item.status === "waived";
+                  const pill = isIncluded
+                    ? { label: "Included", bg: "#D1FAE5", color: "#065F46" }
+                    : { label: "Not included", bg: "#F1F2F4", color: "#6D7175" };
+                  const titleColor = isIncluded ? "#202223" : "#6D7175";
+                  return (
+                    <div
+                      key={`inv-${item.field}`}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #E1E3E5",
+                        borderRadius: 8,
+                        padding: 12,
+                        opacity: isIncluded ? 1 : 0.7,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 16,
+                        }}
                       >
-                        <BlockStack gap="050">
-                          <Text as="p" variant="bodyMd" fontWeight="semibold">
-                            {friendlyLabel(item.field, item.label)}
-                          </Text>
-                          <Text as="p" variant="bodySm" tone="subdued">
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {isIncluded ? (
+                              <span
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  color: "#059669",
+                                  flexShrink: 0,
+                                  display: "inline-flex",
+                                }}
+                              >
+                                <Icon source={CheckCircleIcon} />
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  border: "2px solid #6D7175",
+                                  borderRadius: 9999,
+                                  flexShrink: 0,
+                                  display: "inline-block",
+                                  boxSizing: "border-box",
+                                }}
+                              />
+                            )}
+                            <h4
+                              style={{
+                                fontSize: 14,
+                                fontWeight: 600,
+                                color: titleColor,
+                                margin: 0,
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {friendlyLabel(item.field, item.label)}
+                            </h4>
+                          </div>
+                          <p
+                            style={{
+                              fontSize: 12,
+                              color: "#6D7175",
+                              margin: 0,
+                              marginLeft: 24,
+                              lineHeight: 1.4,
+                            }}
+                          >
                             {WHY_TEXT[item.field] ?? "Strengthens the overall response."}
-                          </Text>
-                        </BlockStack>
-                        <Badge tone={row.tone}>{row.label}</Badge>
-                      </InlineStack>
-                    );
-                  })}
-                </BlockStack>
-              )}
-
-              {recommended.length > 0 && (
-                <BlockStack gap="200">
-                  {recommended.map((item) => {
-                    const row = evidenceRowStatus(item);
-                    return (
-                      <InlineStack
-                        key={`inv-rec-${item.field}`}
-                        align="space-between"
-                        blockAlign="start"
-                        gap="200"
-                        wrap
-                      >
-                        <BlockStack gap="050">
-                          <Text as="p" variant="bodyMd" fontWeight="semibold">
-                            {friendlyLabel(item.field, item.label)}
-                          </Text>
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {WHY_TEXT[item.field] ?? "Would strengthen the overall response."}
-                          </Text>
-                        </BlockStack>
-                        <Badge tone={row.tone}>{row.label}</Badge>
-                      </InlineStack>
-                    );
-                  })}
-                </BlockStack>
-              )}
-
-              {optional.length > 0 && (
-                <BlockStack gap="200">
-                  {optional.map((item) => {
-                    const row = evidenceRowStatus(item);
-                    return (
-                      <InlineStack
-                        key={`inv-opt-${item.field}`}
-                        align="space-between"
-                        blockAlign="start"
-                        gap="200"
-                        wrap
-                      >
-                        <BlockStack gap="050">
-                          <Text as="p" variant="bodyMd" fontWeight="semibold">
-                            {friendlyLabel(item.field, item.label)}
-                          </Text>
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {WHY_TEXT[item.field] ?? "Supportive, not required."}
-                          </Text>
-                        </BlockStack>
-                        <Badge tone={row.tone}>{row.label}</Badge>
-                      </InlineStack>
-                    );
-                  })}
-                </BlockStack>
-              )}
+                          </p>
+                        </div>
+                        <span
+                          style={{
+                            padding: "2px 10px",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: pill.bg,
+                            color: pill.color,
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          {pill.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </BlockStack>
             </BlockStack>
           </div>
         );
