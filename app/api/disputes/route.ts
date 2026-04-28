@@ -130,8 +130,61 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Merge `caseStrength` from each dispute's latest non-failed pack so the
+  // list page can render the strength pill + "{N} strong signals" subtitle
+  // without a per-row N+1. Done in JS rather than via a Supabase
+  // relationship because we need a LEFT JOIN to a *single, latest* row per
+  // dispute and the JS client doesn't expose LATERAL. Bounded by per_page
+  // (≤ 100). Disputes without a completed pack come back as `null` and the
+  // UI renders an em-dash.
+  const disputeIds = (data ?? []).map((d) => d.id);
+  const strengthByDispute = new Map<
+    string,
+    {
+      overall: string;
+      strongCount: number;
+      moderateCount: number;
+      supportingCount: number;
+    }
+  >();
+  if (disputeIds.length > 0) {
+    const { data: packs } = await sb
+      .from("evidence_packs")
+      .select("dispute_id, pack_json, status, created_at")
+      .in("dispute_id", disputeIds)
+      .not("status", "in", "(failed,queued,building)")
+      .order("created_at", { ascending: false });
+
+    for (const p of packs ?? []) {
+      // First row per dispute wins (sorted desc by created_at).
+      if (!p.dispute_id || strengthByDispute.has(p.dispute_id)) continue;
+      const cs = (p.pack_json as { case_strength?: unknown } | null)
+        ?.case_strength as
+        | {
+            overall?: string;
+            strongCount?: number;
+            moderateCount?: number;
+            supportingCount?: number;
+          }
+        | undefined;
+      if (cs?.overall) {
+        strengthByDispute.set(p.dispute_id, {
+          overall: cs.overall,
+          strongCount: cs.strongCount ?? 0,
+          moderateCount: cs.moderateCount ?? 0,
+          supportingCount: cs.supportingCount ?? 0,
+        });
+      }
+    }
+  }
+
+  const disputesWithStrength = (data ?? []).map((d) => ({
+    ...d,
+    caseStrength: strengthByDispute.get(d.id) ?? null,
+  }));
+
   return NextResponse.json({
-    disputes: data,
+    disputes: disputesWithStrength,
     pagination: {
       page,
       per_page: perPage,

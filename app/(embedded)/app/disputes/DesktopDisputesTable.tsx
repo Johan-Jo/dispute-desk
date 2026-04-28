@@ -2,151 +2,311 @@
 
 import Link from "next/link";
 import type { ReadonlyURLSearchParams } from "next/navigation";
-import { Badge, Text } from "@shopify/polaris";
+import type { CSSProperties } from "react";
+import { Icon } from "@shopify/polaris";
+import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
-import { recentDisputesViewDetailsLinkStyle } from "@/lib/embedded/recentDisputesTableStyles";
-import { phaseBadgeTone, phaseLabel as phaseLabelFn } from "@/lib/disputes/phaseUtils";
-import styles from "./disputes-list.module.css";
 import {
-  NORMALIZED_STATUS_TONE,
-  OUTCOME_TONE,
+  figmaCaseStrength,
+  figmaDueDate,
+  figmaNextAction,
+  figmaOutcome,
+  figmaRowChrome,
+  figmaStatus,
+  figmaStrengthDetail,
   formatCurrency,
-  formatDueDate,
-  getUrgency,
   orderLabel,
-  statusBadgeLabel,
-  statusBadgeTone,
   translateReason,
   type Dispute,
-  type TabId,
+  type FigmaCaseStrength,
+  type FigmaDueStatus,
+  type FigmaOutcome,
 } from "./disputeListHelpers";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 interface Props {
   disputes: Dispute[];
-  activeTab: TabId;
+  // activeTab is no longer used to vary columns — the new design uses
+  // a single status dropdown on the page level. Kept in props so the
+  // existing call sites compile until page.tsx is restructured.
+  activeTab?: unknown;
   searchParams: ReadonlyURLSearchParams | null;
   dateLocale: string;
   numberLocale: string;
   t: Translate;
 }
 
+/* ── Shared inline style atoms ── */
+
+const PILL_STYLE: CSSProperties = {
+  padding: "2px 10px",
+  borderRadius: 4,
+  fontSize: 12,
+  fontWeight: 600,
+  lineHeight: 1.4,
+  whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+};
+
+function caseStrengthPillColors(s: FigmaCaseStrength): {
+  bg: string;
+  color: string;
+  label: string;
+} {
+  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: "Strong" };
+  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: "Moderate" };
+  return { bg: "#FEE2E2", color: "#991B1B", label: "Weak" };
+}
+
+function outcomePillColors(o: FigmaOutcome, t: Translate): {
+  bg: string;
+  color: string;
+  label: string;
+} {
+  if (o === "won") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.outcomeWon") };
+  if (o === "lost") return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.outcomeLost") };
+  return { bg: "#E1E3E5", color: "#6D7175", label: t("disputes.outcomePending") };
+}
+
+function dueDateColor(status: FigmaDueStatus): string {
+  if (status === "past") return "#EF4444";
+  if (status === "today") return "#F59E0B";
+  return "#6D7175";
+}
+
+function dueDateWeight(status: FigmaDueStatus): number {
+  return status === "past" || status === "today" ? 600 : 400;
+}
+
+const COL_HEADER_STYLE: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 500,
+  color: "#6D7175",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
 export function DesktopDisputesTable({
   disputes,
-  activeTab,
   searchParams,
   dateLocale,
   numberLocale,
   t,
 }: Props) {
   return (
-    <div className={styles.tableScroll}>
-      <table className={styles.listTable}>
-        <thead>
-          <tr>
-            <th>{t("disputes.phaseLabel")}</th>
-            <th>{t("table.order")}</th>
-            <th>{t("table.customer")}</th>
-            <th>{t("table.reason")}</th>
-            <th>{t("table.amount")}</th>
-            <th>{t("table.status")}</th>
-            {activeTab === "closed" ? (
-              <>
-                <th>{t("disputes.columnOutcome")}</th>
-                <th>{t("disputes.columnClosedAt")}</th>
-              </>
-            ) : (
-              <th>{t("table.urgency")}</th>
-            )}
-            <th>{t("table.date")}</th>
-            <th>{t("table.actions")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {disputes.map((d) => {
-            const label = orderLabel(d);
-            const detailHref = withShopParams(
-              `/app/disputes/${d.id}`,
-              searchParams ?? new URLSearchParams(),
-            );
-            const urgency = getUrgency(d, t);
-            const ns = d.normalized_status;
-            return (
-              <tr key={d.id}>
-                <td>
-                  <Badge tone={phaseBadgeTone(d.phase as "inquiry" | "chargeback" | null)}>
-                    {phaseLabelFn(d.phase as "inquiry" | "chargeback" | null, t)}
-                  </Badge>
-                </td>
-                <td>
-                  <Text as="span" variant="bodySm" fontWeight="semibold">
-                    {label}
-                  </Text>
-                </td>
-                <td>
-                  <Text as="span" variant="bodySm">
-                    {d.customer_display_name ?? "—"}
-                  </Text>
-                </td>
-                <td>
-                  <span className={styles.cellMuted}>{translateReason(d.reason, t)}</span>
-                </td>
-                <td>
-                  <span className={styles.cellAmount}>
-                    {formatCurrency(d.amount, d.currency_code, numberLocale)}
-                  </span>
-                </td>
-                <td>
-                  <Badge tone={ns ? NORMALIZED_STATUS_TONE[ns] : statusBadgeTone(d.status)}>
-                    {ns
-                      ? t(`disputeTimeline.normalizedStatuses.${ns}`)
-                      : statusBadgeLabel(d.status, t)}
-                  </Badge>
-                </td>
-                {activeTab === "closed" ? (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #C9CCCF",
+        borderRadius: 8,
+        overflow: "hidden",
+      }}
+    >
+      {/* Header row */}
+      <div
+        style={{
+          background: "#F6F8FB",
+          borderBottom: "1px solid #E1E3E5",
+          padding: "12px 16px",
+          display: "grid",
+          gridTemplateColumns: "3fr 2fr 2fr 1fr 2fr 1fr",
+          gap: 16,
+          alignItems: "center",
+        }}
+      >
+        <div style={COL_HEADER_STYLE}>{t("disputes.colOrderCustomer")}</div>
+        <div style={COL_HEADER_STYLE}>{t("disputes.colCaseStrength")}</div>
+        <div style={COL_HEADER_STYLE}>{t("disputes.colNextAction")}</div>
+        <div style={COL_HEADER_STYLE}>{t("disputes.colAmount")}</div>
+        <div style={COL_HEADER_STYLE}>{t("disputes.colDueDate")}</div>
+        <div style={COL_HEADER_STYLE}>{t("disputes.colOutcome")}</div>
+      </div>
+
+      {/* Rows */}
+      <div>
+        {disputes.map((d) => {
+          const detailHref = withShopParams(
+            `/app/disputes/${d.id}`,
+            searchParams ?? new URLSearchParams(),
+          );
+          const status = figmaStatus(d);
+          const strength = figmaCaseStrength(d);
+          const detail = figmaStrengthDetail(d, t);
+          const outcome = figmaOutcome(d);
+          const due = figmaDueDate(d, t, dateLocale);
+          const next = figmaNextAction(d, t);
+          const chrome = figmaRowChrome(d);
+
+          const rowStyle: CSSProperties = {
+            display: "grid",
+            gridTemplateColumns: "3fr 2fr 2fr 1fr 2fr 1fr",
+            gap: 16,
+            alignItems: "center",
+            padding: "16px",
+            paddingLeft: chrome.stripeColor ? 12 : 16,
+            borderBottom: "1px solid #E1E3E5",
+            borderLeft: chrome.stripeColor
+              ? `4px solid ${chrome.stripeColor}`
+              : "4px solid transparent",
+            background: chrome.bgColor ?? "#ffffff",
+            opacity: chrome.opacity,
+            color: "#202223",
+            textDecoration: "none",
+            cursor: "pointer",
+          };
+
+          const outcomePill = outcomePillColors(outcome, t);
+
+          return (
+            <Link
+              key={d.id}
+              href={detailHref}
+              style={rowStyle}
+              data-status={status}
+            >
+              {/* Order & Customer */}
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#202223",
+                    lineHeight: 1.4,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {orderLabel(d)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "#6D7175",
+                    lineHeight: 1.4,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {d.customer_display_name ?? "—"}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#6D7175",
+                    marginTop: 2,
+                    lineHeight: 1.4,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {translateReason(d.reason, t)}
+                </div>
+              </div>
+
+              {/* Case strength + subtitle */}
+              <div style={{ minWidth: 0 }}>
+                {strength ? (
                   <>
-                    <td>
-                      {d.final_outcome ? (
-                        <Badge tone={OUTCOME_TONE[d.final_outcome]}>
-                          {t(`disputeTimeline.outcomes.${d.final_outcome}`)}
-                        </Badge>
-                      ) : (
-                        <span className={styles.cellMuted}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={styles.cellMuted}>
-                        {formatDueDate(d.closed_at ?? null, dateLocale)}
-                      </span>
-                    </td>
+                    <span
+                      style={{
+                        ...PILL_STYLE,
+                        ...caseStrengthPillColors(strength),
+                      }}
+                    >
+                      {caseStrengthPillColors(strength).label}
+                    </span>
+                    {detail && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6D7175",
+                          marginTop: 4,
+                          lineHeight: 1.4,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {detail}
+                      </div>
+                    )}
                   </>
                 ) : (
-                  <td>
-                    <Badge tone={urgency.tone}>{urgency.label}</Badge>
-                  </td>
+                  <span style={{ fontSize: 14, color: "#6D7175" }}>—</span>
                 )}
-                <td>
-                  <span className={styles.cellMuted}>
-                    {d.initiated_at
-                      ? new Date(d.initiated_at).toLocaleDateString(dateLocale, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </span>
-                </td>
-                <td>
-                  <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
-                    {t("table.viewDetails")}
-                  </Link>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              </div>
+
+              {/* Next action */}
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "#005BD3",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  minWidth: 0,
+                }}
+              >
+                {next}
+              </div>
+
+              {/* Amount */}
+              <div style={{ fontSize: 14, color: "#202223" }}>
+                {formatCurrency(d.amount, d.currency_code, numberLocale)}
+              </div>
+
+              {/* Due date */}
+              <div
+                style={{
+                  fontSize: 14,
+                  color: dueDateColor(due.status),
+                  fontWeight: dueDateWeight(due.status),
+                }}
+              >
+                {due.label}
+              </div>
+
+              {/* Outcome + chevron */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  minWidth: 0,
+                }}
+              >
+                <span
+                  style={{
+                    ...PILL_STYLE,
+                    background: outcomePill.bg,
+                    color: outcomePill.color,
+                  }}
+                >
+                  {outcomePill.label}
+                </span>
+                <span
+                  style={{
+                    width: 20,
+                    height: 20,
+                    color: "#6D7175",
+                    flexShrink: 0,
+                    display: "inline-flex",
+                  }}
+                >
+                  <Icon source={ChevronRightIcon} />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -23,17 +23,24 @@ import {
   InlineStack,
   Pagination,
   Icon,
-  Badge,
   BlockStack,
   Banner,
   Text,
+  Select,
   useBreakpoints,
 } from "@shopify/polaris";
-import { SearchIcon, FilterIcon, ExportIcon, SortIcon } from "@shopify/polaris-icons";
+import {
+  SearchIcon,
+  FilterIcon,
+  ExportIcon,
+  SortIcon,
+  AlertCircleIcon,
+} from "@shopify/polaris-icons";
 import styles from "./disputes-list.module.css";
 import { DesktopDisputesTable } from "./DesktopDisputesTable";
 import { MobileDisputesList } from "./MobileDisputesList";
 import {
+  figmaKpis,
   formatCurrency,
   formatDueDate,
   formatShortId,
@@ -55,6 +62,63 @@ interface DisputesResponse {
     total: number;
     total_pages: number;
   };
+}
+
+/** Figma KPI card (page-level, top of the list). Pure presentational. */
+function KpiCard({
+  label,
+  value,
+  subtitle,
+  subtitleColor,
+}: {
+  label: string;
+  value: string;
+  subtitle?: string;
+  subtitleColor?: string;
+}) {
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #C9CCCF",
+        borderRadius: 8,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "#6D7175",
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 24,
+          fontWeight: 600,
+          color: "#202223",
+          marginBottom: subtitle ? 4 : 0,
+          lineHeight: 1.2,
+        }}
+      >
+        {value}
+      </div>
+      {subtitle && (
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: subtitleColor ?? "#6D7175",
+          }}
+        >
+          {subtitle}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DisputesListPage() {
@@ -89,6 +153,53 @@ export default function DisputesListPage() {
   const [sortPopoverActive, setSortPopoverActive] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [hasAlertEmail, setHasAlertEmail] = useState(true);
+  /** Quick-preset status dropdown — "All status / Action needed /
+   *  Needs review / Under review / Submitted / Closed". Maps onto
+   *  `normalizedStatusFilter` and `activeTab`. The detailed Filter
+   *  popover stays for power users. */
+  const [statusDropdown, setStatusDropdown] = useState<string>("all");
+
+  const applyStatusDropdown = useCallback((value: string) => {
+    setStatusDropdown(value);
+    setPage(1);
+    if (value === "all") {
+      setNormalizedStatusFilter([]);
+      setActiveTab("active");
+      return;
+    }
+    if (value === "closed") {
+      setNormalizedStatusFilter([]);
+      setActiveTab("closed");
+      return;
+    }
+    setActiveTab("active");
+    if (value === "action_needed") {
+      setNormalizedStatusFilter([
+        "action_needed",
+        "ready_to_submit",
+        "new",
+        "in_progress",
+      ]);
+      return;
+    }
+    if (value === "needs_review") {
+      setNormalizedStatusFilter(["needs_review"]);
+      return;
+    }
+    if (value === "under_review") {
+      setNormalizedStatusFilter([
+        "submitted_to_shopify",
+        "submitted_to_bank",
+        "waiting_on_issuer",
+        "submitted",
+      ]);
+      return;
+    }
+    if (value === "submitted") {
+      setNormalizedStatusFilter(["submitted_to_shopify", "submitted_to_bank"]);
+      return;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -211,27 +322,26 @@ export default function DisputesListPage() {
     URL.revokeObjectURL(a.href);
   };
 
-  // Summary counts
-  const summaryInquiries = disputes.filter((d) => d.phase === "inquiry").length;
-  const summaryChargebacks = disputes.filter((d) => d.phase === "chargeback").length;
-  const summaryNeedsReview = disputes.filter((d) => d.needs_review).length;
-  const summaryNeedsSync = disputes.filter((d) => !d.phase).length;
-  const summaryUrgent = disputes.filter((d) => {
-    if (!d.due_at) return false;
-    const hoursLeft = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
-    return hoursLeft <= 48;
-  }).length;
+  // KPIs for the Figma 4-card row + red urgent banner.
+  const kpis = useMemo(() => figmaKpis(disputes), [disputes]);
 
-  const stateSentence = (() => {
-    if (disputes.length === 0) return t("disputes.stateZero");
-    if (summaryNeedsSync > 0)
-      return t("disputes.stateNeedsSync", { total: disputes.length, sync: summaryNeedsSync });
-    if (summaryUrgent > 0)
-      return t("disputes.stateSomeUrgent", { total: disputes.length, urgent: summaryUrgent });
-    if (summaryNeedsReview > 0)
-      return t("disputes.stateNeedsReview", { total: disputes.length, review: summaryNeedsReview });
-    return t("disputes.stateAllClear", { total: disputes.length });
-  })();
+  /** Find the first urgent dispute's id so the "Resolve now" button on
+   *  the red banner can deep-link the merchant straight to the most
+   *  pressing case. Falls back to navigating to the filtered list. */
+  const firstUrgent = useMemo(() => {
+    const urgent = disputes
+      .filter((d) => {
+        if (!d.due_at) return false;
+        if (d.closed_at) return false;
+        const h = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
+        return h <= 48;
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.due_at!).getTime() - new Date(b.due_at!).getTime(),
+      );
+    return urgent[0] ?? null;
+  }, [disputes]);
 
   const sortChoices = useMemo(() => {
     const base = [
@@ -360,36 +470,174 @@ export default function DisputesListPage() {
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
-            {!loading && (
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyLg" fontWeight="semibold">
-                    {stateSentence}
-                  </Text>
-                  {disputes.length > 0 && (
-                    <InlineStack gap="200" wrap>
-                      {summaryInquiries > 0 && (
-                        <Badge tone="info">{t("disputes.summaryInquiries", { count: summaryInquiries })}</Badge>
-                      )}
-                      {summaryChargebacks > 0 && (
-                        <Badge tone="warning">{t("disputes.summaryChargebacks", { count: summaryChargebacks })}</Badge>
-                      )}
-                      {summaryNeedsReview > 0 && (
-                        <Badge tone="attention">{t("disputes.summaryNeedsReview", { count: summaryNeedsReview })}</Badge>
-                      )}
-                      {summaryNeedsSync > 0 && (
-                        <Badge tone="critical">{t("disputes.summaryNeedsSync", { count: summaryNeedsSync })}</Badge>
-                      )}
-                    </InlineStack>
+            {/* KPI row — Figma section 2. Renders only when at least
+                one dispute is loaded. */}
+            {!loading && disputes.length > 0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: smDown
+                    ? "1fr 1fr"
+                    : "repeat(4, minmax(0, 1fr))",
+                  gap: 16,
+                }}
+              >
+                <KpiCard
+                  label={t("disputes.kpiNeedsAction")}
+                  value={String(kpis.needsActionCount)}
+                  subtitle={
+                    kpis.urgentCount > 0
+                      ? t("disputes.kpiNeedsActionUrgent", {
+                          count: kpis.urgentCount,
+                        })
+                      : undefined
+                  }
+                  subtitleColor="#F59E0B"
+                />
+                <KpiCard
+                  label={t("disputes.kpiAmountAtRisk")}
+                  value={formatCurrency(
+                    kpis.totalAtRisk,
+                    disputes[0]?.currency_code ?? "USD",
+                    numberLocale,
                   )}
-                </BlockStack>
-              </Card>
+                />
+                <KpiCard
+                  label={t("disputes.kpiStrongCases")}
+                  value={String(kpis.strongCasesCount)}
+                  subtitle={t("disputes.kpiStrongCasesSub")}
+                  subtitleColor="#065F46"
+                />
+                <KpiCard
+                  label={t("disputes.kpiAwaitingResponse")}
+                  value={String(kpis.awaitingResponseCount)}
+                  subtitle={t("disputes.kpiAwaitingResponseSub")}
+                />
+              </div>
             )}
 
-            {!loading && summaryNeedsReview > 0 && (
-              <Banner tone="warning">
-                <p>{t("disputes.needsReviewBanner", { count: summaryNeedsReview })}</p>
-              </Banner>
+            {/* Red urgent banner — only when ≥1 urgent dispute. Resolve
+                now deep-links to the first urgent dispute's detail page;
+                View all pre-filters the list. */}
+            {!loading && kpis.urgentCount > 0 && (
+              <div
+                style={{
+                  background: "#FEF2F2",
+                  border: "1px solid #FCA5A5",
+                  borderRadius: 8,
+                  padding: 16,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 20,
+                        height: 20,
+                        color: "#DC2626",
+                        flexShrink: 0,
+                        marginTop: 2,
+                        display: "inline-flex",
+                      }}
+                    >
+                      <Icon source={AlertCircleIcon} />
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "#991B1B",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {t("disputes.urgentBannerTitle", {
+                          count: kpis.urgentCount,
+                        })}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#991B1B",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {t("disputes.urgentBannerBody", {
+                          amount: formatCurrency(
+                            kpis.urgentAmount,
+                            disputes[0]?.currency_code ?? "USD",
+                            numberLocale,
+                          ),
+                          days: kpis.earliestDueInDays ?? 0,
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (firstUrgent) {
+                          const href = withShopParams(
+                            `/app/disputes/${firstUrgent.id}`,
+                            searchParams ?? new URLSearchParams(),
+                          );
+                          window.location.assign(href);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#DC2626",
+                        border: "1px solid #DC2626",
+                        borderRadius: 6,
+                        color: "#ffffff",
+                        fontSize: 14,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t("disputes.urgentBannerResolve")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyStatusDropdown("action_needed");
+                        setSortMode("urgency");
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        background: "transparent",
+                        border: "1px solid #DC2626",
+                        borderRadius: 6,
+                        color: "#DC2626",
+                        fontSize: 14,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t("disputes.urgentBannerViewAll")}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {!loading && !hasAlertEmail && (
@@ -406,26 +654,25 @@ export default function DisputesListPage() {
               </Banner>
             )}
 
-            <InlineStack gap="200">
-              {(["active", "closed", "all"] as const).map((tab) => (
-                <Button
-                  key={tab}
-                  pressed={activeTab === tab}
-                  onClick={() => {
-                    setActiveTab(tab);
-                    setPage(1);
-                  }}
-                  size="slim"
-                >
-                  {t(`disputes.tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)}
-                </Button>
-              ))}
-            </InlineStack>
-
-            {/* Actions bar — desktop: search + filter + export; mobile: stacked, filter + sort */}
+            {/* Filters bar — status dropdown + search + Filter + Export.
+                Mobile stacks the dropdown above the search. */}
             <Card>
               {smDown ? (
                 <BlockStack gap="300">
+                  <Select
+                    label={t("disputes.statusDropdown.all")}
+                    labelHidden
+                    options={[
+                      { label: t("disputes.statusDropdown.all"), value: "all" },
+                      { label: t("disputes.statusDropdown.actionNeeded"), value: "action_needed" },
+                      { label: t("disputes.statusDropdown.needsReview"), value: "needs_review" },
+                      { label: t("disputes.statusDropdown.underReview"), value: "under_review" },
+                      { label: t("disputes.statusDropdown.submitted"), value: "submitted" },
+                      { label: t("disputes.statusDropdown.closed"), value: "closed" },
+                    ]}
+                    value={statusDropdown}
+                    onChange={applyStatusDropdown}
+                  />
                   <TextField
                     label={t("disputes.searchPlaceholder")}
                     labelHidden
@@ -442,6 +689,22 @@ export default function DisputesListPage() {
                 </BlockStack>
               ) : (
                 <InlineStack gap="300" align="start" blockAlign="center" wrap={false}>
+                  <div style={{ minWidth: 180 }}>
+                    <Select
+                      label={t("disputes.statusDropdown.all")}
+                      labelHidden
+                      options={[
+                        { label: t("disputes.statusDropdown.all"), value: "all" },
+                        { label: t("disputes.statusDropdown.actionNeeded"), value: "action_needed" },
+                        { label: t("disputes.statusDropdown.needsReview"), value: "needs_review" },
+                        { label: t("disputes.statusDropdown.underReview"), value: "under_review" },
+                        { label: t("disputes.statusDropdown.submitted"), value: "submitted" },
+                        { label: t("disputes.statusDropdown.closed"), value: "closed" },
+                      ]}
+                      value={statusDropdown}
+                      onChange={applyStatusDropdown}
+                    />
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <TextField
                       label={t("disputes.searchPlaceholder")}
@@ -488,16 +751,14 @@ export default function DisputesListPage() {
                 t={t}
               />
             ) : (
-              <Card padding="0">
-                <DesktopDisputesTable
-                  disputes={visibleDisputes}
-                  activeTab={activeTab}
-                  searchParams={searchParams}
-                  dateLocale={dateLocale}
-                  numberLocale={numberLocale}
-                  t={t}
-                />
-              </Card>
+              <DesktopDisputesTable
+                disputes={visibleDisputes}
+                activeTab={activeTab}
+                searchParams={searchParams}
+                dateLocale={dateLocale}
+                numberLocale={numberLocale}
+                t={t}
+              />
             )}
 
             {pagination.total_pages > 1 && (
