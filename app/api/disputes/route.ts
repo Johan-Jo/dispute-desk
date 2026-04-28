@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 /**
  * GET /api/disputes
@@ -138,6 +140,8 @@ export async function GET(req: NextRequest) {
   // (≤ 100). Disputes without a completed pack come back as `null` and the
   // UI renders an em-dash.
   const disputeIds = (data ?? []).map((d) => d.id);
+  const reasonByDisputeId = new Map<string, string | null>();
+  for (const d of data ?? []) reasonByDisputeId.set(d.id, d.reason ?? null);
   const strengthByDispute = new Map<
     string,
     {
@@ -150,7 +154,7 @@ export async function GET(req: NextRequest) {
   if (disputeIds.length > 0) {
     const { data: packs } = await sb
       .from("evidence_packs")
-      .select("dispute_id, pack_json, status, created_at")
+      .select("dispute_id, pack_json, checklist_v2, status, created_at")
       .in("dispute_id", disputeIds)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
@@ -158,6 +162,7 @@ export async function GET(req: NextRequest) {
     for (const p of packs ?? []) {
       // First row per dispute wins (sorted desc by created_at).
       if (!p.dispute_id || strengthByDispute.has(p.dispute_id)) continue;
+
       const cs = (p.pack_json as { case_strength?: unknown } | null)
         ?.case_strength as
         | {
@@ -167,6 +172,7 @@ export async function GET(req: NextRequest) {
             supportingCount?: number;
           }
         | undefined;
+
       if (cs?.overall) {
         strengthByDispute.set(p.dispute_id, {
           overall: cs.overall,
@@ -174,6 +180,31 @@ export async function GET(req: NextRequest) {
           moderateCount: cs.moderateCount ?? 0,
           supportingCount: cs.supportingCount ?? 0,
         });
+        continue;
+      }
+
+      // Fallback: pack predates the 2026-04-26 case_strength persist
+      // (commit 24235cc). Recompute on the fly from checklist_v2 +
+      // reason. No payload source → conditional fields collapse to
+      // their best-case default per the canonical registry; this is
+      // the same approximation we use anywhere else case strength is
+      // computed without pack payloads. A separate backfill script
+      // updates pack_json so subsequent reads skip this branch.
+      const checklist = (p.checklist_v2 ?? []) as ChecklistItemV2[];
+      if (checklist.length > 0) {
+        try {
+          const reason = reasonByDisputeId.get(p.dispute_id) ?? null;
+          const result = calculateCaseStrength(null, checklist, reason);
+          strengthByDispute.set(p.dispute_id, {
+            overall: result.overall,
+            strongCount: result.strongCount,
+            moderateCount: result.moderateCount,
+            supportingCount: result.supportingCount,
+          });
+        } catch {
+          // If the engine throws on a malformed legacy checklist, leave
+          // the dispute as caseStrength: null. UI shows em-dash.
+        }
       }
     }
   }
