@@ -40,7 +40,7 @@ import {
   evidenceRowStatus,
 } from "@/lib/argument/evidenceStatus";
 import { categoryFor } from "@/lib/argument/canonicalEvidence";
-import { categoryBadge } from "@/lib/argument/categoryBadge";
+import { categoryBadge, classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import styles from "../workspace.module.css";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -676,6 +676,195 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
         );
       })()}
 
+      {/* 2.5. DEVICE & LOCATION CONSISTENCY — Figma section 3.
+          Surfaces IP / device payload independently of argument-
+          layer citation. The counterclaim templates don't cite
+          these fields, so without a dedicated card the rich
+          summary + merchantGuidance copy collected by the IP/
+          device source would never reach the merchant on the
+          Evidence tab. Renders only when at least one of the two
+          fields has a non-empty payload. */}
+      {(() => {
+        const ipPayload = (data.pack?.evidenceItemsByField?.ip_location_check?.payload ?? null) as
+          | Record<string, unknown>
+          | null;
+        const devicePayload = (data.pack?.evidenceItemsByField?.device_session_consistency?.payload ?? null) as
+          | Record<string, unknown>
+          | null;
+        const ipSummary = typeof ipPayload?.summary === "string" ? ipPayload.summary : "";
+        const ipGuidance = typeof ipPayload?.merchantGuidance === "string" ? ipPayload.merchantGuidance : null;
+        const ipLines = ipSummary
+          ? ipSummary.split("\n").filter((l) => l.trim().length > 0)
+          : [];
+        const deviceConsistent = devicePayload?.consistent === true;
+        const deviceLogin = devicePayload?.loginPresent === true;
+        const deviceIpMatch = devicePayload?.ipMatch === true;
+        const hasIp = ipLines.length > 0 || ipGuidance;
+        const hasDevice = devicePayload !== null;
+        if (!hasIp && !hasDevice) return null;
+
+        // Strength reading: strong only when device + login + ipMatch
+        // all true; otherwise supporting (matches canonicalEvidence
+        // device_session_consistency rubric).
+        const strong =
+          deviceConsistent && deviceLogin && deviceIpMatch &&
+          (ipPayload?.locationMatch === "match" || ipPayload?.locationMatch === "country_match");
+        const pill = strong
+          ? { label: "Strong", bg: "#D1FAE5", color: "#065F46" }
+          : { label: "Supporting", bg: "#FEF3C7", color: "#92400E" };
+
+        return (
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #E1E3E5",
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <span
+                style={{
+                  width: 20,
+                  height: 20,
+                  color: "#005BD3",
+                  flexShrink: 0,
+                  marginTop: 2,
+                  display: "inline-flex",
+                }}
+              >
+                <Icon source={GlobeIcon} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#202223",
+                    margin: 0,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Device and location data support a legitimate transaction
+                </h3>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#6D7175",
+                    margin: 0,
+                    marginTop: 4,
+                  }}
+                >
+                  Supporting evidence
+                </p>
+              </div>
+              <span
+                style={{
+                  padding: "2px 10px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: pill.bg,
+                  color: pill.color,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  marginTop: 2,
+                }}
+              >
+                {pill.label}
+              </span>
+            </div>
+            <div
+              style={{
+                borderTop: "1px solid #E1E3E5",
+                padding: "16px 20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              {ipLines.map((line, i) => (
+                <div
+                  key={`ip-${i}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      color: "#059669",
+                      flexShrink: 0,
+                      marginTop: 2,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <Icon source={CheckCircleIcon} />
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      color: "#202223",
+                      lineHeight: 1.4,
+                      fontWeight: i === 0 ? 600 : 400,
+                    }}
+                  >
+                    {line}
+                  </span>
+                </div>
+              ))}
+              {hasDevice && deviceConsistent && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      color: "#059669",
+                      flexShrink: 0,
+                      marginTop: 2,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <Icon source={CheckCircleIcon} />
+                  </span>
+                  <span style={{ fontSize: 14, color: "#202223", lineHeight: 1.4 }}>
+                    Device and session signals are consistent with a legitimate purchase
+                    {deviceLogin ? "; customer was logged in" : ""}
+                    {deviceIpMatch ? "; IP matched on checkout" : ""}.
+                  </span>
+                </div>
+              )}
+              {ipGuidance && (
+                <div
+                  style={{
+                    background: "#EFF6FF",
+                    border: "1px solid #BFDBFE",
+                    borderRadius: 6,
+                    padding: 12,
+                    fontSize: 12,
+                    color: "#1E3A8A",
+                    lineHeight: 1.5,
+                    marginTop: 4,
+                  }}
+                >
+                  {ipGuidance}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 3. EVIDENCE INVENTORY — Figma alignment 2026-04-27.
           Subdued-container card, status pill in header, single
           flat list of rows with binary Included / Not included
@@ -683,21 +872,31 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
           three-subsection layout into one ordered list (collected
           first, then missing rows in priority order). */}
       {effectiveChecklist.length > 0 && (() => {
-        // "Included" must match the argument layer's truth: a row is only
-        // cited as supporting defense evidence when the field appears in
-        // argumentMap.counterclaims[].supporting. Collected-but-not-cited
-        // signals (e.g. IP & Location Check with a location mismatch) are
-        // filtered out of the inventory so Overview and Evidence agree.
-        const citedFields = new Set<string>(
-          (argumentMap?.counterclaims ?? []).flatMap((c) =>
-            c.supporting.map((s) => s.field),
-          ),
-        );
-        const isCollectedUncited = (c: EvidenceItemWithStrength): boolean =>
-          (c.status === "available" || c.status === "waived") &&
-          !citedFields.has(c.field);
+        // Suppress only collected rows whose payload is *explicitly
+        // negative* — never rows the argument layer simply doesn't
+        // cite. Counterclaim templates don't reference IP / device /
+        // billing-match fields at all (they're contextual signals,
+        // not argument-defining ones), so the prior
+        // `!citedFields.has(c.field)` rule was hiding every collected
+        // IP row even when the payload was clean. The right test is
+        // `classifyEvidenceRow(...).category === "invalid"`, which
+        // only fires on AVS-flagged billing mismatch, label-only
+        // shipment, both-fail AVS, etc. — i.e. cases where surfacing
+        // the row would actively contradict the case.
+        const isInvalidCollected = (c: EvidenceItemWithStrength): boolean => {
+          if (c.status !== "available" && c.status !== "waived") return false;
+          const payload = (data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null) as
+            | Record<string, unknown>
+            | null;
+          const cls = classifyEvidenceRow({
+            fieldKey: c.field,
+            status: c.status,
+            payload,
+          });
+          return cls.category === "invalid";
+        };
         const visible = effectiveChecklist.filter(
-          (c) => c.status !== "unavailable" && !isCollectedUncited(c),
+          (c) => c.status !== "unavailable" && !isInvalidCollected(c),
         );
         const includedCount = visible.filter(
           (c) => c.status === "available" || c.status === "waived",
