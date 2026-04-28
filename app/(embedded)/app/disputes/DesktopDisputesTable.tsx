@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import type { ReadonlyURLSearchParams } from "next/navigation";
+import { Badge, Text } from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
+import { recentDisputesViewDetailsLinkStyle } from "@/lib/embedded/recentDisputesTableStyles";
+import { phaseBadgeTone, phaseLabel as phaseLabelFn } from "@/lib/disputes/phaseUtils";
 import styles from "./disputes-list.module.css";
 import {
-  actionCtaLabel,
-  dueDateTone,
-  evidenceStatusBadge,
+  NORMALIZED_STATUS_TONE,
+  OUTCOME_TONE,
   formatCurrency,
   formatDueDate,
+  getUrgency,
   orderLabel,
-  outcomeBadge,
-  statusPillFigma,
+  statusBadgeLabel,
+  statusBadgeTone,
   translateReason,
   type Dispute,
-  type FlatPill,
   type TabId,
 } from "./disputeListHelpers";
 
@@ -30,31 +32,9 @@ interface Props {
   t: Translate;
 }
 
-const PILL_STYLE = {
-  padding: "2px 10px",
-  borderRadius: 6,
-  fontSize: 12,
-  fontWeight: 600,
-  lineHeight: 1.4,
-  whiteSpace: "nowrap" as const,
-  display: "inline-flex",
-  alignItems: "center",
-};
-
-function Pill({ pill }: { pill: FlatPill }) {
-  return (
-    <span style={{ ...PILL_STYLE, background: pill.bg, color: pill.color }}>
-      {pill.label}
-    </span>
-  );
-}
-
 export function DesktopDisputesTable({
   disputes,
-  // activeTab is no longer used to vary columns — Outcome renders on
-  // every row per Figma. Kept in props for prior API compat in case
-  // future callers need it.
-  activeTab: _activeTab,
+  activeTab,
   searchParams,
   dateLocale,
   numberLocale,
@@ -65,45 +45,52 @@ export function DesktopDisputesTable({
       <table className={styles.listTable}>
         <thead>
           <tr>
-            <th>{t("table.status")}</th>
+            <th>{t("disputes.phaseLabel")}</th>
             <th>{t("table.order")}</th>
-            <th>{t("disputes.columnCustomerName")}</th>
+            <th>{t("table.customer")}</th>
             <th>{t("table.reason")}</th>
             <th>{t("table.amount")}</th>
-            <th>{t("disputes.columnEvidenceStatus")}</th>
-            <th>{t("disputes.columnOutcome")}</th>
-            <th>{t("disputes.columnDueDate")}</th>
-            <th>{t("disputes.columnAction")}</th>
+            <th>{t("table.status")}</th>
+            {activeTab === "closed" ? (
+              <>
+                <th>{t("disputes.columnOutcome")}</th>
+                <th>{t("disputes.columnClosedAt")}</th>
+              </>
+            ) : (
+              <th>{t("table.urgency")}</th>
+            )}
+            <th>{t("table.date")}</th>
+            <th>{t("table.actions")}</th>
           </tr>
         </thead>
         <tbody>
           {disputes.map((d) => {
+            const label = orderLabel(d);
             const detailHref = withShopParams(
               `/app/disputes/${d.id}`,
               searchParams ?? new URLSearchParams(),
             );
-            const statusPill = statusPillFigma(d, t);
-            const evidencePill = evidenceStatusBadge(d, t);
-            const outcomePill = outcomeBadge(d, t);
-            const dueTone = dueDateTone(d.due_at);
-            const cta = actionCtaLabel(d, t);
+            const urgency = getUrgency(d, t);
+            const ns = d.normalized_status;
             return (
               <tr key={d.id}>
                 <td>
-                  <Pill pill={statusPill} />
+                  <Badge tone={phaseBadgeTone(d.phase as "inquiry" | "chargeback" | null)}>
+                    {phaseLabelFn(d.phase as "inquiry" | "chargeback" | null, t)}
+                  </Badge>
                 </td>
                 <td>
-                  <span className={styles.cellOrder}>{orderLabel(d)}</span>
+                  <Text as="span" variant="bodySm" fontWeight="semibold">
+                    {label}
+                  </Text>
                 </td>
                 <td>
-                  <span className={styles.cellCustomer}>
+                  <Text as="span" variant="bodySm">
                     {d.customer_display_name ?? "—"}
-                  </span>
+                  </Text>
                 </td>
                 <td>
-                  <span className={styles.cellMuted}>
-                    {translateReason(d.reason, t)}
-                  </span>
+                  <span className={styles.cellMuted}>{translateReason(d.reason, t)}</span>
                 </td>
                 <td>
                   <span className={styles.cellAmount}>
@@ -111,29 +98,48 @@ export function DesktopDisputesTable({
                   </span>
                 </td>
                 <td>
-                  {evidencePill ? (
-                    <Pill pill={evidencePill} />
-                  ) : (
-                    <span className={styles.cellMuted}>—</span>
-                  )}
+                  <Badge tone={ns ? NORMALIZED_STATUS_TONE[ns] : statusBadgeTone(d.status)}>
+                    {ns
+                      ? t(`disputeTimeline.normalizedStatuses.${ns}`)
+                      : statusBadgeLabel(d.status, t)}
+                  </Badge>
                 </td>
+                {activeTab === "closed" ? (
+                  <>
+                    <td>
+                      {d.final_outcome ? (
+                        <Badge tone={OUTCOME_TONE[d.final_outcome]}>
+                          {t(`disputeTimeline.outcomes.${d.final_outcome}`)}
+                        </Badge>
+                      ) : (
+                        <span className={styles.cellMuted}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={styles.cellMuted}>
+                        {formatDueDate(d.closed_at ?? null, dateLocale)}
+                      </span>
+                    </td>
+                  </>
+                ) : (
+                  <td>
+                    <Badge tone={urgency.tone}>{urgency.label}</Badge>
+                  </td>
+                )}
                 <td>
-                  <Pill pill={outcomePill} />
-                </td>
-                <td>
-                  <span
-                    className={
-                      dueTone === "critical"
-                        ? styles.cellDueCritical
-                        : styles.cellMuted
-                    }
-                  >
-                    {formatDueDate(d.due_at, dateLocale)}
+                  <span className={styles.cellMuted}>
+                    {d.initiated_at
+                      ? new Date(d.initiated_at).toLocaleDateString(dateLocale, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "—"}
                   </span>
                 </td>
                 <td>
-                  <Link href={detailHref} className={styles.cellAction}>
-                    {cta}
+                  <Link href={detailHref} style={recentDisputesViewDetailsLinkStyle}>
+                    {t("table.viewDetails")}
                   </Link>
                 </td>
               </tr>

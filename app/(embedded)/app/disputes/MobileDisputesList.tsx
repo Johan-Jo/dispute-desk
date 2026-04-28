@@ -1,7 +1,8 @@
 "use client";
 
+import { Fragment } from "react";
 import type { ReadonlyURLSearchParams } from "next/navigation";
-import { BlockStack } from "@shopify/polaris";
+import { BlockStack, Card } from "@shopify/polaris";
 import { MobileDisputeCard } from "./MobileDisputeCard";
 import type { Dispute, TabId } from "./disputeListHelpers";
 
@@ -25,18 +26,21 @@ export function MobileDisputesList({
   t,
 }: Props) {
   return (
-    <BlockStack gap="300">
-      {disputes.map((d) => (
-        <MobileDisputeCard
-          key={d.id}
-          dispute={d}
-          activeTab={activeTab}
-          searchParams={searchParams}
-          dateLocale={dateLocale}
-          numberLocale={numberLocale}
-          t={t}
-        />
-      ))}
-    </BlockStack>
+    <Card padding="0">
+      <BlockStack gap="0">
+        {disputes.map((d) => (
+          <Fragment key={d.id}>
+            <MobileDisputeCard
+              dispute={d}
+              activeTab={activeTab}
+              searchParams={searchParams}
+              dateLocale={dateLocale}
+              numberLocale={numberLocale}
+              t={t}
+            />
+          </Fragment>
+        ))}
+      </BlockStack>
+    </Card>
   );
 }
