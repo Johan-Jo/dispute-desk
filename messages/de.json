@@ -515,7 +515,39 @@
       "status": "Status",
       "source": "Quelle",
       "created": "Erstellt"
-    }
+    },
+    "actionSubmitNow": "Submit now",
+    "actionReview": "Review",
+    "actionView": "View",
+    "urgentBanner": "You have {count} urgent dispute(s). These chargebacks are approaching or have passed the due date.",
+    "urgentBannerCta": "View all",
+    "statusDropdown": {
+      "all": "All status",
+      "actionNeeded": "Action needed",
+      "needsReview": "Needs review",
+      "underReview": "Under review",
+      "closed": "Closed"
+    },
+    "statusPill": {
+      "actionNeeded": "Action needed",
+      "needsReview": "Needs review",
+      "underReview": "Under review",
+      "closed": "Closed"
+    },
+    "evidencePill": {
+      "strong": "Evidence strong",
+      "needsReview": "Needs review"
+    },
+    "outcomePill": {
+      "won": "Won",
+      "lost": "Lost",
+      "pending": "Pending",
+      "needsReview": "Needs review"
+    },
+    "columnEvidenceStatus": "Evidence Status",
+    "columnDueDate": "Due date",
+    "columnAction": "Action",
+    "columnCustomerName": "Customer name"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",

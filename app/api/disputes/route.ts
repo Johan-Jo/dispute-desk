@@ -130,8 +130,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Merge `caseStrength` from the latest non-failed pack per dispute.
+  // Done in JS rather than via a Supabase relationship because we need
+  // a LEFT JOIN to a *single, latest* row per dispute and the JS client
+  // doesn't expose LATERAL. With per_page ≤ 100 the second round-trip
+  // stays well-bounded. Pre-decision disputes (no pack yet) end up with
+  // `caseStrength: null` and the UI renders an em-dash for them.
+  const disputeIds = (data ?? []).map((d) => d.id);
+  let strengthByDispute = new Map<string, string>();
+  if (disputeIds.length > 0) {
+    const { data: packs } = await sb
+      .from("evidence_packs")
+      .select("dispute_id, pack_json, created_at, status")
+      .in("dispute_id", disputeIds)
+      .not("status", "in", "(failed,queued,building)")
+      .order("created_at", { ascending: false });
+
+    for (const p of packs ?? []) {
+      // First row per dispute_id wins (already sorted desc by created_at).
+      if (!p.dispute_id || strengthByDispute.has(p.dispute_id)) continue;
+      const overall =
+        (p.pack_json as { case_strength?: { overall?: string } } | null)
+          ?.case_strength?.overall ?? null;
+      if (overall) strengthByDispute.set(p.dispute_id, overall);
+    }
+  }
+
+  const disputesWithStrength = (data ?? []).map((d) => ({
+    ...d,
+    caseStrength: strengthByDispute.get(d.id) ?? null,
+  }));
+
   return NextResponse.json({
-    disputes: data,
+    disputes: disputesWithStrength,
     pagination: {
       page,
       per_page: perPage,

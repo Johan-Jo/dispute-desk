@@ -23,6 +23,10 @@ export interface Dispute {
   outcome_amount_recovered?: number | null;
   outcome_amount_lost?: number | null;
   last_event_at?: string | null;
+  /** Latest non-failed pack's `case_strength.overall`. Surfaced by
+   *  `/api/disputes` to render the Figma "Evidence Status" column. Null
+   *  when the dispute has no completed pack yet. */
+  caseStrength?: "strong" | "moderate" | "weak" | "insufficient" | null;
 }
 
 export type TabId = "active" | "closed" | "all";
@@ -226,4 +230,100 @@ export function resolveSort(
   if (activeTab === "active") return { sort: "created_at", sort_dir: "desc" };
   if (activeTab === "closed") return { sort: "closed_at", sort_dir: "desc" };
   return { sort: "created_at", sort_dir: "desc" };
+}
+
+/* ── Figma-aligned flat pill helpers (list page redesign 2026-04-28) ── *
+ *
+ * The dispute-detail redesign moved off Polaris `<Badge>` to flat
+ * rectangular `<span>` pills so visuals match the Figma Make source
+ * exactly. The list page mirrors that pattern: the helpers below
+ * return raw `{ label, bg, color }` triples that the tabular and
+ * card views render as inline-styled pills.
+ */
+
+export interface FlatPill {
+  label: string;
+  bg: string;
+  color: string;
+}
+
+/** Status pill from `normalized_status` (Figma Status column). */
+export function statusPillFigma(d: Dispute, t: Translate): FlatPill {
+  const ns = d.normalized_status;
+  // closed buckets (always gray "Closed")
+  if (
+    ns === "won" ||
+    ns === "lost" ||
+    ns === "accepted_not_contested" ||
+    ns === "closed_other" ||
+    d.closed_at
+  ) {
+    return { label: t("disputes.statusPill.closed"), bg: "#E1E3E5", color: "#6D7175" };
+  }
+  if (ns === "submitted_to_shopify" || ns === "submitted_to_bank" || ns === "waiting_on_issuer" || ns === "submitted") {
+    return { label: t("disputes.statusPill.underReview"), bg: "#DBEAFE", color: "#1E40AF" };
+  }
+  if (ns === "needs_review" || ns === "ready_to_submit" || d.needs_review) {
+    return { label: t("disputes.statusPill.needsReview"), bg: "#FEF3C7", color: "#92400E" };
+  }
+  if (ns === "action_needed") {
+    return { label: t("disputes.statusPill.actionNeeded"), bg: "#FEF3C7", color: "#92400E" };
+  }
+  // new / in_progress / unsynced fall here
+  return { label: t("disputes.statusPill.actionNeeded"), bg: "#FEF3C7", color: "#92400E" };
+}
+
+/** Evidence Status pill — binary split per Figma. Returns null when
+ *  no pack has been built (UI renders an em-dash). */
+export function evidenceStatusBadge(d: Dispute, t: Translate): FlatPill | null {
+  const s = d.caseStrength;
+  if (s === "strong" || s === "moderate") {
+    return { label: t("disputes.evidencePill.strong"), bg: "#D1FAE5", color: "#065F46" };
+  }
+  if (s === "weak" || s === "insufficient") {
+    return { label: t("disputes.evidencePill.needsReview"), bg: "#FEF3C7", color: "#92400E" };
+  }
+  return null;
+}
+
+/** Outcome pill — always renders. Pre-decision rows show "Pending". */
+export function outcomeBadge(d: Dispute, t: Translate): FlatPill {
+  if (d.final_outcome === "won") {
+    return { label: t("disputes.outcomePill.won"), bg: "#D1FAE5", color: "#065F46" };
+  }
+  if (d.final_outcome === "lost") {
+    return { label: t("disputes.outcomePill.lost"), bg: "#FEE2E2", color: "#991B1B" };
+  }
+  if (d.final_outcome === "refunded" || d.final_outcome === "accepted") {
+    return { label: t("disputes.outcomePill.lost"), bg: "#FEE2E2", color: "#991B1B" };
+  }
+  if (d.final_outcome === "partially_won") {
+    return { label: t("disputes.outcomePill.won"), bg: "#D1FAE5", color: "#065F46" };
+  }
+  if (d.needs_review) {
+    return { label: t("disputes.outcomePill.needsReview"), bg: "#FEF3C7", color: "#92400E" };
+  }
+  return { label: t("disputes.outcomePill.pending"), bg: "#E1E3E5", color: "#6D7175" };
+}
+
+/** Per-row CTA label keyed off normalized_status. Same destination
+ *  link in every case; the label is purely a prioritization signal. */
+export function actionCtaLabel(d: Dispute, t: Translate): string {
+  const ns = d.normalized_status;
+  if (ns === "action_needed" || ns === "ready_to_submit") {
+    return t("disputes.actionSubmitNow");
+  }
+  if (ns === "needs_review" || d.needs_review) {
+    return t("disputes.actionReview");
+  }
+  return t("disputes.actionView");
+}
+
+/** Due-date tone for the Figma list — overdue/≤48h red, otherwise
+ *  subdued. Used in the table cell + the mobile-card row. */
+export function dueDateTone(due_at: string | null): "critical" | "subdued" {
+  if (!due_at) return "subdued";
+  const hoursLeft = (new Date(due_at).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursLeft <= 48) return "critical";
+  return "subdued";
 }

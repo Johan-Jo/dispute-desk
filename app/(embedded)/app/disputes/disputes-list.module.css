@@ -8,23 +8,21 @@
   border-collapse: collapse;
 }
 
-/* Figma: bg-[#F7F8FA] border-b border-[#E1E3E5] */
+/* Figma: bg-[#F6F8FB] border-b border-[#E1E3E5] */
 .listTable thead {
-  background: #f7f8fa;
+  background: #f6f8fb;
   border-bottom: 1px solid #e1e3e5;
 }
 .listTable th {
-  padding: 12px 20px;
-  font-size: 0.6875rem;
+  padding: 12px 16px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #6d7175;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   text-align: left;
   white-space: nowrap;
 }
 .listTable td {
-  padding: 16px 20px;
+  padding: 12px 16px;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -35,10 +33,10 @@
   border-bottom: none;
 }
 .listTable tbody tr:hover {
-  background: #f7f8fa;
+  background: #f6f8fb;
 }
 .listTable tbody tr:focus-visible {
-  outline: 2px solid #1d4ed8;
+  outline: 2px solid #005bd3;
   outline-offset: -2px;
 }
 
@@ -50,21 +48,35 @@
 }
 .cellOrder {
   font-size: 0.875rem;
-  color: #1d4ed8;
-  text-decoration: none;
-  cursor: pointer;
+  color: #202223;
 }
-.cellOrder:hover {
-  text-decoration: underline;
+.cellCustomer {
+  font-size: 0.875rem;
+  color: #202223;
 }
 .cellMuted {
   font-size: 0.875rem;
   color: #6d7175;
 }
+.cellDueCritical {
+  font-size: 0.875rem;
+  color: #dc2626;
+  font-weight: 500;
+}
 .cellAmount {
   font-size: 0.875rem;
   font-weight: 500;
   color: #202223;
+}
+.cellAction {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #005bd3;
+  text-decoration: none;
+  cursor: pointer;
+}
+.cellAction:hover {
+  text-decoration: underline;
 }
 
 /* Loading / empty */
@@ -86,29 +98,29 @@
   margin-left: 6px;
 }
 
-/* Mobile card (useBreakpoints() smDown branch) */
+/* Mobile card (useBreakpoints() smDown branch) — Figma section-divided
+ * card with rounded border + spacing between cards. */
 .mobileCardLink {
   display: block;
   color: inherit;
   text-decoration: none;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--p-color-border-subdued);
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e1e3e5;
+  border-radius: 8px;
   transition: background-color 80ms ease, transform 80ms ease;
   -webkit-tap-highlight-color: transparent;
 }
-.mobileCardLink:last-child {
-  border-bottom: none;
-}
 .mobileCardLink:hover {
-  background: var(--p-color-bg-surface-hover);
+  background: #f6f8fb;
 }
 .mobileCardLink:focus-visible {
-  outline: 2px solid var(--p-color-border-focus);
+  outline: 2px solid #005bd3;
   outline-offset: -2px;
-  border-radius: var(--p-border-radius-200);
+  border-radius: 8px;
 }
 .mobileCardLink:active {
-  background: var(--p-color-bg-surface-active);
+  background: #f6f8fb;
   transform: scale(0.995);
 }
 .mobileAmount {

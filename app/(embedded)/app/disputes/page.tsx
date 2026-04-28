@@ -27,9 +27,16 @@ import {
   BlockStack,
   Banner,
   Text,
+  Select,
   useBreakpoints,
 } from "@shopify/polaris";
-import { SearchIcon, FilterIcon, ExportIcon, SortIcon } from "@shopify/polaris-icons";
+import {
+  SearchIcon,
+  FilterIcon,
+  ExportIcon,
+  SortIcon,
+  AlertTriangleIcon,
+} from "@shopify/polaris-icons";
 import styles from "./disputes-list.module.css";
 import { DesktopDisputesTable } from "./DesktopDisputesTable";
 import { MobileDisputesList } from "./MobileDisputesList";
@@ -89,6 +96,42 @@ export default function DisputesListPage() {
   const [sortPopoverActive, setSortPopoverActive] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [hasAlertEmail, setHasAlertEmail] = useState(true);
+  /** Quick-preset status dropdown — Figma's "All status / Action needed
+   *  / Needs review / Under review / Closed". Maps onto the existing
+   *  `normalizedStatusFilter` and (for "closed") the activeTab. The
+   *  detailed Filter popover stays for power users. */
+  const [statusDropdown, setStatusDropdown] = useState<string>("all");
+
+  const applyStatusDropdown = useCallback((value: string) => {
+    setStatusDropdown(value);
+    setPage(1);
+    if (value === "all") {
+      setNormalizedStatusFilter([]);
+      return;
+    }
+    if (value === "closed") {
+      setNormalizedStatusFilter([]);
+      setActiveTab("closed");
+      return;
+    }
+    if (value === "action_needed") {
+      setNormalizedStatusFilter(["action_needed", "ready_to_submit"]);
+      return;
+    }
+    if (value === "needs_review") {
+      setNormalizedStatusFilter(["needs_review"]);
+      return;
+    }
+    if (value === "under_review") {
+      setNormalizedStatusFilter([
+        "submitted_to_shopify",
+        "submitted_to_bank",
+        "waiting_on_issuer",
+        "submitted",
+      ]);
+      return;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -406,6 +449,55 @@ export default function DisputesListPage() {
               </Banner>
             )}
 
+            {/* Urgent banner — Figma section 2. Renders only when at
+                least one dispute is overdue or due ≤ 48h. "View all"
+                jumps to the Active tab with urgency sort so the
+                merchant lands on the most-urgent rows. */}
+            {!loading && summaryUrgent > 0 && (
+              <div
+                style={{
+                  background: "#FFF4E5",
+                  border: "1px solid #FCD34D",
+                  borderRadius: 8,
+                  padding: 16,
+                }}
+              >
+                <InlineStack
+                  align="space-between"
+                  blockAlign="center"
+                  gap="200"
+                  wrap={false}
+                >
+                  <InlineStack gap="200" blockAlign="center" wrap={false}>
+                    <span
+                      style={{
+                        width: 20,
+                        height: 20,
+                        color: "#92400E",
+                        display: "inline-flex",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon source={AlertTriangleIcon} />
+                    </span>
+                    <Text as="p" variant="bodySm" fontWeight="medium">
+                      {t("disputes.urgentBanner", { count: summaryUrgent })}
+                    </Text>
+                  </InlineStack>
+                  <Button
+                    variant="plain"
+                    onClick={() => {
+                      setActiveTab("active");
+                      setSortMode("urgency");
+                      setPage(1);
+                    }}
+                  >
+                    {t("disputes.urgentBannerCta")}
+                  </Button>
+                </InlineStack>
+              </div>
+            )}
+
             <InlineStack gap="200">
               {(["active", "closed", "all"] as const).map((tab) => (
                 <Button
@@ -422,10 +514,25 @@ export default function DisputesListPage() {
               ))}
             </InlineStack>
 
-            {/* Actions bar — desktop: search + filter + export; mobile: stacked, filter + sort */}
+            {/* Actions bar — Figma: status dropdown + search + Filter +
+                Export. Mobile stacks the dropdown above the search and
+                drops Export in favour of Filter + Sort buttons. */}
             <Card>
               {smDown ? (
                 <BlockStack gap="300">
+                  <Select
+                    label={t("disputes.statusDropdown.all")}
+                    labelHidden
+                    options={[
+                      { label: t("disputes.statusDropdown.all"), value: "all" },
+                      { label: t("disputes.statusDropdown.actionNeeded"), value: "action_needed" },
+                      { label: t("disputes.statusDropdown.needsReview"), value: "needs_review" },
+                      { label: t("disputes.statusDropdown.underReview"), value: "under_review" },
+                      { label: t("disputes.statusDropdown.closed"), value: "closed" },
+                    ]}
+                    value={statusDropdown}
+                    onChange={applyStatusDropdown}
+                  />
                   <TextField
                     label={t("disputes.searchPlaceholder")}
                     labelHidden
@@ -442,6 +549,21 @@ export default function DisputesListPage() {
                 </BlockStack>
               ) : (
                 <InlineStack gap="300" align="start" blockAlign="center" wrap={false}>
+                  <div style={{ minWidth: 180 }}>
+                    <Select
+                      label={t("disputes.statusDropdown.all")}
+                      labelHidden
+                      options={[
+                        { label: t("disputes.statusDropdown.all"), value: "all" },
+                        { label: t("disputes.statusDropdown.actionNeeded"), value: "action_needed" },
+                        { label: t("disputes.statusDropdown.needsReview"), value: "needs_review" },
+                        { label: t("disputes.statusDropdown.underReview"), value: "under_review" },
+                        { label: t("disputes.statusDropdown.closed"), value: "closed" },
+                      ]}
+                      value={statusDropdown}
+                      onChange={applyStatusDropdown}
+                    />
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <TextField
                       label={t("disputes.searchPlaceholder")}
