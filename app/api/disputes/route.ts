@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
   // stays well-bounded. Pre-decision disputes (no pack yet) end up with
   // `caseStrength: null` and the UI renders an em-dash for them.
   const disputeIds = (data ?? []).map((d) => d.id);
-  const strengthByDispute = new Map<string, string>();
+  let strengthByDispute = new Map<string, string>();
   if (disputeIds.length > 0) {
     const { data: packs } = await sb
       .from("evidence_packs")
