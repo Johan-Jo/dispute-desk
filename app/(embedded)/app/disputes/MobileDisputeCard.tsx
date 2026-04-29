@@ -56,6 +56,14 @@ function caseStrengthPillColors(s: FigmaCaseStrength): {
   return { bg: "#FEE2E2", color: "#991B1B", label: "Weak" };
 }
 
+/** Subtitle color tied to strength (red/yellow/green pattern, same
+ *  as the detail page). */
+function caseStrengthSubtitleColor(s: FigmaCaseStrength): string {
+  if (s === "strong") return "#065F46";
+  if (s === "moderate") return "#92400E";
+  return "#991B1B";
+}
+
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
   bg: string;
   color: string;
@@ -130,7 +138,7 @@ export function MobileDisputeCard({
                 <div
                   style={{
                     fontSize: 12,
-                    color: "#6D7175",
+                    color: caseStrengthSubtitleColor(strength),
                     marginTop: 4,
                     lineHeight: 1.4,
                   }}

@@ -60,6 +60,15 @@ function caseStrengthPillColors(s: FigmaCaseStrength): {
   return { bg: "#FEE2E2", color: "#991B1B", label: "Weak" };
 }
 
+/** Subtitle color tied to strength so the detail-line ("2 strong
+ *  signals" / "1 strong + 2 moderate" / "Insufficient evidence")
+ *  reads in the same red/yellow/green pattern as the detail-page hero. */
+function caseStrengthSubtitleColor(s: FigmaCaseStrength): string {
+  if (s === "strong") return "#065F46";
+  if (s === "moderate") return "#92400E";
+  return "#991B1B";
+}
+
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
   bg: string;
   color: string;
@@ -224,7 +233,7 @@ export function DesktopDisputesTable({
                       <div
                         style={{
                           fontSize: 12,
-                          color: "#6D7175",
+                          color: caseStrengthSubtitleColor(strength),
                           marginTop: 4,
                           lineHeight: 1.4,
                           whiteSpace: "nowrap",
