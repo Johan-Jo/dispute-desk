@@ -134,11 +134,20 @@ export async function GET(req: NextRequest) {
 
   // Merge `caseStrength` from each dispute's latest non-failed pack so the
   // list page can render the strength pill + "{N} strong signals" subtitle
-  // without a per-row N+1. Done in JS rather than via a Supabase
-  // relationship because we need a LEFT JOIN to a *single, latest* row per
-  // dispute and the JS client doesn't expose LATERAL. Bounded by per_page
-  // (≤ 100). Disputes without a completed pack come back as `null` and the
-  // UI renders an em-dash.
+  // without a per-row N+1.
+  //
+  // Two-stage fetch for performance:
+  //   Stage A — narrow select of `pack_json -> case_strength` only.
+  //             Returns ~150 bytes per pack. Common case after the
+  //             2026-04-26 persist (commit 24235cc): every pack has it
+  //             and we never hit Stage B.
+  //   Stage B — for stale packs whose persisted case_strength is null,
+  //             fetch the heavier columns (`pack_json -> sections`,
+  //             `checklist_v2`) and recompute via the engine. Pass
+  //             `payloadSource = byField(map)` so conditional fields
+  //             (delivery proofType, AVS/CVV codes, IP location flags)
+  //             classify correctly — without it, the list under-counts
+  //             strong signals vs the detail page.
   const disputeIds = (data ?? []).map((d) => d.id);
   const reasonByDisputeId = new Map<string, string | null>();
   for (const d of data ?? []) reasonByDisputeId.set(d.id, d.reason ?? null);
@@ -152,27 +161,29 @@ export async function GET(req: NextRequest) {
     }
   >();
   if (disputeIds.length > 0) {
-    const { data: packs } = await sb
+    // Stage A: narrow select.
+    const { data: csPacks } = await sb
       .from("evidence_packs")
-      .select("dispute_id, pack_json, checklist_v2, status, created_at")
+      .select("id, dispute_id, status, created_at, pack_json->case_strength")
       .in("dispute_id", disputeIds)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
 
-    for (const p of packs ?? []) {
-      // First row per dispute wins (sorted desc by created_at).
-      if (!p.dispute_id || strengthByDispute.has(p.dispute_id)) continue;
-
-      const cs = (p.pack_json as { case_strength?: unknown } | null)
-        ?.case_strength as
+    // First row per dispute wins (sorted desc). Track each so we can
+    // hit Stage B for stale packs.
+    type FallbackPack = { id: string; dispute_id: string };
+    const latestForDispute = new Map<string, FallbackPack>();
+    for (const p of csPacks ?? []) {
+      if (!p.dispute_id || latestForDispute.has(p.dispute_id)) continue;
+      const cs = (p as { case_strength?: unknown }).case_strength as
         | {
             overall?: string;
             strongCount?: number;
             moderateCount?: number;
             supportingCount?: number;
           }
+        | null
         | undefined;
-
       if (cs?.overall) {
         strengthByDispute.set(p.dispute_id, {
           overall: cs.overall,
@@ -180,21 +191,72 @@ export async function GET(req: NextRequest) {
           moderateCount: cs.moderateCount ?? 0,
           supportingCount: cs.supportingCount ?? 0,
         });
-        continue;
+      } else {
+        latestForDispute.set(p.dispute_id, {
+          id: p.id,
+          dispute_id: p.dispute_id,
+        });
       }
+    }
 
-      // Fallback: pack predates the 2026-04-26 case_strength persist
-      // (commit 24235cc). Recompute on the fly from checklist_v2 +
-      // reason. No payload source → conditional fields collapse to
-      // their best-case default per the canonical registry; this is
-      // the same approximation we use anywhere else case strength is
-      // computed without pack payloads. A separate backfill script
-      // updates pack_json so subsequent reads skip this branch.
-      const checklist = (p.checklist_v2 ?? []) as ChecklistItemV2[];
-      if (checklist.length > 0) {
+    // Stage B: only for the latest packs whose case_strength was null.
+    // Pulls just `pack_json -> sections` (for the byField payload map)
+    // and `checklist_v2`.
+    const stalePackIds = Array.from(latestForDispute.values()).map(
+      (f) => f.id,
+    );
+    if (stalePackIds.length > 0) {
+      const { data: heavy } = await sb
+        .from("evidence_packs")
+        .select("id, dispute_id, checklist_v2, pack_json->sections")
+        .in("id", stalePackIds);
+
+      for (const p of heavy ?? []) {
+        if (!p.dispute_id) continue;
+        const checklist = (p.checklist_v2 ?? []) as ChecklistItemV2[];
+        if (checklist.length === 0) continue;
+
+        // Build evidenceItemsByField from pack_json.sections so the
+        // engine can read per-field payloads (matches the detail
+        // page's workspace API behavior).
+        type RawSection = {
+          type?: string;
+          label?: string;
+          source?: string;
+          fieldsProvided?: string[];
+          data?: Record<string, unknown>;
+        };
+        const sections = ((p as { sections?: RawSection[] }).sections ?? []) as RawSection[];
+        const byField: Record<
+          string,
+          { id: string; type?: string; label?: string | null; source?: string | null; payload?: Record<string, unknown> | null }
+        > = {};
+        for (const s of sections) {
+          for (const f of s.fieldsProvided ?? []) {
+            if (f in byField) continue;
+            byField[f] = {
+              id: `pack-section:${f}`,
+              type: s.type,
+              label: s.label ?? null,
+              source: s.source ?? null,
+              payload: { ...(s.data ?? {}), fieldsProvided: s.fieldsProvided },
+            };
+          }
+        }
+
+        const payloadSource =
+          Object.keys(byField).length > 0
+            ? ({ kind: "byField" as const, map: byField })
+            : undefined;
+
         try {
           const reason = reasonByDisputeId.get(p.dispute_id) ?? null;
-          const result = calculateCaseStrength(null, checklist, reason);
+          const result = calculateCaseStrength(
+            null,
+            checklist,
+            reason,
+            payloadSource,
+          );
           strengthByDispute.set(p.dispute_id, {
             overall: result.overall,
             strongCount: result.strongCount,
