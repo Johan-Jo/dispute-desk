@@ -120,6 +120,34 @@ function friendlyLabel(field: string, fallback: string): string {
   return FRIENDLY_FIELD_LABEL[field] ?? fallback;
 }
 
+/* Fields the merchant can act on directly (upload / paste). Mirrors
+ * `FIELD_ACTIONS` in `useDisputeWorkspace.ts`. The set is the *only*
+ * place that defines who gets an upload affordance; other fields
+ * (`avs_cvv_match`, `billing_address_match`, `ip_location_check`, etc.)
+ * are gateway/system signals where a manual upload doesn't make sense.
+ *
+ * Why this exists: the previous gate `collectionType !== "auto"` hid
+ * the upload UI for `customer_communication`, even though that field
+ * only becomes Strong when the merchant supplies a conversation
+ * showing the customer confirmed the order. Auto-collection is a
+ * best-effort fallback — merchant upload is the actual path to
+ * strength, and the UI must surface it. */
+const MERCHANT_ACTIONABLE_FIELDS = new Set([
+  "supporting_documents",
+  "customer_communication",
+  "product_description",
+  "duplicate_explanation",
+]);
+
+function canMerchantUpload(item: { field: string; collectionType?: string }): boolean {
+  if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
+  // Preserve the prior behaviour for non-allowlisted fields: anything
+  // that isn't strictly auto-collected stays uploadable. This keeps
+  // `conditional_auto` rows (e.g. AVS when payment data is missing)
+  // and unspecified `manual` rows working as before.
+  return item.collectionType !== "auto";
+}
+
 function impactSentence(field: string): string {
   const tail = MISSING_IMPACT[field] ?? "the case is weaker than it could be.";
   return `Missing ${friendlyLabel(field, field).toLowerCase()} \u2014 without it, ${tail}`;
@@ -971,6 +999,11 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                     ? { label: "Included", bg: "#D1FAE5", color: "#065F46" }
                     : { label: "Not included", bg: "#F1F2F4", color: "#6D7175" };
                   const titleColor = isIncluded ? "#202223" : "#6D7175";
+                  // Merchant can act on this missing row from the inventory
+                  // itself — clicking jumps to the matching category row and
+                  // opens its upload zone (handled by `EvidenceItemInline`'s
+                  // focusField effect).
+                  const showAddCta = !isIncluded && !readOnly && canMerchantUpload(item);
                   return (
                     <div
                       key={`inv-${item.field}`}
@@ -1047,6 +1080,16 @@ export default function EvidenceTab({ workspace }: { workspace: Workspace }) {
                           >
                             {WHY_TEXT[item.field] ?? "Strengthens the overall response."}
                           </p>
+                          {showAddCta && (
+                            <div style={{ marginTop: 8, marginLeft: 24 }}>
+                              <Button
+                                size="slim"
+                                onClick={() => actions.navigateToEvidence(item.field)}
+                              >
+                                Upload
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         <span
                           style={{
@@ -1332,6 +1375,17 @@ function EvidenceItemInline({
 
   const highlighted = focusField === item.field;
 
+  // When the user clicks "Upload" from the Evidence Inventory (or the
+  // Overview "Add this evidence" CTA), `focusField` flips to this row.
+  // Without this effect the DropZone stays closed because `showUpload`
+  // is only seeded from `focusField` on initial mount, so the merchant
+  // would land on the row but still not see an upload surface.
+  useEffect(() => {
+    if (focusField === item.field && item.status === "missing") {
+      setShowUpload(true);
+    }
+  }, [focusField, item.field, item.status]);
+
   const isSystemDerived = item.collectionType === "auto" || item.collectionType === "conditional_auto";
   const rowClass =
     item.status === "available" ? styles.evidenceRowAvailable :
@@ -1395,7 +1449,7 @@ function EvidenceItemInline({
                 {showContent ? "Hide" : "Preview"}
               </Button>
             )}
-            {item.status === "missing" && !readOnly && !uploading && item.collectionType !== "auto" && (
+            {item.status === "missing" && !readOnly && !uploading && canMerchantUpload(item) && (
               <>
                 <Button size="slim" onClick={() => setShowUpload((v) => !v)}>
                   {error ? "Retry" : "Upload"}
