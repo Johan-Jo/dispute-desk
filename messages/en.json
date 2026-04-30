@@ -2021,7 +2021,11 @@
     "stateHint": "Automation rules on the Automation page decide which playbook DisputeDesk uses for each dispute.",
     "activeCount": "{count} active",
     "draftCount": "{count} draft",
-    "uncoveredCount": "{count} uncovered"
+    "uncoveredCount": "{count} uncovered",
+    "explainerTitle": "What you're looking at",
+    "explainerBullet1": "Playbooks are evidence templates DisputeDesk uses to respond to specific dispute types. Each playbook bundles the order details, tracking proof, customer communication, and policy excerpts that strengthen your case.",
+    "explainerBullet2": "Active playbooks are wired up to your automation rules. When a dispute matches one of your rules, DisputeDesk uses the matching playbook to build the evidence pack — automatically or for your review depending on the rule.",
+    "explainerBullet3": "Use Start from template for quick coverage of the seven main dispute reasons, or Create pack to build a custom one for an edge case. Click any row to edit the evidence checklist."
   },
   "templateCustomize": {
     "banner": "Template Setup Wizard — Complete these steps to activate your template",

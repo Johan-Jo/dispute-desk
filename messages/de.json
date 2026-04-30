@@ -1894,7 +1894,11 @@
     "activeCount": "{count} aktiv",
     "draftCount": "{count} Entwurf",
     "uncoveredCount": "{count} nicht abgedeckt",
-    "activate": "Aktivieren"
+    "activate": "Aktivieren",
+    "explainerTitle": "Was Sie hier sehen",
+    "explainerBullet1": "Playbooks sind Evidenzvorlagen, die DisputeDesk verwendet, um auf bestimmte Streitfalltypen zu reagieren. Jedes Playbook bündelt Bestelldetails, Tracking-Nachweis, Kundenkommunikation und Richtlinien-Auszüge, die Ihren Fall stärken.",
+    "explainerBullet2": "Aktive Playbooks sind mit Ihren Automatisierungsregeln verknüpft. Wenn ein Streitfall einer Ihrer Regeln entspricht, verwendet DisputeDesk das passende Playbook, um den Evidenzpack zu erstellen — automatisch oder zur Prüfung, je nach Regel.",
+    "explainerBullet3": "Verwenden Sie Vorlage starten für schnelle Abdeckung der sieben Hauptursachen oder Pack erstellen, um ein benutzerdefiniertes Playbook für Sonderfälle zu erstellen. Klicken Sie auf eine Zeile, um die Evidenz-Checkliste zu bearbeiten."
   },
   "templateLibrary": {
     "title": "Vorlagenbibliothek",

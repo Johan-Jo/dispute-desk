@@ -28,9 +28,17 @@ import {
   TextField,
   Select,
   IndexTable,
+  Icon,
 } from "@shopify/polaris";
 import { FileText, Info, X } from "lucide-react";
-import { EditIcon, DeleteIcon, MagicIcon, PlusIcon } from "@shopify/polaris-icons";
+import {
+  EditIcon,
+  DeleteIcon,
+  MagicIcon,
+  PlusIcon,
+  InfoIcon,
+  XIcon,
+} from "@shopify/polaris-icons";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
@@ -124,6 +132,14 @@ export default function PacksListPage() {
 
   const [activatingId, setActivatingId] = useState<string | null>(null);
   const [showTemplateBanner, setShowTemplateBanner] = useState(true);
+  const [explainerOpen, setExplainerOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("dd_packs_explainer_dismissed") !== "1";
+  });
+  const dismissExplainer = useCallback(() => {
+    setExplainerOpen(false);
+    try { localStorage.setItem("dd_packs_explainer_dismissed", "1"); } catch {}
+  }, []);
   const [recommendedTemplates, setRecommendedTemplates] = useState<TemplateItem[]>([]);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
   const [recommendedFetched, setRecommendedFetched] = useState(false);
@@ -360,6 +376,64 @@ export default function PacksListPage() {
       >
         <div className="embeddedPacksRoot">
         <BlockStack gap="400">
+          {/* Dismissable explainer — Figma soft-blue card */}
+          {explainerOpen && (
+            <div
+              style={{
+                background: "#EBF5FA",
+                border: "1px solid #B4E1FA",
+                borderRadius: 8,
+                padding: 16,
+                display: "flex",
+                gap: 12,
+                alignItems: "flex-start",
+              }}
+            >
+              <span
+                style={{
+                  width: 20,
+                  height: 20,
+                  flexShrink: 0,
+                  marginTop: 2,
+                  color: "#005BD3",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon source={InfoIcon} tone="info" />
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
+                  {t("packTemplates.explainerTitle")}
+                </div>
+                <ul style={{ listStyle: "disc", margin: 0, paddingLeft: 18, color: "#202223", fontSize: 14, lineHeight: 1.5 }}>
+                  <li style={{ marginBottom: 6 }}>{t("packTemplates.explainerBullet1")}</li>
+                  <li style={{ marginBottom: 6 }}>{t("packTemplates.explainerBullet2")}</li>
+                  <li>{t("packTemplates.explainerBullet3")}</li>
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={dismissExplainer}
+                aria-label="Dismiss"
+                style={{
+                  flexShrink: 0,
+                  background: "transparent",
+                  border: "none",
+                  padding: 4,
+                  cursor: "pointer",
+                  color: "#6D7175",
+                  display: "inline-flex",
+                }}
+              >
+                <span style={{ width: 20, height: 20, display: "inline-flex" }}>
+                  <Icon source={XIcon} />
+                </span>
+              </button>
+            </div>
+          )}
+
           {/* Current state — plain language */}
           {!loading && (
             <Card>

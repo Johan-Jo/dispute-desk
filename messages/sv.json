@@ -1896,7 +1896,11 @@
     "activeCount": "{count} aktiv",
     "draftCount": "{count} utkast",
     "uncoveredCount": "{count} utan täckning",
-    "activate": "Aktivera"
+    "activate": "Aktivera",
+    "explainerTitle": "Vad du tittar på",
+    "explainerBullet1": "Playbooks är bevismallar som DisputeDesk använder för att svara på specifika tvisttyper. Varje playbook samlar orderdetaljer, leveransbevis, kundkommunikation och policyutdrag som stärker ditt ärende.",
+    "explainerBullet2": "Aktiva playbooks är kopplade till dina automatiseringsregler. När en tvist matchar en av dina regler använder DisputeDesk det matchande playbook för att bygga bevispaketet — automatiskt eller för din granskning beroende på regeln.",
+    "explainerBullet3": "Använd Starta från mall för snabb täckning av de sju huvudsakliga tvistorsakerna, eller Skapa paket för att bygga ett anpassat för specialfall. Klicka på en rad för att redigera bevislistan."
   },
   "templateLibrary": {
     "title": "Mallbibliotek",

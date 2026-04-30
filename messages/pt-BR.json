@@ -1971,7 +1971,11 @@
     "stateHint": "As regras de automação na página Automação decidem qual playbook o DisputeDesk usa para cada disputa.",
     "activeCount": "{count} ativo",
     "draftCount": "{count} rascunho",
-    "uncoveredCount": "{count} sem cobertura"
+    "uncoveredCount": "{count} sem cobertura",
+    "explainerTitle": "O que você está vendo",
+    "explainerBullet1": "Playbooks são modelos de evidência que o DisputeDesk usa para responder a tipos específicos de disputa. Cada playbook agrupa detalhes do pedido, comprovante de rastreamento, comunicação com o cliente e trechos de políticas que fortalecem seu caso.",
+    "explainerBullet2": "Playbooks ativos estão conectados às suas regras de automação. Quando uma disputa corresponde a uma de suas regras, o DisputeDesk usa o playbook correspondente para construir o pacote de evidências — automaticamente ou para sua revisão, dependendo da regra.",
+    "explainerBullet3": "Use Começar do modelo para cobertura rápida das sete principais razões de disputa, ou Criar pacote para construir um personalizado para um caso especial. Clique em qualquer linha para editar a lista de evidências."
   },
   "templateLibrary": {
     "title": "Biblioteca de modelos",

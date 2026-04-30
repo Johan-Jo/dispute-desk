@@ -1894,7 +1894,11 @@
     "activeCount": "{count} actif",
     "draftCount": "{count} brouillon",
     "uncoveredCount": "{count} non couvert",
-    "activate": "Activer"
+    "activate": "Activer",
+    "explainerTitle": "Ce que vous regardez",
+    "explainerBullet1": "Les playbooks sont des modèles de preuves que DisputeDesk utilise pour répondre à des types spécifiques de litiges. Chaque playbook regroupe les détails de commande, preuves de suivi, communications client et extraits de politiques qui renforcent votre dossier.",
+    "explainerBullet2": "Les playbooks actifs sont connectés à vos règles d automatisation. Lorsqu un litige correspond à l une de vos règles, DisputeDesk utilise le playbook correspondant pour construire le dossier de preuves — automatiquement ou pour votre examen selon la règle.",
+    "explainerBullet3": "Utilisez Démarrer depuis un modèle pour une couverture rapide des sept principales raisons, ou Créer un pack pour en construire un personnalisé pour un cas limite. Cliquez sur n importe quelle ligne pour modifier la liste de preuves."
   },
   "templateLibrary": {
     "title": "Bibliothèque de modèles",

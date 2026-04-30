@@ -1894,7 +1894,11 @@
     "activeCount": "{count} activo",
     "draftCount": "{count} borrador",
     "uncoveredCount": "{count} sin cubrir",
-    "activate": "Activar"
+    "activate": "Activar",
+    "explainerTitle": "Qué estás viendo",
+    "explainerBullet1": "Los playbooks son plantillas de evidencia que DisputeDesk usa para responder a tipos específicos de disputas. Cada playbook agrupa los detalles del pedido, comprobante de seguimiento, comunicación con el cliente y extractos de políticas que fortalecen tu caso.",
+    "explainerBullet2": "Los playbooks activos están conectados a tus reglas de automatización. Cuando una disputa coincide con una de tus reglas, DisputeDesk usa el playbook correspondiente para construir el paquete de evidencia — automáticamente o para tu revisión según la regla.",
+    "explainerBullet3": "Usa Empezar desde plantilla para cobertura rápida de las siete principales razones de disputa, o Crear pack para construir uno personalizado para un caso límite. Haz clic en cualquier fila para editar la lista de evidencias."
   },
   "templateLibrary": {
     "title": "Biblioteca de plantillas",
