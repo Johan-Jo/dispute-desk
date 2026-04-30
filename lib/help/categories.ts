@@ -2,7 +2,7 @@ export interface HelpCategory {
   slug: string;
   labelKey: string;
   descriptionKey: string;
-  icon: "rocket" | "scale" | "package" | "zap" | "creditCard" | "upload";
+  icon: "rocket" | "scale" | "package" | "zap" | "creditCard" | "upload" | "page";
 }
 
 export const HELP_CATEGORIES: HelpCategory[] = [
@@ -35,6 +35,12 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     labelKey: "help.categories.automationRules",
     descriptionKey: "help.categories.automationRulesDesc",
     icon: "zap",
+  },
+  {
+    slug: "policies",
+    labelKey: "help.categories.policies",
+    descriptionKey: "help.categories.policiesDesc",
+    icon: "page",
   },
   {
     slug: "billing",

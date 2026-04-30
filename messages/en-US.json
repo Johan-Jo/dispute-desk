@@ -1449,7 +1449,8 @@
         "disputesTableTitle": "Your Disputes Table",
         "disputesTableDesc": "All your chargebacks appear here with status, amount, reason, and deadline. Click any row to view full details.",
         "disputeRowTitle": "Select a Dispute",
-        "disputeRowDesc": "Click on a dispute to open the detail view. Look for 'Needs Response' status — those require your attention first."
+        "disputeRowDesc": "Click on a dispute to open the detail view. Look for 'Needs Response' status — those require your attention first.",
+        "duration": "5 min"
       },
       "buildPack": {
         "title": "Build an Evidence Pack",
@@ -1461,7 +1462,8 @@
         "createPackBtnTitle": "Create a Pack",
         "createPackBtnDesc": "Click this button to build a new pack from scratch. You'll name it, choose a dispute type, and add documents.",
         "templateBtnTitle": "Start From a Template",
-        "templateBtnDesc": "Templates give you a head start with pre-built packs for common dispute types. Click to browse the template library."
+        "templateBtnDesc": "Templates give you a head start with pre-built packs for common dispute types. Click to browse the template library.",
+        "duration": "3 min"
       },
       "automationRules": {
         "title": "Set Up Automation",
@@ -1473,7 +1475,8 @@
         "createRuleBtnTitle": "Create a Rule",
         "createRuleBtnDesc": "Click here to create a new automation rule. You'll set conditions, choose an action, and set priority.",
         "rulesListTitle": "Your Active Rules",
-        "rulesListDesc": "Rules are evaluated in priority order. The first matching rule assigns its pack. Edit or reorder rules here."
+        "rulesListDesc": "Rules are evaluated in priority order. The first matching rule assigns its pack. Edit or reorder rules here.",
+        "duration": "3 min"
       },
       "installTemplate": {
         "title": "Install & Customize Templates",
@@ -1483,7 +1486,8 @@
         "templateBtnTitle": "Browse Template Library",
         "templateBtnDesc": "Click 'Start from Template' to open the template library. You can preview, install, and customize any template.",
         "packsGridTitle": "Installed Templates",
-        "packsGridDesc": "After installation, templates appear here as draft packs. Open any to customize fields, documents, and the narrative."
+        "packsGridDesc": "After installation, templates appear here as draft packs. Open any to customize fields, documents, and the narrative.",
+        "duration": "2 min"
       },
       "configurePolicies": {
         "title": "Configure Store Policies",
@@ -1493,7 +1497,8 @@
         "addPolicyBtnTitle": "Add a Policy",
         "addPolicyBtnDesc": "Click to add a new policy. You can link to your existing pages or paste the full text.",
         "policyDocumentsTitle": "Your Policy Documents",
-        "policyDocumentsDesc": "Policies listed here are automatically included in relevant evidence packs. Keep them up to date for stronger evidence."
+        "policyDocumentsDesc": "Policies listed here are automatically included in relevant evidence packs. Keep them up to date for stronger evidence.",
+        "duration": "2 min"
       },
       "packBuilderAdvanced": {
         "title": "Advanced Pack Features",
@@ -1503,7 +1508,8 @@
         "packsGridTitle": "Your Packs Library",
         "packsGridDesc": "Your packs are organized by type and status. Use filters to find specific packs quickly.",
         "packRowTitle": "Open a Pack",
-        "packRowDesc": "Click any pack to open the detail view. From there you can edit documents, update the narrative, and adjust settings."
+        "packRowDesc": "Click any pack to open the detail view. From there you can edit documents, update the narrative, and adjust settings.",
+        "duration": "4 min"
       }
     },
     "categories": {
@@ -1518,7 +1524,9 @@
       "billing": "Billing & Plans",
       "billingDesc": "Plans, quotas, upgrades, and trial information",
       "savingToShopify": "Saving to Shopify",
-      "savingToShopifyDesc": "How evidence is saved and what happens next"
+      "savingToShopifyDesc": "How evidence is saved and what happens next",
+      "policies": "Policies",
+      "policiesDesc": "Manage business policies for stronger evidence"
     },
     "articles": {
       "connectShopifyStore": {
@@ -1660,6 +1668,38 @@
       "notSubmitToNetworks": {
         "title": "DisputeDesk does NOT send evidence to card networks",
         "body": "This is an important distinction: DisputeDesk saves evidence to Shopify, but does NOT send it onward to card networks (Visa, Mastercard, American Express, etc.).\n\nHere's the process:\n1. DisputeDesk builds your evidence pack and saves it to Shopify via API.\n2. Forwarding evidence to the card network is handled entirely by Shopify.\n3. Shopify either auto-sends on the due date or you respond manually from Shopify Admin.\n\nWhy it works this way:\n- Shopify is the merchant of record and handles the official communication with card networks.\n- This ensures compliance with payment processor requirements.\n- Your evidence is formatted and structured by DisputeDesk, then handed off to Shopify for the official process.\n\nYou always maintain control. Review your evidence in Shopify Admin before Shopify forwards it to the card network."
+      },
+      "packVariables": {
+        "title": "Understanding pack variables",
+        "body": "Pack variables are placeholders that automatically populate with order-specific data when DisputeDesk builds an evidence pack. They keep packs reusable while still producing fully personalized rebuttals.\n\n**Common variables**\n- `{{order.number}}` — the Shopify order number (e.g. `#1042`)\n- `{{order.total}}` — order total formatted in the shop currency\n- `{{order.created_at}}` — checkout timestamp\n- `{{customer.name}}` — buyer first + last name\n- `{{customer.email}}` — buyer email at checkout\n- `{{tracking.number}}` — carrier tracking number when present\n- `{{tracking.url}}` — direct link to the carrier status page\n- `{{shipping.carrier}}` — carrier name (USPS, UPS, etc.)\n- `{{policy.shipping}}`, `{{policy.refund}}`, `{{policy.terms}}` — your store policies\n\n**Where they are used**\n- Pack section narratives — DisputeDesk inserts the value when the pack is built.\n- Defense letter and rebuttal — the AI uses variables to ground the narrative in real order data instead of generic templates.\n- Manual edits — you can use the same `{{...}}` syntax in any text field.\n\n**Tips**\n- If a variable value is missing (e.g. no tracking number), DisputeDesk silently omits the surrounding sentence rather than printing an empty placeholder.\n- Variables are case-sensitive: use `{{order.number}}`, not `{{Order.Number}}`.\n- Test by opening any pack — DisputeDesk shows the resolved values in the preview before saving to Shopify."
+      },
+      "packBestPractices": {
+        "title": "Evidence pack best practices",
+        "body": "Winning a dispute is about giving the issuer enough decisive evidence to move the needle. Here is what works:\n\n**1. Always include tracking with proof of delivery.** For Product Not Received claims, tracking that shows delivery — ideally with a signature — is the single highest-impact piece of evidence.\n\n**2. Include AVS + CVV match for fraud claims.** Both must match. AVS-only or CVV-only is moderate; both together is strong.\n\n**3. Reference your policies with timestamps.** Link the buyer checkout timestamp to the policy version they accepted. \"Customer agreed to refund policy at 14:32 UTC on Mar 4\" is decisive; \"refund policy is on our website\" is not.\n\n**4. Show prior undisputed orders.** A history of successful purchases by the same customer/card/email weakens fraud claims significantly.\n\n**5. Include explicit customer communication when available.** Emails, chat transcripts, or order notes where the buyer confirms delivery, use, or satisfaction are decisive.\n\n**6. Show digital access for digital goods.** Login timestamps, download events, or feature usage are strong evidence the customer received the product.\n\n**7. Avoid emotional language.** Stick to facts. \"The buyer received the goods on Mar 5 (signature on file)\" beats \"the buyer is clearly trying to defraud us.\"\n\n**8. Do not rely on collected ≠ strong.** A green collected badge means the field was filled in, not that the issuer will find it persuasive. Check the strength badge before submitting — see Evidence strength rubric.\n\n**9. Keep narratives under 1 page.** Issuers spend seconds per case. Lead with the strongest 2-3 facts and the rebuttal.\n\n**10. Watch your win rate.** DisputeDesk surfaces win rate by reason and family. If a category is consistently losing, look at what evidence is collected vs. submitted and adjust the playbook."
+      },
+      "policyTypesExplained": {
+        "title": "Policy types: shipping, refund, terms, privacy",
+        "body": "DisputeDesk treats policies as first-class evidence. Each policy type strengthens a different category of dispute.\n\n**Shipping policy**\nWhat to include: delivery timeframes (e.g. 3-5 business days domestic), carrier list, tracking commitment, international handling, lost-package process.\nWhen it strengthens evidence: Product Not Received, late delivery, wrong-address claims. Pair with the carrier tracking proof.\n\n**Refund policy**\nWhat to include: return window (e.g. 30 days), refund timeline, restocking fees, conditions (unopened, original packaging), exclusions (final-sale, perishables).\nWhen it strengthens evidence: refund not processed, subscription cancellations, buyer-remorse claims framed as fraud. Issuers want to see the customer agreed to specific terms with a timestamp.\n\n**Terms of service**\nWhat to include: account terms, acceptable use, dispute resolution clause, governing law.\nWhen it strengthens evidence: subscription disputes, digital-goods claims (\"I didn't agree to this\"), recurring charges. The terms link the customer to the relationship.\n\n**Privacy policy**\nWhat to include: data collection scope, retention, third-party sharing, customer rights (access, deletion).\nWhen it strengthens evidence: rarely used in chargeback evidence directly, but referenced when the dispute touches account access or unauthorized-use claims.\n\n**Tip**\nDisputeDesk uses the policy text — not just a link — to build evidence. Upload the actual policy (TXT, Markdown, or the link plus a snapshot) so the AI can quote the relevant clause in the rebuttal."
+      },
+      "policyVariables": {
+        "title": "Using policy variables in packs",
+        "body": "Reference your store policies in evidence pack narratives using policy variables. DisputeDesk inserts the policy text (or a clickable link) automatically when the pack is built.\n\n**Available variables**\n- `{{policy.shipping}}` — your shipping policy\n- `{{policy.refund}}` — your refund / return policy\n- `{{policy.terms}}` — your terms of service\n- `{{policy.privacy}}` — your privacy policy\n\n**How it works**\nWhen DisputeDesk builds a pack and encounters a policy variable, it pulls from the policies you uploaded in Settings → Policies. If you uploaded a TXT or Markdown file, the variable resolves to the relevant excerpt. If you only uploaded a URL, the variable resolves to a clickable link.\n\n**Example**\nIn a pack narrative for a Product Not Received dispute:\n\n> As stated in our shipping policy, all orders are delivered within 3-5 business days with tracking. The customer accepted these terms at checkout on `{{order.created_at}}`. Tracking confirms delivery on Mar 5 — see `{{tracking.url}}`.\n\n**Tips**\n- Pair `{{policy.refund}}` with `{{order.created_at}}` to anchor the policy to the buyer checkout timestamp. Issuers find this far more compelling than a generic \"see our policy\" line.\n- If a policy is not uploaded, the variable silently omits the surrounding sentence — do not reference policies you have not uploaded yet.\n- Update policies in Settings → Policies and DisputeDesk uses the new text on the next pack build. No need to edit each pack."
+      },
+      "policyBestPractices": {
+        "title": "Policy best practices that win disputes",
+        "body": "Strong policies, anchored to the buyer checkout timestamp, are some of the most decisive evidence available. Here is how to make yours stand out.\n\n**1. Upload the actual policy text — not just a link.** A live URL can change. A TXT or Markdown file uploaded to DisputeDesk preserves the exact version the buyer accepted at checkout. Issuers want to see the version, not the current site.\n\n**2. Timestamp every policy.** When you update a policy, version it. \"Refund Policy v3 — effective Mar 1\" lets the rebuttal say \"the customer accepted v3 at checkout on Mar 5.\"\n\n**3. Be specific about timeframes.** \"Refunds processed within 5 business days of return receipt\" beats \"refunds are processed promptly.\" Specificity reads as a real commitment, not boilerplate.\n\n**4. Include explicit checkout consent.** Show a checkbox in your checkout flow that says \"I agree to the refund policy\" with the timestamp. This is the single strongest policy evidence available.\n\n**5. Cover the predictable failure modes.** Lost in transit, late delivery, wrong address, refund timing, subscription cancellation, digital-goods access. If your policy is silent on the dispute reason, the issuer reads silence as ambiguity.\n\n**6. Match policy language to the dispute reason.** Shipping policy → Product Not Received. Refund policy → Credit Not Processed. Terms → Subscription Canceled. DisputeDesk auto-selects the right policy variable based on the dispute family.\n\n**7. Do not hide policies behind a click.** Policies linked in tiny footer text are weaker than policies shown at checkout. Issuers know the difference.\n\n**8. Keep them readable.** Plain English wins. Legal-jargon policies are technically valid but harder to quote in a rebuttal.\n\n**9. Update policies at least annually.** Stale policies (last updated 2019) are less convincing than current ones.\n\n**10. Test the variables.** After uploading a policy, build a test pack and confirm the variable resolves correctly in the preview."
+      },
+      "understandingInquiries": {
+        "title": "Understanding Inquiries",
+        "body": "An inquiry is the first stage of a dispute — before it becomes a formal chargeback.\n\nWhat happens during an inquiry:\n- The customer's bank contacts Shopify with questions about a transaction.\n- This is NOT yet a chargeback. No funds have been reversed.\n- You have an opportunity to respond with information that may resolve the issue.\n\nWhy inquiries matter:\n- Responding promptly to an inquiry can prevent it from escalating to a chargeback.\n- A well-prepared response at this stage saves time, money, and effort.\n- DisputeDesk identifies inquiries and helps you prepare the right response.\n\nHow DisputeDesk handles inquiries:\n- Inquiries appear in your disputes list with an 'Inquiry' badge.\n- The dispute detail page uses inquiry-specific language and CTAs.\n- Automation and playbooks can be configured for inquiry-specific handling.\n\nKey difference from chargebacks:\n- Inquiries are informational — the bank is asking questions.\n- Chargebacks are formal — funds are reversed and you must submit evidence."
+      },
+      "understandingChargebacks": {
+        "title": "Understanding Chargebacks",
+        "body": "A chargeback is a formal dispute where the customer's bank has reversed the transaction.\n\nWhat happens during a chargeback:\n- The bank reverses the funds from the merchant's account.\n- You have a limited window (usually 7-21 days) to submit evidence.\n- If you don't respond, you lose the dispute automatically.\n\nHow DisputeDesk handles chargebacks:\n- Chargebacks appear with a 'Chargeback' badge and stronger urgency.\n- DisputeDesk automatically builds evidence packs using order data, tracking info, and customer communications.\n- Evidence is saved to Shopify, where it's forwarded to the card network.\n\nEvidence that helps win chargebacks:\n- Proof of delivery (tracking numbers, delivery confirmation)\n- Order confirmation and customer communication\n- Store policies (refund, shipping, terms of service)\n- Fraud screening data (AVS match, CVV verification)\n\nTimelines are critical. DisputeDesk monitors deadlines and ensures evidence is prepared well before the due date."
+      },
+      "lifecycleOverview": {
+        "title": "How DisputeDesk Handles the Dispute Lifecycle",
+        "body": "Every dispute goes through a lifecycle with two main phases: Inquiry and Chargeback.\n\nPhase 1 — Inquiry:\n- The bank asks questions about a transaction.\n- No funds reversed yet.\n- Prompt response can prevent escalation.\n- DisputeDesk labels these as 'Inquiry' throughout the app.\n\nPhase 2 — Chargeback:\n- The bank formally reverses funds.\n- Evidence submission required within a deadline.\n- DisputeDesk labels these as 'Chargeback' with stronger urgency.\n\nHow coverage works across phases:\n- Each dispute family (Fraud, Product Not Received, etc.) can have different handling for inquiries vs chargebacks.\n- The Coverage page shows how each family is handled in both phases.\n- Automation rules currently apply to both phases equally.\n\nWhat you should do:\n1. Check your Coverage page to see which families are protected.\n2. Review your Automation settings for each dispute type.\n3. Install playbooks for the dispute types most relevant to your store.\n4. Monitor the Dashboard for inquiry and chargeback queue counts."
       }
     },
     "embedded": {
@@ -1707,7 +1747,38 @@
           "title": "Approving disputes from the review queue",
           "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
         }
-      }
+      },
+      "heroSearchPlaceholder": "Search for help articles, guides, or topics…",
+      "heroTagline": "Get help with DisputeDesk through interactive tours, detailed guides, and best practices",
+      "quickTasksTitle": "Quick Tasks",
+      "interactiveToursTitle": "Interactive Tours",
+      "interactiveToursDesc": "Step-by-step guidance for key tasks",
+      "browseByTopicTitle": "Browse by Topic",
+      "documentationTitle": "Documentation",
+      "popularArticlesTitle": "Popular Articles",
+      "recommendedBadge": "Recommended",
+      "wasHelpful": "Was this helpful?",
+      "feedbackYes": "Yes",
+      "feedbackNo": "No",
+      "feedbackThanks": "Thanks for the feedback",
+      "viewsCount": "{count} views",
+      "helpfulCount": "{count} found helpful",
+      "resourceContactSupport": "Contact Support",
+      "resourceContactDesc": "Get help from our support team within 24 hours",
+      "resourceContactCta": "Send Message",
+      "resourceBestPractices": "Best Practices",
+      "resourceBestPracticesDesc": "Learn from successful merchants and win more disputes",
+      "resourceBestPracticesCta": "View Guide",
+      "resourceApiDocs": "API Documentation",
+      "resourceApiDocsDesc": "Integrate DisputeDesk with your custom workflows",
+      "resourceApiDocsCta": "View Docs",
+      "statusOperational": "All systems operational",
+      "statusLastChecked": "Last checked: {ago}",
+      "quickTaskCreatePack": "Create a Pack",
+      "quickTaskInstallTemplate": "Install Template",
+      "quickTaskHandleDispute": "Handle Dispute",
+      "quickTaskCreateRule": "Create Rule",
+      "quickTaskInteractiveGuide": "Interactive guide"
     }
   },
   "onboarding": {
