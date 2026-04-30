@@ -178,48 +178,135 @@ export function getPortalGuideSteps(guideId: HelpGuideId): OnboardingStep[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Embedded tour steps. The tour modal is page-agnostic (centered Polaris
- * Modal); each step just routes the merchant to the right page and shows
- * a description. Spotlight selectors are deliberately omitted — the
- * embedded pages don't carry `data-help-guide` markers, so we simply land
- * the merchant on the page and let the description point them at the
- * relevant CTA.
+ * Embedded tour steps. Step 0 (intro) renders as a centered card with no
+ * target. Subsequent steps target real `data-help-guide` attributes on
+ * embedded pages and use the spotlight + tooltip overlay
+ * (EmbeddedTourOverlay).
  *
- * Step IDs reuse the portal naming so the existing `help.guides.*.{stepId}Title`
- * / `{stepId}Desc` i18n keys resolve without extra translation work.
+ * Step IDs reuse the portal naming so the existing
+ * `help.guides.*.{stepId}Title` / `{stepId}Desc` i18n keys resolve
+ * without extra translation work.
  */
 const EMBEDDED_GUIDE_STEPS: Record<HelpGuideId, OnboardingStep[]> = {
   "review-dispute": [
     { id: "intro", route: "/app/disputes", position: "center" },
-    { id: "disputesTable", route: "/app/disputes", position: "center" },
-    { id: "disputeRow", route: "/app/disputes", position: "center" },
+    {
+      id: "disputesTable",
+      route: "/app/disputes",
+      targetSelector: '[data-help-guide="disputes-table"]',
+      position: "top",
+      spotlight: true,
+    },
+    {
+      id: "disputeRow",
+      route: "/app/disputes",
+      targetSelector: '[data-help-guide="dispute-row"]',
+      position: "right",
+      spotlight: true,
+    },
   ],
   "build-pack": [
     { id: "intro", route: "/app/packs", position: "center" },
-    { id: "packsGrid", route: "/app/packs", position: "center" },
-    { id: "createPackBtn", route: "/app/packs", position: "center" },
-    { id: "templateBtn", route: "/app/packs", position: "center" },
+    {
+      id: "packsGrid",
+      route: "/app/packs",
+      targetSelector: '[data-help-guide="packs-grid"]',
+      position: "top",
+      spotlight: true,
+    },
+    {
+      id: "createPackBtn",
+      route: "/app/packs",
+      // Polaris page header contains both the primary "Start from template"
+      // and secondary "Create Pack" buttons. We highlight the whole header
+      // so the merchant sees both action buttons together.
+      targetSelector: ".Polaris-Page-Header",
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "templateBtn",
+      route: "/app/packs",
+      targetSelector: ".Polaris-Page-Header",
+      position: "bottom",
+      spotlight: true,
+    },
   ],
   "automation-rules": [
     { id: "intro", route: "/app/rules", position: "center" },
-    { id: "rulesHeader", route: "/app/rules", position: "center" },
-    { id: "rulesList", route: "/app/rules", position: "center" },
-    { id: "createRuleBtn", route: "/app/rules", position: "center" },
+    {
+      id: "rulesHeader",
+      route: "/app/rules",
+      targetSelector: ".Polaris-Page-Header",
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "rulesList",
+      route: "/app/rules",
+      targetSelector: '[data-help-guide="rules-list"]',
+      position: "top",
+      spotlight: true,
+    },
+    {
+      id: "createRuleBtn",
+      route: "/app/rules",
+      // "Add custom rule" primary action lives in the Polaris page header
+      targetSelector: ".Polaris-Page-Header",
+      position: "bottom",
+      spotlight: true,
+    },
   ],
   "install-template": [
     { id: "intro", route: "/app/packs", position: "center" },
-    { id: "templateBtn", route: "/app/packs", position: "center" },
-    { id: "packsGrid", route: "/app/packs", position: "center" },
+    {
+      id: "templateBtn",
+      route: "/app/packs",
+      targetSelector: ".Polaris-Page-Header",
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "packsGrid",
+      route: "/app/packs",
+      targetSelector: '[data-help-guide="packs-grid"]',
+      position: "top",
+      spotlight: true,
+    },
   ],
   "configure-policies": [
     { id: "intro", route: "/app/policies", position: "center" },
-    { id: "addPolicyBtn", route: "/app/policies", position: "center" },
-    { id: "policyDocuments", route: "/app/policies", position: "center" },
+    {
+      id: "addPolicyBtn",
+      route: "/app/policies",
+      targetSelector: ".Polaris-Page-Header",
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "policyDocuments",
+      route: "/app/policies",
+      targetSelector: '[data-help-guide="policy-documents"]',
+      position: "top",
+      spotlight: true,
+    },
   ],
   "pack-builder-advanced": [
     { id: "intro", route: "/app/packs", position: "center" },
-    { id: "packsGrid", route: "/app/packs", position: "center" },
-    { id: "packRow", route: "/app/packs", position: "center" },
+    {
+      id: "packsGrid",
+      route: "/app/packs",
+      targetSelector: '[data-help-guide="packs-grid"]',
+      position: "top",
+      spotlight: true,
+    },
+    {
+      id: "packRow",
+      route: "/app/packs",
+      targetSelector: '[data-help-guide="packs-grid"]',
+      position: "right",
+      spotlight: true,
+    },
   ],
 };
 

@@ -48,9 +48,11 @@ export default function EmbeddedPoliciesPage() {
               {t("policiesSaveError")}
             </Banner>
           )}
-          <Card>
-            <BusinessPoliciesStep stepId="policies" onSaveRef={saveRef} />
-          </Card>
+          <div data-help-guide="policy-documents">
+            <Card>
+              <BusinessPoliciesStep stepId="policies" onSaveRef={saveRef} />
+            </Card>
+          </div>
         </Layout.Section>
       </Layout>
     </Page>

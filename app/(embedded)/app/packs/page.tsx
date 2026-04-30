@@ -491,6 +491,7 @@ export default function PacksListPage() {
             </div>
           )}
 
+          <div data-help-guide="packs-grid">
           <Card padding="0">
             <BlockStack gap="0">
               <div className="embeddedPacksCardHeader">
@@ -710,6 +711,7 @@ export default function PacksListPage() {
               )}
             </BlockStack>
           </Card>
+          </div>
         </BlockStack>
         </div>
       </Page>

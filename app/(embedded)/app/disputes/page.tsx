@@ -742,23 +742,27 @@ export default function DisputesListPage() {
                 </Box>
               </Card>
             ) : smDown ? (
-              <MobileDisputesList
-                disputes={visibleDisputes}
-                activeTab={activeTab}
-                searchParams={searchParams}
-                dateLocale={dateLocale}
-                numberLocale={numberLocale}
-                t={t}
-              />
+              <div data-help-guide="disputes-table">
+                <MobileDisputesList
+                  disputes={visibleDisputes}
+                  activeTab={activeTab}
+                  searchParams={searchParams}
+                  dateLocale={dateLocale}
+                  numberLocale={numberLocale}
+                  t={t}
+                />
+              </div>
             ) : (
-              <DesktopDisputesTable
-                disputes={visibleDisputes}
-                activeTab={activeTab}
-                searchParams={searchParams}
-                dateLocale={dateLocale}
-                numberLocale={numberLocale}
-                t={t}
-              />
+              <div data-help-guide="disputes-table">
+                <DesktopDisputesTable
+                  disputes={visibleDisputes}
+                  activeTab={activeTab}
+                  searchParams={searchParams}
+                  dateLocale={dateLocale}
+                  numberLocale={numberLocale}
+                  t={t}
+                />
+              </div>
             )}
 
             {pagination.total_pages > 1 && (

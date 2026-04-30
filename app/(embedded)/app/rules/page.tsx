@@ -579,6 +579,7 @@ export default function EmbeddedRulesPage() {
             </Card>
 
             {/* ── Automation rules card ──────────────────────────── */}
+            <div data-help-guide="rules-list">
             <Card padding="0">
               {/* Header */}
               <div
@@ -727,6 +728,7 @@ export default function EmbeddedRulesPage() {
                 {tr("firstMatchWinsHint")}
               </div>
             </Card>
+            </div>
 
             {/* ── Safeguards ─────────────────────────────────────── */}
             <Card>

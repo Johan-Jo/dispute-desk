@@ -182,6 +182,55 @@ export default function EmbeddedHelpPage() {
             />
           ) : (
             <>
+              {/* ─── Take the full tour CTA ─── */}
+              {helpGuide && (
+                <div
+                  style={{
+                    background: "linear-gradient(90deg,#1D4ED8 0%,#3B82F6 100%)",
+                    borderRadius: 12,
+                    padding: "18px 22px",
+                    color: "#FFFFFF",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 16,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+                      {tEmbedded("takeFullTour")}
+                    </div>
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.92)" }}>
+                      {tEmbedded("takeFullTourDesc")}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => helpGuide.startTourChain()}
+                    style={{
+                      background: "#FFFFFF",
+                      color: "#1D4ED8",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      padding: "9px 18px",
+                      borderRadius: 8,
+                      border: "none",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ width: 14, height: 14 }}>
+                      <Icon source={PlayIcon} tone="base" />
+                    </span>
+                    {tEmbedded("startGuide")}
+                  </button>
+                </div>
+              )}
+
               {/* ─── Quick Actions ─── */}
               {helpGuide && (
                 <div>
@@ -233,7 +282,7 @@ export default function EmbeddedHelpPage() {
                       <button
                         key={action.guideId}
                         type="button"
-                        onClick={() => helpGuide.startGuide(action.guideId)}
+                        onClick={() => helpGuide.startGuide(action.guideId, { withChain: true })}
                         style={{
                           background: "#FFFFFF",
                           border: "1px solid #C9CCCF",

@@ -135,7 +135,7 @@ export function DesktopDisputesTable({
 
       {/* Rows */}
       <div>
-        {disputes.map((d) => {
+        {disputes.map((d, rowIdx) => {
           const detailHref = withShopParams(
             `/app/disputes/${d.id}`,
             searchParams ?? new URLSearchParams(),
@@ -174,6 +174,7 @@ export function DesktopDisputesTable({
               href={detailHref}
               style={rowStyle}
               data-status={status}
+              {...(rowIdx === 0 ? { "data-help-guide": "dispute-row" } : {})}
             >
               {/* Order & Customer */}
               <div style={{ minWidth: 0 }}>

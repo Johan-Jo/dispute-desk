@@ -1825,7 +1825,15 @@
       "minRead": "{count} min read",
       "wasArticleHelpful": "Was this article helpful?",
       "helpfulYes": "Yes",
-      "helpfulNo": "No"
+      "helpfulNo": "No",
+      "takeFullTour": "Take the full product tour",
+      "takeFullTourDesc": "Run all 5 interactive tours back to back — about 14 minutes end to end.",
+      "tourCompletedTitle": "Finished: {title}",
+      "tourCompletedSuggest": "Continue with {next} to keep exploring DisputeDesk?",
+      "continueChain": "Yes, continue",
+      "doneForNow": "Done for now",
+      "allToursCompleted": "🎉 You completed every tour",
+      "allToursCompletedDesc": "You're set up to handle disputes like a pro. You can replay any tour any time from the Help page."
     }
   },
   "onboarding": {

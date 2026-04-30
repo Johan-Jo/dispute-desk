@@ -5,7 +5,7 @@ import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 import { NextIntlClientProvider } from "next-intl";
 import { HelpGuideProvider } from "@/components/help/help-guide-provider";
-import { EmbeddedHelpGuideTour } from "@/components/help/embedded-help-guide-tour";
+import { EmbeddedTourOverlay } from "@/components/help/EmbeddedTourOverlay";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ export function Providers({
       <AppProvider i18n={i18n}>
         <HelpGuideProvider>
           {children}
-          <EmbeddedHelpGuideTour />
+          <EmbeddedTourOverlay />
         </HelpGuideProvider>
       </AppProvider>
     </NextIntlClientProvider>
