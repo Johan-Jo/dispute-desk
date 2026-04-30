@@ -17,6 +17,22 @@ declare namespace React {
         React.HTMLAttributes<HTMLElement>,
         HTMLElement
       > & { heading?: string; children?: React.ReactNode };
+      "s-icon": React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement>,
+        HTMLElement
+      > & {
+        type?: string;
+        tone?:
+          | "info"
+          | "success"
+          | "warning"
+          | "critical"
+          | "auto"
+          | "neutral"
+          | "caution";
+        color?: "base" | "subdued";
+        size?: "small" | "base";
+      };
     }
   }
 }
