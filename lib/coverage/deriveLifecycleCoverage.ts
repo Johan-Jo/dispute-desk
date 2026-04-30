@@ -126,19 +126,17 @@ function pickRuleForFamilyAndPhase(
   return matches[0];
 }
 
+/**
+ * Map a stored rule.action.mode (canonical "auto"|"review" or any legacy
+ * value) to the coverage-page AutomationMode. Mirrors the two-mode model
+ * defined in lib/rules/normalizeMode.ts: anything that is not "auto" /
+ * "auto_pack" is review.
+ */
 function ruleToAutomationMode(rule: RuleInput): AutomationMode {
-  switch (rule.action.mode) {
-    case "auto_pack":
-      return "automated";
-    case "review":
-      return "review_first";
-    case "manual":
-      return "manual";
-    case "notify":
-      return "notify";
-    default:
-      return "none";
+  if (rule.action.mode === "auto" || rule.action.mode === "auto_pack") {
+    return "automated";
   }
+  return "review_first";
 }
 
 // ---------------------------------------------------------------------------
