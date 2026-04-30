@@ -127,6 +127,42 @@ const DEFAULT_ACTION: FieldAction = {
   skipLabel: "Skip for now",
 };
 
+/* Set of evidence fields the merchant can directly act on (upload or
+ * paste). Derived from `FIELD_ACTIONS` so the allowlist stays in sync
+ * with the per-field CTA config. Other fields (`avs_cvv_match`,
+ * `billing_address_match`, `ip_location_check`, etc.) are gateway/
+ * system signals where a manual upload doesn't make semantic sense.
+ *
+ * Why this is the gate (and `collectionType !== "auto"` is not):
+ * `customer_communication` is marked `collection_type=auto` in the
+ * checklist generator because Shopify *attempts* to pull it from
+ * order notes — but it only becomes Strong via
+ * `payload.customerConfirmsOrder === true`, which requires the
+ * merchant to provide a conversation. Auto-collection is a
+ * best-effort fallback there; merchant upload is the actual path to
+ * strength, and the UI must surface it. */
+export const MERCHANT_ACTIONABLE_FIELDS: ReadonlySet<string> = new Set(
+  Object.keys(FIELD_ACTIONS),
+);
+
+/** True when the merchant should see an upload affordance on a
+ *  missing evidence row. Used by both the Overview tab "Add this
+ *  evidence" CTA and the Evidence tab inventory + per-row Upload
+ *  button so the policy is single-sourced.
+ *
+ *  Allows the merchant to act when the field is in the explicit
+ *  `MERCHANT_ACTIONABLE_FIELDS` allowlist *or* the field is not
+ *  strictly auto-collected (preserves the 2026-04-24 manual fallback
+ *  for `conditional_auto` rows like AVS when payment data is
+ *  missing). */
+export function canMerchantUpload(item: {
+  field: string;
+  collectionType?: string;
+}): boolean {
+  if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
+  return item.collectionType !== "auto";
+}
+
 /* ── Derived state helpers ── */
 
 function deriveEvidenceWithStrength(

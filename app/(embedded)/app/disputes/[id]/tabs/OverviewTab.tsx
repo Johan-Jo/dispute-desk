@@ -37,7 +37,7 @@ import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
-import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
+import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -573,18 +573,18 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               ? "#8C9196"
               : "#059669";
           const pill = pillFor(row);
-          // Inline "Add this evidence" CTA — only on missing rows
-          // whose default category is strong or moderate (would
-          // actually help the case), only when manually collectable,
-          // and only pre-submit. Replaces the standalone "Missing
-          // signals" subsection that used to live in the removed
-          // "What supports your case" card.
-          const defaultCat = (CANONICAL_EVIDENCE as Record<string, { category: string } | undefined>)[item.field]?.category;
-          const showAddCta =
-            !submitted &&
-            isMissing &&
-            (defaultCat === "strong" || defaultCat === "moderate") &&
-            (!item.collectionType || item.collectionType === "manual");
+          // Inline "Add this evidence" CTA — surfaces on every missing
+          // row the merchant can actually act on, gated by the shared
+          // `canMerchantUpload()` helper (single-sourced with the
+          // Evidence tab). The previous gate restricted to
+          // `defaultCat ∈ {strong, moderate}` AND `collectionType ===
+          // "manual"`, which silently hid the CTA for fields that only
+          // become Strong via merchant content (e.g.
+          // `customer_communication` defaults to "supporting" but
+          // becomes Strong when `payload.customerConfirmsOrder ===
+          // true` — the merchant's upload IS the path to strength).
+          // Pre-submit only.
+          const showAddCta = !submitted && isMissing && canMerchantUpload(item);
           return (
             <div
               key={item.field}

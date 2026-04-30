@@ -32,7 +32,7 @@ import {
   NoteIcon,
   FileIcon,
 } from "@shopify/polaris-icons";
-import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
+import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type { EvidenceItemWithStrength, WaiveReason } from "../workspace-components/types";
 import type { CounterclaimNode } from "@/lib/argument/types";
 import {
@@ -118,34 +118,6 @@ const MISSING_IMPACT: Record<string, string> = {
 
 function friendlyLabel(field: string, fallback: string): string {
   return FRIENDLY_FIELD_LABEL[field] ?? fallback;
-}
-
-/* Fields the merchant can act on directly (upload / paste). Mirrors
- * `FIELD_ACTIONS` in `useDisputeWorkspace.ts`. The set is the *only*
- * place that defines who gets an upload affordance; other fields
- * (`avs_cvv_match`, `billing_address_match`, `ip_location_check`, etc.)
- * are gateway/system signals where a manual upload doesn't make sense.
- *
- * Why this exists: the previous gate `collectionType !== "auto"` hid
- * the upload UI for `customer_communication`, even though that field
- * only becomes Strong when the merchant supplies a conversation
- * showing the customer confirmed the order. Auto-collection is a
- * best-effort fallback — merchant upload is the actual path to
- * strength, and the UI must surface it. */
-const MERCHANT_ACTIONABLE_FIELDS = new Set([
-  "supporting_documents",
-  "customer_communication",
-  "product_description",
-  "duplicate_explanation",
-]);
-
-function canMerchantUpload(item: { field: string; collectionType?: string }): boolean {
-  if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
-  // Preserve the prior behaviour for non-allowlisted fields: anything
-  // that isn't strictly auto-collected stays uploadable. This keeps
-  // `conditional_auto` rows (e.g. AVS when payment data is missing)
-  // and unspecified `manual` rows working as before.
-  return item.collectionType !== "auto";
 }
 
 function impactSentence(field: string): string {
