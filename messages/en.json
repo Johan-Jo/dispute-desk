@@ -1802,7 +1802,12 @@
       "quickSetupAutomation": "Set Up Automation",
       "quickSetupAutomationDesc": "Configure rules to auto-submit packs and route disputes to review.",
       "quickInstallTemplate": "Install & Customize Templates",
-      "quickInstallTemplateDesc": "Install pre-built templates and customize them for your store."
+      "quickInstallTemplateDesc": "Install pre-built templates and customize them for your store.",
+      "backToCategory": "Back to {category}",
+      "minRead": "{count} min read",
+      "wasArticleHelpful": "Was this article helpful?",
+      "helpfulYes": "Yes",
+      "helpfulNo": "No"
     }
   },
   "onboarding": {
