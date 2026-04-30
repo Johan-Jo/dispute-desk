@@ -177,38 +177,49 @@ export function getPortalGuideSteps(guideId: HelpGuideId): OnboardingStep[] {
 // Embedded app guide steps (lightweight versions)
 // ---------------------------------------------------------------------------
 
+/**
+ * Embedded tour steps. The tour modal is page-agnostic (centered Polaris
+ * Modal); each step just routes the merchant to the right page and shows
+ * a description. Spotlight selectors are deliberately omitted — the
+ * embedded pages don't carry `data-help-guide` markers, so we simply land
+ * the merchant on the page and let the description point them at the
+ * relevant CTA.
+ *
+ * Step IDs reuse the portal naming so the existing `help.guides.*.{stepId}Title`
+ * / `{stepId}Desc` i18n keys resolve without extra translation work.
+ */
 const EMBEDDED_GUIDE_STEPS: Record<HelpGuideId, OnboardingStep[]> = {
   "review-dispute": [
     { id: "intro", route: "/app/disputes", position: "center" },
-    {
-      id: "disputesTable",
-      route: "/app/disputes",
-      targetSelector: '[data-help-guide="disputes-table"]',
-      position: "bottom",
-      spotlight: false,
-    },
+    { id: "disputesTable", route: "/app/disputes", position: "center" },
+    { id: "disputeRow", route: "/app/disputes", position: "center" },
   ],
   "build-pack": [
-    { id: "intro", route: "/app/disputes", position: "center" },
-    {
-      id: "disputesTable",
-      route: "/app/disputes",
-      targetSelector: '[data-help-guide="disputes-table"]',
-      position: "bottom",
-      spotlight: false,
-    },
+    { id: "intro", route: "/app/packs", position: "center" },
+    { id: "packsGrid", route: "/app/packs", position: "center" },
+    { id: "createPackBtn", route: "/app/packs", position: "center" },
+    { id: "templateBtn", route: "/app/packs", position: "center" },
   ],
   "automation-rules": [
-    { id: "intro", route: "/app", position: "center" },
+    { id: "intro", route: "/app/rules", position: "center" },
+    { id: "rulesHeader", route: "/app/rules", position: "center" },
+    { id: "rulesList", route: "/app/rules", position: "center" },
+    { id: "createRuleBtn", route: "/app/rules", position: "center" },
   ],
   "install-template": [
-    { id: "intro", route: "/app", position: "center" },
+    { id: "intro", route: "/app/packs", position: "center" },
+    { id: "templateBtn", route: "/app/packs", position: "center" },
+    { id: "packsGrid", route: "/app/packs", position: "center" },
   ],
   "configure-policies": [
-    { id: "intro", route: "/app", position: "center" },
+    { id: "intro", route: "/app/policies", position: "center" },
+    { id: "addPolicyBtn", route: "/app/policies", position: "center" },
+    { id: "policyDocuments", route: "/app/policies", position: "center" },
   ],
   "pack-builder-advanced": [
-    { id: "intro", route: "/app", position: "center" },
+    { id: "intro", route: "/app/packs", position: "center" },
+    { id: "packsGrid", route: "/app/packs", position: "center" },
+    { id: "packRow", route: "/app/packs", position: "center" },
   ],
 };
 
