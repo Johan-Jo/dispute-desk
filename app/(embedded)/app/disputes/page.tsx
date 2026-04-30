@@ -139,6 +139,17 @@ export default function DisputesListPage() {
   const numberLocale = dateLocale;
 
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+
+  // Publish the most recent dispute id to a window-scoped global so the
+  // "Handle a Dispute" interactive tour can navigate to a real dispute
+  // when the merchant clicks Next on the dispute-row step. Read by
+  // EmbeddedTourOverlay via OnboardingNextAction = "navigateToFirstDispute".
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as { __ddFirstDisputeId?: string };
+    w.__ddFirstDisputeId = disputes[0]?.id;
+  }, [disputes]);
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [statusFilter] = useState<string[]>([]);
@@ -474,6 +485,7 @@ export default function DisputesListPage() {
                 one dispute is loaded. */}
             {!loading && disputes.length > 0 && (
               <div
+                data-help-guide="disputes-kpi-row"
                 style={{
                   display: "grid",
                   gridTemplateColumns: smDown
@@ -521,6 +533,7 @@ export default function DisputesListPage() {
                 View all pre-filters the list. */}
             {!loading && kpis.urgentCount > 0 && (
               <div
+                data-help-guide="disputes-urgent-banner"
                 style={{
                   background: "#FEF2F2",
                   border: "1px solid #FCA5A5",

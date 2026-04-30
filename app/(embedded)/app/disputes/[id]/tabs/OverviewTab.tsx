@@ -317,6 +317,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           Recommendation / improvement / helper / deadline copy moves to the
           dedicated Recommendation card below. */}
       <div
+        data-help-guide="detail-overview-hero"
         style={{
           background: heroTone.bg,
           border: `2px solid ${heroTone.border}`,
@@ -717,7 +718,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 ? "#DC2626"
                 : "#F59E0B";
         return (
-          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+          <div data-help-guide="detail-overview-evidence" style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
             <BlockStack gap="300">
               <Text as="h3" variant="headingSm">Evidence coverage</Text>
 

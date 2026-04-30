@@ -369,7 +369,9 @@ export default function EmbeddedDashboardPage() {
     >
       <Layout>
         <Layout.Section>
-          <DashboardAttentionBanner stats={stats} />
+          <div data-help-guide="dashboard-attention-banner">
+            <DashboardAttentionBanner stats={stats} />
+          </div>
         </Layout.Section>
 
         <Layout.Section>

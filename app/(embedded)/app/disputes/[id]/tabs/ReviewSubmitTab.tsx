@@ -1122,7 +1122,7 @@ export default function ReviewSubmitTab({ workspace }: { workspace: Workspace })
           {/* ═══════════════════════════════════════════════════════════
               SECTION 2 — PRIMARY ACTION (pre-submit)
               ═══════════════════════════════════════════════════════════ */}
-          <div style={{ display: "flex", gap: 12 }}>
+          <div data-help-guide="detail-submit-button" style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
               <Button
                 variant="primary"

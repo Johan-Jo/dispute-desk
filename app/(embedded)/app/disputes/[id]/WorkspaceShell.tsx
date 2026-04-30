@@ -103,6 +103,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
             flat rectangular status pills, and a top-border divider
             between the title row and the metadata grid. */}
         <div
+          data-help-guide="detail-header"
           style={{
             background: "#ffffff",
             border: "1px solid #E1E3E5",
@@ -191,6 +192,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                   aria-selected={isActive}
                   aria-controls={tab.panelId}
                   id={`${tab.id}-tab`}
+                  data-help-guide={`detail-tab-${tab.id}`}
                   tabIndex={isActive ? 0 : -1}
                   onClick={() => actions.setActiveTab(index as 0 | 1 | 2)}
                   style={{

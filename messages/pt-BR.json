@@ -1469,7 +1469,27 @@
         "disputesTableDesc": "Todos os seus chargebacks com status, valor, motivo e prazo.",
         "disputeRowTitle": "Selecionar uma disputa",
         "disputeRowDesc": "Clique em uma disputa para ver os detalhes. Procure o status 'Precisa de resposta'.",
-        "duration": "5 min"
+        "duration": "5 min",
+        "welcomeTitle": "Welcome — let me show you how disputes work",
+        "welcomeDesc": "I'll walk you through how DisputeDesk handles a dispute end to end — from the moment one arrives, through reviewing your evidence, to submitting it to Shopify. About 5 minutes.",
+        "dashboardAttentionTitle": "Where urgent disputes surface",
+        "dashboardAttentionDesc": "When a dispute needs your immediate action — bank deadline approaching, evidence gap, anything blocking auto-submit — it lights up here. The red banner shows urgent counts and links straight to what needs review.",
+        "disputesKpisTitle": "Triage at a glance",
+        "disputesKpisDesc": "Four quick metrics: how many disputes need your action, how much is at risk, how many are strong cases ready to submit, and how many are already with the bank awaiting their decision.",
+        "disputesUrgentBannerTitle": "Most urgent first",
+        "disputesUrgentBannerDesc": "Disputes due in the next 48 hours surface here in red. 'Resolve now' jumps you straight into the most pressing case so you don't miss a deadline.",
+        "detailHeaderTitle": "Everything at a glance",
+        "detailHeaderDesc": "The header shows you the dispute ID, reason, amount, customer, and filing date — plus two pills: status (Needs action vs. Submitted) and case strength (Strong / Moderate / Weak).",
+        "detailOverviewHeroTitle": "Your case strength",
+        "detailOverviewHeroDesc": "This hero card tells you how likely you are to win. Green = Strong (decisive evidence collected), amber = Moderate (review before submitting), red = Weak (low likelihood). The label changes based on whether your automation rule auto-submits this dispute type or sends it to your review queue first.",
+        "detailOverviewEvidenceTitle": "What evidence DisputeDesk gathered",
+        "detailOverviewEvidenceDesc": "Every signal we pulled from Shopify — order data, tracking, AVS/CVV match, customer history, policies. Checkmarks = collected, warnings = missing or weak, minus = waived. The mix of signals drives your case strength score.",
+        "detailEvidenceTabTitle": "Add or waive evidence",
+        "detailEvidenceTabDesc": "The Evidence tab is where you upload extras (photos, signed agreements, customer chat logs) or waive items you can't provide. Each field has a 'why this matters' note explaining how it affects your win chances.",
+        "detailReviewTabTitle": "Review what you'll submit",
+        "detailReviewTabDesc": "Review & Submit shows the full evidence pack DisputeDesk will send to Shopify, plus a readiness pill: green Ready, amber Risky (weak case), red Blocked (missing required evidence). If your automation rule for this dispute type is set to Auto, DisputeDesk submits without waiting; if Review, the dispute parks here until you click Submit.",
+        "detailSubmitButtonTitle": "Submit when you're ready",
+        "detailSubmitButtonDesc": "This button sends the pack to Shopify. After submitting, this same tab turns into a 'what was sent' summary so you can see exactly what Shopify received and track the bank's response."
       },
       "buildPack": {
         "title": "Criar um pacote de provas",
@@ -1832,7 +1852,9 @@
       "continueChain": "Yes, continue",
       "doneForNow": "Done for now",
       "allToursCompleted": "🎉 You completed every tour",
-      "allToursCompletedDesc": "You're set up to handle disputes like a pro. You can replay any tour any time from the Help page."
+      "allToursCompletedDesc": "You're set up to handle disputes like a pro. You can replay any tour any time from the Help page.",
+      "noDisputesYetTitle": "No disputes synced yet",
+      "noDisputesYetDesc": "When a real dispute arrives in Shopify, this is where you'll handle it. The detail-page walkthrough will skip for now — try this tour again once you have a dispute to look at. You can still continue to the next guide."
     }
   },
   "onboarding": {

@@ -189,7 +189,34 @@ export function getPortalGuideSteps(guideId: HelpGuideId): OnboardingStep[] {
  */
 const EMBEDDED_GUIDE_STEPS: Record<HelpGuideId, OnboardingStep[]> = {
   "review-dispute": [
-    { id: "intro", route: "/app/disputes", position: "center" },
+    // ── Page 1: dashboard ──────────────────────────────────────
+    {
+      id: "welcome",
+      route: "/app",
+      position: "center",
+    },
+    {
+      id: "dashboardAttention",
+      route: "/app",
+      targetSelector: '[data-help-guide="dashboard-attention-banner"]',
+      position: "bottom",
+      spotlight: true,
+    },
+    // ── Page 2: disputes list ──────────────────────────────────
+    {
+      id: "disputesKpis",
+      route: "/app/disputes",
+      targetSelector: '[data-help-guide="disputes-kpi-row"]',
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "disputesUrgentBanner",
+      route: "/app/disputes",
+      targetSelector: '[data-help-guide="disputes-urgent-banner"]',
+      position: "bottom",
+      spotlight: true,
+    },
     {
       id: "disputesTable",
       route: "/app/disputes",
@@ -202,6 +229,58 @@ const EMBEDDED_GUIDE_STEPS: Record<HelpGuideId, OnboardingStep[]> = {
       route: "/app/disputes",
       targetSelector: '[data-help-guide="dispute-row"]',
       position: "right",
+      spotlight: true,
+      // On Next, navigate into the first real dispute's detail page so
+      // the next step can spotlight the detail header.
+      onNext: { type: "navigateToFirstDispute" },
+    },
+    // ── Page 3: dispute detail (route resolved at runtime) ─────
+    {
+      id: "detailHeader",
+      // route is "" so the overlay does not navigate away from the
+      // dispute detail it just opened in the previous step.
+      route: "",
+      targetSelector: '[data-help-guide="detail-header"]',
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "detailOverviewHero",
+      route: "",
+      // Make sure we are on the Overview tab before spotlighting the
+      // hero. (When a tour starts mid-route the user might be on a
+      // different tab.)
+      targetSelector: '[data-help-guide="detail-overview-hero"]',
+      position: "bottom",
+      spotlight: true,
+      onNext: {
+        type: "click",
+        selector: '[data-help-guide="detail-tab-evidence"]',
+      },
+    },
+    {
+      id: "detailEvidenceTab",
+      route: "",
+      targetSelector: '[data-help-guide="detail-tab-evidence"]',
+      position: "bottom",
+      spotlight: true,
+      onNext: {
+        type: "click",
+        selector: '[data-help-guide="detail-tab-submit"]',
+      },
+    },
+    {
+      id: "detailReviewTab",
+      route: "",
+      targetSelector: '[data-help-guide="detail-tab-submit"]',
+      position: "bottom",
+      spotlight: true,
+    },
+    {
+      id: "detailSubmitButton",
+      route: "",
+      targetSelector: '[data-help-guide="detail-submit-button"]',
+      position: "top",
       spotlight: true,
     },
   ],

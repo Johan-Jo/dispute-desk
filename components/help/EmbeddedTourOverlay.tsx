@@ -115,11 +115,15 @@ export function EmbeddedTourOverlay() {
 
   const [stepIdx, setStepIdx] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [showEmptyState, setShowEmptyState] = useState(false);
   const lastNavigatedRef = useRef<string | null>(null);
 
   // Reset step index when the active guide changes
   useEffect(() => {
-    if (guideId) setStepIdx(0);
+    if (guideId) {
+      setStepIdx(0);
+      setShowEmptyState(false);
+    }
   }, [guideId]);
 
   const step = steps[stepIdx] ?? null;
@@ -127,7 +131,10 @@ export function EmbeddedTourOverlay() {
   const isFirstStep = stepIdx === 0;
   const keyPrefix = guideId ? getPortalGuideTranslationKeyPrefix(guideId) : "";
 
-  // Navigate when the step's route changes
+  // Navigate when the step's route changes. An empty-string route means
+  // "stay on the current page" — used by detail-page steps that should
+  // not navigate away from the dynamic /app/disputes/{id} route the
+  // previous step opened via onNext: navigateToFirstDispute.
   useEffect(() => {
     if (!step?.route) return;
     if (pathname !== step.route && lastNavigatedRef.current !== step.route) {
@@ -281,6 +288,45 @@ export function EmbeddedTourOverlay() {
     );
   }
 
+  // ─── No-disputes-yet branch ────────────────────────────────────
+  // Surfaced when the merchant runs the Handle a Dispute tour but has
+  // no disputes synced yet. Shows a centered empty-state card and ends
+  // the tour gracefully so the chain prompt can fire.
+  if (showEmptyState) {
+    return (
+      <div style={overlayBaseStyle}>
+        <div style={dimStyle} onClick={() => helpGuide.closeGuide()} />
+        <div style={centeredCardStyle}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#202223", marginBottom: 6 }}>
+            {tEmbedded("noDisputesYetTitle")}
+          </div>
+          <div style={{ fontSize: 14, color: "#6D7175", lineHeight: 1.55, marginBottom: 18 }}>
+            {tEmbedded("noDisputesYetDesc")}
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => helpGuide.closeGuide()}
+              style={btnSecondaryStyle}
+            >
+              {tEmbedded("doneForNow")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmptyState(false);
+                helpGuide.finishActiveGuide();
+              }}
+              style={btnPrimaryStyle}
+            >
+              {tEmbedded("continueChain")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!step || !guideId) return null;
 
   // ─── Active tour branch ────────────────────────────────────────
@@ -292,7 +338,33 @@ export function EmbeddedTourOverlay() {
 
   const tooltipStyle = computeTooltipStyle(targetRect, requestedPos, useSpotlight);
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Run any onNext side-effect (click a tab, navigate to a dispute)
+    // before advancing the step counter.
+    if (step?.onNext) {
+      const action = step.onNext;
+      if (action.type === "click") {
+        const el = document.querySelector(action.selector);
+        if (el instanceof HTMLElement) {
+          el.click();
+          // Let the tab content render before resolving the next
+          // step's spotlight target.
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      } else if (action.type === "navigateToFirstDispute") {
+        const w = window as unknown as { __ddFirstDisputeId?: string };
+        const id = w.__ddFirstDisputeId;
+        if (!id) {
+          // No disputes synced yet — surface an empty-state and end the
+          // tour cleanly so the chain prompt fires for the next guide.
+          setShowEmptyState(true);
+          return;
+        }
+        router.push(`/app/disputes/${id}`);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    }
+
     if (isLastStep) {
       helpGuide.finishActiveGuide();
     } else {
