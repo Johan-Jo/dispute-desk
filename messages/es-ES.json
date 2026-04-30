@@ -1799,7 +1799,27 @@
       "quickTaskInstallTemplate": "Instalar plantilla",
       "quickTaskHandleDispute": "Gestionar disputa",
       "quickTaskCreateRule": "Crear regla",
-      "quickTaskInteractiveGuide": "Guía interactiva"
+      "quickTaskInteractiveGuide": "Guía interactiva",
+      "helpCenterTitle": "Help Center",
+      "helpCenterSubtitle": "Find guides, tutorials, and answers to common questions about DisputeDesk",
+      "searchPlaceholder": "Search help articles…",
+      "searchHint": "Try searching for \"dispute\", \"evidence pack\", or \"automation\"",
+      "quickActionsTitle": "Quick Actions",
+      "viewAllTours": "View all tours",
+      "popularArticlesByCategoryTitle": "Popular Articles",
+      "browseByCategoryTitle": "Browse by Category",
+      "categoryArticleCount": "{count, plural, one {# article} other {# articles}}",
+      "stillNeedHelp": "Still need help?",
+      "stillNeedHelpDesc": "Our support team is here to help you with any questions or issues.",
+      "contactSupportCta": "Contact Support",
+      "quickHandleDispute": "Handle a Dispute",
+      "quickHandleDisputeDesc": "Learn how to find and review disputes that need your attention.",
+      "quickBuildPack": "Build an Evidence Pack",
+      "quickBuildPackDesc": "See how to create and manage evidence packs for your disputes.",
+      "quickSetupAutomation": "Set Up Automation",
+      "quickSetupAutomationDesc": "Configure rules to auto-submit packs and route disputes to review.",
+      "quickInstallTemplate": "Install & Customize Templates",
+      "quickInstallTemplateDesc": "Install pre-built templates and customize them for your store."
     }
   },
   "onboarding": {
