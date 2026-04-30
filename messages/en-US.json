@@ -3142,7 +3142,20 @@
     "phaseGap": "Not configured",
     "statusFullyCovered": "Fully Covered",
     "statusNotCovered": "Not Covered",
-    "statusPartial": "Partial"
+    "statusPartial": "Partial",
+    "colDisputeType": "Dispute Type",
+    "colChargebackHandling": "Chargeback Handling",
+    "colInquiryHandling": "Inquiry Handling",
+    "colCurrentMode": "Current Mode",
+    "colAction": "Action",
+    "handlingConfigured": "Configured",
+    "handlingMissingPlaybook": "Missing playbook",
+    "handlingNeedsRule": "Needs rule",
+    "inquiryEnabled": "Enabled",
+    "inquiryDisabled": "Disabled",
+    "modeAutoSubmit": "Auto-submit",
+    "modeReviewLabel": "Review before submit",
+    "modeManualLabel": "Manual"
   },
   "disputeTimeline": {
     "title": "History",

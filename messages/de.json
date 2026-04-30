@@ -2287,7 +2287,20 @@
     "emptyStateTitle": "Noch keine Streitfalltypen abgedeckt",
     "emptyStateBody": "Erstellen Sie Ihre erste Automatisierungsregel und installieren Sie ein Playbook, damit DisputeDesk Streitfälle automatisch bearbeitet, wenn sie von Shopify eingehen.",
     "emptyStatePrimaryCta": "Erste Regel erstellen",
-    "inquiryInstallCta": "Anfrage-Vorlagen installieren"
+    "inquiryInstallCta": "Anfrage-Vorlagen installieren",
+    "colDisputeType": "Streitfall-Typ",
+    "colChargebackHandling": "Rückbuchungs-Handhabung",
+    "colInquiryHandling": "Anfrage-Handhabung",
+    "colCurrentMode": "Aktueller Modus",
+    "colAction": "Aktion",
+    "handlingConfigured": "Konfiguriert",
+    "handlingMissingPlaybook": "Playbook fehlt",
+    "handlingNeedsRule": "Regel benötigt",
+    "inquiryEnabled": "Aktiviert",
+    "inquiryDisabled": "Deaktiviert",
+    "modeAutoSubmit": "Automatisch senden",
+    "modeReviewLabel": "Vor dem Senden prüfen",
+    "modeManualLabel": "Manuell"
   },
   "disputeTimeline": {
     "title": "Verlauf",

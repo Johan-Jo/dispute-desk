@@ -2394,7 +2394,20 @@
     "emptyStateTitle": "Inga tvisttyper täcks ännu",
     "emptyStateBody": "Skapa din första automatiseringsregel och installera en playbook så att DisputeDesk kan hantera tvister automatiskt när de kommer från Shopify.",
     "emptyStatePrimaryCta": "Skapa din första regel",
-    "inquiryInstallCta": "Installera förfrågningsmallar"
+    "inquiryInstallCta": "Installera förfrågningsmallar",
+    "colDisputeType": "Tvisttyp",
+    "colChargebackHandling": "Återkravshantering",
+    "colInquiryHandling": "Förfråganshantering",
+    "colCurrentMode": "Aktuellt läge",
+    "colAction": "Åtgärd",
+    "handlingConfigured": "Konfigurerad",
+    "handlingMissingPlaybook": "Saknar playbook",
+    "handlingNeedsRule": "Behöver regel",
+    "inquiryEnabled": "Aktiverad",
+    "inquiryDisabled": "Inaktiverad",
+    "modeAutoSubmit": "Auto-skicka",
+    "modeReviewLabel": "Granska före skick",
+    "modeManualLabel": "Manuell"
   },
   "disputeTimeline": {
     "title": "Historik",

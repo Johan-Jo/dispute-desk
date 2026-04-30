@@ -2287,7 +2287,20 @@
     "emptyStateTitle": "Ningún tipo de disputa está cubierto aún",
     "emptyStateBody": "Configure su primera regla de automatización e instale un playbook para que DisputeDesk maneje las disputas automáticamente cuando lleguen de Shopify.",
     "emptyStatePrimaryCta": "Crear su primera regla",
-    "inquiryInstallCta": "Instalar plantillas de consulta"
+    "inquiryInstallCta": "Instalar plantillas de consulta",
+    "colDisputeType": "Tipo de disputa",
+    "colChargebackHandling": "Manejo de contracargo",
+    "colInquiryHandling": "Manejo de consulta",
+    "colCurrentMode": "Modo actual",
+    "colAction": "Acción",
+    "handlingConfigured": "Configurado",
+    "handlingMissingPlaybook": "Falta playbook",
+    "handlingNeedsRule": "Necesita regla",
+    "inquiryEnabled": "Activado",
+    "inquiryDisabled": "Desactivado",
+    "modeAutoSubmit": "Envío automático",
+    "modeReviewLabel": "Revisar antes de enviar",
+    "modeManualLabel": "Manual"
   },
   "disputeTimeline": {
     "title": "Historial",

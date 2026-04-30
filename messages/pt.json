@@ -2279,7 +2279,20 @@
     "emptyStateTitle": "Nenhum tipo de disputa está coberto ainda",
     "emptyStateBody": "Configure sua primeira regra de automação e instale um playbook para que o DisputeDesk trate disputas automaticamente quando chegarem do Shopify.",
     "emptyStatePrimaryCta": "Criar sua primeira regra",
-    "inquiryInstallCta": "Instalar modelos de consulta"
+    "inquiryInstallCta": "Instalar modelos de consulta",
+    "colDisputeType": "Tipo de disputa",
+    "colChargebackHandling": "Tratamento de chargeback",
+    "colInquiryHandling": "Tratamento de consulta",
+    "colCurrentMode": "Modo atual",
+    "colAction": "Ação",
+    "handlingConfigured": "Configurado",
+    "handlingMissingPlaybook": "Playbook ausente",
+    "handlingNeedsRule": "Precisa de regra",
+    "inquiryEnabled": "Ativado",
+    "inquiryDisabled": "Desativado",
+    "modeAutoSubmit": "Envio automático",
+    "modeReviewLabel": "Revisar antes de enviar",
+    "modeManualLabel": "Manual"
   },
   "disputeTimeline": {
     "title": "Histórico",

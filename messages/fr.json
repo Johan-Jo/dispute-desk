@@ -2287,7 +2287,20 @@
     "emptyStateTitle": "Aucun type de litige n'est encore couvert",
     "emptyStateBody": "Configurez votre première règle d'automatisation et installez un playbook pour que DisputeDesk traite les litiges automatiquement lorsqu'ils arrivent de Shopify.",
     "emptyStatePrimaryCta": "Créer votre première règle",
-    "inquiryInstallCta": "Installer les modèles de demande"
+    "inquiryInstallCta": "Installer les modèles de demande",
+    "colDisputeType": "Type de litige",
+    "colChargebackHandling": "Gestion des rétrofacturations",
+    "colInquiryHandling": "Gestion des demandes",
+    "colCurrentMode": "Mode actuel",
+    "colAction": "Action",
+    "handlingConfigured": "Configuré",
+    "handlingMissingPlaybook": "Playbook manquant",
+    "handlingNeedsRule": "Règle requise",
+    "inquiryEnabled": "Activé",
+    "inquiryDisabled": "Désactivé",
+    "modeAutoSubmit": "Envoi automatique",
+    "modeReviewLabel": "Examiner avant envoi",
+    "modeManualLabel": "Manuel"
   },
   "disputeTimeline": {
     "title": "Historique",

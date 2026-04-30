@@ -2226,7 +2226,20 @@
     "emptyStateTitle": "No dispute types are covered yet",
     "emptyStateBody": "Set up your first automation rule and install a playbook so DisputeDesk can handle disputes automatically when they arrive from Shopify.",
     "emptyStatePrimaryCta": "Create your first rule",
-    "inquiryInstallCta": "Install inquiry templates"
+    "inquiryInstallCta": "Install inquiry templates",
+    "colDisputeType": "Dispute Type",
+    "colChargebackHandling": "Chargeback Handling",
+    "colInquiryHandling": "Inquiry Handling",
+    "colCurrentMode": "Current Mode",
+    "colAction": "Action",
+    "handlingConfigured": "Configured",
+    "handlingMissingPlaybook": "Missing playbook",
+    "handlingNeedsRule": "Needs rule",
+    "inquiryEnabled": "Enabled",
+    "inquiryDisabled": "Disabled",
+    "modeAutoSubmit": "Auto-submit",
+    "modeReviewLabel": "Review before submit",
+    "modeManualLabel": "Manual"
   },
   "templateLibrary": {
     "title": "Template Library",
