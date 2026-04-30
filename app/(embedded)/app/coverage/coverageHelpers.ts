@@ -11,7 +11,11 @@ import type {
 
 export type ChargebackStatus = "configured" | "missing-playbook" | "needs-rule";
 export type InquiryStatus = "enabled" | "disabled";
-export type CurrentMode = "auto-submit" | "review" | "manual";
+/**
+ * Two merchant-facing modes only — see lib/rules/normalizeMode.ts.
+ * Legacy `manual` / `notify` values normalize to `review`.
+ */
+export type CurrentMode = "auto-submit" | "review";
 
 export interface CoverageRow {
   familyId: string;
@@ -32,16 +36,7 @@ export function inquiryStatus(h: LifecyclePhaseHandling): InquiryStatus {
 }
 
 export function currentMode(h: LifecyclePhaseHandling): CurrentMode {
-  switch (h.automationMode) {
-    case "automated":
-      return "auto-submit";
-    case "review_first":
-    case "notify":
-      return "review";
-    case "manual":
-    case "none":
-      return "manual";
-  }
+  return h.automationMode === "automated" ? "auto-submit" : "review";
 }
 
 export function toRow(family: LifecycleFamilyCoverage): CoverageRow {

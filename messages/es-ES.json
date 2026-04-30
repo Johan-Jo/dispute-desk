@@ -3165,8 +3165,7 @@
     "inquiryEnabled": "Activado",
     "inquiryDisabled": "Desactivado",
     "modeAutoSubmit": "Envío automático",
-    "modeReviewLabel": "Revisar antes de enviar",
-    "modeManualLabel": "Manual"
+    "modeReviewLabel": "Revisar antes de enviar"
   },
   "disputeTimeline": {
     "title": "Historial",

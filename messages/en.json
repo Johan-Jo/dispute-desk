@@ -331,7 +331,7 @@
     "customerInfo": "Customer Information",
     "orderDetails": "Order Details",
     "timeline": "Timeline",
-    "dueToday": "Due today",
+    "dueToday": "Today",
     "daysOverdue": "{count}d overdue",
     "daysRemaining": "{count}d remaining",
     "name": "Name",
@@ -560,7 +560,6 @@
     "outcomePending": "Pending",
     "outcomeWon": "Won",
     "outcomeLost": "Lost",
-    "dueToday": "Today",
     "dueTomorrow": "Tomorrow",
     "dueSubmitted": "Submitted",
     "dueResolved": "Resolved",
@@ -2238,8 +2237,7 @@
     "inquiryEnabled": "Enabled",
     "inquiryDisabled": "Disabled",
     "modeAutoSubmit": "Auto-submit",
-    "modeReviewLabel": "Review before submit",
-    "modeManualLabel": "Manual"
+    "modeReviewLabel": "Review before submit"
   },
   "templateLibrary": {
     "title": "Template Library",

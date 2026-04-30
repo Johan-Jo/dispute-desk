@@ -3154,8 +3154,7 @@
     "inquiryEnabled": "Enabled",
     "inquiryDisabled": "Disabled",
     "modeAutoSubmit": "Auto-submit",
-    "modeReviewLabel": "Review before submit",
-    "modeManualLabel": "Manual"
+    "modeReviewLabel": "Review before submit"
   },
   "disputeTimeline": {
     "title": "History",

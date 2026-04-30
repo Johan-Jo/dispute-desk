@@ -2406,8 +2406,7 @@
     "inquiryEnabled": "Aktiverad",
     "inquiryDisabled": "Inaktiverad",
     "modeAutoSubmit": "Auto-skicka",
-    "modeReviewLabel": "Granska före skick",
-    "modeManualLabel": "Manuell"
+    "modeReviewLabel": "Granska före skick"
   },
   "disputeTimeline": {
     "title": "Historik",

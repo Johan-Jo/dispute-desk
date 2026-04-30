@@ -75,7 +75,6 @@ function modePill(mode: CurrentMode, tc: Translate) {
   const map: Record<CurrentMode, { bg: string; color: string; key: string }> = {
     "auto-submit": { bg: "#D1FAE5", color: "#065F46", key: "modeAutoSubmit" },
     "review": { bg: "#FEF3C7", color: "#92400E", key: "modeReviewLabel" },
-    "manual": { bg: "#E1E3E5", color: "#6D7175", key: "modeManualLabel" },
   };
   const c = map[mode];
   return (
