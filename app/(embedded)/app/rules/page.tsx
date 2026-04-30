@@ -1,16 +1,15 @@
 /**
- * Embedded automation rules page.
+ * Embedded Automation page — Figma-matched layout.
  *
  * Per-family routing view backed by the canonical pack-based automation
  * system. One row per dispute family from DISPUTE_FAMILIES; each row's
- * Select edits the modes of all packs belonging to that family. Saves go
- * through POST /api/setup/automation (pack_modes branch), the same
- * pipeline the setup wizard uses, so coverage and rules always agree.
+ * segmented toggle edits the modes of all packs in that family. Saves go
+ * through POST /api/setup/automation (pack_modes branch) — same pipeline
+ * the setup wizard uses, so coverage and rules always agree.
  *
  * Also includes:
  * - Safeguards section: high-value review threshold (standalone rule with
  *   __dd_safeguard__: prefix, survives pack-based saves)
- * - Suggested configurations: quick-action buttons that bulk-set pack modes
  * - Custom rules: read-only list of user-created rules from /portal/rules
  */
 "use client";
@@ -29,8 +28,6 @@ import {
   InlineStack,
   BlockStack,
   Banner,
-  Select,
-  Divider,
   Icon,
   Checkbox,
   TextField,
@@ -43,6 +40,8 @@ import {
   ReceiptRefundIcon,
   DuplicateIcon,
   ClipboardCheckFilledIcon,
+  InfoIcon,
+  XIcon,
 } from "@shopify/polaris-icons";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
 import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
@@ -55,6 +54,7 @@ import {
 
 const SAFEGUARD_RULE_NAME = "__dd_safeguard__:high_value";
 const DEFAULT_SAFEGUARD_AMOUNT = 500;
+const EXPLAINER_DISMISSED_KEY = "dd_automation_explainer_dismissed";
 
 const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
   fraud: "FRAUD",
@@ -74,6 +74,16 @@ const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   refund: ReceiptRefundIcon,
   duplicate: DuplicateIcon,
   general: ClipboardCheckFilledIcon,
+};
+
+const FAMILY_ICON_COLOR: Record<string, string> = {
+  fraud: "#DC2626",
+  pnr: "#3B82F6",
+  not_as_described: "#F59E0B",
+  subscription: "#22C55E",
+  refund: "#8B5CF6",
+  duplicate: "#06B6D4",
+  general: "#6D7175",
 };
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -159,7 +169,16 @@ export default function EmbeddedRulesPage() {
   >(null);
   const [shopId, setShopId] = useState<string | null>(null);
   const [installModalFamily, setInstallModalFamily] = useState<string | null>(null);
+  const [explainerOpen, setExplainerOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(EXPLAINER_DISMISSED_KEY) !== "1";
+  });
   const familyRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const dismissExplainer = useCallback(() => {
+    setExplainerOpen(false);
+    try { localStorage.setItem(EXPLAINER_DISMISSED_KEY, "1"); } catch {}
+  }, []);
 
   // ─── Data fetching ────────────────────────────────────────────────────
 
@@ -191,7 +210,6 @@ export default function EmbeddedRulesPage() {
         const allRules = (await rulesRes.json()) as CustomRule[];
         const arr = Array.isArray(allRules) ? allRules : [];
 
-        // Find safeguard rule
         const sg = arr.find((r) => r.name === SAFEGUARD_RULE_NAME);
         if (sg) {
           const sgState: SafeguardState = {
@@ -203,7 +221,6 @@ export default function EmbeddedRulesPage() {
           setSavedSafeguard(sgState);
         }
 
-        // Custom rules = everything that isn't setup/safeguard managed
         setCustomRules(arr.filter((r) => !isSetupOrSafeguardRule(r.name)));
       }
     } finally {
@@ -332,7 +349,6 @@ export default function EmbeddedRulesPage() {
     setErrorMsg(null);
     setSavedBanner(false);
     try {
-      // Save pack modes
       if (packModesDirty) {
         const res = await fetch("/api/setup/automation", {
           method: "POST",
@@ -347,7 +363,6 @@ export default function EmbeddedRulesPage() {
         }
       }
 
-      // Save safeguard
       if (safeguardDirty) {
         const rulePayload = {
           name: SAFEGUARD_RULE_NAME,
@@ -401,26 +416,7 @@ export default function EmbeddedRulesPage() {
     );
   }
 
-  const stateSentence = (() => {
-    if (summary.auto === 0 && summary.review === 0) return tr("stateNoSetup");
-    if (summary.noPlaybook > 0)
-      return tr("stateWithGaps", {
-        manual: summary.noPlaybook,
-        total: summary.total,
-      });
-    if (summary.review > 0)
-      return tr("stateMostlyAuto", {
-        automated: summary.auto,
-        total: summary.total,
-        review: summary.review,
-      });
-    return tr("stateAllAuto", { total: summary.total });
-  })();
-
-  const routingChoices = [
-    { label: tr("autoPack"), value: "auto" as const },
-    { label: tr("review"), value: "review" as const },
-  ];
+  const configuredCount = summary.auto + summary.review;
 
   return (
     <Page
@@ -442,199 +438,258 @@ export default function EmbeddedRulesPage() {
               </Banner>
             )}
 
-            {/* ── State sentence ─────────────────────────────────── */}
+            {/* ── Dismissable explainer ────────────────────────────── */}
+            {explainerOpen && (
+              <div
+                style={{
+                  background: "#EBF5FA",
+                  border: "1px solid #B4E1FA",
+                  borderRadius: 8,
+                  padding: 16,
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    width: 20,
+                    height: 20,
+                    flexShrink: 0,
+                    marginTop: 2,
+                    color: "#005BD3",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon source={InfoIcon} tone="info" />
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
+                    {tr("explainerTitle")}
+                  </div>
+                  <ul style={{ listStyle: "disc", margin: 0, paddingLeft: 18, color: "#202223", fontSize: 14, lineHeight: 1.5 }}>
+                    <li style={{ marginBottom: 6 }}>{tr("explainerBullet1")}</li>
+                    <li style={{ marginBottom: 6 }}>{tr("explainerBullet2")}</li>
+                    <li>{tr("explainerBullet3")}</li>
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={dismissExplainer}
+                  aria-label="Dismiss"
+                  style={{
+                    flexShrink: 0,
+                    background: "transparent",
+                    border: "none",
+                    padding: 4,
+                    cursor: "pointer",
+                    color: "#6D7175",
+                    display: "inline-flex",
+                  }}
+                >
+                  <span style={{ width: 20, height: 20, display: "inline-flex" }}>
+                    <Icon source={XIcon} />
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* ── Status summary ─────────────────────────────────── */}
             <Card>
-              <BlockStack gap="300">
-                <Text as="p" variant="bodyLg" fontWeight="semibold">
-                  {stateSentence}
+              <BlockStack gap="200">
+                <Text as="p" variant="bodyMd">
+                  {tr("figmaSummary", {
+                    automated: summary.auto,
+                    total: summary.total,
+                    review: summary.review,
+                  })}
                 </Text>
                 <InlineStack gap="200" wrap>
-                  {summary.auto > 0 && (
-                    <Badge tone="success">
-                      {`${summary.auto} ${tc("modeAutomated")}`}
-                    </Badge>
-                  )}
-                  {summary.review > 0 && (
-                    <Badge tone="info">
-                      {`${summary.review} ${tc("modeReviewFirst")}`}
-                    </Badge>
-                  )}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#D1FAE5",
+                      color: "#065F46",
+                    }}
+                  >
+                    {`${summary.auto} ${tr("modeAutomaticShort")}`}
+                  </span>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#DBEAFE",
+                      color: "#1E40AF",
+                    }}
+                  >
+                    {`${summary.review} ${tr("review")}`}
+                  </span>
                   {summary.noPlaybook > 0 && (
                     <Badge tone="attention">
                       {`${summary.noPlaybook} ${tr("notConfigured")}`}
                     </Badge>
                   )}
                 </InlineStack>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {tr("phaseBlindNote")}
-                </Text>
               </BlockStack>
             </Card>
 
-            {/* ── Per-family rows ────────────────────────────────── */}
-            <Card>
-              <BlockStack gap="400">
-                <BlockStack gap="100">
-                  <Text as="h2" variant="headingMd">
-                    {tr("automationRulesTitle")}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {tr("automationRulesSubtitle")}
-                  </Text>
-                </BlockStack>
+            {/* ── Automation rules card ──────────────────────────── */}
+            <Card padding="0">
+              {/* Header */}
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderBottom: "1px solid #E1E3E5",
+                }}
+              >
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#202223", marginBottom: 4 }}>
+                  {tr("automationRulesTitle")}
+                </div>
+                <div style={{ fontSize: 14, color: "#6D7175" }}>
+                  {tr("automationRulesSubtitle")}
+                </div>
+              </div>
 
-                <BlockStack gap="0">
-                  {DISPUTE_FAMILIES.map((family, index) => {
-                    const FamilyIcon =
-                      FAMILY_ICONS[family.id] ?? ClipboardCheckFilledIcon;
-                    const mode = familyModes[family.id];
-                    const packs = familyPacks[family.id] ?? [];
-                    const isHighlighted = highlightedFamilyId === family.id;
-                    const familyLabel = tc(
-                      family.labelKey.replace("coverage.", ""),
-                    );
-                    const iconBg =
-                      mode === "auto"
-                        ? "#DCFCE7"
-                        : mode === "review"
-                          ? "#DBEAFE"
-                          : "#FEE2E2";
-                    const iconColor =
-                      mode === "auto"
-                        ? "#16A34A"
-                        : mode === "review"
-                          ? "#2563EB"
-                          : "#DC2626";
+              {/* Family rows */}
+              <div>
+                {DISPUTE_FAMILIES.map((family, index) => {
+                  const FamilyIcon =
+                    FAMILY_ICONS[family.id] ?? ClipboardCheckFilledIcon;
+                  const familyColor = FAMILY_ICON_COLOR[family.id] ?? "#6D7175";
+                  const mode = familyModes[family.id];
+                  const packs = familyPacks[family.id] ?? [];
+                  const isHighlighted = highlightedFamilyId === family.id;
+                  const familyLabel = tc(
+                    family.labelKey.replace("coverage.", ""),
+                  );
+                  const playbookNames = packs
+                    .map((p) =>
+                      tp.has(`disputeTypeLabel.${p.dispute_type}`)
+                        ? tp(`disputeTypeLabel.${p.dispute_type}`)
+                        : p.name,
+                    )
+                    .join(", ");
 
-                    return (
+                  return (
+                    <div
+                      key={family.id}
+                      ref={(el) => {
+                        familyRowRefs.current[family.id] = el;
+                      }}
+                      style={{
+                        padding: "20px",
+                        borderTop: index === 0 ? "none" : "1px solid #E1E3E5",
+                        transition: "background-color 400ms ease",
+                        background: isHighlighted ? "#FEF3C7" : "transparent",
+                        display: "flex",
+                        gap: 16,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <div
-                        key={family.id}
-                        ref={(el) => {
-                          familyRowRefs.current[family.id] = el;
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          background: "#F6F8FB",
+                          color: familyColor,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
                         }}
                       >
-                        {index > 0 && <Divider />}
-                        <div
-                          style={{
-                            padding: "16px 0",
-                            transition: "background-color 400ms ease",
-                            backgroundColor: isHighlighted
-                              ? "#FEF3C7"
-                              : "transparent",
-                            borderRadius: 8,
-                          }}
-                        >
-                          <BlockStack gap="200">
-                            <InlineStack
-                              align="space-between"
-                              blockAlign="center"
-                              wrap={false}
-                              gap="300"
-                            >
-                              <InlineStack
-                                gap="300"
-                                blockAlign="center"
-                                wrap
-                              >
-                                <div
-                                  style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 8,
-                                    background: iconBg,
-                                    color: iconColor,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  <Icon source={FamilyIcon} />
-                                </div>
-                                <Text
-                                  as="h3"
-                                  variant="bodyMd"
-                                  fontWeight="semibold"
-                                >
-                                  {familyLabel}
-                                </Text>
-                                {mode === "none" && (
-                                  <Badge tone="attention">
-                                    {tr("noPlaybookBadge")}
-                                  </Badge>
-                                )}
-                              </InlineStack>
-                              {mode === "none" ? (
-                                <Button
-                                  size="slim"
-                                  onClick={() => setInstallModalFamily(family.id)}
-                                >
-                                  {tc("installPlaybook")}
-                                </Button>
-                              ) : (
-                                <div style={{ minWidth: 180, flexShrink: 0 }}>
-                                  <Select
-                                    label={tr("actionRouting")}
-                                    labelHidden
-                                    options={routingChoices}
-                                    value={mode}
-                                    onChange={(value) =>
-                                      setFamilyMode(
-                                        family.id,
-                                        value as "auto" | "review",
-                                      )
-                                    }
-                                  />
-                                </div>
-                              )}
-                            </InlineStack>
-                            {packs.length > 0 && (
-                              <Text as="p" variant="bodySm" tone="subdued">
-                                {tr("playbooksInUse", {
-                                  names: packs.map((p) => tp.has(`disputeTypeLabel.${p.dispute_type}`) ? tp(`disputeTypeLabel.${p.dispute_type}`) : p.name).join(", "),
-                                })}
-                              </Text>
-                            )}
-                          </BlockStack>
-                        </div>
+                        <Icon source={FamilyIcon} />
                       </div>
-                    );
-                  })}
-                </BlockStack>
 
-                {/* Quick actions */}
-                <Divider />
+                      <div style={{ flex: 1, minWidth: 200 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#202223", marginBottom: 2 }}>
+                          {familyLabel}
+                        </div>
+                        {playbookNames ? (
+                          <div style={{ fontSize: 12, color: "#6D7175" }}>
+                            {tr("playbooksInUse", { names: playbookNames })}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "#6D7175" }}>
+                            {tr("noPlaybookBadge")}
+                          </div>
+                        )}
+                      </div>
+
+                      {mode === "none" ? (
+                        <Button
+                          size="slim"
+                          onClick={() => setInstallModalFamily(family.id)}
+                        >
+                          {tc("installPlaybook")}
+                        </Button>
+                      ) : (
+                        <ModeToggle
+                          mode={mode}
+                          onChange={(next) => setFamilyMode(family.id, next)}
+                          reviewLabel={tr("review")}
+                          autoLabel={tr("modeAutomaticShort")}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom toolbar */}
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderTop: "1px solid #E1E3E5",
+                  background: "#F6F8FB",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <InlineStack gap="200" wrap>
                   <Button size="slim" onClick={() => applyQuickConfig("auto")}>
                     {tr("quickAutoAll")}
                   </Button>
-                  <Button
-                    size="slim"
-                    onClick={() => applyQuickConfig("review")}
-                  >
+                  <Button size="slim" onClick={() => applyQuickConfig("review")}>
                     {tr("quickReviewAll")}
                   </Button>
                 </InlineStack>
-
-                <InlineStack
-                  align="space-between"
-                  blockAlign="center"
-                  wrap
-                  gap="200"
+                <Button
+                  variant="primary"
+                  loading={saving}
+                  disabled={saving || !dirty}
+                  onClick={save}
                 >
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {tr("firstMatchWinsHint")}
-                  </Text>
-                  <Button
-                    variant="primary"
-                    loading={saving}
-                    disabled={saving || !dirty}
-                    onClick={save}
-                  >
-                    {tr("saveStarterRules")}
-                  </Button>
-                </InlineStack>
-              </BlockStack>
+                  {configuredCount > 0
+                    ? tr("saveNRules", { count: configuredCount })
+                    : tr("saveStarterRules")}
+                </Button>
+              </div>
+              <div
+                style={{
+                  padding: "12px 20px",
+                  borderTop: "1px solid #E1E3E5",
+                  background: "#F6F8FB",
+                  fontSize: 12,
+                  color: "#6D7175",
+                }}
+              >
+                {tr("firstMatchWinsHint")}
+              </div>
             </Card>
 
             {/* ── Safeguards ─────────────────────────────────────── */}
@@ -700,9 +755,6 @@ export default function EmbeddedRulesPage() {
 
                   <BlockStack gap="0">
                     {customRules.map((rule, idx) => {
-                      // Normalize legacy stored modes at the render boundary
-                      // so the UI only ever labels them as Automatic or
-                      // Review before submit.
                       const normalizedMode =
                         rule.action?.mode === "auto" ||
                         rule.action?.mode === "auto_pack"
@@ -713,43 +765,34 @@ export default function EmbeddedRulesPage() {
                           ? tr("autoPack")
                           : tr("review");
                       return (
-                        <div key={rule.id}>
-                          {idx > 0 && <Divider />}
-                          <div style={{ padding: "12px 0" }}>
-                            <InlineStack
-                              align="space-between"
-                              blockAlign="center"
-                              wrap={false}
-                              gap="300"
-                            >
-                              <InlineStack
-                                gap="300"
-                                blockAlign="center"
-                                wrap
-                              >
-                                <Text
-                                  as="h3"
-                                  variant="bodyMd"
-                                  fontWeight="semibold"
-                                >
-                                  {rule.name ?? tr("unnamedRule")}
-                                </Text>
-                                <Badge
-                                  tone={rule.enabled ? "success" : undefined}
-                                >
-                                  {rule.enabled ? tr("active") : tr("inactive")}
-                                </Badge>
-                              </InlineStack>
-                              <Button
-                                onClick={() => router.push("/portal/rules")}
-                              >
-                                {tr("editRule")}
-                              </Button>
+                        <div
+                          key={rule.id}
+                          style={{
+                            padding: "12px 0",
+                            borderTop: idx === 0 ? "none" : "1px solid #E1E3E5",
+                          }}
+                        >
+                          <InlineStack
+                            align="space-between"
+                            blockAlign="center"
+                            wrap={false}
+                            gap="300"
+                          >
+                            <InlineStack gap="300" blockAlign="center" wrap>
+                              <Text as="h3" variant="bodyMd" fontWeight="semibold">
+                                {rule.name ?? tr("unnamedRule")}
+                              </Text>
+                              <Badge tone={rule.enabled ? "success" : undefined}>
+                                {rule.enabled ? tr("active") : tr("inactive")}
+                              </Badge>
                             </InlineStack>
-                            <Text as="p" variant="bodySm" tone="subdued">
-                              {`${tr("action")}: ${actionLabel}`}
-                            </Text>
-                          </div>
+                            <Button onClick={() => router.push("/portal/rules")}>
+                              {tr("editRule")}
+                            </Button>
+                          </InlineStack>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {`${tr("action")}: ${actionLabel}`}
+                          </Text>
                         </div>
                       );
                     })}
@@ -774,5 +817,69 @@ export default function EmbeddedRulesPage() {
         />
       )}
     </Page>
+  );
+}
+
+// ─── Mode toggle (segmented) ────────────────────────────────────────────
+
+function ModeToggle({
+  mode,
+  onChange,
+  reviewLabel,
+  autoLabel,
+}: {
+  mode: "auto" | "review";
+  onChange: (mode: "auto" | "review") => void;
+  reviewLabel: string;
+  autoLabel: string;
+}) {
+  const baseBtn: React.CSSProperties = {
+    border: "none",
+    padding: "6px 12px",
+    fontSize: 13,
+    fontWeight: 600,
+    borderRadius: 6,
+    cursor: "pointer",
+    transition: "all 150ms ease",
+  };
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        padding: 4,
+        borderRadius: 8,
+        border: "1px solid #C9CCCF",
+        background: "#F6F8FB",
+        gap: 4,
+        flexShrink: 0,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => onChange("review")}
+        style={{
+          ...baseBtn,
+          background: mode === "review" ? "#0EA5E9" : "transparent",
+          color: mode === "review" ? "#FFFFFF" : "#6D7175",
+          boxShadow:
+            mode === "review" ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+        }}
+      >
+        {reviewLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("auto")}
+        style={{
+          ...baseBtn,
+          background: mode === "auto" ? "#22C55E" : "transparent",
+          color: mode === "auto" ? "#FFFFFF" : "#6D7175",
+          boxShadow:
+            mode === "auto" ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+        }}
+      >
+        {autoLabel}
+      </button>
+    </div>
   );
 }

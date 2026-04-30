@@ -1131,7 +1131,15 @@
     "advancedFiltersTitle": "Règles personnalisées avancées",
     "advancedFiltersSubtitle": "Règles personnalisées créées dans le portail. Elles s'exécutent en parallèle de l'automatisation familiale.",
     "quickNotifyAll": "Tout examiner",
-    "notifyOnly": "Examiner avant de soumettre"
+    "notifyOnly": "Examiner avant de soumettre",
+    "figmaSummary": "DisputeDesk gère automatiquement {automated} types de litige sur {total}, {review} sont envoyés à votre file d examen au préalable.",
+    "saveNRules": "Enregistrer {count} règles",
+    "modeReviewShort": "Examiner",
+    "modeAutomaticShort": "Automatique",
+    "explainerTitle": "Ce que vous regardez",
+    "explainerBullet1": "Ces règles s'exécutent chaque fois qu'un nouveau litige arrive. DisputeDesk les vérifie de haut en bas, et la première règle dont les conditions correspondent décide de ce qui se passe — soumission automatique ou envoi dans votre file d'examen.",
+    "explainerBullet2": "Définissez une règle sur Automatique si vous voulez que DisputeDesk construise le dossier de preuves et le soumette à Shopify sans vous attendre. Définissez-la sur Examiner avant envoi si vous voulez approuver le dossier avant son envoi.",
+    "explainerBullet3": "La section Garde-fous ci-dessous vous permet d'ajouter une dérogation — par exemple, toujours examiner les litiges de grande valeur même si la règle dit Automatique."
   },
   "settings": {
     "title": "Paramètres",

@@ -1112,7 +1112,15 @@
     "advancedFiltersSubtitle": "Custom rules created in the portal. These run alongside family automation.",
     "phaseBlindNote": "Inquiry-phase disputes route to lighter inquiry templates automatically. Each rule applies to both phases unless you restrict it.",
     "quickNotifyAll": "Review all",
-    "notifyOnly": "Review before submit"
+    "notifyOnly": "Review before submit",
+    "figmaSummary": "DisputeDesk handles {automated} of {total} dispute types automatically, with {review} sent to your review queue first.",
+    "saveNRules": "Save {count} rules",
+    "modeReviewShort": "Review",
+    "modeAutomaticShort": "Automatic",
+    "explainerTitle": "What you're looking at",
+    "explainerBullet1": "These rules run whenever a new dispute arrives. DisputeDesk checks them top to bottom, and the first rule whose conditions match decides what happens — automatic submission or sent to your review queue.",
+    "explainerBullet2": "Set a rule to Automatic if you want DisputeDesk to build the evidence pack and submit it to Shopify without waiting for you. Set it to Review before submit if you want to approve the pack before it goes out.",
+    "explainerBullet3": "The Safeguards section below lets you add an override — for example, always review high-value disputes even if the rule says automatic."
   },
   "settings": {
     "title": "Settings",

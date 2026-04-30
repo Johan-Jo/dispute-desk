@@ -1131,7 +1131,15 @@
     "advancedFiltersTitle": "Regras personalizadas avançadas",
     "advancedFiltersSubtitle": "Regras personalizadas criadas no portal. Elas são executadas junto com a automação familiar.",
     "quickNotifyAll": "Revisar tudo",
-    "notifyOnly": "Revisar antes de enviar"
+    "notifyOnly": "Revisar antes de enviar",
+    "figmaSummary": "O DisputeDesk lida com {automated} de {total} tipos de disputa automaticamente, com {review} enviados primeiro para sua fila de revisão.",
+    "saveNRules": "Salvar {count} regras",
+    "modeReviewShort": "Revisar",
+    "modeAutomaticShort": "Automático",
+    "explainerTitle": "O que você está vendo",
+    "explainerBullet1": "Estas regras são executadas sempre que uma nova disputa chega. O DisputeDesk verifica de cima para baixo, e a primeira regra cujas condições corresponderem decide o que acontece — envio automático ou enviada para sua fila de revisão.",
+    "explainerBullet2": "Defina uma regra como Automático se quiser que o DisputeDesk construa o pacote de evidências e o envie para o Shopify sem esperar por você. Defina como Revisar antes de enviar se quiser aprovar o pacote antes que ele saia.",
+    "explainerBullet3": "A seção Salvaguardas abaixo permite adicionar uma exceção — por exemplo, sempre revisar disputas de alto valor mesmo que a regra diga Automático."
   },
   "settings": {
     "title": "Configurações",

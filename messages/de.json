@@ -1080,7 +1080,15 @@
     "advancedFiltersTitle": "Erweiterte benutzerdefinierte Regeln",
     "advancedFiltersSubtitle": "Im Portal erstellte benutzerdefinierte Regeln. Diese laufen parallel zur Familienautomatisierung.",
     "quickNotifyAll": "Alle prüfen",
-    "notifyOnly": "Vor dem Einreichen prüfen"
+    "notifyOnly": "Vor dem Einreichen prüfen",
+    "figmaSummary": "DisputeDesk bearbeitet {automated} von {total} Streitfalltypen automatisch, {review} werden vorher zur Überprüfung weitergeleitet.",
+    "saveNRules": "{count} Regeln speichern",
+    "modeReviewShort": "Prüfen",
+    "modeAutomaticShort": "Automatisch",
+    "explainerTitle": "Was Sie hier sehen",
+    "explainerBullet1": "Diese Regeln werden ausgeführt, sobald ein neuer Streitfall eintrifft. DisputeDesk prüft sie von oben nach unten, und die erste passende Regel entscheidet, was passiert — automatische Einreichung oder Weiterleitung in Ihre Prüfwarteschlange.",
+    "explainerBullet2": "Setzen Sie eine Regel auf Automatisch, wenn DisputeDesk den Evidenzpack ohne Ihr Eingreifen erstellen und an Shopify senden soll. Setzen Sie sie auf Vor dem Senden prüfen, wenn Sie den Pack zuerst genehmigen möchten.",
+    "explainerBullet3": "Im Bereich Sicherheitsmaßnahmen unten können Sie eine Ausnahme hinzufügen — zum Beispiel, hochwertige Streitfälle immer zu prüfen, auch wenn die Regel Automatisch sagt."
   },
   "settings": {
     "title": "Einstellungen",

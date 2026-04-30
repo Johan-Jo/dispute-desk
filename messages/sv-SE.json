@@ -1132,7 +1132,15 @@
     "advancedFiltersTitle": "Avancerade anpassade regler",
     "advancedFiltersSubtitle": "Anpassade regler skapade i portalen. Dessa körs parallellt med familjeautomatiseringen.",
     "quickNotifyAll": "Granska alla",
-    "notifyOnly": "Granska innan du skickar"
+    "notifyOnly": "Granska innan du skickar",
+    "figmaSummary": "DisputeDesk hanterar {automated} av {total} tvisttyper automatiskt, {review} skickas till din granskningskö först.",
+    "saveNRules": "Spara {count} regler",
+    "modeReviewShort": "Granska",
+    "modeAutomaticShort": "Automatisk",
+    "explainerTitle": "Vad du tittar på",
+    "explainerBullet1": "Dessa regler körs när en ny tvist kommer in. DisputeDesk kontrollerar dem uppifrån och ner, och den första regel vars villkor matchar bestämmer vad som händer — automatisk inlämning eller skickad till din granskningskö.",
+    "explainerBullet2": "Sätt en regel till Automatisk om du vill att DisputeDesk ska bygga bevispaketet och skicka det till Shopify utan att vänta på dig. Sätt den till Granska före skick om du vill godkänna paketet innan det skickas.",
+    "explainerBullet3": "Avsnittet Säkerhetsåtgärder nedan låter dig lägga till ett undantag — till exempel alltid granska tvister med högt värde även om regeln säger Automatisk."
   },
   "settings": {
     "title": "Inställningar",
