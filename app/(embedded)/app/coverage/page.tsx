@@ -21,11 +21,9 @@ import {
   Button,
   Spinner,
   Icon,
-  Banner,
-  Collapsible,
   useBreakpoints,
 } from "@shopify/polaris";
-import { ShieldPersonIcon } from "@shopify/polaris-icons";
+import { ShieldPersonIcon, InfoIcon, XIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
 import {
   deriveLifecycleCoverage,
@@ -224,21 +222,67 @@ export default function CoveragePage() {
       ]}
     >
       <Layout>
-        {/* Dismissable explainer */}
-        <Layout.Section>
-          <Collapsible id="coverage-explainer" open={explainerOpen}>
-            <Banner onDismiss={dismissExplainer}>
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingSm">
+        {/* Dismissable explainer — Figma soft-blue card */}
+        {explainerOpen && (
+          <Layout.Section>
+            <div
+              style={{
+                background: "#EBF5FA",
+                border: "1px solid #B4E1FA",
+                borderRadius: 8,
+                padding: 16,
+                display: "flex",
+                gap: 12,
+                alignItems: "flex-start",
+              }}
+            >
+              <span
+                style={{
+                  width: 20,
+                  height: 20,
+                  flexShrink: 0,
+                  marginTop: 2,
+                  color: "#005BD3",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon source={InfoIcon} tone="info" />
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
                   {tc("explainerTitle")}
-                </Text>
-                <Text as="p" variant="bodySm">• {tc("explainerBullet1")}</Text>
-                <Text as="p" variant="bodySm">• {tc("explainerBullet2")}</Text>
-                <Text as="p" variant="bodySm">• {tc("explainerBullet3")}</Text>
-              </BlockStack>
-            </Banner>
-          </Collapsible>
-        </Layout.Section>
+                </div>
+                <ul style={{ listStyle: "disc", margin: 0, paddingLeft: 18, color: "#202223", fontSize: 14, lineHeight: 1.5 }}>
+                  <li style={{ marginBottom: 6 }}>{tc("explainerBullet1")}</li>
+                  <li style={{ marginBottom: 6 }}>{tc("explainerBullet2")}</li>
+                  <li>{tc("explainerBullet3")}</li>
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={dismissExplainer}
+                aria-label="Dismiss"
+                style={{
+                  flexShrink: 0,
+                  background: "transparent",
+                  border: "none",
+                  padding: 4,
+                  cursor: "pointer",
+                  color: "#6D7175",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span style={{ width: 20, height: 20, display: "inline-flex" }}>
+                  <Icon source={XIcon} />
+                </span>
+              </button>
+            </div>
+          </Layout.Section>
+        )}
 
         {/* Status summary */}
         <Layout.Section>
