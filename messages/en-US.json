@@ -1526,7 +1526,9 @@
       "savingToShopify": "Saving to Shopify",
       "savingToShopifyDesc": "How evidence is saved and what happens next",
       "policies": "Policies",
-      "policiesDesc": "Manage business policies for stronger evidence"
+      "policiesDesc": "Manage business policies for stronger evidence",
+      "lifecycle": "Inquiry & Chargeback Lifecycle",
+      "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each"
     },
     "articles": {
       "connectShopifyStore": {
