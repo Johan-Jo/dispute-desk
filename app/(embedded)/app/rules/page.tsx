@@ -15,7 +15,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Page,
@@ -134,7 +134,6 @@ type FamilyMode = "auto" | "review" | "none";
 // ─── Component ──────────────────────────────────────────────────────────
 
 export default function EmbeddedRulesPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const locale = useLocale();
   const tr = useTranslations("rules");
@@ -418,11 +417,20 @@ export default function EmbeddedRulesPage() {
 
   const configuredCount = summary.auto + summary.review;
 
+  // Custom rules live in the merchant portal, not in the embedded app.
+  // Open in a new tab so the iframe doesn't try to load disputedesk.app
+  // inside Shopify Admin (which CSP refuses).
+  const portalRulesUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://disputedesk.app"}/portal/rules`;
+
   return (
     <Page
       title={tn("automation")}
       subtitle={tr("purposeLine")}
-      primaryAction={{ content: tr("primaryAddCustom"), url: "/portal/rules" }}
+      primaryAction={{
+        content: tr("primaryAddCustom"),
+        url: portalRulesUrl,
+        external: true,
+      }}
     >
       <Layout>
         <Layout.Section>
@@ -786,7 +794,7 @@ export default function EmbeddedRulesPage() {
                                 {rule.enabled ? tr("active") : tr("inactive")}
                               </Badge>
                             </InlineStack>
-                            <Button onClick={() => router.push("/portal/rules")}>
+                            <Button url={portalRulesUrl} external>
                               {tr("editRule")}
                             </Button>
                           </InlineStack>
