@@ -49,6 +49,7 @@ import {
   disputeTypeToPrimaryReason,
   type PackHandlingUiMode,
 } from "@/lib/rules/packHandlingAutomation";
+import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ export default function EmbeddedRulesPage() {
   const tn = useTranslations("nav");
   const tc = useTranslations("coverage");
   const tp = useTranslations("packs");
+  const tCommon = useTranslations("common");
 
   // Data
   const [automation, setAutomation] = useState<AutomationData | null>(null);
@@ -168,6 +170,8 @@ export default function EmbeddedRulesPage() {
   >(null);
   const [shopId, setShopId] = useState<string | null>(null);
   const [installModalFamily, setInstallModalFamily] = useState<string | null>(null);
+  const [customRuleDraft, setCustomRuleDraft] = useState<CustomRuleDraft | null>(null);
+  const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(EXPLAINER_DISMISSED_KEY) !== "1";
@@ -417,10 +421,35 @@ export default function EmbeddedRulesPage() {
 
   const configuredCount = summary.auto + summary.review;
 
-  // Custom rules live in the merchant portal, not in the embedded app.
-  // Open in a new tab so the iframe doesn't try to load disputedesk.app
-  // inside Shopify Admin (which CSP refuses).
-  const portalRulesUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://disputedesk.app"}/portal/rules`;
+  const openNewCustomRule = () => {
+    setCustomRuleDraft(null);
+    setCustomRuleModalOpen(true);
+  };
+
+  const openEditCustomRule = (rule: CustomRule) => {
+    setCustomRuleDraft({
+      id: rule.id,
+      name: rule.name,
+      match: {
+        reason: rule.match?.reason,
+        amount_range: rule.match?.amount_range,
+      },
+      action: {
+        mode:
+          rule.action?.mode === "auto" || rule.action?.mode === "auto_pack"
+            ? "auto"
+            : "review",
+      },
+      enabled: rule.enabled,
+      priority: rule.priority,
+    });
+    setCustomRuleModalOpen(true);
+  };
+
+  // Newly created rules sort below the catch-all (priority 100000) so
+  // baseline + safeguard rules continue to win first.
+  const nextRulePriority =
+    customRules.reduce((m, r) => Math.max(m, r.priority), 100000) + 1;
 
   return (
     <Page
@@ -428,8 +457,7 @@ export default function EmbeddedRulesPage() {
       subtitle={tr("purposeLine")}
       primaryAction={{
         content: tr("primaryAddCustom"),
-        url: portalRulesUrl,
-        external: true,
+        onAction: openNewCustomRule,
       }}
     >
       <Layout>
@@ -794,7 +822,7 @@ export default function EmbeddedRulesPage() {
                                 {rule.enabled ? tr("active") : tr("inactive")}
                               </Badge>
                             </InlineStack>
-                            <Button url={portalRulesUrl} external>
+                            <Button onClick={() => openEditCustomRule(rule)}>
                               {tr("editRule")}
                             </Button>
                           </InlineStack>
@@ -824,6 +852,19 @@ export default function EmbeddedRulesPage() {
           initialCategory={FAMILY_TO_DISPUTE_TYPE[installModalFamily] ?? ""}
         />
       )}
+      <CustomRuleModal
+        open={customRuleModalOpen}
+        shopId={shopId}
+        initial={customRuleDraft}
+        defaultPriority={nextRulePriority}
+        tr={tr}
+        tCommon={tCommon}
+        onClose={() => setCustomRuleModalOpen(false)}
+        onSaved={() => {
+          setCustomRuleModalOpen(false);
+          fetchAll();
+        }}
+      />
     </Page>
   );
 }
