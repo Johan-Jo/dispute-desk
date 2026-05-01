@@ -292,6 +292,14 @@ function ChargebackKpiTile({
     ? "—"
     : `${rate.toFixed(1)}%`;
 
+  // 3-row layout — matches the other 4 KPI tiles (title → value →
+  // change). Figma's `shopify-home.tsx` uses a 2-row inline-delta
+  // design that works at its xl-width mock but breaks the visual
+  // rhythm in our narrower 5-column grid (value sinks to the bottom
+  // with empty space above). Keeping all the Figma affordances
+  // — label, info tooltip, threshold pill, arrow + pp delta — just
+  // distributing them across 3 rows so heights and content
+  // anchoring align with Active / Win / Recovered / At Risk.
   return (
     <div
       style={{
@@ -299,31 +307,16 @@ function ChargebackKpiTile({
         borderRadius: "10px",
         border: "1px solid #E1E3E5",
         padding: "16px",
-        // Match the height of the other 4 KPI tiles (which carry an
-        // extra "vs last month" change-indicator row). flex-column +
-        // space-between distributes the title row to the top and the
-        // value row to the bottom, killing the ragged-bottom look.
-        // `gap` sets the minimum spacing; space-between fills any
-        // remaining height when the grid cell is taller than the
-        // natural content.
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        gap: "12px",
-        // Force the card to fill its grid cell — defensive against
-        // any parent that overrides the grid `align-items: stretch`
-        // default. Without this, content-sized cards stay short next
-        // to taller siblings.
-        alignSelf: "stretch",
-        minHeight: "100%",
       }}
     >
+      {/* Row 1 — title (label + info icon) | threshold pill */}
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: "8px",
+          marginBottom: "12px",
         }}
       >
         <div
@@ -335,11 +328,6 @@ function ChargebackKpiTile({
             flex: 1,
           }}
         >
-          {/* Allow the label to wrap to a second line at narrow card
-              widths instead of truncating with ellipsis. The other 4
-              cards' labels are short enough to never wrap; only this
-              one ("Chargeback rate (30d)" — 21 chars) ever exceeds a
-              single line at 5-column grid widths. */}
           <p
             style={{
               fontSize: "12px",
@@ -394,20 +382,16 @@ function ChargebackKpiTile({
         )}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          gap: "8px",
-        }}
-      >
-        <p style={{ fontSize: "24px", fontWeight: 700, color: "#202223", margin: 0 }}>
-          {display}
-        </p>
-        {available && delta !== null && (
-          <ChargebackDelta value={delta} />
-        )}
+      {/* Row 2 — value (large, alone). Sits in the middle of the
+          card, matching where the other 4 tiles place their value. */}
+      <p style={{ fontSize: "24px", fontWeight: 700, color: "#111827", margin: 0 }}>
+        {display}
+      </p>
+
+      {/* Row 3 — arrow + pp delta. Same vertical position as the
+          other tiles' "X% vs last month" change indicator. */}
+      <div style={{ marginTop: "6px", minHeight: "18px" }}>
+        {available && delta !== null && <ChargebackDelta value={delta} />}
       </div>
     </div>
   );
