@@ -476,33 +476,40 @@ UTC day boundary is intentional: card-network reporting standards are UTC-based,
 
 ### Dashboard KPI tile (Figma alignment 2026-05-01)
 
-Fifth card on the existing `Performance overview` row (no new sections, no chart, no nav per PRD §8). `DashboardKpis.tsx` adds the card to `desktopCards` (auto-fit grid wraps to 4+1 at typical embedded widths) and a Row-4 full-width tile on mobile so the threshold pill doesn't truncate.
+Fifth card on the existing `Performance overview` row (no new sections, no chart, no nav per PRD §8). `DashboardKpis.tsx` exports a dedicated **`ChargebackKpiTile`** component — separate from the shared `DesktopKpiTile` / `MobileKpiTile` — because the chargeback card carries affordances the standard tile doesn't have (info tooltip, threshold pill in the title row top-right, lucide-equivalent arrow icon for the delta). The other 4 KPI tiles (Active / Win Rate / Recovered / At Risk) are unchanged.
 
-The card renders **only** label, value, threshold badge, and pp delta — per PRD §8 explicit "DO NOT add subtext / numerator-denominator / explanations on the card." Numerator/denominator, last-synced timestamp, and explanatory hints live in the inline `ChargebackRateDetailsStrip` below the KPI grid (see next section).
+**Layout — 3 rows matching the visual rhythm of the other 4 tiles:**
 
-- Title: "Chargeback rate (30d)" via `dashboard.chargebackRate` (12 locales).
-- Value: `stats.chargebackRate.toFixed(1) + "%"` when `chargebackRateAvailable`; `—` otherwise.
-- Threshold pill: `Healthy` (`<0.6%`) green, `Watch` (`0.6–0.9%`) amber, `High risk` (`>0.9%`) red per PRD §8.
-- Delta: `ChangeIndicator` with `unit: "pp"` and `inverse: true` (up = red, down = green). The unit prop is new; existing tiles default to `%` and are unaffected.
-- The prior `KpiCard.subtext` and `KpiCard.unavailable` props were removed — the card never carries that copy anymore.
+1. **Title row** (`flex justify-between, align-items: flex-start`):
+   - Left: label "Chargeback rate (30d)" (`12px / #6D7175`) + Polaris `Tooltip`-wrapped Info icon (12×12). Tooltip body is a `BlockStack` with the three threshold bands (Healthy `<0.6%` / Watch `0.6%–0.9%` / High risk `>0.9%`) plus a card-network penalty footnote.
+   - Right: threshold pill — `Healthy` green (`#D1FAE5`/`#065F46`), `Watch` amber (`#FEF3C7`/`#92400E`), `High risk` red (`#FEE2E2`/`#991B1B`). `padding: 2px 6px`, `border-radius: 6px`, `font-size: 10px`.
+   - Label has `overflow-wrap: anywhere` so "(30d)" wraps to a second line at narrow grid widths instead of truncating to "Chargeback r…".
+2. **Value row:** `24px bold #111827` rate value, alone on the row. Renders `—` when `!chargebackRateAvailable || chargebackRate === null`.
+3. **Delta row:** custom `ChargebackDelta` helper — Polaris `ArrowUpIcon` (red `#DC2626`) for an increase, `ArrowDownIcon` (green `#059669`) for a decrease, neutral subdued for zero. Format: `↑ +0.1 pp` / `↓ 0.1 pp`. **Does NOT use `ChangeIndicator`** (the helper used by the other 4 tiles), because (a) chargeback's "vs last month" suffix isn't shown on the card and (b) the arrow icon matches Figma's `TrendingUp/Down` lucide treatment more faithfully.
 
-### Inline details strip (Figma Task 2 — `ChargebackRateDetailsStrip`)
+**Card chrome:** `border: 1px solid #E1E3E5; border-radius: 10px; padding: 16px`. Natural content height matches the other 4 tiles in the auto-fit grid — no `flex-direction: column; justify-content: space-between` tricks needed.
 
-A non-card affordance directly below the KPI grid, inside the same Performance Overview container, separated by a 1-px `#E5E7EB` border-top. **No background box, no shadow, no heavy padding** per PRD §8 styling rules.
+**Mobile:** the chargeback card lives in Row 4 of the custom mobile stack (full width). Same `ChargebackKpiTile` component; the card is the same shape as on desktop.
 
-- **Default state:** right-aligned `Details` link only. No duplicate KPI values, no explanatory text.
-- **Expanded state:** inline row of 12-px subdued items —
-  - `{numerator} chargebacks / {denominator} orders` (locale-formatted)
-  - Delta sentence: `+0.1 pp increase` / `0.1 pp decrease` / `No change vs prior period`
-  - `Last synced 12m ago` (locale-aware relative time: `just now` / `Xm ago` / `Xh ago` / `Xd ago` / `no snapshot yet`)
-  - **Optional** `Low volume — rate may be volatile` when `chargebackRateLowVolume`
-  - **Optional** `Approaching risk threshold (0.9%)` when `0.8 ≤ rate < 0.9` (upper Watch band only — below 0.8 there's headroom; above 0.9 the High-risk badge already signals it)
+The card renders **only** label, info tooltip, threshold pill, value, and pp delta — per PRD §8 explicit "DO NOT add subtext / numerator-denominator / explanations on the card." Numerator/denominator, last-synced timestamp, and explanatory hints live in the inline `ChargebackRateDetailsStrip` below the KPI grid (see next section).
+
+### Inline details strip (`ChargebackRateDetailsStrip`)
+
+A non-card affordance directly below the KPI grid, inside the same Performance Overview container, separated by a 1-px `#E1E3E5` border-top. **No background box, no shadow, no heavy padding** per PRD §8 styling rules. Mirrors Figma `shopify-home.tsx:331-365` literally.
+
+- **Default state:** right-aligned `Details` link only — Shopify-blue `#005BD3` with underline-on-hover. Always rendered after initial load (only suppressed during the loading skeleton). Earlier "hide-when-empty" was an invented optimization and was removed.
+- **Expanded state:** vertical stack of 12px subdued lines (Figma `mt-2 space-y-1.5`):
+  - `{numerator} chargebacks / {denominator} orders` — numerator bolded against subdued parent text (`font-medium #202223` inside `#6D7175`).
+  - pp delta sentence — color-keyed: red `#DC2626` for an increase, green `#059669` for a decrease, neutral for flat. Format from i18n: `+0.1 pp increase` / `0.1 pp decrease` / `No change vs prior period`.
+  - **Optional** `Approaching risk threshold (0.9%)` — surfaces whenever `chargebackRate >= 0.7%` (matches Figma's literal trigger; spans the upper Watch band through High risk).
+  - `Last synced 12m ago` — locale-aware relative time: `just now` / `Xm ago` / `Xh ago` / `Xd ago` / `no snapshot yet`.
+  - **Optional** `Low volume — rate may be volatile` rendered as a yellow pill (`bg-[#FEF3C7] / text-[#92400E] / px-2 py-1 rounded inline-block`) when `chargebackRateLowVolume === true`.
+- **No-snapshot fallback:** when `!chargebackRateAvailable`, the expanded panel collapses to a single italicized "Calculating…" line so the affordance still feels responsive on fresh installs / mid-backfill. The Details button itself remains visible.
 - **Toggle:** `Details` ⇄ `Hide details`, no animation beyond simple expand. Self-contained `useState` — no global state, no URL param.
-- **Hide-when-empty:** suppresses entirely when there's no snapshot **and** no `lastSyncedAt`. Toggling open to show only "Calculating…" would be wasteful UX during the first day post-install.
 
 i18n keys (`messages/{locale}.json`, all 12 locales):
-- KPI tile: `dashboard.chargebackRate`, `dashboard.chargebackRateThresholdHealthy / Watch / High`
-- Details strip: `dashboard.chargebackRateDetailsShow / Hide`, `chargebackRateSubtext` (`{numerator}` / `{denominator}`), `chargebackRateDeltaIncrease / Decrease / Flat` (`{value}` placeholder), `chargebackRateLastSynced` (`{ago}` placeholder), `chargebackRateLowVolume`, `chargebackRateApproachingThreshold`, `chargebackRateRelativeJustNow / Minutes / Hours / Days / Never`
+- KPI tile: `dashboard.chargebackRate`, `dashboard.chargebackRateThresholdHealthy / Watch / High`, `dashboard.chargebackRateTooltipFootnote`
+- Details strip: `dashboard.chargebackRateDetailsShow / Hide`, `chargebackRateSubtext` (`{numerator}` / `{denominator}`), `chargebackRateDeltaIncrease / Decrease / Flat` (`{value}` placeholder), `chargebackRateLastSynced` (`{ago}` placeholder), `chargebackRateLowVolume`, `chargebackRateApproachingThreshold`, `chargebackRateRelativeJustNow / Minutes / Hours / Days / Never`, `chargebackRateUnavailable` (the "Calculating…" italicized fallback)
 
 ### Admin shops list (Figma `pages/admin/shops-admin.tsx`)
 
