@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { BlockStack, Icon, Text, useBreakpoints } from "@shopify/polaris";
 import {
@@ -38,6 +39,7 @@ function ChangeIndicator({
   value,
   label,
   inverse = false,
+  unit = "%",
 }: {
   value: number | null;
   label: string;
@@ -46,6 +48,9 @@ function ChangeIndicator({
    *  rate, error rate, etc. Defaults false to preserve the existing
    *  active-disputes / win-rate / amount-at-risk semantics. */
   inverse?: boolean;
+  /** Display unit for the delta. Existing tiles render `%`; chargeback
+   *  rate renders `pp` (percentage points) per PRD §7. */
+  unit?: "%" | "pp";
 }) {
   if (value === null || value === undefined) return null;
   const isPositive = value > 0;
@@ -57,10 +62,12 @@ function ChangeIndicator({
     : isNegative
       ? (inverse ? goodColor : badColor)
       : "#9CA3AF";
+  const formatted = unit === "pp" ? value.toFixed(1) : String(value);
+  const suffix = unit === "pp" ? " pp" : "%";
   return (
     <span style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
       <span style={{ fontWeight: 500, color }}>
-        {isPositive ? "+" : ""}{value}%
+        {isPositive ? "+" : ""}{formatted}{suffix}
       </span>
       <span style={{ color: "#9CA3AF" }}>{label}</span>
     </span>
@@ -108,21 +115,16 @@ interface KpiCard {
   change: number | null;
   /** When true, "up = bad" for the change indicator. */
   changeInverse?: boolean;
-  /** Optional descriptor below the value (e.g. "12 disputes / 1,460
-   *  orders" on the chargeback rate tile). */
-  subtext?: string;
+  /** Display unit for the change indicator. Defaults to `%`; chargeback
+   *  rate uses `pp` per PRD §7. */
+  changeUnit?: "%" | "pp";
   /** Optional inline pill rendered to the right of the value. Used by
    *  the chargeback rate tile to surface the Healthy / Watch / High
    *  risk threshold band per PRD §8. */
   badge?: { label: string; tone: ThresholdTone };
-  /** Replaces the value with the supplied helper string when true.
-   *  Used when a snapshot is missing for the window — UI shows
-   *  "Calculating…" instead of a misleading 0%. */
-  unavailable?: { value: string; helper: string };
 }
 
 function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: string; loading: boolean }) {
-  const display = card.unavailable ? card.unavailable.value : (loading ? "—" : card.value);
   return (
     <div
       style={{
@@ -150,9 +152,9 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
         <p style={{ fontSize: "24px", fontWeight: 700, color: "#111827", margin: 0 }}>
-          {display}
+          {loading ? "—" : card.value}
         </p>
-        {card.badge && !card.unavailable && (
+        {card.badge && (
           <span
             style={{
               padding: "2px 8px",
@@ -169,16 +171,12 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
           </span>
         )}
       </div>
-      {(card.subtext || card.unavailable) && (
-        <p style={{ fontSize: "12px", color: "#6D7175", margin: "4px 0 0", lineHeight: 1.4 }}>
-          {card.unavailable ? card.unavailable.helper : card.subtext}
-        </p>
-      )}
       <div style={{ marginTop: "6px" }}>
         <ChangeIndicator
           value={card.change}
           label={vsLabel}
           inverse={card.changeInverse}
+          unit={card.changeUnit}
         />
       </div>
     </div>
@@ -196,7 +194,6 @@ function MobileKpiTile({
   loading: boolean;
   critical?: boolean;
 }) {
-  const display = card.unavailable ? card.unavailable.value : (loading ? "—" : card.value);
   return (
     <div className={`${styles.kpiTileMobile} ${critical ? styles.kpiHeroTileRisk : ""}`}>
       <div className={styles.header}>
@@ -206,8 +203,8 @@ function MobileKpiTile({
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
-        <p className={styles.value}>{display}</p>
-        {card.badge && !card.unavailable && (
+        <p className={styles.value}>{loading ? "—" : card.value}</p>
+        {card.badge && (
           <span
             style={{
               padding: "2px 8px",
@@ -224,16 +221,12 @@ function MobileKpiTile({
           </span>
         )}
       </div>
-      {(card.subtext || card.unavailable) && (
-        <p style={{ fontSize: "12px", color: "#6D7175", margin: "4px 0 0", lineHeight: 1.4 }}>
-          {card.unavailable ? card.unavailable.helper : card.subtext}
-        </p>
-      )}
       <div style={{ marginTop: "6px" }}>
         <ChangeIndicator
           value={card.change}
           label={vsLabel}
           inverse={card.changeInverse}
+          unit={card.changeUnit}
         />
       </div>
     </div>
@@ -285,12 +278,11 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
   };
 
   // ── Chargeback rate (PRD §8) ────────────────────────────────────────
-  // Read directly from the snapshot-fed metrics. When `available` is
-  // false the snapshot pipeline hasn't filled the window yet (fresh
-  // install during backfill, or recently uninstalled+reinstalled);
-  // surface "Calculating…" rather than a misleading "0.00%".
-  const dateLocale = useDateLocale();
-  const numberFmt = (n: number) => new Intl.NumberFormat(dateLocale).format(n);
+  // Card itself shows ONLY: title, rounded value, threshold badge,
+  // pp delta with inverse coloring (up = bad). Numerator/denominator,
+  // last-synced, and explanatory hints all live in the Details strip
+  // below the KPI row — never inside the tile (PRD §8 "DO NOT add
+  // subtext / numerator-denominator / explanations").
   const chargebackBand = classifyChargebackRate(stats.chargebackRate);
   const chargebackBadgeLabel =
     chargebackBand === "healthy"
@@ -300,31 +292,20 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
         : chargebackBand === "high"
           ? t("dashboard.chargebackRateThresholdHigh")
           : null;
-  const chargebackSubtext = stats.chargebackRateAvailable
-    ? (stats.chargebackRateLowVolume
-        ? t("dashboard.chargebackRateLowVolume")
-        : t("dashboard.chargebackRateSubtext", {
-            numerator: numberFmt(stats.chargebackRateNumerator),
-            denominator: numberFmt(stats.chargebackRateDenominator),
-          }))
-    : undefined;
   const chargebackRate: KpiCard = {
     icon: ShieldCheckMarkIcon,
     label: t("dashboard.chargebackRate"),
-    value: stats.chargebackRate !== null ? `${stats.chargebackRate.toFixed(2)}%` : "—",
-    change: stats.chargebackRateChange,
+    value:
+      stats.chargebackRateAvailable && stats.chargebackRate !== null
+        ? `${stats.chargebackRate.toFixed(1)}%`
+        : "—",
+    change: stats.chargebackRateAvailable ? stats.chargebackRateChange : null,
     changeInverse: true,
-    subtext: chargebackSubtext,
+    changeUnit: "pp",
     badge:
       chargebackBand && chargebackBadgeLabel
         ? { label: chargebackBadgeLabel, tone: chargebackBand }
         : undefined,
-    unavailable: !stats.chargebackRateAvailable
-      ? {
-          value: "—",
-          helper: t("dashboard.chargebackRateUnavailable"),
-        }
-      : undefined,
   };
 
   const desktopCards = [active, winRate, recovered, atRisk, chargebackRate];
@@ -377,7 +358,167 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
           </div>
         </>
       )}
+      <ChargebackRateDetailsStrip stats={stats} loading={loading} />
     </div>
   );
+}
+
+/**
+ * Inline details strip below the KPI row (PRD §8 Task 2).
+ *
+ * NOT a card — sits inside the existing Performance Overview container
+ * with a subtle border-top divider so it visually attaches to the KPI
+ * row. Default state: a right-aligned `Details` link only. Expanded:
+ * numerator/denominator, pp delta, last-synced timestamp, plus optional
+ * low-volume and approaching-threshold hints.
+ *
+ * Hides itself entirely when:
+ *   - The dashboard is in its initial loading state, or
+ *   - The chargeback snapshot is unavailable AND there's no last-synced
+ *     timestamp to show — there's nothing useful to expand to.
+ */
+function ChargebackRateDetailsStrip({
+  stats,
+  loading,
+}: {
+  stats: DashboardStats;
+  loading: boolean;
+}) {
+  const t = useTranslations();
+  const dateLocale = useDateLocale();
+  const [expanded, setExpanded] = useState(false);
+
+  if (loading) return null;
+  // Nothing meaningful to surface — hide the affordance entirely.
+  if (!stats.chargebackRateAvailable && !stats.chargebackRateLastSyncedAt) {
+    return null;
+  }
+
+  const numberFmt = (n: number) => new Intl.NumberFormat(dateLocale).format(n);
+  const change = stats.chargebackRateChange;
+
+  const deltaLabel = (() => {
+    if (change === null || change === undefined) return null;
+    if (change > 0) {
+      return t("dashboard.chargebackRateDeltaIncrease", {
+        value: change.toFixed(1),
+      });
+    }
+    if (change < 0) {
+      return t("dashboard.chargebackRateDeltaDecrease", {
+        value: Math.abs(change).toFixed(1),
+      });
+    }
+    return t("dashboard.chargebackRateDeltaFlat");
+  })();
+
+  const lastSyncedLabel = stats.chargebackRateLastSyncedAt
+    ? t("dashboard.chargebackRateLastSynced", {
+        ago: relativeTime(t, stats.chargebackRateLastSyncedAt),
+      })
+    : null;
+
+  // PRD §8 — "Approaching risk threshold (0.9%)" only when the rate is
+  // in the upper half of the Watch band, i.e. 0.8% ≤ rate < 0.9%.
+  // Below 0.8% the merchant has plenty of headroom; above 0.9% the
+  // High-risk badge already signals it.
+  const approachingThreshold =
+    stats.chargebackRateAvailable &&
+    stats.chargebackRate !== null &&
+    stats.chargebackRate >= 0.8 &&
+    stats.chargebackRate < 0.9;
+
+  const showLowVolume =
+    stats.chargebackRateAvailable && stats.chargebackRateLowVolume;
+
+  return (
+    <div
+      style={{
+        marginTop: "16px",
+        paddingTop: "12px",
+        borderTop: "1px solid #E5E7EB",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: expanded ? "space-between" : "flex-end",
+          flexWrap: "wrap",
+          gap: "12px",
+        }}
+      >
+        {expanded && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              fontSize: "12px",
+              color: "#6D7175",
+              lineHeight: 1.4,
+            }}
+          >
+            {stats.chargebackRateAvailable && (
+              <span>
+                {t("dashboard.chargebackRateSubtext", {
+                  numerator: numberFmt(stats.chargebackRateNumerator),
+                  denominator: numberFmt(stats.chargebackRateDenominator),
+                })}
+              </span>
+            )}
+            {deltaLabel && <span>{deltaLabel}</span>}
+            {lastSyncedLabel && <span>{lastSyncedLabel}</span>}
+            {showLowVolume && (
+              <span style={{ color: "#92400E" }}>
+                {t("dashboard.chargebackRateLowVolume")}
+              </span>
+            )}
+            {approachingThreshold && (
+              <span style={{ color: "#92400E" }}>
+                {t("dashboard.chargebackRateApproachingThreshold")}
+              </span>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          style={{
+            appearance: "none",
+            background: "transparent",
+            border: 0,
+            padding: 0,
+            fontSize: "12px",
+            fontWeight: 500,
+            color: "#1D4ED8",
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {expanded
+            ? t("dashboard.chargebackRateDetailsHide")
+            : t("dashboard.chargebackRateDetailsShow")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function relativeTime(
+  t: ReturnType<typeof useTranslations>,
+  iso: string,
+): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return t("dashboard.chargebackRateRelativeNever");
+  if (ms < 60_000) return t("dashboard.chargebackRateRelativeJustNow");
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 60) return t("dashboard.chargebackRateRelativeMinutes", { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t("dashboard.chargebackRateRelativeHours", { count: hours });
+  const days = Math.floor(hours / 24);
+  return t("dashboard.chargebackRateRelativeDays", { count: days });
 }
 

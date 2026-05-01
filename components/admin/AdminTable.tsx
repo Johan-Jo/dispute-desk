@@ -1,8 +1,24 @@
-import { Search } from "lucide-react";
+import { Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+
+/** A header cell. Plain string for static columns; the object form
+ *  enables sorting (used by the admin shops list "Chargeback rate
+ *  (90d)" column). Backward compatible with every existing call
+ *  site that still passes `string[]`. */
+export type AdminTableHeader =
+  | string
+  | {
+      label: string;
+      align?: "left" | "right";
+      sortable?: boolean;
+      sortDirection?: "asc" | "desc" | null;
+      onSort?: () => void;
+    };
 
 interface AdminTableProps {
-  headers: string[];
-  /** Pass `"right"` to right-align a header (e.g. for Actions columns). Index matches headers array. */
+  headers: AdminTableHeader[];
+  /** Pass `"right"` to right-align a header (e.g. for Actions columns).
+   *  Used only when the corresponding header is a plain string —
+   *  object-form headers carry their own `align` property. */
   headerAlign?: Record<number, "left" | "right">;
   children: React.ReactNode;
   loading?: boolean;
@@ -37,16 +53,54 @@ export function AdminTable({
           <table className="w-full">
             <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
               <tr>
-                {headers.map((header, i) => (
-                  <th
-                    key={header}
-                    className={`px-6 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider ${
-                      headerAlign?.[i] === "right" ? "text-right" : "text-left"
-                    }`}
-                  >
-                    {header}
-                  </th>
-                ))}
+                {headers.map((header, i) => {
+                  const isObject = typeof header !== "string";
+                  const label = isObject ? header.label : header;
+                  const align = isObject
+                    ? header.align ?? "left"
+                    : headerAlign?.[i] ?? "left";
+                  const sortable = isObject && header.sortable === true;
+                  const sortDirection = isObject ? header.sortDirection ?? null : null;
+                  const baseClass = `px-6 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider ${
+                    align === "right" ? "text-right" : "text-left"
+                  }`;
+                  if (!sortable) {
+                    return (
+                      <th key={`${label}-${i}`} className={baseClass}>
+                        {label}
+                      </th>
+                    );
+                  }
+                  const SortIcon =
+                    sortDirection === "asc"
+                      ? ArrowUp
+                      : sortDirection === "desc"
+                        ? ArrowDown
+                        : ArrowUpDown;
+                  return (
+                    <th key={`${label}-${i}`} className={baseClass}>
+                      <button
+                        type="button"
+                        onClick={isObject ? header.onSort : undefined}
+                        aria-sort={
+                          sortDirection === "asc"
+                            ? "ascending"
+                            : sortDirection === "desc"
+                              ? "descending"
+                              : "none"
+                        }
+                        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                          sortDirection
+                            ? "text-[#0F172A]"
+                            : "text-[#64748B] hover:text-[#0F172A]"
+                        }`}
+                      >
+                        {label}
+                        <SortIcon className="w-3 h-3" />
+                      </button>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]">{children}</tbody>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Store, ExternalLink, Calendar } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
-import { AdminTable } from "@/components/admin/AdminTable";
+import { AdminTable, type AdminTableHeader } from "@/components/admin/AdminTable";
 import { StatusPill } from "@/components/admin/StatusPill";
 
 interface Shop {
@@ -15,13 +15,39 @@ interface Shop {
   plan: string;
   created_at: string;
   uninstalled_at: string | null;
+  /** Computed by the API from `shop_daily_metrics` over the trailing
+   *  90 UTC days. Null when the shop has no snapshot rows yet
+   *  (fresh install, mid-backfill) or when the window denominator is
+   *  zero. */
+  chargebackRate90d: number | null;
+  chargebackRate90dNumerator: number;
+  chargebackRate90dDenominator: number;
+  chargebackRate90dAvailable: boolean;
 }
+
+type SortDirection = "asc" | "desc";
+
+function chargebackTone(rate: number | null): "green" | "amber" | "red" | null {
+  if (rate === null) return null;
+  if (rate < 0.6) return "green";
+  if (rate <= 0.9) return "amber";
+  return "red";
+}
+
+const TONE_TEXT: Record<"green" | "amber" | "red", string> = {
+  green: "text-[#15803D]",
+  amber: "text-[#B45309]",
+  red: "text-[#B91C1C]",
+};
 
 export default function AdminShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  /** Sort state for the chargeback rate column. Null = default API
+   *  order (created_at desc). Click toggles desc → asc → null. */
+  const [chargebackSort, setChargebackSort] = useState<SortDirection | null>(null);
 
   const fetchShops = useCallback(async () => {
     setLoading(true);
@@ -41,6 +67,28 @@ export default function AdminShopsPage() {
     if (planFilter !== "all" && (s.plan ?? "free") !== planFilter) return false;
     return true;
   });
+
+  // Client-side sort by chargeback rate (90d). Nulls always at the
+  // bottom regardless of direction so "Calculating…" rows don't crowd
+  // the top of a "highest rate first" view.
+  const sorted = useMemo(() => {
+    if (!chargebackSort) return filtered;
+    const dir = chargebackSort === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const ar = a.chargebackRate90d;
+      const br = b.chargebackRate90d;
+      if (ar === null && br === null) return 0;
+      if (ar === null) return 1;
+      if (br === null) return -1;
+      return (ar - br) * dir;
+    });
+  }, [filtered, chargebackSort]);
+
+  const cycleChargebackSort = () => {
+    setChargebackSort((prev) =>
+      prev === null ? "desc" : prev === "desc" ? "asc" : null,
+    );
+  };
 
   const active = shops.filter((s) => !s.uninstalled_at).length;
   const uninstalled = shops.filter((s) => s.uninstalled_at).length;
@@ -83,16 +131,28 @@ export default function AdminShopsPage() {
       />
 
       <AdminTable
-        headers={["Shop Domain", "Plan", "Status", "Installed", "Actions"]}
-        headerAlign={{ 4: "right" }}
+        headers={[
+          "Shop Domain",
+          "Plan",
+          "Status",
+          {
+            label: "Chargeback rate (90d)",
+            sortable: true,
+            sortDirection: chargebackSort,
+            onSort: cycleChargebackSort,
+          },
+          "Installed",
+          { label: "Actions", align: "right" },
+        ] as AdminTableHeader[]}
         loading={loading}
-        isEmpty={!loading && filtered.length === 0}
+        isEmpty={!loading && sorted.length === 0}
         emptyTitle="No shops found"
         emptyMessage="Try adjusting your search or plan filter"
       >
-        {filtered.map((s) => {
+        {sorted.map((s) => {
           const plan = (s.plan ?? "free").toLowerCase();
           const _pc = planColors[plan];
+          const tone = chargebackTone(s.chargebackRate90d);
           return (
             <tr key={s.id} className="hover:bg-[#F8FAFC] transition-colors">
               <td className="px-6 py-4">
@@ -106,6 +166,22 @@ export default function AdminShopsPage() {
               </td>
               <td className="px-6 py-4">
                 <StatusPill status={s.uninstalled_at ? "uninstalled" : "active"} />
+              </td>
+              <td className="px-6 py-4">
+                {s.chargebackRate90dAvailable && s.chargebackRate90d !== null ? (
+                  <div className="flex flex-col">
+                    <span
+                      className={`text-sm font-semibold ${tone ? TONE_TEXT[tone] : "text-[#0F172A]"}`}
+                    >
+                      {s.chargebackRate90d.toFixed(1)}%
+                    </span>
+                    <span className="text-xs text-[#94A3B8]">
+                      {s.chargebackRate90dNumerator} / {s.chargebackRate90dDenominator}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-[#94A3B8]">—</span>
+                )}
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-1.5">
