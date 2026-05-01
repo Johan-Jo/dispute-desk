@@ -43,6 +43,17 @@ export interface DashboardStats {
   winRateTrend: number[];
   disputeCategories: { label: string; value: number }[];
   recentActivity: ActivityItem[];
+
+  // ── Chargeback rate (PRD §8) ─────────────────────────────────────
+  // Rate is null when the snapshot is missing for the window — UI
+  // renders "—" + "Calculating…" rather than a misleading 0%.
+  chargebackRate: number | null;
+  chargebackRateChange: number | null;
+  chargebackRateNumerator: number;
+  chargebackRateDenominator: number;
+  chargebackRateAvailable: boolean;
+  chargebackRateLowVolume: boolean;
+  chargebackRateLastSyncedAt: string | null;
 }
 
 export const DEFAULT_STATS: DashboardStats = {
@@ -75,6 +86,13 @@ export const DEFAULT_STATS: DashboardStats = {
   winRateTrend: [0, 0, 0, 0, 0, 0],
   disputeCategories: [],
   recentActivity: [],
+  chargebackRate: null,
+  chargebackRateChange: null,
+  chargebackRateNumerator: 0,
+  chargebackRateDenominator: 0,
+  chargebackRateAvailable: false,
+  chargebackRateLowVolume: false,
+  chargebackRateLastSyncedAt: null,
 };
 
 export function useDateLocale() {

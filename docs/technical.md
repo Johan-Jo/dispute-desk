@@ -420,12 +420,14 @@ worker endpoint (`/api/jobs/worker`).
 
 ### Job Types
 
-| Type             | Trigger                              | Handler                                |
-|------------------|--------------------------------------|----------------------------------------|
-| sync_disputes    | Cron, manual, or dispute webhooks    | lib/jobs/handlers/syncDisputesJob.ts   |
-| build_pack       | Automation pipeline or manual        | lib/jobs/handlers/buildPackJob.ts      |
-| render_pdf       | POST /api/packs/:packId/render-pdf   | lib/jobs/handlers/renderPdfJob.ts      |
-| save_to_shopify  | Auto-save gate or POST .../approve   | lib/jobs/handlers/saveToShopifyJob.ts  |
+| Type                          | Trigger                                                | Handler                                                  |
+|-------------------------------|--------------------------------------------------------|----------------------------------------------------------|
+| sync_disputes                 | Cron, manual, or dispute webhooks                      | lib/jobs/handlers/syncDisputesJob.ts                     |
+| build_pack                    | Automation pipeline or manual                          | lib/jobs/handlers/buildPackJob.ts                        |
+| render_pdf                    | POST /api/packs/:packId/render-pdf                     | lib/jobs/handlers/renderPdfJob.ts                        |
+| save_to_shopify               | Auto-save gate or POST .../approve                     | lib/jobs/handlers/saveToShopifyJob.ts                    |
+| snapshot_shop_daily_metrics   | Daily cron (`/api/cron/snapshot-daily-metrics`)         | lib/jobs/handlers/snapshotShopDailyMetricsJob.ts         |
+| backfill_shop_daily_metrics   | OAuth callback (install/reinstall) — fire-and-forget   | lib/jobs/handlers/backfillShopDailyMetricsJob.ts         |
 
 ### Execution Flow
 
@@ -436,7 +438,66 @@ worker endpoint (`/api/jobs/worker`).
 5. Retry: 3 attempts, 30s × attempt backoff on failure.
 6. UI polls `GET /api/jobs/:id` every 3 seconds until terminal state.
 
-## Database Migrations
+The worker route declares `export const maxDuration = 300` so that the bulk `backfill_shop_daily_metrics` handler — which loops through 90 UTC days × ~700ms/day ≈ 63s — completes inside one invocation rather than fanning out as 90 separate jobs (which would queue serially against the per-shop concurrency cap and stretch a backfill over ~3 hours).
+
+## Chargeback Rate (PRD §8 + §9)
+
+### Snapshot pipeline
+
+`shop_daily_metrics(shop_id, date, order_count, dispute_count, chargeback_count, inquiry_count, last_synced_at)` (migration `20260501100000_shop_daily_metrics.sql`) is the single source of truth for the chargeback-rate metric. The dashboard KPI and the admin Risk profile both read from this table; **never live Shopify** at the read side (PRD §6, §12).
+
+Snapshot writers:
+- **`/api/cron/snapshot-daily-metrics`** — Vercel Cron `30 0 * * *` (00:30 UTC, after the prior UTC day fully closes). Enqueues one `snapshot_shop_daily_metrics` job per active shop with `entity_id = yesterday's YYYY-MM-DD`. Skips when a job for the same (shop, date) is already queued/running (idempotent).
+- **`enqueueShopDailyMetricsBackfill(shopId)`** — fire-and-forget call from the OAuth callback (`/api/auth/shopify/callback`) right after `storeSession()`. Enqueues a single `backfill_shop_daily_metrics` job that walks the trailing 90 UTC days. Idempotent: skips when any rows already exist for the shop (re-installs after uninstall don't re-pay the cost), and skips already-snapshotted dates inside the loop so retries are cheap.
+
+Each per-day snapshot:
+1. Resolves the shop's offline session via `getShopBackgroundSession`.
+2. Calls Shopify GraphQL `ordersCount(query: "created_at:>=…Z created_at:<…Z")` once for the UTC day → `order_count` (one query point per call, ~500ms).
+3. Reads the local `disputes` table filtered by `initiated_at` ∈ [day, day+1) → `dispute_count` total, split into `chargeback_count` (phase = 'chargeback') and `inquiry_count` (phase = 'inquiry'). Phase-NULL legacy rows are excluded from both buckets but counted in `dispute_count`.
+4. Upserts on (shop_id, date) and stamps `last_synced_at`.
+
+UTC day boundary is intentional: card-network reporting standards are UTC-based, and merchant timezones are not considered. Adding 200ms between days inside the backfill loop keeps the job safely under Shopify's 50-points-per-second restore rate.
+
+### Read path
+
+`lib/disputes/chargebackRate.ts → computeChargebackRate({ shopId, fromDate?, toDate? })` returns `{ rate, rateChange, numerator, denominator, available, lowVolume, daysCovered, daysExpected, lastSyncedAt }`. Rules:
+- Rate is `100 × chargeback_count / order_count`, rounded to one decimal place.
+- `available: false` when zero snapshot rows cover the window — UI renders "Calculating…" rather than a misleading 0%.
+- `available: true, rate: null` when all rows have `order_count = 0` (avoids 0/0 → NaN).
+- `lowVolume: true` when `denominator < 50` (PRD §11). UI suppresses the numerator/denominator subtext in favour of a "Low volume — rate may be volatile" hint.
+- `rateChange` is the **percentage-point** delta vs. the prior equal-length window. Same unit convention as `winRateChange` (PRD §7).
+- `lastSyncedAt` is the most-recent `last_synced_at` in the window — drives the admin Sync freshness signal.
+
+`computeDisputeMetrics` (`lib/disputes/metrics.ts`) calls `computeChargebackRate` once with the period derived from `periodFrom/periodTo`, surfaces the result on `DisputeMetrics` as `chargebackRate`, `chargebackRateChange`, `chargebackRateNumerator`, `chargebackRateDenominator`, `chargebackRateAvailable`, `chargebackRateLowVolume`, `chargebackRateLastSyncedAt`. Every consumer route (`/api/dashboard/stats`, `/api/admin/metrics`) gets these for free via the existing `...m` spread.
+
+### Dashboard KPI tile
+
+Fifth card on the existing `Performance overview` row (no new sections, no chart, no nav per PRD §8). `DashboardKpis.tsx` adds the card to `desktopCards` (auto-fit grid wraps to 4+1 at typical embedded widths) and a Row-4 full-width tile on mobile (so the threshold pill + subtext don't truncate inside a 2-column grid). Tile renders:
+- Value `0.82%` (or `—` when `chargebackRateAvailable` is false; helper "Calculating…" replaces the subtext)
+- Inline threshold pill — `Healthy` (`<0.6%`), `Watch` (`0.6–0.9%`), `High risk` (`>0.9%`) per PRD §8.
+- Subtext `12 disputes / 1,460 orders` (locale-formatted) or `Low volume — rate may be volatile` when `chargebackRateLowVolume`.
+- Change indicator: percentage points, **inverse coloring** (up = red, down = green) — opposite of the win-rate / amount-recovered convention. Implemented as the new `inverse` prop on `ChangeIndicator`; other tiles unchanged.
+
+i18n keys (`messages/{locale}.json`, all 12 locales):
+- `dashboard.chargebackRate`
+- `dashboard.chargebackRateSubtext` (`{numerator}` and `{denominator}` placeholders)
+- `dashboard.chargebackRateUnavailable`
+- `dashboard.chargebackRateLowVolume`
+- `dashboard.chargebackRateThresholdHealthy` / `Watch` / `High`
+
+### Admin Risk profile (`/admin/shops/[id]`)
+
+`components/admin/ShopRiskProfile.tsx` renders the section above the Admin Overrides card. Fetches `GET /api/admin/shops/[id]/risk` (handler: `lib/admin/shopRisk.ts → getShopRiskProfile`) which composes:
+- 30d + 90d `RateCard` (chargeback rate with threshold pill + pp delta, or "Calculating…")
+- Total disputes (90d) with chargeback / inquiry split
+- Total orders (90d, from snapshot)
+- Amount at risk (active disputes only, dominant currency)
+- Reason breakdown — Fraud (`DISPUTE_REASON_FAMILIES` ∈ Fraud/Authorization), Item not received (∈ Fulfillment/Quality), Other (everything else)
+- Outcome breakdown — Won / Lost / Pending (no terminal `final_outcome`)
+- Weekly dispute velocity sparkline — 13 weekly buckets ending at yesterday UTC (`components/admin/Sparkline.tsx`, dependency-free SVG)
+- Sync freshness — most recent snapshot `last_synced_at` rendered as relative time
+
+All numbers come from `shop_daily_metrics` + the local `disputes` table; no live Shopify calls.
 
 Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabase CLI** (tracks migrations in the remote `supabase_migrations` history — this is what the project uses day to day).
 
@@ -485,6 +546,7 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 | 20260412140000_shops_first_win_at.sql | shops.first_win_at |
 | 20260413100000_dispute_events_and_normalized_status.sql | dispute_events ledger + disputes normalized status/submission/outcome columns |
 | 20260425120000_disputes_customer_email.sql | `disputes.customer_email` — populated from Shopify `disputeEvidence.customerEmailAddress` in `syncDisputes`; required for argument route / jobs that select this column |
+| 20260501100000_shop_daily_metrics.sql | `shop_daily_metrics(shop_id, date, order_count, dispute_count, chargeback_count, inquiry_count, last_synced_at)` — daily snapshot powering the dashboard chargeback-rate KPI and the admin Risk profile (PRD §5/§8/§9). Service-role-only RLS, mirrors the convention in `audit_events`. |
 
 ## Dispute History & Timeline (Phase 1)
 

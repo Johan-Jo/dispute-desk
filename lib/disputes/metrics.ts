@@ -9,6 +9,11 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import {
+  computeChargebackRate,
+  defaultWindowEndDate,
+  windowStartDate,
+} from "./chargebackRate";
 
 export interface MetricsOptions {
   /** Shop ID for shop-scoped metrics. Omit for cross-shop (admin). */
@@ -60,6 +65,27 @@ export interface DisputeMetrics {
   overriddenCount: number | null;
   syncIssueCount: number | null;
   disputesWithNotesCount: number | null;
+
+  // ── Chargeback rate (PRD §8) ─────────────────────────────────────────
+  // Read from shop_daily_metrics, not raw disputes. `chargebackRate`
+  // is null when the snapshot is missing for the window OR when there
+  // are zero orders in the window — UI should render "—". Numerator
+  // counts only `phase = 'chargeback'`; inquiries are excluded.
+  chargebackRate: number | null;
+  /** Percentage points vs. the prior equal-length window. Same unit
+   *  convention as `winRateChange`. */
+  chargebackRateChange: number | null;
+  chargebackRateNumerator: number;
+  chargebackRateDenominator: number;
+  /** True when the window has at least one snapshot row. Distinguishes
+   *  "not yet snapshotted" from "genuinely zero." */
+  chargebackRateAvailable: boolean;
+  /** True when denominator < 50 — UI should hint the rate may be
+   *  volatile (PRD §11). */
+  chargebackRateLowVolume: boolean;
+  /** Most recent snapshot `last_synced_at` in the window — admin
+   *  Sync Freshness signal (PRD §9). */
+  chargebackRateLastSyncedAt: string | null;
 }
 
 const ACTIVE_NORMALIZED = [
@@ -220,6 +246,39 @@ export async function computeDisputeMetrics(
     disputesWithNotesCount = notesCount ?? 0;
   }
 
+  // ── Chargeback rate (PRD §8) ──────────────────────────────────────────
+  // Pulls from shop_daily_metrics. Shop-scoped only — cross-shop admin
+  // metrics surface this differently (per-shop on the risk page, not
+  // an aggregated platform rate). Window: when `periodFrom` is given,
+  // map [periodFrom, periodTo) → [fromDate, toDate] in UTC days,
+  // clamped at yesterday since today's snapshot isn't written yet.
+  let chargebackRate: number | null = null;
+  let chargebackRateChange: number | null = null;
+  let chargebackRateNumerator = 0;
+  let chargebackRateDenominator = 0;
+  let chargebackRateAvailable = false;
+  let chargebackRateLowVolume = false;
+  let chargebackRateLastSyncedAt: string | null = null;
+
+  if (shopId) {
+    const toDate = defaultWindowEndDate(new Date(periodEnd));
+    const fromDate = periodFrom
+      ? toDateOnlyClamped(new Date(periodFrom), toDate)
+      : windowStartDate(toDate, 30); // default to a 30d view (PRD §4)
+    const cb = await computeChargebackRate({
+      shopId,
+      fromDate,
+      toDate,
+    });
+    chargebackRate = cb.rate;
+    chargebackRateChange = cb.rateChange;
+    chargebackRateNumerator = cb.numerator;
+    chargebackRateDenominator = cb.denominator;
+    chargebackRateAvailable = cb.available;
+    chargebackRateLowVolume = cb.lowVolume;
+    chargebackRateLastSyncedAt = cb.lastSyncedAt;
+  }
+
   return {
     activeDisputes,
     disputesWon,
@@ -246,5 +305,19 @@ export async function computeDisputeMetrics(
     overriddenCount,
     syncIssueCount,
     disputesWithNotesCount,
+    chargebackRate,
+    chargebackRateChange,
+    chargebackRateNumerator,
+    chargebackRateDenominator,
+    chargebackRateAvailable,
+    chargebackRateLowVolume,
+    chargebackRateLastSyncedAt,
   };
+}
+
+/** Convert a Date to YYYY-MM-DD UTC, clamped to not exceed `maxDate`
+ *  (the snapshot upper bound, typically yesterday). */
+function toDateOnlyClamped(d: Date, maxDate: string): string {
+  const iso = d.toISOString().slice(0, 10);
+  return iso > maxDate ? maxDate : iso;
 }

@@ -6,6 +6,7 @@ import { Store, ArrowLeft } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
 
 interface ShopDetail {
   shop: {
@@ -93,6 +94,8 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
           { label: "Installed", value: new Date(shop.created_at).toLocaleDateString() },
         ]}
       />
+
+      <ShopRiskProfile shopId={shop.id} />
 
       <div className="bg-white rounded-lg border border-[#E2E8F0] p-6">
         <h3 className="text-lg font-semibold text-[#0F172A] mb-4">Admin Overrides</h3>

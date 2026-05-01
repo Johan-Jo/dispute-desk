@@ -5,6 +5,7 @@ import { verifyHmac, exchangeCodeForToken, decodeOAuthState } from "@/lib/shopif
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { enqueueShopDailyMetricsBackfill } from "@/lib/disputes/backfillShopDailyMetrics";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
@@ -134,6 +135,18 @@ export async function GET(req: NextRequest) {
         .catch((err) => {
           console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
         });
+
+      // Kick off the 90-day chargeback-rate backfill. Idempotent: the
+      // helper skips when shop_daily_metrics already has rows for this
+      // shop, so re-installs after uninstall don't re-pay the cost.
+      // Fire-and-forget — backfill runs in the worker, not on this
+      // request path, so OAuth latency is unaffected.
+      enqueueShopDailyMetricsBackfill(shopInternalId).catch((err) => {
+        console.warn(
+          "[shop_daily_metrics] backfill enqueue failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
 
       if (source === "portal") {
         const destination =
