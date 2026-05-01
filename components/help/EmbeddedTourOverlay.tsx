@@ -143,7 +143,14 @@ export function EmbeddedTourOverlay() {
     }
   }, [step?.route, router, pathname]);
 
-  // Resolve the target rect (with MutationObserver wait)
+  // Resolve the target rect (with MutationObserver wait).
+  //
+  // Avoid mid-scroll repositioning: only scroll the target into view
+  // when it is fully off-screen. When we do scroll, wait for the smooth
+  // scroll to settle (~450ms) before recomputing the tooltip rect —
+  // otherwise the tooltip is positioned against the pre-scroll layout
+  // and the merchant sees the popup "fly" or "disappear" as the page
+  // animates into place.
   useEffect(() => {
     if (!step) return;
 
@@ -158,18 +165,31 @@ export function EmbeddedTourOverlay() {
     waitForSelectorRect(step.targetSelector, RECT_OBSERVER_TIMEOUT).then(
       (rect) => {
         if (cancelled) return;
-        if (rect) {
-          // Scroll into view, then recompute on next frame
-          const el = document.querySelector(step.targetSelector!);
-          el?.scrollIntoView({ behavior: "smooth", block: "center" });
-          requestAnimationFrame(() => {
-            const fresh = el?.getBoundingClientRect();
-            if (fresh) setTargetRect(fresh);
-            else setTargetRect(rect);
-          });
-        } else {
+        if (!rect) {
           setTargetRect(null);
+          return;
         }
+        const el = document.querySelector(step.targetSelector!);
+        const vh = window.innerHeight;
+        const margin = 80;
+        const fullyVisible =
+          rect.top >= margin && rect.bottom <= vh - margin;
+
+        if (fullyVisible || !el) {
+          setTargetRect(rect);
+          return;
+        }
+
+        // Off-screen — scroll, wait for smooth-scroll to settle, then
+        // commit the tooltip rect against the post-scroll layout.
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const settle = setTimeout(() => {
+          if (cancelled) return;
+          const fresh = el.getBoundingClientRect();
+          setTargetRect(fresh.width || fresh.height ? fresh : rect);
+        }, 500);
+
+        return () => clearTimeout(settle);
       },
     );
 
@@ -178,19 +198,27 @@ export function EmbeddedTourOverlay() {
     };
   }, [step]);
 
-  // Recompute on resize / scroll
+  // Recompute on resize / scroll. Throttle scroll-driven recomputation
+  // via requestAnimationFrame so the tooltip doesn't chase the target
+  // during user-initiated scroll animations.
   useEffect(() => {
     if (!step?.targetSelector) return;
+    let frameId: number | null = null;
     const recompute = () => {
-      const el = document.querySelector(step.targetSelector!);
-      if (el) {
-        const r = el.getBoundingClientRect();
-        if (r.width > 0 || r.height > 0) setTargetRect(r);
-      }
+      if (frameId !== null) return;
+      frameId = requestAnimationFrame(() => {
+        frameId = null;
+        const el = document.querySelector(step.targetSelector!);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 || r.height > 0) setTargetRect(r);
+        }
+      });
     };
     window.addEventListener("resize", recompute);
     window.addEventListener("scroll", recompute, true);
     return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
       window.removeEventListener("resize", recompute);
       window.removeEventListener("scroll", recompute, true);
     };
