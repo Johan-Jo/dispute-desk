@@ -299,27 +299,56 @@ function ChargebackKpiTile({
         borderRadius: "10px",
         border: "1px solid #E1E3E5",
         padding: "16px",
+        // Match the height of the other 4 KPI tiles (which carry an
+        // extra "vs last month" change-indicator row). flex-column +
+        // space-between distributes the title row to the top and the
+        // value row to the bottom, killing the ragged-bottom look.
+        // `gap` sets the minimum spacing; space-between fills any
+        // remaining height when the grid cell is taller than the
+        // natural content.
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: "12px",
+        // Force the card to fill its grid cell — defensive against
+        // any parent that overrides the grid `align-items: stretch`
+        // default. Without this, content-sized cards stay short next
+        // to taller siblings.
+        alignSelf: "stretch",
+        minHeight: "100%",
       }}
     >
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
-          marginBottom: "12px",
           gap: "8px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            minWidth: 0,
+            flex: 1,
+          }}
+        >
+          {/* Allow the label to wrap to a second line at narrow card
+              widths instead of truncating with ellipsis. The other 4
+              cards' labels are short enough to never wrap; only this
+              one ("Chargeback rate (30d)" — 21 chars) ever exceeds a
+              single line at 5-column grid widths. */}
           <p
             style={{
               fontSize: "12px",
               fontWeight: 500,
               color: "#6D7175",
               margin: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              lineHeight: 1.35,
+              wordBreak: "normal",
+              overflowWrap: "anywhere",
             }}
           >
             {t("dashboard.chargebackRate")}
@@ -336,9 +365,10 @@ function ChargebackKpiTile({
                 cursor: "help",
                 display: "inline-flex",
                 color: "#6D7175",
-                width: "14px",
-                height: "14px",
+                width: "12px",
+                height: "12px",
                 flexShrink: 0,
+                marginTop: "2px",
               }}
             >
               <Icon source={InfoIcon} />
@@ -348,7 +378,7 @@ function ChargebackKpiTile({
         {band && bandLabel && (
           <span
             style={{
-              padding: "2px 8px",
+              padding: "2px 6px",
               borderRadius: "6px",
               fontSize: "10px",
               fontWeight: 600,
