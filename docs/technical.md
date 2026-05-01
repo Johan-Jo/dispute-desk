@@ -470,34 +470,58 @@ UTC day boundary is intentional: card-network reporting standards are UTC-based,
 
 `computeDisputeMetrics` (`lib/disputes/metrics.ts`) calls `computeChargebackRate` once with the period derived from `periodFrom/periodTo`, surfaces the result on `DisputeMetrics` as `chargebackRate`, `chargebackRateChange`, `chargebackRateNumerator`, `chargebackRateDenominator`, `chargebackRateAvailable`, `chargebackRateLowVolume`, `chargebackRateLastSyncedAt`. Every consumer route (`/api/dashboard/stats`, `/api/admin/metrics`) gets these for free via the existing `...m` spread.
 
-### Dashboard KPI tile
+### Dashboard KPI tile (Figma alignment 2026-05-01)
 
-Fifth card on the existing `Performance overview` row (no new sections, no chart, no nav per PRD §8). `DashboardKpis.tsx` adds the card to `desktopCards` (auto-fit grid wraps to 4+1 at typical embedded widths) and a Row-4 full-width tile on mobile (so the threshold pill + subtext don't truncate inside a 2-column grid). Tile renders:
-- Value `0.82%` (or `—` when `chargebackRateAvailable` is false; helper "Calculating…" replaces the subtext)
-- Inline threshold pill — `Healthy` (`<0.6%`), `Watch` (`0.6–0.9%`), `High risk` (`>0.9%`) per PRD §8.
-- Subtext `12 disputes / 1,460 orders` (locale-formatted) or `Low volume — rate may be volatile` when `chargebackRateLowVolume`.
-- Change indicator: percentage points, **inverse coloring** (up = red, down = green) — opposite of the win-rate / amount-recovered convention. Implemented as the new `inverse` prop on `ChangeIndicator`; other tiles unchanged.
+Fifth card on the existing `Performance overview` row (no new sections, no chart, no nav per PRD §8). `DashboardKpis.tsx` adds the card to `desktopCards` (auto-fit grid wraps to 4+1 at typical embedded widths) and a Row-4 full-width tile on mobile so the threshold pill doesn't truncate.
+
+The card renders **only** label, value, threshold badge, and pp delta — per PRD §8 explicit "DO NOT add subtext / numerator-denominator / explanations on the card." Numerator/denominator, last-synced timestamp, and explanatory hints live in the inline `ChargebackRateDetailsStrip` below the KPI grid (see next section).
+
+- Title: "Chargeback rate (30d)" via `dashboard.chargebackRate` (12 locales).
+- Value: `stats.chargebackRate.toFixed(1) + "%"` when `chargebackRateAvailable`; `—` otherwise.
+- Threshold pill: `Healthy` (`<0.6%`) green, `Watch` (`0.6–0.9%`) amber, `High risk` (`>0.9%`) red per PRD §8.
+- Delta: `ChangeIndicator` with `unit: "pp"` and `inverse: true` (up = red, down = green). The unit prop is new; existing tiles default to `%` and are unaffected.
+- The prior `KpiCard.subtext` and `KpiCard.unavailable` props were removed — the card never carries that copy anymore.
+
+### Inline details strip (Figma Task 2 — `ChargebackRateDetailsStrip`)
+
+A non-card affordance directly below the KPI grid, inside the same Performance Overview container, separated by a 1-px `#E5E7EB` border-top. **No background box, no shadow, no heavy padding** per PRD §8 styling rules.
+
+- **Default state:** right-aligned `Details` link only. No duplicate KPI values, no explanatory text.
+- **Expanded state:** inline row of 12-px subdued items —
+  - `{numerator} chargebacks / {denominator} orders` (locale-formatted)
+  - Delta sentence: `+0.1 pp increase` / `0.1 pp decrease` / `No change vs prior period`
+  - `Last synced 12m ago` (locale-aware relative time: `just now` / `Xm ago` / `Xh ago` / `Xd ago` / `no snapshot yet`)
+  - **Optional** `Low volume — rate may be volatile` when `chargebackRateLowVolume`
+  - **Optional** `Approaching risk threshold (0.9%)` when `0.8 ≤ rate < 0.9` (upper Watch band only — below 0.8 there's headroom; above 0.9 the High-risk badge already signals it)
+- **Toggle:** `Details` ⇄ `Hide details`, no animation beyond simple expand. Self-contained `useState` — no global state, no URL param.
+- **Hide-when-empty:** suppresses entirely when there's no snapshot **and** no `lastSyncedAt`. Toggling open to show only "Calculating…" would be wasteful UX during the first day post-install.
 
 i18n keys (`messages/{locale}.json`, all 12 locales):
-- `dashboard.chargebackRate`
-- `dashboard.chargebackRateSubtext` (`{numerator}` and `{denominator}` placeholders)
-- `dashboard.chargebackRateUnavailable`
-- `dashboard.chargebackRateLowVolume`
-- `dashboard.chargebackRateThresholdHealthy` / `Watch` / `High`
+- KPI tile: `dashboard.chargebackRate`, `dashboard.chargebackRateThresholdHealthy / Watch / High`
+- Details strip: `dashboard.chargebackRateDetailsShow / Hide`, `chargebackRateSubtext` (`{numerator}` / `{denominator}`), `chargebackRateDeltaIncrease / Decrease / Flat` (`{value}` placeholder), `chargebackRateLastSynced` (`{ago}` placeholder), `chargebackRateLowVolume`, `chargebackRateApproachingThreshold`, `chargebackRateRelativeJustNow / Minutes / Hours / Days / Never`
 
-### Admin Risk profile (`/admin/shops/[id]`)
+### Admin shops list — Chargeback rate column (Figma Task 3)
 
-`components/admin/ShopRiskProfile.tsx` renders the section above the Admin Overrides card. Fetches `GET /api/admin/shops/[id]/risk` (handler: `lib/admin/shopRisk.ts → getShopRiskProfile`) which composes:
-- 30d + 90d `RateCard` (chargeback rate with threshold pill + pp delta, or "Calculating…")
-- Total disputes (90d) with chargeback / inquiry split
-- Total orders (90d, from snapshot)
-- Amount at risk (active disputes only, dominant currency)
-- Reason breakdown — Fraud (`DISPUTE_REASON_FAMILIES` ∈ Fraud/Authorization), Item not received (∈ Fulfillment/Quality), Other (everything else)
-- Outcome breakdown — Won / Lost / Pending (no terminal `final_outcome`)
-- Weekly dispute velocity sparkline — 13 weekly buckets ending at yesterday UTC (`components/admin/Sparkline.tsx`, dependency-free SVG)
-- Sync freshness — most recent snapshot `last_synced_at` rendered as relative time
+`/admin/shops/page.tsx` adds a sortable "Chargeback rate (90d)" column between Status and Installed. The cell renders the rounded rate with a green / amber / red text tone matching the threshold band, plus a small `numerator / denominator` line. Null / unavailable rows render `—`.
 
-All numbers come from `shop_daily_metrics` + the local `disputes` table; no live Shopify calls.
+- **Data source:** `/api/admin/shops` is **extended (not a new endpoint)** to compute the rate per shop. A single batched `shop_daily_metrics` read (`SELECT … WHERE shop_id IN (…) AND date BETWEEN from AND to`) covers all listed shops; aggregation happens in JS. This avoids fanning out 200 individual reads per list-page load.
+- **Sorting:** client-side toggle cycles `null → desc → asc → null`. Nulls always sink regardless of direction so "Calculating…" rows never crowd the top of a "highest rate first" view.
+- **AdminTable** got an additive enhancement: `headers` now accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
+
+### Admin Risk profile (`/admin/shops/[id]`, Figma Task 4)
+
+`components/admin/ShopRiskProfile.tsx` renders the section above Admin Overrides. Fetches `GET /api/admin/shops/[id]/risk` (handler: `lib/admin/shopRisk.ts → getShopRiskProfile`).
+
+- **Snapshot row** (5 cards, uses **`AdminStatsRow`** per PRD "Reuse existing admin card components"):
+  - Chargeback rate (30d) — value formatted to 1 decimal, threshold tone via `valueColor`, pp delta via AdminStatsRow's `change` / `changeType` (with `down` = increase = red so the inverse mapping reads correctly)
+  - Chargeback rate (90d) — same shape
+  - Total disputes (90d), Total orders (90d), Amount at risk
+- **Reason breakdown** (90d, custom `BreakdownBar`): Fraud (`DISPUTE_REASON_FAMILIES` ∈ Fraud/Authorization), Item not received (∈ Fulfillment/Quality), Other.
+- **Outcome breakdown** (90d): Won / Lost / Pending (Pending = no terminal `final_outcome`).
+- **Trend (90d):** weekly dispute count via `components/admin/Sparkline.tsx` (dependency-free SVG, 13 buckets, peak label).
+- **Signals:** explicit definition list with the inquiry-vs-chargeback ratio (`{i}/{c}` or `2.50 : 1`) and last-sync relative time.
+
+All numbers come from `shop_daily_metrics` + the local `disputes` table; no live Shopify calls. The threshold pill on the snapshot row was dropped during the AdminStatsRow refactor — its prior role is covered by the green / amber / red `valueColor` on the rate value itself.
 
 Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabase CLI** (tracks migrations in the remote `supabase_migrations` history — this is what the project uses day to day).
 
