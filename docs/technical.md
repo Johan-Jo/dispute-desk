@@ -452,11 +452,15 @@ Snapshot writers:
 
 Each per-day snapshot:
 1. Resolves the shop's offline session via `getShopBackgroundSession`.
-2. Calls Shopify GraphQL `ordersCount(query: "created_at:>=…Z created_at:<…Z")` once for the UTC day → `order_count` (one query point per call, ~500ms).
-3. Reads the local `disputes` table filtered by `initiated_at` ∈ [day, day+1) → `dispute_count` total, split into `chargeback_count` (phase = 'chargeback') and `inquiry_count` (phase = 'inquiry'). Phase-NULL legacy rows are excluded from both buckets but counted in `dispute_count`.
+2. Calls `fetchOrdersInWindow(session, dateIso, dateIso+1)` (`lib/shopify/queries/ordersForSnapshot.ts`) — paginated Shopify GraphQL `orders` connection sorted by `CREATED_AT`, selecting `id`, `createdAt`, `test`. Buckets results by UTC day in code via `bucketOrdersByUtcDay()`, **excluding orders where `test === true`** (PRD: "Chargeback rate must reflect real merchant activity only"). Test order GIDs are collected via `testOrderGidSet()` so the dispute side can match.
+3. Reads the local `disputes` table filtered by `initiated_at` ∈ [day, day+1) → `dispute_count` total, split into `chargeback_count` (phase = 'chargeback') and `inquiry_count` (phase = 'inquiry'). Phase-NULL legacy rows are excluded from both buckets but counted in `dispute_count`. **Disputes whose `order_gid` matches a test-order GID are skipped** so the numerator stays consistent with the denominator.
 4. Upserts on (shop_id, date) and stamps `last_synced_at`.
 
-UTC day boundary is intentional: card-network reporting standards are UTC-based, and merchant timezones are not considered. Adding 200ms between days inside the backfill loop keeps the job safely under Shopify's 50-points-per-second restore rate.
+**Why not `ordersCount`:** the snapshot pipeline previously called Shopify's `ordersCount(query: …)` field per UTC day. In API version 2026-01 that field returns wrong counts for narrow `created_at:>=…Z created_at:<…Z` compound range filters — it double-counts orders straddling day boundaries (verified against `surasvenne` 2026-05-01: window-level count = 7 but per-day-summed count = 14). The orders LIST connection honors the same range filter correctly, so the snapshot now goes through the connection and counts in code. Removed `lib/shopify/queries/ordersCount.ts` — no remaining callers.
+
+**Backfill efficiency:** `backfillShopDailyMetrics` fetches the entire 90-day window in one paginated stream (typically one page; high-volume shops paginate), groups locally by UTC date, and writes 90 daily rows in one bulk upsert. Replaces the prior 90-sequential-calls approach. Test-order filtering applies to the bulk path identically.
+
+UTC day boundary is intentional: card-network reporting standards are UTC-based, and merchant timezones are not considered.
 
 ### Read path
 
