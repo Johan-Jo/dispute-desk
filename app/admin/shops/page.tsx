@@ -23,6 +23,9 @@ interface Shop {
   chargebackRate90dNumerator: number;
   chargebackRate90dDenominator: number;
   chargebackRate90dAvailable: boolean;
+  disputeCount: number;
+  packCount: number;
+  monthlyRevenueUsd: number;
 }
 
 type SortDirection = "asc" | "desc";
@@ -70,7 +73,9 @@ export default function AdminShopsPage() {
 
   // Client-side sort by chargeback rate (90d). Nulls always at the
   // bottom regardless of direction so "Calculating…" rows don't crowd
-  // the top of a "highest rate first" view.
+  // the top of a "highest rate first" view. Two-state cycle (asc ⇄
+  // desc) per Figma `shops-admin.tsx:42-49` — clicking with no sort
+  // active starts at desc.
   const sorted = useMemo(() => {
     if (!chargebackSort) return filtered;
     const dir = chargebackSort === "asc" ? 1 : -1;
@@ -85,13 +90,14 @@ export default function AdminShopsPage() {
   }, [filtered, chargebackSort]);
 
   const cycleChargebackSort = () => {
-    setChargebackSort((prev) =>
-      prev === null ? "desc" : prev === "desc" ? "asc" : null,
-    );
+    setChargebackSort((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
   const active = shops.filter((s) => !s.uninstalled_at).length;
-  const uninstalled = shops.filter((s) => s.uninstalled_at).length;
+  const totalDisputes = shops.reduce((s, shop) => s + (shop.disputeCount ?? 0), 0);
+  const totalMrr = shops
+    .filter((s) => !s.uninstalled_at)
+    .reduce((s, shop) => s + (shop.monthlyRevenueUsd ?? 0), 0);
 
   const planColors: Record<string, { bg: string; text: string }> = {
     enterprise: { bg: "bg-[#EDE9FE]", text: "text-[#6B21A8]" },
@@ -111,7 +117,8 @@ export default function AdminShopsPage() {
         cards={[
           { label: "Total Shops", value: shops.length },
           { label: "Active", value: active, valueColor: "text-[#22C55E]" },
-          { label: "Uninstalled", value: uninstalled, valueColor: "text-[#EF4444]" },
+          { label: "Total Disputes", value: totalDisputes },
+          { label: "Total MRR", value: `$${totalMrr.toLocaleString()}` },
         ]}
       />
 
@@ -121,10 +128,10 @@ export default function AdminShopsPage() {
         searchPlaceholder="Search by domain..."
         filters={[
           { label: "All Plans", value: "all" },
-          { label: "Enterprise", value: "enterprise" },
+          { label: "Scale", value: "scale" },
           { label: "Growth", value: "growth" },
           { label: "Starter", value: "starter" },
-          { label: "Trial", value: "trial" },
+          { label: "Free", value: "free" },
         ]}
         activeFilter={planFilter}
         onFilterChange={setPlanFilter}
@@ -135,6 +142,9 @@ export default function AdminShopsPage() {
           "Shop Domain",
           "Plan",
           "Status",
+          "Disputes",
+          "Packs",
+          "MRR",
           {
             label: "Chargeback rate (90d)",
             sortable: true,
@@ -166,6 +176,17 @@ export default function AdminShopsPage() {
               </td>
               <td className="px-6 py-4">
                 <StatusPill status={s.uninstalled_at ? "uninstalled" : "active"} />
+              </td>
+              <td className="px-6 py-4">
+                <span className="text-sm text-[#0F172A] font-semibold">{s.disputeCount}</span>
+              </td>
+              <td className="px-6 py-4">
+                <span className="text-sm text-[#0F172A] font-semibold">{s.packCount}</span>
+              </td>
+              <td className="px-6 py-4">
+                <span className="text-sm text-[#0F172A] font-semibold">
+                  ${s.monthlyRevenueUsd}
+                </span>
               </td>
               <td className="px-6 py-4">
                 {s.chargebackRate90dAvailable && s.chargebackRate90d !== null ? (

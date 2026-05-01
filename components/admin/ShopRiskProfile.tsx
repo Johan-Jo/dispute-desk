@@ -1,22 +1,36 @@
 "use client";
 
 /**
- * Admin "Risk profile" section on /admin/shops/[id] (PRD §9 / Task 4).
+ * Admin "Risk Profile" section on /admin/shops/[id] —
+ * Figma `pages/admin/shop-detail.tsx:170-413` (2026-05-01).
  *
- * Renders 30d/90d chargeback rates, totals, reason mix, outcome mix,
- * weekly dispute velocity sparkline, inquiry-vs-chargeback ratio, and
- * sync freshness — all sourced from /api/admin/shops/[id]/risk which
- * reads from `shop_daily_metrics` (no live Shopify calls).
+ * Layout:
+ *   - Sticky header with period selector (30d / 90d / 180d / All time).
+ *   - Snapshot row: 6 cards (Chargeback rate · Total disputes ·
+ *     Total orders · Amount at risk · Total invoiced · Win rate).
+ *   - Charts row (2 cols):
+ *     · Dispute breakdown — three labeled progress bars
+ *       (Fraud / Item not received / Other).
+ *     · Outcomes — three rows with colored 40×40 icon boxes
+ *       (Won / Lost / Pending).
+ *   - Trend (90d-shaped) — dual-bar chart per bucket
+ *     (disputes red + orders gray).
+ *   - Additional Signals — three cards
+ *     (Inquiry ratio · Last sync · Data completeness).
  *
- * Snapshot row uses `AdminStatsRow` (PRD: "Reuse existing admin card
- * components"). The threshold tone is surfaced through `valueColor`
- * since AdminStatsRow doesn't carry pills; the per-rate pp delta is
- * surfaced via the existing `change` / `changeType` slots.
+ * All numbers come from `/api/admin/shops/[id]/risk?period=…`.
+ * Period selector triggers a re-fetch (`option 2b`).
  */
 
 import { useEffect, useState } from "react";
-import { AdminStatsRow } from "./AdminStatsRow";
-import { Sparkline } from "./Sparkline";
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Info,
+  Package,
+  XCircle,
+} from "lucide-react";
 
 interface ChargebackRateResult {
   rate: number | null;
@@ -30,21 +44,48 @@ interface ChargebackRateResult {
   lastSyncedAt: string | null;
 }
 
+interface PeriodWithChange {
+  count: number;
+  previous: number | null;
+  changePercent: number | null;
+}
+
+type RiskPeriod = "30d" | "90d" | "180d" | "all";
+
 interface ShopRiskProfileResponse {
   shopId: string;
-  rate30d: ChargebackRateResult;
-  rate90d: ChargebackRateResult;
-  totalDisputes90d: number;
-  totalOrders90d: number;
+  period: RiskPeriod;
+  windowDays: number | null;
+  rate: ChargebackRateResult;
+  totalDisputes: PeriodWithChange;
+  totalOrders: PeriodWithChange;
   amountAtRisk: number;
   currencyCode: string;
   reasonBreakdown: { fraud: number; fulfillment: number; other: number };
   outcomeBreakdown: { won: number; lost: number; pending: number };
-  inquiryCount90d: number;
-  chargebackCount90d: number;
-  weeklyTrend: Array<{ weekStart: string; disputeCount: number }>;
+  winRate: number;
+  inquiryCount: number;
+  chargebackCount: number;
+  trend: Array<{ bucketStart: string; disputeCount: number; orderCount: number }>;
   lastSyncedAt: string | null;
+  dataCompleteness: number;
+  monthlyRevenue: { planName: string; planId: string; monthlyUsd: number };
+  totalInvoiced: { totalUsd: number; windowDays: number; monthsInPeriod: number; isApproximate: true };
 }
+
+const PERIOD_LABEL: Record<RiskPeriod, string> = {
+  "30d": "30d",
+  "90d": "90d",
+  "180d": "180d",
+  all: "All time",
+};
+
+const PERIOD_VERBOSE: Record<RiskPeriod, string> = {
+  "30d": "30d",
+  "90d": "90d",
+  "180d": "180d",
+  all: "all time",
+};
 
 function thresholdTone(rate: number | null): "healthy" | "watch" | "high" | null {
   if (rate === null) return null;
@@ -53,15 +94,21 @@ function thresholdTone(rate: number | null): "healthy" | "watch" | "high" | null
   return "high";
 }
 
-const TONE_VALUE_COLOR: Record<"healthy" | "watch" | "high", string> = {
-  healthy: "text-[#15803D]",
-  watch: "text-[#B45309]",
-  high: "text-[#B91C1C]",
+const TONE_BADGE: Record<"healthy" | "watch" | "high", string> = {
+  healthy: "bg-[#D1FAE5] text-[#065F46]",
+  watch: "bg-[#FEF3C7] text-[#92400E]",
+  high: "bg-[#FEE2E2] text-[#991B1B]",
+};
+
+const TONE_LABEL: Record<"healthy" | "watch" | "high", string> = {
+  healthy: "Healthy",
+  watch: "Watch",
+  high: "High risk",
 };
 
 function formatRate(r: ChargebackRateResult): string {
   if (!r.available || r.rate === null) return "—";
-  return `${r.rate.toFixed(1)}%`;
+  return `${r.rate.toFixed(2)}%`;
 }
 
 function formatNumber(n: number): string {
@@ -85,73 +132,36 @@ function formatRelativeTime(iso: string | null): string {
   const ms = Date.now() - new Date(iso).getTime();
   if (ms < 60_000) return "just now";
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-function formatDelta(rateChange: number | null): { change?: string; changeType?: "up" | "down" | "neutral" } {
-  if (rateChange === null || rateChange === undefined) return {};
-  if (rateChange === 0) {
-    return { change: "0.0 pp", changeType: "neutral" };
-  }
-  const sign = rateChange > 0 ? "+" : "";
-  // For chargeback rate, increase is bad — flip the AdminStatsRow
-  // color convention (which treats `down` as red).
-  return {
-    change: `${sign}${rateChange.toFixed(1)} pp`,
-    changeType: rateChange > 0 ? "down" : "up",
-  };
-}
-
-function BreakdownBar({
-  segments,
-  total,
-}: {
-  segments: Array<{ label: string; count: number; tone: "good" | "neutral" | "bad" | "info" }>;
-  total: number;
-}) {
-  const TONE_BG: Record<"good" | "neutral" | "bad" | "info", string> = {
-    good: "bg-[#10B981]",
-    neutral: "bg-[#94A3B8]",
-    bad: "bg-[#EF4444]",
-    info: "bg-[#1D4ED8]",
-  };
-  if (total === 0) {
-    return <div className="text-sm text-[#64748B]">No disputes in window</div>;
-  }
+function ChangeBadge({ pct, inverse }: { pct: number | null; inverse?: boolean }) {
+  if (pct === null) return <span className="text-xs text-[#94A3B8]">—</span>;
+  const isPositive = pct > 0;
+  const isNegative = pct < 0;
+  // For total disputes (inverse=true) increase is bad → red.
+  // For total orders (inverse=false) increase is good → green.
+  const goodColor = "text-[#22C55E]";
+  const badColor = "text-[#DC2626]";
+  const color = isPositive
+    ? inverse
+      ? badColor
+      : goodColor
+    : isNegative
+      ? inverse
+        ? goodColor
+        : badColor
+      : "text-[#64748B]";
+  const sign = isPositive ? "+" : "";
   return (
-    <div>
-      <div className="flex h-2 rounded-full overflow-hidden bg-[#F1F5F9]">
-        {segments.map((s) => {
-          const pct = total > 0 ? (s.count / total) * 100 : 0;
-          if (pct === 0) return null;
-          return (
-            <div
-              key={s.label}
-              className={`${TONE_BG[s.tone]}`}
-              style={{ width: `${pct}%` }}
-              title={`${s.label}: ${s.count}`}
-            />
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-        {segments.map((s) => {
-          const pct = total > 0 ? Math.round((s.count / total) * 100) : 0;
-          return (
-            <div key={s.label} className="text-xs text-[#64748B]">
-              <span className={`inline-block w-2 h-2 rounded-full ${TONE_BG[s.tone]} mr-1.5 align-middle`} />
-              {s.label}: <span className="font-semibold text-[#0F172A]">{s.count}</span>
-              {" "}
-              <span className="text-[#94A3B8]">({pct}%)</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <span className={`text-xs font-medium ${color}`}>
+      {sign}
+      {pct}% vs prev
+    </span>
   );
 }
 
@@ -160,6 +170,7 @@ interface Props {
 }
 
 export function ShopRiskProfile({ shopId }: Props) {
+  const [period, setPeriod] = useState<RiskPeriod>("90d");
   const [data, setData] = useState<ShopRiskProfileResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,7 +178,7 @@ export function ShopRiskProfile({ shopId }: Props) {
     let cancelled = false;
     setData(null);
     setError(null);
-    fetch(`/api/admin/shops/${shopId}/risk`)
+    fetch(`/api/admin/shops/${shopId}/risk?period=${period}`)
       .then(async (r) => {
         if (!r.ok) {
           const body = await r.json().catch(() => null);
@@ -184,7 +195,7 @@ export function ShopRiskProfile({ shopId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [shopId]);
+  }, [shopId, period]);
 
   if (error) {
     return (
@@ -197,140 +208,358 @@ export function ShopRiskProfile({ shopId }: Props) {
 
   if (!data) {
     return (
-      <div className="bg-white border border-[#E2E8F0] rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold text-[#0F172A] mb-2">Risk profile</h3>
-        <div className="text-sm text-[#64748B]">Loading risk profile…</div>
+      <div className="bg-white border border-[#E2E8F0] rounded-lg overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+          <h2 className="text-lg font-bold text-[#0F172A]">Risk profile</h2>
+        </div>
+        <div className="p-6 text-sm text-[#64748B]">Loading…</div>
       </div>
     );
   }
 
-  const tone30 = thresholdTone(data.rate30d.rate);
-  const tone90 = thresholdTone(data.rate90d.rate);
-  const trendValues = data.weeklyTrend.map((w) => w.disputeCount);
-  const totalReasonClassified =
+  const periodLabel = PERIOD_LABEL[data.period];
+  const periodVerbose = PERIOD_VERBOSE[data.period];
+  const band = thresholdTone(data.rate.rate);
+  const totalReasons =
     data.reasonBreakdown.fraud +
     data.reasonBreakdown.fulfillment +
     data.reasonBreakdown.other;
-  const totalOutcomeClassified =
+  const totalOutcomes =
     data.outcomeBreakdown.won + data.outcomeBreakdown.lost + data.outcomeBreakdown.pending;
+  const lossRate =
+    data.outcomeBreakdown.won + data.outcomeBreakdown.lost > 0
+      ? Math.round(
+          (data.outcomeBreakdown.lost /
+            (data.outcomeBreakdown.won + data.outcomeBreakdown.lost)) *
+            100,
+        )
+      : 0;
+  const inquiryRatio =
+    data.chargebackCount > 0 ? data.inquiryCount / data.chargebackCount : null;
 
-  // Inquiry-vs-chargeback ratio (Signals). Express as "I:C" when both
-  // counts are non-zero, otherwise the absolute counts. Avoids
-  // division-by-zero noise on shops with chargebacks but no inquiries.
-  const inquiryRatioLabel = (() => {
-    const i = data.inquiryCount90d;
-    const c = data.chargebackCount90d;
-    if (c === 0 && i === 0) return "—";
-    if (c === 0) return `${i} inquiries / 0 chargebacks`;
-    if (i === 0) return `0 inquiries / ${c} chargebacks`;
-    const ratio = (i / c).toFixed(2);
-    return `${ratio} : 1 (${i} inquiries / ${c} chargebacks)`;
-  })();
+  const trendValues = data.trend.map((t) => t.disputeCount);
+  const orderValues = data.trend.map((t) => t.orderCount);
+  const maxDisputes = Math.max(1, ...trendValues);
+  const maxOrders = Math.max(1, ...orderValues);
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-lg p-6 mb-6">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-lg font-semibold text-[#0F172A]">Risk profile</h3>
-      </div>
-
-      {/* Snapshot row — reuses AdminStatsRow per PRD Task 4. */}
-      <AdminStatsRow
-        cards={[
-          {
-            label: "Chargeback rate (30d)",
-            value: formatRate(data.rate30d),
-            valueColor: tone30 ? TONE_VALUE_COLOR[tone30] : undefined,
-            ...formatDelta(data.rate30d.rateChange),
-          },
-          {
-            label: "Chargeback rate (90d)",
-            value: formatRate(data.rate90d),
-            valueColor: tone90 ? TONE_VALUE_COLOR[tone90] : undefined,
-            ...formatDelta(data.rate90d.rateChange),
-          },
-          {
-            label: "Total disputes (90d)",
-            value: formatNumber(data.totalDisputes90d),
-          },
-          {
-            label: "Total orders (90d)",
-            value: data.rate90d.available ? formatNumber(data.totalOrders90d) : "—",
-          },
-          {
-            label: "Amount at risk",
-            value: formatCurrency(data.amountAtRisk, data.currencyCode),
-          },
-        ]}
-      />
-
-      {/* Reason + outcome breakdowns */}
-      <div className="grid gap-4 mb-6 grid-cols-1 lg:grid-cols-2">
-        <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-5">
-          <div className="text-sm font-semibold text-[#0F172A] mb-3">
-            Dispute reasons (90d)
-          </div>
-          <BreakdownBar
-            segments={[
-              { label: "Fraud", count: data.reasonBreakdown.fraud, tone: "bad" },
-              { label: "Item not received", count: data.reasonBreakdown.fulfillment, tone: "info" },
-              { label: "Other", count: data.reasonBreakdown.other, tone: "neutral" },
-            ]}
-            total={totalReasonClassified}
-          />
-        </div>
-        <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-5">
-          <div className="text-sm font-semibold text-[#0F172A] mb-3">
-            Outcomes (90d)
-          </div>
-          <BreakdownBar
-            segments={[
-              { label: "Won", count: data.outcomeBreakdown.won, tone: "good" },
-              { label: "Lost", count: data.outcomeBreakdown.lost, tone: "bad" },
-              { label: "Pending", count: data.outcomeBreakdown.pending, tone: "neutral" },
-            ]}
-            total={totalOutcomeClassified}
-          />
+    <div className="bg-white border border-[#E2E8F0] rounded-lg overflow-hidden mb-6">
+      {/* Header — Risk Profile + period selector */}
+      <div className="px-6 py-4 border-b border-[#E2E8F0] bg-[#F8FAFC] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 className="text-lg font-bold text-[#0F172A]">Risk Profile</h2>
+        <div className="inline-flex rounded-lg border border-[#E2E8F0] p-1 bg-white">
+          {(["30d", "90d", "180d", "all"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setPeriod(key)}
+              className={`px-3 py-1.5 text-sm font-semibold rounded transition-all ${
+                key === "30d" ? "" : "ml-1"
+              } ${
+                period === key
+                  ? "bg-[#1D4ED8] text-white shadow-sm"
+                  : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+              }`}
+            >
+              {PERIOD_LABEL[key]}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Weekly trend sparkline */}
-      <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-5 mb-6">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <div className="text-sm font-semibold text-[#0F172A]">
-            Dispute velocity (90d, weekly)
+      <div className="p-6">
+        {/* Snapshot row — 6 cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-[#64748B]">Chargeback rate</div>
+              {band && (
+                <span
+                  className={`px-1.5 py-0.5 ${TONE_BADGE[band]} text-[10px] font-semibold rounded`}
+                >
+                  {TONE_LABEL[band]}
+                </span>
+              )}
+            </div>
+            <div className="text-xl font-bold text-[#0F172A] mb-1">{formatRate(data.rate)}</div>
+            <div className="text-xs text-[#64748B]">
+              {data.rate.numerator} / {formatNumber(data.rate.denominator)}
+            </div>
           </div>
-          <div className="text-xs text-[#64748B]">
-            Peak: {Math.max(0, ...trendValues)} disputes / week
-          </div>
-        </div>
-        <Sparkline
-          data={trendValues}
-          width={520}
-          height={56}
-          ariaLabel="Weekly dispute count over the trailing 90 days"
-        />
-        <div className="flex justify-between text-[10px] text-[#94A3B8] mt-1">
-          <span>{data.weeklyTrend[0]?.weekStart ?? ""}</span>
-          <span>{data.weeklyTrend.at(-1)?.weekStart ?? ""}</span>
-        </div>
-      </div>
 
-      {/* Signals — explicit per PRD Task 4 */}
-      <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-5">
-        <div className="text-sm font-semibold text-[#0F172A] mb-3">Signals</div>
-        <dl className="grid gap-3 grid-cols-1 sm:grid-cols-2 text-sm">
-          <div>
-            <dt className="text-xs text-[#64748B] mb-0.5">Inquiry vs chargeback (90d)</dt>
-            <dd className="text-[#0F172A] font-medium">{inquiryRatioLabel}</dd>
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="text-xs text-[#64748B] mb-2">Total disputes</div>
+            <div className="text-xl font-bold text-[#0F172A] mb-1">
+              {data.totalDisputes.count}
+            </div>
+            <ChangeBadge pct={data.totalDisputes.changePercent} inverse />
           </div>
-          <div>
-            <dt className="text-xs text-[#64748B] mb-0.5">Last sync</dt>
-            <dd className="text-[#0F172A] font-medium">
+
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="text-xs text-[#64748B] mb-2">Total orders</div>
+            <div className="text-xl font-bold text-[#0F172A] mb-1">
+              {formatNumber(data.totalOrders.count)}
+            </div>
+            <ChangeBadge pct={data.totalOrders.changePercent} />
+          </div>
+
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="text-xs text-[#64748B] mb-2">Amount at risk</div>
+            <div className="text-xl font-bold text-[#DC2626] mb-1">
+              {formatCurrency(data.amountAtRisk, data.currencyCode)}
+            </div>
+            <div className="text-xs text-[#64748B]">{data.outcomeBreakdown.pending} pending</div>
+          </div>
+
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="text-xs text-[#64748B] mb-2">Total invoiced</div>
+            <div className="text-xl font-bold text-[#0F172A] mb-1">
+              ${data.totalInvoiced.totalUsd.toLocaleString()}
+            </div>
+            <div className="text-xs text-[#64748B]">
+              {periodVerbose}
+              {/* Approximation hint — see lib/admin/shopBilling.ts */}
+              <span className="ml-1 text-[#94A3B8]" title="Approximate: monthly price × months in window. No invoice history yet.">
+                ≈
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="text-xs text-[#64748B] mb-2">Win rate</div>
+            <div className="text-xl font-bold text-[#065F46] mb-1">{data.winRate}%</div>
+            <div className="text-xs text-[#64748B]">{data.outcomeBreakdown.won} won</div>
+          </div>
+        </div>
+
+        {/* Charts grid — Dispute breakdown + Outcomes */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="border border-[#E2E8F0] rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-[#0F172A] mb-4">
+              Dispute breakdown ({periodVerbose})
+            </h3>
+            <div className="space-y-3">
+              <BreakdownRow
+                icon={<AlertCircle className="w-4 h-4 text-[#DC2626]" />}
+                label="Fraud / Unauthorized"
+                count={data.reasonBreakdown.fraud}
+                total={totalReasons}
+                barClass="bg-[#DC2626]"
+              />
+              <BreakdownRow
+                icon={<Package className="w-4 h-4 text-[#3B82F6]" />}
+                label="Item not received"
+                count={data.reasonBreakdown.fulfillment}
+                total={totalReasons}
+                barClass="bg-[#3B82F6]"
+              />
+              <BreakdownRow
+                icon={<AlertCircle className="w-4 h-4 text-[#F59E0B]" />}
+                label="Other"
+                count={data.reasonBreakdown.other}
+                total={totalReasons}
+                barClass="bg-[#F59E0B]"
+              />
+              {totalReasons === 0 && (
+                <div className="text-sm text-[#64748B]">No disputes in window.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="border border-[#E2E8F0] rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-[#0F172A] mb-4">
+              Outcomes ({periodVerbose})
+            </h3>
+            <div className="space-y-4">
+              <OutcomeRow
+                icon={<CheckCircle className="w-5 h-5 text-[#065F46]" />}
+                iconBg="bg-[#D1FAE5]"
+                title="Won"
+                helper={`${data.winRate}% win rate`}
+                count={data.outcomeBreakdown.won}
+                countColor="text-[#065F46]"
+              />
+              <OutcomeRow
+                icon={<XCircle className="w-5 h-5 text-[#991B1B]" />}
+                iconBg="bg-[#FEE2E2]"
+                title="Lost"
+                helper={`${lossRate}% loss rate`}
+                count={data.outcomeBreakdown.lost}
+                countColor="text-[#991B1B]"
+              />
+              <OutcomeRow
+                icon={<Clock className="w-5 h-5 text-[#92400E]" />}
+                iconBg="bg-[#FEF3C7]"
+                title="Pending"
+                helper="Awaiting decision"
+                count={data.outcomeBreakdown.pending}
+                countColor="text-[#92400E]"
+              />
+              {totalOutcomes === 0 && (
+                <div className="text-sm text-[#64748B]">No disputes in window.</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Trend — dual-bar (disputes + orders) per bucket */}
+        <div className="border border-[#E2E8F0] rounded-lg p-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h3 className="text-sm font-semibold text-[#0F172A]">
+              Dispute trend ({periodVerbose})
+            </h3>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-[#DC2626] rounded" />
+                <span className="text-[#64748B]">Disputes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-[#94A3B8] rounded" />
+                <span className="text-[#64748B]">Orders (scaled)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative h-48">
+            <div className="absolute inset-0 flex items-end justify-between gap-1">
+              {data.trend.map((point, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex items-end justify-center gap-0.5 h-40">
+                    <div
+                      className="w-full bg-[#DC2626] rounded-t transition-all hover:opacity-80"
+                      style={{
+                        height: `${(point.disputeCount / maxDisputes) * 100}%`,
+                      }}
+                      title={`${point.disputeCount} disputes`}
+                    />
+                    <div
+                      className="w-full bg-[#94A3B8] rounded-t transition-all hover:opacity-80"
+                      style={{
+                        height: `${(point.orderCount / maxOrders) * 100}%`,
+                      }}
+                      title={`${point.orderCount} orders`}
+                    />
+                  </div>
+                  <div className="text-[10px] text-[#64748B] text-center whitespace-nowrap transform -rotate-45 origin-top-left mt-2">
+                    {point.bucketStart}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Signals */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="w-4 h-4 text-[#64748B]" />
+              <div className="text-xs text-[#64748B]">Inquiry ratio</div>
+            </div>
+            <div className="text-lg font-bold text-[#0F172A]">
+              {inquiryRatio === null ? "—" : `${inquiryRatio.toFixed(1)}:1`}
+            </div>
+            <div className="text-xs text-[#64748B] mt-1">Inquiries per chargeback</div>
+          </div>
+
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-[#64748B]" />
+              <div className="text-xs text-[#64748B]">Last sync</div>
+            </div>
+            <div className="text-lg font-bold text-[#0F172A]">
               {formatRelativeTime(data.lastSyncedAt)}
-            </dd>
+            </div>
+            <div
+              className={`text-xs mt-1 ${
+                data.dataCompleteness >= 90 ? "text-[#22C55E]" : "text-[#64748B]"
+              }`}
+            >
+              {data.dataCompleteness >= 90 ? "Data is current" : "Partial coverage"}
+            </div>
           </div>
-        </dl>
+
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="w-4 h-4 text-[#64748B]" />
+              <div className="text-xs text-[#64748B]">Data completeness</div>
+            </div>
+            <div className="text-lg font-bold text-[#0F172A]">{data.dataCompleteness}%</div>
+            <div className="w-full bg-[#E2E8F0] rounded-full h-1.5 mt-2">
+              <div
+                className="bg-[#22C55E] h-1.5 rounded-full"
+                style={{ width: `${data.dataCompleteness}%` }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function BreakdownRow({
+  icon,
+  label,
+  count,
+  total,
+  barClass,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  total: number;
+  barClass: string;
+}) {
+  const pct = total > 0 ? (count / total) * 100 : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-sm text-[#0F172A]">{label}</span>
+        </div>
+        <span className="text-sm font-semibold text-[#0F172A]">{count}</span>
+      </div>
+      <div className="w-full bg-[#E2E8F0] rounded-full h-2">
+        <div
+          className={`${barClass} h-2 rounded-full transition-all`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OutcomeRow({
+  icon,
+  iconBg,
+  title,
+  helper,
+  count,
+  countColor,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  helper: string;
+  count: number;
+  countColor: string;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div
+          className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center`}
+        >
+          {icon}
+        </div>
+        <div>
+          <div className="text-sm font-medium text-[#0F172A]">{title}</div>
+          <div className="text-xs text-[#64748B]">{helper}</div>
+        </div>
+      </div>
+      <div className={`text-xl font-bold ${countColor}`}>{count}</div>
     </div>
   );
 }

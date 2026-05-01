@@ -4,16 +4,23 @@ import {
   defaultWindowEndDate,
   windowStartDate,
 } from "@/lib/disputes/chargebackRate";
+import { monthlyRevenueForPlan } from "@/lib/admin/shopBilling";
 
 export const runtime = "nodejs";
 
-interface ShopRowWithRate {
-  // pass-through `shops.*` columns + computed chargeback fields
+interface ShopRowEnriched {
+  // pass-through `shops.*` columns + computed admin fields
   [key: string]: unknown;
   chargebackRate90d: number | null;
   chargebackRate90dNumerator: number;
   chargebackRate90dDenominator: number;
   chargebackRate90dAvailable: boolean;
+  /** Total disputes (all-time) for this shop. */
+  disputeCount: number;
+  /** Total evidence packs (all-time) for this shop. */
+  packCount: number;
+  /** Monthly revenue in USD, derived from `shops.plan` via PLANS map. */
+  monthlyRevenueUsd: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -71,7 +78,27 @@ export async function GET(req: NextRequest) {
     totals.set(row.shop_id as string, existing);
   }
 
-  const enriched: ShopRowWithRate[] = shops.map((s) => {
+  // ── Disputes count + Packs count, batched per shop ──────────────
+  // Two scalar queries instead of 2N. We pull `shop_id` from each
+  // row and tally locally. Acceptable cost since the disputes /
+  // evidence_packs tables stay small per shop.
+  const [{ data: dispRows }, { data: packRows }] = await Promise.all([
+    sb.from("disputes").select("shop_id").in("shop_id", shopIds),
+    sb.from("evidence_packs").select("shop_id").in("shop_id", shopIds),
+  ]);
+
+  const disputeCounts = new Map<string, number>();
+  for (const r of dispRows ?? []) {
+    const sid = r.shop_id as string;
+    disputeCounts.set(sid, (disputeCounts.get(sid) ?? 0) + 1);
+  }
+  const packCounts = new Map<string, number>();
+  for (const r of packRows ?? []) {
+    const sid = r.shop_id as string;
+    packCounts.set(sid, (packCounts.get(sid) ?? 0) + 1);
+  }
+
+  const enriched: ShopRowEnriched[] = shops.map((s) => {
     const t = totals.get(s.id);
     const available = !!t && t.rows > 0;
     const numerator = t?.numerator ?? 0;
@@ -80,12 +107,17 @@ export async function GET(req: NextRequest) {
       available && denominator > 0
         ? Math.round((numerator / denominator) * 1000) / 10
         : null;
+    const planValue = (s.plan as string | null) ?? "free";
+    const mrr = monthlyRevenueForPlan(planValue);
     return {
       ...s,
       chargebackRate90d: rate,
       chargebackRate90dNumerator: numerator,
       chargebackRate90dDenominator: denominator,
       chargebackRate90dAvailable: available,
+      disputeCount: disputeCounts.get(s.id) ?? 0,
+      packCount: packCounts.get(s.id) ?? 0,
+      monthlyRevenueUsd: mrr.monthlyUsd,
     };
   });
 

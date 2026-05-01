@@ -1,11 +1,25 @@
 "use client";
 
+/**
+ * Admin shop detail page — Figma-aligned 2026-05-01.
+ *
+ * Header rewrite (Figma `pages/admin/shop-detail.tsx:120-167`):
+ * 48×48 Store icon, h1 domain, plan + status pills, Calendar +
+ * "Installed" line, right-side "View in Shopify" + "Contact Shop"
+ * buttons. AdminPageHeader / AdminStatsRow are not used here; the
+ * Risk profile section + Quick Stats footer carry the numbers.
+ */
+
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { Store, ArrowLeft } from "lucide-react";
-import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
-import { StatusPill } from "@/components/admin/StatusPill";
+import {
+  ArrowLeft,
+  Calendar,
+  Store,
+  AlertCircle,
+  DollarSign,
+  Package,
+} from "lucide-react";
 import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
 
 interface ShopDetail {
@@ -23,6 +37,27 @@ interface ShopDetail {
   disputes: number;
   packs: number;
 }
+
+const PLAN_LABEL: Record<string, string> = {
+  free: "Free",
+  starter: "Starter",
+  growth: "Growth",
+  scale: "Scale",
+};
+
+const PLAN_PRICE: Record<string, number> = {
+  free: 0,
+  starter: 29,
+  growth: 79,
+  scale: 149,
+};
+
+const PLAN_PILL: Record<string, string> = {
+  free: "bg-[#F1F5F9] text-[#475569]",
+  starter: "bg-[#D1FAE5] text-[#065F46]",
+  growth: "bg-[#DBEAFE] text-[#1E40AF]",
+  scale: "bg-[#EDE9FE] text-[#6B21A8]",
+};
 
 export default function AdminShopDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -66,36 +101,109 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const { shop, disputes, packs } = data;
+  const planKey = (shop.plan ?? "free").toLowerCase();
+  const planLabel = PLAN_LABEL[planKey] ?? planKey;
+  const planPrice = PLAN_PRICE[planKey] ?? 0;
+  const planPillClass = PLAN_PILL[planKey] ?? PLAN_PILL.free;
+  const isActive = !shop.uninstalled_at;
+  const shopAdminUrl = `https://${shop.shop_domain}/admin`;
 
   return (
-    <div className="p-8 max-w-4xl">
-      <Link
-        href="/admin/shops"
-        className="inline-flex items-center gap-2 text-sm text-[#64748B] hover:text-[#0F172A] mb-4 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Shops
-      </Link>
+    <div className="p-8">
+      {/* Header — Figma `shop-detail.tsx:120-167`. Custom layout
+          with Store icon, h1 domain, pills, install date, and right-
+          side action buttons. Replaces AdminPageHeader. */}
+      <div className="mb-6">
+        <Link
+          href="/admin/shops"
+          className="inline-flex items-center gap-2 text-sm text-[#64748B] hover:text-[#0F172A] mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Shops
+        </Link>
 
-      <AdminPageHeader
-        title={shop.shop_domain}
-        subtitle={`Shop ID: ${shop.id}`}
-        icon={Store}
-        actions={
-          <StatusPill status={shop.uninstalled_at ? "uninstalled" : "active"} />
-        }
-      />
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-[#EFF6FF] rounded-lg flex items-center justify-center flex-shrink-0">
+              <Store className="w-6 h-6 text-[#1D4ED8]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[#0F172A] mb-1">{shop.shop_domain}</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  className={`px-2.5 py-1 ${planPillClass} text-xs font-semibold rounded-full`}
+                >
+                  {planLabel}
+                </span>
+                <span
+                  className={`px-2.5 py-1 ${
+                    isActive
+                      ? "bg-[#D1FAE5] text-[#065F46]"
+                      : "bg-[#FEE2E2] text-[#991B1B]"
+                  } text-xs font-semibold rounded-full`}
+                >
+                  {isActive ? "Active" : "Uninstalled"}
+                </span>
+                <div className="flex items-center gap-1.5 text-sm text-[#64748B]">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Installed {new Date(shop.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <AdminStatsRow
-        cards={[
-          { label: "Disputes", value: disputes },
-          { label: "Evidence Packs", value: packs },
-          { label: "Plan", value: (shop.plan ?? "free").charAt(0).toUpperCase() + (shop.plan ?? "free").slice(1) },
-          { label: "Installed", value: new Date(shop.created_at).toLocaleDateString() },
-        ]}
-      />
+          <div className="flex gap-2">
+            <a
+              href={shopAdminUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 border border-[#E2E8F0] bg-white text-[#0F172A] text-sm font-semibold rounded-lg hover:bg-[#F8FAFC] transition-colors"
+            >
+              View in Shopify
+            </a>
+            {/* "Contact Shop" — placeholder until we wire a contact-
+                support flow. The button stays visible so the layout
+                matches Figma; clicking it currently does nothing. */}
+            <button
+              type="button"
+              disabled
+              className="px-4 py-2 bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg hover:bg-[#1E40AF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Contact flow coming soon"
+            >
+              Contact Shop
+            </button>
+          </div>
+        </div>
+      </div>
 
       <ShopRiskProfile shopId={shop.id} />
+
+      {/* Quick Stats footer — Figma `shop-detail.tsx:418-449` */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <DollarSign className="w-5 h-5 text-[#64748B]" />
+            <div className="text-sm text-[#64748B]">Monthly Revenue</div>
+          </div>
+          <div className="text-2xl font-bold text-[#0F172A]">${planPrice}</div>
+        </div>
+
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <Package className="w-5 h-5 text-[#64748B]" />
+            <div className="text-sm text-[#64748B]">Evidence Packs</div>
+          </div>
+          <div className="text-2xl font-bold text-[#0F172A]">{packs}</div>
+        </div>
+
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <AlertCircle className="w-5 h-5 text-[#64748B]" />
+            <div className="text-sm text-[#64748B]">Total Disputes</div>
+          </div>
+          <div className="text-2xl font-bold text-[#0F172A]">{disputes}</div>
+        </div>
+      </div>
 
       <div className="bg-white rounded-lg border border-[#E2E8F0] p-6">
         <h3 className="text-lg font-semibold text-[#0F172A] mb-4">Admin Overrides</h3>

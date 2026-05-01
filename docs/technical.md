@@ -504,28 +504,59 @@ i18n keys (`messages/{locale}.json`, all 12 locales):
 - KPI tile: `dashboard.chargebackRate`, `dashboard.chargebackRateThresholdHealthy / Watch / High`
 - Details strip: `dashboard.chargebackRateDetailsShow / Hide`, `chargebackRateSubtext` (`{numerator}` / `{denominator}`), `chargebackRateDeltaIncrease / Decrease / Flat` (`{value}` placeholder), `chargebackRateLastSynced` (`{ago}` placeholder), `chargebackRateLowVolume`, `chargebackRateApproachingThreshold`, `chargebackRateRelativeJustNow / Minutes / Hours / Days / Never`
 
-### Admin shops list — Chargeback rate column (Figma Task 3)
+### Admin shops list (Figma `pages/admin/shops-admin.tsx`)
 
-`/admin/shops/page.tsx` adds a sortable "Chargeback rate (90d)" column between Status and Installed. The cell renders the rounded rate with a green / amber / red text tone matching the threshold band, plus a small `numerator / denominator` line. Null / unavailable rows render `—`.
+`/admin/shops/page.tsx` displays a sortable table of installed shops with billing + dispute data.
 
-- **Data source:** `/api/admin/shops` is **extended (not a new endpoint)** to compute the rate per shop. A single batched `shop_daily_metrics` read (`SELECT … WHERE shop_id IN (…) AND date BETWEEN from AND to`) covers all listed shops; aggregation happens in JS. This avoids fanning out 200 individual reads per list-page load.
-- **Sorting:** client-side toggle cycles `null → desc → asc → null`. Nulls always sink regardless of direction so "Calculating…" rows never crowd the top of a "highest rate first" view.
-- **AdminTable** got an additive enhancement: `headers` now accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
+- **Stats row (top):** 4 cards — Total Shops · Active (green) · Total Disputes · Total MRR (sum of `monthlyRevenueUsd` across active shops, derived from `shops.plan` via `lib/billing/plans.ts → PLANS[plan].price`).
+- **Table columns:** Domain · Plan · Status · Disputes (count) · Packs (count) · MRR · Chargeback Rate (90d, sortable) · Installed · Actions.
+- **Filter chips:** All Plans · Scale · Growth · Starter · Free.
+- **Data source:** `/api/admin/shops` returns the shop row plus 4 computed fields per shop:
+  - `chargebackRate90d{,Numerator,Denominator,Available}` — single batched `shop_daily_metrics` read for the trailing 90 UTC days, aggregated in JS.
+  - `disputeCount` — count of `disputes` per shop_id, batched.
+  - `packCount` — count of `evidence_packs` per shop_id, batched.
+  - `monthlyRevenueUsd` — `monthlyRevenueForPlan(shop.plan).monthlyUsd`.
+- **Sorting:** click toggles `asc ⇄ desc` two-state on the chargeback rate column (matches Figma `shops-admin.tsx:42-49`). Nulls always sink regardless of direction.
+- **AdminTable** sortable-header form: `headers` accepts `string | { label, sortable?, sortDirection?, onSort?, align? }`. Existing string-array call sites are unchanged.
 
-### Admin Risk profile (`/admin/shops/[id]`, Figma Task 4)
+### Admin shop detail (`/admin/shops/[id]`, Figma `pages/admin/shop-detail.tsx`)
 
-`components/admin/ShopRiskProfile.tsx` renders the section above Admin Overrides. Fetches `GET /api/admin/shops/[id]/risk` (handler: `lib/admin/shopRisk.ts → getShopRiskProfile`).
+The page replaces the prior `AdminPageHeader` / `AdminStatsRow` chrome with a Figma-aligned custom layout:
 
-- **Snapshot row** (5 cards, uses **`AdminStatsRow`** per PRD "Reuse existing admin card components"):
-  - Chargeback rate (30d) — value formatted to 1 decimal, threshold tone via `valueColor`, pp delta via AdminStatsRow's `change` / `changeType` (with `down` = increase = red so the inverse mapping reads correctly)
-  - Chargeback rate (90d) — same shape
-  - Total disputes (90d), Total orders (90d), Amount at risk
-- **Reason breakdown** (90d, custom `BreakdownBar`): Fraud (`DISPUTE_REASON_FAMILIES` ∈ Fraud/Authorization), Item not received (∈ Fulfillment/Quality), Other.
-- **Outcome breakdown** (90d): Won / Lost / Pending (Pending = no terminal `final_outcome`).
-- **Trend (90d):** weekly dispute count via `components/admin/Sparkline.tsx` (dependency-free SVG, 13 buckets, peak label).
-- **Signals:** explicit definition list with the inquiry-vs-chargeback ratio (`{i}/{c}` or `2.50 : 1`) and last-sync relative time.
+- **Header row:** 48×48 Store icon in a `bg-[#EFF6FF]` rounded square + `<h1 text-2xl>` shop domain + plan pill + status pill + Calendar + "Installed [date]". Right side: "View in Shopify" (links to `https://{domain}/admin`) + "Contact Shop" (placeholder, disabled until a contact-support flow lands).
+- **Risk Profile card** — see next section.
+- **Quick Stats footer:** 3 cards (Monthly Revenue $ · Evidence Packs · Total Disputes) sourced from `shops.plan`, `evidence_packs.count(*)`, `disputes.count(*)`.
+- **Admin Overrides card:** unchanged (plan override, pack limit override, admin notes).
 
-All numbers come from `shop_daily_metrics` + the local `disputes` table; no live Shopify calls. The threshold pill on the snapshot row was dropped during the AdminStatsRow refactor — its prior role is covered by the green / amber / red `valueColor` on the rate value itself.
+### Admin Risk Profile section (Figma `shop-detail.tsx:170-413`)
+
+`components/admin/ShopRiskProfile.tsx` renders the period-aware risk panel inside the detail page.
+
+- **Period selector:** 30d · 90d · 180d · All time. Selection triggers a re-fetch of `/api/admin/shops/[id]/risk?period=…` so each period yields exact period-scoped numbers (not pre-loaded). API handler: `app/api/admin/shops/[id]/risk/route.ts` validates the param against `["30d","90d","180d","all"]`, defaulting to `90d`.
+- **Snapshot row (6 cards, light-gray containers):**
+  - Chargeback rate — threshold pill (Healthy / Watch / High risk) on the right, `numerator / denominator` subtext.
+  - Total disputes — count + period-vs-prior trend pill (`+12% vs prev`, inverse-colored: increase = red).
+  - Total orders — count + period-vs-prior trend pill (increase = green).
+  - Amount at risk — red value, "{n} pending" subtext (active disputes only, all-time).
+  - Total invoiced — `monthlyPrice × monthsInPeriod` via `totalInvoicedForPeriod()`. Marked approximate via a "≈" tooltip ("Approximate: monthly price × months in window. No invoice history yet.") — see `lib/admin/shopBilling.ts`.
+  - Win rate — green value, "{n} won" subtext. Denominator is `won + lost`, so "Pending" disputes don't deflate the rate.
+- **Charts grid (2 cols):**
+  - Dispute breakdown — three labeled progress bars: Fraud / Unauthorized (red), Item not received (blue), Other (amber). Family classification from `DISPUTE_REASON_FAMILIES` (Fraud + Authorization → fraud; Fulfillment + Quality → fulfillment; everything else → other).
+  - Outcomes — three rows with colored 40×40 icon boxes (Won / Lost / Pending) + helper rate.
+- **Trend chart (full-width):** dual-bar per bucket — disputes red + orders gray, side-by-side. Bucket plan adapts to period: 30d → 4 weekly buckets, 90d → 13 weekly, 180d → 13 bi-weekly, all → 12 monthly. Date label rotates -45° to fit horizontal space.
+- **Additional Signals (3 cards):**
+  - Inquiry ratio — `inquiry / chargeback` ratio formatted as `X.X:1` ("Inquiries per chargeback"), or "—" when chargeback count is zero.
+  - Last sync — relative time ("12 minutes ago"), with "Data is current" green text when `dataCompleteness ≥ 90%`, otherwise "Partial coverage" gray.
+  - Data completeness — `% = (snapshot rows in window) / (window days)`. Surfaced as a value + horizontal progress bar.
+
+All numbers come from `shop_daily_metrics` + the local `disputes` table + `shops.plan` (no live Shopify calls). Period-vs-prior deltas use a same-length prior window immediately before the current one; for the "All time" view there's no prior window so deltas show "—". `getShopRiskProfile(shopId, { period })` in `lib/admin/shopRisk.ts` is the single composer.
+
+### Billing helpers (`lib/admin/shopBilling.ts`)
+
+Two pure helpers wrap the existing `lib/billing/plans.ts → PLANS` map for the admin metrics:
+
+- `monthlyRevenueForPlan(plan)` → `{ planId, planName, monthlyUsd }`. Used by the shops list MRR column and the detail-page Quick Stats footer.
+- `totalInvoicedForPeriod(plan, windowDays)` → `{ totalUsd, monthsInPeriod, isApproximate: true, … }`. **Approximation**: `monthlyPrice × (windowDays / 30)`. Doesn't account for plan changes mid-window, trial periods, or top-up purchases. Replace with real invoice records when a `billing_invoices` table is built.
 
 Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabase CLI** (tracks migrations in the remote `supabase_migrations` history — this is what the project uses day to day).
 
