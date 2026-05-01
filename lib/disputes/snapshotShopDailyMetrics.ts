@@ -8,12 +8,19 @@
  *     considered. The chargeback-rate metric is reported in UTC days.
  *
  * Sources:
- *   - Order count: live Shopify Admin GraphQL `ordersCount` (single
- *     call, ~1 query point).
+ *   - Order data: live Shopify Admin GraphQL `orders` connection
+ *     (paginated). Replaces the prior `ordersCount` field, which
+ *     returned wrong values for narrow `created_at:` range filters
+ *     (verified against surasvenne, 2026-05-01: window-level count
+ *     was 7 but per-day-summed count was 14). The orders connection
+ *     correctly honors the range filter, so we paginate and group
+ *     by UTC date in code.
+ *   - Test orders (`test === true`) are **excluded** from the
+ *     denominator and from the dispute-test-filter set.
  *   - Dispute counts: local `disputes` table filtered by
  *     `initiated_at` falling inside the UTC day, split by `phase`.
- *     Source-of-truth for "initiated" is Shopify, not our ingestion
- *     time — the metric matches card-network semantics.
+ *     Disputes whose `order_gid` matches a test order are excluded
+ *     so the rate reflects real merchant activity only.
  *
  * Side effect: upserts a single row into `shop_daily_metrics` keyed by
  * (shop_id, date). Re-runs are idempotent and refresh `last_synced_at`.
@@ -24,20 +31,15 @@
  *   - Shopify auth invalid → throws `ShopifyAuthInvalidError`.
  *   - Shopify GraphQL error → propagates; the job runner retries
  *     according to `jobs.max_attempts`.
- *
- * The PRD's fallback rule (PRD §6: "If snapshot missing, return null /
- * loading state — do NOT compute from live Shopify") is enforced at the
- * read side (metrics util), not here.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
-import { getShopBackgroundSession, assertNotAuthInvalid } from "@/lib/shopify/sessions/getShopBackgroundSession";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
-  SHOP_ORDERS_COUNT_QUERY,
-  ordersCountSearchQueryForDate,
-  type OrdersCountResult,
-} from "@/lib/shopify/queries/ordersCount";
+  fetchOrdersInWindow,
+  bucketOrdersByUtcDay,
+  testOrderGidSet,
+} from "@/lib/shopify/queries/ordersForSnapshot";
 
 export interface SnapshotResult {
   shopId: string;
@@ -46,7 +48,6 @@ export interface SnapshotResult {
   disputeCount: number;
   chargebackCount: number;
   inquiryCount: number;
-  precision: OrdersCountResult["precision"];
 }
 
 export async function snapshotShopDailyMetrics(
@@ -59,40 +60,33 @@ export async function snapshotShopDailyMetrics(
   }
 
   const session = await getShopBackgroundSession(shopId);
+  const nextDate = nextDateIso(dateIso);
 
-  // Order count from Shopify.
-  const gqlResp = await requestShopifyGraphQL<{ ordersCount: OrdersCountResult }>({
-    session: { shopDomain: session.shopDomain, accessToken: session.accessToken },
-    query: SHOP_ORDERS_COUNT_QUERY,
-    variables: { query: ordersCountSearchQueryForDate(dateIso) },
-    correlationId: opts.correlationId ?? `snapshot-${shopId}-${dateIso}`,
-  });
+  // ── Orders for the day (paginated; typically one page). ────────
+  const orders = await fetchOrdersInWindow(
+    { shopDomain: session.shopDomain, accessToken: session.accessToken },
+    dateIso,
+    nextDate,
+    { correlationId: opts.correlationId ?? `snapshot-${shopId}-${dateIso}` },
+  );
 
-  assertNotAuthInvalid(shopId, "offline", { errors: gqlResp.errors ?? null });
+  const buckets = bucketOrdersByUtcDay(orders);
+  const orderCount = buckets.get(dateIso) ?? 0;
+  const testGids = testOrderGidSet(orders);
 
-  if (gqlResp.errors && gqlResp.errors.length > 0) {
-    throw new Error(
-      `Shopify ordersCount failed: ${gqlResp.errors.map((e) => e.message).join("; ")}`,
-    );
-  }
-  if (!gqlResp.data?.ordersCount) {
-    throw new Error("Shopify ordersCount returned no data");
-  }
-
-  const orderCount = gqlResp.data.ordersCount.count;
-  const precision = gqlResp.data.ordersCount.precision;
-
-  // Dispute counts from the local table. We rely on the routine
-  // `sync-disputes` job (every 5 min) to keep this up-to-date; for
-  // brand-new installs the backfill orchestrator should run a fresh
-  // dispute sync before invoking the snapshot job for that day.
+  // ── Disputes initiated in the UTC day ──────────────────────────
+  // Pulled from local table — kept fresh by the routine sync_disputes
+  // job (every 5 min). Disputes tied to a test order are excluded
+  // from both numerator and `dispute_count` so the row reflects real
+  // merchant activity only (PRD: "Chargeback rate must reflect real
+  // merchant activity only").
   const sb = getServiceClient();
   const startIso = `${dateIso}T00:00:00Z`;
-  const endIso = `${nextDateIso(dateIso)}T00:00:00Z`;
+  const endIso = `${nextDate}T00:00:00Z`;
 
   const { data: disputeRows, error: disputeErr } = await sb
     .from("disputes")
-    .select("id, phase")
+    .select("id, phase, order_gid")
     .eq("shop_id", shopId)
     .gte("initiated_at", startIso)
     .lt("initiated_at", endIso);
@@ -103,15 +97,17 @@ export async function snapshotShopDailyMetrics(
 
   let chargebackCount = 0;
   let inquiryCount = 0;
+  let disputeCount = 0;
   for (const row of disputeRows ?? []) {
+    if (row.order_gid && testGids.has(row.order_gid)) continue;
+    disputeCount += 1;
     if (row.phase === "chargeback") chargebackCount += 1;
     else if (row.phase === "inquiry") inquiryCount += 1;
-    // phase NULL is excluded from both buckets per PRD §11. The total
-    // `dispute_count` still includes them.
+    // phase NULL is excluded from both phase buckets but counted in
+    // `dispute_count` (PRD §11 — handle legacy phase nulls).
   }
-  const disputeCount = (disputeRows ?? []).length;
 
-  // Upsert.
+  // ── Upsert ──────────────────────────────────────────────────────
   const { error: upsertErr } = await sb
     .from("shop_daily_metrics")
     .upsert(
@@ -138,7 +134,6 @@ export async function snapshotShopDailyMetrics(
     disputeCount,
     chargebackCount,
     inquiryCount,
-    precision,
   };
 }
 

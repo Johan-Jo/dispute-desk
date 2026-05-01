@@ -1,39 +1,51 @@
 /**
  * 90-day backfill orchestration for shop_daily_metrics.
  *
- * Strategy: a single job per shop that loops through the last 90 UTC
- * days and calls `snapshotShopDailyMetrics` for each. A bulk job (vs.
- * 90 individual jobs) avoids the per-shop concurrency cap (1 job at a
- * time) which would otherwise stretch a backfill over ~3 hours.
+ * Strategy (revised 2026-05-01): a single paginated orders-list
+ * stream covers the full 90-day window in one Shopify call (typically
+ * one page; high-volume shops paginate). We group orders locally by
+ * UTC date, then write 90 daily rows in one upsert batch.
  *
- * The handler is idempotent — already-snapshotted dates are skipped,
- * so retries on transient failures don't duplicate Shopify calls.
+ * This replaces the prior per-day fan-out (90 sequential
+ * `snapshotShopDailyMetrics` calls), which had two issues:
+ *   1. Shopify's `ordersCount` returned wrong counts for narrow
+ *      `created_at:>=...Z created_at:<...Z` filters (verified bug —
+ *      surasvenne window=7 vs per-day-summed=14).
+ *   2. 90 sequential calls × ~500ms each ≈ 45s of Shopify time even
+ *      on a quiet shop.
  *
- * Pacing: 200ms gap between dates to stay well clear of Shopify's
- * 50-points-per-second restore rate. 90 days × (~500ms call + 200ms
- * gap) ≈ 63s — fits comfortably under the worker's 300s `maxDuration`.
+ * Single-stream approach:
+ *   - One paginated orders fetch for the 90-day window.
+ *   - One disputes table read for the 90-day window.
+ *   - 90 row upserts in one DB call.
  *
- * PRD §6: backfill is required before the admin risk view shows
- * meaningful data. The cron continues to top up the trailing edge daily.
+ * Test-order handling: orders with `test === true` are excluded from
+ * the denominator. Disputes whose `order_gid` matches a test order
+ * are excluded from the numerator. PRD: "Chargeback rate must
+ * reflect real merchant activity only."
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
+import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
-  snapshotShopDailyMetrics,
-  recentUtcDates,
-} from "./snapshotShopDailyMetrics";
+  fetchOrdersInWindow,
+  bucketOrdersByUtcDay,
+  testOrderGidSet,
+} from "@/lib/shopify/queries/ordersForSnapshot";
+import { recentUtcDates } from "./snapshotShopDailyMetrics";
 
 export const BACKFILL_DAYS = 90;
-const BETWEEN_DATE_PAUSE_MS = 200;
 
 export interface BackfillResult {
   shopId: string;
-  attempted: number;
-  skipped: number;
-  succeeded: number;
-  failed: number;
-  failures: Array<{ date: string; error: string }>;
+  windowStart: string;
+  windowEnd: string;
+  daysWritten: number;
+  ordersFetched: number;
+  ordersAfterTestFilter: number;
+  disputesInWindow: number;
+  disputesAfterTestFilter: number;
 }
 
 export async function backfillShopDailyMetrics(
@@ -42,46 +54,98 @@ export async function backfillShopDailyMetrics(
 ): Promise<BackfillResult> {
   const days = opts.days ?? BACKFILL_DAYS;
   const dates = recentUtcDates(days);
+  // dates is newest-first; the window runs from the oldest date in
+  // the list (inclusive) to the day after the newest (exclusive).
+  const windowStart = dates[dates.length - 1];
+  const windowEnd = (() => {
+    const newest = new Date(`${dates[0]}T00:00:00Z`);
+    newest.setUTCDate(newest.getUTCDate() + 1);
+    return newest.toISOString().slice(0, 10);
+  })();
 
+  const session = await getShopBackgroundSession(shopId);
+
+  // ── 1. Pull the full 90-day orders list in one paginated stream ─
+  const orders = await fetchOrdersInWindow(
+    { shopDomain: session.shopDomain, accessToken: session.accessToken },
+    windowStart,
+    windowEnd,
+    { correlationId: opts.correlationId ?? `backfill-${shopId}` },
+  );
+  const orderBuckets = bucketOrdersByUtcDay(orders);
+  const testGids = testOrderGidSet(orders);
+  const realOrderCount = orders.length - testGids.size;
+
+  // ── 2. Pull the 90-day disputes list ───────────────────────────
   const sb = getServiceClient();
-  const { data: existing } = await sb
-    .from("shop_daily_metrics")
-    .select("date")
+  const startIso = `${windowStart}T00:00:00Z`;
+  const endIso = `${windowEnd}T00:00:00Z`;
+  const { data: disputeRows, error: disputeErr } = await sb
+    .from("disputes")
+    .select("id, phase, order_gid, initiated_at")
     .eq("shop_id", shopId)
-    .in("date", dates);
-  const existingDates = new Set((existing ?? []).map((r) => r.date));
-
-  const todo = dates.filter((d) => !existingDates.has(d));
-
-  const result: BackfillResult = {
-    shopId,
-    attempted: todo.length,
-    skipped: dates.length - todo.length,
-    succeeded: 0,
-    failed: 0,
-    failures: [],
-  };
-
-  for (const date of todo) {
-    try {
-      await snapshotShopDailyMetrics(shopId, date, {
-        correlationId: opts.correlationId ?? `backfill-${shopId}`,
-      });
-      result.succeeded += 1;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      result.failed += 1;
-      result.failures.push({ date, error: message });
-      // Don't abort — one bad day shouldn't kill the whole backfill.
-      // The handler's `markJobFailed` retry path will revisit any
-      // dates that failed (since they're now in `todo` again next run).
-    }
-    if (BETWEEN_DATE_PAUSE_MS > 0) {
-      await new Promise((r) => setTimeout(r, BETWEEN_DATE_PAUSE_MS));
-    }
+    .gte("initiated_at", startIso)
+    .lt("initiated_at", endIso);
+  if (disputeErr) {
+    throw new Error(`disputes lookup failed: ${disputeErr.message}`);
   }
 
-  return result;
+  // Group disputes by UTC date, excluding those tied to test orders.
+  type DisputeBucket = { dispute: number; chargeback: number; inquiry: number };
+  const disputeBuckets = new Map<string, DisputeBucket>();
+  let disputesAfterFilter = 0;
+  for (const row of disputeRows ?? []) {
+    if (row.order_gid && testGids.has(row.order_gid as string)) continue;
+    disputesAfterFilter += 1;
+    const initiated = String(row.initiated_at ?? "");
+    if (!initiated) continue;
+    const dateIso = initiated.slice(0, 10);
+    if (dateIso < windowStart || dateIso >= windowEnd) continue;
+    const bucket =
+      disputeBuckets.get(dateIso) ?? { dispute: 0, chargeback: 0, inquiry: 0 };
+    bucket.dispute += 1;
+    if (row.phase === "chargeback") bucket.chargeback += 1;
+    else if (row.phase === "inquiry") bucket.inquiry += 1;
+    disputeBuckets.set(dateIso, bucket);
+  }
+
+  // ── 3. Build one row per UTC day in the window ─────────────────
+  const nowIso = new Date().toISOString();
+  const rowsToUpsert = dates.map((dateIso) => {
+    const orderCount = orderBuckets.get(dateIso) ?? 0;
+    const dBucket = disputeBuckets.get(dateIso) ?? {
+      dispute: 0,
+      chargeback: 0,
+      inquiry: 0,
+    };
+    return {
+      shop_id: shopId,
+      date: dateIso,
+      order_count: orderCount,
+      dispute_count: dBucket.dispute,
+      chargeback_count: dBucket.chargeback,
+      inquiry_count: dBucket.inquiry,
+      last_synced_at: nowIso,
+    };
+  });
+
+  const { error: upsertErr } = await sb
+    .from("shop_daily_metrics")
+    .upsert(rowsToUpsert, { onConflict: "shop_id,date" });
+  if (upsertErr) {
+    throw new Error(`shop_daily_metrics bulk upsert failed: ${upsertErr.message}`);
+  }
+
+  return {
+    shopId,
+    windowStart,
+    windowEnd,
+    daysWritten: rowsToUpsert.length,
+    ordersFetched: orders.length,
+    ordersAfterTestFilter: realOrderCount,
+    disputesInWindow: (disputeRows ?? []).length,
+    disputesAfterTestFilter: disputesAfterFilter,
+  };
 }
 
 /**
