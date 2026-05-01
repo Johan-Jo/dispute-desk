@@ -19,10 +19,11 @@
  *   - One disputes table read for the 90-day window.
  *   - 90 row upserts in one DB call.
  *
- * Test-order handling: orders with `test === true` are excluded from
- * the denominator. Disputes whose `order_gid` matches a test order
- * are excluded from the numerator. PRD: "Chargeback rate must
- * reflect real merchant activity only."
+ * Test-order handling: **reverted 2026-05-01** at the user's request
+ * so dev shops with Bogus-Gateway test orders surface realistic
+ * numbers during local testing. Both `test === true` orders and
+ * disputes tied to them are now counted. The `testOrderGidSet`
+ * helper remains exported for the eventual prod re-enable.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -31,7 +32,6 @@ import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgrou
 import {
   fetchOrdersInWindow,
   bucketOrdersByUtcDay,
-  testOrderGidSet,
 } from "@/lib/shopify/queries/ordersForSnapshot";
 import { recentUtcDates } from "./snapshotShopDailyMetrics";
 
@@ -43,9 +43,7 @@ export interface BackfillResult {
   windowEnd: string;
   daysWritten: number;
   ordersFetched: number;
-  ordersAfterTestFilter: number;
   disputesInWindow: number;
-  disputesAfterTestFilter: number;
 }
 
 export async function backfillShopDailyMetrics(
@@ -73,8 +71,6 @@ export async function backfillShopDailyMetrics(
     { correlationId: opts.correlationId ?? `backfill-${shopId}` },
   );
   const orderBuckets = bucketOrdersByUtcDay(orders);
-  const testGids = testOrderGidSet(orders);
-  const realOrderCount = orders.length - testGids.size;
 
   // ── 2. Pull the 90-day disputes list ───────────────────────────
   const sb = getServiceClient();
@@ -82,7 +78,7 @@ export async function backfillShopDailyMetrics(
   const endIso = `${windowEnd}T00:00:00Z`;
   const { data: disputeRows, error: disputeErr } = await sb
     .from("disputes")
-    .select("id, phase, order_gid, initiated_at")
+    .select("id, phase, initiated_at")
     .eq("shop_id", shopId)
     .gte("initiated_at", startIso)
     .lt("initiated_at", endIso);
@@ -90,13 +86,11 @@ export async function backfillShopDailyMetrics(
     throw new Error(`disputes lookup failed: ${disputeErr.message}`);
   }
 
-  // Group disputes by UTC date, excluding those tied to test orders.
+  // Group disputes by UTC date. (Test-tied dispute filtering was
+  // reverted 2026-05-01 — see file header.)
   type DisputeBucket = { dispute: number; chargeback: number; inquiry: number };
   const disputeBuckets = new Map<string, DisputeBucket>();
-  let disputesAfterFilter = 0;
   for (const row of disputeRows ?? []) {
-    if (row.order_gid && testGids.has(row.order_gid as string)) continue;
-    disputesAfterFilter += 1;
     const initiated = String(row.initiated_at ?? "");
     if (!initiated) continue;
     const dateIso = initiated.slice(0, 10);
@@ -142,9 +136,7 @@ export async function backfillShopDailyMetrics(
     windowEnd,
     daysWritten: rowsToUpsert.length,
     ordersFetched: orders.length,
-    ordersAfterTestFilter: realOrderCount,
     disputesInWindow: (disputeRows ?? []).length,
-    disputesAfterTestFilter: disputesAfterFilter,
   };
 }
 

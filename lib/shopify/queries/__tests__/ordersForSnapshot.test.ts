@@ -67,29 +67,22 @@ describe("bucketOrdersByUtcDay", () => {
     expect(buckets.get("2026-04-20")).toBe(1);
   });
 
-  it("excludes test orders from the bucket count", () => {
-    // The chargeback-rate fix demands real-merchant-activity only;
-    // surasvenne is the textbook case where every order is `test`.
+  it("counts test orders alongside real orders (post-2026-05-01 revert)", () => {
+    // The test-order exclusion was removed so dev shops with
+    // Bogus-Gateway orders surface realistic numbers. The
+    // `testOrderGidSet` helper still tags them for the eventual
+    // prod re-enable.
     const orders: OrderForSnapshot[] = [
       order({ createdAt: "2026-04-21T10:00:00Z", isTest: false }),
       order({ createdAt: "2026-04-21T11:00:00Z", isTest: true }),
       order({ createdAt: "2026-04-21T12:00:00Z", isTest: true }),
     ];
     const buckets = bucketOrdersByUtcDay(orders);
-    expect(buckets.get("2026-04-21")).toBe(1);
+    expect(buckets.get("2026-04-21")).toBe(3);
   });
 
   it("returns an empty map when given no orders", () => {
     expect(bucketOrdersByUtcDay([]).size).toBe(0);
-  });
-
-  it("returns an empty map when every order is a test order", () => {
-    const orders: OrderForSnapshot[] = [
-      order({ createdAt: "2026-04-21T10:00:00Z", isTest: true }),
-      order({ createdAt: "2026-04-22T11:00:00Z", isTest: true }),
-    ];
-    const buckets = bucketOrdersByUtcDay(orders);
-    expect(buckets.size).toBe(0);
   });
 });
 

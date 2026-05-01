@@ -15,12 +15,13 @@
  *     was 7 but per-day-summed count was 14). The orders connection
  *     correctly honors the range filter, so we paginate and group
  *     by UTC date in code.
- *   - Test orders (`test === true`) are **excluded** from the
- *     denominator and from the dispute-test-filter set.
+ *   - Test orders (`test === true`) are **counted** during the dev
+ *     phase so dev shops with Bogus-Gateway orders surface realistic
+ *     numbers. The exclusion logic was reverted 2026-05-01 at the
+ *     user's request; the `testOrderGidSet` helper remains exported
+ *     for the eventual prod re-enable.
  *   - Dispute counts: local `disputes` table filtered by
  *     `initiated_at` falling inside the UTC day, split by `phase`.
- *     Disputes whose `order_gid` matches a test order are excluded
- *     so the rate reflects real merchant activity only.
  *
  * Side effect: upserts a single row into `shop_daily_metrics` keyed by
  * (shop_id, date). Re-runs are idempotent and refresh `last_synced_at`.
@@ -38,7 +39,6 @@ import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgrou
 import {
   fetchOrdersInWindow,
   bucketOrdersByUtcDay,
-  testOrderGidSet,
 } from "@/lib/shopify/queries/ordersForSnapshot";
 
 export interface SnapshotResult {
@@ -72,21 +72,18 @@ export async function snapshotShopDailyMetrics(
 
   const buckets = bucketOrdersByUtcDay(orders);
   const orderCount = buckets.get(dateIso) ?? 0;
-  const testGids = testOrderGidSet(orders);
 
   // ── Disputes initiated in the UTC day ──────────────────────────
   // Pulled from local table — kept fresh by the routine sync_disputes
-  // job (every 5 min). Disputes tied to a test order are excluded
-  // from both numerator and `dispute_count` so the row reflects real
-  // merchant activity only (PRD: "Chargeback rate must reflect real
-  // merchant activity only").
+  // job (every 5 min). Test-tied dispute filtering was reverted
+  // 2026-05-01 (see file header).
   const sb = getServiceClient();
   const startIso = `${dateIso}T00:00:00Z`;
   const endIso = `${nextDate}T00:00:00Z`;
 
   const { data: disputeRows, error: disputeErr } = await sb
     .from("disputes")
-    .select("id, phase, order_gid")
+    .select("id, phase")
     .eq("shop_id", shopId)
     .gte("initiated_at", startIso)
     .lt("initiated_at", endIso);
@@ -97,15 +94,13 @@ export async function snapshotShopDailyMetrics(
 
   let chargebackCount = 0;
   let inquiryCount = 0;
-  let disputeCount = 0;
   for (const row of disputeRows ?? []) {
-    if (row.order_gid && testGids.has(row.order_gid)) continue;
-    disputeCount += 1;
     if (row.phase === "chargeback") chargebackCount += 1;
     else if (row.phase === "inquiry") inquiryCount += 1;
     // phase NULL is excluded from both phase buckets but counted in
     // `dispute_count` (PRD §11 — handle legacy phase nulls).
   }
+  const disputeCount = (disputeRows ?? []).length;
 
   // ── Upsert ──────────────────────────────────────────────────────
   const { error: upsertErr } = await sb

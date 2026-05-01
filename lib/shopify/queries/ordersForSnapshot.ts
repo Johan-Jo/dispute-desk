@@ -147,20 +147,27 @@ export async function fetchOrdersInWindow(
   );
 }
 
-/** Pure helper: bucket orders into UTC-day order counts, **excluding
- *  test orders**. Returns a Map<dateIso → count>. */
+/** Pure helper: bucket orders into UTC-day order counts. Returns a
+ *  Map<dateIso → count>.
+ *
+ *  Test-order exclusion (the `if (o.isTest) continue` rule) was
+ *  removed 2026-05-01 at the user's request so dev shops with
+ *  Bogus-Gateway test orders read realistic numbers during local
+ *  testing. The `testOrderGidSet` helper below is kept for the
+ *  eventual re-enable when promoting from dev → prod. */
 export function bucketOrdersByUtcDay(orders: OrderForSnapshot[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const o of orders) {
-    if (o.isTest) continue; // Real-merchant-activity rule.
     const dateIso = o.createdAt.slice(0, 10);
     counts.set(dateIso, (counts.get(dateIso) ?? 0) + 1);
   }
   return counts;
 }
 
-/** Pure helper: build a Set of test-order GIDs so we can exclude
- *  disputes whose `order_gid` refers to a test order. */
+/** Pure helper: build a Set of test-order GIDs. **Currently unused**
+ *  — the test-order filter was reverted 2026-05-01 to let dev shops
+ *  surface realistic numbers. Kept exported so the eventual prod
+ *  re-enable doesn't have to re-implement it. */
 export function testOrderGidSet(orders: OrderForSnapshot[]): Set<string> {
   const set = new Set<string>();
   for (const o of orders) {
