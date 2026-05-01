@@ -564,10 +564,11 @@ function ChargebackRateDetailsStrip({
   const [expanded, setExpanded] = useState(false);
 
   if (loading) return null;
-  // Nothing meaningful to surface — hide the affordance entirely.
-  if (!stats.chargebackRateAvailable && !stats.chargebackRateLastSyncedAt) {
-    return null;
-  }
+
+  // Figma `shopify-home.tsx` always renders the Details button —
+  // there is no `if (!available) return null` guard. The expanded
+  // panel below gracefully degrades to a single "Calculating…" line
+  // when no snapshot exists yet (fresh install, mid-backfill).
 
   const numberFmt = (n: number) => new Intl.NumberFormat(dateLocale).format(n);
   const change = stats.chargebackRateChange;
@@ -595,9 +596,7 @@ function ChargebackRateDetailsStrip({
 
   // Figma 2026-05-01 — "Approaching risk threshold (0.9%)" surfaces
   // whenever rate ≥ 0.7%, which spans the upper Watch band through
-  // High risk. Matches the literal Figma trigger (`shopify-home.tsx`)
-  // — the hint coexists with the High-risk pill rather than being
-  // suppressed by it.
+  // High risk. Matches the literal Figma trigger (`shopify-home.tsx`).
   const approachingThreshold =
     stats.chargebackRateAvailable &&
     stats.chargebackRate !== null &&
@@ -609,65 +608,14 @@ function ChargebackRateDetailsStrip({
   return (
     <div
       style={{
-        marginTop: "16px",
-        paddingTop: "12px",
-        borderTop: "1px solid #E5E7EB",
+        marginTop: "12px",
+        paddingTop: "8px",
+        borderTop: "1px solid #E1E3E5",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: expanded ? "space-between" : "flex-end",
-          flexWrap: "wrap",
-          gap: "12px",
-        }}
-      >
-        {expanded && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-              fontSize: "12px",
-              color: "#6D7175",
-              lineHeight: 1.4,
-            }}
-          >
-            {stats.chargebackRateAvailable && (
-              <span>
-                {t("dashboard.chargebackRateSubtext", {
-                  numerator: numberFmt(stats.chargebackRateNumerator),
-                  denominator: numberFmt(stats.chargebackRateDenominator),
-                })}
-              </span>
-            )}
-            {deltaLabel && <span>{deltaLabel}</span>}
-            {approachingThreshold && (
-              <span style={{ color: "#92400E" }}>
-                {t("dashboard.chargebackRateApproachingThreshold")}
-              </span>
-            )}
-            {lastSyncedLabel && (
-              <span style={{ color: "#8C9196" }}>{lastSyncedLabel}</span>
-            )}
-            {showLowVolume && (
-              <span
-                style={{
-                  display: "inline-block",
-                  background: "#FEF3C7",
-                  color: "#92400E",
-                  padding: "2px 8px",
-                  borderRadius: "6px",
-                  fontWeight: 500,
-                }}
-              >
-                {t("dashboard.chargebackRateLowVolume")}
-              </span>
-            )}
-          </div>
-        )}
+      {/* Top row — Details button right-aligned, always visible.
+          Matches Figma `shopify-home.tsx:331-339` literally. */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -679,16 +627,95 @@ function ChargebackRateDetailsStrip({
             padding: 0,
             fontSize: "12px",
             fontWeight: 500,
-            color: "#1D4ED8",
+            color: "#005BD3",
             cursor: "pointer",
             fontFamily: "inherit",
+            textDecoration: "none",
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
         >
           {expanded
             ? t("dashboard.chargebackRateDetailsHide")
             : t("dashboard.chargebackRateDetailsShow")}
         </button>
       </div>
+
+      {/* Expanded panel — vertical stack of subdued lines. Matches
+          Figma `shopify-home.tsx:340-365` (`space-y-1.5`). When the
+          snapshot is missing the panel collapses to a single
+          "Calculating…" line so the affordance still feels responsive. */}
+      {expanded && (
+        <div
+          style={{
+            marginTop: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+          }}
+        >
+          {!stats.chargebackRateAvailable ? (
+            <span style={{ fontSize: "12px", color: "#6D7175", fontStyle: "italic" }}>
+              {t("dashboard.chargebackRateUnavailable")}
+            </span>
+          ) : (
+            <>
+              <div style={{ fontSize: "12px", color: "#6D7175", lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 500, color: "#202223" }}>
+                  {numberFmt(stats.chargebackRateNumerator)}{" "}
+                  {stats.chargebackRateNumerator === 1 ? "chargeback" : "chargebacks"}
+                </span>
+                {" / "}
+                {numberFmt(stats.chargebackRateDenominator)} orders
+              </div>
+              {deltaLabel && (
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color:
+                      change !== null && change > 0
+                        ? "#DC2626"
+                        : change !== null && change < 0
+                          ? "#059669"
+                          : "#6D7175",
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {deltaLabel}
+                </div>
+              )}
+              {approachingThreshold && (
+                <div style={{ fontSize: "12px", color: "#92400E", lineHeight: 1.4 }}>
+                  {t("dashboard.chargebackRateApproachingThreshold")}
+                </div>
+              )}
+              {lastSyncedLabel && (
+                <div style={{ fontSize: "12px", color: "#8C9196", lineHeight: 1.4 }}>
+                  {lastSyncedLabel}
+                </div>
+              )}
+              {showLowVolume && (
+                <div style={{ marginTop: "4px" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      background: "#FEF3C7",
+                      color: "#92400E",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {t("dashboard.chargebackRateLowVolume")}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
