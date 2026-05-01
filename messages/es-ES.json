@@ -133,6 +133,7 @@
     "chargebackRateThresholdHealthy": "Saludable",
     "chargebackRateThresholdWatch": "Vigilar",
     "chargebackRateThresholdHigh": "Riesgo alto",
+    "chargebackRateTooltipFootnote": "Las redes de tarjetas pueden aplicar penalizaciones por encima de los umbrales.",
     "chargebackRateDetailsShow": "Detalles",
     "chargebackRateDetailsHide": "Ocultar detalles",
     "chargebackRateDeltaIncrease": "+{value} pp de aumento",

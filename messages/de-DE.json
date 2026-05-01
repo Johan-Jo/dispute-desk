@@ -133,6 +133,7 @@
     "chargebackRateThresholdHealthy": "Gesund",
     "chargebackRateThresholdWatch": "Beobachten",
     "chargebackRateThresholdHigh": "Hohes Risiko",
+    "chargebackRateTooltipFootnote": "Kartennetzwerke können oberhalb der Schwellenwerte Strafen verhängen.",
     "chargebackRateDetailsShow": "Details",
     "chargebackRateDetailsHide": "Details ausblenden",
     "chargebackRateDeltaIncrease": "+{value} pp Anstieg",

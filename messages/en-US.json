@@ -122,6 +122,7 @@
     "chargebackRateThresholdHealthy": "Healthy",
     "chargebackRateThresholdWatch": "Watch",
     "chargebackRateThresholdHigh": "High risk",
+    "chargebackRateTooltipFootnote": "Card networks may apply penalties above threshold levels.",
     "chargebackRateDetailsShow": "Details",
     "chargebackRateDetailsHide": "Hide details",
     "chargebackRateDeltaIncrease": "+{value} pp increase",

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { BlockStack, Icon, Text, useBreakpoints } from "@shopify/polaris";
+import { BlockStack, Icon, Text, Tooltip, useBreakpoints } from "@shopify/polaris";
 import {
   AlertCircleIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
   CashDollarIcon,
   ChartLineIcon,
-  ShieldCheckMarkIcon,
+  InfoIcon,
 } from "@shopify/polaris-icons";
 import styles from "./dashboard.module.css";
 import {
@@ -233,6 +235,183 @@ function MobileKpiTile({
   );
 }
 
+/**
+ * Chargeback rate tile — Figma alignment 2026-05-01.
+ *
+ * Structurally distinct from `DesktopKpiTile` / `MobileKpiTile`
+ * because the Figma chargeback card carries affordances the standard
+ * tile doesn't have:
+ *   - Info icon next to the label with a hover tooltip explaining
+ *     the threshold bands + a card-network penalty footnote.
+ *   - Threshold pill in the **title row top-right** (replaces the
+ *     icon chip the other 4 tiles use).
+ *   - Value + delta on the **same row** (`flex items-end justify-
+ *     between`), not stacked.
+ *
+ * Other 4 KPI tiles (Active / Win / Recovered / At risk) keep their
+ * current styling — explicitly out of scope per the Figma rework
+ * brief ("align with the current design").
+ */
+function ChargebackKpiTile({
+  rate,
+  delta,
+  available,
+  band,
+  bandLabel,
+  loading,
+}: {
+  rate: number | null;
+  delta: number | null;
+  available: boolean;
+  band: ThresholdTone | null;
+  bandLabel: string | null;
+  loading: boolean;
+}) {
+  const t = useTranslations();
+  const tooltipContent = (
+    <BlockStack gap="050">
+      <Text as="p" variant="bodySm">
+        <strong>{t("dashboard.chargebackRateThresholdHealthy")}:</strong>{" "}
+        below 0.6%
+      </Text>
+      <Text as="p" variant="bodySm">
+        <strong>{t("dashboard.chargebackRateThresholdWatch")}:</strong>{" "}
+        0.6%–0.9%
+      </Text>
+      <Text as="p" variant="bodySm">
+        <strong>{t("dashboard.chargebackRateThresholdHigh")}:</strong>{" "}
+        above 0.9%
+      </Text>
+      <Text as="p" variant="bodyXs" tone="subdued">
+        {t("dashboard.chargebackRateTooltipFootnote")}
+      </Text>
+    </BlockStack>
+  );
+
+  const display = loading || !available || rate === null
+    ? "—"
+    : `${rate.toFixed(1)}%`;
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "10px",
+        border: "1px solid #E1E3E5",
+        padding: "16px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "12px",
+          gap: "8px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "#6D7175",
+              margin: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {t("dashboard.chargebackRate")}
+          </p>
+          <Tooltip content={tooltipContent} preferredPosition="below">
+            <button
+              type="button"
+              aria-label={t("dashboard.chargebackRate")}
+              style={{
+                appearance: "none",
+                background: "transparent",
+                border: 0,
+                padding: 0,
+                cursor: "help",
+                display: "inline-flex",
+                color: "#6D7175",
+                width: "14px",
+                height: "14px",
+                flexShrink: 0,
+              }}
+            >
+              <Icon source={InfoIcon} />
+            </button>
+          </Tooltip>
+        </div>
+        {band && bandLabel && (
+          <span
+            style={{
+              padding: "2px 8px",
+              borderRadius: "6px",
+              fontSize: "10px",
+              fontWeight: 600,
+              lineHeight: 1.4,
+              background: TONE_PALETTE[band].bg,
+              color: TONE_PALETTE[band].color,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {bandLabel}
+          </span>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: "8px",
+        }}
+      >
+        <p style={{ fontSize: "24px", fontWeight: 700, color: "#202223", margin: 0 }}>
+          {display}
+        </p>
+        {available && delta !== null && (
+          <ChargebackDelta value={delta} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Inline arrow + value chip for the chargeback rate card.
+ *  Up = red (rate climbing is bad), down = green, zero = neutral. */
+function ChargebackDelta({ value }: { value: number }) {
+  const isPositive = value > 0;
+  const isNegative = value < 0;
+  const color = isPositive ? "#DC2626" : isNegative ? "#059669" : "#6D7175";
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        fontSize: "12px",
+        fontWeight: 500,
+        color,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {(isPositive || isNegative) && (
+        <span style={{ width: "12px", height: "12px", display: "inline-flex", color }}>
+          <Icon source={isPositive ? ArrowUpIcon : ArrowDownIcon} />
+        </span>
+      )}
+      {isPositive ? "+" : ""}
+      {value.toFixed(1)} pp
+    </span>
+  );
+}
+
 interface Props {
   stats: DashboardStats;
   loading: boolean;
@@ -277,14 +456,13 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     change: stats.amountAtRiskChange,
   };
 
-  // ── Chargeback rate (PRD §8) ────────────────────────────────────────
-  // Card itself shows ONLY: title, rounded value, threshold badge,
-  // pp delta with inverse coloring (up = bad). Numerator/denominator,
-  // last-synced, and explanatory hints all live in the Details strip
-  // below the KPI row — never inside the tile (PRD §8 "DO NOT add
-  // subtext / numerator-denominator / explanations").
+  // ── Chargeback rate (PRD §8 / Figma 2026-05-01) ─────────────────────
+  // Rendered via a dedicated `ChargebackKpiTile` rather than the shared
+  // `DesktopKpiTile` because Figma gives this card a distinct title row
+  // (label + info tooltip + threshold pill in top-right) and a value+
+  // delta inline row. The other 4 KPI tiles keep their existing shape.
   const chargebackBand = classifyChargebackRate(stats.chargebackRate);
-  const chargebackBadgeLabel =
+  const chargebackBandLabel =
     chargebackBand === "healthy"
       ? t("dashboard.chargebackRateThresholdHealthy")
       : chargebackBand === "watch"
@@ -292,23 +470,19 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
         : chargebackBand === "high"
           ? t("dashboard.chargebackRateThresholdHigh")
           : null;
-  const chargebackRate: KpiCard = {
-    icon: ShieldCheckMarkIcon,
-    label: t("dashboard.chargebackRate"),
-    value:
-      stats.chargebackRateAvailable && stats.chargebackRate !== null
-        ? `${stats.chargebackRate.toFixed(1)}%`
-        : "—",
-    change: stats.chargebackRateAvailable ? stats.chargebackRateChange : null,
-    changeInverse: true,
-    changeUnit: "pp",
-    badge:
-      chargebackBand && chargebackBadgeLabel
-        ? { label: chargebackBadgeLabel, tone: chargebackBand }
-        : undefined,
-  };
 
-  const desktopCards = [active, winRate, recovered, atRisk, chargebackRate];
+  const desktopCards = [active, winRate, recovered, atRisk];
+
+  const chargebackTile = (
+    <ChargebackKpiTile
+      rate={stats.chargebackRate}
+      delta={stats.chargebackRateAvailable ? stats.chargebackRateChange : null}
+      available={stats.chargebackRateAvailable}
+      band={chargebackBand}
+      bandLabel={chargebackBandLabel}
+      loading={loading}
+    />
+  );
 
   return (
     <div style={{
@@ -339,10 +513,10 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
               <MobileKpiTile card={recovered} vsLabel={vsLabel} loading={loading} />
               <MobileKpiTile card={lost} vsLabel={vsLabel} loading={loading} />
             </div>
-            {/* Row 4: Chargeback Rate (full width — risk metric warrants
-                its own row so the threshold pill + subtext don't
-                truncate inside a 2-column grid) */}
-            <MobileKpiTile card={chargebackRate} vsLabel={vsLabel} loading={loading} />
+            {/* Row 4: Chargeback Rate — full width on mobile so the
+                threshold pill + info tooltip + delta have room to
+                render without wrapping. */}
+            {chargebackTile}
           </div>
         </BlockStack>
       ) : (
@@ -355,6 +529,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
             {desktopCards.map((card) => (
               <DesktopKpiTile key={card.label} card={card} vsLabel={vsLabel} loading={loading} />
             ))}
+            {chargebackTile}
           </div>
         </>
       )}
@@ -418,15 +593,15 @@ function ChargebackRateDetailsStrip({
       })
     : null;
 
-  // PRD §8 — "Approaching risk threshold (0.9%)" only when the rate is
-  // in the upper half of the Watch band, i.e. 0.8% ≤ rate < 0.9%.
-  // Below 0.8% the merchant has plenty of headroom; above 0.9% the
-  // High-risk badge already signals it.
+  // Figma 2026-05-01 — "Approaching risk threshold (0.9%)" surfaces
+  // whenever rate ≥ 0.7%, which spans the upper Watch band through
+  // High risk. Matches the literal Figma trigger (`shopify-home.tsx`)
+  // — the hint coexists with the High-risk pill rather than being
+  // suppressed by it.
   const approachingThreshold =
     stats.chargebackRateAvailable &&
     stats.chargebackRate !== null &&
-    stats.chargebackRate >= 0.8 &&
-    stats.chargebackRate < 0.9;
+    stats.chargebackRate >= 0.7;
 
   const showLowVolume =
     stats.chargebackRateAvailable && stats.chargebackRateLowVolume;
@@ -469,15 +644,26 @@ function ChargebackRateDetailsStrip({
               </span>
             )}
             {deltaLabel && <span>{deltaLabel}</span>}
-            {lastSyncedLabel && <span>{lastSyncedLabel}</span>}
-            {showLowVolume && (
-              <span style={{ color: "#92400E" }}>
-                {t("dashboard.chargebackRateLowVolume")}
-              </span>
-            )}
             {approachingThreshold && (
               <span style={{ color: "#92400E" }}>
                 {t("dashboard.chargebackRateApproachingThreshold")}
+              </span>
+            )}
+            {lastSyncedLabel && (
+              <span style={{ color: "#8C9196" }}>{lastSyncedLabel}</span>
+            )}
+            {showLowVolume && (
+              <span
+                style={{
+                  display: "inline-block",
+                  background: "#FEF3C7",
+                  color: "#92400E",
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  fontWeight: 500,
+                }}
+              >
+                {t("dashboard.chargebackRateLowVolume")}
               </span>
             )}
           </div>

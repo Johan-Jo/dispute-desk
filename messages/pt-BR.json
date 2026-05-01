@@ -133,6 +133,7 @@
     "chargebackRateThresholdHealthy": "Saudável",
     "chargebackRateThresholdWatch": "Atenção",
     "chargebackRateThresholdHigh": "Risco alto",
+    "chargebackRateTooltipFootnote": "Bandeiras de cartão podem aplicar penalidades acima dos limites.",
     "chargebackRateDetailsShow": "Detalhes",
     "chargebackRateDetailsHide": "Ocultar detalhes",
     "chargebackRateDeltaIncrease": "+{value} pp de aumento",

@@ -116,6 +116,7 @@
     "chargebackRateThresholdHealthy": "Hälsosam",
     "chargebackRateThresholdWatch": "Bevaka",
     "chargebackRateThresholdHigh": "Hög risk",
+    "chargebackRateTooltipFootnote": "Kortnätverk kan tillämpa straffavgifter över tröskelvärdena.",
     "chargebackRateDetailsShow": "Detaljer",
     "chargebackRateDetailsHide": "Dölj detaljer",
     "chargebackRateDeltaIncrease": "+{value} pp ökning",

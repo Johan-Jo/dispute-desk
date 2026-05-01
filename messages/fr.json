@@ -116,6 +116,7 @@
     "chargebackRateThresholdHealthy": "Sain",
     "chargebackRateThresholdWatch": "À surveiller",
     "chargebackRateThresholdHigh": "Risque élevé",
+    "chargebackRateTooltipFootnote": "Les réseaux de cartes peuvent appliquer des pénalités au-dessus des seuils.",
     "chargebackRateDetailsShow": "Détails",
     "chargebackRateDetailsHide": "Masquer les détails",
     "chargebackRateDeltaIncrease": "+{value} pp de hausse",
