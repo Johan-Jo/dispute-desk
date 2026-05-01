@@ -51,6 +51,31 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * Clamp the spotlight rect to the visible viewport. Used for targets
+ * that are taller than the screen (e.g. a long disputes table) so the
+ * spotlight cutout doesn't extend off-screen and the tooltip can be
+ * positioned correctly relative to the visible portion.
+ */
+function clampRectToViewport(rect: DOMRect, vh: number, taller: boolean): DOMRect {
+  if (!taller) return rect;
+  const top = Math.max(rect.top, 0);
+  const bottom = Math.min(rect.bottom, vh);
+  const height = Math.max(0, bottom - top);
+  return {
+    ...rect,
+    top,
+    bottom,
+    height,
+    x: rect.x,
+    y: top,
+    left: rect.left,
+    right: rect.right,
+    width: rect.width,
+    toJSON: rect.toJSON,
+  } as DOMRect;
+}
+
+/**
  * Wait for a selector to appear in the DOM (with a viewport-rect),
  * polling via MutationObserver. Resolves with the rect, or null on timeout.
  */
@@ -145,12 +170,21 @@ export function EmbeddedTourOverlay() {
 
   // Resolve the target rect (with MutationObserver wait).
   //
-  // Avoid mid-scroll repositioning: only scroll the target into view
-  // when it is fully off-screen. When we do scroll, wait for the smooth
-  // scroll to settle (~450ms) before recomputing the tooltip rect —
-  // otherwise the tooltip is positioned against the pre-scroll layout
-  // and the merchant sees the popup "fly" or "disappear" as the page
-  // animates into place.
+  // Three scroll cases:
+  //   - Fully visible -> commit the rect immediately, no scroll.
+  //   - Smaller than viewport but partly out of view -> scroll to
+  //     center it.
+  //   - Larger than viewport (e.g. disputes table that extends
+  //     past the fold) -> scroll only the TOP of the element into
+  //     view and clamp the spotlight to the visible portion. Without
+  //     this clamp, scrollIntoView({block:"center"}) would yank the
+  //     page so the table's middle is centered, leaving the top of
+  //     the target above the viewport and the tooltip flying off
+  //     screen.
+  //
+  // We also commit the existing rect IMMEDIATELY (so the tooltip
+  // never disappears) and overwrite it with the post-scroll rect
+  // 500ms later once the smooth scroll has settled.
   useEffect(() => {
     if (!step) return;
 
@@ -160,6 +194,7 @@ export function EmbeddedTourOverlay() {
     }
 
     let cancelled = false;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
     setTargetRect(null);
 
     waitForSelectorRect(step.targetSelector, RECT_OBSERVER_TIMEOUT).then(
@@ -174,27 +209,39 @@ export function EmbeddedTourOverlay() {
         const margin = 80;
         const fullyVisible =
           rect.top >= margin && rect.bottom <= vh - margin;
+        const tallerThanViewport = rect.height > vh - margin * 2;
+
+        // Commit something visible RIGHT AWAY so the popup never
+        // disappears. The post-scroll fresh rect overrides this 500ms
+        // later if we scroll.
+        const initial = clampRectToViewport(rect, vh, tallerThanViewport);
+        setTargetRect(initial);
 
         if (fullyVisible || !el) {
-          setTargetRect(rect);
           return;
         }
 
-        // Off-screen — scroll, wait for smooth-scroll to settle, then
-        // commit the tooltip rect against the post-scroll layout.
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        const settle = setTimeout(() => {
+        // For oversized targets, align the top of the element with
+        // 16px from the top of the viewport so the spotlight covers
+        // the visible top region. For normal targets, center it.
+        const block: ScrollLogicalPosition = tallerThanViewport
+          ? "start"
+          : "center";
+        el.scrollIntoView({ behavior: "smooth", block });
+
+        settleTimer = setTimeout(() => {
           if (cancelled) return;
           const fresh = el.getBoundingClientRect();
-          setTargetRect(fresh.width || fresh.height ? fresh : rect);
+          if (fresh.width || fresh.height) {
+            setTargetRect(clampRectToViewport(fresh, vh, tallerThanViewport));
+          }
         }, 500);
-
-        return () => clearTimeout(settle);
       },
     );
 
     return () => {
       cancelled = true;
+      if (settleTimer !== null) clearTimeout(settleTimer);
     };
   }, [step]);
 
