@@ -130,16 +130,15 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <a href={SHOPIFY_INSTALL_URL}>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-full sm:w-auto bg-white text-[#0B1220] hover:bg-slate-100 border-2 border-white shadow-xl shadow-black/25 focus:ring-white/60 [&_svg]:text-[#0B1220]"
-                  >
-                    {t("hero.installFree")}
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </a>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handlePricingCta}
+                  className="w-full sm:w-auto bg-white text-[#0B1220] hover:bg-slate-100 border-2 border-white shadow-xl shadow-black/25 focus:ring-white/60 [&_svg]:text-[#0B1220]"
+                >
+                  {t("hero.installFree")}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
                 <a href="#pricing">
                   <Button
                     variant="secondary"
