@@ -1120,7 +1120,55 @@ The Overview tab is structured as a **decision-oriented recommendation engine**,
 
 Rule: every section must explain *why* something matters and guide the user toward the next action. No raw scores, no system jargon, no generic dashboard phrasing. Assertive language only.
 
-### Evidence tab structure (decision-driven analysis)
+### Evidence tab structure (4-section IA, 2026-05-02)
+
+**Status:** active. Supersedes the *decision-driven analysis* layout below (retained for context). The 1737-LOC `EvidenceTab.tsx` was replaced with a thin orchestrator that delegates to four labelled sections fed by a pure-derivation hook (`useEvidenceSections`). Backend logic — scoring, classification, payload generation — was **not** touched. The hook reads existing workspace data and produces a typed view-model; no new fetches, no new fields, no new API.
+
+**Hard rules (enforced by the hook + components):**
+- **No percentages anywhere.** No "83% evidence collected", no coverage bars, no progress meters.
+- **No predictive copy.** No "Likely outcome", no win/loss probability language.
+- **Strength is read verbatim from `caseStrength.overall`.** The raw value (`strong | moderate | weak | insufficient`) is preserved through the view-model; `insufficient` is mapped to *Weak* only at the `CaseSummaryCard` display layer, never in the hook.
+- **Item-level row strength is exactly `Strong | Moderate | Supporting`.** "Weak" is reserved for the case-level chip; item rows use *Supporting* as the lowest positive label.
+- **Three buckets are visually unambiguous:** submitted to Shopify/bank ▸ internal-only (not submitted) ▸ missing/optional. Negative or weakening evidence is visible to the merchant but never appears under any "submitted" section.
+
+**Sections (in order):**
+
+1. **Case summary** (`CaseSummaryCard.tsx`) — single card. Renders four signals:
+   - Case-strength chip (`caseStrength.overall` verbatim; `insufficient → Weak` is display-only).
+   - Status chip — `Submitted | Needs attention | In progress`, derived from `derived.isReadOnly`, `derived.isFailed`, and `derived.readiness`.
+   - Automation chip — `Automatic | Review required` from `data.appliedRule.mode` (the canonical two-mode rule from `feedback_two_automation_modes.md`; `null` defaults to Review-required).
+   - Next-step line — one of four fixed copies driven by `readiness × automationMode`:
+     - `ready_no_action` → "Ready — no action needed" (`readiness === "ready"` AND automation = automatic).
+     - `submit_now` → "Submit now" (`readiness === "ready_with_warnings"` OR `ready` + review mode).
+     - `review_missing` → "Review missing evidence below" (`readiness === "blocked"`).
+     - `submitted_no_action` → "Submitted — no further action required" (`isReadOnly === true`).
+   - Plus the merchant-facing automation copy ("DisputeDesk will handle this automatically based on the evidence shown above." / "Review required before submission.") sourced from `disputes.evidenceTab.automation.{automatic|reviewRequired}`.
+
+2. **Evidence used in defense** (`EvidenceUsedSection.tsx` + `EvidenceRow.tsx`) — lists **all** signals supporting the case regardless of submission status, ordered Strong → Moderate → Supporting. Sources: `derived.contributions.strong[]` + `derived.contributions.moderate[]` (the canonical `computeContributions` output from `lib/argument/caseStrength.ts`) plus a third pass over `effectiveChecklist` that picks up `available` items at `supporting` level. Each row answers four questions in stable order: **What it is** (title), **Why this matters** (single reason-aware sentence — merges what was previously two fields), **Source** (`Shopify | Merchant upload | Derived`, classified by an explicit allowlist), **Submitted to Shopify** (`Yes / No / Unknown` chip — see below).
+
+3. **Missing or weak evidence** (`MissingOrWeakSection.tsx`) — only items with `status === "missing"`, fed from `derived.missingItems`. Each row carries Title, Why-it-matters, Required/Optional chip. **Inline merchant actions** (added 2026-05-02): an `Upload evidence` button (hidden `<input type="file">` → `actions.uploadEvidence(field, files)`) and a `Mark as not applicable` button that opens a section-level Modal (single Polaris `Select` of the existing `WaiveReason` values → `actions.waiveItem(field, reason)`). No DropZone, no per-row state — minimal Polaris primitives only. Section collapses entirely (returns `null`) when the list is empty.
+
+4. **Internal-only signals** (`InternalOnlySignalsSection.tsx`) — **always rendered**, even when empty, so the merchant always has a definitive answer to "is anything being held back?" Populated by a minimal classifier in `useEvidenceSections.ts` reading existing payloads:
+   - **AVS or CVV mismatch** when `payload.avsResultCode` is set and not `"Y"/"A"` OR `payload.cvvResultCode` is set and not `"M"`. Absence of codes is never a negative signal.
+   - **IP geolocation country mismatch** when `payload.locationMatch === "different_country"` (per `lib/packs/sources/deviceLocationSource.ts`).
+   - **High-risk IP routing** when `payload.riskLevel === "high"` (VPN / proxy / data-center).
+   - **Generic catch-all** for any field whose payload sets `bankEligible: false`. Future negative-signal collectors light this up automatically without code changes.
+   - Empty state copy: *"No internal-only signals. All relevant evidence is included in your defense."*
+   This honors `feedback_bank_optimized_rebuttal.md` — weakening signals are visible to the merchant but never appear under §2.
+
+**Tristate `submittedToShopify` (Yes / No / Unknown):** derived in `useEvidenceSections.ts` from the same source the actual mutation reads — `data.submissionFields[].included`. Each evidence field maps to a known set of Shopify field names via the `EVIDENCE_TO_SHOPIFY` map; `yes` requires at least one mapped Shopify field to be in the included set, `no` requires the mapping to exist but no included match, `unknown` is the explicit default for evidence without a dedicated Shopify field (AVS/CVV codes embedded in narrative, derived signals, file-upload-only fields). The hook **never defaults to `yes`**. Waived items and items in `clientState.excludedFields` always resolve to `no`. The `unknown` chip in `RowStatusChip.tsx` is wrapped in a Polaris `Tooltip` with explanatory copy — *"Submission status could not be determined for this item. It may or may not be included depending on how Shopify processes this evidence."* — so the merchant never sees an unexplained "Unknown".
+
+**Build / load / no-pack states:** surfaced as Polaris `Banner`s above the four sections — `isFailed → critical`, `isBuilding → info`, `pack === null → warning`. The four sections still render below the banner with whatever data is available, matching the legacy non-flicker behavior.
+
+**Files of record:**
+- `app/(embedded)/app/disputes/[id]/tabs/EvidenceTab.tsx` (composition only, ~120 LOC)
+- `app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts` (pure derivation hook)
+- `app/(embedded)/app/disputes/[id]/tabs/sections/{CaseSummaryCard,EvidenceUsedSection,EvidenceRow,RowStatusChip,MissingOrWeakSection,InternalOnlySignalsSection}.tsx`
+- i18n keys: `disputes.{caseStrength,itemStrength}` and `disputes.evidenceTab.{sections,row,automation}` across all 12 locale files. English first; other locales mirror English copy until translated.
+
+---
+
+### Evidence tab structure — legacy decision-driven layout (retained for historical context)
 
 The Evidence tab is the analysis surface for a single dispute. It must answer three questions in order: *Will I win this case? Why? What should I do next?* Sections, in order (Figma alignment 2026-04-26 — Plan C, no logic removed):
 
@@ -1138,7 +1186,46 @@ The Evidence tab is the analysis surface for a single dispute. It must answer th
 
 **Removed in earlier rewrites:** the standalone "Argument summary" card, "Case strength" card, "Ways to strengthen this case", "Collected automatically" cards, and the closing-action guidance Banner. The 2026-04-26 Figma alignment did not remove any further logic — only swapped Polaris `<Card>` chrome for inline div styling and converted the per-counterclaim flat tag list into expand/collapse argument blocks.
 
-### Review & Submit tab structure (Figma alignment 2026-04-27)
+### Review & Submit tab structure (4-section IA, 2026-05-02)
+
+**Status:** active. Supersedes the *Figma alignment 2026-04-27* layout below (retained for context). The 1354-LOC `ReviewSubmitTab.tsx` was replaced with a thin orchestrator that delegates to four labelled sections fed by `useReviewView`. No backend changes — the hook reads the existing workspace shape (including `data.submissionFields`, `data.rebuttalDraft`, `data.attachments`) and produces a typed view-model. The Shopify mutation payload is rendered byte-for-byte; only the visual grouping is presentational.
+
+**Hard rules:**
+- **§2 ("Exact data sent to Shopify") matches the actual mutation byte-for-byte.** The five readable groups are pure presentation; no field content is transformed, no values are reordered inside a group beyond field-by-field rendering.
+- **No loading skeletons in §2.** When the payload is absent (pre-build / empty pack), render the explicit empty-state copy *"Save your evidence first to see exactly what will be sent to the bank."* and stop.
+- **Bank-visible vs internal split is unambiguous.** §2 is what the bank sees; §3 lists what was excluded with a stable reason from a fixed dictionary; §4 is the rebuttal text.
+
+**Sections (in order):**
+
+1. **Submission status** (`SubmissionStatusCard.tsx`) — single card. Two states:
+   - **Submitted**: `Evidence submitted to Shopify` chip + formatted timestamp (via `Intl.DateTimeFormat` with the active `next-intl` locale; bad ISO strings fall back to the raw value rather than throwing) + `Open in Shopify Admin` link from `getShopifyDisputeUrl(shopDomain, disputeEvidenceGid)` in `lib/shopify/shopifyAdminUrl.ts` (link hidden when the helper returns `null`).
+   - **Ready to submit**: `Ready to submit` chip + the primary CTA. The CTA stays enabled whenever the system can accept a submit attempt (i.e. NOT `isBuilding` and NOT `isFailed`); readiness alone never disables the button — that would block the merchant outright. When `requiresOverride === true` (readiness blocked or `ready_with_warnings`), the CTA label flips to *"Submit anyway"* and the click routes through the override Modal instead of submitting directly.
+
+2. **Exact data sent to Shopify** (`ExactDataSentCard.tsx`) — bank-visible payload bucketed into five fixed presentational groups in this order:
+   - **Order details** — `accessActivityLog` (timeline / order activity).
+   - **Payment verification** — currently no dedicated Shopify text field; AVS/CVV codes are embedded in `accessActivityLog` narrative. The header is hidden when the group has no rows (hide-when-empty rule).
+   - **Customer activity** — `shippingDocumentation`, `shippingDocumentationFile`.
+   - **Policies** — `refundPolicyDisclosure`, `cancellationPolicyDisclosure`, `refundRefusalExplanation`, `cancellationRebuttal`.
+   - **Additional evidence** — `uncategorizedText` plus all `data.attachments` (file uploads).
+   Empty groups are stripped at the hook layer and not rendered. The five-group routing lives in `EVIDENCE_TO_SHOPIFY` (in `useEvidenceSections.ts` — also consulted by §2 of EvidenceTab for the `submittedToShopify` chip) and `GROUP_BY_FIELD` (in `useReviewView.ts`). Maintenance touchpoint: a new Shopify field not in the map silently falls into `additionalEvidence` (matches Shopify's `uncategorizedText` semantics).
+
+3. **Not submitted (transparency)** (`NotSubmittedCard.tsx`) — items present in the pack but excluded from the bank-visible payload. Sources: any `submissionFields` row with `included === false`, plus items in `clientState.excludedFields`. Each row carries a stable reason from a fixed dictionary (`avoid_weakening` / `gateway_gated` / `merchant_waived` / `write_only`) — never free-text. Section collapses (returns `null`) when the list is empty.
+
+4. **Final defense statement** (`FinalDefenseStatementCard.tsx`) — full bank-rebuttal text rendered exactly as it will be sent. Header label *"This is the final statement sent to the card network."* Optional `Derived from:` sub-block lists contributing evidence categories (sourced from `derived.contributions.{strong,moderate}`'s labels — metadata, not weaknesses). When `data.rebuttalOutdated === true`, a warning Banner surfaces *"The evidence pack changed since this statement was generated. Regenerate to pick up the latest signals."* alongside a `Regenerate defense` button that delegates to `actions.regenerateArgument()`. `clientState.regeneratingArgument` drives the button's `loading` + `disabled` state. Card collapses entirely (returns `null`) when no rebuttal text exists.
+
+**Override-submit flow (`ReviewSubmitTab.tsx`):** when the merchant clicks the CTA on a blocked or `ready_with_warnings` case, the tab opens a Polaris `Modal` that captures a reason from a fixed dictionary (`will_provide_separately | merchant_accepts_risk | classifier_uncertain | other`) plus an optional free-text note, then calls `actions.submitToShopify(reason, note)` — the existing API path that already logs override args into the audit log. The merchant is never blocked outright; the override path requires explicit intent.
+
+**Build / load / no-pack states:** surfaced as Polaris `Banner`s above the four sections — same pattern as EvidenceTab.
+
+**Files of record:**
+- `app/(embedded)/app/disputes/[id]/tabs/ReviewSubmitTab.tsx` (composition + override modal, ~200 LOC)
+- `app/(embedded)/app/disputes/[id]/tabs/useReviewView.ts` (pure derivation hook)
+- `app/(embedded)/app/disputes/[id]/tabs/sections/{SubmissionStatusCard,ExactDataSentCard,NotSubmittedCard,FinalDefenseStatementCard}.tsx`
+- i18n keys: `disputes.reviewTab.sections.{status,dataSent,notSubmitted,finalStatement,override}` across all 12 locale files.
+
+---
+
+### Review & Submit tab structure — legacy Figma alignment 2026-04-27 (retained for historical context)
 
 The Review & Submit tab (`ReviewSubmitTab.tsx`) is the merchant's last decision surface — pre-submit it asks "Should I submit?", post-submit it answers "What did we send?" Two distinct compositions render off `derived.isReadOnly`:
 

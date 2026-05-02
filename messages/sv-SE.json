@@ -611,6 +611,143 @@
       "underReview": "Under review",
       "submitted": "Submitted",
       "closed": "Closed"
+    },
+    "caseStrength": {
+      "strong": "Strong",
+      "moderate": "Moderate",
+      "weak": "Weak"
+    },
+    "itemStrength": {
+      "strong": "Strong",
+      "moderate": "Moderate",
+      "supporting": "Supporting"
+    },
+    "evidenceTab": {
+      "sections": {
+        "summary": {
+          "title": "Case summary",
+          "strengthLabel": "Case strength",
+          "statusLabel": "Status",
+          "automationLabel": "Automation",
+          "nextStepLabel": "Next step",
+          "status": {
+            "submitted": "Submitted",
+            "needs_attention": "Needs attention",
+            "in_progress": "In progress"
+          },
+          "automationMode": {
+            "automatic": "Automatic",
+            "review_required": "Review required"
+          },
+          "nextStep": {
+            "readyNoAction": "Ready — no action needed",
+            "submitNow": "Submit now",
+            "reviewMissing": "Review missing evidence below",
+            "submittedNoAction": "Submitted — no further action required"
+          }
+        },
+        "used": {
+          "title": "Evidence used in defense"
+        },
+        "missing": {
+          "title": "Missing or weak evidence",
+          "required": "Required",
+          "optional": "Optional",
+          "actions": {
+            "upload": "Upload evidence",
+            "uploading": "Uploading…",
+            "markNotApplicable": "Mark as not applicable",
+            "waiveTitle": "Why is this not applicable?",
+            "waiveReason": {
+              "not_applicable": "Not applicable to this dispute",
+              "evidence_unavailable": "I can’t get this evidence",
+              "already_in_shopify": "Already submitted separately",
+              "merchant_accepts_risk": "I understand the risk",
+              "other": "Other reason"
+            },
+            "waiveCancel": "Cancel",
+            "waiveConfirm": "Mark as not applicable"
+          }
+        },
+        "internalOnly": {
+          "title": "Internal-only signals",
+          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
+          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
+        }
+      },
+      "row": {
+        "whyThisMatters": "Why this matters",
+        "source": "Source",
+        "submittedToShopify": "Submitted to Shopify",
+        "submittedYes": "Yes",
+        "submittedNo": "No",
+        "submittedUnknown": "Unknown",
+        "submittedUnknownExplanation": "Submission status could not be determined for this item. It may or may not be included depending on how Shopify processes this evidence.",
+        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
+        "sourceShopify": "Shopify",
+        "sourceMerchant": "Merchant upload",
+        "sourceDerived": "Derived"
+      },
+      "automation": {
+        "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
+        "reviewRequired": "Review required before submission."
+      }
+    },
+    "reviewTab": {
+      "sections": {
+        "status": {
+          "submitted": "Evidence submitted to Shopify",
+          "readyToSubmit": "Ready to submit",
+          "submittedAt": "Submitted on {timestamp}",
+          "openInShopify": "Open in Shopify Admin"
+        },
+        "dataSent": {
+          "title": {
+            "submitted": "This is exactly what has been saved to Shopify and sent to the bank.",
+            "unsubmitted": "This is exactly what will be saved to Shopify and sent to the bank."
+          },
+          "empty": "Save your evidence first to see exactly what will be sent to the bank.",
+          "groups": {
+            "orderDetails": "Order details",
+            "paymentVerification": "Payment verification",
+            "customerActivity": "Customer activity",
+            "policies": "Policies",
+            "additionalEvidence": "Additional evidence"
+          }
+        },
+        "notSubmitted": {
+          "title": "Not submitted",
+          "disclaimer": "Not submitted to avoid weakening the case.",
+          "reasonAvoidWeakening": "Not submitted to avoid weakening the case",
+          "reasonGatewayGated": "Not submitted because the payment gateway does not support this signal",
+          "reasonMerchantWaived": "Waived by merchant",
+          "reasonWriteOnly": "Field is write-only and not part of the bank-visible payload"
+        },
+        "finalStatement": {
+          "title": "Final defense statement",
+          "label": "This is the final statement sent to the card network.",
+          "derivedFrom": "Derived from:",
+          "regenerate": "Regenerate defense",
+          "regenerating": "Regenerating…",
+          "outdated": "The evidence pack changed since this statement was generated. Regenerate to pick up the latest signals."
+        },
+        "override": {
+          "title": "Submit anyway?",
+          "body": "Submitting before all critical evidence is in place may weaken your case. Choose a reason below to confirm.",
+          "reasonLabel": "Reason for submitting now",
+          "reasonPlaceholder": "Select a reason",
+          "reason": {
+            "will_provide_separately": "Evidence will be provided through another channel",
+            "merchant_accepts_risk": "I understand the risk and want to submit anyway",
+            "classifier_uncertain": "Automated assessment may not reflect the case",
+            "other": "Other"
+          },
+          "noteLabel": "Optional note",
+          "notePlaceholder": "Add context for the audit log…",
+          "cancel": "Cancel",
+          "confirm": "Submit anyway"
+        }
+      }
     }
   },
   "disputeReasons": {
