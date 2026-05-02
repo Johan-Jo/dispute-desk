@@ -1,51 +1,60 @@
 /**
- * RowStatusChip — explicit "Submitted to Shopify" indicator.
+ * RowStatusChip — explicit "Included as" destination indicator.
  *
- * Renders one of four states. Three of them are the row-level submission
- * tristate that the hook emits (`yes` / `no` / `unknown`); the fourth
- * (`internal_only`) is reserved for §4 on EvidenceTab where the chip
- * affirms the row is intentionally not transmitted.
+ * Renders one of three deterministic destinations:
+ *   - form_field    → "Form field"      (success tone)
+ *   - rebuttal_text → "Rebuttal text"   (info tone)
+ *   - not_included  → "Not included"    (attention tone)
  *
- * `unknown` is a first-class state — it appears whenever the
- * evidence-field-to-Shopify-field mapping is ambiguous and the hook
- * refuses to claim "Yes" without proof. The chip is wrapped in a
- * Polaris Tooltip with explanatory copy so the merchant always knows
- * WHY they're seeing "Unknown" instead of being left with unexplained
- * uncertainty.
+ * There is NO "Unknown" state. Every row in §2 of the EvidenceTab
+ * resolves to a concrete destination via `deriveSubmissionDestination`
+ * in useEvidenceSections.ts. Each chip carries a tooltip explaining
+ * what the destination means so the merchant can map the chip to the
+ * actual case structure.
  */
 
 "use client";
 
 import { Badge, Tooltip } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
-import type { RowSubmissionStatus } from "../useEvidenceSections";
+import type { EvidenceSubmissionDestination } from "../useEvidenceSections";
 
-export type RowStatus = RowSubmissionStatus | "internal_only";
-
-export function RowStatusChip({ status }: { status: RowStatus }) {
+export function RowStatusChip({
+  destination,
+}: {
+  destination: EvidenceSubmissionDestination;
+}) {
   const t = useTranslations("disputes.evidenceTab.row");
 
-  if (status === "yes") {
-    return <Badge tone="success">{t("submittedYes")}</Badge>;
-  }
-  if (status === "no") {
-    return <Badge tone="attention">{t("submittedNo")}</Badge>;
-  }
-  if (status === "unknown") {
-    // Tooltip explains why we're not claiming Yes/No, instead of leaving
-    // the merchant guessing. The Badge itself remains the visual anchor;
-    // the tooltip surfaces on hover/focus (desktop + keyboard) and on
-    // tap (touch — Shopify Admin embedded mobile).
+  if (destination === "form_field") {
     return (
       <Tooltip
-        content={t("submittedUnknownExplanation")}
+        content={t("includedAsFormFieldExplanation")}
         preferredPosition="above"
       >
-        <Badge tone="info">{t("submittedUnknown")}</Badge>
+        <Badge tone="success">{t("includedAsFormField")}</Badge>
       </Tooltip>
     );
   }
-  // internal_only — explicit, not a fallback. Distinct tone so the
-  // merchant cannot confuse it with the submitted/not-submitted axis.
-  return <Badge tone="info">{t("submittedNo")}</Badge>;
+
+  if (destination === "rebuttal_text") {
+    return (
+      <Tooltip
+        content={t("includedAsRebuttalTextExplanation")}
+        preferredPosition="above"
+      >
+        <Badge tone="info">{t("includedAsRebuttalText")}</Badge>
+      </Tooltip>
+    );
+  }
+
+  // not_included
+  return (
+    <Tooltip
+      content={t("includedAsNotIncludedExplanation")}
+      preferredPosition="above"
+    >
+      <Badge tone="attention">{t("includedAsNotIncluded")}</Badge>
+    </Tooltip>
+  );
 }

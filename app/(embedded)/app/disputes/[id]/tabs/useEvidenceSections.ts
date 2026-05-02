@@ -13,10 +13,12 @@
  * the display-time mapping of "insufficient" → "Weak" lives in
  * `CaseSummaryCard`, not here.
  *
- * `submittedToShopify` is a tristate (`yes` | `no` | `unknown`) derived
- * from the same source as the actual Shopify payload —
- * `data.submissionFields[].included`. Defaults to `unknown` rather than
- * `yes` whenever the field-to-Shopify mapping is ambiguous.
+ * `includedAs` is a deterministic destination — `form_field` |
+ * `rebuttal_text` | `not_included`. Derived signals that influence
+ * the bank-facing narrative resolve to `rebuttal_text`; mapped
+ * Shopify fields with payload presence resolve to `form_field`;
+ * waived/excluded items resolve to `not_included`. There is no
+ * "unknown" state — every supporting row gets a definitive answer.
  */
 
 "use client";
@@ -40,13 +42,25 @@ export type CaseStatus = "submitted" | "needs_attention" | "in_progress";
 export type AutomationMode = "automatic" | "review_required";
 
 /**
- * Tristate submission status. `unknown` is a first-class value: it
- * appears whenever the evidence-field-to-Shopify-field mapping is
- * ambiguous (e.g., AVS/CVV signals embedded in narrative text rather
- * than a dedicated Shopify field). Never default to `yes` when the
- * mapping is uncertain.
+ * Where a piece of evidence lands in the case sent to Shopify.
+ *
+ *   - form_field:    structured Shopify evidence field or attached file
+ *                    (e.g., refundPolicyDisclosure, shippingDocumentationFile,
+ *                    customer-uploaded supporting docs).
+ *   - rebuttal_text: folded into the bank-facing narrative — derived
+ *                    signals like AVS/CVV result, IP/location consistency,
+ *                    and device/session signals. They influence the
+ *                    rebuttal prose rather than producing a discrete
+ *                    Shopify field.
+ *   - not_included:  intentionally kept out of the Shopify submission
+ *                    (waived, merchant-excluded, or internal-only).
+ *
+ * No "unknown" state — every row in §2 gets a deterministic answer.
  */
-export type RowSubmissionStatus = "yes" | "no" | "unknown";
+export type EvidenceSubmissionDestination =
+  | "form_field"
+  | "rebuttal_text"
+  | "not_included";
 
 /**
  * Four merchant-facing next-step copies. Each maps 1:1 to a stable
@@ -78,7 +92,11 @@ export interface EvidenceRowViewModel {
   strength: ItemStrength;
   whyThisMatters: string;
   source: EvidenceSource;
-  submittedToShopify: RowSubmissionStatus;
+  /**
+   * Where this row's evidence lands in the bank-facing case. Always
+   * deterministic — see EvidenceSubmissionDestination doc.
+   */
+  includedAs: EvidenceSubmissionDestination;
 }
 
 export interface MissingItemViewModel {
@@ -189,7 +207,7 @@ function inferSource(field: string): EvidenceSource {
   return "shopify";
 }
 
-/* ── Submission status derivation ──
+/* ── Submission destination derivation ──
  *
  * Maps each canonical evidence field to the set of Shopify mutation
  * field names it can contribute to. Drawn from
@@ -197,13 +215,13 @@ function inferSource(field: string): EvidenceSource {
  * the same source the actual payload uses.
  *
  * Empty list = the evidence is not directly addressable as a Shopify
- * field (e.g., AVS/CVV codes embedded in narrative prose, or
- * derived signals that influence text wording rather than producing
- * a dedicated field). Those rows resolve to `unknown`, never `yes`.
+ * field; it influences the rebuttal narrative instead (AVS/CVV,
+ * IP/location, device/session). Those rows resolve to `rebuttal_text`,
+ * never to a fake "Yes" claim on a non-existent field.
  *
  * Each entry is the COMPLETE list of Shopify field names this
- * evidence can land in; `submittedToShopify` is `yes` when at least
- * one of them is `included: true` in `data.submissionFields`.
+ * evidence can land in; the row resolves to `form_field` when at
+ * least one of them is `included: true` in `data.submissionFields`.
  */
 const EVIDENCE_TO_SHOPIFY: Record<string, readonly string[]> = {
   // Order facts → access activity log (timeline)
@@ -232,16 +250,23 @@ const EVIDENCE_TO_SHOPIFY: Record<string, readonly string[]> = {
 
   // Embedded / derived signals: appear (if at all) inside other fields'
   // narrative text, never as a dedicated Shopify field. Rows resolve
-  // to `unknown` to avoid false-positive "Yes" claims on the merchant UI.
+  // to `rebuttal_text` — they do reach the bank, just not as a discrete
+  // structured field.
   avs_cvv_match: [],
   ip_location_check: [],
   device_session_consistency: [],
-
-  // File uploads: not text fields; tracked via attachments rather than
-  // submissionFields. Resolve to `unknown` here; the merchant sees
-  // attachments listed in §2 of ReviewSubmitTab.
-  supporting_documents: [],
 };
+
+/**
+ * Fields whose merchant-visible "available" status implies they ride
+ * along with the Shopify submission as attachments rather than as
+ * mutation fields (so they don't appear in `submissionFields`). Treated
+ * as `form_field` when present — they ARE structured submission inputs,
+ * just on the file-attachment channel.
+ */
+const ATTACHMENT_FIELDS: ReadonlySet<string> = new Set([
+  "supporting_documents",
+]);
 
 function buildIncludedShopifyFieldSet(
   data: WorkspaceData,
@@ -253,29 +278,40 @@ function buildIncludedShopifyFieldSet(
   return set;
 }
 
-function deriveSubmissionStatus(args: {
+function deriveSubmissionDestination(args: {
   field: string;
   evidenceStatus: EvidenceItemWithStrength["status"] | undefined;
   excludedFields: ReadonlySet<string>;
   includedShopifyFields: ReadonlySet<string>;
-}): RowSubmissionStatus {
+}): EvidenceSubmissionDestination {
   // Waived items are explicitly excluded from the bank-visible payload.
-  if (args.evidenceStatus === "waived") return "no";
+  if (args.evidenceStatus === "waived") return "not_included";
 
   // Merchant has explicitly toggled this field off in the review UI.
-  if (args.excludedFields.has(args.field)) return "no";
+  if (args.excludedFields.has(args.field)) return "not_included";
+
+  // File-attachment fields ride the submission's attachments channel
+  // rather than `submissionFields`. Available + not-excluded = form_field.
+  if (ATTACHMENT_FIELDS.has(args.field)) return "form_field";
 
   const mapped = EVIDENCE_TO_SHOPIFY[args.field];
-  // No mapping registered → uncertain, not assumed-true.
-  if (!mapped || mapped.length === 0) return "unknown";
+
+  // No mapping registered, or mapping is intentionally empty (derived
+  // narrative signal): the evidence rides the rebuttal text. This is
+  // the AVS/CVV, IP/location, device/session bucket — they DO reach
+  // the bank, just inside the narrative rather than as a discrete field.
+  if (!mapped || mapped.length === 0) return "rebuttal_text";
 
   // Mapping exists. If any mapped Shopify field is in the included
-  // set, the evidence reaches the bank.
+  // set, the evidence reaches the bank as a structured field.
   for (const shopifyField of mapped) {
-    if (args.includedShopifyFields.has(shopifyField)) return "yes";
+    if (args.includedShopifyFields.has(shopifyField)) return "form_field";
   }
-  // Mapping known but no mapped Shopify field is included.
-  return "no";
+  // Mapping known but no mapped Shopify field is currently included
+  // (e.g., the merchant has not yet supplied that piece, or the field
+  // is downstream of one not picked up). Treated as not_included for
+  // the bank submission.
+  return "not_included";
 }
 
 /* ── Why-this-matters copy ──
@@ -491,9 +527,9 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
 
   // ── Evidence used in defense ──
   // Includes ALL supporting signals (strong + moderate + supporting),
-  // regardless of submission status. Each row carries an explicit
-  // submittedToShopify chip — yes / no / unknown — derived from the
-  // same source as the Shopify payload.
+  // regardless of submission destination. Each row carries an explicit
+  // `includedAs` chip — form_field / rebuttal_text / not_included —
+  // derived from the same source as the Shopify payload.
   const usedInDefense: EvidenceRowViewModel[] = [];
 
   function buildRow(
@@ -510,7 +546,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
       strength,
       whyThisMatters: whyThisMatters(field, label),
       source: inferSource(field),
-      submittedToShopify: deriveSubmissionStatus({
+      includedAs: deriveSubmissionDestination({
         field,
         evidenceStatus: checklistItem?.status,
         excludedFields,

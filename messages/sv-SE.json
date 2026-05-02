@@ -647,7 +647,8 @@
           }
         },
         "used": {
-          "title": "Evidence used in defense"
+          "title": "Evidence used in defense",
+          "destinationExplainer": "Evidence can be included either as structured Shopify fields or inside the rebuttal narrative sent with the case."
         },
         "missing": {
           "title": "Missing or weak evidence",
@@ -678,11 +679,13 @@
       "row": {
         "whyThisMatters": "Why this matters",
         "source": "Source",
-        "submittedToShopify": "Submitted to Shopify",
-        "submittedYes": "Yes",
-        "submittedNo": "No",
-        "submittedUnknown": "Unknown",
-        "submittedUnknownExplanation": "Submission status could not be determined for this item. It may or may not be included depending on how Shopify processes this evidence.",
+        "includedAs": "Included as",
+        "includedAsFormField": "Form field",
+        "includedAsFormFieldExplanation": "Included as a structured Shopify evidence field or uploaded evidence item.",
+        "includedAsRebuttalText": "Rebuttal text",
+        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative rather than as a separate Shopify field.",
+        "includedAsNotIncluded": "Not included",
+        "includedAsNotIncludedExplanation": "Kept out of the bank-facing submission, usually because it is internal-only or could weaken the case.",
         "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",

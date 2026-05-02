@@ -5,7 +5,7 @@
  *   1. What it is        (title)
  *   2. Why this matters  (one concise reason-aware sentence)
  *   3. Source            (Shopify / Merchant upload / Derived)
- *   4. Submitted to Shopify  (Yes / No chip)
+ *   4. Included as       (Form field / Rebuttal text / Not included)
  *
  * Used by EvidenceUsedSection. The strength badge is rendered at the
  * row level (Strong | Moderate | Supporting) and ordered by the
@@ -55,7 +55,7 @@ export function EvidenceRow({ item }: { item: EvidenceRowViewModel }) {
             {tStrength(item.strength)}
           </Badge>
         </InlineStack>
-        <RowStatusChip status={item.submittedToShopify} />
+        <RowStatusChip destination={item.includedAs} />
       </InlineStack>
 
       <Text as="p" variant="bodySm" tone="subdued">
