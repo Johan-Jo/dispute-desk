@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info, Store } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info, Store, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
@@ -54,7 +54,11 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
   const [showInstall, setShowInstall] = useState(false);
   const [shopInput, setShopInput] = useState("");
   const [shopError, setShopError] = useState<string | null>(null);
-  const installRef = useRef<HTMLDivElement>(null);
+
+  const closeInstall = () => {
+    setShowInstall(false);
+    setShopError(null);
+  };
 
   const handlePricingCta = () => {
     if (IS_APP_STORE_SET) {
@@ -62,7 +66,6 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
       return;
     }
     setShowInstall(true);
-    setTimeout(() => installRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
   const handleInstallSubmit = () => {
@@ -73,6 +76,20 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
     }
     window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
   };
+
+  useEffect(() => {
+    if (!showInstall) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeInstall();
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showInstall]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -361,36 +378,6 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
             </div>
           </div>
 
-          {/* Inline install panel — appears when pricing CTA clicked (pre-App Store listing) */}
-          {showInstall && (
-            <div ref={installRef} className="mt-8 bg-[#F6F8FB] rounded-xl border border-[#E5E7EB] p-6 sm:p-8 max-w-lg mx-auto">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
-                  <Store className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-[#0B1220]">{t("pricing.installTitle")}</h3>
-                  <p className="text-sm text-[#64748B]">{t("pricing.installSubtitle")}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={shopInput}
-                  onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
-                  onKeyDown={(e) => e.key === "Enter" && handleInstallSubmit()}
-                  placeholder={t("pricing.shopPlaceholder")}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/40 focus:border-[#1D4ED8]"
-                  autoFocus
-                />
-                <Button variant="primary" onClick={handleInstallSubmit}>
-                  {t("pricing.installButton")}
-                </Button>
-              </div>
-              {shopError && <p className="text-sm text-[#EF4444] mt-2">{shopError}</p>}
-              <p className="text-xs text-[#94A3B8] mt-3">{t("pricing.installHint")}</p>
-            </div>
-          )}
         </div>
       </section>
 
@@ -486,6 +473,58 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
       </section>
 
       <MarketingSiteFooter base={base} />
+
+      {/* Install modal — opens when pricing/hero CTA is clicked (pre-App Store listing) */}
+      {showInstall && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="install-modal-title"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0B1220]/70 backdrop-blur-sm"
+          onClick={closeInstall}
+        >
+          <div
+            className="relative w-full max-w-lg bg-white rounded-xl border border-[#E5E7EB] shadow-2xl p-6 sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeInstall}
+              aria-label="Close"
+              className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-[#64748B] hover:text-[#0B1220] hover:bg-[#F6F8FB] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
+                <Store className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 id="install-modal-title" className="text-lg font-semibold text-[#0B1220]">
+                  {t("pricing.installTitle")}
+                </h3>
+                <p className="text-sm text-[#64748B]">{t("pricing.installSubtitle")}</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={shopInput}
+                onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
+                onKeyDown={(e) => e.key === "Enter" && handleInstallSubmit()}
+                placeholder={t("pricing.shopPlaceholder")}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/40 focus:border-[#1D4ED8]"
+                autoFocus
+              />
+              <Button variant="primary" onClick={handleInstallSubmit}>
+                {t("pricing.installButton")}
+              </Button>
+            </div>
+            {shopError && <p className="text-sm text-[#EF4444] mt-2">{shopError}</p>}
+            <p className="text-xs text-[#94A3B8] mt-3">{t("pricing.installHint")}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
