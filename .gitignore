@@ -44,3 +44,40 @@ next-env.d.ts
 .claude/scheduled_tasks.lock
 admin-all-code.txt
 embedded-app-all-code.txt
+
+# One-off diagnostic scripts (Phase 0.1 cleanup, 2026-05-02).
+# Production utilities live in package.json's "scripts" section. Anything
+# matching the patterns below is per-incident — keep it local, do not
+# commit. Add new patterns here if you find yourself repeatedly creating
+# the same shape of one-off script.
+/scripts/diag-*.mjs
+/scripts/diagnose-*.mjs
+/scripts/inspect-dispute-*.mjs
+/scripts/inspect-pack-*.mjs
+/scripts/inspect-comms-*.mjs
+/scripts/inspect-due-date-*.mjs
+/scripts/inspect-march-orders.mjs
+/scripts/check-pack-[0-9]*.mjs
+/scripts/check-checklist-[0-9]*.mjs
+/scripts/check-chargeback-state.mjs
+/scripts/find-dispute-[0-9]*.mjs
+/scripts/find-pack-[0-9]*.mjs
+/scripts/find-file-upload-errors.mjs
+/scripts/enqueue-*-[0-9]*.mjs
+/scripts/verify-*-[0-9]*.mjs
+/scripts/verify-*-aee832ad*.mjs
+/scripts/verify-chargeback-math.mjs
+/scripts/dump-*.mjs
+/scripts/disputes-*-raw.mjs
+/scripts/show-device-loc-*.mjs
+/scripts/why-blocked-*.mjs
+/scripts/watch-save-*.mjs
+/scripts/lower-threshold-*.mjs
+/scripts/retrigger-autosave-*.mjs
+/scripts/rollback-*.mjs
+/scripts/rebuild-and-check-*.mjs
+/scripts/reset-and-backfill-shop-metrics.mjs
+/scripts/reset-jobs-table.mjs
+/scripts/suppress-*.mjs
+/scripts/trigger-chargeback-*.mjs
+/scripts/test-orders-count.mjs
