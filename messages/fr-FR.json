@@ -1912,19 +1912,19 @@
       "installOnShopify": "Installer sur Shopify"
     },
     "seo": {
-      "title": "DisputeDesk — Dossiers de preuves chargeback Shopify & automatisation des litiges",
+      "title": "DisputeDesk - Automatisation des chargebacks pour Shopify",
       "description": "Créez des dossiers de preuves pour rétrofacturations Shopify en minutes : file d'attente, score de complétude, piste d'audit immuable, tarifs prévisibles. Installation gratuite depuis le Shopify App Store.",
       "keywords": "rétrofacturation Shopify, dossier de preuves chargeback, automatisation litiges, Shopify Payments, logiciel chargeback, application Shopify, marchand",
       "jsonLdDescription": "DisputeDesk aide les marchands Shopify à constituer des dossiers de preuves pour les rétrofacturations, à imposer la complétude et à garder une piste d'audit avec des flux contrôlés par le marchand."
     },
     "hero": {
       "tagline": "Gestion des litiges pour Shopify",
-      "headline": "Gérez les chargebacks comme une équipe ops — pas comme une taxe de 25%.",
-      "subheadline": "DisputeDesk vous aide à créer des dossiers de preuves rapidement, à assurer la complétude et à maintenir une piste d'audit défendable — avec des workflows contrôlés par le marchand et des tarifs prévisibles.",
+      "headline": "Gagnez plus de chargebacks. Gardez plus de revenus.",
+      "subheadline": "DisputeDesk transforme le chaos des chargebacks Shopify en une opération professionnelle et reproductible — avec des dossiers de preuves rapides, des contrôles de complétude intégrés et une piste d'audit complète. Aucune commission au succès. Aucune IA opaque. Juste des tarifs prévisibles et des workflows contrôlés par le marchand.",
       "bullet1": "Dossiers de preuves en minutes — les brouillons sont illimités, les packs comptent uniquement à l'export",
       "bullet2": "File de révision + contrôle de complétude pour éviter les soumissions faibles",
       "bullet3": "Piste d'audit immuable pour chaque modification, fichier et décision",
-      "installFree": "Installer gratuitement",
+      "installFree": "Installer sur Shopify (Gratuit pour commencer)",
       "viewPricing": "Voir les tarifs",
       "disclaimer": "Les preuves sont sauvegardées dans Shopify via API. La soumission au réseau de cartes se fait dans Shopify Admin (ou automatiquement à la date d'échéance).",
       "queueTitle": "File de révision",
