@@ -42,6 +42,7 @@ next-env.d.ts
 .omc/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+.cursor/
 admin-all-code.txt
 embedded-app-all-code.txt
 
@@ -58,8 +59,13 @@ embedded-app-all-code.txt
 /scripts/inspect-due-date-*.mjs
 /scripts/inspect-march-orders.mjs
 /scripts/check-pack-[0-9]*.mjs
+/scripts/check-pack-attachments.mjs
 /scripts/check-checklist-[0-9]*.mjs
 /scripts/check-chargeback-state.mjs
+/scripts/check-dispute-[0-9]*.mjs
+/scripts/check-evidence-packs-bucket.mjs
+/scripts/compare-*.mjs
+/scripts/scan-*.mjs
 /scripts/find-dispute-[0-9]*.mjs
 /scripts/find-pack-[0-9]*.mjs
 /scripts/find-file-upload-errors.mjs
