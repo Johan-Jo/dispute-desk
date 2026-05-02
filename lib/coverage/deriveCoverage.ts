@@ -75,8 +75,14 @@ function packMatchesFamily(pack: PackInput, family: DisputeFamily): boolean {
 
 function ruleMatchesFamily(rule: RuleInput, family: DisputeFamily): boolean {
   if (!rule.enabled) return false;
-  // Catch-all rule (no reason filter) matches every family
-  if (!rule.match.reason || rule.match.reason.length === 0) return true;
+  // Only rules with an explicit reason filter overlapping the family's
+  // reasons define a family's automation mode. Catch-all rules
+  // (safeguards like __dd_safeguard__:high_value, fallbacks like
+  // __dd_setup__:fallback:default, custom global rules) match disputes
+  // at dispatch time but must not override the per-family Current
+  // Mode shown on the Coverage page — that would diverge from the
+  // Automation page, which only reads pack-specific rules.
+  if (!rule.match.reason || rule.match.reason.length === 0) return false;
   return family.reasons.some((r) => rule.match.reason!.includes(r));
 }
 

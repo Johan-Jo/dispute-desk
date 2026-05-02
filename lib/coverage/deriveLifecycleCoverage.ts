@@ -106,7 +106,13 @@ function ruleMatchesFamily(
   if (phase && rule.match.phase?.length && !rule.match.phase.includes(phase)) {
     return false;
   }
-  if (!rule.match.reason || rule.match.reason.length === 0) return true;
+  // Only rules with an explicit reason filter overlapping the family's
+  // reasons define a family's automation mode. Catch-all rules
+  // (safeguards, fallbacks, custom global rules) match disputes at
+  // dispatch time but must not override the per-family Current Mode
+  // shown on the Coverage page — that would diverge from the
+  // Automation page, which only reads pack-specific rules.
+  if (!rule.match.reason || rule.match.reason.length === 0) return false;
   return family.reasons.some((r) => rule.match.reason!.includes(r));
 }
 
