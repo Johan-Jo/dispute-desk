@@ -442,6 +442,8 @@ The worker route declares `export const maxDuration = 300` so that the bulk `bac
 
 ### sync-disputes cron — due-queue + adaptive cadence
 
+**Time-to-discovery for a new dispute is sub-minute, not the reconcile interval.** Shopify pushes `disputes/create` the instant a chargeback opens; the webhook handler enqueues a `sync_disputes` job; the worker (`*/2 * * * *`) processes it within 2 minutes worst case. The reconcile cron does NOT gate discovery — it is a backstop for missed webhooks (Shopify retries delivery for 48h, but if every retry fails or the handler returns non-2xx, reconcile is what eventually catches the drift). At a 1-hour reconcile interval, a stuck dispute is still found well inside any chargeback evidence-due window (typically 7-14 days).
+
 Webhooks (`disputes/create`, `disputes/update`) drive primary sync; the cron at `/api/cron/sync-disputes` is a **reconciliation safety net** for missed webhooks. It does NOT loop over every shop on every tick — that pattern doesn't scale past a few thousand tenants. Instead it claims a bounded batch of *due* shops via the `claim_due_shops` SQL function (migration `20260502120000_shop_reconcile_schedule.sql`).
 
 **Schedule columns on `shops`:**
