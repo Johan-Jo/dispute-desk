@@ -440,12 +440,49 @@ worker endpoint (`/api/jobs/worker`).
 
 The worker route declares `export const maxDuration = 300` so that the bulk `backfill_shop_daily_metrics` handler — which loops through 90 UTC days × ~700ms/day ≈ 63s — completes inside one invocation rather than fanning out as 90 separate jobs (which would queue serially against the per-shop concurrency cap and stretch a backfill over ~3 hours).
 
-### sync-disputes cron — guards against runaway failures
+### sync-disputes cron — due-queue + adaptive cadence
 
-`/api/cron/sync-disputes` runs every 5 minutes and enqueues one `sync_disputes` job per active shop. Two guards prevent broken shops from generating perpetual failure noise:
+Webhooks (`disputes/create`, `disputes/update`) drive primary sync; the cron at `/api/cron/sync-disputes` is a **reconciliation safety net** for missed webhooks. It does NOT loop over every shop on every tick — that pattern doesn't scale past a few thousand tenants. Instead it claims a bounded batch of *due* shops via the `claim_due_shops` SQL function (migration `20260502120000_shop_reconcile_schedule.sql`).
 
-1. **No-session skip:** if the shop has no offline `shop_sessions` row, skip enqueue with `reason: "no_offline_session"`. Without this guard a token-less shop would fail every 5 minutes (3× retries each, then permanently failed) and accumulate ~864 failed rows/day.
-2. **Circuit-breaker:** if the last 5 terminal `sync_disputes` jobs for the shop all failed, skip enqueue with `reason: "circuit_breaker_open"` until an admin clears the streak (manual retry of any one of those jobs that succeeds counts toward closing the breaker on the next tick).
+**Schedule columns on `shops`:**
+
+| Column                          | Default | Meaning                                                |
+|---------------------------------|---------|--------------------------------------------------------|
+| `next_reconcile_at`             | `now()` | When the cron should next pick this shop. Backfilled to a random offset within 1 hour to avoid stampedes. |
+| `reconcile_interval_seconds`    | `3600`  | Per-shop cadence in seconds. Adapted automatically.    |
+| `last_reconciled_at`            | `null`  | Stamped by `recordReconcileOutcome()` after each run.  |
+
+**Claim flow (`claim_due_shops(p_limit int)`):**
+
+```
+WITH due AS (
+  SELECT id FROM shops
+  WHERE uninstalled_at IS NULL AND next_reconcile_at <= now()
+  ORDER BY next_reconcile_at LIMIT p_limit
+  FOR UPDATE SKIP LOCKED
+)
+UPDATE shops s
+  SET next_reconcile_at = now() + (s.reconcile_interval_seconds * '1 second'::interval)
+  FROM due WHERE s.id = due.id
+  RETURNING s.id, s.shop_domain;
+```
+
+`FOR UPDATE SKIP LOCKED` makes the claim safe under concurrent cron invocations. The `next_reconcile_at` advance happens in the same statement, so a claimed shop can't be re-claimed for one full interval — even if the worker hasn't started yet.
+
+The cron route (`CLAIM_BATCH = 200`) is bounded regardless of tenant count. At 100k shops with 1-hour cadence → ~140 shops/5-min tick, well under the cap.
+
+**Adaptive cadence** (`lib/disputes/reconcileSchedule.ts`): after each `syncDisputes` run, `recordReconcileOutcome()` adjusts the shop's interval:
+
+- drift detected (`created > 0 || updated > 0`) → halve, floor 15 min
+- clean reconcile (no drift, no errors) → multiply by 1.5, ceiling 24 h
+- errors present → leave interval alone (the circuit-breaker handles repeated failures)
+
+Active shops settle near 15-30 min, dormant shops drift toward 24 h. Webhook-driven syncs do NOT call `recordReconcileOutcome` — only the cron reconciliation path adapts cadence (otherwise normal webhook activity would constantly halve the interval and defeat the purpose).
+
+**Per-shop guards (kept from earlier fix):**
+
+1. **No-session skip:** if the shop has no offline `shop_sessions` row, skip enqueue with `reason: "no_offline_session"`. Prevents enqueueing work that can only fail.
+2. **Circuit-breaker:** if the last 5 terminal `sync_disputes` jobs for the shop all failed, skip with `reason: "circuit_breaker_open"` until an admin clears the streak.
 
 Job retention: terminal jobs (`succeeded` | `failed`) older than 30 days are pruned by `/api/cron/retention-cleanup` (weekly, `0 3 * * 0`). Job rows are operational telemetry, not audit data — `dispute_events` is the audit source.
 

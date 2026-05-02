@@ -100,11 +100,22 @@ function buildFakeClient(opts: {
 
   const from = vi.fn((table: string) => {
     if (table === "shops") {
-      return {
+      // syncDisputes hits shops twice: (a) select-by-id at the start, and
+      // (b) recordReconcileOutcome at the end (select interval, update row).
+      const shopsChain: Record<string, unknown> = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: shopRow, error: null }),
+        single: vi.fn().mockImplementation(() =>
+          Promise.resolve({
+            data: { ...shopRow, reconcile_interval_seconds: 3600 },
+            error: null,
+          }),
+        ),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
       };
+      return shopsChain;
     }
     if (table === "shop_sessions") {
       return {

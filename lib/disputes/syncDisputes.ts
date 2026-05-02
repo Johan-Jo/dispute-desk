@@ -29,6 +29,7 @@ import {
   DISPUTE_CLOSED,
   SUBMISSION_CONFIRMED,
 } from "@/lib/disputeEvents/eventTypes";
+import { recordReconcileOutcome } from "./reconcileSchedule";
 
 const KNOWN_REASONS = new Set<string>(ALL_DISPUTE_REASONS);
 
@@ -613,6 +614,13 @@ export async function syncDisputes(
       errors: result.errors.length,
       correlation_id: opts?.correlationId,
     },
+  });
+
+  // Adaptive cadence: tighten on drift, loosen on clean runs.
+  await recordReconcileOutcome({
+    shopId,
+    driftDetected: result.created > 0 || result.updated > 0,
+    hadErrors: result.errors.length > 0,
   });
 
   return result;

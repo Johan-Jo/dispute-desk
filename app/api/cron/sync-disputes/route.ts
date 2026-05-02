@@ -5,12 +5,18 @@ import { enqueueJob } from "@/lib/jobs/claimJobs";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 const CIRCUIT_BREAKER_WINDOW = 5;
+const CLAIM_BATCH = 200;
 
 /**
  * GET /api/cron/sync-disputes
  *
- * Called by Vercel Cron every 5 minutes (Pro plan).
- * Enqueues a sync_disputes job for each active (installed) shop.
+ * Reconciliation cron. Webhooks (disputes/create, disputes/update) drive
+ * primary sync; this catches missed webhooks via per-shop next_reconcile_at.
+ *
+ * Each tick claims up to CLAIM_BATCH shops whose next_reconcile_at <= now()
+ * (atomic, FOR UPDATE SKIP LOCKED), advances their schedule, and enqueues
+ * one sync_disputes job per claimed shop. Bounded by CLAIM_BATCH regardless
+ * of tenant count.
  */
 export async function GET(req: NextRequest) {
   const secret =
@@ -23,19 +29,18 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
 
-  const { data: shops, error } = await sb
-    .from("shops")
-    .select("id")
-    .is("uninstalled_at", null);
+  const { data: due, error: claimErr } = await sb.rpc("claim_due_shops", {
+    p_limit: CLAIM_BATCH,
+  });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (claimErr) {
+    return NextResponse.json({ error: claimErr.message }, { status: 500 });
   }
 
   const enqueued: string[] = [];
   const skipped: { shopId: string; reason: string }[] = [];
 
-  for (const shop of shops ?? []) {
+  for (const shop of (due ?? []) as { id: string; shop_domain: string }[]) {
     const { data: existing } = await sb
       .from("jobs")
       .select("id")
@@ -45,7 +50,10 @@ export async function GET(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    if (existing) continue;
+    if (existing) {
+      skipped.push({ shopId: shop.id, reason: "job_already_pending" });
+      continue;
+    }
 
     // Root-cause skip: no offline Shopify session = every sync will fail with
     // "No offline session for shop ...". Don't enqueue work that can't succeed.
@@ -64,7 +72,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Circuit-breaker: if the last N sync_disputes jobs for this shop ALL
-    // failed, pause enqueuing until an admin intervenes (retry/clears jobs).
+    // failed, pause enqueuing until an admin intervenes.
     const { data: recent } = await sb
       .from("jobs")
       .select("status")
@@ -92,7 +100,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    shops: (shops ?? []).length,
+    claimed: (due ?? []).length,
     enqueued: enqueued.length,
     skipped: skipped.length,
     skippedDetails: skipped,
