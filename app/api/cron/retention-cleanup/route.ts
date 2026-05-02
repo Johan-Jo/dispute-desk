@@ -67,5 +67,21 @@ export async function GET(req: NextRequest) {
     archived += packIds.length;
   }
 
-  return NextResponse.json({ archived, pdfsDeleted, shopsProcessed: allShops.length });
+  // Prune terminal jobs older than 30 days. Job rows are operational telemetry,
+  // not audit data — retaining them indefinitely inflates the failed/succeeded
+  // counts and blocks the dashboard from showing recent health.
+  const jobCutoff = new Date();
+  jobCutoff.setDate(jobCutoff.getDate() - 30);
+  const { count: jobsDeleted } = await sb
+    .from("jobs")
+    .delete({ count: "exact" })
+    .in("status", ["succeeded", "failed"])
+    .lt("created_at", jobCutoff.toISOString());
+
+  return NextResponse.json({
+    archived,
+    pdfsDeleted,
+    shopsProcessed: allShops.length,
+    jobsDeleted: jobsDeleted ?? 0,
+  });
 }

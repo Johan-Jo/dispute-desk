@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     sb.from("shops").select("id, shop_domain, plan, uninstalled_at"),
     sb.from("disputes").select("id", { count: "exact", head: true }),
     sb.from("evidence_packs").select("id, status, completeness_score, blockers, dispute_type, saved_to_shopify_at"),
-    sb.from("jobs").select("id, status").in("status", ["queued", "running", "failed"]),
+    sb.from("jobs").select("id, status"),
     sb.from("pack_templates").select("id, name, status"),
     sb.from("reason_template_mappings").select("id, template_id, dispute_phase, reason_code"),
   ]);
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   }
 
   const jobList = jobs.data ?? [];
-  const jobCounts = { queued: 0, running: 0, failed: 0 };
+  const jobCounts = { queued: 0, running: 0, succeeded: 0, failed: 0 };
   for (const j of jobList) {
     if (j.status in jobCounts) jobCounts[j.status as keyof typeof jobCounts]++;
   }

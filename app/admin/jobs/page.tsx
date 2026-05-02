@@ -18,8 +18,16 @@ interface Job {
   stale: boolean;
 }
 
+interface JobTotals {
+  queued: number;
+  running: number;
+  failed: number;
+  succeeded: number;
+}
+
 export default function AdminJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [totals, setTotals] = useState<JobTotals>({ queued: 0, running: 0, failed: 0, succeeded: 0 });
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
@@ -27,8 +35,13 @@ export default function AdminJobsPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (filter !== "all") params.set("status", filter);
-    const res = await fetch(`/api/admin/jobs?${params}`);
-    setJobs(await res.json());
+    const [jobsRes, metricsRes] = await Promise.all([
+      fetch(`/api/admin/jobs?${params}`),
+      fetch(`/api/admin/metrics`),
+    ]);
+    setJobs(await jobsRes.json());
+    const metrics = await metricsRes.json();
+    if (metrics?.jobs) setTotals(metrics.jobs);
     setLoading(false);
   }, [filter]);
 
@@ -45,12 +58,7 @@ export default function AdminJobsPage() {
     fetchJobs();
   };
 
-  const counts = {
-    queued: jobs.filter((j) => j.status === "queued").length,
-    running: jobs.filter((j) => j.status === "running").length,
-    failed: jobs.filter((j) => j.status === "failed").length,
-    completed: jobs.filter((j) => j.status === "completed").length,
-  };
+  const counts = totals;
 
   return (
     <div className="p-8">
@@ -65,7 +73,7 @@ export default function AdminJobsPage() {
           { label: "Queued", value: counts.queued, valueColor: "text-[#3B82F6]" },
           { label: "Running", value: counts.running, valueColor: "text-[#3B82F6]" },
           { label: "Failed", value: counts.failed, valueColor: "text-[#EF4444]" },
-          { label: "Completed", value: counts.completed, valueColor: "text-[#22C55E]" },
+          { label: "Succeeded", value: counts.succeeded, valueColor: "text-[#22C55E]" },
         ]}
       />
 
@@ -75,7 +83,7 @@ export default function AdminJobsPage() {
           { label: "Queued", value: "queued" },
           { label: "Running", value: "running" },
           { label: "Failed", value: "failed" },
-          { label: "Completed", value: "completed" },
+          { label: "Succeeded", value: "succeeded" },
         ]}
         activeFilter={filter}
         onFilterChange={setFilter}

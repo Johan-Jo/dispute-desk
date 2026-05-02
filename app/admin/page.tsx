@@ -48,7 +48,7 @@ interface Metrics {
   shops: { total: number; active: number; uninstalled: number };
   disputes: number;
   packs: { total: number; byStatus: Record<string, number> };
-  jobs: { queued: number; running: number; failed: number };
+  jobs: { queued: number; running: number; succeeded: number; failed: number };
   plans: Record<string, number>;
   templates: { total: number; active: number; draft: number; archived: number };
   reasonMappings: { total: number; mapped: number; unmapped: number };

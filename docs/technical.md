@@ -440,6 +440,19 @@ worker endpoint (`/api/jobs/worker`).
 
 The worker route declares `export const maxDuration = 300` so that the bulk `backfill_shop_daily_metrics` handler — which loops through 90 UTC days × ~700ms/day ≈ 63s — completes inside one invocation rather than fanning out as 90 separate jobs (which would queue serially against the per-shop concurrency cap and stretch a backfill over ~3 hours).
 
+### sync-disputes cron — guards against runaway failures
+
+`/api/cron/sync-disputes` runs every 5 minutes and enqueues one `sync_disputes` job per active shop. Two guards prevent broken shops from generating perpetual failure noise:
+
+1. **No-session skip:** if the shop has no offline `shop_sessions` row, skip enqueue with `reason: "no_offline_session"`. Without this guard a token-less shop would fail every 5 minutes (3× retries each, then permanently failed) and accumulate ~864 failed rows/day.
+2. **Circuit-breaker:** if the last 5 terminal `sync_disputes` jobs for the shop all failed, skip enqueue with `reason: "circuit_breaker_open"` until an admin clears the streak (manual retry of any one of those jobs that succeeds counts toward closing the breaker on the next tick).
+
+Job retention: terminal jobs (`succeeded` | `failed`) older than 30 days are pruned by `/api/cron/retention-cleanup` (weekly, `0 3 * * 0`). Job rows are operational telemetry, not audit data — `dispute_events` is the audit source.
+
+### Admin overview job counts
+
+`/api/admin/metrics` returns `jobs: { queued, running, succeeded, failed }` (totals across the table — no `LIMIT`). The `/admin/jobs` page reads `succeeded` from this endpoint for its stats row, while still rendering only the most recent 200 rows in the table for performance. The job status enum on disk is `queued | running | succeeded | failed` (per `007_jobs.sql`); the dashboard uses these names verbatim — never label them as "Completed" (a non-existent enum value).
+
 ## Chargeback Rate (PRD §8 + §9)
 
 ### Snapshot pipeline

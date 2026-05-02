@@ -2,6 +2,7 @@ const DEFAULT_COLORS: Record<string, { bg: string; text: string }> = {
   active: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
   mapped: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
   success: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
+  succeeded: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
   completed: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
   running: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
   queued: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
