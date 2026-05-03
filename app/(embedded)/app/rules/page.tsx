@@ -50,6 +50,7 @@ import {
   type PackHandlingUiMode,
 } from "@/lib/rules/packHandlingAutomation";
 import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
+import { FAMILY_TO_DISPUTE_TYPE } from "@/lib/rules/helpers";
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -57,15 +58,9 @@ const SAFEGUARD_RULE_NAME = "__dd_safeguard__:high_value";
 const DEFAULT_SAFEGUARD_AMOUNT = 500;
 const EXPLAINER_DISMISSED_KEY = "dd_automation_explainer_dismissed";
 
-const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
-  fraud: "FRAUD",
-  pnr: "PNR",
-  not_as_described: "NOT_AS_DESCRIBED",
-  subscription: "SUBSCRIPTION",
-  refund: "REFUND",
-  duplicate: "DUPLICATE",
-  general: "GENERAL",
-};
+// FAMILY_TO_DISPUTE_TYPE moved to lib/rules/helpers.ts so the portal
+// rules page can share it. UI primitives (Polaris vs Tailwind) stay
+// divergent intentionally per memory feedback_figma_embedded_vs_portal.
 
 const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
   fraud: ShieldPersonIcon,

@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { DemoNotice } from "@/components/ui/demo-notice";
+import { REASON_KEYS, matchSummary } from "@/lib/rules/helpers";
 
 interface Rule {
   id: string;
@@ -37,40 +38,10 @@ const DISPUTE_REASONS = [
   "GENERAL",
 ];
 
-const REASON_KEYS: Record<string, string> = {
-  PRODUCT_NOT_RECEIVED: "productNotReceived",
-  PRODUCT_UNACCEPTABLE: "productUnacceptable",
-  FRAUDULENT: "fraudulent",
-  CREDIT_NOT_PROCESSED: "creditNotProcessed",
-  SUBSCRIPTION_CANCELED: "subscriptionCanceled",
-  DUPLICATE: "duplicate",
-  GENERAL: "general",
-};
-
-type ReasonsTranslator = ReturnType<typeof useTranslations>;
-
-function matchSummary(
-  match: Rule["match"],
-  tRules: (key: string) => string,
-  tReasons: ReasonsTranslator,
-): string {
-  const parts: string[] = [];
-  if (match.reason?.length) {
-    const translated = match.reason.map((r) => {
-      const key = REASON_KEYS[r];
-      return key && tReasons.has(key) ? tReasons(key) : r.replace(/_/g, " ");
-    });
-    parts.push(`${tRules("reason")}: ${translated.join(", ")}`);
-  }
-  if (match.status?.length) parts.push(`${tRules("statusLabel")}: ${match.status.join(", ")}`);
-  if (match.amount_range) {
-    const { min, max } = match.amount_range;
-    if (min != null && max != null) parts.push(`$${min}–$${max}`);
-    else if (min != null) parts.push(`≥ $${min}`);
-    else if (max != null) parts.push(`≤ $${max}`);
-  }
-  return parts.length ? parts.join(" · ") : tRules("matchesAll");
-}
+// REASON_KEYS + matchSummary live in lib/rules/helpers.ts so the
+// embedded rules page (Polaris) and the portal rules page (Tailwind)
+// share a single source of truth. UI is intentionally divergent;
+// data + formatting are not.
 
 export default function RulesSettingsPage() {
   // TODO: Re-wire portal auto-complete for new wizard steps
