@@ -49,10 +49,7 @@ import {
   type DisputeEvidenceUpdateInput,
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
-import { sendPackSavedAlert } from "@/lib/email/sendPackSavedAlert";
-import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
-import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
-import { EVIDENCE_SAVED_TO_SHOPIFY } from "@/lib/disputeEvents/eventTypes";
+import { emitSaveToShopifyEvents } from "./saveToShopifyEvents";
 import type { ClaimedJob } from "../claimJobs";
 
 /* ── Helpers ── */
@@ -507,59 +504,21 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     }).eq("id", pack.dispute_id);
   }
 
-  await logAuditEvent({
-    shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
-    actorType: "system",
-    eventType: "evidence_saved_to_shopify",
-    eventPayload: {
-      evidence_gid: dispute.dispute_evidence_gid,
-      fields_sent: inputKeys,
-      field_count: inputKeys.length,
-      job_id: job.id,
-      session_type: "online",
-      verified,
-      verification: verificationDiff,
-      final_status: finalStatus,
-      manual_attachment_count: manualAttachments.length,
-      pdf_attached: pdfAttachment !== null,
-    },
-  });
-
-  if (!verified) {
-    console.warn(
-      `[saveToShopify] WARNING: evidence saved but verification failed. ` +
-      `Status: ${finalStatus}. Missing fields: ${JSON.stringify((verificationDiff as { fields_missing?: string[] }).fields_missing ?? [])}`,
-    );
-  }
-
-  if (pack.dispute_id) {
-    void emitDisputeEvent({
-      disputeId: pack.dispute_id,
-      shopId: pack.shop_id,
-      eventType: EVIDENCE_SAVED_TO_SHOPIFY,
-      description: verified
-        ? `${inputKeys.length} evidence fields sent and verified in Shopify`
-        : `${inputKeys.length} evidence fields sent to Shopify (verification pending)`,
-      eventAt: now,
-      actorType: "disputedesk_system",
-      sourceType: "pack_engine",
-      metadataJson: {
-        pack_id: packId,
-        evidence_gid: dispute.dispute_evidence_gid,
-        fields_sent: inputKeys,
-        verified,
-      },
-      dedupeKey: `${pack.dispute_id}:${EVIDENCE_SAVED_TO_SHOPIFY}:${packId}`,
-    });
-    void updateNormalizedStatus(pack.dispute_id);
-  }
-
-  void sendPackSavedAlert({
+  await emitSaveToShopifyEvents({
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
+    jobId: job.id,
+    evidenceGid: dispute.dispute_evidence_gid,
+    finalStatus,
+    inputKeys,
+    verified,
+    verificationDiff,
+    manualAttachmentCount: manualAttachments.length,
+    pdfAttached: pdfAttachment !== null,
     reason: dispute.reason ?? null,
     amount: dispute.amount ?? null,
     currencyCode: dispute.currency_code ?? null,
+    eventAt: now,
   });
 }
