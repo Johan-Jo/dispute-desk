@@ -17,6 +17,9 @@ out/
 npm-debug.log*
 debug-*.log
 
+# vitest coverage reports (Phase 1.2 — `npm run test:coverage`)
+coverage/
+
 # playwright
 /test-results/
 /playwright-report/
