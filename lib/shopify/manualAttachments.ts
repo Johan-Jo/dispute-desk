@@ -514,9 +514,18 @@ export function formatManualAttachmentsBlock(
     return a.label.localeCompare(b.label);
   });
 
+  // When every upload falls into the catch-all `DEFAULT_GROUP_LABEL`
+  // group, the inner `Supporting documents:` heading is redundant with
+  // the top-level `Supporting documents (secure access links):` header
+  // and the two stack back-to-back in the bank-facing text. Suppress
+  // the inner heading in that single case — categorised groupings
+  // (Order Facts, Delivery proof, etc.) always keep theirs.
+  const suppressDefaultHeading =
+    orderedGroups.length === 1 && orderedGroups[0].label === DEFAULT_GROUP_LABEL;
+
   const sections: string[] = [];
   for (const g of orderedGroups) {
-    const lines: string[] = [`${g.label}:`];
+    const lines: string[] = suppressDefaultHeading ? [] : [`${g.label}:`];
     for (const item of g.items) {
       const fileLine = item.prefix
         ? `- ${item.prefix} - ${item.fileName}`

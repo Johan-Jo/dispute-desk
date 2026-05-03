@@ -274,13 +274,16 @@ describe("formatManualAttachmentsBlock", () => {
       null,
     );
     expect(block).not.toBeNull();
-    expect(block).toContain("Supporting documents:");
+    // Single default group → inner `Supporting documents:` heading is
+    // suppressed to avoid stacking with the top-level header.
+    expect(block).toContain("Supporting documents (secure access links):");
+    expect(block).not.toMatch(/^Supporting documents:$/m);
     expect(block).toContain("- CONTRATO.pdf");
     expect(block).not.toMatch(/^- CONTRATO\.pdf - CONTRATO\.pdf$/m);
     expect(block).not.toContain("\uD83D\uDCC4");
   });
 
-  it("uses `Supporting documents` as the section header when label is missing", () => {
+  it("renders only the top-level header (no inner duplicate) when label is missing", () => {
     const block = formatManualAttachmentsBlock(
       [
         {
@@ -293,7 +296,8 @@ describe("formatManualAttachmentsBlock", () => {
       ],
       null,
     );
-    expect(block).toContain("Supporting documents:");
+    expect(block).toContain("Supporting documents (secure access links):");
+    expect(block).not.toMatch(/^Supporting documents:$/m);
     expect(block).toContain("- screenshot.png");
     expect(block).not.toContain("uploaded 2026-04-24");
   });
@@ -311,7 +315,8 @@ describe("formatManualAttachmentsBlock", () => {
       ],
       null,
     );
-    expect(block).toContain("Supporting documents:");
+    expect(block).toContain("Supporting documents (secure access links):");
+    expect(block).not.toMatch(/^Supporting documents:$/m);
     expect(block).toContain("- document");
     expect(block).not.toContain("uploaded ");
     expect(block).not.toContain("MB");
