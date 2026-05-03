@@ -12,13 +12,14 @@
  *   3. Missing or weak evidence — actionable gaps; collapses if empty
  *   4. Internal-only signals    — always rendered with empty-state copy
  *
- * Build/load/failed states are surfaced as Polaris Banners ABOVE the
- * sections. Forbidden in this tab: percentages, predictive copy,
+ * Build/load/failed states and upload success are surfaced as Polaris
+ * Banners ABOVE the sections. Forbidden in this tab: percentages, predictive copy,
  * "Likely outcome", "Prepared for you", "83% evidence collected".
  */
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useEvidenceSections } from "./useEvidenceSections";
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export default function EvidenceTab({ workspace }: Props) {
+  const t = useTranslations("disputes.evidenceTab");
   const { data, derived, clientState, actions } = workspace;
   const sections = useEvidenceSections(workspace);
 
@@ -80,11 +82,27 @@ export default function EvidenceTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
+  const uploadSuccessBanner = clientState.uploadSuccessNotice ? (
+    <Banner
+      tone="success"
+      title={t("uploadSuccessTitle")}
+      onDismiss={() => actions.dismissUploadSuccessNotice()}
+    >
+      <p>
+        {t("uploadSuccessBody", {
+          fileName: clientState.uploadSuccessNotice.fileName,
+          evidenceTitle: clientState.uploadSuccessNotice.evidenceTitle,
+        })}
+      </p>
+    </Banner>
+  ) : null;
+
   return (
     <BlockStack gap="500">
       {failedBanner}
       {buildingBanner}
       {noPackBanner}
+      {uploadSuccessBanner}
 
       {/* §1 — Case summary */}
       <CaseSummaryCard {...sections.caseSummary} />

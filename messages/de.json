@@ -660,7 +660,9 @@
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
         "reviewRequired": "Review required before submission."
-      }
+      },
+      "uploadSuccessTitle": "Evidence file saved",
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
     },
     "reviewTab": {
       "sections": {

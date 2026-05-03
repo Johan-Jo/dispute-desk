@@ -252,12 +252,21 @@ function deriveCategories(
 
 /* ── Hook ── */
 
+/** Shown after a successful manual upload so the row leaving "Missing"
+ *  is not mistaken for a silent failure. */
+export interface UploadSuccessNotice {
+  field: string;
+  fileName: string;
+  evidenceTitle: string;
+}
+
 export interface WorkspaceClientState {
   activeTab: 0 | 1 | 2;
   loading: boolean;
   uploadingField: string | null;
   failedFields: Map<string, string>;
   completedFields: Set<string>;
+  uploadSuccessNotice: UploadSuccessNotice | null;
   focusField: string | null;
   expandedCategories: Set<string>;
   excludedFields: Set<string>;
@@ -320,6 +329,7 @@ export function useDisputeWorkspace(disputeId: string) {
     uploadingField: null,
     failedFields: new Map(),
     completedFields: new Set(),
+    uploadSuccessNotice: null,
     focusField: null,
     expandedCategories: new Set(),
     excludedFields: new Set(),
@@ -385,7 +395,19 @@ export function useDisputeWorkspace(disputeId: string) {
     };
   }, [fetchAll]);
 
+  useEffect(() => {
+    if (!clientState.uploadSuccessNotice) return;
+    const t = window.setTimeout(() => {
+      setClientState((s) => ({ ...s, uploadSuccessNotice: null }));
+    }, 12000);
+    return () => window.clearTimeout(t);
+  }, [clientState.uploadSuccessNotice]);
+
   /* ── Actions ── */
+
+  const dismissUploadSuccessNotice = useCallback(() => {
+    setClientState((s) => ({ ...s, uploadSuccessNotice: null }));
+  }, []);
 
   const generatePack = useCallback(
     async (templateId?: string) => {
@@ -418,6 +440,7 @@ export function useDisputeWorkspace(disputeId: string) {
       setClientState((s) => ({
         ...s,
         uploadingField: field,
+        uploadSuccessNotice: null,
         failedFields: new Map([...s.failedFields].filter(([k]) => k !== field)),
       }));
       let serverMessage: string | null = null;
@@ -439,9 +462,17 @@ export function useDisputeWorkspace(disputeId: string) {
             throw new Error(serverMessage ?? "Upload failed");
           }
         }
+        const checklistRow = data.pack.checklistV2?.find((c) => c.field === field);
+        const evidenceTitle =
+          checklistRow?.label ?? field.replace(/_/g, " ");
+        const fileSummary =
+          files.length === 1
+            ? files[0].name
+            : files.map((f) => f.name).join(", ");
         setClientState((s) => ({
           ...s,
           completedFields: new Set(s.completedFields).add(field),
+          uploadSuccessNotice: { field, fileName: fileSummary, evidenceTitle },
         }));
       } catch {
         setClientState((s) => ({
@@ -765,6 +796,7 @@ export function useDisputeWorkspace(disputeId: string) {
     actions: {
       fetchAll,
       generatePack,
+      dismissUploadSuccessNotice,
       uploadEvidence,
       waiveItem,
       unwaiveItem,
