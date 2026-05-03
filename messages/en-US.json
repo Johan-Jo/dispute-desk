@@ -3597,13 +3597,5 @@
     "faq3A": "DisputeDesk is built to help merchants run a better dispute workflow with more control and clearer evidence handling.",
     "closingTitle": "Not sure where to start?",
     "closingBody": "Open the chat and tell us a bit about your store, payment setup, and dispute workflow."
-  },
-  "review": {
-    "whatWasSent": {
-      "heading": "What was sent:",
-      "loading": "Loading…",
-      "emptyFallback": "• (no evidence fields were populated — contact support)",
-      "verificationNote": "Some evidence may be stored by Shopify in structured fields that are not clearly visible in this Admin view. In this case, merchant-visible verification is limited to the fields shown here."
-    }
   }
 }

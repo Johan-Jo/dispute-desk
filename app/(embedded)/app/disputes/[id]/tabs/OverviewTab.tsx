@@ -250,7 +250,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   /* ── O4 Coverage breakdown by priority ── */
   const visibleChecklist = effectiveChecklist.filter((c) => c.status !== "unavailable");
-  const completenessScore = data.pack?.completenessScore ?? 0;
   type Bucket = { key: "critical" | "recommended" | "optional"; label: string; items: ChecklistItemV2[]; complete: number };
   const buckets: Bucket[] = (["critical", "recommended", "optional"] as const).map((key) => {
     const items = visibleChecklist.filter((c) => (c.priority as string) === key);
@@ -342,14 +341,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
             <span style={{ fontSize: 24, fontWeight: 700, color: heroTone.titleColor, lineHeight: 1.2 }}>
               {strengthLabel}
-            </span>
-            <span
-              style={{
-                padding: "2px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                background: heroTone.pillBg, color: heroTone.pillColor,
-              }}
-            >
-              {`${caseStrength.coveragePercent}% evidence collected`}
             </span>
           </div>
           {caseStrength.strengthReason && !submitted && (
@@ -709,14 +700,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 supportingBucket.items.length - supportingBucket.complete === 1 ? "item" : "items"
               } missing`
             : null;
-        const barColor =
-          heroVariant === "covered"
-            ? "#1D4ED8"
-            : heroVariant === "likely_to_win"
-              ? "#059669"
-              : heroVariant === "hard_to_win"
-                ? "#DC2626"
-                : "#F59E0B";
         return (
           <div data-help-guide="detail-overview-evidence" style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
             <BlockStack gap="300">
@@ -739,16 +722,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     {`${totalIncluded}/${totalCount} collected`}
                   </span>
                 </InlineStack>
-                <div style={{ marginTop: 8, height: 8, background: "#E1E3E5", borderRadius: 9999, overflow: "hidden" }}>
-                  <div
-                    style={{
-                      width: `${completenessScore}%`,
-                      height: "100%",
-                      background: barColor,
-                      borderRadius: 9999,
-                    }}
-                  />
-                </div>
               </div>
 
               {supportingLabel && (
