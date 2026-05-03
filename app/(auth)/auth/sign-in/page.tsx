@@ -115,16 +115,16 @@ function SignInForm() {
       footer={
         <p>
           {t("footerNoAccount")}{" "}
-          <a href="/auth/sign-up" className="text-[#4F46E5] font-medium hover:underline">
+          <a href="/auth/sign-up" className="text-indigo-600 font-medium hover:underline">
             {t("createOne")}
           </a>
         </p>
       }
     >
       {isDirectVisit && (
-        <div className="flex items-start gap-2.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg px-4 py-3 mb-1">
-          <Info className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-[#1D4ED8]">
+        <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-1">
+          <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-700">
             {ta("shopifyBanner")}{" "}
             <a href="/" className="font-medium underline">{ta("shopifyBannerCta")}</a>
           </p>
@@ -144,8 +144,8 @@ function SignInForm() {
             }}
             autoFocus
           />
-          <p className="text-xs text-[#667085]">{t("shopHint")}</p>
-          {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
+          <p className="text-xs text-[var(--dd-text-subtle)]">{t("shopHint")}</p>
+          {shopError && <p className="text-sm text-red-500">{shopError}</p>}
           <div className="flex gap-2">
             <Button
               type="button"
@@ -202,12 +202,12 @@ function SignInForm() {
         />
 
         <div className="text-right">
-          <a href="/auth/forgot-password" className="text-sm text-[#4F46E5] hover:underline">
+          <a href="/auth/forgot-password" className="text-sm text-indigo-600 hover:underline">
             {t("forgotPassword")}
           </a>
         </div>
 
-        {error && <p className="text-sm text-[#EF4444]" data-testid="sign-in-error">{error}</p>}
+        {error && <p className="text-sm text-red-500" data-testid="sign-in-error">{error}</p>}
 
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
           {loading ? t("signingIn") : t("submit")}
@@ -218,7 +218,7 @@ function SignInForm() {
         <button
           onClick={handleMagicLink}
           disabled={loading}
-          className="text-sm text-[#4F46E5] hover:underline disabled:opacity-50"
+          className="text-sm text-indigo-600 hover:underline disabled:opacity-50"
         >
           {t("sendMagicLink")}
         </button>

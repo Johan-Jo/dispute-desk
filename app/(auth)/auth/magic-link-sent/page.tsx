@@ -43,10 +43,10 @@ function MagicLinkSentContent() {
   return (
     <AuthCard title={t("title")} subtitle={t("subtitle")}>
       <div className="text-center py-6">
-        <div className="w-16 h-16 bg-[#EFF6FF] rounded-full flex items-center justify-center mx-auto mb-4">
-          <Mail className="w-8 h-8 text-[#4F46E5]" />
+        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Mail className="w-8 h-8 text-indigo-600" />
         </div>
-        <p className="text-[#667085] mb-6">{t("body")}</p>
+        <p className="text-[var(--dd-text-subtle)] mb-6">{t("body")}</p>
       </div>
 
       <div className="space-y-3">
@@ -60,7 +60,7 @@ function MagicLinkSentContent() {
         <Button variant="secondary" className="w-full" onClick={handleResend} disabled={!email}>
           {resent ? t("sentAgain") : t("resend")}
         </Button>
-        {error && <p className="text-sm text-[#EF4444] text-center">{error}</p>}
+        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
         <a href="/auth/sign-in">
           <Button variant="ghost" className="w-full">
             {t("backToSignIn")}

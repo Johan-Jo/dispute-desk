@@ -99,9 +99,9 @@ export default function SignUpPage() {
         subtitle={t("successSubtitle", { email })}
       >
         <div className="text-center py-4">
-          <p className="text-sm text-[#667085]">{t("successBody")}</p>
+          <p className="text-sm text-[var(--dd-text-subtle)]">{t("successBody")}</p>
         </div>
-        <a href="/auth/sign-in" className="block text-center text-sm text-[#4F46E5] hover:underline">
+        <a href="/auth/sign-in" className="block text-center text-sm text-indigo-600 hover:underline">
           {t("backToSignIn")}
         </a>
       </AuthCard>
@@ -115,15 +115,15 @@ export default function SignUpPage() {
       footer={
         <p>
           {t("footerHasAccount")}{" "}
-          <a href="/auth/sign-in" className="text-[#4F46E5] font-medium hover:underline">
+          <a href="/auth/sign-in" className="text-indigo-600 font-medium hover:underline">
             {t("signInLink")}
           </a>
         </p>
       }
     >
-      <div className="flex items-start gap-2.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg px-4 py-3 mb-1">
-        <Info className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-[#1D4ED8]">
+      <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-1">
+        <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-700">
           {ta("shopifyBanner")}{" "}
           <a href="/" className="font-medium underline">{ta("shopifyBannerCta")}</a>
         </p>
@@ -142,8 +142,8 @@ export default function SignUpPage() {
             }}
             autoFocus
           />
-          <p className="text-xs text-[#667085]">{t("shopHint")}</p>
-          {shopError && <p className="text-sm text-[#EF4444]">{shopError}</p>}
+          <p className="text-xs text-[var(--dd-text-subtle)]">{t("shopHint")}</p>
+          {shopError && <p className="text-sm text-red-500">{shopError}</p>}
           <div className="flex gap-2">
             <Button
               type="button"
@@ -207,7 +207,7 @@ export default function SignUpPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {error && <p className="text-sm text-[#EF4444]">{error}</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
 
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
           {loading ? t("creating") : t("createAccount")}

@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
           required
           onChange={(e) => setPassword(e.target.value)}
         />
-        {error && <p className="text-sm text-[#EF4444]">{error}</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
           {loading ? t("updating") : t("updatePassword")}
         </Button>

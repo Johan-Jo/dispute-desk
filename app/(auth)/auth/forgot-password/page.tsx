@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthCard title={t("titleCheck")} subtitle={t("subtitleSent", { email })}>
-        <a href="/auth/sign-in" className="block text-center text-sm text-[#4F46E5] hover:underline mt-4">
+        <a href="/auth/sign-in" className="block text-center text-sm text-indigo-600 hover:underline mt-4">
           {t("backToSignIn")}
         </a>
       </AuthCard>
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
       footer={
         <p>
           {t("footerRemember")}{" "}
-          <a href="/auth/sign-in" className="text-[#4F46E5] font-medium hover:underline">
+          <a href="/auth/sign-in" className="text-indigo-600 font-medium hover:underline">
             {t("signIn")}
           </a>
         </p>
@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        {error && <p className="text-sm text-[#EF4444]">{error}</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
           {loading ? t("sending") : t("sendLink")}
         </Button>
