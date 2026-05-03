@@ -175,6 +175,13 @@ interface IpDerivedFields {
   ipOrg: string | null;
   ipNoVpnProxyHosting: boolean | null;
   ipCountryMatchesShipping: boolean | null;
+  /**
+   * Pack-side eligibility flag, mirrored verbatim from the source
+   * `ip_location_check` section. The rebuttal engine consults this
+   * before emitting any IP/location paragraph — see
+   * lib/argument/deviceLocationEligibility.ts.
+   */
+  bankEligible: boolean | null;
 }
 
 function deriveIpFields(ipSection: RawSection | null, order: RawSection | null): IpDerivedFields {
@@ -185,6 +192,7 @@ function deriveIpFields(ipSection: RawSection | null, order: RawSection | null):
     ipOrg: null,
     ipNoVpnProxyHosting: null,
     ipCountryMatchesShipping: null,
+    bankEligible: null,
   };
   if (!ipSection) return empty;
   const data = asObject(ipSection.data);
@@ -231,6 +239,12 @@ function deriveIpFields(ipSection: RawSection | null, order: RawSection | null):
       country.toLowerCase() === shippingCountry.toLowerCase();
   }
 
+  // Pack-side `bankEligible` decision is computed by
+  // deviceLocationSource.ts at pack-build time. Mirror it verbatim;
+  // never re-derive here.
+  const bankEligible =
+    typeof data.bankEligible === "boolean" ? data.bankEligible : null;
+
   return {
     ipCity: city,
     ipRegion: region,
@@ -238,6 +252,7 @@ function deriveIpFields(ipSection: RawSection | null, order: RawSection | null):
     ipOrg: org,
     ipNoVpnProxyHosting,
     ipCountryMatchesShipping,
+    bankEligible,
   };
 }
 
@@ -282,6 +297,7 @@ export function extractEvidenceDataFromPack(
     ipOrg: ipFields.ipOrg,
     ipNoVpnProxyHosting: ipFields.ipNoVpnProxyHosting,
     ipCountryMatchesShipping: ipFields.ipCountryMatchesShipping,
+    bankEligible: ipFields.bankEligible,
     hasOrderConfirmation: order != null ? true : undefined,
     hasCustomerEmail: resolvedEmail != null ? true : undefined,
     hasSupportingDocs: hasManualUploadSection(safeSections) ? true : undefined,

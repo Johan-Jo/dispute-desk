@@ -70,6 +70,10 @@ const FULL_FRAUD_DATA: EvidenceData = {
   ipOrg: "AS18881 TELEFÔNICA BRASIL S.A",
   ipNoVpnProxyHosting: true,
   ipCountryMatchesShipping: true,
+  // Bank-eligibility gate is the hard prerequisite for the IP
+  // paragraph in any bank-facing surface — keeping it true here
+  // exercises the canonical positive case end-to-end.
+  bankEligible: true,
   hasOrderConfirmation: true,
   hasCustomerEmail: true,
   hasSupportingDocs: true,
@@ -221,7 +225,41 @@ describe("bank-grade rebuttal template — customer/checkout gating", () => {
   });
 });
 
+/**
+ * Assert that none of the IP-signal values from `data` appear in
+ * `text`. Reads values live from `EvidenceData` so the test is not
+ * coupled to specific fixture strings.
+ */
+function expectNoIpSignalLeak(text: string, data: EvidenceData): void {
+  for (const [field, value] of [
+    ["ipCity", data.ipCity],
+    ["ipRegion", data.ipRegion],
+    ["ipCountry", data.ipCountry],
+    ["ipOrg", data.ipOrg],
+  ] as const) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      expect(
+        text,
+        `bank-facing text must not contain ${field} value "${value}"`,
+      ).not.toContain(value);
+    }
+  }
+}
+
 describe("bank-grade rebuttal template — device & location gating", () => {
+  // The device paragraph is gated by `bankEligible === true` AND a
+  // clean country match AND no VPN/proxy/hosting. Anything else means
+  // the entire paragraph is omitted from bank-facing output — never
+  // reframed, never softened.
+  const ELIGIBLE_BASE = {
+    ipCity: "Stockholm",
+    ipCountry: "SE",
+    ipOrg: "Telia",
+    ipCountryMatchesShipping: true as const,
+    ipNoVpnProxyHosting: true as const,
+    bankEligible: true as const,
+  } satisfies EvidenceData;
+
   it("omits bank-grade-device when no IP narrative fields exist", () => {
     const ids = getSectionIds("fraud", FULL_FRAUD_FLAGS, {
       ...FULL_FRAUD_DATA,
@@ -233,60 +271,66 @@ describe("bank-grade rebuttal template — device & location gating", () => {
     expect(ids).not.toContain("bank-grade-device");
   });
 
-  it("emits bank-grade-device when IP data is present", () => {
-    const data: EvidenceData = {
-      ipCity: "Stockholm",
-      ipCountry: "SE",
-      ipOrg: "Telia",
-    };
-    expect(getSectionIds("fraud", EMPTY_FLAGS, data)).toContain("bank-grade-device");
+  it("emits bank-grade-device when IP data is present AND bankEligible is true", () => {
+    expect(getSectionIds("fraud", EMPTY_FLAGS, ELIGIBLE_BASE)).toContain("bank-grade-device");
   });
 
-  it("uses the exact mismatch neutralizer from the spec", () => {
+  it("omits bank-grade-device when bankEligible is missing or false (IP data alone is not enough)", () => {
+    for (const bankEligible of [undefined, null, false] as const) {
+      const data: EvidenceData = { ...ELIGIBLE_BASE, bankEligible };
+      expect(getSectionIds("fraud", EMPTY_FLAGS, data)).not.toContain("bank-grade-device");
+    }
+  });
+
+  it("omits bank-grade-device entirely when ipCountryMatchesShipping is false (no defensive reframing)", () => {
     const data: EvidenceData = {
       ipCity: "Rio de Janeiro",
       ipCountry: "BR",
       ipOrg: "Telefonica",
+      ipNoVpnProxyHosting: true,
       ipCountryMatchesShipping: false,
+      // Even with bankEligible accidentally set true, the secondary
+      // mismatch check must still suppress the paragraph.
+      bankEligible: true,
     };
-    expect(joinSections("fraud", EMPTY_FLAGS, data)).toContain(
-      "While the purchase location differs from the shipping destination, this is consistent with legitimate cross-border purchasing behavior and does not indicate unauthorized use.",
-    );
+    const text = joinSections("fraud", EMPTY_FLAGS, data);
+    expect(text).not.toContain("differs from the shipping destination");
+    expect(text).not.toContain("cross-border");
+    expectNoIpSignalLeak(text, data);
   });
 
-  it("omits mismatch neutralizer when ipCountryMatchesShipping is true or null", () => {
-    for (const ipCountryMatchesShipping of [true, null] as const) {
-      const data: EvidenceData = {
-        ipCity: "Stockholm",
-        ipCountry: "SE",
-        ipOrg: "Telia",
-        ipCountryMatchesShipping,
-      };
-      expect(joinSections("fraud", EMPTY_FLAGS, data)).not.toContain(
-        "differs from the shipping destination",
-      );
+  it("omits bank-grade-device when ipNoVpnProxyHosting is null or false", () => {
+    for (const ipNoVpnProxyHosting of [null, false] as const) {
+      const data: EvidenceData = { ...ELIGIBLE_BASE, ipNoVpnProxyHosting };
+      const text = joinSections("fraud", EMPTY_FLAGS, data);
+      expect(getSectionIds("fraud", EMPTY_FLAGS, data)).not.toContain("bank-grade-device");
+      expect(text).not.toContain("No VPN, proxy, or hosting indicators were detected");
+      expectNoIpSignalLeak(text, data);
     }
   });
 
-  it("renders the clean-network sentence only when ipNoVpnProxyHosting is true", () => {
-    const cleanData: EvidenceData = {
-      ipCity: "Stockholm",
-      ipCountry: "SE",
-      ipNoVpnProxyHosting: true,
-    };
-    expect(joinSections("fraud", EMPTY_FLAGS, cleanData)).toContain(
+  it("renders the clean-network sentence in the canonical positive case", () => {
+    expect(joinSections("fraud", EMPTY_FLAGS, ELIGIBLE_BASE)).toContain(
       "No VPN, proxy, or hosting indicators were detected, indicating a standard consumer network.",
     );
+  });
 
-    for (const ipNoVpnProxyHosting of [null, false] as const) {
-      const data: EvidenceData = {
-        ipCity: "Stockholm",
-        ipCountry: "SE",
-        ipNoVpnProxyHosting,
-      };
-      expect(joinSections("fraud", EMPTY_FLAGS, data)).not.toContain(
-        "No VPN, proxy, or hosting indicators were detected",
-      );
+  it("never emits the cross-border reframing phrase under any input", () => {
+    // The neutralizer constant has been deleted entirely. Even when
+    // someone constructs a data object that previously triggered it,
+    // the output must not contain the banned phrase.
+    const inputs: EvidenceData[] = [
+      ELIGIBLE_BASE,
+      { ...ELIGIBLE_BASE, ipCountryMatchesShipping: false },
+      { ...ELIGIBLE_BASE, bankEligible: false },
+      FULL_FRAUD_DATA,
+    ];
+    for (const data of inputs) {
+      const text = joinSections("fraud", EMPTY_FLAGS, data);
+      expect(text).not.toContain("cross-border");
+      expect(text).not.toContain("consistent with legitimate cross-border");
+      expect(text).not.toContain("does not indicate unauthorized use");
+      expect(text).not.toContain("differs from the shipping destination");
     }
   });
 });

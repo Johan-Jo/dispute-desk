@@ -12,6 +12,7 @@
 import type { DisputeEvidenceUpdateInput } from "./mutations/disputeEvidenceUpdate";
 import type { RawPackSection } from "./fieldMapping";
 import { resolveReasonFamily } from "@/lib/argument/responseEngine";
+import { isDeviceLocationBankEligible } from "@/lib/argument/deviceLocationEligibility";
 
 /* ── Safe formatters ── */
 
@@ -292,10 +293,15 @@ export function buildEvidenceForShopify(
       | { bankEligible?: boolean; bankParagraph?: string | null }
       | undefined;
 
+    // Single source of truth for the bank-eligibility decision
+    // (shared with the rebuttal engine — see
+    // lib/argument/deviceLocationEligibility.ts).
+    const eligible = isDeviceLocationBankEligible(deviceLocSection ?? null);
+
     let deviceLine: string | null = null;
     if (
-      data?.bankEligible &&
-      typeof data.bankParagraph === "string" &&
+      eligible &&
+      typeof data?.bankParagraph === "string" &&
       data.bankParagraph.length > 0
     ) {
       // Positive signal — submit the full bank paragraph.

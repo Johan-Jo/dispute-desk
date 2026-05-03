@@ -15,6 +15,7 @@
  */
 
 import type { RebuttalSection } from "./types";
+import { isEvidenceDataDeviceLocationBankEligible } from "./deviceLocationEligibility";
 
 /* ── Evidence Flags ── */
 
@@ -70,8 +71,16 @@ export interface EvidenceData {
   ipOrg?: string | null;
   /** True iff ipinfo.privacy.{vpn, proxy, hosting} are all explicitly false. */
   ipNoVpnProxyHosting?: boolean | null;
-  /** true / false / null — null means unknown, suppresses neutralizing clause. */
+  /** true / false / null — null means unknown. When false, the device
+   *  paragraph is omitted from bank-facing output entirely (no
+   *  defensive reframing of mismatches). */
   ipCountryMatchesShipping?: boolean | null;
+  /**
+   * Mirror of the source pack section's `bankEligible` flag. Hard
+   * prerequisite for emitting the IP/device paragraph in any
+   * bank-facing surface. See lib/argument/deviceLocationEligibility.ts.
+   */
+  bankEligible?: boolean | null;
   /** Order/checkout evidence present in the pack (standard online flow). */
   hasOrderConfirmation?: boolean;
   /** Customer email on the order record (confirmation email sentence). */
@@ -564,8 +573,10 @@ const BANK_GRADE_CLOSING =
 const IP_VPN_CLEAN_SENTENCE =
   "No VPN, proxy, or hosting indicators were detected, indicating a standard consumer network.";
 
-const IP_MISMATCH_NEUTRALIZER =
-  "While the purchase location differs from the shipping destination, this is consistent with legitimate cross-border purchasing behavior and does not indicate unauthorized use.";
+// Intentionally no IP_MISMATCH_NEUTRALIZER: bank-facing output must
+// not explain away a country mismatch. When the IP country differs
+// from the shipping country, the entire device paragraph is omitted
+// via isEvidenceDataDeviceLocationBankEligible — never reframed.
 
 const SUPPORTING_DOCS_PARAGRAPH =
   "Supporting documentation is provided to reinforce the legitimacy of the transaction, including identity-linked materials and transaction-related records associated with the order. These documents are consistent with the customer information used during checkout and support that the purchase was made by the authorized cardholder.";
@@ -648,7 +659,14 @@ export function buildBankGradeStructure(data: EvidenceData): {
   }
 
   // ── Section 4 — Device & location (one paragraph) ──
-  if (hasDeviceLocationBlock(data)) {
+  //
+  // Gated by `isEvidenceDataDeviceLocationBankEligible`. The IP /
+  // city / region / country / ISP / ASN are emitted only when the
+  // pack-side `bankEligible` flag is explicitly true AND the country
+  // matches shipping AND VPN/proxy/hosting are cleanly absent. Any
+  // other state means complete omission — never a defensive
+  // reframing of a mismatch (see deviceLocationEligibility.ts).
+  if (hasDeviceLocationBlock(data) && isEvidenceDataDeviceLocationBankEligible(data)) {
     const city = (data.ipCity ?? "").trim();
     const region = (data.ipRegion ?? "").trim();
     const country = (data.ipCountry ?? "").trim();
@@ -665,13 +683,9 @@ export function buildBankGradeStructure(data: EvidenceData): {
       base = `The transaction originated from an IP address associated with ${org}.`;
     }
 
-    const devParts: string[] = [base];
-    if (data.ipNoVpnProxyHosting === true) {
-      devParts.push(IP_VPN_CLEAN_SENTENCE);
-    }
-    if (data.ipCountryMatchesShipping === false) {
-      devParts.push(IP_MISMATCH_NEUTRALIZER);
-    }
+    // The eligibility gate already guarantees ipNoVpnProxyHosting === true,
+    // so the clean-network sentence always follows the geo sentence here.
+    const devParts: string[] = [base, IP_VPN_CLEAN_SENTENCE];
     middles.push({ kind: "device", text: devParts.join(" ") });
   }
 

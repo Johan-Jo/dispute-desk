@@ -76,9 +76,29 @@ describe("extractEvidenceDataFromPack", () => {
     expect(result.ipCountry).toBeNull();
     expect(result.ipNoVpnProxyHosting).toBeNull();
     expect(result.ipCountryMatchesShipping).toBeNull();
+    expect(result.bankEligible).toBeNull();
     expect(result.hasOrderConfirmation).toBeUndefined();
     expect(result.hasCustomerEmail).toBeUndefined();
     expect(result.hasSupportingDocs).toBeUndefined();
+  });
+
+  it("mirrors bankEligible from the IP section verbatim (true)", () => {
+    const result = extractEvidenceDataFromPack([
+      ipSection({ data: { ...(ipSection().data as object), bankEligible: true } }),
+    ]);
+    expect(result.bankEligible).toBe(true);
+  });
+
+  it("mirrors bankEligible from the IP section verbatim (false)", () => {
+    const result = extractEvidenceDataFromPack([
+      ipSection({ data: { ...(ipSection().data as object), bankEligible: false } }),
+    ]);
+    expect(result.bankEligible).toBe(false);
+  });
+
+  it("returns bankEligible=null when the source section omits the flag", () => {
+    const result = extractEvidenceDataFromPack([ipSection()]);
+    expect(result.bankEligible).toBeNull();
   });
 
   it("handles null/undefined sections", () => {
