@@ -1,8 +1,24 @@
 name: CI
 
-# Paused: was running on every push/PR and failing. Re-enable by restoring push/pull_request triggers.
+# Re-enabled 2026-05-03 (Phase 1.1). All steps verified green on master HEAD
+# locally before flipping the trigger:
+#   - npx tsc --noEmit (exit 0)
+#   - npm run lint    (exit 0; warnings only)
+#   - npm test        (922/922 pass)
+#   - npm run build   (exit 0)
+#   - npm audit --audit-level=critical (exit 0; high/moderate sit below the filter)
+#   - 4 grep guards   (no matches)
 on:
+  push:
+    branches: [master]
+  pull_request:
   workflow_dispatch:
+
+# Cancel in-flight runs for the same ref when a new push lands. PRs and
+# master each have their own concurrency lane.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
