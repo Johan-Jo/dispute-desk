@@ -1,0 +1,235 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > buildRestSupplementFields > DUPLICATE — REST supplement (product_description + shipping) 1`] = `
+{
+  "product_description": "Product name: Acme Widget
+Size: Large
+Quantity: 1
+Price: 199.00
+SKU: WGT-001",
+  "shipping_carrier": "UPS",
+  "shipping_date": "2026-04-11",
+  "shipping_tracking_number": "1Z999AA10123456784",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > buildRestSupplementFields > FRAUDULENT — REST supplement (product_description + shipping) 1`] = `
+{
+  "product_description": "Product name: Acme Widget
+Size: Large
+Quantity: 1
+Price: 199.00
+SKU: WGT-001",
+  "shipping_carrier": "UPS",
+  "shipping_date": "2026-04-11",
+  "shipping_tracking_number": "1Z999AA10123456784",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > buildRestSupplementFields > PRODUCT_NOT_RECEIVED — REST supplement (product_description + shipping) 1`] = `
+{
+  "product_description": "Product name: Acme Widget
+Size: Large
+Quantity: 1
+Price: 199.00
+SKU: WGT-001",
+  "shipping_carrier": "UPS",
+  "shipping_date": "2026-04-11",
+  "shipping_tracking_number": "1Z999AA10123456784",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > buildRestSupplementFields > PRODUCT_UNACCEPTABLE — REST supplement (product_description + shipping) 1`] = `
+{
+  "product_description": "Product name: Acme Widget
+Size: Large
+Quantity: 1
+Price: 199.00
+SKU: WGT-001",
+  "shipping_carrier": "UPS",
+  "shipping_date": "2026-04-11",
+  "shipping_tracking_number": "1Z999AA10123456784",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > composeShopifyMutationPayload > DUPLICATE — composed mutation payload 1`] = `
+{
+  "accessActivityLog": "Order: #DUPL-001
+Date: April 10, 2026
+Status: paid
+Billing: Austin, TX, US, 78701
+Shipping: Austin, TX, US, 78701
+Billing and shipping addresses match.
+
+Items ordered:
+  - Acme Widget (Large) x1
+
+AVS (Address Verification): Full match
+CVV (Card Verification): Match
+Card: Visa ending 1234",
+  "customerEmailAddress": "casey@example.com",
+  "customerFirstName": "Casey",
+  "customerLastName": "Rivera",
+  "uncategorizedText": "Rebuttal for DUPLICATE: the transaction was authorized and the order was shipped/delivered as agreed.",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > composeShopifyMutationPayload > FRAUDULENT — composed mutation payload 1`] = `
+{
+  "accessActivityLog": "Order: #FRAU-001
+Date: April 10, 2026
+Status: paid
+Billing: Austin, TX, US, 78701
+Shipping: Austin, TX, US, 78701
+Billing and shipping addresses match.
+
+Items ordered:
+  - Acme Widget (Large) x1
+
+AVS (Address Verification): Full match
+CVV (Card Verification): Match
+Card: Visa ending 1234
+
+Device-level location data was not available for this transaction.",
+  "customerEmailAddress": "casey@example.com",
+  "customerFirstName": "Casey",
+  "customerLastName": "Rivera",
+  "uncategorizedText": "Rebuttal for FRAUDULENT: the transaction was authorized and the order was shipped/delivered as agreed.",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > composeShopifyMutationPayload > PRODUCT_NOT_RECEIVED — composed mutation payload 1`] = `
+{
+  "accessActivityLog": "Order: #PROD-001
+Date: April 10, 2026
+Status: paid
+Billing: Austin, TX, US, 78701
+Shipping: Austin, TX, US, 78701
+Billing and shipping addresses match.
+
+Items ordered:
+  - Acme Widget (Large) x1
+
+AVS (Address Verification): Full match
+CVV (Card Verification): Match
+Card: Visa ending 1234",
+  "customerEmailAddress": "casey@example.com",
+  "customerFirstName": "Casey",
+  "customerLastName": "Rivera",
+  "uncategorizedText": "Rebuttal for PRODUCT_NOT_RECEIVED: the transaction was authorized and the order was shipped/delivered as agreed.",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > composeShopifyMutationPayload > PRODUCT_UNACCEPTABLE — composed mutation payload 1`] = `
+{
+  "accessActivityLog": "Order: #PROD-001
+Date: April 10, 2026
+Status: paid
+Billing: Austin, TX, US, 78701
+Shipping: Austin, TX, US, 78701
+Billing and shipping addresses match.
+
+Items ordered:
+  - Acme Widget (Large) x1
+
+AVS (Address Verification): Full match
+CVV (Card Verification): Match
+Card: Visa ending 1234",
+  "customerEmailAddress": "casey@example.com",
+  "customerFirstName": "Casey",
+  "customerLastName": "Rivera",
+  "uncategorizedText": "Rebuttal for PRODUCT_UNACCEPTABLE: the transaction was authorized and the order was shipped/delivered as agreed.",
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > diffVerificationReadback > DUPLICATE — verified read-back classification 1`] = `
+{
+  "fields_confirmed": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "uncategorizedText",
+  ],
+  "fields_missing": [],
+  "fields_sent": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "customerFirstName",
+    "customerLastName",
+    "uncategorizedText",
+  ],
+  "fields_write_only": [
+    "customerFirstName",
+    "customerLastName",
+  ],
+  "verified": true,
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > diffVerificationReadback > FRAUDULENT — verified read-back classification 1`] = `
+{
+  "fields_confirmed": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "uncategorizedText",
+  ],
+  "fields_missing": [],
+  "fields_sent": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "customerFirstName",
+    "customerLastName",
+    "uncategorizedText",
+  ],
+  "fields_write_only": [
+    "customerFirstName",
+    "customerLastName",
+  ],
+  "verified": true,
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > diffVerificationReadback > PRODUCT_NOT_RECEIVED — verified read-back classification 1`] = `
+{
+  "fields_confirmed": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "uncategorizedText",
+  ],
+  "fields_missing": [],
+  "fields_sent": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "customerFirstName",
+    "customerLastName",
+    "uncategorizedText",
+  ],
+  "fields_write_only": [
+    "customerFirstName",
+    "customerLastName",
+  ],
+  "verified": true,
+}
+`;
+
+exports[`save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3) > diffVerificationReadback > PRODUCT_UNACCEPTABLE — verified read-back classification 1`] = `
+{
+  "fields_confirmed": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "uncategorizedText",
+  ],
+  "fields_missing": [],
+  "fields_sent": [
+    "accessActivityLog",
+    "customerEmailAddress",
+    "customerFirstName",
+    "customerLastName",
+    "uncategorizedText",
+  ],
+  "fields_write_only": [
+    "customerFirstName",
+    "customerLastName",
+  ],
+  "verified": true,
+}
+`;
