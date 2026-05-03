@@ -18,8 +18,7 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
 import {
   REASON_ENUM_INTROSPECTION_QUERY,
@@ -70,14 +69,6 @@ export type DriftCheckResult =
     }
   | { ok: false; error: "introspection_failed"; message: string };
 
-function decryptAccessToken(encryptedToken: string): string {
-  try {
-    return decrypt(deserializeEncrypted(encryptedToken));
-  } catch {
-    return encryptedToken;
-  }
-}
-
 function computeDiff(remote: string[], local: readonly string[]) {
   const remoteSet = new Set(remote);
   const localSet = new Set(local);
@@ -117,18 +108,15 @@ export async function checkShopifyReasonEnumDrift(): Promise<DriftCheckResult> {
     ? (shopRelation[0] as { shop_domain: string })
     : (shopRelation as { shop_domain: string });
   const shopDomain = shopRow?.shop_domain;
-  if (!shopDomain) {
+  const shopId = (session as { shop_id: string }).shop_id;
+  if (!shopDomain || !shopId) {
     return { ok: true, skipped: "no_shop_domain" };
   }
 
-  const accessToken = decryptAccessToken(
-    (session as { access_token_encrypted: string }).access_token_encrypted,
-  );
-
   let enumValues: string[] = [];
   try {
-    const res = await requestShopifyGraphQL<ReasonEnumIntrospectionResponse>({
-      session: { shopDomain, accessToken },
+    const res = await makeAuthedRequest<ReasonEnumIntrospectionResponse>({
+      shopId,
       query: REASON_ENUM_INTROSPECTION_QUERY,
       variables: {},
     });

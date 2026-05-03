@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
+import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
   DISPUTE_DETAIL_QUERY,
   type DisputeDetailNode,
 } from "@/lib/shopify/queries/disputes";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
 import {
@@ -20,14 +20,6 @@ export const runtime = "nodejs";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
-}
-
-function decryptAccessToken(encrypted: string): string {
-  try {
-    return decrypt(deserializeEncrypted(encrypted));
-  } catch {
-    return encrypted;
-  }
 }
 
 /**
@@ -70,30 +62,21 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const row = dispute as Record<string, unknown>;
   const overriddenFields = (row.overridden_fields as Record<string, boolean>) ?? {};
 
-  // Load shop offline session
-  const { data: session } = await sb
-    .from("shop_sessions")
-    .select("access_token_encrypted, key_version, shop_domain")
-    .eq("shop_id", dispute.shop_id)
-    .eq("session_type", "offline")
-    .is("user_id", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!session) {
-    return NextResponse.json({ error: "No offline session for shop" }, { status: 400 });
+  // Fetch from Shopify (helper loads offline session + decrypts token)
+  let gql;
+  try {
+    gql = await makeAuthedRequest<{ dispute: DisputeDetailNode }>({
+      shopId: dispute.shop_id as string,
+      query: DISPUTE_DETAIL_QUERY,
+      variables: { id: dispute.dispute_gid },
+      correlationId: `resync-${disputeId}`,
+    });
+  } catch (err) {
+    if (err instanceof NoBackgroundSessionError) {
+      return NextResponse.json({ error: "No offline session for shop" }, { status: 400 });
+    }
+    throw err;
   }
-
-  const accessToken = decryptAccessToken(session.access_token_encrypted);
-
-  // Fetch from Shopify
-  const gql = await requestShopifyGraphQL<{ dispute: DisputeDetailNode }>({
-    session: { shopDomain: session.shop_domain ?? "", accessToken },
-    query: DISPUTE_DETAIL_QUERY,
-    variables: { id: dispute.dispute_gid },
-    correlationId: `resync-${disputeId}`,
-  });
 
   if (gql.errors?.length || !gql.data?.dispute) {
     return NextResponse.json({

@@ -1,5 +1,5 @@
 import { loadSession } from "./sessionStorage";
-import { requestShopifyGraphQL } from "./graphql";
+import { makeAuthedRequest } from "./makeAuthedRequest";
 
 export interface ShopDetails {
   name: string;
@@ -56,6 +56,8 @@ interface ShopQueryData {
 }
 
 export async function fetchShopDetails(shopInternalId: string): Promise<ShopDetails | null> {
+  // Pre-flight domain sanity check stays here so we can early-return
+  // null without a Shopify roundtrip when the stored domain is bogus.
   const session = await loadSession(shopInternalId, "offline");
   if (!session) return null;
   if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(session.shopDomain)) {
@@ -66,8 +68,8 @@ export async function fetchShopDetails(shopInternalId: string): Promise<ShopDeta
     return null;
   }
 
-  const result = await requestShopifyGraphQL<ShopQueryData>({
-    session: { shopDomain: session.shopDomain, accessToken: session.accessToken },
+  const result = await makeAuthedRequest<ShopQueryData>({
+    shopId: shopInternalId,
     query: SHOP_DETAILS_QUERY,
   });
 

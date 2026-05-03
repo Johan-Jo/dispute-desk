@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
+import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
   DISPUTE_DETAIL_QUERY,
   type DisputeDetailResponse,
 } from "@/lib/shopify/queries/disputes";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
-}
-
-function decryptAccessToken(encryptedToken: string): string {
-  try {
-    const payload = deserializeEncrypted(encryptedToken);
-    return decrypt(payload);
-  } catch {
-    return encryptedToken;
-  }
 }
 
 /**
@@ -39,34 +30,23 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
   }
 
-  const { data: shop } = await sb
-    .from("shops")
-    .select("shop_domain")
-    .eq("id", dispute.shop_id)
-    .single();
-
-  const { data: session } = await sb
-    .from("shop_sessions")
-    .select("access_token_encrypted, shop_domain")
-    .eq("shop_id", dispute.shop_id)
-    .eq("session_type", "offline")
-    .single();
-
-  if (!shop || !session) {
-    return NextResponse.json(
-      { error: "Shop or session not found" },
-      { status: 404 }
-    );
+  let gqlResult;
+  try {
+    gqlResult = await makeAuthedRequest<DisputeDetailResponse>({
+      shopId: dispute.shop_id,
+      query: DISPUTE_DETAIL_QUERY,
+      variables: { id: dispute.dispute_gid },
+      correlationId: `single-sync-${id}`,
+    });
+  } catch (err) {
+    if (err instanceof NoBackgroundSessionError) {
+      return NextResponse.json(
+        { error: "Shop or session not found" },
+        { status: 404 }
+      );
+    }
+    throw err;
   }
-
-  const accessToken = decryptAccessToken(session.access_token_encrypted);
-
-  const gqlResult = await requestShopifyGraphQL<DisputeDetailResponse>({
-    session: { shopDomain: shop.shop_domain, accessToken },
-    query: DISPUTE_DETAIL_QUERY,
-    variables: { id: dispute.dispute_gid },
-    correlationId: `single-sync-${id}`,
-  });
 
   const node = gqlResult.data?.dispute;
   if (!node) {

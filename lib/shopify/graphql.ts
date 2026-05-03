@@ -5,7 +5,7 @@ interface ShopifySession {
   accessToken: string;
 }
 
-interface GraphQLResponse<T = unknown> {
+export interface GraphQLResponse<T = unknown> {
   data?: T;
   errors?: Array<{ message: string; extensions?: Record<string, unknown> }>;
   extensions?: {
