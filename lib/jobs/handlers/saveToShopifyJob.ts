@@ -27,6 +27,10 @@ import { type RawPackSection } from "@/lib/shopify/fieldMapping";
 import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
 import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
 import {
+  verifyEvidenceReadback,
+  type VerificationDiffOrError,
+} from "@/lib/shopify/verifyEvidenceReadback";
+import {
   type ManualAttachmentInput,
   type PackPdfInput,
 } from "@/lib/shopify/manualAttachments";
@@ -50,68 +54,6 @@ import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
 import { EVIDENCE_SAVED_TO_SHOPIFY } from "@/lib/disputeEvents/eventTypes";
 import type { ClaimedJob } from "../claimJobs";
-
-/* ── Verification query ── */
-
-/**
- * Verification query — reads back evidence fields from Shopify.
- *
- * NOTE: shippingDocumentation is WRITE-ONLY via the mutation.
- * The readable equivalent is shippingDocumentationFile (file upload).
- * Text fields we can verify: accessActivityLog, cancellationRebuttal,
- * cancellationPolicyDisclosure, refundPolicyDisclosure, uncategorizedText.
- */
-const VERIFY_EVIDENCE_QUERY = `
-  query VerifyEvidence($id: ID!) {
-    node(id: $id) {
-      ... on ShopifyPaymentsDispute {
-        disputeEvidence {
-          id
-          accessActivityLog
-          cancellationPolicyDisclosure
-          cancellationRebuttal
-          customerEmailAddress
-          refundPolicyDisclosure
-          refundRefusalExplanation
-          uncategorizedText
-        }
-      }
-    }
-  }
-`;
-
-/** Fields that are readable via the Shopify API for verification. */
-const VERIFIABLE_FIELDS = new Set([
-  "accessActivityLog",
-  "cancellationPolicyDisclosure",
-  "cancellationRebuttal",
-  "customerEmailAddress",
-  "refundPolicyDisclosure",
-  "refundRefusalExplanation",
-  "uncategorizedText",
-]);
-
-/** Fields that are write-only (mutation accepts but can't be verified via read-back). */
-const WRITE_ONLY_FIELDS = new Set([
-  "submitEvidence",
-  "customerFirstName",
-  "customerLastName",
-]);
-
-interface VerifyEvidenceResult {
-  node: {
-    disputeEvidence: {
-      id: string;
-      accessActivityLog: string | null;
-      cancellationPolicyDisclosure: string | null;
-      cancellationRebuttal: string | null;
-      customerEmailAddress: string | null;
-      refundPolicyDisclosure: string | null;
-      refundRefusalExplanation: string | null;
-      uncategorizedText: string | null;
-    } | null;
-  } | null;
-}
 
 /* ── Helpers ── */
 
@@ -510,9 +452,14 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   // ═══════════════════════════════════════════════════════════
 
   let verified = false;
-  let verificationDiff: Record<string, unknown> = {};
+  let verificationDiff: VerificationDiffOrError = {
+    error: "verification not attempted",
+  };
 
   try {
+    // 2-second buffer — mutation responses don't always reflect on the
+    // read replica immediately. Empirically every dispute we save shows
+    // up cleanly after this wait.
     await new Promise((r) => setTimeout(r, 2000));
 
     // Query via dispute GID (not evidence GID) — evidence is a nested field
@@ -522,54 +469,20 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       .eq("id", pack.dispute_id)
       .single();
 
-    const verifyResult = await requestShopifyGraphQL<{ data: VerifyEvidenceResult }>({
-      session: { shopDomain, accessToken },
-      query: VERIFY_EVIDENCE_QUERY,
-      variables: { id: disputeData?.dispute_gid ?? "" },
+    const { diff, evidenceNode } = await verifyEvidenceReadback({
+      shopDomain,
+      accessToken,
+      disputeGid: disputeData?.dispute_gid ?? "",
+      inputKeys,
       correlationId: `verify-${job.id}`,
     });
 
-    // requestShopifyGraphQL returns { data: { node: { disputeEvidence: {...} } } }
-    const rawResult = verifyResult as unknown as Record<string, unknown>;
-    const dataNode = (rawResult.data as Record<string, unknown> | undefined)?.node as Record<string, unknown> | undefined;
-    const evidence = dataNode?.disputeEvidence as Record<string, unknown> | undefined;
-
-    if (evidence) {
-      const fieldsConfirmed: string[] = [];
-      const fieldsMissing: string[] = [];
-      const fieldsWriteOnly: string[] = [];
-
-      for (const key of inputKeys) {
-        if (WRITE_ONLY_FIELDS.has(key)) {
-          // Can't verify write-only fields — trust the mutation success
-          fieldsWriteOnly.push(key);
-          continue;
-        }
-        if (!VERIFIABLE_FIELDS.has(key)) {
-          fieldsWriteOnly.push(key);
-          continue;
-        }
-        const shopifyValue = evidence[key];
-        if (shopifyValue && typeof shopifyValue === "string" && shopifyValue.trim().length > 0) {
-          fieldsConfirmed.push(key);
-        } else {
-          fieldsMissing.push(key);
-        }
-      }
-
-      verified = fieldsMissing.length === 0;
-      verificationDiff = {
-        fields_sent: inputKeys,
-        fields_confirmed: fieldsConfirmed,
-        fields_missing: fieldsMissing,
-        fields_write_only: fieldsWriteOnly,
-        verified,
-      };
-
-      console.log(`[saveToShopify] verification:`, JSON.stringify(verificationDiff));
-    } else {
+    verificationDiff = diff;
+    if ("verified" in diff) {
+      verified = diff.verified;
+      console.log(`[saveToShopify] verification:`, JSON.stringify(diff));
+    } else if (!evidenceNode) {
       console.log("[saveToShopify] verification: could not fetch evidence from Shopify");
-      verificationDiff = { error: "Could not fetch evidence from Shopify" };
     }
   } catch (verifyErr) {
     console.error("[saveToShopify] verification error:", verifyErr instanceof Error ? verifyErr.message : String(verifyErr));

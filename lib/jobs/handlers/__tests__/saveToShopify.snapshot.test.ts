@@ -7,7 +7,7 @@
  * for splitting it into three pure helpers + a thin orchestrator:
  *   - composeShopifyMutationPayload  (extracted ✓)
  *   - buildRestSupplementFields      (extracted ✓ — Phase 2.3 step 1)
- *   - diffVerificationReadback       (still inline)
+ *   - diffVerificationReadback       (extracted ✓ — Phase 2.3 step 2)
  *   - emitSaveToShopifyEvents        (still inline)
  *
  * This file is the byte-equivalence safety net for that split. It
@@ -28,82 +28,21 @@ import {
   type ComposeShopifyMutationPayloadInput,
 } from "@/lib/shopify/composeShopifyMutationPayload";
 import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
+import {
+  diffVerificationReadback,
+  VERIFIABLE_FIELDS,
+} from "@/lib/shopify/verifyEvidenceReadback";
 import type { RawPackSection } from "@/lib/shopify/fieldMapping";
 import type { DisputeEvidenceUpdateInput } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 
 /* ─────────────────────────────────────────────────────────────
- *  PURE HELPERS — mirrored inline from saveToShopifyJob.ts.
+ *  Helpers used in the snapshot harness.
  *
- *  These are NOT imports from production code yet. Phase 2.3's
- *  decomposition lifts these into `lib/shopify/*.ts` and the
- *  production handler calls them. Snapshots pin the exact output
- *  shape so each move is provably non-behavioral.
+ *  Pure pieces (composeShopifyMutationPayload, buildRestSupplementFields,
+ *  diffVerificationReadback) are now imported from production. The
+ *  events emitter remains inline pending Phase 2.3 step 3.
  * ───────────────────────────────────────────────────────────── */
 
-/** Verifiable fields per saveToShopifyJob lines 83–91. */
-const VERIFIABLE_FIELDS = new Set([
-  "accessActivityLog",
-  "cancellationPolicyDisclosure",
-  "cancellationRebuttal",
-  "customerEmailAddress",
-  "refundPolicyDisclosure",
-  "refundRefusalExplanation",
-  "uncategorizedText",
-]);
-
-/** Write-only fields per saveToShopifyJob lines 94–98. */
-const WRITE_ONLY_FIELDS = new Set([
-  "submitEvidence",
-  "customerFirstName",
-  "customerLastName",
-]);
-
-interface VerificationDiff {
-  fields_sent: string[];
-  fields_confirmed: string[];
-  fields_missing: string[];
-  fields_write_only: string[];
-  verified: boolean;
-}
-
-/** Mirror of saveToShopifyJob lines 567–598 (read-back diff). */
-function diffVerificationReadback(args: {
-  inputKeys: string[];
-  evidenceFromShopify: Record<string, unknown> | null;
-}): VerificationDiff | { error: string } {
-  const { inputKeys, evidenceFromShopify } = args;
-  if (!evidenceFromShopify) {
-    return { error: "Could not fetch evidence from Shopify" };
-  }
-  const fieldsConfirmed: string[] = [];
-  const fieldsMissing: string[] = [];
-  const fieldsWriteOnly: string[] = [];
-
-  for (const key of inputKeys) {
-    if (WRITE_ONLY_FIELDS.has(key)) {
-      fieldsWriteOnly.push(key);
-      continue;
-    }
-    if (!VERIFIABLE_FIELDS.has(key)) {
-      fieldsWriteOnly.push(key);
-      continue;
-    }
-    const shopifyValue = evidenceFromShopify[key];
-    if (typeof shopifyValue === "string" && shopifyValue.trim().length > 0) {
-      fieldsConfirmed.push(key);
-    } else {
-      fieldsMissing.push(key);
-    }
-  }
-
-  return {
-    fields_sent: inputKeys,
-    fields_confirmed: fieldsConfirmed,
-    fields_missing: fieldsMissing,
-    fields_write_only: fieldsWriteOnly,
-    verified: fieldsMissing.length === 0,
-  };
-}
 
 /* ─────────────────────────────────────────────────────────────
  *  FIXTURES — one per dispute family.
