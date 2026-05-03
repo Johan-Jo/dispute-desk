@@ -12,6 +12,27 @@ export interface ClaimedJob {
 }
 
 /**
+ * JobResult — handler return type at the dispatcher↔handler seam.
+ *
+ * Phase 2.6: a narrow Result that lets handlers distinguish
+ * non-retriable failures (pack not submittable, auth invalid,
+ * Shopify userErrors) from transient ones (network timeouts, 5xx).
+ * The worker reads `retriable` to decide whether to re-queue.
+ *
+ * Handlers may also still throw — the worker treats unhandled
+ * exceptions as retriable by default (existing behavior). The new
+ * return path is for KNOWN failure modes the handler can name and
+ * classify.
+ *
+ * Phase 2.6 is intentionally minimal: only `saveToShopifyJob`
+ * adopts JobResult in this PR. Other handlers continue to return
+ * `Promise<void>`. The worker accepts both shapes.
+ */
+export type JobResult =
+  | { ok: true }
+  | { ok: false; reason: string; retriable: boolean };
+
+/**
  * Claim up to `limit` queued jobs using SELECT ... FOR UPDATE SKIP LOCKED.
  * Enforces per-shop concurrency cap (V1: 1 running job per shop).
  *
@@ -56,16 +77,25 @@ export async function markJobSucceeded(jobId: string): Promise<void> {
 }
 
 /**
- * Mark a job as failed. If attempts < max_attempts, re-queue it.
+ * Mark a job as failed. If attempts < max_attempts AND `retriable`
+ * is not explicitly false, re-queue it.
+ *
+ * `retriable: false` is the JobResult escape hatch (Phase 2.6) — the
+ * handler has determined the failure cannot succeed by retry (auth
+ * invalid, pack status not submittable, Shopify userErrors, missing
+ * required GIDs). Forcing the row to `failed` immediately stops the
+ * worker from burning attempts on a known dead end.
  */
 export async function markJobFailed(
   jobId: string,
   error: string,
   attempts: number,
-  maxAttempts: number
+  maxAttempts: number,
+  opts: { retriable?: boolean } = {},
 ): Promise<void> {
   const db = getServiceClient();
-  const shouldRetry = attempts < maxAttempts;
+  const shouldRetry =
+    opts.retriable !== false && attempts < maxAttempts;
 
   await db
     .from("jobs")

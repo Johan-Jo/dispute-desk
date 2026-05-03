@@ -38,6 +38,11 @@ async function runWorker(req: NextRequest) {
 
   for (const job of claimed) {
     try {
+      // Handlers return either `void` (legacy) or a `JobResult` (Phase
+      // 2.6+). When a handler explicitly returns `{ ok: false, ... }`,
+      // the dispatcher honors `retriable` instead of always retrying
+      // until maxAttempts. Throws stay retriable by default.
+      let handlerResult: void | { ok: boolean; reason?: string; retriable?: boolean } | undefined;
       switch (job.jobType) {
         case "build_pack":
           await handleBuildPack(job);
@@ -49,7 +54,7 @@ async function runWorker(req: NextRequest) {
           await handleSyncDisputes(job);
           break;
         case "save_to_shopify":
-          await handleSaveToShopify(job);
+          handlerResult = await handleSaveToShopify(job);
           break;
         case "snapshot_shop_daily_metrics":
           await handleSnapshotShopDailyMetrics(job);
@@ -60,10 +65,21 @@ async function runWorker(req: NextRequest) {
         default:
           throw new Error(`Unknown job type: ${job.jobType}`);
       }
-      await markJobSucceeded(job.id);
-      results.push({ jobId: job.id, status: "succeeded" });
+
+      if (handlerResult && handlerResult.ok === false) {
+        const reason = handlerResult.reason ?? "handler returned failure";
+        await markJobFailed(job.id, reason, job.attempts, job.maxAttempts, {
+          retriable: handlerResult.retriable !== false,
+        });
+        results.push({ jobId: job.id, status: "failed", error: reason });
+      } else {
+        await markJobSucceeded(job.id);
+        results.push({ jobId: job.id, status: "succeeded" });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      // Unhandled exception → retriable by default. Handlers that
+      // need non-retriable behavior should return JobResult instead.
       await markJobFailed(job.id, message, job.attempts, job.maxAttempts);
       results.push({ jobId: job.id, status: "failed", error: message });
     }

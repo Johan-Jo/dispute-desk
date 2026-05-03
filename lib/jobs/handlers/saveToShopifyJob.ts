@@ -50,7 +50,7 @@ import {
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { emitSaveToShopifyEvents } from "./saveToShopifyEvents";
-import type { ClaimedJob } from "../claimJobs";
+import type { ClaimedJob, JobResult } from "../claimJobs";
 
 /* ── Helpers ── */
 
@@ -69,17 +69,29 @@ function truncateInput(input: DisputeEvidenceUpdateInput): Record<string, string
 
 /* ── Main handler ── */
 
-export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
+export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
   const sb = getServiceClient();
   const packId = job.entityId;
-  if (!packId) throw new Error("No entity_id (pack ID) on save_to_shopify job");
+  if (!packId) {
+    return {
+      ok: false,
+      retriable: false,
+      reason: "No entity_id (pack ID) on save_to_shopify job",
+    };
+  }
 
   const { data: pack } = await sb
     .from("evidence_packs")
     .select("id, shop_id, dispute_id, status, pack_json")
     .eq("id", packId)
     .single();
-  if (!pack) throw new Error(`Pack not found: ${packId}`);
+  if (!pack) {
+    return {
+      ok: false,
+      retriable: false,
+      reason: `Pack not found: ${packId}`,
+    };
+  }
 
   // ═══════════════════════════════════════════════════════════
   //  DEFENSE-IN-DEPTH STATUS GUARD
@@ -119,9 +131,11 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
         pack_status: pack.status,
       },
     });
-    throw new Error(
-      `Refusing to save to Shopify: pack status is "${pack.status}", not a submittable state. Shopify was NOT called.`,
-    );
+    return {
+      ok: false,
+      retriable: false,
+      reason: `Refusing to save to Shopify: pack status is "${pack.status}", not a submittable state. Shopify was NOT called.`,
+    };
   }
 
   const { data: dispute } = await sb
@@ -130,7 +144,11 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute?.dispute_evidence_gid) {
-    throw new Error("Dispute has no evidence GID — cannot save to Shopify");
+    return {
+      ok: false,
+      retriable: false,
+      reason: "Dispute has no evidence GID — cannot save to Shopify",
+    };
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -308,7 +326,11 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
 
   const inputKeys = Object.keys(input);
   if (inputKeys.length === 0) {
-    throw new Error("No evidence fields to send — pack sections are empty");
+    return {
+      ok: false,
+      retriable: false,
+      reason: "No evidence fields to send — pack sections are empty",
+    };
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -348,7 +370,8 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   // Auth-class errors get their own dedicated code path so the failure
   // mode is unambiguous (distinguishable from userErrors or other
   // Shopify-side rejections). On match, persist save_failed with a
-  // stable reason and rethrow the typed error.
+  // stable reason and return a non-retriable JobResult — the merchant
+  // must reinstall before any retry could succeed.
   try {
     assertNotAuthInvalid(pack.shop_id, session.sessionType, {
       errors: result.errors,
@@ -373,18 +396,33 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
           shopify_message: err.rawMessage,
         },
       });
+      return {
+        ok: false,
+        retriable: false,
+        reason: `shopify_auth_invalid: ${err.rawMessage}`,
+      };
     }
     throw err;
   }
 
-  // Check GraphQL errors (non-auth)
+  // Check GraphQL errors (non-auth). These can be transient (rate limit,
+  // 5xx) or schema/resource errors. Treat as RETRIABLE — the worker's
+  // attempts cap will eventually fail it if the error persists. The
+  // pack is flipped to save_failed regardless so the UI doesn't show
+  // it as in-progress while the worker waits.
   if (result.errors?.length) {
     const errMsg = result.errors.map((e: { message: string }) => e.message).join(", ");
     await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
-    throw new Error(`Shopify GraphQL errors: ${errMsg}`);
+    return {
+      ok: false,
+      retriable: true,
+      reason: `Shopify GraphQL errors: ${errMsg}`,
+    };
   }
 
-  // Check userErrors
+  // Check userErrors. These are input-validation failures from Shopify
+  // (e.g. malformed evidence field, non-text in a text-only column).
+  // Retrying with the same payload won't help → non-retriable.
   const userErrors = result.data?.disputeEvidenceUpdate?.userErrors ?? [];
   if (userErrors.length > 0) {
     await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
@@ -393,7 +431,11 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
       actorType: "system", eventType: "job_failed",
       eventPayload: { jobId: job.id, jobType: "save_to_shopify", user_errors: userErrors },
     });
-    throw new Error(`Shopify userErrors: ${userErrors.map((e) => e.message).join(", ")}`);
+    return {
+      ok: false,
+      retriable: false,
+      reason: `Shopify userErrors: ${userErrors.map((e) => e.message).join(", ")}`,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -521,4 +563,6 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
     currencyCode: dispute.currency_code ?? null,
     eventAt: now,
   });
+
+  return { ok: true };
 }
