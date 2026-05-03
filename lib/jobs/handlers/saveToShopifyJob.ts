@@ -25,6 +25,7 @@ import {
 } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
 import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
+import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
 import {
   type ManualAttachmentInput,
   type PackPdfInput,
@@ -360,42 +361,11 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<void> {
   //  text-only. See lib/shopify/disputeFileUpload.ts for the full record.
   // ═══════════════════════════════════════════════════════════
 
-  const restOnlyFields: Record<string, string> = {};
-
-  // Product description from line items
-  const orderSections = sections.filter(s => s.type === "order");
-  for (const s of orderSections) {
-    const items = s.data?.lineItems as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(items) && items.length > 0) {
-      const desc = items.map(li => {
-        const parts: string[] = [];
-        if (li.title) parts.push(`Product name: ${String(li.title)}`);
-        if (li.variantTitle) parts.push(`Size: ${String(li.variantTitle)}`);
-        if (li.quantity) parts.push(`Quantity: ${String(li.quantity)}`);
-        if (li.price) parts.push(`Price: ${String(li.price)}`);
-        if (li.sku) parts.push(`SKU: ${String(li.sku)}`);
-        return parts.join("\n");
-      }).join("\n\n");
-      if (desc) restOnlyFields.product_description = desc;
-    }
-  }
-
-  // Shipping data from fulfillment sections
-  const shipSections = sections.filter(s => s.type === "shipping" || s.type === "fulfillment");
-  for (const s of shipSections) {
-    const fulfillments = s.data?.fulfillments as Array<Record<string, unknown>> | undefined;
-    if (!Array.isArray(fulfillments)) continue;
-    for (const f of fulfillments) {
-      if (f.createdAt) restOnlyFields.shipping_date = String(f.createdAt).split("T")[0];
-      const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
-      if (Array.isArray(tracking)) {
-        for (const t of tracking) {
-          if (t.carrier) restOnlyFields.shipping_carrier = String(t.carrier);
-          if (t.number) restOnlyFields.shipping_tracking_number = String(t.number);
-        }
-      }
-    }
-  }
+  // REST-only fields are extracted by `buildRestSupplementFields` —
+  // see the snapshot harness in lib/jobs/handlers/__tests__/
+  // saveToShopify.snapshot.test.ts for byte-equivalence pinning across
+  // the four dispute-family fixtures.
+  const restOnlyFields = buildRestSupplementFields(sections);
 
   const inputKeys = Object.keys(input);
   if (inputKeys.length === 0) {

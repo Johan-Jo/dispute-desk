@@ -5,8 +5,8 @@
  * that does pack-load → mutation-compose → GraphQL call → read-back
  * verification → events + audit + alert. The Phase 2.3 plan calls
  * for splitting it into three pure helpers + a thin orchestrator:
- *   - composeShopifyMutationPayload  (already extracted ✓)
- *   - buildRestSupplementFields      (still inline)
+ *   - composeShopifyMutationPayload  (extracted ✓)
+ *   - buildRestSupplementFields      (extracted ✓ — Phase 2.3 step 1)
  *   - diffVerificationReadback       (still inline)
  *   - emitSaveToShopifyEvents        (still inline)
  *
@@ -17,10 +17,9 @@
  * pre-refactor (capture baseline) and post-refactor (must stay
  * byte-identical).
  *
- * The helpers are mirrored INLINE here from the current handler.
- * When the decomposition lands, the production code will import the
- * same logic from `lib/jobs/handlers/saveToShopify/*.ts`; the
- * snapshots assert nothing changes.
+ * Helpers still pending extraction are mirrored INLINE here. As each
+ * one lands in production, this file switches its inline copy for an
+ * import; the snapshots stay byte-identical.
  */
 
 import { describe, expect, it } from "vitest";
@@ -28,6 +27,7 @@ import {
   composeShopifyMutationPayload,
   type ComposeShopifyMutationPayloadInput,
 } from "@/lib/shopify/composeShopifyMutationPayload";
+import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
 import type { RawPackSection } from "@/lib/shopify/fieldMapping";
 import type { DisputeEvidenceUpdateInput } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 
@@ -35,60 +35,10 @@ import type { DisputeEvidenceUpdateInput } from "@/lib/shopify/mutations/dispute
  *  PURE HELPERS — mirrored inline from saveToShopifyJob.ts.
  *
  *  These are NOT imports from production code yet. Phase 2.3's
- *  decomposition lifts these into `lib/jobs/handlers/saveToShopify/*.ts`
- *  and the production handler calls them. The snapshots below pin the
- *  exact output shape so the move is provably non-behavioral.
+ *  decomposition lifts these into `lib/shopify/*.ts` and the
+ *  production handler calls them. Snapshots pin the exact output
+ *  shape so each move is provably non-behavioral.
  * ───────────────────────────────────────────────────────────── */
-
-/** Mirror of saveToShopifyJob lines 363–398 (REST supplement extraction). */
-function buildRestSupplementFields(
-  sections: RawPackSection[],
-): Record<string, string> {
-  const restOnlyFields: Record<string, string> = {};
-
-  // Product description from line items
-  const orderSections = sections.filter((s) => s.type === "order");
-  for (const s of orderSections) {
-    const items = s.data?.lineItems as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(items) && items.length > 0) {
-      const desc = items
-        .map((li) => {
-          const parts: string[] = [];
-          if (li.title) parts.push(`Product name: ${String(li.title)}`);
-          if (li.variantTitle) parts.push(`Size: ${String(li.variantTitle)}`);
-          if (li.quantity) parts.push(`Quantity: ${String(li.quantity)}`);
-          if (li.price) parts.push(`Price: ${String(li.price)}`);
-          if (li.sku) parts.push(`SKU: ${String(li.sku)}`);
-          return parts.join("\n");
-        })
-        .join("\n\n");
-      if (desc) restOnlyFields.product_description = desc;
-    }
-  }
-
-  // Shipping data from fulfillment sections
-  const shipSections = sections.filter(
-    (s) => s.type === "shipping" || s.type === "fulfillment",
-  );
-  for (const s of shipSections) {
-    const fulfillments = s.data?.fulfillments as
-      | Array<Record<string, unknown>>
-      | undefined;
-    if (!Array.isArray(fulfillments)) continue;
-    for (const f of fulfillments) {
-      if (f.createdAt) restOnlyFields.shipping_date = String(f.createdAt).split("T")[0];
-      const tracking = f.tracking as Array<Record<string, unknown>> | undefined;
-      if (Array.isArray(tracking)) {
-        for (const t of tracking) {
-          if (t.carrier) restOnlyFields.shipping_carrier = String(t.carrier);
-          if (t.number) restOnlyFields.shipping_tracking_number = String(t.number);
-        }
-      }
-    }
-  }
-
-  return restOnlyFields;
-}
 
 /** Verifiable fields per saveToShopifyJob lines 83–91. */
 const VERIFIABLE_FIELDS = new Set([
