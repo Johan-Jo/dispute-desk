@@ -78,17 +78,20 @@ export function AdminTable({
                         ? ArrowDown
                         : ArrowUpDown;
                   return (
-                    <th key={`${label}-${i}`} className={baseClass}>
+                    <th
+                      key={`${label}-${i}`}
+                      className={baseClass}
+                      aria-sort={
+                        sortDirection === "asc"
+                          ? "ascending"
+                          : sortDirection === "desc"
+                            ? "descending"
+                            : "none"
+                      }
+                    >
                       <button
                         type="button"
                         onClick={isObject ? header.onSort : undefined}
-                        aria-sort={
-                          sortDirection === "asc"
-                            ? "ascending"
-                            : sortDirection === "desc"
-                              ? "descending"
-                              : "none"
-                        }
                         className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
                           sortDirection
                             ? "text-[#0F172A]"

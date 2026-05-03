@@ -102,7 +102,7 @@ export const FIELD_MAPPINGS: FieldMapping[] = [
  * suitable for the Shopify disputeEvidenceUpdate mutation.
  */
 function serializeSectionData(section: RawPackSection): string {
-  const { data, label, type } = section;
+  const { data, label: _label, type } = section;
   if (!data || typeof data !== "object") return "";
 
   // Display-only sections (e.g. per-type policy rows emitted by

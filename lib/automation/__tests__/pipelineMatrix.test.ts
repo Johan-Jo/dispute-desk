@@ -87,18 +87,13 @@ function buildSb(pack: PackFixture, dispute: DisputeFixture) {
     phase: dispute.phase ?? "chargeback",
   };
 
-  let evidencePacksReadCount = 0;
-
   return {
     from: vi.fn((table: string) => {
       if (table === "evidence_packs") {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockImplementation(() => {
-            evidencePacksReadCount++;
-            return Promise.resolve({ data: packRow, error: null });
-          }),
+          single: vi.fn().mockResolvedValue({ data: packRow, error: null }),
           update: vi.fn().mockReturnValue({
             eq: vi.fn().mockResolvedValue({ data: null, error: null }),
           }),

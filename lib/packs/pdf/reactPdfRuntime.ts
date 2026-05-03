@@ -12,7 +12,10 @@ export async function getReactPdfRenderer() {
   return {
     ...mod,
     renderToBuffer: mod.renderToBuffer as (
-      // Widen the type so wrapper components (not just <Document>) are accepted.
+      // Widen the type so wrapper components (not just <Document>) are
+      // accepted. @react-pdf doesn't export a generic ReactElement; the
+      // unknown props payload is the right shape for arbitrary wrappers.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       element: React.ReactElement<any>
     ) => Promise<Uint8Array>,
   };

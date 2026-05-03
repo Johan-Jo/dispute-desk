@@ -24,7 +24,8 @@ interface RouteParams {
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id: disputeId } = await params;
-  const locale = req.nextUrl.searchParams.get("locale") ?? "en-US";
+  // Locale is read by callers via Accept-Language; not used in this route.
+  void req;
   const sb = getServiceClient();
 
   // ── 1. Load dispute with shop_domain ──────────────────────────────

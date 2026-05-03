@@ -4,7 +4,7 @@
  * Computes the single most important next step for the merchant.
  */
 
-import type { SubmissionReadiness, ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import type { SubmissionReadiness } from "@/lib/types/evidenceItem";
 import type { ArgumentMap, NextAction, MissingItemWithContext } from "./types";
 
 interface NextActionInput {
@@ -22,7 +22,7 @@ export function computeNextAction(input: NextActionInput): NextAction {
     packStatus,
     readiness,
     missingItems,
-    argumentMap,
+    argumentMap: _argumentMap,
     savedToShopifyAt,
   } = input;
 

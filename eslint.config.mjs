@@ -47,6 +47,7 @@ const eslintConfig = [
     rules: {
       // Prefer next/link in new code; existing pages use <a href> widely.
       "@next/next/no-html-link-for-pages": "off",
+      // Default: relaxed (tests + scripts use `any` widely).
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/triple-slash-reference": "off",
@@ -54,6 +55,23 @@ const eslintConfig = [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+    },
+  },
+  // Phase 1.3 — production code (app/** + lib/**) must declare types
+  // explicitly. Any new `any` produces a warning. Tests, scripts, and
+  // the Figma reference TSX keep the relaxed default above.
+  {
+    files: ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    ignores: [
+      "app/**/__tests__/**",
+      "app/**/*.test.ts",
+      "app/**/*.test.tsx",
+      "lib/**/__tests__/**",
+      "lib/**/tests/**",
+      "lib/**/*.test.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 ];

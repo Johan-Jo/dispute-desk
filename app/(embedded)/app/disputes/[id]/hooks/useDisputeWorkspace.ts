@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocale } from "next-intl";
 import type {
   WorkspaceData,
-  WorkspacePack,
   ChecklistItemV2,
   SubmissionReadiness,
   WaiveReason,
@@ -18,7 +17,6 @@ import type {
   WhyWinsResult,
   RiskResult,
   ImprovementSignal,
-  SubmissionField,
 } from "../workspace-components/types";
 import { EVIDENCE_CATEGORIES } from "../workspace-components/types";
 import { computeNextAction } from "@/lib/argument/nextAction";

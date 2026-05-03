@@ -47,10 +47,12 @@ const REASON_KEYS: Record<string, string> = {
   GENERAL: "general",
 };
 
+type ReasonsTranslator = ReturnType<typeof useTranslations>;
+
 function matchSummary(
   match: Rule["match"],
   tRules: (key: string) => string,
-  tReasons: { has: (key: string) => boolean; (key: string): string },
+  tReasons: ReasonsTranslator,
 ): string {
   const parts: string[] = [];
   if (match.reason?.length) {
@@ -436,7 +438,7 @@ export default function RulesSettingsPage() {
                       {rule.action.mode === "auto" ? t("autoPack") : t("review")}
                     </Badge>
                   </div>
-                  <p className="text-xs text-[#667085]">{matchSummary(rule.match, t, tr as any)}</p>
+                  <p className="text-xs text-[#667085]">{matchSummary(rule.match, t, tr)}</p>
                 </div>
               </div>
             ))}

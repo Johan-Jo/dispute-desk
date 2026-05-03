@@ -20,7 +20,6 @@ import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter"
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 const CAL_LINK = "disputedesk";
-const SUPPORT_EMAIL = "support@disputedesk.app";
 
 /**
  * Attempt to open the global Tawk chat widget.
@@ -48,7 +47,7 @@ const HELP_CARDS = [
   { key: "Other", icon: Handshake },
 ] as const;
 
-export function ContactPageClient({ base = "" }: { base?: string }) {
+export function ContactPageClient({ base: _base = "" }: { base?: string }) {
   const t = useTranslations("contact");
 
   const handleOpenChat = useCallback(() => openTawkChat(), []);

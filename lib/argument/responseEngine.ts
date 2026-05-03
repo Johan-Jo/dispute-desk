@@ -330,7 +330,7 @@ export function classifyDefensePosition(
 
 /* ── Section builders ── */
 
-function paymentVerification(flags: EvidenceFlags, data: EvidenceData): RebuttalSection | null {
+function _paymentVerification(flags: EvidenceFlags, data: EvidenceData): RebuttalSection | null {
   if (!flags.avs && !flags.cvv) return null;
 
   let text = "The transaction was authenticated using standard card security protocols.";
@@ -355,7 +355,7 @@ function paymentVerification(flags: EvidenceFlags, data: EvidenceData): Rebuttal
   };
 }
 
-function orderFlow(flags: EvidenceFlags, data: EvidenceData): RebuttalSection | null {
+function orderFlow(flags: EvidenceFlags, _data: EvidenceData): RebuttalSection | null {
   if (!flags.orderConfirmation) return null;
 
   let text = "The order was placed directly through the merchant's online store and followed a standard checkout process.";
@@ -375,7 +375,7 @@ function orderFlow(flags: EvidenceFlags, data: EvidenceData): RebuttalSection | 
   };
 }
 
-function customerBehavior(flags: EvidenceFlags, data: EvidenceData): RebuttalSection | null {
+function _customerBehavior(flags: EvidenceFlags, _data: EvidenceData): RebuttalSection | null {
   if (!flags.billingShippingMatch && !flags.customerHistory) return null;
 
   let text = "The transaction aligns with expected customer behavior.";
@@ -510,7 +510,7 @@ function cancellationTimeline(flags: EvidenceFlags, _data: EvidenceData): Rebutt
   };
 }
 
-function billingAccuracy(flags: EvidenceFlags, _data: EvidenceData): RebuttalSection | null {
+function _billingAccuracy(flags: EvidenceFlags, _data: EvidenceData): RebuttalSection | null {
   if (!flags.duplicateChargeEvidence && !flags.amountCorrectEvidence) return null;
 
   let text = "";

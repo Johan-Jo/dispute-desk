@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Page,
-  Text,
   BlockStack,
   Icon,
   Toast,
@@ -31,10 +30,7 @@ import {
   getEmbeddedArticleTitleKey,
 } from "@/lib/help/embedded";
 import { POPULAR_ARTICLES } from "@/lib/help/popular";
-import {
-  HELP_GUIDE_IDS,
-  type HelpGuideId,
-} from "@/lib/help-guides-config";
+import { type HelpGuideId } from "@/lib/help-guides-config";
 import { useTranslations } from "next-intl";
 
 // ─── Quick Actions: 4 cards mapped 1:1 with Figma ──────────────

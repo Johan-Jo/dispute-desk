@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import type {
   StepStatus,
   SkippedReason,
-  StepState,
   StepId,
   StepsMap,
   SetupStateResponse,

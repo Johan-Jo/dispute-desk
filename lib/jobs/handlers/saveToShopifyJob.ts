@@ -47,10 +47,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendPackSavedAlert } from "@/lib/email/sendPackSavedAlert";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
-import {
-  EVIDENCE_SAVED_TO_SHOPIFY,
-  EVIDENCE_SAVE_FAILED,
-} from "@/lib/disputeEvents/eventTypes";
+import { EVIDENCE_SAVED_TO_SHOPIFY } from "@/lib/disputeEvents/eventTypes";
 import type { ClaimedJob } from "../claimJobs";
 
 /* ── Verification query ── */

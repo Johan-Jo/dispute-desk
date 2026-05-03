@@ -5,7 +5,7 @@
  */
 
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import type { ArgumentMap, RiskResult, CaseStrengthLevel } from "./types";
+import type { ArgumentMap, RiskResult } from "./types";
 
 const RISK_DESCRIPTIONS: Record<string, string> = {
   // System-derived: descriptive, not action-oriented
@@ -24,7 +24,7 @@ const RISK_DESCRIPTIONS: Record<string, string> = {
 
 export function generateRiskExplanation(
   argumentMap: ArgumentMap | null,
-  checklist: ChecklistItemV2[],
+  _checklist: ChecklistItemV2[],
 ): RiskResult {
   if (!argumentMap) {
     return {

@@ -21,11 +21,8 @@ import {
   BlockStack,
   InlineStack,
   Banner,
-  Badge,
   Button,
   TextField,
-  InlineGrid,
-  Divider,
   Box,
 } from "@shopify/polaris";
 
@@ -304,14 +301,6 @@ function CheckCircleSvg() {
   );
 }
 
-function XSvg() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 function BillingPageInner() {
   const t = useTranslations();
   const searchParams = useSearchParams();
@@ -560,12 +549,6 @@ function BillingPageInner() {
                   const cardTier = PLAN_TIER[planId];
                   const isUpgrade = cardTier > currentTier;
                   const isDowngrade = cardTier < currentTier && planId !== "free";
-
-                  let ctaVariant: "current" | "upgrade" | "downgrade" | "disabled";
-                  if (isCurrent) ctaVariant = "current";
-                  else if (isUpgrade) ctaVariant = "upgrade";
-                  else if (isDowngrade) ctaVariant = "downgrade";
-                  else ctaVariant = "disabled";
 
                   return (
                     <div

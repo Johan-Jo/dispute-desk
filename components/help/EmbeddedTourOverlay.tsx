@@ -19,7 +19,6 @@
  */
 
 import {
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -33,7 +32,6 @@ import {
   getEmbeddedGuideSteps,
   getPortalGuideTranslationKeyPrefix,
   HELP_TRANSLATION_NAMESPACE,
-  type HelpGuideId,
 } from "@/lib/help-guides-config";
 import { trackHelpGuideSkip } from "@/components/help/help-guide-provider";
 

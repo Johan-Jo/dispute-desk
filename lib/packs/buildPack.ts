@@ -17,10 +17,7 @@ import {
   deriveCompletenessMetrics,
   type TemplateChecklistItem,
 } from "@/lib/automation/completeness";
-import {
-  collectedFieldsFromPack,
-  reconcileChecklistWithCollectedFields,
-} from "./checklistReconcile";
+import { reconcileChecklistWithCollectedFields } from "./checklistReconcile";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import {
   ORDER_DETAIL_QUERY,

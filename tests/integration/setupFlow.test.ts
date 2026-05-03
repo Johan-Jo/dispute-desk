@@ -9,7 +9,7 @@ import {
   getNextActionableStep,
   isPrerequisiteMet,
 } from "@/lib/setup/constants";
-import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
+import type { StepState, SetupStateResponse } from "@/lib/setup/types";
 
 vi.mock("@/lib/supabase/server", () => ({
   getServiceClient: vi.fn(),

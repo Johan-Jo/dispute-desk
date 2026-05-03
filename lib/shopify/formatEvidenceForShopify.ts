@@ -11,7 +11,6 @@
 
 import type { DisputeEvidenceUpdateInput } from "./mutations/disputeEvidenceUpdate";
 import type { RawPackSection } from "./fieldMapping";
-import type { ReasonFamily } from "@/lib/argument/responseEngine";
 import { resolveReasonFamily } from "@/lib/argument/responseEngine";
 
 /* ── Safe formatters ── */
@@ -210,9 +209,9 @@ export function buildEvidenceForShopify(
     .filter(Boolean)
     .join("\n\n");
   const activityText = sections.filter(s => s.type === "access_log").map(s => formatActivityLog(s.data)).filter(Boolean).join("\n\n");
-  const commsText = sections.filter(s => s.type === "comms").map(s => formatComms(s.data)).filter(Boolean).join("\n\n");
+  const _commsText = sections.filter(s => s.type === "comms").map(s => formatComms(s.data)).filter(Boolean).join("\n\n");
   const policyText = sections.filter(s => s.type === "policy").map(s => formatPolicies(s.data)).filter(Boolean).join("\n\n");
-  const shippingText = sections.filter(s => s.type === "shipping" || s.type === "fulfillment").map(s => {
+  const _shippingText = sections.filter(s => s.type === "shipping" || s.type === "fulfillment").map(s => {
     const d = s.data;
     const lines: string[] = [];
     const fulfillments = d.fulfillments as Array<Record<string, unknown>> | undefined;

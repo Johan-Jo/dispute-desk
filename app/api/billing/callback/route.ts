@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { getPlan, TRIAL_DAYS, TRIAL_INCLUDED_PACKS, type PlanId } from "@/lib/billing/plans";
+import { getPlan, TRIAL_INCLUDED_PACKS, type PlanId } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
 
 export const runtime = "nodejs";

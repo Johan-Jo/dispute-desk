@@ -53,7 +53,7 @@ export function PackHeader({
   disputePhase,
   deadline,
   onScrollToBuilder,
-  onSave,
+  onSave: _onSave,
   saving,
 }: PackHeaderProps) {
   const isSaved = status === "saved_to_shopify" || readiness === "submitted";

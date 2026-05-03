@@ -217,7 +217,6 @@ export function ShopRiskProfile({ shopId }: Props) {
     );
   }
 
-  const periodLabel = PERIOD_LABEL[data.period];
   const periodVerbose = PERIOD_VERBOSE[data.period];
   const band = thresholdTone(data.rate.rate);
   const totalReasons =
