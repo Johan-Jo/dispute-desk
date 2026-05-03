@@ -30,6 +30,12 @@ const eslintConfig = [
       ".vercel/**",
       // Reference-only TSX; not part of the app build.
       "docs/figma-reference/**",
+      // Cursor IDE planning artifacts (Figma TSX exports, plan markdown).
+      // Tracked for reference but not production code.
+      ".cursor/**",
+      // Claude Code sibling worktrees — local-only, never present in CI.
+      // Listed so local lint matches CI output.
+      ".claude/**",
       // Node CLI scripts use CJS patterns; lint app + lib + tests only.
       "scripts/**",
       "next.config.js",
