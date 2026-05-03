@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { getPlan } from "@/lib/billing/plans";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 
 export const runtime = "nodejs";
 
@@ -11,8 +12,7 @@ export const runtime = "nodejs";
  * Returns current plan, usage, and quota info.
  */
 export async function GET(req: NextRequest) {
-  const shopId =
-    req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
+  const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }

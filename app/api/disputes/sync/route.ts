@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { syncDisputes } from "@/lib/disputes/syncDisputes";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
+import { extractShopIdFromBody } from "@/lib/middleware/extractShopId";
 
 /**
  * POST /api/disputes/sync
@@ -13,7 +14,7 @@ import { parseJsonBody } from "@/lib/http/parseJsonBody";
 export async function POST(req: NextRequest) {
   const parsed = await parseJsonBody<{ shop_id?: string }>(req);
   if (parsed instanceof NextResponse) return parsed;
-  const shopId = parsed.shop_id ?? req.headers.get("x-shop-id");
+  const shopId = extractShopIdFromBody(req, parsed);
 
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import {
+  extractShopId,
+  extractShopIdFromBody,
+} from "@/lib/middleware/extractShopId";
 
 export interface NotificationPreferences {
   newDispute: boolean;
@@ -13,21 +17,12 @@ const DEFAULTS: NotificationPreferences = {
   evidenceReady: false,
 };
 
-function getShopId(req: NextRequest): string | null {
-  const url = req.nextUrl ?? new URL(req.url);
-  return (
-    url.searchParams.get("shop_id") ??
-    req.headers.get("x-shop-id") ??
-    null
-  );
-}
-
 /**
  * GET /api/shop/preferences?shop_id=...
  * Returns notification preferences from setup state (team step payload).
  */
 export async function GET(req: NextRequest) {
-  const shopId = getShopId(req);
+  const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
@@ -67,7 +62,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const shopId = body.shop_id ?? req.headers.get("x-shop-id");
+  const shopId = extractShopIdFromBody(req, body);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }

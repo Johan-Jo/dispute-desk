@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/supabase/portal";
 import { getLinkedShops } from "@/lib/portal/activeShop";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 
 /**
  * GET /api/policies?shop_id=...
@@ -9,7 +10,7 @@ import { getServiceClient } from "@/lib/supabase/server";
  * Returns policy snapshots for the shop (for portal Policies page preview).
  */
 export async function GET(req: NextRequest) {
-  const shopId = req.nextUrl.searchParams.get("shop_id") ?? req.headers.get("x-shop-id");
+  const shopId = extractShopId(req);
 
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });

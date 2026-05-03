@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 
 /**
  * GET /api/disputes
@@ -28,7 +29,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
  */
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const shopId = sp.get("shop_id") ?? req.headers.get("x-shop-id");
+  const shopId = extractShopId(req);
 
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
