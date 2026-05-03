@@ -75,9 +75,13 @@ docs/                → Architecture, technical spec, epics, roadmap
 - [`docs/roadmap.md`](docs/roadmap.md) — product roadmap
 
 ## Shopify Scopes Required
+Minimal summary — full OAuth list must match `shopify.app.toml` / `SHOPIFY_SCOPES` (see `docs/technical.md`).
+
 ```
 read_orders
 read_shopify_payments_disputes
+read_shopify_payments_dispute_file_uploads
+write_shopify_payments_dispute_file_uploads
 write_shopify_payments_dispute_evidences
 ```
 

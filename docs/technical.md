@@ -28,16 +28,19 @@ parses both files and fails the suite if the two ever diverge. This guards
 against the install-time 400/redirect-loop that results from OAuth requesting
 a scope set different from what managed install grants.
 
-Current 17 scopes (reflected in both TOML and `.env.example`):
+Current 19 scopes (reflected in both TOML and `.env.example`):
 
 ```
 read_orders, write_orders, read_customers, read_products, write_products,
 read_fulfillments, read_shipping, read_shopify_payments_disputes,
 read_shopify_payments_dispute_evidences, write_shopify_payments_dispute_evidences,
+read_shopify_payments_dispute_file_uploads, write_shopify_payments_dispute_file_uploads,
 read_files, write_files, write_draft_orders, write_fulfillments,
 write_merchant_managed_fulfillment_orders, read_locations, read_inventory,
 write_inventory
 ```
+
+`read_shopify_payments_dispute_file_uploads` and `write_shopify_payments_dispute_file_uploads` are required for REST `POST …/dispute_file_uploads.json` and for attaching uploads via GraphQL `disputeEvidenceUpdate` file fields (`scripts/test-dispute-file-upload.ts`). Merchants must re-approve the app after these scopes are added.
 
 The `write_*` scopes (`write_orders`, `write_products`, `write_inventory`,
 `write_draft_orders`, `write_fulfillments`, `write_merchant_managed_fulfillment_orders`)
