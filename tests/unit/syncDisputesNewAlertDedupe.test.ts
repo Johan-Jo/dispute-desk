@@ -29,10 +29,13 @@ const { runAutomationPipeline: mockRunPipeline } = vi.hoisted(() => ({
 vi.mock("@/lib/automation/pipeline", () => ({
   runAutomationPipeline: mockRunPipeline,
 }));
-vi.mock("@/lib/rules/evaluateRules", () => ({
+const { evaluateRules: mockEvaluateRules } = vi.hoisted(() => ({
   evaluateRules: vi
     .fn()
     .mockResolvedValue({ action: { mode: "review" }, packTemplateId: null }),
+}));
+vi.mock("@/lib/rules/evaluateRules", () => ({
+  evaluateRules: mockEvaluateRules,
 }));
 vi.mock("@/lib/email/sendUnknownReasonAlert", () => ({
   sendUnknownReasonAlert: vi.fn(),
@@ -297,5 +300,52 @@ describe("syncDisputes — new-dispute alert dedupe", () => {
     await syncDisputes(SHOP_ID, { triggerAutomation: true });
 
     expect(mockSendAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT send the auto-mode email at sync when the pipeline enqueues a build", async () => {
+    // Regression: this is the bug we just fixed. The auto-mode "we
+    // submitted it" copy must wait for the pipeline's terminal
+    // decision. Otherwise an auto-rule dispute that ends up parked
+    // (Moderate strength) gets a false confirmation email.
+    mockEvaluateRules.mockResolvedValueOnce({
+      action: { mode: "auto" },
+      packTemplateId: null,
+    });
+    mockRunPipeline.mockResolvedValue({ action: "pack_enqueued" });
+    mockGetServiceClient.mockReturnValue(
+      buildFakeClient({
+        existingBehavior: "null-no-error",
+        alertAlreadySent: false,
+      }),
+    );
+
+    await syncDisputes(SHOP_ID, { triggerAutomation: true });
+
+    expect(mockRunPipeline).toHaveBeenCalled();
+    expect(mockSendAlert).not.toHaveBeenCalled();
+  });
+
+  it("forces review variant at sync when no build will run (auto rule but auto-build disabled)", async () => {
+    // Auto rule but pipeline returned `skipped_auto_build_off`. The
+    // "we submitted it" copy is still a lie — no submission can ever
+    // happen. Sender must coerce to the review variant.
+    mockEvaluateRules.mockResolvedValueOnce({
+      action: { mode: "auto" },
+      packTemplateId: null,
+    });
+    mockRunPipeline.mockResolvedValue({ action: "skipped_auto_build_off" });
+    mockGetServiceClient.mockReturnValue(
+      buildFakeClient({
+        existingBehavior: "null-no-error",
+        alertAlreadySent: false,
+      }),
+    );
+
+    await syncDisputes(SHOP_ID, { triggerAutomation: true });
+
+    expect(mockSendAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendAlert).toHaveBeenCalledWith(
+      expect.objectContaining({ resolvedMode: "review" }),
+    );
   });
 });

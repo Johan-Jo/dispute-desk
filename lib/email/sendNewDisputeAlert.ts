@@ -668,13 +668,32 @@ ${shared.footer}`;
 }
 
 /**
- * Claim `new_dispute_alert_sent_at` and send the review variant of the
- * new-dispute email after the automated pack build has finished and the pack
- * is parked for review. No-op if the alert was already sent or the claim fails.
+ * Claim `new_dispute_alert_sent_at` and send the new-dispute email after
+ * the automated pack build has reached a terminal pipeline decision.
+ *
+ * `mode` controls which variant fires:
+ *   - "auto"   → emitted from `evaluateAndMaybeAutoSave` ONLY when the
+ *                pipeline decided to auto-save. The "we submitted it"
+ *                copy is now truthful: by the time this claim resolves,
+ *                the save_to_shopify job has been enqueued.
+ *   - "review" → emitted when the pipeline parked the pack (review-mode
+ *                rule, OR auto-mode case strength below the auto-submit
+ *                threshold). "Your response is ready" is accurate.
+ *
+ * Why: the original sync-time send claimed "submitted automatically"
+ * even when the auto-mode pipeline ended up parking or blocking the
+ * pack — the merchant got a confirmation for a submission that never
+ * happened. Both variants now fire ONLY after the pipeline reaches a
+ * decision; the same `new_dispute_alert_sent_at` claim guarantees the
+ * merchant gets exactly one new-dispute email per dispute regardless
+ * of which decision branch ran.
+ *
+ * No-op if the alert was already sent or the claim fails.
  * Fire-and-forget friendly — use void + .catch in callers.
  */
-export async function claimAndSendDeferredNewDisputeReviewAlert(
+export async function claimAndSendDeferredNewDisputeAlert(
   disputeId: string,
+  mode: AutomationMode,
 ): Promise<void> {
   try {
     const sb = getServiceClient();
@@ -699,13 +718,24 @@ export async function claimAndSendDeferredNewDisputeReviewAlert(
       currencyCode: row.currency_code,
       dueAt: row.due_at,
       orderName: row.order_name,
-      resolvedMode: "review",
+      resolvedMode: mode,
       shopifyDisputeEvidenceGid: row.dispute_evidence_gid,
     });
   } catch (err) {
     console.error(
-      "[email] Deferred new-dispute (review) alert failed:",
+      `[email] Deferred new-dispute (${mode}) alert failed:`,
       err instanceof Error ? err.message : err,
     );
   }
+}
+
+/**
+ * Backwards-compatible alias kept for any external/test callers that
+ * already imported the old name. New code should call
+ * `claimAndSendDeferredNewDisputeAlert(id, "review")` directly.
+ */
+export async function claimAndSendDeferredNewDisputeReviewAlert(
+  disputeId: string,
+): Promise<void> {
+  return claimAndSendDeferredNewDisputeAlert(disputeId, "review");
 }

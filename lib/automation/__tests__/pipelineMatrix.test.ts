@@ -36,7 +36,12 @@ vi.mock("@/lib/disputeEvents/emitEvent", () => ({
 vi.mock("@/lib/disputeEvents/updateNormalizedStatus", () => ({
   updateNormalizedStatus: vi.fn().mockResolvedValue(undefined),
 }));
+const { claimAndSendDeferredNewDisputeAlert: mockClaimAndSendDeferredAlert } =
+  vi.hoisted(() => ({
+    claimAndSendDeferredNewDisputeAlert: vi.fn().mockResolvedValue(undefined),
+  }));
 vi.mock("@/lib/email/sendNewDisputeAlert", () => ({
+  claimAndSendDeferredNewDisputeAlert: mockClaimAndSendDeferredAlert,
   claimAndSendDeferredNewDisputeReviewAlert: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -425,5 +430,130 @@ describe("evaluateAndMaybeAutoSave — Fatal-loss Gate (PRD §5)", () => {
     });
     const r = await evaluateAndMaybeAutoSave("p1");
     expect(r.action).toBe("auto_save");
+  });
+});
+
+describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () => {
+  // The sync-time send is now deferred for every `pack_enqueued`
+  // outcome. These tests assert that each terminal pipeline decision
+  // claims the deferred alert with the correct variant — the auto
+  // variant ("we submitted it on your behalf") MUST only fire when the
+  // pipeline actually decided to auto-save.
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("auto + strong + gate ok → claims AUTO variant (the only path that submits)", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "auto");
+  });
+
+  it("auto + moderate (parked) → claims REVIEW variant, never auto", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "moderate", strongCount: 1, moderateCount: 1, supportingCount: 0 },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    expect(mockClaimAndSendDeferredAlert).not.toHaveBeenCalledWith(
+      "d1",
+      "auto",
+    );
+  });
+
+  it("auto + weak (blocked) → claims REVIEW variant", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "weak", strongCount: 0, moderateCount: 0, supportingCount: 3 },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+  });
+
+  it("review mode (parked) → claims REVIEW variant", async () => {
+    setupMocks({
+      ruleMode: "review",
+      pack: {
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+  });
+
+  it("Coverage Gate (skip_covered) → claims REVIEW variant (merchant still gets notified)", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        pack_json: {
+          coverage: { state: "covered_shopify", shopifyProtectStatus: "PROTECTED" },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+  });
+
+  it("Pack failed (system error) → claims REVIEW variant", async () => {
+    setupMocks({
+      pack: { status: "failed" },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+  });
+
+  it("Fatal-loss block → claims REVIEW variant", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+          fatal_loss: { triggered: true, reason: "refund_issued", message: "..." },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+  });
+
+  it("auto + strong + gate FAILS (low completeness) → claims REVIEW variant", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 50,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "strong", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
   });
 });

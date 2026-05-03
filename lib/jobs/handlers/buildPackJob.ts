@@ -6,6 +6,7 @@ import {
   sendEvidenceNeededAlert,
   shouldSendEvidenceAlert,
 } from "../../email/sendEvidenceNeededAlert";
+import { claimAndSendDeferredNewDisputeAlert } from "../../email/sendNewDisputeAlert";
 import { emitDisputeEvent } from "../../disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "../../disputeEvents/updateNormalizedStatus";
 import {
@@ -157,6 +158,19 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
         visibility: "internal_only",
         metadataJson: { pack_id: packId, error: message },
         dedupeKey: `${failedPack.dispute_id}:${PACK_BUILD_FAILED}:${packId}`,
+      });
+      // Sync-time send was deferred for every `pack_enqueued` outcome,
+      // including this one. The build job is now throwing — the
+      // pipeline's `evaluateAndMaybeAutoSave` may not run again before
+      // the merchant's deadline. Send the review variant so the
+      // merchant knows a new dispute came in even when the build path
+      // failed at the system level. (`claimAndSendDeferredNewDisputeAlert`
+      // is idempotent via the `new_dispute_alert_sent_at` claim.)
+      void claimAndSendDeferredNewDisputeAlert(
+        failedPack.dispute_id,
+        "review",
+      ).catch(() => {
+        /* non-fatal */
       });
     }
 

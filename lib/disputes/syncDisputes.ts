@@ -557,10 +557,27 @@ export async function syncDisputes(
             }
           }
 
-          const deferReviewReadyEmail =
-            resolvedMode === "review" && pipelineResult?.action === "pack_enqueued";
+          // Defer the new-dispute email to the pipeline's terminal
+          // decision whenever a build was enqueued — for BOTH auto and
+          // review modes. This guarantees the auto variant ("we submitted
+          // it") only ever fires when the pipeline actually decided to
+          // auto-save; an auto-mode dispute that ends up parked or blocked
+          // (Moderate strength, Weak strength, autoSaveGate failure)
+          // receives the review variant instead. See
+          // `claimAndSendDeferredNewDisputeAlert`.
+          const deferNewDisputeEmail =
+            pipelineResult?.action === "pack_enqueued";
 
-          if (!deferReviewReadyEmail) {
+          if (!deferNewDisputeEmail) {
+            // No pack will be built (auto-build disabled, quota
+            // exceeded, feature gated, an existing pack already covered
+            // this dispute, or rules evaluation threw). The auto variant
+            // promises "we submitted it on your behalf" which is only
+            // ever true after the pipeline's auto-save branch runs —
+            // none of those branches will run here. Send the review
+            // variant so the merchant is told accurately that they need
+            // to review and submit, regardless of the resolved rule mode.
+            const variantToSend: AutomationMode = "review";
             const { data: claimed } = await sb
               .from("disputes")
               .update({ new_dispute_alert_sent_at: new Date().toISOString() })
@@ -577,7 +594,7 @@ export async function syncDisputes(
                 currencyCode: d.amount?.currencyCode ?? null,
                 dueAt: d.evidenceDueBy ?? null,
                 orderName: d.order?.name ?? null,
-                resolvedMode,
+                resolvedMode: variantToSend,
                 shopifyDisputeEvidenceGid: d.disputeEvidence?.id ?? null,
               });
             }

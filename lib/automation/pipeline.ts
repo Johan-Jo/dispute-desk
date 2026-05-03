@@ -11,7 +11,7 @@ import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
-import { claimAndSendDeferredNewDisputeReviewAlert } from "@/lib/email/sendNewDisputeAlert";
+import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import {
@@ -168,8 +168,18 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // skip the auto-save gate entirely. Emitting "auto_save_blocked" here
   // would mislead the merchant into thinking they need to add evidence
   // when the real cause is upstream. The build job already emitted a
-  // PACK_BUILD_FAILED dispute event; nothing more to do.
+  // PACK_BUILD_FAILED dispute event; nothing more to do — except send
+  // the deferred new-dispute alert (review variant) so the merchant
+  // knows a dispute came in. Sync-time send is now deferred for every
+  // `pack_enqueued` outcome; without this we'd silently drop the alert.
   if (pack.status === "failed") {
+    if (pack.dispute_id) {
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
+    }
     return { action: "block", details: "Pack build failed; skipping auto-save evaluation." };
   }
 
@@ -192,6 +202,20 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         shopify_protect_status: coverage.shopifyProtectStatus,
       },
     });
+    // Send the deferred new-dispute alert (review variant). Sync-time
+    // send is now deferred for every `pack_enqueued` outcome and a
+    // covered case never reaches an auto-save / park / block branch
+    // that would otherwise emit the email. Review copy is acceptable —
+    // it doesn't lie about submission and is the most informative
+    // existing variant. The merchant still needs to know a dispute
+    // came in even when Shopify Protect is paying.
+    if (pack.dispute_id) {
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
+    }
     return { action: "skip_covered", details: reason };
   }
 
@@ -264,6 +288,14 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
+      // Sync-time send was deferred. Send review variant so the
+      // merchant is informed of the new dispute even though the case
+      // is structurally unwinnable.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
     }
     return { action: "block", details: reason };
   }
@@ -321,7 +353,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       void updateNormalizedStatus(pack.dispute_id);
     }
     if (pack.dispute_id && !alreadySaved) {
-      void claimAndSendDeferredNewDisputeReviewAlert(pack.dispute_id).catch(
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
         () => {
           /* non-fatal */
         },
@@ -356,6 +388,14 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
+      // Sync-time send was deferred for this dispute. Send the review
+      // variant now: the merchant needs to know the case won't auto-
+      // submit and they have to act.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
     }
     return { action: "block", details: reason };
   }
@@ -411,7 +451,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     // "Your response is ready" new-dispute email: only after automated evidence
     // is collected (deferred from first sync when a build was enqueued).
     if (pack.dispute_id && !alreadySaved) {
-      void claimAndSendDeferredNewDisputeReviewAlert(pack.dispute_id).catch(
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
         () => {
           /* non-fatal */
         },
@@ -474,6 +514,17 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${AUTO_SAVE_TRIGGERED}:${packId}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
+      // Sync-time send was deferred for this dispute. The auto-save job
+      // is now enqueued, so the auto variant ("we submitted it on your
+      // behalf") is finally accurate. The pack-saved confirmation that
+      // fires from `saveToShopifyJob` is a separate, complementary
+      // notification — this one tells the merchant a NEW dispute exists
+      // and was handled; that one confirms the actual Shopify save.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "auto").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
     }
 
     return { action: "auto_save", details: "Enqueued save to Shopify" };
@@ -505,6 +556,15 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
     });
     void updateNormalizedStatus(pack.dispute_id);
+    // Sync-time send was deferred for this dispute. Auto rule said
+    // "submit" but the quality gate refused (low completeness or
+    // blockers present). Send review variant so the merchant knows
+    // they need to fill the gaps and submit.
+    void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      () => {
+        /* non-fatal */
+      },
+    );
   }
 
   return {
