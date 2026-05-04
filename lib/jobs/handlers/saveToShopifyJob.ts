@@ -411,6 +411,15 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
         ok: boolean;
         reused?: boolean;
         requestId?: string | null;
+        /** When `ok === false`, captures the underlying error message
+         *  so post-mortem can identify which entry failed and why,
+         *  without needing access to the worker's server logs. */
+        errorMessage?: string;
+        /** When the failure was a `DisputeFileUploadError`, surface
+         *  its `code` discriminator (`validation_input` /
+         *  `validation_size` / `validation_mime` / `shopify_rejection` /
+         *  `missing_id_in_response`). */
+        errorCode?: string;
       }> = [];
 
       for (const entry of plan) {
@@ -477,9 +486,14 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
               err && typeof err === "object" && "requestId" in err
                 ? ((err as { requestId?: string | null }).requestId ?? null)
                 : null;
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            const errorCode =
+              err && typeof err === "object" && "code" in err && typeof (err as { code: unknown }).code === "string"
+                ? ((err as { code: string }).code)
+                : undefined;
             console.error(
               "[saveToShopify] file evidence upload failed (continuing text-only for this entry):",
-              err instanceof Error ? err.message : String(err),
+              errorMessage,
               "requestId=",
               requestId,
             );
@@ -490,6 +504,8 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
               slot: entry.resolvedSlot.origin,
               ok: false,
               requestId,
+              errorMessage: errorMessage.slice(0, 500),
+              ...(errorCode ? { errorCode } : {}),
             });
           }
         }

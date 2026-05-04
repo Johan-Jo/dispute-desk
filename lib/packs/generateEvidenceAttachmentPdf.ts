@@ -14,12 +14,14 @@
  * can render in the chargeback-response UI.
  */
 import React from "react";
-import {
-  EvidenceAttachmentDocument,
-  type EvidenceAttachmentPdfData,
-  type EvidenceAttachmentPdfFact,
+import type {
+  EvidenceAttachmentPdfData,
+  EvidenceAttachmentPdfFact,
 } from "./pdf/EvidenceAttachmentDocument";
-import { getReactPdfRenderer } from "./pdf/reactPdfRuntime";
+import {
+  getEvidenceAttachmentDocumentModule,
+  getReactPdfRenderer,
+} from "./pdf/reactPdfRuntime";
 import type { RawPackSection } from "@/lib/shopify/fieldMapping";
 import type { AttachmentType } from "@/lib/shopify/decideFileAttachments";
 
@@ -196,7 +198,16 @@ export async function generateEvidenceAttachmentPdf(
     body,
   };
 
+  // Dynamic-import BOTH the renderer and the document module from the
+  // same runtime call. Statically importing `EvidenceAttachmentDocument`
+  // here while dynamic-importing the renderer creates two separate
+  // bundles for `@react-pdf/renderer` under webpack — the document
+  // links to one React instance, the renderer to another, and rendering
+  // throws React error #31 ("object passed where text expected") because
+  // the elements aren't recognized as React elements by the renderer.
+  // Same pattern as `lib/jobs/handlers/renderPdfJob.ts`.
   const { renderToBuffer } = await getReactPdfRenderer();
+  const { EvidenceAttachmentDocument } = await getEvidenceAttachmentDocumentModule();
   const bytes = await renderToBuffer(React.createElement(EvidenceAttachmentDocument, { data }));
   return Buffer.from(bytes);
 }
