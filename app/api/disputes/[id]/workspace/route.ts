@@ -14,9 +14,15 @@ import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
  *  session was issued before these scopes shipped (commit f61176c),
  *  the merchant must reinstall to grant them — otherwise the save
  *  job's REST upload returns 403/404. The workspace surfaces a
- *  reinstall banner so they can self-serve. */
+ *  reinstall banner so they can self-serve.
+ *
+ *  Only the WRITE scope is checked. Shopify's OAuth deduplicates
+ *  granted scopes — `write_*` subsumes `read_*`, so the stored
+ *  session string only ever contains `write_shopify_payments_dispute_file_uploads`
+ *  even when the app requests both. Requiring both would always
+ *  return false-positive "missing scopes" and trigger the reinstall
+ *  banner even after a successful reinstall. */
 const FILE_EVIDENCE_REQUIRED_SCOPES = [
-  "read_shopify_payments_dispute_file_uploads",
   "write_shopify_payments_dispute_file_uploads",
 ] as const;
 
