@@ -26,7 +26,17 @@ interface SectionLike {
 }
 
 interface EvidenceItemLike {
-  payload?: { fieldsProvided?: string[] | null } | null;
+  payload?: {
+    fieldsProvided?: string[] | null;
+    /** Set by `POST /api/packs/:id/upload` when a merchant uploads
+     *  from a specific Evidence-tab row. We treat it as a synonym for
+     *  `fieldsProvided` here so manual uploads correctly flip the
+     *  checklist row from `missing` → `available` — including older
+     *  rows created before the upload route started mirroring the
+     *  field into `fieldsProvided`. */
+    checklistField?: string | null;
+  } | null;
+  source?: string | null;
 }
 
 export function collectedFieldsFromPack(args: {
@@ -39,6 +49,14 @@ export function collectedFieldsFromPack(args: {
   }
   for (const it of args.evidenceItems ?? []) {
     for (const f of it.payload?.fieldsProvided ?? []) set.add(f);
+    // Manual-upload fallback: legacy rows persisted only `checklistField`,
+    // never `fieldsProvided`. Treat the two as synonyms so the
+    // Evidence Used section surfaces the upload immediately on the
+    // next workspace read — no rebuild required.
+    if (it.source === "manual_upload" && typeof it.payload?.checklistField === "string") {
+      const cf = it.payload.checklistField.trim();
+      if (cf) set.add(cf);
+    }
   }
   return set;
 }

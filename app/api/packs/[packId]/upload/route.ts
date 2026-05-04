@@ -164,6 +164,7 @@ export async function POST(
     );
   }
 
+  const targetChecklistField = uploadedField ?? MANUAL_UPLOAD_FIELD;
   const { data: item, error: itemErr } = await db
     .from("evidence_items")
     .insert({
@@ -178,7 +179,16 @@ export async function POST(
         storagePath,
         storageBucket: MANUAL_UPLOAD_STORAGE_BUCKET,
         /** Checklist row the merchant uploaded from (Evidence tab). Drives bank-facing section headings. */
-        checklistField: uploadedField ?? MANUAL_UPLOAD_FIELD,
+        checklistField: targetChecklistField,
+        /**
+         * Mirrors the same field as `fieldsProvided` so
+         * `collectedFieldsFromPack` (lib/packs/checklistReconcile.ts)
+         * flips the matching checklist row from `missing` → `available`
+         * on the next read. Without this the Evidence Used section
+         * never surfaces the upload — the checklist stays "missing"
+         * even though the file is in the pack.
+         */
+        fieldsProvided: [targetChecklistField],
       },
     })
     .select("id")

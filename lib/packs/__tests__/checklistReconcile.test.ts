@@ -42,6 +42,37 @@ describe("collectedFieldsFromPack", () => {
   it("returns an empty set when nothing is provided", () => {
     expect(collectedFieldsFromPack({}).size).toBe(0);
   });
+
+  it("treats payload.checklistField on manual_upload as a collected field (regression: missing-row stays hidden after upload)", () => {
+    // POST /api/packs/:id/upload now mirrors `checklistField` into
+    // `fieldsProvided`, but legacy rows persisted only `checklistField`.
+    // Both shapes must surface the field as collected so the Evidence
+    // Used in Defense section flips the row from missing → available.
+    const set = collectedFieldsFromPack({
+      sections: [],
+      evidenceItems: [
+        // legacy shape (no fieldsProvided)
+        {
+          source: "manual_upload",
+          payload: { checklistField: "customer_communication" },
+        },
+        // new shape (mirrored)
+        {
+          source: "manual_upload",
+          payload: {
+            fieldsProvided: ["delivery_proof"],
+            checklistField: "delivery_proof",
+          },
+        },
+        // non-manual rows are unaffected (no checklistField fallback)
+        {
+          source: "auto_shopify",
+          payload: { checklistField: "order_confirmation" },
+        },
+      ],
+    });
+    expect([...set].sort()).toEqual(["customer_communication", "delivery_proof"]);
+  });
 });
 
 describe("reconcileChecklistWithCollectedFields", () => {
