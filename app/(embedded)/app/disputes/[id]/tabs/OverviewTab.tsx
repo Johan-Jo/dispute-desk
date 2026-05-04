@@ -575,8 +575,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           // `customer_communication` defaults to "supporting" but
           // becomes Strong when `payload.customerConfirmsOrder ===
           // true` — the merchant's upload IS the path to strength).
-          // Pre-submit only.
-          const showAddCta = !submitted && isMissing && canMerchantUpload(item);
+          //
+          // The CTA hides only when the dispute has a `finalOutcome`
+          // (won / lost). "Saved to Shopify" is NOT terminal — Shopify
+          // accepts evidence updates until the dispute's deadline,
+          // and the Evidence tab still shows the upload UI in that
+          // window, so the Overview CTA (which navigates to Evidence)
+          // must remain consistent.
+          const isCaseClosed = !!dispute.finalOutcome;
+          const showAddCta = !isCaseClosed && isMissing && canMerchantUpload(item);
           return (
             <div
               key={item.field}
