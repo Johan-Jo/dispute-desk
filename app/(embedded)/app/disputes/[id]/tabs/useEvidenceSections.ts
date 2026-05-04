@@ -595,9 +595,18 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // Supporting items — items that exist in the checklist as available
   // but did not reach moderate or strong category. They still support
   // the case and belong in §2 with strength: "supporting".
+  //
+  // We dedupe by checking what was already pushed from
+  // `derived.contributions.strong/moderate` above (single source of
+  // truth for strong/moderate placement). The previous version also
+  // gated on `item.strength`, but `deriveEvidenceWithStrength` upgrades
+  // every available item to `"moderate"` by default — including fields
+  // whose canonical category is `supporting` (e.g. `customer_communication`
+  // with a manual upload that lacks `customerConfirmsOrder`). That gate
+  // silently dropped supporting rows that were never in contributions,
+  // so the merchant's upload never appeared in Evidence Used in Defense.
   for (const item of derived.effectiveChecklist) {
     if (item.status !== "available") continue;
-    if (item.strength === "strong" || item.strength === "moderate") continue;
     if (usedInDefense.some((row) => row.field === item.field)) continue;
     usedInDefense.push(buildRow("supporting", item.field, item.label, "supporting"));
   }
