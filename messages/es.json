@@ -596,6 +596,8 @@
           "statusLabel": "Status",
           "automationLabel": "Automation",
           "nextStepLabel": "Next step",
+          "whyLabel": "Por qué esta fuerza",
+          "improveLabel": "Qué la haría más fuerte",
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Needs attention",

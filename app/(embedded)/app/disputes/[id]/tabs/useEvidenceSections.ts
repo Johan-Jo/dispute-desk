@@ -83,6 +83,20 @@ export interface CaseSummaryViewModel {
   status: CaseStatus;
   automationMode: AutomationMode;
   nextStep: NextStep;
+  /** Merchant-facing one-line summary of why the case is at this
+   *  strength (from `caseStrength.strengthReason`). Surfaces context
+   *  the merchant can't deduce from the badge alone — e.g. for the
+   *  fraud "moderate-from-AVS-only" path it explains that one
+   *  decisive signal exists but more would help. Null when not
+   *  meaningful (e.g. covered cases). */
+  strengthReason: string | null;
+  /** Concrete suggestion for the highest-leverage missing item
+   *  (from `caseStrength.improvementHint`). Renders as a subtle
+   *  call-to-action so the merchant sees a specific path to a
+   *  stronger case. Null when overall is already strong, when no
+   *  actionable missing field stands out, or when the case is
+   *  covered / fatal-loss. */
+  improvementHint: string | null;
 }
 
 export interface EvidenceRowViewModel {
@@ -498,6 +512,8 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
         status: "in_progress",
         automationMode: "review_required",
         nextStep: { kind: "review_missing" },
+        strengthReason: null,
+        improvementHint: null,
       },
       usedInDefense: [],
       missingOrWeak: [],
@@ -534,6 +550,8 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
       readiness: derived.readiness,
       automationMode,
     }),
+    strengthReason: derived.caseStrength.strengthReason ?? null,
+    improvementHint: derived.caseStrength.improvementHint ?? null,
   };
 
   // ── Evidence used in defense ──

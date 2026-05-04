@@ -324,8 +324,22 @@ export function categorizeEvidenceField(
   // is strong when payload confirms delivery to the verified billing /
   // customer address (no mismatch); otherwise moderate. delivered_unverified
   // → supporting. label_created → invalid (explicit negative).
+  //
+  // Manual-upload nuance: when `proofType` is absent AND the payload
+  // has a `fileName` (i.e. the merchant uploaded a document and assigned
+  // it to this checklist row), we cannot auto-verify what kind of
+  // delivery proof it is — but we will NOT silently drop it as
+  // `label_created` → invalid. The merchant DID provide evidence; treat
+  // it as `delivered_unverified` → supporting. To reach moderate or
+  // strong, the upload (or auto-collector) must explicitly set proofType.
   if (fieldKey === "delivery_proof" || fieldKey === "shipping_tracking") {
-    const proofType = (p.proofType ?? "label_created") as DeliveryProofType;
+    const explicitProofType =
+      typeof p.proofType === "string" ? (p.proofType as DeliveryProofType) : null;
+    const looksLikeManualUpload =
+      typeof p.fileName === "string" && (p.fileName as string).length > 0;
+    const proofType: DeliveryProofType =
+      explicitProofType ??
+      (looksLikeManualUpload ? "delivered_unverified" : "label_created");
     switch (proofType) {
       case "signature_confirmed":
         return "strong";

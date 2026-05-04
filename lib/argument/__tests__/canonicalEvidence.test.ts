@@ -104,9 +104,49 @@ describe("delivery proofType — strict 4-state mapping (#14)", () => {
     expect(categorizeEvidenceField("shipping_tracking", { proofType: "label_created" })).toBe("invalid");
   });
 
-  it("absent proofType → invalid (defaults to label_created)", () => {
+  it("absent proofType + no fileName → invalid (auto-collector found nothing decisive)", () => {
     expect(categorizeEvidenceField("delivery_proof", {})).toBe("invalid");
     expect(categorizeEvidenceField("delivery_proof", null)).toBe("invalid");
+  });
+
+  it("absent proofType + fileName present → supporting (manual upload, can't auto-verify)", () => {
+    // Regression: merchant uploads a delivery proof PDF via the
+    // Evidence tab. Pre-fix this categorized as `label_created` →
+    // `invalid` and silently disappeared from the case strength
+    // calculation. Now it counts as `delivered_unverified` →
+    // `supporting`. Reaching moderate / strong still requires explicit
+    // proofType (e.g. signature_confirmed).
+    expect(
+      categorizeEvidenceField("delivery_proof", {
+        fileName: "carrier-scan.pdf",
+        fileSize: 12345,
+      }),
+    ).toBe("supporting");
+    expect(
+      categorizeEvidenceField("shipping_tracking", {
+        fileName: "tracking-screenshot.png",
+      }),
+    ).toBe("supporting");
+  });
+
+  it("explicit proofType overrides the manual-upload heuristic", () => {
+    // Even when fileName is present, an explicit `label_created`
+    // proofType should keep the row at invalid — the auto-collector
+    // told us only a label was created, the merchant's upload doesn't
+    // change that fact.
+    expect(
+      categorizeEvidenceField("delivery_proof", {
+        fileName: "anything.pdf",
+        proofType: "label_created",
+      }),
+    ).toBe("invalid");
+    // And signature_confirmed stays strong even with a fileName.
+    expect(
+      categorizeEvidenceField("delivery_proof", {
+        fileName: "signature.png",
+        proofType: "signature_confirmed",
+      }),
+    ).toBe("strong");
   });
 });
 

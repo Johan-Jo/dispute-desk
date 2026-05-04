@@ -126,6 +126,32 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
           </Text>
         </BlockStack>
 
+        {/* Why-this-strength explanation. Only renders when the case is
+            not strong AND we have a meaningful reason — gives the
+            merchant a clear "what would lift this" sentence so a
+            "Moderate" badge isn't a dead end. */}
+        {props.strength !== "strong" && props.strengthReason ? (
+          <BlockStack gap="050">
+            <Text as="span" variant="bodySm" tone="subdued">
+              {t("whyLabel")}
+            </Text>
+            <Text as="p" variant="bodyMd">
+              {props.strengthReason}
+            </Text>
+          </BlockStack>
+        ) : null}
+
+        {props.strength !== "strong" && props.improvementHint ? (
+          <BlockStack gap="050">
+            <Text as="span" variant="bodySm" tone="subdued">
+              {t("improveLabel")}
+            </Text>
+            <Text as="p" variant="bodyMd">
+              {props.improvementHint}
+            </Text>
+          </BlockStack>
+        ) : null}
+
         <Text as="p" variant="bodySm" tone="subdued">
           {props.automationMode === "automatic"
             ? tAutoCopy("automatic")

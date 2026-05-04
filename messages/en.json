@@ -618,6 +618,8 @@
           "statusLabel": "Status",
           "automationLabel": "Automation",
           "nextStepLabel": "Next step",
+          "whyLabel": "Why this strength",
+          "improveLabel": "What would make it stronger",
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Needs attention",
