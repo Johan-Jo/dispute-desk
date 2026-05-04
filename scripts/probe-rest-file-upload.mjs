@@ -94,7 +94,7 @@ for (const version of VERSIONS) {
   const url = `https://${shopDomain}/admin/api/${version}/shopify_payments/disputes/${DISPUTE_NUMERIC_ID}/dispute_file_uploads.json`;
   const body = {
     dispute_file_upload: {
-      document_type: "UNCATEGORIZED_FILE",
+      document_type: "uncategorized_file",
       filename: "probe.pdf",
       mimetype: "application/pdf",
       data: base64,

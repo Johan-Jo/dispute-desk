@@ -13,6 +13,7 @@ import {
   affectsStrength,
   categorizeEvidenceField,
   categoryFor,
+  isFileEligible,
 } from "../canonicalEvidence";
 
 describe("canonical evidence registry — invariants", () => {
@@ -395,5 +396,68 @@ describe("signal-level deduplication (#11)", () => {
   it("activity_log and customer_account_info share signalId 'account_history'", () => {
     expect(CANONICAL_EVIDENCE.activity_log.signalId).toBe("account_history");
     expect(CANONICAL_EVIDENCE.customer_account_info.signalId).toBe("account_history");
+  });
+});
+
+describe("fileEligible static flag (Phase 1 of conditional file evidence layer)", () => {
+  /** Fields whose evidence is genuinely file-shaped — eligible to drive
+   *  a native Shopify *File attachment when the deciding policy + payload
+   *  agree. The actual decision lives in `decideFileAttachments.ts`. */
+  const ELIGIBLE = [
+    "delivery_proof",
+    "shipping_tracking",
+    "customer_communication",
+    "activity_log",
+    "supporting_documents",
+    "refund_policy",
+    "shipping_policy",
+    "cancellation_policy",
+  ];
+
+  /** Text-derived signals — always false. Attaching a file for an AVS
+   *  result code or an IP-location check is meaningless. */
+  const NOT_ELIGIBLE = [
+    "avs_cvv_match",
+    "tds_authentication",
+    "billing_address_match",
+    "ip_location_check",
+    "device_session_consistency",
+    "customer_account_info",
+    "order_confirmation",
+    "product_description",
+    "duplicate_explanation",
+  ];
+
+  it("eligible fields opt in via fileEligible: true", () => {
+    for (const field of ELIGIBLE) {
+      expect(CANONICAL_EVIDENCE[field]?.fileEligible, field).toBe(true);
+      expect(isFileEligible(field), field).toBe(true);
+    }
+  });
+
+  it("non-eligible fields do not declare fileEligible (defaults to false)", () => {
+    for (const field of NOT_ELIGIBLE) {
+      expect(CANONICAL_EVIDENCE[field]?.fileEligible, field).toBeUndefined();
+      expect(isFileEligible(field), field).toBe(false);
+    }
+  });
+
+  it("ELIGIBLE ∪ NOT_ELIGIBLE covers the entire registry — no field is ambiguous", () => {
+    const declared = new Set([...ELIGIBLE, ...NOT_ELIGIBLE]);
+    const all = new Set(Object.keys(CANONICAL_EVIDENCE));
+    expect([...all].sort()).toEqual([...declared].sort());
+  });
+
+  it("isFileEligible returns false for unknown field keys", () => {
+    expect(isFileEligible("not_a_real_field")).toBe(false);
+    expect(isFileEligible("")).toBe(false);
+  });
+
+  it("supportingOnly fields are NEVER fileEligible (rubric forbids supporting-only attachments)", () => {
+    for (const [field, spec] of Object.entries(CANONICAL_EVIDENCE)) {
+      if (spec.supportingOnly) {
+        expect(spec.fileEligible ?? false, field).toBe(false);
+      }
+    }
   });
 });

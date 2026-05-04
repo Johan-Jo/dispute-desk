@@ -6,19 +6,14 @@ import {
   MANUAL_UPLOAD_FIELD,
 } from "@/lib/automation/completeness";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import {
+  SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES,
+  sumEvidencePayloadFileSizes,
+  validateShopifyDisputeEvidenceUpload,
+} from "@/lib/uploads/shopifyDisputeEvidenceFileConstraints";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 /** Same bucket as pack PDFs (`renderPdfJob`); `evidence-uploads` is not provisioned in migrations and may 400 in prod. */
 const MANUAL_UPLOAD_STORAGE_BUCKET = "evidence-packs";
-const ALLOWED_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "text/plain",
-  "text/csv",
-]);
 
 /**
  * Map a Supabase Storage error to merchant-safe copy. Supabase returns
@@ -35,7 +30,7 @@ function merchantUploadMessage(err: { message?: string }, fileType: string): str
     return `This Shopify store hasn't allowed ${fileType || "this file type"} uploads in evidence storage yet. Contact DisputeDesk support — it's a one-time setting.`;
   }
   if (raw.includes("exceeded the maximum allowed size") || raw.includes("payload too large")) {
-    return "This file is larger than your storage limit allows. Try a file under 10 MB or contact support.";
+    return "This file is larger than your storage limit allows. Try a dispute evidence file under 4 MB or contact support.";
   }
   if (raw.includes("duplicate") || raw.includes("already exists")) {
     return "A file with this name already exists for this pack. Rename it and try again.";
@@ -109,17 +104,32 @@ export async function POST(
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json(
-      { error: `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024} MB` },
-      { status: 400 }
-    );
+  const typeCheck = validateShopifyDisputeEvidenceUpload({
+    type: file.type,
+    name: file.name,
+    size: file.size,
+  });
+  if (!typeCheck.ok) {
+    return NextResponse.json({ error: typeCheck.error }, { status: 400 });
   }
 
-  if (!ALLOWED_TYPES.has(file.type)) {
+  const { data: existingManualRows } = await db
+    .from("evidence_items")
+    .select("payload")
+    .eq("pack_id", packId)
+    .eq("source", "manual_upload");
+
+  const usedBytes = sumEvidencePayloadFileSizes(existingManualRows);
+  if (usedBytes + file.size > SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES) {
+    const remaining = Math.max(
+      0,
+      SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES - usedBytes,
+    );
     return NextResponse.json(
-      { error: `File type '${file.type}' not allowed` },
-      { status: 400 }
+      {
+        error: `This upload would exceed the ${SHOPIFY_DISPUTE_EVIDENCE_FILE_COMBINED_MAX_BYTES / (1024 * 1024)} MB combined limit for supporting files on this pack (Shopify Payments dispute file upload cap). About ${Math.ceil(remaining / 1024)} KB remaining.`,
+      },
+      { status: 400 },
     );
   }
 

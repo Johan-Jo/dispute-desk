@@ -1,0 +1,245 @@
+{
+  "runAt": "2026-05-03T19:01:56.008Z",
+  "apiVersion": "2026-01",
+  "shop": "surasvenne.myshopify.com",
+  "sessionScopes": "read_customers,read_locations,read_shipping,read_shopify_payments_disputes,write_draft_orders,write_files,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads",
+  "dispute": {
+    "gid": "gid://shopify/ShopifyPaymentsDispute/10519937081",
+    "numericId": "10519937081",
+    "evidenceGid": "gid://shopify/ShopifyPaymentsDisputeEvidence/10517905465",
+    "status": "needs_response",
+    "reason": "FRAUDULENT"
+  },
+  "probe": {
+    "bytes": 327,
+    "mime": "image/jpeg"
+  },
+  "perField": {
+    "customer_communication_file": {
+      "mutationField": "customerCommunicationFile",
+      "upload": {
+        "status": 200,
+        "requestId": "9f1d3d71-6d55-4c34-af44-fe0f8364cd2f-1777834905",
+        "fileId": 8421900345,
+        "fileGid": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421900345",
+        "restEvidenceId": 10517905465,
+        "body": {
+          "dispute_file_upload": {
+            "id": 8421900345,
+            "shop_id": 78362017849,
+            "file_size": 327,
+            "file_type": "image/jpeg",
+            "original_filename": "phase0-customer_communication_file.jpg",
+            "filename": "91be5230-e50b-4f9d-ac23-6da7553f6abe.jpg",
+            "created_at": "2026-05-03T15:01:46-04:00",
+            "updated_at": "2026-05-03T15:01:47-04:00",
+            "dispute_evidence_id": 10517905465,
+            "dispute_evidence_type": "customer_communication_file",
+            "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/46b4/0783/6201/7849/payments_file_uploads/91be5230-e50b-4f9d-ac23-6da7553f6abe.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190147Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=34a7c191de48d0b7401b4a06a5243d871d82f34c505caac58804f50dafa3fe612b7096fc2e2ef92c414d82bd7d87dad6bd8f18402c0c6ecd663e988763119053312af650d39a2ebe9bd1c72c6cf03650ecae3ec7cd1264b5aecb3b70b04e2a0707ffe7b5bf2de3913da09d336e422ab61d958cd4d27acf89e072a906dc08b11c9ce083a006fe10fd7109fbd0750b94da89fd4653f97212cd5415a4ab95cab446aebaa3234dca1cf751eb14725fec409b16ad4bf512265d4214d66af1e7d06ca86951a530d60b9737f2b48e98c9f93efecfc1058e83fa8a726da48dd4e510bcd3563986e99862cb84452aff4e3bb28cfe412264117180b04af53de5c138b48fdc"
+          }
+        }
+      },
+      "mutation": {
+        "ok": true,
+        "status": 200,
+        "requestId": "adf47fdd-4cd9-48de-afdf-6d530b68a906-1777834907",
+        "errors": [],
+        "userErrors": []
+      }
+    },
+    "refund_policy_file": {
+      "mutationField": "refundPolicyFile",
+      "upload": {
+        "status": 200,
+        "requestId": "8b2bf6e9-aaa9-4d6b-bd44-586940ccc432-1777834908",
+        "fileId": 8421933113,
+        "fileGid": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421933113",
+        "restEvidenceId": 10517905465,
+        "body": {
+          "dispute_file_upload": {
+            "id": 8421933113,
+            "shop_id": 78362017849,
+            "file_size": 327,
+            "file_type": "image/jpeg",
+            "original_filename": "phase0-refund_policy_file.jpg",
+            "filename": "b26bb6a5-9177-4b55-b68b-a76f06c4b73b.jpg",
+            "created_at": "2026-05-03T15:01:48-04:00",
+            "updated_at": "2026-05-03T15:01:50-04:00",
+            "dispute_evidence_id": 10517905465,
+            "dispute_evidence_type": "refund_policy_file",
+            "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/b169/0783/6201/7849/payments_file_uploads/b26bb6a5-9177-4b55-b68b-a76f06c4b73b.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190150Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=60c3752f25232abfd76cebb62309e16516b126e6fa66857a1c2e8882add722a141ca2c0c47210a6f7735a1ba94dd8d4e792e7315cc249ee6f85af2ac02bc927cff8be8ab233a36eb6b58b9ae79cbc00ea1a7e54a938e278adc34cdbc47d7a2c1701517e09ebb288c88242dc1cb6811619d9b14f4a805695617d55f6c5bdad19e1a6fbeb85255a1fe9c01798d1dbcc3b348b5bc95637b9a09e81c63569eca23e5aebd586c13b37cfbde3a482a5c7bb5cd95bf65efcb4e07ccb106f7fcf429d32227ddb65dbda20fd415374f792321bae9f8c657fc220dfd0e616bf5d603ac79c845c8dac333ae0f65d18f08c2291d4db4687ad17411c5cd47317011fc086a1621"
+          }
+        }
+      },
+      "mutation": {
+        "ok": true,
+        "status": 200,
+        "requestId": "616cbaf3-0ac8-4556-9f4e-22a79c93c614-1777834910",
+        "errors": [],
+        "userErrors": []
+      }
+    },
+    "cancellation_policy_file": {
+      "mutationField": "cancellationPolicyFile",
+      "upload": {
+        "status": 200,
+        "requestId": "b6856f41-8165-42bc-96a8-8fd1ebaab4e0-1777834910",
+        "fileId": 8421965881,
+        "fileGid": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421965881",
+        "restEvidenceId": 10517905465,
+        "body": {
+          "dispute_file_upload": {
+            "id": 8421965881,
+            "shop_id": 78362017849,
+            "file_size": 327,
+            "file_type": "image/jpeg",
+            "original_filename": "phase0-cancellation_policy_file.jpg",
+            "filename": "8ccb7c10-db24-44e3-b1c5-c23f3c3a2270.jpg",
+            "created_at": "2026-05-03T15:01:50-04:00",
+            "updated_at": "2026-05-03T15:01:52-04:00",
+            "dispute_evidence_id": 10517905465,
+            "dispute_evidence_type": "cancellation_policy_file",
+            "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/8091/0783/6201/7849/payments_file_uploads/8ccb7c10-db24-44e3-b1c5-c23f3c3a2270.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190152Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=3913a534097aacf9e443b0a4a6f4fd02f5671da2ce1e9e1a70f4d1c50f3d668d533fbb342a31adf241f74a5d4e889b109c0dc166bc8027b2256c2af8652da27cb525c5d34bc813d26f5711cc79822fbdc56f379815bcad4d2ae615a63a12ee9253fa3a50ed9a7aba5d84136d692aa3f1cb936e8fc794be397a965ad8f797edb01173ad7a5c517b11bf61e23b67cb1b5977d04717d0ab89e9c8259a6be91e2d1554e1acc97a3a855e84cdbd07571042a49f749c19524ff303458afb29fb44aeef04371657b29fc8d1a0b77c095994a8bab0e4230f76dbfe74e8faa0243b991a01808a2af9d9a22c47047f0b5225de95b77921aa47a1bf59750350e847a7f97456"
+          }
+        }
+      },
+      "mutation": {
+        "ok": true,
+        "status": 200,
+        "requestId": "be03b0d6-2e95-4ebd-a1d7-206e65191bf6-1777834912",
+        "errors": [],
+        "userErrors": []
+      }
+    },
+    "uncategorized_file": {
+      "mutationField": "uncategorizedFile",
+      "upload": {
+        "status": 200,
+        "requestId": "33fc9479-3836-4390-99ab-e1afae25bafe-1777834912",
+        "fileId": 8421998649,
+        "fileGid": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421998649",
+        "restEvidenceId": 10517905465,
+        "body": {
+          "dispute_file_upload": {
+            "id": 8421998649,
+            "shop_id": 78362017849,
+            "file_size": 327,
+            "file_type": "image/jpeg",
+            "original_filename": "phase0-uncategorized_file.jpg",
+            "filename": "d6979cd1-c37f-44a4-9706-0b45cba7f55e.jpg",
+            "created_at": "2026-05-03T15:01:52-04:00",
+            "updated_at": "2026-05-03T15:01:55-04:00",
+            "dispute_evidence_id": 10517905465,
+            "dispute_evidence_type": "uncategorized_file",
+            "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/6018/0783/6201/7849/payments_file_uploads/d6979cd1-c37f-44a4-9706-0b45cba7f55e.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190155Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=1dd75130e813a61d594f38598fff4928b91f5279f79f9092db7d74f15e398de6a6f6d03b7084c08654852b7bc55e6ba341a80df10d77ff335b8b605b75100a30ce79aedaf2c1190822fe7fe908f0c92dcf667e5110e98ed62a4cae1ea55105e61aff908cbc3be365fedb407bc94003abbf1379d35b4d69b349f63ddb562f6756cfd4fc0f8a7a2f74d52506f97496d705cfd7c4dc31566fe51c159109a012fe055db3942a49a8a5dcc556513b2d2905294fa3d3569c45931ab69c3417261e36b2ce7db8cbf5ebfc37b9f572ffb8ab5b22a919b255844ea3e68aa5d7eb45171afa7d3b7d7959f8220da180559dafda1327e90ae2bdaa0ab7c7d2e5d9513387b2a1"
+          }
+        }
+      },
+      "mutation": {
+        "ok": true,
+        "status": 200,
+        "requestId": "669115ef-9e98-4ece-ba3e-8e73761ae1e3-1777834915",
+        "errors": [],
+        "userErrors": []
+      }
+    },
+    "shipping_documentation_file": {
+      "mutationField": "shippingDocumentationFile",
+      "upload": {
+        "status": 200,
+        "requestId": "50820be4-c18a-4b9f-824e-f2b19bd376e7-1777834915",
+        "fileId": 8422031417,
+        "fileGid": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8422031417",
+        "restEvidenceId": 10517905465,
+        "body": {
+          "dispute_file_upload": {
+            "id": 8422031417,
+            "shop_id": 78362017849,
+            "file_size": 327,
+            "file_type": "image/jpeg",
+            "original_filename": "phase0-shipping_documentation_file.jpg",
+            "filename": "41aaabf3-aadf-490c-afba-150a820f536a.jpg",
+            "created_at": "2026-05-03T15:01:55-04:00",
+            "updated_at": "2026-05-03T15:01:57-04:00",
+            "dispute_evidence_id": 10517905465,
+            "dispute_evidence_type": "shipping_documentation_file",
+            "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/b033/0783/6201/7849/payments_file_uploads/41aaabf3-aadf-490c-afba-150a820f536a.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190157Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=aef8cb369ce73884057ba1a027bcc66689b54d74126bdb9ab7f9356336051852f4c483653fd5a8377e076d11922f9e250e41b77546bca4b1240337049f846b3633946a3dbf877dd68d08bb90fd3c26807db4570a963855968a79784582d5545bed4e5cb12de9aff58f8a73f005c86baabf42e130a4eb9fa7ef844fd5bf585193373e74a32bc57c02d32dace2e5548c35d41b23a0571641436b1bd0b2178580bdda2930218d1bf9b3a271ed9ed7b7221ac429d9b2c00e7198fd000c04a9e3c7b6d4c265fce40540c982068956a61e53e7c04764aeaf1df0e1f7060301dffd57582028d2e3372f47f05ea0ea9c3766d80664b73a9cb2b3e363d266c6d4634c1e77"
+          }
+        }
+      },
+      "mutation": {
+        "ok": true,
+        "status": 200,
+        "requestId": "8ea2b92f-dedc-4d67-a302-7d291431de7f-1777834917",
+        "errors": [],
+        "userErrors": []
+      }
+    },
+    "service_documentation_file": {
+      "mutationField": "serviceDocumentationFile",
+      "upload": {
+        "status": 200,
+        "requestId": "b0746799-3f94-479f-928a-fac5b243409b-1777834917",
+        "fileId": 8422064185,
+        "fileGid": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8422064185",
+        "restEvidenceId": 10517905465,
+        "body": {
+          "dispute_file_upload": {
+            "id": 8422064185,
+            "shop_id": 78362017849,
+            "file_size": 327,
+            "file_type": "image/jpeg",
+            "original_filename": "phase0-service_documentation_file.jpg",
+            "filename": "0be7bc44-df09-4ab6-935a-6451f6614361.jpg",
+            "created_at": "2026-05-03T15:01:57-04:00",
+            "updated_at": "2026-05-03T15:01:59-04:00",
+            "dispute_evidence_id": 10517905465,
+            "dispute_evidence_type": "service_documentation_file",
+            "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/c219/0783/6201/7849/payments_file_uploads/0be7bc44-df09-4ab6-935a-6451f6614361.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190159Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=83fd71feed9dc773032018275011b5ac03e63c67b938eb543c90c2135a34160be119ecc927114350b697e6d043e161f5bc0d303ad3428a2366c5e9a395f6233edb201ce76cd685320b681e96ec7af9b0306e5bcbac0671a054eba5baefc4ee72d0e13c1e6095f2c6b235406c0134c716ba52ffe8d3a7e053b8dd16f9f962891174acbf21b81f000387a8806a9bae8a73f4944151bc7520854d01f1b3967158140abfd9daac088a25c1da59b710b12dd0cf76eb2de7cb729cbc266ef387172787077f80da0c367673e9d9e604b3ca8dc571e6040261b4336599c599ed354bb4e78a980f275ab7b4f94138e7b94e032f30c70ca77fcafabddb1213256c22fccdff"
+          }
+        }
+      },
+      "mutation": {
+        "ok": true,
+        "status": 200,
+        "requestId": "47b67849-f439-4e7a-af74-c1d439196631-1777834920",
+        "errors": [],
+        "userErrors": []
+      }
+    }
+  },
+  "readback": {
+    "status": 200,
+    "requestId": "1817d7d8-ee70-4eb1-aa95-e50acc2d332e-1777834920",
+    "errors": [],
+    "evidence": {
+      "id": "gid://shopify/ShopifyPaymentsDisputeEvidence/10517905465",
+      "uncategorizedText": null,
+      "uncategorizedFile": {
+        "id": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421998649"
+      },
+      "cancellationPolicyFile": {
+        "id": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421965881"
+      },
+      "customerCommunicationFile": {
+        "id": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421900345"
+      },
+      "refundPolicyFile": {
+        "id": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8421933113"
+      },
+      "serviceDocumentationFile": {
+        "id": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8422064185"
+      },
+      "shippingDocumentationFile": {
+        "id": "gid://shopify/ShopifyPaymentsDisputeFileUpload/8422031417"
+      }
+    }
+  },
+  "restList": {
+    "status": 404,
+    "requestId": "82946da2-bcf4-4262-b3a1-ee4e76c231ae-1777834920",
+    "body": {
+      "errors": "Not Found"
+    }
+  }
+}

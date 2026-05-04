@@ -53,6 +53,15 @@ export interface EmitSaveToShopifyEventsInput {
   /** Bookkeeping for the audit payload. */
   manualAttachmentCount: number;
   pdfAttached: boolean;
+  /** File evidence layer — populated when
+   *  `FILE_EVIDENCE_ATTACHMENTS_ENABLED` is on (Phase 5 of the
+   *  conditional file evidence layer). Native attachments are files
+   *  that landed in a Shopify `*File` slot via REST upload + GID
+   *  assignment; merchants and issuers see them as populated rows in
+   *  the chargeback response screen instead of as labelled links in
+   *  `uncategorizedText`. */
+  nativeAttachmentCount?: number;
+  nativeAttachmentFields?: string[];
   /** Dispute-level metadata for the merchant alert. */
   reason: string | null;
   amount: number | null;
@@ -83,6 +92,8 @@ export async function emitSaveToShopifyEvents(
     verificationDiff,
     manualAttachmentCount,
     pdfAttached,
+    nativeAttachmentCount = 0,
+    nativeAttachmentFields = [],
     reason,
     amount,
     currencyCode,
@@ -106,6 +117,8 @@ export async function emitSaveToShopifyEvents(
       final_status: finalStatus,
       manual_attachment_count: manualAttachmentCount,
       pdf_attached: pdfAttached,
+      native_attachment_count: nativeAttachmentCount,
+      native_attachment_fields: nativeAttachmentFields,
     },
   });
 
@@ -118,13 +131,17 @@ export async function emitSaveToShopifyEvents(
   }
 
   if (disputeId) {
+    const nativeSuffix =
+      nativeAttachmentCount > 0
+        ? ` · ${nativeAttachmentCount} file${nativeAttachmentCount === 1 ? "" : "s"} attached natively`
+        : "";
     void emitDisputeEvent({
       disputeId,
       shopId,
       eventType: EVIDENCE_SAVED_TO_SHOPIFY,
       description: verified
-        ? `${inputKeys.length} evidence fields sent and verified in Shopify`
-        : `${inputKeys.length} evidence fields sent to Shopify (verification pending)`,
+        ? `${inputKeys.length} evidence fields sent and verified in Shopify${nativeSuffix}`
+        : `${inputKeys.length} evidence fields sent to Shopify (verification pending)${nativeSuffix}`,
       eventAt,
       actorType: "disputedesk_system",
       sourceType: "pack_engine",
@@ -133,6 +150,8 @@ export async function emitSaveToShopifyEvents(
         evidence_gid: evidenceGid,
         fields_sent: inputKeys,
         verified,
+        native_attachment_count: nativeAttachmentCount,
+        native_attachment_fields: nativeAttachmentFields,
       },
       dedupeKey: `${disputeId}:${EVIDENCE_SAVED_TO_SHOPIFY}:${packId}`,
     });

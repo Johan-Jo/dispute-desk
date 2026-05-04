@@ -40,6 +40,15 @@ function sourceLabel(
   return t("sourceDerived");
 }
 
+const TARGET_FIELD_LABEL: Record<string, string> = {
+  shippingDocumentationFile: "Shipping documentation",
+  customerCommunicationFile: "Customer communication",
+  serviceDocumentationFile: "Proof of service",
+  refundPolicyFile: "Refund policy",
+  cancellationPolicyFile: "Cancellation policy",
+  uncategorizedFile: "Other evidence",
+};
+
 export function EvidenceRow({ item }: { item: EvidenceRowViewModel }) {
   const t = useTranslations("disputes.evidenceTab.row");
   const tStrength = useTranslations("disputes.itemStrength");
@@ -54,6 +63,14 @@ export function EvidenceRow({ item }: { item: EvidenceRowViewModel }) {
           <Badge tone={strengthTone(item.strength)}>
             {tStrength(item.strength)}
           </Badge>
+          {item.nativeAttachment ? (
+            <Badge tone="success">
+              {`📎 Attached to ${
+                TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
+                item.nativeAttachment.targetField
+              }`}
+            </Badge>
+          ) : null}
         </InlineStack>
         <RowStatusChip destination={item.includedAs} />
       </InlineStack>

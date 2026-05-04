@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/components/ui/utils";
+import { SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR } from "@/lib/uploads/shopifyDisputeEvidenceFileConstraints";
 
 interface EvidenceType {
   id: string;
@@ -1162,7 +1163,7 @@ export function TemplateSetupWizard({
               ref={modalFileInputRef}
               type="file"
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+              accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
               onChange={(e) => {
                 const files = e.target.files;
                 if (files?.length) {

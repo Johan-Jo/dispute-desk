@@ -120,26 +120,15 @@ async function resolveFromSupabase(disputeRowId: string): Promise<{
 }
 
 const API_VERSION = "2025-01";
-const UPLOAD_FILENAME = "disputedesk-probe.pdf";
+const UPLOAD_FILENAME = "disputedesk-probe.jpg";
 
-const MINIMAL_PDF = Buffer.from(
-  "%PDF-1.4\n" +
-    "1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n" +
-    "2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n" +
-    "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Resources<<>>/Contents 4 0 R>>endobj\n" +
-    "4 0 obj<</Length 44>>stream\n" +
-    "BT /F1 12 Tf 50 750 Td (DisputeDesk test file upload probe) Tj ET\n" +
-    "endstream endobj\n" +
-    "xref\n" +
-    "0 5\n" +
-    "0000000000 65535 f \n" +
-    "0000000009 00000 n \n" +
-    "0000000052 00000 n \n" +
-    "0000000101 00000 n \n" +
-    "0000000189 00000 n \n" +
-    "trailer<</Size 5/Root 1 0 R>>\nstartxref\n270\n%%EOF\n",
-  "utf8",
+/** Shopify rejected our synthetic PDF (“problem with uploaded file”); use a minimal valid JPEG instead. */
+const PROBE_BYTES = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/AP/EABQRAAACAwAAAAAAAAAAAAAAAAABAgMxQf/aAAwDAQACEQMRAD8AIf//Z",
+  "base64",
 );
+
+const UPLOAD_MIMETYPE = "image/jpeg";
 
 function headersToRecord(h: Headers): Record<string, string> {
   const out: Record<string, string> = {};
@@ -172,11 +161,11 @@ interface UploadAttemptResult {
 async function uploadMultipart(
   uploadUrl: string,
   token: string,
-  pdf: Buffer,
+  fileBytes: Buffer,
   filename: string,
 ): Promise<UploadAttemptResult> {
   const form = new FormData();
-  const blob = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
+  const blob = new Blob([new Uint8Array(fileBytes)], { type: UPLOAD_MIMETYPE });
   form.append("file", blob, filename);
   form.append("filename", filename);
 
@@ -200,15 +189,16 @@ async function uploadMultipart(
 async function uploadJsonBase64(
   uploadUrl: string,
   token: string,
-  pdf: Buffer,
+  fileBytes: Buffer,
   filename: string,
 ): Promise<UploadAttemptResult> {
   const payload = {
     dispute_file_upload: {
-      document_type: "UNCATEGORIZED_FILE",
+      // Shopify REST validates lowercase enums (422 if UNCATEGORIZED_FILE).
+      document_type: "uncategorized_file",
       filename,
-      mimetype: "application/pdf",
-      data: pdf.toString("base64"),
+      mimetype: UPLOAD_MIMETYPE,
+      data: fileBytes.toString("base64"),
     },
   };
 
@@ -231,12 +221,12 @@ async function uploadJsonBase64(
 }
 
 function parseUploadJson(raw: string): {
-  dispute_file_upload?: { id?: unknown };
+  dispute_file_upload?: { id?: unknown; dispute_evidence_id?: unknown };
   errors?: unknown;
 } | null {
   try {
     return JSON.parse(raw) as {
-      dispute_file_upload?: { id?: unknown };
+      dispute_file_upload?: { id?: unknown; dispute_evidence_id?: unknown };
       errors?: unknown;
     };
   } catch {
@@ -249,6 +239,20 @@ function extractUploadId(parsed: unknown): string | undefined {
   const d = parsed as { dispute_file_upload?: { id?: unknown } };
   const id = d.dispute_file_upload?.id;
   if (typeof id === "number" || typeof id === "string") return String(id);
+  return undefined;
+}
+
+/** REST create response includes this; avoids root `dispute { disputeEvidence }` which may be absent on newer Admin schema pins. */
+function extractDisputeEvidenceGid(parsed: unknown): string | undefined {
+  if (!parsed || typeof parsed !== "object") return undefined;
+  const raw = (parsed as { dispute_file_upload?: { dispute_evidence_id?: unknown } })
+    .dispute_file_upload?.dispute_evidence_id;
+  if (typeof raw === "number") {
+    return `gid://shopify/ShopifyPaymentsDisputeEvidence/${raw}`;
+  }
+  if (typeof raw === "string" && /^\d+$/.test(raw)) {
+    return `gid://shopify/ShopifyPaymentsDisputeEvidence/${raw}`;
+  }
   return undefined;
 }
 
@@ -334,7 +338,7 @@ async function main(): Promise<void> {
   try {
     console.log("\n→ Step 1a: multipart/form-data POST (probe requirement)…");
 
-    multipartOutcome = await uploadMultipart(uploadUrl, accessToken, MINIMAL_PDF, UPLOAD_FILENAME);
+    multipartOutcome = await uploadMultipart(uploadUrl, accessToken, PROBE_BYTES, UPLOAD_FILENAME);
 
     console.log("→ Upload (multipart) response status:", multipartOutcome.status);
     console.log("→ Upload (multipart) response body:", formatBodySnippet(multipartOutcome.bodyText));
@@ -347,7 +351,7 @@ async function main(): Promise<void> {
 
     if (!uploadOutcome) {
       console.log("\n→ Step 1b: JSON + base64 POST (matches Shopify REST docs + existing probes)…");
-      const jsonTry = await uploadJsonBase64(uploadUrl, accessToken, MINIMAL_PDF, UPLOAD_FILENAME);
+      const jsonTry = await uploadJsonBase64(uploadUrl, accessToken, PROBE_BYTES, UPLOAD_FILENAME);
       console.log("→ Upload (json) response status:", jsonTry.status);
       console.log("→ Upload (json) response body:", formatBodySnippet(jsonTry.bodyText));
       logHeaders("Upload (json) response headers", jsonTry.responseHeaders);
@@ -383,27 +387,49 @@ async function main(): Promise<void> {
       shopifyDisputeGidFromDb ??
       `gid://shopify/ShopifyPaymentsDispute/${disputeId}`;
 
-    const evidenceQuery = `
+    let evidenceGid = extractDisputeEvidenceGid(parsedBody);
+
+    const evidenceQueryNode = `
       query DisputeEvidenceForProbe($id: ID!) {
-        dispute(id: $id) {
-          id
-          disputeEvidence { id }
+        node(id: $id) {
+          ... on ShopifyPaymentsDispute {
+            id
+            disputeEvidence { id }
+          }
         }
       }
     `;
 
-    console.log("\n→ GraphQL: resolve disputeEvidence id for mutation…");
-    const ev = await gqlRequest(graphqlUrl, accessToken, evidenceQuery, { id: disputeGid });
-    console.log("→ evidence query status:", ev.status);
-    console.log("→ evidence query X-Request-ID:", ev.requestId ?? "(none)");
-    logHeaders("evidence query response headers", ev.responseHeaders);
-    console.log("→ evidence query body:", formatBodySnippet(ev.bodyText, 4000));
+    if (evidenceGid) {
+      console.log("\n→ disputeEvidence gid from REST (dispute_evidence_id):", evidenceGid);
+    } else {
+      console.log("\n→ GraphQL: resolve disputeEvidence id via node (fallback)…");
+    }
+
+    const ev = evidenceGid
+      ? ({
+          status: 200,
+          requestId: null,
+          bodyText: "(skipped — evidence gid from REST)",
+          parsed: {} as unknown,
+          responseHeaders: {},
+        } satisfies Awaited<ReturnType<typeof gqlRequest>>)
+      : await gqlRequest(graphqlUrl, accessToken, evidenceQueryNode, { id: disputeGid });
+
+    if (!evidenceGid) {
+      console.log("→ evidence query status:", ev.status);
+      console.log("→ evidence query X-Request-ID:", ev.requestId ?? "(none)");
+      logHeaders("evidence query response headers", ev.responseHeaders);
+      console.log("→ evidence query body:", formatBodySnippet(ev.bodyText, 4000));
+    }
 
     const evParsed = ev.parsed as {
       errors?: unknown;
-      data?: { dispute?: { disputeEvidence?: { id?: string } | null } | null };
+      data?: { node?: { disputeEvidence?: { id?: string } | null } | null };
     };
-    const evidenceGid = evParsed?.data?.dispute?.disputeEvidence?.id;
+    if (!evidenceGid) {
+      evidenceGid = evParsed?.data?.node?.disputeEvidence?.id ?? undefined;
+    }
     const gqlErrors = evParsed?.errors;
 
     if (!evidenceGid) {

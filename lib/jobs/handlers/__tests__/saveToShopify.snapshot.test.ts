@@ -260,6 +260,87 @@ describe("save-to-shopify pipeline — pre-refactor snapshots (Phase 2.3)", () =
         verified: true,
       });
     });
+
+    describe("file-field GID equality (Phase 0d / Phase 3 close-out)", () => {
+      const SENT_GID = "gid://shopify/ShopifyPaymentsDisputeFileUpload/8422326329";
+
+      it("file field with matching read-back GID → confirmed", () => {
+        const diff = diffVerificationReadback({
+          inputKeys: ["shippingDocumentationFile"],
+          evidenceFromShopify: {
+            shippingDocumentationFile: { id: SENT_GID },
+          },
+          inputValues: {
+            shippingDocumentationFile: { id: SENT_GID },
+          },
+        });
+        expect(diff).toMatchObject({
+          fields_confirmed: ["shippingDocumentationFile"],
+          fields_missing: [],
+          verified: true,
+        });
+      });
+
+      it("file field with mismatched read-back GID → missing (real failure, not a false alarm)", () => {
+        const diff = diffVerificationReadback({
+          inputKeys: ["shippingDocumentationFile"],
+          evidenceFromShopify: {
+            shippingDocumentationFile: { id: "gid://shopify/ShopifyPaymentsDisputeFileUpload/different" },
+          },
+          inputValues: {
+            shippingDocumentationFile: { id: SENT_GID },
+          },
+        });
+        expect(diff).toMatchObject({
+          fields_missing: ["shippingDocumentationFile"],
+          verified: false,
+        });
+      });
+
+      it("file field with null read-back → missing", () => {
+        const diff = diffVerificationReadback({
+          inputKeys: ["shippingDocumentationFile"],
+          evidenceFromShopify: { shippingDocumentationFile: null },
+          inputValues: { shippingDocumentationFile: { id: SENT_GID } },
+        });
+        expect(diff).toMatchObject({ verified: false });
+      });
+
+      it("backwards compat: caller without inputValues → file field falls through to write-only", () => {
+        // Existing text-only callers (and the snapshot harness) don't
+        // pass inputValues. File fields shouldn't break their behaviour —
+        // they classify as write-only and don't trigger missing.
+        const diff = diffVerificationReadback({
+          inputKeys: ["uncategorizedText", "shippingDocumentationFile"],
+          evidenceFromShopify: { uncategorizedText: "echoed" },
+        });
+        expect(diff).toMatchObject({
+          fields_confirmed: ["uncategorizedText"],
+          fields_missing: [],
+          fields_write_only: ["shippingDocumentationFile"],
+          verified: true,
+        });
+      });
+
+      it("mixed text + file inputs both verify", () => {
+        const diff = diffVerificationReadback({
+          inputKeys: ["uncategorizedText", "shippingDocumentationFile"],
+          evidenceFromShopify: {
+            uncategorizedText: "rebuttal text echoed back",
+            shippingDocumentationFile: { id: SENT_GID },
+          },
+          inputValues: {
+            uncategorizedText: "rebuttal text echoed back",
+            shippingDocumentationFile: { id: SENT_GID },
+          },
+        });
+        expect(diff).toMatchObject({
+          fields_confirmed: expect.arrayContaining(["uncategorizedText", "shippingDocumentationFile"]),
+          fields_missing: [],
+          verified: true,
+        });
+      });
+    });
   });
 });
 

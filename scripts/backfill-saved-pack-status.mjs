@@ -6,17 +6,9 @@
 // We restore status to "saved_to_shopify_unverified" (the safe
 // default — never claims verification we didn't perform).
 
-import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
-import { join } from "path";
+import { getServiceClient } from "./lib/supabase.mjs";
 
-config({ path: join(process.cwd(), ".env.local") });
-
-const sb = createClient(
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false } },
-);
+const sb = getServiceClient();
 
 const SAVED_STATUSES = [
   "saved_to_shopify",

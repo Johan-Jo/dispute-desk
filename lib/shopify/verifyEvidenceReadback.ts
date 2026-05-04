@@ -33,10 +33,12 @@ import { requestShopifyGraphQL } from "./graphql";
 /**
  * Verification query — reads back evidence fields from Shopify.
  *
- * NOTE: shippingDocumentation is WRITE-ONLY via the mutation.
- * The readable equivalent is shippingDocumentationFile (file upload).
- * Text fields we can verify: accessActivityLog, cancellationRebuttal,
- * cancellationPolicyDisclosure, refundPolicyDisclosure, uncategorizedText.
+ * Text fields verify by non-empty value (Shopify echoes the same string we
+ * sent). File fields verify by GID equality — Phase 0d (2026-05-03)
+ * confirmed `disputeEvidence.*File.id` is fully readable on all six
+ * named slots, so when `saveToShopifyJob` sends a `*File` field with
+ * a GID, the read-back must return the same GID or we treat it as
+ * unverified.
  */
 export const VERIFY_EVIDENCE_QUERY = `
   query VerifyEvidence($id: ID!) {
@@ -51,13 +53,19 @@ export const VERIFY_EVIDENCE_QUERY = `
           refundPolicyDisclosure
           refundRefusalExplanation
           uncategorizedText
+          shippingDocumentationFile { id }
+          customerCommunicationFile { id }
+          serviceDocumentationFile { id }
+          uncategorizedFile { id }
+          refundPolicyFile { id }
+          cancellationPolicyFile { id }
         }
       }
     }
   }
 `;
 
-/** Fields that are readable via the Shopify API for verification. */
+/** Text fields that are readable via the Shopify API for verification. */
 export const VERIFIABLE_FIELDS: ReadonlySet<string> = new Set([
   "accessActivityLog",
   "cancellationPolicyDisclosure",
@@ -66,6 +74,16 @@ export const VERIFIABLE_FIELDS: ReadonlySet<string> = new Set([
   "refundPolicyDisclosure",
   "refundRefusalExplanation",
   "uncategorizedText",
+]);
+
+/** File fields verified by GID equality (Phase 0d / Phase 3). */
+export const VERIFIABLE_FILE_FIELDS: ReadonlySet<string> = new Set([
+  "shippingDocumentationFile",
+  "customerCommunicationFile",
+  "serviceDocumentationFile",
+  "uncategorizedFile",
+  "refundPolicyFile",
+  "cancellationPolicyFile",
 ]);
 
 /** Fields that are write-only (mutation accepts but can't be verified via read-back). */
@@ -86,6 +104,12 @@ interface VerifyEvidenceResult {
       refundPolicyDisclosure: string | null;
       refundRefusalExplanation: string | null;
       uncategorizedText: string | null;
+      shippingDocumentationFile: { id: string } | null;
+      customerCommunicationFile: { id: string } | null;
+      serviceDocumentationFile: { id: string } | null;
+      uncategorizedFile: { id: string } | null;
+      refundPolicyFile: { id: string } | null;
+      cancellationPolicyFile: { id: string } | null;
     } | null;
   } | null;
 }
@@ -110,6 +134,11 @@ export interface DiffVerificationInput {
   /** The `disputeEvidence` node Shopify returned, or `null` when the
    *  read failed. */
   evidenceFromShopify: Record<string, unknown> | null;
+  /** Optional original input — needed for file-field GID-equality
+   *  verification. When omitted, file fields fall through to
+   *  `fields_write_only` (backwards compat with text-only callers and
+   *  the existing snapshot tests). */
+  inputValues?: Record<string, unknown>;
 }
 
 /**
@@ -129,7 +158,7 @@ export interface DiffVerificationInput {
 export function diffVerificationReadback(
   args: DiffVerificationInput,
 ): VerificationDiffOrError {
-  const { inputKeys, evidenceFromShopify } = args;
+  const { inputKeys, evidenceFromShopify, inputValues } = args;
   if (!evidenceFromShopify) {
     return { error: "Could not fetch evidence from Shopify" };
   }
@@ -142,6 +171,38 @@ export function diffVerificationReadback(
       fieldsWriteOnly.push(key);
       continue;
     }
+
+    if (VERIFIABLE_FILE_FIELDS.has(key)) {
+      // File fields verify by GID equality. Only meaningful when the
+      // caller passes the original `inputValues`; without it, fall
+      // through to write-only (preserves prior snapshot test
+      // behaviour for callers that don't supply file values).
+      if (!inputValues) {
+        fieldsWriteOnly.push(key);
+        continue;
+      }
+      const sentValue = inputValues[key];
+      const sentGid =
+        sentValue && typeof sentValue === "object" && "id" in (sentValue as object)
+          ? (sentValue as { id?: unknown }).id
+          : null;
+      const echoed = evidenceFromShopify[key];
+      const echoedGid =
+        echoed && typeof echoed === "object" && "id" in (echoed as object)
+          ? (echoed as { id?: unknown }).id
+          : null;
+      if (
+        typeof sentGid === "string" &&
+        typeof echoedGid === "string" &&
+        sentGid === echoedGid
+      ) {
+        fieldsConfirmed.push(key);
+      } else {
+        fieldsMissing.push(key);
+      }
+      continue;
+    }
+
     if (!VERIFIABLE_FIELDS.has(key)) {
       fieldsWriteOnly.push(key);
       continue;
@@ -173,6 +234,9 @@ export interface VerifyEvidenceReadbackInput {
   disputeGid: string;
   /** Keys on the `DisputeEvidenceUpdateInput` we sent. */
   inputKeys: string[];
+  /** Optional original input — required to verify file fields by GID
+   *  equality. Text-only callers can omit it. */
+  inputValues?: Record<string, unknown>;
   /** Optional correlation id for the GraphQL request. */
   correlationId?: string;
 }
@@ -189,7 +253,7 @@ export async function verifyEvidenceReadback(
   diff: VerificationDiffOrError;
   evidenceNode: Record<string, unknown> | null;
 }> {
-  const { shopDomain, accessToken, disputeGid, inputKeys, correlationId } = args;
+  const { shopDomain, accessToken, disputeGid, inputKeys, inputValues, correlationId } = args;
 
   const verifyResult = await requestShopifyGraphQL<{ data: VerifyEvidenceResult }>({
     session: { shopDomain, accessToken },
@@ -209,6 +273,7 @@ export async function verifyEvidenceReadback(
     diff: diffVerificationReadback({
       inputKeys,
       evidenceFromShopify: evidence ?? null,
+      inputValues,
     }),
     evidenceNode: evidence ?? null,
   };

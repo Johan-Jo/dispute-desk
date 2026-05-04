@@ -1,14 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
-import { join } from "path";
+import { getServiceClient } from "./lib/supabase.mjs";
 
-config({ path: join(process.cwd(), ".env.local") });
-
-const sb = createClient(
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false } },
-);
+const sb = getServiceClient();
 
 // Pull all parked_for_review events with null description where metadata.reason exists
 const { data: events, error } = await sb

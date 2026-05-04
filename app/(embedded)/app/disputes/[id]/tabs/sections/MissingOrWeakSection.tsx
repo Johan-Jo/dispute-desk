@@ -29,6 +29,7 @@ import {
   Select,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR } from "@/lib/uploads/shopifyDisputeEvidenceFileConstraints";
 import type { MissingItemViewModel } from "../useEvidenceSections";
 import type { WaiveReason } from "../../workspace-components/types";
 
@@ -75,6 +76,7 @@ function MissingRow({ item, t, tActions, uploading, onUpload, onWaiveClick }: Ro
               <input
                 ref={fileInputRef}
                 type="file"
+                accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
                 style={{ display: "none" }}
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? []);

@@ -24,8 +24,25 @@ import {
   ShopifyAuthInvalidError,
 } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { type RawPackSection } from "@/lib/shopify/fieldMapping";
-import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
+import {
+  composeShopifyMutationPayload,
+  type ResolvedAttachmentPlanEntry,
+} from "@/lib/shopify/composeShopifyMutationPayload";
 import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
+import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
+import {
+  decideFileAttachments,
+  type FileAttachmentCandidate,
+} from "@/lib/shopify/decideFileAttachments";
+import {
+  uploadDisputeFile,
+  DOCUMENT_TYPE_TO_MUTATION_FIELD,
+  type DisputeFileDocumentType,
+  type DisputeEvidenceFileField,
+} from "@/lib/shopify/disputeFileUpload";
+import { generateEvidenceAttachmentPdf } from "@/lib/packs/generateEvidenceAttachmentPdf";
+import { isFileEligible } from "@/lib/argument/canonicalEvidence";
+import type { CaseStrengthLevel } from "@/lib/argument/types";
 import {
   verifyEvidenceReadback,
   type VerificationDiffOrError,
@@ -66,6 +83,30 @@ function truncateInput(input: DisputeEvidenceUpdateInput): Record<string, string
   }
   return out;
 }
+
+/** Persisted on `pack_json.attachmentUploads` so retries + lifecycle
+ *  reads can reuse uploaded GIDs without re-hitting Shopify. */
+interface PersistedAttachmentUpload {
+  evidenceItemId: string;
+  evidenceFieldKey: string;
+  targetField: DisputeEvidenceFileField;
+  fileGid: string;
+  uploadedAt: string;
+}
+
+/** Reverse of `DOCUMENT_TYPE_TO_MUTATION_FIELD`. Built once at module
+ *  load. Used by the file-evidence pipeline to derive the REST
+ *  `document_type` from the planner's `targetField`. */
+const MUTATION_FIELD_TO_DOCUMENT_TYPE: Record<
+  DisputeEvidenceFileField,
+  DisputeFileDocumentType
+> = (() => {
+  const out = {} as Record<DisputeEvidenceFileField, DisputeFileDocumentType>;
+  for (const [docType, fieldName] of Object.entries(DOCUMENT_TYPE_TO_MUTATION_FIELD)) {
+    out[fieldName as DisputeEvidenceFileField] = docType as DisputeFileDocumentType;
+  }
+  return out;
+})();
 
 /* ── Main handler ── */
 
@@ -248,6 +289,12 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
       toBackfill.push({ id: String(item.id), meta, checklistField });
     }
     manualAttachments.push({
+      // `id` is consulted by `composeShopifyMutationPayload` to suppress
+      // links for items whose bytes (or synthesised PDFs) have been
+      // attached natively via the file evidence layer (Q2=A in the
+      // conditional file evidence plan). Always set; suppression is
+      // a no-op when the file evidence flag is off.
+      id: String(item.id),
       checklistField,
       label: (item.label as string | null) ?? null,
       fileName: typeof meta.fileName === "string" ? meta.fileName : null,
@@ -284,6 +331,233 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
     pdfAttachment = { url: buildShortAttachmentUrl(code) };
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  FILE EVIDENCE PIPELINE (gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED`)
+  //
+  //  When the flag is on, run `decideFileAttachments` over the
+  //  merchant's manual uploads, generate a focused PDF per native
+  //  plan entry, REST-upload it to Shopify, persist the resulting GID
+  //  on `pack_json.attachmentUploads` for retry idempotency, and pass
+  //  the resolved plan to `composeShopifyMutationPayload`. Compose
+  //  sets the matching `*File` fields and suppresses the manual link
+  //  for the same `evidence_item_id` (Q2=A — native-only when attached).
+  //
+  //  When the flag is off (default), `resolvedAttachmentPlan` stays
+  //  empty and compose's behaviour is byte-identical to the
+  //  text-only path that's been in production since 2026-04-21.
+  //
+  //  Failure isolation: any error inside this block degrades to
+  //  text-only for that specific entry (or the whole pack on a hard
+  //  failure) and is recorded via `attachment_pipeline_failed` audit
+  //  events. Shopify mutation will still proceed.
+  // ═══════════════════════════════════════════════════════════
+
+  let resolvedAttachmentPlan: ResolvedAttachmentPlanEntry[] = [];
+
+  if (isFileEvidenceAttachmentsEnabled()) {
+    try {
+      const packJson = (pack.pack_json ?? {}) as {
+        case_strength?: { overall?: CaseStrengthLevel };
+        coverage?: { state?: string };
+        fatal_loss?: { triggered?: boolean };
+        attachmentUploads?: PersistedAttachmentUpload[];
+      };
+
+      const caseStrength: CaseStrengthLevel =
+        (packJson.case_strength?.overall as CaseStrengthLevel | undefined) ?? "insufficient";
+      const coverageActive = packJson.coverage?.state === "covered_shopify";
+      const fatalLossActive = packJson.fatal_loss?.triggered === true;
+
+      const candidates: FileAttachmentCandidate[] = [];
+      for (const item of manualItems ?? []) {
+        const meta = (item.payload ?? {}) as Record<string, unknown>;
+        const checklistField =
+          typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
+            ? meta.checklistField
+            : null;
+        if (!checklistField || !isFileEligible(checklistField)) continue;
+        candidates.push({
+          evidenceItemId: String(item.id),
+          evidenceFieldKey: checklistField,
+          payload: meta,
+          label: (item.label as string | null) ?? null,
+          fileName: typeof meta.fileName === "string" ? meta.fileName : null,
+        });
+      }
+
+      const plan = decideFileAttachments({
+        caseStrength,
+        disputeReason: dispute.reason,
+        coverageActive,
+        fatalLossActive,
+        candidates,
+      });
+
+      const numericDisputeId = dispute.dispute_evidence_gid.match(/\/(\d+)$/)?.[1];
+      const candidateById = new Map(candidates.map(c => [c.evidenceItemId, c]));
+      // Idempotency: lifecycle-fresh stash is reused; otherwise re-upload.
+      const lifecycleFreshStatuses = new Set(["ready", "saving", "saved_to_shopify_unverified"]);
+      const lifecycleFresh = lifecycleFreshStatuses.has(pack.status as string);
+      const existingMap = new Map<string, PersistedAttachmentUpload>(
+        (packJson.attachmentUploads ?? []).map(u => [u.evidenceItemId, u]),
+      );
+
+      const updatedUploads: PersistedAttachmentUpload[] = [];
+      const auditAttachments: Array<{
+        evidenceItemId: string;
+        evidenceFieldKey: string;
+        targetField: string;
+        slot: string;
+        ok: boolean;
+        reused?: boolean;
+        requestId?: string | null;
+      }> = [];
+
+      for (const entry of plan) {
+        if (entry.resolvedSlot.kind !== "native") {
+          // Link-only entries are recorded in the resolved plan with
+          // null GID so the Review & Submit UI can show "queued to
+          // narrative" with a reason, but they never trigger an upload.
+          resolvedAttachmentPlan.push({
+            evidenceItemId: entry.evidenceItemId,
+            evidenceFieldKey: entry.evidenceFieldKey,
+            resolvedSlot: entry.resolvedSlot,
+            fileGid: null,
+          });
+          continue;
+        }
+
+        const targetField = entry.resolvedSlot.targetField;
+        const existing = existingMap.get(entry.evidenceItemId);
+        let fileGid: string | null = null;
+        let reused = false;
+
+        if (
+          existing &&
+          existing.targetField === targetField &&
+          lifecycleFresh
+        ) {
+          fileGid = existing.fileGid;
+          reused = true;
+        } else if (numericDisputeId) {
+          try {
+            const cand = candidateById.get(entry.evidenceItemId);
+            const pdfBytes = await generateEvidenceAttachmentPdf({
+              attachmentType: entry.attachmentType,
+              evidenceFieldKey: entry.evidenceFieldKey,
+              reason: entry.reason,
+              shopDomain,
+              disputeId: numericDisputeId,
+              sections,
+              label: cand?.label ?? null,
+              payload: cand?.payload ?? null,
+            });
+
+            const documentType = MUTATION_FIELD_TO_DOCUMENT_TYPE[targetField];
+            const upload = await uploadDisputeFile({
+              shopDomain,
+              accessToken,
+              disputeNumericId: numericDisputeId,
+              documentType,
+              filename: `${entry.evidenceFieldKey}.pdf`,
+              mimeType: "application/pdf",
+              fileBytes: pdfBytes,
+            });
+            fileGid = upload.fileGid;
+            auditAttachments.push({
+              evidenceItemId: entry.evidenceItemId,
+              evidenceFieldKey: entry.evidenceFieldKey,
+              targetField,
+              slot: entry.resolvedSlot.origin,
+              ok: true,
+              requestId: upload.requestId,
+            });
+          } catch (err) {
+            const requestId =
+              err && typeof err === "object" && "requestId" in err
+                ? ((err as { requestId?: string | null }).requestId ?? null)
+                : null;
+            console.error(
+              "[saveToShopify] file evidence upload failed (continuing text-only for this entry):",
+              err instanceof Error ? err.message : String(err),
+              "requestId=",
+              requestId,
+            );
+            auditAttachments.push({
+              evidenceItemId: entry.evidenceItemId,
+              evidenceFieldKey: entry.evidenceFieldKey,
+              targetField,
+              slot: entry.resolvedSlot.origin,
+              ok: false,
+              requestId,
+            });
+          }
+        }
+
+        if (fileGid) {
+          updatedUploads.push({
+            evidenceItemId: entry.evidenceItemId,
+            evidenceFieldKey: entry.evidenceFieldKey,
+            targetField,
+            fileGid,
+            uploadedAt: existing && reused ? existing.uploadedAt : new Date().toISOString(),
+          });
+        }
+
+        resolvedAttachmentPlan.push({
+          evidenceItemId: entry.evidenceItemId,
+          evidenceFieldKey: entry.evidenceFieldKey,
+          resolvedSlot: entry.resolvedSlot,
+          fileGid,
+        });
+      }
+
+      // Persist GIDs back to pack_json (best-effort; never block save).
+      if (updatedUploads.length > 0) {
+        const nextPackJson = { ...packJson, attachmentUploads: updatedUploads };
+        await sb
+          .from("evidence_packs")
+          .update({ pack_json: nextPackJson, updated_at: new Date().toISOString() })
+          .eq("id", packId);
+      }
+
+      if (auditAttachments.length > 0) {
+        await logAuditEvent({
+          shopId: pack.shop_id,
+          disputeId: pack.dispute_id,
+          packId,
+          actorType: "system",
+          eventType: "file_evidence_planned",
+          eventPayload: {
+            jobId: job.id,
+            attachments: auditAttachments,
+            failures: auditAttachments.filter(a => !a.ok).length,
+            reused: auditAttachments.filter(a => a.reused).length,
+          },
+        });
+      }
+    } catch (pipelineErr) {
+      // Pipeline-level failure (decide, candidate building, etc.).
+      // Continue with text-only path.
+      console.error(
+        "[saveToShopify] file evidence pipeline failed (degrading to text-only):",
+        pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr),
+      );
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: "file_evidence_pipeline_failed",
+        eventPayload: {
+          jobId: job.id,
+          error: pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr),
+        },
+      });
+      resolvedAttachmentPlan = [];
+    }
+  }
+
   // Compose the final GraphQL mutation payload via the shared
   // `composeShopifyMutationPayload` builder. The submission-preview
   // endpoint calls the same function so the merchant's "raw view" is
@@ -300,6 +574,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
     },
     manualAttachments,
     pdfAttachment,
+    attachmentPlan: resolvedAttachmentPlan,
   });
 
 
@@ -513,6 +788,9 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
       accessToken,
       disputeGid: disputeData?.dispute_gid ?? "",
       inputKeys,
+      // Pass the full input so file-field GID equality verifies
+      // post-flag-on submissions; harmless when no *File fields are set.
+      inputValues: input as unknown as Record<string, unknown>,
       correlationId: `verify-${job.id}`,
     });
 
@@ -546,6 +824,9 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
     }).eq("id", pack.dispute_id);
   }
 
+  const confirmedNativeEntries = resolvedAttachmentPlan.filter(
+    e => e.resolvedSlot.kind === "native" && e.fileGid != null,
+  );
   await emitSaveToShopifyEvents({
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
@@ -558,6 +839,10 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
     verificationDiff,
     manualAttachmentCount: manualAttachments.length,
     pdfAttached: pdfAttachment !== null,
+    nativeAttachmentCount: confirmedNativeEntries.length,
+    nativeAttachmentFields: confirmedNativeEntries.map(e =>
+      e.resolvedSlot.kind === "native" ? e.resolvedSlot.targetField : "",
+    ).filter(Boolean),
     reason: dispute.reason ?? null,
     amount: dispute.amount ?? null,
     currencyCode: dispute.currency_code ?? null,

@@ -97,6 +97,17 @@ export interface EvidenceRowViewModel {
    * deterministic — see EvidenceSubmissionDestination doc.
    */
   includedAs: EvidenceSubmissionDestination;
+  /**
+   * File evidence layer (Phase 6). Set when the most recent save run
+   * uploaded a focused PDF for this field key into a Shopify `*File`
+   * slot. Drives the clip-icon badge in EvidenceRow.
+   */
+  nativeAttachment?: {
+    /** The Shopify mutation field key (e.g. `shippingDocumentationFile`). */
+    targetField: string;
+    /** ISO timestamp captured when the upload landed. */
+    uploadedAt: string;
+  };
 }
 
 export interface MissingItemViewModel {
@@ -532,6 +543,24 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // derived from the same source as the Shopify payload.
   const usedInDefense: EvidenceRowViewModel[] = [];
 
+  // File evidence layer (Phase 6) — index by evidenceFieldKey for O(1)
+  // lookup when building each row's `nativeAttachment` flag. Multiple
+  // uploads for the same field key (rare; e.g. delivery_proof primary
+  // + shipping_tracking overflow) collapse to the most recent.
+  const nativeAttachmentsByField = new Map<
+    string,
+    { targetField: string; uploadedAt: string }
+  >();
+  for (const u of data.pack?.attachmentUploads ?? []) {
+    const prior = nativeAttachmentsByField.get(u.evidenceFieldKey);
+    if (!prior || u.uploadedAt > prior.uploadedAt) {
+      nativeAttachmentsByField.set(u.evidenceFieldKey, {
+        targetField: u.targetField,
+        uploadedAt: u.uploadedAt,
+      });
+    }
+  }
+
   function buildRow(
     idPrefix: string,
     field: string,
@@ -539,6 +568,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
     strength: ItemStrength,
   ): EvidenceRowViewModel {
     const checklistItem = checklistByField.get(field);
+    const native = nativeAttachmentsByField.get(field);
     return {
       id: `${idPrefix}:${field}`,
       field,
@@ -552,6 +582,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
         excludedFields,
         includedShopifyFields,
       }),
+      ...(native ? { nativeAttachment: native } : {}),
     };
   }
 

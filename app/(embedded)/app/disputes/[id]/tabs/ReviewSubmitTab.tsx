@@ -35,6 +35,7 @@ import { SubmissionStatusCard } from "./sections/SubmissionStatusCard";
 import { ExactDataSentCard } from "./sections/ExactDataSentCard";
 import { NotSubmittedCard } from "./sections/NotSubmittedCard";
 import { FinalDefenseStatementCard } from "./sections/FinalDefenseStatementCard";
+import { FileEvidenceRoutingCard } from "./sections/FileEvidenceRoutingCard";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -92,6 +93,27 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
+  // ── File evidence reinstall consent banner (Phase 7b) ──
+  // Only shown when the file evidence layer is enabled but the
+  // merchant's offline session was issued before the new dispute
+  // file upload scopes shipped (commit f61176c). Reinstalling the
+  // app from the Shopify Admin app listing will refresh the scopes.
+  const reinstallBanner =
+    data?.fileEvidence?.flagEnabled && data.fileEvidence.scopesGranted === false ? (
+      <Banner tone="warning" title="Reinstall DisputeDesk to enable native file evidence">
+        <p>
+          DisputeDesk now uploads evidence files directly into Shopify&rsquo;s
+          chargeback response file rows (Shipping documentation, Customer
+          communication, etc.) — but your store&rsquo;s permissions don&rsquo;t
+          include the new <code>{data.fileEvidence.missingScopes.join(", ")}</code>{" "}
+          {data.fileEvidence.missingScopes.length === 1 ? "scope" : "scopes"} yet.
+          Reinstall the app from the Shopify Admin app listing to refresh
+          permissions. Until then, evidence continues to ship as labelled
+          links in the dispute text.
+        </p>
+      </Banner>
+    ) : null;
+
   // ── Submit handler ──
   // Routes through the override modal when the view-model says the
   // current readiness requires explicit intent. Otherwise submits
@@ -129,6 +151,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {failedBanner}
       {buildingBanner}
       {noPackBanner}
+      {reinstallBanner}
 
       {/* §1 — Submission status (submitted vs ready-to-submit + CTA) */}
       <SubmissionStatusCard
@@ -138,6 +161,11 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         cta={view.cta}
         onSubmit={handleSubmit}
       />
+
+      {/* File evidence routing (Phase 6) — only renders when the file
+          evidence flag is on AND the most recent save resolved native
+          attachments. Surfaces what landed in which Shopify *File slot. */}
+      <FileEvidenceRoutingCard uploads={data?.pack?.attachmentUploads ?? []} />
 
       {/* §2 — Exact data sent to Shopify (five readable groups) */}
       <ExactDataSentCard state={view.state} payload={view.payload} />

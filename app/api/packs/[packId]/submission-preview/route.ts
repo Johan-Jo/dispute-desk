@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { FIELD_MAPPINGS, type RawPackSection } from "@/lib/shopify/fieldMapping";
-import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
+import {
+  composeShopifyMutationPayload,
+  type ResolvedAttachmentPlanEntry,
+} from "@/lib/shopify/composeShopifyMutationPayload";
 import {
   type ManualAttachmentInput,
   type PackPdfInput,
@@ -10,6 +13,20 @@ import {
   loadChecklistFieldByEvidenceItemIdFromAudit,
   resolveChecklistFieldForManualItem,
 } from "@/lib/shopify/manualUploadChecklistFromAudit";
+import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
+import {
+  decideFileAttachments,
+  type FileAttachmentCandidate,
+} from "@/lib/shopify/decideFileAttachments";
+import { isFileEligible } from "@/lib/argument/canonicalEvidence";
+import type { CaseStrengthLevel } from "@/lib/argument/types";
+
+/** Placeholder GID surfaced in the preview when the file evidence flag
+ *  is on. Communicates "this slot WILL be set" without leaking real
+ *  Shopify file ids — the production `saveToShopifyJob` substitutes
+ *  the real REST-uploaded GID at submit time. */
+const PLACEHOLDER_FILE_GID =
+  "gid://shopify/ShopifyPaymentsDisputeFileUpload/<preview-only>";
 
 export const runtime = "nodejs";
 
@@ -130,6 +147,9 @@ export async function GET(
         auditChecklistByItemId,
       );
       return {
+        // `id` matches the job-side payload so link suppression in
+        // composeShopifyMutationPayload behaves identically here.
+        id: String(item.id),
         checklistField,
         label: (item.label as string | null) ?? null,
         fileName: typeof meta.fileName === "string" ? meta.fileName : null,
@@ -144,6 +164,63 @@ export async function GET(
     ? { url: PLACEHOLDER_ATTACHMENT_URL }
     : null;
 
+  // ── File evidence preview parity (Phase 4) ──
+  //
+  // When the flag is on, the production save job runs
+  // `decideFileAttachments` and uploads PDFs via REST. The preview
+  // mirrors the planning step so merchants see the same field routing
+  // (which slots will be populated, which items are demoted to links)
+  // before they hit Submit. The placeholder GID communicates "this slot
+  // WILL be set" without leaking real Shopify file ids.
+  let resolvedAttachmentPlan: ResolvedAttachmentPlanEntry[] = [];
+  if (isFileEvidenceAttachmentsEnabled()) {
+    const fullPackJson = pack.pack_json as {
+      case_strength?: { overall?: CaseStrengthLevel };
+      coverage?: { state?: string };
+      fatal_loss?: { triggered?: boolean };
+    } | null;
+    const caseStrength: CaseStrengthLevel =
+      (fullPackJson?.case_strength?.overall as CaseStrengthLevel | undefined) ??
+      "insufficient";
+    const coverageActive = fullPackJson?.coverage?.state === "covered_shopify";
+    const fatalLossActive = fullPackJson?.fatal_loss?.triggered === true;
+
+    const candidates: FileAttachmentCandidate[] = [];
+    for (const item of manualItems ?? []) {
+      const meta = (item.payload ?? {}) as Record<string, unknown>;
+      const checklistField =
+        typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
+          ? meta.checklistField
+          : null;
+      if (!checklistField || !isFileEligible(checklistField)) continue;
+      candidates.push({
+        evidenceItemId: String(item.id),
+        evidenceFieldKey: checklistField,
+        payload: meta,
+        label: (item.label as string | null) ?? null,
+        fileName: typeof meta.fileName === "string" ? meta.fileName : null,
+      });
+    }
+
+    const plan = decideFileAttachments({
+      caseStrength,
+      disputeReason,
+      coverageActive,
+      fatalLossActive,
+      candidates,
+    });
+    resolvedAttachmentPlan = plan.map((entry) => ({
+      evidenceItemId: entry.evidenceItemId,
+      evidenceFieldKey: entry.evidenceFieldKey,
+      resolvedSlot: entry.resolvedSlot,
+      // Native entries get a placeholder so compose sets the *File
+      // shape AND the Native-evidence pointer block emits. Real GID
+      // is substituted by the save job at submit time.
+      fileGid: entry.resolvedSlot.kind === "native" ? PLACEHOLDER_FILE_GID : null,
+      label: candidates.find((c) => c.evidenceItemId === entry.evidenceItemId)?.label ?? null,
+    }));
+  }
+
   // Single source of truth — same builder, same input shape, same field
   // omission rules as `saveToShopifyJob`. See plan v3 §3.A.2 and the
   // byte-equivalence test in `lib/shopify/__tests__/composeShopifyMutationPayload.test.ts`.
@@ -157,6 +234,7 @@ export async function GET(
     },
     manualAttachments,
     pdfAttachment,
+    attachmentPlan: resolvedAttachmentPlan,
   });
 
   // Field-by-field structured view derived from the same payload.

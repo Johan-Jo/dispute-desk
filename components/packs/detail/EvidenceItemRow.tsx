@@ -25,6 +25,7 @@ import type {
   ChecklistItemV2,
   WaiveReason,
 } from "@/lib/types/evidenceItem";
+import { SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR } from "@/lib/uploads/shopifyDisputeEvidenceFileConstraints";
 import styles from "@/app/(embedded)/app/packs/[packId]/pack-detail.module.css";
 
 /** Legacy UI type — kept for backward compat shim in page.tsx. */
@@ -180,7 +181,7 @@ export const EvidenceItemRow = forwardRef<HTMLDivElement, EvidenceItemRowProps>(
                 <DropZone
                   onDrop={handleDrop}
                   allowMultiple={false}
-                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
+                  accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
                   variableHeight
                 >
                   <DropZone.FileUpload actionHint="Drop a file or click to upload" />
@@ -293,7 +294,7 @@ export function IncludedItemRow({
               <DropZone
                 onDrop={handleDrop}
                 allowMultiple={false}
-                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv"
+                accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
                 variableHeight
               >
                 <DropZone.FileUpload actionHint="Drop a file to replace" />

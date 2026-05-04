@@ -79,6 +79,18 @@ export interface WorkspacePack {
       | "PROTECTED"
       | null;
   } | null;
+  /** File evidence layer record. One entry per native attachment that
+   *  was uploaded to Shopify and assigned to a `*File` slot. Empty
+   *  when the file evidence flag is off or no native attachments
+   *  landed. Surfaces in the Evidence tab as a clip-icon badge and
+   *  in Review & Submit as a per-file routing row. */
+  attachmentUploads?: Array<{
+    evidenceItemId: string;
+    evidenceFieldKey: string;
+    targetField: string;
+    fileGid: string;
+    uploadedAt: string;
+  }>;
 }
 
 export interface WorkspaceAttachment {
@@ -137,6 +149,15 @@ export interface WorkspaceData {
   /** The rule decision for this dispute (from the latest rule_applied event). */
   appliedRule: AppliedRule | null;
   caseTypeInfo: CaseTypeInfo;
+  /** File evidence layer status (Phase 7b). Drives the reinstall
+   *  consent banner: when `flagEnabled === true && scopesGranted ===
+   *  false`, the merchant is on a pre-f61176c session and must
+   *  reinstall to grant the new dispute file upload scopes. */
+  fileEvidence?: {
+    flagEnabled: boolean;
+    scopesGranted: boolean;
+    missingScopes: string[];
+  };
 }
 
 export interface EvidenceCategory {

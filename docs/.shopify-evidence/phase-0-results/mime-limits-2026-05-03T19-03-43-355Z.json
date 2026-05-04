@@ -1,0 +1,106 @@
+{
+  "runAt": "2026-05-03T19:03:33.439Z",
+  "shop": "surasvenne.myshopify.com",
+  "dispute": "gid://shopify/ShopifyPaymentsDispute/10519937081",
+  "variants": {
+    "valid-jpeg": {
+      "bytes": 327,
+      "mime": "image/jpeg",
+      "httpStatus": 200,
+      "elapsedMs": 2134,
+      "requestId": "b8c3d567-775b-4251-86fd-aae35da96549-1777835003",
+      "fileId": 8422096953,
+      "body": {
+        "dispute_file_upload": {
+          "id": 8422096953,
+          "shop_id": 78362017849,
+          "file_size": 327,
+          "file_type": "image/jpeg",
+          "original_filename": "probe.jpg",
+          "filename": "a2cddc1d-cb30-4899-af88-d9e07cd713f3.jpg",
+          "created_at": "2026-05-03T15:03:23-04:00",
+          "updated_at": "2026-05-03T15:03:25-04:00",
+          "dispute_evidence_id": 10517905465,
+          "dispute_evidence_type": "uncategorized_file",
+          "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/e226/0783/6201/7849/payments_file_uploads/a2cddc1d-cb30-4899-af88-d9e07cd713f3.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190325Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=8d7fba23cb5107a690ba1af924c865f8b5989c535b80daf59e5991a8351436ca4d96487173772c7bf451faa5280e1207ba60101a5b6dcd73e6a347bc5e2f97b08113f34e7f37d2dd036f90b7e59e3348d492dda98f4fb51abc5c6ef6a63eb5d783ec6ae489e09a7c3d9b6f30fa1ac4cb70a400990db21134fd401648eb07794badf2a032d795068ee73903f2cda7f8897f7e33c2398c12e94ce0bc208dce41030764cce506fe219a3535d6a1d1584f1240430c25c2490036266b9602e868a02a5ea024c3cdcb0d1e1c4ed4504240a41fbe6a2a2c11cee2e082a0f09474bfcafb0c9e5bac087a371284670d67ba95f8b1f4a85b7a6023c52c97dbf6df397b6e7f"
+        }
+      }
+    },
+    "valid-png": {
+      "bytes": 70,
+      "mime": "image/png",
+      "httpStatus": 200,
+      "elapsedMs": 2028,
+      "requestId": "98aba50b-98c2-464e-97df-611e0006d9ae-1777835005",
+      "fileId": 8422129721,
+      "body": {
+        "dispute_file_upload": {
+          "id": 8422129721,
+          "shop_id": 78362017849,
+          "file_size": 70,
+          "file_type": "image/png",
+          "original_filename": "probe.png",
+          "filename": "ad6092a5-6477-456f-9e82-66f11ffc8485.png",
+          "created_at": "2026-05-03T15:03:25-04:00",
+          "updated_at": "2026-05-03T15:03:27-04:00",
+          "dispute_evidence_id": 10517905465,
+          "dispute_evidence_type": "uncategorized_file",
+          "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/860a/0783/6201/7849/payments_file_uploads/ad6092a5-6477-456f-9e82-66f11ffc8485.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190327Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=8878c4df128167a0fd37d0979783496b89d1ac0e06b5a2498a24c0056e168f0fcef96a470e8827ab4364d1e39777f2498b819788e5bfc8eff4b23c662eee3f46679e3bdac96e7cd3df190dec562bd452c88b4d479a0ba912248ca29009b6aac356d1449e1155137fb1c3040ddcf77278ce10d36b77850d8b08224178ef8f511d7cb7230db8a75582c0d81d1f2562ec90a31c72a343e8db7fcfe2bb5720909818bb8105f3ab3f9cd074251474b2928932a10dab4b97485153b16b5904a87a347694cc9c91b3cdb28ec01f8e0d13c93733ec213a08d4b22524bcad02815976fbe93623242d97acd1ff0c1e10be1f7ae1a2f4c8314ae0cc322b7b970f6e62267b17"
+        }
+      }
+    },
+    "valid-pdf-tiny": {
+      "bytes": 559,
+      "mime": "application/pdf",
+      "httpStatus": 200,
+      "elapsedMs": 2306,
+      "requestId": "e7362462-ebd7-413a-b561-a1e6ea43268c-1777835007",
+      "fileId": 8422162489,
+      "body": {
+        "dispute_file_upload": {
+          "id": 8422162489,
+          "shop_id": 78362017849,
+          "file_size": 559,
+          "file_type": "application/pdf",
+          "original_filename": "probe.pdf",
+          "filename": "d4abf7bc-af26-4ec4-9e62-68c4ee7ba195.pdf",
+          "created_at": "2026-05-03T15:03:27-04:00",
+          "updated_at": "2026-05-03T15:03:29-04:00",
+          "dispute_evidence_id": 10517905465,
+          "dispute_evidence_type": "uncategorized_file",
+          "url": "https://shopify-private-shop-assets.storage.googleapis.com/s/files/1/d/b5a5/0783/6201/7849/payments_file_uploads/d4abf7bc-af26-4ec4-9e62-68c4ee7ba195.pdf?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=merchant-assets%40shopify-tiers.iam.gserviceaccount.com%2F20260503%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260503T190329Z&X-Goog-Expires=604800&X-Goog-SignedHeaders=host&X-Goog-Signature=57603598f60f3fa0db51492678e04de02ca45a7492c393860361e92a21dc8c06469154defbc549393e6e8db1605c0f833ba4de61b89d6a687bcc6fe3f48e70fbd5ab3975f3c98110756a2375b8ca2a95869d598c6fa9b6aa1f942739ef45e7a54c53a455644f90760f0c1d6521c0c10a0915bd27578557c873896d85e9813fc7fb8d747c32f9b59656412ddd818aa918619a91a918c17ee3af0936947fd1744690917eb3d24c985482cc704ce85d2d8ef3f986ba7d94ab8e8f27efedbc3c197c2ea78b80e335a4d12518ebf86c90e032de666ee1c7e115e61f68be0bb86f0dc7dac0061b7cac177f274282858dee6e81761d48011a558a527fae805e30968263"
+        }
+      }
+    },
+    "corrupt-pdf": {
+      "bytes": 39,
+      "mime": "application/pdf",
+      "httpStatus": 422,
+      "elapsedMs": 252,
+      "requestId": "27814054-03a4-4917-9075-32ef98074a2b-1777835009",
+      "fileId": null,
+      "body": {
+        "errors": {
+          "dispute_file_upload": [
+            "mimetype must be one of image/jpg, image/jpeg, image/png, application/pdf"
+          ]
+        }
+      }
+    },
+    "oversized-10mb": {
+      "bytes": 10485760,
+      "mime": "image/png",
+      "httpStatus": 422,
+      "elapsedMs": 3182,
+      "requestId": "2eb21d46-46e6-4115-912d-1f574464b638-1777835010",
+      "fileId": null,
+      "body": {
+        "errors": {
+          "dispute_file_upload": [
+            "You can upload up to 4MB and your last file uploaded surpassed this limit. Please upload a file smaller than 3997806 bytes."
+          ]
+        }
+      }
+    }
+  }
+}

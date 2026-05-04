@@ -20,7 +20,12 @@ export type EventType =
   | "evidence_waived"
   | "evidence_unwaived"
   | "submitted_with_warnings"
-  | "order_fetch_failed";
+  | "order_fetch_failed"
+  // Conditional file evidence layer (Phase 3 of
+  // docs/plans/conditional_file_evidence_layer.plan.md). Both events
+  // are emitted from saveToShopifyJob when FILE_EVIDENCE_ATTACHMENTS_ENABLED.
+  | "file_evidence_planned"
+  | "file_evidence_pipeline_failed";
 
 export interface AuditLogInput {
   shopId: string;
