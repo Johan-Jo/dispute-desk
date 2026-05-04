@@ -228,12 +228,64 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     : HERO_LABEL_BY_VARIANT_PRE_SUBMIT[heroVariant];
   const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
 
-  /* ── Timeline ── */
+  /* ── Timeline ──
+   *
+   *  Critical: "Saved to Shopify" is NOT "bank review in progress."
+   *  Shopify holds the evidence until the deadline (then auto-forwards
+   *  to the card network) OR until the merchant clicks Submit in
+   *  Shopify Admin. The window between those two events is the
+   *  merchant's last chance to add evidence — so the timeline must
+   *  surface it as a distinct active step, not collapse straight into
+   *  "bank review".
+   *
+   *  Signals:
+   *    - dispute.submissionState === "saved_to_shopify": we saved.
+   *    - dispute.normalizedStatus === "submitted_to_bank":
+   *        Shopify has forwarded to the card network (their status
+   *        flipped to `under_review`). Bank is now reviewing.
+   *    - dispute.finalOutcome != null: bank decided.
+   */
+  const bankReviewing =
+    dispute.normalizedStatus === "submitted_to_bank" ||
+    dispute.normalizedStatus === "won" ||
+    dispute.normalizedStatus === "lost" ||
+    !!dispute.finalOutcome;
+  const savedAwaitingForward = submitted && !bankReviewing && !dispute.finalOutcome;
+
   type TimelineStep = { state: "done" | "active" | "pending"; title: string; helper: string };
   const timeline: TimelineStep[] = submitted
     ? [
-        { state: "done", title: "Evidence submitted", helper: submittedAt ? `Submitted to Shopify on ${formatDate(submittedAt)}` : "Submitted to Shopify" },
-        { state: dispute.finalOutcome ? "done" : "active", title: "Bank review in progress", helper: "Expected duration: 30–75 days" },
+        {
+          state: "done",
+          title: "Evidence saved to Shopify",
+          helper: submittedAt
+            ? `Saved on ${formatDate(submittedAt)}`
+            : "Saved to Shopify",
+        },
+        savedAwaitingForward
+          ? {
+              state: "active",
+              title: "Shopify auto-submits to your card network",
+              helper: dispute.dueAt
+                ? `Scheduled for ${formatDate(dispute.dueAt)} (the dispute deadline). You can keep adding evidence until then, or click Submit in Shopify Admin to send sooner.`
+                : "Shopify will auto-submit on the dispute deadline. You can keep adding evidence until then.",
+            }
+          : {
+              state: "done",
+              title: "Submitted to your card network",
+              helper: "Shopify has forwarded the evidence — the card network is now reviewing.",
+            },
+        bankReviewing
+          ? {
+              state: dispute.finalOutcome ? "done" : "active",
+              title: "Bank review in progress",
+              helper: "Expected duration: 30–75 days",
+            }
+          : {
+              state: "pending",
+              title: "Bank review",
+              helper: "Begins once Shopify forwards the evidence to your card network.",
+            },
         {
           state: dispute.finalOutcome ? "done" : "pending",
           title: "Outcome notification",
@@ -350,9 +402,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           )}
           {submitted && (
             <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
-              {submittedAt
-                ? `Submitted to Shopify on ${formatDate(submittedAt)} — bank review in progress.`
-                : "Submitted to Shopify — bank review in progress."}
+              {savedAwaitingForward
+                ? submittedAt
+                  ? dispute.dueAt
+                    ? `Saved to Shopify on ${formatDate(submittedAt)}. Shopify will auto-submit to your card network on ${formatDate(dispute.dueAt)} (the deadline) — you can keep adding evidence until then.`
+                    : `Saved to Shopify on ${formatDate(submittedAt)} — awaiting auto-submit to your card network. You can keep adding evidence until the deadline.`
+                  : "Saved to Shopify — awaiting auto-submit to your card network. You can keep adding evidence until the deadline."
+                : dispute.finalOutcome
+                  ? `Outcome reported: ${dispute.finalOutcome}.`
+                  : submittedAt
+                    ? `Submitted to your card network on ${formatDate(submittedAt)} — bank review in progress (typically 30–75 days).`
+                    : "Submitted to your card network — bank review in progress (typically 30–75 days)."}
             </p>
           )}
         </div>
