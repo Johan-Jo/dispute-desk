@@ -605,6 +605,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // with a manual upload that lacks `customerConfirmsOrder`). That gate
   // silently dropped supporting rows that were never in contributions,
   // so the merchant's upload never appeared in Evidence Used in Defense.
+  // Pinned by `tests/unit/evidenceSectionsUsedInDefense.test.ts`.
   for (const item of derived.effectiveChecklist) {
     if (item.status !== "available") continue;
     if (usedInDefense.some((row) => row.field === item.field)) continue;
