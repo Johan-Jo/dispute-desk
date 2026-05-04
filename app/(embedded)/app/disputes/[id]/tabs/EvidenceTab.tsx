@@ -113,10 +113,14 @@ export default function EvidenceTab({ workspace }: Props) {
       {/* §3 — Missing or weak evidence (collapses when empty)
               Inline actions: Upload evidence + Mark as not applicable.
               Both delegate to existing workspace actions; no new
-              backend calls. */}
+              backend calls. `focusField` + `onFocusCleared` drive the
+              yellow-pulse highlight when the merchant arrives via the
+              Overview tab's "Add this evidence" CTA. */}
       <MissingOrWeakSection
         items={sections.missingOrWeak}
         uploadingField={clientState.uploadingField}
+        focusField={clientState.focusField}
+        onFocusCleared={actions.clearFocus}
         onUpload={(field, files) => {
           void actions.uploadEvidence(field, files);
         }}
