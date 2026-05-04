@@ -21,7 +21,6 @@ import type {
   EvidenceSource,
   ItemStrength,
 } from "../useEvidenceSections";
-import { RowStatusChip } from "./RowStatusChip";
 
 function strengthTone(
   strength: ItemStrength,
@@ -49,30 +48,40 @@ const TARGET_FIELD_LABEL: Record<string, string> = {
   uncategorizedFile: "Other evidence",
 };
 
+/**
+ * The right-side "Included as" chip (RowStatusChip — form_field /
+ * rebuttal_text / not_included) was removed in 2026-05-03 because:
+ *   1. Its data source (`data.submissionFields`) is hardcoded to `[]`
+ *      in the workspace API, so every mapped row resolved to
+ *      `not_included` → "Internal only" regardless of reality.
+ *   2. Even with that fixed, the chip duplicated the section header.
+ *      Rows in "Evidence used in defense" are by definition used in
+ *      defense; rows that genuinely don't reach the bank live in §4
+ *      (Internal-only signals).
+ * Native-attachment badge stays — it's information the merchant can
+ * act on (which Shopify file row their upload populated).
+ */
 export function EvidenceRow({ item }: { item: EvidenceRowViewModel }) {
   const t = useTranslations("disputes.evidenceTab.row");
   const tStrength = useTranslations("disputes.itemStrength");
 
   return (
     <BlockStack gap="100">
-      <InlineStack align="space-between" blockAlign="center" gap="200">
-        <InlineStack gap="200" blockAlign="center">
-          <Text as="h4" variant="headingSm">
-            {item.title}
-          </Text>
-          <Badge tone={strengthTone(item.strength)}>
-            {tStrength(item.strength)}
+      <InlineStack gap="200" blockAlign="center">
+        <Text as="h4" variant="headingSm">
+          {item.title}
+        </Text>
+        <Badge tone={strengthTone(item.strength)}>
+          {tStrength(item.strength)}
+        </Badge>
+        {item.nativeAttachment ? (
+          <Badge tone="success">
+            {`📎 Attached to ${
+              TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
+              item.nativeAttachment.targetField
+            }`}
           </Badge>
-          {item.nativeAttachment ? (
-            <Badge tone="success">
-              {`📎 Attached to ${
-                TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
-                item.nativeAttachment.targetField
-              }`}
-            </Badge>
-          ) : null}
-        </InlineStack>
-        <RowStatusChip destination={item.includedAs} />
+        ) : null}
       </InlineStack>
 
       <Text as="p" variant="bodySm" tone="subdued">
