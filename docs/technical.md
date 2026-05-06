@@ -2108,6 +2108,16 @@ Requires `.env.local` with `SUPABASE_URL_POSTGRES` configured.
 5. Forbidden copy grep (reject "submit response" etc. in UI code)
 6. `npm audit --audit-level=critical`
 
+### Release verification
+
+Before any "big update" (changes to auth, Shopify API, evidence
+generation/scoring, submission, billing, DB schema, dashboard metrics, or
+core UI flows) is promoted to production, run the full release verification
+plan: see `docs/RELEASE_TESTING_PLAN.md`. The aggregate command
+`npm run release:verify` chains lint + typecheck + vitest + build. Per-release
+manual checks live as dated files under `docs/release-checklists/`
+(template: `docs/release-checklists/TEMPLATE.md`).
+
 ## Internal Admin Panel
 
 A standalone operator dashboard at `/admin/*`, separate from the merchant-facing app.
