@@ -114,22 +114,13 @@ If Shopify later introduces something like `shopifyPaymentsDisputeCreate` (or a 
 
 ## Webhooks for dispute events
 
-DisputeDesk currently keeps disputes in sync via:
+DisputeDesk keeps disputes in sync via three paths:
 
-1. **Cron** — `GET /api/cron/sync-disputes` runs every 5 minutes and enqueues a `sync_disputes` job per installed shop.
-2. **Manual sync** — "Sync Now" on the Disputes page triggers a sync for the current shop.
+1. **`disputes/create` + `disputes/update` webhooks** — registered per-shop by `lib/shopify/registerDisputeWebhooks.ts` (called on OAuth completion and re-registered on `shop/update`). Handlers at `app/api/webhooks/disputes-create/route.ts` and `app/api/webhooks/disputes-update/route.ts` delegate to the shared `lib/webhooks/handleDisputeWebhook.ts` which verifies HMAC, resolves the shop, and enqueues a `sync_disputes` job (idempotent — skipped when one is already in flight). 9 unit tests in `lib/webhooks/__tests__/handleDisputeWebhook.test.ts`.
+2. **Cron** — `GET /api/cron/sync-disputes` runs every 5 minutes and enqueues a `sync_disputes` job per installed shop. Backstop in case a webhook is missed.
+3. **Manual sync** — "Sync Now" on the Disputes page triggers a sync for the current shop.
 
-There is **no dispute webhook handler yet**. The app has a TODO in `app/api/webhooks/shop-update/route.ts` to register `disputes/create` or `disputes/update` when available for the pinned API version. The help copy mentions "webhooks when disputes are created or updated" but the backend does not yet subscribe to or handle those events.
-
-**If you add dispute webhooks:**
-
-- **Register** the webhook topic(s) with Shopify (e.g. `disputes/create`, `disputes/update`) via the [WebhookSubscription](https://shopify.dev/docs/api/admin-graphql/latest/mutations/webhooksubscriptioncreate) GraphQL API (or Partner Dashboard). Registration typically needs to happen after install or on shop/update so each store gets the subscription.
-- **Create a handler** — e.g. `POST /api/webhooks/disputes-create` (and optionally `disputes-update`) that:
-  1. Verifies the request with `verifyShopifyWebhook(rawBody, x-shopify-hmac-sha256)` (reuse `lib/webhooks/verify.ts`).
-  2. Parses the payload for shop domain and dispute id (or admin_graphql_api_id).
-  3. Enqueues a `sync_disputes` job for that shop (or runs a single-dispute fetch and upsert) so the new/updated dispute is reflected without waiting for the next cron run.
-
-That gives real-time dispute ingestion when Shopify sends the webhook, and fits the existing sync pipeline (same `syncDisputes` logic, just triggered by webhook instead of only cron/manual).
+All three converge on the same `syncDisputes` job handler — webhooks just give us real-time ingestion without waiting for the cron tick.
 
 ---
 
