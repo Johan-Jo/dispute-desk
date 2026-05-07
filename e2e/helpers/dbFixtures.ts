@@ -1,14 +1,14 @@
 /**
- * Direct-Postgres seed/cleanup helpers for E2E specs that need real
- * database state (e.g. an `evidence_packs` row at status="ready" so
+ * Test fixture helpers for E2E specs that need real database state
+ * (e.g. an `evidence_packs` row at status="ready" so
  * POST /api/packs/:id/save-to-shopify can return 202).
  *
- * Why pg + service-role write rather than the Supabase JS client:
- *   - The Supabase JS client requires a session token (anon or service
- *     role). Direct pg uses the postgres URL with embedded credentials,
- *     which is the same pattern `scripts/smoke-test.mjs` uses.
- *   - Specs run their inserts in their own connection, so the API
- *     route's separate connection can read the committed rows.
+ * Uses the Supabase JS client with the service role key — same write
+ * access as a direct Postgres connection, but routes through the REST
+ * API. This avoids needing `SUPABASE_URL_POSTGRES` (the database
+ * password is non-trivial to obtain on Supabase IPv6-only direct
+ * connections; the service role JWT is already in `.env.local` for
+ * production code paths).
  *
  * Cleanup contract:
  *   - Every helper returns an `ids` object plus a `cleanup()` function.
@@ -19,51 +19,29 @@
  *     database until manually purged. Use only against a non-prod DB.
  */
 
-import pg from "pg";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 
-const { Client } = pg;
-
-interface PgConn {
-  client: pg.Client;
-  end(): Promise<void>;
+export interface SbConn {
+  client: SupabaseClient;
 }
 
-/** Open a pg connection from `SUPABASE_URL_POSTGRES`. Throws when the
- *  env var is unset — the caller (test.skip) should guard against this. */
-export async function openPg(): Promise<PgConn> {
-  const url = process.env.SUPABASE_URL_POSTGRES;
-  if (!url) {
+/** Open a Supabase REST client with service-role credentials.
+ *  Throws when env vars are unset — the caller (test.skip) should
+ *  guard against this. */
+export function openSb(): SbConn {
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
     throw new Error(
-      "SUPABASE_URL_POSTGRES is not set; this spec requires direct " +
-        "Postgres access for seeding/cleanup. Set it in .env.local " +
-        "and re-run.",
+      "SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY " +
+        "must be set in .env.local for seeded fixtures.",
     );
   }
-  const match = url.match(
-    /postgresql:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)/,
-  );
-  if (!match) {
-    throw new Error(
-      "SUPABASE_URL_POSTGRES has unexpected shape; expected " +
-        "postgresql://USER:PASS@HOST:PORT/DB",
-    );
-  }
-  const client = new Client({
-    host: match[3],
-    port: parseInt(match[4], 10),
-    database: match[5],
-    user: match[1],
-    password: match[2],
-    ssl: { rejectUnauthorized: false },
+  const client = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
-  await client.connect();
-  return {
-    client,
-    async end() {
-      await client.end();
-    },
-  };
+  return { client };
 }
 
 export interface SeededPackIds {
@@ -84,62 +62,73 @@ export interface SeededPackIds {
  * cleaned up won't error.
  */
 export async function seedReadyPackForUser(
-  conn: PgConn,
+  conn: SbConn,
   userEmail: string,
 ): Promise<{ ids: SeededPackIds; cleanup: () => Promise<void> }> {
   const { client } = conn;
 
-  // Resolve the test user's shop via portal_user_shops. Skip if the
-  // user has no connected shop — matches the same precondition that
-  // the existing portal-sections.spec.ts assumes.
-  const shopRes = await client.query(
-    `SELECT s.id AS shop_id
-       FROM auth.users u
-       JOIN public.portal_user_shops pus ON pus.user_id = u.id
-       JOIN public.shops s ON s.id = pus.shop_id
-      WHERE u.email = $1
-      ORDER BY pus.created_at ASC
-      LIMIT 1`,
-    [userEmail],
-  );
-  if (shopRes.rowCount === 0) {
+  // Resolve the test user via auth admin API, then look up their
+  // first connected shop via portal_user_shops.
+  const { data: usersList, error: usersErr } = await client.auth.admin.listUsers({
+    perPage: 200,
+  });
+  if (usersErr) throw new Error(`auth.admin.listUsers failed: ${usersErr.message}`);
+  const user = usersList.users.find((u) => u.email === userEmail);
+  if (!user) {
+    throw new Error(`No Supabase Auth user with email "${userEmail}".`);
+  }
+
+  const { data: linkRows, error: linkErr } = await client
+    .from("portal_user_shops")
+    .select("shop_id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (linkErr) throw new Error(`portal_user_shops lookup failed: ${linkErr.message}`);
+  const shopId = linkRows?.[0]?.shop_id as string | undefined;
+  if (!shopId) {
     throw new Error(
       `No connected shop found for ${userEmail}. ` +
         "Connect the test user to at least one shop (portal_user_shops) before running seeded specs.",
     );
   }
-  const shopId = shopRes.rows[0].shop_id as string;
 
   const disputeId = randomUUID();
   const packId = randomUUID();
 
-  await client.query(
-    `INSERT INTO public.disputes
-       (id, shop_id, dispute_gid, dispute_evidence_gid, reason, status, currency_code, amount, created_at)
-     VALUES
-       ($1, $2, $3, $4, 'FRAUDULENT', 'NEEDS_RESPONSE', 'USD', 100, now())`,
-    [
-      disputeId,
-      shopId,
-      `gid://shopify/ShopifyPaymentsDispute/test-${disputeId}`,
-      `gid://shopify/DisputeEvidence/test-${disputeId}`,
-    ],
-  );
+  const { error: dErr } = await client.from("disputes").insert({
+    id: disputeId,
+    shop_id: shopId,
+    dispute_gid: `gid://shopify/ShopifyPaymentsDispute/test-${disputeId}`,
+    dispute_evidence_gid: `gid://shopify/DisputeEvidence/test-${disputeId}`,
+    reason: "FRAUDULENT",
+    status: "NEEDS_RESPONSE",
+    currency_code: "USD",
+    amount: 100,
+  });
+  if (dErr) throw new Error(`disputes insert failed: ${dErr.message}`);
 
-  await client.query(
-    `INSERT INTO public.evidence_packs
-       (id, shop_id, dispute_id, status, completeness_score, submission_readiness, pack_json, created_at, updated_at)
-     VALUES
-       ($1, $2, $3, 'ready', 92, 'ready', '{"sections": []}'::jsonb, now(), now())`,
-    [packId, shopId, disputeId],
-  );
+  const { error: pErr } = await client.from("evidence_packs").insert({
+    id: packId,
+    shop_id: shopId,
+    dispute_id: disputeId,
+    status: "ready",
+    completeness_score: 92,
+    submission_readiness: "ready",
+    pack_json: { sections: [] },
+  });
+  if (pErr) {
+    // Roll back the dispute insert so we don't leave an orphan.
+    await client.from("disputes").delete().eq("id", disputeId);
+    throw new Error(`evidence_packs insert failed: ${pErr.message}`);
+  }
 
   const cleanup = async () => {
     // Order matters — jobs reference pack IDs via entity_id; disputes
     // hold the pack's foreign key. Delete in reverse dependency order.
-    await client.query(`DELETE FROM public.jobs WHERE entity_id = $1`, [packId]);
-    await client.query(`DELETE FROM public.evidence_packs WHERE id = $1`, [packId]);
-    await client.query(`DELETE FROM public.disputes WHERE id = $1`, [disputeId]);
+    await client.from("jobs").delete().eq("entity_id", packId);
+    await client.from("evidence_packs").delete().eq("id", packId);
+    await client.from("disputes").delete().eq("id", disputeId);
   };
 
   return {
@@ -151,26 +140,30 @@ export async function seedReadyPackForUser(
 /** Read the current row for a seeded pack — used by specs to verify
  *  side effects (e.g. status flipped to "saving"). */
 export async function readPackStatus(
-  conn: PgConn,
+  conn: SbConn,
   packId: string,
 ): Promise<string | null> {
-  const res = await conn.client.query(
-    `SELECT status FROM public.evidence_packs WHERE id = $1`,
-    [packId],
-  );
-  return res.rowCount === 0 ? null : (res.rows[0].status as string);
+  const { data, error } = await conn.client
+    .from("evidence_packs")
+    .select("status")
+    .eq("id", packId)
+    .maybeSingle();
+  if (error) throw new Error(`readPackStatus failed: ${error.message}`);
+  return (data?.status as string | undefined) ?? null;
 }
 
 /** Count jobs for a seeded pack — used by specs to verify the
  *  save-to-shopify enqueue actually wrote a row. */
 export async function countJobsForPack(
-  conn: PgConn,
+  conn: SbConn,
   packId: string,
   jobType: string,
 ): Promise<number> {
-  const res = await conn.client.query(
-    `SELECT count(*)::int AS n FROM public.jobs WHERE entity_id = $1 AND job_type = $2`,
-    [packId, jobType],
-  );
-  return res.rows[0].n as number;
+  const { count, error } = await conn.client
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("entity_id", packId)
+    .eq("job_type", jobType);
+  if (error) throw new Error(`countJobsForPack failed: ${error.message}`);
+  return count ?? 0;
 }

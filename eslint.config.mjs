@@ -21,6 +21,9 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      // Playwright's webServer (next dev -p 3099) builds into .next-e2e
+      // when NEXT_E2E_BUILD=1 — same shape as .next, same lint exclusion.
+      ".next-e2e/**",
       "node_modules/**",
       "out/**",
       "dist/**",

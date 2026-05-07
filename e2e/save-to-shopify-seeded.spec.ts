@@ -10,60 +10,92 @@
  *
  * Requirements:
  *   - E2E_TEST_EMAIL + E2E_TEST_PASSWORD (Supabase Auth credentials)
- *   - SUPABASE_URL_POSTGRES (direct Postgres access for seed/cleanup)
+ *   - SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (already in .env.local
+ *     for production code paths — used here for seed/cleanup via the
+ *     Supabase REST API)
  *   - The test user must have at least one connected shop (portal_user_shops)
  *
- * The spec skips when any of the above are unset — runs in CI/staging
- * where the env is configured, no-ops elsewhere.
+ * The spec skips when E2E credentials are unset — no-ops in environments
+ * without portal auth configured.
  *
- * Cleanup happens in afterEach unconditionally so a crashed test does
- * NOT leave orphan rows in the test database. The pg connection is
- * also closed in afterEach.
+ * Cleanup happens unconditionally in `finally` so a crashed test does
+ * NOT leave orphan rows in the test database.
  */
 
 import { test, expect, type Page } from "@playwright/test";
 import {
-  openPg,
+  openSb,
   seedReadyPackForUser,
   readPackStatus,
   countJobsForPack,
 } from "./helpers/dbFixtures";
 
+// Single test combines seed (Supabase REST) + sign-in (Playwright form)
+// + POST + cleanup. Each phase has its own timeout, so the per-test
+// budget needs headroom for the sum. Matches portal-sections.spec.ts.
+test.setTimeout(60_000);
+
 const E2E_EMAIL = process.env.E2E_TEST_EMAIL;
 const E2E_PASSWORD = process.env.E2E_TEST_PASSWORD;
-const PG_URL = process.env.SUPABASE_URL_POSTGRES;
+const SB_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 async function portalSignIn(page: Page): Promise<void> {
   await page.goto("/auth/sign-in", {
-    waitUntil: "domcontentloaded",
+    // networkidle (not just domcontentloaded) ensures React has
+    // hydrated. Without it, fill() can race the controlled-input
+    // setState call and the value silently doesn't stick.
+    waitUntil: "networkidle",
     timeout: 30_000,
   });
 
   const emailInput = page.locator('input[type="email"]');
   await expect(emailInput).toBeVisible({ timeout: 10_000 });
+  await emailInput.click();
   await emailInput.fill(E2E_EMAIL!);
+  // Verify the value actually landed — surfaces hydration races early.
+  await expect(emailInput).toHaveValue(E2E_EMAIL!, { timeout: 5_000 });
 
   const passwordInput = page.locator('input[type="password"]');
   await expect(passwordInput).toBeVisible({ timeout: 5_000 });
+  await passwordInput.click();
   await passwordInput.fill(E2E_PASSWORD!);
+  await expect(passwordInput).toHaveValue(E2E_PASSWORD!, { timeout: 5_000 });
 
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/portal\//, { timeout: 25_000 });
+
+  // Race the navigation against the sign-in-error testid so a bad
+  // credential surfaces as a useful message instead of a generic timeout.
+  const result = await Promise.race([
+    page.waitForURL(/\/portal\//, { timeout: 25_000 }).then(() => "portal" as const),
+    page
+      .getByTestId("sign-in-error")
+      .waitFor({ state: "visible", timeout: 25_000 })
+      .then(() => "error" as const),
+  ]).catch(() => null);
+
+  if (result === "error") {
+    const msg = await page.getByTestId("sign-in-error").first().textContent();
+    throw new Error(`Sign-in failed: "${msg?.trim() ?? "unknown"}"`);
+  }
+  if (result !== "portal") {
+    throw new Error("Sign-in did not redirect to portal and no error appeared");
+  }
 }
 
 test.describe("POST /api/packs/:packId/save-to-shopify — seeded happy path", () => {
   test.beforeEach(async () => {
     test.skip(
-      !E2E_EMAIL || !E2E_PASSWORD || !PG_URL,
+      !E2E_EMAIL || !E2E_PASSWORD || !SB_URL || !SB_KEY,
       "Seeded happy path requires E2E_TEST_EMAIL, E2E_TEST_PASSWORD, " +
-        "and SUPABASE_URL_POSTGRES in .env.local",
+        "SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY in .env.local",
     );
   });
 
   test("returns 202, enqueues a save_to_shopify job, and flips the pack to 'saving'", async ({
     page,
   }) => {
-    const conn = await openPg();
+    const conn = openSb();
     const seeded = await seedReadyPackForUser(conn, E2E_EMAIL!);
 
     try {
@@ -100,7 +132,6 @@ test.describe("POST /api/packs/:packId/save-to-shopify — seeded happy path", (
       expect(await readPackStatus(conn, seeded.ids.packId)).toBe("saving");
     } finally {
       await seeded.cleanup();
-      await conn.end();
     }
   });
 });

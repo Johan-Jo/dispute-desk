@@ -42,17 +42,24 @@ const E2E_PASSWORD = process.env.E2E_TEST_PASSWORD;
  */
 async function portalSignIn(page: Page): Promise<void> {
   await page.goto("/auth/sign-in", {
-    waitUntil: "domcontentloaded",
+    // networkidle (not just domcontentloaded) ensures React has
+    // hydrated. Without it, fill() can race the controlled-input
+    // setState call and the value silently doesn't stick.
+    waitUntil: "networkidle",
     timeout: 30_000,
   });
 
   const emailInput = page.locator('input[type="email"]');
   await expect(emailInput).toBeVisible({ timeout: 10_000 });
+  await emailInput.click();
   await emailInput.fill(E2E_EMAIL!);
+  await expect(emailInput).toHaveValue(E2E_EMAIL!, { timeout: 5_000 });
 
   const passwordInput = page.locator('input[type="password"]');
   await expect(passwordInput).toBeVisible({ timeout: 5_000 });
+  await passwordInput.click();
   await passwordInput.fill(E2E_PASSWORD!);
+  await expect(passwordInput).toHaveValue(E2E_PASSWORD!, { timeout: 5_000 });
 
   await page.getByRole("button", { name: "Sign in" }).click();
 
