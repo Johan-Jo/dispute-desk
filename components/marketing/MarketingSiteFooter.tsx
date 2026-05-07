@@ -18,6 +18,13 @@ function pathHref(base: string, path: string) {
   return base ? `${base}${p}` : p;
 }
 
+/** Legal/support pages live at the marketing root (no locale prefix) —
+ *  they are English-only authoritative documents per the privacy
+ *  policy's translation note. Always link without `base`. */
+function legalHref(path: string) {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
 /** Shared marketing footer (home, Resources hub, etc.) — matches Figma Make landing. */
 export function MarketingSiteFooter({ base = "" }: Props) {
   const t = useTranslations("marketing");
@@ -74,13 +81,28 @@ export function MarketingSiteFooter({ base = "" }: Props) {
             <h3 className="font-semibold mb-4">{t("footer.legal")}</h3>
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
-                <a href={pathHref(base, "/terms")} className="hover:text-white transition-colors">
+                <a href={legalHref("/privacy")} className="hover:text-white transition-colors">
+                  {t("footer.privacy")}
+                </a>
+              </li>
+              <li>
+                <a href={legalHref("/terms")} className="hover:text-white transition-colors">
                   {t("footer.terms")}
                 </a>
               </li>
               <li>
-                <a href={pathHref(base, "/privacy")} className="hover:text-white transition-colors">
-                  {t("footer.privacy")}
+                <a href={legalHref("/security")} className="hover:text-white transition-colors">
+                  {t("footer.security")}
+                </a>
+              </li>
+              <li>
+                <a href={legalHref("/data-retention")} className="hover:text-white transition-colors">
+                  {t("footer.dataRetention")}
+                </a>
+              </li>
+              <li>
+                <a href={legalHref("/support")} className="hover:text-white transition-colors">
+                  {t("footer.support")}
                 </a>
               </li>
             </ul>

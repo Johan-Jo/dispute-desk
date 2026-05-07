@@ -2146,7 +2146,10 @@
       "legal": "Juridiskt",
       "terms": "Användarvillkor",
       "privacy": "Integritetspolicy",
-      "copyright": "© 2026 DisputeDesk. Ej ansluten till Shopify Inc."
+      "copyright": "© 2026 DisputeDesk. Ej ansluten till Shopify Inc.",
+      "security": "Säkerhet",
+      "support": "Support",
+      "dataRetention": "Datalagring"
     },
     "roi": {
       "title": "ROI-översikt",

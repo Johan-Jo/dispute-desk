@@ -2076,7 +2076,10 @@
       "legal": "Legal",
       "terms": "Términos de servicio",
       "privacy": "Política de privacidad",
-      "copyright": "© 2026 DisputeDesk. No afiliado a Shopify Inc."
+      "copyright": "© 2026 DisputeDesk. No afiliado a Shopify Inc.",
+      "security": "Seguridad",
+      "support": "Soporte",
+      "dataRetention": "Retención de datos"
     },
     "roi": {
       "title": "Resumen de ROI",
