@@ -39,8 +39,8 @@ that must pass before any "big update" lands on `master`.
 | E2E | `e2e/*.spec.ts` | `npm run test:e2e` (Playwright on port 3099) | 3 specs: portal sign-in + sections, portal setup checklist, admin Resources Hub |
 | Smoke (DB pipeline) | `scripts/smoke-test.mjs` | `node scripts/smoke-test.mjs` | Seeds a dispute, runs pipeline, asserts state via `pg` |
 | Smoke (Resources Hub) | `scripts/smoke-resources-hub.mjs` | `npm run smoke:resources-hub` | Hub publish + retrieval |
-| Golden fixtures | `tests/golden/` | `npm run test:golden` | Locks engine outputs (coverage, fatal-loss, case strength, Shopify field mapping) for 5 canonical dispute scenarios. Pure-function — no I/O. Also runs as part of `npm test`. |
-| Visual regression | `e2e/visual/` | `npm run test:visual` | Two baselines: `/auth/sign-in` (static, no auth) and `/portal/dashboard` (signed-in, dynamic data masked). See `e2e/visual/README.md` for scope and how to add more. |
+| Golden fixtures | `tests/golden/` | `npm run test:golden` | Locks engine outputs (coverage, fatal-loss, case strength, Shopify field mapping) for 8 canonical dispute scenarios spanning every reason family (FRAUDULENT, PRODUCT_NOT_RECEIVED, DUPLICATE, PRODUCT_UNACCEPTABLE, SUBSCRIPTION_CANCELED). Pure-function — no I/O. Also runs as part of `npm test`. |
+| Visual regression | `e2e/visual/` | `npm run test:visual` | Five baselines: `/auth/sign-in` (desktop), `/auth/sign-in` at 393/375/320 px (mobile), `/portal/dashboard` (signed-in, dynamic data masked). See `e2e/visual/README.md` for scope and how to add more. |
 | Build | repo-wide | `npm run build` | Next.js production build |
 | Security audit | repo-wide | `npm audit --audit-level=critical` | Critical CVEs only |
 | Forbidden-copy guards | source + translations | CI grep steps | "submit response" copy, canonical category writes outside registry, vague summary copy, deprecated relevance pills |

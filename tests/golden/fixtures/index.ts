@@ -35,6 +35,9 @@ import { fixture as digitalGoodsAccess } from "./digital-goods-access";
 import { fixture as missingEvidence } from "./missing-evidence";
 import { fixture as refundBeforeChargeback } from "./refund-before-chargeback";
 import { fixture as suspiciousRiskyOrder } from "./suspicious-risky-order";
+import { fixture as duplicateCharge } from "./duplicate-charge";
+import { fixture as productUnacceptable } from "./product-unacceptable";
+import { fixture as subscriptionCanceled } from "./subscription-canceled";
 
 export const GOLDEN_FIXTURES: GoldenFixture[] = [
   strongDeliveredFraud,
@@ -42,4 +45,7 @@ export const GOLDEN_FIXTURES: GoldenFixture[] = [
   missingEvidence,
   refundBeforeChargeback,
   suspiciousRiskyOrder,
+  duplicateCharge,
+  productUnacceptable,
+  subscriptionCanceled,
 ];

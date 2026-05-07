@@ -26,6 +26,9 @@ import { expected as digitalGoodsAccessExpected } from "./expected/digital-goods
 import { expected as missingEvidenceExpected } from "./expected/missing-evidence.expected";
 import { expected as refundBeforeChargebackExpected } from "./expected/refund-before-chargeback.expected";
 import { expected as suspiciousRiskyOrderExpected } from "./expected/suspicious-risky-order.expected";
+import { expected as duplicateChargeExpected } from "./expected/duplicate-charge.expected";
+import { expected as productUnacceptableExpected } from "./expected/product-unacceptable.expected";
+import { expected as subscriptionCanceledExpected } from "./expected/subscription-canceled.expected";
 
 /* ── Public expected shape ── */
 
@@ -55,6 +58,9 @@ const EXPECTED: Record<string, GoldenExpected> = {
   "missing-evidence": missingEvidenceExpected,
   "refund-before-chargeback": refundBeforeChargebackExpected,
   "suspicious-risky-order": suspiciousRiskyOrderExpected,
+  "duplicate-charge": duplicateChargeExpected,
+  "product-unacceptable": productUnacceptableExpected,
+  "subscription-canceled": subscriptionCanceledExpected,
 };
 
 function runFixture(fixture: GoldenFixture): GoldenExpected {
