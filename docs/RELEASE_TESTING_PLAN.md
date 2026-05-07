@@ -340,19 +340,18 @@ merchant only finds out after the bank decision. Coverage today:
   (FRAUDULENT, PRODUCT_NOT_RECEIVED, PRODUCT_UNACCEPTABLE, DUPLICATE)
 - ❌ End-to-end: no Playwright spec exercises the merchant clicking
   "Save to Shopify" against a stubbed Shopify endpoint
-- ❌ Read-back verification in CI: `verifyEvidenceReadback.ts` exists but
-  isn't exercised by an integration test on the Save route
+- ✅ Read-back verification orchestration:
+  `lib/shopify/__tests__/verifyEvidenceReadback.test.ts` — 11 tests
+  covering happy path, empty/whitespace text classification, write-only
+  routing, file-field GID equality (match + mismatch + omitted
+  inputValues back-compat), and defensive paths for malformed Shopify
+  responses
 
 **Remaining priorities (separate PRs):**
 
-1. **Read-back verification integration test** — exercise
-   `verifyEvidenceReadback.ts` against a stubbed Shopify response so a
-   regression in the diff logic surfaces in CI rather than as an
-   "unverified" status in production.
-2. **`e2e/save-to-shopify.spec.ts`** — for the embedded app, this needs
-   a test-mode Shopify session bridge first (out of scope for this PR).
-   Until that's available, the staging walk-through (§9b step 6) is the
-   only end-to-end check.
+1. **`e2e/save-to-shopify.spec.ts`** — for the embedded app, this needs
+   a test-mode Shopify session bridge first. Until that's available,
+   the staging walk-through (§9b step 6) is the only end-to-end check.
 
 This priority is duplicated in the per-release checklist's risk table so
 it stays visible until automated.
