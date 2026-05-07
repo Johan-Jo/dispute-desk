@@ -346,12 +346,24 @@ merchant only finds out after the bank decision. Coverage today:
   routing, file-field GID equality (match + mismatch + omitted
   inputValues back-compat), and defensive paths for malformed Shopify
   responses
+- ✅ Route-level Playwright spec via portal auth:
+  `e2e/save-to-shopify.spec.ts` — 2 tests (404 for unknown pack via
+  authenticated portal session, 401 SESSION_REQUIRED without auth).
+  Catches middleware portal-fallback regressions and route-registration
+  drift. Run via `npm run test:e2e` against staging or a local
+  Playwright-managed dev server.
 
 **Remaining priorities (separate PRs):**
 
-1. **`e2e/save-to-shopify.spec.ts`** — for the embedded app, this needs
-   a test-mode Shopify session bridge first. Until that's available,
-   the staging walk-through (§9b step 6) is the only end-to-end check.
+1. **Seeded happy-path E2E** — sign in, seed an `evidence_packs` row
+   with `status="ready"`, POST to the route, assert 202 + `jobs.insert`
+   + pack flip to `"saving"`, then clean up. Requires
+   `SUPABASE_URL_POSTGRES` and a transactional seed/cleanup helper.
+2. **Full embedded click-the-button E2E** — `/app/disputes/[id]` →
+   "Save to Shopify" inside Shopify Admin. Blocked on a Shopify
+   test-mode session bridge (~325 LOC across HIGH-risk auth files +
+   security review). Defer until the staging walk-through (§9b step 6)
+   stops being sufficient.
 
 This priority is duplicated in the per-release checklist's risk table so
 it stays visible until automated.
