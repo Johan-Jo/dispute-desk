@@ -108,3 +108,87 @@ jobs:
             exit 1
           fi
           echo "Dispute detail uses the canonical registry"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # E2E job — runs only on push to master + manual dispatch.
+  #
+  # Deliberately NOT triggered on PRs: every PR run would write rows to
+  # the real Supabase project (auth sign-in, dispute/pack seed) and add
+  # concurrent-write pressure that masks real product issues. Running
+  # post-merge on master gives us a sanity signal without the spam.
+  #
+  # Required GitHub Actions secrets (Settings → Secrets and variables → Actions):
+  #   - E2E_TEST_EMAIL              merchant test user email
+  #   - E2E_TEST_PASSWORD           merchant test user password
+  #   - NEXT_PUBLIC_SUPABASE_URL    same as your .env.local
+  #   - NEXT_PUBLIC_SUPABASE_ANON_KEY  same as your .env.local
+  #   - SUPABASE_URL                same as your .env.local
+  #   - SUPABASE_SERVICE_ROLE_KEY   same as your .env.local
+  # The test user must already exist in Supabase Auth and have at least
+  # one row in `portal_user_shops` linking them to a real shops.id.
+  #
+  # Specs included:
+  #   - e2e/save-to-shopify.spec.ts          (route gates: 401 + 404)
+  #   - e2e/save-to-shopify-seeded.spec.ts   (seeded happy path: 202 + jobs row + status flip)
+  # The other e2e specs (portal-sections, portal-setup-checklist,
+  # admin-resources-hub) can be added to `npm run test:e2e -- ...` when
+  # we want them in CI; keeping the lane narrow until we trust this one.
+  # ─────────────────────────────────────────────────────────────────────
+  e2e:
+    needs: check
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Soft gate: if secrets aren't set yet (e.g. first run after merging
+      # this workflow before the maintainer adds them in repo settings),
+      # skip cleanly with a useful message rather than failing the run on
+      # blank-credential sign-in. Once secrets are configured, every
+      # subsequent run executes the suite.
+      - name: Check E2E secrets are configured
+        id: gate
+        run: |
+          if [ -z "${{ secrets.E2E_TEST_EMAIL }}" ] || \
+             [ -z "${{ secrets.E2E_TEST_PASSWORD }}" ] || \
+             [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" ] || \
+             [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::warning::E2E secrets not configured. Add E2E_TEST_EMAIL, E2E_TEST_PASSWORD, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY at Settings → Secrets and variables → Actions to enable the e2e suite."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Playwright browsers
+        if: steps.gate.outputs.skip != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run save-to-shopify e2e specs
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          CI: "true"
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx playwright test e2e/save-to-shopify.spec.ts e2e/save-to-shopify-seeded.spec.ts --reporter=list
+
+      - name: Upload Playwright report on failure
+        if: failure() && steps.gate.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

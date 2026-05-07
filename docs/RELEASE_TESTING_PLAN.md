@@ -45,10 +45,12 @@ that must pass before any "big update" lands on `master`.
 | Security audit | repo-wide | `npm audit --audit-level=critical` | Critical CVEs only |
 | Forbidden-copy guards | source + translations | CI grep steps | "submit response" copy, canonical category writes outside registry, vague summary copy, deprecated relevance pills |
 
-**CI today (`.github/workflows/ci.yml`)** runs all of: typecheck, lint, vitest,
-audit, 4 grep guards. It does **not** run E2E, the DB smoke, or the build. Build
-is run locally per CLAUDE.md. E2E requires `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`
-in `.env.local` and a connected shop.
+**CI today (`.github/workflows/ci.yml`)**:
+- `check` job runs on every push + PR: typecheck, lint, vitest, audit, 4 grep guards.
+- `e2e` job runs only on push to `master` + manual `workflow_dispatch` (NOT on PRs — avoids every PR writing to the real Supabase project): runs `e2e/save-to-shopify.spec.ts` + `e2e/save-to-shopify-seeded.spec.ts` against staging Supabase. Soft-gated on the presence of the required secrets, so the first run after merging without secrets configured emits a warning and skips cleanly. Build is run locally per CLAUDE.md.
+
+**Required GitHub Actions secrets** for the `e2e` job (Settings → Secrets and variables → Actions):
+`E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Test user must exist in Supabase Auth and have at least one `portal_user_shops` row.
 
 **Folder reality vs. proposed structure:**
 
