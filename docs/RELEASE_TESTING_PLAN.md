@@ -103,7 +103,7 @@ step for any gap row.
 | 8 | File upload permissions/flow | `tests/api/files/samples.test.ts`, `tests/api/files/samplesDelete.test.ts` | **Manual:** upload a real PDF + image in staging, confirm it lands in the private bucket and shows in the pack |
 | 9 | Review/submit flow | `tests/api/packs/failedPackGuards.test.ts` (404/409), `tests/api/packs/saveToShopifyRoute.test.ts` (422 gates + 202 happy path + audit + jobs.insert + status flip), `lib/jobs/handlers/__tests__/saveToShopify.snapshot.test.ts` (per-family payload composition) | **Manual:** end-to-end on a staging dispute — Overview → Evidence → Review & Submit → Save to Shopify; confirm `packs.status` transitions and audit row written. The browser-driven E2E is still missing (see §12). |
 | 10 | Dashboard metrics | (no dedicated test) | **Manual:** open `/app` overview after seeding disputes, confirm KPI cards (open / under review / saved) match `disputes` rows |
-| 11 | Billing / plan restrictions | (no dedicated test) | **Manual:** with a free-plan shop, attempt a paid action (e.g. exceed pack quota); confirm `lib/billing/checkQuota.ts` blocks and surfaces the correct CTA |
+| 11 | Billing / plan restrictions | `tests/unit/billing.test.ts` (26 tests: plans + top-ups + checkFeatureAccess + checkPackQuota + consumePack idempotency + PackLimitReachedError + getBalance + grantCredits) | **Manual:** with a free-plan shop, attempt a paid action (e.g. exceed pack quota); confirm `lib/billing/checkQuota.ts` blocks and surfaces the correct CTA |
 | 12 | Resources Hub (locale parity) | `npm run audit:hub-locales:fail`, `npm run smoke:resources-hub` | Run both before any hub-content-bearing release |
 | 13 | DB migrations | n/a | Per CLAUDE.md non-negotiable: agent runs `npm run db:migrate` in same session as the migration file. Verify on staging before prod |
 
@@ -359,14 +359,17 @@ merchant only finds out after the bank decision. Coverage today:
   Catches middleware portal-fallback regressions and route-registration
   drift. Run via `npm run test:e2e` against staging or a local
   Playwright-managed dev server.
+- ✅ Seeded happy-path Playwright spec:
+  `e2e/save-to-shopify-seeded.spec.ts` + `e2e/helpers/dbFixtures.ts` —
+  signs in, seeds a fresh `evidence_packs` row at `status="ready"`,
+  POSTs to the route, asserts 202 + jobs row + pack flipped to `"saving"`,
+  then cleans up via direct pg DELETE-by-id. Requires
+  `SUPABASE_URL_POSTGRES` + `E2E_TEST_EMAIL`/`E2E_TEST_PASSWORD`; skips
+  cleanly when any are missing.
 
-**Remaining priorities (separate PRs):**
+**Remaining priority (separate PR):**
 
-1. **Seeded happy-path E2E** — sign in, seed an `evidence_packs` row
-   with `status="ready"`, POST to the route, assert 202 + `jobs.insert`
-   + pack flip to `"saving"`, then clean up. Requires
-   `SUPABASE_URL_POSTGRES` and a transactional seed/cleanup helper.
-2. **Full embedded click-the-button E2E** — `/app/disputes/[id]` →
+1. **Full embedded click-the-button E2E** — `/app/disputes/[id]` →
    "Save to Shopify" inside Shopify Admin. Blocked on a Shopify
    test-mode session bridge (~325 LOC across HIGH-risk auth files +
    security review). Defer until the staging walk-through (§9b step 6)

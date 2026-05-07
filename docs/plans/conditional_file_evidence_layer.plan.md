@@ -85,7 +85,7 @@ All phases are landed. Behavior is gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED` 
 | 4 | "Native evidence" pointer block in `uncategorizedText`; `submission-preview/route` parity (runs `decide` with placeholder GIDs) | ✅ |
 | 5 | `emitSaveToShopifyEvents` extended with `nativeAttachmentCount` + `nativeAttachmentFields` on audit + dispute history | ✅ |
 | 6 | EvidenceRow shows a "📎 Attached to <slot>" badge for natively-routed fields; ReviewSubmitTab renders FileEvidenceRoutingCard above ExactDataSentCard listing per-file routing | ✅ |
-| 7a | Help articles `fieldMapping` + `afterSaving` (portal + embedded mirror) updated in en.json + en-US.json. Other 10 locales still describe flag-off behaviour pending re-translation | ✅ (en/en-US) |
+| 7a | Help articles `fieldMapping` + `afterSaving` (portal + embedded mirror) updated across all 12 locale files (verified 2026-05-07). All locales describe the file evidence layer; minor wording drift vs en.json remains but is not blocking. | ✅ |
 | 7b | Workspace API surfaces `fileEvidence.{flagEnabled, scopesGranted, missingScopes}`; ReviewSubmitTab shows "Reinstall to enable native file evidence" banner when scopes are stale | ✅ |
 | extra | `verifyEvidenceReadback` now diffs file fields by GID equality (Phase 0d close-out) | ✅ |
 | extra | Removed link-suppression for natively-attached items: synthesised PDFs aren't duplicates of merchant uploads, so issuer now sees both (synthesised summary in *File row + original as labelled link) | ✅ |
