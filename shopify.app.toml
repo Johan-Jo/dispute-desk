@@ -13,9 +13,13 @@ redirect_urls = [
 
 [access_scopes]
 # Evidence scopes approved by App Review and synced to app config (2026-03-04, ticket 64535407).
-# Dispute evidence file uploads: read/write_shopify_payments_dispute_file_uploads (REST + disputeEvidenceUpdate attachments).
-# Seed script (scripts/shopify/) needs: write_draft_orders, write_fulfillments, write_merchant_managed_fulfillment_orders
-scopes = "read_orders,write_orders,read_customers,read_products,write_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,write_shopify_payments_dispute_file_uploads,read_files,write_files,write_draft_orders,write_fulfillments,write_merchant_managed_fulfillment_orders,read_locations,read_inventory,write_inventory"
+# Tightened 2026-05-07 — production code uses ONLY the scopes below (verified by grep in
+# tests/unit/shopifyScopes.test.ts and the App Store review checklist). Seed scripts under
+# scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID, a separate Partners app with a broader set
+# (write_draft_orders, write_fulfillments, write_products, write_inventory, read_files,
+# write_files, read_inventory, read_locations, write_orders,
+# write_merchant_managed_fulfillment_orders) — never granted to merchants of the production app.
+scopes = "read_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"
@@ -30,11 +34,9 @@ api_version = "2026-01"
 
 # disputes/create and disputes/update registered at runtime (OAuth) - require protected-customer-data approval in Partners
 
-# App proxy not used; minimal values required by CLI validation
-[app_proxy]
-url = "https://example.com/proxy"
-subpath = "app"
-prefix = "apps"
+# App proxy section removed 2026-05-07 — DisputeDesk does not use storefront proxying.
+# If the CLI rejects the missing block on a future `shopify app config push`, restore the
+# minimal placeholder; it had been kept solely to satisfy older CLI validation.
 
 [pos]
 embedded = false
