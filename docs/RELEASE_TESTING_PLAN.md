@@ -3,12 +3,12 @@
 Repeatable verification process before any larger update is promoted to production
 (Vercel `master`). Owner: maintainer. Last reviewed: 2026-05-06.
 
-> **Highest-risk uncovered area as of this review:** the
-> review → submit → save-to-Shopify flow. There is no end-to-end automated
-> test that exercises a merchant clicking "Save to Shopify" and verifies
-> the evidence lands in the right field on the Shopify dispute record.
-> Existing coverage is route-level integration tests + the manual checklist.
-> **This flow is the next E2E priority** — see §12.
+> **Highest-risk uncovered area as of this review:** the browser-driven
+> review → submit → save-to-Shopify flow. Route-level gates and per-family
+> payload composition are now locked in CI (see §4 row 9), but no
+> Playwright spec exercises a merchant clicking "Save to Shopify" against
+> a stubbed Shopify endpoint. The blocker is a Shopify test-mode session
+> bridge for the embedded app — see §12 for what landed and what's next.
 
 ---
 
@@ -101,7 +101,7 @@ step for any gap row.
 | 6 | Evidence strength classification | `lib/argument/__tests__/canonicalEvidence.test.ts`, `caseStrength.test.ts`, `categoryBadge.test.ts`, `classifyEvidenceRow.test.ts`, `lib/automation/__tests__/{completeness,autoSaveGate,fatalLoss,pipelineMatrix}.test.ts` | **Manual:** spot-check a fraud / INR / refund_issued case in staging — strength label and `heroVariant` match expected matrix |
 | 7 | Evidence field mapping → Shopify | `tests/unit/fieldMapping.test.ts`, `tests/unit/shopifyDisputeEvidenceFileConstraints.test.ts`, `tests/unit/evidenceSectionsUsedInDefense.test.ts`, `tests/contract/shopifyDisputes.test.ts` | **Manual:** save a pack to Shopify in staging, open the dispute in Shopify Admin, confirm evidence appears in the expected field per reason (uncategorizedText for fraud, etc.) |
 | 8 | File upload permissions/flow | `tests/api/files/samples.test.ts`, `tests/api/files/samplesDelete.test.ts` | **Manual:** upload a real PDF + image in staging, confirm it lands in the private bucket and shows in the pack |
-| 9 | Review/submit flow | (covered indirectly via pack route tests) | **Manual:** end-to-end on a staging dispute — Overview → Evidence → Review & Submit → Save to Shopify; confirm `packs.status` transitions and audit row written |
+| 9 | Review/submit flow | `tests/api/packs/failedPackGuards.test.ts` (404/409), `tests/api/packs/saveToShopifyRoute.test.ts` (422 gates + 202 happy path + audit + jobs.insert + status flip), `lib/jobs/handlers/__tests__/saveToShopify.snapshot.test.ts` (per-family payload composition) | **Manual:** end-to-end on a staging dispute — Overview → Evidence → Review & Submit → Save to Shopify; confirm `packs.status` transitions and audit row written. The browser-driven E2E is still missing (see §12). |
 | 10 | Dashboard metrics | (no dedicated test) | **Manual:** open `/app` overview after seeding disputes, confirm KPI cards (open / under review / saved) match `disputes` rows |
 | 11 | Billing / plan restrictions | (no dedicated test) | **Manual:** with a free-plan shop, attempt a paid action (e.g. exceed pack quota); confirm `lib/billing/checkQuota.ts` blocks and surfaces the correct CTA |
 | 12 | Resources Hub (locale parity) | `npm run audit:hub-locales:fail`, `npm run smoke:resources-hub` | Run both before any hub-content-bearing release |
@@ -332,17 +332,24 @@ merchant only finds out after the bank decision. Coverage today:
 - ✅ Field mapping: `tests/unit/fieldMapping.test.ts`,
   `lib/shopify/__tests__/composeShopifyMutationPayload.test.ts`,
   `tests/golden/` (5 fixtures lock the keys-populated decision)
+- ✅ Save-to-Shopify route gates: `tests/api/packs/saveToShopifyRoute.test.ts`
+  (404/422/400/500 paths, 202 happy path with `jobs.insert` shape +
+  pack flip to `saving` + `evidence_saved_to_shopify` audit emit)
+- ✅ Per-family mutation payload byte-equivalence:
+  `lib/jobs/handlers/__tests__/saveToShopify.snapshot.test.ts`
+  (FRAUDULENT, PRODUCT_NOT_RECEIVED, PRODUCT_UNACCEPTABLE, DUPLICATE)
 - ❌ End-to-end: no Playwright spec exercises the merchant clicking
   "Save to Shopify" against a stubbed Shopify endpoint
 - ❌ Read-back verification in CI: `verifyEvidenceReadback.ts` exists but
   isn't exercised by an integration test on the Save route
 
-**Recommended next step (separate PR, NOT in this diff):**
+**Remaining priorities (separate PRs):**
 
-1. Add `tests/api/packs/saveToShopify.test.ts` — POST to the route with a
-   mocked Shopify client; assert the mutation payload matches the
-   reason-aware mapping for fraud / INR / refund_issued cases.
-2. Add `e2e/save-to-shopify.spec.ts` — for the embedded app, this needs
+1. **Read-back verification integration test** — exercise
+   `verifyEvidenceReadback.ts` against a stubbed Shopify response so a
+   regression in the diff logic surfaces in CI rather than as an
+   "unverified" status in production.
+2. **`e2e/save-to-shopify.spec.ts`** — for the embedded app, this needs
    a test-mode Shopify session bridge first (out of scope for this PR).
    Until that's available, the staging walk-through (§9b step 6) is the
    only end-to-end check.
