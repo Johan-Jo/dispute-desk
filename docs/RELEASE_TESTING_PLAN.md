@@ -1,7 +1,7 @@
 # Release Testing Plan
 
 Repeatable verification process before any larger update is promoted to production
-(Vercel `master`). Owner: maintainer. Last reviewed: 2026-05-06.
+(Vercel `master`). Owner: maintainer. Last reviewed: 2026-05-07.
 
 > **Highest-risk uncovered area as of this review:** the browser-driven
 > review → submit → save-to-Shopify flow. Route-level gates and per-family
@@ -300,18 +300,25 @@ The diff that ships with this plan:
 2. **Add `docs/release-checklists/README.md`** — one-liner explaining the
    template.
 3. **Add `docs/release-checklists/TEMPLATE.md`** — fill-in-the-blank checklist.
-4. **Add a `release:verify` script to `package.json`** —
-   `"release:verify": "npm run lint && npx tsc --noEmit && npm test && npm run build"`.
-   Chaining with `&&` works on both PowerShell 7+ (the dev shell per CLAUDE.md)
-   and bash (CI). No new dependencies.
+4. **Add a `release:verify` script to `package.json`.** Initially shipped
+   as `lint && tsc --noEmit && vitest run && next build` chained with
+   `&&`. Replaced in a follow-up commit (`c58c3ad`) with
+   `node scripts/release-verify.mjs`, a small Node runner that prints
+   per-step banners, streams Vitest in `--reporter=verbose`, captures
+   per-step timing, and prints a summary table at the end. Same gate
+   semantics — exit non-zero on any failure. No new dependencies.
 5. **Update `docs/technical.md`** with a one-line pointer to this plan under a
    new "Release verification" heading. (Per `feedback_docs_update.md`, docs are
    updated in the same commit as the change.)
 
-Out of scope for this diff (deliberate — listed for transparency):
+Out of scope for the original diff (still deferred unless noted):
 
-- Adding new automated tests for billing / dashboard metrics / review-submit
-  (each is a separate PR; tracked as backlog).
+- ~~Review/submit automated coverage~~ — landed across follow-up commits:
+  `tests/api/packs/saveToShopifyRoute.test.ts` (10 route gates + happy
+  path side-effects), `lib/shopify/__tests__/verifyEvidenceReadback.test.ts`
+  (11 orchestration tests), and `e2e/save-to-shopify.spec.ts` (route-level
+  Playwright via portal auth).
+- Automated tests for **billing** and **dashboard metrics** — still backlog.
 - Wiring `release:verify` into a GitHub Action — current CI already runs the
   underlying steps; a separate "release" workflow can come later if useful.
 - Moving existing `tests/api/*` into `tests/integration/*` — pure churn for no
