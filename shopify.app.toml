@@ -32,6 +32,20 @@ api_version = "2026-01"
   topics = ["shop/update"]
   uri = "/api/webhooks/shop-update"
 
+  # GDPR mandatory webhooks (App Store requirement). Handlers in
+  # app/api/webhooks/{customers-data-request,customers-redact,shop-redact}/.
+  [[webhooks.subscriptions]]
+  topics = ["customers/data_request"]
+  uri = "/api/webhooks/customers-data-request"
+
+  [[webhooks.subscriptions]]
+  topics = ["customers/redact"]
+  uri = "/api/webhooks/customers-redact"
+
+  [[webhooks.subscriptions]]
+  topics = ["shop/redact"]
+  uri = "/api/webhooks/shop-redact"
+
 # disputes/create and disputes/update registered at runtime (OAuth) - require protected-customer-data approval in Partners
 
 # App proxy section removed 2026-05-07 — DisputeDesk does not use storefront proxying.
