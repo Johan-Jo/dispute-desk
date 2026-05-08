@@ -105,8 +105,8 @@ OUTPUT FORMAT — return valid JSON with this exact structure:
   "shopify_workflow_notes": [
     "string"  // 5–8 specific Shopify Admin / Payments / Order / Disputes workflow facts. Name exact paths, fields, button labels. No generalities.
   ],
-  "processor_network_caveats": [
-    "string"  // 3–5 places the rules vary: Shopify Payments vs Stripe vs other gateways, Visa vs Mastercard, region differences, acquirer differences. Say "confirm with your processor" where the exact value varies.
+  "variance_constraints": [
+    "string"  // 3–5 places the rules vary: Shopify Payments vs Stripe vs other gateways, Visa vs Mastercard, region differences, acquirer differences. Say "confirm with your processor" where the exact value varies. THESE ARE WOVEN INTO PROSE INLINE BY PASS 2 — they NEVER become a section heading.
   ],
   "positioning_constraints": [
     "string"  // 2–3 honest framings of what DisputeDesk's automation handles vs what it does not. No guarantees, no black-box AI claims. THESE ARE WOVEN INTO PROSE BY PASS 2 — they will not become a section heading.
@@ -157,6 +157,19 @@ If you find yourself producing similar-structured headings across articles ("Why
 
 POSITIONING — DisputeDesk's role does NOT get its own section.
 Fold positioning material into the closing paragraphs of whichever section it belongs to. Never produce a heading containing "DisputeDesk", "Automation", "Role", "Transparency", or similar. The reader feels the positioning in passing prose ("Pack assembly handles X; merchants still own Y"); they should not see it as an article structural component.
+
+VARIANCE — processor / network / acquirer differences NEVER get their own section.
+Variation between Shopify Payments and Stripe, between Visa and Mastercard, between regions, between acquirers, gets folded INLINE into whichever operational section is discussing the underlying topic. Never produce headings containing "Processor", "Network", "Gateway", "Variance", "Caveats", "Variation Between", "Cross-System", or similar. The reader encounters caveats inline — e.g. "AVS Y on Shopify Payments shows in the Order's payment summary; Stripe surfaces it differently. Visa and Mastercard may also weigh AVS differently depending on processor routing." — not as a categorized warning block.
+
+PACING — uneven is correct.
+Aim for roughly 600–900 words of substantive depth. Below ~500 words usually means under-using the source material; above ~1,500 means you started inventing.
+
+Within that range, ASYMMETRY is editorial signal, not failure:
+- Section lengths should vary widely. A 1-paragraph section can sit next to a 5-paragraph section. That's right.
+- One section may dominate the article — if a single observation deserves it, give it the room.
+- Some source-material categories may DISAPPEAR entirely from the article. If you don't have something concrete to say with workflow_notes for this topic, drop them. Do not create a section just because a category exists in the input.
+- Some categories may appear distributed across multiple sections — a single failure_mode might inform the opener, an aside in section 3, and the closing claim. That's fine.
+- Avoid uniform 1-paragraph H2s. If every section is the same length and structure, you have re-created the schema-as-skeleton failure mode in a different form.
 
 ASSEMBLY RULES:
 - Preserve the source material's wording wherever it's already sharp. Do not paraphrase strong observations into smoother corporate prose.
@@ -219,7 +232,7 @@ export interface PassOneSourceMaterial {
   messy_examples: PassOneMessyExample[];
   evidence_hierarchy: PassOneEvidenceHierarchyEntry[];
   shopify_workflow_notes: string[];
-  processor_network_caveats: string[];
+  variance_constraints: string[];
   positioning_constraints: string[];
 }
 
@@ -227,13 +240,19 @@ export interface PassOneSourceMaterial {
 export function validatePassOneShape(raw: unknown): raw is PassOneSourceMaterial {
   if (!raw || typeof raw !== "object") return false;
   const r = raw as Record<string, unknown>;
-  // Tolerate the legacy key name `disputedesk_positioning_notes` for one
-  // generation; the prompt now requests `positioning_constraints`.
+  // Backward-compat: tolerate legacy key names for one generation cycle so a
+  // mid-deploy Pass 1 response with the old field name still parses.
   if (
     !Array.isArray(r.positioning_constraints) &&
     Array.isArray(r.disputedesk_positioning_notes)
   ) {
     r.positioning_constraints = r.disputedesk_positioning_notes;
+  }
+  if (
+    !Array.isArray(r.variance_constraints) &&
+    Array.isArray(r.processor_network_caveats)
+  ) {
+    r.variance_constraints = r.processor_network_caveats;
   }
   return (
     Array.isArray(r.observations) &&
@@ -241,7 +260,7 @@ export function validatePassOneShape(raw: unknown): raw is PassOneSourceMaterial
     Array.isArray(r.messy_examples) &&
     Array.isArray(r.evidence_hierarchy) &&
     Array.isArray(r.shopify_workflow_notes) &&
-    Array.isArray(r.processor_network_caveats) &&
+    Array.isArray(r.variance_constraints) &&
     Array.isArray(r.positioning_constraints)
   );
 }

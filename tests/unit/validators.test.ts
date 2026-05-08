@@ -14,6 +14,7 @@ import {
   v6_noInternalLinks,
   v7_embeddingSimilarity,
   v8_slugLocale,
+  v9_uniformPacing,
   wordCount,
   type EmbeddingClient,
   type ValidatorBriefContext,
@@ -208,6 +209,14 @@ describe("V3 — generic AI openings", () => {
       "Operational Transparency with DisputeDesk",
       "Workflow Insights",
       "Processor and Network Caveats",
+      "Processor Caveats",
+      "Network Caveats",
+      "Gateway Variance",
+      "Processor Variance",
+      "Cross-System Variance",
+      "Variance Constraints",
+      "Variation Between Processors",
+      "Variation Between Gateways",
       "Common Operational Mistakes",
       "How Evidence Strength Actually Works",
     ];
@@ -527,6 +536,62 @@ describe("V8 — slug locale enforcement", () => {
       "pt-BR"
     );
     expect(f).toBeNull();
+  });
+});
+
+/* ── V9 — uniform pacing detector ────────────────────────────── */
+
+describe("V9 — uniform pacing", () => {
+  function buildBody(sectionWordCounts: number[]): string {
+    return sectionWordCounts
+      .map((wc, i) => `<h2>Section ${i + 1}</h2><p>${"word ".repeat(wc).trim()}</p>`)
+      .join("");
+  }
+
+  it("soft-flags when 4+ sections all hover near the same length (CV < 0.35)", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml: buildBody([55, 60, 50, 58]),
+        keyTakeaways: [],
+        faq: [],
+        disclaimer: "",
+      },
+    });
+    const f = v9_uniformPacing(c);
+    expect(f).not.toBeNull();
+    expect(f!.severity).toBe("soft");
+    expect(f!.message).toMatch(/uniform/i);
+  });
+
+  it("does NOT flag when section lengths vary widely", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml: buildBody([20, 200, 60, 350]),
+        keyTakeaways: [],
+        faq: [],
+        disclaimer: "",
+      },
+    });
+    expect(v9_uniformPacing(c)).toBeNull();
+  });
+
+  it("does NOT flag when fewer than 4 sections", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml: buildBody([50, 50, 50]),
+        keyTakeaways: [],
+        faq: [],
+        disclaimer: "",
+      },
+    });
+    expect(v9_uniformPacing(c)).toBeNull();
+  });
+
+  it("does NOT flag empty / very-short articles", () => {
+    const c = makeCandidate({
+      body_json: { mainHtml: "<p>x</p>", keyTakeaways: [], faq: [], disclaimer: "" },
+    });
+    expect(v9_uniformPacing(c)).toBeNull();
   });
 });
 

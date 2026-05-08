@@ -46,7 +46,7 @@ const validMaterial: PassOneSourceMaterial = {
     },
   ],
   shopify_workflow_notes: ["Disputes appear in Settings → Payments → Manage."],
-  processor_network_caveats: ["Confirm response windows with your processor."],
+  variance_constraints: ["Confirm response windows with your processor."],
   positioning_constraints: ["Automation improves consistency, not certainty."],
 };
 
@@ -73,9 +73,11 @@ describe("PASS_ONE_SYSTEM_PROMPT", () => {
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"messy_examples"');
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"evidence_hierarchy"');
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"shopify_workflow_notes"');
-    // Renamed from disputedesk_positioning_notes to reduce schema-leakage to headings.
+    // Renamed to neutralize editorial gravity — these never become headings.
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"positioning_constraints"');
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"variance_constraints"');
     expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"disputedesk_positioning_notes"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"processor_network_caveats"');
   });
 
   it("inherits the banned-phrase blocklist from the voice core", () => {
@@ -177,6 +179,15 @@ describe("validatePassOneShape", () => {
       disputedesk_positioning_notes: validMaterial.positioning_constraints,
     };
     delete legacyShape.positioning_constraints;
+    expect(validatePassOneShape(legacyShape)).toBe(true);
+  });
+
+  it("tolerates the legacy processor_network_caveats key during transition", () => {
+    const legacyShape: Record<string, unknown> = {
+      ...validMaterial,
+      processor_network_caveats: validMaterial.variance_constraints,
+    };
+    delete legacyShape.variance_constraints;
     expect(validatePassOneShape(legacyShape)).toBe(true);
   });
 

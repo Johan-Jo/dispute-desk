@@ -30,7 +30,8 @@ export type ValidatorId =
   | "V5_archetype_must_haves"
   | "V6_no_internal_links"
   | "V7_embedding_similarity"
-  | "V8_slug_locale";
+  | "V8_slug_locale"
+  | "V9_uniform_pacing";
 
 export type ValidatorSeverity = "hard" | "soft";
 
@@ -156,6 +157,15 @@ const SCHEMA_LEAKED_HEADING_PATTERNS: RegExp[] = [
   /^operational insights?\b/i,
   /\bworkflow (insights?|notes?)\b/i,
   /\bprocessor (and|&) network caveats?\b/i,
+  /\bprocessor caveats?\b/i,
+  /\bnetwork caveats?\b/i,
+  /\bgateway caveats?\b/i,
+  /\bgateway variance\b/i,
+  /\bprocessor variance\b/i,
+  /\bcross[- ]system variance\b/i,
+  /\bvariance constraints?\b/i,
+  /\bnon[- ]universal conditions?\b/i,
+  /\bvariation between (processors?|gateways?|networks?)\b/i,
   /\bdispute[- ]?desk'?s role\b/i,
   /\bdisputedesk(?:'s)? (role|positioning|transparency)/i,
   /\boperational transparency with disputedesk\b/i,
@@ -535,6 +545,51 @@ export function v8_slugLocale(
   };
 }
 
+/* ── V9 — Uniform pacing detector (soft) ──────────────────────────── */
+
+/**
+ * Pull body text per H2 section so we can measure how uniform the section
+ * lengths are. The model frequently produces "schema-as-skeleton with
+ * different labels" outputs where every section is one paragraph of similar
+ * length — we want to soft-warn on that.
+ */
+function sectionWordCounts(html: string): number[] {
+  const re = /<h2\b[^>]*>[\s\S]*?<\/h2>([\s\S]*?)(?=<h2\b|$)/gi;
+  const counts: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html ?? "")) !== null) {
+    counts.push(wordCount(htmlToText(m[1])));
+  }
+  return counts;
+}
+
+export function v9_uniformPacing(candidate: ValidatorCandidate): ValidatorFailure | null {
+  const counts = sectionWordCounts(candidate.body_json.mainHtml);
+  if (counts.length < 4) return null; // need enough sections for a uniformity claim
+
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  const mean = total / counts.length;
+  if (mean < 30) return null; // article is too short to even diagnose
+
+  const variance =
+    counts.reduce((a, b) => a + (b - mean) ** 2, 0) / counts.length;
+  const stdDev = Math.sqrt(variance);
+  const cv = stdDev / mean; // coefficient of variation
+
+  // Threshold tuned so that:
+  //   counts = [50, 60, 55, 50] (CV ~0.07) → flagged
+  //   counts = [50, 200, 30, 90] (CV ~0.66) → not flagged
+  if (cv >= 0.35) return null;
+
+  return {
+    id: "V9_uniform_pacing",
+    severity: "soft",
+    message: `Section lengths are uniform (CV ${cv.toFixed(2)}, mean ${Math.round(mean)} words across ${counts.length} sections). Reads like a schema-as-skeleton article.`,
+    retryHint: `Section lengths in the article are too uniform — every H2 has roughly the same body length, which signals the schema-as-skeleton failure mode in pacing form. Vary section lengths dramatically. A 1-paragraph section can sit next to a 5-paragraph one. Some sections should dominate; others should be brief asides. The article should NOT read as N evenly-distributed mini-articles. If a category from the source material doesn't have something concrete to say for THIS topic, drop it entirely instead of giving it a uniform paragraph.`,
+  };
+}
+
 /* ── V7 — Embedding semantic similarity ───────────────────────────── */
 
 export interface EmbeddingClient {
@@ -675,6 +730,9 @@ export async function runAllValidators(
 
   const v8 = v8_slugLocale(candidate, brief, locale);
   if (v8) failures.push(v8);
+
+  const v9 = v9_uniformPacing(candidate);
+  if (v9) failures.push(v9);
 
   const v7 = await v7_embeddingSimilarity(
     candidate,
