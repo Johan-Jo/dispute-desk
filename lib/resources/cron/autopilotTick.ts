@@ -2,6 +2,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { isBacklogRankUnavailableError } from "@/lib/resources/isBacklogRankUnavailableError";
 import { runGenerationPipeline } from "@/lib/resources/generation/pipeline";
 import { isGenerationEnabled } from "@/lib/resources/generation/generate";
+import { isArchiveAutopilotEligible } from "@/lib/resources/generation/tierAutopilotPolicy";
 import type { PublishQueueTickResult } from "@/lib/resources/cron/publishQueueTick";
 
 const INITIAL_BURST_COUNT = 5;
@@ -32,10 +33,14 @@ const PICK_BATCH = 50;
 /** Only backlog / brief_ready — `idea` stays editorial-only until promoted. */
 async function pickNextArchiveItem(excludeIds: ReadonlySet<string>): Promise<string | null> {
   const client = getServiceClient();
+  // Pull tier-relevant signals so we can apply the Tier A safeguard
+  // (PR 5: skip Tier A unless autopilot_approved=true).
   const base = () =>
     client
       .from("content_archive_items")
-      .select("id")
+      .select(
+        "id, content_type, tier_override, is_hub_article, autopilot_approved"
+      )
       .in("status", ["backlog", "brief_ready"])
       .is("created_from_archive_to_content_item_id", null);
 
@@ -48,7 +53,25 @@ async function pickNextArchiveItem(excludeIds: ReadonlySet<string>): Promise<str
     first = await base().order("priority_score", { ascending: false }).limit(PICK_BATCH);
   }
 
-  const row = first.data?.find((r) => r.id && !excludeIds.has(r.id));
+  type Row = {
+    id: string | null;
+    content_type: string;
+    tier_override: string | null;
+    is_hub_article: boolean | null;
+    autopilot_approved: boolean | null;
+  };
+  const rows = (first.data ?? []) as Row[];
+  const row = rows.find(
+    (r) =>
+      r.id &&
+      !excludeIds.has(r.id) &&
+      isArchiveAutopilotEligible({
+        contentType: r.content_type,
+        tier_override: r.tier_override,
+        is_hub_article: r.is_hub_article,
+        autopilot_approved: r.autopilot_approved,
+      })
+  );
   return row?.id ?? null;
 }
 

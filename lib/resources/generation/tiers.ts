@@ -66,22 +66,22 @@ export const TIER_RANGES: Record<ContentTier, TierRange> = {
 };
 
 export function inferTierFromContentType(
-  contentType: string,
+  contentType: string | null | undefined,
   isHubArticle?: boolean | null
 ): ContentTier {
   if (isHubArticle) return "A";
-  const t = contentType.trim().toLowerCase();
+  const t = (contentType ?? "").trim().toLowerCase();
   if (t === "pillar_page") return "A";
   if (t === "cluster_article" || t === "case_study" || t === "legal_update") return "B";
   return "C";
 }
 
 export function inferArchetypeFromContentType(
-  contentType: string,
+  contentType: string | null | undefined,
   isHubArticle?: boolean | null
 ): ContentArchetype {
   if (isHubArticle) return "authority_pillar";
-  switch (contentType.trim().toLowerCase()) {
+  switch ((contentType ?? "").trim().toLowerCase()) {
     case "pillar_page":
       return "authority_pillar";
     case "checklist":
@@ -121,7 +121,7 @@ export function normalizeArchetype(raw: string | null | undefined): ContentArche
  */
 export function resolveTier(input: {
   tier?: string | null;
-  contentType: string;
+  contentType: string | null | undefined;
   isHubArticle?: boolean | null;
 }): ContentTier {
   return normalizeTier(input.tier) ?? inferTierFromContentType(input.contentType, input.isHubArticle);
@@ -129,7 +129,7 @@ export function resolveTier(input: {
 
 export function resolveArchetype(input: {
   archetype?: string | null;
-  contentType: string;
+  contentType: string | null | undefined;
   isHubArticle?: boolean | null;
 }): ContentArchetype {
   return (

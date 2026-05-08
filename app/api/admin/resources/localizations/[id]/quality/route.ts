@@ -32,10 +32,23 @@ const ALLOWED_QUALITY_STATUSES = [
 ] as const;
 type QualityStatus = (typeof ALLOWED_QUALITY_STATUSES)[number];
 
+const ALLOWED_MIGRATION_ACTIONS = [
+  "keep",
+  "expand",
+  "merge",
+  "redirect",
+  "noindex",
+  "rewrite_b",
+  "rewrite_c",
+  "promote_a",
+] as const;
+type MigrationAction = (typeof ALLOWED_MIGRATION_ACTIONS)[number];
+
 type AllowedField =
   | "redirect_to_localization_id"
   | "is_excluded_from_sitemap"
-  | "quality_status";
+  | "quality_status"
+  | "migration_action";
 
 export async function PATCH(
   req: NextRequest,
@@ -99,11 +112,24 @@ export async function PATCH(
     updates.quality_status = v;
   }
 
+  if ("migration_action" in body) {
+    const v = body.migration_action;
+    if (v !== null && (typeof v !== "string" || !ALLOWED_MIGRATION_ACTIONS.includes(v as MigrationAction))) {
+      return NextResponse.json(
+        {
+          error: `migration_action must be one of: ${ALLOWED_MIGRATION_ACTIONS.join(", ")} or null`,
+        },
+        { status: 400 }
+      );
+    }
+    updates.migration_action = v;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
       {
         error:
-          "No recognised fields. Allowed: redirect_to_localization_id, is_excluded_from_sitemap, quality_status",
+          "No recognised fields. Allowed: redirect_to_localization_id, is_excluded_from_sitemap, quality_status, migration_action",
       },
       { status: 400 }
     );

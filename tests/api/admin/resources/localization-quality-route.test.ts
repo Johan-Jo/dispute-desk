@@ -254,3 +254,50 @@ describe("PATCH — happy paths for non-redirect fields", () => {
     expect((updateCalls[0] as Record<string, unknown>).quality_status).toBeNull();
   });
 });
+
+describe("PATCH — migration_action (PR 5)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockHasAdmin.mockResolvedValue(true);
+  });
+
+  for (const action of ["keep", "expand", "merge", "redirect", "noindex", "rewrite_b", "rewrite_c", "promote_a"]) {
+    it(`accepts migration_action='${action}'`, async () => {
+      const { sb, updateCalls } = buildSbMock({
+        targetMaybeSingle: async () => ({ data: null, error: null }),
+      });
+      mockGetService.mockReturnValue(sb as never);
+
+      const res = await PATCH(buildRequest({ migration_action: action }) as never, {
+        params: Promise.resolve({ id: localizationId }),
+      });
+      expect(res.status).toBe(200);
+      expect((updateCalls[0] as Record<string, unknown>).migration_action).toBe(action);
+    });
+  }
+
+  it("accepts migration_action=null (clear)", async () => {
+    const { sb, updateCalls } = buildSbMock({
+      targetMaybeSingle: async () => ({ data: null, error: null }),
+    });
+    mockGetService.mockReturnValue(sb as never);
+
+    const res = await PATCH(buildRequest({ migration_action: null }) as never, {
+      params: Promise.resolve({ id: localizationId }),
+    });
+    expect(res.status).toBe(200);
+    expect((updateCalls[0] as Record<string, unknown>).migration_action).toBeNull();
+  });
+
+  it("rejects invalid migration_action values", async () => {
+    const { sb } = buildSbMock({
+      targetMaybeSingle: async () => ({ data: null, error: null }),
+    });
+    mockGetService.mockReturnValue(sb as never);
+
+    const res = await PATCH(buildRequest({ migration_action: "bogus" }) as never, {
+      params: Promise.resolve({ id: localizationId }),
+    });
+    expect(res.status).toBe(400);
+  });
+});

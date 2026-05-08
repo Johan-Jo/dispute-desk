@@ -12,6 +12,10 @@ import { resolveGenerationPrompts } from "./prompts";
 import type { GenerationBrief, GenerationContext } from "./prompts";
 import type { GenerationResult } from "./generate";
 import { routeKindForContentType } from "./contentRouteKind";
+import {
+  autopilotInitialWorkflowStatus,
+  shouldSkipAutopilotPublish,
+} from "./tierAutopilotPolicy";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
 import {
   drainPublishQueueAfterAutopilotEnqueue,
@@ -213,8 +217,16 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
 
   // Autopilot must not set "published" until publishLocalization runs; otherwise the admin list
   // shows Published with no date and the hub stays empty if the queue tick fails.
+  // PR 5: Tier A on autopilot holds at `in-editorial-review` so admin reviews the
+  // pillar before it goes live. tierAutopilotPolicy is the single source of truth.
+  const tierSignals = {
+    contentType: brief.contentType,
+    tier_override: brief.tier ?? null,
+    is_hub_article: brief.isHubArticle ?? null,
+    autopilot_approved: true, // already passed the picker by the time we land here
+  };
   const initialStatus = options.autopilot
-    ? "scheduled"
+    ? autopilotInitialWorkflowStatus(tierSignals)
     : brief.contentType === "legal_update"
       ? "in-legal-review"
       : "drafting";
@@ -305,6 +317,12 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
       ...(sourceLocale ? { source_locale: sourceLocale } : {}),
     })
     .eq("id", contentItemId);
+
+  // PR 5: Tier A holds at in-editorial-review — skip publish-queue enqueue so
+  // the publish cron does not auto-promote the pillar before a human reviews it.
+  if (options.autopilot && shouldSkipAutopilotPublish(tierSignals)) {
+    return { contentItemId, results, error: null };
+  }
 
   if (options.autopilot && localizationInserts.length > 0) {
     const { data: locs } = await sb.from("content_localizations").select("id").eq("content_item_id", contentItemId);
