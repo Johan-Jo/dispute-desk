@@ -28,6 +28,17 @@ import {
   type ValidatorCandidate,
   type ValidatorFailure,
 } from "./validators";
+import { resolveArchetype } from "./tiers";
+import {
+  PASS_ONE_SYSTEM_PROMPT,
+  PASS_TWO_SYSTEM_PROMPT,
+  buildPassOneUserPrompt,
+  buildPassTwoUserPrompt,
+  validatePassOneShape,
+  type PassOneSourceMaterial,
+  type TwoPassBriefContext,
+} from "./twoPassPrompts";
+import { DEFAULT_LOCALE_INSTRUCTIONS } from "./prompts";
 
 const MODEL = process.env.GENERATION_MODEL ?? "gpt-4o";
 const MAX_VALIDATOR_RETRIES = 2;
@@ -145,6 +156,150 @@ export async function generateForLocale(
   }
 }
 
+/**
+ * Low-level OpenAI chat call. Returns the raw assistant message + tokens used.
+ * Used by both single-call generation and the two-pass orchestrator below.
+ */
+async function callOpenAIChat(
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number
+): Promise<{ raw: string | null; tokensUsed: number; error: string | null }> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { raw: null, tokensUsed: 0, error: "OPENAI_API_KEY not configured" };
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature,
+        max_tokens: 16384,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { raw: null, tokensUsed: 0, error: `OpenAI API error ${res.status}: ${errBody.slice(0, 200)}` };
+    }
+
+    const data = await res.json();
+    const tokensUsed = data.usage?.total_tokens ?? 0;
+    const raw = data.choices?.[0]?.message?.content as string | undefined;
+    if (!raw) return { raw: null, tokensUsed, error: "Empty response from model" };
+    return { raw, tokensUsed, error: null };
+  } catch (err) {
+    return { raw: null, tokensUsed: 0, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+function buildTwoPassContext(brief: GenerationBrief, locale: string): TwoPassBriefContext {
+  const localeInstruction =
+    DEFAULT_LOCALE_INSTRUCTIONS[locale] ?? DEFAULT_LOCALE_INSTRUCTIONS["en-US"];
+  // Filter brief notes the same way the single-call path does — strip CMS bookkeeping.
+  let notes = brief.notes ?? null;
+  if (notes) {
+    try {
+      const parsed = JSON.parse(notes) as Record<string, unknown>;
+      const noisy = new Set([
+        "brief_version",
+        "cluster",
+        "page_role",
+        "complexity",
+        "target_word_range",
+        "page_title",
+        "seo_title",
+        "cta_type",
+      ]);
+      const filtered: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (!noisy.has(k)) filtered[k] = v;
+      }
+      notes = JSON.stringify(filtered, null, 2);
+    } catch {
+      /* keep notes as-is if not valid JSON */
+    }
+  }
+
+  return {
+    topic: brief.proposedTitle,
+    targetKeyword: brief.targetKeyword,
+    contextSummary: brief.summary,
+    notes,
+    locale,
+    localeInstruction,
+  };
+}
+
+/**
+ * Pass 1 — generate raw operator source material (observations, failure modes,
+ * messy examples, evidence hierarchy notes). Single attempt; no retry. The
+ * output is structural data, not prose, so retries don't add much value.
+ */
+async function generatePassOne(
+  brief: GenerationBrief,
+  locale: string
+): Promise<{ material: PassOneSourceMaterial | null; tokensUsed: number; error: string | null }> {
+  const ctx = buildTwoPassContext(brief, locale);
+  const userPrompt = buildPassOneUserPrompt(ctx);
+  const { raw, tokensUsed, error } = await callOpenAIChat(PASS_ONE_SYSTEM_PROMPT, userPrompt, 0.5);
+  if (!raw) return { material: null, tokensUsed, error };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { material: null, tokensUsed, error: "Pass 1: model returned non-JSON" };
+  }
+  if (!validatePassOneShape(parsed)) {
+    return { material: null, tokensUsed, error: "Pass 1: response missing required source-material fields" };
+  }
+  return { material: parsed, tokensUsed, error: null };
+}
+
+/**
+ * Pass 2 — assemble the article from Pass 1 source material. Used by the
+ * retry loop: when Pass 2 fails validators, we regenerate Pass 2 only
+ * (cheaper than re-running Pass 1) with retry feedback appended.
+ */
+async function generatePassTwo(
+  brief: GenerationBrief,
+  locale: string,
+  sourceMaterial: PassOneSourceMaterial,
+  extraInstructions?: string
+): Promise<GenerationResult> {
+  const ctx = buildTwoPassContext(brief, locale);
+  const baseUserPrompt = buildPassTwoUserPrompt(ctx, sourceMaterial);
+  const userPrompt = extraInstructions
+    ? `${baseUserPrompt}\n\n${extraInstructions.trim()}`
+    : baseUserPrompt;
+
+  const { raw, tokensUsed, error } = await callOpenAIChat(PASS_TWO_SYSTEM_PROMPT, userPrompt, 0.4);
+  if (!raw) return { locale, content: null, error, tokensUsed };
+
+  let parsed: GeneratedContent;
+  try {
+    parsed = JSON.parse(raw) as GeneratedContent;
+  } catch {
+    return { locale, content: null, error: "Pass 2: model returned non-JSON", tokensUsed };
+  }
+
+  if (!parsed.title || !parsed.body_json?.mainHtml) {
+    return { locale, content: null, error: "Pass 2: invalid response structure", tokensUsed };
+  }
+
+  return { locale, content: parsed, error: null, tokensUsed };
+}
+
 export interface GenerateAllLocalesOptions {
   /** Per-locale similar published articles (from DB) for prompt + post checks. */
   contextByLocale: Record<string, GenerationContext>;
@@ -171,20 +326,42 @@ async function generateLocaleWithValidators(
         ? makeOpenAIEmbeddingClient(process.env.OPENAI_API_KEY)
         : null;
 
+  // PR 7 — two-pass routing for authority_pillar. Pass 1 produces source
+  // material once; Pass 2 assembles into article (and re-runs on retry with
+  // validator feedback). Other archetypes use the single-call path.
+  const archetype = resolveArchetype({
+    archetype: brief.archetype ?? null,
+    contentType: brief.contentType,
+    isHubArticle: brief.isHubArticle ?? null,
+  });
+  const useTwoPass = archetype === "authority_pillar";
+
   let totalTokens = 0;
   let lastError: string | null = null;
   let lastSoftWarnings: ValidatorFailure[] = [];
   let extraInstructions: string | undefined;
+  let passOneMaterial: PassOneSourceMaterial | null = null;
+
+  if (useTwoPass) {
+    const p1 = await generatePassOne(brief, locale);
+    totalTokens += p1.tokensUsed;
+    if (!p1.material) {
+      return { locale, content: null, error: `Pass 1 failed: ${p1.error}`, tokensUsed: totalTokens };
+    }
+    passOneMaterial = p1.material;
+  }
 
   // Initial attempt + up to MAX_VALIDATOR_RETRIES retries.
   for (let attempt = 0; attempt <= MAX_VALIDATOR_RETRIES; attempt += 1) {
-    const result = await generateForLocale(
-      brief,
-      locale,
-      resolvedPrompts,
-      ctx,
-      extraInstructions ? { extraUserInstructions: extraInstructions } : undefined
-    );
+    const result = useTwoPass && passOneMaterial
+      ? await generatePassTwo(brief, locale, passOneMaterial, extraInstructions)
+      : await generateForLocale(
+          brief,
+          locale,
+          resolvedPrompts,
+          ctx,
+          extraInstructions ? { extraUserInstructions: extraInstructions } : undefined
+        );
     totalTokens += result.tokensUsed;
 
     if (!result.content) {
