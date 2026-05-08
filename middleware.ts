@@ -97,16 +97,29 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(target);
   }
 
-  // --- Marketing + Resources Hub: `/`, `/privacy`, hub paths, + /de, /es, … + /en/resources/… → next-intl ---
+  // --- Marketing + Resources Hub: `/`, `/contact`, hub paths, + /de, /es, … + /en/resources/… → next-intl ---
+  // Legal/support pages (/privacy, /terms, /security, /data-retention, /support) live under
+  // app/(marketing)/ as English-only authoritative documents and must NOT be routed through
+  // next-intl (which would try to redirect to a locale-prefixed variant that doesn't exist).
   if (
     pathname === "/" ||
-    pathname === "/privacy" ||
     pathname === "/contact" ||
     localePathRegex.test(pathname) ||
     hubPublicPathRegex.test(pathname) ||
     enPrefixedHubPathRegex.test(pathname)
   ) {
     return intlMiddleware(requestWithAppBridge(req, "0"));
+  }
+
+  // --- Legal/support pages (English-only, served from app/(marketing)/) ---
+  if (
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname === "/security" ||
+    pathname === "/data-retention" ||
+    pathname === "/support"
+  ) {
+    return nextWithAppBridge(req, "0");
   }
 
   // --- Public routes: auth, static assets ---
