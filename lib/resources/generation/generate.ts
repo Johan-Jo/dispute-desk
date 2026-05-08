@@ -1,12 +1,36 @@
 /**
- * Core generation engine — calls OpenAI to produce article body_json per locale.
+ * Core generation engine — calls OpenAI to produce article body_json per locale,
+ * and runs the V1–V8 editorial validators (lib/resources/generation/validators.ts)
+ * with up to 2 retries (3 total attempts) before accepting or rejecting.
+ *
+ * Retry feedback: every validator failure carries a concrete retry hint;
+ * `formatValidatorRetryFeedback` concatenates them into the next user message
+ * so the model sees exactly what to fix.
+ *
+ * Soft failures (V1 on Tier B/C, V4, V5) become `validatorWarnings` on the
+ * result — the pipeline can still publish the article but the warnings flow
+ * into review surfaces. Hard failures (V2, V3, V6, V8, V1 on Tier A,
+ * V7 embedding) trigger retry; if still failing after 2 retries the result
+ * is rejected.
  */
 
 import { buildUserPrompt } from "./prompts";
 import type { GenerationBrief, ResolvedGenerationPrompts, GenerationContext } from "./prompts";
 import { assessGeneratedSimilarity, getSimilarityRetryInstruction } from "./similarity";
+import {
+  formatValidatorRetryFeedback,
+  hardFailures,
+  makeOpenAIEmbeddingClient,
+  runAllValidators,
+  softFailures,
+  type EmbeddingClient,
+  type ValidatorBriefContext,
+  type ValidatorCandidate,
+  type ValidatorFailure,
+} from "./validators";
 
 const MODEL = process.env.GENERATION_MODEL ?? "gpt-4o";
+const MAX_VALIDATOR_RETRIES = 2;
 
 interface GeneratedContent {
   title: string;
@@ -27,10 +51,28 @@ export interface GenerationResult {
   content: GeneratedContent | null;
   error: string | null;
   tokensUsed: number;
+  /** Soft validator failures recorded against an *accepted* article. */
+  validatorWarnings?: ValidatorFailure[];
 }
 
 export function isGenerationEnabled(): boolean {
   return process.env.GENERATION_ENABLED === "true" && !!process.env.OPENAI_API_KEY;
+}
+
+function isEmbeddingValidatorEnabled(): boolean {
+  return process.env.GENERATION_EMBEDDINGS_ENABLED === "true";
+}
+
+function briefToValidatorContext(brief: GenerationBrief): ValidatorBriefContext {
+  return {
+    contentType: brief.contentType,
+    primaryPillar: brief.primaryPillar,
+    targetKeyword: brief.targetKeyword,
+    proposedTitle: brief.proposedTitle,
+    tier: brief.tier ?? null,
+    archetype: brief.archetype ?? null,
+    isHubArticle: brief.isHubArticle ?? null,
+  };
 }
 
 export async function generateForLocale(
@@ -107,71 +149,123 @@ export interface GenerateAllLocalesOptions {
   contextByLocale: Record<string, GenerationContext>;
   /** True if slug already exists for this locale + route_kind (any row). */
   isSlugTaken: (locale: string, slug: string) => Promise<boolean>;
+  /** Test override: provide a fake embedding client. Defaults to OpenAI client when env enables. */
+  embeddingClient?: EmbeddingClient | null;
 }
 
-async function generateLocaleWithSimilarityGuards(
+async function generateLocaleWithValidators(
   brief: GenerationBrief,
   locale: string,
   resolvedPrompts: ResolvedGenerationPrompts,
   opts: GenerateAllLocalesOptions
 ): Promise<GenerationResult> {
   const ctx = opts.contextByLocale[locale] ?? { similarArticles: [] };
-  const similar = ctx.similarArticles;
+  const peers = ctx.similarArticles;
+  const briefCtx = briefToValidatorContext(brief);
 
-  const callOnce = async (extra?: string) =>
-    generateForLocale(brief, locale, resolvedPrompts, ctx, extra ? { extraUserInstructions: extra } : undefined);
+  const embeddingClient =
+    opts.embeddingClient !== undefined
+      ? opts.embeddingClient
+      : isEmbeddingValidatorEnabled()
+        ? makeOpenAIEmbeddingClient(process.env.OPENAI_API_KEY)
+        : null;
 
-  const first = await callOnce();
-  let totalTokens = first.tokensUsed;
+  let totalTokens = 0;
+  let lastError: string | null = null;
+  let lastSoftWarnings: ValidatorFailure[] = [];
+  let extraInstructions: string | undefined;
 
-  if (!first.content) return first;
-
-  const slugTaken1 = await opts.isSlugTaken(locale, first.content.slug);
-  let guard = assessGeneratedSimilarity(
-    {
-      title: first.content.title,
-      excerpt: first.content.excerpt,
-      slug: first.content.slug,
-    },
-    similar,
-    slugTaken1
-  );
-
-  if (guard.ok) return first;
-
-  const second = await callOnce(getSimilarityRetryInstruction());
-  totalTokens += second.tokensUsed;
-
-  if (!second.content) {
-    return {
+  // Initial attempt + up to MAX_VALIDATOR_RETRIES retries.
+  for (let attempt = 0; attempt <= MAX_VALIDATOR_RETRIES; attempt += 1) {
+    const result = await generateForLocale(
+      brief,
       locale,
-      content: null,
-      error: second.error,
-      tokensUsed: totalTokens,
+      resolvedPrompts,
+      ctx,
+      extraInstructions ? { extraUserInstructions: extraInstructions } : undefined
+    );
+    totalTokens += result.tokensUsed;
+
+    if (!result.content) {
+      lastError = result.error;
+      break;
+    }
+
+    // Slug-collision and Jaccard guard from similarity.ts still apply — they
+    // catch fast/cheap duplicates without an embedding round-trip.
+    const slugTaken = await opts.isSlugTaken(locale, result.content.slug);
+    const jaccardGuard = assessGeneratedSimilarity(
+      {
+        title: result.content.title,
+        excerpt: result.content.excerpt,
+        slug: result.content.slug,
+      },
+      peers,
+      slugTaken
+    );
+
+    let validatorFailures: ValidatorFailure[] = [];
+    if (!jaccardGuard.ok) {
+      validatorFailures.push({
+        id: "V7_embedding_similarity",
+        severity: "hard",
+        message: `${jaccardGuard.reason}: ${jaccardGuard.detail}`,
+        retryHint: getSimilarityRetryInstruction(),
+      });
+    }
+
+    const candidate: ValidatorCandidate = {
+      title: result.content.title,
+      excerpt: result.content.excerpt,
+      slug: result.content.slug,
+      meta_title: result.content.meta_title,
+      meta_description: result.content.meta_description,
+      body_json: result.content.body_json,
     };
+
+    const editorial = await runAllValidators(
+      { candidate, brief: briefCtx, peers, locale },
+      { embeddingClient }
+    );
+    validatorFailures = [...validatorFailures, ...editorial.failures];
+
+    const hard = hardFailures(validatorFailures);
+    const soft = softFailures(validatorFailures);
+
+    if (hard.length === 0) {
+      // Accept; soft failures become warnings on the result.
+      return {
+        locale,
+        content: result.content,
+        error: null,
+        tokensUsed: totalTokens,
+        ...(soft.length > 0 ? { validatorWarnings: soft } : {}),
+      };
+    }
+
+    lastSoftWarnings = soft;
+
+    if (attempt >= MAX_VALIDATOR_RETRIES) {
+      const summary = hard.map((f) => `${f.id}: ${f.message}`).join("; ");
+      return {
+        locale,
+        content: null,
+        error: `Generation rejected after ${MAX_VALIDATOR_RETRIES} retries — ${summary}`,
+        tokensUsed: totalTokens,
+        ...(soft.length > 0 ? { validatorWarnings: soft } : {}),
+      };
+    }
+
+    extraInstructions = formatValidatorRetryFeedback(validatorFailures);
   }
 
-  const slugTaken2 = await opts.isSlugTaken(locale, second.content.slug);
-  guard = assessGeneratedSimilarity(
-    {
-      title: second.content.title,
-      excerpt: second.content.excerpt,
-      slug: second.content.slug,
-    },
-    similar,
-    slugTaken2
-  );
-
-  if (!guard.ok) {
-    return {
-      locale,
-      content: null,
-      error: `Generation rejected after similarity retry (${guard.reason}): ${guard.detail}`,
-      tokensUsed: totalTokens,
-    };
-  }
-
-  return { ...second, tokensUsed: totalTokens };
+  return {
+    locale,
+    content: null,
+    error: lastError ?? "Generation failed",
+    tokensUsed: totalTokens,
+    ...(lastSoftWarnings.length > 0 ? { validatorWarnings: lastSoftWarnings } : {}),
+  };
 }
 
 export async function generateAllLocales(
@@ -181,7 +275,7 @@ export async function generateAllLocales(
 ): Promise<GenerationResult[]> {
   return Promise.all(
     brief.targetLocales.map((locale) =>
-      generateLocaleWithSimilarityGuards(brief, locale, resolvedPrompts, opts)
+      generateLocaleWithValidators(brief, locale, resolvedPrompts, opts)
     )
   );
 }
