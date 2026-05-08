@@ -245,21 +245,34 @@ export function v1_tierMinimumWords(
 
   if (wc >= min) return null;
 
-  // Tier A: hard-floor at 600w (under that, the article is not viable as
-  // an authority pillar at all — it can't carry the source material). Above
-  // 600 but below tier minimum (3000) stays SOFT so the model isn't punished
-  // for failing to hit aspirational depth. Tier B/C stay soft throughout.
-  // Two-pass authority_pillar generation produces ≥ 600w reliably; this
-  // floor catches the model's tendency to over-compress.
-  const ASSEMBLY_HARD_FLOOR = 600;
-  const severity: ValidatorSeverity =
-    tier === "A" && wc < ASSEMBLY_HARD_FLOOR ? "hard" : "soft";
+  // Path B-lite floors:
+  //   < 300w → HARD (article is unusable at any tier)
+  //   300–499w → SOFT (under-developed; retry hint pushes for expansion)
+  //   500–599w → SOFT (borderline; editorial review decides)
+  //   600w to tier-min → SOFT (acceptable assembly, just below aspirational depth)
+  // Word-count alone is not enough to reject a Tier A article above 300w —
+  // the qualitative validators (V3 schema leakage, V5 archetype must-haves,
+  // V6 internal links, etc.) catch real failures.
+  const STUB_HARD_FLOOR = 300;
+  const UNDER_DEVELOPED_THRESHOLD = 500;
+  const severity: ValidatorSeverity = wc < STUB_HARD_FLOOR ? "hard" : "soft";
+
+  let retryHint: string;
+  if (wc < STUB_HARD_FLOOR) {
+    retryHint = `The previous article was only ${wc} words — that is a stub, not an article. Develop the strongest messy scenario from the source material in full. Walk the operational workflow end-to-end. Compare evidence strength comparatively. Each major section should carry operational weight, not be a one-line summary. Aim for 600–900 words of substantive depth.`;
+  } else if (wc < UNDER_DEVELOPED_THRESHOLD) {
+    retryHint = `The previous article was only ${wc} words. Expand by developing the strongest messy scenario from the source material in full (not summarized), walking the Shopify workflow end-to-end, and comparing evidence strength comparatively. Do not add generic padding — add operational depth. At least one section should be 3–5 paragraphs.`;
+  } else {
+    retryHint = `The previous article was ${wc} words; aim for 600–900 words of operational depth. Do not pad — develop one section more fully (the strongest messy scenario, the workflow walk-through, or the evidence comparison) without inventing new substance.`;
+  }
 
   return {
     id: "V1_tier_minimum_words",
     severity,
-    message: `Article body is ${wc} words; tier ${tier} minimum is ${min}.`,
-    retryHint: `The previous article was only ${wc} words. Tier ${tier} requires at least ${min} words of substantive depth — not padding. Add concrete coverage: name a specific Shopify Admin path with the page label, walk one merchant scenario end-to-end (reason / amount / decision / outcome), enumerate evidence quality bands (Strong / Moderate / Weak) with sample values, and include a "common mistakes that lose disputes" section. Do NOT pad with restated points.`,
+    message: `Article body is ${wc} words; tier ${tier} minimum is ${min}.${
+      wc < UNDER_DEVELOPED_THRESHOLD ? " (under-developed)" : ""
+    }`,
+    retryHint,
   };
 }
 

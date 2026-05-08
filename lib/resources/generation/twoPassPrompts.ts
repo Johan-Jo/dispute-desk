@@ -161,13 +161,28 @@ Fold positioning material into the closing paragraphs of whichever section it be
 VARIANCE — processor / network / acquirer differences NEVER get their own section.
 Variation between Shopify Payments and Stripe, between Visa and Mastercard, between regions, between acquirers, gets folded INLINE into whichever operational section is discussing the underlying topic. Never produce headings containing "Processor", "Network", "Gateway", "Variance", "Caveats", "Variation Between", "Cross-System", or similar. The reader encounters caveats inline — e.g. "AVS Y on Shopify Payments shows in the Order's payment summary; Stripe surfaces it differently. Visa and Mastercard may also weigh AVS differently depending on processor routing." — not as a categorized warning block.
 
-PACING — uneven is correct.
+INTERNAL ASSEMBLY PROCESS — required before producing JSON
 
-Body length REQUIREMENT: at least 600 words. Below 600 the article reads as a stub — it cannot have used the Pass 1 source material substantively. Articles under 600 words will be REJECTED and you will be asked to rewrite. Aim for 700–1,100 words of operational depth.
+Before you write the article JSON, internally plan 4–6 sections. Each section must have a SPECIFIC JOB. Pick from these jobs (use whichever 4–6 fit the source material best — not all are required, and you may invent close variants):
 
-If the source material has 8+ observations, 3+ failure modes, 2+ messy examples, 4+ evidence hierarchy entries, and 5+ workflow notes, you have at least 700 words of real material. The compression mandate is "no padding, no warm-up" — NOT "make it small". A 1,200-word article of operator observations is correct; a 350-word skeleton is failure.
+- One section explains the operational workflow end-to-end (what happens, in what order, who acts).
+- One section develops the strongest messy scenario in full — not summarized, but walked through with the actual signal mix, decision pressure, and outcome reasoning.
+- One section compares evidence strength comparatively (Strong vs Moderate vs Weak with named field values, not a flat list).
+- One section handles processor / network / acquirer variance INLINE within the relevant operational discussion (variance gets folded into prose; it is never its own section).
+- One section explains what the merchant should DO before submitting — concrete, sequenced, actionable.
+- Optional closing section folds DisputeDesk positioning into prose only (still not a "DisputeDesk's Role" heading).
 
-Above ~1,500 means you started inventing beyond the source material — also wrong.
+Do NOT expose the internal plan. The final output is ONLY the JSON.
+
+COMPRESSED DOES NOT MEAN SHORT.
+
+Compressed means every paragraph carries operational weight. It does NOT mean summarize the source material into miniature sections. Develop the strongest messy scenario fully. Explain why the evidence failed or held. Connect the Shopify workflow to the issuer/acquirer decision logic. Walk through the merchant's options.
+
+Do NOT write every section as one short paragraph. At least one section should be substantially developed — 3–5 paragraphs of analysis — if the source material supports it. The other sections may be shorter, but the article cannot read as N evenly-sized fragments.
+
+Aim for 600–900 words of substantive operational depth. Below 500 reads as under-developed; above 1,500 means you started inventing beyond the source material.
+
+If the source material has 8+ observations, 3+ failure modes, 2+ messy examples, 4+ evidence hierarchy entries, and 5+ workflow notes, you have material for 700+ words of real content. Use it.
 
 Within that range, ASYMMETRY is editorial signal, not failure:
 - Section lengths should vary widely. A 1-paragraph section can sit next to a 5-paragraph section. That's right.
