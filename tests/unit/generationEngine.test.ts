@@ -144,7 +144,7 @@ describe("generateAllLocales — validator retry loop", () => {
     expect(results[0].content?.title).toBe(distinct.title);
   });
 
-  it("rejects when output remains too similar after MAX retries (3 total attempts)", async () => {
+  it("rejects when output remains too similar after MAX retries (4 total attempts)", async () => {
     const dup = {
       title: "How merchants can prevent chargebacks effectively",
       excerpt: "Practical steps to reduce disputes before they escalate.",
@@ -161,6 +161,7 @@ describe("generateAllLocales — validator retry loop", () => {
 
     const fetchMock = vi.mocked(fetch);
     fetchMock
+      .mockResolvedValueOnce(jsonResponse(dup, 40) as never)
       .mockResolvedValueOnce(jsonResponse(dup, 40) as never)
       .mockResolvedValueOnce(jsonResponse(dup, 40) as never)
       .mockResolvedValueOnce(jsonResponse(dup, 40) as never);
@@ -184,9 +185,9 @@ describe("generateAllLocales — validator retry loop", () => {
       embeddingClient: null,
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(results[0].content).toBeNull();
-    expect(results[0].error).toMatch(/rejected after 2 retries/i);
+    expect(results[0].error).toMatch(/rejected after 3 retries/i);
   });
 
   it("attaches soft validator warnings on accepted result", async () => {

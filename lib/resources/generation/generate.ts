@@ -41,7 +41,10 @@ import {
 import { DEFAULT_LOCALE_INSTRUCTIONS } from "./prompts";
 
 const MODEL = process.env.GENERATION_MODEL ?? "gpt-4o";
-const MAX_VALIDATOR_RETRIES = 2;
+// Bumped 2 → 3 after observing repeat schema-leakage cases where the model
+// took 3 attempts to escape "DisputeDesk's Role" / "Failure Modes" patterns.
+// Pass 2 retries are cheap (~$0.10 each) compared to losing the whole article.
+const MAX_VALIDATOR_RETRIES = 3;
 
 interface GeneratedContent {
   title: string;

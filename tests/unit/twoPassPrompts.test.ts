@@ -47,7 +47,7 @@ const validMaterial: PassOneSourceMaterial = {
   ],
   shopify_workflow_notes: ["Disputes appear in Settings → Payments → Manage."],
   processor_network_caveats: ["Confirm response windows with your processor."],
-  disputedesk_positioning_notes: ["Automation improves consistency, not certainty."],
+  positioning_constraints: ["Automation improves consistency, not certainty."],
 };
 
 /* ── Pass 1 system prompt ────────────────────────────────────────────── */
@@ -73,6 +73,9 @@ describe("PASS_ONE_SYSTEM_PROMPT", () => {
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"messy_examples"');
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"evidence_hierarchy"');
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"shopify_workflow_notes"');
+    // Renamed from disputedesk_positioning_notes to reduce schema-leakage to headings.
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"positioning_constraints"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"disputedesk_positioning_notes"');
   });
 
   it("inherits the banned-phrase blocklist from the voice core", () => {
@@ -166,6 +169,15 @@ describe("validatePassOneShape", () => {
     const broken = { ...validMaterial } as Record<string, unknown>;
     delete broken.observations;
     expect(validatePassOneShape(broken)).toBe(false);
+  });
+
+  it("tolerates the legacy disputedesk_positioning_notes key during transition", () => {
+    const legacyShape: Record<string, unknown> = {
+      ...validMaterial,
+      disputedesk_positioning_notes: validMaterial.positioning_constraints,
+    };
+    delete legacyShape.positioning_constraints;
+    expect(validatePassOneShape(legacyShape)).toBe(true);
   });
 
   it("rejects non-array fields", () => {

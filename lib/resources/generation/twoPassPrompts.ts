@@ -108,8 +108,8 @@ OUTPUT FORMAT — return valid JSON with this exact structure:
   "processor_network_caveats": [
     "string"  // 3–5 places the rules vary: Shopify Payments vs Stripe vs other gateways, Visa vs Mastercard, region differences, acquirer differences. Say "confirm with your processor" where the exact value varies.
   ],
-  "disputedesk_positioning_notes": [
-    "string"  // 2–3 honest framings of what DisputeDesk's automation handles vs what it does not. No guarantees, no black-box AI claims.
+  "positioning_constraints": [
+    "string"  // 2–3 honest framings of what DisputeDesk's automation handles vs what it does not. No guarantees, no black-box AI claims. THESE ARE WOVEN INTO PROSE BY PASS 2 — they will not become a section heading.
   ]
 }
 
@@ -136,25 +136,27 @@ The Pass 1 JSON structure is raw source material, not an article outline. Do not
 
 Do NOT preserve a one-to-one mapping between source categories and article sections. A truly good assembler should: merge fields when they belong together; split a single field across multiple sections when warranted; reorder material; elevate one observation into an entire section; bury another into a single line; sometimes omit a whole category entirely if it doesn't earn its place; sometimes reuse the same category's material across multiple sections. That asymmetry is what creates human editorial variance.
 
-Anti-pattern examples — NEVER produce sections like these:
+Anti-pattern — NEVER produce sections that mirror schema categories:
 
 BAD (schema-leaked headings — even if reworded):
 - "Failure Modes" / "Critical Failure Modes" / "Common Operational Mistakes"
 - "Evidence Hierarchy" / "Evidence Hierarchy: What Matters More" / "How Evidence Strength Actually Works"
-- "Messy Examples" / "Messy Examples: Real-World Scenarios" / "Real Merchant Scenarios"
+- "Messy Examples" / "Real-World Scenarios" / "Real Merchant Scenarios"
 - "Shopify Workflow Notes" / "Workflow Insights"
 - "Processor and Network Caveats"
 - "DisputeDesk's Role" / "Operational Transparency with DisputeDesk"
 
-GOOD (topic-led, problem-led, argument-led):
-- "Why AVS Y Still Loses Fraud Disputes"
-- "The Hidden Risk of 'Delivered' Without Signature"
-- "What Actually Happens After Clicking Submit Response in Shopify"
-- "Why Merchants Misread Shopify Protect Coverage"
-- "When the Issuer Cares More About Delivery Than Authorization"
-- "The 10-Day Clock and Where It Quietly Slips"
+What a GOOD heading looks like — describe SHAPE, not specific examples (this prompt deliberately does NOT give you example headings to copy; you must invent yours from the topic):
+- references a specific dispute reason, evidence type, or Shopify surface
+- names a SPECIFIC operational tension (X looks like it should win but doesn't, Y looks moderate but actually wins, the timing of Z, the issuer's actual focus on W)
+- pulls together 2–3 concepts from the source material — not 1 category re-titled
+- reads like a question or claim a working operator would say out loud, not like a category label
+- different across articles even when topics overlap
 
-The GOOD examples each emerge from a SPECIFIC operational reality the source material describes. They synthesize across categories — a heading may pull from a failure mode AND an evidence hierarchy entry AND a Shopify workflow note all at once. That's the bar.
+If you find yourself producing similar-structured headings across articles ("Why X Still Loses Y Disputes", "The Hidden Risk of A Without B"), that ALSO becomes a template. Vary the syntactic shape of your headings — some questions, some claims, some named tensions, some single-noun phrases tied to a specific scenario.
+
+POSITIONING — DisputeDesk's role does NOT get its own section.
+Fold positioning material into the closing paragraphs of whichever section it belongs to. Never produce a heading containing "DisputeDesk", "Automation", "Role", "Transparency", or similar. The reader feels the positioning in passing prose ("Pack assembly handles X; merchants still own Y"); they should not see it as an article structural component.
 
 ASSEMBLY RULES:
 - Preserve the source material's wording wherever it's already sharp. Do not paraphrase strong observations into smoother corporate prose.
@@ -218,13 +220,21 @@ export interface PassOneSourceMaterial {
   evidence_hierarchy: PassOneEvidenceHierarchyEntry[];
   shopify_workflow_notes: string[];
   processor_network_caveats: string[];
-  disputedesk_positioning_notes: string[];
+  positioning_constraints: string[];
 }
 
 /** Lightweight runtime check that the model returned the expected shape. */
 export function validatePassOneShape(raw: unknown): raw is PassOneSourceMaterial {
   if (!raw || typeof raw !== "object") return false;
   const r = raw as Record<string, unknown>;
+  // Tolerate the legacy key name `disputedesk_positioning_notes` for one
+  // generation; the prompt now requests `positioning_constraints`.
+  if (
+    !Array.isArray(r.positioning_constraints) &&
+    Array.isArray(r.disputedesk_positioning_notes)
+  ) {
+    r.positioning_constraints = r.disputedesk_positioning_notes;
+  }
   return (
     Array.isArray(r.observations) &&
     Array.isArray(r.failure_modes) &&
@@ -232,7 +242,7 @@ export function validatePassOneShape(raw: unknown): raw is PassOneSourceMaterial
     Array.isArray(r.evidence_hierarchy) &&
     Array.isArray(r.shopify_workflow_notes) &&
     Array.isArray(r.processor_network_caveats) &&
-    Array.isArray(r.disputedesk_positioning_notes)
+    Array.isArray(r.positioning_constraints)
   );
 }
 
