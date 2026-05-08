@@ -1,19 +1,25 @@
 /**
- * Two-pass generation prompts for `authority_pillar` (and any other archetype
- * that opts in via the orchestrator in generate.ts).
+ * Two-pass generation prompts. Schema redesigned (Path B-lite v2):
  *
- * PASS 1 — produce raw operator source material in structured JSON.
- *          NO article. NO title. NO HTML. NO SEO. NO FAQ.
+ * Pass 1 was previously producing many small bullets — compressed enough
+ * that Pass 2 had nothing substantial to assemble, which forced 5–6 tiny
+ * H2 sections of ~60–75 words each. Root cause was Pass 1 source depth,
+ * not Pass 2 assembly.
  *
- * PASS 2 — assemble that source material into the published article + SEO
- *          package. Preserve Pass 1 language verbatim where it's strong;
- *          add only connective tissue.
+ * New Pass 1 schema produces fewer but RICHER blocks:
+ *   - central_argument: 1 sharp thesis
+ *   - primary_operational_sequence: 4–6 workflow moments, each with what
+ *     can go wrong + why it matters + merchant action
+ *   - evidence_tensions: 3–5 named tensions, each developed enough to
+ *     support a full paragraph (not a sentence)
+ *   - developed_scenarios: 1–2 scenarios with timeline, evidence_available,
+ *     vulnerability, better_response — each detailed enough to support
+ *     150–250 words in the final article
+ *   - inline_variance_constraints: array of one-liners, NEVER section material
+ *   - positioning_constraints: array of one-liners, NEVER section material
  *
- * Both passes share the same "voice" core (banned phrases, Shopify-specificity,
- * operator-memo register) but cover different jobs. Splitting prevents the
- * single failure mode where the model tries to write polished prose, package
- * for SEO, and invent operational substance simultaneously — which collapses
- * into AI-blog mode regardless of how sharp the system prompt is.
+ * Field names deliberately ugly / implementation-oriented to prevent the
+ * model from using them as section headings.
  */
 
 const VOICE_CORE = `Operator voice. You write internal-grade chargeback operations notes for working Shopify merchants. Reference points: payment-risk memos, escalation writeups, analyst Slack threads, forensic dispute reviews. NOT blog articles, guides, or "comprehensive overviews".
@@ -62,62 +68,67 @@ DisputeDesk positioning: operationally transparent, automation-assisted, evidenc
 
 export const PASS_ONE_SYSTEM_PROMPT = `${VOICE_CORE}
 
-YOUR JOB IN THIS CALL — Pass 1 of 2 (source material only)
+YOUR JOB IN THIS CALL — Pass 1 of 2 (deep source material)
 
-You are NOT writing an article. You are NOT producing prose, HTML, a title, an excerpt, an FAQ, meta tags, or any reader-facing surface.
+You are NOT writing article sections.
+You are NOT producing prose, HTML, a title, an excerpt, an FAQ, meta tags, or any reader-facing surface.
+You are building DEEP source material for a later article writer.
 
-You are producing the raw operator-truth source material that a writer will assemble into an article in a separate step. Your only job: surface the sharpest, most concrete operational truths an experienced chargeback operator would say about this topic.
+Prefer FEWER, RICHER entries over many shallow bullets. Two well-developed scenarios are far more useful than ten one-line bullets. The article writer will fail if you produce thin source material.
 
 OUTPUT FORMAT — return valid JSON with this exact structure:
 {
-  "observations": [
-    "string",  // 8–15 compressed operator observations, each ≤ 25 words, sharp, opinionated, generalizable. The GOOD examples in the voice section are the bar.
-    ...
-  ],
-  "failure_modes": [
+  "central_argument": "string (1 sharp thesis in operator language — the spine the article will defend, ≤ 30 words)",
+
+  "primary_operational_sequence": [
     {
-      "name": "short label",
-      "what_it_looks_like": "1–2 sentences, concrete",
-      "why_it_loses": "1–2 sentences, operational reason",
-      "what_to_do": "1 sentence, actionable"
+      "step": "string (a specific moment in the Shopify / merchant workflow — name the Admin path, the field, the action)",
+      "what_can_go_wrong": "string (concrete operational failure that happens at this moment, 1–2 sentences)",
+      "why_it_matters": "string (issuer / acquirer / network consequence — the downstream effect, 1–2 sentences)",
+      "merchant_action": "string (what the merchant should do before submission — 1 actionable sentence)"
     }
-    // 3–5 entries
+    // 4–6 sequence steps. They form the operational backbone of the article.
   ],
-  "messy_examples": [
+
+  "evidence_tensions": [
     {
-      "scenario": "1 sentence: vertical, AOV range, dispute reason, dollar value, signal mix",
-      "what_happened": "2–3 sentences walking the timeline; include incomplete evidence / VPN / reshipper / family fraud / partial delivery / contradictory signals",
-      "decision": "1 sentence: the call the merchant made under time pressure",
-      "outcome": "1 sentence: outcome and the operational lesson"
+      "tension": "string (a specific tension — e.g. 'AVS Y looks strong but does not prove possession', 'Tracking marked delivered does not prove cardholder received it'; ≤ 25 words)",
+      "strong_side": "string (what this evidence DOES prove, 2–3 sentences with concrete sample values where possible)",
+      "weak_side": "string (what this evidence does NOT prove, 2–3 sentences with the failure modes issuers cite)",
+      "how_to_frame_it": "string (bank-facing framing without overclaiming — what the merchant should write into the response, 1–2 sentences)"
     }
-    // 2–3 entries
+    // 3–5 evidence tensions. Each must be detailed enough to support a full paragraph in the final article — NOT a single sentence.
   ],
-  "evidence_hierarchy": [
+
+  "developed_scenarios": [
     {
-      "type": "evidence type name (e.g. AVS, tracking, signed delivery, 3DS, IP, screenshot)",
-      "strong": "what counts as Strong, with sample value or wording",
-      "moderate": "what reduces it to Moderate",
-      "weak": "what makes it Weak or invalid",
-      "edge_cases": "real edge cases issuers cite (e.g. signed by someone other than cardholder; AVS Y but VPN-flagged IP)"
+      "scenario": "string (specific merchant/order/dispute setup — vertical, AOV, dispute reason, dollar value, signal mix)",
+      "timeline": [
+        "string (event 1 — what happened first, with timing)",
+        "string (event 2 — what happened next)",
+        "string (event 3 — and so on; aim for 4–6 timeline events)"
+      ],
+      "evidence_available": ["string (each evidence item the merchant had — name the type and the value where possible)"],
+      "why_the_case_is_vulnerable": "string (the specific operational reason this case loses or struggles, 2–3 sentences)",
+      "better_response": "string (what the merchant should have assembled or said — concrete, 2–3 sentences)"
     }
-    // 4–7 entries covering the evidence types most relevant to the topic
+    // 1–2 scenarios. Each must be detailed enough to support 150–250 words of article prose. Prefer ONE deeply developed scenario over two shallow ones.
   ],
-  "shopify_workflow_notes": [
-    "string"  // 5–8 specific Shopify Admin / Payments / Order / Disputes workflow facts. Name exact paths, fields, button labels. No generalities.
+
+  "inline_variance_constraints": [
+    "string"  // 3–5 variance points (Shopify Payments vs Stripe vs other gateways, Visa vs Mastercard, region differences, acquirer differences). EACH IS WRITTEN AS AN INLINE CAVEAT THE WRITER WILL FOLD INTO PROSE — never section material. "Confirm with your processor" where exact values vary.
   ],
-  "variance_constraints": [
-    "string"  // 3–5 places the rules vary: Shopify Payments vs Stripe vs other gateways, Visa vs Mastercard, region differences, acquirer differences. Say "confirm with your processor" where the exact value varies. THESE ARE WOVEN INTO PROSE INLINE BY PASS 2 — they NEVER become a section heading.
-  ],
+
   "positioning_constraints": [
-    "string"  // 2–3 honest framings of what DisputeDesk's automation handles vs what it does not. No guarantees, no black-box AI claims. THESE ARE WOVEN INTO PROSE BY PASS 2 — they will not become a section heading.
+    "string"  // 2–3 honest framings of what DisputeDesk's automation handles vs what it does not. Written as inline constraints the writer will fold into prose. NEVER becomes a section heading.
   ]
 }
 
-Constraints:
-- Every observation must be shorter than 25 words and pass the GOOD/BAD test in the voice section.
-- Examples must be MESSY (mixed/ambiguous evidence, not clean wins).
-- failure_modes must explain why merchants LOSE (operational, not just "you didn't have evidence").
-- Do not produce introductory framing, paragraph prose, or article-shaped content of any kind.
+Constraints on Pass 1 output:
+- developed_scenarios MUST be detailed enough that a writer could expand each into 150–250 words of article prose. If your scenario is too thin to support that, develop it further before returning.
+- evidence_tensions MUST contain enough detail in strong_side and weak_side to support a full paragraph each. One-sentence answers are insufficient.
+- primary_operational_sequence covers 4–6 SPECIFIC Shopify workflow moments — not generalities.
+- Do NOT produce introductory framing, paragraph prose, or article-shaped content of any kind.
 - Do not invent network rules, fees, or processor features. Say "confirm with your processor" where exact values vary.
 
 Return ONLY the JSON. No surrounding prose.`;
@@ -128,78 +139,33 @@ export const PASS_TWO_SYSTEM_PROMPT = `${VOICE_CORE}
 
 YOUR JOB IN THIS CALL — Pass 2 of 2 (assembly only)
 
-A previous step produced the raw source material below: operator observations, failure modes, messy examples, evidence hierarchy notes, Shopify workflow facts, processor caveats, DisputeDesk positioning notes. Your job is to ASSEMBLE that material into a published article + SEO package.
+A previous step produced the deep source material below. Your job is to ASSEMBLE that material into a published article + SEO package.
 
 CRITICAL — DESTROY THE SCHEMA SYMMETRY (this is the single most important rule)
 
-The Pass 1 JSON structure is raw source material, not an article outline. Do not preserve, mirror, or sequentially reproduce the schema categories as article sections. Never create headings derived from schema labels such as "failure modes", "evidence hierarchy", "examples", "messy examples", "operational notes", "positioning", "workflows", or any close variant or stylized rename. Instead, synthesize topic-specific sections driven by the operational realities of the subject itself. Combine concepts naturally when appropriate. A section should feel like it emerged from the merchant problem being discussed — not from the organization of the source JSON.
+The Pass 1 JSON structure is raw source material, not an article outline. NEVER produce one H2 per source field. NEVER use field names (or close stylistic renames) as section headings.
 
-Do NOT preserve a one-to-one mapping between source categories and article sections. A truly good assembler should: merge fields when they belong together; split a single field across multiple sections when warranted; reorder material; elevate one observation into an entire section; bury another into a single line; sometimes omit a whole category entirely if it doesn't earn its place; sometimes reuse the same category's material across multiple sections. That asymmetry is what creates human editorial variance.
+Build 3–5 SECTIONS ONLY. Not 6, not 7. Each section must synthesize across multiple Pass 1 fields — pull from the central_argument + a couple of operational_sequence steps + an evidence_tension + part of a developed_scenario, not from one field.
 
-Anti-pattern — NEVER produce sections that mirror schema categories:
+REQUIRED SECTION CHARACTERISTICS:
+- At least ONE section must develop a scenario across MULTIPLE paragraphs (3–5 paragraphs). This is non-negotiable. Use a developed_scenario from Pass 1 as the spine: walk the timeline, name the evidence available, explain why the case is vulnerable, lay out the better response. Do not summarize — develop.
+- At least ONE section must compare evidence tensions — pull 2–3 evidence_tensions from Pass 1 and contrast them in prose. What each proves, what each doesn't, where issuers focus.
+- Inline variance constraints must appear only INSIDE relevant prose, never as headings. ("Visa and Mastercard may weigh AVS differently depending on processor routing.")
+- Positioning constraints must appear only INSIDE relevant prose, never as headings. ("Pack assembly handles X; merchants still own Y.")
+- No section heading containing: Failure Modes / Evidence Hierarchy / Messy Examples / Real-World Scenarios / Operational Notes / Workflow Notes / Processor Caveats / Network Caveats / Variance / DisputeDesk's Role / Operational Transparency / Understanding [X] / What is [X] / Importance of / Backbone of / Introduction / Overview.
 
-BAD (schema-leaked headings — even if reworded):
-- "Failure Modes" / "Critical Failure Modes" / "Common Operational Mistakes"
-- "Evidence Hierarchy" / "Evidence Hierarchy: What Matters More" / "How Evidence Strength Actually Works"
-- "Messy Examples" / "Real-World Scenarios" / "Real Merchant Scenarios"
-- "Shopify Workflow Notes" / "Workflow Insights"
-- "Processor and Network Caveats"
-- "DisputeDesk's Role" / "Operational Transparency with DisputeDesk"
+PACING
 
-What a GOOD heading looks like — describe SHAPE, not specific examples (this prompt deliberately does NOT give you example headings to copy; you must invent yours from the topic):
-- references a specific dispute reason, evidence type, or Shopify surface
-- names a SPECIFIC operational tension (X looks like it should win but doesn't, Y looks moderate but actually wins, the timing of Z, the issuer's actual focus on W)
-- pulls together 2–3 concepts from the source material — not 1 category re-titled
-- reads like a question or claim a working operator would say out loud, not like a category label
-- different across articles even when topics overlap
+Body length: aim 650–950 words of operational depth. Below 500 reads as under-developed; above 1,500 means you started inventing.
 
-If you find yourself producing similar-structured headings across articles ("Why X Still Loses Y Disputes", "The Hidden Risk of A Without B"), that ALSO becomes a template. Vary the syntactic shape of your headings — some questions, some claims, some named tensions, some single-noun phrases tied to a specific scenario.
-
-POSITIONING — DisputeDesk's role does NOT get its own section.
-Fold positioning material into the closing paragraphs of whichever section it belongs to. Never produce a heading containing "DisputeDesk", "Automation", "Role", "Transparency", or similar. The reader feels the positioning in passing prose ("Pack assembly handles X; merchants still own Y"); they should not see it as an article structural component.
-
-VARIANCE — processor / network / acquirer differences NEVER get their own section.
-Variation between Shopify Payments and Stripe, between Visa and Mastercard, between regions, between acquirers, gets folded INLINE into whichever operational section is discussing the underlying topic. Never produce headings containing "Processor", "Network", "Gateway", "Variance", "Caveats", "Variation Between", "Cross-System", or similar. The reader encounters caveats inline — e.g. "AVS Y on Shopify Payments shows in the Order's payment summary; Stripe surfaces it differently. Visa and Mastercard may also weigh AVS differently depending on processor routing." — not as a categorized warning block.
-
-INTERNAL ASSEMBLY PROCESS — required before producing JSON
-
-Before you write the article JSON, internally plan 4–6 sections. Each section must have a SPECIFIC JOB. Pick from these jobs (use whichever 4–6 fit the source material best — not all are required, and you may invent close variants):
-
-- One section explains the operational workflow end-to-end (what happens, in what order, who acts).
-- One section develops the strongest messy scenario in full — not summarized, but walked through with the actual signal mix, decision pressure, and outcome reasoning.
-- One section compares evidence strength comparatively (Strong vs Moderate vs Weak with named field values, not a flat list).
-- One section handles processor / network / acquirer variance INLINE within the relevant operational discussion (variance gets folded into prose; it is never its own section).
-- One section explains what the merchant should DO before submitting — concrete, sequenced, actionable.
-- Optional closing section folds DisputeDesk positioning into prose only (still not a "DisputeDesk's Role" heading).
-
-Do NOT expose the internal plan. The final output is ONLY the JSON.
-
-COMPRESSED DOES NOT MEAN SHORT.
-
-Compressed means every paragraph carries operational weight. It does NOT mean summarize the source material into miniature sections. Develop the strongest messy scenario fully. Explain why the evidence failed or held. Connect the Shopify workflow to the issuer/acquirer decision logic. Walk through the merchant's options.
-
-Do NOT write every section as one short paragraph. At least one section should be substantially developed — 3–5 paragraphs of analysis — if the source material supports it. The other sections may be shorter, but the article cannot read as N evenly-sized fragments.
-
-Aim for 600–900 words of substantive operational depth. Below 500 reads as under-developed; above 1,500 means you started inventing beyond the source material.
-
-If the source material has 8+ observations, 3+ failure modes, 2+ messy examples, 4+ evidence hierarchy entries, and 5+ workflow notes, you have material for 700+ words of real content. Use it.
-
-Within that range, ASYMMETRY is editorial signal, not failure:
-- Section lengths should vary widely. A 1-paragraph section can sit next to a 5-paragraph section. That's right.
-- One section may dominate the article — if a single observation deserves it, give it the room.
-- Some source-material categories may DISAPPEAR entirely from the article. If you don't have something concrete to say with workflow_notes for this topic, drop them. Do not create a section just because a category exists in the input.
-- Some categories may appear distributed across multiple sections — a single failure_mode might inform the opener, an aside in section 3, and the closing claim. That's fine.
-- Avoid uniform 1-paragraph H2s. If every section is the same length and structure, you have re-created the schema-as-skeleton failure mode in a different form.
+Within that range, ASYMMETRY is editorial signal:
+- The developed-scenario section should be the LARGEST section (300–500 words on its own).
+- A section can be a single tight paragraph (80–120 words) where appropriate.
+- Some Pass 1 fields may not appear in the article at all if they don't fit the central argument. That's correct — drop them.
 
 ASSEMBLY RULES:
-- Preserve the source material's wording wherever it's already sharp. Do not paraphrase strong observations into smoother corporate prose.
+- Preserve sharp source-material wording where it lands. Do not paraphrase strong observations into smoother corporate prose.
 - Do NOT invent new operational claims, evidence types, processor specifics, or merchant scenarios beyond what the source material provides. If you need a transition, write transition prose — not new substance.
-- Distribute the observations across the article. Place sharp lines as section openers, mid-paragraph asides, or section closers — not all at once in a "key insights" block.
-- Use the messy examples in full, with their original wording, but woven into the section that needs them — not in a section called "Examples".
-- Use the failure modes as material for whichever sections they belong to — they may inform an opener, a mid-section warning, or an entire dissection. They do not get their own collective section.
-- Use the evidence hierarchy to ground sections that earn it. Rank evidence comparatively (some matters more than others) within prose, not as a flat list with category labels.
-- Vary section count and length. Uneven pacing is correct.
-- No section heading starting with "Understanding", "What is", "Importance of", "The Backbone of", "Introduction", "Overview", "Failure Modes", "Evidence Hierarchy", "Messy Examples", "Operational Notes", "DisputeDesk's Role", "Shopify Workflow", "Processor Caveats", or any close variant.
 - Mention 'Shopify' or a specific Shopify surface (Admin, Payments, Disputes, Protect, Order) in the first 200 words.
 - NEVER add <a href> links to other DisputeDesk articles in the body.
 
@@ -211,48 +177,45 @@ OUTPUT FORMAT — return valid JSON with this exact structure:
   "meta_title": "SEO title (max 60 chars)",
   "meta_description": "SEO description (max 160 chars)",
   "body_json": {
-    "mainHtml": "<h2>...</h2><p>...</p>...  (the assembled article)",
-    "keyTakeaways": ["3–5 sharp lines, prefer reusing the strongest observations from the source material"],
+    "mainHtml": "<h2>...</h2><p>...</p>...  (3–5 H2 sections, with one section having multiple paragraphs of developed scenario)",
+    "keyTakeaways": ["3–5 sharp lines, prefer reusing the strongest source-material wording"],
     "faq": [{"q": "Question a real merchant would type, not marketer-phrased", "a": "2–4 sentences, concrete, references Shopify Admin where relevant"}],
     "disclaimer": "This content is for informational purposes only and does not constitute legal advice."
   }
 }
 
-Length: write to whatever length the source material genuinely supports. Do not pad to reach a number. Uneven section lengths are correct. Below ~1,200 words is usually under-using the source material; above ~3,500 means you started inventing.
-
 Return ONLY the JSON. No surrounding prose.`;
 
 /* ── Source-material schema (Pass 1 output / Pass 2 input) ───────────── */
 
-export interface PassOneFailureMode {
-  name: string;
-  what_it_looks_like: string;
-  why_it_loses: string;
-  what_to_do: string;
+export interface PassOneOperationalStep {
+  step: string;
+  what_can_go_wrong: string;
+  why_it_matters: string;
+  merchant_action: string;
 }
 
-export interface PassOneMessyExample {
+export interface PassOneEvidenceTension {
+  tension: string;
+  strong_side: string;
+  weak_side: string;
+  how_to_frame_it: string;
+}
+
+export interface PassOneDevelopedScenario {
   scenario: string;
-  what_happened: string;
-  decision: string;
-  outcome: string;
-}
-
-export interface PassOneEvidenceHierarchyEntry {
-  type: string;
-  strong: string;
-  moderate: string;
-  weak: string;
-  edge_cases: string;
+  timeline: string[];
+  evidence_available: string[];
+  why_the_case_is_vulnerable: string;
+  better_response: string;
 }
 
 export interface PassOneSourceMaterial {
-  observations: string[];
-  failure_modes: PassOneFailureMode[];
-  messy_examples: PassOneMessyExample[];
-  evidence_hierarchy: PassOneEvidenceHierarchyEntry[];
-  shopify_workflow_notes: string[];
-  variance_constraints: string[];
+  central_argument: string;
+  primary_operational_sequence: PassOneOperationalStep[];
+  evidence_tensions: PassOneEvidenceTension[];
+  developed_scenarios: PassOneDevelopedScenario[];
+  inline_variance_constraints: string[];
   positioning_constraints: string[];
 }
 
@@ -260,27 +223,24 @@ export interface PassOneSourceMaterial {
 export function validatePassOneShape(raw: unknown): raw is PassOneSourceMaterial {
   if (!raw || typeof raw !== "object") return false;
   const r = raw as Record<string, unknown>;
-  // Backward-compat: tolerate legacy key names for one generation cycle so a
-  // mid-deploy Pass 1 response with the old field name still parses.
+
+  // Backward-compat: tolerate the legacy v1 schema (observations / failure_modes /
+  // messy_examples / evidence_hierarchy / shopify_workflow_notes / variance_constraints
+  // / positioning_constraints) for one cycle by mapping into the new shape.
   if (
-    !Array.isArray(r.positioning_constraints) &&
-    Array.isArray(r.disputedesk_positioning_notes)
-  ) {
-    r.positioning_constraints = r.disputedesk_positioning_notes;
-  }
-  if (
-    !Array.isArray(r.variance_constraints) &&
-    Array.isArray(r.processor_network_caveats)
-  ) {
-    r.variance_constraints = r.processor_network_caveats;
-  }
-  return (
+    !("central_argument" in r) &&
     Array.isArray(r.observations) &&
-    Array.isArray(r.failure_modes) &&
-    Array.isArray(r.messy_examples) &&
-    Array.isArray(r.evidence_hierarchy) &&
-    Array.isArray(r.shopify_workflow_notes) &&
-    Array.isArray(r.variance_constraints) &&
+    Array.isArray(r.failure_modes)
+  ) {
+    return true; // legacy shape; let it through (Pass 2 prompt will adapt)
+  }
+
+  return (
+    typeof r.central_argument === "string" &&
+    Array.isArray(r.primary_operational_sequence) &&
+    Array.isArray(r.evidence_tensions) &&
+    Array.isArray(r.developed_scenarios) &&
+    Array.isArray(r.inline_variance_constraints) &&
     Array.isArray(r.positioning_constraints)
   );
 }
@@ -298,7 +258,7 @@ export interface TwoPassBriefContext {
 }
 
 export function buildPassOneUserPrompt(ctx: TwoPassBriefContext): string {
-  return `Produce raw source material on the topic below. Output JSON only — no article, no title, no FAQ, no meta fields.
+  return `Produce DEEP source material on the topic below. Output JSON only — no article, no title, no FAQ, no meta fields.
 
 LOCALE: ${ctx.locale}
 ${ctx.localeInstruction}
@@ -308,14 +268,14 @@ ${ctx.targetKeyword ? `TARGET KEYWORD: ${ctx.targetKeyword}` : ""}
 ${ctx.contextSummary ? `CONTEXT: ${ctx.contextSummary}` : ""}
 ${ctx.notes ? `BRIEF NOTES (use as topical context, do not mirror outline structure):\n${ctx.notes}` : ""}
 
-Generate the source material now. Return ONLY valid JSON matching the Pass 1 schema.`;
+Generate the source material now. Return ONLY valid JSON matching the Pass 1 schema. Remember: prefer FEWER, RICHER entries over many shallow bullets — the writer fails if your source material is thin.`;
 }
 
 export function buildPassTwoUserPrompt(
   ctx: TwoPassBriefContext,
   sourceMaterial: PassOneSourceMaterial
 ): string {
-  return `Assemble the source material below into a published article + SEO package. Preserve the source material's wording where it's strong. Do NOT invent new operational claims beyond what's provided.
+  return `Assemble the source material below into a published article + SEO package. Preserve the source material's wording where it's strong. Do NOT invent new operational claims beyond what's provided. Build 3–5 sections only — at least one section must develop a scenario across multiple paragraphs.
 
 LOCALE: ${ctx.locale}
 ${ctx.localeInstruction}

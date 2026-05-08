@@ -19,35 +19,68 @@ const ctx: TwoPassBriefContext = {
 };
 
 const validMaterial: PassOneSourceMaterial = {
-  observations: ["Most lost disputes are operational losses, not evidence losses."],
-  failure_modes: [
+  central_argument:
+    "Most lost Shopify chargebacks are operational losses, not evidence losses — issuers care about the assembly, not the data.",
+  primary_operational_sequence: [
     {
-      name: "Scattered evidence",
-      what_it_looks_like: "Tracking lives in carrier portal, comms in Gorgias, payment in Shopify.",
-      why_it_loses: "Late assembly misses the response window.",
-      what_to_do: "Centralize before day 5.",
+      step: "New dispute appears in Settings → Payments → Manage in Shopify Admin",
+      what_can_go_wrong:
+        "Merchant doesn't see the dispute for 12+ hours; staff with insufficient permissions can't open it.",
+      why_it_matters:
+        "The 10-day response window starts ticking on Shopify Payments' clock, not when the merchant notices.",
+      merchant_action:
+        "Set up dispute notifications and assign Manage Orders permissions before disputes hit.",
+    },
+    {
+      step: "Evidence assembly across Gorgias / Zendesk / carrier portal / Shopify Admin notes",
+      what_can_go_wrong:
+        "Tracking number is in Shippo; signature confirmation lives in FedEx; customer thread is in Gorgias.",
+      why_it_matters: "Late assembly means evidence arrives after the response is filed.",
+      merchant_action: "Centralize all evidence into the dispute pack before day 5.",
     },
   ],
-  messy_examples: [
+  evidence_tensions: [
     {
-      scenario: "Beauty brand, AOV $90, fraud chargeback on $189 order",
-      what_happened: "AVS Y, tracking delivered, but signature was a roommate's; cardholder claims unauthorized.",
-      decision: "Submitted with tracking + AVS, no signed contract.",
-      outcome: "Lost. Issuer cited 'signed by another party'.",
+      tension:
+        "AVS Y looks strong but does not prove the cardholder personally received the order",
+      strong_side:
+        "AVS Y on the cardholder's billing address shown in the Order's payment summary proves the billing identity matched at authorization. Issuers see this as a baseline authentication signal.",
+      weak_side:
+        "AVS Y proves nothing about possession of the goods. In high-AOV physical-goods fraud, issuers regularly rule against merchants whose only fraud-defense is AVS — they want delivery proof tied to the cardholder, not to a billing match.",
+      how_to_frame_it:
+        "Cite AVS Y alongside delivery confirmation and IP geolocation; never as a standalone fraud defense.",
     },
   ],
-  evidence_hierarchy: [
+  developed_scenarios: [
     {
-      type: "AVS",
-      strong: "AVS Y on cardholder's billing address",
-      moderate: "AVS Y but VPN-flagged IP",
-      weak: "AVS only, no shipping match",
-      edge_cases: "Shopify Payments displays AVS in payment summary; third-party gateways vary",
+      scenario:
+        "Beauty brand, $90 AOV, $189 fraud chargeback (10.4 unauthorized) on a 3-item order",
+      timeline: [
+        "Day 0: order placed at 11:42pm, AVS Y, CVV Y, IP from cardholder city",
+        "Day 2: shipped via FedEx Ground, signature required",
+        "Day 4: delivered, signed by 'M. ROOMER' (cardholder is M. ROOMERS)",
+        "Day 19: chargeback filed, reason 10.4 unauthorized",
+      ],
+      evidence_available: [
+        "AVS Y match",
+        "CVV Y match",
+        "IP geolocation matching billing city",
+        "FedEx tracking + signature",
+      ],
+      why_the_case_is_vulnerable:
+        "The signature is one letter off from the cardholder name. Issuers reading 'signed by another party' default to rejection in unauthorized-use cases. AVS Y doesn't compensate; the issuer focuses on possession.",
+      better_response:
+        "Include a written narrative explicitly addressing the signature variance (typo on FedEx side; same address; proof of cardholder presence via subsequent purchases or login activity).",
     },
   ],
-  shopify_workflow_notes: ["Disputes appear in Settings → Payments → Manage."],
-  variance_constraints: ["Confirm response windows with your processor."],
-  positioning_constraints: ["Automation improves consistency, not certainty."],
+  inline_variance_constraints: [
+    "Shopify Payments shows AVS in the Order's payment summary; Stripe surfaces it differently in the Dashboard.",
+    "Visa and Mastercard may weigh AVS differently depending on processor routing — confirm with your processor.",
+  ],
+  positioning_constraints: [
+    "DisputeDesk pack assembly handles fragmented evidence consolidation; merchants still own high-risk review.",
+    "Automation improves consistency, not certainty.",
+  ],
 };
 
 /* ── Pass 1 system prompt ────────────────────────────────────────────── */
@@ -56,34 +89,40 @@ describe("PASS_ONE_SYSTEM_PROMPT", () => {
   it("does NOT mention 'pillar' / 'guide' / 'complete' / 'comprehensive overview'", () => {
     const p = PASS_ONE_SYSTEM_PROMPT;
     expect(/\bpillar\b/i.test(p)).toBe(false);
-    // "guide" appears once in negative framing ("NOT blog articles, guides…") which is fine
     expect(p).toContain("NOT blog articles, guides");
     expect(p).not.toContain("complete guide");
     expect(p.toLowerCase()).not.toContain("authority pillar");
   });
 
   it("forbids article packaging in Pass 1 output", () => {
-    expect(PASS_ONE_SYSTEM_PROMPT).toMatch(/NOT writing an article/i);
-    expect(PASS_ONE_SYSTEM_PROMPT).toMatch(/NOT producing prose, HTML, a title/i);
+    expect(PASS_ONE_SYSTEM_PROMPT).toMatch(/NOT writing article sections/i);
   });
 
-  it("requires the source-material schema", () => {
-    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"observations"');
-    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"failure_modes"');
-    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"messy_examples"');
-    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"evidence_hierarchy"');
-    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"shopify_workflow_notes"');
-    // Renamed to neutralize editorial gravity — these never become headings.
+  it("requires the new deeper source-material schema", () => {
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"central_argument"');
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"primary_operational_sequence"');
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"evidence_tensions"');
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"developed_scenarios"');
+    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"inline_variance_constraints"');
     expect(PASS_ONE_SYSTEM_PROMPT).toContain('"positioning_constraints"');
-    expect(PASS_ONE_SYSTEM_PROMPT).toContain('"variance_constraints"');
-    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"disputedesk_positioning_notes"');
-    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"processor_network_caveats"');
+    // Old shallow-bullet schema fields should be gone:
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"observations"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"failure_modes"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"messy_examples"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"evidence_hierarchy"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"shopify_workflow_notes"');
+    expect(PASS_ONE_SYSTEM_PROMPT).not.toContain('"variance_constraints"');
   });
 
   it("inherits the banned-phrase blocklist from the voice core", () => {
     expect(PASS_ONE_SYSTEM_PROMPT).toContain("Hard-banned anywhere in your output:");
     expect(PASS_ONE_SYSTEM_PROMPT).toContain("comprehensive overview");
     expect(PASS_ONE_SYSTEM_PROMPT).toContain("leveraging");
+  });
+
+  it("instructs to prefer fewer richer entries over many shallow bullets", () => {
+    expect(PASS_ONE_SYSTEM_PROMPT).toMatch(/FEWER, RICHER entries/);
+    expect(PASS_ONE_SYSTEM_PROMPT).toMatch(/150–250 words/);
   });
 });
 
@@ -95,7 +134,7 @@ describe("PASS_TWO_SYSTEM_PROMPT", () => {
   });
 
   it("instructs to PRESERVE source material wording, not invent", () => {
-    expect(PASS_TWO_SYSTEM_PROMPT).toMatch(/Preserve the source material/);
+    expect(PASS_TWO_SYSTEM_PROMPT).toMatch(/Preserve.*source.material.wording/i);
     expect(PASS_TWO_SYSTEM_PROMPT).toMatch(/Do NOT invent new operational claims/);
   });
 
@@ -107,8 +146,9 @@ describe("PASS_TWO_SYSTEM_PROMPT", () => {
     expect(PASS_TWO_SYSTEM_PROMPT).toContain('"mainHtml"');
   });
 
-  it("forbids explanatory section headings", () => {
-    expect(PASS_TWO_SYSTEM_PROMPT).toMatch(/No section heading starting with "Understanding"/);
+  it("caps section count at 3-5 and requires multi-paragraph development", () => {
+    expect(PASS_TWO_SYSTEM_PROMPT).toMatch(/3–5 SECTIONS/);
+    expect(PASS_TWO_SYSTEM_PROMPT).toMatch(/develop a scenario across MULTIPLE paragraphs/);
   });
 
   it("inherits the banned-phrase blocklist", () => {
@@ -129,10 +169,10 @@ describe("buildPassOneUserPrompt", () => {
     expect(p).toContain("audience");
   });
 
-  it("instructs JSON only, no article", () => {
+  it("instructs JSON only and points at deep-source-material framing", () => {
     const p = buildPassOneUserPrompt(ctx);
     expect(p).toMatch(/JSON only — no article/i);
-    expect(p).toMatch(/Pass 1 schema/);
+    expect(p).toMatch(/DEEP source material/);
   });
 });
 
@@ -142,9 +182,8 @@ describe("buildPassTwoUserPrompt", () => {
   it("embeds source material as authoritative input", () => {
     const p = buildPassTwoUserPrompt(ctx, validMaterial);
     expect(p).toContain("SOURCE MATERIAL");
-    expect(p).toContain("Most lost disputes are operational losses");
-    expect(p).toContain("Scattered evidence");
-    expect(p).toContain("AVS Y on cardholder's billing address");
+    expect(p).toContain(validMaterial.central_argument);
+    expect(p).toContain(validMaterial.developed_scenarios[0].scenario);
   });
 
   it("includes topic + context + locale", () => {
@@ -153,10 +192,11 @@ describe("buildPassTwoUserPrompt", () => {
     expect(p).toContain("LOCALE: en-US");
   });
 
-  it("instructs to preserve wording", () => {
+  it("instructs to preserve wording and cap at 3–5 sections", () => {
     const p = buildPassTwoUserPrompt(ctx, validMaterial);
-    expect(p).toMatch(/Preserve the source material/);
+    expect(p).toMatch(/Preserve the source material's wording/);
     expect(p).toMatch(/Do NOT invent new operational claims/);
+    expect(p).toMatch(/3–5 sections only/);
   });
 });
 
@@ -169,30 +209,27 @@ describe("validatePassOneShape", () => {
 
   it("rejects missing top-level keys", () => {
     const broken = { ...validMaterial } as Record<string, unknown>;
-    delete broken.observations;
+    delete broken.central_argument;
     expect(validatePassOneShape(broken)).toBe(false);
   });
 
-  it("tolerates the legacy disputedesk_positioning_notes key during transition", () => {
+  it("tolerates the legacy v1 schema (observations + failure_modes) during transition", () => {
     const legacyShape: Record<string, unknown> = {
-      ...validMaterial,
-      disputedesk_positioning_notes: validMaterial.positioning_constraints,
+      observations: ["string"],
+      failure_modes: [{}],
+      messy_examples: [{}],
+      evidence_hierarchy: [{}],
+      shopify_workflow_notes: ["x"],
+      variance_constraints: ["x"],
+      positioning_constraints: ["x"],
     };
-    delete legacyShape.positioning_constraints;
     expect(validatePassOneShape(legacyShape)).toBe(true);
   });
 
-  it("tolerates the legacy processor_network_caveats key during transition", () => {
-    const legacyShape: Record<string, unknown> = {
-      ...validMaterial,
-      processor_network_caveats: validMaterial.variance_constraints,
-    };
-    delete legacyShape.variance_constraints;
-    expect(validatePassOneShape(legacyShape)).toBe(true);
-  });
-
-  it("rejects non-array fields", () => {
-    expect(validatePassOneShape({ ...validMaterial, observations: "not-array" })).toBe(false);
+  it("rejects non-array fields in the new schema", () => {
+    expect(
+      validatePassOneShape({ ...validMaterial, evidence_tensions: "not-array" })
+    ).toBe(false);
   });
 
   it("rejects null / non-object input", () => {

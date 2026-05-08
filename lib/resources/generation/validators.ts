@@ -149,6 +149,7 @@ const EXPLANATORY_HEADING_PATTERNS: RegExp[] = [
  * structural sameness the user is targeting. Hard-fails any of these patterns.
  */
 const SCHEMA_LEAKED_HEADING_PATTERNS: RegExp[] = [
+  // Old (v1) schema field names
   /\bfailure modes?\b/i,
   /\bevidence hierarch/i,
   /\bmessy examples?\b/i,
@@ -171,6 +172,14 @@ const SCHEMA_LEAKED_HEADING_PATTERNS: RegExp[] = [
   /\boperational transparency with disputedesk\b/i,
   /^common operational mistakes?\b/i,
   /\bhow evidence strength (actually )?works\b/i,
+  // New (v2) schema field names — must NOT appear as headings either
+  /\bcentral argument\b/i,
+  /\bprimary operational sequence\b/i,
+  /\boperational sequence\b/i,
+  /\bevidence tensions?\b/i,
+  /\bdeveloped scenarios?\b/i,
+  /\binline variance\b/i,
+  /\bpositioning constraints?\b/i,
 ];
 
 const SHOPIFY_SURFACE_PATTERNS: RegExp[] = [

@@ -248,7 +248,7 @@ function buildTwoPassContext(brief: GenerationBrief, locale: string): TwoPassBri
  * messy examples, evidence hierarchy notes). Single attempt; no retry. The
  * output is structural data, not prose, so retries don't add much value.
  */
-async function generatePassOne(
+export async function generatePassOne(
   brief: GenerationBrief,
   locale: string
 ): Promise<{ material: PassOneSourceMaterial | null; tokensUsed: number; error: string | null }> {
