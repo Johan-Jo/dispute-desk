@@ -245,15 +245,15 @@ export function v1_tierMinimumWords(
 
   if (wc >= min) return null;
 
-  // V1 is always SOFT for now — gpt-4o frequently produces 600-1000-word
-  // articles even when the prompt explicitly asks for 3500+. We log the
-  // miss as a warning and accept the article into editorial review rather
-  // than rejecting after 2 expensive retries that don't help. Editorial
-  // review (workflow_status='in-editorial-review' for Tier A per PR 5)
-  // is where humans decide whether to publish, expand, or kick back.
-  // Re-promote to hard once a reliable >2000w generation strategy is in
-  // place (multi-pass / section-iterative generation, or a stronger model).
-  const severity: ValidatorSeverity = "soft";
+  // Tier A: hard-floor at 600w (under that, the article is not viable as
+  // an authority pillar at all — it can't carry the source material). Above
+  // 600 but below tier minimum (3000) stays SOFT so the model isn't punished
+  // for failing to hit aspirational depth. Tier B/C stay soft throughout.
+  // Two-pass authority_pillar generation produces ≥ 600w reliably; this
+  // floor catches the model's tendency to over-compress.
+  const ASSEMBLY_HARD_FLOOR = 600;
+  const severity: ValidatorSeverity =
+    tier === "A" && wc < ASSEMBLY_HARD_FLOOR ? "hard" : "soft";
 
   return {
     id: "V1_tier_minimum_words",

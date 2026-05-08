@@ -162,7 +162,12 @@ VARIANCE — processor / network / acquirer differences NEVER get their own sect
 Variation between Shopify Payments and Stripe, between Visa and Mastercard, between regions, between acquirers, gets folded INLINE into whichever operational section is discussing the underlying topic. Never produce headings containing "Processor", "Network", "Gateway", "Variance", "Caveats", "Variation Between", "Cross-System", or similar. The reader encounters caveats inline — e.g. "AVS Y on Shopify Payments shows in the Order's payment summary; Stripe surfaces it differently. Visa and Mastercard may also weigh AVS differently depending on processor routing." — not as a categorized warning block.
 
 PACING — uneven is correct.
-Aim for roughly 600–900 words of substantive depth. Below ~500 words usually means under-using the source material; above ~1,500 means you started inventing.
+
+Body length REQUIREMENT: at least 600 words. Below 600 the article reads as a stub — it cannot have used the Pass 1 source material substantively. Articles under 600 words will be REJECTED and you will be asked to rewrite. Aim for 700–1,100 words of operational depth.
+
+If the source material has 8+ observations, 3+ failure modes, 2+ messy examples, 4+ evidence hierarchy entries, and 5+ workflow notes, you have at least 700 words of real material. The compression mandate is "no padding, no warm-up" — NOT "make it small". A 1,200-word article of operator observations is correct; a 350-word skeleton is failure.
+
+Above ~1,500 means you started inventing beyond the source material — also wrong.
 
 Within that range, ASYMMETRY is editorial signal, not failure:
 - Section lengths should vary widely. A 1-paragraph section can sit next to a 5-paragraph section. That's right.
