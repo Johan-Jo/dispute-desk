@@ -49,8 +49,20 @@ describe("verifySessionToken", () => {
 
   it("rejects a token with a bad signature", async () => {
     const { verifySessionToken } = await import("@/lib/shopify/sessionToken");
-    const tampered = signToken(validPayload).replace(/.$/, "x");
-    expect(verifySessionToken(tampered)).toBeNull();
+    // Tamper the signature at the byte level, not the base64 char level: the
+    // trailing base64url char of a 32-byte HMAC carries only 4 meaningful bits,
+    // so a naive ".replace(/.$/, 'x')" can decode to the same buffer ~5% of
+    // the time and the bad signature passes verification.
+    const [header, body, sigB64] = signToken(validPayload).split(".");
+    const padded = sigB64 + "=".repeat((4 - (sigB64.length % 4)) % 4);
+    const sigBytes = Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+    sigBytes[0] = sigBytes[0] ^ 0xff;
+    const tamperedSig = sigBytes
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    expect(verifySessionToken(`${header}.${body}.${tamperedSig}`)).toBeNull();
   });
 
   it("rejects a token with the wrong audience", async () => {
