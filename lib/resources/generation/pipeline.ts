@@ -60,6 +60,9 @@ function archiveRowToBrief(data: Record<string, unknown>): GenerationBrief {
   const pageRoleCol = data.page_role as string | null | undefined;
   const complexityCol = data.complexity as string | null | undefined;
   const targetWordRangeCol = data.target_word_range as string | null | undefined;
+  const tierCol = data.tier_override as string | null | undefined;
+  const archetypeCol = data.archetype as string | null | undefined;
+  const isHubArticle = data.is_hub_article as boolean | null | undefined;
 
   return {
     archiveItemId: data.id as string,
@@ -71,6 +74,9 @@ function archiveRowToBrief(data: Record<string, unknown>): GenerationBrief {
     searchIntent: (data.search_intent as string | null) ?? null,
     complexity: complexityCol ?? fromNotes.complexity ?? null,
     targetWordRange: targetWordRangeCol ?? fromNotes.targetWordRange ?? null,
+    tier: tierCol ?? null,
+    archetype: archetypeCol ?? null,
+    isHubArticle: isHubArticle ?? null,
     summary: (data.summary as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
     targetLocales: locs && locs.length > 0 ? locs : ["en-US", "de-DE", "fr-FR", "es-ES", "pt-BR", "sv-SE"],

@@ -13,8 +13,8 @@ describe("resolveGenerationPrompts", () => {
     const r = resolveGenerationPrompts({});
     expect(r.systemPrompt).toBe(DEFAULT_SYSTEM_PROMPT);
     expect(r.userPromptSuffix).toBe(DEFAULT_USER_PROMPT_SUFFIX);
-    expect(r.userPromptSuffix).toContain("Originality and anti-repetition requirements");
-    expect(DEFAULT_SYSTEM_PROMPT).toContain("B2B ecommerce content strategist");
+    expect(r.userPromptSuffix).toContain("Originality and anti-repetition baseline");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("Shopify chargeback operations writer");
     expect(r.localeInstructions["sv-SE"]).toContain("Återbetalningskrav");
     expect(r.contentTypeInstructions["cluster_article"]).toBe(
       DEFAULT_CONTENT_TYPE_INSTRUCTIONS["cluster_article"]
@@ -71,9 +71,12 @@ describe("buildUserPrompt", () => {
     expect(p).toContain("Vary headline structure.");
     expect(p).toContain("TARGET KEYWORD: kw");
     expect(p).toContain("Length guidance:");
-    expect(p).toContain("1100–1500 words");
+    // cluster_article + medium complexity now resolves to Tier B (1900–2500 words).
+    expect(p).toContain("1900–2500 words");
     expect(p).toContain("SEARCH INTENT: informational");
     expect(p).toContain("PAGE ROLE: support");
+    expect(p).toContain("ARCHETYPE: merchant_playbook");
+    expect(p).toContain("TIER: B");
   });
 
   it("omits overlap section when similar list is empty", () => {
@@ -91,7 +94,7 @@ describe("buildUserPrompt", () => {
       emptyCtx
     );
     expect(p).toContain("500–800 words (override)");
-    expect(p).not.toContain("1100–1500 words");
+    expect(p).not.toContain("1900–2500 words");
   });
 
   it("includes compact similar-article context when provided", () => {

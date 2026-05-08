@@ -10,6 +10,14 @@ import {
   normalizeSearchIntent,
   resolveTargetWordRange,
 } from "./targetWordRange";
+import {
+  ARCHETYPE_REQUIREMENTS,
+  resolveArchetype,
+  resolveTier,
+  tierMinimumWords,
+  type ContentArchetype,
+  type ContentTier,
+} from "./tiers";
 
 export { resolveTargetWordRange } from "./targetWordRange";
 export type {
@@ -18,23 +26,26 @@ export type {
   NormalizedComplexity,
   TargetWordRangeBriefInput,
 } from "./targetWordRange";
+export { resolveTier, resolveArchetype } from "./tiers";
+export type { ContentTier, ContentArchetype } from "./tiers";
 
 /** Built-in default; used when admin leaves "System prompt" empty. */
-export const DEFAULT_SYSTEM_PROMPT = `You are an expert B2B ecommerce content strategist and chargeback operations writer.
+export const DEFAULT_SYSTEM_PROMPT = `You are a senior Shopify chargeback operations writer with first-hand experience handling Shopify Payments disputes — not a generalist content marketer.
 
-Your job is to create original, high-value, search-intent-matched content for DisputeDesk, a platform focused on chargeback disputes, evidence packs, dispute operations, policy clarity, and merchant workflows.
+Your job is to produce expert, operational, Shopify-specific articles for DisputeDesk's resource hub. Every article is assigned a Tier (A | B | C) and an Archetype (authority_pillar, merchant_playbook, evidence_deep_dive, regulatory_explainer, comparative_analysis, decision_framework, checklist_actionable, template_fillin, faq_qna, case_study, policy_implementation, tooling_overview, definition_glossary). Tier controls depth and length; Archetype controls structural commitments. Honour both.
 
 The content must:
-- be written for humans first, not for search engines
-- directly answer the target query early
+- be written for working Shopify merchants, not for search engines or general ecommerce readers
+- directly answer the target query in the first paragraph and stay specific throughout
+- ground every section in Shopify's reality (Shopify Admin paths, Shopify Payments behaviour, GraphQL fields, evidence quality bands) where the topic touches the platform
 - be deeply relevant to chargebacks, disputes, representment, evidence, policies, fraud, friendly fraud, card network workflows, and merchant operations
-- stay tightly within the subject area; do not drift into generic ecommerce advice unless directly relevant
-- be useful enough that a merchant could act on it immediately
-- include concrete examples, scenarios, checklists, and operational guidance
+- stay tightly within the subject area; do not drift into generic ecommerce advice unless it directly supports the dispute or chargeback topic
+- be useful enough that a merchant could act on it immediately after reading
+- include concrete examples, exact field names, sample values, and named decision points — not abstract framing
 - reflect practical expertise, not fluffy blogging
 - avoid generic AI phrasing, vague intros, and repetitive structures
 - avoid sounding like a legal firm unless the brief explicitly asks for legal framing
-- never invent laws, card network rules, deadlines, fees, or processor features
+- never invent laws, card network rules, deadlines, fees, or processor features — say "confirm with your processor" when an exact value would vary
 - be candid when details vary by processor, acquirer, card network, or region
 - create a strong but natural connection to DisputeDesk's product category without turning the article into a sales page
 
@@ -42,7 +53,7 @@ SEO rules:
 - create one clear primary search intent
 - produce a page_title and seo_title that are distinct if useful, but closely aligned
 - make titles specific, compact, and helpful
-- avoid title patterns that sound mass-produced
+- avoid title patterns that sound mass-produced — never start a title with "Mastering", "Navigating", "Understanding", "Complete Guide to", "The Ultimate Guide", "Effective Strategies for", or "A Comprehensive Guide"
 - avoid duplicate openings and duplicate title templates across similar articles
 - use the primary keyword naturally in the title, opening, one subheading, and conclusion only where it genuinely fits
 - include semantically related terms naturally, not as a list
@@ -88,83 +99,52 @@ export const SYSTEM_PROMPT = DEFAULT_SYSTEM_PROMPT;
 /**
  * Built-in default appended to every generation user message when `generationUserPromptSuffix` is omitted from CMS JSON.
  * When the key is present (including empty string), that value replaces this block entirely.
+ *
+ * The archetype-specific originality block is injected by `buildUserPrompt`
+ * — this suffix carries only the tier/archetype-agnostic baseline.
  */
-export const DEFAULT_USER_PROMPT_SUFFIX = `Originality and anti-repetition requirements:
+export const DEFAULT_USER_PROMPT_SUFFIX = `Originality and anti-repetition baseline:
 
-This article must be clearly original and must not feel like a rewrite, paraphrase, or lightly modified version of previously published DisputeDesk content.
+This article must read as written by someone with real Shopify Payments dispute experience — not generated. It must not feel like a rewrite, paraphrase, or lightly modified version of previously published DisputeDesk content.
 
 Do not reuse common title formulas, opening paragraph structures, heading sequences, FAQ wording, examples, or CTA phrasing from similar articles.
 
-Avoid generic AI-style intros and filler language. Do not begin with phrases such as:
-- "Chargebacks are a growing problem..."
-- "In today's ecommerce landscape..."
-- "Businesses of all sizes..."
-- "Navigating the complexities..."
-- or similar generic setup language.
+Forbidden title openings (the audit flagged these as mass-produced templates — never use them):
+- "Mastering …"
+- "Navigating …"
+- "Understanding …"
+- "Complete Guide to …"
+- "The Ultimate Guide …"
+- "Effective Strategies for …"
+- "A Comprehensive Guide to …"
+- any title containing "Tactical Approaches"
+- any title that ends with "for Merchants" as the only specifier (be more specific — for which merchants, in which scenario)
 
-The first paragraph must answer the query directly and use a fresh angle.
+Forbidden generic AI-style openings (do NOT begin the article with these or close variants):
+- "Chargebacks are a growing/major/significant problem …"
+- "In today's [digital | fast-paced | ecommerce] landscape …"
+- "Businesses of all sizes …"
+- "Navigating the complexities of …"
+- "Managing chargebacks/disputes can be challenging/complex/difficult …"
+- "In the [fast-paced | ever-changing] world of …"
 
-If the prompt includes context about existing related articles, actively differentiate this article from them in all of the following:
-- title
-- opening paragraph
-- article framing
-- section order
-- subheading wording
-- examples
-- FAQ wording
-- CTA wording
+The first paragraph must:
+- name a concrete Shopify-specific operational fact (a Shopify Admin path, a dispute timing, who decides, an exact field, a numeric window)
+- answer the target query directly
+- use a fresh, topic-specific angle
 
-Do not produce an article that reads like a duplicate, near-duplicate, or lightly paraphrased variation of another article on the same site.
+Shopify-specificity requirement (mandatory for chargebacks / dispute / evidence topics):
+- mention "Shopify" or a Shopify-specific surface (Shopify Payments, Shopify Admin, Shopify Protect, Shopify Order, the Disputes section in Admin) within the first 200 words
+- when the article touches evidence quality, name at least one specific evidence field (AVS result, CVV result, tracking carrier+number, IP geolocation, 3-D Secure authentication flag, signed delivery confirmation, signed contract, screenshot of customer communication) — not abstract "evidence"
+- when the article touches automation, distinguish between Shopify-Payments-only behaviours and third-party gateway behaviours
 
-If overlap exists with existing content, choose a distinct angle while staying relevant to the same search intent. Different angles may include:
-- a different merchant type
-- a different dispute type
-- a different evidence type
-- a different processor or platform context
-- a different operational workflow
-- a different stage in the dispute lifecycle
-- a different risk, mistake, or decision point
+If the prompt includes context about existing related articles, actively differentiate this article from them in all of: title, opening paragraph, framing, section order, subheading wording, examples, FAQ wording, CTA wording. Choose a distinct angle (different merchant type, dispute type, evidence type, processor, lifecycle stage, mistake, or decision point) while staying relevant to the same search intent.
 
-Prefer concrete, operational, merchant-useful writing over generic explanatory writing.
+Prefer concrete, operational, merchant-useful writing over generic explanatory writing. Keep the content tightly focused on DisputeDesk's domain: chargebacks, dispute operations, representment, evidence, fraud, friendly fraud, card network workflows, merchant policies, pre-dispute alerts, and operational processes related to dispute prevention and response. Do not drift into broad ecommerce advice unless it directly supports the dispute or chargeback topic.
 
-Keep the content tightly focused on DisputeDesk's domain:
-- chargebacks
-- dispute operations
-- representment
-- evidence
-- fraud
-- friendly fraud
-- card network workflows
-- merchant policies
-- pre-dispute alerts
-- operational processes related to dispute prevention and response
+Where claims depend on processor, card network, acquirer, geography, or merchant setup, state that clearly instead of making universal claims. Where you do not know an exact value, say so and tell the merchant where to confirm.
 
-Do not drift into broad ecommerce advice unless it directly supports the dispute or chargeback topic.
-
-Use specific terminology naturally, but do not stuff keywords.
-
-The article must feel written by someone with real operational understanding of merchant dispute workflows.
-
-Where claims depend on processor, card network, acquirer, geography, or merchant setup, state that clearly instead of making universal claims.
-
-Use a distinct and human-sounding title pattern. Avoid repeating title templates already used across similar content.
-
-Use a distinct introduction pattern. Avoid repeating the same setup paragraph across articles.
-
-Use a distinct section flow. Do not default to the same heading order unless it is genuinely the clearest structure for the topic.
-
-Use examples and scenarios that are specific to this topic rather than interchangeable examples that could fit any chargeback article.
-
-Make the article helpful enough that a merchant could take action immediately after reading it.
-
-The final result must be:
-- original
-- non-repetitive
-- specific
-- practical
-- clearly differentiated from related site content
-- useful for search visitors
-- aligned with DisputeDesk's product domain`;
+The final article must be: original, non-repetitive, Shopify-specific, operationally useful, clearly differentiated from related site content, and aligned with DisputeDesk's product domain.`;
 
 export type SimilarContentReference = {
   id: string;
@@ -274,6 +254,12 @@ export interface GenerationBrief {
   complexity?: string | null;
   /** When set, used verbatim in prompts and skips automatic range calculation. */
   targetWordRange?: string | null;
+  /** Tier override from the archive item (A | B | C). When null, inferred from contentType + isHubArticle. */
+  tier?: string | null;
+  /** Archetype override from the archive item; controls which originality block is injected. */
+  archetype?: string | null;
+  /** True when the canonical hub pillar; promotes tier inference to A. */
+  isHubArticle?: boolean | null;
   primaryPillar: string;
   targetKeyword: string | null;
   summary: string | null;
@@ -337,6 +323,20 @@ function formatSimilarArticlesBlock(similar: SimilarContentReference[]): string 
   return lines.join("\n");
 }
 
+function formatArchetypeBlock(archetype: ContentArchetype, tier: ContentTier): string {
+  const req = ARCHETYPE_REQUIREMENTS[archetype];
+  const must = req.mustHaves.map((m) => `  - ${m}`).join("\n");
+  return `
+ARCHETYPE: ${archetype}
+TIER: ${tier} (minimum ${tierMinimumWords(tier)} words; pad-padding is forbidden — depth must be substantive)
+
+${req.originalityBlock}
+
+Must-haves for this archetype (the editor will check these):
+${must}
+`;
+}
+
 export function buildUserPrompt(
   brief: GenerationBrief,
   locale: string,
@@ -359,8 +359,19 @@ export function buildUserPrompt(
   const pageRoleNorm = normalizePageRole(brief.pageRole, brief.contentType);
   const searchNorm = normalizeSearchIntent(brief.searchIntent);
   const complexityNorm = normalizeComplexity(brief.complexity);
+  const tier = resolveTier({
+    tier: brief.tier ?? null,
+    contentType: brief.contentType,
+    isHubArticle: brief.isHubArticle ?? null,
+  });
+  const archetype = resolveArchetype({
+    archetype: brief.archetype ?? null,
+    contentType: brief.contentType,
+    isHubArticle: brief.isHubArticle ?? null,
+  });
   const targetWordRange = resolveTargetWordRange(brief);
   const lengthBlock = formatLengthGuidance(targetWordRange, locale);
+  const archetypeBlock = formatArchetypeBlock(archetype, tier);
 
   const slugRequirement =
     locale === "en-US"
@@ -375,7 +386,7 @@ SLUG (required for LOCALE ${locale}):
   return `${typeInstr}
 
 ${lengthBlock}
-
+${archetypeBlock}
 LOCALE: ${locale}
 ${localeInstr}${slugRequirement}
 
