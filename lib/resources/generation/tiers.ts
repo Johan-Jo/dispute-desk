@@ -151,52 +151,53 @@ export interface ArchetypeRequirements {
 
 export const ARCHETYPE_REQUIREMENTS: Record<ContentArchetype, ArchetypeRequirements> = {
   authority_pillar: {
-    originalityBlock: `Authority Pillar (Tier A) — MANDATORY OPERATIONAL STRUCTURE.
+    originalityBlock: `Authority Pillar (Tier A) — STRUCTURAL VARIATION REQUIRED.
 
-This is a DECISION-SUPPORT article, not an encyclopedia entry. Each section must answer "what would an experienced chargeback operator tell a merchant making a decision RIGHT NOW about this?" — not "what is the textbook explanation?".
+The previous "9 fixed decision-support sections" framework is RETIRED — articles built that way sound mass-produced, even when the section headings are operationally framed.
 
-Use these 9 decision-support sections in this order. Section headings should read as operational framings, not topic labels. Each section MUST hit its minimum word count AND deliver at least one concrete operator insight (a tactical recommendation, named merchant mistake, evidence weakness, decision tradeoff, issuer-behavior nuance, or risk warning). Sections that only define concepts have failed — rewrite them.
+For each pillar, pick ONE structural FRAME that fits the specific topic. The frame defines pacing and section logic. Do NOT default to a checklist of universal sections.
 
-1. **What merchants misunderstand about [topic]** (≥ 350 words)
-   Open the article. Name the most common wrong assumption merchants bring to this topic and correct it with a concrete operational fact (a Shopify Admin path, a response window, a specific issuer behaviour). Open WITHOUT generic AI phrasing — never start with "In today's...", "Chargebacks are...", "Navigating...", "Businesses of all sizes...".
+Valid frames:
 
-2. **Where this lives inside Shopify Admin (and where it doesn't)** (≥ 400 words)
-   Exact paths, button labels, settings pages. What Shopify shows you, what it doesn't, and what merchants miss because of how the UI surfaces information. Distinguish Shopify Payments behaviour from third-party gateway behaviour.
+- **Operational Breakdown** — workflow lifecycle, evidence hierarchy, operational bottlenecks, issuer behavior, dispute decision-making. Best for broad operational topics. Sections evolve from "how this happens" → "where it breaks" → "what to do".
 
-3. **Why merchants lose this kind of dispute** (≥ 450 words)
-   Specifically the OPERATIONAL failure modes that cause merchants to lose otherwise-winnable cases. Scattered evidence across support tools and carrier portals. Late responses. Missing signatures. Reshippers. Family fraud confusion. VPN noise. Each failure mode named, why it loses, what to do instead.
+- **Real Case Analysis** — open with a realistic dispute scenario (incomplete evidence, merchant confusion, operational mistake). Forensically analyze what happened, what weakened the case, what evidence mattered, what should have been done differently. Sections follow the case timeline, not a generic skeleton.
 
-4. **What evidence actually wins (and what's weaker than merchants think)** (≥ 500 words)
-   Rank evidence comparatively — not "all of these help" but "this matters most, this matters least, and this looks strong but issuers reject it for these specific reasons". Sample values. Strong / Moderate / Weak bands. Edge cases (signed delivery rerouted, AVS Y but no tracking, IP from cardholder country but VPN-flagged).
+- **Merchant Failure Analysis** — sharp, corrective, direct. Sections built around merchant losses: false assumptions, weak evidence myths, workflow failures, timing failures, issuer skepticism. Each section names one failure mode and dissects it.
 
-5. **A messy real example, not a clean one** (≥ 500 words)
-   Anonymized merchant scenario with mixed evidence quality, ambiguous signals, an actual decision the merchant had to make under time pressure. Include the call they made, the trade-off, and the outcome. Don't sanitize — the value is in the realism.
+- **Evidence Deep Dive** — focused on a single dominant evidence category (or 2–3 closely related ones). When each piece works, when it fails, why merchants overestimate it, issuer interpretation, edge cases. Sections evolve evidence-type by evidence-type, not topic by topic.
 
-6. **When to fight, when to concede, when to escalate** (≥ 400 words)
-   Explicit decision rule the merchant can apply. Include the math: when conceding is operationally correct because the time + fees + likely loss outweigh the dispute amount. Distinguish first chargeback from second presentment / pre-arbitration where stakes change.
+- **Platform / Processor Nuance** — comparative. Shopify Payments vs Stripe vs other gateways. Issuer variation. Regional behavior. Visa vs Mastercard nuance. Sections built around processors / contexts, not a generic outline.
 
-7. **Operational bottlenecks merchants ignore** (≥ 350 words)
-   The workflow friction that quietly costs disputes — evidence sitting in Gorgias / Zendesk that never makes it into the response, carrier signatures that take 3 business days to retrieve, support staff who don't know which evidence types help fraud cases vs INR cases. Concrete and specific.
+- **Decision Support / Triage** — fight vs concede vs escalate. Evidence thresholds. Operational cost. Risk scoring. Representment prioritization. Sections built as decision branches.
 
-8. **Where the rules actually vary (and where merchants get burned by assumptions)** (≥ 350 words)
-   Shopify Payments vs Stripe vs other processors. Region differences. Card network nuance. Be candid where you don't know an exact value — say "confirm with your processor". Call out the assumptions merchants make that don't hold across processors.
+Pick at the start. Build the article AROUND the frame, not around a fixed section list. If the brief or notes specify a structural_archetype_variant, use that frame. Otherwise pick the one that genuinely fits the topic — not the one easiest to write.
 
-9. **What automation handles and what it doesn't** (≥ 300 words)
-   Honest scope. DisputeDesk's pack assembly handles fragmented evidence consolidation, evidence-quality scoring, structured representment formatting. It does NOT submit to networks (Shopify does), does NOT guarantee outcomes, does NOT replace merchant review on high-risk cases. Automation improves consistency, not certainty.
+Pacing rules:
+- Vary section count across articles. Six tight sections is often stronger than nine padded ones.
+- Vary section length. Short observational sections (200-300 words) can sit alongside longer analytical ones.
+- Resist the urge to mirror the section names from earlier articles even when the topic overlaps.
 
-TOTAL minimum body: 3,650 words. Articles below this length are unsuitable for an authority pillar and will be sent back.
+Mandatory ingredients regardless of frame:
+- Open with a topic-specific operational fact, never with a generic AI phrase.
+- Mention 'Shopify' (or a specific Shopify surface — Admin, Payments, Disputes, Protect, Order) within the first 200 words.
+- Include at least 3–5 original operator observations (memorable, sharp, experience-based one-liners — see system prompt for examples).
+- Include at least one messy-real example with mixed/ambiguous evidence.
+- Explain at least one OPERATIONAL failure mode (why merchants lose otherwise-winnable cases) somewhere in the body.
+- Cite at least one Shopify Admin path, settings page, or field by name.
+- Honest automation scope: what DisputeDesk's pack assembly handles vs what it does not. Place this naturally — not as a final closing section every time.
 
-Other commitments:
-- Mention sibling DisputeDesk topics in plain prose only — never as <a> tags.
-- Within each section, develop ideas with structured sub-points, comparative ranking, or named scenarios. A wall of generic paragraph text means you're not going deep enough.
-- The reader should finish the article thinking "this was written by someone who actually handles disputes" — not "this was written for SEO".`,
+Length: aim for substantive depth, but don't pad. Below ~1,800 words a Tier A pillar usually isn't earning its tier; above ~5,500 you are over-explaining. Vary the actual count by topic.
+
+The reader should finish thinking "this was written by an operator with a particular point of view on this topic" — NOT "this was the same template as the last article".`,
     mustHaves: [
       "Mention 'Shopify' specifically in the first 200 words.",
       "Cite at least one Shopify Admin path, button label, or settings page by name.",
-      "Include all 9 decision-support sections; each must meet its per-section minimum AND carry at least one concrete operator insight.",
-      "Total body ≥ 3,650 words.",
-      "At least one section explicitly explains why merchants LOSE disputes (not just how to win).",
-      "At least one example contains mixed/ambiguous evidence — not a clean win scenario.",
+      "Pick a structural FRAME (Operational Breakdown / Real Case Analysis / Merchant Failure / Evidence Deep Dive / Processor Nuance / Decision Triage) and build sections around that frame — NOT a fixed 9-section checklist.",
+      "Include at least 3 original operator observations (memorable, experience-based one-liners).",
+      "Include at least one messy-real example with mixed/ambiguous evidence — not a clean win.",
+      "Explain at least one operational failure mode (why merchants lose).",
+      "Section count and pacing must differ from prior pillars — this is a hard structural-diversity requirement.",
     ],
   },
   merchant_playbook: {
