@@ -52,7 +52,7 @@ export default function TermsPage() {
           merchant&apos;s Shopify dispute response.
         </p>
         <p>
-          DisputeDesk does not submit responses to card networks directly.
+          DisputeDesk does not transmit responses to card networks directly.
           The actual submission to Visa, Mastercard, or other networks
           happens inside Shopify Admin (either when a merchant clicks
           submit, or automatically on the dispute&apos;s due date — Shopify

@@ -88,7 +88,7 @@ export const TIER_A_PILLAR_BRIEFS: TierAPillarBrief[] = [
       ],
       must_cover: [
         "Where in Shopify Admin a merchant sees a new dispute",
-        "What 'submit response' actually does (writes evidence into Shopify, NOT to the network directly)",
+        "What clicking 'Submit' in the Shopify dispute screen actually does (writes evidence into Shopify, NOT to the network directly)",
         "Strong vs Moderate vs Weak evidence with concrete examples",
         "When to fight vs concede with a decision rule a merchant can apply",
         "Common mistakes that lose disputes (≥ 3 concrete failure modes)",
