@@ -128,6 +128,16 @@ const userPrompt = buildPassTwoUserPrompt(ctx, sourceMaterial as PassOneSourceMa
 
 console.log(`\nRunning Pass 2 (Claude ${model})...`);
 const start = Date.now();
+// Opus 4.x dropped `temperature` (deprecated). Send it for Sonnet/older only.
+const supportsTemperature = !/^claude-opus-4/.test(model);
+const body: Record<string, unknown> = {
+  model,
+  system: PASS_TWO_SYSTEM_PROMPT,
+  messages: [{ role: "user", content: userPrompt }],
+  max_tokens: 8192,
+};
+if (supportsTemperature) body.temperature = 0.4;
+
 const res = await fetch("https://api.anthropic.com/v1/messages", {
   method: "POST",
   headers: {
@@ -135,13 +145,7 @@ const res = await fetch("https://api.anthropic.com/v1/messages", {
     "x-api-key": apiKey,
     "anthropic-version": "2023-06-01",
   },
-  body: JSON.stringify({
-    model,
-    system: PASS_TWO_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userPrompt }],
-    temperature: 0.4,
-    max_tokens: 8192,
-  }),
+  body: JSON.stringify(body),
 });
 
 if (!res.ok) {

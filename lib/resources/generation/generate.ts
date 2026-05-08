@@ -225,6 +225,17 @@ async function callClaudeChat(
 
   const model = process.env.GENERATION_MODEL_PASS_TWO ?? "claude-sonnet-4-6";
 
+  // Opus 4.x dropped `temperature` (400s with "deprecated"). Send it for
+  // Sonnet / Haiku / older models only.
+  const supportsTemperature = !/^claude-opus-4/.test(model);
+  const requestBody: Record<string, unknown> = {
+    model,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+    max_tokens: 8192,
+  };
+  if (supportsTemperature) requestBody.temperature = temperature;
+
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -233,13 +244,7 @@ async function callClaudeChat(
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-        temperature,
-        max_tokens: 8192,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!res.ok) {
