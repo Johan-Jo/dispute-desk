@@ -12,6 +12,10 @@ import {
   findLocalizationBySlugAnyLocale,
   getRelatedResources,
 } from "@/lib/resources/queries";
+import {
+  buildRedirectPath,
+  resolveLocalizationRedirect,
+} from "@/lib/resources/redirects";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { ArticleStickyBar } from "@/components/resources/ArticleStickyBar";
@@ -186,6 +190,19 @@ export default async function ResourceArticlePage({ params }: Props) {
     locale: hubLocale,
     slug,
   });
+
+  // PR 4 — canonicalization: if this row has redirect_to_localization_id set,
+  // 301 to the canonical target. One hop only — the resolver refuses chains.
+  const redirectId = (row?.localization as Record<string, unknown> | undefined)?.[
+    "redirect_to_localization_id"
+  ] as string | null | undefined;
+  if (row && redirectId) {
+    const target = await resolveLocalizationRedirect(redirectId);
+    if (target) {
+      permanentRedirect(buildRedirectPath(target));
+    }
+  }
+
   if (!row || row.item.primary_pillar !== pillar) {
     // Slug not found for this locale — it may belong to another locale or route kind
     // (stale Google-cached URL, cross-locale slug, or route kind mismatch).

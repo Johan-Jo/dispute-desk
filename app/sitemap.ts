@@ -5,6 +5,7 @@ import {
   RESOURCE_HUB_PILLARS,
 } from "@/lib/resources/pillars";
 import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import { isLocalizationSitemapEligible } from "@/lib/resources/redirects";
 
 const BASE_URL = getPublicSiteBaseUrl();
 
@@ -116,14 +117,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         // Only include localizations that belong to the "resources" route so
         // that template / glossary / case-study articles are not accidentally
         // mapped to /resources/ paths.
-        const { data: locs } = await sb
+        const { data: locsRaw } = await sb
           .from("content_localizations")
-          .select("locale, slug")
+          .select(
+            "locale, slug, redirect_to_localization_id, is_excluded_from_sitemap, quality_status"
+          )
           .eq("content_item_id", item.id)
           .eq("route_kind", "resources")
           .eq("is_published", true);
 
-        if (!locs?.length) continue;
+        // Filter out rows that are 301-redirected, manually excluded, or
+        // marked thin / rewrite_pending (PR 4 + PR 5 canonicalization).
+        const locs = (locsRaw ?? []).filter(isLocalizationSitemapEligible);
+        if (!locs.length) continue;
 
         const pillar =
           normalizeResourceHubPillar(item.primary_pillar) ?? RESOURCE_HUB_PILLARS[0];
@@ -159,15 +165,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Templates ───────────────────────────────────────────────────────────
     {
-      const { data: locs } = await sb
+      const { data: locsRaw } = await sb
         .from("content_localizations")
-        .select("locale, slug, content_item_id, content_items!inner(updated_at, workflow_status)")
+        .select(
+          "locale, slug, content_item_id, redirect_to_localization_id, is_excluded_from_sitemap, quality_status, content_items!inner(updated_at, workflow_status)"
+        )
         .eq("route_kind", "templates")
         .eq("is_published", true)
         .eq("locale", "en-US")
         .eq("content_items.workflow_status", "published");
 
-      for (const loc of locs ?? []) {
+      const locs = (locsRaw ?? []).filter(isLocalizationSitemapEligible);
+      for (const loc of locs) {
         if (!loc.slug) continue;
         const languages = await buildLocaleAlternates(
           sb,
@@ -192,15 +201,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Glossary entries ────────────────────────────────────────────────────
     {
-      const { data: locs } = await sb
+      const { data: locsRaw } = await sb
         .from("content_localizations")
-        .select("locale, slug, content_item_id, content_items!inner(updated_at, workflow_status)")
+        .select(
+          "locale, slug, content_item_id, redirect_to_localization_id, is_excluded_from_sitemap, quality_status, content_items!inner(updated_at, workflow_status)"
+        )
         .eq("route_kind", "glossary")
         .eq("is_published", true)
         .eq("locale", "en-US")
         .eq("content_items.workflow_status", "published");
 
-      for (const loc of locs ?? []) {
+      const locs = (locsRaw ?? []).filter(isLocalizationSitemapEligible);
+      for (const loc of locs) {
         if (!loc.slug) continue;
         const languages = await buildLocaleAlternates(
           sb,
@@ -225,15 +237,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Case studies ────────────────────────────────────────────────────────
     {
-      const { data: locs } = await sb
+      const { data: locsRaw } = await sb
         .from("content_localizations")
-        .select("locale, slug, content_item_id, content_items!inner(updated_at, workflow_status)")
+        .select(
+          "locale, slug, content_item_id, redirect_to_localization_id, is_excluded_from_sitemap, quality_status, content_items!inner(updated_at, workflow_status)"
+        )
         .eq("route_kind", "case-studies")
         .eq("is_published", true)
         .eq("locale", "en-US")
         .eq("content_items.workflow_status", "published");
 
-      for (const loc of locs ?? []) {
+      const locs = (locsRaw ?? []).filter(isLocalizationSitemapEligible);
+      for (const loc of locs) {
         if (!loc.slug) continue;
         const languages = await buildLocaleAlternates(
           sb,
