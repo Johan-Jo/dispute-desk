@@ -74,7 +74,7 @@ async function runClaimedQueueRows(
         const { data: loc } = await sb
           .from("content_localizations")
           .select(
-            "title, slug, locale, route_kind, content_item_id, content_items(primary_pillar)"
+            "title, slug, locale, route_kind, content_item_id, is_published, content_items(primary_pillar, workflow_status)"
           )
           .eq("id", row.content_localization_id)
           .maybeSingle();
@@ -82,8 +82,8 @@ async function runClaimedQueueRows(
         if (loc) {
           const routeKind = loc.route_kind ?? "resources";
           const rawCi = loc.content_items as
-            | { primary_pillar: string }
-            | { primary_pillar: string }[]
+            | { primary_pillar: string; workflow_status: string }
+            | { primary_pillar: string; workflow_status: string }[]
             | null;
           const contentItem = Array.isArray(rawCi) ? rawCi[0] : rawCi;
           const pillar =
@@ -97,11 +97,18 @@ async function runClaimedQueueRows(
             });
           }
 
+          // Re-verify the row is still actually published before emailing. publishLocalization
+          // sets is_published=true and workflow_status='published', but a concurrent delete or
+          // un-publish in the small window between then and now would leave the email pointing
+          // at a 404. Confirm both flags here so the notification can never advertise a ghost.
+          const isLive =
+            loc.is_published === true && contentItem?.workflow_status === "published";
+
           // Only email for en-US: non-English locales share the same article and their
           // per-locale slugs can occasionally differ from the English canonical URL,
           // causing 404 links. One email per article is also less noisy.
           const emailTo = typeof notifyEmail === "string" ? notifyEmail.trim() : "";
-          if (emailTo && loc.locale === "en-US" && loc.title?.trim() && loc.slug?.trim()) {
+          if (emailTo && isLive && loc.locale === "en-US" && loc.title?.trim() && loc.slug?.trim()) {
             const sent = await sendPublishNotification({
               to: emailTo,
               articleTitle: loc.title,
