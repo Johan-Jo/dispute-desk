@@ -66,13 +66,13 @@ describe("htmlToText + wordCount", () => {
 /* ── V1 word count ──────────────────────────────────────────────── */
 
 describe("V1 — tier minimum word count", () => {
-  it("Tier A short article fails as HARD", () => {
+  it("Tier A short article fails as SOFT (gpt-4o length-compliance pragmatic relaxation)", () => {
     const c = makeCandidate({
       body_json: { mainHtml: "<p>" + "word ".repeat(800) + "</p>", keyTakeaways: [], faq: [], disclaimer: "" },
     });
     const f = v1_tierMinimumWords(c, makeBrief({ contentType: "pillar_page" }));
     expect(f).not.toBeNull();
-    expect(f!.severity).toBe("hard");
+    expect(f!.severity).toBe("soft");
     expect(f!.message).toMatch(/tier A minimum/i);
   });
 

@@ -108,8 +108,9 @@ export async function generateForLocale(
         temperature: brief.contentType === "legal_update" ? 0.3 : 0.4,
         // Non-English locales need ~40-60% more tokens than English for the same word count.
         // 4096 caused self-truncation in DE/FR/ES/PT/SV, producing shorter articles.
-        // gpt-4o supports 16 384 output tokens; stay comfortably below that.
-        max_tokens: 12000,
+        // 12000 was too tight for Tier A (3500-5000w + JSON wrapping → 8000+ tokens).
+        // gpt-4o caps at 16384; we use the full ceiling for Tier A headroom.
+        max_tokens: 16384,
         response_format: { type: "json_object" },
       }),
     });

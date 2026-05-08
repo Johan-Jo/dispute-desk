@@ -151,20 +151,49 @@ export interface ArchetypeRequirements {
 
 export const ARCHETYPE_REQUIREMENTS: Record<ContentArchetype, ArchetypeRequirements> = {
   authority_pillar: {
-    originalityBlock: `Authority Pillar (Tier A) — required structural commitments:
-- Open with a specific operational fact about Shopify chargebacks within the first two paragraphs (e.g. response window, who decides, exact path inside Shopify Admin).
-- Include at minimum:
-  - One concrete merchant scenario walkthrough (name the dispute reason, dollar value, and outcome decision).
-  - One section that names exact Shopify Admin paths, fields, or API/GraphQL identifiers.
-  - One section explaining what counts as "Strong", "Moderate", and "Weak" evidence and why.
-  - One section on edge cases or where rules vary by processor / region / Shopify Payments vs third-party gateway.
-  - A "common mistakes that lose disputes" section with at least three concrete failure modes.
-- Use a fresh, topic-specific opening — never start with "Chargebacks are a [growing/major] problem", "In today's ecommerce landscape", "Businesses of all sizes", or any variant.
-- Mention sibling DisputeDesk topics in plain prose only — never as <a> tags.`,
+    originalityBlock: `Authority Pillar (Tier A) — MANDATORY STRUCTURE.
+
+This is a DEPTH article. It MUST contain the following 9 H2 sections, each meeting the indicated minimum word count. Articles that come in under these per-section budgets will be REJECTED and rewritten — meet every per-section minimum.
+
+Required sections (use these exact section purposes — you may rephrase the heading text but every section MUST appear and MUST hit the word budget):
+
+1. **What this actually is, in Shopify's reality** (≥ 350 words)
+   Concrete framing. Open with a Shopify-specific operational fact (Admin path, response window, who decides). Forbidden openings: "Chargebacks are a [growing/major] problem", "In today's [digital/fast-paced/ecommerce] landscape", "Businesses of all sizes", "Navigating the complexities of", "Managing chargebacks can be challenging".
+
+2. **Where this lives in Shopify Admin** (≥ 400 words)
+   Name the exact Admin paths, settings pages, button labels. Distinguish Shopify Payments behaviour from third-party gateway behaviour.
+
+3. **The lifecycle: from trigger to outcome** (≥ 450 words)
+   Walk the full sequence step by step. Name each phase, who acts at each phase, and the timing.
+
+4. **Concrete walked example with a real-shaped scenario** (≥ 500 words)
+   Anonymized but specific: vertical, AOV range, dispute reason, dollar value, evidence assembled, outcome. Include sample text the merchant would write, not generic descriptions.
+
+5. **Evidence quality bands: Strong, Moderate, Weak** (≥ 500 words)
+   Enumerate evidence types. For each: what it proves, what it does not prove, what counts as Strong vs Moderate vs Weak with sample values. Do not generalize.
+
+6. **Decision criteria: when to fight vs concede vs escalate** (≥ 400 words)
+   Explicit decision rule the merchant can apply. Include the conditions under which conceding is the right call (the math sometimes says concede).
+
+7. **Where the rules vary** (≥ 350 words)
+   Shopify Payments vs Stripe vs other gateways. Region differences. Processor differences. Be candid where you do not know an exact value — say "confirm with your processor".
+
+8. **Common mistakes that lose otherwise winnable cases** (≥ 400 words)
+   At least 4 concrete failure modes. For each: what the mistake looks like in practice, why it loses, what to do instead.
+
+9. **What automation can and cannot do** (≥ 300 words)
+   Honest scope: what DisputeDesk's pack assembly handles, what merchants still own, what no automation can do (the network submission itself, ultimate outcome).
+
+TOTAL minimum body: 3,650 words. Articles below this length are unsuitable for an authority pillar and will be sent back.
+
+Other commitments:
+- Mention sibling DisputeDesk topics in plain prose only — never as <a> tags.
+- Within each section, use sub-bullets, structured lists, or sub-headings to develop ideas concretely. A solid wall of paragraph text is a sign you are not going deep enough.`,
     mustHaves: [
       "Mention 'Shopify' specifically in the first 200 words.",
       "Cite at least one Shopify Admin path, button label, or settings page by name.",
-      "Include numbered or named sections with operational substance — not 'Introduction / Conclusion / FAQ' shells.",
+      "Include all 9 required H2 sections; each must meet its per-section minimum word count.",
+      "Total body ≥ 3,650 words.",
     ],
   },
   merchant_playbook: {

@@ -155,8 +155,15 @@ export function v1_tierMinimumWords(
 
   if (wc >= min) return null;
 
-  // Tier A misses are hard-failures; B/C are soft (sometimes the topic is genuinely small).
-  const severity: ValidatorSeverity = tier === "A" ? "hard" : "soft";
+  // V1 is always SOFT for now — gpt-4o frequently produces 600-1000-word
+  // articles even when the prompt explicitly asks for 3500+. We log the
+  // miss as a warning and accept the article into editorial review rather
+  // than rejecting after 2 expensive retries that don't help. Editorial
+  // review (workflow_status='in-editorial-review' for Tier A per PR 5)
+  // is where humans decide whether to publish, expand, or kick back.
+  // Re-promote to hard once a reliable >2000w generation strategy is in
+  // place (multi-pass / section-iterative generation, or a stronger model).
+  const severity: ValidatorSeverity = "soft";
 
   return {
     id: "V1_tier_minimum_words",
