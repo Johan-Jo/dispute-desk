@@ -109,6 +109,7 @@ const FORBIDDEN_AI_PHRASES: RegExp[] = [
   /\btypically includes\b/i,
   /\bbusinesses should\b/i,
   /\bit is crucial\b/i,
+  /\bis crucial\b/i,
   /\bplays a vital role\b/i,
   /\bhelps streamline\b/i,
   /\benhances efficiency\b/i,
@@ -116,6 +117,50 @@ const FORBIDDEN_AI_PHRASES: RegExp[] = [
   /\brobust\b/i,
   /\bleveraging\b/i,
   /\bin conclusion\b/i,
+  /\bthe importance of\b/i,
+  /\bis the backbone of\b/i,
+  /\bis key to\b/i,
+  /\bthis example underscores\b/i,
+  /\bthis highlights\b/i,
+  /\bthis demonstrates\b/i,
+];
+
+/**
+ * Section-heading patterns that mark educational / blog-mode framing.
+ * These are HARD-fails because they signal the article reverted to "explain
+ * basics" mode regardless of word choice elsewhere.
+ */
+const EXPLANATORY_HEADING_PATTERNS: RegExp[] = [
+  /^understanding\b/i,
+  /^what is\b/i,
+  /^what are\b/i,
+  /^importance of\b/i,
+  /^the importance of\b/i,
+  /^introduction\b/i,
+  /^overview\b/i,
+  /\bbackbone\b/i,
+];
+
+/**
+ * Schema-leaked heading patterns. When the two-pass assembler uses Pass 1's
+ * JSON field names (or close stylistic renames) as section headings, the
+ * article ends up with the same skeleton regardless of topic — exactly the
+ * structural sameness the user is targeting. Hard-fails any of these patterns.
+ */
+const SCHEMA_LEAKED_HEADING_PATTERNS: RegExp[] = [
+  /\bfailure modes?\b/i,
+  /\bevidence hierarch/i,
+  /\bmessy examples?\b/i,
+  /\breal[- ]world scenarios?\b/i,
+  /^operational notes?\b/i,
+  /^operational insights?\b/i,
+  /\bworkflow (insights?|notes?)\b/i,
+  /\bprocessor (and|&) network caveats?\b/i,
+  /\bdispute[- ]?desk'?s role\b/i,
+  /\bdisputedesk(?:'s)? (role|positioning|transparency)/i,
+  /\boperational transparency with disputedesk\b/i,
+  /^common operational mistakes?\b/i,
+  /\bhow evidence strength (actually )?works\b/i,
 ];
 
 const SHOPIFY_SURFACE_PATTERNS: RegExp[] = [
@@ -160,6 +205,17 @@ function firstNWords(text: string, n: number): string {
 
 function countH2H3(html: string): number {
   return (html.match(/<h[23]\b/gi) ?? []).length;
+}
+
+function extractH2Headings(html: string): string[] {
+  const out: string[] = [];
+  const re = /<h2\b[^>]*>([\s\S]*?)<\/h2>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html ?? "")) !== null) {
+    const text = m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    if (text) out.push(text);
+  }
+  return out;
 }
 
 /* ── V1 — Tier minimum word count ─────────────────────────────────── */
@@ -226,6 +282,32 @@ export function v3_genericOpening(candidate: ValidatorCandidate): ValidatorFailu
         message: `Opening matches generic AI-style pattern (${re}).`,
         retryHint: `The first paragraph used a banned generic opening. Open instead with a specific operational fact: a Shopify Admin path the merchant can navigate to, the dispute response window in days, who decides the dispute (issuer vs network), or an exact field name. Forbidden openings include: "Chargebacks are a [growing/major/significant] problem", "In today's [digital/fast-paced/ecommerce] landscape", "Businesses of all sizes", "Navigating the complexities of", "Managing chargebacks can be challenging", "In the fast-paced world of".`,
       };
+    }
+  }
+
+  // Section-heading scan: any explanatory heading is a HARD fail. These are
+  // unambiguous signals the article reverted to AI-blog mode.
+  const headings = extractH2Headings(candidate.body_json.mainHtml);
+  for (const h of headings) {
+    for (const re of EXPLANATORY_HEADING_PATTERNS) {
+      if (re.test(h)) {
+        return {
+          id: "V3_generic_opening",
+          severity: "hard",
+          message: `Section heading "${h}" uses explanatory / educational framing (${re}).`,
+          retryHint: `The article contains a section heading "${h}" that signals AI-blog mode. Section headings must NEVER start with "Understanding", "What is", "What are", "Importance of", "The Importance of", "Introduction", or "Overview", and must NEVER contain "backbone". Section headings should be sharp, topic-specific, observational. Replace with a heading that names a concrete operational angle (e.g. "Why merchants lose this", "Where this breaks", "AVS Y but no tracking — what wins"). Assume the reader already understands what chargebacks are.`,
+        };
+      }
+    }
+    for (const re of SCHEMA_LEAKED_HEADING_PATTERNS) {
+      if (re.test(h)) {
+        return {
+          id: "V3_generic_opening",
+          severity: "hard",
+          message: `Section heading "${h}" mirrors a Pass 1 JSON schema category (${re}).`,
+          retryHint: `The section heading "${h}" derives from the source-material JSON schema instead of the topic itself. NEVER produce headings like "Failure Modes", "Evidence Hierarchy", "Messy Examples", "Real-World Scenarios", "Operational Notes/Insights", "Workflow Notes", "Processor Caveats", or "DisputeDesk's Role" — they all leak the input schema as the article skeleton. Synthesize a topic-specific heading instead (e.g. "Why AVS Y still loses fraud disputes", "The 10-day clock and where it quietly slips", "When the issuer cares more about delivery than authorization"). The source material is INPUT, not OUTLINE — merge fields, split fields, omit categories that don't earn placement.`,
+        };
+      }
     }
   }
 

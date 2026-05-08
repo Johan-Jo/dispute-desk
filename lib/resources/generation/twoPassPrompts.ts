@@ -130,15 +130,41 @@ YOUR JOB IN THIS CALL — Pass 2 of 2 (assembly only)
 
 A previous step produced the raw source material below: operator observations, failure modes, messy examples, evidence hierarchy notes, Shopify workflow facts, processor caveats, DisputeDesk positioning notes. Your job is to ASSEMBLE that material into a published article + SEO package.
 
-CRITICAL ASSEMBLY RULES:
+CRITICAL — DESTROY THE SCHEMA SYMMETRY (this is the single most important rule)
+
+The Pass 1 JSON structure is raw source material, not an article outline. Do not preserve, mirror, or sequentially reproduce the schema categories as article sections. Never create headings derived from schema labels such as "failure modes", "evidence hierarchy", "examples", "messy examples", "operational notes", "positioning", "workflows", or any close variant or stylized rename. Instead, synthesize topic-specific sections driven by the operational realities of the subject itself. Combine concepts naturally when appropriate. A section should feel like it emerged from the merchant problem being discussed — not from the organization of the source JSON.
+
+Do NOT preserve a one-to-one mapping between source categories and article sections. A truly good assembler should: merge fields when they belong together; split a single field across multiple sections when warranted; reorder material; elevate one observation into an entire section; bury another into a single line; sometimes omit a whole category entirely if it doesn't earn its place; sometimes reuse the same category's material across multiple sections. That asymmetry is what creates human editorial variance.
+
+Anti-pattern examples — NEVER produce sections like these:
+
+BAD (schema-leaked headings — even if reworded):
+- "Failure Modes" / "Critical Failure Modes" / "Common Operational Mistakes"
+- "Evidence Hierarchy" / "Evidence Hierarchy: What Matters More" / "How Evidence Strength Actually Works"
+- "Messy Examples" / "Messy Examples: Real-World Scenarios" / "Real Merchant Scenarios"
+- "Shopify Workflow Notes" / "Workflow Insights"
+- "Processor and Network Caveats"
+- "DisputeDesk's Role" / "Operational Transparency with DisputeDesk"
+
+GOOD (topic-led, problem-led, argument-led):
+- "Why AVS Y Still Loses Fraud Disputes"
+- "The Hidden Risk of 'Delivered' Without Signature"
+- "What Actually Happens After Clicking Submit Response in Shopify"
+- "Why Merchants Misread Shopify Protect Coverage"
+- "When the Issuer Cares More About Delivery Than Authorization"
+- "The 10-Day Clock and Where It Quietly Slips"
+
+The GOOD examples each emerge from a SPECIFIC operational reality the source material describes. They synthesize across categories — a heading may pull from a failure mode AND an evidence hierarchy entry AND a Shopify workflow note all at once. That's the bar.
+
+ASSEMBLY RULES:
 - Preserve the source material's wording wherever it's already sharp. Do not paraphrase strong observations into smoother corporate prose.
 - Do NOT invent new operational claims, evidence types, processor specifics, or merchant scenarios beyond what the source material provides. If you need a transition, write transition prose — not new substance.
 - Distribute the observations across the article. Place sharp lines as section openers, mid-paragraph asides, or section closers — not all at once in a "key insights" block.
-- Use the messy examples in full, with their original wording.
-- Use the failure modes as material for at least one section — name them, explain them, do not soften.
-- Use the evidence hierarchy to ground at least one section. Rank evidence comparatively (some matters more than others); do not present as a flat list.
+- Use the messy examples in full, with their original wording, but woven into the section that needs them — not in a section called "Examples".
+- Use the failure modes as material for whichever sections they belong to — they may inform an opener, a mid-section warning, or an entire dissection. They do not get their own collective section.
+- Use the evidence hierarchy to ground sections that earn it. Rank evidence comparatively (some matters more than others) within prose, not as a flat list with category labels.
 - Vary section count and length. Uneven pacing is correct.
-- No section heading starting with "Understanding", "What is", "Importance of", "The Backbone of", "Introduction", "Overview".
+- No section heading starting with "Understanding", "What is", "Importance of", "The Backbone of", "Introduction", "Overview", "Failure Modes", "Evidence Hierarchy", "Messy Examples", "Operational Notes", "DisputeDesk's Role", "Shopify Workflow", "Processor Caveats", or any close variant.
 - Mention 'Shopify' or a specific Shopify surface (Admin, Payments, Disputes, Protect, Order) in the first 200 words.
 - NEVER add <a href> links to other DisputeDesk articles in the body.
 

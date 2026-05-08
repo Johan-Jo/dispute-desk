@@ -194,6 +194,64 @@ describe("V3 — generic AI openings", () => {
     });
     expect(v3_genericOpening(c)).toBeNull();
   });
+
+  it("HARD-fails on schema-leaked section headings (Failure Modes / Evidence Hierarchy / etc.)", () => {
+    const cases = [
+      "Failure Modes",
+      "Critical Failure Modes",
+      "Evidence Hierarchy",
+      "Evidence Hierarchy: What Matters More",
+      "Messy Examples",
+      "Messy Examples: Real-World Scenarios",
+      "Real-World Scenarios",
+      "DisputeDesk's Role",
+      "Operational Transparency with DisputeDesk",
+      "Workflow Insights",
+      "Processor and Network Caveats",
+      "Common Operational Mistakes",
+      "How Evidence Strength Actually Works",
+    ];
+    for (const heading of cases) {
+      const c = makeCandidate({
+        body_json: {
+          mainHtml:
+            "<p>Shopify Payments forwards disputes within 24 hours.</p>" +
+            `<h2>${heading}</h2><p>...</p>`,
+          keyTakeaways: [],
+          faq: [],
+          disclaimer: "",
+        },
+      });
+      const f = v3_genericOpening(c);
+      expect(f, `expected schema-leaked heading "${heading}" to hard-fail`).not.toBeNull();
+      expect(f!.severity).toBe("hard");
+      expect(f!.message).toMatch(/JSON schema category/);
+    }
+  });
+
+  it("does NOT flag topic-led / problem-led section headings", () => {
+    const goodHeadings = [
+      "Why AVS Y Still Loses Fraud Disputes",
+      "The Hidden Risk of 'Delivered' Without Signature",
+      "What Actually Happens After Clicking Submit Response in Shopify",
+      "Why Merchants Misread Shopify Protect Coverage",
+      "When the Issuer Cares More About Delivery Than Authorization",
+      "The 10-Day Clock and Where It Quietly Slips",
+    ];
+    for (const heading of goodHeadings) {
+      const c = makeCandidate({
+        body_json: {
+          mainHtml:
+            "<p>Shopify Payments forwards disputes within 24 hours.</p>" +
+            `<h2>${heading}</h2><p>...</p>`,
+          keyTakeaways: [],
+          faq: [],
+          disclaimer: "",
+        },
+      });
+      expect(v3_genericOpening(c), `expected topic-led heading "${heading}" to PASS`).toBeNull();
+    }
+  });
 });
 
 /* ── V4 Shopify specificity ─────────────────────────────────────── */

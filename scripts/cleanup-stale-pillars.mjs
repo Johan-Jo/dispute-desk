@@ -23,13 +23,14 @@ const sb = createClient(
 );
 
 const KEEP_CONTENT_ITEM_IDS = new Set([
-  "124ef967-cd80-4831-ae7b-39c1c5f5a8f1", // latest pillar 2 (Phase 2 evidence_deep_dive)
+  // Empty — clearing all prior pillar generations to make room for two-pass output.
 ]);
 
 const PILLAR_SLUGS = [
   "shopify-chargebacks-complete-merchant-guide",
   "chargeback-evidence-guide-shopify-merchants",
   "shopify-fraud-chargebacks-explained",
+  "shopify-fraud-chargeback-explained",
   // Phase-1 model-invented slugs we want to clear:
   "shopify-chargeback-evidence-guide",
   "shopify-chargebacks-dispute-strategies",
@@ -78,7 +79,7 @@ for (const id of itemIdsToDelete) {
   }
 }
 
-// Also reset the archive rows so they can be re-picked.
+// Reset all 3 archive items so the autopilot can re-pick them.
 const { error: archErr } = await sb
   .from("content_archive_items")
   .update({
@@ -88,10 +89,10 @@ const { error: archErr } = await sb
   })
   .in("proposed_slug", [
     "shopify-chargebacks-complete-merchant-guide",
+    "chargeback-evidence-guide-shopify-merchants",
     "shopify-fraud-chargebacks-explained",
   ]);
 if (archErr) {
   console.error(`Archive reset failed: ${archErr.message}`);
 }
-console.log("\nReset pillar 1 + pillar 3 archive items to brief_ready.");
-console.log("Pillar 2 (124ef967-...) preserved.");
+console.log("\nReset all 3 pillar archive items to brief_ready.");
