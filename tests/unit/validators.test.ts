@@ -162,6 +162,38 @@ describe("V3 — generic AI openings", () => {
     });
     expect(v3_genericOpening(c)).toBeNull();
   });
+
+  it("soft-flags when body contains 3+ AI-corporate phrases anywhere", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml:
+          "<p>Shopify Payments forwards disputes to Admin.</p>" +
+          "<p>It's important to note that various factors influence outcomes.</p>" +
+          "<p>This robust workflow helps streamline operations and enhances efficiency.</p>",
+        keyTakeaways: [],
+        faq: [],
+        disclaimer: "",
+      },
+    });
+    const f = v3_genericOpening(c);
+    expect(f).not.toBeNull();
+    expect(f!.severity).toBe("soft");
+    expect(f!.message).toMatch(/AI-corporate/i);
+  });
+
+  it("does NOT soft-flag when fewer than 3 blocklist hits", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml:
+          "<p>Shopify Payments forwards disputes to Admin within 24 hours.</p>" +
+          "<p>The robust evidence pack matters here.</p>",
+        keyTakeaways: [],
+        faq: [],
+        disclaimer: "",
+      },
+    });
+    expect(v3_genericOpening(c)).toBeNull();
+  });
 });
 
 /* ── V4 Shopify specificity ─────────────────────────────────────── */

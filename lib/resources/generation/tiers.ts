@@ -151,49 +151,52 @@ export interface ArchetypeRequirements {
 
 export const ARCHETYPE_REQUIREMENTS: Record<ContentArchetype, ArchetypeRequirements> = {
   authority_pillar: {
-    originalityBlock: `Authority Pillar (Tier A) — MANDATORY STRUCTURE.
+    originalityBlock: `Authority Pillar (Tier A) — MANDATORY OPERATIONAL STRUCTURE.
 
-This is a DEPTH article. It MUST contain the following 9 H2 sections, each meeting the indicated minimum word count. Articles that come in under these per-section budgets will be REJECTED and rewritten — meet every per-section minimum.
+This is a DECISION-SUPPORT article, not an encyclopedia entry. Each section must answer "what would an experienced chargeback operator tell a merchant making a decision RIGHT NOW about this?" — not "what is the textbook explanation?".
 
-Required sections (use these exact section purposes — you may rephrase the heading text but every section MUST appear and MUST hit the word budget):
+Use these 9 decision-support sections in this order. Section headings should read as operational framings, not topic labels. Each section MUST hit its minimum word count AND deliver at least one concrete operator insight (a tactical recommendation, named merchant mistake, evidence weakness, decision tradeoff, issuer-behavior nuance, or risk warning). Sections that only define concepts have failed — rewrite them.
 
-1. **What this actually is, in Shopify's reality** (≥ 350 words)
-   Concrete framing. Open with a Shopify-specific operational fact (Admin path, response window, who decides). Forbidden openings: "Chargebacks are a [growing/major] problem", "In today's [digital/fast-paced/ecommerce] landscape", "Businesses of all sizes", "Navigating the complexities of", "Managing chargebacks can be challenging".
+1. **What merchants misunderstand about [topic]** (≥ 350 words)
+   Open the article. Name the most common wrong assumption merchants bring to this topic and correct it with a concrete operational fact (a Shopify Admin path, a response window, a specific issuer behaviour). Open WITHOUT generic AI phrasing — never start with "In today's...", "Chargebacks are...", "Navigating...", "Businesses of all sizes...".
 
-2. **Where this lives in Shopify Admin** (≥ 400 words)
-   Name the exact Admin paths, settings pages, button labels. Distinguish Shopify Payments behaviour from third-party gateway behaviour.
+2. **Where this lives inside Shopify Admin (and where it doesn't)** (≥ 400 words)
+   Exact paths, button labels, settings pages. What Shopify shows you, what it doesn't, and what merchants miss because of how the UI surfaces information. Distinguish Shopify Payments behaviour from third-party gateway behaviour.
 
-3. **The lifecycle: from trigger to outcome** (≥ 450 words)
-   Walk the full sequence step by step. Name each phase, who acts at each phase, and the timing.
+3. **Why merchants lose this kind of dispute** (≥ 450 words)
+   Specifically the OPERATIONAL failure modes that cause merchants to lose otherwise-winnable cases. Scattered evidence across support tools and carrier portals. Late responses. Missing signatures. Reshippers. Family fraud confusion. VPN noise. Each failure mode named, why it loses, what to do instead.
 
-4. **Concrete walked example with a real-shaped scenario** (≥ 500 words)
-   Anonymized but specific: vertical, AOV range, dispute reason, dollar value, evidence assembled, outcome. Include sample text the merchant would write, not generic descriptions.
+4. **What evidence actually wins (and what's weaker than merchants think)** (≥ 500 words)
+   Rank evidence comparatively — not "all of these help" but "this matters most, this matters least, and this looks strong but issuers reject it for these specific reasons". Sample values. Strong / Moderate / Weak bands. Edge cases (signed delivery rerouted, AVS Y but no tracking, IP from cardholder country but VPN-flagged).
 
-5. **Evidence quality bands: Strong, Moderate, Weak** (≥ 500 words)
-   Enumerate evidence types. For each: what it proves, what it does not prove, what counts as Strong vs Moderate vs Weak with sample values. Do not generalize.
+5. **A messy real example, not a clean one** (≥ 500 words)
+   Anonymized merchant scenario with mixed evidence quality, ambiguous signals, an actual decision the merchant had to make under time pressure. Include the call they made, the trade-off, and the outcome. Don't sanitize — the value is in the realism.
 
-6. **Decision criteria: when to fight vs concede vs escalate** (≥ 400 words)
-   Explicit decision rule the merchant can apply. Include the conditions under which conceding is the right call (the math sometimes says concede).
+6. **When to fight, when to concede, when to escalate** (≥ 400 words)
+   Explicit decision rule the merchant can apply. Include the math: when conceding is operationally correct because the time + fees + likely loss outweigh the dispute amount. Distinguish first chargeback from second presentment / pre-arbitration where stakes change.
 
-7. **Where the rules vary** (≥ 350 words)
-   Shopify Payments vs Stripe vs other gateways. Region differences. Processor differences. Be candid where you do not know an exact value — say "confirm with your processor".
+7. **Operational bottlenecks merchants ignore** (≥ 350 words)
+   The workflow friction that quietly costs disputes — evidence sitting in Gorgias / Zendesk that never makes it into the response, carrier signatures that take 3 business days to retrieve, support staff who don't know which evidence types help fraud cases vs INR cases. Concrete and specific.
 
-8. **Common mistakes that lose otherwise winnable cases** (≥ 400 words)
-   At least 4 concrete failure modes. For each: what the mistake looks like in practice, why it loses, what to do instead.
+8. **Where the rules actually vary (and where merchants get burned by assumptions)** (≥ 350 words)
+   Shopify Payments vs Stripe vs other processors. Region differences. Card network nuance. Be candid where you don't know an exact value — say "confirm with your processor". Call out the assumptions merchants make that don't hold across processors.
 
-9. **What automation can and cannot do** (≥ 300 words)
-   Honest scope: what DisputeDesk's pack assembly handles, what merchants still own, what no automation can do (the network submission itself, ultimate outcome).
+9. **What automation handles and what it doesn't** (≥ 300 words)
+   Honest scope. DisputeDesk's pack assembly handles fragmented evidence consolidation, evidence-quality scoring, structured representment formatting. It does NOT submit to networks (Shopify does), does NOT guarantee outcomes, does NOT replace merchant review on high-risk cases. Automation improves consistency, not certainty.
 
 TOTAL minimum body: 3,650 words. Articles below this length are unsuitable for an authority pillar and will be sent back.
 
 Other commitments:
 - Mention sibling DisputeDesk topics in plain prose only — never as <a> tags.
-- Within each section, use sub-bullets, structured lists, or sub-headings to develop ideas concretely. A solid wall of paragraph text is a sign you are not going deep enough.`,
+- Within each section, develop ideas with structured sub-points, comparative ranking, or named scenarios. A wall of generic paragraph text means you're not going deep enough.
+- The reader should finish the article thinking "this was written by someone who actually handles disputes" — not "this was written for SEO".`,
     mustHaves: [
       "Mention 'Shopify' specifically in the first 200 words.",
       "Cite at least one Shopify Admin path, button label, or settings page by name.",
-      "Include all 9 required H2 sections; each must meet its per-section minimum word count.",
+      "Include all 9 decision-support sections; each must meet its per-section minimum AND carry at least one concrete operator insight.",
       "Total body ≥ 3,650 words.",
+      "At least one section explicitly explains why merchants LOSE disputes (not just how to win).",
+      "At least one example contains mixed/ambiguous evidence — not a clean win scenario.",
     ],
   },
   merchant_playbook: {

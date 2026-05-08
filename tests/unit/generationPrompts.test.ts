@@ -14,7 +14,7 @@ describe("resolveGenerationPrompts", () => {
     expect(r.systemPrompt).toBe(DEFAULT_SYSTEM_PROMPT);
     expect(r.userPromptSuffix).toBe(DEFAULT_USER_PROMPT_SUFFIX);
     expect(r.userPromptSuffix).toContain("Originality and anti-repetition baseline");
-    expect(DEFAULT_SYSTEM_PROMPT).toContain("Shopify chargeback operations writer");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("chargeback operations strategist");
     expect(r.localeInstructions["sv-SE"]).toContain("Återbetalningskrav");
     expect(r.contentTypeInstructions["cluster_article"]).toBe(
       DEFAULT_CONTENT_TYPE_INSTRUCTIONS["cluster_article"]

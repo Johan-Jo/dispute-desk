@@ -94,6 +94,30 @@ const GENERIC_OPENING_PATTERNS: RegExp[] = [
   /businesses of all sizes/i,
 ];
 
+/**
+ * Explicit AI-corporate phrasing the operator-voice brief forbids throughout
+ * the body (not just the opening). Three or more hits triggers V3 regardless
+ * of where they appear.
+ */
+const FORBIDDEN_AI_PHRASES: RegExp[] = [
+  /\bit'?s important to note\b/i,
+  /\bit is important to note\b/i,
+  /\bcan significantly impact\b/i,
+  /\bthroughout this process\b/i,
+  /\bvarious factors\b/i,
+  /\bcomprehensive overview\b/i,
+  /\btypically includes\b/i,
+  /\bbusinesses should\b/i,
+  /\bit is crucial\b/i,
+  /\bplays a vital role\b/i,
+  /\bhelps streamline\b/i,
+  /\benhances efficiency\b/i,
+  /\bseamlessly\b/i,
+  /\brobust\b/i,
+  /\bleveraging\b/i,
+  /\bin conclusion\b/i,
+];
+
 const SHOPIFY_SURFACE_PATTERNS: RegExp[] = [
   /\bshopify\b/i,
   /\bshopify\s+payments\b/i,
@@ -204,6 +228,25 @@ export function v3_genericOpening(candidate: ValidatorCandidate): ValidatorFailu
       };
     }
   }
+
+  // Whole-body scan: 3+ hits from the AI-phrase blocklist means the article
+  // is leaning on corporate-AI language regardless of where the offending
+  // phrases appear. Severity soft so the article can still ship if every
+  // other validator passes — but the warnings get surfaced for editorial review.
+  const fullText = htmlToText(candidate.body_json.mainHtml);
+  const hits: string[] = [];
+  for (const re of FORBIDDEN_AI_PHRASES) {
+    if (re.test(fullText)) hits.push(re.source);
+  }
+  if (hits.length >= 3) {
+    return {
+      id: "V3_generic_opening",
+      severity: "soft",
+      message: `Body contains ${hits.length} forbidden AI-corporate phrases.`,
+      retryHint: `The article uses ${hits.length} phrases from the AI-corporate blocklist (e.g. ${hits.slice(0, 3).join(", ")}). Rewrite those passages in operator voice — direct, opinionated, specific. The brief is operationally credible dispute intelligence, not corporate ecommerce blogging. Forbidden anywhere in the body: "It's important to note", "can significantly impact", "throughout this process", "various factors", "comprehensive overview", "typically includes", "businesses should", "it is crucial", "plays a vital role", "helps streamline", "enhances efficiency", "seamlessly", "robust", "leveraging", "in conclusion".`,
+    };
+  }
+
   return null;
 }
 
