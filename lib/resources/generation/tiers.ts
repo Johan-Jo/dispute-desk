@@ -151,53 +151,23 @@ export interface ArchetypeRequirements {
 
 export const ARCHETYPE_REQUIREMENTS: Record<ContentArchetype, ArchetypeRequirements> = {
   authority_pillar: {
-    originalityBlock: `Authority Pillar (Tier A) — STRUCTURAL VARIATION REQUIRED.
+    // The internal name authority_pillar stays for code routing, but the prompt
+    // itself never says "pillar", "guide", "complete", or any word-count target —
+    // those signals trigger SEO/educational writing instincts in the model.
+    originalityBlock: `Build from observations outward, not from an outline.
 
-The previous "9 fixed decision-support sections" framework is RETIRED — articles built that way sound mass-produced, even when the section headings are operationally framed.
+Pick the SHARPEST observation you have about this specific topic. Make it the article's spine. Every section after that exists to extend, qualify, or contradict that spine — not to "cover" sub-topics evenly.
 
-For each pillar, pick ONE structural FRAME that fits the specific topic. The frame defines pacing and section logic. Do NOT default to a checklist of universal sections.
+Sections are vehicles for compressed insight. Vary count. Vary length. Skip the warm-up. No section explains basics; assume the reader handles disputes for a living. If the brief notes contain an outline array, treat it as topical context — do NOT mirror it heading-by-heading.
 
-Valid frames:
-
-- **Operational Breakdown** — workflow lifecycle, evidence hierarchy, operational bottlenecks, issuer behavior, dispute decision-making. Best for broad operational topics. Sections evolve from "how this happens" → "where it breaks" → "what to do".
-
-- **Real Case Analysis** — open with a realistic dispute scenario (incomplete evidence, merchant confusion, operational mistake). Forensically analyze what happened, what weakened the case, what evidence mattered, what should have been done differently. Sections follow the case timeline, not a generic skeleton.
-
-- **Merchant Failure Analysis** — sharp, corrective, direct. Sections built around merchant losses: false assumptions, weak evidence myths, workflow failures, timing failures, issuer skepticism. Each section names one failure mode and dissects it.
-
-- **Evidence Deep Dive** — focused on a single dominant evidence category (or 2–3 closely related ones). When each piece works, when it fails, why merchants overestimate it, issuer interpretation, edge cases. Sections evolve evidence-type by evidence-type, not topic by topic.
-
-- **Platform / Processor Nuance** — comparative. Shopify Payments vs Stripe vs other gateways. Issuer variation. Regional behavior. Visa vs Mastercard nuance. Sections built around processors / contexts, not a generic outline.
-
-- **Decision Support / Triage** — fight vs concede vs escalate. Evidence thresholds. Operational cost. Risk scoring. Representment prioritization. Sections built as decision branches.
-
-Pick at the start. Build the article AROUND the frame, not around a fixed section list. If the brief or notes specify a structural_archetype_variant, use that frame. Otherwise pick the one that genuinely fits the topic — not the one easiest to write.
-
-Pacing rules:
-- Vary section count across articles. Six tight sections is often stronger than nine padded ones.
-- Vary section length. Short observational sections (200-300 words) can sit alongside longer analytical ones.
-- Resist the urge to mirror the section names from earlier articles even when the topic overlaps.
-
-Mandatory ingredients regardless of frame:
-- Open with a topic-specific operational fact, never with a generic AI phrase.
-- Mention 'Shopify' (or a specific Shopify surface — Admin, Payments, Disputes, Protect, Order) within the first 200 words.
-- Include at least 3–5 original operator observations (memorable, sharp, experience-based one-liners — see system prompt for examples).
-- Include at least one messy-real example with mixed/ambiguous evidence.
-- Explain at least one OPERATIONAL failure mode (why merchants lose otherwise-winnable cases) somewhere in the body.
-- Cite at least one Shopify Admin path, settings page, or field by name.
-- Honest automation scope: what DisputeDesk's pack assembly handles vs what it does not. Place this naturally — not as a final closing section every time.
-
-Length: aim for substantive depth, but don't pad. Below ~1,800 words a Tier A pillar usually isn't earning its tier; above ~5,500 you are over-explaining. Vary the actual count by topic.
-
-The reader should finish thinking "this was written by an operator with a particular point of view on this topic" — NOT "this was the same template as the last article".`,
+The article should read like an analyst memo or escalation writeup. Uneven pacing is a feature: a 90-word section sitting next to a 350-word section signals real judgment about what matters.`,
     mustHaves: [
-      "Mention 'Shopify' specifically in the first 200 words.",
-      "Cite at least one Shopify Admin path, button label, or settings page by name.",
-      "Pick a structural FRAME (Operational Breakdown / Real Case Analysis / Merchant Failure / Evidence Deep Dive / Processor Nuance / Decision Triage) and build sections around that frame — NOT a fixed 9-section checklist.",
-      "Include at least 3 original operator observations (memorable, experience-based one-liners).",
-      "Include at least one messy-real example with mixed/ambiguous evidence — not a clean win.",
-      "Explain at least one operational failure mode (why merchants lose).",
-      "Section count and pacing must differ from prior pillars — this is a hard structural-diversity requirement.",
+      "Mention 'Shopify' or a specific Shopify surface (Admin, Payments, Disputes, Protect, Order) in the first 200 words.",
+      "Cite at least one Shopify Admin path, settings page, or field by name.",
+      "Include 3+ compressed operator observations (sharp, ≤25-word one-liners that compress experience).",
+      "Include at least one messy-real example — mixed/ambiguous evidence, not a clean win.",
+      "Explain at least one operational failure mode (why merchants lose otherwise-winnable cases).",
+      "No section heading starting with 'Understanding', 'What is', 'Importance of', or 'The Backbone of'.",
     ],
   },
   merchant_playbook: {

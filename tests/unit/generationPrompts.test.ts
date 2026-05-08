@@ -13,8 +13,8 @@ describe("resolveGenerationPrompts", () => {
     const r = resolveGenerationPrompts({});
     expect(r.systemPrompt).toBe(DEFAULT_SYSTEM_PROMPT);
     expect(r.userPromptSuffix).toBe(DEFAULT_USER_PROMPT_SUFFIX);
-    expect(r.userPromptSuffix).toContain("Originality and anti-repetition baseline");
-    expect(DEFAULT_SYSTEM_PROMPT).toContain("chargeback operations strategist");
+    expect(r.userPromptSuffix).toContain("Originality:");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("internal-grade chargeback operations notes");
     expect(r.localeInstructions["sv-SE"]).toContain("Återbetalningskrav");
     expect(r.contentTypeInstructions["cluster_article"]).toBe(
       DEFAULT_CONTENT_TYPE_INSTRUCTIONS["cluster_article"]
@@ -70,13 +70,15 @@ describe("buildUserPrompt", () => {
     const p = buildUserPrompt(brief, "en-US", resolved, emptyCtx);
     expect(p).toContain("Vary headline structure.");
     expect(p).toContain("TARGET KEYWORD: kw");
+    // cluster_article (not authority_pillar) keeps length guidance.
     expect(p).toContain("Length guidance:");
-    // cluster_article + medium complexity now resolves to Tier B (1900–2500 words).
     expect(p).toContain("1900–2500 words");
-    expect(p).toContain("SEARCH INTENT: informational");
-    expect(p).toContain("PAGE ROLE: support");
-    expect(p).toContain("ARCHETYPE: merchant_playbook");
-    expect(p).toContain("TIER: B");
+    // PILLAR / CONTENT TYPE / PAGE ROLE / COMPLEXITY / TARGET WORD RANGE / ARCHETYPE
+    // labels are stripped from the prompt — they leaked SEO-blog instincts.
+    expect(p).not.toContain("PAGE ROLE:");
+    expect(p).not.toContain("SEARCH INTENT:");
+    expect(p).not.toContain("ARCHETYPE:");
+    expect(p).not.toContain("PILLAR:");
   });
 
   it("omits overlap section when similar list is empty", () => {
