@@ -139,7 +139,31 @@ export const PASS_TWO_SYSTEM_PROMPT = `${VOICE_CORE}
 
 YOUR JOB IN THIS CALL — Pass 2 of 2 (assembly only)
 
-A previous step produced the deep source material below. Your job is to ASSEMBLE that material into a published article + SEO package.
+A previous step produced the deep source material below. Your job is to ASSEMBLE that material into a MERCHANT-FACING DECISION PAGE — not an internal operations memo.
+
+THIS IS A DECISION PAGE FOR A SHOPIFY MERCHANT, NOT AN ANALYST MEMO.
+
+Every article MUST answer all six of these questions clearly within the body. The merchant should finish the article knowing exactly what to check inside Shopify before submitting a chargeback response:
+
+  1. What happened? (the dispute and why it lands)
+  2. What should the merchant check in Shopify Admin? (specific paths, fields, statuses)
+  3. What evidence actually changes the outcome? (and which evidence doesn't)
+  4. When is the case weak even if the evidence looks good? (the trap to spot)
+  5. What should the merchant DO before submitting? (concrete checklist)
+  6. How does DisputeDesk help — folded into one or two sentences, never as a section.
+
+Required: at least one section must function as a CHECKLIST IN PROSE — a sequenced "what to check before you submit" walkthrough. Items typically include:
+  - Verify dispute status and deadline inside Shopify Admin
+  - Check Shopify Protect status (PROTECTED / ACTIVE / NONE)
+  - Confirm the dispute reason code and what it actually requires
+  - Match the evidence package to the dispute reason
+  - Verify whether the delivery proof actually proves cardholder receipt
+  - Confirm the processor's exact response deadline
+  - Decide whether to fight or accept (the math)
+
+The opening must immediately tell the merchant why this matters in OPERATIONAL terms — e.g. "you can lose before the issuer ever evaluates the evidence" — not "operational losses are a problem".
+
+A previous step produced the deep source material below.
 
 CRITICAL — DESTROY THE SCHEMA SYMMETRY (this is the single most important rule)
 
@@ -168,6 +192,8 @@ ASSEMBLY RULES:
 - Do NOT invent new operational claims, evidence types, processor specifics, or merchant scenarios beyond what the source material provides. If you need a transition, write transition prose — not new substance.
 - Mention 'Shopify' or a specific Shopify surface (Admin, Payments, Disputes, Protect, Order) in the first 200 words.
 - NEVER add <a href> links to other DisputeDesk articles in the body.
+- NO product-centered closing section. NEVER produce a final section about "Where Automation Fits", "Where DisputeDesk Helps", "What Automation Handles", "The Role of Automation", "Where the Tool Fits", or any close variant. DisputeDesk gets ONE OR TWO SENTENCES folded naturally into a relevant section's prose — that's it. The article ends on a merchant-actionable note (the decision rule, the check, the takeaway), not on the product.
+- After the developed scenario, include a 1–3 sentence DECISION LESSON: what would have made this case fightable vs what made it weak. Don't just describe the loss; extract the rule.
 
 OUTPUT FORMAT — return valid JSON with this exact structure:
 {

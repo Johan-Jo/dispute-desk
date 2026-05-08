@@ -180,6 +180,16 @@ const SCHEMA_LEAKED_HEADING_PATTERNS: RegExp[] = [
   /\bdeveloped scenarios?\b/i,
   /\binline variance\b/i,
   /\bpositioning constraints?\b/i,
+  // Product-centered closing sections — DisputeDesk should be folded into prose,
+  // never given its own section. These patterns turn an article into product
+  // marketing instead of merchant decision support.
+  /\bwhere automation fits\b/i,
+  /\bwhere automation helps\b/i,
+  /\bwhere disputedesk (fits|helps|comes in)\b/i,
+  /\brole of automation\b/i,
+  /\bwhat automation (handles|does|can do)\b/i,
+  /\bwhere the (tool|product|platform) fits\b/i,
+  /\bautomation in (chargeback|dispute|evidence)/i,
 ];
 
 const SHOPIFY_SURFACE_PATTERNS: RegExp[] = [
