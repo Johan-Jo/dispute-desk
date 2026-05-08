@@ -26,6 +26,7 @@
     "backfill:resources-images:dry": "node scripts/backfill-resources-featured-images.mjs --dry-run",
     "import:backlog": "node scripts/import-content-backlog.mjs",
     "seed:shopify-chargeback-cluster": "node scripts/seed-shopify-chargeback-cluster.mjs",
+    "seed:tier-a-pillars": "node scripts/seed-tier-a-pillar-briefs.mjs",
     "run:autopilot-once": "node scripts/run-autopilot-once.mjs",
     "db:migrate": "npx supabase db push",
     "db:migrate:script": "node scripts/run-migration.mjs",
