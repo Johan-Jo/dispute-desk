@@ -205,6 +205,77 @@ async function callOpenAIChat(
   }
 }
 
+/**
+ * Anthropic (Claude) chat call. Used for Pass 2 when GENERATION_PASS_TWO_PROVIDER=claude
+ * and ANTHROPIC_API_KEY is set. Pass 1 stays on OpenAI (the structured-source-material
+ * job suits gpt-4o fine; Claude is being tested specifically for the article-assembly
+ * length-compliance problem in Pass 2).
+ *
+ * Anthropic's API differs from OpenAI: system prompt is a top-level field (not a
+ * message); auth is x-api-key (not Bearer); response_format is implicit (no JSON
+ * mode flag — we ask for JSON in the prompt instead).
+ */
+async function callClaudeChat(
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number
+): Promise<{ raw: string | null; tokensUsed: number; error: string | null }> {
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY;
+  if (!apiKey) return { raw: null, tokensUsed: 0, error: "ANTHROPIC_API_KEY not configured" };
+
+  const model = process.env.GENERATION_MODEL_PASS_TWO ?? "claude-sonnet-4-6";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+        temperature,
+        max_tokens: 8192,
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { raw: null, tokensUsed: 0, error: `Claude API error ${res.status}: ${errBody.slice(0, 300)}` };
+    }
+
+    const data = await res.json();
+    const tokensUsed = (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0);
+    // Anthropic returns content as an array of blocks. We requested JSON in the
+    // prompt — first text block is the JSON payload.
+    const block = (data.content as Array<{ type: string; text?: string }> | undefined)?.find(
+      (b) => b.type === "text"
+    );
+    const raw = block?.text;
+    if (!raw) return { raw: null, tokensUsed, error: "Empty response from Claude" };
+    // Claude sometimes wraps JSON in ```json fences; strip them.
+    const cleaned = raw
+      .replace(/^\s*```(?:json)?\s*/i, "")
+      .replace(/\s*```\s*$/i, "")
+      .trim();
+    return { raw: cleaned, tokensUsed, error: null };
+  } catch (err) {
+    return { raw: null, tokensUsed: 0, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+/** Provider selector for Pass 2 only. Pass 1 always uses OpenAI. */
+function passTwoProvider(): "openai" | "claude" {
+  const envChoice = process.env.GENERATION_PASS_TWO_PROVIDER?.toLowerCase();
+  if (envChoice === "claude" && (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
+    return "claude";
+  }
+  return "openai";
+}
+
 function buildTwoPassContext(brief: GenerationBrief, locale: string): TwoPassBriefContext {
   const localeInstruction =
     DEFAULT_LOCALE_INSTRUCTIONS[locale] ?? DEFAULT_LOCALE_INSTRUCTIONS["en-US"];
@@ -286,7 +357,11 @@ async function generatePassTwo(
     ? `${baseUserPrompt}\n\n${extraInstructions.trim()}`
     : baseUserPrompt;
 
-  const { raw, tokensUsed, error } = await callOpenAIChat(PASS_TWO_SYSTEM_PROMPT, userPrompt, 0.4);
+  const provider = passTwoProvider();
+  const { raw, tokensUsed, error } =
+    provider === "claude"
+      ? await callClaudeChat(PASS_TWO_SYSTEM_PROMPT, userPrompt, 0.4)
+      : await callOpenAIChat(PASS_TWO_SYSTEM_PROMPT, userPrompt, 0.4);
   if (!raw) return { locale, content: null, error, tokensUsed };
 
   let parsed: GeneratedContent;
