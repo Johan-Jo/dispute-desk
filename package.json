@@ -31,6 +31,7 @@
     "db:migrate:script": "node scripts/run-migration.mjs",
     "cron:resources": "node scripts/trigger-resources-crons.mjs",
     "smoke:resources-hub": "node scripts/smoke-resources-hub.mjs",
+    "audit:resources-hub": "node scripts/audit-resources-hub.mjs",
     "audit:hub-locales": "node scripts/audit-hub-localization-titles.mjs",
     "audit:hub-locales:coverage": "node scripts/audit-hub-localization-titles.mjs --locale-coverage",
     "audit:hub-locales:fail": "node scripts/audit-hub-localization-titles.mjs --fail",
