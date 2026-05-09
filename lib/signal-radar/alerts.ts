@@ -1,0 +1,144 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SignalAnalysisOutput } from "./schema";
+
+const MIN_CONFIDENCE_FOR_IMMEDIATE = 5;
+const CATEGORY_COOLDOWN_HOURS = 4;
+const CLUSTER_COOLDOWN_HOURS = 24;
+const CIRCUIT_BREAKER_LIMIT = 10;
+const CIRCUIT_BREAKER_WINDOW_HOURS = 1;
+const MIGRATION_DAILY_CAP = 5;
+
+export type AlertKind = "immediate" | "digest" | "none";
+
+export interface AlertDecisionInput {
+  analysis: Pick<
+    SignalAnalysisOutput,
+    "category" | "signal_score" | "source_confidence_score"
+  >;
+  platform: string;
+  subreddit: string | null;
+  cluster_key: string | null;
+}
+
+export interface AlertDecision {
+  kind: AlertKind;
+  category_dedup_key: string;
+  cluster_dedup_key: string | null;
+  category_cooldown_hours: number | null;
+  cluster_cooldown_hours: number;
+  reason: string;
+}
+
+export function decideAlert(input: AlertDecisionInput): AlertDecision {
+  const { analysis, platform, subreddit, cluster_key } = input;
+  const subKey = subreddit ?? "_";
+  const category_dedup_key = `immediate:${analysis.category}:${platform}:${subKey}`;
+  const cluster_dedup_key = cluster_key
+    ? `immediate:cluster:${cluster_key}`
+    : null;
+
+  const baseDecision = (
+    kind: AlertKind,
+    reason: string,
+    categoryCooldown: number | null
+  ): AlertDecision => ({
+    kind,
+    category_dedup_key,
+    cluster_dedup_key,
+    category_cooldown_hours: categoryCooldown,
+    cluster_cooldown_hours: CLUSTER_COOLDOWN_HOURS,
+    reason,
+  });
+
+  if (analysis.source_confidence_score < MIN_CONFIDENCE_FOR_IMMEDIATE) {
+    return baseDecision("digest", "below_confidence_gate", null);
+  }
+
+  if (analysis.category === "migration_intent" && analysis.signal_score >= 8) {
+    return baseDecision("immediate", "migration_intent", null);
+  }
+  if (
+    analysis.category === "transparency_frustration" &&
+    analysis.signal_score >= 8
+  ) {
+    return baseDecision(
+      "immediate",
+      "transparency_frustration",
+      CATEGORY_COOLDOWN_HOURS
+    );
+  }
+  if (analysis.category === "reserve_fear" && analysis.signal_score >= 9) {
+    return baseDecision("immediate", "reserve_fear", CATEGORY_COOLDOWN_HOURS);
+  }
+  if (
+    analysis.category === "competitor_frustration" &&
+    analysis.signal_score >= 8
+  ) {
+    return baseDecision(
+      "immediate",
+      "competitor_frustration",
+      CATEGORY_COOLDOWN_HOURS
+    );
+  }
+
+  return baseDecision("digest", "no_immediate_rule_matched", null);
+}
+
+export async function circuitBreakerTripped(
+  sb: SupabaseClient
+): Promise<boolean> {
+  const since = new Date(
+    Date.now() - CIRCUIT_BREAKER_WINDOW_HOURS * 60 * 60 * 1000
+  ).toISOString();
+  const { count } = await sb
+    .from("signal_alerts")
+    .select("*", { count: "exact", head: true })
+    .eq("alert_type", "immediate")
+    .gt("sent_at", since);
+  return (count ?? 0) >= CIRCUIT_BREAKER_LIMIT;
+}
+
+export async function checkCategoryDedup(
+  sb: SupabaseClient,
+  decision: AlertDecision
+): Promise<boolean> {
+  if (decision.category_cooldown_hours == null) return false;
+  const since = new Date(
+    Date.now() - decision.category_cooldown_hours * 60 * 60 * 1000
+  ).toISOString();
+  const { count } = await sb
+    .from("signal_alerts")
+    .select("*", { count: "exact", head: true })
+    .eq("dedup_key", decision.category_dedup_key)
+    .gt("sent_at", since);
+  return (count ?? 0) > 0;
+}
+
+export async function checkClusterDedup(
+  sb: SupabaseClient,
+  decision: AlertDecision
+): Promise<boolean> {
+  if (!decision.cluster_dedup_key) return false;
+  const since = new Date(
+    Date.now() - decision.cluster_cooldown_hours * 60 * 60 * 1000
+  ).toISOString();
+  const { count } = await sb
+    .from("signal_alerts")
+    .select("*", { count: "exact", head: true })
+    .eq("cluster_dedup_key", decision.cluster_dedup_key)
+    .gt("sent_at", since);
+  return (count ?? 0) > 0;
+}
+
+export async function migrationCapReached(
+  sb: SupabaseClient
+): Promise<boolean> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await sb
+    .from("signal_alerts")
+    .select("*", { count: "exact", head: true })
+    .eq("alert_type", "immediate")
+    .eq("category", "migration_intent")
+    .gt("sent_at", since);
+  return (count ?? 0) >= MIGRATION_DAILY_CAP;
+}

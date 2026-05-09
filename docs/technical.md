@@ -2728,3 +2728,49 @@ Structural reset of all embedded app pages around the four-question contract: Pu
 **Playbook Detail**: NULL phase on dispute-linked packs now shows explicit warning banner instead of silent omission.
 
 **Phase utilities** (`lib/disputes/phaseUtils.ts`): Added `isPhaseKnown()`, `casePrimaryCta()` for state-dependent CTA logic. `phaseLabel()` returns "Needs Sync" for NULL (not "Unknown"). `phaseBadgeTone()` returns "attention" for NULL (not undefined).
+
+## Signal Radar (admin-only merchant intelligence)
+
+Admin-only Shopify-merchant pain monitor. Lives at `/admin/signal-radar`, ingested by `/api/cron/signal-radar-reddit` (hourly), classified by `/api/cron/signal-radar-classify` (every 5 min), with manual refresh via `POST /api/admin/signal-radar/refresh` (admin auth via `internal_admin_grants`).
+
+**Purpose:** synthesize public Shopify-merchant pain (Reddit submissions + top-level comments for M1) into structured intelligence — categories, recurring phrases, week-over-week trends, competitor weaknesses — that informs DisputeDesk positioning, onboarding, and content. **Not outreach. Not auto-reply. Read-only feed in M1.**
+
+**Tables** (migration `20260509120000_signal_radar.sql`, all service-role-only RLS):
+- `signal_sources` — raw items + classifier work-queue (`analysis_status pending|classified|failed|skipped`, `analysis_attempts`, `analysis_locked_at`, `cluster_key`, `content_type submission|comment`, `parent_external_id`).
+- `signal_analysis` — 1:1 with `signal_sources` after classification. Holds **two emotion dimensions** (`frustration_score` for operational pain, `emotional_intensity_score` for psychological urgency — they don't ladder), `signal_score` (DisputeDesk-strategic value), `source_confidence_score` (trustworthiness/specificity), `category`, `competitor`, `merchant_type`, `merchant_stage`, `merchant_scale_signals` (jsonb array of inferred GMV/volume/vertical hints), `suggested_angle`, `why_this_matters` (explicit synthesis — what DisputeDesk should DO), `summary`, plus snapshot cluster trend metrics (`cluster_size_24h`, `cluster_growth_rate`).
+- `signal_alerts` — sent-alert ledger with both `dedup_key` (category-keyed) and `cluster_dedup_key` (cluster-keyed), powering two dedup paths plus a global circuit breaker (>10 immediate alerts/hour → suppress).
+
+**Source adapter abstraction** (`lib/signal-radar/sources/types.ts`): `SignalSourceAdapter { platform, ingest(): Promise<IngestedItem[]> }`. Reddit adapter (`sources/reddit.ts`) is the only M1 implementation; M2/M3 will add Shopify Community + App Store reviews adapters against the same interface — no plugin loader, just a typed boundary so platform-specific assumptions don't leak.
+
+**Reddit ingest** (`lib/signal-radar/sources/reddit.ts`): **public unauthenticated JSON endpoints**, no OAuth. Reddit's Responsible Builder Policy now gates API registration behind a commercial-app application process; for our low-volume admin-only ingest (5 subs × 1 listing/hour + ≤50 comment fetches/hour) the public `.json` endpoints stay well within unauthenticated rate limits. Subreddits: `r/shopify`, `r/ecommerce`, `r/dropshipping`, `r/Entrepreneur`, `r/smallbusiness`. Submissions via `https://www.reddit.com/r/{sub}/new.json?limit=50&raw_json=1`; top-level comments via `https://www.reddit.com/r/{sub}/comments/{id}.json?limit=20&depth=1&sort=top&raw_json=1`. Only requirement: a stable `User-Agent` header (default is hard-coded; override via `REDDIT_USER_AGENT` env). Filters: skip `[deleted]`/`[removed]`, skip `collapsed=true`, skip `score < 1`, cap 20 comments/submission. If Reddit ever 403/429s the Vercel egress IPs we can register through the Responsible Builder flow and switch back to authenticated endpoints — the adapter is the only file that would change.
+
+**Clustering** (`lib/signal-radar/cluster.ts`): `computeClusterKey(text)` is a deterministic, embedding-free token fingerprint — lowercase, strip URLs/punct/markdown, drop stopwords, take top-8 by frequency-then-length, sort alphabetically, sha1 first 16 hex. Computed inline at ingest. Acceptable false-positives (related complaints collapse) — that's **better** than alert flooding. M2 upgrade path: replace with embedding cosine similarity + `signal_clusters` table. `extractPhrases(items)` powers the dashboard "Top Recurring Phrases" widget — 1- to 3-grams over the last 7d, stopword-filtered, with a curated Shopify-domain phrase whitelist boosted (×3): `black box`, `rolling reserve`, `payout hold`, `frozen funds`, `manual evidence`, `losing disputes`, etc.
+
+**Classifier** (`lib/signal-radar/classify.ts`): OpenAI Chat Completions with **strict JSON schema mode** (`response_format: { type: "json_schema", strict: true, json_schema: SIGNAL_ANALYSIS_JSON_SCHEMA }`). Returns 13 fields including `merchant_type`, `merchant_scale_signals`, `why_this_matters`, both emotion dimensions, and `source_confidence_score`. Comments are passed alongside their parent submission's title for context. Model: `SIGNAL_RADAR_MODEL` (default `gpt-4o-mini-2024-07-18`) — **separate from `GENERATION_MODEL`** so content-gen tuning doesn't drift classifier behavior. Defense-in-depth: Zod parse at the boundary (`SignalAnalysisSchema`) — strict mode + Zod can drift.
+
+**Classifier drain** (`lib/signal-radar/classify-drain.ts`): claims rows with `analysis_status='pending'` and `analysis_locked_at IS NULL OR < now() - 5 minutes`, sets `analysis_locked_at`, classifies, computes cluster metrics, inserts `signal_analysis`, fires alerts. Wall-clock budget 50 s (Vercel 60 s timeout), max 4 in-flight, max 3 attempts before status=`failed`.
+
+**Alerts** (`lib/signal-radar/alerts.ts`): pure `decideAlert()` rules:
+- `migration_intent` AND `signal_score >= 8` → immediate, **no** category cooldown, but cluster cooldown 24h still applies, hard cap 5/day
+- `transparency_frustration` AND `signal_score >= 8` → immediate, 4h category cooldown + 24h cluster cooldown
+- `reserve_fear` AND `signal_score >= 9` → immediate, 4h category cooldown + 24h cluster cooldown
+- `competitor_frustration` AND `signal_score >= 8` → immediate, 4h category cooldown + 24h cluster cooldown
+- everything else → digest (digest is no-op in M1; rolls up in M3)
+
+**Source-confidence gate**: `source_confidence_score < 5` always falls through to digest, regardless of category — vague low-confidence rants don't fire immediates. Both dedup keys (`category` and `cluster`) are stored on every `signal_alerts` row. Global circuit breaker: > 10 immediate alerts in any 1h window suppresses further immediates.
+
+**Email**: reuses `sendAdminEmail()` (`lib/email/adminEmail.ts`), `logTag: "signal-radar-immediate"`. Subject `[Signal Radar] {category}: {title}`. Body shows `why_this_matters` first (the synthesis the operator should read first), then summary, suggested angle, scores, "Open original" + "Open Signal Radar" links.
+
+**Dashboard** (`/admin/signal-radar/page.tsx` server component, `revalidate=300`): synthesis-first, not feed-first.
+- KPI strip — high-intent today, migration today, transparency today, reserve today
+- **What Changed This Week?** widget (`compareWeekOverWeek` from `lib/signal-radar/trends.ts`) — week-over-week category deltas, 5–8 rows by absolute delta. Two count queries per category, no analytics pipeline.
+- **Top Recurring Phrases (7d)** widget — bar list from `extractPhrases()`. Strategically the most-valuable widget — surfaces merchant language directly.
+- Filter bar — source, category, merchant_type, min signal/confidence/emotion sliders, timeframe (1d/7d/30d), sort (quality/recent/emotion).
+- **Clustered feed table** — rows deduped at render by `cluster_key`, lead row is highest-`signal_score`. Cluster siblings collapse into "+N similar" badges that expand inline.
+- **Detail panel** (`detail-panel.tsx`, slide-over) — `why_this_matters` rendered prominently at top, four scores side-by-side with tooltips, `merchant_scale_signals` chips, cluster trend badge ("↑ 3.2× over prior 24h" when growth_rate ≥ 1.5), excerpt, "Open original" link.
+
+**What's NOT in M1**: save/dismiss/reviewed buttons, daily digest, Shopify Community/App Store ingesters, vocabulary persistence, content-opportunities tab, weekly intelligence report, per-admin alert preferences, outreach automation. The product direction is **intelligence synthesis, not social-media monitoring**.
+
+**Cron schedule** (`vercel.json`): `/api/cron/signal-radar-reddit` hourly (`0 * * * *`), `/api/cron/signal-radar-classify` every 5 min (`*/5 * * * *`). Both authed via `Authorization: Bearer ${CRON_SECRET}` (or `?secret=` query fallback).
+
+**Env vars**: none required for ingest (public Reddit endpoints, default User-Agent baked in). Optional: `REDDIT_USER_AGENT` (override default UA), `SIGNAL_RADAR_MODEL` (override classifier model). Reuses `OPENAI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFY_EMAIL`, `CRON_SECRET`.

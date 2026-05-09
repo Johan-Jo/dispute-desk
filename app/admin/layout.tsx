@@ -27,6 +27,7 @@ import {
   ListTodo,
   Settings,
   X,
+  Radar,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -64,6 +65,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Billing", href: "/admin/billing", icon: DollarSign },
   { label: "Team", href: "/admin/team", icon: Users },
   { label: "Resources", href: "/admin/resources", icon: BookOpen },
+  { label: "Signal Radar", href: "/admin/signal-radar", icon: Radar },
   { label: "Help", href: "/admin/help", icon: HelpCircle },
 ];
 

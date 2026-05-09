@@ -16,6 +16,7 @@ import {
   Globe,
   Zap,
   Users,
+  Radar,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -31,6 +32,7 @@ const SECTIONS = [
   { id: "ai-generator", label: "AI Generator", icon: Sparkles },
   { id: "autopilot", label: "Autopilot Mode", icon: Zap },
   { id: "seo", label: "SEO & Indexing", icon: Globe },
+  { id: "signal-radar", label: "Signal Radar", icon: Radar },
   { id: "settings", label: "Settings", icon: Settings },
   { id: "workflow", label: "Workflow Reference", icon: GitBranch },
 ] as const;
@@ -309,6 +311,59 @@ export function HelpClient() {
             <P>A dynamic sitemap at <Code>/sitemap.xml</Code> lists all published articles with hreflang alternates for each locale. It also includes static pages (resources, glossary, templates, case studies).</P>
             <H3>Robots.txt</H3>
             <P>Served at <Code>/robots.txt</Code>. Allows all crawlers on public pages and blocks admin, API, app, portal, and auth routes.</P>
+          </Section>
+
+          {/* SIGNAL RADAR */}
+          <Section id="signal-radar" title="Signal Radar">
+            <P>
+              At <Code>/admin/signal-radar</Code> — admin-only Shopify-merchant intelligence. Listens
+              to public Reddit discussions, classifies each post and top-level comment with an LLM,
+              and surfaces synthesis (recurring phrases, week-over-week trends, &quot;why this
+              matters&quot;) so you can spot positioning opportunities, competitor weaknesses, and
+              merchant pain trends. <Strong>Not outreach. Not auto-reply. Read-only feed in M1.</Strong>
+            </P>
+            <H3>What you see on the page</H3>
+            <Table headers={["Surface", "Purpose"]} rows={[
+              ["KPI strip", "Today's counts: high-intent signals, migration intent, transparency complaints, reserve fear"],
+              ["What Changed This Week?", "Week-over-week category deltas. Empty until ~14 days of data exist"],
+              ["Top Recurring Phrases (7d)", "Frequency-ranked merchant language — strategically the most valuable widget for copy and positioning"],
+              ["Filter bar", "Source, category, merchant_type, min signal/confidence/emotion sliders, timeframe, sort"],
+              ["Clustered feed", "Rows deduped by cluster_key with '+N similar' badge. Click any row to open the detail panel"],
+              ["Detail panel", "why_this_matters first, then the four scores side-by-side, merchant scale chips, cluster trend, summary, suggested angle, link to original"],
+            ]} />
+            <H3>Sources (M1)</H3>
+            <P>Reddit only — submissions and top-level comments from <Code>r/shopify</Code>, <Code>r/ecommerce</Code>, <Code>r/dropshipping</Code>, <Code>r/Entrepreneur</Code>, <Code>r/smallbusiness</Code>. Comments are filtered: skip <Code>[deleted]</Code>/<Code>[removed]</Code>, skip collapsed, score &ge; 1, max 20 per submission. Future milestones add Shopify Community and App Store reviews against the same adapter interface.</P>
+            <H3>How it works</H3>
+            <Ol items={[
+              "Hourly cron pulls public Reddit JSON endpoints (no OAuth — uses unauthenticated /r/{sub}/new.json + /r/{sub}/comments/{id}.json).",
+              "Each item gets a token-fingerprint cluster_key at ingest so duplicates and viral threads collapse into one row.",
+              "5-minute classifier drain claims pending rows, calls OpenAI gpt-4o-mini in strict JSON-schema mode, writes signal_analysis.",
+              "If the analysis matches an immediate-alert rule (migration_intent ≥8, transparency_frustration ≥8, reserve_fear ≥9, competitor_frustration ≥8) AND source_confidence_score ≥ 5, an email goes to ADMIN_NOTIFY_EMAIL.",
+              "Two dedup paths protect your inbox: 4h category cooldown per (category, platform, subreddit) + 24h cluster cooldown for everyone (incl. migration_intent), plus a global circuit breaker at >10 immediates/hour.",
+            ]} />
+            <H3>Refresh now</H3>
+            <P>The button at the top of the feed table runs the Reddit ingest immediately (no waiting for the next cron tick). Useful right after deploy or when validating a code change. The page reloads ~1.2s later so newly inserted rows appear once the next classifier-drain cron runs.</P>
+            <H3>Score legend</H3>
+            <Table headers={["Score", "Means"]} rows={[
+              ["frustration_score (0-10)", "Operational/financial pain. \"Lost 50K to chargebacks\" → 9. \"Chargebacks are annoying\" → 4."],
+              ["emotional_intensity_score (0-10)", "Psychological urgency, anger, fear, exhaustion — independent of operational value. \"Funds frozen, cannot make payroll\" → 10. \"Their support sucks\" → 5."],
+              ["signal_score (0-10)", "Strategic value to DisputeDesk. Migration intent, transparency complaints, competitor failures rank high; general discussion ranks low."],
+              ["source_confidence_score (0-10)", "Trustworthiness of the signal — high-detail r/shopify thread > vague r/Entrepreneur rant. Below 5 falls through to digest, regardless of category."],
+            ]} />
+            <H3>Categories</H3>
+            <P><Code>migration_intent</Code> · <Code>transparency_frustration</Code> · <Code>reserve_fear</Code> · <Code>competitor_frustration</Code> · <Code>operational_overload</Code> · <Code>evidence_confusion</Code> · <Code>support_failure</Code> · <Code>general_discussion</Code> · <Code>spam</Code> · <Code>trolling</Code></P>
+            <H3>Reading why_this_matters</H3>
+            <P>The most important field on every classified item — appears at the top of the detail panel in the blue card. The classifier is instructed to explicitly tag the strategic angle (positioning_opportunity, onboarding_confusion, competitor_weakness, seo_content_opportunity, operational_trend, acquisition_opportunity, none) and say what DisputeDesk should DO about the signal, in one sentence. Read this first; the summary second.</P>
+            <H3>Env vars</H3>
+            <P>Required: <Code>OPENAI_API_KEY</Code>, <Code>RESEND_API_KEY</Code>, <Code>EMAIL_FROM</Code>, <Code>ADMIN_NOTIFY_EMAIL</Code>, <Code>CRON_SECRET</Code> (all already in use by other features). Optional: <Code>REDDIT_USER_AGENT</Code> (override the default UA), <Code>SIGNAL_RADAR_MODEL</Code> (default <Code>gpt-4o-mini-2024-07-18</Code>). No Reddit OAuth credentials needed — the adapter uses public endpoints.</P>
+            <H3>Troubleshooting</H3>
+            <Table headers={["Symptom", "Likely cause / fix"]} rows={[
+              ["Empty feed after Refresh now", "Classifier-drain cron runs every 5 minutes. Wait one tick or check Vercel logs for /api/cron/signal-radar-classify errors. Most common cause: OPENAI_API_KEY missing/invalid."],
+              ["403 / 429 from Reddit in logs", "Vercel egress IP got rate-limited. Short-term: wait. Long-term: register through Reddit's Responsible Builder Policy and switch the adapter back to OAuth (only file that changes: lib/signal-radar/sources/reddit.ts)."],
+              ["No emails arriving", "Check ADMIN_NOTIFY_EMAIL is set, RESEND_API_KEY is valid, and the alert isn't suppressed by dedup (check signal_alerts table — look for a row with the same dedup_key in the last 4-24h) or the circuit breaker (>10 immediates in last hour)."],
+              ["What Changed This Week? always empty", "Expected behavior for the first ~14 days. Needs two full weeks of data before the prior-7d query has anything to compare against."],
+              ["Same complaint firing multiple alerts", "Cluster fingerprinting is approximate. If two related complaints aren't sharing a cluster_key, look at the title+content tokens — the algorithm picks top-8 by frequency-then-length. Edge cases will get distinct keys; that's accepted in M1."],
+            ]} />
           </Section>
 
           {/* SETTINGS */}
