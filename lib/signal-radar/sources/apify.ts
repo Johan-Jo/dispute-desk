@@ -209,6 +209,25 @@ function passesShopifyPainGate(text: string): boolean {
   return SHOPIFY_PAIN_TERMS.some((re) => re.test(text));
 }
 
+/**
+ * Shopify context gate. Per user direction, every ingested item must be
+ * unambiguously about Shopify — either by explicit literal mention in the
+ * text, or by being posted in an unambiguously-Shopify subreddit
+ * (r/shopify). r/ecommerce and r/Dropship posts pass only when they
+ * mention Shopify literally; otherwise they're generic ecommerce chatter
+ * that happens to discuss disputes.
+ */
+const SHOPIFY_LITERAL = /\bshopify\b/i;
+const SHOPIFY_SUBREDDIT = /^r\/shopify$/i;
+
+function isShopifyContext(
+  text: string,
+  subreddit: string | null
+): boolean {
+  if (subreddit && SHOPIFY_SUBREDDIT.test(subreddit)) return true;
+  return SHOPIFY_LITERAL.test(text);
+}
+
 type MapResult =
   | { kind: "ok"; item: IngestedItem }
   | { kind: "schema_incomplete" }
@@ -255,10 +274,15 @@ function mapItem(d: ApifyRedditItem): MapResult {
   // sit at 0–1 even when they carry the most useful pain signal. Let the
   // classifier sort signal from noise.
 
-  // Topic gate — drop generic ecommerce chatter that doesn't mention any
-  // Shopify-merchant-pain term. Saves classifier API spend and stops the
-  // dashboard filling with sales/shipping/TikTok-Shop/spreadsheet noise.
+  // Shopify context gate — must mention Shopify literally OR be posted in
+  // r/shopify. Without this, r/ecommerce posts about Stripe chargebacks etc.
+  // would slip through.
   const topicBlob = `${title ?? ""}\n${content}`;
+  if (!isShopifyContext(topicBlob, subreddit)) return { kind: "filtered" };
+
+  // Topic gate — drop generic Shopify chatter (sales/shipping/etc.) that
+  // doesn't mention any Shopify-merchant-pain term. Saves classifier API
+  // spend and stops the dashboard filling with off-topic noise.
   if (!passesShopifyPainGate(topicBlob)) return { kind: "filtered" };
 
   let parentExternalId: string | null = null;
