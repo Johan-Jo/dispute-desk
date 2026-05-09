@@ -146,40 +146,51 @@ function looksLikeAutomod(text: string): boolean {
   return AUTOMOD_PATTERNS.some((re) => re.test(text));
 }
 
-function mapItem(d: ApifyRedditItem): IngestedItem | null {
+type MapResult =
+  | { kind: "ok"; item: IngestedItem }
+  | { kind: "schema_incomplete" }
+  | { kind: "filtered" };
+
+function mapItem(d: ApifyRedditItem): MapResult {
   const dataType = pickString(d, ["dataType"]);
   const isComment = d.isComment === true || dataType === "comment";
 
+  // Schema-required fields. Missing these means the Apify actor returned
+  // an unexpected shape — that's a real problem worth surfacing.
   const externalId = buildExternalId(d, isComment);
-  if (!externalId) return null;
+  if (!externalId) return { kind: "schema_incomplete" };
 
   const url = pickString(d, ["postUrl", "url", "permalink"]);
-  if (!url) return null;
-
-  const subreddit = normalizeSubreddit(
-    pickString(d, ["parsedCommunityName", "community", "communityName", "subreddit"])
-  );
+  if (!url) return { kind: "schema_incomplete" };
 
   const postedAt = normalizePostedAt(
     pickString(d, ["createdAt", "createdAtIso", "created"])
   );
-  if (!postedAt) return null;
+  if (!postedAt) return { kind: "schema_incomplete" };
 
+  const subreddit = normalizeSubreddit(
+    pickString(d, ["parsedCommunityName", "community", "communityName", "subreddit"])
+  );
   const title = isComment ? null : pickString(d, ["title"]);
   const content = pickString(d, ["body", "text", "selftext"]) ?? "";
 
-  // Drop bot/automod content — it's noise, not signal
+  // Quality filters — intentional drops, not errors. The classifier's
+  // source_confidence_score catches low-signal content downstream too,
+  // but cheap pre-filtering at ingest reduces classifier API spend.
   const author = pickString(d, ["username", "user", "author"]);
-  if (author && BOT_AUTHORS.has(author)) return null;
-  if (looksLikeAutomod(title ?? "")) return null;
-  if (looksLikeAutomod(content)) return null;
+  if (author && BOT_AUTHORS.has(author)) return { kind: "filtered" };
+  if (looksLikeAutomod(title ?? "")) return { kind: "filtered" };
+  if (looksLikeAutomod(content)) return { kind: "filtered" };
 
-  // Drop empty/near-empty submissions (link-only with no body and no title-as-context)
-  if (!isComment && !title && content.trim().length < 8) return null;
-  if (isComment && content.trim().length < 8) return null;
+  // Truly empty content is useless. Short snippets ("$50k/mo", "same here")
+  // can still be informative, so the threshold is intentionally low.
+  if (!isComment && !title && content.trim().length < 4) return { kind: "filtered" };
+  if (isComment && content.trim().length < 4) return { kind: "filtered" };
 
-  const score = pickNumber(d, ["score", "upVotes", "numberOfupvotes"]) ?? 0;
-  if (isComment && score < 1) return null;
+  // Note: no upvote-score filter for comments. Reddit's vote-count fuzzing
+  // shows 0/1 for most fresh content, and minority-opinion comments often
+  // sit at 0–1 even when they carry the most useful pain signal. Let the
+  // classifier sort signal from noise.
 
   let parentExternalId: string | null = null;
   if (isComment) {
@@ -190,17 +201,20 @@ function mapItem(d: ApifyRedditItem): IngestedItem | null {
   }
 
   return {
-    platform: "reddit",
-    contentType: isComment ? "comment" : "submission",
-    externalId,
-    parentExternalId,
-    subreddit,
-    url: url.startsWith("http") ? url : `https://www.reddit.com${url}`,
-    author,
-    title,
-    content,
-    rawPayload: d,
-    postedAt,
+    kind: "ok",
+    item: {
+      platform: "reddit",
+      contentType: isComment ? "comment" : "submission",
+      externalId,
+      parentExternalId,
+      subreddit,
+      url: url.startsWith("http") ? url : `https://www.reddit.com${url}`,
+      author,
+      title,
+      content,
+      rawPayload: d,
+      postedAt,
+    },
   };
 }
 
@@ -283,23 +297,31 @@ export const apifyAdapter: SignalSourceAdapter = {
     }
 
     const items: IngestedItem[] = [];
-    let mappingFailures = 0;
+    let schemaIncomplete = 0;
+    let filtered = 0;
     for (const d of dataset) {
-      const item = mapItem(d);
-      if (item) items.push(item);
-      else mappingFailures++;
+      const r = mapItem(d);
+      if (r.kind === "ok") items.push(r.item);
+      else if (r.kind === "schema_incomplete") schemaIncomplete++;
+      else filtered++;
     }
 
     const errors: string[] = [];
+    // Only flag schema mismatches as errors — they indicate the Apify actor
+    // returned an unexpected shape and may need APIFY_REDDIT_ACTOR_ID tuning.
+    // Quality filters (bot content, near-empty bodies) are intentional drops.
     if (dataset.length > 0 && items.length === 0) {
       errors.push(
         `Apify returned ${dataset.length} dataset items but none could be mapped — actor schema may differ from expected. Check APIFY_REDDIT_ACTOR_ID.`
       );
-    } else if (mappingFailures > items.length / 2 && mappingFailures > 5) {
+    } else if (schemaIncomplete > 0 && schemaIncomplete > dataset.length * 0.5) {
       errors.push(
-        `Apify mapping: ${mappingFailures}/${dataset.length} items skipped (missing required fields).`
+        `Apify schema: ${schemaIncomplete}/${dataset.length} items missing required fields (id/url/createdAt). Actor schema may have shifted.`
       );
     }
+    console.info(
+      `[signal-radar] apify mapped=${items.length} filtered=${filtered} schema_incomplete=${schemaIncomplete}`
+    );
 
     return { items, errors };
   },
