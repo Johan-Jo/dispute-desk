@@ -22,21 +22,34 @@ const APIFY_API = "https://api.apify.com/v2";
 const DEFAULT_ACTOR_ID = "trudax~reddit-scraper-lite";
 
 /**
- * Subreddit list. r/Entrepreneur and r/smallbusiness were in v1 but they're
- * 90%+ off-topic for Shopify-merchant pain — the topic gate filters most of
- * their output anyway, just at the cost of wasted Apify calls. r/shopify and
- * r/ecommerce remain because they have direct chargeback/reserve threads;
- * r/Dropship occasionally has fraud/dispute discussion that's relevant.
+ * Reddit search queries — replace the old subreddit /new strategy. Reddit's
+ * /new for off-topic subs (r/Entrepreneur, r/smallbusiness, even r/ecommerce)
+ * was 90%+ generic ecommerce chatter; the gate filtered most of it to nothing.
+ * Search-based ingest finds Shopify-specific content wherever it appears,
+ * including posts in subs we don't ingest directly.
+ *
+ * Each query is run via a Reddit search URL (sort=new, t=month). The Apify
+ * lite actor accepts these as startUrls; if the user upgrades to the paid
+ * trudax/reddit-scraper actor via APIFY_REDDIT_ACTOR_ID env, the same input
+ * shape works.
  */
-const SUBREDDITS = [
-  "shopify",
-  "ecommerce",
-  "Dropship",
+const SHOPIFY_PAIN_QUERIES: string[] = [
+  "shopify chargeback",
+  "shopify dispute",
+  "shopify reserve",
+  "shopify payouts",
+  "shopify payments fraud",
+  "chargeflow",
+  "disputifier",
+  "chargepay",
+  "alternative chargeflow",
+  "alternative disputifier",
 ];
 
 /**
- * Per-run cap. The topic gate drops most items, so we ingest more raw to
- * end up with a usable harvest. ~150 items takes ~60-90s on the lite actor.
+ * Per-run cap. The gate drops most items, so we ingest more raw to end up
+ * with a usable harvest. ~150 items split across ~10 queries takes ~60-90s
+ * on the lite actor.
  */
 const MAX_ITEMS = 150;
 /** Server-side (Apify) timeout in seconds — Apify aborts if its run exceeds this. */
@@ -230,14 +243,20 @@ export const apifyAdapter: SignalSourceAdapter = {
       `&timeout=${APIFY_RUN_TIMEOUT_SECS}`;
 
     const input = {
-      startUrls: SUBREDDITS.map((s) => ({
-        url: `https://www.reddit.com/r/${s}/new/`,
+      // Search-based ingest: each query targets a Shopify-pain narrative.
+      // Reddit's global search across all subs catches Shopify-specific posts
+      // wherever they happen — venting in r/Entrepreneur, advice in r/SaaS, etc.
+      startUrls: SHOPIFY_PAIN_QUERIES.map((q) => ({
+        url: `https://www.reddit.com/search/?q=${encodeURIComponent(q)}&sort=new&t=month`,
       })),
+      // Some actor variants accept `searches` directly — pass both, harmless duplicate.
+      searches: SHOPIFY_PAIN_QUERIES,
       maxItems: MAX_ITEMS,
       maxPostCount: MAX_ITEMS,
       maxPosts: MAX_ITEMS,
       type: "posts",
       sort: "new",
+      time: "month",
       includeNSFW: false,
       proxy: { useApifyProxy: true },
     };

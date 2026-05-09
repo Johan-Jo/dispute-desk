@@ -324,23 +324,24 @@ export function HelpClient() {
             </P>
             <H3>What you see on the page</H3>
             <Table headers={["Surface", "Purpose"]} rows={[
-              ["KPI strip", "Today's counts: high-intent signals, migration intent, transparency complaints, reserve fear"],
-              ["What Changed This Week?", "Week-over-week category deltas. Empty until ~14 days of data exist"],
-              ["Top Recurring Phrases (7d)", "Frequency-ranked merchant language — strategically the most valuable widget for copy and positioning"],
-              ["Filter bar", "Source, category, merchant_type, min signal/confidence/emotion sliders, timeframe, sort"],
-              ["Clustered feed", "Rows deduped by cluster_key with '+N similar' badge. Click any row to open the detail panel"],
-              ["Detail panel", "why_this_matters first, then the four scores side-by-side, merchant scale chips, cluster trend, summary, suggested angle, link to original"],
+              ["KPI strip", "Last-24h counts: high-intent signals, looking to switch, reserve & payout pain, competitor frustration"],
+              ["🔥 Looking to switch stream", "Merchants asking for an alternative chargeback / dispute tool — real quotes"],
+              ["⚠ Competitor pain spikes", "Grouped by competitor with this-week vs prior-week delta and top 3 recent signals"],
+              ["💰 High-value merchant leads", "Posts where the merchant revealed scale (GMV, order volume, vertical) AND scored ≥6 strategic relevance"],
+              ["📈 Emerging narratives", "Week-over-week category deltas. Plain-English labels — needs ~14 days of data to populate"],
+              ["Detail panel (click any signal)", "why_this_matters first, four scores, merchant scale chips, cluster trend, link to original"],
+              ["Browse all signals (/admin/signal-radar/all)", "Operator view: every classified signal in last 14d, filterable, with Top Recurring Phrases widget"],
             ]} />
-            <H3>Sources (M1)</H3>
-            <P>Reddit only — submissions and top-level comments from <Code>r/shopify</Code>, <Code>r/ecommerce</Code>, <Code>r/dropshipping</Code>, <Code>r/Entrepreneur</Code>, <Code>r/smallbusiness</Code>. Comments are filtered: skip <Code>[deleted]</Code>/<Code>[removed]</Code>, skip collapsed, score &ge; 1, max 20 per submission. Future milestones add Shopify Community and App Store reviews against the same adapter interface.</P>
-            <H3>Cloudflare Worker proxy (required on Vercel)</H3>
-            <P>Reddit blocks Vercel/AWS/GCP egress IPs on its <Code>.json</Code> endpoints with HTTP 403. To work around this, deploy the tiny Worker at <Code>cloudflare-workers/signal-radar-reddit-proxy/</Code> (see its <Strong>README.md</Strong> — two deploy paths: Cloudflare dashboard paste, or <Code>wrangler deploy</Code>). Free tier (100K reqs/day) covers our volume.</P>
-            <P>After deploy, set on Vercel:</P>
-            <Ul items={[
-              "REDDIT_PROXY_URL = the Worker URL (https://signal-radar-reddit-proxy.<your-account>.workers.dev)",
-              "REDDIT_PROXY_SECRET = the same secret you set as PROXY_SECRET in the Worker",
+            <H3>Sources</H3>
+            <Table headers={["Source", "How"]} rows={[
+              ["Shopify Community (community.shopify.com)", "Official Shopify forum (Discourse). Public unauth /latest.json + /top.json. Free, always-on."],
+              ["Reddit (search-based)", "Apify Reddit Scraper actor. Targeted searches like 'shopify chargeback', 'chargeflow', 'shopify reserve' — finds Shopify-specific posts wherever they appear, not just in r/shopify."],
             ]} />
-            <P>Without these, the adapter falls back to direct Reddit fetches — works on local dev (residential IP), fails on Vercel. The refresh-status banner surfaces per-subreddit errors so you can see exactly what Reddit returned (e.g. <Code>r/shopify: Reddit listing shopify failed 403</Code>).</P>
+            <P>Both sources share the same ingest gates (`lib/signal-radar/sources/utils.ts`): drop bot/automod content, drop empty bodies, require Shopify-context (literal mention OR implicit via source domain), require at least one Shopify-pain term (chargeback, dispute, reserve, payout, evidence, AVS/CVV/3DS, INR, or a named competitor). Items that fail any gate never reach the classifier.</P>
+            <H3>Production env requirements (Vercel)</H3>
+            <P>Required: <Code>APIFY_API_TOKEN</Code> (or <Code>APIFY_API_KEY</Code>) — Apify Reddit Scraper. Without it, Reddit fetches will 403 on Vercel datacenter IPs. Optional: <Code>APIFY_REDDIT_ACTOR_ID</Code> to override the default lite actor with the paid <Code>trudax/reddit-scraper</Code> for richer data including comment trees.</P>
+            <P>Free fallback: deploy the Cloudflare Worker at <Code>cloudflare-workers/signal-radar-reddit-proxy/</Code> and set <Code>REDDIT_PROXY_URL</Code> + <Code>REDDIT_PROXY_SECRET</Code>. The Worker code is in the repo; see its README for two-step deploy. Used only when Apify isn&apos;t configured.</P>
+            <P>Shopify Community needs no auth — it always runs as long as <Code>community.shopify.com</Code> is reachable from Vercel (verified, no IP block as of M1.5 launch).</P>
             <H3>How it works</H3>
             <Ol items={[
               "Hourly cron pulls public Reddit JSON endpoints (no OAuth — uses unauthenticated /r/{sub}/new.json + /r/{sub}/comments/{id}.json).",
