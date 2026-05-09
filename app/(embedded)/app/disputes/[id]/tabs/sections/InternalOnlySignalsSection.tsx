@@ -1,11 +1,10 @@
 /**
  * InternalOnlySignalsSection — Section 4 of EvidenceTab.
  *
- * Always rendered. When non-empty: lists negative-but-merchant-visible
- * signals that are intentionally NOT submitted to Shopify (e.g., AVS
- * mismatch, IP geolocation mismatch). When empty: renders an explicit
- * informational line so the merchant gets a definitive answer to "is
- * anything being held back?"
+ * Always rendered. The disclaimer leads (so the merchant reads the
+ * framing before the signals), then the list, with thin dividers
+ * between heterogeneous signals. When empty, an explicit
+ * informational line answers "is anything being held back?".
  *
  * Honors feedback_bank_optimized_rebuttal.md — weakening signals are
  * visible to the merchant but never appear under any "submitted"
@@ -14,13 +13,14 @@
 
 "use client";
 
-import { Card, BlockStack, Text } from "@shopify/polaris";
+import { Card, BlockStack, Box, Text } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { Fragment } from "react";
 import type { InternalSignalViewModel } from "../useEvidenceSections";
 
 function InternalSignalRow({ signal }: { signal: InternalSignalViewModel }) {
   return (
-    <BlockStack gap="050">
+    <BlockStack gap="100">
       <Text as="h4" variant="headingSm">
         {signal.title}
       </Text>
@@ -51,12 +51,26 @@ export function InternalOnlySignalsSection({
           </Text>
         ) : (
           <BlockStack gap="300">
-            {items.map((signal) => (
-              <InternalSignalRow key={signal.id} signal={signal} />
-            ))}
             <Text as="p" variant="bodySm" tone="subdued">
               {t("disclaimer")}
             </Text>
+            <BlockStack gap="300">
+              {items.map((signal, index) => (
+                <Fragment key={signal.id}>
+                  {index > 0 ? (
+                    <Box
+                      borderBlockStartWidth="025"
+                      borderColor="border"
+                      paddingBlockStart="300"
+                    >
+                      <InternalSignalRow signal={signal} />
+                    </Box>
+                  ) : (
+                    <InternalSignalRow signal={signal} />
+                  )}
+                </Fragment>
+              ))}
+            </BlockStack>
           </BlockStack>
         )}
       </BlockStack>

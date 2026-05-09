@@ -1,15 +1,14 @@
 /**
- * EvidenceRow — the four-question row primitive.
+ * EvidenceRow — denser per-item row used by EvidenceUsedSection.
  *
- * Each row answers (in this order):
- *   1. What it is        (title)
- *   2. Why this matters  (one concise reason-aware sentence)
- *   3. Source            (Shopify / Merchant upload / Derived)
- *   4. Included as       (Form field / Rebuttal text / Not included)
+ * Layout:
+ *   [title + optional attachment badge]                      [Source · X]
+ *   <one concise reason-aware sentence>
  *
- * Used by EvidenceUsedSection. The strength badge is rendered at the
- * row level (Strong | Moderate | Supporting) and ordered by the
- * parent section.
+ * The strength badge is rendered at the bucket level by the parent
+ * section, so each row is visually quiet and homogeneous within a
+ * bucket. The native-attachment badge stays — it tells the merchant
+ * which Shopify file row their upload populated.
  */
 
 "use client";
@@ -19,16 +18,7 @@ import { useTranslations } from "next-intl";
 import type {
   EvidenceRowViewModel,
   EvidenceSource,
-  ItemStrength,
 } from "../useEvidenceSections";
-
-function strengthTone(
-  strength: ItemStrength,
-): "success" | "attention" | "info" {
-  if (strength === "strong") return "success";
-  if (strength === "moderate") return "attention";
-  return "info";
-}
 
 function sourceLabel(
   source: EvidenceSource,
@@ -48,48 +38,37 @@ const TARGET_FIELD_LABEL: Record<string, string> = {
   uncategorizedFile: "Other evidence",
 };
 
-/**
- * The right-side "Included as" chip (RowStatusChip — form_field /
- * rebuttal_text / not_included) was removed in 2026-05-03 because:
- *   1. Its data source (`data.submissionFields`) is hardcoded to `[]`
- *      in the workspace API, so every mapped row resolved to
- *      `not_included` → "Internal only" regardless of reality.
- *   2. Even with that fixed, the chip duplicated the section header.
- *      Rows in "Evidence used in defense" are by definition used in
- *      defense; rows that genuinely don't reach the bank live in §4
- *      (Internal-only signals).
- * Native-attachment badge stays — it's information the merchant can
- * act on (which Shopify file row their upload populated).
- */
 export function EvidenceRow({ item }: { item: EvidenceRowViewModel }) {
   const t = useTranslations("disputes.evidenceTab.row");
-  const tStrength = useTranslations("disputes.itemStrength");
 
   return (
     <BlockStack gap="100">
-      <InlineStack gap="200" blockAlign="center">
-        <Text as="h4" variant="headingSm">
-          {item.title}
+      <InlineStack
+        align="space-between"
+        blockAlign="start"
+        gap="300"
+        wrap
+      >
+        <InlineStack gap="200" blockAlign="center">
+          <Text as="h4" variant="headingSm">
+            {item.title}
+          </Text>
+          {item.nativeAttachment ? (
+            <Badge tone="success">
+              {`📎 Attached to ${
+                TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
+                item.nativeAttachment.targetField
+              }`}
+            </Badge>
+          ) : null}
+        </InlineStack>
+        <Text as="span" variant="bodySm" tone="subdued">
+          {`${t("source")} · ${sourceLabel(item.source, t)}`}
         </Text>
-        <Badge tone={strengthTone(item.strength)}>
-          {tStrength(item.strength)}
-        </Badge>
-        {item.nativeAttachment ? (
-          <Badge tone="success">
-            {`📎 Attached to ${
-              TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
-              item.nativeAttachment.targetField
-            }`}
-          </Badge>
-        ) : null}
       </InlineStack>
 
-      <Text as="p" variant="bodySm" tone="subdued">
-        <strong>{t("whyThisMatters")}:</strong> {item.whyThisMatters}
-      </Text>
-
-      <Text as="p" variant="bodySm" tone="subdued">
-        <strong>{t("source")}:</strong> {sourceLabel(item.source, t)}
+      <Text as="p" variant="bodySm">
+        {item.whyThisMatters}
       </Text>
     </BlockStack>
   );

@@ -1,11 +1,10 @@
 /**
  * CaseSummaryCard — Section 1 of EvidenceTab.
  *
- * Renders the merchant-facing case state in a single card:
- *   - Case strength chip   (Strong | Moderate | Weak — pack.overall verbatim)
- *   - Status chip          (Submitted | Needs attention | In progress)
- *   - Automation chip      (Automatic | Review required)
- *   - Next step line       (one of four fixed sentences)
+ * Hero layout: the strength badge is the dominant visual element, with
+ * Status + Automation pushed to the right of the same row. The "Next
+ * step" sentence reads as a standalone subtitle. Why-this-strength and
+ * What-would-make-it-stronger collapse into one labelled region.
  *
  * NO percentages. NO progress bars. NO predictive copy.
  */
@@ -22,19 +21,11 @@ import type {
 } from "../useEvidenceSections";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 
-/**
- * Display-time mapping of the raw backend strength level to the
- * three merchant-facing labels (Strong / Moderate / Weak). The
- * backend value is never mutated; "insufficient" is rendered as
- * "Weak" only at this presentation layer.
- */
 type DisplayStrength = "strong" | "moderate" | "weak";
 
 function toDisplayStrength(level: CaseStrengthLevel): DisplayStrength {
   if (level === "strong") return "strong";
   if (level === "moderate") return "moderate";
-  // Both "weak" and "insufficient" surface as "Weak" at the
-  // merchant-facing categorical layer per the approved plan.
   return "weak";
 }
 
@@ -76,79 +67,68 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
   const tNext = useTranslations("disputes.evidenceTab.sections.summary.nextStep");
   const tAutoCopy = useTranslations("disputes.evidenceTab.automation");
 
+  const display = toDisplayStrength(props.strength);
+  const showExplanation =
+    props.strength !== "strong" &&
+    (Boolean(props.strengthReason) || Boolean(props.improvementHint));
+
   return (
     <Card>
-      <BlockStack gap="300">
-        <Text as="h2" variant="headingMd">
-          {t("title")}
-        </Text>
-
-        <InlineStack gap="200" wrap>
-          <InlineStack gap="100" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">
-              {t("strengthLabel")}:
-            </Text>
-            {(() => {
-              const display = toDisplayStrength(props.strength);
-              return (
-                <Badge tone={strengthTone(display)}>
-                  {tStrength(display)}
-                </Badge>
-              );
-            })()}
-          </InlineStack>
-
-          <InlineStack gap="100" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">
-              {t("statusLabel")}:
-            </Text>
-            <Badge tone={statusTone(props.status)}>
-              {tStatus(props.status)}
-            </Badge>
-          </InlineStack>
-
-          <InlineStack gap="100" blockAlign="center">
-            <Text as="span" variant="bodySm" tone="subdued">
-              {t("automationLabel")}:
-            </Text>
-            <Badge tone={automationTone(props.automationMode)}>
-              {tAuto(props.automationMode)}
-            </Badge>
-          </InlineStack>
-        </InlineStack>
-
-        <BlockStack gap="050">
+      <BlockStack gap="500">
+        <BlockStack gap="200">
           <Text as="span" variant="bodySm" tone="subdued">
-            {t("nextStepLabel")}
+            {t("title")}
           </Text>
-          <Text as="p" variant="bodyMd">
-            {nextStepCopy(props.nextStep, tNext)}
-          </Text>
+          <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
+            <InlineStack gap="200" blockAlign="center">
+              <Badge tone={strengthTone(display)} size="large">
+                {tStrength(display)}
+              </Badge>
+              <Text as="h2" variant="headingMd">
+                {nextStepCopy(props.nextStep, tNext)}
+              </Text>
+            </InlineStack>
+            <InlineStack gap="200" blockAlign="center" wrap>
+              <InlineStack gap="100" blockAlign="center">
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("statusLabel")}
+                </Text>
+                <Badge tone={statusTone(props.status)}>
+                  {tStatus(props.status)}
+                </Badge>
+              </InlineStack>
+              <InlineStack gap="100" blockAlign="center">
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("automationLabel")}
+                </Text>
+                <Badge tone={automationTone(props.automationMode)}>
+                  {tAuto(props.automationMode)}
+                </Badge>
+              </InlineStack>
+            </InlineStack>
+          </InlineStack>
         </BlockStack>
 
-        {/* Why-this-strength explanation. Only renders when the case is
-            not strong AND we have a meaningful reason — gives the
-            merchant a clear "what would lift this" sentence so a
-            "Moderate" badge isn't a dead end. */}
-        {props.strength !== "strong" && props.strengthReason ? (
-          <BlockStack gap="050">
-            <Text as="span" variant="bodySm" tone="subdued">
+        {showExplanation ? (
+          <BlockStack gap="200">
+            <Text as="h3" variant="headingSm">
               {t("whyLabel")}
             </Text>
-            <Text as="p" variant="bodyMd">
-              {props.strengthReason}
-            </Text>
-          </BlockStack>
-        ) : null}
-
-        {props.strength !== "strong" && props.improvementHint ? (
-          <BlockStack gap="050">
-            <Text as="span" variant="bodySm" tone="subdued">
-              {t("improveLabel")}
-            </Text>
-            <Text as="p" variant="bodyMd">
-              {props.improvementHint}
-            </Text>
+            {props.strengthReason ? (
+              <Text as="p" variant="bodyMd">
+                {props.strengthReason}
+              </Text>
+            ) : null}
+            {props.improvementHint ? (
+              <BlockStack gap="050">
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("improveLabel")}
+                </Text>
+                <Text as="p" variant="bodyMd">
+                  {props.improvementHint}
+                </Text>
+              </BlockStack>
+            ) : null}
           </BlockStack>
         ) : null}
 
