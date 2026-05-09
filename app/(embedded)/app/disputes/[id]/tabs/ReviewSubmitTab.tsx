@@ -163,19 +163,10 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         onSubmit={handleSubmit}
       />
 
-      {/* §2 — Exact data sent to Shopify (six readable groups, including
-          customer details, native file slot routing, merchant uploads,
-          and the auto-generated pack PDF). */}
-      <ExactDataSentCard
-        state={view.state}
-        payload={view.payload}
-        loading={view.payloadLoading}
-      />
-
-      {/* §3 — Not submitted (transparency, collapses when empty) */}
-      <NotSubmittedCard items={view.notSubmitted} />
-
-      {/* §4 — Final defense statement (collapses when no rebuttal) */}
+      {/* §2 — Final defense statement. The rebuttal letter is the
+          merchant's primary "did we say the right thing?" surface, so
+          it sits above the structured-field detail. Collapses when no
+          rebuttal text exists. */}
       <FinalDefenseStatementCard
         text={view.bankRebuttalText}
         derivedFrom={view.derivedFrom}
@@ -183,6 +174,20 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         regenerating={clientState.regeneratingArgument}
         onRegenerate={handleRegenerate}
       />
+
+      {/* §3 — Exact data sent to Shopify (six readable groups, including
+          customer details, native file slot routing, merchant uploads,
+          and the auto-generated pack PDF). The uncategorizedText field
+          is intentionally suppressed in this section because its body
+          IS the rebuttal text rendered above. */}
+      <ExactDataSentCard
+        state={view.state}
+        payload={view.payload}
+        loading={view.payloadLoading}
+      />
+
+      {/* §4 — Not submitted (transparency, collapses when empty) */}
+      <NotSubmittedCard items={view.notSubmitted} />
 
       {/* Override-submit modal — only mounted when the merchant clicks
           submit on a blocked / ready_with_warnings case. Reason +

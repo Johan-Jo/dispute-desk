@@ -268,6 +268,14 @@ export function useReviewView(
   // a labelled `SubmissionPreviewField` via `FIELD_MAPPINGS`. Use it if
   // we have it; fall back to the (currently empty) workspace list only
   // for forward-compat.
+  //
+  // Suppress `uncategorizedText` from the structured-field list. Its
+  // content is the bank rebuttal letter PLUS a "Supporting documents
+  // (secure access links)" block — both already surfaced elsewhere on
+  // the tab (the §"Final defense statement" card renders the rebuttal
+  // verbatim, and the per-file attachment rows below render each file).
+  // Keeping it here would duplicate the rebuttal in two cards and the
+  // file links twice within the same card.
   const previewFields = submissionPreview?.preview?.fields ?? [];
   const fallbackFields = data.submissionFields ?? [];
   const submissionFields: SubmissionField[] =
@@ -281,7 +289,9 @@ export function useReviewView(
           included: f.included,
         }))
       : fallbackFields;
-  const includedFields = submissionFields.filter((f) => f.included);
+  const includedFields = submissionFields.filter(
+    (f) => f.included && f.shopifyFieldName !== "uncategorizedText",
+  );
 
   const groups: DataSentGroup[] = GROUP_ORDER.map((key) => ({
     key,
