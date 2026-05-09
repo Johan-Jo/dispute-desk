@@ -113,7 +113,7 @@ beforeEach(() => {
 });
 
 describe("shopifyCommunityAdapter", () => {
-  it("ingests relevant topics and filters off-topic + pinned + closed", async () => {
+  it("ingests Shopify topics and drops globally-pinned + closed", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
@@ -125,16 +125,20 @@ describe("shopifyCommunityAdapter", () => {
     const result = await shopifyCommunityAdapter.ingest();
     expect(result.errors).toEqual([]);
 
-    // 3 relevant items expected (chargeback dispute, chargeflow, reserve fear).
-    // Theme question is dropped (no pain term). Pinned + closed are dropped.
-    // /latest.json and /top.json fixtures are the same here so dedup runs once.
+    // Pre-filter is now intentionally minimal — Shopify Community is implicitly
+    // Shopify context, and the classifier (downstream) judges merchant
+    // relevance. The ingest gate only drops bot/automod/empty/closed/pinned.
     const titles = result.items.map((i) => i.title);
     expect(titles).toContain("Lost a chargeback dispute despite providing tracking");
     expect(titles).toContain(
       "Chargeflow took 25% of recovered revenue, looking for alternatives"
     );
     expect(titles).toContain("Shopify froze my payouts after a small spike in chargebacks");
-    expect(titles).not.toContain("How do I add a custom font to my Dawn theme?");
+    // The custom-font theme topic now passes ingest (it's still on-Shopify
+    // context); the classifier will mark it merchant_relevance=true with a
+    // low signal_score so it doesn't appear in any stream.
+    expect(titles).toContain("How do I add a custom font to my Dawn theme?");
+    // Globally-pinned announcements and closed threads still drop at ingest.
     expect(titles).not.toContain(
       "Welcome to the Community! Read this first about chargebacks"
     );

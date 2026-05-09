@@ -113,8 +113,7 @@ export type GateRejection =
   | "bot_author"
   | "automod_text"
   | "empty_content"
-  | "off_topic_shopify"
-  | "off_topic_pain";
+  | "off_topic_shopify";
 
 export interface GateInput {
   author: string | null;
@@ -136,7 +135,17 @@ export function applyIngestGates(input: GateInput): GateRejection | null {
 
   const blob = `${title ?? ""}\n${content}`;
   if (!isShopifyContext(blob, implicitShopifyContext)) return "off_topic_shopify";
-  if (!passesShopifyPainGate(blob)) return "off_topic_pain";
+
+  // NOTE: pain-term filter intentionally NOT applied as a hard gate.
+  // Reddit's search results are lossy — many items mention "shopify" + a
+  // pain term coincidentally (news, off-topic posts) and the regex can't
+  // tell the difference between genuine pain and "Shopify announced a new
+  // chargeback feature". The classifier's merchant_relevance + signal_score
+  // are far better at this judgment, and the dashboard streams already
+  // filter on those. Pre-filtering on regex was filtering out 100% of
+  // legitimate but-loosely-phrased pain (e.g. "I lost on stripe disputes").
+  // Cost of letting more items through: ~$0.0005/item to gpt-4o-mini ≈
+  // ~$10/month at hourly cadence. Acceptable.
 
   return null;
 }

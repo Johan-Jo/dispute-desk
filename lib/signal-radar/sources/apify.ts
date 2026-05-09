@@ -33,17 +33,34 @@ const DEFAULT_ACTOR_ID = "trudax~reddit-scraper-lite";
  * trudax/reddit-scraper actor via APIFY_REDDIT_ACTOR_ID env, the same input
  * shape works.
  */
+/**
+ * Narrative-specific queries beat generic ones on Reddit search.
+ * "shopify chargeback" returns news + casual mentions; "shopify froze payouts"
+ * returns merchants in actual crisis. These targets the language merchants use
+ * when they're hurting.
+ */
 const SHOPIFY_PAIN_QUERIES: string[] = [
-  "shopify chargeback",
-  "shopify dispute",
-  "shopify reserve",
-  "shopify payouts",
-  "shopify payments fraud",
+  // Reserve / payout crises
+  '"shopify froze"',
+  '"shopify reserve"',
+  '"rolling reserve"',
+  '"payouts frozen"',
+  // Dispute outcomes
+  '"lost a chargeback"',
+  '"won a chargeback"',
+  '"shopify dispute"',
+  // Migration intent
+  '"alternative to chargeflow"',
+  '"alternative to disputifier"',
+  '"chargeflow review"',
+  '"disputifier review"',
+  // Operational pain
+  '"shopify protect"',
+  '"merchant of record"',
+  // Competitor mentions (broad, classifier filters)
   "chargeflow",
   "disputifier",
   "chargepay",
-  "alternative chargeflow",
-  "alternative disputifier",
 ];
 
 /**
