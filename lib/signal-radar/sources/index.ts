@@ -1,5 +1,5 @@
 import type { SignalSourceAdapter } from "./types";
-import { redditAdapter } from "./reddit";
+import { redditAdapter, getProxySecret } from "./reddit";
 import { apifyAdapter, getApifyToken } from "./apify";
 import { shopifyCommunityAdapter } from "./shopify-community";
 
@@ -21,9 +21,7 @@ import { shopifyCommunityAdapter } from "./shopify-community";
 export function getDefaultAdapters(): SignalSourceAdapter[] {
   const adapters: SignalSourceAdapter[] = [shopifyCommunityAdapter];
 
-  const hasProxy = Boolean(
-    process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET
-  );
+  const hasProxy = Boolean(process.env.REDDIT_PROXY_URL && getProxySecret());
   if (hasProxy) {
     adapters.push(redditAdapter);
   } else if (getApifyToken()) {
@@ -37,7 +35,7 @@ export function getDefaultAdapters(): SignalSourceAdapter[] {
 
 /** Backward-compat — returns just the Reddit adapter. */
 export function getRedditAdapter(): SignalSourceAdapter {
-  if (process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET) {
+  if (process.env.REDDIT_PROXY_URL && getProxySecret()) {
     return redditAdapter;
   }
   if (getApifyToken()) return apifyAdapter;

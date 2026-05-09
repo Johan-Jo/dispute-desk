@@ -29,9 +29,19 @@ function userAgent(): string {
 }
 
 /**
+ * Cloudflare's Worker reads its secret from `env.PROXY_SECRET`. Operators
+ * who copy that name verbatim to Vercel naturally name the var `PROXY_SECRET`
+ * there too — so accept either form. `REDDIT_PROXY_SECRET` is the canonical
+ * Vercel-side name; `PROXY_SECRET` is the alias.
+ */
+export function getProxySecret(): string | undefined {
+  return process.env.REDDIT_PROXY_SECRET ?? process.env.PROXY_SECRET;
+}
+
+/**
  * Fetches a Reddit path. Routes through the Cloudflare Worker proxy when
- * REDDIT_PROXY_URL + REDDIT_PROXY_SECRET are configured (production), and
- * falls back to direct Reddit fetches otherwise (local dev).
+ * REDDIT_PROXY_URL + REDDIT_PROXY_SECRET (or PROXY_SECRET) are configured
+ * (production), and falls back to direct Reddit fetches otherwise (local).
  *
  * Reddit blocks Vercel/AWS/GCP egress IPs on .json endpoints. The Worker
  * runs on Cloudflare's CDN edge (different IP class), bypassing the block.
@@ -39,7 +49,7 @@ function userAgent(): string {
  */
 async function redditFetch(path: string): Promise<Response> {
   const proxyUrl = process.env.REDDIT_PROXY_URL;
-  const proxySecret = process.env.REDDIT_PROXY_SECRET;
+  const proxySecret = getProxySecret();
   if (proxyUrl && proxySecret) {
     const url = `${proxyUrl}?path=${encodeURIComponent(path)}`;
     return fetch(url, {
