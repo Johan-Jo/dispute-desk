@@ -47,10 +47,18 @@ export function getProxySecret(): string | undefined {
  * runs on Cloudflare's CDN edge (different IP class), bypassing the block.
  * See cloudflare-workers/signal-radar-reddit-proxy/ for the Worker code.
  */
+/** Normalize a proxy URL — prepend https:// if missing, strip trailing slash. */
+function normalizeProxyUrl(raw: string): string {
+  let u = raw.trim();
+  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+  return u.replace(/\/$/, "");
+}
+
 async function redditFetch(path: string): Promise<Response> {
-  const proxyUrl = process.env.REDDIT_PROXY_URL;
+  const rawProxyUrl = process.env.REDDIT_PROXY_URL;
   const proxySecret = getProxySecret();
-  if (proxyUrl && proxySecret) {
+  if (rawProxyUrl && proxySecret) {
+    const proxyUrl = normalizeProxyUrl(rawProxyUrl);
     const url = `${proxyUrl}?path=${encodeURIComponent(path)}`;
     return fetch(url, {
       headers: {
@@ -228,14 +236,16 @@ export const redditAdapter: SignalSourceAdapter = {
       }
     }
 
-    if (
-      items.length === 0 &&
-      errors.length === SHOPIFY_VIEWS.length &&
-      !usingProxy
-    ) {
-      errors.push(
-        "All r/shopify fetches failed and REDDIT_PROXY_URL is not set — deploy the Cloudflare Worker proxy (cloudflare-workers/signal-radar-reddit-proxy/README.md) and configure REDDIT_PROXY_URL + REDDIT_PROXY_SECRET on Vercel."
-      );
+    if (items.length === 0 && errors.length === SHOPIFY_VIEWS.length) {
+      if (!usingProxy) {
+        errors.push(
+          "All r/shopify fetches failed and REDDIT_PROXY_URL is not set — deploy the Cloudflare Worker proxy (cloudflare-workers/signal-radar-reddit-proxy/README.md) and configure REDDIT_PROXY_URL + REDDIT_PROXY_SECRET on Vercel."
+        );
+      } else {
+        errors.push(
+          "All r/shopify fetches failed even though REDDIT_PROXY_URL is configured — verify the Worker is deployed and PROXY_SECRET inside Cloudflare matches REDDIT_PROXY_SECRET (or PROXY_SECRET) on Vercel."
+        );
+      }
     }
 
     console.info(
