@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 
+const REFRESH_KEY = "signal-radar-last-refresh";
+
 export function ManualRefreshButton() {
   const [refreshing, setRefreshing] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
     setRefreshing(true);
-    setMsg(null);
     setError(null);
     try {
       const res = await fetch("/api/admin/signal-radar/refresh", {
@@ -44,21 +44,23 @@ export function ManualRefreshButton() {
         errors?: string[];
         by_platform?: Record<string, number>;
       };
-      const platforms = j.by_platform ?? {};
-      const breakdown = Object.entries(platforms)
-        .map(([p, n]) => `${p}: ${n}`)
-        .join(", ");
-      setMsg(
-        `Ingested ${j.fetched_submissions ?? 0} posts + ${j.fetched_comments ?? 0} comments (${j.inserted ?? 0} new)${breakdown ? ` · ${breakdown}` : ""}`
-      );
-      if (j.errors && j.errors.length > 0) {
-        setError(`Issues: ${j.errors.slice(0, 2).join("; ")}`);
-      }
-      // Reload after a beat so the streams pick up classified items as they
-      // come through the next 5-min drain tick.
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      try {
+        window.sessionStorage.setItem(
+          REFRESH_KEY,
+          JSON.stringify({
+            at: Date.now(),
+            fetched_submissions: j.fetched_submissions ?? 0,
+            fetched_comments: j.fetched_comments ?? 0,
+            inserted: j.inserted ?? 0,
+            errors: Array.isArray(j.errors) ? j.errors : [],
+            by_platform: j.by_platform ?? {},
+          })
+        );
+      } catch {}
+      // Reload so the page-level RefreshStatusBar picks up the new sessionStorage
+      // value and starts the countdown. Streams won't update yet (classifier
+      // runs every 5 min) — the banner explains the wait.
+      window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "request failed");
     } finally {
@@ -76,7 +78,6 @@ export function ManualRefreshButton() {
         <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
         {refreshing ? "Refreshing…" : "Refresh now"}
       </button>
-      {msg && <span className="text-[10px] text-[#64748B]">{msg}</span>}
       {error && <span className="text-[10px] text-[#DC2626]">{error}</span>}
     </div>
   );

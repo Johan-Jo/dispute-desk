@@ -17,6 +17,7 @@ import { CompetitorPainStream } from "./streams/competitor-pain-stream";
 import { HighValueStream } from "./streams/high-value-stream";
 import { WhatChangedWidget } from "./what-changed-widget";
 import { ManualRefreshButton } from "./manual-refresh-button";
+import { RefreshStatusBar } from "./refresh-status-bar";
 
 export const runtime = "nodejs";
 export const revalidate = 300;
@@ -62,6 +63,8 @@ export default async function SignalRadarPage() {
           </div>
         }
       />
+
+      <RefreshStatusBar />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="High-intent today" value={kpis.high_intent_today} accent="#2563EB" />
