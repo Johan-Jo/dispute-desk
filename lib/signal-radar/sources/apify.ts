@@ -121,6 +121,31 @@ function buildExternalId(d: ApifyRedditItem, isComment: boolean): string | null 
   return null;
 }
 
+/** Reddit author handles that are bots — skip everything they post/comment. */
+const BOT_AUTHORS = new Set(["AutoModerator", "automoderator", "[deleted]", "RemindMeBot"]);
+
+/**
+ * AutoModerator removal-message signatures. Reddit replaces a removed post/comment
+ * body with one of these stock messages, which would otherwise pollute the
+ * classifier and the phrase widget with "automatically removed", "contact moderators",
+ * etc. — not merchant pain.
+ */
+const AUTOMOD_PATTERNS: RegExp[] = [
+  /this action was performed automatically/i,
+  /please contact the moderators of (this|the) subreddit/i,
+  /your (post|submission|comment) has been (automatically )?removed/i,
+  /you (don'?t|do not) have enough (karma|post karma|comment karma)/i,
+  /^\s*\[removed\]\s*$/i,
+  /^\s*\[deleted\]\s*$/i,
+  /i am a bot/i,
+  /this is an automated/i,
+];
+
+function looksLikeAutomod(text: string): boolean {
+  if (!text) return false;
+  return AUTOMOD_PATTERNS.some((re) => re.test(text));
+}
+
 function mapItem(d: ApifyRedditItem): IngestedItem | null {
   const dataType = pickString(d, ["dataType"]);
   const isComment = d.isComment === true || dataType === "comment";
@@ -143,10 +168,18 @@ function mapItem(d: ApifyRedditItem): IngestedItem | null {
   const title = isComment ? null : pickString(d, ["title"]);
   const content = pickString(d, ["body", "text", "selftext"]) ?? "";
 
+  // Drop bot/automod content — it's noise, not signal
+  const author = pickString(d, ["username", "user", "author"]);
+  if (author && BOT_AUTHORS.has(author)) return null;
+  if (looksLikeAutomod(title ?? "")) return null;
+  if (looksLikeAutomod(content)) return null;
+
+  // Drop empty/near-empty submissions (link-only with no body and no title-as-context)
+  if (!isComment && !title && content.trim().length < 8) return null;
+  if (isComment && content.trim().length < 8) return null;
+
   const score = pickNumber(d, ["score", "upVotes", "numberOfupvotes"]) ?? 0;
   if (isComment && score < 1) return null;
-
-  const author = pickString(d, ["username", "user", "author"]);
 
   let parentExternalId: string | null = null;
   if (isComment) {

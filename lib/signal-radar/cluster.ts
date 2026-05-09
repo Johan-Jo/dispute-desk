@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const STOPWORDS = new Set([
+  // Standard English stopwords
   "a","an","and","are","as","at","be","because","been","before","being","but","by","can","could",
   "did","do","does","doing","don","each","few","for","from","further","get","got","had","has",
   "have","having","he","her","here","hers","herself","him","himself","his","how","i","if","in",
@@ -11,9 +12,23 @@ const STOPWORDS = new Set([
   "theirs","them","themselves","then","there","these","they","this","those","through","to","too",
   "under","until","up","ve","very","was","we","were","what","when","where","which","while","who",
   "whom","why","will","with","would","you","your","yours","yourself","yourselves",
+  // Generic colloquial filler
   "edit","update","tldr","tl;dr","op","please","help","anyone","someone","really","actually",
   "thanks","thank","hi","hey","hello","also","still","ever","never","always","maybe","probably",
   "going","getting","make","made","makes","take","took","taken","one","two","three",
+  // Reddit mechanics / metadata — these dominate phrase counts otherwise
+  "post","posts","posting","comment","comments","commenting","thread","threads","subreddit",
+  "subreddits","sub","subs","karma","upvote","upvoted","upvotes","downvote","downvotes",
+  "downvoted","reddit","redditor","mods","mod","moderator","moderators","moderate","flair",
+  "removed","deleted","banned","approved","sticky","stickied","pinned","locked","archived",
+  "automod","automoderator","automatically","automated","action","performed","contact","message",
+  "compose","report","reported","filter","filtered","permalink","crosspost","crossposted",
+  // Source tags (these are the SUBREDDITS we ingest — they're the source, not the signal)
+  "shopify","ecommerce","dropshipping","entrepreneur","smallbusiness","commerce",
+  // Common Reddit usage that adds no signal
+  "asked","asking","question","questions","wondering","curious","looking","need","needed",
+  "want","wanted","trying","tried","want","new","good","bad","best","better","worse","worst",
+  "today","yesterday","tomorrow","week","weeks","month","months","year","years","time","times",
 ]);
 
 const SHOPIFY_PHRASES = [
