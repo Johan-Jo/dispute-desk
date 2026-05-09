@@ -227,17 +227,40 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: "reddit" }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        setRefreshError(json.error ?? res.statusText ?? "request failed");
+      const text = await res.text();
+      let json: Record<string, unknown> = {};
+      try {
+        json = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        // Server returned HTML or plain text (Vercel timeout / edge error)
+        const snippet = text.slice(0, 200).replace(/\s+/g, " ").trim();
+        setRefreshError(
+          res.status === 504 || /timeout/i.test(snippet)
+            ? `Request timed out (Vercel ${res.status}). Apify scrape exceeded the function timeout — try again or lower APIFY_REDDIT_ACTOR_ID maxItems.`
+            : `Server returned non-JSON response (${res.status}): ${snippet}`
+        );
         return;
       }
+      if (!res.ok) {
+        setRefreshError(
+          (json as { error?: string }).error ??
+            res.statusText ??
+            "request failed"
+        );
+        return;
+      }
+      const j = json as {
+        fetched_submissions?: number;
+        fetched_comments?: number;
+        inserted?: number;
+        errors?: string[];
+      };
       const snap: RefreshSnapshot = {
         at: Date.now(),
-        fetched_submissions: json.fetched_submissions ?? 0,
-        fetched_comments: json.fetched_comments ?? 0,
-        inserted: json.inserted ?? 0,
-        errors: Array.isArray(json.errors) ? json.errors : [],
+        fetched_submissions: j.fetched_submissions ?? 0,
+        fetched_comments: j.fetched_comments ?? 0,
+        inserted: j.inserted ?? 0,
+        errors: Array.isArray(j.errors) ? j.errors : [],
       };
       saveLastRefresh(snap);
       setLastRefresh(snap);

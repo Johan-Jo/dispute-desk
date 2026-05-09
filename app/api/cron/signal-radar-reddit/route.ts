@@ -3,7 +3,7 @@ import { ingestLoop } from "@/lib/signal-radar/ingest-loop";
 import { getRedditAdapter } from "@/lib/signal-radar/sources";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 

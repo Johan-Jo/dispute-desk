@@ -29,7 +29,14 @@ const SUBREDDITS = [
   "smallbusiness",
 ];
 
-const MAX_ITEMS = 250;
+/**
+ * Per-run cap. Apify's lite actor takes ~0.3-0.5s per item; with Vercel's
+ * 60-300s function timeout we need to fit within the wall clock. 50 keeps
+ * sync runs under ~30s; cron + manual refresh both share this budget.
+ */
+const MAX_ITEMS = 50;
+/** Server-side (Apify) timeout in seconds — Apify aborts if its run exceeds this. */
+const APIFY_RUN_TIMEOUT_SECS = 50;
 
 interface ApifyRedditItem {
   id?: string;
@@ -185,7 +192,10 @@ export const apifyAdapter: SignalSourceAdapter = {
     }
 
     const actorId = process.env.APIFY_REDDIT_ACTOR_ID ?? DEFAULT_ACTOR_ID;
-    const url = `${APIFY_API}/acts/${actorId}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}`;
+    const url =
+      `${APIFY_API}/acts/${actorId}/run-sync-get-dataset-items` +
+      `?token=${encodeURIComponent(token)}` +
+      `&timeout=${APIFY_RUN_TIMEOUT_SECS}`;
 
     const input = {
       startUrls: SUBREDDITS.map((s) => ({
