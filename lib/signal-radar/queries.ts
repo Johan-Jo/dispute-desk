@@ -188,6 +188,41 @@ export async function fetchCompetitorPain(
   return result.sort((a, b) => b.count_7d - a.count_7d);
 }
 
+/**
+ * Stream: recent pain points — surfaces high-signal items in any merchant
+ * pain category, regardless of whether they hit migration_intent or named a
+ * competitor. Catches transparency_frustration / reserve_fear /
+ * operational_overload / support_failure / evidence_confusion items that
+ * the other streams don't see.
+ */
+const PAIN_CATEGORIES = [
+  "transparency_frustration",
+  "reserve_fear",
+  "operational_overload",
+  "support_failure",
+  "evidence_confusion",
+];
+
+export async function fetchRecentPainPoints(
+  sb: SupabaseClient
+): Promise<StreamSignal[]> {
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await sb
+    .from("signal_analysis")
+    .select(ANALYSIS_SELECT)
+    .in("category", PAIN_CATEGORIES)
+    .eq("merchant_relevance", true)
+    .gte("signal_score", 4)
+    .gt("created_at", since)
+    .order("signal_score", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(15);
+
+  return ((data ?? []) as RawAnalysisRow[])
+    .map(rowToSignal)
+    .filter((r): r is StreamSignal => r !== null);
+}
+
 /** Stream 3: high-value merchant leads — has scale signals AND high signal_score. */
 export async function fetchHighValueLeads(
   sb: SupabaseClient

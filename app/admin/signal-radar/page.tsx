@@ -10,11 +10,13 @@ import {
   fetchSwitchingSignals,
   fetchCompetitorPain,
   fetchHighValueLeads,
+  fetchRecentPainPoints,
 } from "@/lib/signal-radar/queries";
 import { categoryLabel } from "@/lib/signal-radar/category-labels";
 import { SwitchingStream } from "./streams/switching-stream";
 import { CompetitorPainStream } from "./streams/competitor-pain-stream";
 import { HighValueStream } from "./streams/high-value-stream";
+import { PainPointsStream } from "./streams/pain-points-stream";
 import { WhatChangedWidget } from "./what-changed-widget";
 import { ManualRefreshButton } from "./manual-refresh-button";
 import { RefreshStatusBar } from "./refresh-status-bar";
@@ -29,13 +31,15 @@ export default async function SignalRadarPage() {
 
   const sb = getServiceClient();
 
-  const [kpis, switching, competitor, highValue, weekDeltasRaw] = await Promise.all([
-    fetchKpiCounts(sb),
-    fetchSwitchingSignals(sb),
-    fetchCompetitorPain(sb),
-    fetchHighValueLeads(sb),
-    compareWeekOverWeek(sb),
-  ]);
+  const [kpis, switching, competitor, highValue, painPoints, weekDeltasRaw] =
+    await Promise.all([
+      fetchKpiCounts(sb),
+      fetchSwitchingSignals(sb),
+      fetchCompetitorPain(sb),
+      fetchHighValueLeads(sb),
+      fetchRecentPainPoints(sb),
+      compareWeekOverWeek(sb),
+    ]);
 
   // Re-label deltas with plain English categories before passing to widget
   const weekDeltas = weekDeltasRaw.map((d) => ({
@@ -77,6 +81,8 @@ export default async function SignalRadarPage() {
         <WhatChangedWidget deltas={weekDeltas} />
         <SwitchingStream signals={switching} />
       </div>
+
+      <PainPointsStream signals={painPoints} />
 
       <CompetitorPainStream rows={competitor} />
 
