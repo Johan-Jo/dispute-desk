@@ -164,14 +164,23 @@ function mapItem(d: ApifyRedditItem): IngestedItem | null {
   };
 }
 
+/** Accept either env name — APIFY_API_TOKEN (canonical) or APIFY_API_KEY (common alias). */
+function getApifyToken(): string | undefined {
+  return process.env.APIFY_API_TOKEN ?? process.env.APIFY_API_KEY;
+}
+
+export { getApifyToken };
+
 export const apifyAdapter: SignalSourceAdapter = {
   platform: "reddit",
   async ingest(): Promise<IngestResult> {
-    const token = process.env.APIFY_API_TOKEN;
+    const token = getApifyToken();
     if (!token) {
       return {
         items: [],
-        errors: ["APIFY_API_TOKEN not configured on this environment"],
+        errors: [
+          "APIFY_API_TOKEN (or APIFY_API_KEY) not configured on this environment",
+        ],
       };
     }
 
