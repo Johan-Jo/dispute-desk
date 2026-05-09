@@ -12,8 +12,9 @@
 
 "use client";
 
-import { Card, BlockStack, InlineStack, Text, Badge } from "@shopify/polaris";
+import { Card, BlockStack, InlineStack, Box, Text, Badge } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { Fragment } from "react";
 import type {
   EvidenceRowViewModel,
   ItemStrength,
@@ -59,23 +60,46 @@ export function EvidenceUsedSection({
           </Text>
         </BlockStack>
 
-        {BUCKET_ORDER.map((bucket) => {
-          const rows = buckets[bucket];
-          if (rows.length === 0) return null;
-          return (
-            <BlockStack key={bucket} gap="300">
-              <InlineStack gap="200" blockAlign="center">
-                <Badge tone={bucketTone(bucket)}>{tStrength(bucket)}</Badge>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {`(${rows.length})`}
-                </Text>
-              </InlineStack>
-              {rows.map((item) => (
-                <EvidenceRow key={item.id} item={item} />
-              ))}
-            </BlockStack>
+        {(() => {
+          const visibleBuckets = BUCKET_ORDER.filter(
+            (bucket) => buckets[bucket].length > 0,
           );
-        })}
+          return visibleBuckets.map((bucket, visibleIndex) => {
+            const rows = buckets[bucket];
+            return (
+              <BlockStack key={bucket} gap="300">
+                {visibleIndex > 0 ? (
+                  <Box
+                    borderBlockStartWidth="025"
+                    borderColor="border"
+                    paddingBlockStart="400"
+                  />
+                ) : null}
+                <InlineStack gap="200" blockAlign="center">
+                  <Badge tone={bucketTone(bucket)}>{tStrength(bucket)}</Badge>
+                  <Text as="span" variant="bodySm" tone="subdued">
+                    {`(${rows.length})`}
+                  </Text>
+                </InlineStack>
+                {rows.map((item, rowIndex) => (
+                  <Fragment key={item.id}>
+                    {rowIndex > 0 ? (
+                      <Box
+                        borderBlockStartWidth="025"
+                        borderColor="border"
+                        paddingBlockStart="300"
+                      >
+                        <EvidenceRow item={item} />
+                      </Box>
+                    ) : (
+                      <EvidenceRow item={item} />
+                    )}
+                  </Fragment>
+                ))}
+              </BlockStack>
+            );
+          });
+        })()}
       </BlockStack>
     </Card>
   );
