@@ -10,10 +10,12 @@ import {
   migrationCapReached,
 } from "./alerts";
 
-// Vercel route is configured maxDuration=300s; leave 30s buffer for Apify
-// startup + DB upserts + cron route overhead.
-const WALL_CLOCK_BUDGET_MS = 270_000;
-const MAX_IN_FLIGHT = 4;
+// Conservative budget — bias toward many short cron ticks rather than one
+// long marathon. Each pass processes ~6-12 items in 30-45s and exits cleanly.
+// The hourly cron + 5-min classifier cron together drain steadily without
+// memory pressure.
+const WALL_CLOCK_BUDGET_MS = 45_000;
+const MAX_IN_FLIGHT = 2;
 const MAX_ATTEMPTS = 3;
 const STALE_LOCK_INTERVAL = "5 minutes";
 
@@ -52,11 +54,13 @@ export async function classifyDrain(): Promise<ClassifyDrainResult> {
   };
 
   let inFlight = 0;
-  const tasks: Promise<void>[] = [];
+  // Set keeps only IN-FLIGHT tasks; finished ones remove themselves so the
+  // collection doesn't grow unboundedly across a long drain.
+  const inFlightTasks = new Set<Promise<void>>();
 
   while (Date.now() < deadline) {
     if (inFlight >= MAX_IN_FLIGHT) {
-      await Promise.race(tasks.filter(Boolean));
+      await Promise.race([...inFlightTasks]);
       continue;
     }
 
@@ -68,7 +72,7 @@ export async function classifyDrain(): Promise<ClassifyDrainResult> {
     inFlight++;
     result.attempted++;
 
-    const task = processOne(sb, claimed)
+    const task: Promise<void> = processOne(sb, claimed)
       .then((outcome) => {
         if (outcome === "ok") result.succeeded++;
         else if (outcome === "alerted") {
@@ -81,14 +85,15 @@ export async function classifyDrain(): Promise<ClassifyDrainResult> {
       })
       .finally(() => {
         inFlight--;
+        inFlightTasks.delete(task);
       });
 
-    tasks.push(task);
+    inFlightTasks.add(task);
   }
 
   if (Date.now() >= deadline) result.budget_exceeded = true;
 
-  await Promise.allSettled(tasks);
+  await Promise.allSettled([...inFlightTasks]);
   return result;
 }
 
