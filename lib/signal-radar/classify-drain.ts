@@ -10,7 +10,9 @@ import {
   migrationCapReached,
 } from "./alerts";
 
-const WALL_CLOCK_BUDGET_MS = 50_000;
+// Vercel route is configured maxDuration=300s; leave 30s buffer for Apify
+// startup + DB upserts + cron route overhead.
+const WALL_CLOCK_BUDGET_MS = 270_000;
 const MAX_IN_FLIGHT = 4;
 const MAX_ATTEMPTS = 3;
 const STALE_LOCK_INTERVAL = "5 minutes";

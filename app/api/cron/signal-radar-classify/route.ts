@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { classifyDrain } from "@/lib/signal-radar/classify-drain";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
