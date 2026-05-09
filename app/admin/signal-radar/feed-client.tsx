@@ -127,7 +127,13 @@ interface ClusterGroup {
   siblings: FeedRow[];
 }
 
-export function FeedClient({ rows }: { rows: FeedRow[] }) {
+export function FeedClient({
+  rows,
+  initialCategory,
+}: {
+  rows: FeedRow[];
+  initialCategory?: string | null;
+}) {
   const [activeRow, setActiveRow] = useState<FeedRow | null>(null);
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
@@ -135,7 +141,9 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
   const [lastRefresh, setLastRefresh] = useState<RefreshSnapshot | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
 
-  const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
+  const [categoryFilter, setCategoryFilter] = useState<Set<string>>(() =>
+    initialCategory ? new Set([initialCategory]) : new Set()
+  );
   const [merchantTypeFilter, setMerchantTypeFilter] = useState<Set<string>>(new Set());
   const [minSignal, setMinSignal] = useState(0);
   const [minConfidence, setMinConfidence] = useState(0);

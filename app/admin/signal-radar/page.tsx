@@ -41,9 +41,10 @@ export default async function SignalRadarPage() {
       compareWeekOverWeek(sb),
     ]);
 
-  // Re-label deltas with plain English categories before passing to widget
+  // Keep raw category enum for drill-through links; render plain-English label
   const weekDeltas = weekDeltasRaw.map((d) => ({
     ...d,
+    rawCategory: d.category,
     category: categoryLabel(d.category),
   }));
 

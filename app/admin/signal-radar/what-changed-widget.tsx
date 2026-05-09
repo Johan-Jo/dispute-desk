@@ -1,20 +1,13 @@
-import { TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight } from "lucide-react";
 import type { CategoryDelta } from "@/lib/signal-radar/trends";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  migration_intent: "Migration intent",
-  transparency_frustration: "Transparency complaints",
-  operational_overload: "Operational overload",
-  reserve_fear: "Reserve fear",
-  evidence_confusion: "Evidence confusion",
-  support_failure: "Support failure",
-  competitor_frustration: "Competitor frustration",
-  general_discussion: "General discussion",
-  spam: "Spam",
-  trolling: "Trolling",
-};
+interface WidgetDelta extends CategoryDelta {
+  /** Raw classifier enum value, used to deep-link to the filtered list. */
+  rawCategory?: string;
+}
 
-export function WhatChangedWidget({ deltas }: { deltas: CategoryDelta[] }) {
+export function WhatChangedWidget({ deltas }: { deltas: WidgetDelta[] }) {
   const safeDeltas = deltas ?? [];
   return (
     <div className="rounded-lg bg-white border border-[#E2E8F0] p-5">
@@ -23,25 +16,34 @@ export function WhatChangedWidget({ deltas }: { deltas: CategoryDelta[] }) {
         <h2 className="font-semibold text-[#0F172A]">What Changed This Week?</h2>
       </div>
       {safeDeltas.length === 0 ? (
-        <p className="text-sm text-[#64748B]">No data yet — week-over-week comparison needs at least 14 days of signal.</p>
+        <p className="text-sm text-[#64748B]">
+          No data yet — week-over-week comparison needs at least 14 days of signal.
+        </p>
       ) : (
-        <ul className="space-y-2">
-          {safeDeltas.slice(0, 8).map((d) => (
-            <li
-              key={d.category}
-              className="flex items-center justify-between gap-3 text-sm"
-            >
-              <span className="text-[#0F172A]">
-                {CATEGORY_LABELS[d.category] ?? d.category}
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="text-[#64748B] text-xs">
-                  {d.prior_7d} → {d.current_7d}
-                </span>
-                <DeltaBadge delta={d} />
-              </span>
-            </li>
-          ))}
+        <ul className="divide-y divide-[#E2E8F0] -my-2">
+          {safeDeltas.slice(0, 8).map((d) => {
+            const raw = d.rawCategory ?? d.category;
+            const href = `/admin/signal-radar/all?category=${encodeURIComponent(raw)}`;
+            return (
+              <li key={raw}>
+                <Link
+                  href={href}
+                  className="flex items-center justify-between gap-3 text-sm py-2 hover:bg-[#F8FAFC] -mx-2 px-2 rounded transition-colors group"
+                >
+                  <span className="text-[#0F172A] flex items-center gap-1">
+                    {d.category}
+                    <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </span>
+                  <span className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[#64748B] text-xs">
+                      {d.prior_7d} → {d.current_7d}
+                    </span>
+                    <DeltaBadge delta={d} />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

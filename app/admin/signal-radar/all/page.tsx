@@ -48,10 +48,19 @@ interface AnalysisRow {
 
 const ROW_LIMIT = 200;
 
-export default async function SignalRadarAllPage() {
+export default async function SignalRadarAllPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ category?: string | string[] }>;
+}) {
   if (!(await hasAdminSession())) {
     redirect("/admin/login");
   }
+
+  const params = (await searchParams) ?? {};
+  const initialCategory = Array.isArray(params.category)
+    ? params.category[0]
+    : params.category;
 
   const sb = getServiceClient();
   const since14d = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -147,7 +156,7 @@ export default async function SignalRadarAllPage() {
 
       <RecurringPhrasesWidget phrases={phrases} />
 
-      <FeedClient rows={rows} />
+      <FeedClient rows={rows} initialCategory={initialCategory ?? null} />
     </div>
   );
 }
