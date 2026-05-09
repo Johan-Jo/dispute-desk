@@ -1,8 +1,61 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ExternalLink, MessageCircle, FileText, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ExternalLink,
+  MessageCircle,
+  FileText,
+  RefreshCw,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 import { DetailPanel } from "./detail-panel";
+
+interface RefreshSnapshot {
+  at: number;
+  fetched_submissions: number;
+  fetched_comments: number;
+  inserted: number;
+}
+
+const REFRESH_KEY = "signal-radar-last-refresh";
+const CLASSIFIER_INTERVAL_MS = 5 * 60 * 1000;
+const CLASSIFIER_BUFFER_MS = 30 * 1000;
+
+function loadLastRefresh(): RefreshSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(REFRESH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as RefreshSnapshot;
+    if (typeof parsed.at !== "number") return null;
+    if (Date.now() - parsed.at > 60 * 60 * 1000) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveLastRefresh(snap: RefreshSnapshot): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(REFRESH_KEY, JSON.stringify(snap));
+  } catch {}
+}
+
+function nextClassifierTickAt(refreshAt: number): number {
+  const minutes = Math.ceil((refreshAt + CLASSIFIER_BUFFER_MS) / CLASSIFIER_INTERVAL_MS);
+  return minutes * CLASSIFIER_INTERVAL_MS + CLASSIFIER_BUFFER_MS;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 0) ms = 0;
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s}s`;
+}
 
 export interface FeedRow {
   id: string;
@@ -71,7 +124,9 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
   const [activeRow, setActiveRow] = useState<FeedRow | null>(null);
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<RefreshSnapshot | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
 
   const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
   const [merchantTypeFilter, setMerchantTypeFilter] = useState<Set<string>>(new Set());
@@ -80,6 +135,16 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
   const [minEmotion, setMinEmotion] = useState(0);
   const [timeframe, setTimeframe] = useState("7d");
   const [sort, setSort] = useState<"quality" | "recent" | "emotion">("quality");
+
+  useEffect(() => {
+    setLastRefresh(loadLastRefresh());
+  }, []);
+
+  useEffect(() => {
+    if (!lastRefresh) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [lastRefresh]);
 
   const filtered = useMemo(() => {
     const tf = TIMEFRAMES.find((t) => t.id === timeframe) ?? TIMEFRAMES[1];
@@ -148,7 +213,7 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
 
   async function manualRefresh() {
     setRefreshing(true);
-    setRefreshMsg(null);
+    setRefreshError(null);
     try {
       const res = await fetch("/api/admin/signal-radar/refresh", {
         method: "POST",
@@ -157,15 +222,20 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setRefreshMsg(`Error: ${json.error ?? res.statusText}`);
-      } else {
-        setRefreshMsg(
-          `Fetched ${json.fetched_submissions ?? 0} posts + ${json.fetched_comments ?? 0} comments · ${json.inserted ?? 0} new`
-        );
-        setTimeout(() => window.location.reload(), 1200);
+        setRefreshError(json.error ?? res.statusText ?? "request failed");
+        return;
       }
+      const snap: RefreshSnapshot = {
+        at: Date.now(),
+        fetched_submissions: json.fetched_submissions ?? 0,
+        fetched_comments: json.fetched_comments ?? 0,
+        inserted: json.inserted ?? 0,
+      };
+      saveLastRefresh(snap);
+      setLastRefresh(snap);
+      setNow(Date.now());
     } catch (e) {
-      setRefreshMsg(`Error: ${e instanceof Error ? e.message : "request failed"}`);
+      setRefreshError(e instanceof Error ? e.message : "request failed");
     } finally {
       setRefreshing(false);
     }
@@ -208,8 +278,8 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            {refreshMsg && (
-              <span className="text-xs text-[#64748B]">{refreshMsg}</span>
+            {refreshError && (
+              <span className="text-xs text-[#DC2626]">Error: {refreshError}</span>
             )}
             <button
               onClick={manualRefresh}
@@ -217,10 +287,14 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded bg-[#2563EB] text-white hover:bg-[#1D4ED8] disabled:opacity-50"
             >
               <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh now
+              {refreshing ? "Refreshing…" : "Refresh now"}
             </button>
           </div>
         </div>
+
+        {lastRefresh && (
+          <RefreshStatusBanner snap={lastRefresh} now={now} />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <SliderRow label="Min signal" value={minSignal} onChange={setMinSignal} />
@@ -244,10 +318,7 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
 
       <div className="rounded-lg bg-white border border-[#E2E8F0] overflow-hidden">
         {visibleGroups.length === 0 ? (
-          <div className="p-12 text-center text-[#64748B] text-sm">
-            No signals yet. Cron runs hourly — or click <strong>Refresh now</strong> above to seed
-            initial data. (You may need at least one classified item before the feed populates.)
-          </div>
+          <EmptyState lastRefresh={lastRefresh} now={now} />
         ) : (
           <ul className="divide-y divide-[#E2E8F0]">
             {visibleGroups.map((group) => (
@@ -465,6 +536,135 @@ const CATEGORY_ACCENTS: Record<string, string> = {
   operational_overload: "#0891B2",
   support_failure: "#0EA5E9",
 };
+
+function RefreshStatusBanner({
+  snap,
+  now,
+}: {
+  snap: RefreshSnapshot;
+  now: number;
+}) {
+  const elapsed = now - snap.at;
+  const tickAt = nextClassifierTickAt(snap.at);
+  const remaining = tickAt - now;
+  const tickReady = remaining <= 0;
+
+  return (
+    <div
+      className={`rounded-md border px-3 py-2 text-xs flex items-center gap-3 ${
+        tickReady
+          ? "bg-[#ECFDF5] border-[#A7F3D0] text-[#065F46]"
+          : "bg-[#EFF6FF] border-[#BFDBFE] text-[#1E40AF]"
+      }`}
+    >
+      {tickReady ? (
+        <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+      ) : (
+        <Clock className="w-4 h-4 flex-shrink-0" />
+      )}
+      <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span>
+          Refreshed <strong>{formatDuration(elapsed)}</strong> ago
+        </span>
+        <span className="opacity-70">·</span>
+        <span>
+          ingested <strong>{snap.fetched_submissions}</strong> posts +{" "}
+          <strong>{snap.fetched_comments}</strong> comments (
+          <strong>{snap.inserted}</strong> new)
+        </span>
+        <span className="opacity-70">·</span>
+        {tickReady ? (
+          <span>
+            classifier should have run — <strong>reload</strong> to see results
+          </span>
+        ) : (
+          <span>
+            next classifier tick in <strong>{formatDuration(remaining)}</strong>
+          </span>
+        )}
+      </div>
+      {tickReady && (
+        <button
+          onClick={() => window.location.reload()}
+          className="px-2 py-1 rounded bg-[#10B981] text-white font-medium hover:bg-[#059669]"
+        >
+          Reload
+        </button>
+      )}
+    </div>
+  );
+}
+
+function EmptyState({
+  lastRefresh,
+  now,
+}: {
+  lastRefresh: RefreshSnapshot | null;
+  now: number;
+}) {
+  if (!lastRefresh) {
+    return (
+      <div className="p-12 text-center text-[#64748B] text-sm">
+        No signals yet. The hourly Reddit ingest cron will populate this feed
+        automatically — or click <strong>Refresh now</strong> above to seed initial data.
+      </div>
+    );
+  }
+
+  const tickAt = nextClassifierTickAt(lastRefresh.at);
+  const remaining = tickAt - now;
+  const tickReady = remaining <= 0;
+
+  if (lastRefresh.inserted === 0) {
+    return (
+      <div className="p-12 text-center text-[#64748B] text-sm space-y-1">
+        <div>
+          The last refresh fetched <strong>{lastRefresh.fetched_submissions}</strong> posts +{" "}
+          <strong>{lastRefresh.fetched_comments}</strong> comments but{" "}
+          <strong>0 were new</strong> — Reddit returned items already in the database.
+        </div>
+        <div className="text-xs opacity-80">
+          Wait for the next hourly cron to pick up fresh posts, or come back later.
+        </div>
+      </div>
+    );
+  }
+
+  if (!tickReady) {
+    return (
+      <div className="p-12 text-center text-[#64748B] text-sm space-y-1">
+        <div>
+          Just ingested <strong>{lastRefresh.inserted}</strong> new items.
+        </div>
+        <div>
+          The classifier runs every 5 minutes — first results in roughly{" "}
+          <strong>{formatDuration(remaining)}</strong>.
+        </div>
+        <div className="text-xs opacity-80 mt-2">
+          The page will offer a reload button once the classifier has run.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-12 text-center text-[#64748B] text-sm space-y-2">
+      <div>The classifier has had time to run.</div>
+      <div className="text-xs">
+        If the feed is still empty, check Vercel logs for{" "}
+        <code className="px-1 bg-[#F1F5F9] rounded">/api/cron/signal-radar-classify</code>{" "}
+        — the most common cause is a missing or invalid <code>OPENAI_API_KEY</code>.
+      </div>
+      <button
+        onClick={() => window.location.reload()}
+        className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded bg-[#10B981] text-white hover:bg-[#059669]"
+      >
+        <RefreshCw className="w-3 h-3" />
+        Reload now
+      </button>
+    </div>
+  );
+}
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
