@@ -2,6 +2,7 @@
 
 import { ExternalLink, X, TrendingUp } from "lucide-react";
 import type { FeedRow } from "./feed-client";
+import { categoryLabel } from "@/lib/signal-radar/category-labels";
 
 export function DetailPanel({
   row,
@@ -141,7 +142,7 @@ export function DetailPanel({
               Open original
             </a>
             <span className="ml-auto text-xs text-[#94A3B8] self-center">
-              author: {row.author ?? "unknown"} · category: {row.category}
+              author: {row.author ?? "unknown"} · {categoryLabel(row.category)}
               {row.competitor ? ` · competitor: ${row.competitor}` : ""}
             </span>
           </section>
