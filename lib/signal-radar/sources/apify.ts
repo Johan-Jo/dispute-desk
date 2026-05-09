@@ -21,20 +21,24 @@ import type {
 const APIFY_API = "https://api.apify.com/v2";
 const DEFAULT_ACTOR_ID = "trudax~reddit-scraper-lite";
 
+/**
+ * Subreddit list. r/Entrepreneur and r/smallbusiness were in v1 but they're
+ * 90%+ off-topic for Shopify-merchant pain — the topic gate filters most of
+ * their output anyway, just at the cost of wasted Apify calls. r/shopify and
+ * r/ecommerce remain because they have direct chargeback/reserve threads;
+ * r/Dropship occasionally has fraud/dispute discussion that's relevant.
+ */
 const SUBREDDITS = [
   "shopify",
   "ecommerce",
-  "dropshipping",
-  "Entrepreneur",
-  "smallbusiness",
+  "Dropship",
 ];
 
 /**
- * Per-run cap. Apify's lite actor takes ~0.3-0.5s per item; with Vercel's
- * 60-300s function timeout we need to fit within the wall clock. 50 keeps
- * sync runs under ~30s; cron + manual refresh both share this budget.
+ * Per-run cap. The topic gate drops most items, so we ingest more raw to
+ * end up with a usable harvest. ~150 items takes ~60-90s on the lite actor.
  */
-const MAX_ITEMS = 50;
+const MAX_ITEMS = 150;
 /** Server-side (Apify) timeout in seconds — Apify aborts if its run exceeds this. */
 const APIFY_RUN_TIMEOUT_SECS = 50;
 
@@ -146,6 +150,65 @@ function looksLikeAutomod(text: string): boolean {
   return AUTOMOD_PATTERNS.some((re) => re.test(text));
 }
 
+/**
+ * Topic gate: only ingest content that mentions at least one Shopify-pain
+ * term. Without this gate, the classifier wastes API calls (and the dashboard
+ * fills) with generic ecommerce chatter — sales, shipping, TikTok Shop fees,
+ * spreadsheets — which has zero strategic value to DisputeDesk.
+ *
+ * Word-boundary matched, case-insensitive. Very generous with synonyms and
+ * common misspellings since Reddit posters write casually. False positives
+ * (like the literal word "shopify" alone) are tolerated because they're rare
+ * outside genuine Shopify-merchant context, and the classifier catches them.
+ */
+const SHOPIFY_PAIN_TERMS: RegExp[] = [
+  // Disputes / chargebacks
+  /\bchargeback(s|ed|ing)?\b/i,
+  /\bcharge[- ]back(s|ed|ing)?\b/i,
+  /\bdispute(s|d|ing)?\b/i,
+  /\brepresentment\b/i,
+  /\bfriendly[- ]?fraud\b/i,
+  /\binquiry\b/i,
+  /\bretrieval\b/i,
+  // Shopify Payments mechanics
+  /\b(shopify[- ]?)?payouts?\b/i,
+  /\b(rolling[- ])?reserve(s)?\b/i,
+  /\bfunds (held|frozen|on hold)\b/i,
+  /\bhigh[- ]?risk\b/i,
+  /\bpayout (hold|frozen|delayed)\b/i,
+  /\bshopify protect\b/i,
+  // Evidence / representment vocabulary
+  /\bevidence pack\b/i,
+  /\bavs\b/i,
+  /\bcvv\b/i,
+  /\b3[- ]?d[- ]?secure\b/i,
+  /\b3ds\b/i,
+  /\bissuer (rejected|won|lost)\b/i,
+  // INR / fulfillment
+  /\bitem not received\b/i,
+  /\bINR\b/,
+  /\bproduct not received\b/i,
+  /\bnot as described\b/i,
+  // Competitor mentions
+  /\bchargeflow\b/i,
+  /\bdisputifier\b/i,
+  /\bchargepay\b/i,
+  /\bjustt\b/i,
+  /\bmidigator\b/i,
+  /\bsignifyd\b/i,
+  /\briskified\b/i,
+  /\bnofraud\b/i,
+  // Generic dispute-tooling intent
+  /\bchargeback (app|tool|software|service|management|prevention|automation)\b/i,
+  /\bfraud (prevention|detection|filter)\b/i,
+  /\bdispute (app|tool|software|service|management)\b/i,
+];
+
+function passesShopifyPainGate(text: string): boolean {
+  if (!text) return false;
+  return SHOPIFY_PAIN_TERMS.some((re) => re.test(text));
+}
+
 type MapResult =
   | { kind: "ok"; item: IngestedItem }
   | { kind: "schema_incomplete" }
@@ -191,6 +254,12 @@ function mapItem(d: ApifyRedditItem): MapResult {
   // shows 0/1 for most fresh content, and minority-opinion comments often
   // sit at 0–1 even when they carry the most useful pain signal. Let the
   // classifier sort signal from noise.
+
+  // Topic gate — drop generic ecommerce chatter that doesn't mention any
+  // Shopify-merchant-pain term. Saves classifier API spend and stops the
+  // dashboard filling with sales/shipping/TikTok-Shop/spreadsheet noise.
+  const topicBlob = `${title ?? ""}\n${content}`;
+  if (!passesShopifyPainGate(topicBlob)) return { kind: "filtered" };
 
   let parentExternalId: string | null = null;
   if (isComment) {
