@@ -444,6 +444,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     label: t("dashboard.activeDisputes"),
     value: String(stats.activeDisputes),
     change: stats.activeDisputesChange,
+    changeInverse: true,
   };
   const winRate: KpiCard = {
     icon: ChartLineIcon,
@@ -468,6 +469,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     label: t("dashboard.amountAtRisk"),
     value: formatCurrency(stats.amountAtRisk),
     change: stats.amountAtRiskChange,
+    changeInverse: true,
   };
 
   // ── Chargeback rate (PRD §8 / Figma 2026-05-01) ─────────────────────
