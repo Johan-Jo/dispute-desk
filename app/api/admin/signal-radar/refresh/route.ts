@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { ingestLoop } from "@/lib/signal-radar/ingest-loop";
-import { redditAdapter } from "@/lib/signal-radar/sources/reddit";
+import { getRedditAdapter } from "@/lib/signal-radar/sources";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await ingestLoop(redditAdapter);
+    const result = await ingestLoop(getRedditAdapter());
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "ingest failed";

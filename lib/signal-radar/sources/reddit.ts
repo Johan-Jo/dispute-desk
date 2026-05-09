@@ -1,4 +1,8 @@
-import type { IngestedItem, SignalSourceAdapter } from "./types";
+import type {
+  IngestedItem,
+  IngestResult,
+  SignalSourceAdapter,
+} from "./types";
 
 const SUBREDDITS = [
   "shopify",
@@ -16,6 +20,32 @@ const DEFAULT_USER_AGENT =
 
 function userAgent(): string {
   return process.env.REDDIT_USER_AGENT ?? DEFAULT_USER_AGENT;
+}
+
+/**
+ * Fetches a Reddit path. Routes through the Cloudflare Worker proxy when
+ * REDDIT_PROXY_URL + REDDIT_PROXY_SECRET are configured (production), and
+ * falls back to direct Reddit fetches otherwise (local dev).
+ *
+ * Reddit blocks Vercel/AWS/GCP egress IPs on .json endpoints. The Worker
+ * runs on Cloudflare's CDN edge (different IP class), bypassing the block.
+ * See cloudflare-workers/signal-radar-reddit-proxy/ for the Worker code.
+ */
+async function redditFetch(path: string): Promise<Response> {
+  const proxyUrl = process.env.REDDIT_PROXY_URL;
+  const proxySecret = process.env.REDDIT_PROXY_SECRET;
+  if (proxyUrl && proxySecret) {
+    const url = `${proxyUrl}?path=${encodeURIComponent(path)}`;
+    return fetch(url, {
+      headers: {
+        Authorization: `Bearer ${proxySecret}`,
+        "X-Reddit-UA": userAgent(),
+      },
+    });
+  }
+  return fetch(`${REDDIT_PUBLIC_BASE}${path}`, {
+    headers: { "User-Agent": userAgent() },
+  });
 }
 
 interface RedditListingChild<T> {
@@ -49,11 +79,8 @@ interface RedditComment {
 }
 
 async function fetchSubmissions(sub: string): Promise<RedditSubmission[]> {
-  const res = await fetch(
-    `${REDDIT_PUBLIC_BASE}/r/${sub}/new.json?limit=${SUBMISSION_LIMIT}&raw_json=1`,
-    {
-      headers: { "User-Agent": userAgent() },
-    }
+  const res = await redditFetch(
+    `/r/${sub}/new.json?limit=${SUBMISSION_LIMIT}&raw_json=1`
   );
   if (!res.ok) {
     const body = await res.text();
@@ -69,11 +96,8 @@ async function fetchTopLevelComments(
   sub: string,
   postId: string
 ): Promise<RedditComment[]> {
-  const res = await fetch(
-    `${REDDIT_PUBLIC_BASE}/r/${sub}/comments/${postId}.json?limit=${COMMENTS_PER_SUBMISSION}&depth=1&sort=top&raw_json=1`,
-    {
-      headers: { "User-Agent": userAgent() },
-    }
+  const res = await redditFetch(
+    `/r/${sub}/comments/${postId}.json?limit=${COMMENTS_PER_SUBMISSION}&depth=1&sort=top&raw_json=1`
   );
   if (!res.ok) return [];
   const json = await res.json();
@@ -128,15 +152,21 @@ function commentToItem(c: RedditComment): IngestedItem {
 
 export const redditAdapter: SignalSourceAdapter = {
   platform: "reddit",
-  async ingest(): Promise<IngestedItem[]> {
+  async ingest(): Promise<IngestResult> {
     const items: IngestedItem[] = [];
+    const errors: string[] = [];
+    const usingProxy = Boolean(
+      process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET
+    );
 
     for (const sub of SUBREDDITS) {
       let submissions: RedditSubmission[] = [];
       try {
         submissions = await fetchSubmissions(sub);
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[signal-radar] reddit ${sub} listing error:`, err);
+        errors.push(`r/${sub}: ${msg.slice(0, 160)}`);
         continue;
       }
 
@@ -151,6 +181,13 @@ export const redditAdapter: SignalSourceAdapter = {
       }
     }
 
-    return items;
+    // If every subreddit failed AND we weren't proxying, suggest the proxy
+    if (items.length === 0 && errors.length === SUBREDDITS.length && !usingProxy) {
+      errors.push(
+        "All Reddit fetches failed and REDDIT_PROXY_URL is not set — configure the Cloudflare Worker proxy (see cloudflare-workers/signal-radar-reddit-proxy/README.md)."
+      );
+    }
+
+    return { items, errors };
   },
 };

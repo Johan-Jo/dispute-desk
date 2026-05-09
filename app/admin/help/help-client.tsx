@@ -333,6 +333,14 @@ export function HelpClient() {
             ]} />
             <H3>Sources (M1)</H3>
             <P>Reddit only — submissions and top-level comments from <Code>r/shopify</Code>, <Code>r/ecommerce</Code>, <Code>r/dropshipping</Code>, <Code>r/Entrepreneur</Code>, <Code>r/smallbusiness</Code>. Comments are filtered: skip <Code>[deleted]</Code>/<Code>[removed]</Code>, skip collapsed, score &ge; 1, max 20 per submission. Future milestones add Shopify Community and App Store reviews against the same adapter interface.</P>
+            <H3>Cloudflare Worker proxy (required on Vercel)</H3>
+            <P>Reddit blocks Vercel/AWS/GCP egress IPs on its <Code>.json</Code> endpoints with HTTP 403. To work around this, deploy the tiny Worker at <Code>cloudflare-workers/signal-radar-reddit-proxy/</Code> (see its <Strong>README.md</Strong> — two deploy paths: Cloudflare dashboard paste, or <Code>wrangler deploy</Code>). Free tier (100K reqs/day) covers our volume.</P>
+            <P>After deploy, set on Vercel:</P>
+            <Ul items={[
+              "REDDIT_PROXY_URL = the Worker URL (https://signal-radar-reddit-proxy.<your-account>.workers.dev)",
+              "REDDIT_PROXY_SECRET = the same secret you set as PROXY_SECRET in the Worker",
+            ]} />
+            <P>Without these, the adapter falls back to direct Reddit fetches — works on local dev (residential IP), fails on Vercel. The refresh-status banner surfaces per-subreddit errors so you can see exactly what Reddit returned (e.g. <Code>r/shopify: Reddit listing shopify failed 403</Code>).</P>
             <H3>How it works</H3>
             <Ol items={[
               "Hourly cron pulls public Reddit JSON endpoints (no OAuth — uses unauthenticated /r/{sub}/new.json + /r/{sub}/comments/{id}.json).",

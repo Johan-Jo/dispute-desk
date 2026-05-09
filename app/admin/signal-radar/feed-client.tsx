@@ -16,6 +16,7 @@ interface RefreshSnapshot {
   fetched_submissions: number;
   fetched_comments: number;
   inserted: number;
+  errors: string[];
 }
 
 const REFRESH_KEY = "signal-radar-last-refresh";
@@ -230,6 +231,7 @@ export function FeedClient({ rows }: { rows: FeedRow[] }) {
         fetched_submissions: json.fetched_submissions ?? 0,
         fetched_comments: json.fetched_comments ?? 0,
         inserted: json.inserted ?? 0,
+        errors: Array.isArray(json.errors) ? json.errors : [],
       };
       saveLastRefresh(snap);
       setLastRefresh(snap);
@@ -548,48 +550,70 @@ function RefreshStatusBanner({
   const tickAt = nextClassifierTickAt(snap.at);
   const remaining = tickAt - now;
   const tickReady = remaining <= 0;
+  const hasErrors = snap.errors.length > 0;
 
   return (
-    <div
-      className={`rounded-md border px-3 py-2 text-xs flex items-center gap-3 ${
-        tickReady
-          ? "bg-[#ECFDF5] border-[#A7F3D0] text-[#065F46]"
-          : "bg-[#EFF6FF] border-[#BFDBFE] text-[#1E40AF]"
-      }`}
-    >
-      {tickReady ? (
-        <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-      ) : (
-        <Clock className="w-4 h-4 flex-shrink-0" />
-      )}
-      <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span>
-          Refreshed <strong>{formatDuration(elapsed)}</strong> ago
-        </span>
-        <span className="opacity-70">·</span>
-        <span>
-          ingested <strong>{snap.fetched_submissions}</strong> posts +{" "}
-          <strong>{snap.fetched_comments}</strong> comments (
-          <strong>{snap.inserted}</strong> new)
-        </span>
-        <span className="opacity-70">·</span>
-        {tickReady ? (
-          <span>
-            classifier should have run — <strong>reload</strong> to see results
-          </span>
+    <div className="space-y-2">
+      <div
+        className={`rounded-md border px-3 py-2 text-xs flex items-center gap-3 ${
+          hasErrors
+            ? "bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]"
+            : tickReady
+              ? "bg-[#ECFDF5] border-[#A7F3D0] text-[#065F46]"
+              : "bg-[#EFF6FF] border-[#BFDBFE] text-[#1E40AF]"
+        }`}
+      >
+        {hasErrors ? (
+          <Clock className="w-4 h-4 flex-shrink-0" />
+        ) : tickReady ? (
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
         ) : (
+          <Clock className="w-4 h-4 flex-shrink-0" />
+        )}
+        <div className="flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>
-            next classifier tick in <strong>{formatDuration(remaining)}</strong>
+            Refreshed <strong>{formatDuration(elapsed)}</strong> ago
           </span>
+          <span className="opacity-70">·</span>
+          <span>
+            ingested <strong>{snap.fetched_submissions}</strong> posts +{" "}
+            <strong>{snap.fetched_comments}</strong> comments (
+            <strong>{snap.inserted}</strong> new)
+          </span>
+          {!hasErrors && (
+            <>
+              <span className="opacity-70">·</span>
+              {tickReady ? (
+                <span>
+                  classifier should have run — <strong>reload</strong> to see
+                  results
+                </span>
+              ) : (
+                <span>
+                  next classifier tick in <strong>{formatDuration(remaining)}</strong>
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        {tickReady && !hasErrors && (
+          <button
+            onClick={() => window.location.reload()}
+            className="px-2 py-1 rounded bg-[#10B981] text-white font-medium hover:bg-[#059669]"
+          >
+            Reload
+          </button>
         )}
       </div>
-      {tickReady && (
-        <button
-          onClick={() => window.location.reload()}
-          className="px-2 py-1 rounded bg-[#10B981] text-white font-medium hover:bg-[#059669]"
-        >
-          Reload
-        </button>
+      {hasErrors && (
+        <div className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]">
+          <div className="font-semibold mb-1">Ingest errors ({snap.errors.length}):</div>
+          <ul className="list-disc list-inside space-y-0.5">
+            {snap.errors.map((e, i) => (
+              <li key={i} className="break-all">{e}</li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

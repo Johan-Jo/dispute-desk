@@ -1,0 +1,6 @@
+name = "signal-radar-reddit-proxy"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+# Set the secret with: npx wrangler secret put PROXY_SECRET
+# (do NOT put it in this file — secrets must be encrypted at rest)

@@ -15,7 +15,13 @@ export interface IngestedItem {
   postedAt: string;
 }
 
+export interface IngestResult {
+  items: IngestedItem[];
+  /** Per-source error messages (e.g. one per subreddit when Reddit 403s) — surfaced to the admin UI. */
+  errors: string[];
+}
+
 export interface SignalSourceAdapter {
   readonly platform: SignalPlatform;
-  ingest(): Promise<IngestedItem[]>;
+  ingest(): Promise<IngestResult>;
 }

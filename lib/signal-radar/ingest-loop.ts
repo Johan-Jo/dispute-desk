@@ -8,12 +8,13 @@ export interface IngestLoopResult {
   fetched_submissions: number;
   fetched_comments: number;
   inserted: number;
+  errors: string[];
 }
 
 export async function ingestLoop(
   adapter: SignalSourceAdapter
 ): Promise<IngestLoopResult> {
-  const items = await adapter.ingest();
+  const { items, errors } = await adapter.ingest();
 
   let fetched_submissions = 0;
   let fetched_comments = 0;
@@ -29,6 +30,7 @@ export async function ingestLoop(
       fetched_submissions: 0,
       fetched_comments: 0,
       inserted: 0,
+      errors,
     };
   }
 
@@ -52,6 +54,7 @@ export async function ingestLoop(
     fetched_submissions,
     fetched_comments,
     inserted: data?.length ?? 0,
+    errors,
   };
 }
 
