@@ -261,7 +261,26 @@ export function useReviewView(
       };
 
   // ── Exact data sent to Shopify ──
-  const submissionFields = data.submissionFields ?? [];
+  // The workspace API hardcodes `data.submissionFields` to []. The
+  // authoritative source for "what will be sent" is the live submission
+  // preview, which runs the same `composeShopifyMutationPayload` builder
+  // as the production save job and maps each non-empty mutation field to
+  // a labelled `SubmissionPreviewField` via `FIELD_MAPPINGS`. Use it if
+  // we have it; fall back to the (currently empty) workspace list only
+  // for forward-compat.
+  const previewFields = submissionPreview?.preview?.fields ?? [];
+  const fallbackFields = data.submissionFields ?? [];
+  const submissionFields: SubmissionField[] =
+    previewFields.length > 0
+      ? previewFields.map((f) => ({
+          shopifyFieldName: f.shopifyFieldName,
+          shopifyFieldLabel: f.shopifyFieldLabel,
+          content: f.content,
+          contentPreview: f.contentPreview,
+          source: f.source,
+          included: f.included,
+        }))
+      : fallbackFields;
   const includedFields = submissionFields.filter((f) => f.included);
 
   const groups: DataSentGroup[] = GROUP_ORDER.map((key) => ({

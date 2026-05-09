@@ -229,7 +229,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const attachments: WorkspaceAttachment[] = [];
   for (const it of (itemsRes.data ?? []) as RawEvidenceItem[]) {
     const p = it.payload ?? {};
-    const fileId = typeof p.fileId === "string" ? p.fileId : null;
+    // Accept either a legacy `fileId` (Storage object id) or the
+    // current `storagePath` (bucket/key string). Real merchant uploads
+    // from the embedded UI write `storagePath`; some older auto-collected
+    // items wrote `fileId`. Without this fallback the Review tab silently
+    // hid every uploaded file. The downstream UI doesn't render the id
+    // — it's only used as a stable React key — so a string from either
+    // source is fine.
+    const fileId =
+      typeof p.fileId === "string"
+        ? p.fileId
+        : typeof p.storagePath === "string"
+          ? p.storagePath
+          : null;
     if (!fileId) continue;
     attachments.push({
       id: it.id,
@@ -238,7 +250,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       label: it.label ?? null,
       fileName: typeof p.fileName === "string" ? p.fileName : null,
       sizeBytes: typeof p.fileSize === "number" ? p.fileSize : null,
-      mimeType: typeof p.mimeType === "string" ? p.mimeType : null,
+      mimeType:
+        typeof p.mimeType === "string"
+          ? p.mimeType
+          : typeof p.fileType === "string"
+            ? p.fileType
+            : null,
       source: it.source ?? null,
       fileId,
     });
