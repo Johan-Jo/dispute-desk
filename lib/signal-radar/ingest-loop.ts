@@ -3,40 +3,63 @@ import { computeClusterKey } from "./cluster";
 import type { SignalSourceAdapter, IngestedItem } from "./sources/types";
 
 export interface IngestLoopResult {
-  platform: string;
   fetched: number;
   fetched_submissions: number;
   fetched_comments: number;
   inserted: number;
   errors: string[];
+  /** Per-platform breakdown so the admin UI can show "shopify_community: 12, reddit: 8". */
+  by_platform: Record<string, number>;
 }
 
+/**
+ * Runs every adapter in the array, merges their items, then upserts in a single
+ * batch. Per-source errors flow into IngestResult.errors so the admin UI can
+ * report exactly which source failed.
+ */
 export async function ingestLoop(
-  adapter: SignalSourceAdapter
+  adapters: SignalSourceAdapter[]
 ): Promise<IngestLoopResult> {
-  const { items, errors } = await adapter.ingest();
+  const allItems: IngestedItem[] = [];
+  const allErrors: string[] = [];
+
+  for (const adapter of adapters) {
+    try {
+      const result = await adapter.ingest();
+      allItems.push(...result.items);
+      allErrors.push(...result.errors);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      allErrors.push(`${adapter.platform}: ${msg}`);
+      console.error(
+        `[signal-radar] adapter ${adapter.platform} threw:`,
+        err
+      );
+    }
+  }
 
   let fetched_submissions = 0;
   let fetched_comments = 0;
-  for (const item of items) {
+  const by_platform: Record<string, number> = {};
+  for (const item of allItems) {
     if (item.contentType === "submission") fetched_submissions++;
     else fetched_comments++;
+    by_platform[item.platform] = (by_platform[item.platform] ?? 0) + 1;
   }
 
-  if (items.length === 0) {
+  if (allItems.length === 0) {
     return {
-      platform: adapter.platform,
       fetched: 0,
       fetched_submissions: 0,
       fetched_comments: 0,
       inserted: 0,
-      errors,
+      errors: allErrors,
+      by_platform,
     };
   }
 
   const sb = getServiceClient();
-
-  const rows = items.map((item) => itemToRow(item));
+  const rows = allItems.map((item) => itemToRow(item));
 
   const { data, error } = await sb
     .from("signal_sources")
@@ -49,12 +72,12 @@ export async function ingestLoop(
   }
 
   return {
-    platform: adapter.platform,
-    fetched: items.length,
+    fetched: allItems.length,
     fetched_submissions,
     fetched_comments,
     inserted: data?.length ?? 0,
-    errors,
+    errors: allErrors,
+    by_platform,
   };
 }
 

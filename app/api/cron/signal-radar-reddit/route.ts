@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestLoop } from "@/lib/signal-radar/ingest-loop";
-import { getRedditAdapter } from "@/lib/signal-radar/sources";
+import { getDefaultAdapters } from "@/lib/signal-radar/sources";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await ingestLoop(getRedditAdapter());
+    const result = await ingestLoop(getDefaultAdapters());
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "ingest failed";

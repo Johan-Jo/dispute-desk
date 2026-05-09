@@ -125,108 +125,9 @@ function buildExternalId(d: ApifyRedditItem, isComment: boolean): string | null 
   return null;
 }
 
-/** Reddit author handles that are bots — skip everything they post/comment. */
-const BOT_AUTHORS = new Set(["AutoModerator", "automoderator", "[deleted]", "RemindMeBot"]);
+import { applyIngestGates } from "./utils";
 
-/**
- * AutoModerator removal-message signatures. Reddit replaces a removed post/comment
- * body with one of these stock messages, which would otherwise pollute the
- * classifier and the phrase widget with "automatically removed", "contact moderators",
- * etc. — not merchant pain.
- */
-const AUTOMOD_PATTERNS: RegExp[] = [
-  /this action was performed automatically/i,
-  /please contact the moderators of (this|the) subreddit/i,
-  /your (post|submission|comment) has been (automatically )?removed/i,
-  /you (don'?t|do not) have enough (karma|post karma|comment karma)/i,
-  /^\s*\[removed\]\s*$/i,
-  /^\s*\[deleted\]\s*$/i,
-  /i am a bot/i,
-  /this is an automated/i,
-];
-
-function looksLikeAutomod(text: string): boolean {
-  if (!text) return false;
-  return AUTOMOD_PATTERNS.some((re) => re.test(text));
-}
-
-/**
- * Topic gate: only ingest content that mentions at least one Shopify-pain
- * term. Without this gate, the classifier wastes API calls (and the dashboard
- * fills) with generic ecommerce chatter — sales, shipping, TikTok Shop fees,
- * spreadsheets — which has zero strategic value to DisputeDesk.
- *
- * Word-boundary matched, case-insensitive. Very generous with synonyms and
- * common misspellings since Reddit posters write casually. False positives
- * (like the literal word "shopify" alone) are tolerated because they're rare
- * outside genuine Shopify-merchant context, and the classifier catches them.
- */
-const SHOPIFY_PAIN_TERMS: RegExp[] = [
-  // Disputes / chargebacks
-  /\bchargeback(s|ed|ing)?\b/i,
-  /\bcharge[- ]back(s|ed|ing)?\b/i,
-  /\bdispute(s|d|ing)?\b/i,
-  /\brepresentment\b/i,
-  /\bfriendly[- ]?fraud\b/i,
-  /\binquiry\b/i,
-  /\bretrieval\b/i,
-  // Shopify Payments mechanics
-  /\b(shopify[- ]?)?payouts?\b/i,
-  /\b(rolling[- ])?reserve(s)?\b/i,
-  /\bfunds (held|frozen|on hold)\b/i,
-  /\bhigh[- ]?risk\b/i,
-  /\bpayout (hold|frozen|delayed)\b/i,
-  /\bshopify protect\b/i,
-  // Evidence / representment vocabulary
-  /\bevidence pack\b/i,
-  /\bavs\b/i,
-  /\bcvv\b/i,
-  /\b3[- ]?d[- ]?secure\b/i,
-  /\b3ds\b/i,
-  /\bissuer (rejected|won|lost)\b/i,
-  // INR / fulfillment
-  /\bitem not received\b/i,
-  /\bINR\b/,
-  /\bproduct not received\b/i,
-  /\bnot as described\b/i,
-  // Competitor mentions
-  /\bchargeflow\b/i,
-  /\bdisputifier\b/i,
-  /\bchargepay\b/i,
-  /\bjustt\b/i,
-  /\bmidigator\b/i,
-  /\bsignifyd\b/i,
-  /\briskified\b/i,
-  /\bnofraud\b/i,
-  // Generic dispute-tooling intent
-  /\bchargeback (app|tool|software|service|management|prevention|automation)\b/i,
-  /\bfraud (prevention|detection|filter)\b/i,
-  /\bdispute (app|tool|software|service|management)\b/i,
-];
-
-function passesShopifyPainGate(text: string): boolean {
-  if (!text) return false;
-  return SHOPIFY_PAIN_TERMS.some((re) => re.test(text));
-}
-
-/**
- * Shopify context gate. Per user direction, every ingested item must be
- * unambiguously about Shopify — either by explicit literal mention in the
- * text, or by being posted in an unambiguously-Shopify subreddit
- * (r/shopify). r/ecommerce and r/Dropship posts pass only when they
- * mention Shopify literally; otherwise they're generic ecommerce chatter
- * that happens to discuss disputes.
- */
-const SHOPIFY_LITERAL = /\bshopify\b/i;
 const SHOPIFY_SUBREDDIT = /^r\/shopify$/i;
-
-function isShopifyContext(
-  text: string,
-  subreddit: string | null
-): boolean {
-  if (subreddit && SHOPIFY_SUBREDDIT.test(subreddit)) return true;
-  return SHOPIFY_LITERAL.test(text);
-}
 
 type MapResult =
   | { kind: "ok"; item: IngestedItem }
@@ -256,34 +157,25 @@ function mapItem(d: ApifyRedditItem): MapResult {
   const title = isComment ? null : pickString(d, ["title"]);
   const content = pickString(d, ["body", "text", "selftext"]) ?? "";
 
-  // Quality filters — intentional drops, not errors. The classifier's
-  // source_confidence_score catches low-signal content downstream too,
-  // but cheap pre-filtering at ingest reduces classifier API spend.
+  // r/shopify is implicitly Shopify-context (the entire sub is about
+  // Shopify); other subreddits must mention Shopify literally. Pass the
+  // flag through to the shared gate.
   const author = pickString(d, ["username", "user", "author"]);
-  if (author && BOT_AUTHORS.has(author)) return { kind: "filtered" };
-  if (looksLikeAutomod(title ?? "")) return { kind: "filtered" };
-  if (looksLikeAutomod(content)) return { kind: "filtered" };
-
-  // Truly empty content is useless. Short snippets ("$50k/mo", "same here")
-  // can still be informative, so the threshold is intentionally low.
-  if (!isComment && !title && content.trim().length < 4) return { kind: "filtered" };
-  if (isComment && content.trim().length < 4) return { kind: "filtered" };
+  const implicitShopifyContext = subreddit
+    ? SHOPIFY_SUBREDDIT.test(subreddit)
+    : false;
+  const rejected = applyIngestGates({
+    author,
+    title,
+    content,
+    implicitShopifyContext,
+  });
+  if (rejected) return { kind: "filtered" };
 
   // Note: no upvote-score filter for comments. Reddit's vote-count fuzzing
   // shows 0/1 for most fresh content, and minority-opinion comments often
   // sit at 0–1 even when they carry the most useful pain signal. Let the
   // classifier sort signal from noise.
-
-  // Shopify context gate — must mention Shopify literally OR be posted in
-  // r/shopify. Without this, r/ecommerce posts about Stripe chargebacks etc.
-  // would slip through.
-  const topicBlob = `${title ?? ""}\n${content}`;
-  if (!isShopifyContext(topicBlob, subreddit)) return { kind: "filtered" };
-
-  // Topic gate — drop generic Shopify chatter (sales/shipping/etc.) that
-  // doesn't mention any Shopify-merchant-pain term. Saves classifier API
-  // spend and stops the dashboard filling with off-topic noise.
-  if (!passesShopifyPainGate(topicBlob)) return { kind: "filtered" };
 
   let parentExternalId: string | null = null;
   if (isComment) {
