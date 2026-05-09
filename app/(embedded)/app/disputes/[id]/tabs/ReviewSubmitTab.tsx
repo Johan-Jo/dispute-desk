@@ -31,11 +31,11 @@ import {
 import { useTranslations } from "next-intl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
+import { useSubmissionPreview } from "./useSubmissionPreview";
 import { SubmissionStatusCard } from "./sections/SubmissionStatusCard";
 import { ExactDataSentCard } from "./sections/ExactDataSentCard";
 import { NotSubmittedCard } from "./sections/NotSubmittedCard";
 import { FinalDefenseStatementCard } from "./sections/FinalDefenseStatementCard";
-import { FileEvidenceRoutingCard } from "./sections/FileEvidenceRoutingCard";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -53,7 +53,8 @@ interface Props {
 
 export default function ReviewSubmitTab({ workspace }: Props) {
   const { data, derived, clientState, actions } = workspace;
-  const view = useReviewView(workspace);
+  const submissionPreview = useSubmissionPreview(data?.pack?.id ?? null);
+  const view = useReviewView(workspace, submissionPreview);
   const tOverride = useTranslations("disputes.reviewTab.sections.override");
 
   const [overrideOpen, setOverrideOpen] = useState(false);
@@ -162,13 +163,14 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         onSubmit={handleSubmit}
       />
 
-      {/* File evidence routing (Phase 6) — only renders when the file
-          evidence flag is on AND the most recent save resolved native
-          attachments. Surfaces what landed in which Shopify *File slot. */}
-      <FileEvidenceRoutingCard uploads={data?.pack?.attachmentUploads ?? []} />
-
-      {/* §2 — Exact data sent to Shopify (five readable groups) */}
-      <ExactDataSentCard state={view.state} payload={view.payload} />
+      {/* §2 — Exact data sent to Shopify (six readable groups, including
+          customer details, native file slot routing, merchant uploads,
+          and the auto-generated pack PDF). */}
+      <ExactDataSentCard
+        state={view.state}
+        payload={view.payload}
+        loading={view.payloadLoading}
+      />
 
       {/* §3 — Not submitted (transparency, collapses when empty) */}
       <NotSubmittedCard items={view.notSubmitted} />

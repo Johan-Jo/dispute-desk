@@ -1191,10 +1191,12 @@ The Evidence tab is the analysis surface for a single dispute. It must answer th
 
 ### Review & Submit tab structure (4-section IA, 2026-05-02)
 
-**Status:** active. Supersedes the *Figma alignment 2026-04-27* layout below (retained for context). The 1354-LOC `ReviewSubmitTab.tsx` was replaced with a thin orchestrator that delegates to four labelled sections fed by `useReviewView`. No backend changes — the hook reads the existing workspace shape (including `data.submissionFields`, `data.rebuttalDraft`, `data.attachments`) and produces a typed view-model. The Shopify mutation payload is rendered byte-for-byte; only the visual grouping is presentational.
+**Status:** active. Supersedes the *Figma alignment 2026-04-27* layout below (retained for context). The 1354-LOC `ReviewSubmitTab.tsx` was replaced with a thin orchestrator that delegates to four labelled sections fed by `useReviewView`. The Shopify mutation payload is rendered byte-for-byte; only the visual grouping is presentational.
+
+**Live submission preview (2026-05-09):** `ReviewSubmitTab` now also calls a small client hook `useSubmissionPreview(packId)` that fetches `GET /api/packs/[packId]/submission-preview?format=raw`. That endpoint runs the **exact same** `composeShopifyMutationPayload` builder as the production save job (`saveToShopifyJob`), so the merchant view of "what will be sent" is byte-equivalent to the actual `disputeEvidenceUpdate` GraphQL input — including customer name/email and native file slot routing that the legacy `submissionFields` list does not expose. The preview hook's `loading: true` state surfaces a discreet inline indicator on §2; it never blocks the page or shows a skeleton (per the "no loading skeletons in §2" rule). The previously-separate `FileEvidenceRoutingCard` was removed in this rewrite — native file slot routing is now an inline attachment row inside the relevant group with an *"Attached to Shipping documentation"* badge.
 
 **Hard rules:**
-- **§2 ("Exact data sent to Shopify") matches the actual mutation byte-for-byte.** The five readable groups are pure presentation; no field content is transformed, no values are reordered inside a group beyond field-by-field rendering.
+- **§2 ("Exact data sent to Shopify") matches the actual mutation byte-for-byte.** The six readable groups are pure presentation; no field content is transformed, no values are reordered inside a group beyond field-by-field rendering.
 - **No loading skeletons in §2.** When the payload is absent (pre-build / empty pack), render the explicit empty-state copy *"Save your evidence first to see exactly what will be sent to the bank."* and stop.
 - **Bank-visible vs internal split is unambiguous.** §2 is what the bank sees; §3 lists what was excluded with a stable reason from a fixed dictionary; §4 is the rebuttal text.
 
@@ -1204,13 +1206,14 @@ The Evidence tab is the analysis surface for a single dispute. It must answer th
    - **Submitted**: `Evidence submitted to Shopify` chip + formatted timestamp (via `Intl.DateTimeFormat` with the active `next-intl` locale; bad ISO strings fall back to the raw value rather than throwing) + `Open in Shopify Admin` link from `getShopifyDisputeUrl(shopDomain, disputeEvidenceGid)` in `lib/shopify/shopifyAdminUrl.ts` (link hidden when the helper returns `null`).
    - **Ready to submit**: `Ready to submit` chip + the primary CTA. The CTA stays enabled whenever the system can accept a submit attempt (i.e. NOT `isBuilding` and NOT `isFailed`); readiness alone never disables the button — that would block the merchant outright. When `requiresOverride === true` (readiness blocked or `ready_with_warnings`), the CTA label flips to *"Submit anyway"* and the click routes through the override Modal instead of submitting directly.
 
-2. **Exact data sent to Shopify** (`ExactDataSentCard.tsx`) — bank-visible payload bucketed into five fixed presentational groups in this order:
+2. **Exact data sent to Shopify** (`ExactDataSentCard.tsx`) — bank-visible payload bucketed into six fixed presentational groups in this order. Each group can hold structured text fields **and** files (merchant uploads, native Shopify file slots, the auto-generated pack PDF). Groups are separated by a thin Polaris `Box` divider:
    - **Order details** — `accessActivityLog` (timeline / order activity).
+   - **Customer details** — `customerFirstName`, `customerLastName`, `customerEmailAddress` (sourced from the live mutation payload — these are not in the legacy `submissionFields` list).
    - **Payment verification** — currently no dedicated Shopify text field; AVS/CVV codes are embedded in `accessActivityLog` narrative. The header is hidden when the group has no rows (hide-when-empty rule).
-   - **Customer activity** — `shippingDocumentation`, `shippingDocumentationFile`.
-   - **Policies** — `refundPolicyDisclosure`, `cancellationPolicyDisclosure`, `refundRefusalExplanation`, `cancellationRebuttal`.
-   - **Additional evidence** — `uncategorizedText` plus all `data.attachments` (file uploads).
-   Empty groups are stripped at the hook layer and not rendered. The five-group routing lives in `EVIDENCE_TO_SHOPIFY` (in `useEvidenceSections.ts` — also consulted by §2 of EvidenceTab for the `includedAs` destination chip via `deriveSubmissionDestination`) and `GROUP_BY_FIELD` (in `useReviewView.ts`). Maintenance touchpoint: a new Shopify field not in the map silently falls into `additionalEvidence` (matches Shopify's `uncategorizedText` semantics).
+   - **Customer activity** — `shippingDocumentation`, `shippingDocumentationFile`, `customerCommunicationFile`, `serviceDocumentationFile`. Native file uploads landing in any of these `*File` slots render as an attachment row with an *"Attached to <slot>"* badge.
+   - **Policies** — `refundPolicyDisclosure`, `cancellationPolicyDisclosure`, `refundRefusalExplanation`, `cancellationRebuttal`, plus `refundPolicyFile` and `cancellationPolicyFile` native uploads.
+   - **Additional evidence** — `uncategorizedText` plus `uncategorizedFile`, all `data.attachments` (merchant-uploaded files that did NOT land in a native slot), and the **auto-generated pack PDF** (`pack.pdfPath`) as a discrete attachment row with a *"Pack PDF"* badge so the merchant sees it isn't buried in the rebuttal text.
+   Empty groups are stripped at the hook layer and not rendered. The six-group routing lives in `GROUP_BY_FIELD` (in `useReviewView.ts`); native slot routing uses `groupForNativeSlot()` in the same file. Maintenance touchpoint: a new Shopify field not in the map silently falls into `additionalEvidence` (matches Shopify's `uncategorizedText` semantics).
 
 3. **Not submitted (transparency)** (`NotSubmittedCard.tsx`) — items present in the pack but excluded from the bank-visible payload. Sources: any `submissionFields` row with `included === false`, plus items in `clientState.excludedFields`. Each row carries a stable reason from a fixed dictionary (`avoid_weakening` / `gateway_gated` / `merchant_waived` / `write_only`) — never free-text. Section collapses (returns `null`) when the list is empty.
 
@@ -1222,9 +1225,10 @@ The Evidence tab is the analysis surface for a single dispute. It must answer th
 
 **Files of record:**
 - `app/(embedded)/app/disputes/[id]/tabs/ReviewSubmitTab.tsx` (composition + override modal, ~200 LOC)
-- `app/(embedded)/app/disputes/[id]/tabs/useReviewView.ts` (pure derivation hook)
+- `app/(embedded)/app/disputes/[id]/tabs/useReviewView.ts` (pure derivation hook — merges workspace data + live submission preview)
+- `app/(embedded)/app/disputes/[id]/tabs/useSubmissionPreview.ts` (live fetch of `/api/packs/[packId]/submission-preview?format=raw`)
 - `app/(embedded)/app/disputes/[id]/tabs/sections/{SubmissionStatusCard,ExactDataSentCard,NotSubmittedCard,FinalDefenseStatementCard}.tsx`
-- i18n keys: `disputes.reviewTab.sections.{status,dataSent,notSubmitted,finalStatement,override}` across all 12 locale files.
+- i18n keys: `disputes.reviewTab.sections.{status,dataSent,notSubmitted,finalStatement,override}` across all 12 locale files (added 2026-05-09: `dataSent.loading` and `dataSent.groups.customerDetails`).
 
 ---
 
@@ -1878,7 +1882,7 @@ Phase 0 of the conditional file evidence layer (`docs/plans/conditional_file_evi
 
 **Submission-preview parity (`/api/packs/:id/submission-preview`)**: when the flag is on, the preview route runs the same `decideFileAttachments` + composes the same payload (with placeholder GIDs in the `*File` slots so compose's pointer block + `*File` field assignments fire identically). The merchant's "raw view" matches what saveToShopifyJob will actually send.
 
-**UI transparency (Phase 6)**: the workspace API (`/api/disputes/:id/workspace`) exposes `pack.attachmentUploads`. `EvidenceRow` renders a green **📎 Attached to <slot>** badge on rows whose latest upload landed natively. `ReviewSubmitTab` renders a `FileEvidenceRoutingCard` above the "Exact data sent" section listing per-file routing (`evidenceFieldKey → targetField`).
+**UI transparency (Phase 6, refactored 2026-05-09)**: the workspace API (`/api/disputes/:id/workspace`) exposes `pack.attachmentUploads`. `EvidenceRow` renders a green **📎 Attached to <slot>** badge on rows whose latest upload landed natively. On `ReviewSubmitTab`, native uploads now render **inline** within the relevant `ExactDataSentCard` group (Shipping documentation → "Customer activity", policy files → "Policies", etc.) with an *"Attached to <slot>"* badge — replacing the standalone `FileEvidenceRoutingCard` so merchants see the file alongside the structured fields it complements rather than in a separate card above.
 
 **Reinstall consent (Phase 7b)**: when the flag is on but the merchant's offline session was issued before commit `f61176c` (added the new `read/write_shopify_payments_dispute_file_uploads` scopes), the workspace API reports `fileEvidence.scopesGranted = false`. `ReviewSubmitTab` shows a "Reinstall DisputeDesk to enable native file evidence" banner with the missing scopes named explicitly. Until reinstall, evidence continues to flow as labelled links only.
 

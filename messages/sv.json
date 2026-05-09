@@ -682,8 +682,10 @@
             "unsubmitted": "This is exactly what will be saved to Shopify and sent to the bank."
           },
           "empty": "Save your evidence first to see exactly what will be sent to the bank.",
+          "loading": "Loading the latest submission preview…",
           "groups": {
             "orderDetails": "Order details",
+            "customerDetails": "Customer details",
             "paymentVerification": "Payment verification",
             "customerActivity": "Customer activity",
             "policies": "Policies",
