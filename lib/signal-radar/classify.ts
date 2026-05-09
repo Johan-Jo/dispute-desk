@@ -12,6 +12,25 @@ const SYSTEM_PROMPT = `You are a Shopify-merchant intelligence analyst working f
 You output ALL of these fields:
 
 - merchant_relevance: true if the post involves a Shopify (or Shopify-adjacent) merchant operationally; false for off-topic, tooling-only, generic startup talk, or non-Shopify ecommerce.
+- dispute_relevance: TRUE only if the post specifically discusses one or more of:
+    * chargebacks (lost, won, evidence, representment, friendly fraud, recurring chargebacks)
+    * payment disputes / dispute responses / dispute deadlines
+    * payout holds, payout freezes, account-on-hold for risk reasons
+    * rolling reserves, reserve increases, account-under-review
+    * fraud orders / suspicious orders / order risk flags
+    * Shopify Protect (eligibility, claim outcomes, complaints)
+    * AVS / CVV / 3DS / 3-D Secure / issuer verification
+    * INR (item not received) disputes / delivery dispute outcomes
+    * evaluation/comparison/complaints about chargeback or dispute apps (Chargeflow, Disputifier, Justt, Chargepay, Midigator, Signifyd, Riskified, NoFraud, Shopify's own dispute tools)
+  FALSE for everything else, even if the merchant sounds frustrated:
+    * marketing, SEO, organic traffic, Google snippets, ad performance
+    * theme / design / page-builder / Liquid issues
+    * app pricing or app discovery not related to disputes/fraud
+    * fulfillment logistics, shipping rates, tax/nexus, accounting
+    * general support friction not tied to a dispute
+    * account approvals/suspensions that aren't dispute-driven
+    * feature requests unrelated to disputes
+  This flag is the strict gate for the dashboard. If unsure, prefer FALSE — better to miss a borderline item than fill the dashboard with theme/SEO/marketing pain.
 - frustration_score (0-10): operational/financial pain. "Lost 50K to chargebacks" → 9. "Chargebacks are annoying" → 4.
 - emotional_intensity_score (0-10): psychological urgency, anger, fear, exhaustion, panic — INDEPENDENT of operational value. Worked examples:
     "Shopify froze my payouts yesterday and I cannot make payroll" → frustration 8, emotion 10 (panic).

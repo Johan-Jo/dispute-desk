@@ -111,6 +111,7 @@ export async function fetchSwitchingSignals(
     .select(ANALYSIS_SELECT)
     .eq("category", "migration_intent")
     .eq("merchant_relevance", true)
+    .eq("dispute_relevance", true)
     .gt("created_at", since)
     .order("signal_score", { ascending: false })
     .order("created_at", { ascending: false })
@@ -142,6 +143,7 @@ export async function fetchCompetitorPain(
     .select(ANALYSIS_SELECT)
     .not("competitor", "is", null)
     .eq("merchant_relevance", true)
+    .eq("dispute_relevance", true)
     .gt("created_at", t14)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -212,6 +214,7 @@ export async function fetchRecentPainPoints(
     .select(ANALYSIS_SELECT)
     .in("category", PAIN_CATEGORIES)
     .eq("merchant_relevance", true)
+    .eq("dispute_relevance", true)
     .gte("signal_score", 4)
     .gt("created_at", since)
     .order("signal_score", { ascending: false })
@@ -233,6 +236,7 @@ export async function fetchHighValueLeads(
     .select(ANALYSIS_SELECT)
     .gte("signal_score", 6)
     .eq("merchant_relevance", true)
+    .eq("dispute_relevance", true)
     .neq("merchant_scale_signals", "[]")
     .gt("created_at", since)
     .order("created_at", { ascending: false })
@@ -262,6 +266,7 @@ export async function fetchKpiCounts(
       .from("signal_analysis")
       .select("*", { count: "exact", head: true })
       .eq("merchant_relevance", true)
+      .eq("dispute_relevance", true)
       .gte("signal_score", 7)
       .gt("created_at", since)
       .not("category", "in", `(${HIDDEN_CATEGORIES.map((c) => `"${c}"`).join(",")})`),
@@ -270,18 +275,21 @@ export async function fetchKpiCounts(
       .select("*", { count: "exact", head: true })
       .eq("category", "migration_intent")
       .eq("merchant_relevance", true)
+      .eq("dispute_relevance", true)
       .gt("created_at", since),
     sb
       .from("signal_analysis")
       .select("*", { count: "exact", head: true })
       .eq("category", "reserve_fear")
       .eq("merchant_relevance", true)
+      .eq("dispute_relevance", true)
       .gt("created_at", since),
     sb
       .from("signal_analysis")
       .select("*", { count: "exact", head: true })
       .eq("category", "competitor_frustration")
       .eq("merchant_relevance", true)
+      .eq("dispute_relevance", true)
       .gt("created_at", since),
   ]);
 

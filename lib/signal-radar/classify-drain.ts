@@ -172,6 +172,7 @@ async function processOne(
   const { error: insertErr } = await sb.from("signal_analysis").insert({
     source_id: row.id,
     merchant_relevance: result.data.merchant_relevance,
+    dispute_relevance: result.data.dispute_relevance,
     frustration_score: result.data.frustration_score,
     emotional_intensity_score: result.data.emotional_intensity_score,
     signal_score: result.data.signal_score,

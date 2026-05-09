@@ -44,6 +44,7 @@ export const COMPETITORS = [
 
 export const SignalAnalysisSchema = z.object({
   merchant_relevance: z.boolean(),
+  dispute_relevance: z.boolean(),
   frustration_score: z.number().int().min(0).max(10),
   emotional_intensity_score: z.number().int().min(0).max(10),
   signal_score: z.number().int().min(0).max(10),
@@ -68,6 +69,7 @@ export const SIGNAL_ANALYSIS_JSON_SCHEMA = {
     additionalProperties: false,
     required: [
       "merchant_relevance",
+      "dispute_relevance",
       "frustration_score",
       "emotional_intensity_score",
       "signal_score",
@@ -83,6 +85,7 @@ export const SIGNAL_ANALYSIS_JSON_SCHEMA = {
     ],
     properties: {
       merchant_relevance: { type: "boolean" },
+      dispute_relevance: { type: "boolean" },
       frustration_score: { type: "integer", minimum: 0, maximum: 10 },
       emotional_intensity_score: { type: "integer", minimum: 0, maximum: 10 },
       signal_score: { type: "integer", minimum: 0, maximum: 10 },

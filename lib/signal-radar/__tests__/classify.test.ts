@@ -3,6 +3,7 @@ import { SignalAnalysisSchema } from "@/lib/signal-radar/schema";
 
 const VALID = {
   merchant_relevance: true,
+  dispute_relevance: true,
   frustration_score: 7,
   emotional_intensity_score: 8,
   signal_score: 9,
