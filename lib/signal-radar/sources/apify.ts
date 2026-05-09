@@ -34,32 +34,33 @@ const DEFAULT_ACTOR_ID = "trudax~reddit-scraper-lite";
  * shape works.
  */
 /**
- * Narrative-specific queries beat generic ones on Reddit search.
- * "shopify chargeback" returns news + casual mentions; "shopify froze"
- * returns merchants in actual crisis. Limited to ~6 queries because the
- * Apify lite actor needs ~10-15s per query and we have an 80-second budget
- * before Vercel kills the function.
+ * Tier 1 Reddit sources: every post in r/shopify regardless of phrasing.
+ * Merchants almost never write "rolling reserve" or "friendly fraud" —
+ * they write "shopify held my money" and "what the hell is this". Searching
+ * for known terms misses the bulk of real pain. The classifier downstream
+ * decides relevance.
+ *
+ * Four r/shopify views give wide coverage:
+ *   /new     — latest posts (catch fresh pain within the cron window)
+ *   /hot     — algorithmic trending (what's getting engagement right now)
+ *   /top?t=day  — most-upvoted of the day (caught up to where new can't reach)
+ *   /top?t=week — most-upvoted of the week (catches older but actively-discussed)
  */
-const SHOPIFY_PAIN_QUERIES: string[] = [
-  // Reserve / payout crises (highest emotion)
-  '"shopify reserve"',
-  '"rolling reserve"',
-  '"payouts frozen"',
-  // Dispute outcomes
-  '"lost a chargeback"',
-  // Migration intent
-  '"alternative to chargeflow"',
-  // Competitor mentions (broad sweep — classifier sorts)
-  "chargeflow shopify",
+const REDDIT_TIER1_URLS: string[] = [
+  "https://www.reddit.com/r/shopify/new/",
+  "https://www.reddit.com/r/shopify/hot/",
+  "https://www.reddit.com/r/shopify/top/?t=day",
+  "https://www.reddit.com/r/shopify/top/?t=week",
 ];
 
 /**
- * Per-run cap. With ~6 queries, the lite actor scrapes ~1 item/second so
- * 60 items takes ~60-80s. Vercel function maxDuration is 300s; we set the
- * Apify-side timeout to 240s to give plenty of headroom while leaving 60s
- * buffer for Apify's own startup + our upsert.
+ * Per-run cap. r/shopify alone produces 30+ submissions/day; with comments
+ * mixed in, 100 raw items covers ~4-6 hours of activity. We need to catch
+ * posts within an hour of being made (cron is hourly), so scraping multiple
+ * r/shopify views (new, hot, top) gives broader coverage. Apify timeout is
+ * generous; Vercel's 300s function budget bounds the whole call.
  */
-const MAX_ITEMS = 60;
+const MAX_ITEMS = 100;
 /** Server-side (Apify) timeout in seconds. Apify aborts the run if exceeded. */
 const APIFY_RUN_TIMEOUT_SECS = 240;
 
@@ -250,21 +251,17 @@ export const apifyAdapter: SignalSourceAdapter = {
       `?token=${encodeURIComponent(token)}` +
       `&timeout=${APIFY_RUN_TIMEOUT_SECS}`;
 
+    // Tier 1 broad ingest — every post in r/shopify across new/hot/top.
+    // Implicit Shopify context (entire sub is Shopify), so classifier judges
+    // relevance downstream rather than us pre-filtering on phrasing.
+    const startUrls = REDDIT_TIER1_URLS.map((url) => ({ url }));
+
     const input = {
-      // Search-based ingest: each query targets a Shopify-pain narrative.
-      // Reddit's global search across all subs catches Shopify-specific posts
-      // wherever they happen — venting in r/Entrepreneur, advice in r/SaaS, etc.
-      startUrls: SHOPIFY_PAIN_QUERIES.map((q) => ({
-        url: `https://www.reddit.com/search/?q=${encodeURIComponent(q)}&sort=new&t=month`,
-      })),
-      // Some actor variants accept `searches` directly — pass both, harmless duplicate.
-      searches: SHOPIFY_PAIN_QUERIES,
+      startUrls,
       maxItems: MAX_ITEMS,
       maxPostCount: MAX_ITEMS,
       maxPosts: MAX_ITEMS,
       type: "posts",
-      sort: "new",
-      time: "month",
       includeNSFW: false,
       proxy: { useApifyProxy: true },
     };

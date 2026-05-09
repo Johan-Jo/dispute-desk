@@ -26,8 +26,17 @@ const COMMUNITY_BASE = "https://community.shopify.com";
 const USER_AGENT =
   "DisputeDesk-SignalRadar/1.0 (+https://disputedesk.app; admin-only intelligence)";
 
-/** Endpoints to harvest each run. Latest = freshness; top = highest-engagement of the day. */
-const ENDPOINTS: string[] = ["/latest.json", "/top.json?period=daily"];
+/**
+ * Endpoints to harvest each run. Three views give broad coverage:
+ *   latest             — newest topics (catch fresh pain)
+ *   top daily          — highest-engagement today (what merchants are reacting to)
+ *   top weekly         — highest-engagement this week (catches older actively-discussed)
+ */
+const ENDPOINTS: string[] = [
+  "/latest.json",
+  "/top.json?period=daily",
+  "/top.json?period=weekly",
+];
 
 interface DiscourseTopic {
   id: number;
