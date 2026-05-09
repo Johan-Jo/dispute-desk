@@ -71,13 +71,13 @@ export function DetailPanel({
             </div>
           </section>
 
-          {row.merchant_scale_signals.length > 0 && (
+          {(row.merchant_scale_signals ?? []).length > 0 && (
             <section>
               <div className="text-xs uppercase tracking-wide text-[#64748B] font-semibold mb-2">
                 Merchant scale signals
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {row.merchant_scale_signals.map((s, i) => (
+                {(row.merchant_scale_signals ?? []).map((s, i) => (
                   <span
                     key={i}
                     className="text-xs px-2 py-1 rounded bg-[#F1F5F9] text-[#0F172A]"

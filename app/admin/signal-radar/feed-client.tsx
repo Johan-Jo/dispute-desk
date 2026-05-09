@@ -28,10 +28,16 @@ function loadLastRefresh(): RefreshSnapshot | null {
   try {
     const raw = window.sessionStorage.getItem(REFRESH_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as RefreshSnapshot;
+    const parsed = JSON.parse(raw) as Partial<RefreshSnapshot>;
     if (typeof parsed.at !== "number") return null;
     if (Date.now() - parsed.at > 60 * 60 * 1000) return null;
-    return parsed;
+    return {
+      at: parsed.at,
+      fetched_submissions: parsed.fetched_submissions ?? 0,
+      fetched_comments: parsed.fetched_comments ?? 0,
+      inserted: parsed.inserted ?? 0,
+      errors: Array.isArray(parsed.errors) ? parsed.errors : [],
+    };
   } catch {
     return null;
   }
@@ -550,7 +556,8 @@ function RefreshStatusBanner({
   const tickAt = nextClassifierTickAt(snap.at);
   const remaining = tickAt - now;
   const tickReady = remaining <= 0;
-  const hasErrors = snap.errors.length > 0;
+  const errors = snap.errors ?? [];
+  const hasErrors = errors.length > 0;
 
   return (
     <div className="space-y-2">
@@ -607,9 +614,9 @@ function RefreshStatusBanner({
       </div>
       {hasErrors && (
         <div className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]">
-          <div className="font-semibold mb-1">Ingest errors ({snap.errors.length}):</div>
+          <div className="font-semibold mb-1">Ingest errors ({errors.length}):</div>
           <ul className="list-disc list-inside space-y-0.5">
-            {snap.errors.map((e, i) => (
+            {errors.map((e, i) => (
               <li key={i} className="break-all">{e}</li>
             ))}
           </ul>

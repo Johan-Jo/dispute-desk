@@ -15,17 +15,18 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function WhatChangedWidget({ deltas }: { deltas: CategoryDelta[] }) {
+  const safeDeltas = deltas ?? [];
   return (
     <div className="rounded-lg bg-white border border-[#E2E8F0] p-5">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-[#2563EB]" />
         <h2 className="font-semibold text-[#0F172A]">What Changed This Week?</h2>
       </div>
-      {deltas.length === 0 ? (
+      {safeDeltas.length === 0 ? (
         <p className="text-sm text-[#64748B]">No data yet — week-over-week comparison needs at least 14 days of signal.</p>
       ) : (
         <ul className="space-y-2">
-          {deltas.slice(0, 8).map((d) => (
+          {safeDeltas.slice(0, 8).map((d) => (
             <li
               key={d.category}
               className="flex items-center justify-between gap-3 text-sm"
