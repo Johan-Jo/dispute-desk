@@ -193,7 +193,7 @@ export const redditAdapter: SignalSourceAdapter = {
     const items: IngestedItem[] = [];
     const errors: string[] = [];
     const usingProxy = Boolean(
-      process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET
+      process.env.REDDIT_PROXY_URL && getProxySecret()
     );
 
     // Fetch all 4 r/shopify views, dedupe submissions across them.
