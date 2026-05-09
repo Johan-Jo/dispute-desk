@@ -35,42 +35,33 @@ const DEFAULT_ACTOR_ID = "trudax~reddit-scraper-lite";
  */
 /**
  * Narrative-specific queries beat generic ones on Reddit search.
- * "shopify chargeback" returns news + casual mentions; "shopify froze payouts"
- * returns merchants in actual crisis. These targets the language merchants use
- * when they're hurting.
+ * "shopify chargeback" returns news + casual mentions; "shopify froze"
+ * returns merchants in actual crisis. Limited to ~6 queries because the
+ * Apify lite actor needs ~10-15s per query and we have an 80-second budget
+ * before Vercel kills the function.
  */
 const SHOPIFY_PAIN_QUERIES: string[] = [
-  // Reserve / payout crises
-  '"shopify froze"',
+  // Reserve / payout crises (highest emotion)
   '"shopify reserve"',
   '"rolling reserve"',
   '"payouts frozen"',
   // Dispute outcomes
   '"lost a chargeback"',
-  '"won a chargeback"',
-  '"shopify dispute"',
   // Migration intent
   '"alternative to chargeflow"',
-  '"alternative to disputifier"',
-  '"chargeflow review"',
-  '"disputifier review"',
-  // Operational pain
-  '"shopify protect"',
-  '"merchant of record"',
-  // Competitor mentions (broad, classifier filters)
-  "chargeflow",
-  "disputifier",
-  "chargepay",
+  // Competitor mentions (broad sweep — classifier sorts)
+  "chargeflow shopify",
 ];
 
 /**
- * Per-run cap. The gate drops most items, so we ingest more raw to end up
- * with a usable harvest. ~150 items split across ~10 queries takes ~60-90s
- * on the lite actor.
+ * Per-run cap. With ~6 queries, the lite actor scrapes ~1 item/second so
+ * 60 items takes ~60-80s. Vercel function maxDuration is 300s; we set the
+ * Apify-side timeout to 240s to give plenty of headroom while leaving 60s
+ * buffer for Apify's own startup + our upsert.
  */
-const MAX_ITEMS = 150;
-/** Server-side (Apify) timeout in seconds — Apify aborts if its run exceeds this. */
-const APIFY_RUN_TIMEOUT_SECS = 50;
+const MAX_ITEMS = 60;
+/** Server-side (Apify) timeout in seconds. Apify aborts the run if exceeded. */
+const APIFY_RUN_TIMEOUT_SECS = 240;
 
 interface ApifyRedditItem {
   id?: string;
