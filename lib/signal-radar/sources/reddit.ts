@@ -1,19 +1,25 @@
+import { applyIngestGates } from "./utils";
 import type {
   IngestedItem,
   IngestResult,
   SignalSourceAdapter,
 } from "./types";
 
-const SUBREDDITS = [
-  "shopify",
-  "ecommerce",
-  "dropshipping",
-  "Entrepreneur",
-  "smallbusiness",
+/**
+ * Tier 1 Reddit views — broad ingestion of r/shopify across new/hot/top.
+ * Posts here are implicitly Shopify-context, so the classifier judges
+ * relevance without us pre-filtering on phrasing. Multiple views catch
+ * posts that scrolled off /new but are still actively discussed.
+ */
+const SHOPIFY_VIEWS: string[] = [
+  "/r/shopify/new.json",
+  "/r/shopify/hot.json",
+  "/r/shopify/top.json?t=day",
+  "/r/shopify/top.json?t=week",
 ];
 
-const SUBMISSION_LIMIT = 50;
-const COMMENTS_PER_SUBMISSION = 20;
+const SUBMISSIONS_PER_VIEW = 25;
+const COMMENTS_PER_SUBMISSION = 5;
 const REDDIT_PUBLIC_BASE = "https://www.reddit.com";
 const DEFAULT_USER_AGENT =
   "DisputeDesk-SignalRadar/1.0 (admin-only Shopify-merchant intelligence; contact: oi@johan.com.br)";
@@ -78,13 +84,20 @@ interface RedditComment {
   link_id: string;
 }
 
-async function fetchSubmissions(sub: string): Promise<RedditSubmission[]> {
-  const res = await redditFetch(
-    `/r/${sub}/new.json?limit=${SUBMISSION_LIMIT}&raw_json=1`
-  );
+function withParam(path: string, key: string, value: string | number): string {
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}${key}=${value}`;
+}
+
+async function fetchListing(viewPath: string): Promise<RedditSubmission[]> {
+  let p = withParam(viewPath, "limit", SUBMISSIONS_PER_VIEW);
+  p = withParam(p, "raw_json", 1);
+  const res = await redditFetch(p);
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Reddit listing ${sub} failed ${res.status}: ${body.slice(0, 200)}`);
+    throw new Error(
+      `Reddit ${viewPath} failed ${res.status}: ${body.slice(0, 200)}`
+    );
   }
   const json = await res.json();
   const children: RedditListingChild<RedditSubmission>[] =
@@ -93,12 +106,12 @@ async function fetchSubmissions(sub: string): Promise<RedditSubmission[]> {
 }
 
 async function fetchTopLevelComments(
-  sub: string,
   postId: string
 ): Promise<RedditComment[]> {
-  const res = await redditFetch(
-    `/r/${sub}/comments/${postId}.json?limit=${COMMENTS_PER_SUBMISSION}&depth=1&sort=top&raw_json=1`
-  );
+  const path =
+    `/r/shopify/comments/${postId}.json` +
+    `?limit=${COMMENTS_PER_SUBMISSION}&depth=1&sort=top&raw_json=1`;
+  const res = await redditFetch(path);
   if (!res.ok) return [];
   const json = await res.json();
   if (!Array.isArray(json) || json.length < 2) return [];
@@ -108,29 +121,22 @@ async function fetchTopLevelComments(
   return children
     .filter((c) => c.kind === "t1")
     .map((c) => c.data)
-    .filter((c) => {
-      if (!c || typeof c.body !== "string") return false;
-      if (c.body === "[deleted]" || c.body === "[removed]") return false;
-      if (c.collapsed === true) return false;
-      if ((c.score ?? 0) < 1) return false;
-      return true;
-    })
     .slice(0, COMMENTS_PER_SUBMISSION);
 }
 
-function submissionToItem(sub: RedditSubmission): IngestedItem {
+function submissionToItem(s: RedditSubmission): IngestedItem {
   return {
     platform: "reddit",
     contentType: "submission",
-    externalId: sub.name,
+    externalId: s.name,
     parentExternalId: null,
-    subreddit: `r/${sub.subreddit}`,
-    url: `https://www.reddit.com${sub.permalink}`,
-    author: sub.author ?? null,
-    title: sub.title,
-    content: sub.selftext ?? "",
-    rawPayload: sub,
-    postedAt: new Date(sub.created_utc * 1000).toISOString(),
+    subreddit: `r/${s.subreddit}`,
+    url: `https://www.reddit.com${s.permalink}`,
+    author: s.author ?? null,
+    title: s.title,
+    content: s.selftext ?? "",
+    rawPayload: s,
+    postedAt: new Date(s.created_utc * 1000).toISOString(),
   };
 }
 
@@ -150,6 +156,19 @@ function commentToItem(c: RedditComment): IngestedItem {
   };
 }
 
+function passesGate(item: IngestedItem): boolean {
+  // r/shopify is implicitly Shopify-context — don't require a literal "shopify"
+  // mention. The classifier downstream judges relevance.
+  return (
+    applyIngestGates({
+      author: item.author,
+      title: item.title,
+      content: item.content,
+      implicitShopifyContext: true,
+    }) === null
+  );
+}
+
 export const redditAdapter: SignalSourceAdapter = {
   platform: "reddit",
   async ingest(): Promise<IngestResult> {
@@ -159,34 +178,59 @@ export const redditAdapter: SignalSourceAdapter = {
       process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET
     );
 
-    for (const sub of SUBREDDITS) {
-      let submissions: RedditSubmission[] = [];
+    // Fetch all 4 r/shopify views, dedupe submissions across them.
+    const seenSubmissions = new Set<string>();
+    const uniqueSubmissions: RedditSubmission[] = [];
+    for (const view of SHOPIFY_VIEWS) {
       try {
-        submissions = await fetchSubmissions(sub);
+        const subs = await fetchListing(view);
+        for (const s of subs) {
+          if (seenSubmissions.has(s.id)) continue;
+          seenSubmissions.add(s.id);
+          uniqueSubmissions.push(s);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[signal-radar] reddit ${sub} listing error:`, err);
-        errors.push(`r/${sub}: ${msg.slice(0, 160)}`);
-        continue;
-      }
-
-      for (const s of submissions) {
-        items.push(submissionToItem(s));
-        try {
-          const comments = await fetchTopLevelComments(sub, s.id);
-          for (const c of comments) items.push(commentToItem(c));
-        } catch (err) {
-          console.warn(`[signal-radar] reddit ${sub}/${s.id} comments error:`, err);
-        }
+        console.warn(`[signal-radar] reddit ${view} error:`, err);
+        errors.push(`${view}: ${msg.slice(0, 160)}`);
       }
     }
 
-    // If every subreddit failed AND we weren't proxying, suggest the proxy
-    if (items.length === 0 && errors.length === SUBREDDITS.length && !usingProxy) {
+    // Map submissions through the gate
+    for (const s of uniqueSubmissions) {
+      const item = submissionToItem(s);
+      if (passesGate(item)) items.push(item);
+    }
+
+    // Fetch top-level comments for each kept submission. Comments are gated
+    // separately so junk doesn't ride in on the back of a relevant post.
+    for (const s of uniqueSubmissions) {
+      try {
+        const comments = await fetchTopLevelComments(s.id);
+        for (const c of comments) {
+          const item = commentToItem(c);
+          if (passesGate(item)) items.push(item);
+        }
+      } catch (err) {
+        // Comments are nice-to-have; don't surface per-post fetch errors as
+        // top-level errors unless every fetch fails (already handled below).
+        console.warn(`[signal-radar] reddit comments ${s.id} error:`, err);
+      }
+    }
+
+    if (
+      items.length === 0 &&
+      errors.length === SHOPIFY_VIEWS.length &&
+      !usingProxy
+    ) {
       errors.push(
-        "All Reddit fetches failed and REDDIT_PROXY_URL is not set — configure the Cloudflare Worker proxy (see cloudflare-workers/signal-radar-reddit-proxy/README.md)."
+        "All r/shopify fetches failed and REDDIT_PROXY_URL is not set — deploy the Cloudflare Worker proxy (cloudflare-workers/signal-radar-reddit-proxy/README.md) and configure REDDIT_PROXY_URL + REDDIT_PROXY_SECRET on Vercel."
       );
     }
+
+    console.info(
+      `[signal-radar] reddit views=${SHOPIFY_VIEWS.length} unique_submissions=${uniqueSubmissions.length} kept_items=${items.length} errors=${errors.length}`
+    );
 
     return { items, errors };
   },

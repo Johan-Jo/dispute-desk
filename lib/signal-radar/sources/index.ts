@@ -8,23 +8,38 @@ import { shopifyCommunityAdapter } from "./shopify-community";
  *
  * Always-on:
  *   - shopifyCommunityAdapter — community.shopify.com (Discourse JSON, free,
- *     no IP block; highest-signal source for Shopify-merchant pain).
+ *     no IP block; highest-signal source).
  *
- * Reddit selection (for the Reddit slot):
- *   1. APIFY_API_TOKEN (or APIFY_API_KEY) set → Apify Reddit Scraper (paid,
- *      reliable, primary).
- *   2. neither set → direct Reddit (works on local dev, blocked on Vercel —
- *      a clear "configure ingest" error surfaces in the UI banner).
+ * Reddit selection (priority order, first match wins):
+ *   1. REDDIT_PROXY_URL + REDDIT_PROXY_SECRET set → direct Reddit via the
+ *      free Cloudflare Worker proxy. **Preferred** — free, reliable.
+ *   2. APIFY_API_TOKEN/APIFY_API_KEY set → Apify Reddit Scraper (paid
+ *      fallback, only used if no proxy is configured).
+ *   3. neither → direct Reddit (works on residential IPs / local dev,
+ *      403s on Vercel datacenter IPs).
  */
 export function getDefaultAdapters(): SignalSourceAdapter[] {
   const adapters: SignalSourceAdapter[] = [shopifyCommunityAdapter];
-  adapters.push(getApifyToken() ? apifyAdapter : redditAdapter);
+
+  const hasProxy = Boolean(
+    process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET
+  );
+  if (hasProxy) {
+    adapters.push(redditAdapter);
+  } else if (getApifyToken()) {
+    adapters.push(apifyAdapter);
+  } else {
+    adapters.push(redditAdapter);
+  }
+
   return adapters;
 }
 
-/** Backward-compat — returns the single Reddit adapter only. Kept for any
- * legacy callers; new code should use getDefaultAdapters. */
+/** Backward-compat — returns just the Reddit adapter. */
 export function getRedditAdapter(): SignalSourceAdapter {
+  if (process.env.REDDIT_PROXY_URL && process.env.REDDIT_PROXY_SECRET) {
+    return redditAdapter;
+  }
   if (getApifyToken()) return apifyAdapter;
   return redditAdapter;
 }
