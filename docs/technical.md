@@ -687,6 +687,54 @@ The fix layers three guarantees:
 
 **What this does NOT do:** it does not change the FK ON DELETE behaviour (still NO ACTION) and does not add CASCADE — cascading deletes would silently wipe audit history when a parent dispute is deleted by ordinary code, defeating the audit guarantee.
 
+## Shopify Fraud Intelligence (Phase 1)
+
+Positioning: **chargeback operations + merchant intelligence**, NOT fraud prevention. The layer surfaces Shopify's existing fraud analysis (risk levels, fraud-protection tier, fulfillment patterns) as historical context — it does **not** make checkout decisions, block orders, or attempt approval optimization. Copy throughout the embedded app must hold this distinction.
+
+### Schema (migration `20260510150000_fraud_intelligence_orders.sql`)
+
+Three tables + columns on `shops`:
+
+- **`shopify_orders`** — one row per Shopify order, immutable risk snapshot. Carries the columns the dashboard, future timing analytics, and risk-to-dispute conversion all depend on:
+  - identity: `shopify_order_id`, `shopify_order_number`, `shop_id`
+  - timing: `processed_at`, `created_at_shopify`, `cancelled_at`, **`fulfilled_at`** (first fulfillment — load-bearing for "time-to-fulfillment after high-risk classification" intelligence)
+  - geography: `country`, **`is_cross_border`**, **`distance_bucket`** (nullable freeform `local|regional|international|long_distance_domestic|…`; persisted at ingest so future cross-border analytics never re-derive from raw addresses)
+  - money: `currency`, `order_total`, `payment_gateway`
+  - status: `financial_status`, `fulfillment_status`, `cancel_reason`
+  - **immutable risk snapshot:** `risk_level_initial`, `risk_recommendation_initial`, `risk_provider_initial` — enforced by `shopify_orders_lock_initial_risk_trg` (BEFORE UPDATE trigger raises `check_violation` if any of the three previously-set non-null values change). The trigger permits the `null → first-observed` transition, so backfill can populate the snapshot lazily.
+  - fraud protection: `fraud_protection_level` (`fully_protected | partially_protected | not_protected | pending | not_eligible | not_available`)
+  - denormalized chargeback flags: `has_chargeback`, `chargeback_type`, `chargeback_status` — reconciled by job from `disputes`, NEVER a substitute for it.
+  - Indexes: `(shop_id, processed_at desc)`, `(shop_id, risk_level_initial) where risk_level_initial is not null`, `(shop_id, risk_level_initial) where has_chargeback`, `(processed_at)`.
+
+- **`shopify_order_risk_assessments`** — many-to-one per `(shop, order, provider, snapshot_at)`. Mutable. Stores per-provider revisions; the dashboard reads the **latest** snapshot per `(order, provider)`. The immutable `risk_level_initial` on `shopify_orders` is the source of truth for "what Shopify thought at the time" — this table is the source of truth for "what Shopify thinks now."
+
+- **`shop_fraud_daily_metrics(shop_id, date, …)`** — per-day rollup parallel to `shop_daily_metrics`. Powers the embedded fraud KPI row with O(1) window aggregation. Carries `orders_total`, `orders_low / orders_medium / orders_high / orders_none / orders_pending`, `orders_fulfilled_high_risk`, `fraud_disputes`, `total_disputes`, `chargebacks`, `fully_protected_value`, `eligible_protected_value`, `last_synced_at`. Acceptance-rate denominator = `orders_low + orders_medium`; `orders_none` and `orders_pending` are intentionally excluded and the dashboard tooltip **must** disclose this ("Acceptance rate is calculated from orders classified by Shopify as low or medium risk. Orders without completed fraud analysis are excluded.").
+
+- **`shops.historical_import_*`** — backfill state machine that gates the onboarding banner:
+  - `historical_import_status` ∈ `not_started | in_progress | complete | failed` (default `not_started`)
+  - `historical_import_progress_pct` 0–100
+  - `historical_import_since_date`, `historical_import_completed_at`
+  - `historical_import_orders_total`, `historical_import_orders_processed`
+  - `historical_import_scope_granted` ∈ `default_window | read_all_orders` — drives `historical_import_since_date` (60-day default vs full history)
+
+All three new tables are service-role-only (RLS enabled, no policies — matches `shop_daily_metrics`).
+
+### Onboarding banner copy contract
+
+The dashboard insight banner only renders when `shops.historical_import_status = 'complete'`. Pre-completion the dashboard shows a neutral "Analyzing your order history…" progress card with processed/total counts.
+
+Once complete, the banner leads with **insight, not verdict**:
+
+- **Headline:** "We analyzed {N} historical Shopify orders."
+- **Body:** "{X}% of recent orders were classified as high-risk by Shopify's fraud analysis. {Y}% of Shopify high-risk orders were still fulfilled. You can now monitor fraud-risk exposure, operational patterns, and dispute trends directly inside DisputeDesk."
+- **Supporting metric (secondary hierarchy):** "Current chargeback health: {status}" — never the lead, never headline-weight.
+
+Never lead onboarding with `Your chargeback health is At Risk` — banner must create curiosity and perceived value, not defensive reaction. CTAs: `View Risk Profile`, `Understand Chargeback Health`.
+
+### Verification
+
+`scripts/verify-fraud-intel-schema.mjs` (service-role; cleans up after itself) asserts: tables present, columns present (including `fulfilled_at`, `is_cross_border`, `distance_bucket`), `shops.historical_import_*` defaults applied, immutability trigger rejects all three `risk_*_initial` mutations, trigger permits `null → first observed` transition, `historical_import_status` check constraint enforced. Run after touching the migration.
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.
