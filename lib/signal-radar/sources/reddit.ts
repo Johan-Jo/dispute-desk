@@ -20,10 +20,13 @@ const SHOPIFY_VIEWS: string[] = [
   "/r/shopify/hot.json",
   "/r/shopify/top.json?t=day",
   "/r/shopify/top.json?t=week",
-  "/r/chargeback/new.json",
-  "/r/chargeback/top.json?t=week",
+  // r/chargeback was banned by Reddit; r/chargebacks (plural) is the surviving sub.
+  "/r/chargebacks/new.json",
+  "/r/chargebacks/top.json?t=week",
   "/r/Stripe/new.json",
   "/r/Stripe/top.json?t=week",
+  "/r/paypal/new.json",
+  "/r/paypal/top.json?t=week",
   "/r/Etsy/top.json?t=week",
 ];
 
