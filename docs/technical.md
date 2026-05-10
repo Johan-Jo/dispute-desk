@@ -735,6 +735,19 @@ Never lead onboarding with `Your chargeback health is At Risk` — banner must c
 
 `scripts/verify-fraud-intel-schema.mjs` (service-role; cleans up after itself) asserts: tables present, columns present (including `fulfilled_at`, `is_cross_border`, `distance_bucket`), `shops.historical_import_*` defaults applied, immutability trigger rejects all three `risk_*_initial` mutations, trigger permits `null → first observed` transition, `historical_import_status` check constraint enforced. Run after touching the migration.
 
+### Backfill GraphQL query (`lib/shopify/queries/ordersForBackfill.ts`)
+
+Separate from `ordersForSnapshot.ts` (which carries only `id|createdAt|test` and powers the cheap chargeback-rate bucketing). The backfill query carries the richer projection persisted to `shopify_orders`: identity (`id`, `name`), timing (`createdAt`, `processedAt`, `cancelledAt`, first-fulfillment `createdAt`), money (`totalPriceSet`, `paymentGatewayNames`), status (`displayFinancialStatus`, `displayFulfillmentStatus`, `cancelReason`), geography (`shippingAddress.countryCode`), and the fraud-signal projection: `shopifyProtect.status` plus `risk { recommendation, assessments { riskLevel, provider, facts } }`. `PAGE_SIZE = 100` (vs. 250 on the snapshot query) to keep cost-per-page within Shopify's 1000-bucket / 50-restore-rate budget after the risk + fulfillment expansion.
+
+Defensive parsing: every nested object is typed as nullable even where the 2026-01 schema declares non-null. The `normalizeBackfillOrder` helper:
+- **Picks the highest-severity risk level across all assessments** (`HIGH > MEDIUM > LOW > PENDING > NONE`) for `risk_level_initial`. The provider attached to that winning assessment becomes `risk_provider_initial`; falls back to `"shopify"` when blank/missing.
+- **Leaves all three `risk_*_initial` fields null when no assessments are present** — never writes `NONE` as a stand-in. The immutability trigger relies on the null → first-observed transition; writing a synthetic NONE would lock real future assessments out.
+- **`fraud_protection_level` stores raw `shopifyProtect.status`** (`PROTECTED | ACTIVE | PENDING | INACTIVE | NOT_PROTECTED`). The PRD's normalized vocabulary (`fully_protected | partially_protected | …`) is a future presentation-layer mapping, not a storage concern.
+- **`is_cross_border`** is null when either the shipping country or the store country is unknown — never guessed. Compared case-insensitively.
+- **`distance_bucket`** is null in v1; the column exists so future ingest passes can backfill it without a migration.
+
+Pure helpers (`pickInitialRisk`, `pickFulfilledAt`, `normalizeBackfillOrder`) are unit-tested in `lib/shopify/queries/__tests__/ordersForBackfill.test.ts` (23 tests).
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.
