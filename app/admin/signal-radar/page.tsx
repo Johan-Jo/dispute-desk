@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Radar, ListFilter } from "lucide-react";
+import { Radar, ListFilter, Settings as SettingsIcon } from "lucide-react";
 import { getServiceClient } from "@/lib/supabase/server";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -64,6 +64,13 @@ export default async function SignalRadarPage() {
             >
               <ListFilter className="w-3 h-3" />
               Browse all
+            </Link>
+            <Link
+              href="/admin/signal-radar/settings"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-[#E2E8F0] text-[#475569] hover:bg-[#F1F5F9]"
+            >
+              <SettingsIcon className="w-3 h-3" />
+              Settings
             </Link>
           </div>
         }

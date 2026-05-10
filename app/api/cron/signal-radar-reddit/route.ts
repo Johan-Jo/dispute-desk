@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestLoop } from "@/lib/signal-radar/ingest-loop";
-import { getDefaultAdapters } from "@/lib/signal-radar/sources";
+import { getEnabledAdapters } from "@/lib/signal-radar/sources";
+import { getSignalRadarSettings } from "@/lib/signal-radar/settings";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -16,8 +17,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const settings = await getSignalRadarSettings();
+  if (!settings.reddit_cron_enabled) {
+    return NextResponse.json({ skipped: true, reason: "reddit_cron_disabled" });
+  }
+
   try {
-    const result = await ingestLoop(getDefaultAdapters());
+    const result = await ingestLoop(await getEnabledAdapters());
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "ingest failed";

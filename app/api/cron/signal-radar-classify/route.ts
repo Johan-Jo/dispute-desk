@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyDrain } from "@/lib/signal-radar/classify-drain";
+import { getSignalRadarSettings } from "@/lib/signal-radar/settings";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
 
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const settings = await getSignalRadarSettings();
+  if (!settings.classify_cron_enabled) {
+    return NextResponse.json({ skipped: true, reason: "classify_cron_disabled" });
   }
 
   try {

@@ -112,7 +112,9 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("shopifyCommunityAdapter", () => {
+// Adapter sleeps 4s between Discourse endpoints to avoid 429s; with 3
+// endpoints that's ~8s of waits per test.
+describe("shopifyCommunityAdapter", { timeout: 30_000 }, () => {
   it("ingests Shopify topics and drops globally-pinned + closed", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,

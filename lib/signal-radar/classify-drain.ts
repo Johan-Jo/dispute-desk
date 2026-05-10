@@ -21,7 +21,7 @@ const STALE_LOCK_INTERVAL = "5 minutes";
 
 interface SignalSourceRow {
   id: string;
-  platform: "reddit" | "shopify_community" | "app_store";
+  platform: string;
   content_type: "submission" | "comment";
   subreddit: string | null;
   parent_external_id: string | null;

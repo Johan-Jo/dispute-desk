@@ -55,7 +55,7 @@ Domain framing: Shopify Payments, rolling reserves, payout holds, chargebacks, r
 Return only JSON matching the provided schema. No prose.`;
 
 interface ClassifyInput {
-  platform: "reddit" | "shopify_community" | "app_store";
+  platform: string;
   contentType: "submission" | "comment";
   subreddit: string | null;
   parentTitle: string | null;
