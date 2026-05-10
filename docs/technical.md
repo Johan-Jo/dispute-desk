@@ -832,6 +832,18 @@ The PRD's original "Your current chargeback health is At Risk" as the dominant o
 
 API: `GET /api/dashboard/insights/initial-analysis` bundles everything the banner + page need — historical totals, 90d fraud-rollup percentages, 90d chargeback rate + classified health, risk breakdown, and import state. Single endpoint, single fetch per surface.
 
+### Scope-upgrade nudge (`DashboardScopeUpgradeBanner`)
+
+Re-OAuth banner for installs that pre-date the `read_all_orders` grant (Shopify approved 2026-05-10). The endpoint exposes `currentScopeGrant` derived from the live offline session's scopes string (not the persisted `historical_import_scope_granted` column, which captures the grant as of the last backfill). The banner renders when:
+- `historicalImportStatus === 'complete'` (don't pile a re-auth ask on top of an active backfill), AND
+- `currentScopeGrant === 'default_window'` (the merchant has the narrow grant in their current session).
+
+Clicking the CTA navigates the **top frame** (`window.top.location.href`) to `/api/auth/shopify?phase=offline&shop=<domain>`. The Shopify consent screen would be blocked by `X-Frame-Options` inside the embedded iframe, so the breakout is required.
+
+After re-OAuth, `resetBackfillIfScopeUpgraded` (in `lib/disputes/backfillOrders.ts`) fires in the callback. It detects the upgrade (new scopes include `read_all_orders`, prior backfill ran under `default_window`, `historical_import_status='complete'`) and resets the import state to `not_started`. The standard `enqueueShopOrdersBackfill` call that follows then runs a fresh wider-window backfill. Idempotent — no-op on first install, re-installs without scope change, and in-flight backfills (those let their own first-run bookkeeping pick up the new scopes).
+
+Banner dismissal: localStorage flag `dd_scope_upgrade_banner_dismissed`. Per-device "remind me later" — no server-side state.
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.

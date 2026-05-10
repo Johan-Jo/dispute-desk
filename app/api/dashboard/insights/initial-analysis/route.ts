@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { classifyScopeGrant } from "@/lib/disputes/backfillOrders";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,12 @@ interface InsightsResponse {
   historicalImportSinceDate: string | null;
   historicalImportScopeGranted: "default_window" | "read_all_orders" | null;
   historicalImportCompletedAt: string | null;
+  /** Live offline-session scope tier. Distinct from
+   *  `historicalImportScopeGranted` (which captures the tier as of the
+   *  last backfill). When they differ, the merchant has re-OAuthed
+   *  but the backfill hasn't re-run yet — the dashboard surfaces the
+   *  re-OAuth banner based on this live value. */
+  currentScopeGrant: "default_window" | "read_all_orders";
 }
 
 function classifyChargebackHealth(
@@ -74,6 +81,23 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = getServiceClient();
+
+  // ── Live offline-session scopes ────────────────────────────────
+  // Lightweight read — we only need the scopes string, not the
+  // (encrypted) access token. Resolves whether the merchant has the
+  // expanded order-history grant in their current session.
+  const { data: sessionRow } = await sb
+    .from("shop_sessions")
+    .select("scopes")
+    .eq("shop_id", shopId)
+    .eq("session_type", "offline")
+    .is("user_id", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const currentScopeGrant = classifyScopeGrant(
+    (sessionRow?.scopes as string | null) ?? null,
+  );
 
   // ── Shop state ─────────────────────────────────────────────────
   const { data: shopRow } = await sb
@@ -174,6 +198,7 @@ export async function GET(req: NextRequest) {
       null,
     historicalImportCompletedAt:
       (shopRow?.historical_import_completed_at as string | null) ?? null,
+    currentScopeGrant,
   };
 
   return NextResponse.json(response);

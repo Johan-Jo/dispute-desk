@@ -46,6 +46,7 @@ import { DashboardInsights } from "./DashboardInsights";
 import { DashboardQuickActions } from "./DashboardQuickActions";
 import { DashboardFraudIntelligence } from "./DashboardFraudIntelligence";
 import { DashboardInitialAnalysisBannerWrapper } from "./DashboardInitialAnalysisBanner";
+import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -374,6 +375,10 @@ export default function EmbeddedDashboardPage() {
           <div data-help-guide="dashboard-attention-banner">
             <DashboardAttentionBanner stats={stats} />
           </div>
+        </Layout.Section>
+
+        <Layout.Section>
+          <DashboardScopeUpgradeBanner />
         </Layout.Section>
 
         <Layout.Section>

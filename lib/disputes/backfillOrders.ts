@@ -379,6 +379,62 @@ async function persistOrders(
 }
 
 /**
+ * Resets `historical_import_status` to `not_started` when the newly
+ * granted Shopify scopes upgrade the access tier (default_window →
+ * read_all_orders). Idempotent — no-op when:
+ *   - the new scopes do not include `read_all_orders` (no upgrade);
+ *   - the shop has never run a backfill (status already non-complete);
+ *   - the prior backfill already ran under `read_all_orders` (no change).
+ *
+ * Intended to be called from the OAuth callback right after
+ * `storeSession` and before `enqueueShopOrdersBackfill`. The re-enqueue
+ * helper does the rest — once `historical_import_status` is
+ * `not_started`, the standard enqueue path kicks off a fresh backfill
+ * with the wider window.
+ */
+export async function resetBackfillIfScopeUpgraded(
+  shopId: string,
+  newScopesCsv: string | null | undefined,
+): Promise<{ upgraded: boolean }> {
+  const newGrant = classifyScopeGrant(newScopesCsv);
+  if (newGrant !== "read_all_orders") return { upgraded: false };
+
+  const sb = getServiceClient();
+  const { data: shop } = await sb
+    .from("shops")
+    .select("historical_import_status, historical_import_scope_granted")
+    .eq("id", shopId)
+    .maybeSingle();
+  if (!shop) return { upgraded: false };
+  if (shop.historical_import_scope_granted === "read_all_orders") {
+    return { upgraded: false };
+  }
+  if (shop.historical_import_status !== "complete") {
+    // Backfill is mid-flight or pending — let the existing run finish.
+    // Its own first-run bookkeeping reads the (now upgraded) session
+    // scopes when it starts, so the new window applies automatically.
+    return { upgraded: false };
+  }
+
+  const { error } = await sb
+    .from("shops")
+    .update({
+      historical_import_status: "not_started",
+      historical_import_progress_pct: 0,
+      historical_import_orders_processed: 0,
+      historical_import_orders_total: null,
+      historical_import_completed_at: null,
+      historical_import_since_date: null,
+      historical_import_scope_granted: null,
+    })
+    .eq("id", shopId);
+  if (error) {
+    throw new Error(`shops scope-upgrade reset failed: ${error.message}`);
+  }
+  return { upgraded: true };
+}
+
+/**
  * Enqueue a backfill for a shop. Idempotent:
  *   - Skips when a backfill is already `queued`/`running`.
  *   - Skips when the shop's `historical_import_status` is already

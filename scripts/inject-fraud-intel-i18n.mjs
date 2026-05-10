@@ -80,6 +80,11 @@ const KEYS = {
   whatThisMeansTitle: "What this means",
   whatThisMeansBody:
     "Fraud-risk classification is one operational signal among many. DisputeDesk treats it as context for dispute correlation and merchant operations — never as a verdict on individual orders.",
+  // ── Scope-upgrade nudge ─────────────────────────────────────────
+  scopeUpgradeTitle: "Unlock your full order history",
+  scopeUpgradeBody:
+    "DisputeDesk now supports analyzing your full historical orders, not just the last 60 days. Re-authorize to expand the risk overview with seasonality, long-window trends, and risk-to-dispute correlation.",
+  scopeUpgradeCta: "Re-authorize on Shopify",
 };
 
 function injectInto(filePath) {

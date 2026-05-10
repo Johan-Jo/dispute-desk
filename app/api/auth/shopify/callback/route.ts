@@ -6,7 +6,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { enqueueShopDailyMetricsBackfill } from "@/lib/disputes/backfillShopDailyMetrics";
-import { enqueueShopOrdersBackfill } from "@/lib/disputes/backfillOrders";
+import {
+  enqueueShopOrdersBackfill,
+  resetBackfillIfScopeUpgraded,
+} from "@/lib/disputes/backfillOrders";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
@@ -152,14 +155,22 @@ export async function GET(req: NextRequest) {
       // Kick off the historical-orders backfill — Phase 1 fraud
       // intelligence. Idempotent: the helper skips when a backfill
       // is already queued/running or when historical_import_status
-      // is already 'complete'. Fire-and-forget for the same reason
-      // as the daily-metrics enqueue.
-      enqueueShopOrdersBackfill(shopInternalId).catch((err) => {
-        console.warn(
-          "[fraud-intel] orders backfill enqueue failed:",
-          err instanceof Error ? err.message : err,
-        );
-      });
+      // is already 'complete'.
+      //
+      // Scope-upgrade detection: if the merchant just re-OAuthed and
+      // the new offline session includes `read_all_orders` (and the
+      // prior run was on `default_window`), reset historical-import
+      // state to `not_started` so the re-enqueue actually runs the
+      // wider-window backfill. Idempotent — no-op on first install,
+      // re-installs without scope change, or in-flight backfills.
+      resetBackfillIfScopeUpgraded(shopInternalId, tokenResult.scope)
+        .then(() => enqueueShopOrdersBackfill(shopInternalId))
+        .catch((err) => {
+          console.warn(
+            "[fraud-intel] orders backfill enqueue failed:",
+            err instanceof Error ? err.message : err,
+          );
+        });
 
       if (source === "portal") {
         const destination =
