@@ -118,7 +118,13 @@ export const shopifyCommunityAdapter: SignalSourceAdapter = {
     const errors: string[] = [];
     const seen = new Set<number>();
 
-    for (const endpoint of ENDPOINTS) {
+    for (let i = 0; i < ENDPOINTS.length; i++) {
+      const endpoint = ENDPOINTS[i];
+      // Discourse rate-limits ~10 requests/10s per IP; space requests out
+      // so we don't get HTTP 429 "Slow down" errors.
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+      }
       let res: Response;
       try {
         res = await fetch(`${COMMUNITY_BASE}${endpoint}`, {
