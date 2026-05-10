@@ -44,6 +44,7 @@ import { DashboardHelpCard } from "./DashboardHelpCard";
 import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
 import { DashboardQuickActions } from "./DashboardQuickActions";
+import { DashboardFraudIntelligence } from "./DashboardFraudIntelligence";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -380,6 +381,10 @@ export default function EmbeddedDashboardPage() {
 
         <Layout.Section>
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
+        </Layout.Section>
+
+        <Layout.Section>
+          <DashboardFraudIntelligence />
         </Layout.Section>
 
         {recentDisputesPreview}

@@ -795,6 +795,27 @@ Pure helpers (`aggregateOrderCounts`) are unit-tested in `lib/disputes/__tests__
 
 The new scope `read_all_orders` was added to `shopify.app.toml` and `.env.example` (the drift-guard test enforces both stay in sync). Until Partners-side approval for Protected Customer Data lands, `classifyScopeGrant` resolves the offline session's actual granted scopes string and falls back to the default 60-day window automatically — the code path is scope-aware so we ship without blocking on App Review.
 
+### Embedded dashboard panel (`app/(embedded)/app/DashboardFraudIntelligence.tsx`)
+
+A single Polaris Card slotted between `DashboardKpis` and the recent-disputes preview. Self-contained — fetches its own data from `/api/dashboard/fraud-metrics?window=30d|90d|365d|all` so it does not disturb the existing `stats` flow on `/api/dashboard/stats`.
+
+State machine (driven by `shops.historical_import_status`):
+- `not_started` / `in_progress` → progress card with the moving order count ("We've analyzed N orders so far…"). **KPIs are hidden — we never show partial numbers during backfill.**
+- `failed` → snag-state banner with retry guidance.
+- `complete` → KPI grid with six tiles:
+  - **Acceptance rate** = (low + medium) ÷ (total − none − pending). Tooltip discloses the NONE + PENDING exclusion verbatim.
+  - **High-risk orders** = high ÷ total.
+  - **Fraud dispute rate** = fraud disputes ÷ total orders.
+  - **High-risk fulfilled** = orders fulfilled with `risk_level_initial = HIGH` ÷ `orders_high`. PRD §13 flags this as a critical operational signal.
+  - **Shopify Protect coverage** = fully-protected value ÷ eligible-protected value.
+  - **Orders analyzed** = total orders in the window.
+
+Each KPI carries an `available` boolean — false when its denominator is zero so the UI renders `—` instead of a misleading `0.0%`. Window selector is a Polaris `Select`; default `90d` per PRD §9. Rate rounding uses 1 decimal place (matches `chargebackRate.ts`).
+
+API: `GET /api/dashboard/fraud-metrics` reads exclusively from `shop_fraud_daily_metrics` plus three columns on `shops` — no Shopify fan-out, no `shopify_orders` table scans on the hot path.
+
+i18n: the `fraudIntel` namespace is injected into all 12 locale files (`scripts/inject-fraud-intel-i18n.mjs`) with an English baseline. Native-language translation is a follow-up pass; the script is idempotent so re-running it after translation merges only fills missing keys.
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.
