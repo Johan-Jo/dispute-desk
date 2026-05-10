@@ -748,6 +748,25 @@ Defensive parsing: every nested object is typed as nullable even where the 2026-
 
 Pure helpers (`pickInitialRisk`, `pickFulfilledAt`, `normalizeBackfillOrder`) are unit-tested in `lib/shopify/queries/__tests__/ordersForBackfill.test.ts` (23 tests).
 
+### Backfill orchestrator + job (`lib/disputes/backfillOrders.ts`, `lib/jobs/handlers/backfillOrdersJob.ts`)
+
+`backfillShopOrders(shopId, opts)` is the orchestrator. One slice does the following:
+1. **First-run bookkeeping** (when `opts.cursor` is null): reads the offline session's `scopes` string, classifies as `default_window` vs `read_all_orders` via `classifyScopeGrant`, persists `historical_import_scope_granted`, derives `historical_import_since_date` via `deriveSinceDate` (60 days back for default; `2010-01-01` anchor for `read_all_orders`), flips `historical_import_status` to `in_progress`.
+2. **Store-country lookup** (one extra `shop { billingAddress { countryCodeV2 } }` GraphQL call per slice) so `normalizeBackfillOrder` can populate `is_cross_border`. Failure falls back to null — cross-border is best-effort.
+3. **Page loop**: `fetchOrdersBackfillPage` until the soft time budget (`DEFAULT_SOFT_BUDGET_MS = 240_000` ms, leaves 60s headroom under `maxDuration = 300`s on `/api/jobs/worker`) is exhausted or the connection ends. Each page:
+   - Normalizes via `normalizeBackfillOrder`.
+   - `persistOrders` partitions incoming rows into INSERT (new GIDs) vs. UPDATE (existing GIDs). Updates exclude `risk_*_initial` so the immutability trigger never fires — the trigger would reject any rewrite, and re-asserting the same value is wasted work.
+   - Risk-assessment rows are append-only: each page's assessments insert with a fresh `snapshot_at`, growing the per-`(shop, order, provider)` history naturally.
+   - `shops.historical_import_orders_processed` is bumped after each page.
+4. **Termination**: when `hasNextPage = false`, flips `historical_import_status = 'complete'`, writes `progress_pct = 100` + `orders_total = processed` + `completed_at = now()`. The dashboard banner gates on this status.
+5. **Soft timeout**: returns `{ status: 'continue', nextCursor }`. The handler re-enqueues a `backfill_shop_orders` job with the cursor stashed in `entity_id`; the worker's per-shop concurrency cap (1) prevents the resumed job from racing the orchestrator's own writes.
+
+`enqueueShopOrdersBackfill(shopId)` is the install hook (wired in Commit 5). Idempotent: skips when a backfill job is already queued/running, or when `historical_import_status` is already `complete`. Force-refresh path goes through the admin panel.
+
+Failure path: any throw inside the orchestrator sets `historical_import_status = 'failed'` on the shops row, then re-throws so the worker's standard retry path can re-claim.
+
+Pure helpers (`classifyScopeGrant`, `deriveSinceDate`, `tomorrowUtcIso`) are unit-tested in `lib/disputes/__tests__/backfillOrders.test.ts`.
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.
