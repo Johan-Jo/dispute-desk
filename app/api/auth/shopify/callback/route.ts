@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { enqueueShopDailyMetricsBackfill } from "@/lib/disputes/backfillShopDailyMetrics";
+import { enqueueShopOrdersBackfill } from "@/lib/disputes/backfillOrders";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
@@ -144,6 +145,18 @@ export async function GET(req: NextRequest) {
       enqueueShopDailyMetricsBackfill(shopInternalId).catch((err) => {
         console.warn(
           "[shop_daily_metrics] backfill enqueue failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
+
+      // Kick off the historical-orders backfill — Phase 1 fraud
+      // intelligence. Idempotent: the helper skips when a backfill
+      // is already queued/running or when historical_import_status
+      // is already 'complete'. Fire-and-forget for the same reason
+      // as the daily-metrics enqueue.
+      enqueueShopOrdersBackfill(shopInternalId).catch((err) => {
+        console.warn(
+          "[fraud-intel] orders backfill enqueue failed:",
           err instanceof Error ? err.message : err,
         );
       });

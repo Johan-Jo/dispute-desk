@@ -789,6 +789,12 @@ Cron + handlers:
 
 Pure helpers (`aggregateOrderCounts`) are unit-tested in `lib/disputes/__tests__/snapshotFraudDailyMetrics.test.ts` (10 tests pinning risk-bucketing, high-risk fulfillment counting, Protect coverage value math).
 
+### Install hook
+
+`/api/auth/shopify/callback` (offline phase) fires `enqueueShopOrdersBackfill(shopInternalId)` alongside the existing `enqueueShopDailyMetricsBackfill`. Fire-and-forget — backfill runs in the worker, not on the OAuth request path. Idempotent: skips when a backfill job is already queued/running or when `historical_import_status = 'complete'`.
+
+The new scope `read_all_orders` was added to `shopify.app.toml` and `.env.example` (the drift-guard test enforces both stay in sync). Until Partners-side approval for Protected Customer Data lands, `classifyScopeGrant` resolves the offline session's actual granted scopes string and falls back to the default 60-day window automatically — the code path is scope-aware so we ship without blocking on App Review.
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.

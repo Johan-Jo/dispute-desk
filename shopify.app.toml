@@ -19,7 +19,16 @@ redirect_urls = [
 # (write_draft_orders, write_fulfillments, write_products, write_inventory, read_files,
 # write_files, read_inventory, read_locations, write_orders,
 # write_merchant_managed_fulfillment_orders) — never granted to merchants of the production app.
-scopes = "read_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,write_shopify_payments_dispute_file_uploads"
+#
+# 2026-05-10 — added `read_all_orders` for Phase 1 Shopify Fraud Intelligence
+# (historical orders backfill). Shopify Admin returns the trailing 60 days
+# of orders to `read_orders` alone; full historical analysis requires
+# `read_all_orders`, which is a Protected Customer Data scope and needs
+# Partners-side justification. Until that approval lands, the backfill
+# orchestrator (`lib/disputes/backfillOrders.ts → classifyScopeGrant`)
+# falls back to the default 60-day window automatically — code path is
+# scope-aware so we can ship without blocking on App Review.
+scopes = "read_orders,read_all_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"
