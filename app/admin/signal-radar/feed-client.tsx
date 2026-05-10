@@ -144,6 +144,11 @@ export function FeedClient({
   const [categoryFilter, setCategoryFilter] = useState<Set<string>>(() =>
     initialCategory ? new Set([initialCategory]) : new Set()
   );
+  // When a user drills in from the What Changed widget, the matching items
+  // may have an older posted_at (from when the post was created on Reddit /
+  // Shopify Community / etc.) than their classification created_at. Default
+  // the timeframe to 30d so drilled-through views aren't accidentally empty.
+  const initialTimeframe = initialCategory ? "30d" : "7d";
   const [merchantTypeFilter, setMerchantTypeFilter] = useState<Set<string>>(new Set());
   const [minSignal, setMinSignal] = useState(0);
   const [minConfidence, setMinConfidence] = useState(0);
