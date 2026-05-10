@@ -68,41 +68,53 @@ export default async function SignalRadarAllPage({
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: analyses }, { data: sources }, { data: phraseSources }] =
-    await Promise.all([
-      sb
-        .from("signal_analysis")
-        .select(
-          "source_id,merchant_relevance,frustration_score,emotional_intensity_score,signal_score,source_confidence_score,category,competitor,merchant_stage,merchant_type,merchant_scale_signals,suggested_angle,why_this_matters,summary,cluster_size_24h,cluster_growth_rate,created_at"
-        )
-        .gt("created_at", since30d)
-        .not("category", "in", `(${HIDDEN_CATEGORIES.map((c) => `"${c}"`).join(",")})`)
-        .order("created_at", { ascending: false })
-        .limit(ROW_LIMIT),
-      sb
-        .from("signal_sources")
-        .select(
-          "id,platform,content_type,subreddit,parent_external_id,title,content,url,author,posted_at,cluster_key"
-        )
-        .gt("posted_at", since30d)
-        .order("posted_at", { ascending: false })
-        .limit(ROW_LIMIT),
-      sb
-        .from("signal_sources")
-        .select("title,content")
-        .gt("posted_at", since7d)
-        .limit(2500),
-    ]);
-
-  const analysisBySource = new Map<string, AnalysisRow>();
-  for (const a of (analyses ?? []) as AnalysisRow[]) {
-    analysisBySource.set(a.source_id, a);
+  // When the user drills through from What Changed (?category=…), filter
+  // analyses by category server-side so a flood of general_discussion rows
+  // can't crowd out the niche category we're trying to surface (the
+  // top-200-by-created_at default would otherwise return ~zero rows for
+  // narrow categories like transparency_frustration when general_discussion
+  // alone has 300+ items in the same window).
+  let analysisQuery = sb
+    .from("signal_analysis")
+    .select(
+      "source_id,merchant_relevance,frustration_score,emotional_intensity_score,signal_score,source_confidence_score,category,competitor,merchant_stage,merchant_type,merchant_scale_signals,suggested_angle,why_this_matters,summary,cluster_size_24h,cluster_growth_rate,created_at"
+    )
+    .gt("created_at", since30d)
+    .not("category", "in", `(${HIDDEN_CATEGORIES.map((c) => `"${c}"`).join(",")})`)
+    .order("created_at", { ascending: false })
+    .limit(ROW_LIMIT);
+  if (initialCategory) {
+    analysisQuery = analysisQuery.eq("category", initialCategory);
   }
 
-  const rows: FeedRow[] = ((sources ?? []) as SignalRow[])
-    .map((s) => {
-      const a = analysisBySource.get(s.id);
-      if (!a) return null;
+  const [{ data: analyses }, { data: phraseSources }] = await Promise.all([
+    analysisQuery,
+    sb
+      .from("signal_sources")
+      .select("title,content")
+      .gt("posted_at", since7d)
+      .limit(2500),
+  ]);
+
+  // Load only the source rows that match the analyses we just fetched, by
+  // ID. This avoids the "top-200-most-recent-posts" cap dropping rows whose
+  // analysis is recent but posted_at is older.
+  const sourceIds = ((analyses ?? []) as AnalysisRow[]).map((a) => a.source_id);
+  const sourcesById = new Map<string, SignalRow>();
+  if (sourceIds.length > 0) {
+    const { data: sources } = await sb
+      .from("signal_sources")
+      .select(
+        "id,platform,content_type,subreddit,parent_external_id,title,content,url,author,posted_at,cluster_key"
+      )
+      .in("id", sourceIds);
+    for (const s of (sources ?? []) as SignalRow[]) sourcesById.set(s.id, s);
+  }
+
+  const rows: FeedRow[] = ((analyses ?? []) as AnalysisRow[])
+    .map((a) => {
+      const s = sourcesById.get(a.source_id);
+      if (!s) return null;
       return {
         id: s.id,
         platform: s.platform,
