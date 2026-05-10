@@ -1,4 +1,15 @@
-export type SignalPlatform = "reddit" | "shopify_community" | "app_store";
+export type SignalPlatform =
+  | "reddit"
+  | "shopify_community"
+  | "app_store"
+  | "trustpilot"
+  | "g2"
+  | "capterra"
+  | "stripe_community"
+  | "paypal_community"
+  | "bbb"
+  | "hackernews"
+  | "indie_hackers";
 export type SignalContentType = "submission" | "comment";
 
 export interface IngestedItem {

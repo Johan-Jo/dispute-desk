@@ -3,6 +3,7 @@ import { redditAdapter, getProxySecret } from "./reddit";
 import { apifyAdapter, getApifyToken } from "./apify";
 import { shopifyCommunityAdapter } from "./shopify-community";
 import { appStoreAdapter } from "./app-store";
+import { hackerNewsAdapter } from "./hackernews";
 
 /**
  * Returns the full ordered list of adapters to run on each ingest tick.
@@ -23,6 +24,7 @@ export function getDefaultAdapters(): SignalSourceAdapter[] {
   const adapters: SignalSourceAdapter[] = [
     shopifyCommunityAdapter,
     appStoreAdapter,
+    hackerNewsAdapter,
   ];
 
   const hasProxy = Boolean(process.env.REDDIT_PROXY_URL && getProxySecret());
@@ -46,7 +48,13 @@ export function getRedditAdapter(): SignalSourceAdapter {
   return redditAdapter;
 }
 
-export { redditAdapter, apifyAdapter, shopifyCommunityAdapter, appStoreAdapter };
+export {
+  redditAdapter,
+  apifyAdapter,
+  shopifyCommunityAdapter,
+  appStoreAdapter,
+  hackerNewsAdapter,
+};
 export type {
   SignalSourceAdapter,
   IngestedItem,

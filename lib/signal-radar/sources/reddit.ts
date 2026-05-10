@@ -6,16 +6,25 @@ import type {
 } from "./types";
 
 /**
- * Tier 1 Reddit views — broad ingestion of r/shopify across new/hot/top.
- * Posts here are implicitly Shopify-context, so the classifier judges
- * relevance without us pre-filtering on phrasing. Multiple views catch
- * posts that scrolled off /new but are still actively discussed.
+ * Tier 1 Reddit views — broad ingestion of dispute-relevant subreddits.
+ * r/shopify is implicitly Shopify-context. The other subs (chargeback,
+ * Stripe, Etsy) are implicitly DISPUTE-context — every thread there is
+ * about chargebacks/payments/disputes by definition. The classifier
+ * still vets each item and the dashboard streams filter on dispute_relevance.
+ *
+ * For r/shopify we crawl new/hot/top (4 views) for breadth. For the
+ * smaller dispute-focused subs, /new alone is enough volume.
  */
 const SHOPIFY_VIEWS: string[] = [
   "/r/shopify/new.json",
   "/r/shopify/hot.json",
   "/r/shopify/top.json?t=day",
   "/r/shopify/top.json?t=week",
+  "/r/chargeback/new.json",
+  "/r/chargeback/top.json?t=week",
+  "/r/Stripe/new.json",
+  "/r/Stripe/top.json?t=week",
+  "/r/Etsy/top.json?t=week",
 ];
 
 const SUBMISSIONS_PER_VIEW = 25;
@@ -174,15 +183,25 @@ function commentToItem(c: RedditComment): IngestedItem {
   };
 }
 
+/**
+ * Subreddits that are implicitly Shopify-context — every thread is about
+ * Shopify by definition. Other subs (r/chargeback, r/Stripe, r/Etsy) need
+ * a literal "shopify" mention to pass the gate; otherwise we'd ingest pure
+ * Stripe/Etsy/non-Shopify dispute pain that the merchant_relevance classifier
+ * would correctly mark false anyway, just wasting API calls.
+ */
+const IMPLICIT_SHOPIFY_SUBREDDITS = /^r\/shopify$/i;
+
 function passesGate(item: IngestedItem): boolean {
-  // r/shopify is implicitly Shopify-context — don't require a literal "shopify"
-  // mention. The classifier downstream judges relevance.
+  const implicitShopifyContext = item.subreddit
+    ? IMPLICIT_SHOPIFY_SUBREDDITS.test(item.subreddit)
+    : false;
   return (
     applyIngestGates({
       author: item.author,
       title: item.title,
       content: item.content,
-      implicitShopifyContext: true,
+      implicitShopifyContext,
     }) === null
   );
 }
