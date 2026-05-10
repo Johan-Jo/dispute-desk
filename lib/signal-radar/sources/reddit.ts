@@ -28,14 +28,12 @@ const SHOPIFY_VIEWS: string[] = [
   "/r/shopify/top.json?t=month",
   // r/shopify search — catches dispute-pain posts that didn't trend at all
   // (low engagement, posted at off-hours, drowned by volume). restrict_sr=1
-  // keeps us inside r/shopify; sort=new + t=month bounds at 30 days. These
-  // are the posts users mean when they say "I can find lots of chargeback
-  // posts in r/shopify why aren't they here?".
+  // keeps us inside r/shopify; sort=new + t=month bounds at 30 days. Two
+  // queries chosen for breadth — chargeback + dispute together cover the
+  // overwhelming majority of pain content; reserve/payout/fraud-app
+  // discussions almost always also mention "dispute" or "chargeback".
   "/r/shopify/search.json?q=chargeback&restrict_sr=1&sort=new&t=month",
   "/r/shopify/search.json?q=dispute&restrict_sr=1&sort=new&t=month",
-  "/r/shopify/search.json?q=reserve&restrict_sr=1&sort=new&t=month",
-  "/r/shopify/search.json?q=payout&restrict_sr=1&sort=new&t=month",
-  "/r/shopify/search.json?q=fraud&restrict_sr=1&sort=new&t=month",
   // r/chargeback was banned by Reddit; r/chargebacks (plural) is the surviving sub.
   "/r/chargebacks/new.json",
   "/r/chargebacks/top.json?t=week",
@@ -43,22 +41,16 @@ const SHOPIFY_VIEWS: string[] = [
   // r/Stripe — dispute-focused merchants venting Stripe-side. High-signal
   // for "I'm getting destroyed by chargebacks" content even when the
   // merchant doesn't name Shopify (Shopify Payments wraps Stripe under
-  // the hood for many merchants anyway).
+  // the hood for many merchants anyway). Search-by-chargeback alone
+  // catches the bulk of relevant posts; /new + /top?t=month cover the
+  // unpredictable rest.
   "/r/Stripe/new.json",
-  "/r/Stripe/hot.json",
-  "/r/Stripe/top.json?t=week",
   "/r/Stripe/top.json?t=month",
   "/r/Stripe/search.json?q=chargeback&restrict_sr=1&sort=new&t=month",
-  "/r/Stripe/search.json?q=dispute&restrict_sr=1&sort=new&t=month",
-  "/r/Stripe/search.json?q=reserve&restrict_sr=1&sort=new&t=month",
-  "/r/Stripe/search.json?q=fraud&restrict_sr=1&sort=new&t=month",
-  // r/paypal — same logic as r/Stripe.
+  // r/paypal — same logic as r/Stripe but lighter footprint.
   "/r/paypal/new.json",
-  "/r/paypal/top.json?t=week",
   "/r/paypal/top.json?t=month",
   "/r/paypal/search.json?q=chargeback&restrict_sr=1&sort=new&t=month",
-  "/r/paypal/search.json?q=dispute&restrict_sr=1&sort=new&t=month",
-  "/r/Etsy/top.json?t=week",
   "/r/Etsy/top.json?t=month",
 ];
 
@@ -108,22 +100,38 @@ function normalizeProxyUrl(raw: string): string {
   return u.replace(/\/$/, "");
 }
 
+/**
+ * Per-fetch timeout. Without this, one hanging Reddit (or proxy) connection
+ * can stall the loop for minutes and blow the Vercel 300s function budget,
+ * starving every subsequent listing of its share. 12 s is generous enough
+ * for a healthy Reddit response while still letting a stuck call die fast.
+ */
+const FETCH_TIMEOUT_MS = 12_000;
+
 async function redditFetch(path: string): Promise<Response> {
-  const rawProxyUrl = process.env.REDDIT_PROXY_URL;
-  const proxySecret = getProxySecret();
-  if (rawProxyUrl && proxySecret) {
-    const proxyUrl = normalizeProxyUrl(rawProxyUrl);
-    const url = `${proxyUrl}?path=${encodeURIComponent(path)}`;
-    return fetch(url, {
-      headers: {
-        Authorization: `Bearer ${proxySecret}`,
-        "X-Reddit-UA": userAgent(),
-      },
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const rawProxyUrl = process.env.REDDIT_PROXY_URL;
+    const proxySecret = getProxySecret();
+    if (rawProxyUrl && proxySecret) {
+      const proxyUrl = normalizeProxyUrl(rawProxyUrl);
+      const url = `${proxyUrl}?path=${encodeURIComponent(path)}`;
+      return await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${proxySecret}`,
+          "X-Reddit-UA": userAgent(),
+        },
+        signal: ctrl.signal,
+      });
+    }
+    return await fetch(`${REDDIT_PUBLIC_BASE}${path}`, {
+      headers: { "User-Agent": userAgent() },
+      signal: ctrl.signal,
     });
+  } finally {
+    clearTimeout(timer);
   }
-  return fetch(`${REDDIT_PUBLIC_BASE}${path}`, {
-    headers: { "User-Agent": userAgent() },
-  });
 }
 
 interface RedditListingChild<T> {
