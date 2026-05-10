@@ -668,6 +668,24 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 | 20260413100000_dispute_events_and_normalized_status.sql | dispute_events ledger + disputes normalized status/submission/outcome columns |
 | 20260425120000_disputes_customer_email.sql | `disputes.customer_email` — populated from Shopify `disputeEvidence.customerEmailAddress` in `syncDisputes`; required for argument route / jobs that select this column |
 | 20260501100000_shop_daily_metrics.sql | `shop_daily_metrics(shop_id, date, order_count, dispute_count, chargeback_count, inquiry_count, last_synced_at)` — daily snapshot powering the dashboard chargeback-rate KPI and the admin Risk profile (PRD §5/§8/§9). Service-role-only RLS, mirrors the convention in `audit_events`. |
+| 20260509130000_audit_events_cleanup_guc_and_orphan_wipe.sql | Relaxes the `audit_events` BEFORE-DELETE/UPDATE trigger to honour an `app.allow_audit_mutation = 'on'` session GUC, and wipes the 30 orphan E2E fixture disputes that had accumulated on the production project. See *E2E fixtures and audit immutability* below. |
+| 20260509140000_e2e_fixture_cleanup_rpc.sql | `delete_e2e_fixture_dispute(uuid)` SECURITY DEFINER RPC — the only path E2E `cleanup()` and `npm run cleanup:e2e-orphans` use to delete audit/jobs/pack/dispute rows for fixture disputes. Refuses any `dispute_gid` that doesn't match the test pattern. |
+
+### E2E fixtures and audit immutability
+
+`004_audit_events.sql` made `audit_events` strictly append-only via two BEFORE triggers (`trg_audit_no_update`, `trg_audit_no_delete`) plus NO ACTION foreign keys to `disputes` and `evidence_packs`. The combination is intentional for prod data — audit history is unforgeable, and accidental deletes of a parent dispute fail loudly. But it also meant **once any audit event referenced a dispute or pack, that dispute/pack was undeletable** — including the seeded rows from the E2E fixture helper at [`e2e/helpers/dbFixtures.ts`](../e2e/helpers/dbFixtures.ts).
+
+Because the DisputeDesk codebase shares one Supabase project across dev / E2E / prod (`sddzuglxdnkhcnjmcpbj`), every E2E run that hit `POST /api/packs/:id/save-to-shopify` (which writes audit events) was leaking the fixture dispute, pack, and audit rows into the live merchant dashboard — visible as ghost "Active disputes: 36" with empty order/customer cells. The original `cleanup()` swallowed FK violations silently, which masked the leak for weeks. **30 orphans** were discovered on 2026-05-09 and wiped via migration `20260509130000`.
+
+The fix layers three guarantees:
+
+1. **Trigger escape-hatch (migration 20260509130000).** `reject_audit_mutation()` now allows DELETE/UPDATE only when `current_setting('app.allow_audit_mutation', true) = 'on'`. App code never sets the GUC, so the immutability invariant still holds for normal traffic. Privileged paths set it for one transaction at a time.
+2. **Cleanup RPC (migration 20260509140000).** `delete_e2e_fixture_dispute(uuid)` is the **only** way the test helper or recovery scripts reach audit_events. It is SECURITY DEFINER, scoped to `dispute_gid LIKE 'gid://shopify/ShopifyPaymentsDispute/test-%'` (refusing anything else with `raise exception`), and granted to `service_role` only. PostgREST clients cannot set GUCs from outside, so the RPC is the practical wrapper that flips the GUC and runs the deletes atomically.
+3. **Prod-DB safety guard (`e2e/helpers/dbFixtures.ts:openSb`).** Refuses to seed when `SUPABASE_URL` points at the production project ref unless `E2E_ALLOW_PROD_DB=true` is explicitly set. Until a separate test Supabase project is provisioned, this opt-in is the structural defence against accidental fixture leaks.
+
+**Recovery for crashed tests:** if a spec dies between seed and `cleanup()`, run `npm run cleanup:e2e-orphans` (dry-run) and `npm run cleanup:e2e-orphans -- --apply` to wipe via the same RPC. The script is idempotent and refuses to touch anything outside the test-fixture pattern.
+
+**What this does NOT do:** it does not change the FK ON DELETE behaviour (still NO ACTION) and does not add CASCADE — cascading deletes would silently wipe audit history when a parent dispute is deleted by ordinary code, defeating the audit guarantee.
 
 ## Dispute History & Timeline (Phase 1)
 
@@ -2764,7 +2782,11 @@ Filters: skip `[deleted]`/`[removed]`, skip `collapsed=true`, skip `score < 1`, 
 
 **Classifier** (`lib/signal-radar/classify.ts`): OpenAI Chat Completions with **strict JSON schema mode** (`response_format: { type: "json_schema", strict: true, json_schema: SIGNAL_ANALYSIS_JSON_SCHEMA }`). Returns 13 fields including `merchant_type`, `merchant_scale_signals`, `why_this_matters`, both emotion dimensions, and `source_confidence_score`. Comments are passed alongside their parent submission's title for context. Model: `SIGNAL_RADAR_MODEL` (default `gpt-4o-mini-2024-07-18`) — **separate from `GENERATION_MODEL`** so content-gen tuning doesn't drift classifier behavior. Defense-in-depth: Zod parse at the boundary (`SignalAnalysisSchema`) — strict mode + Zod can drift.
 
-**Classifier drain** (`lib/signal-radar/classify-drain.ts`): claims rows with `analysis_status='pending'` and `analysis_locked_at IS NULL OR < now() - 5 minutes`, sets `analysis_locked_at`, classifies, computes cluster metrics, inserts `signal_analysis`, fires alerts. Wall-clock budget 50 s (Vercel 60 s timeout), max 4 in-flight, max 3 attempts before status=`failed`.
+**Classifier drain** (`lib/signal-radar/classify-drain.ts`): claims rows with `analysis_status='pending'`, `analysis_locked_at IS NULL OR < now() - 5 minutes`, AND `posted_at > now() - 30 days` (defense-in-depth max-age gate so stale items still queued from earlier ingest runs can't fire alert emails about years-old content), sets `analysis_locked_at`, classifies, computes cluster metrics, inserts `signal_analysis`, fires alerts. Wall-clock budget 45 s, max 2 in-flight, max 3 attempts before status=`failed`. Duplicate-key (PG `23505`) on the analysis insert reconciles the source row to `classified` instead of retrying — earlier passes can split the analysis insert from the source-status update, leaving a stuck pending row otherwise.
+
+**Ingest max-age** (`lib/signal-radar/ingest-loop.ts`): `MAX_ITEM_AGE_MS = 30 days` is enforced on every adapter's output before upsert. Items with `posted_at` older than 30 days are dropped with a `dropped_stale` log line. Combined with the classify-drain gate, no item past the cutoff can reach the classifier even if a future adapter mis-parses dates.
+
+**App Store sentiment-polarity gate** (`lib/signal-radar/sources/app-store.ts`): reviews with `rating >= 4` are dropped at ingest. Positive reviews on chargeback apps (e.g. "5/5 — Disputifier's support resolved my chargeback alert") were misclassified as `support_failure` / `competitor_frustration` because the classifier sees "support" + "chargeback" keywords without sentiment context. Only 1-3 star reviews ingest — those are the actual pain signal.
 
 **Alerts** (`lib/signal-radar/alerts.ts`): pure `decideAlert()` rules:
 - `migration_intent` AND `signal_score >= 8` → immediate, **no** category cooldown, but cluster cooldown 24h still applies, hard cap 5/day
@@ -2784,7 +2806,7 @@ Filters: skip `[deleted]`/`[removed]`, skip `collapsed=true`, skip `score < 1`, 
 - **💰 High-value merchant leads** — rows where `merchant_scale_signals != '[]'` AND `signal_score >= 6`. Scale signal chips rendered inline.
 - **📈 Emerging narratives** — re-themed `compareWeekOverWeek` widget. Plain-English category labels via `lib/signal-radar/category-labels.ts` (e.g. `transparency_frustration` → "Lost trust in their tool").
 - **Detail panel** (`detail-panel.tsx`) — `why_this_matters` first, four scores side-by-side, `merchant_scale_signals` chips, cluster trend badge, excerpt, "Open original" link.
-- **/admin/signal-radar/all** secondary route — operator "Browse all signals" view with the original FeedClient (filter bar, cluster expansion, Top Recurring Phrases widget). Not the default landing.
+- **/admin/signal-radar/all** secondary route — operator "Browse all signals" view with the original FeedClient (filter bar, cluster expansion, Top Recurring Phrases widget). Not the default landing. Server load window is 30 days (matches ingest max-age) and the client `timeframe` defaults to `30d` when a `?category=…` URL param is present (drill-through from What Changed widget) so re-classified items with older `posted_at` aren't accidentally hidden behind the 7d default.
 
 Stream queries live in `lib/signal-radar/queries.ts` — `fetchKpiCounts`, `fetchSwitchingSignals`, `fetchCompetitorPain`, `fetchHighValueLeads`. All exclude `spam`/`trolling` via `HIDDEN_CATEGORIES`.
 

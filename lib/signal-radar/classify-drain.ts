@@ -206,6 +206,20 @@ async function processOne(
   });
 
   if (insertErr) {
+    // Duplicate-key (23505) means an earlier classify pass already inserted
+    // the analysis row but failed to flip the source's status — reconcile
+    // here instead of retrying forever.
+    if ((insertErr as { code?: string }).code === "23505") {
+      await sb
+        .from("signal_sources")
+        .update({
+          analysis_status: "classified",
+          analysis_last_error: null,
+          analysis_locked_at: null,
+        })
+        .eq("id", row.id);
+      return "ok";
+    }
     console.error("[signal-radar] insert analysis error:", insertErr);
     await sb
       .from("signal_sources")
