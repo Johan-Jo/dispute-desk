@@ -36,6 +36,19 @@ const REDDIT_PUBLIC_BASE = "https://www.reddit.com";
 const DEFAULT_USER_AGENT =
   "DisputeDesk-SignalRadar/1.0 (admin-only Shopify-merchant intelligence; contact: oi@johan.com.br)";
 
+/**
+ * Reddit's unauthenticated .json endpoint rate-limits per source IP. The
+ * Cloudflare Worker proxy uses a small CDN egress pool, so 11 rapid hits
+ * trip 429s on most calls. 1500ms between listings keeps us under the
+ * limit; comments use 500ms (they're cheaper and Reddit cares less).
+ */
+const LISTING_DELAY_MS = 1500;
+const COMMENT_DELAY_MS = 500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function userAgent(): string {
   return process.env.REDDIT_USER_AGENT ?? DEFAULT_USER_AGENT;
 }
@@ -218,10 +231,12 @@ export const redditAdapter: SignalSourceAdapter = {
       process.env.REDDIT_PROXY_URL && getProxySecret()
     );
 
-    // Fetch all 4 r/shopify views, dedupe submissions across them.
+    // Fetch listings sequentially with spacing so Reddit's .json rate limit
+    // doesn't 429 most of them. Dedupe submissions across views.
     const seenSubmissions = new Set<string>();
     const uniqueSubmissions: RedditSubmission[] = [];
-    for (const view of SHOPIFY_VIEWS) {
+    for (let i = 0; i < SHOPIFY_VIEWS.length; i++) {
+      const view = SHOPIFY_VIEWS[i];
       try {
         const subs = await fetchListing(view);
         for (const s of subs) {
@@ -234,6 +249,7 @@ export const redditAdapter: SignalSourceAdapter = {
         console.warn(`[signal-radar] reddit ${view} error:`, err);
         errors.push(`${view}: ${msg.slice(0, 160)}`);
       }
+      if (i < SHOPIFY_VIEWS.length - 1) await sleep(LISTING_DELAY_MS);
     }
 
     // Map submissions through the gate
@@ -244,7 +260,9 @@ export const redditAdapter: SignalSourceAdapter = {
 
     // Fetch top-level comments for each kept submission. Comments are gated
     // separately so junk doesn't ride in on the back of a relevant post.
-    for (const s of uniqueSubmissions) {
+    // Spaced to avoid Reddit's per-IP rate limit on .json endpoints.
+    for (let i = 0; i < uniqueSubmissions.length; i++) {
+      const s = uniqueSubmissions[i];
       try {
         const comments = await fetchTopLevelComments(s.id);
         for (const c of comments) {
@@ -256,16 +274,17 @@ export const redditAdapter: SignalSourceAdapter = {
         // top-level errors unless every fetch fails (already handled below).
         console.warn(`[signal-radar] reddit comments ${s.id} error:`, err);
       }
+      if (i < uniqueSubmissions.length - 1) await sleep(COMMENT_DELAY_MS);
     }
 
     if (items.length === 0 && errors.length === SHOPIFY_VIEWS.length) {
       if (!usingProxy) {
         errors.push(
-          "All r/shopify fetches failed and REDDIT_PROXY_URL is not set — deploy the Cloudflare Worker proxy (cloudflare-workers/signal-radar-reddit-proxy/README.md) and configure REDDIT_PROXY_URL + REDDIT_PROXY_SECRET on Vercel."
+          "All Reddit fetches failed and REDDIT_PROXY_URL is not set — deploy the Cloudflare Worker proxy (cloudflare-workers/signal-radar-reddit-proxy/README.md) and configure REDDIT_PROXY_URL + REDDIT_PROXY_SECRET on Vercel."
         );
       } else {
         errors.push(
-          "All r/shopify fetches failed even though REDDIT_PROXY_URL is configured — verify the Worker is deployed and PROXY_SECRET inside Cloudflare matches REDDIT_PROXY_SECRET (or PROXY_SECRET) on Vercel."
+          "All Reddit fetches failed even though REDDIT_PROXY_URL is configured — verify the Worker is deployed and PROXY_SECRET inside Cloudflare matches REDDIT_PROXY_SECRET (or PROXY_SECRET) on Vercel."
         );
       }
     }
