@@ -63,19 +63,16 @@ const SHOPIFY_VIEWS: string[] = [
 ];
 
 const SUBMISSIONS_PER_VIEW = 25;
-const COMMENTS_PER_SUBMISSION = 5;
 const REDDIT_PUBLIC_BASE = "https://www.reddit.com";
 const DEFAULT_USER_AGENT =
   "DisputeDesk-SignalRadar/1.0 (admin-only Shopify-merchant intelligence; contact: oi@johan.com.br)";
 
 /**
- * Reddit's unauthenticated .json endpoint rate-limits per source IP. The
- * Cloudflare Worker proxy uses a small CDN egress pool, so 11 rapid hits
- * trip 429s on most calls. 1500ms between listings keeps us under the
- * limit; comments use 500ms (they're cheaper and Reddit cares less).
+ * Reddit's unauthenticated .json endpoint rate-limits per source IP. With
+ * 23 listings firing back-to-back we'd 429 most of them; 1500ms spacing
+ * keeps us under the limit.
  */
 const LISTING_DELAY_MS = 1500;
-const COMMENT_DELAY_MS = 500;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -146,19 +143,6 @@ interface RedditSubmission {
   created_utc: number;
 }
 
-interface RedditComment {
-  id: string;
-  name: string;
-  body: string;
-  permalink: string;
-  author: string;
-  subreddit: string;
-  created_utc: number;
-  score: number;
-  collapsed?: boolean;
-  link_id: string;
-}
-
 function withParam(path: string, key: string, value: string | number): string {
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}${key}=${value}`;
@@ -180,25 +164,6 @@ async function fetchListing(viewPath: string): Promise<RedditSubmission[]> {
   return children.filter((c) => c.kind === "t3").map((c) => c.data);
 }
 
-async function fetchTopLevelComments(
-  postId: string
-): Promise<RedditComment[]> {
-  const path =
-    `/r/shopify/comments/${postId}.json` +
-    `?limit=${COMMENTS_PER_SUBMISSION}&depth=1&sort=top&raw_json=1`;
-  const res = await redditFetch(path);
-  if (!res.ok) return [];
-  const json = await res.json();
-  if (!Array.isArray(json) || json.length < 2) return [];
-  const commentTree = json[1];
-  const children: RedditListingChild<RedditComment>[] =
-    commentTree?.data?.children ?? [];
-  return children
-    .filter((c) => c.kind === "t1")
-    .map((c) => c.data)
-    .slice(0, COMMENTS_PER_SUBMISSION);
-}
-
 function submissionToItem(s: RedditSubmission): IngestedItem {
   return {
     platform: "reddit",
@@ -212,22 +177,6 @@ function submissionToItem(s: RedditSubmission): IngestedItem {
     content: s.selftext ?? "",
     rawPayload: s,
     postedAt: new Date(s.created_utc * 1000).toISOString(),
-  };
-}
-
-function commentToItem(c: RedditComment): IngestedItem {
-  return {
-    platform: "reddit",
-    contentType: "comment",
-    externalId: c.name,
-    parentExternalId: c.link_id,
-    subreddit: `r/${c.subreddit}`,
-    url: `https://www.reddit.com${c.permalink}`,
-    author: c.author ?? null,
-    title: null,
-    content: c.body,
-    rawPayload: c,
-    postedAt: new Date(c.created_utc * 1000).toISOString(),
   };
 }
 
@@ -296,24 +245,13 @@ export const redditAdapter: SignalSourceAdapter = {
       if (passesGate(item)) items.push(item);
     }
 
-    // Fetch top-level comments for each kept submission. Comments are gated
-    // separately so junk doesn't ride in on the back of a relevant post.
-    // Spaced to avoid Reddit's per-IP rate limit on .json endpoints.
-    for (let i = 0; i < uniqueSubmissions.length; i++) {
-      const s = uniqueSubmissions[i];
-      try {
-        const comments = await fetchTopLevelComments(s.id);
-        for (const c of comments) {
-          const item = commentToItem(c);
-          if (passesGate(item)) items.push(item);
-        }
-      } catch (err) {
-        // Comments are nice-to-have; don't surface per-post fetch errors as
-        // top-level errors unless every fetch fails (already handled below).
-        console.warn(`[signal-radar] reddit comments ${s.id} error:`, err);
-      }
-      if (i < uniqueSubmissions.length - 1) await sleep(COMMENT_DELAY_MS);
-    }
+    // Comment fetching disabled. With the expanded view set (~23 listings,
+    // including search.json across r/shopify + r/Stripe + r/paypal), unique
+    // submissions can hit 200+. Fetching top-5 comments per submission with
+    // 500ms spacing was pushing total ingest time past Vercel's 300s
+    // maxDuration. Submissions carry the full pain narrative in selftext —
+    // comments add diminishing signal at high time cost. If we ever want
+    // them back, do it in a separate cron tick or async job.
 
     if (items.length === 0 && errors.length === SHOPIFY_VIEWS.length) {
       if (!usingProxy) {
