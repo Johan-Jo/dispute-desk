@@ -2,6 +2,7 @@ import type { SignalSourceAdapter } from "./types";
 import { redditAdapter, getProxySecret } from "./reddit";
 import { apifyAdapter, getApifyToken } from "./apify";
 import { shopifyCommunityAdapter } from "./shopify-community";
+import { appStoreAdapter } from "./app-store";
 
 /**
  * Returns the full ordered list of adapters to run on each ingest tick.
@@ -19,7 +20,10 @@ import { shopifyCommunityAdapter } from "./shopify-community";
  *      403s on Vercel datacenter IPs).
  */
 export function getDefaultAdapters(): SignalSourceAdapter[] {
-  const adapters: SignalSourceAdapter[] = [shopifyCommunityAdapter];
+  const adapters: SignalSourceAdapter[] = [
+    shopifyCommunityAdapter,
+    appStoreAdapter,
+  ];
 
   const hasProxy = Boolean(process.env.REDDIT_PROXY_URL && getProxySecret());
   if (hasProxy) {
@@ -42,7 +46,7 @@ export function getRedditAdapter(): SignalSourceAdapter {
   return redditAdapter;
 }
 
-export { redditAdapter, apifyAdapter, shopifyCommunityAdapter };
+export { redditAdapter, apifyAdapter, shopifyCommunityAdapter, appStoreAdapter };
 export type {
   SignalSourceAdapter,
   IngestedItem,
