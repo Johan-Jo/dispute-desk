@@ -1,8 +1,8 @@
 # Shopify App Configuration — DisputeDesk (Dispute Ops)
 # https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "DisputeDesk"
 client_id = "84f40ec77c9ba18e9eabc1657d9b6af8"
+name = "DisputeDesk"
 application_url = "https://disputedesk.app"
 embedded = true
 
@@ -12,23 +12,21 @@ redirect_urls = [
 ]
 
 [access_scopes]
-# Evidence scopes approved by App Review and synced to app config (2026-03-04, ticket 64535407).
-# Tightened 2026-05-07 — production code uses ONLY the scopes below (verified by grep in
-# tests/unit/shopifyScopes.test.ts and the App Store review checklist). Seed scripts under
-# scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID, a separate Partners app with a broader set
-# (write_draft_orders, write_fulfillments, write_products, write_inventory, read_files,
-# write_files, read_inventory, read_locations, write_orders,
-# write_merchant_managed_fulfillment_orders) — never granted to merchants of the production app.
-#
-# 2026-05-10 — added `read_all_orders` for Phase 1 Shopify Fraud Intelligence
-# (historical orders backfill). Shopify Admin returns the trailing 60 days
-# of orders to `read_orders` alone; full historical analysis requires
-# `read_all_orders`, which is a Protected Customer Data scope and needs
-# Partners-side justification. Until that approval lands, the backfill
-# orchestrator (`lib/disputes/backfillOrders.ts → classifyScopeGrant`)
-# falls back to the default 60-day window automatically — code path is
-# scope-aware so we can ship without blocking on App Review.
-scopes = "read_orders,read_all_orders,read_customers,read_products,read_fulfillments,read_shipping,read_shopify_payments_disputes,read_shopify_payments_dispute_evidences,write_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,write_shopify_payments_dispute_file_uploads"
+# Scope state as of 2026-05-10 deploy:
+#   * Partners currently grants the broader 20-scope set below (verified via
+#     `shopify app config pull` 2026-05-10). The 2026-05-07 "tightening" commit
+#     authored the narrower set locally but never deployed — a deploy now with
+#     the tightened set would silently remove the broader grants from active
+#     installs. That tightening is deferred to a separate, audited change.
+#   * `read_all_orders` newly approved by Shopify Partners on 2026-05-10
+#     (Protected Customer Data tier) for the Phase 1 Fraud Intelligence
+#     historical-orders backfill. Until this deploy, the scope existed in code
+#     paths (scope-aware fallback in lib/disputes/backfillOrders.ts) but was
+#     not actually granted to merchants. Push this file via
+#     `shopify app deploy` to activate it on new installs.
+#   * Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID — a
+#     separate Partners app — and are never granted to merchants of this app.
+scopes = "read_all_orders,read_customers,read_files,read_fulfillments,read_inventory,read_locations,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_draft_orders,write_files,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"
@@ -41,25 +39,28 @@ api_version = "2026-01"
   topics = ["shop/update"]
   uri = "/api/webhooks/shop-update"
 
-  # GDPR mandatory webhooks (App Store requirement). Handlers in
+  # GDPR mandatory webhooks (App Store requirement). Configured under
+  # `privacy_compliance` — these are NOT regular topic subscriptions in
+  # the modern Shopify CLI config schema; they have a dedicated section
+  # with fixed URL fields. Handlers live in
   # app/api/webhooks/{customers-data-request,customers-redact,shop-redact}/.
-  [[webhooks.subscriptions]]
-  topics = ["customers/data_request"]
-  uri = "/api/webhooks/customers-data-request"
-
-  [[webhooks.subscriptions]]
-  topics = ["customers/redact"]
-  uri = "/api/webhooks/customers-redact"
-
-  [[webhooks.subscriptions]]
-  topics = ["shop/redact"]
-  uri = "/api/webhooks/shop-redact"
+  # Note 2026-05-10: a `shopify app config pull` revealed Partners had
+  # NEVER registered these despite the local TOML carrying them as
+  # subscription entries since 2026-05-07 (wrong format — silently
+  # rejected on prior deploy attempts). This deploy fixes the schema +
+  # closes the compliance gap.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://disputedesk.app/api/webhooks/customers-data-request"
+  customer_deletion_url     = "https://disputedesk.app/api/webhooks/customers-redact"
+  shop_deletion_url         = "https://disputedesk.app/api/webhooks/shop-redact"
 
 # disputes/create and disputes/update registered at runtime (OAuth) - require protected-customer-data approval in Partners
 
-# App proxy section removed 2026-05-07 — DisputeDesk does not use storefront proxying.
-# If the CLI rejects the missing block on a future `shopify app config push`, restore the
-# minimal placeholder; it had been kept solely to satisfy older CLI validation.
+# App proxy: intentionally absent. The Partners-side app_proxy block (pulled
+# 2026-05-10) was a legacy placeholder pointing at `https://example.com/proxy`
+# — a literal example URL that was never used by any DisputeDesk feature.
+# This deploy removes it. If a future feature needs storefront proxying,
+# restore the block and configure the real URL at that time.
 
 [pos]
 embedded = false
