@@ -816,6 +816,22 @@ API: `GET /api/dashboard/fraud-metrics` reads exclusively from `shop_fraud_daily
 
 i18n: the `fraudIntel` namespace is injected into all 12 locale files (`scripts/inject-fraud-intel-i18n.mjs`) with an English baseline. Native-language translation is a follow-up pass; the script is idempotent so re-running it after translation merges only fills missing keys.
 
+### Insight banner + Initial Analysis page
+
+**Banner** (`DashboardInitialAnalysisBannerWrapper` in `DashboardInitialAnalysisBanner.tsx`) renders ONLY when `historical_import_status = 'complete'`. Dismissible via localStorage (`dd_fraud_intel_banner_dismissed`); the permanent home is `/app/insights/initial-analysis`.
+
+Copy contract — load-bearing, must not regress:
+- Headline LEADS with insight: `"We analyzed {count} historical Shopify orders."` — never with the chargeback-health verdict.
+- Body cites concrete percentages from the data: `"{X}% of recent orders were classified as high-risk by Shopify's fraud analysis. {Y}% of Shopify high-risk orders were still fulfilled. You can now monitor fraud-risk exposure, operational patterns, and dispute trends directly inside DisputeDesk."`
+- Chargeback-health is a SECONDARY/SUPPORTING line, lower visual hierarchy: `"Current chargeback health: {status}"` rendered with `variant="bodySm" tone="subdued"`. Never headline weight.
+- CTAs: `View Risk Profile` (primary) and `Understand Chargeback Health` (deep-link to `#chargeback-health`).
+
+The PRD's original "Your current chargeback health is At Risk" as the dominant onboarding message was explicitly rejected — the banner must create curiosity and perceived value, not defensive reaction. `classifyChargebackHealth` (pure, exported for tests) buckets `<0.40% → good`, `0.40–0.60% → at_risk`, `>0.60% → elevated`.
+
+**`/app/insights/initial-analysis` page** is always reachable (banner dismiss does not hide it). Same insight-first hierarchy: hero headline → 90d KPIs → risk-classification breakdown table → chargeback-health section (with the `#chargeback-health` anchor for the banner CTA) → "What this means" closing note that explicitly reframes risk as operational context, not verdict.
+
+API: `GET /api/dashboard/insights/initial-analysis` bundles everything the banner + page need — historical totals, 90d fraud-rollup percentages, 90d chargeback rate + classified health, risk breakdown, and import state. Single endpoint, single fetch per surface.
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.
