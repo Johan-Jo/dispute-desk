@@ -62,11 +62,11 @@ describe("appStoreAdapter", () => {
     const result = await appStoreAdapter.ingest();
     expect(result.errors).toEqual([]);
 
-    // 2 valid reviews × 5 apps × 2 pages = 20, but dedup by externalId means 2 unique
     const ids = new Set(result.items.map((i) => i.externalId));
+    // 2-star negative review keeps (pain signal)
     expect(ids.has("as_chargeflow_1234567")).toBe(true);
-    expect(ids.has("as_chargeflow_7654321")).toBe(true);
-
+    // 5-star praise review drops at ingest (sentiment polarity gate)
+    expect(ids.has("as_chargeflow_7654321")).toBe(false);
     // Empty-body review (review-99999) should be filtered
     expect(ids.has("as_chargeflow_99999")).toBe(false);
 

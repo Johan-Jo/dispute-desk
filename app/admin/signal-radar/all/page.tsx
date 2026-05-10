@@ -63,7 +63,9 @@ export default async function SignalRadarAllPage({
     : params.category;
 
   const sb = getServiceClient();
-  const since14d = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  // 30d window matches the ingest-loop max-age gate so re-classified items
+  // (created_at recent, posted_at older) still surface in drill-through.
+  const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: analyses }, { data: sources }, { data: phraseSources }] =
@@ -73,7 +75,7 @@ export default async function SignalRadarAllPage({
         .select(
           "source_id,merchant_relevance,frustration_score,emotional_intensity_score,signal_score,source_confidence_score,category,competitor,merchant_stage,merchant_type,merchant_scale_signals,suggested_angle,why_this_matters,summary,cluster_size_24h,cluster_growth_rate,created_at"
         )
-        .gt("created_at", since14d)
+        .gt("created_at", since30d)
         .not("category", "in", `(${HIDDEN_CATEGORIES.map((c) => `"${c}"`).join(",")})`)
         .order("created_at", { ascending: false })
         .limit(ROW_LIMIT),
@@ -82,7 +84,7 @@ export default async function SignalRadarAllPage({
         .select(
           "id,platform,content_type,subreddit,parent_external_id,title,content,url,author,posted_at,cluster_key"
         )
-        .gt("posted_at", since14d)
+        .gt("posted_at", since30d)
         .order("posted_at", { ascending: false })
         .limit(ROW_LIMIT),
       sb
@@ -148,7 +150,7 @@ export default async function SignalRadarAllPage({
         </Link>
         <AdminPageHeader
           title="Browse all signals"
-          subtitle="Operator view: every classified signal in the last 14 days, filterable. For curated streams use the main page."
+          subtitle="Operator view: every classified signal in the last 30 days, filterable. For curated streams use the main page."
           icon={ListFilter}
           iconGradient="from-[#475569] to-[#64748B]"
         />

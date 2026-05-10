@@ -153,7 +153,7 @@ export function FeedClient({
   const [minSignal, setMinSignal] = useState(0);
   const [minConfidence, setMinConfidence] = useState(0);
   const [minEmotion, setMinEmotion] = useState(0);
-  const [timeframe, setTimeframe] = useState("7d");
+  const [timeframe, setTimeframe] = useState(initialTimeframe);
   const [sort, setSort] = useState<"quality" | "recent" | "emotion">("quality");
 
   useEffect(() => {

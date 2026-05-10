@@ -187,6 +187,11 @@ export const appStoreAdapter: SignalSourceAdapter = {
         if (!html) continue;
         const reviews = parsePage(html, handle);
         for (const r of reviews) {
+          // Sentiment-polarity gate: 4-5 star reviews are praise, not pain.
+          // Signal Radar's dashboard streams are all pain-focused; positive
+          // reviews would be misclassified as support_failure / etc. just
+          // because they mention chargeback keywords. Drop at ingest.
+          if (r.rating >= 4) continue;
           const item = reviewToItem(r);
           // App Store reviews are implicitly Shopify-context.
           const rejected = applyIngestGates({

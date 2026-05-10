@@ -100,6 +100,11 @@ export async function classifyDrain(): Promise<ClassifyDrainResult> {
 async function claimNextPending(
   sb: ReturnType<typeof getServiceClient>
 ): Promise<SignalSourceRow | null> {
+  // Defense in depth: items older than 30 days never reach the classifier
+  // even if they were ingested before the ingest-time max-age gate shipped.
+  // Stale items still queued from earlier runs would otherwise keep firing
+  // immediate-alert emails about years-old reviews.
+  const maxAge = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { data: candidate } = await sb
     .from("signal_sources")
     .select(
@@ -107,6 +112,7 @@ async function claimNextPending(
     )
     .eq("analysis_status", "pending")
     .lt("analysis_attempts", MAX_ATTEMPTS)
+    .gt("posted_at", maxAge)
     .or(
       `analysis_locked_at.is.null,analysis_locked_at.lt.${new Date(Date.now() - 5 * 60 * 1000).toISOString()}`
     )
