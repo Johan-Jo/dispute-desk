@@ -767,6 +767,28 @@ Failure path: any throw inside the orchestrator sets `historical_import_status =
 
 Pure helpers (`classifyScopeGrant`, `deriveSinceDate`, `tomorrowUtcIso`) are unit-tested in `lib/disputes/__tests__/backfillOrders.test.ts`.
 
+### Fraud-rollup pipeline (`lib/disputes/snapshotFraudDailyMetrics.ts`)
+
+`snapshotFraudDailyMetrics(shopId, dateIso)` is the per-day aggregator. **Does not call Shopify** — all source data is local: `shopify_orders` (populated by the backfill orchestrator) plus `disputes` (kept fresh by the existing 5-minute `sync_disputes` cron). One pass over each table for the UTC date, then a single upsert on `shop_fraud_daily_metrics(shop_id, date)`.
+
+Bucket semantics that the dashboard tooltip copy commits to:
+- `orders_total`: rows whose `processed_at` (or `created_at_shopify` fallback when null) falls inside the UTC day.
+- `orders_low / medium / high / none / pending`: bucketed by `risk_level_initial`. **`null` risk_level_initial buckets as `none`, not `pending`** — pending is reserved for orders Shopify explicitly returned as `PENDING`. The acceptance-rate denominator is `low + medium`; `none + pending` are excluded and the tooltip must disclose this.
+- `orders_fulfilled_high_risk`: subset of `orders_high` where `fulfillment_status` ∈ `{FULFILLED, PARTIAL, PARTIALLY_FULFILLED}`. Drives the high-risk fulfillment-rate KPI (critical metric per PRD §13).
+- `fraud_disputes`: count of disputes initiated on this UTC day with `reason = 'FRAUDULENT'` (Shopify's canonical code post the 2026-04 normalization migration).
+- `chargebacks`: subset of total disputes with `phase = 'chargeback'`.
+- `fully_protected_value`: sum of `order_total` where `fraud_protection_level = 'PROTECTED'`.
+- `eligible_protected_value`: sum of `order_total` where `fraud_protection_level` ∈ `{PROTECTED, ACTIVE, PENDING}` — orders Shopify Protect could underwrite if a chargeback lands.
+
+`backfillFraudDailyMetrics(shopId)` is the bulk-backfill path: bounded scan of distinct UTC dates with rows in `shopify_orders`, snapshot each one. Triggered automatically by the order-backfill orchestrator when it flips `historical_import_status = 'complete'` — guarantees the dashboard window selectors have rollup data the moment the banner unlocks.
+
+Cron + handlers:
+- **`/api/cron/snapshot-fraud-daily-metrics`** — Vercel Cron `45 0 * * *` (00:45 UTC, 15 min after `snapshot-daily-metrics` to avoid contention). Enqueues `snapshot_fraud_daily_metrics(shop, yesterday)` per active shop with `historical_import_status = 'complete'`. Idempotent against in-flight (shop, date) jobs.
+- **`snapshot_fraud_daily_metrics` job** — single-day; entity_id is the date, falls back to yesterday UTC when absent.
+- **`backfill_fraud_daily_metrics` job** — one-shot bulk backfill chained from order-backfill completion. Bounded by `maxDuration=300s` on the worker.
+
+Pure helpers (`aggregateOrderCounts`) are unit-tested in `lib/disputes/__tests__/snapshotFraudDailyMetrics.test.ts` (10 tests pinning risk-bucketing, high-risk fulfillment counting, Protect coverage value math).
+
 ## Dispute History & Timeline (Phase 1)
 
 Merchant-facing event ledger and normalized status model for dispute lifecycle tracking.

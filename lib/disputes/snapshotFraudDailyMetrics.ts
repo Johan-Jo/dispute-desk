@@ -1,0 +1,278 @@
+/**
+ * Snapshot one (shop, date) row into `shop_fraud_daily_metrics`.
+ *
+ * Phase 1 fraud-intelligence rollup. Unlike `shop_daily_metrics`,
+ * this aggregator does NOT hit Shopify — all source data lives in
+ * the local `shopify_orders` + `disputes` tables (populated by the
+ * order-backfill orchestrator and the dispute-sync job respectively).
+ * One pass over the local rows for the UTC date is enough.
+ *
+ * Inputs:
+ *   - shopId — internal `shops.id`
+ *   - dateIso — `YYYY-MM-DD` (UTC). UTC-anchored to match the rest
+ *     of the metrics stack.
+ *
+ * Side effect: upserts a single row into `shop_fraud_daily_metrics`
+ * keyed by (shop_id, date). Idempotent — re-runs refresh `last_synced_at`.
+ *
+ * Metric semantics (must match dashboard tooltip copy):
+ *   - orders_total: all orders processed in the UTC day.
+ *   - orders_low / medium / high / none / pending: bucketed by
+ *     `risk_level_initial`. NONE and PENDING are TRACKED but
+ *     intentionally excluded from the acceptance-rate denominator
+ *     — the dashboard tooltip must disclose this.
+ *   - orders_fulfilled_high_risk: subset of orders_high where
+ *     `fulfillment_status` is FULFILLED or PARTIAL. Drives the
+ *     high-risk fulfillment-rate KPI.
+ *   - fraud_disputes: subset of disputes initiated on this date with
+ *     `reason = 'FRAUDULENT'` (Shopify's canonical fraud reason code).
+ *   - total_disputes: count of all disputes initiated on this date.
+ *   - chargebacks: subset of total_disputes where phase='chargeback'.
+ *   - fully_protected_value: sum of order_total where
+ *     fraud_protection_level='PROTECTED'.
+ *   - eligible_protected_value: sum of order_total where
+ *     fraud_protection_level IN ('PROTECTED','ACTIVE','PENDING') —
+ *     the orders Shopify Protect could underwrite if a dispute lands.
+ *
+ * Tracking gap: the orders columns only count orders whose
+ * `processed_at` (or `created_at_shopify` fallback) falls in the
+ * UTC date — same convention as `shopify_orders.processed_at` carries.
+ */
+
+import { getServiceClient } from "@/lib/supabase/server";
+
+export interface FraudSnapshotResult {
+  shopId: string;
+  date: string;
+  ordersTotal: number;
+  ordersHigh: number;
+  fraudDisputes: number;
+  totalDisputes: number;
+  chargebacks: number;
+}
+
+const FULFILLED_STATUSES = new Set<string>(["FULFILLED", "PARTIAL", "PARTIALLY_FULFILLED"]);
+const PROTECTED_STATUSES = new Set<string>(["PROTECTED"]);
+const ELIGIBLE_PROTECTED_STATUSES = new Set<string>([
+  "PROTECTED",
+  "ACTIVE",
+  "PENDING",
+]);
+
+export async function snapshotFraudDailyMetrics(
+  shopId: string,
+  dateIso: string,
+): Promise<FraudSnapshotResult> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+    throw new Error(
+      `snapshotFraudDailyMetrics: invalid date "${dateIso}", expected YYYY-MM-DD`,
+    );
+  }
+  const sb = getServiceClient();
+  const startIso = `${dateIso}T00:00:00Z`;
+  const endIso = `${nextDateIso(dateIso)}T00:00:00Z`;
+
+  // ── Orders rows for the day ─────────────────────────────────────
+  // processed_at is the primary anchor (Shopify's "this is when the
+  // order processed" timestamp). Falls back to created_at_shopify
+  // when processed_at is null (rare — abandoned/pending orders).
+  const { data: orderRows, error: ordersErr } = await sb
+    .from("shopify_orders")
+    .select(
+      "risk_level_initial, fulfillment_status, fraud_protection_level, order_total, processed_at, created_at_shopify",
+    )
+    .eq("shop_id", shopId)
+    .or(
+      `and(processed_at.gte.${startIso},processed_at.lt.${endIso}),and(processed_at.is.null,created_at_shopify.gte.${startIso},created_at_shopify.lt.${endIso})`,
+    );
+  if (ordersErr) {
+    throw new Error(`shopify_orders lookup failed: ${ordersErr.message}`);
+  }
+  const rows = orderRows ?? [];
+  const counts = aggregateOrderCounts(rows);
+
+  // ── Disputes initiated on the day ───────────────────────────────
+  const { data: disputeRows, error: disputeErr } = await sb
+    .from("disputes")
+    .select("id, phase, reason")
+    .eq("shop_id", shopId)
+    .gte("initiated_at", startIso)
+    .lt("initiated_at", endIso);
+  if (disputeErr) {
+    throw new Error(`disputes lookup failed: ${disputeErr.message}`);
+  }
+  const disputes = disputeRows ?? [];
+  let fraudDisputes = 0;
+  let chargebacks = 0;
+  for (const d of disputes) {
+    if (typeof d.reason === "string" && d.reason.toUpperCase() === "FRAUDULENT") {
+      fraudDisputes += 1;
+    }
+    if (d.phase === "chargeback") chargebacks += 1;
+  }
+
+  // ── Upsert ──────────────────────────────────────────────────────
+  const row = {
+    shop_id: shopId,
+    date: dateIso,
+    orders_total: counts.ordersTotal,
+    orders_low: counts.ordersLow,
+    orders_medium: counts.ordersMedium,
+    orders_high: counts.ordersHigh,
+    orders_none: counts.ordersNone,
+    orders_pending: counts.ordersPending,
+    orders_fulfilled_high_risk: counts.ordersFulfilledHighRisk,
+    fraud_disputes: fraudDisputes,
+    total_disputes: disputes.length,
+    chargebacks,
+    fully_protected_value: counts.fullyProtectedValue,
+    eligible_protected_value: counts.eligibleProtectedValue,
+    last_synced_at: new Date().toISOString(),
+  };
+  const { error: upErr } = await sb
+    .from("shop_fraud_daily_metrics")
+    .upsert(row, { onConflict: "shop_id,date" });
+  if (upErr) {
+    throw new Error(`shop_fraud_daily_metrics upsert failed: ${upErr.message}`);
+  }
+
+  return {
+    shopId,
+    date: dateIso,
+    ordersTotal: counts.ordersTotal,
+    ordersHigh: counts.ordersHigh,
+    fraudDisputes,
+    totalDisputes: disputes.length,
+    chargebacks,
+  };
+}
+
+interface OrderRowForAggregation {
+  risk_level_initial: string | null;
+  fulfillment_status: string | null;
+  fraud_protection_level: string | null;
+  order_total: number | string | null;
+}
+
+export interface FraudOrderCounts {
+  ordersTotal: number;
+  ordersLow: number;
+  ordersMedium: number;
+  ordersHigh: number;
+  ordersNone: number;
+  ordersPending: number;
+  ordersFulfilledHighRisk: number;
+  fullyProtectedValue: number;
+  eligibleProtectedValue: number;
+}
+
+/** Pure: aggregate the count + value buckets from a list of order rows. */
+export function aggregateOrderCounts(
+  rows: OrderRowForAggregation[],
+): FraudOrderCounts {
+  const out: FraudOrderCounts = {
+    ordersTotal: rows.length,
+    ordersLow: 0,
+    ordersMedium: 0,
+    ordersHigh: 0,
+    ordersNone: 0,
+    ordersPending: 0,
+    ordersFulfilledHighRisk: 0,
+    fullyProtectedValue: 0,
+    eligibleProtectedValue: 0,
+  };
+  for (const r of rows) {
+    const risk = (r.risk_level_initial ?? "").toUpperCase();
+    switch (risk) {
+      case "LOW":
+        out.ordersLow += 1;
+        break;
+      case "MEDIUM":
+        out.ordersMedium += 1;
+        break;
+      case "HIGH":
+        out.ordersHigh += 1;
+        // High-risk orders that still reached fulfilled state drive
+        // the High-Risk Fulfillment Rate KPI (critical metric per PRD §13).
+        if (
+          r.fulfillment_status &&
+          FULFILLED_STATUSES.has(r.fulfillment_status.toUpperCase())
+        ) {
+          out.ordersFulfilledHighRisk += 1;
+        }
+        break;
+      case "PENDING":
+        out.ordersPending += 1;
+        break;
+      case "NONE":
+      default:
+        // null risk_level_initial and any unexpected value are bucketed
+        // as "none" — the assessment was not present at ingest time.
+        out.ordersNone += 1;
+        break;
+    }
+
+    const total = Number(r.order_total ?? 0);
+    if (Number.isFinite(total) && total > 0 && r.fraud_protection_level) {
+      const status = r.fraud_protection_level.toUpperCase();
+      if (PROTECTED_STATUSES.has(status)) out.fullyProtectedValue += total;
+      if (ELIGIBLE_PROTECTED_STATUSES.has(status))
+        out.eligibleProtectedValue += total;
+    }
+  }
+  return out;
+}
+
+function nextDateIso(dateIso: string): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Backfill all daily rollups for a shop. Iterates the distinct UTC
+ * dates with rows in `shopify_orders` for this shop and snapshots
+ * each one. Triggered automatically when the order-backfill
+ * orchestrator flips `historical_import_status` to 'complete'.
+ *
+ * Cheap-ish: each date is one Postgres aggregation. A 60-day window
+ * is 60 round trips. The orchestrator runs this synchronously inside
+ * the backfill_fraud_daily_metrics handler so it's bounded by the
+ * 300s `maxDuration` like its sibling.
+ */
+export async function backfillFraudDailyMetrics(
+  shopId: string,
+): Promise<{ shopId: string; daysWritten: number }> {
+  const sb = getServiceClient();
+
+  // Bounded scan of the per-shop timestamp column. Even high-volume
+  // shops cap at tens of thousands of rows for a 60-day window —
+  // pulling two timestamp columns is a few MB at most. A future
+  // RPC could DISTINCT this server-side; not needed for v1.
+  const { data: rows, error: scanErr } = await sb
+    .from("shopify_orders")
+    .select("processed_at, created_at_shopify")
+    .eq("shop_id", shopId);
+  if (scanErr) {
+    throw new Error(`shopify_orders date scan failed: ${scanErr.message}`);
+  }
+  const dateSet = new Set<string>();
+  for (const r of rows ?? []) {
+    const ts = (r.processed_at ?? r.created_at_shopify) as string | null;
+    if (!ts) continue;
+    dateSet.add(ts.slice(0, 10));
+  }
+  const dates = Array.from(dateSet).sort();
+
+  for (const date of dates) {
+    await snapshotFraudDailyMetrics(shopId, date);
+  }
+  return { shopId, daysWritten: dates.length };
+}
+
+/** Yesterday in UTC (`YYYY-MM-DD`). The most recent fully complete day. */
+export function fraudYesterdayUtcDateIso(now: Date = new Date()): string {
+  const d = new Date(now);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}

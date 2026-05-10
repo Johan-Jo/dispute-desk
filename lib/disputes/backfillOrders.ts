@@ -270,6 +270,25 @@ export async function backfillShopOrders(
           historical_import_completed_at: new Date().toISOString(),
         })
         .eq("id", shopId);
+      // Chain: enqueue the fraud-rollup backfill so the embedded
+      // dashboard's window selectors have data the moment the banner
+      // unlocks. Skipped silently when a job is already queued — the
+      // worker's per-shop concurrency cap (1) prevents racing.
+      const { data: existingChain } = await sb
+        .from("jobs")
+        .select("id")
+        .eq("shop_id", shopId)
+        .eq("job_type", "backfill_fraud_daily_metrics")
+        .in("status", ["queued", "running"])
+        .limit(1)
+        .maybeSingle();
+      if (!existingChain) {
+        await enqueueJob({
+          shopId,
+          jobType: "backfill_fraud_daily_metrics",
+          priority: 70,
+        });
+      }
       return { status: "complete", ordersProcessed: processed };
     }
     cursor = page.endCursor;
