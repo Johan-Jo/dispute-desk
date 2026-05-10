@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are a Shopify-merchant intelligence analyst working f
 
 You output ALL of these fields:
 
-- merchant_relevance: true if the post involves a Shopify (or Shopify-adjacent) merchant operationally; false for off-topic, tooling-only, generic startup talk, or non-Shopify ecommerce.
+- merchant_relevance: true if the author is an ecommerce merchant (any platform — Shopify, WooCommerce, BigCommerce, custom, Etsy, Stripe-direct, etc.) describing operational pain. False for: customers venting (not a merchant), journalists/analysts, tool-vendors marketing themselves, generic startup talk unrelated to operating a store, or content not from an actual merchant. **Shopify-specificity is NOT required at this gate** — dispute pain on any ecommerce platform is strategic intel for DisputeDesk; Shopify-specific filtering happens downstream via dispute_relevance + per-stream rules.
 - dispute_relevance: TRUE only if the post specifically discusses one or more of:
     * chargebacks (lost, won, evidence, representment, friendly fraud, recurring chargebacks)
     * payment disputes / dispute responses / dispute deadlines

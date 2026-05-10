@@ -40,11 +40,26 @@ const SHOPIFY_VIEWS: string[] = [
   "/r/chargebacks/new.json",
   "/r/chargebacks/top.json?t=week",
   "/r/chargebacks/top.json?t=month",
+  // r/Stripe — dispute-focused merchants venting Stripe-side. High-signal
+  // for "I'm getting destroyed by chargebacks" content even when the
+  // merchant doesn't name Shopify (Shopify Payments wraps Stripe under
+  // the hood for many merchants anyway).
   "/r/Stripe/new.json",
+  "/r/Stripe/hot.json",
   "/r/Stripe/top.json?t=week",
+  "/r/Stripe/top.json?t=month",
+  "/r/Stripe/search.json?q=chargeback&restrict_sr=1&sort=new&t=month",
+  "/r/Stripe/search.json?q=dispute&restrict_sr=1&sort=new&t=month",
+  "/r/Stripe/search.json?q=reserve&restrict_sr=1&sort=new&t=month",
+  "/r/Stripe/search.json?q=fraud&restrict_sr=1&sort=new&t=month",
+  // r/paypal — same logic as r/Stripe.
   "/r/paypal/new.json",
   "/r/paypal/top.json?t=week",
+  "/r/paypal/top.json?t=month",
+  "/r/paypal/search.json?q=chargeback&restrict_sr=1&sort=new&t=month",
+  "/r/paypal/search.json?q=dispute&restrict_sr=1&sort=new&t=month",
   "/r/Etsy/top.json?t=week",
+  "/r/Etsy/top.json?t=month",
 ];
 
 const SUBMISSIONS_PER_VIEW = 25;
@@ -217,17 +232,23 @@ function commentToItem(c: RedditComment): IngestedItem {
 }
 
 /**
- * Subreddits that are implicitly Shopify-context — every thread is about
- * Shopify by definition. Other subs (r/chargeback, r/Stripe, r/Etsy) need
- * a literal "shopify" mention to pass the gate; otherwise we'd ingest pure
- * Stripe/Etsy/non-Shopify dispute pain that the merchant_relevance classifier
- * would correctly mark false anyway, just wasting API calls.
+ * Subreddits that are implicitly in-scope. r/shopify is implicitly Shopify;
+ * r/chargebacks/r/Stripe/r/paypal are implicitly DISPUTE-focused — every
+ * thread there is about chargebacks/payments/disputes by definition. We
+ * treat all of them as "implicit context" so the literal `shopify` gate
+ * doesn't drop a Stripe-using ecom merchant venting "$12k in chargebacks
+ * this month" purely because they didn't say the word "shopify".
+ *
+ * The classifier still vets each item (merchant_relevance, dispute_relevance),
+ * and the dashboard streams filter on those — non-merchant rants still won't
+ * surface, but legitimate dispute pain across the broader ecom payments
+ * landscape now reaches the classifier.
  */
-const IMPLICIT_SHOPIFY_SUBREDDITS = /^r\/shopify$/i;
+const IMPLICIT_CONTEXT_SUBREDDITS = /^r\/(shopify|chargebacks|Stripe|paypal)$/i;
 
 function passesGate(item: IngestedItem): boolean {
   const implicitShopifyContext = item.subreddit
-    ? IMPLICIT_SHOPIFY_SUBREDDITS.test(item.subreddit)
+    ? IMPLICIT_CONTEXT_SUBREDDITS.test(item.subreddit)
     : false;
   return (
     applyIngestGates({
