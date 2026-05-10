@@ -16,13 +16,30 @@ import type {
  * smaller dispute-focused subs, /new alone is enough volume.
  */
 const SHOPIFY_VIEWS: string[] = [
+  // r/shopify breadth — /new + /hot + /top day/week/month catches both
+  // freshly-posted pain (e.g. "got my first chargeback today") and
+  // older-but-trending posts. r/shopify gets ~25 new posts every few hours,
+  // so without /top?t=month any post older than ~24h that didn't trend
+  // would never appear in our window.
   "/r/shopify/new.json",
   "/r/shopify/hot.json",
   "/r/shopify/top.json?t=day",
   "/r/shopify/top.json?t=week",
+  "/r/shopify/top.json?t=month",
+  // r/shopify search — catches dispute-pain posts that didn't trend at all
+  // (low engagement, posted at off-hours, drowned by volume). restrict_sr=1
+  // keeps us inside r/shopify; sort=new + t=month bounds at 30 days. These
+  // are the posts users mean when they say "I can find lots of chargeback
+  // posts in r/shopify why aren't they here?".
+  "/r/shopify/search.json?q=chargeback&restrict_sr=1&sort=new&t=month",
+  "/r/shopify/search.json?q=dispute&restrict_sr=1&sort=new&t=month",
+  "/r/shopify/search.json?q=reserve&restrict_sr=1&sort=new&t=month",
+  "/r/shopify/search.json?q=payout&restrict_sr=1&sort=new&t=month",
+  "/r/shopify/search.json?q=fraud&restrict_sr=1&sort=new&t=month",
   // r/chargeback was banned by Reddit; r/chargebacks (plural) is the surviving sub.
   "/r/chargebacks/new.json",
   "/r/chargebacks/top.json?t=week",
+  "/r/chargebacks/top.json?t=month",
   "/r/Stripe/new.json",
   "/r/Stripe/top.json?t=week",
   "/r/paypal/new.json",
