@@ -142,13 +142,27 @@ export function DashboardFraudIntelligence() {
 
   // ── In-progress / not-started state ──────────────────────────────
   // Gate before showing KPIs: we never display partial numbers
-  // during backfill. The progress card surfaces the moving order
-  // count so merchants see the work happening.
-  if (
-    data &&
-    (data.historicalImportStatus === "in_progress" ||
-      data.historicalImportStatus === "not_started")
-  ) {
+  // during backfill. Differentiates two states:
+  //  - not_started: backfill hasn't been claimed yet. The dashboard
+  //    API self-heals by enqueueing on read; the worker cron picks
+  //    it up within ~2 min. Use queued copy (no "0 orders processed").
+  //  - in_progress: worker is actively processing; surface the moving
+  //    order count so merchants see work happening.
+  if (data && data.historicalImportStatus === "not_started") {
+    return (
+      <Card>
+        <BlockStack gap="300">
+          <Text as="h2" variant="headingMd">
+            {t("fraudIntel.queuedTitle")}
+          </Text>
+          <Text as="p" tone="subdued">
+            {t("fraudIntel.queuedBody")}
+          </Text>
+        </BlockStack>
+      </Card>
+    );
+  }
+  if (data && data.historicalImportStatus === "in_progress") {
     return (
       <Card>
         <BlockStack gap="300">

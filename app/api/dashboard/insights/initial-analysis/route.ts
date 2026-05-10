@@ -15,7 +15,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
-import { classifyScopeGrant } from "@/lib/disputes/backfillOrders";
+import {
+  classifyScopeGrant,
+  enqueueShopOrdersBackfill,
+} from "@/lib/disputes/backfillOrders";
 
 export const runtime = "nodejs";
 
@@ -113,6 +116,17 @@ export async function GET(req: NextRequest) {
     "not_started";
   const ordersTotal =
     (shopRow?.historical_import_orders_total as number | null) ?? 0;
+
+  // Self-heal: see fraud-metrics route for the same pattern. Idempotent
+  // via enqueueShopOrdersBackfill's own queued/running/complete guards.
+  if (status === "not_started") {
+    enqueueShopOrdersBackfill(shopId).catch((err) => {
+      console.warn(
+        "[insights] self-heal backfill enqueue failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+  }
 
   // ── 90d fraud rollup ────────────────────────────────────────────
   const windowStart90d = utcDateNDaysAgo(90);

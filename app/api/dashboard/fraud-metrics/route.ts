@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { enqueueShopOrdersBackfill } from "@/lib/disputes/backfillOrders";
 
 export const runtime = "nodejs";
 
@@ -138,6 +139,20 @@ export async function GET(req: NextRequest) {
     )
     .eq("id", shopId)
     .single();
+
+  // Self-heal: shops installed before the OAuth-callback install hook
+  // (commit f4e6ce1) never had a backfill enqueued. Calling this on
+  // every dashboard read is safe — `enqueueShopOrdersBackfill` skips
+  // when a job is already queued/running or when status='complete'.
+  // Fire-and-forget so dashboard latency is unaffected.
+  if (shopRow?.historical_import_status === "not_started") {
+    enqueueShopOrdersBackfill(shopId).catch((err) => {
+      console.warn(
+        "[fraud-metrics] self-heal backfill enqueue failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+  }
 
   // ── Metric window query ────────────────────────────────────────
   const days = windowDays(window);

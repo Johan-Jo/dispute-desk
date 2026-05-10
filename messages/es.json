@@ -2773,6 +2773,8 @@
     "window90": "Last 90 days",
     "window365": "Last 365 days",
     "windowAll": "All time",
+    "queuedTitle": "Preparing your fraud-risk overview",
+    "queuedBody": "We've queued up an analysis of your historical orders. This usually starts within a few minutes — refresh in a bit to see progress.",
     "analyzingTitle": "Analyzing your order history",
     "analyzingBody": "We've analyzed {count} orders so far. The risk overview unlocks the moment we finish.",
     "failedTitle": "We hit a snag analyzing your orders",
