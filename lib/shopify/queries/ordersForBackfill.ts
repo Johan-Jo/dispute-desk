@@ -39,6 +39,11 @@
 
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { assertNotAuthInvalid } from "@/lib/shopify/sessions/getShopBackgroundSession";
+import {
+  readTrackingMetafields,
+  mergeTrackingReads,
+  type RawShopifyMetafield,
+} from "@/lib/shopify/trackingApps";
 
 export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
   query ShopOrdersForBackfill($first: Int!, $after: String, $query: String) {
@@ -65,10 +70,6 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           shippingAddress {
             countryCode
           }
-          fulfillments(first: 1) {
-            createdAt
-            displayStatus
-          }
           shopifyProtect {
             status
           }
@@ -83,6 +84,40 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
             status
             gateway
             receiptJson
+          }
+          # Tracking-app metafields. When the merchant has AfterShip /
+          # Shipway / ParcelPanel / Wonderment / TrackingMore installed
+          # AND has enabled "sync to Shopify", those apps write
+          # delivery status + signed-by name + delivered_at into
+          # metafields under their own namespace. We read them for
+          # free — no merchant action, no third-party API key. The
+          # unified reader lives in lib/shopify/trackingApps.ts.
+          # first=20 captures multiple keys per namespace; the reader
+          # picks the priority namespace.
+          metafields(first: 20) {
+            edges {
+              node {
+                namespace
+                key
+                value
+              }
+            }
+          }
+          # Per-fulfillment tracking metafields. More accurate than
+          # order-level because a single order can split into multiple
+          # shipments. Read separately and merge with mergeTrackingReads().
+          fulfillments(first: 1) {
+            createdAt
+            displayStatus
+            metafields(first: 20) {
+              edges {
+                node {
+                  namespace
+                  key
+                  value
+                }
+              }
+            }
           }
           risk {
             recommendation
@@ -128,6 +163,11 @@ export interface RawBackfillTransaction {
   receiptJson: string | Record<string, unknown> | null;
 }
 
+/** Raw metafield connection edge as Shopify returns it. */
+export interface RawMetafieldEdge {
+  node: { namespace: string; key: string; value: string };
+}
+
 /** Raw order as returned by Shopify, one page of the backfill query. */
 export interface RawBackfillOrder {
   id: string;
@@ -147,9 +187,11 @@ export interface RawBackfillOrder {
   fulfillments: Array<{
     createdAt: string | null;
     displayStatus: string | null;
+    metafields: { edges: RawMetafieldEdge[] } | null;
   }> | null;
   shopifyProtect: { status: string | null } | null;
   transactions: RawBackfillTransaction[] | null;
+  metafields: { edges: RawMetafieldEdge[] } | null;
   risk: {
     recommendation: string | null;
     assessments: RawRiskAssessment[] | null;
@@ -268,6 +310,10 @@ export interface ShopifyOrderRow {
    *  True when authenticated; false is rarely observed (the source
    *  collapses non-authenticated states to null). */
   three_ds_authenticated: boolean | null;
+  delivery_status: string | null;
+  delivered_at_tracking: string | null;
+  signed_by_name: string | null;
+  tracking_source: string | null;
 }
 
 /** Row shape persisted to `shopify_order_risk_assessments`. */
@@ -394,6 +440,42 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+/** Pure: flatten a RawBackfillOrder's metafields into the four
+ *  tracking-related columns persisted to shopify_orders. Reads
+ *  order-level + fulfillment-level metafields and merges (the
+ *  fulfillment data wins for per-shipment accuracy). */
+export function flattenTrackingForRow(raw: RawBackfillOrder): {
+  delivery_status: string | null;
+  delivered_at_tracking: string | null;
+  signed_by_name: string | null;
+  tracking_source: string | null;
+} {
+  const orderMfs: RawShopifyMetafield[] = (raw.metafields?.edges ?? []).map(
+    (e) => ({
+      namespace: e.node.namespace,
+      key: e.node.key,
+      value: e.node.value,
+    }),
+  );
+  const fulMfs: RawShopifyMetafield[] = (
+    raw.fulfillments?.[0]?.metafields?.edges ?? []
+  ).map((e) => ({
+    namespace: e.node.namespace,
+    key: e.node.key,
+    value: e.node.value,
+  }));
+  const merged = mergeTrackingReads(
+    readTrackingMetafields(fulMfs),
+    readTrackingMetafields(orderMfs),
+  );
+  return {
+    delivery_status: merged.deliveryStatus,
+    delivered_at_tracking: merged.deliveredAtTracking,
+    signed_by_name: merged.signedByName,
+    tracking_source: merged.trackingSource,
+  };
+}
+
 export function pickInitialRisk(
   assessments: RawRiskAssessment[] | null | undefined,
 ): { level: string | null; provider: string | null } {
@@ -457,6 +539,7 @@ export function normalizeBackfillOrder(
     risk_provider_initial: initial.provider,
     fraud_protection_level: raw.shopifyProtect?.status ?? null,
     three_ds_authenticated: pickThreeDsAuthenticated(raw.transactions ?? null),
+    ...flattenTrackingForRow(raw),
   };
 
   const assessments: ShopifyOrderRiskAssessmentRow[] = (

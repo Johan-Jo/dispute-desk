@@ -352,6 +352,10 @@ async function persistOrders(
         cancel_reason: o.cancel_reason,
         fraud_protection_level: o.fraud_protection_level,
         three_ds_authenticated: o.three_ds_authenticated,
+        delivery_status: o.delivery_status,
+        delivered_at_tracking: o.delivered_at_tracking,
+        signed_by_name: o.signed_by_name,
+        tracking_source: o.tracking_source,
         updated_at: nowIso,
       })
       .eq("shop_id", shopId)

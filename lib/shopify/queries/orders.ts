@@ -71,6 +71,24 @@ export const ORDER_DETAIL_QUERY = `
               }
             }
           }
+          # Tracking-app metafields per fulfillment. When the merchant
+          # has AfterShip / Shipway / ParcelPanel / Wonderment /
+          # TrackingMore installed AND has "sync to Shopify" enabled,
+          # these apps write delivery status + signed-by-name +
+          # delivered_at into per-fulfillment metafields. The
+          # fulfillmentSource collector reads these via
+          # lib/shopify/trackingApps.ts to set proofType to
+          # signature_confirmed (the strongest evidence tier) when
+          # a recipient signature is captured.
+          metafields(first: 20) {
+            edges {
+              node {
+                namespace
+                key
+                value
+              }
+            }
+          }
         }
         refunds(first: 10) {
           id
@@ -119,6 +137,18 @@ export const ORDER_DETAIL_QUERY = `
         shopifyProtect {
           status
         }
+        # Order-level tracking-app metafields. Fallback when the
+        # tracking app writes at the order level instead of per
+        # fulfillment (older AfterShip configurations did this).
+        metafields(first: 20) {
+          edges {
+            node {
+              namespace
+              key
+              value
+            }
+          }
+        }
       }
     }
   }
@@ -157,6 +187,16 @@ export interface OrderFulfillment {
       };
     }>;
   };
+  /** Per-fulfillment tracking-app metafields (AfterShip / Shipway /
+   *  ParcelPanel / Wonderment / TrackingMore). Read via the unified
+   *  reader in lib/shopify/trackingApps.ts. Optional + null-tolerant
+   *  because golden test fixtures pre-date this field; the reader
+   *  treats absence as no signal. */
+  metafields?: {
+    edges: Array<{
+      node: { namespace: string; key: string; value: string };
+    }>;
+  } | null;
 }
 
 export interface OrderRefund {
@@ -259,6 +299,14 @@ export interface OrderDetailNode {
      *  PENDING = decision pending. INACTIVE = ineligible.
      *  NOT_PROTECTED = chargeback received but not covered. */
     status: "ACTIVE" | "INACTIVE" | "NOT_PROTECTED" | "PENDING" | "PROTECTED";
+  } | null;
+  /** Order-level tracking-app metafields. Fallback when the tracking
+   *  app writes at the order level rather than per fulfillment.
+   *  Optional + null-tolerant for golden-fixture compatibility. */
+  metafields?: {
+    edges: Array<{
+      node: { namespace: string; key: string; value: string };
+    }>;
   } | null;
 }
 

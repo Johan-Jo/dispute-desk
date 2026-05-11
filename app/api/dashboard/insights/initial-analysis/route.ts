@@ -116,6 +116,19 @@ interface PeriodWindow {
    *  in the window. Median (not mean) so a few outliers don't skew. */
   medianFulfillmentHours: number | null;
   fulfilledOrdersCount: number;
+  /** Confirmed-delivery rate. Numerator: orders with carrier-confirmed
+   *  delivery (delivery_status='Delivered' OR delivered_at_tracking
+   *  set). Denominator: orders that were fulfilled (fulfilled_at set).
+   *  Tracking-app data via lib/shopify/trackingApps.ts. */
+  confirmedDeliveryRatePct: number | null;
+  confirmedDeliveryOrders: number;
+  fulfilledForDeliveryCount: number;
+  /** Signed-for rate. Numerator: orders with signed_by_name set.
+   *  Denominator: orders with carrier-confirmed delivery (so we don't
+   *  dilute by orders still in transit). Strongest dispute-defense
+   *  signal we capture — bank rebuttals cite the signature name. */
+  signedForRatePct: number | null;
+  signedForOrders: number;
 }
 
 interface RiskConversionBucket {
@@ -166,6 +179,9 @@ interface OrderForKpi {
   three_ds_authenticated: boolean | null;
   processed_at: string | null;
   fulfilled_at: string | null;
+  delivery_status: string | null;
+  delivered_at_tracking: string | null;
+  signed_by_name: string | null;
 }
 
 /** Pure: 3DS auth rate + median fulfillment hours over a subset of
@@ -181,9 +197,17 @@ function compute3dsAndFulfillment(
   threeDsAuthEligibleOrders: number;
   medianFulfillmentHours: number | null;
   fulfilledOrdersCount: number;
+  confirmedDeliveryRatePct: number | null;
+  confirmedDeliveryOrders: number;
+  fulfilledForDeliveryCount: number;
+  signedForRatePct: number | null;
+  signedForOrders: number;
 } {
   let authEligible = 0;
   let authPositive = 0;
+  let fulfilledForDelivery = 0;
+  let confirmedDelivered = 0;
+  let signedForCount = 0;
   const fulfillmentHours: number[] = [];
   const fromMs = new Date(`${fromIso}T00:00:00Z`).getTime();
   const toMs = new Date(`${toExclusiveIso}T00:00:00Z`).getTime();
@@ -198,9 +222,19 @@ function compute3dsAndFulfillment(
     if (r.fulfilled_at) {
       const fulMs = new Date(r.fulfilled_at).getTime();
       const deltaHours = (fulMs - procMs) / 3600000;
-      // Guard against bad data (negative or absurdly large windows).
       if (deltaHours >= 0 && deltaHours < 24 * 60) {
         fulfillmentHours.push(deltaHours);
+      }
+      // Confirmed-delivery denominator: any order that was fulfilled.
+      fulfilledForDelivery += 1;
+      // Carrier-confirmed delivery — tracking-app metafield says so.
+      const carrierDelivered =
+        r.delivery_status === "Delivered" || !!r.delivered_at_tracking;
+      if (carrierDelivered) {
+        confirmedDelivered += 1;
+        if (r.signed_by_name && r.signed_by_name.trim().length > 0) {
+          signedForCount += 1;
+        }
       }
     }
   }
@@ -215,6 +249,11 @@ function compute3dsAndFulfillment(
     threeDsAuthEligibleOrders: authEligible,
     medianFulfillmentHours: median === null ? null : Math.round(median * 10) / 10,
     fulfilledOrdersCount: fulfillmentHours.length,
+    confirmedDeliveryRatePct: rate(confirmedDelivered, fulfilledForDelivery),
+    confirmedDeliveryOrders: confirmedDelivered,
+    fulfilledForDeliveryCount: fulfilledForDelivery,
+    signedForRatePct: rate(signedForCount, confirmedDelivered),
+    signedForOrders: signedForCount,
   };
 }
 
@@ -384,7 +423,9 @@ export async function GET(req: NextRequest) {
     for (let from = 0; ; from += 1000) {
       const { data, error } = await sb
         .from("shopify_orders")
-        .select("payment_gateway, three_ds_authenticated, processed_at, fulfilled_at")
+        .select(
+          "payment_gateway, three_ds_authenticated, processed_at, fulfilled_at, delivery_status, delivered_at_tracking, signed_by_name",
+        )
         .eq("shop_id", shopId)
         .gte("processed_at", windowStart90dIso)
         .range(from, from + 999);

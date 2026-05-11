@@ -251,6 +251,42 @@ function buildOrderRow(shopId, date) {
     // trust the receipt shape there) → null.
     three_ds_authenticated:
       gateway === "shopify_payments" ? rand() < 0.5 : null,
+    // Tracking-app metafield-derived fields. Populated only when the
+    // order was fulfilled AND the merchant has a tracking app
+    // installed. See backfill-surasvenne-tracking-cols.mjs for the
+    // same distribution applied to existing rows.
+    ...(() => {
+      const trackingSrc = pickWeighted([
+        ["aftership", 60], [null, 25], ["shipway", 10], ["wonderment", 5],
+      ]);
+      if (!trackingSrc || !fulfilledAt) {
+        return {
+          tracking_source: null,
+          delivery_status: null,
+          delivered_at_tracking: null,
+          signed_by_name: null,
+        };
+      }
+      const ds = pickWeighted([
+        ["Delivered", 85], ["InTransit", 8], ["OutForDelivery", 4],
+        ["AttemptFail", 2], ["Exception", 1],
+      ]);
+      const fulMs = new Date(fulfilledAt).getTime();
+      const deliveredAt =
+        ds === "Delivered"
+          ? new Date(fulMs + (2 + Math.floor(rand() * 5)) * 86400000).toISOString()
+          : null;
+      const signedBy =
+        ds === "Delivered" && rand() < 0.25
+          ? `${pick(["Anna","Erik","Maria","Johan","Karin","Lars","Eva","Per"])} ${pick(["Andersson","Johansson","Karlsson","Nilsson","Eriksson","Larsson","Olsson","Persson"])}`
+          : null;
+      return {
+        tracking_source: trackingSrc,
+        delivery_status: ds,
+        delivered_at_tracking: deliveredAt,
+        signed_by_name: signedBy,
+      };
+    })(),
     has_chargeback: false,
     chargeback_type: null,
     chargeback_status: null,

@@ -36,6 +36,7 @@ const rawOrder = (overrides: Partial<RawBackfillOrder> = {}): RawBackfillOrder =
     fulfillments: null,
     shopifyProtect: null,
     transactions: null,
+    metafields: null,
     risk: null,
   };
   return { ...base, ...overrides };
@@ -306,7 +307,7 @@ describe("normalizeBackfillOrder", () => {
       shopId,
       rawOrder({
         fulfillments: [
-          { createdAt: "2026-04-22T13:00:00Z", displayStatus: "SUCCESS" },
+          { createdAt: "2026-04-22T13:00:00Z", displayStatus: "SUCCESS", metafields: null },
         ],
       }),
       { storeCountryCode: "US" },

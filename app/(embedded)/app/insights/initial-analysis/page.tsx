@@ -96,6 +96,11 @@ interface PeriodWindow {
   threeDsAuthEligibleOrders: number;
   medianFulfillmentHours: number | null;
   fulfilledOrdersCount: number;
+  confirmedDeliveryRatePct: number | null;
+  confirmedDeliveryOrders: number;
+  fulfilledForDeliveryCount: number;
+  signedForRatePct: number | null;
+  signedForOrders: number;
 }
 
 interface RiskConversionBucket {
@@ -795,6 +800,28 @@ export default function InitialAnalysisPage() {
                   deltaUnit="h"
                   context={t("fraudIntel.kpiMedianFulfillmentContext", {
                     count: current30d.fulfilledOrdersCount.toLocaleString(),
+                  })}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiConfirmedDelivery")}
+                  value={formatPct(current30d.confirmedDeliveryRatePct)}
+                  current={current30d.confirmedDeliveryRatePct}
+                  prior={prior30d.confirmedDeliveryRatePct}
+                  context={t("fraudIntel.kpiConfirmedDeliveryContext", {
+                    num: current30d.confirmedDeliveryOrders.toLocaleString(),
+                    den: current30d.fulfilledForDeliveryCount.toLocaleString(),
+                  })}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiSignedFor")}
+                  value={formatPct(current30d.signedForRatePct)}
+                  current={current30d.signedForRatePct}
+                  prior={prior30d.signedForRatePct}
+                  context={t("fraudIntel.kpiSignedForContext", {
+                    num: current30d.signedForOrders.toLocaleString(),
+                    den: current30d.confirmedDeliveryOrders.toLocaleString(),
                   })}
                   t={t}
                 />

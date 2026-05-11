@@ -19,11 +19,45 @@
  * signature scan is wired in, branch here.
  */
 
-import type { OrderFulfillment } from "@/lib/shopify/queries/orders";
+import type { OrderFulfillment, OrderDetailNode } from "@/lib/shopify/queries/orders";
 import type { EvidenceSection, BuildContext } from "../types";
 import type { DeliveryProofType } from "@/lib/argument/canonicalEvidence";
+import {
+  readTrackingMetafields,
+  mergeTrackingReads,
+  type RawShopifyMetafield,
+  type UnifiedTrackingData,
+} from "@/lib/shopify/trackingApps";
 
-function extractTrackingData(fulfillment: OrderFulfillment) {
+/** Convert a metafield edge connection into the flat array shape the
+ *  tracking-apps reader expects. Tolerant of null connections. */
+function flattenMetafields(
+  connection: { edges: Array<{ node: { namespace: string; key: string; value: string } }> } | null,
+): RawShopifyMetafield[] {
+  if (!connection?.edges?.length) return [];
+  return connection.edges.map((e) => ({
+    namespace: e.node.namespace,
+    key: e.node.key,
+    value: e.node.value,
+  }));
+}
+
+/** Read tracking-app metafields for one fulfillment, merging with
+ *  order-level metafields as fallback. */
+function readTrackingForFulfillment(
+  fulfillment: OrderFulfillment,
+  order: OrderDetailNode,
+): UnifiedTrackingData {
+  const ful = readTrackingMetafields(flattenMetafields(fulfillment.metafields ?? null));
+  const ord = readTrackingMetafields(flattenMetafields(order.metafields ?? null));
+  return mergeTrackingReads(ful, ord);
+}
+
+function extractTrackingData(
+  fulfillment: OrderFulfillment,
+  order: OrderDetailNode,
+) {
+  const tracking = readTrackingForFulfillment(fulfillment, order);
   return {
     fulfillmentId: fulfillment.id,
     status: fulfillment.status,
@@ -42,6 +76,17 @@ function extractTrackingData(fulfillment: OrderFulfillment) {
       title: e.node.lineItem.title,
       quantity: e.node.quantity,
     })),
+    // Tracking-app metafield data (when present). signedByName is the
+    // big one — it elevates the proofType to `signature_confirmed`
+    // which is the strongest possible delivery-evidence tier.
+    carrierTracking: tracking.deliveryStatus
+      ? {
+          deliveryStatus: tracking.deliveryStatus,
+          deliveredAtTracking: tracking.deliveredAtTracking,
+          signedByName: tracking.signedByName,
+          trackingSource: tracking.trackingSource,
+        }
+      : null,
   };
 }
 
@@ -50,18 +95,31 @@ function extractTrackingData(fulfillment: OrderFulfillment) {
  *  label). The categorizer will downgrade strong→moderate→supporting→
  *  invalid based on this string.
  *
- *  TODO: signature_confirmed is currently unreachable until carrier
- *  signature scan data is added to the Shopify fulfillment query. When
- *  that data lands, branch here on it. */
-function resolveProofType(fulfillments: OrderFulfillment[]): DeliveryProofType {
+ *  signature_confirmed is reached when a tracking-app metafield
+ *  (AfterShip / Shipway / Wonderment / etc.) carries a signed-by-
+ *  name on at least one fulfillment. That's the strongest possible
+ *  delivery evidence — carrier-attested human-readable signature.
+ *  See lib/shopify/trackingApps.ts for the metafield reader. */
+function resolveProofType(
+  fulfillments: OrderFulfillment[],
+  order: OrderDetailNode,
+): DeliveryProofType {
   let bestTier: 0 | 1 | 2 | 3 = 0;
   for (const f of fulfillments) {
-    // Signature confirmation: not currently available — see TODO above.
-    // const hasSignature = f.trackingInfo.some((t) => /* signature data */ false);
-    // if (hasSignature) bestTier = Math.max(bestTier, 3) as 0 | 1 | 2 | 3;
-
-    // Delivered with corroborating timestamp from the carrier.
-    if (f.deliveredAt) {
+    // Signature confirmation via tracking-app metafield. Per-
+    // fulfillment metafield wins; falls back to order-level.
+    const tracking = readTrackingForFulfillment(f, order);
+    if (tracking.signedByName) {
+      bestTier = Math.max(bestTier, 3) as 0 | 1 | 2 | 3;
+      continue;
+    }
+    // Delivered with corroborating timestamp from the carrier (either
+    // via Shopify's deliveredAt or via a tracking-app's Delivered
+    // status + delivered_at_tracking).
+    const carrierConfirmedDelivered =
+      tracking.deliveryStatus === "Delivered" &&
+      !!tracking.deliveredAtTracking;
+    if (f.deliveredAt || carrierConfirmedDelivered) {
       bestTier = Math.max(bestTier, 2) as 0 | 1 | 2 | 3;
       continue;
     }
@@ -85,7 +143,7 @@ export async function collectFulfillmentEvidence(
   const order = ctx.order;
   if (!order?.fulfillments?.length) return [];
 
-  const proofType = resolveProofType(order.fulfillments);
+  const proofType = resolveProofType(order.fulfillments, order);
 
   const fieldsProvided: string[] = [];
   const hasTracking = order.fulfillments.some((f) =>
@@ -119,7 +177,7 @@ export async function collectFulfillmentEvidence(
         // categorizer. Same value applies to both shipping_tracking
         // and delivery_proof since they share signalId "delivery".
         proofType,
-        fulfillments: order.fulfillments.map(extractTrackingData),
+        fulfillments: order.fulfillments.map((f) => extractTrackingData(f, order)),
       },
     },
   ];
