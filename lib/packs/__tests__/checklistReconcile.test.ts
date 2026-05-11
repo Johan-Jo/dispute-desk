@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectedFieldsFromPack,
+  normalizeChecklistV2Shape,
   reconcileChecklistWithCollectedFields,
 } from "../checklistReconcile";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
@@ -147,5 +148,38 @@ describe("reconcileChecklistWithCollectedFields", () => {
     expect(status("cancellation_policy")).toBe("available");
     expect(status("billing_address_match")).toBe("missing");
     expect(status("delivery_proof")).toBe("unavailable");
+  });
+});
+
+describe("normalizeChecklistV2Shape — defensive read-side unwrap", () => {
+  // Regression: seed packs persisted `checklist_v2` as the legacy v1
+  // wrapper shape `{ items: [...] }`. The route used to cast as
+  // `ChecklistItemV2[]` and crash with `TypeError: a.map is not a
+  // function`. This normalizer accepts either shape.
+  const sample = [item("order_confirmation", "missing")];
+
+  it("passes a flat array through unchanged", () => {
+    expect(normalizeChecklistV2Shape(sample)).toBe(sample);
+  });
+
+  it("unwraps the legacy { items: [...] } wrapper", () => {
+    expect(normalizeChecklistV2Shape({ items: sample })).toEqual(sample);
+  });
+
+  it("returns null for nullish or unrecognized shapes", () => {
+    expect(normalizeChecklistV2Shape(null)).toBeNull();
+    expect(normalizeChecklistV2Shape(undefined)).toBeNull();
+    expect(normalizeChecklistV2Shape({})).toBeNull();
+    expect(normalizeChecklistV2Shape("string")).toBeNull();
+    expect(normalizeChecklistV2Shape({ items: "not-array" })).toBeNull();
+  });
+
+  it("reconcile accepts the wrapper shape without crashing", () => {
+    expect(() =>
+      reconcileChecklistWithCollectedFields(
+        { items: sample } as unknown as ChecklistItemV2[],
+        new Set(),
+      ),
+    ).not.toThrow();
   });
 });

@@ -189,7 +189,16 @@ for (const d of disputes) {
     status: packStatus,
     completeness_score: completeness,
     checklist,
-    checklist_v2: checklist,
+    // `checklist_v2` expects a flat array of `ChecklistItemV2` rows
+    // (field/status/priority/blocking/source). The seed's `buildChecklist`
+    // emits the legacy v1 wrapper shape `{items: [...]}` which is
+    // structurally incompatible with v2 — writing it here historically
+    // caused the workspace route to throw `TypeError: a.map is not a
+    // function` (the route casts as `ChecklistItemV2[]` and calls
+    // `.map`). Seed packs are dev-only and the workspace renders fine
+    // when checklist_v2 is null, so we write null rather than
+    // synthesizing a fake v2 array.
+    checklist_v2: null,
     pack_json: packJson,
     submission_readiness: submissionReadiness,
     waived_items: [],

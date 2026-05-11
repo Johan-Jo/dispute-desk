@@ -61,12 +61,33 @@ export function collectedFieldsFromPack(args: {
   return set;
 }
 
+/**
+ * Defensive accessor — `checklist_v2` is typed as `ChecklistItemV2[]` in
+ * code, but historical seed/builder paths persisted it as
+ * `{ items: ChecklistItemV2[] }`. The TS cast at the route boundary
+ * hides the runtime mismatch; this normalizer accepts either shape and
+ * always returns a plain array. Exported so other read sites can use
+ * the same unwrapping path.
+ */
+export function normalizeChecklistV2Shape(
+  raw: unknown,
+): ChecklistItemV2[] | null {
+  if (raw == null) return null;
+  if (Array.isArray(raw)) return raw as ChecklistItemV2[];
+  if (typeof raw === "object" && raw !== null && "items" in raw) {
+    const items = (raw as { items?: unknown }).items;
+    if (Array.isArray(items)) return items as ChecklistItemV2[];
+  }
+  return null;
+}
+
 export function reconcileChecklistWithCollectedFields(
   checklist: ChecklistItemV2[] | null | undefined,
   collected: Set<string>,
 ): ChecklistItemV2[] {
-  if (!checklist) return [];
-  return checklist.map((c) => {
+  const normalized = normalizeChecklistV2Shape(checklist);
+  if (!normalized) return [];
+  return normalized.map((c) => {
     if (c.status !== "missing") return c;
     if (!collected.has(c.field)) return c;
     return { ...c, status: "available" as const, unavailableReason: undefined };
