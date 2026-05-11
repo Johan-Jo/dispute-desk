@@ -11,10 +11,13 @@
  *   - Historical import has already completed (we don't pile a
  *     re-auth ask on top of an active backfill).
  *   - Live offline session scopes do NOT include `read_all_orders`.
+ *   - Server-side dismissal flag for banner_id `scope_upgrade` is
+ *     not set on this shop.
  *
- * Dismissal: localStorage flag, per-device. Functionally a "remind
- * me later" — does not write server state, so a re-login on another
- * device still shows the nudge.
+ * Dismissal: server-side via POST /api/dashboard/banners/dismiss.
+ * Replaces the previous localStorage flag (which was per-device,
+ * so merchants saw the banner on every other browser/device they
+ * signed in from). Persisted in `shops.dismissed_banners` JSONB.
  *
  * Clicking the CTA navigates the top frame to `/api/auth/shopify`
  * (offline phase). The merchant goes through Shopify's consent
@@ -28,7 +31,7 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Banner, BlockStack, Text, Button, InlineStack } from "@shopify/polaris";
 
-const STORAGE_KEY = "dd_scope_upgrade_banner_dismissed";
+const BANNER_ID = "scope_upgrade";
 
 interface ScopeStatePayload {
   historicalImportStatus:
@@ -37,21 +40,18 @@ interface ScopeStatePayload {
     | "complete"
     | "failed";
   currentScopeGrant: "default_window" | "read_all_orders";
+  dismissed: boolean;
 }
 
 export function DashboardScopeUpgradeBanner() {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const [state, setState] = useState<ScopeStatePayload | null>(null);
-  const [dismissed, setDismissed] = useState<boolean>(false);
-  const [hydrated, setHydrated] = useState<boolean>(false);
-
-  useEffect(() => {
-    try {
-      setDismissed(window.localStorage.getItem(STORAGE_KEY) === "1");
-    } catch {}
-    setHydrated(true);
-  }, []);
+  // Local optimistic dismissal — flips immediately on click so the
+  // banner disappears without waiting for the POST round-trip. The
+  // server state catches up shortly after and the dashboard's next
+  // poll reflects it everywhere.
+  const [optimisticDismissed, setOptimisticDismissed] = useState<boolean>(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,9 +59,11 @@ export function DashboardScopeUpgradeBanner() {
       .then((res) => (res.ok ? res.json() : null))
       .then((d) => {
         if (cancelled || !d) return;
+        const dismissed = !!(d.dismissedBanners ?? {})[BANNER_ID];
         setState({
           historicalImportStatus: d.historicalImportStatus,
           currentScopeGrant: d.currentScopeGrant,
+          dismissed,
         });
       });
     return () => {
@@ -69,15 +71,23 @@ export function DashboardScopeUpgradeBanner() {
     };
   }, []);
 
-  if (!hydrated || dismissed || !state) return null;
+  if (!state) return null;
+  if (state.dismissed || optimisticDismissed) return null;
   if (state.historicalImportStatus !== "complete") return null;
   if (state.currentScopeGrant === "read_all_orders") return null;
 
   const onDismiss = () => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, "1");
-    } catch {}
-    setDismissed(true);
+    setOptimisticDismissed(true);
+    // Fire-and-forget — if the POST fails the banner will re-appear
+    // on the next dashboard load, which is the right behaviour
+    // (don't lose the nudge silently).
+    fetch("/api/dashboard/banners/dismiss", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bannerId: BANNER_ID }),
+    }).catch(() => {
+      /* swallow — next page load will retry the dismissal naturally */
+    });
   };
 
   const onReauth = () => {

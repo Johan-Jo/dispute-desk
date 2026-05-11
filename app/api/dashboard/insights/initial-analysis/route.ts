@@ -84,6 +84,11 @@ interface InsightsResponse {
     none: RiskConversionBucket;
     pending: RiskConversionBucket;
   };
+  /** Per-shop banner dismissal state, server-side. Keys are banner
+   *  IDs (e.g. "scope_upgrade"); presence of a key means dismissed.
+   *  Replaces the old localStorage flags so dismissals persist
+   *  across devices. */
+  dismissedBanners: Record<string, string>;
 }
 
 interface RiskConversionBucket {
@@ -148,7 +153,7 @@ export async function GET(req: NextRequest) {
   const { data: shopRow } = await sb
     .from("shops")
     .select(
-      "historical_import_status, historical_import_orders_total, historical_import_since_date, historical_import_scope_granted, historical_import_completed_at",
+      "historical_import_status, historical_import_orders_total, historical_import_since_date, historical_import_scope_granted, historical_import_completed_at, dismissed_banners",
     )
     .eq("id", shopId)
     .single();
@@ -350,6 +355,8 @@ export async function GET(req: NextRequest) {
       (shopRow?.historical_import_completed_at as string | null) ?? null,
     currentScopeGrant,
     riskToDisputeConversion,
+    dismissedBanners:
+      (shopRow?.dismissed_banners as Record<string, string> | null) ?? {},
   };
 
   return NextResponse.json(response);
