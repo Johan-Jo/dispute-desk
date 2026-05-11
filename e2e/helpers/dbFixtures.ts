@@ -14,9 +14,25 @@
  *   - Every helper returns an `ids` object plus a `cleanup()` function.
  *   - Specs MUST call `cleanup()` in `afterEach` (or an equivalent
  *     try/finally) to delete the seeded rows. Cleanup is idempotent.
- *   - If a test crashes between seed and cleanup, the next run's
- *     cleanup-by-id is a no-op; orphan rows accumulate in the test
- *     database until manually purged. Use only against a non-prod DB.
+ *   - Cleanup goes through the `delete_e2e_fixture_dispute(uuid)` RPC
+ *     (added in migration `20260509140000`), which is the only path
+ *     able to delete the audit_events rows the seeded dispute and pack
+ *     accumulate during the test. Without the RPC, the BEFORE-DELETE
+ *     trigger on audit_events would block the dispute/pack delete via
+ *     FK and silently leak the seed (root cause of the 30 orphan
+ *     fixtures wiped on 2026-05-09 — see docs/technical.md
+ *     § *E2E fixtures and audit immutability*).
+ *   - If a test crashes between seed and cleanup, the RPC is also what
+ *     `npm run cleanup:e2e-orphans` calls under the hood for any
+ *     test-pattern dispute_gid found in the DB.
+ *
+ * Production-DB safety:
+ *   - The DisputeDesk codebase shares a single Supabase project across
+ *     dev / E2E / prod. To avoid contaminating the merchant dashboard
+ *     with fixture rows, `openSb()` refuses to operate against
+ *     `SUPABASE_URL` unless `E2E_ALLOW_PROD_DB=true` is explicitly set.
+ *     The opt-in is intentional: it forces a deliberate ack every time
+ *     a developer wants to run E2E specs against the live project.
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -28,7 +44,10 @@ export interface SbConn {
 
 /** Open a Supabase REST client with service-role credentials.
  *  Throws when env vars are unset — the caller (test.skip) should
- *  guard against this. */
+ *  guard against this. Also refuses to operate against the production
+ *  Supabase project unless `E2E_ALLOW_PROD_DB=true` is set; this is
+ *  the structural guard against E2E fixtures leaking into the live
+ *  merchant dashboard. */
 export function openSb(): SbConn {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,6 +57,24 @@ export function openSb(): SbConn {
         "must be set in .env.local for seeded fixtures.",
     );
   }
+
+  // DisputeDesk has one Supabase project (`sddzuglxdnkhcnjmcpbj`) that
+  // backs dev, E2E, and prod. Until we provision a separate test
+  // project, opt-in via `E2E_ALLOW_PROD_DB=true` so that nobody
+  // accidentally seeds fixtures while the dashboard is being demoed.
+  const PROD_REF = "sddzuglxdnkhcnjmcpbj";
+  if (
+    url.includes(PROD_REF) &&
+    process.env.E2E_ALLOW_PROD_DB !== "true"
+  ) {
+    throw new Error(
+      `Refusing to seed E2E fixtures against the production Supabase project (${PROD_REF}). ` +
+        "Set E2E_ALLOW_PROD_DB=true to override — be aware that fixture rows " +
+        "show up on the live dashboard until cleanup runs. " +
+        "See docs/technical.md § E2E fixtures and audit immutability.",
+    );
+  }
+
   const client = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -124,11 +161,23 @@ export async function seedReadyPackForUser(
   }
 
   const cleanup = async () => {
-    // Order matters — jobs reference pack IDs via entity_id; disputes
-    // hold the pack's foreign key. Delete in reverse dependency order.
-    await client.from("jobs").delete().eq("entity_id", packId);
-    await client.from("evidence_packs").delete().eq("id", packId);
-    await client.from("disputes").delete().eq("id", disputeId);
+    // Goes through the SECURITY DEFINER RPC so the audit_events rows
+    // accumulated during the test (which the BEFORE-DELETE trigger
+    // would otherwise refuse to surrender) get cleaned up too. The
+    // RPC is hardcoded to refuse anything that isn't an E2E fixture
+    // dispute_gid, so a forged disputeId can't wipe real data.
+    //
+    // Errors are surfaced — the previous fire-and-forget cleanup
+    // silently swallowed FK violations and leaked orphan fixtures into
+    // the production dashboard.
+    const { error } = await client.rpc("delete_e2e_fixture_dispute", {
+      p_dispute_id: disputeId,
+    });
+    if (error) {
+      throw new Error(
+        `delete_e2e_fixture_dispute(${disputeId}) failed: ${error.message}`,
+      );
+    }
   };
 
   return {

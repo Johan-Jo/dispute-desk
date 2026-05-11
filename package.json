@@ -30,6 +30,7 @@
     "run:autopilot-once": "node scripts/run-autopilot-once.mjs",
     "db:migrate": "npx supabase db push",
     "db:migrate:script": "node scripts/run-migration.mjs",
+    "cleanup:e2e-orphans": "node scripts/cleanup-e2e-orphans.mjs",
     "cron:resources": "node scripts/trigger-resources-crons.mjs",
     "smoke:resources-hub": "node scripts/smoke-resources-hub.mjs",
     "audit:resources-hub": "node scripts/audit-resources-hub.mjs",
