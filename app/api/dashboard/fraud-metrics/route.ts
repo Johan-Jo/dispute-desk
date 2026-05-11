@@ -201,12 +201,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const acceptanceDenom = ordersTotal - ordersNone - ordersPending;
+  // Acceptance rate:
+  //   numerator   = orders Shopify cleared OR rated low/medium risk
+  //                 (LOW + MEDIUM + NONE — Shopify's `NONE` is its
+  //                 "analyzed, no risk indicators" value, NOT "skipped").
+  //   denominator = orders that were analyzed = total − PENDING.
+  // Only PENDING ("analysis still in flight") is excluded.
+  const acceptanceDenom = ordersTotal - ordersPending;
   const response: FraudMetricsResponse = {
     window,
     windowStart,
     ordersAnalyzed: ordersTotal,
-    acceptanceRate: rate(ordersLow + ordersMedium, acceptanceDenom),
+    acceptanceRate: rate(
+      ordersLow + ordersMedium + ordersNone,
+      acceptanceDenom,
+    ),
     highRiskRate: rate(ordersHigh, ordersTotal),
     fraudDisputeRate: rate(fraudDisputes, ordersTotal),
     highRiskFulfillmentRate: rate(ordersFulfilledHighRisk, ordersHigh),

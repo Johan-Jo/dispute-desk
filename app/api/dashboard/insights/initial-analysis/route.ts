@@ -161,10 +161,17 @@ export async function GET(req: NextRequest) {
     eligibleProtectedValue += Number(r.eligible_protected_value ?? 0);
   }
 
-  const acceptanceDenom = ordersTotal90 - ordersNone - ordersPending;
+  // Acceptance rate: see fraud-metrics route for the formula contract.
+  // Numerator = LOW + MEDIUM + NONE (Shopify's "cleared" bucket counts
+  // as accepted). Denominator = total − PENDING (only orders still
+  // awaiting analysis are excluded).
+  const acceptanceDenom = ordersTotal90 - ordersPending;
   const highRiskPct = rate(ordersHigh, ordersTotal90);
   const fulfilledHighRiskPct = rate(ordersFulfilledHighRisk, ordersHigh);
-  const acceptanceRatePct = rate(ordersLow + ordersMedium, acceptanceDenom);
+  const acceptanceRatePct = rate(
+    ordersLow + ordersMedium + ordersNone,
+    acceptanceDenom,
+  );
   const fraudDisputeRatePct = rate(fraudDisputes, ordersTotal90);
   const shopifyProtectCoveragePct = rate(
     fullyProtectedValue,

@@ -28,7 +28,7 @@ const KEYS = {
     "Our background job didn't complete. We'll retry automatically — refresh in a few minutes.",
   kpiAcceptanceRate: "Acceptance rate",
   tooltipAcceptanceRate:
-    "Acceptance rate is calculated from orders classified by Shopify as low or medium risk. Orders without completed fraud analysis are excluded.",
+    "Share of analyzed orders that Shopify cleared or rated low/medium risk. Orders still pending fraud analysis are excluded; orders Shopify marked as having no risk indicators are counted as accepted.",
   kpiHighRiskRate: "High-risk orders",
   tooltipHighRiskRate:
     "Share of orders Shopify classified as HIGH risk during fraud analysis.",
@@ -74,7 +74,7 @@ const KEYS = {
   riskMedium: "Medium",
   riskLow: "Low",
   riskPending: "Pending analysis",
-  riskNone: "No classification",
+  riskNone: "Cleared",
   chargebackHealthTitle: "Chargeback health",
   chargebackHealthExplain:
     "Calculated from your trailing 90-day chargeback rate. Industry monitoring thresholds align with card-network programs.",
@@ -90,12 +90,25 @@ const KEYS = {
   scopeUpgradeCta: "Re-authorize on Shopify",
 };
 
+// Keys we want to FORCE-overwrite even if a locale file already has them
+// — used when copy is reframed (e.g. NONE bucket relabeled as "Cleared",
+// acceptance-rate tooltip rewritten for the new math). Add a key here
+// for one run, then remove it once translations have caught up. Empty
+// in steady state.
+const FORCE_OVERRIDE = new Set([]);
+
 function injectInto(filePath) {
   const raw = readFileSync(filePath, "utf8");
   const obj = JSON.parse(raw);
   if (obj[NAMESPACE]) {
-    // Merge — keep any existing translated keys, add missing ones.
-    obj[NAMESPACE] = { ...KEYS, ...obj[NAMESPACE] };
+    // Merge — keep existing translations EXCEPT for keys in
+    // FORCE_OVERRIDE, where the English baseline wins.
+    const existing = obj[NAMESPACE];
+    const merged = { ...KEYS, ...existing };
+    for (const k of FORCE_OVERRIDE) {
+      if (KEYS[k] !== undefined) merged[k] = KEYS[k];
+    }
+    obj[NAMESPACE] = merged;
   } else {
     obj[NAMESPACE] = { ...KEYS };
   }
