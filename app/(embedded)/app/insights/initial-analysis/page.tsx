@@ -723,16 +723,24 @@ export default function InitialAnalysisPage() {
           />
         </Layout.Section>
 
-        {/* ── KPI strip (current 30d + MoM delta) ─────────────────── */}
+        {/* ── 30d KPIs, split into three thematic groups ──────────────
+            Single 9-tile strip was too crowded. Each group now lives
+            in its own card with a heading + subtitle. Order matches
+            the merchant's mental flow:
+              1. What is Shopify's fraud analysis telling me?
+              2. How was the payment verified / underwritten?
+              3. What is happening with delivery operations? */}
+
+        {/* Group 1 — Fraud-risk profile (Shopify classification + outcomes) */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
               <div className={styles.sectionTitle}>
                 <Text as="h3" variant="headingMd">
-                  {t("fraudIntel.section30dTitle")}
+                  {t("fraudIntel.segmentFraudProfileTitle")}
                 </Text>
                 <Text as="span" variant="bodySm" tone="subdued">
-                  {t("fraudIntel.section30dSubtitle")}
+                  {t("fraudIntel.segmentFraudProfileSubtitle")}
                 </Text>
               </div>
               <div className={styles.kpiStrip}>
@@ -759,21 +767,24 @@ export default function InitialAnalysisPage() {
                   inverseDelta
                   t={t}
                 />
-                <KpiTile
-                  label={t("fraudIntel.kpiHighRiskFulfilled")}
-                  value={formatPct(current30d.fulfilledHighRiskPct)}
-                  current={current30d.fulfilledHighRiskPct}
-                  prior={prior30d.fulfilledHighRiskPct}
-                  inverseDelta
-                  t={t}
-                />
-                <KpiTile
-                  label={t("fraudIntel.kpiProtectCoverage")}
-                  value={formatPct(current30d.shopifyProtectCoveragePct)}
-                  current={current30d.shopifyProtectCoveragePct}
-                  prior={prior30d.shopifyProtectCoveragePct}
-                  t={t}
-                />
+              </div>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Group 2 — Payment verification (authentication + underwriting) */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <div className={styles.sectionTitle}>
+                <Text as="h3" variant="headingMd">
+                  {t("fraudIntel.segmentVerificationTitle")}
+                </Text>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("fraudIntel.segmentVerificationSubtitle")}
+                </Text>
+              </div>
+              <div className={styles.kpiStrip}>
                 <KpiTile
                   label={t("fraudIntel.kpi3dsAuth")}
                   value={formatPct(current30d.threeDsAuthRatePct)}
@@ -785,6 +796,31 @@ export default function InitialAnalysisPage() {
                   })}
                   t={t}
                 />
+                <KpiTile
+                  label={t("fraudIntel.kpiProtectCoverage")}
+                  value={formatPct(current30d.shopifyProtectCoveragePct)}
+                  current={current30d.shopifyProtectCoveragePct}
+                  prior={prior30d.shopifyProtectCoveragePct}
+                  t={t}
+                />
+              </div>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Group 3 — Delivery operations (carrier confirmation + timing) */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <div className={styles.sectionTitle}>
+                <Text as="h3" variant="headingMd">
+                  {t("fraudIntel.segmentDeliveryTitle")}
+                </Text>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("fraudIntel.segmentDeliverySubtitle")}
+                </Text>
+              </div>
+              <div className={styles.kpiStrip}>
                 <KpiTile
                   label={t("fraudIntel.kpiMedianFulfillment")}
                   value={
@@ -801,6 +837,14 @@ export default function InitialAnalysisPage() {
                   context={t("fraudIntel.kpiMedianFulfillmentContext", {
                     count: current30d.fulfilledOrdersCount.toLocaleString(),
                   })}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiHighRiskFulfilled")}
+                  value={formatPct(current30d.fulfilledHighRiskPct)}
+                  current={current30d.fulfilledHighRiskPct}
+                  prior={prior30d.fulfilledHighRiskPct}
+                  inverseDelta
                   t={t}
                 />
                 <KpiTile
