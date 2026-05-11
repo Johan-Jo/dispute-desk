@@ -12,21 +12,32 @@ redirect_urls = [
 ]
 
 [access_scopes]
-# Scope state as of 2026-05-10 deploy:
-#   * Partners currently grants the broader 20-scope set below (verified via
-#     `shopify app config pull` 2026-05-10). The 2026-05-07 "tightening" commit
-#     authored the narrower set locally but never deployed — a deploy now with
-#     the tightened set would silently remove the broader grants from active
-#     installs. That tightening is deferred to a separate, audited change.
-#   * `read_all_orders` newly approved by Shopify Partners on 2026-05-10
-#     (Protected Customer Data tier) for the Phase 1 Fraud Intelligence
-#     historical-orders backfill. Until this deploy, the scope existed in code
-#     paths (scope-aware fallback in lib/disputes/backfillOrders.ts) but was
-#     not actually granted to merchants. Push this file via
-#     `shopify app deploy` to activate it on new installs.
-#   * Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID — a
-#     separate Partners app — and are never granted to merchants of this app.
-scopes = "read_all_orders,read_customers,read_files,read_fulfillments,read_inventory,read_locations,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_draft_orders,write_files,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
+# Tightened 2026-05-11 — production code uses ONLY the scopes below.
+# Audit re-run before this deploy confirmed zero references in `lib/`
+# or `app/` to: read_files, read_inventory, read_locations,
+# write_draft_orders, write_files, write_fulfillments, write_inventory,
+# write_merchant_managed_fulfillment_orders, write_orders,
+# write_products. No GraphQL mutations call any of those scopes
+# either (verified: no draftOrderCreate, fulfillmentCreate,
+# productCreate, orderCreate, fileCreate, inventoryAdjust callers).
+#
+# History:
+#   * Scopes originally approved per ticket 64535407 (2026-03-04).
+#   * 2026-05-07 commit narrowed the local TOML but the change never
+#     reached Partners (no deploy was run). The wider set was
+#     silently in production until 2026-05-10.
+#   * 2026-05-10 — `read_all_orders` approved as Protected Customer
+#     Data and pushed. The tightening was deferred to this commit
+#     so the read_all_orders deploy didn't bundle silent deletes.
+#   * 2026-05-11 — this commit. Push via `shopify app deploy
+#     --allow-deletes` to drop the 10 unused scopes from Partners.
+#     Existing installs keep whatever they previously consented to;
+#     only NEW installs see the tightened consent screen.
+#
+# Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID
+# (a separate Partners app) and carry the broader write set there
+# — never on the production app.
+scopes = "read_all_orders,read_customers,read_fulfillments,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"
