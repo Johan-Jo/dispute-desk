@@ -828,9 +828,36 @@ Copy contract — load-bearing, must not regress:
 
 The PRD's original "Your current chargeback health is At Risk" as the dominant onboarding message was explicitly rejected — the banner must create curiosity and perceived value, not defensive reaction. `classifyChargebackHealth` (pure, exported for tests) buckets `<0.40% → good`, `0.40–0.60% → at_risk`, `>0.60% → elevated`.
 
-**`/app/insights/initial-analysis` page** is always reachable (banner dismiss does not hide it). Same insight-first hierarchy: hero headline → 90d KPIs → risk-classification breakdown table → chargeback-health section (with the `#chargeback-health` anchor for the banner CTA) → "What this means" closing note that explicitly reframes risk as operational context, not verdict.
+**`/app/insights/initial-analysis` page** (titled **"Chargeback Exposure"** in the merchant UI as of 2026-05-11; renamed from "Risk Intelligence" to avoid the fraud-prevention framing that would attract Riskified/Signifyd/NoFraud expectations DisputeDesk does not own). Always reachable; banner dismiss does not hide it. Linked from the embedded sidebar as **"Insights"** (`nav.insights`) — generic label reserves room for sub-pages (Trends, Benchmarking) without another rename.
+
+Hierarchy (operational behavior is the hero, Shopify's classification is supporting context):
+1. Hero — orders analyzed + leading observation.
+2. KPI strips — three thematic cards in this order: **Delivery operations** (median fulfill, high-risk fulfilled, confirmed delivery, signed-for) → **Payment verification** (3-DS auth, Protect coverage) → **Fraud-risk profile** (acceptance, high-risk, fraud-dispute rate). Each KPI tile carries an info-icon tooltip explaining the metric in 1–2 sentences. Reads as the interpretation layer, not a Shopify wrapper.
+3. **Operational Checkpoints** — rule-engine output (see below).
+4. Risk classification breakdown — stacked bar always visible; per-bucket prose lives behind a "Show classification details" disclosure to reduce visual weight.
+5. Two-column row — risk-to-dispute correlation chart + chargeback-health gauge.
+6. "What this means" footer.
+
+Color severity is intentionally softened: HIGH risk is amber-orange (`#F97316`), not red. True red (`#DC2626`) is reserved for actual network-threshold breaches (the gauge "elevated" band, breach-severity checkpoint rows).
 
 API: `GET /api/dashboard/insights/initial-analysis` bundles everything the banner + page need — historical totals, 90d fraud-rollup percentages, 90d chargeback rate + classified health, risk breakdown, and import state. Single endpoint, single fetch per surface.
+
+### Operational Checkpoints
+
+Rule-engine layer in `lib/insights/checkpoints.ts` that turns the already-computed page metrics into a sorted, capped list of sourced observations. Every rule emits a severity in `{healthy | info | consider | breach}`; the UI sorts by severity (most urgent first, ties resolve by declaration order) and caps at 5 visible.
+
+**Network-rule citations** (verified 2026-05-11, scheduled recheck 2026-08-11):
+- **Visa VAMP** (effective April 1, 2026): merchant Excessive ratio **1.5%** (count-based, CNP). Approaching band: **0.9–1.5%**. Fine at Excessive: $8 per disputed/fraudulent transaction. [Visa fact sheet](https://corporate.visa.com/content/dam/VCOM/corporate/visa-perspectives/security-and-trust/documents/visa-acquirer-monitoring-program-fact-sheet-2025.pdf).
+- **Mastercard ECM**: **1.5%** chargeback-to-transaction ratio AND **100+** chargebacks/month. **HECM**: 3.0% + 300/month. [Mastercard ECP guide](https://www.jpmorgan.com/content/dam/jpm/merchant-services/payment-network-updates/documents/mastercard-excessive-chargeback-program-guide.pdf).
+- **Visa 3-DS liability shift**: authenticated CNP payments shift fraud-chargeback liability to the issuer.
+
+**Not cited**: Visa CE3.0. CE3.0 is about *historical-footprint matching* (two prior transactions 120–365 days old, two matching data points incl. IP or device ID) — not about signature confirmation. Signature is general delivery evidence under traditional CNP rules and is cited as such, not as a CE3.0 requirement.
+
+**Own-baseline observations** (DisputeDesk heuristics, not network rules): high-risk-fulfilled ≥50% → `consider`; signature-rate <30% → `consider`; 3-DS rate ≥25% → `healthy`, <10% → `consider`; Protect coverage <20% → `info`; median fulfillment regressed ≥12 h → `consider`, improved ≥6 h → `healthy`.
+
+**RECHECK_RULES**: Card networks refresh these thresholds periodically (VAMP changed materially in April 2025 and again April 2026). Schedule a quarterly source-recheck and update the constants in `lib/insights/checkpoints.ts` if any threshold moves. Last verified date is held in the file header.
+
+Tests: `lib/insights/__tests__/checkpoints.test.ts` — 19 cases covering boundary transitions, sort order, the top-5 cap, and a surasvenne dev-shop sanity test (must never emit a `breach` for realistic dev-shop numbers).
 
 ### Scope-upgrade nudge (`DashboardScopeUpgradeBanner`)
 

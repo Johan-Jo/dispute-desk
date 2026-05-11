@@ -45,6 +45,8 @@ import {
 } from "@shopify/polaris";
 import { InfoIcon } from "@shopify/polaris-icons";
 import styles from "./initial-analysis.module.css";
+import { OperationalCheckpoints } from "./OperationalCheckpoints";
+import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
 
 interface InsightsResponse {
   available: boolean;
@@ -919,6 +921,27 @@ export default function InitialAnalysisPage() {
               </div>
             </BlockStack>
           </Card>
+        </Layout.Section>
+
+        {/* ── Operational checkpoints ─────────────────────────────
+            Rule-engine output: network thresholds (VAMP, ECM) and
+            own-baseline observations. Surfaces actionable, sourced
+            findings derived from the metrics above — DisputeDesk
+            as interpretation layer, not data presenter. */}
+        <Layout.Section>
+          <OperationalCheckpoints
+            checkpoints={evaluateCheckpoints({
+              chargebackRate90d: data.chargebackRate90d,
+              chargebackOrders90d: data.chargebackOrders90d,
+              fraudDisputeRatePct: current30d.fraudDisputeRatePct,
+              fulfilledHighRiskPct: current30d.fulfilledHighRiskPct,
+              threeDsAuthRatePct: current30d.threeDsAuthRatePct,
+              signedForRatePct: current30d.signedForRatePct,
+              shopifyProtectCoveragePct: current30d.shopifyProtectCoveragePct,
+              medianFulfillmentHoursCurrent: current30d.medianFulfillmentHours,
+              medianFulfillmentHoursPrior: prior30d.medianFulfillmentHours,
+            })}
+          />
         </Layout.Section>
 
         {/* ── Risk classification breakdown (all-time) ───────────── */}

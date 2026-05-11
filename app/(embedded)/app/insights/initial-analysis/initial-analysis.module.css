@@ -486,6 +486,54 @@
   background: #DC2626;
 }
 
+/* ─── Operational checkpoints list ──────────────────────────────── */
+
+.checkpointList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkpointRow {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+
+/* The colored severity pip — small, soft, never alarming. Red is
+ * intentionally reserved for breach-only rows so it stands out. */
+.checkpointPip {
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.checkpointBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkpointSource {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6D7175;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  width: fit-content;
+}
+
+.checkpointSource:hover {
+  color: #005BD3;
+  text-decoration-color: currentColor;
+}
+
 /* ─── "What this means" footer ──────────────────────────────────── */
 
 .footerCard {
