@@ -44,8 +44,7 @@ import { DashboardHelpCard } from "./DashboardHelpCard";
 import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
 import { DashboardQuickActions } from "./DashboardQuickActions";
-import { DashboardFraudIntelligence } from "./DashboardFraudIntelligence";
-import { DashboardInitialAnalysisBannerWrapper } from "./DashboardInitialAnalysisBanner";
+import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
@@ -382,10 +381,6 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <DashboardInitialAnalysisBannerWrapper />
-        </Layout.Section>
-
-        <Layout.Section>
           <DashboardOperationalSummary stats={stats} loading={statsLoading} />
         </Layout.Section>
 
@@ -394,7 +389,7 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <DashboardFraudIntelligence />
+          <DashboardOperationalInsightsStrip />
         </Layout.Section>
 
         {recentDisputesPreview}

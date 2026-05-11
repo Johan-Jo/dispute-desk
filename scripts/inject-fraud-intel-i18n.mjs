@@ -93,6 +93,15 @@ const KEYS = {
   whatThisMeansTitle: "What this means",
   whatThisMeansBody:
     "Fraud-risk classification is one operational signal among many. DisputeDesk treats it as context for dispute correlation and merchant operations — never as a verdict on individual orders.",
+  // ── Tier 2: compact insight strip on the embedded dashboard ─────
+  // Replaces the previous 6-card fraud panel + dismissible banner
+  // with a single observational card. Three sentences, one CTA.
+  stripTitle: "Operational insights",
+  stripBody:
+    "We've analyzed {count} historical Shopify orders. {high}% were classified high-risk by Shopify's fraud analysis. {fulfilled}% of those high-risk orders were still fulfilled.",
+  stripPreparingBody:
+    "Preparing operational insights — your historical analysis is still in progress. The summary lands here once it finishes.",
+  stripCta: "View operational analysis",
   // ── Scope-upgrade nudge ─────────────────────────────────────────
   scopeUpgradeTitle: "Unlock your full order history",
   scopeUpgradeBody:
