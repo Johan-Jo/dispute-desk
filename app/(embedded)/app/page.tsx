@@ -380,6 +380,9 @@ export default function EmbeddedDashboardPage() {
           <DashboardScopeUpgradeBanner />
         </Layout.Section>
 
+        {/* Operations pipeline — workflow status + period KPIs together
+            so the merchant sees current state next to performance over
+            the same window. */}
         <Layout.Section>
           <DashboardOperationalSummary stats={stats} loading={statsLoading} />
         </Layout.Section>
@@ -388,11 +391,16 @@ export default function EmbeddedDashboardPage() {
           <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
+        {/* Recent disputes — moved up per the Tier 2 plan. Operational
+            queue belongs above intelligence; the merchant's next
+            action is usually on a dispute row, not on a metric. */}
+        {recentDisputesPreview}
+
+        {/* Operational insights — drill-down intelligence. Compact
+            strip; full breakdown lives on /app/insights/initial-analysis. */}
         <Layout.Section>
           <DashboardOperationalInsightsStrip />
         </Layout.Section>
-
-        {recentDisputesPreview}
 
         <Layout.Section variant="oneHalf">
           <RecentActivityFeed stats={stats} loading={statsLoading} />
