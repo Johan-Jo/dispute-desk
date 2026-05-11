@@ -1405,7 +1405,9 @@
     "soc2Desc": "Audits de sécurité annuels par des tiers",
     "gdpr": "Prêt pour le RGPD & CCPA",
     "gdprDesc": "Conformité totale aux réglementations sur la protection des données",
-    "active": "Actif"
+    "active": "Actif",
+    "notifMonthlyDigest": "Bulletin mensuel de contestations",
+    "notifMonthlyDigestDesc": "Un email mensuel qui résume votre exposition aux contestations, votre position vis-à-vis des règles des réseaux et les évolutions."
   },
   "connect": {
     "title": "Connection Readiness",

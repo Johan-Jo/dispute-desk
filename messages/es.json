@@ -1354,7 +1354,9 @@
     "soc2": "Cumplimiento SOC 2 Tipo II",
     "soc2Desc": "Auditorías de seguridad anuales por terceros",
     "gdpr": "Listo para GDPR y CCPA",
-    "gdprDesc": "Pleno cumplimiento de la normativa de protección de datos"
+    "gdprDesc": "Pleno cumplimiento de la normativa de protección de datos",
+    "notifMonthlyDigest": "Resumen mensual de contracargos",
+    "notifMonthlyDigestDesc": "Un correo mensual que resume tu exposición a contracargos, tu posición frente a las reglas de las redes y los cambios."
   },
   "connect": {
     "title": "Connection Readiness",

@@ -1354,7 +1354,9 @@
     "soc2": "SOC 2 Typ II zertifiziert",
     "soc2Desc": "Jährliche Sicherheitsprüfungen durch Dritte",
     "gdpr": "DSGVO & CCPA-konform",
-    "gdprDesc": "Vollständige Einhaltung der Datenschutzbestimmungen"
+    "gdprDesc": "Vollständige Einhaltung der Datenschutzbestimmungen",
+    "notifMonthlyDigest": "Monatliche Rückbuchungs-Übersicht",
+    "notifMonthlyDigestDesc": "Eine monatliche E-Mail mit deiner Rückbuchungs-Exposition, deiner Position gegenüber den Netzwerkregeln und den Veränderungen."
   },
   "connect": {
     "title": "Connection Readiness",

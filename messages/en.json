@@ -1377,7 +1377,9 @@
     "teamMembers": "Team members",
     "deleteWarning": "Once deleted, your account and all data cannot be recovered.",
     "deleteAccount": "Delete account",
-    "active": "Active"
+    "active": "Active",
+    "notifMonthlyDigest": "Monthly chargeback digest",
+    "notifMonthlyDigestDesc": "A monthly email summarizing your chargeback exposure, where you stand on the network rules, and what changed."
   },
   "connect": {
     "title": "Connection Readiness",

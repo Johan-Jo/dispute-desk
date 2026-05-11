@@ -37,6 +37,7 @@ interface NotificationPrefs {
   newDispute: boolean;
   beforeDue: boolean;
   evidenceReady: boolean;
+  monthlyDigest: boolean;
 }
 
 interface AutomationSettings {
@@ -61,6 +62,8 @@ export default function EmbeddedSettingsPage() {
   const [notifNewDispute, setNotifNewDispute] = useState(true);
   const [notifBeforeDue, setNotifBeforeDue] = useState(true);
   const [notifEvidenceReady, setNotifEvidenceReady] = useState(false);
+  // Monthly Chargeback Exposure digest. Default ON — opt-out only.
+  const [notifMonthlyDigest, setNotifMonthlyDigest] = useState(true);
 
   const [automation, setAutomation] = useState<AutomationSettings>({
     auto_build_enabled: false,
@@ -94,6 +97,10 @@ export default function EmbeddedSettingsPage() {
           setNotifNewDispute(n.newDispute);
           setNotifBeforeDue(n.beforeDue);
           setNotifEvidenceReady(n.evidenceReady);
+          // Default to ON when the field is missing entirely — opt-out
+          // semantics. The cron also treats `undefined` as enabled, so
+          // the UI default mirrors server behavior.
+          setNotifMonthlyDigest(n.monthlyDigest ?? true);
         }
         if (prefs.teamEmail) {
           setTeamEmail(prefs.teamEmail);
@@ -319,6 +326,20 @@ export default function EmbeddedSettingsPage() {
                       label=""
                       checked={notifEvidenceReady}
                       onChange={(v) => { setNotifEvidenceReady(v); void persistNotification("evidenceReady", v); }}
+                      labelHidden
+                    />
+                  </InlineStack>
+                </div>
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifMonthlyDigest")}</Text>
+                      <Text as="span" variant="bodySm" tone="subdued">{t("notifMonthlyDigestDesc")}</Text>
+                    </BlockStack>
+                    <Checkbox
+                      label=""
+                      checked={notifMonthlyDigest}
+                      onChange={(v) => { setNotifMonthlyDigest(v); void persistNotification("monthlyDigest", v); }}
                       labelHidden
                     />
                   </InlineStack>

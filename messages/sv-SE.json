@@ -1406,7 +1406,9 @@
     "soc2Desc": "Årliga säkerhetsgranskningar av tredje part",
     "gdpr": "Redo för GDPR och CCPA",
     "gdprDesc": "Fullständig efterlevnad av dataskyddsförordningar",
-    "active": "Aktiv"
+    "active": "Aktiv",
+    "notifMonthlyDigest": "Månatlig återkrediteringssammanfattning",
+    "notifMonthlyDigestDesc": "Ett månadsmejl som sammanfattar din återkrediteringsexponering, din position gentemot kortnätsreglerna och förändringarna."
   },
   "connect": {
     "title": "Connection Readiness",

@@ -1354,7 +1354,9 @@
     "soc2": "Conformidade SOC 2 Tipo II",
     "soc2Desc": "Auditorias de segurança anuais por terceiros",
     "gdpr": "Pronto para GDPR e CCPA",
-    "gdprDesc": "Conformidade total com regulamentos de proteção de dados"
+    "gdprDesc": "Conformidade total com regulamentos de proteção de dados",
+    "notifMonthlyDigest": "Resumo mensal de estornos",
+    "notifMonthlyDigestDesc": "Um e-mail mensal que resume sua exposição a estornos, sua posição em relação às regras das redes e o que mudou."
   },
   "connect": {
     "title": "Connection Readiness",
