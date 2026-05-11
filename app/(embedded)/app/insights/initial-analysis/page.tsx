@@ -264,15 +264,21 @@ export default function InitialAnalysisPage() {
 
         {/* ── Risk breakdown table + "what these mean" explainer ─────
             "Cleared" is the largest bucket on most healthy stores and
-            the easiest to misread as "unclassified". The inline
-            definitions below the table address that head-on so
-            operators understand the data without a docs round-trip. */}
+            its difference from "Low" is genuinely non-obvious — both
+            look like "safe orders" but Shopify treats them differently
+            (Low = positive signals; Cleared = no signals either way).
+            The info banner at the top addresses that confusion head-on
+            before the operator scans the table; the per-bucket
+            definitions below repeat the distinction in the row text. */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
               <Text as="h3" variant="headingMd">
                 {t("fraudIntel.riskBreakdownTitle")}
               </Text>
+              <Banner tone="info" title={t("fraudIntel.breakdownExplainBannerTitle")}>
+                <p>{t("fraudIntel.breakdownExplainBannerBody")}</p>
+              </Banner>
               <RiskRow
                 label={t("fraudIntel.riskHigh")}
                 count={riskBreakdown.high}

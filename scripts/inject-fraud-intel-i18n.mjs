@@ -104,20 +104,29 @@ const KEYS = {
   stripCta: "View operational analysis",
   // ── Risk-bucket definitions (Initial Analysis page) ─────────────
   // The "Cleared" bucket is the largest one on most healthy stores
-  // and the most easily misread (operators assume "unclassified").
-  // The explanation block beneath the breakdown table addresses
-  // that head-on.
+  // and the most easily misread. The genuinely confusing part is
+  // Cleared vs Low — both look like "safe orders" but Shopify treats
+  // them differently. The info banner at the top of the breakdown
+  // card addresses that head-on; the per-bucket definitions below
+  // the table back it up.
   breakdownExplainTitle: "What these mean",
+  // Top-of-card info banner addressing the Low-vs-Cleared question.
+  breakdownExplainBannerTitle:
+    "Cleared vs Low — what's the difference?",
+  breakdownExplainBannerBody:
+    "Low means Shopify found explicit POSITIVE signals (returning customer, billing/shipping match, established email domain). Cleared means Shopify analyzed the order but found no strong signals in either direction — no red flags AND no positive endorsements. Both are safe to accept; Low just has more positive evidence behind it. On a healthy store the majority of orders end up in Cleared simply because most customers don't trigger anything noteworthy.",
+  // Per-bucket definitions — rewritten to make the Low/Cleared
+  // distinction explicit in the row text too.
   breakdownExplainHigh:
-    "Shopify detected multiple risk signals (e.g. VPN use, parcel-forwarder address, billing/shipping mismatch in a high-fraud region). Recommended for manual review.",
+    "Shopify detected multiple NEGATIVE signals (e.g. VPN use, parcel-forwarder address, billing/shipping mismatch in a high-fraud region). Recommended for manual review.",
   breakdownExplainMedium:
-    "A few neutral signals worth a second look (e.g. first-time customer, order placed outside the store's typical hours).",
+    "A few concerning or ambiguous signals worth a second look (e.g. first-time customer, order placed outside the store's typical hours).",
   breakdownExplainLow:
-    "Positive signals (returning customer, billing/shipping match, good email-domain history).",
+    "Shopify found explicit POSITIVE signals — returning customer with successful prior orders, billing/shipping match, established email domain. High confidence the order is legitimate.",
   breakdownExplainPending:
     "Shopify hasn't finished its fraud check on this order yet — a verdict appears later.",
   breakdownExplainCleared:
-    "Shopify analyzed the order and found no notable risk signals. This is typically the largest bucket on a healthy store — these are your clean orders, NOT orders that went unclassified.",
+    "Shopify completed its analysis but didn't find strong signals in either direction — no red flags AND no explicit positive indicators. Different from Low: Low means \"I see reasons to trust this\"; Cleared means \"I see no reason to flag this.\" Most orders end up here on a healthy store.",
   // ── Scope-upgrade nudge ─────────────────────────────────────────
   scopeUpgradeTitle: "Unlock your full order history",
   scopeUpgradeBody:
