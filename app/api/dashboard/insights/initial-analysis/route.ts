@@ -104,6 +104,18 @@ interface PeriodWindow {
   shopifyProtectCoveragePct: number | null;
   chargebackRatePct: number | null;
   chargebackOrders: number;
+  /** % of Shopify Payments orders that completed 3-D Secure
+   *  authentication. Numerator: orders with three_ds_authenticated=true.
+   *  Denominator: orders with payment_gateway='shopify_payments'.
+   *  Null when the denominator is zero. */
+  threeDsAuthRatePct: number | null;
+  threeDsAuthOrders: number;
+  threeDsAuthEligibleOrders: number;
+  /** Median number of HOURS between processed_at and fulfilled_at for
+   *  orders fulfilled in this window. Null when no fulfilled orders
+   *  in the window. Median (not mean) so a few outliers don't skew. */
+  medianFulfillmentHours: number | null;
+  fulfilledOrdersCount: number;
 }
 
 interface RiskConversionBucket {
@@ -149,12 +161,71 @@ interface DailyRow {
   chargeback_count: number;
 }
 
-/** Aggregate the fraud-rollup rows + daily-metrics rows for a given
- *  date window into a single PeriodWindow snapshot. Both inputs are
- *  pre-fetched and filtered to the window range. */
+interface OrderForKpi {
+  payment_gateway: string | null;
+  three_ds_authenticated: boolean | null;
+  processed_at: string | null;
+  fulfilled_at: string | null;
+}
+
+/** Pure: 3DS auth rate + median fulfillment hours over a subset of
+ *  shopify_orders rows. Returns the three counters PeriodWindow
+ *  expects. Filters by processed_at falling in [from, toExclusive). */
+function compute3dsAndFulfillment(
+  rows: OrderForKpi[],
+  fromIso: string,
+  toExclusiveIso: string,
+): {
+  threeDsAuthRatePct: number | null;
+  threeDsAuthOrders: number;
+  threeDsAuthEligibleOrders: number;
+  medianFulfillmentHours: number | null;
+  fulfilledOrdersCount: number;
+} {
+  let authEligible = 0;
+  let authPositive = 0;
+  const fulfillmentHours: number[] = [];
+  const fromMs = new Date(`${fromIso}T00:00:00Z`).getTime();
+  const toMs = new Date(`${toExclusiveIso}T00:00:00Z`).getTime();
+  for (const r of rows) {
+    if (!r.processed_at) continue;
+    const procMs = new Date(r.processed_at).getTime();
+    if (procMs < fromMs || procMs >= toMs) continue;
+    if (r.payment_gateway === "shopify_payments") {
+      authEligible += 1;
+      if (r.three_ds_authenticated === true) authPositive += 1;
+    }
+    if (r.fulfilled_at) {
+      const fulMs = new Date(r.fulfilled_at).getTime();
+      const deltaHours = (fulMs - procMs) / 3600000;
+      // Guard against bad data (negative or absurdly large windows).
+      if (deltaHours >= 0 && deltaHours < 24 * 60) {
+        fulfillmentHours.push(deltaHours);
+      }
+    }
+  }
+  fulfillmentHours.sort((a, b) => a - b);
+  const median =
+    fulfillmentHours.length === 0
+      ? null
+      : fulfillmentHours[Math.floor(fulfillmentHours.length / 2)];
+  return {
+    threeDsAuthRatePct: rate(authPositive, authEligible),
+    threeDsAuthOrders: authPositive,
+    threeDsAuthEligibleOrders: authEligible,
+    medianFulfillmentHours: median === null ? null : Math.round(median * 10) / 10,
+    fulfilledOrdersCount: fulfillmentHours.length,
+  };
+}
+
+/** Aggregate the fraud-rollup rows + daily-metrics rows + order rows
+ *  for a given date window into a single PeriodWindow snapshot. All
+ *  three inputs are pre-fetched; the function filters each to the
+ *  requested window. */
 function aggregateWindow(
   fraudRows: FraudRollupRow[],
   dailyRows: DailyRow[],
+  orderRows: OrderForKpi[],
   fromIso: string,
   toExclusiveIso: string,
 ): PeriodWindow {
@@ -191,6 +262,7 @@ function aggregateWindow(
   }
 
   const acceptanceDenom = ordersTotal - ordersPending;
+  const tdsAndFul = compute3dsAndFulfillment(orderRows, fromIso, toExclusiveIso);
   return {
     ordersTotal,
     acceptanceRatePct: rate(ordersLow + ordersMedium + ordersNone, acceptanceDenom),
@@ -200,6 +272,7 @@ function aggregateWindow(
     shopifyProtectCoveragePct: rate(fullyProtectedValue, eligibleProtectedValue),
     chargebackRatePct: rate(cbCount, cbOrders),
     chargebackOrders: cbOrders,
+    ...tdsAndFul,
   };
 }
 
@@ -302,15 +375,36 @@ export async function GET(req: NextRequest) {
     .eq("shop_id", shopId)
     .gte("date", windowStart90d);
 
+  // 3DS rate + median fulfillment time aren't in the rollup tables,
+  // so pull the per-order columns needed for both. Window aligned to
+  // 90d for consistency; in-memory filter per-window.
+  const windowStart90dIso = `${windowStart90d}T00:00:00Z`;
+  async function fetchOrderRowsFor90d(): Promise<OrderForKpi[]> {
+    const out: OrderForKpi[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb
+        .from("shopify_orders")
+        .select("payment_gateway, three_ds_authenticated, processed_at, fulfilled_at")
+        .eq("shop_id", shopId)
+        .gte("processed_at", windowStart90dIso)
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      out.push(...(data ?? []).map((r) => r as OrderForKpi));
+      if (!data || data.length < 1000) break;
+    }
+    return out;
+  }
+  const orderRowsForKpi = await fetchOrderRowsFor90d();
+
   const fraud = (fraudRows ?? []) as FraudRollupRow[];
   const daily = (dailyRows ?? []) as DailyRow[];
 
   // ── 90d aggregate (kept for the dashboard strip) ───────────────
-  const win90 = aggregateWindow(fraud, daily, windowStart90d, todayIso);
+  const win90 = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart90d, todayIso);
 
   // ── 30d current vs prior 30d ───────────────────────────────────
-  const current30d = aggregateWindow(fraud, daily, windowStart30d, todayIso);
-  const prior30d = aggregateWindow(fraud, daily, windowStart30dPrior, windowStart30d);
+  const current30d = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart30d, todayIso);
+  const prior30d = aggregateWindow(fraud, daily, orderRowsForKpi, windowStart30dPrior, windowStart30d);
 
   // ── 8-week weekly sparkline (chargeback rate) ──────────────────
   const chargebackRateSparklineWeekly = weeklySparkline(daily);

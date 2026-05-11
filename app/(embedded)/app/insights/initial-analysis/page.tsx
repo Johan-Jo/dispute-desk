@@ -91,6 +91,11 @@ interface PeriodWindow {
   shopifyProtectCoveragePct: number | null;
   chargebackRatePct: number | null;
   chargebackOrders: number;
+  threeDsAuthRatePct: number | null;
+  threeDsAuthOrders: number;
+  threeDsAuthEligibleOrders: number;
+  medianFulfillmentHours: number | null;
+  fulfilledOrdersCount: number;
 }
 
 interface RiskConversionBucket {
@@ -122,11 +127,15 @@ function DeltaPill({
   current,
   prior,
   inverse = false,
+  unit = "pp",
   t,
 }: {
   current: number | null;
   prior: number | null;
   inverse?: boolean;
+  /** Unit suffix on the delta — "pp" (percentage points) for rate
+   *  metrics, "h" for time-in-hours, custom for anything else. */
+  unit?: "pp" | "h";
   t: ReturnType<typeof useTranslations>;
 }) {
   if (current === null || prior === null) {
@@ -138,8 +147,10 @@ function DeltaPill({
   }
   const delta = current - prior;
   const absDelta = Math.abs(delta);
-  // Flat threshold: <0.1pp considered no meaningful change
-  if (absDelta < 0.1) {
+  // Flat threshold differs by unit. <0.1pp / <0.5h is considered
+  // statistically uninteresting.
+  const flatCutoff = unit === "h" ? 0.5 : 0.1;
+  if (absDelta < flatCutoff) {
     return (
       <span style={{ fontSize: 11, color: "#6D7175", fontWeight: 500 }}>
         → {t("fraudIntel.deltaStable")}
@@ -150,6 +161,7 @@ function DeltaPill({
   const isBad = inverse ? isUp : !isUp;
   const color = isBad ? "#DC2626" : "#10B981";
   const arrow = isUp ? "↑" : "↓";
+  const unitLabel = unit === "h" ? " h" : " pp";
   return (
     <span
       style={{
@@ -159,7 +171,7 @@ function DeltaPill({
         fontVariantNumeric: "tabular-nums",
       }}
     >
-      {arrow} {absDelta.toFixed(1)} pp {t("fraudIntel.deltaVsLast")}
+      {arrow} {absDelta.toFixed(1)}{unitLabel} {t("fraudIntel.deltaVsLast")}
     </span>
   );
 }
@@ -227,6 +239,7 @@ function KpiTile({
   current,
   prior,
   inverseDelta,
+  deltaUnit,
   context,
   t,
 }: {
@@ -235,6 +248,7 @@ function KpiTile({
   current: number | null;
   prior: number | null;
   inverseDelta?: boolean;
+  deltaUnit?: "pp" | "h";
   context?: string;
   t: ReturnType<typeof useTranslations>;
 }) {
@@ -242,7 +256,13 @@ function KpiTile({
     <div className={styles.kpiTile}>
       <div className={styles.kpiTileLabel}>{label}</div>
       <div className={styles.kpiTileValue}>{value}</div>
-      <DeltaPill current={current} prior={prior} inverse={inverseDelta} t={t} />
+      <DeltaPill
+        current={current}
+        prior={prior}
+        inverse={inverseDelta}
+        unit={deltaUnit}
+        t={t}
+      />
       {context ? <div className={styles.kpiTileContext}>{context}</div> : null}
     </div>
   );
@@ -747,6 +767,35 @@ export default function InitialAnalysisPage() {
                   value={formatPct(current30d.shopifyProtectCoveragePct)}
                   current={current30d.shopifyProtectCoveragePct}
                   prior={prior30d.shopifyProtectCoveragePct}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpi3dsAuth")}
+                  value={formatPct(current30d.threeDsAuthRatePct)}
+                  current={current30d.threeDsAuthRatePct}
+                  prior={prior30d.threeDsAuthRatePct}
+                  context={t("fraudIntel.kpi3dsAuthContext", {
+                    num: current30d.threeDsAuthOrders.toLocaleString(),
+                    den: current30d.threeDsAuthEligibleOrders.toLocaleString(),
+                  })}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiMedianFulfillment")}
+                  value={
+                    current30d.medianFulfillmentHours === null
+                      ? "—"
+                      : current30d.medianFulfillmentHours < 24
+                        ? `${current30d.medianFulfillmentHours.toFixed(1)} h`
+                        : `${(current30d.medianFulfillmentHours / 24).toFixed(1)} d`
+                  }
+                  current={current30d.medianFulfillmentHours}
+                  prior={prior30d.medianFulfillmentHours}
+                  inverseDelta
+                  deltaUnit="h"
+                  context={t("fraudIntel.kpiMedianFulfillmentContext", {
+                    count: current30d.fulfilledOrdersCount.toLocaleString(),
+                  })}
                   t={t}
                 />
               </div>

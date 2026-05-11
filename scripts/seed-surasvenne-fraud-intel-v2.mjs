@@ -245,6 +245,12 @@ function buildOrderRow(shopId, date) {
     risk_recommendation_initial: recommendation,
     risk_provider_initial: "shopify",
     fraud_protection_level: fraudProtection,
+    // 3-D Secure: ~50% of Shopify Payments orders authenticate via
+    // 3DS (realistic for an EU-leaning Swedish store post-PSD2).
+    // Non-Shopify-Payments gateways carry no 3DS signal (we never
+    // trust the receipt shape there) → null.
+    three_ds_authenticated:
+      gateway === "shopify_payments" ? rand() < 0.5 : null,
     has_chargeback: false,
     chargeback_type: null,
     chargeback_status: null,

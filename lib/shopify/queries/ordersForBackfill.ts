@@ -72,6 +72,18 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           shopifyProtect {
             status
           }
+          # Capture the primary transaction's receipt so we can extract
+          # 3-D Secure authentication status. first=5 is generous
+          # insurance — most orders have 1-3 transactions (sale plus
+          # maybe a capture or refund). The receipt is gateway-defined
+          # JSON (per lib/packs/sources/threeDSecureSource.ts) — we
+          # only trust the shape for Shopify Payments.
+          transactions(first: 5) {
+            kind
+            status
+            gateway
+            receiptJson
+          }
           risk {
             recommendation
             assessments {
@@ -108,6 +120,14 @@ export interface RawRiskAssessment {
   }> | null;
 }
 
+/** Raw transaction shape — just the fields needed for 3DS parsing. */
+export interface RawBackfillTransaction {
+  kind: string | null;
+  status: string | null;
+  gateway: string | null;
+  receiptJson: string | Record<string, unknown> | null;
+}
+
 /** Raw order as returned by Shopify, one page of the backfill query. */
 export interface RawBackfillOrder {
   id: string;
@@ -129,6 +149,7 @@ export interface RawBackfillOrder {
     displayStatus: string | null;
   }> | null;
   shopifyProtect: { status: string | null } | null;
+  transactions: RawBackfillTransaction[] | null;
   risk: {
     recommendation: string | null;
     assessments: RawRiskAssessment[] | null;
@@ -242,6 +263,11 @@ export interface ShopifyOrderRow {
   risk_recommendation_initial: string | null;
   risk_provider_initial: string | null;
   fraud_protection_level: string | null;
+  /** 3-D Secure authentication outcome for the primary transaction.
+   *  Null when unknown / non-Shopify-Payments / receipt unparseable.
+   *  True when authenticated; false is rarely observed (the source
+   *  collapses non-authenticated states to null). */
+  three_ds_authenticated: boolean | null;
 }
 
 /** Row shape persisted to `shopify_order_risk_assessments`. */
@@ -289,6 +315,84 @@ const RISK_LEVEL_RANK: Record<string, number> = {
   PENDING: 1,
   NONE: 0,
 };
+
+/**
+ * Pure helper: extract the 3-D Secure authenticated flag from a
+ * Shopify Payments transaction receipt. Mirrors the contract in
+ * lib/packs/sources/threeDSecureSource.ts — only Shopify Payments is
+ * trusted; the receipt shape on other gateways is provider-defined
+ * and we refuse to read it.
+ *
+ * Returns:
+ *   true  — 3DS authentication completed successfully
+ *   null  — unknown, non-Shopify-Payments, receipt unparseable, or
+ *           3DS was not used. Absence of 3DS is never a negative
+ *           signal in our rubric; all "no positive read" outcomes
+ *           collapse to null.
+ *
+ * Picks the primary transaction (first SUCCESS sale/auth) — same
+ * rule as the dispute-evidence collector so backfill and per-dispute
+ * read agree.
+ */
+export function pickThreeDsAuthenticated(
+  transactions: RawBackfillTransaction[] | null | undefined,
+): boolean | null {
+  if (!transactions?.length) return null;
+  const tx = transactions.find(
+    (t) =>
+      (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
+      t.status === "SUCCESS",
+  );
+  if (!tx) return null;
+  if (tx.gateway !== "shopify_payments") return null;
+  const receipt = parseReceiptShape(tx.receiptJson);
+  if (!receipt) return null;
+  return readThreeDsAuthenticatedFromReceipt(receipt);
+}
+
+function parseReceiptShape(
+  raw: unknown,
+): Record<string, unknown> | null {
+  if (raw == null) return null;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return isPlainObject(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return isPlainObject(raw) ? raw : null;
+}
+
+function readThreeDsAuthenticatedFromReceipt(
+  receipt: Record<string, unknown>,
+): boolean | null {
+  try {
+    const candidates: unknown[] = [
+      // Modern PaymentIntent shape (2026-01)
+      (receipt.latest_charge as Record<string, unknown> | undefined)
+        ?.payment_method_details,
+      // Legacy charge-level fallback
+      receipt.payment_method_details,
+    ];
+    for (const pmd of candidates) {
+      if (!isPlainObject(pmd)) continue;
+      const card = pmd.card;
+      if (!isPlainObject(card)) continue;
+      const tds = card.three_d_secure;
+      if (!isPlainObject(tds)) continue;
+      if (tds.authenticated === true) return true;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
 export function pickInitialRisk(
   assessments: RawRiskAssessment[] | null | undefined,
@@ -352,6 +456,7 @@ export function normalizeBackfillOrder(
     risk_recommendation_initial: raw.risk?.recommendation ?? null,
     risk_provider_initial: initial.provider,
     fraud_protection_level: raw.shopifyProtect?.status ?? null,
+    three_ds_authenticated: pickThreeDsAuthenticated(raw.transactions ?? null),
   };
 
   const assessments: ShopifyOrderRiskAssessmentRow[] = (

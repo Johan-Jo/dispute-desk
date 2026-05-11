@@ -162,6 +162,11 @@ const KEYS = {
   deltaNoComparison: "no prior period",
   sparklineTitle: "Chargeback rate trend",
   sparklineSubtitle: "Weekly, last 8 weeks",
+  // Tier-A KPIs
+  kpi3dsAuth: "3-D Secure authentication",
+  kpi3dsAuthContext: "{num} of {den} Shopify Payments orders",
+  kpiMedianFulfillment: "Median time to fulfill",
+  kpiMedianFulfillmentContext: "{count} orders fulfilled",
   gauge90dLabel: "90-day chargeback rate",
   gaugeBandGood: "Good < 0.4%",
   gaugeBandAtRisk: "At risk 0.4–0.6%",

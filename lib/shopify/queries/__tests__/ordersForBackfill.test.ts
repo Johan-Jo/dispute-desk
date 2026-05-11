@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   pickInitialRisk,
   pickFulfilledAt,
+  pickThreeDsAuthenticated,
   normalizeBackfillOrder,
   type RawBackfillOrder,
   type RawRiskAssessment,
@@ -34,6 +35,7 @@ const rawOrder = (overrides: Partial<RawBackfillOrder> = {}): RawBackfillOrder =
     shippingAddress: { countryCode: "US" },
     fulfillments: null,
     shopifyProtect: null,
+    transactions: null,
     risk: null,
   };
   return { ...base, ...overrides };
@@ -87,6 +89,119 @@ describe("pickInitialRisk", () => {
       { riskLevel: null, provider: { title: "A" }, facts: null },
     ];
     expect(pickInitialRisk(assessments)).toEqual({ level: null, provider: null });
+  });
+});
+
+describe("pickThreeDsAuthenticated", () => {
+  it("returns null when no transactions are present", () => {
+    expect(pickThreeDsAuthenticated(null)).toBeNull();
+    expect(pickThreeDsAuthenticated([])).toBeNull();
+  });
+
+  it("returns null for non-Shopify-Payments gateways even if 3DS shape exists", () => {
+    // Receipt shape mirrors Stripe's but the gateway is paypal — we
+    // refuse to read because the contract isn't ours to trust.
+    const receipt = JSON.stringify({
+      latest_charge: {
+        payment_method_details: {
+          card: { three_d_secure: { authenticated: true } },
+        },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "paypal", receiptJson: receipt },
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns true when Shopify Payments + modern receipt path is authenticated", () => {
+    const receipt = JSON.stringify({
+      latest_charge: {
+        payment_method_details: {
+          card: { three_d_secure: { authenticated: true } },
+        },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBe(true);
+  });
+
+  it("accepts legacy (non-latest_charge) receipt path as fallback", () => {
+    const receipt = JSON.stringify({
+      payment_method_details: {
+        card: { three_d_secure: { authenticated: true } },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBe(true);
+  });
+
+  it("returns null when the receipt parses but no 3DS block is present", () => {
+    const receipt = JSON.stringify({ latest_charge: { payment_method_details: { card: {} } } });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null when authenticated flag is not strictly true", () => {
+    const receipt = JSON.stringify({
+      latest_charge: {
+        payment_method_details: {
+          card: { three_d_secure: { authenticated: false } },
+        },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null when receiptJson is malformed", () => {
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: "{not-json" },
+      ]),
+    ).toBeNull();
+  });
+
+  it("accepts pre-parsed object receiptJson too", () => {
+    const receipt = {
+      latest_charge: {
+        payment_method_details: {
+          card: { three_d_secure: { authenticated: true } },
+        },
+      },
+    };
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBe(true);
+  });
+
+  it("ignores transactions that aren't SUCCESS sale/auth", () => {
+    const receipt = JSON.stringify({
+      latest_charge: {
+        payment_method_details: { card: { three_d_secure: { authenticated: true } } },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "REFUND", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+        { kind: "SALE", status: "FAILURE", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBeNull();
   });
 });
 
