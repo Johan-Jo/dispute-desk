@@ -328,4 +328,93 @@ describe("extractEvidenceDataFromPack", () => {
     };
     expect(extractEvidenceDataFromPack([manual]).hasSupportingDocs).toBe(true);
   });
+
+  describe("carrier signature (from fulfillmentSource tracking-app metafields)", () => {
+    function fulfillmentSection(carrierTracking: unknown): RawSection {
+      return {
+        type: "shipping",
+        label: "Fulfillments (1)",
+        source: "shopify_fulfillments",
+        fieldsProvided: ["shipping_tracking", "delivery_proof"],
+        data: {
+          fulfillmentCount: 1,
+          proofType: "signature_confirmed",
+          fulfillments: [
+            {
+              fulfillmentId: "gid://shopify/Fulfillment/1",
+              status: "SUCCESS",
+              deliveredAt: "2026-04-21T14:30:00Z",
+              tracking: [],
+              items: [],
+              carrierTracking,
+            },
+          ],
+        },
+      };
+    }
+
+    it("populates signedByName when carrierTracking has a signature name", () => {
+      const out = extractEvidenceDataFromPack([
+        fulfillmentSection({
+          deliveryStatus: "Delivered",
+          deliveredAtTracking: "2026-04-22T10:00:00Z",
+          signedByName: "Anna Andersson",
+          trackingSource: "aftership",
+        }),
+      ]);
+      expect(out.signedByName).toBe("Anna Andersson");
+    });
+
+    it("prefers the carrier-confirmed delivered_at over absent default", () => {
+      const out = extractEvidenceDataFromPack([
+        fulfillmentSection({
+          deliveryStatus: "Delivered",
+          deliveredAtTracking: "2026-04-22T10:00:00Z",
+          signedByName: "Anna Andersson",
+          trackingSource: "aftership",
+        }),
+      ]);
+      expect(out.deliveredDate).toBe("2026-04-22T10:00:00Z");
+    });
+
+    it("leaves signedByName null when carrierTracking has no name", () => {
+      const out = extractEvidenceDataFromPack([
+        fulfillmentSection({
+          deliveryStatus: "Delivered",
+          deliveredAtTracking: "2026-04-22T10:00:00Z",
+          signedByName: null,
+          trackingSource: "aftership",
+        }),
+      ]);
+      expect(out.signedByName).toBeNull();
+    });
+
+    it("walks multiple fulfillments and picks the first with a signature", () => {
+      const out = extractEvidenceDataFromPack([
+        {
+          type: "shipping",
+          source: "shopify_fulfillments",
+          fieldsProvided: ["delivery_proof"],
+          data: {
+            fulfillments: [
+              { fulfillmentId: "f1", carrierTracking: null },
+              {
+                fulfillmentId: "f2",
+                carrierTracking: {
+                  deliveryStatus: "Delivered",
+                  signedByName: "Erik Eriksson",
+                  trackingSource: "shipway",
+                },
+              },
+            ],
+          },
+        },
+      ]);
+      expect(out.signedByName).toBe("Erik Eriksson");
+    });
+
+    it("returns null signedByName when no fulfillment section is present", () => {
+      expect(extractEvidenceDataFromPack([]).signedByName).toBeNull();
+    });
+  });
 });

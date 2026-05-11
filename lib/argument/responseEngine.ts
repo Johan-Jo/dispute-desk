@@ -58,6 +58,12 @@ export interface EvidenceData {
   trackingNumber?: string | null;
   shippedDate?: string | null;
   deliveredDate?: string | null;
+  /** Recipient name on signature confirmation from carrier tracking
+   *  data (AfterShip / Shipway / Wonderment metafields via
+   *  lib/shopify/trackingApps.ts). When present, the delivery
+   *  paragraph cites the signature explicitly — one of the strongest
+   *  possible defenses for FRAUDULENT chargebacks. */
+  signedByName?: string | null;
   policyTypes?: string[];
   shopDomain?: string | null;
   // ── Bank-grade rebuttal signals (pack + dispute extract) ──
@@ -158,6 +164,7 @@ export interface DefenseClassification {
 export function classifyDefensePosition(
   family: ReasonFamily,
   flags: EvidenceFlags,
+  data: EvidenceData = {},
 ): DefenseClassification {
   // 1. Check for dispute withdrawal
   if (flags.disputeWithdrawalEvidence) {
@@ -208,7 +215,16 @@ export function classifyDefensePosition(
   if (flags.billingShippingMatch) legitimacySignals.push("Billing/shipping address match");
   if (flags.customerHistory) legitimacySignals.push("Customer purchase history");
   if (flags.customerContact) legitimacySignals.push("Customer communication");
-  if (flags.deliveryConfirmed) legitimacySignals.push("Delivery confirmed");
+  if (flags.deliveryConfirmed) {
+    // Signature-confirmed delivery is materially stronger evidence
+    // than plain delivered status. Surface it as a distinct signal so
+    // confidence thresholds reflect the stronger anchor.
+    legitimacySignals.push(
+      data.signedByName
+        ? "Carrier signature confirmation"
+        : "Delivery confirmed",
+    );
+  }
   if (flags.tracking) legitimacySignals.push("Shipping tracking");
   if (flags.digitalAccessLogs) legitimacySignals.push("Digital access logs");
   if (flags.policyAttached) legitimacySignals.push("Policies disclosed");
@@ -415,6 +431,13 @@ function deliveryConfirmation(flags: EvidenceFlags, data: EvidenceData): Rebutta
     text = "The order was shipped and delivery has been confirmed by the carrier.";
     if (data.carrier) text += ` The shipment was handled by ${data.carrier}.`;
     if (data.deliveredDate) text += ` Delivery was confirmed on ${fmtDate(data.deliveredDate)}.`;
+    // Carrier signature is the strongest delivery anchor we can cite —
+    // bank reviewers treat a captured signature name as near-conclusive
+    // for fraud / non-receipt rebuttals. Only emit when the carrier
+    // actually returned a name.
+    if (data.signedByName) {
+      text += ` The package was signed for at delivery by ${data.signedByName}.`;
+    }
   } else if (flags.tracking) {
     text = "The order was shipped with tracking.";
     if (data.carrier) text += ` The shipment was dispatched via ${data.carrier}.`;
@@ -581,7 +604,7 @@ const IP_VPN_CLEAN_SENTENCE =
 const SUPPORTING_DOCS_PARAGRAPH =
   "Supporting documentation is provided to reinforce the legitimacy of the transaction, including identity-linked materials and transaction-related records associated with the order. These documents are consistent with the customer information used during checkout and support that the purchase was made by the authorized cardholder.";
 
-export type BankGradeMiddleKind = "payment" | "transaction" | "device" | "supporting";
+export type BankGradeMiddleKind = "payment" | "transaction" | "device" | "delivery" | "supporting";
 
 function hasDeviceLocationBlock(data: EvidenceData): boolean {
   return (
@@ -689,6 +712,41 @@ export function buildBankGradeStructure(data: EvidenceData): {
     middles.push({ kind: "device", text: devParts.join(" ") });
   }
 
+  // ── Section 4b — Delivery / carrier confirmation ──
+  // Strongest fraud-rebuttal anchor we can cite: a recipient name
+  // captured on signature contradicts "I didn't authorize this"
+  // claims more decisively than AVS/CVV. Emitted only when the
+  // tracking app supplied a signature name OR a carrier-confirmed
+  // delivered timestamp. No signature → no emission (never claim
+  // delivery without independent verification).
+  if (data.signedByName || data.deliveredDate) {
+    const deliveryParts: string[] = [];
+    if (data.signedByName && data.deliveredDate) {
+      deliveryParts.push(
+        `The package was delivered on ${fmtDate(
+          data.deliveredDate,
+        )} and signed for by ${data.signedByName}, as recorded by the carrier.`,
+      );
+    } else if (data.signedByName) {
+      deliveryParts.push(
+        `The package was signed for by ${data.signedByName}, as recorded by the carrier.`,
+      );
+    } else if (data.deliveredDate) {
+      deliveryParts.push(
+        `Carrier records confirm the package was delivered on ${fmtDate(
+          data.deliveredDate,
+        )}.`,
+      );
+    }
+    if (data.carrier) {
+      deliveryParts.push(`Shipping was handled by ${data.carrier}.`);
+    }
+    deliveryParts.push(
+      "This carrier-attested delivery confirmation is independent of the merchant and constitutes external corroboration that the goods reached the cardholder's address.",
+    );
+    middles.push({ kind: "delivery", text: deliveryParts.join(" ") });
+  }
+
   // ── Section 5 — Supporting documentation ──
   if (data.hasSupportingDocs === true) {
     middles.push({ kind: "supporting", text: SUPPORTING_DOCS_PARAGRAPH });
@@ -715,6 +773,7 @@ function evidenceRefsForBankGradeKind(
   }
   if (kind === "transaction") return ["order_confirmation"];
   if (kind === "device") return ["ip_location_check"];
+  if (kind === "delivery") return ["delivery_proof"];
   return ["supporting_documents"];
 }
 
@@ -874,7 +933,7 @@ export function generateDisputeResponse(
   data: EvidenceData,
 ): DisputeResponseOutput {
   // Classify defense position FIRST — it influences the response
-  const defensePosition = classifyDefensePosition(reasonFamily, flags);
+  const defensePosition = classifyDefensePosition(reasonFamily, flags, data);
 
   const strategies: Record<ReasonFamily, (f: EvidenceFlags, d: EvidenceData) => FamilyStrategy> = {
     fraud: fraudStrategy,

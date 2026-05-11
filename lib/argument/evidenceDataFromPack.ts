@@ -135,6 +135,55 @@ function hasManualUploadSection(sections: RawSection[]): boolean {
 }
 
 /**
+ * Find the fulfillment section emitted by fulfillmentSource.ts. The
+ * section data carries `fulfillments[]` where each entry may include
+ * a `carrierTracking` object with signedByName / deliveredAtTracking /
+ * trackingSource captured from tracking-app metafields
+ * (AfterShip / Shipway / Wonderment / etc. via
+ * lib/shopify/trackingApps.ts).
+ */
+function findFulfillmentSection(sections: RawSection[]): RawSection | null {
+  for (const s of sections) {
+    if (s.source === "shopify_fulfillments") return s;
+  }
+  for (const s of sections) {
+    if ((s.fieldsProvided ?? []).includes("delivery_proof")) return s;
+  }
+  return null;
+}
+
+/**
+ * Across all fulfillments in the section, find the first that has
+ * carrier-captured signature data. Returns the recipient name plus a
+ * timestamp / source if available. Null when no fulfillment carries
+ * signature data — caller suppresses the corresponding rebuttal line.
+ */
+function deriveCarrierSignature(
+  fulfillment: RawSection | null,
+): { signedByName: string | null; deliveredAtTracking: string | null } {
+  const empty = { signedByName: null, deliveredAtTracking: null };
+  if (!fulfillment) return empty;
+  const data = asObject(fulfillment.data);
+  if (!data) return empty;
+  const fulfillments = data.fulfillments as unknown;
+  if (!Array.isArray(fulfillments)) return empty;
+  for (const f of fulfillments) {
+    if (!f || typeof f !== "object") continue;
+    const ct = (f as Record<string, unknown>).carrierTracking;
+    if (!ct || typeof ct !== "object") continue;
+    const ctObj = ct as Record<string, unknown>;
+    const signed = asString(ctObj.signedByName);
+    if (signed) {
+      return {
+        signedByName: signed,
+        deliveredAtTracking: asString(ctObj.deliveredAtTracking),
+      };
+    }
+  }
+  return empty;
+}
+
+/**
  * Authorization succeeded iff the pack contains a card payment
  * verification section. paymentSource only emits with status
  * "available" / "unavailable_from_gateway" — both reflect a successful
@@ -272,6 +321,7 @@ export function extractEvidenceDataFromPack(
   const payment = findPaymentSection(safeSections);
   const ipSection = findIpLocationSection(safeSections);
   const order = findMainOrderSection(safeSections);
+  const fulfillment = findFulfillmentSection(safeSections);
 
   const paymentData = asObject(payment?.data);
   const avsCode = asString(paymentData?.avsResultCode);
@@ -280,6 +330,7 @@ export function extractEvidenceDataFromPack(
   const authorizationSucceeded = deriveAuthorizationSucceeded(payment);
   const captureSucceeded = deriveCaptureSucceeded(order);
   const ipFields = deriveIpFields(ipSection, order);
+  const signature = deriveCarrierSignature(fulfillment);
 
   const orderData = asObject(order?.data);
   const customerEmailFromOrder = orderData ? asString(orderData.customerEmail) : null;
@@ -301,5 +352,11 @@ export function extractEvidenceDataFromPack(
     hasOrderConfirmation: order != null ? true : undefined,
     hasCustomerEmail: resolvedEmail != null ? true : undefined,
     hasSupportingDocs: hasManualUploadSection(safeSections) ? true : undefined,
+    signedByName: signature.signedByName,
+    // Prefer the carrier-confirmed delivered_at over Shopify's own
+    // deliveredAt — tracking apps poll carriers continuously, so this
+    // is the more reliable timestamp. Falls through to whatever the
+    // engine already populates if absent.
+    deliveredDate: signature.deliveredAtTracking ?? undefined,
   };
 }

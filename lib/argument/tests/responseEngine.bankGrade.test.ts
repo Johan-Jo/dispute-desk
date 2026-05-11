@@ -380,6 +380,48 @@ describe("bank-grade rebuttal template — delivery, billing, general", () => {
   });
 });
 
+describe("bank-grade rebuttal template — carrier signature delivery section", () => {
+  it("emits the delivery middle when signedByName is present", () => {
+    const data: EvidenceData = {
+      ...FULL_FRAUD_DATA,
+      signedByName: "Anna Andersson",
+      deliveredDate: "2026-04-21T14:30:00Z",
+      carrier: "PostNord",
+    };
+    const ids = getSectionIds("fraud", FULL_FRAUD_FLAGS, data);
+    expect(ids).toContain("bank-grade-delivery");
+    const text = joinSections("fraud", FULL_FRAUD_FLAGS, data);
+    expect(text).toContain("signed for by Anna Andersson");
+    expect(text).toContain("PostNord");
+  });
+
+  it("emits the delivery middle when only deliveredDate is present (no signature)", () => {
+    const data: EvidenceData = {
+      ...FULL_FRAUD_DATA,
+      signedByName: null,
+      deliveredDate: "2026-04-21T14:30:00Z",
+    };
+    const text = joinSections("fraud", FULL_FRAUD_FLAGS, data);
+    expect(text).toContain("Carrier records confirm the package was delivered");
+    // Must NOT fabricate a signature when none was captured
+    expect(text).not.toContain("signed for by");
+  });
+
+  it("omits the delivery middle entirely when neither signature nor delivery date is present", () => {
+    const ids = getSectionIds("fraud", FULL_FRAUD_FLAGS, FULL_FRAUD_DATA);
+    expect(ids).not.toContain("bank-grade-delivery");
+  });
+
+  it("cites the carrier-attested independence line when signature is present", () => {
+    const data: EvidenceData = {
+      ...FULL_FRAUD_DATA,
+      signedByName: "Erik Eriksson",
+    };
+    const text = joinSections("fraud", FULL_FRAUD_FLAGS, data);
+    expect(text).toContain("carrier-attested delivery confirmation is independent of the merchant");
+  });
+});
+
 describe("bank-grade carve-out — refund, subscription, product, digital", () => {
   function getSummaryText(family: ReasonFamily): string {
     return generateDisputeResponse(family, EMPTY_FLAGS, EMPTY_DATA).sections[0].text;
