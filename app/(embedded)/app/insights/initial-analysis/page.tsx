@@ -262,7 +262,11 @@ export default function InitialAnalysisPage() {
           </Card>
         </Layout.Section>
 
-        {/* ── Risk breakdown table ─────────────────────────────────── */}
+        {/* ── Risk breakdown table + "what these mean" explainer ─────
+            "Cleared" is the largest bucket on most healthy stores and
+            the easiest to misread as "unclassified". The inline
+            definitions below the table address that head-on so
+            operators understand the data without a docs round-trip. */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
@@ -299,6 +303,40 @@ export default function InitialAnalysisPage() {
                 total={riskTotal}
                 color="#9CA3AF"
               />
+
+              <Divider />
+
+              <BlockStack gap="150">
+                <Text as="h4" variant="headingSm">
+                  {t("fraudIntel.breakdownExplainTitle")}
+                </Text>
+                <BreakdownExplainRow
+                  label={t("fraudIntel.riskHigh")}
+                  body={t("fraudIntel.breakdownExplainHigh")}
+                  color="#DC2626"
+                />
+                <BreakdownExplainRow
+                  label={t("fraudIntel.riskMedium")}
+                  body={t("fraudIntel.breakdownExplainMedium")}
+                  color="#F59E0B"
+                />
+                <BreakdownExplainRow
+                  label={t("fraudIntel.riskLow")}
+                  body={t("fraudIntel.breakdownExplainLow")}
+                  color="#10B981"
+                />
+                <BreakdownExplainRow
+                  label={t("fraudIntel.riskPending")}
+                  body={t("fraudIntel.breakdownExplainPending")}
+                  color="#6B7280"
+                />
+                <BreakdownExplainRow
+                  label={t("fraudIntel.riskNone")}
+                  body={t("fraudIntel.breakdownExplainCleared")}
+                  color="#9CA3AF"
+                  emphasize
+                />
+              </BlockStack>
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -398,5 +436,42 @@ function RiskRow({
         {count.toLocaleString()} ({pct}%)
       </Text>
     </InlineStack>
+  );
+}
+
+/** Single explanation row for the "What these mean" block below the
+ *  breakdown table. Mirrors the dot-color of the matching RiskRow so
+ *  the eye traces table → definition without re-reading the label.
+ *  `emphasize` is used on the Cleared row — it's the largest bucket
+ *  and the most easily misread, so it gets normal body text instead
+ *  of subdued.
+ */
+function BreakdownExplainRow({
+  label,
+  body,
+  color,
+  emphasize = false,
+}: {
+  label: string;
+  body: string;
+  color: string;
+  emphasize?: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+      <div
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          background: color,
+          flexShrink: 0,
+          marginTop: 7,
+        }}
+      />
+      <Text as="p" variant="bodySm" tone={emphasize ? undefined : "subdued"}>
+        <strong>{label}</strong> — {body}
+      </Text>
+    </div>
   );
 }

@@ -3686,6 +3686,12 @@
     "stripBody": "We've analyzed {count} historical Shopify orders. {high}% were classified high-risk by Shopify's fraud analysis. {fulfilled}% of those high-risk orders were still fulfilled.",
     "stripPreparingBody": "Preparing operational insights — your historical analysis is still in progress. The summary lands here once it finishes.",
     "stripCta": "View operational analysis",
+    "breakdownExplainTitle": "What these mean",
+    "breakdownExplainHigh": "Shopify detected multiple risk signals (e.g. VPN use, parcel-forwarder address, billing/shipping mismatch in a high-fraud region). Recommended for manual review.",
+    "breakdownExplainMedium": "A few neutral signals worth a second look (e.g. first-time customer, order placed outside the store's typical hours).",
+    "breakdownExplainLow": "Positive signals (returning customer, billing/shipping match, good email-domain history).",
+    "breakdownExplainPending": "Shopify hasn't finished its fraud check on this order yet — a verdict appears later.",
+    "breakdownExplainCleared": "Shopify analyzed the order and found no notable risk signals. This is typically the largest bucket on a healthy store — these are your clean orders, NOT orders that went unclassified.",
     "scopeUpgradeTitle": "Unlock your full order history",
     "scopeUpgradeBody": "DisputeDesk now supports analyzing your full historical orders, not just the last 60 days. Re-authorize to expand the risk overview with seasonality, long-window trends, and risk-to-dispute correlation.",
     "scopeUpgradeCta": "Re-authorize on Shopify"

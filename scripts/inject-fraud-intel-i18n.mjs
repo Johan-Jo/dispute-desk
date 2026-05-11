@@ -102,6 +102,22 @@ const KEYS = {
   stripPreparingBody:
     "Preparing operational insights — your historical analysis is still in progress. The summary lands here once it finishes.",
   stripCta: "View operational analysis",
+  // ── Risk-bucket definitions (Initial Analysis page) ─────────────
+  // The "Cleared" bucket is the largest one on most healthy stores
+  // and the most easily misread (operators assume "unclassified").
+  // The explanation block beneath the breakdown table addresses
+  // that head-on.
+  breakdownExplainTitle: "What these mean",
+  breakdownExplainHigh:
+    "Shopify detected multiple risk signals (e.g. VPN use, parcel-forwarder address, billing/shipping mismatch in a high-fraud region). Recommended for manual review.",
+  breakdownExplainMedium:
+    "A few neutral signals worth a second look (e.g. first-time customer, order placed outside the store's typical hours).",
+  breakdownExplainLow:
+    "Positive signals (returning customer, billing/shipping match, good email-domain history).",
+  breakdownExplainPending:
+    "Shopify hasn't finished its fraud check on this order yet — a verdict appears later.",
+  breakdownExplainCleared:
+    "Shopify analyzed the order and found no notable risk signals. This is typically the largest bucket on a healthy store — these are your clean orders, NOT orders that went unclassified.",
   // ── Scope-upgrade nudge ─────────────────────────────────────────
   scopeUpgradeTitle: "Unlock your full order history",
   scopeUpgradeBody:
