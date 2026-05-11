@@ -3719,7 +3719,7 @@
     "deltaNoComparison": "sin período comparable",
     "sparklineTitle": "Tendencia de la tasa de contracargos",
     "sparklineSubtitle": "Semanal, últimas 8 semanas",
-    "kpi3dsAuth": "Autenticación 3-D Secure",
+    "kpi3dsAuth": "Auten. 3-DS",
     "kpi3dsAuthContext": "{num} de {den} pedidos de Shopify Payments",
     "kpiMedianFulfillment": "Tiempo mediano de cumplimiento",
     "kpiMedianFulfillmentContext": "{count} pedidos cumplidos",
@@ -3733,6 +3733,15 @@
     "gaugeBandElevated": "Elevado > 0,6 %",
     "scopeUpgradeTitle": "Desbloquea tu historial completo de pedidos",
     "scopeUpgradeBody": "DisputeDesk ahora puede analizar todo tu historial de pedidos, no solo los últimos 60 días. Vuelve a autorizar para ampliar el resumen de riesgo con estacionalidad, tendencias a largo plazo y correlación riesgo-disputa.",
-    "scopeUpgradeCta": "Reautorizar en Shopify"
+    "scopeUpgradeCta": "Reautorizar en Shopify",
+    "kpiAcceptanceRateInfo": "Porcentaje de pedidos analizados que Shopify aceptó al pagar — es decir, que el análisis de fraude no bloqueó. Se excluyen pedidos con análisis pendiente.",
+    "kpiHighRiskRateInfo": "Porcentaje de pedidos que Shopify clasificó como riesgo ALTO durante el análisis de fraude. Cuanto más alto, mayor exposición a contracargos.",
+    "kpiFraudDisputeRateInfo": "Porcentaje de pedidos que se convirtieron en una disputa por fraude de Shopify Payments (motivo = FRAUDULENT) en este período.",
+    "kpi3dsAuthInfo": "Porcentaje de pedidos con tarjeta de Shopify Payments donde la autenticación 3-D Secure se completó correctamente. Los pagos autenticados trasladan la responsabilidad por fraude al emisor.",
+    "kpiProtectCoverageInfo": "De los pedidos elegibles para Shopify Protect, el porcentaje marcado como PROTECTED. Los pedidos protegidos no llegan como contracargos.",
+    "kpiMedianFulfillmentInfo": "Tiempo mediano entre la realización del pedido y el cumplimiento, en los pedidos completados en este período. Un cumplimiento más rápido mejora las señales de servicio al cliente.",
+    "kpiHighRiskFulfilledInfo": "De los pedidos clasificados por Shopify como riesgo ALTO, el porcentaje que aun así se cumplió. Un valor alto indica que estás asumiendo el riesgo de fraude que Shopify marcó.",
+    "kpiConfirmedDeliveryInfo": "De los pedidos cumplidos, el porcentaje en los que el transportista devolvió un estado de entregado. La entrega confirmada por el transportista es una prueba sólida en disputas.",
+    "kpiSignedForInfo": "De las entregas confirmadas, el porcentaje en las que el transportista registró una firma. La firma de recepción es la prueba de entrega más fuerte para contracargos por fraude."
   }
 }

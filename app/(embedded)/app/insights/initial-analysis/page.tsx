@@ -38,7 +38,10 @@ import {
   Spinner,
   Divider,
   Banner,
+  Tooltip,
+  Icon,
 } from "@shopify/polaris";
+import { InfoIcon } from "@shopify/polaris-icons";
 import styles from "./initial-analysis.module.css";
 
 interface InsightsResponse {
@@ -240,6 +243,7 @@ function HeroDisplay({
 // ═══ KpiTile: stat tile with current value + MoM delta ════════════
 function KpiTile({
   label,
+  info,
   value,
   current,
   prior,
@@ -249,6 +253,9 @@ function KpiTile({
   t,
 }: {
   label: string;
+  /** Tooltip body explaining what this metric measures. Rendered on
+   *  hover/focus of a small info icon next to the label. */
+  info?: string;
   value: string;
   current: number | null;
   prior: number | null;
@@ -259,7 +266,20 @@ function KpiTile({
 }) {
   return (
     <div className={styles.kpiTile}>
-      <div className={styles.kpiTileLabel}>{label}</div>
+      <div className={styles.kpiTileLabelRow}>
+        <span className={styles.kpiTileLabel}>{label}</span>
+        {info ? (
+          <Tooltip content={info} dismissOnMouseOut preferredPosition="above">
+            <button
+              type="button"
+              className={styles.kpiTileInfoButton}
+              aria-label={info}
+            >
+              <Icon source={InfoIcon} tone="subdued" />
+            </button>
+          </Tooltip>
+        ) : null}
+      </div>
       <div className={styles.kpiTileValue}>{value}</div>
       <DeltaPill
         current={current}
@@ -746,6 +766,7 @@ export default function InitialAnalysisPage() {
               <div className={styles.kpiStrip}>
                 <KpiTile
                   label={t("fraudIntel.kpiAcceptanceRate")}
+                  info={t("fraudIntel.kpiAcceptanceRateInfo")}
                   value={formatPct(current30d.acceptanceRatePct)}
                   current={current30d.acceptanceRatePct}
                   prior={prior30d.acceptanceRatePct}
@@ -753,6 +774,7 @@ export default function InitialAnalysisPage() {
                 />
                 <KpiTile
                   label={t("fraudIntel.kpiHighRiskRate")}
+                  info={t("fraudIntel.kpiHighRiskRateInfo")}
                   value={formatPct(current30d.highRiskPct)}
                   current={current30d.highRiskPct}
                   prior={prior30d.highRiskPct}
@@ -761,6 +783,7 @@ export default function InitialAnalysisPage() {
                 />
                 <KpiTile
                   label={t("fraudIntel.kpiFraudDisputeRate")}
+                  info={t("fraudIntel.kpiFraudDisputeRateInfo")}
                   value={formatPct(current30d.fraudDisputeRatePct, 2)}
                   current={current30d.fraudDisputeRatePct}
                   prior={prior30d.fraudDisputeRatePct}
@@ -787,6 +810,7 @@ export default function InitialAnalysisPage() {
               <div className={styles.kpiStrip}>
                 <KpiTile
                   label={t("fraudIntel.kpi3dsAuth")}
+                  info={t("fraudIntel.kpi3dsAuthInfo")}
                   value={formatPct(current30d.threeDsAuthRatePct)}
                   current={current30d.threeDsAuthRatePct}
                   prior={prior30d.threeDsAuthRatePct}
@@ -798,6 +822,7 @@ export default function InitialAnalysisPage() {
                 />
                 <KpiTile
                   label={t("fraudIntel.kpiProtectCoverage")}
+                  info={t("fraudIntel.kpiProtectCoverageInfo")}
                   value={formatPct(current30d.shopifyProtectCoveragePct)}
                   current={current30d.shopifyProtectCoveragePct}
                   prior={prior30d.shopifyProtectCoveragePct}
@@ -823,6 +848,7 @@ export default function InitialAnalysisPage() {
               <div className={styles.kpiStrip}>
                 <KpiTile
                   label={t("fraudIntel.kpiMedianFulfillment")}
+                  info={t("fraudIntel.kpiMedianFulfillmentInfo")}
                   value={
                     current30d.medianFulfillmentHours === null
                       ? "—"
@@ -841,6 +867,7 @@ export default function InitialAnalysisPage() {
                 />
                 <KpiTile
                   label={t("fraudIntel.kpiHighRiskFulfilled")}
+                  info={t("fraudIntel.kpiHighRiskFulfilledInfo")}
                   value={formatPct(current30d.fulfilledHighRiskPct)}
                   current={current30d.fulfilledHighRiskPct}
                   prior={prior30d.fulfilledHighRiskPct}
@@ -849,6 +876,7 @@ export default function InitialAnalysisPage() {
                 />
                 <KpiTile
                   label={t("fraudIntel.kpiConfirmedDelivery")}
+                  info={t("fraudIntel.kpiConfirmedDeliveryInfo")}
                   value={formatPct(current30d.confirmedDeliveryRatePct)}
                   current={current30d.confirmedDeliveryRatePct}
                   prior={prior30d.confirmedDeliveryRatePct}
@@ -860,6 +888,7 @@ export default function InitialAnalysisPage() {
                 />
                 <KpiTile
                   label={t("fraudIntel.kpiSignedFor")}
+                  info={t("fraudIntel.kpiSignedForInfo")}
                   value={formatPct(current30d.signedForRatePct)}
                   current={current30d.signedForRatePct}
                   prior={prior30d.signedForRatePct}

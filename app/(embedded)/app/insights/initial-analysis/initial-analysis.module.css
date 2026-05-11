@@ -126,10 +126,48 @@
   border-radius: 8px;
 }
 
+.kpiTileLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .kpiTileLabel {
   font-size: 12px;
   font-weight: 500;
   color: #6D7175;
+}
+
+/* Info button — bare button wrapping the InfoIcon, so the Tooltip
+ * trigger is keyboard-focusable. Inherits Polaris icon sizing (20px
+ * outer); we shrink slightly and align to the label baseline. */
+.kpiTileInfoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: help;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: #6D7175;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.kpiTileInfoButton:hover,
+.kpiTileInfoButton:focus-visible {
+  color: #202223;
+  background: #F1F2F3;
+  outline: none;
+}
+
+.kpiTileInfoButton :global(.Polaris-Icon) {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .kpiTileValue {

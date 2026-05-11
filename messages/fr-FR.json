@@ -3719,7 +3719,7 @@
     "deltaNoComparison": "pas de période de comparaison",
     "sparklineTitle": "Tendance du taux de chargebacks",
     "sparklineSubtitle": "Hebdomadaire, 8 dernières semaines",
-    "kpi3dsAuth": "Authentification 3-D Secure",
+    "kpi3dsAuth": "Auth. 3-DS",
     "kpi3dsAuthContext": "{num} sur {den} commandes Shopify Payments",
     "kpiMedianFulfillment": "Délai médian d'expédition",
     "kpiMedianFulfillmentContext": "{count} commandes expédiées",
@@ -3733,6 +3733,15 @@
     "gaugeBandElevated": "Élevé > 0,6 %",
     "scopeUpgradeTitle": "Débloquez votre historique de commandes complet",
     "scopeUpgradeBody": "DisputeDesk prend désormais en charge l'analyse de l'intégralité de votre historique de commandes, et plus seulement des 60 derniers jours. Réautorisez pour enrichir l'aperçu du risque avec la saisonnalité, les tendances longues et la corrélation risque-litige.",
-    "scopeUpgradeCta": "Réautoriser sur Shopify"
+    "scopeUpgradeCta": "Réautoriser sur Shopify",
+    "kpiAcceptanceRateInfo": "Part des commandes analysées que Shopify a acceptées au paiement — c'est-à-dire que l'analyse de fraude ne les a pas bloquées. Les commandes en attente d'analyse sont exclues.",
+    "kpiHighRiskRateInfo": "Part des commandes classées en risque ÉLEVÉ par l'analyse de fraude de Shopify. Plus le chiffre est haut, plus l'exposition aux contestations augmente.",
+    "kpiFraudDisputeRateInfo": "Part des commandes devenues une contestation pour fraude Shopify Payments (motif = FRAUDULENT) sur cette période.",
+    "kpi3dsAuthInfo": "Part des paiements par carte Shopify Payments où l'authentification 3-D Secure a abouti. Les paiements authentifiés transfèrent la responsabilité des contestations pour fraude à l'émetteur.",
+    "kpiProtectCoverageInfo": "Sur les commandes éligibles à Shopify Protect, la part marquée PROTECTED. Les commandes protégées ne vous parviennent pas sous forme de contestations.",
+    "kpiMedianFulfillmentInfo": "Délai médian entre la passation de la commande et l'expédition, pour les commandes traitées sur cette période. Un traitement plus rapide améliore généralement les signaux service client.",
+    "kpiHighRiskFulfilledInfo": "Sur les commandes classées risque ÉLEVÉ par Shopify, la part qui a tout de même été expédiée. Un chiffre élevé indique que vous absorbez le risque de fraude signalé par Shopify.",
+    "kpiConfirmedDeliveryInfo": "Sur les commandes expédiées, la part dont le transporteur a confirmé la livraison. Une livraison attestée par le transporteur est une preuve solide en contestation.",
+    "kpiSignedForInfo": "Sur les livraisons confirmées, la part dont le transporteur a enregistré une signature. La signature à la réception est la preuve de livraison la plus forte pour les contestations de fraude."
   }
 }

@@ -2972,7 +2972,7 @@
     "deltaNoComparison": "ingen jämförelseperiod",
     "sparklineTitle": "Chargeback-frekvens – trend",
     "sparklineSubtitle": "Veckovis, senaste 8 veckorna",
-    "kpi3dsAuth": "3-D Secure-autentisering",
+    "kpi3dsAuth": "3-DS-aut.",
     "kpi3dsAuthContext": "{num} av {den} Shopify Payments-ordrar",
     "kpiMedianFulfillment": "Median tid till uppfyllelse",
     "kpiMedianFulfillmentContext": "{count} uppfyllda ordrar",
@@ -2986,6 +2986,15 @@
     "gaugeBandElevated": "Förhöjt > 0,6 %",
     "scopeUpgradeTitle": "Lås upp din fullständiga orderhistorik",
     "scopeUpgradeBody": "DisputeDesk stödjer nu analys av hela din orderhistorik, inte bara de senaste 60 dagarna. Återauktorisera för att utöka riskanalysen med säsongsvariation, långa trender och korrelation mellan risk och tvist.",
-    "scopeUpgradeCta": "Återauktorisera på Shopify"
+    "scopeUpgradeCta": "Återauktorisera på Shopify",
+    "kpiAcceptanceRateInfo": "Andelen analyserade order som Shopify accepterade vid kassan — det vill säga som bedrägeriskanningen inte blockerade. Order med pågående analys räknas inte.",
+    "kpiHighRiskRateInfo": "Andelen order som Shopify klassade som HÖG risk i bedrägerianalysen. Ett högre värde innebär ökad exponering för återkrediteringar.",
+    "kpiFraudDisputeRateInfo": "Andelen order som blev en bedrägeritvist från Shopify Payments (orsak = FRAUDULENT) under perioden.",
+    "kpi3dsAuthInfo": "Andelen kortköp via Shopify Payments där 3-D Secure-autentiseringen slutfördes. Autentiserade betalningar flyttar ansvaret för bedrägeritvister till utgivaren.",
+    "kpiProtectCoverageInfo": "Av de order som Shopify Protect kunde teckna, andelen som markerats PROTECTED. Skyddade order når dig inte som återkrediteringar.",
+    "kpiMedianFulfillmentInfo": "Mediantid mellan lagd order och utskick, för order som hanterats under perioden. Snabbare hantering förbättrar generellt kundsignalerna.",
+    "kpiHighRiskFulfilledInfo": "Av order som Shopify klassat som HÖG risk, andelen som ändå skickades. Ett högt värde innebär att du bär den bedrägeririsk som Shopify flaggade.",
+    "kpiConfirmedDeliveryInfo": "Av skickade order, andelen där transportören rapporterat levererad status. Bekräftad leverans av transportören är stark bevisning i tvist.",
+    "kpiSignedForInfo": "Av bekräftade leveranser, andelen där transportören registrerat en signatur. Signaturbekräftelse är det starkaste leveransbeviset vid bedrägeritvister."
   }
 }

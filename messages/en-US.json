@@ -3706,7 +3706,7 @@
     "deltaNoComparison": "no prior period",
     "sparklineTitle": "Chargeback rate trend",
     "sparklineSubtitle": "Weekly, last 8 weeks",
-    "kpi3dsAuth": "3-D Secure authentication",
+    "kpi3dsAuth": "3-DS auth",
     "kpi3dsAuthContext": "{num} of {den} Shopify Payments orders",
     "kpiMedianFulfillment": "Median time to fulfill",
     "kpiMedianFulfillmentContext": "{count} orders fulfilled",
@@ -3720,6 +3720,15 @@
     "gaugeBandElevated": "Elevated > 0.6%",
     "scopeUpgradeTitle": "Unlock your full order history",
     "scopeUpgradeBody": "DisputeDesk now supports analyzing your full historical orders, not just the last 60 days. Re-authorize to expand the risk overview with seasonality, long-window trends, and risk-to-dispute correlation.",
-    "scopeUpgradeCta": "Re-authorize on Shopify"
+    "scopeUpgradeCta": "Re-authorize on Shopify",
+    "kpiAcceptanceRateInfo": "Share of analyzed orders Shopify accepted at checkout — meaning the fraud analysis did not block them. Excludes orders still pending fraud analysis.",
+    "kpiHighRiskRateInfo": "Share of orders Shopify classified as HIGH risk during fraud analysis. A higher number signals more exposure to chargebacks.",
+    "kpiFraudDisputeRateInfo": "Share of orders that became a Shopify Payments fraud dispute (reason = FRAUDULENT) in this window.",
+    "kpi3dsAuthInfo": "Share of Shopify Payments card orders where 3-D Secure authentication completed successfully. Authenticated payments shift liability to the issuer for fraud chargebacks.",
+    "kpiProtectCoverageInfo": "Of orders Shopify Protect was eligible to underwrite, the share marked PROTECTED. Protected orders do not reach you as chargebacks.",
+    "kpiMedianFulfillmentInfo": "Median time between order placement and fulfillment, across orders fulfilled in this window. Faster fulfillment generally improves customer-service signals.",
+    "kpiHighRiskFulfilledInfo": "Of orders Shopify classified HIGH risk, the share that still reached a fulfilled state. A high number means you are absorbing the fraud risk Shopify flagged.",
+    "kpiConfirmedDeliveryInfo": "Of fulfilled orders, the share where the carrier returned a delivered status. Carrier-attested delivery is strong dispute evidence.",
+    "kpiSignedForInfo": "Of confirmed deliveries, the share where the carrier recorded a signature. Signature confirmation is the strongest delivery evidence for fraud chargebacks."
   }
 }

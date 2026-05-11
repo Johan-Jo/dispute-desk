@@ -3719,7 +3719,7 @@
     "deltaNoComparison": "kein Vergleichszeitraum",
     "sparklineTitle": "Chargeback-Quote – Trend",
     "sparklineSubtitle": "Wöchentlich, letzte 8 Wochen",
-    "kpi3dsAuth": "3-D-Secure-Authentifizierung",
+    "kpi3dsAuth": "3-DS-Auth.",
     "kpi3dsAuthContext": "{num} von {den} Shopify-Payments-Bestellungen",
     "kpiMedianFulfillment": "Median-Zeit bis zur Erfüllung",
     "kpiMedianFulfillmentContext": "{count} erfüllte Bestellungen",
@@ -3733,6 +3733,15 @@
     "gaugeBandElevated": "Erhöht > 0,6 %",
     "scopeUpgradeTitle": "Vollständigen Bestellverlauf freischalten",
     "scopeUpgradeBody": "DisputeDesk unterstützt jetzt die Analyse Ihres gesamten historischen Bestellverlaufs, nicht nur der letzten 60 Tage. Erneut autorisieren, um die Risikoübersicht um Saisonalität, langfristige Trends und Risiko-zu-Streit-Korrelation zu erweitern.",
-    "scopeUpgradeCta": "Auf Shopify erneut autorisieren"
+    "scopeUpgradeCta": "Auf Shopify erneut autorisieren",
+    "kpiAcceptanceRateInfo": "Anteil der analysierten Bestellungen, die Shopify beim Checkout akzeptiert hat — die Betrugsanalyse hat sie also nicht blockiert. Bestellungen mit ausstehender Analyse sind ausgenommen.",
+    "kpiHighRiskRateInfo": "Anteil der Bestellungen, die Shopify in der Betrugsanalyse als HOHES Risiko eingestuft hat. Ein höherer Wert bedeutet mehr Exposition gegenüber Rückbuchungen.",
+    "kpiFraudDisputeRateInfo": "Anteil der Bestellungen, aus denen in diesem Zeitraum eine Shopify-Payments-Betrugsanfechtung (Grund = FRAUDULENT) wurde.",
+    "kpi3dsAuthInfo": "Anteil der Shopify-Payments-Kartenzahlungen, bei denen die 3-D-Secure-Authentifizierung erfolgreich abgeschlossen wurde. Authentifizierte Zahlungen verlagern die Haftung für Betrugsrückbuchungen auf den Aussteller.",
+    "kpiProtectCoverageInfo": "Anteil der durch Shopify Protect förderfähigen Bestellungen, die als PROTECTED gekennzeichnet sind. Geschützte Bestellungen erreichen dich nicht als Rückbuchungen.",
+    "kpiMedianFulfillmentInfo": "Mittlere Zeit zwischen Bestelleingang und Fulfillment für die in diesem Zeitraum abgewickelten Bestellungen. Schnelleres Fulfillment verbessert in der Regel die Service-Signale.",
+    "kpiHighRiskFulfilledInfo": "Anteil der von Shopify als HOHES Risiko eingestuften Bestellungen, die dennoch ausgeliefert wurden. Ein hoher Wert bedeutet, dass du das von Shopify markierte Betrugsrisiko übernimmst.",
+    "kpiConfirmedDeliveryInfo": "Anteil der ausgelieferten Bestellungen, bei denen der Spediteur einen Zustellstatus zurückgemeldet hat. Vom Spediteur bestätigte Zustellungen sind starke Beweise im Streitfall.",
+    "kpiSignedForInfo": "Anteil der bestätigten Zustellungen, bei denen der Spediteur eine Unterschrift erfasst hat. Die Empfangsbestätigung ist der stärkste Zustellbeweis bei Betrugsrückbuchungen."
   }
 }
