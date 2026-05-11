@@ -69,6 +69,27 @@ interface InsightsResponse {
    *  but the backfill hasn't re-run yet — the dashboard surfaces the
    *  re-OAuth banner based on this live value. */
   currentScopeGrant: "default_window" | "read_all_orders";
+  /** Per-risk-bucket conversion from orders to disputes. Observational
+   *  signal — "of orders Shopify classified <level>, X% became disputes"
+   *  — that becomes meaningful once the merchant has any disputes at
+   *  all. Each bucket reports the raw counts AND a percentage; the
+   *  percentage is null when the bucket's order count is below the
+   *  sample threshold, so the UI can render "Insufficient sample"
+   *  instead of a misleading rate. Computed all-time, not windowed —
+   *  conversion is a stable per-merchant signal, not a recency metric. */
+  riskToDisputeConversion: {
+    high: RiskConversionBucket;
+    medium: RiskConversionBucket;
+    low: RiskConversionBucket;
+    none: RiskConversionBucket;
+    pending: RiskConversionBucket;
+  };
+}
+
+interface RiskConversionBucket {
+  orders: number;
+  disputes: number;
+  conversionPct: number | null;
 }
 
 function classifyChargebackHealth(
@@ -86,6 +107,12 @@ function classifyChargebackHealth(
  *  severity verdict. Matches PRD §11 low-volume threshold used by
  *  computeChargebackRate. */
 const CHARGEBACK_VERDICT_MIN_ORDERS = 50;
+
+/** Minimum per-bucket order count for the risk-to-dispute conversion
+ *  rate to surface as a percentage. Below this we still show the raw
+ *  "X of Y disputed" counts so the merchant sees the data, but the
+ *  pct is null so the UI can render "Insufficient sample" copy. */
+const RISK_CONVERSION_MIN_ORDERS = 30;
 
 function rate(num: number, den: number): number | null {
   if (den <= 0) return null;
@@ -207,6 +234,91 @@ export async function GET(req: NextRequest) {
   }
   const chargebackRate90d = rate(cbCount, cbOrderTotal);
 
+  // ── Risk-to-dispute conversion (all-time) ──────────────────────
+  // For each risk bucket, compute: orders in bucket, disputes whose
+  // order_gid is in that bucket, and the conversion rate. Reads the
+  // raw shopify_orders + disputes tables (no rollup table exists for
+  // this cross-join yet); both are paginated past PostgREST's
+  // default 1000-row cap.
+  async function fetchAllOrders(): Promise<
+    Array<{ shopify_order_id: string; risk_level_initial: string | null }>
+  > {
+    const out: Array<{ shopify_order_id: string; risk_level_initial: string | null }> = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb
+        .from("shopify_orders")
+        .select("shopify_order_id, risk_level_initial")
+        .eq("shop_id", shopId)
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      out.push(
+        ...(data ?? []).map((d) => ({
+          shopify_order_id: d.shopify_order_id as string,
+          risk_level_initial: (d.risk_level_initial as string | null) ?? null,
+        })),
+      );
+      if (!data || data.length < 1000) break;
+    }
+    return out;
+  }
+  async function fetchAllDisputedGids(): Promise<Set<string>> {
+    const out = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb
+        .from("disputes")
+        .select("order_gid")
+        .eq("shop_id", shopId)
+        .not("order_gid", "is", null)
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      for (const r of data ?? []) {
+        if (r.order_gid) out.add(r.order_gid as string);
+      }
+      if (!data || data.length < 1000) break;
+    }
+    return out;
+  }
+
+  const allOrders = await fetchAllOrders();
+  const disputedGids = await fetchAllDisputedGids();
+  const conversionBuckets = {
+    high:    { orders: 0, disputes: 0 },
+    medium:  { orders: 0, disputes: 0 },
+    low:     { orders: 0, disputes: 0 },
+    none:    { orders: 0, disputes: 0 },
+    pending: { orders: 0, disputes: 0 },
+  };
+  for (const o of allOrders) {
+    const lvl = (o.risk_level_initial ?? "").toUpperCase();
+    const key =
+      lvl === "HIGH"    ? "high"   :
+      lvl === "MEDIUM"  ? "medium" :
+      lvl === "LOW"     ? "low"    :
+      lvl === "PENDING" ? "pending" :
+                          "none";
+    conversionBuckets[key].orders += 1;
+    if (disputedGids.has(o.shopify_order_id)) {
+      conversionBuckets[key].disputes += 1;
+    }
+  }
+  function bucketWithPct(b: { orders: number; disputes: number }): RiskConversionBucket {
+    return {
+      orders: b.orders,
+      disputes: b.disputes,
+      conversionPct:
+        b.orders >= RISK_CONVERSION_MIN_ORDERS
+          ? Math.round((b.disputes / b.orders) * 1000) / 10
+          : null,
+    };
+  }
+  const riskToDisputeConversion = {
+    high:    bucketWithPct(conversionBuckets.high),
+    medium:  bucketWithPct(conversionBuckets.medium),
+    low:     bucketWithPct(conversionBuckets.low),
+    none:    bucketWithPct(conversionBuckets.none),
+    pending: bucketWithPct(conversionBuckets.pending),
+  };
+
   const response: InsightsResponse = {
     available: status === "complete",
     ordersAnalyzed: ordersTotal,
@@ -237,6 +349,7 @@ export async function GET(req: NextRequest) {
     historicalImportCompletedAt:
       (shopRow?.historical_import_completed_at as string | null) ?? null,
     currentScopeGrant,
+    riskToDisputeConversion,
   };
 
   return NextResponse.json(response);

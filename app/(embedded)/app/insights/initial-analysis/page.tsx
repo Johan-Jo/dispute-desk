@@ -46,6 +46,13 @@ interface InsightsResponse {
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
   chargebackHealthAvailable: boolean;
   chargebackOrders90d: number;
+  riskToDisputeConversion?: {
+    high: RiskConversionBucket;
+    medium: RiskConversionBucket;
+    low: RiskConversionBucket;
+    none: RiskConversionBucket;
+    pending: RiskConversionBucket;
+  };
   riskBreakdown: {
     low: number;
     medium: number;
@@ -62,6 +69,12 @@ interface InsightsResponse {
   historicalImportSinceDate: string | null;
   historicalImportScopeGranted: "default_window" | "read_all_orders" | null;
   historicalImportCompletedAt: string | null;
+}
+
+interface RiskConversionBucket {
+  orders: number;
+  disputes: number;
+  conversionPct: number | null;
 }
 
 function formatPct(v: number | null): string {
@@ -347,6 +360,58 @@ export default function InitialAnalysisPage() {
           </Card>
         </Layout.Section>
 
+        {/* ── Risk-to-dispute correlation ─────────────────────────────
+            Observational: shows what % of orders in each Shopify risk
+            bucket actually became disputes. Answers "how predictive
+            was Shopify's classification for THIS merchant?" without
+            making a verdict. Per-bucket gating on sample size so a
+            tiny denominator never produces a misleading rate. */}
+        {data.riskToDisputeConversion ? (
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="300">
+                <BlockStack gap="050">
+                  <Text as="h3" variant="headingMd">
+                    {t("fraudIntel.correlationTitle")}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("fraudIntel.correlationSubtitle")}
+                  </Text>
+                </BlockStack>
+                <ConversionRow
+                  label={t("fraudIntel.riskHigh")}
+                  color="#DC2626"
+                  bucket={data.riskToDisputeConversion.high}
+                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
+                />
+                <ConversionRow
+                  label={t("fraudIntel.riskMedium")}
+                  color="#F59E0B"
+                  bucket={data.riskToDisputeConversion.medium}
+                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
+                />
+                <ConversionRow
+                  label={t("fraudIntel.riskLow")}
+                  color="#10B981"
+                  bucket={data.riskToDisputeConversion.low}
+                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
+                />
+                <ConversionRow
+                  label={t("fraudIntel.riskNone")}
+                  color="#9CA3AF"
+                  bucket={data.riskToDisputeConversion.none}
+                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
+                />
+                <Divider />
+                <CorrelationObservation
+                  conversion={data.riskToDisputeConversion}
+                  t={t}
+                />
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        ) : null}
+
         {/* ── Chargeback Health section (banner CTA target) ──────────
             Verdict only renders when the 90-day order denominator is
             statistically meaningful. Below the threshold we show
@@ -442,6 +507,130 @@ function RiskRow({
         {count.toLocaleString()} ({pct}%)
       </Text>
     </InlineStack>
+  );
+}
+
+/** One row in the risk-to-dispute correlation table. Shows the
+ *  bucket name, dot color, raw "X of Y disputed" counts, and the
+ *  conversion percentage when the sample is large enough. Below the
+ *  per-bucket sample threshold, the pct slot reads "insufficient
+ *  sample" — observational, no implied judgement.
+ */
+function ConversionRow({
+  label,
+  color,
+  bucket,
+  insufficientLabel,
+}: {
+  label: string;
+  color: string;
+  bucket: RiskConversionBucket;
+  insufficientLabel: string;
+}) {
+  return (
+    <InlineStack gap="300" blockAlign="center" wrap={false}>
+      <div
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          background: color,
+          flexShrink: 0,
+        }}
+      />
+      <Text as="span" variant="bodyMd">
+        {label}
+      </Text>
+      <div style={{ flex: 1 }} />
+      <Text as="span" variant="bodyMd" tone="subdued">
+        {bucket.disputes.toLocaleString()} of {bucket.orders.toLocaleString()}
+      </Text>
+      <Text
+        as="span"
+        variant="bodyMd"
+        fontWeight={bucket.conversionPct === null ? "regular" : "semibold"}
+        tone={bucket.conversionPct === null ? "subdued" : undefined}
+      >
+        {bucket.conversionPct === null
+          ? insufficientLabel
+          : `${bucket.conversionPct.toFixed(1)}%`}
+      </Text>
+    </InlineStack>
+  );
+}
+
+/** Footer observation on the correlation table. Compares the HIGH
+ *  bucket's conversion rate to the LOW + NONE blended baseline (the
+ *  "safe orders" pool). Only renders an observation when both sides
+ *  have meaningful samples AND a meaningful ratio. Otherwise stays
+ *  silent rather than fabricating a takeaway.
+ */
+function CorrelationObservation({
+  conversion,
+  t,
+}: {
+  conversion: NonNullable<InsightsResponse["riskToDisputeConversion"]>;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const high = conversion.high;
+  const low = conversion.low;
+  const none = conversion.none;
+
+  if (high.conversionPct === null) {
+    return (
+      <Text as="p" variant="bodySm" tone="subdued">
+        {t("fraudIntel.correlationObservationNeedHigh")}
+      </Text>
+    );
+  }
+
+  // Blend LOW + NONE as the "safe orders" baseline. Each must
+  // individually have a meaningful sample for the blend to be honest.
+  const safeOrders = low.orders + none.orders;
+  const safeDisputes = low.disputes + none.disputes;
+  const safeBlendPct = safeOrders > 0 ? (safeDisputes / safeOrders) * 100 : null;
+  if (safeBlendPct === null || (low.conversionPct === null && none.conversionPct === null)) {
+    return (
+      <Text as="p" variant="bodySm" tone="subdued">
+        {t("fraudIntel.correlationObservationNeedSafe")}
+      </Text>
+    );
+  }
+
+  const ratio = safeBlendPct > 0 ? high.conversionPct / safeBlendPct : null;
+  if (ratio === null) {
+    return null;
+  }
+
+  if (ratio >= 2.0) {
+    return (
+      <Text as="p" variant="bodyMd">
+        {t("fraudIntel.correlationObservationStrong", {
+          ratio: ratio.toFixed(1),
+        })}
+      </Text>
+    );
+  }
+  if (ratio >= 1.3) {
+    return (
+      <Text as="p" variant="bodyMd">
+        {t("fraudIntel.correlationObservationMild", {
+          ratio: ratio.toFixed(1),
+        })}
+      </Text>
+    );
+  }
+  if (ratio < 0.8) {
+    return (
+      <Text as="p" variant="bodyMd">
+        {t("fraudIntel.correlationObservationInverted")}
+      </Text>
+    );
+  }
+  return (
+    <Text as="p" variant="bodySm" tone="subdued">
+      {t("fraudIntel.correlationObservationFlat")}
+    </Text>
   );
 }
 
