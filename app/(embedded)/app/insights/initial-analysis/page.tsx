@@ -1,18 +1,26 @@
 "use client";
 
 /**
- * Phase 1 Shopify Fraud Intelligence — Initial Analysis page.
+ * Risk Intelligence page — formerly "Initial Analysis".
  *
- * Permanent home for the onboarding insight content. The dashboard
- * banner is dismissible; this page is always reachable from the
- * banner CTAs (and via future navigation entries).
+ * Designed to be useful at install (first impression) AND ongoing
+ * (the page merchants return to monthly to check what changed).
+ * Each KPI carries a month-over-month delta (current 30d vs prior
+ * 30d). Chargeback rate also includes an 8-week sparkline.
  *
- * Layout follows the same insight-first hierarchy as the banner:
- *   1. Headline (orders analyzed) leads.
- *   2. Recent-window percentages give the merchant context.
- *   3. Risk breakdown table.
- *   4. Chargeback Health section (anchor #chargeback-health).
- *   5. What this means / what to do next.
+ * Layout hierarchy:
+ *   1. Hero card — large headline with N orders analyzed + leading
+ *      observation copy. Stacked-bar mini-anchor of risk distribution.
+ *   2. KPI strip — 5 stat tiles (current value + MoM delta).
+ *   3. Risk classification breakdown — full-width stacked bar +
+ *      per-row breakdown rows with progress bars + "Cleared vs Low"
+ *      info banner + per-bucket definitions.
+ *   4. Two-column row:
+ *      a. Risk-to-dispute correlation — horizontal bar chart of
+ *         conversion rates by risk bucket + observation footer.
+ *      b. Chargeback health — gauge with three colored bands +
+ *         8-week sparkline trend.
+ *   5. "What this means" footer — observational closing note.
  *
  * Positioning: chargeback operations + merchant intelligence.
  * Never frame as fraud prevention.
@@ -28,14 +36,15 @@ import {
   InlineStack,
   Text,
   Spinner,
-  Badge,
   Divider,
   Banner,
 } from "@shopify/polaris";
+import styles from "./initial-analysis.module.css";
 
 interface InsightsResponse {
   available: boolean;
   ordersAnalyzed: number;
+
   windowStart90d: string;
   highRiskPct: number | null;
   fulfilledHighRiskPct: number | null;
@@ -46,6 +55,18 @@ interface InsightsResponse {
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
   chargebackHealthAvailable: boolean;
   chargebackOrders90d: number;
+
+  windowStart30d: string;
+  windowStart30dPrior: string;
+  current30d: PeriodWindow;
+  prior30d: PeriodWindow;
+  chargebackRateSparklineWeekly: Array<{
+    weekStart: string;
+    rate: number | null;
+    orderCount: number;
+  }>;
+
+  riskBreakdown: { low: number; medium: number; high: number; none: number; pending: number };
   riskToDisputeConversion?: {
     high: RiskConversionBucket;
     medium: RiskConversionBucket;
@@ -53,22 +74,23 @@ interface InsightsResponse {
     none: RiskConversionBucket;
     pending: RiskConversionBucket;
   };
-  riskBreakdown: {
-    low: number;
-    medium: number;
-    high: number;
-    none: number;
-    pending: number;
-  };
-  historicalImportStatus:
-    | "not_started"
-    | "in_progress"
-    | "complete"
-    | "failed";
+
+  historicalImportStatus: "not_started" | "in_progress" | "complete" | "failed";
   historicalImportOrdersTotal: number;
   historicalImportSinceDate: string | null;
   historicalImportScopeGranted: "default_window" | "read_all_orders" | null;
   historicalImportCompletedAt: string | null;
+}
+
+interface PeriodWindow {
+  ordersTotal: number;
+  acceptanceRatePct: number | null;
+  highRiskPct: number | null;
+  fulfilledHighRiskPct: number | null;
+  fraudDisputeRatePct: number | null;
+  shopifyProtectCoveragePct: number | null;
+  chargebackRatePct: number | null;
+  chargebackOrders: number;
 }
 
 interface RiskConversionBucket {
@@ -77,37 +99,472 @@ interface RiskConversionBucket {
   conversionPct: number | null;
 }
 
-function formatPct(v: number | null): string {
-  return v === null ? "—" : `${v.toFixed(1)}%`;
+// ═══ Color palette (kept in sync with initial-analysis.module.css) ═══
+const RISK_COLOR = {
+  HIGH: "#DC2626",
+  MEDIUM: "#F59E0B",
+  LOW: "#10B981",
+  PENDING: "#6B7280",
+  NONE: "#9CA3AF",
+} as const;
+
+function formatPct(v: number | null, digits = 1): string {
+  return v === null ? "—" : `${v.toFixed(digits)}%`;
 }
 
-function HealthBadge({
-  status,
-  rateLabel,
-  label,
+// ═══ DeltaPill: month-over-month change indicator ═══════════════════
+/** Renders a small pill showing the delta between current and prior
+ *  windows. Color-coded by whether the change is favorable. For some
+ *  metrics (chargeback rate, fraud-dispute rate, high-risk rate)
+ *  an INCREASE is bad; for others (acceptance rate, Protect coverage)
+ *  an increase is good. `inverse=true` flips the color logic. */
+function DeltaPill({
+  current,
+  prior,
+  inverse = false,
+  t,
 }: {
-  status: InsightsResponse["chargebackHealth"];
-  rateLabel: string;
-  label: string;
+  current: number | null;
+  prior: number | null;
+  inverse?: boolean;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const tone =
-    status === "good"
-      ? "success"
-      : status === "at_risk"
-        ? "attention"
-        : status === "elevated"
-          ? "critical"
-          : undefined;
+  if (current === null || prior === null) {
+    return (
+      <span style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+        {t("fraudIntel.deltaNoComparison")}
+      </span>
+    );
+  }
+  const delta = current - prior;
+  const absDelta = Math.abs(delta);
+  // Flat threshold: <0.1pp considered no meaningful change
+  if (absDelta < 0.1) {
+    return (
+      <span style={{ fontSize: 11, color: "#6D7175", fontWeight: 500 }}>
+        → {t("fraudIntel.deltaStable")}
+      </span>
+    );
+  }
+  const isUp = delta > 0;
+  const isBad = inverse ? isUp : !isUp;
+  const color = isBad ? "#DC2626" : "#10B981";
+  const arrow = isUp ? "↑" : "↓";
   return (
-    <InlineStack gap="200" blockAlign="center">
-      <Text as="span" variant="bodyMd">
-        {rateLabel}
-      </Text>
-      <Badge tone={tone}>{label}</Badge>
-    </InlineStack>
+    <span
+      style={{
+        fontSize: 11,
+        color,
+        fontWeight: 600,
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {arrow} {absDelta.toFixed(1)} pp {t("fraudIntel.deltaVsLast")}
+    </span>
   );
 }
 
+// ═══ HeroDisplay: orders analyzed + leading observation ════════════
+function HeroDisplay({
+  ordersAnalyzed,
+  highRiskPct,
+  fulfilledHighRiskPct,
+  miniBarData,
+  miniBarTotal,
+  t,
+}: {
+  ordersAnalyzed: number;
+  highRiskPct: number | null;
+  fulfilledHighRiskPct: number | null;
+  miniBarData: { color: string; pct: number; label: string }[];
+  miniBarTotal: number;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <Card>
+      <div className={styles.heroCard}>
+        <div className={styles.heroAccentBar} />
+        <div className={styles.heroLayout}>
+          <BlockStack gap="400">
+            <div>
+              <div className={styles.heroNumber}>
+                {ordersAnalyzed.toLocaleString()}
+              </div>
+              <div className={styles.heroNumberLabel}>
+                {t("fraudIntel.heroNumberLabel")}
+              </div>
+            </div>
+            <Text as="p" variant="bodyLg">
+              {t("fraudIntel.pageBody", {
+                high: highRiskPct?.toFixed(1) ?? "—",
+                fulfilled: fulfilledHighRiskPct?.toFixed(0) ?? "—",
+              })}
+            </Text>
+          </BlockStack>
+          {miniBarTotal > 0 ? (
+            <div className={styles.heroMiniBar}>
+              <div className={styles.heroMiniBarLabel}>
+                {t("fraudIntel.heroMiniBarLabel")}
+              </div>
+              <StackedDistributionBar segments={miniBarData} />
+              <StackedLegend
+                segments={miniBarData}
+                total={miniBarTotal}
+                compact
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══ KpiTile: stat tile with current value + MoM delta ════════════
+function KpiTile({
+  label,
+  value,
+  current,
+  prior,
+  inverseDelta,
+  context,
+  t,
+}: {
+  label: string;
+  value: string;
+  current: number | null;
+  prior: number | null;
+  inverseDelta?: boolean;
+  context?: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div className={styles.kpiTile}>
+      <div className={styles.kpiTileLabel}>{label}</div>
+      <div className={styles.kpiTileValue}>{value}</div>
+      <DeltaPill current={current} prior={prior} inverse={inverseDelta} t={t} />
+      {context ? <div className={styles.kpiTileContext}>{context}</div> : null}
+    </div>
+  );
+}
+
+// ═══ StackedDistributionBar: full-width segmented bar ══════════════
+function StackedDistributionBar({
+  segments,
+}: {
+  segments: { color: string; pct: number; label: string }[];
+}) {
+  return (
+    <div
+      className={styles.stackedBar}
+      role="img"
+      aria-label={segments
+        .map((s) => `${s.label} ${s.pct.toFixed(1)}%`)
+        .join(", ")}
+    >
+      {segments.map((s, i) => (
+        <div
+          key={i}
+          className={styles.stackedSegment}
+          style={{
+            width: `${s.pct}%`,
+            background: s.color,
+          }}
+          title={`${s.label} — ${s.pct.toFixed(1)}%`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StackedLegend({
+  segments,
+  total,
+  compact = false,
+}: {
+  segments: { color: string; pct: number; label: string; count?: number }[];
+  total: number;
+  compact?: boolean;
+}) {
+  return (
+    <div className={styles.stackedBarLegend}>
+      {segments.map((s, i) => (
+        <div key={i} className={styles.stackedBarLegendItem}>
+          <span
+            className={styles.stackedBarLegendDot}
+            style={{ background: s.color }}
+          />
+          <span>
+            <span className={styles.stackedBarLegendStrong}>{s.label}</span>
+            {compact ? null : ` · ${s.count?.toLocaleString()}`} ·{" "}
+            {s.pct.toFixed(1)}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══ DistributionRow: dot + label + progress bar + count ═══════════
+function DistributionRow({
+  label,
+  color,
+  count,
+  total,
+}: {
+  label: string;
+  color: string;
+  count: number;
+  total: number;
+}) {
+  const pct = total > 0 ? (count / total) * 100 : 0;
+  return (
+    <div className={styles.distRow}>
+      <span className={styles.distRowDot} style={{ background: color }} />
+      <span className={styles.distRowLabel}>{label}</span>
+      <div className={styles.distRowTrack}>
+        <div
+          className={styles.distRowFill}
+          style={{ width: `${pct}%`, background: color }}
+        />
+      </div>
+      <span className={styles.distRowMeta}>
+        <span className={styles.distRowMetaStrong}>
+          {count.toLocaleString()}
+        </span>{" "}
+        ({pct.toFixed(1)}%)
+      </span>
+    </div>
+  );
+}
+
+// ═══ ConversionBarChart: horizontal bars showing per-bucket rate ══
+function ConversionBarChart({
+  rows,
+  insufficientLabel,
+}: {
+  rows: {
+    label: string;
+    color: string;
+    bucket: RiskConversionBucket;
+  }[];
+  insufficientLabel: string;
+}) {
+  // Scale bars to the max conversion rate so relative magnitudes are
+  // visible. If every bucket is null (no data), the chart degrades
+  // gracefully with empty tracks.
+  const maxPct = Math.max(
+    ...rows.map((r) => (r.bucket.conversionPct ?? 0)),
+    0.01,
+  );
+  return (
+    <div className={styles.convChart}>
+      {rows.map((r, i) => {
+        const pct = r.bucket.conversionPct;
+        const barPct =
+          pct === null ? 0 : Math.max((pct / maxPct) * 100, 3);
+        return (
+          <div key={i} className={styles.convRow}>
+            <div className={styles.convRowLabel}>
+              <span
+                className={styles.convRowLabelDot}
+                style={{ background: r.color }}
+              />
+              {r.label}
+            </div>
+            <div className={styles.convBar}>
+              {pct !== null ? (
+                <div
+                  className={styles.convBarFill}
+                  style={{
+                    width: `${barPct}%`,
+                    background: r.color,
+                  }}
+                >
+                  {barPct > 14 ? `${pct.toFixed(1)}%` : null}
+                </div>
+              ) : null}
+            </div>
+            <div>
+              {pct !== null ? (
+                <div className={styles.convRowValue}>
+                  {pct.toFixed(1)}%
+                </div>
+              ) : (
+                <div
+                  className={`${styles.convRowSubtle} ${styles.convRowSubtleInsufficient}`}
+                >
+                  {insufficientLabel}
+                </div>
+              )}
+              <div className={styles.convRowSubtle}>
+                {r.bucket.disputes.toLocaleString()} /{" "}
+                {r.bucket.orders.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══ ChargebackGauge: tri-band horizontal gauge with marker ════════
+function ChargebackGauge({
+  rate,
+  status,
+  available,
+  statusLabel,
+  insufficientLabel,
+  bandsLabel,
+  goodLabel,
+  atRiskLabel,
+  elevatedLabel,
+}: {
+  rate: number | null;
+  status: InsightsResponse["chargebackHealth"];
+  available: boolean;
+  statusLabel: string;
+  insufficientLabel: string;
+  bandsLabel: string;
+  goodLabel: string;
+  atRiskLabel: string;
+  elevatedLabel: string;
+}) {
+  // Gauge scale: 0% → 1%. Bands at 0.4% (good→at_risk) and 0.6%
+  // (at_risk→elevated). A rate above 1% pins to the right edge —
+  // realistic worst-case for surfacing on the gauge.
+  const SCALE_MAX = 1.0;
+  const safeRate = rate === null ? null : Math.min(Math.max(rate, 0), SCALE_MAX);
+  const markerPct =
+    safeRate === null ? null : (safeRate / SCALE_MAX) * 100;
+  const statusClass = available
+    ? styles[`gaugeStatus_${status}` as keyof typeof styles]
+    : styles.gaugeStatus_unknown;
+  return (
+    <div className={styles.gaugeWrap}>
+      <div className={styles.gaugeRow}>
+        <div>
+          <div className={styles.gaugeRateValue}>
+            {rate === null ? "—" : `${rate.toFixed(2)}%`}
+          </div>
+          <div className={styles.gaugeRateLabel}>{bandsLabel}</div>
+        </div>
+        <span className={`${styles.gaugeStatus} ${statusClass}`}>
+          {available ? statusLabel : insufficientLabel}
+        </span>
+      </div>
+      <div className={styles.gaugeTrack}>
+        {markerPct !== null ? (
+          <div
+            className={styles.gaugeMarker}
+            style={{ left: `${markerPct}%` }}
+            aria-hidden
+          />
+        ) : null}
+      </div>
+      <div className={styles.gaugeTicks}>
+        <span>0%</span>
+        <span style={{ marginLeft: "auto", marginRight: "auto" }}>0.5%</span>
+        <span>{SCALE_MAX.toFixed(1)}%+</span>
+      </div>
+      <div className={styles.gaugeBands}>
+        <div className={styles.gaugeBandItem}>
+          <span
+            className={`${styles.gaugeBandDot} ${styles.gaugeBand_good}`}
+          />
+          {goodLabel}
+        </div>
+        <div className={styles.gaugeBandItem}>
+          <span
+            className={`${styles.gaugeBandDot} ${styles.gaugeBand_at_risk}`}
+          />
+          {atRiskLabel}
+        </div>
+        <div className={styles.gaugeBandItem}>
+          <span
+            className={`${styles.gaugeBandDot} ${styles.gaugeBand_elevated}`}
+          />
+          {elevatedLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══ Sparkline: weekly chargeback rate over 8 weeks ════════════════
+function Sparkline({
+  points,
+  height = 40,
+  width = 220,
+}: {
+  points: Array<{ weekStart: string; rate: number | null; orderCount: number }>;
+  height?: number;
+  width?: number;
+}) {
+  const numbers = points.map((p) => p.rate).filter((r): r is number => r !== null);
+  if (numbers.length === 0) {
+    return (
+      <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+        No data
+      </div>
+    );
+  }
+  const min = 0;
+  const max = Math.max(...numbers, 1.0);
+  const padX = 4;
+  const padY = 4;
+  const w = width - padX * 2;
+  const h = height - padY * 2;
+  const xStep = points.length > 1 ? w / (points.length - 1) : w;
+
+  const segs: string[] = [];
+  let prev: { x: number; y: number } | null = null;
+  points.forEach((p, i) => {
+    if (p.rate === null) {
+      prev = null;
+      return;
+    }
+    const x = padX + i * xStep;
+    const y = padY + h - ((p.rate - min) / (max - min)) * h;
+    if (prev) segs.push(`M ${prev.x} ${prev.y} L ${x} ${y}`);
+    prev = { x, y };
+  });
+
+  const lastPoint = points
+    .map((p, i) => ({ ...p, i }))
+    .reverse()
+    .find((p) => p.rate !== null);
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Weekly chargeback rate, last 8 weeks"
+    >
+      <path
+        d={segs.join(" ")}
+        fill="none"
+        stroke="#005BD3"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {lastPoint && lastPoint.rate !== null ? (
+        <circle
+          cx={padX + lastPoint.i * xStep}
+          cy={padY + h - ((lastPoint.rate - min) / (max - min)) * h}
+          r="2.5"
+          fill="#005BD3"
+        />
+      ) : null}
+    </svg>
+  );
+}
+
+// ═══ Main page ═════════════════════════════════════════════════════
 export default function InitialAnalysisPage() {
   const t = useTranslations();
   const [data, setData] = useState<InsightsResponse | null>(null);
@@ -130,7 +587,7 @@ export default function InitialAnalysisPage() {
 
   if (loading) {
     return (
-      <Page title={t("fraudIntel.pageTitle")}>
+      <Page title={t("fraudIntel.pageTitleV2")}>
         <Layout>
           <Layout.Section>
             <Card>
@@ -146,7 +603,7 @@ export default function InitialAnalysisPage() {
 
   if (!data) {
     return (
-      <Page title={t("fraudIntel.pageTitle")}>
+      <Page title={t("fraudIntel.pageTitleV2")}>
         <Layout>
           <Layout.Section>
             <Banner tone="warning" title={t("fraudIntel.failedTitle")}>
@@ -160,7 +617,7 @@ export default function InitialAnalysisPage() {
 
   if (data.historicalImportStatus !== "complete") {
     return (
-      <Page title={t("fraudIntel.pageTitle")}>
+      <Page title={t("fraudIntel.pageTitleV2")}>
         <Layout>
           <Layout.Section>
             <Card>
@@ -181,7 +638,7 @@ export default function InitialAnalysisPage() {
     );
   }
 
-  const { riskBreakdown } = data;
+  const { riskBreakdown, current30d, prior30d } = data;
   const riskTotal =
     riskBreakdown.low +
     riskBreakdown.medium +
@@ -189,139 +646,135 @@ export default function InitialAnalysisPage() {
     riskBreakdown.none +
     riskBreakdown.pending;
 
+  // Stacked-bar segments — ordered by severity for visual rhythm.
+  const distSegments = [
+    {
+      color: RISK_COLOR.HIGH,
+      pct: riskTotal > 0 ? (riskBreakdown.high / riskTotal) * 100 : 0,
+      count: riskBreakdown.high,
+      label: t("fraudIntel.riskHigh"),
+    },
+    {
+      color: RISK_COLOR.MEDIUM,
+      pct: riskTotal > 0 ? (riskBreakdown.medium / riskTotal) * 100 : 0,
+      count: riskBreakdown.medium,
+      label: t("fraudIntel.riskMedium"),
+    },
+    {
+      color: RISK_COLOR.LOW,
+      pct: riskTotal > 0 ? (riskBreakdown.low / riskTotal) * 100 : 0,
+      count: riskBreakdown.low,
+      label: t("fraudIntel.riskLow"),
+    },
+    {
+      color: RISK_COLOR.PENDING,
+      pct: riskTotal > 0 ? (riskBreakdown.pending / riskTotal) * 100 : 0,
+      count: riskBreakdown.pending,
+      label: t("fraudIntel.riskPending"),
+    },
+    {
+      color: RISK_COLOR.NONE,
+      pct: riskTotal > 0 ? (riskBreakdown.none / riskTotal) * 100 : 0,
+      count: riskBreakdown.none,
+      label: t("fraudIntel.riskNone"),
+    },
+  ];
+
   return (
     <Page
-      title={t("fraudIntel.pageTitle")}
+      title={t("fraudIntel.pageTitleV2")}
       subtitle={t("fraudIntel.pageSubtitle")}
     >
       <Layout>
-        {/* ── Hero: insight leads, not verdict ─────────────────────── */}
+        {/* ── Hero ─────────────────────────────────────────────────── */}
+        <Layout.Section>
+          <HeroDisplay
+            ordersAnalyzed={data.ordersAnalyzed}
+            highRiskPct={data.highRiskPct}
+            fulfilledHighRiskPct={data.fulfilledHighRiskPct}
+            miniBarData={distSegments}
+            miniBarTotal={riskTotal}
+            t={t}
+          />
+        </Layout.Section>
+
+        {/* ── KPI strip (current 30d + MoM delta) ─────────────────── */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingLg">
-                {t("fraudIntel.pageHeadline", {
-                  count: data.ordersAnalyzed.toLocaleString(),
-                })}
-              </Text>
-              <Text as="p">
-                {t("fraudIntel.pageBody", {
-                  high: data.highRiskPct?.toFixed(1) ?? "—",
-                  fulfilled: data.fulfilledHighRiskPct?.toFixed(0) ?? "—",
-                })}
-              </Text>
-              {data.historicalImportScopeGranted === "default_window" ? (
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("fraudIntel.pageScopeNoteDefault")}
+              <div className={styles.sectionTitle}>
+                <Text as="h3" variant="headingMd">
+                  {t("fraudIntel.section30dTitle")}
                 </Text>
-              ) : null}
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("fraudIntel.section30dSubtitle")}
+                </Text>
+              </div>
+              <div className={styles.kpiStrip}>
+                <KpiTile
+                  label={t("fraudIntel.kpiAcceptanceRate")}
+                  value={formatPct(current30d.acceptanceRatePct)}
+                  current={current30d.acceptanceRatePct}
+                  prior={prior30d.acceptanceRatePct}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiHighRiskRate")}
+                  value={formatPct(current30d.highRiskPct)}
+                  current={current30d.highRiskPct}
+                  prior={prior30d.highRiskPct}
+                  inverseDelta
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiFraudDisputeRate")}
+                  value={formatPct(current30d.fraudDisputeRatePct, 2)}
+                  current={current30d.fraudDisputeRatePct}
+                  prior={prior30d.fraudDisputeRatePct}
+                  inverseDelta
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiHighRiskFulfilled")}
+                  value={formatPct(current30d.fulfilledHighRiskPct)}
+                  current={current30d.fulfilledHighRiskPct}
+                  prior={prior30d.fulfilledHighRiskPct}
+                  inverseDelta
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiProtectCoverage")}
+                  value={formatPct(current30d.shopifyProtectCoveragePct)}
+                  current={current30d.shopifyProtectCoveragePct}
+                  prior={prior30d.shopifyProtectCoveragePct}
+                  t={t}
+                />
+              </div>
             </BlockStack>
           </Card>
         </Layout.Section>
 
-        {/* ── Window summary ───────────────────────────────────────── */}
+        {/* ── Risk classification breakdown (all-time) ───────────── */}
         <Layout.Section>
           <Card>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingMd">
-                {t("fraudIntel.pageSection90d")}
-              </Text>
-              <InlineStack gap="600" wrap>
-                <BlockStack gap="050">
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {t("fraudIntel.kpiAcceptanceRate")}
-                  </Text>
-                  <Text as="p" variant="headingMd">
-                    {formatPct(data.acceptanceRatePct)}
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="050">
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {t("fraudIntel.kpiHighRiskRate")}
-                  </Text>
-                  <Text as="p" variant="headingMd">
-                    {formatPct(data.highRiskPct)}
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="050">
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {t("fraudIntel.kpiFraudDisputeRate")}
-                  </Text>
-                  <Text as="p" variant="headingMd">
-                    {formatPct(data.fraudDisputeRatePct)}
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="050">
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {t("fraudIntel.kpiHighRiskFulfilled")}
-                  </Text>
-                  <Text as="p" variant="headingMd">
-                    {formatPct(data.fulfilledHighRiskPct)}
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="050">
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {t("fraudIntel.kpiProtectCoverage")}
-                  </Text>
-                  <Text as="p" variant="headingMd">
-                    {formatPct(data.shopifyProtectCoveragePct)}
-                  </Text>
-                </BlockStack>
-              </InlineStack>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("fraudIntel.tooltipAcceptanceRate")}
-              </Text>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
+            <BlockStack gap="400">
+              <div className={styles.sectionTitle}>
+                <Text as="h3" variant="headingMd">
+                  {t("fraudIntel.riskBreakdownTitle")}
+                </Text>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {riskTotal.toLocaleString()} {t("fraudIntel.ordersWordTotal")}
+                </Text>
+              </div>
 
-        {/* ── Risk breakdown table + "what these mean" explainer ─────
-            "Cleared" is the largest bucket on most healthy stores and
-            its difference from "Low" is genuinely non-obvious — both
-            look like "safe orders" but Shopify treats them differently
-            (Low = positive signals; Cleared = no signals either way).
-            The info banner at the top addresses that confusion head-on
-            before the operator scans the table; the per-bucket
-            definitions below repeat the distinction in the row text. */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingMd">
-                {t("fraudIntel.riskBreakdownTitle")}
-              </Text>
+              <div>
+                <StackedDistributionBar segments={distSegments} />
+                <StackedLegend segments={distSegments} total={riskTotal} />
+              </div>
+
               <Banner tone="info" title={t("fraudIntel.breakdownExplainBannerTitle")}>
                 <p>{t("fraudIntel.breakdownExplainBannerBody")}</p>
               </Banner>
-              <RiskRow
-                label={t("fraudIntel.riskHigh")}
-                count={riskBreakdown.high}
-                total={riskTotal}
-                color="#DC2626"
-              />
-              <RiskRow
-                label={t("fraudIntel.riskMedium")}
-                count={riskBreakdown.medium}
-                total={riskTotal}
-                color="#F59E0B"
-              />
-              <RiskRow
-                label={t("fraudIntel.riskLow")}
-                count={riskBreakdown.low}
-                total={riskTotal}
-                color="#10B981"
-              />
-              <RiskRow
-                label={t("fraudIntel.riskPending")}
-                count={riskBreakdown.pending}
-                total={riskTotal}
-                color="#6B7280"
-              />
-              <RiskRow
-                label={t("fraudIntel.riskNone")}
-                count={riskBreakdown.none}
-                total={riskTotal}
-                color="#9CA3AF"
-              />
 
               <Divider />
 
@@ -332,27 +785,27 @@ export default function InitialAnalysisPage() {
                 <BreakdownExplainRow
                   label={t("fraudIntel.riskHigh")}
                   body={t("fraudIntel.breakdownExplainHigh")}
-                  color="#DC2626"
+                  color={RISK_COLOR.HIGH}
                 />
                 <BreakdownExplainRow
                   label={t("fraudIntel.riskMedium")}
                   body={t("fraudIntel.breakdownExplainMedium")}
-                  color="#F59E0B"
+                  color={RISK_COLOR.MEDIUM}
                 />
                 <BreakdownExplainRow
                   label={t("fraudIntel.riskLow")}
                   body={t("fraudIntel.breakdownExplainLow")}
-                  color="#10B981"
+                  color={RISK_COLOR.LOW}
                 />
                 <BreakdownExplainRow
                   label={t("fraudIntel.riskPending")}
                   body={t("fraudIntel.breakdownExplainPending")}
-                  color="#6B7280"
+                  color={RISK_COLOR.PENDING}
                 />
                 <BreakdownExplainRow
                   label={t("fraudIntel.riskNone")}
                   body={t("fraudIntel.breakdownExplainCleared")}
-                  color="#9CA3AF"
+                  color={RISK_COLOR.NONE}
                   emphasize
                 />
               </BlockStack>
@@ -360,14 +813,9 @@ export default function InitialAnalysisPage() {
           </Card>
         </Layout.Section>
 
-        {/* ── Risk-to-dispute correlation ─────────────────────────────
-            Observational: shows what % of orders in each Shopify risk
-            bucket actually became disputes. Answers "how predictive
-            was Shopify's classification for THIS merchant?" without
-            making a verdict. Per-bucket gating on sample size so a
-            tiny denominator never produces a misleading rate. */}
+        {/* ── Two-column: correlation + chargeback gauge ─────────── */}
         {data.riskToDisputeConversion ? (
-          <Layout.Section>
+          <Layout.Section variant="oneHalf">
             <Card>
               <BlockStack gap="300">
                 <BlockStack gap="050">
@@ -378,269 +826,103 @@ export default function InitialAnalysisPage() {
                     {t("fraudIntel.correlationSubtitle")}
                   </Text>
                 </BlockStack>
-                <ConversionRow
-                  label={t("fraudIntel.riskHigh")}
-                  color="#DC2626"
-                  bucket={data.riskToDisputeConversion.high}
+                <ConversionBarChart
                   insufficientLabel={t("fraudIntel.correlationInsufficient")}
-                />
-                <ConversionRow
-                  label={t("fraudIntel.riskMedium")}
-                  color="#F59E0B"
-                  bucket={data.riskToDisputeConversion.medium}
-                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
-                />
-                <ConversionRow
-                  label={t("fraudIntel.riskLow")}
-                  color="#10B981"
-                  bucket={data.riskToDisputeConversion.low}
-                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
-                />
-                <ConversionRow
-                  label={t("fraudIntel.riskNone")}
-                  color="#9CA3AF"
-                  bucket={data.riskToDisputeConversion.none}
-                  insufficientLabel={t("fraudIntel.correlationInsufficient")}
+                  rows={[
+                    { label: t("fraudIntel.riskHigh"),   color: RISK_COLOR.HIGH,    bucket: data.riskToDisputeConversion.high },
+                    { label: t("fraudIntel.riskMedium"), color: RISK_COLOR.MEDIUM,  bucket: data.riskToDisputeConversion.medium },
+                    { label: t("fraudIntel.riskLow"),    color: RISK_COLOR.LOW,     bucket: data.riskToDisputeConversion.low },
+                    { label: t("fraudIntel.riskNone"),   color: RISK_COLOR.NONE,    bucket: data.riskToDisputeConversion.none },
+                  ]}
                 />
                 <Divider />
-                <CorrelationObservation
-                  conversion={data.riskToDisputeConversion}
-                  t={t}
-                />
+                <div className={styles.observationAccent}>
+                  <CorrelationObservation
+                    conversion={data.riskToDisputeConversion}
+                    t={t}
+                  />
+                </div>
               </BlockStack>
             </Card>
           </Layout.Section>
         ) : null}
 
-        {/* ── Chargeback Health section (banner CTA target) ──────────
-            Verdict only renders when the 90-day order denominator is
-            statistically meaningful. Below the threshold we show
-            "Insufficient dispute history" — observational, no implied
-            judgement on the merchant. */}
-        <Layout.Section>
+        <Layout.Section variant="oneHalf">
           <Card>
             <div id="chargeback-health">
               <BlockStack gap="300">
                 <Text as="h3" variant="headingMd">
                   {t("fraudIntel.chargebackHealthTitle")}
                 </Text>
-                {data.chargebackHealthAvailable ? (
-                  <HealthBadge
-                    status={data.chargebackHealth}
-                    rateLabel={
-                      data.chargebackRate90d === null
-                        ? t("fraudIntel.kpiUnavailable")
-                        : `${data.chargebackRate90d.toFixed(2)}%`
-                    }
-                    label={t(
-                      `fraudIntel.bannerHealth_${data.chargebackHealth}`,
-                    )}
-                  />
-                ) : (
-                  <BlockStack gap="100">
-                    <Text as="p" variant="bodyMd">
-                      {t("fraudIntel.chargebackHealthInsufficientTitle")}
+                <ChargebackGauge
+                  rate={data.chargebackRate90d}
+                  status={data.chargebackHealth}
+                  available={data.chargebackHealthAvailable}
+                  statusLabel={t(
+                    `fraudIntel.bannerHealth_${data.chargebackHealth}`,
+                  )}
+                  insufficientLabel={t(
+                    "fraudIntel.chargebackHealthInsufficientTitle",
+                  )}
+                  bandsLabel={t("fraudIntel.gauge90dLabel")}
+                  goodLabel={t("fraudIntel.gaugeBandGood")}
+                  atRiskLabel={t("fraudIntel.gaugeBandAtRisk")}
+                  elevatedLabel={t("fraudIntel.gaugeBandElevated")}
+                />
+                <Divider />
+                <InlineStack
+                  align="space-between"
+                  blockAlign="center"
+                  wrap={false}
+                  gap="300"
+                >
+                  <BlockStack gap="050">
+                    <Text as="span" variant="bodySm" fontWeight="semibold">
+                      {t("fraudIntel.sparklineTitle")}
                     </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {t("fraudIntel.chargebackHealthInsufficientBody", {
-                        count: data.chargebackOrders90d.toLocaleString(),
-                      })}
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {t("fraudIntel.sparklineSubtitle")}
                     </Text>
                   </BlockStack>
-                )}
+                  <Sparkline points={data.chargebackRateSparklineWeekly} />
+                </InlineStack>
+                {!data.chargebackHealthAvailable ? (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("fraudIntel.chargebackHealthInsufficientBody", {
+                      count: data.chargebackOrders90d.toLocaleString(),
+                    })}
+                  </Text>
+                ) : null}
                 <Text as="p" variant="bodySm" tone="subdued">
                   {t("fraudIntel.chargebackHealthExplain")}
-                </Text>
-                <Divider />
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("fraudIntel.chargebackHealthBands")}
                 </Text>
               </BlockStack>
             </div>
           </Card>
         </Layout.Section>
 
-        {/* ── What this means / what to do next ────────────────────── */}
+        {/* ── "What this means" footer ───────────────────────────── */}
         <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingMd">
-                {t("fraudIntel.whatThisMeansTitle")}
-              </Text>
-              <Text as="p">{t("fraudIntel.whatThisMeansBody")}</Text>
-            </BlockStack>
-          </Card>
+          <div className={styles.footerCard}>
+            <Card>
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingSm">
+                  {t("fraudIntel.whatThisMeansTitle")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("fraudIntel.whatThisMeansBody")}
+                </Text>
+              </BlockStack>
+            </Card>
+          </div>
         </Layout.Section>
       </Layout>
     </Page>
   );
 }
 
-function RiskRow({
-  label,
-  count,
-  total,
-  color,
-}: {
-  label: string;
-  count: number;
-  total: number;
-  color: string;
-}) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  return (
-    <InlineStack gap="300" blockAlign="center" wrap={false}>
-      <div
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          background: color,
-          flexShrink: 0,
-        }}
-      />
-      <Text as="span" variant="bodyMd">
-        {label}
-      </Text>
-      <div style={{ flex: 1 }} />
-      <Text as="span" variant="bodyMd" tone="subdued">
-        {count.toLocaleString()} ({pct}%)
-      </Text>
-    </InlineStack>
-  );
-}
-
-/** One row in the risk-to-dispute correlation table. Shows the
- *  bucket name, dot color, raw "X of Y disputed" counts, and the
- *  conversion percentage when the sample is large enough. Below the
- *  per-bucket sample threshold, the pct slot reads "insufficient
- *  sample" — observational, no implied judgement.
- */
-function ConversionRow({
-  label,
-  color,
-  bucket,
-  insufficientLabel,
-}: {
-  label: string;
-  color: string;
-  bucket: RiskConversionBucket;
-  insufficientLabel: string;
-}) {
-  return (
-    <InlineStack gap="300" blockAlign="center" wrap={false}>
-      <div
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          background: color,
-          flexShrink: 0,
-        }}
-      />
-      <Text as="span" variant="bodyMd">
-        {label}
-      </Text>
-      <div style={{ flex: 1 }} />
-      <Text as="span" variant="bodyMd" tone="subdued">
-        {bucket.disputes.toLocaleString()} of {bucket.orders.toLocaleString()}
-      </Text>
-      <Text
-        as="span"
-        variant="bodyMd"
-        fontWeight={bucket.conversionPct === null ? "regular" : "semibold"}
-        tone={bucket.conversionPct === null ? "subdued" : undefined}
-      >
-        {bucket.conversionPct === null
-          ? insufficientLabel
-          : `${bucket.conversionPct.toFixed(1)}%`}
-      </Text>
-    </InlineStack>
-  );
-}
-
-/** Footer observation on the correlation table. Compares the HIGH
- *  bucket's conversion rate to the LOW + NONE blended baseline (the
- *  "safe orders" pool). Only renders an observation when both sides
- *  have meaningful samples AND a meaningful ratio. Otherwise stays
- *  silent rather than fabricating a takeaway.
- */
-function CorrelationObservation({
-  conversion,
-  t,
-}: {
-  conversion: NonNullable<InsightsResponse["riskToDisputeConversion"]>;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  const high = conversion.high;
-  const low = conversion.low;
-  const none = conversion.none;
-
-  if (high.conversionPct === null) {
-    return (
-      <Text as="p" variant="bodySm" tone="subdued">
-        {t("fraudIntel.correlationObservationNeedHigh")}
-      </Text>
-    );
-  }
-
-  // Blend LOW + NONE as the "safe orders" baseline. Each must
-  // individually have a meaningful sample for the blend to be honest.
-  const safeOrders = low.orders + none.orders;
-  const safeDisputes = low.disputes + none.disputes;
-  const safeBlendPct = safeOrders > 0 ? (safeDisputes / safeOrders) * 100 : null;
-  if (safeBlendPct === null || (low.conversionPct === null && none.conversionPct === null)) {
-    return (
-      <Text as="p" variant="bodySm" tone="subdued">
-        {t("fraudIntel.correlationObservationNeedSafe")}
-      </Text>
-    );
-  }
-
-  const ratio = safeBlendPct > 0 ? high.conversionPct / safeBlendPct : null;
-  if (ratio === null) {
-    return null;
-  }
-
-  if (ratio >= 2.0) {
-    return (
-      <Text as="p" variant="bodyMd">
-        {t("fraudIntel.correlationObservationStrong", {
-          ratio: ratio.toFixed(1),
-        })}
-      </Text>
-    );
-  }
-  if (ratio >= 1.3) {
-    return (
-      <Text as="p" variant="bodyMd">
-        {t("fraudIntel.correlationObservationMild", {
-          ratio: ratio.toFixed(1),
-        })}
-      </Text>
-    );
-  }
-  if (ratio < 0.8) {
-    return (
-      <Text as="p" variant="bodyMd">
-        {t("fraudIntel.correlationObservationInverted")}
-      </Text>
-    );
-  }
-  return (
-    <Text as="p" variant="bodySm" tone="subdued">
-      {t("fraudIntel.correlationObservationFlat")}
-    </Text>
-  );
-}
-
-/** Single explanation row for the "What these mean" block below the
- *  breakdown table. Mirrors the dot-color of the matching RiskRow so
- *  the eye traces table → definition without re-reading the label.
- *  `emphasize` is used on the Cleared row — it's the largest bucket
- *  and the most easily misread, so it gets normal body text instead
- *  of subdued.
- */
+/** Inline explanation row for each risk bucket. Dot mirrors the
+ *  matching distribution color. */
 function BreakdownExplainRow({
   label,
   body,
@@ -668,5 +950,70 @@ function BreakdownExplainRow({
         <strong>{label}</strong> — {body}
       </Text>
     </div>
+  );
+}
+
+/** Observation footer on the correlation card. Compares HIGH
+ *  conversion to the blended LOW+NONE baseline and surfaces one of
+ *  the localized observation variants. */
+function CorrelationObservation({
+  conversion,
+  t,
+}: {
+  conversion: NonNullable<InsightsResponse["riskToDisputeConversion"]>;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const high = conversion.high;
+  const low = conversion.low;
+  const none = conversion.none;
+
+  if (high.conversionPct === null) {
+    return (
+      <Text as="p" variant="bodySm" tone="subdued">
+        {t("fraudIntel.correlationObservationNeedHigh")}
+      </Text>
+    );
+  }
+  const safeOrders = low.orders + none.orders;
+  const safeDisputes = low.disputes + none.disputes;
+  const safeBlendPct = safeOrders > 0 ? (safeDisputes / safeOrders) * 100 : null;
+  if (
+    safeBlendPct === null ||
+    (low.conversionPct === null && none.conversionPct === null)
+  ) {
+    return (
+      <Text as="p" variant="bodySm" tone="subdued">
+        {t("fraudIntel.correlationObservationNeedSafe")}
+      </Text>
+    );
+  }
+  const ratio = safeBlendPct > 0 ? high.conversionPct / safeBlendPct : null;
+  if (ratio === null) return null;
+
+  if (ratio >= 2.0) {
+    return (
+      <Text as="p" variant="bodyMd">
+        {t("fraudIntel.correlationObservationStrong", { ratio: ratio.toFixed(1) })}
+      </Text>
+    );
+  }
+  if (ratio >= 1.3) {
+    return (
+      <Text as="p" variant="bodyMd">
+        {t("fraudIntel.correlationObservationMild", { ratio: ratio.toFixed(1) })}
+      </Text>
+    );
+  }
+  if (ratio < 0.8) {
+    return (
+      <Text as="p" variant="bodyMd">
+        {t("fraudIntel.correlationObservationInverted")}
+      </Text>
+    );
+  }
+  return (
+    <Text as="p" variant="bodySm" tone="subdued">
+      {t("fraudIntel.correlationObservationFlat")}
+    </Text>
   );
 }

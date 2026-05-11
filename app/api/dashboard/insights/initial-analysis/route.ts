@@ -4,11 +4,15 @@
  * Single endpoint powering both the dashboard insight banner and the
  * `/app/insights/initial-analysis` page. Bundles:
  *   - Total historical orders analyzed (the headline figure).
- *   - Recent-window (90d) high-risk + high-risk-fulfilled percentages
- *     for the banner body.
- *   - 90d chargeback rate + threshold-classified status for the
- *     supporting/secondary line.
- *   - Risk-level breakdown for the initial-analysis page.
+ *   - 30d current + 30d prior comparison for every KPI (the page's
+ *     month-over-month deltas).
+ *   - 90d fraud rollup (kept for backwards-compat with the embedded
+ *     dashboard's OperationalInsightsStrip).
+ *   - 90d chargeback rate + threshold-classified status.
+ *   - 8-week weekly sparkline for chargeback rate (rendered on the
+ *     Risk Intelligence page).
+ *   - Risk-level breakdown (all-time).
+ *   - Risk-to-dispute conversion (all-time).
  *   - Historical import state so the UI knows whether to render at all.
  */
 
@@ -31,6 +35,8 @@ function utcDateNDaysAgo(days: number, now: Date = new Date()): string {
 interface InsightsResponse {
   available: boolean;
   ordersAnalyzed: number;
+
+  // ── 90d fields (kept for backwards-compat with dashboard strip) ──
   windowStart90d: string;
   highRiskPct: number | null;
   fulfilledHighRiskPct: number | null;
@@ -39,14 +45,27 @@ interface InsightsResponse {
   shopifyProtectCoveragePct: number | null;
   chargebackRate90d: number | null;
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
-  /** True when the 90-day order denominator is large enough for the
-   *  chargeback-rate classification to be statistically meaningful
-   *  (PRD §11 low-volume threshold = 50). When false, the UI must NOT
-   *  display a colored verdict — show "Insufficient dispute history"
-   *  instead. Protects low-volume merchants from misleading severity
-   *  labels on tiny sample sizes. */
   chargebackHealthAvailable: boolean;
   chargebackOrders90d: number;
+
+  // ── 30d current + prior 30d (MoM comparison) ─────────────────────
+  // Each "Window" carries the aggregate metrics for its date range.
+  // Prior = days 60→30 ago. Current = days 30→0 ago.
+  windowStart30d: string;
+  windowStart30dPrior: string;
+  current30d: PeriodWindow;
+  prior30d: PeriodWindow;
+
+  // ── 8-week weekly sparkline for chargeback rate ─────────────────
+  // 8 points, oldest first. Each point: weekStartIso, rate (null when
+  // the week had zero orders), orderCount.
+  chargebackRateSparklineWeekly: Array<{
+    weekStart: string;
+    rate: number | null;
+    orderCount: number;
+  }>;
+
+  // ── Risk breakdown + conversion (all-time) ──────────────────────
   riskBreakdown: {
     low: number;
     medium: number;
@@ -54,6 +73,15 @@ interface InsightsResponse {
     none: number;
     pending: number;
   };
+  riskToDisputeConversion: {
+    high: RiskConversionBucket;
+    medium: RiskConversionBucket;
+    low: RiskConversionBucket;
+    none: RiskConversionBucket;
+    pending: RiskConversionBucket;
+  };
+
+  // ── Shop + session state ────────────────────────────────────────
   historicalImportStatus:
     | "not_started"
     | "in_progress"
@@ -63,32 +91,19 @@ interface InsightsResponse {
   historicalImportSinceDate: string | null;
   historicalImportScopeGranted: "default_window" | "read_all_orders" | null;
   historicalImportCompletedAt: string | null;
-  /** Live offline-session scope tier. Distinct from
-   *  `historicalImportScopeGranted` (which captures the tier as of the
-   *  last backfill). When they differ, the merchant has re-OAuthed
-   *  but the backfill hasn't re-run yet — the dashboard surfaces the
-   *  re-OAuth banner based on this live value. */
   currentScopeGrant: "default_window" | "read_all_orders";
-  /** Per-risk-bucket conversion from orders to disputes. Observational
-   *  signal — "of orders Shopify classified <level>, X% became disputes"
-   *  — that becomes meaningful once the merchant has any disputes at
-   *  all. Each bucket reports the raw counts AND a percentage; the
-   *  percentage is null when the bucket's order count is below the
-   *  sample threshold, so the UI can render "Insufficient sample"
-   *  instead of a misleading rate. Computed all-time, not windowed —
-   *  conversion is a stable per-merchant signal, not a recency metric. */
-  riskToDisputeConversion: {
-    high: RiskConversionBucket;
-    medium: RiskConversionBucket;
-    low: RiskConversionBucket;
-    none: RiskConversionBucket;
-    pending: RiskConversionBucket;
-  };
-  /** Per-shop banner dismissal state, server-side. Keys are banner
-   *  IDs (e.g. "scope_upgrade"); presence of a key means dismissed.
-   *  Replaces the old localStorage flags so dismissals persist
-   *  across devices. */
   dismissedBanners: Record<string, string>;
+}
+
+interface PeriodWindow {
+  ordersTotal: number;
+  acceptanceRatePct: number | null;
+  highRiskPct: number | null;
+  fulfilledHighRiskPct: number | null;
+  fraudDisputeRatePct: number | null;
+  shopifyProtectCoveragePct: number | null;
+  chargebackRatePct: number | null;
+  chargebackOrders: number;
 }
 
 interface RiskConversionBucket {
@@ -98,30 +113,125 @@ interface RiskConversionBucket {
 }
 
 function classifyChargebackHealth(
-  rate: number | null,
+  r: number | null,
 ): InsightsResponse["chargebackHealth"] {
-  if (rate === null) return "unknown";
-  if (rate < 0.4) return "good";
-  if (rate <= 0.6) return "at_risk";
+  if (r === null) return "unknown";
+  if (r < 0.4) return "good";
+  if (r <= 0.6) return "at_risk";
   return "elevated";
 }
 
-/** Minimum 90-day order denominator at which a chargeback rate
- *  classification carries enough signal to surface in the UI. Below
- *  this we render "Insufficient dispute history" rather than a colored
- *  severity verdict. Matches PRD §11 low-volume threshold used by
- *  computeChargebackRate. */
 const CHARGEBACK_VERDICT_MIN_ORDERS = 50;
-
-/** Minimum per-bucket order count for the risk-to-dispute conversion
- *  rate to surface as a percentage. Below this we still show the raw
- *  "X of Y disputed" counts so the merchant sees the data, but the
- *  pct is null so the UI can render "Insufficient sample" copy. */
 const RISK_CONVERSION_MIN_ORDERS = 30;
 
 function rate(num: number, den: number): number | null {
   if (den <= 0) return null;
   return Math.round((num / den) * 1000) / 10;
+}
+
+interface FraudRollupRow {
+  date: string;
+  orders_total: number;
+  orders_low: number;
+  orders_medium: number;
+  orders_high: number;
+  orders_none: number;
+  orders_pending: number;
+  orders_fulfilled_high_risk: number;
+  fraud_disputes: number;
+  fully_protected_value: number | string;
+  eligible_protected_value: number | string;
+}
+
+interface DailyRow {
+  date: string;
+  order_count: number;
+  chargeback_count: number;
+}
+
+/** Aggregate the fraud-rollup rows + daily-metrics rows for a given
+ *  date window into a single PeriodWindow snapshot. Both inputs are
+ *  pre-fetched and filtered to the window range. */
+function aggregateWindow(
+  fraudRows: FraudRollupRow[],
+  dailyRows: DailyRow[],
+  fromIso: string,
+  toExclusiveIso: string,
+): PeriodWindow {
+  let ordersTotal = 0;
+  let ordersLow = 0;
+  let ordersMedium = 0;
+  let ordersHigh = 0;
+  let ordersNone = 0;
+  let ordersPending = 0;
+  let ordersFulfilledHighRisk = 0;
+  let fraudDisputes = 0;
+  let fullyProtectedValue = 0;
+  let eligibleProtectedValue = 0;
+  for (const r of fraudRows) {
+    if (r.date < fromIso || r.date >= toExclusiveIso) continue;
+    ordersTotal += r.orders_total ?? 0;
+    ordersLow += r.orders_low ?? 0;
+    ordersMedium += r.orders_medium ?? 0;
+    ordersHigh += r.orders_high ?? 0;
+    ordersNone += r.orders_none ?? 0;
+    ordersPending += r.orders_pending ?? 0;
+    ordersFulfilledHighRisk += r.orders_fulfilled_high_risk ?? 0;
+    fraudDisputes += r.fraud_disputes ?? 0;
+    fullyProtectedValue += Number(r.fully_protected_value ?? 0);
+    eligibleProtectedValue += Number(r.eligible_protected_value ?? 0);
+  }
+
+  let cbOrders = 0;
+  let cbCount = 0;
+  for (const r of dailyRows) {
+    if (r.date < fromIso || r.date >= toExclusiveIso) continue;
+    cbOrders += r.order_count ?? 0;
+    cbCount += r.chargeback_count ?? 0;
+  }
+
+  const acceptanceDenom = ordersTotal - ordersPending;
+  return {
+    ordersTotal,
+    acceptanceRatePct: rate(ordersLow + ordersMedium + ordersNone, acceptanceDenom),
+    highRiskPct: rate(ordersHigh, ordersTotal),
+    fulfilledHighRiskPct: rate(ordersFulfilledHighRisk, ordersHigh),
+    fraudDisputeRatePct: rate(fraudDisputes, ordersTotal),
+    shopifyProtectCoveragePct: rate(fullyProtectedValue, eligibleProtectedValue),
+    chargebackRatePct: rate(cbCount, cbOrders),
+    chargebackOrders: cbOrders,
+  };
+}
+
+/** Walk `dailyRows` across 8 weekly buckets ending today (UTC). Each
+ *  bucket is 7 days long; the chargeback rate is computed inside the
+ *  bucket. Returns rate=null when the bucket had zero orders. */
+function weeklySparkline(
+  dailyRows: DailyRow[],
+  now: Date = new Date(),
+): InsightsResponse["chargebackRateSparklineWeekly"] {
+  const buckets: InsightsResponse["chargebackRateSparklineWeekly"] = [];
+  for (let i = 7; i >= 0; i--) {
+    const end = new Date(now);
+    end.setUTCDate(end.getUTCDate() - i * 7);
+    const start = new Date(end);
+    start.setUTCDate(start.getUTCDate() - 7);
+    const startIso = start.toISOString().slice(0, 10);
+    const endIso = end.toISOString().slice(0, 10);
+    let orders = 0;
+    let cbs = 0;
+    for (const r of dailyRows) {
+      if (r.date < startIso || r.date >= endIso) continue;
+      orders += r.order_count ?? 0;
+      cbs += r.chargeback_count ?? 0;
+    }
+    buckets.push({
+      weekStart: startIso,
+      orderCount: orders,
+      rate: orders > 0 ? Math.round((cbs / orders) * 1000) / 10 : null,
+    });
+  }
+  return buckets;
 }
 
 export async function GET(req: NextRequest) {
@@ -133,9 +243,6 @@ export async function GET(req: NextRequest) {
   const sb = getServiceClient();
 
   // ── Live offline-session scopes ────────────────────────────────
-  // Lightweight read — we only need the scopes string, not the
-  // (encrypted) access token. Resolves whether the merchant has the
-  // expanded order-history grant in their current session.
   const { data: sessionRow } = await sb
     .from("shop_sessions")
     .select("scopes")
@@ -164,8 +271,6 @@ export async function GET(req: NextRequest) {
   const ordersTotal =
     (shopRow?.historical_import_orders_total as number | null) ?? 0;
 
-  // Self-heal: see fraud-metrics route for the same pattern. Idempotent
-  // via enqueueShopOrdersBackfill's own queued/running/complete guards.
   if (status === "not_started") {
     enqueueShopOrdersBackfill(shopId).catch((err) => {
       console.warn(
@@ -175,76 +280,42 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // ── 90d fraud rollup ────────────────────────────────────────────
+  // ── Pull the rollup tables once for the full 90-day window ─────
+  // We slice that single dataset for: current 30d, prior 30d, and
+  // the all-90d aggregate. Saves three round-trips.
   const windowStart90d = utcDateNDaysAgo(90);
+  const windowStart30d = utcDateNDaysAgo(30);
+  const windowStart30dPrior = utcDateNDaysAgo(60);
+  const todayIso = utcDateNDaysAgo(0);
+
   const { data: fraudRows } = await sb
     .from("shop_fraud_daily_metrics")
     .select(
-      "orders_total, orders_low, orders_medium, orders_high, orders_none, orders_pending, orders_fulfilled_high_risk, fraud_disputes, fully_protected_value, eligible_protected_value",
+      "date, orders_total, orders_low, orders_medium, orders_high, orders_none, orders_pending, orders_fulfilled_high_risk, fraud_disputes, fully_protected_value, eligible_protected_value",
     )
     .eq("shop_id", shopId)
     .gte("date", windowStart90d);
 
-  let ordersTotal90 = 0;
-  let ordersLow = 0;
-  let ordersMedium = 0;
-  let ordersHigh = 0;
-  let ordersNone = 0;
-  let ordersPending = 0;
-  let ordersFulfilledHighRisk = 0;
-  let fraudDisputes = 0;
-  let fullyProtectedValue = 0;
-  let eligibleProtectedValue = 0;
-  for (const r of fraudRows ?? []) {
-    ordersTotal90 += r.orders_total ?? 0;
-    ordersLow += r.orders_low ?? 0;
-    ordersMedium += r.orders_medium ?? 0;
-    ordersHigh += r.orders_high ?? 0;
-    ordersNone += r.orders_none ?? 0;
-    ordersPending += r.orders_pending ?? 0;
-    ordersFulfilledHighRisk += r.orders_fulfilled_high_risk ?? 0;
-    fraudDisputes += r.fraud_disputes ?? 0;
-    fullyProtectedValue += Number(r.fully_protected_value ?? 0);
-    eligibleProtectedValue += Number(r.eligible_protected_value ?? 0);
-  }
-
-  // Acceptance rate: see fraud-metrics route for the formula contract.
-  // Numerator = LOW + MEDIUM + NONE (Shopify's "cleared" bucket counts
-  // as accepted). Denominator = total − PENDING (only orders still
-  // awaiting analysis are excluded).
-  const acceptanceDenom = ordersTotal90 - ordersPending;
-  const highRiskPct = rate(ordersHigh, ordersTotal90);
-  const fulfilledHighRiskPct = rate(ordersFulfilledHighRisk, ordersHigh);
-  const acceptanceRatePct = rate(
-    ordersLow + ordersMedium + ordersNone,
-    acceptanceDenom,
-  );
-  const fraudDisputeRatePct = rate(fraudDisputes, ordersTotal90);
-  const shopifyProtectCoveragePct = rate(
-    fullyProtectedValue,
-    eligibleProtectedValue,
-  );
-
-  // ── 90d chargeback rate ────────────────────────────────────────
   const { data: dailyRows } = await sb
     .from("shop_daily_metrics")
-    .select("order_count, chargeback_count")
+    .select("date, order_count, chargeback_count")
     .eq("shop_id", shopId)
     .gte("date", windowStart90d);
-  let cbOrderTotal = 0;
-  let cbCount = 0;
-  for (const r of dailyRows ?? []) {
-    cbOrderTotal += r.order_count ?? 0;
-    cbCount += r.chargeback_count ?? 0;
-  }
-  const chargebackRate90d = rate(cbCount, cbOrderTotal);
+
+  const fraud = (fraudRows ?? []) as FraudRollupRow[];
+  const daily = (dailyRows ?? []) as DailyRow[];
+
+  // ── 90d aggregate (kept for the dashboard strip) ───────────────
+  const win90 = aggregateWindow(fraud, daily, windowStart90d, todayIso);
+
+  // ── 30d current vs prior 30d ───────────────────────────────────
+  const current30d = aggregateWindow(fraud, daily, windowStart30d, todayIso);
+  const prior30d = aggregateWindow(fraud, daily, windowStart30dPrior, windowStart30d);
+
+  // ── 8-week weekly sparkline (chargeback rate) ──────────────────
+  const chargebackRateSparklineWeekly = weeklySparkline(daily);
 
   // ── Risk-to-dispute conversion (all-time) ──────────────────────
-  // For each risk bucket, compute: orders in bucket, disputes whose
-  // order_gid is in that bucket, and the conversion rate. Reads the
-  // raw shopify_orders + disputes tables (no rollup table exists for
-  // this cross-join yet); both are paginated past PostgREST's
-  // default 1000-row cap.
   async function fetchAllOrders(): Promise<
     Array<{ shopify_order_id: string; risk_level_initial: string | null }>
   > {
@@ -293,6 +364,7 @@ export async function GET(req: NextRequest) {
     none:    { orders: 0, disputes: 0 },
     pending: { orders: 0, disputes: 0 },
   };
+  let allTimeOrdersLow = 0, allTimeOrdersMedium = 0, allTimeOrdersHigh = 0, allTimeOrdersNone = 0, allTimeOrdersPending = 0;
   for (const o of allOrders) {
     const lvl = (o.risk_level_initial ?? "").toUpperCase();
     const key =
@@ -305,6 +377,11 @@ export async function GET(req: NextRequest) {
     if (disputedGids.has(o.shopify_order_id)) {
       conversionBuckets[key].disputes += 1;
     }
+    if      (key === "high")    allTimeOrdersHigh    += 1;
+    else if (key === "medium")  allTimeOrdersMedium  += 1;
+    else if (key === "low")     allTimeOrdersLow     += 1;
+    else if (key === "pending") allTimeOrdersPending += 1;
+    else                        allTimeOrdersNone    += 1;
   }
   function bucketWithPct(b: { orders: number; disputes: number }): RiskConversionBucket {
     return {
@@ -327,23 +404,33 @@ export async function GET(req: NextRequest) {
   const response: InsightsResponse = {
     available: status === "complete",
     ordersAnalyzed: ordersTotal,
+
     windowStart90d,
-    highRiskPct,
-    fulfilledHighRiskPct,
-    acceptanceRatePct,
-    fraudDisputeRatePct,
-    shopifyProtectCoveragePct,
-    chargebackRate90d,
-    chargebackHealth: classifyChargebackHealth(chargebackRate90d),
-    chargebackHealthAvailable: cbOrderTotal >= CHARGEBACK_VERDICT_MIN_ORDERS,
-    chargebackOrders90d: cbOrderTotal,
+    highRiskPct: win90.highRiskPct,
+    fulfilledHighRiskPct: win90.fulfilledHighRiskPct,
+    acceptanceRatePct: win90.acceptanceRatePct,
+    fraudDisputeRatePct: win90.fraudDisputeRatePct,
+    shopifyProtectCoveragePct: win90.shopifyProtectCoveragePct,
+    chargebackRate90d: win90.chargebackRatePct,
+    chargebackHealth: classifyChargebackHealth(win90.chargebackRatePct),
+    chargebackHealthAvailable: win90.chargebackOrders >= CHARGEBACK_VERDICT_MIN_ORDERS,
+    chargebackOrders90d: win90.chargebackOrders,
+
+    windowStart30d,
+    windowStart30dPrior,
+    current30d,
+    prior30d,
+    chargebackRateSparklineWeekly,
+
     riskBreakdown: {
-      low: ordersLow,
-      medium: ordersMedium,
-      high: ordersHigh,
-      none: ordersNone,
-      pending: ordersPending,
+      low: allTimeOrdersLow,
+      medium: allTimeOrdersMedium,
+      high: allTimeOrdersHigh,
+      none: allTimeOrdersNone,
+      pending: allTimeOrdersPending,
     },
+    riskToDisputeConversion,
+
     historicalImportStatus: status,
     historicalImportOrdersTotal: ordersTotal,
     historicalImportSinceDate:
@@ -354,7 +441,6 @@ export async function GET(req: NextRequest) {
     historicalImportCompletedAt:
       (shopRow?.historical_import_completed_at as string | null) ?? null,
     currentScopeGrant,
-    riskToDisputeConversion,
     dismissedBanners:
       (shopRow?.dismissed_banners as Record<string, string> | null) ?? {},
   };

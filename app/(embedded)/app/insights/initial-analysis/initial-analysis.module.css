@@ -1,0 +1,473 @@
+/* Initial Analysis page — visual treatments beyond Polaris primitives.
+ *
+ * Polaris doesn't ship gauge / horizontal-bar-chart / stacked-bar
+ * primitives, and the page's data was rendering as plain dot-rows
+ * — fine for read-only but the relative magnitudes (HIGH vs CLEARED,
+ * conversion ratios, chargeback band position) were invisible. This
+ * module adds the chart-like treatments while staying inside
+ * Polaris design tokens for color, spacing, type.
+ */
+
+/* ─── Hero card ───────────────────────────────────────────────────── */
+
+.heroCard {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 91, 211, 0.04) 0%,
+    rgba(0, 91, 211, 0.0) 60%
+  );
+}
+
+.heroAccentBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #005BD3 0%, #00528E 100%);
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.heroLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding-left: 12px;
+}
+
+@media (min-width: 768px) {
+  .heroLayout {
+    grid-template-columns: 1.4fr 1fr;
+    align-items: center;
+  }
+}
+
+.heroNumber {
+  font-size: 48px;
+  line-height: 1.05;
+  font-weight: 700;
+  color: #202223;
+  letter-spacing: -0.02em;
+}
+
+.heroNumberLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6D7175;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.heroBody {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #202223;
+}
+
+.heroBodySubdued {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6D7175;
+}
+
+/* Mini stacked bar that lives in the hero on wider viewports. */
+.heroMiniBar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.heroMiniBarLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6D7175;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Section heading shared treatment ─────────────────────────────── */
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sectionEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6D7175;
+  margin-bottom: 4px;
+}
+
+/* ─── KPI strip (5-up) ───────────────────────────────────────────── */
+
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.kpiTile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  background: #FFFFFF;
+  border: 1px solid #E1E3E5;
+  border-radius: 8px;
+}
+
+.kpiTileLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6D7175;
+}
+
+.kpiTileValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.kpiTileContext {
+  font-size: 11px;
+  color: #6D7175;
+}
+
+/* ─── Stacked distribution bar ───────────────────────────────────── */
+
+.stackedBar {
+  width: 100%;
+  height: 14px;
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #F4F6F8;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.stackedSegment {
+  height: 100%;
+  transition: opacity 120ms ease;
+}
+
+.stackedSegment:hover {
+  opacity: 0.85;
+}
+
+.stackedBarLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin-top: 12px;
+}
+
+.stackedBarLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6D7175;
+}
+
+.stackedBarLegendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.stackedBarLegendStrong {
+  font-weight: 600;
+  color: #202223;
+}
+
+/* ─── Per-row distribution row (with progress) ──────────────────── */
+
+.distRow {
+  display: grid;
+  grid-template-columns: 16px 110px 1fr 80px;
+  align-items: center;
+  gap: 12px;
+}
+
+.distRowDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.distRowLabel {
+  font-size: 14px;
+  color: #202223;
+}
+
+.distRowTrack {
+  position: relative;
+  height: 6px;
+  background: #F4F6F8;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.distRowFill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  transition: width 250ms ease;
+}
+
+.distRowMeta {
+  font-size: 13px;
+  color: #6D7175;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.distRowMetaStrong {
+  font-weight: 600;
+  color: #202223;
+}
+
+/* ─── Horizontal conversion bar chart ────────────────────────────── */
+
+.convChart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.convRow {
+  display: grid;
+  grid-template-columns: 110px 1fr 80px;
+  align-items: center;
+  gap: 12px;
+}
+
+.convRowLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #202223;
+  font-weight: 500;
+}
+
+.convRowLabelDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.convBar {
+  position: relative;
+  height: 22px;
+  background: #F4F6F8;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.convBarFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  justify-content: flex-end;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 600;
+  transition: width 350ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  min-width: 24px;
+}
+
+.convBarFillLabelInside {
+  /* shown when fill is wide enough to fit text inside */
+}
+
+.convRowValue {
+  font-size: 14px;
+  color: #202223;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.convRowSubtle {
+  font-size: 11px;
+  color: #9CA3AF;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.convRowSubtleInsufficient {
+  font-style: italic;
+}
+
+/* ─── Chargeback health gauge ───────────────────────────────────── */
+
+.gaugeWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gaugeRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gaugeRateValue {
+  font-size: 36px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.gaugeRateLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6D7175;
+  margin-top: 6px;
+}
+
+.gaugeStatus {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gaugeStatus_good {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.gaugeStatus_at_risk {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.gaugeStatus_elevated {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.gaugeStatus_unknown {
+  background: #F4F6F8;
+  color: #6D7175;
+}
+
+.gaugeTrack {
+  position: relative;
+  height: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #D1FAE5 0%,
+    #D1FAE5 40%,
+    #FEF3C7 40%,
+    #FEF3C7 60%,
+    #FEE2E2 60%,
+    #FEE2E2 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.gaugeMarker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 4px;
+  border-radius: 2px;
+  background: #111827;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 1px 4px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+}
+
+.gaugeTicks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #6D7175;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gaugeBands {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #6D7175;
+}
+
+.gaugeBandItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gaugeBandDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.gaugeBand_good {
+  background: #10B981;
+}
+.gaugeBand_at_risk {
+  background: #F59E0B;
+}
+.gaugeBand_elevated {
+  background: #DC2626;
+}
+
+/* ─── "What this means" footer ──────────────────────────────────── */
+
+.footerCard {
+  background: #F9FAFB;
+  border-color: #E1E3E5;
+}
+
+/* ─── Accent borders (used on Observation footers) ──────────────── */
+
+.observationAccent {
+  border-left: 3px solid #005BD3;
+  padding-left: 12px;
+  background: rgba(0, 91, 211, 0.04);
+  border-radius: 0 6px 6px 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-right: 12px;
+}
+
+.observationAccentMuted {
+  border-left: 3px solid #D2D5D8;
+  background: transparent;
+}

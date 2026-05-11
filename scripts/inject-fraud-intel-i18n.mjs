@@ -147,6 +147,25 @@ const KEYS = {
     "Not enough high-risk orders observed yet to compute a meaningful correlation. Conversion ratios will appear here once volume builds.",
   correlationObservationNeedSafe:
     "Not enough low-risk or cleared orders observed yet to compute a meaningful correlation baseline.",
+  // ── Risk Intelligence page v2 (visual refresh + MoM) ───────────
+  // Page renamed from "Initial Analysis" → "Risk Intelligence" so the
+  // copy works for both first-time install AND ongoing monthly visits.
+  // Each KPI tile carries a month-over-month delta pill.
+  pageTitleV2: "Risk Intelligence",
+  heroNumberLabel: "Historical Shopify orders analyzed",
+  heroMiniBarLabel: "Risk classification distribution",
+  section30dTitle: "Last 30 days",
+  section30dSubtitle: "Current snapshot with month-over-month change",
+  ordersWordTotal: "total orders",
+  deltaVsLast: "vs. last 30d",
+  deltaStable: "stable",
+  deltaNoComparison: "no prior period",
+  sparklineTitle: "Chargeback rate trend",
+  sparklineSubtitle: "Weekly, last 8 weeks",
+  gauge90dLabel: "90-day chargeback rate",
+  gaugeBandGood: "Good < 0.4%",
+  gaugeBandAtRisk: "At risk 0.4–0.6%",
+  gaugeBandElevated: "Elevated > 0.6%",
   // ── Scope-upgrade nudge ─────────────────────────────────────────
   scopeUpgradeTitle: "Unlock your full order history",
   scopeUpgradeBody:

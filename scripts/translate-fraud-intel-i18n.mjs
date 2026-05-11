@@ -406,6 +406,93 @@ const T = {
       pt: "Reautorizar no Shopify",
       sv: "Återauktorisera på Shopify",
     },
+    // Risk Intelligence page v2
+    pageTitleV2: {
+      de: "Risiko-Intelligenz", es: "Inteligencia de riesgo",
+      fr: "Intelligence des risques", pt: "Inteligência de risco",
+      sv: "Riskintelligens",
+    },
+    heroNumberLabel: {
+      de: "Analysierte historische Shopify-Bestellungen",
+      es: "Pedidos históricos de Shopify analizados",
+      fr: "Commandes Shopify historiques analysées",
+      pt: "Pedidos históricos do Shopify analisados",
+      sv: "Analyserade historiska Shopify-ordrar",
+    },
+    heroMiniBarLabel: {
+      de: "Verteilung der Risikoklassifizierung",
+      es: "Distribución de la clasificación de riesgo",
+      fr: "Répartition de la classification de risque",
+      pt: "Distribuição da classificação de risco",
+      sv: "Fördelning av riskklassificering",
+    },
+    section30dTitle: {
+      de: "Letzte 30 Tage", es: "Últimos 30 días",
+      fr: "30 derniers jours", pt: "Últimos 30 dias",
+      sv: "Senaste 30 dagarna",
+    },
+    section30dSubtitle: {
+      de: "Aktuelle Momentaufnahme mit Veränderung gegenüber dem Vormonat",
+      es: "Instantánea actual con cambio mes a mes",
+      fr: "Instantané actuel avec variation par rapport au mois précédent",
+      pt: "Visão atual com variação mês a mês",
+      sv: "Aktuell ögonblicksbild med månadsvis förändring",
+    },
+    ordersWordTotal: {
+      de: "Bestellungen insgesamt", es: "pedidos totales",
+      fr: "commandes au total", pt: "pedidos no total",
+      sv: "ordrar totalt",
+    },
+    deltaVsLast: {
+      de: "ggü. letzten 30 T.", es: "vs. últimos 30 d.",
+      fr: "vs. 30 j précédents", pt: "vs. últimos 30 d.",
+      sv: "jmf. senaste 30 d.",
+    },
+    deltaStable: {
+      de: "stabil", es: "estable", fr: "stable", pt: "estável", sv: "stabilt",
+    },
+    deltaNoComparison: {
+      de: "kein Vergleichszeitraum",
+      es: "sin período comparable",
+      fr: "pas de période de comparaison",
+      pt: "sem período de comparação",
+      sv: "ingen jämförelseperiod",
+    },
+    sparklineTitle: {
+      de: "Chargeback-Quote – Trend",
+      es: "Tendencia de la tasa de contracargos",
+      fr: "Tendance du taux de chargebacks",
+      pt: "Tendência da taxa de chargebacks",
+      sv: "Chargeback-frekvens – trend",
+    },
+    sparklineSubtitle: {
+      de: "Wöchentlich, letzte 8 Wochen",
+      es: "Semanal, últimas 8 semanas",
+      fr: "Hebdomadaire, 8 dernières semaines",
+      pt: "Semanal, últimas 8 semanas",
+      sv: "Veckovis, senaste 8 veckorna",
+    },
+    gauge90dLabel: {
+      de: "90-Tage-Chargeback-Quote",
+      es: "Tasa de contracargos a 90 días",
+      fr: "Taux de chargebacks sur 90 jours",
+      pt: "Taxa de chargebacks em 90 dias",
+      sv: "90-dagars chargeback-frekvens",
+    },
+    gaugeBandGood: {
+      de: "Gut < 0,4 %", es: "Bueno < 0,4 %",
+      fr: "Bon < 0,4 %", pt: "Bom < 0,4 %", sv: "Bra < 0,4 %",
+    },
+    gaugeBandAtRisk: {
+      de: "Risiko 0,4–0,6 %", es: "Riesgo 0,4–0,6 %",
+      fr: "À risque 0,4–0,6 %", pt: "Risco 0,4–0,6 %",
+      sv: "Risk 0,4–0,6 %",
+    },
+    gaugeBandElevated: {
+      de: "Erhöht > 0,6 %", es: "Elevado > 0,6 %",
+      fr: "Élevé > 0,6 %", pt: "Elevado > 0,6 %",
+      sv: "Förhöjt > 0,6 %",
+    },
   },
   dashboard: {
     recentActivity: {
