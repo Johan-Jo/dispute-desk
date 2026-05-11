@@ -18,7 +18,8 @@
     "switchToDemo": "Passer à la démo",
     "coverage": "Couverture",
     "automation": "Automatisation",
-    "playbooks": "Playbooks"
+    "playbooks": "Playbooks",
+    "insights": "Analyses"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -3654,8 +3655,8 @@
     "bannerBody": "{high} % des commandes récentes ont été classées en haut risque par l'analyse de fraude de Shopify. {fulfilled} % des commandes Shopify à haut risque ont été expédiées malgré tout. Vous pouvez désormais suivre l'exposition au risque de fraude, les schémas opérationnels et les tendances des litiges directement dans DisputeDesk.",
     "bannerHealthLine": "État actuel des chargebacks : {status}",
     "bannerHealth_good": "Dans la zone saine",
-    "bannerHealth_at_risk": "Approche du seuil",
-    "bannerHealth_elevated": "Au-dessus du seuil",
+    "bannerHealth_at_risk": "Approche du seuil de surveillance",
+    "bannerHealth_elevated": "Dans la zone de surveillance",
     "bannerHealth_unknown": "Pas encore mesuré",
     "bannerHealthInsufficient": "Constitution de la base de référence — encore trop peu de commandes récentes pour afficher un taux significatif.",
     "bannerCtaRiskAnalysis": "Ouvrir l'analyse des risques",
@@ -3702,7 +3703,7 @@
     "correlationObservationInverted": "Inhabituel — dans votre boutique, les commandes à haut risque se sont converties en litiges à un taux similaire ou inférieur aux commandes validées. Cela peut arriver lorsque l'échantillon de litiges est restreint ou lorsque les litiges sont portés par des problèmes post-achat (livraison, produit) plutôt que par des signaux de fraude.",
     "correlationObservationNeedHigh": "Pas encore assez de commandes à haut risque observées pour calculer une corrélation significative. Les taux de conversion apparaîtront ici dès que le volume augmentera.",
     "correlationObservationNeedSafe": "Pas encore assez de commandes à faible risque ou validées pour établir une base de comparaison significative.",
-    "pageTitleV2": "Intelligence des risques",
+    "pageTitleV2": "Exposition aux contestations",
     "heroNumberLabel": "Commandes Shopify historiques analysées",
     "heroMiniBarLabel": "Répartition de la classification de risque",
     "section30dTitle": "30 derniers jours",
@@ -3742,6 +3743,8 @@
     "kpiMedianFulfillmentInfo": "Délai médian entre la passation de la commande et l'expédition, pour les commandes traitées sur cette période. Un traitement plus rapide améliore généralement les signaux service client.",
     "kpiHighRiskFulfilledInfo": "Sur les commandes classées risque ÉLEVÉ par Shopify, la part qui a tout de même été expédiée. Un chiffre élevé indique que vous absorbez le risque de fraude signalé par Shopify.",
     "kpiConfirmedDeliveryInfo": "Sur les commandes expédiées, la part dont le transporteur a confirmé la livraison. Une livraison attestée par le transporteur est une preuve solide en contestation.",
-    "kpiSignedForInfo": "Sur les livraisons confirmées, la part dont le transporteur a enregistré une signature. La signature à la réception est la preuve de livraison la plus forte pour les contestations de fraude."
+    "kpiSignedForInfo": "Sur les livraisons confirmées, la part dont le transporteur a enregistré une signature. La signature à la réception est la preuve de livraison la plus forte pour les contestations de fraude.",
+    "showClassificationDetails": "Afficher les détails de classification",
+    "hideClassificationDetails": "Masquer les détails de classification"
   }
 }

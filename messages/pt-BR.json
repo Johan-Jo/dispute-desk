@@ -18,7 +18,8 @@
     "switchToDemo": "Mudar para a loja demo",
     "coverage": "Cobertura",
     "automation": "Automação",
-    "playbooks": "Playbooks"
+    "playbooks": "Playbooks",
+    "insights": "Insights"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -3671,8 +3672,8 @@
     "bannerBody": "{high}% dos pedidos recentes foram classificados como alto risco pela análise de fraude do Shopify. {fulfilled}% dos pedidos de alto risco do Shopify foram atendidos mesmo assim. Você pode agora monitorar a exposição ao risco de fraude, padrões operacionais e tendências de disputas diretamente no DisputeDesk.",
     "bannerHealthLine": "Status atual de chargebacks: {status}",
     "bannerHealth_good": "Dentro da faixa saudável",
-    "bannerHealth_at_risk": "Aproximando-se do limite",
-    "bannerHealth_elevated": "Acima do limite",
+    "bannerHealth_at_risk": "Aproximando-se da faixa de monitoramento",
+    "bannerHealth_elevated": "Na zona de monitoramento",
     "bannerHealth_unknown": "Ainda não medido",
     "bannerHealthInsufficient": "Construindo a base de comparação — ainda há poucos pedidos recentes para apresentar uma taxa significativa.",
     "bannerCtaRiskAnalysis": "Abrir análise de risco",
@@ -3719,7 +3720,7 @@
     "correlationObservationInverted": "Incomum — na sua loja, pedidos de alto risco se converteram em disputas a uma taxa similar ou menor à dos pedidos aprovados. Isto pode acontecer quando a amostra de disputas é pequena ou quando as disputas são impulsionadas por problemas pós-compra (entrega, produto) em vez de sinais de fraude.",
     "correlationObservationNeedHigh": "Ainda não há pedidos de alto risco suficientes para calcular uma correlação significativa. As taxas de conversão aparecerão aqui quando o volume crescer.",
     "correlationObservationNeedSafe": "Ainda não há pedidos de baixo risco ou aprovados suficientes para calcular uma base de correlação significativa.",
-    "pageTitleV2": "Inteligência de risco",
+    "pageTitleV2": "Exposição a estornos",
     "heroNumberLabel": "Pedidos históricos do Shopify analisados",
     "heroMiniBarLabel": "Distribuição da classificação de risco",
     "section30dTitle": "Últimos 30 dias",
@@ -3759,6 +3760,8 @@
     "kpiMedianFulfillmentInfo": "Tempo mediano entre a realização do pedido e o atendimento, para os pedidos atendidos neste período. Um atendimento mais rápido melhora os sinais de serviço ao cliente.",
     "kpiHighRiskFulfilledInfo": "Dos pedidos classificados pela Shopify como risco ALTO, o percentual que mesmo assim foi atendido. Um valor alto indica que você está absorvendo o risco de fraude sinalizado.",
     "kpiConfirmedDeliveryInfo": "Dos pedidos atendidos, o percentual em que a transportadora retornou um status de entregue. A entrega confirmada pela transportadora é uma evidência forte em disputa.",
-    "kpiSignedForInfo": "Das entregas confirmadas, o percentual em que a transportadora registrou uma assinatura. A confirmação por assinatura é a evidência de entrega mais forte para estornos por fraude."
+    "kpiSignedForInfo": "Das entregas confirmadas, o percentual em que a transportadora registrou uma assinatura. A confirmação por assinatura é a evidência de entrega mais forte para estornos por fraude.",
+    "showClassificationDetails": "Mostrar detalhes da classificação",
+    "hideClassificationDetails": "Ocultar detalhes da classificação"
   }
 }

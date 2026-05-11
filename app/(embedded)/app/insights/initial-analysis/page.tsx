@@ -40,6 +40,8 @@ import {
   Banner,
   Tooltip,
   Icon,
+  Collapsible,
+  Button,
 } from "@shopify/polaris";
 import { InfoIcon } from "@shopify/polaris-icons";
 import styles from "./initial-analysis.module.css";
@@ -113,15 +115,20 @@ interface RiskConversionBucket {
 }
 
 // ═══ Color palette (kept in sync with initial-analysis.module.css) ═══
+// Softened from earlier red severity: HIGH risk is amber/orange
+// (operational attention), not red (crisis). Red is now reserved
+// exclusively for actual threshold breaches — the elevated band of
+// the chargeback gauge. This keeps the page feeling like an
+// operational monitor rather than a panic dashboard.
 const RISK_COLOR = {
-  HIGH: "#DC2626",
-  MEDIUM: "#F59E0B",
-  LOW: "#10B981",
+  HIGH: "#F97316",     // orange-500 — operational attention
+  MEDIUM: "#FBBF24",   // amber-400 — softer than the previous F59E0B
+  LOW: "#10B981",      // emerald — accepted/cleared
   PENDING: "#6B7280",
   NONE: "#9CA3AF",
 } as const;
 
-function formatPct(v: number | null, digits = 1): string {
+function formatPct(v: number | null, digits = 0): string {
   return v === null ? "—" : `${v.toFixed(digits)}%`;
 }
 
@@ -167,7 +174,10 @@ function DeltaPill({
   }
   const isUp = delta > 0;
   const isBad = inverse ? isUp : !isUp;
-  const color = isBad ? "#DC2626" : "#10B981";
+  // Amber for unfavorable deltas, green for favorable. Red is
+  // reserved for actual threshold breaches (the gauge "elevated"
+  // band) — operational variance is not a crisis.
+  const color = isBad ? "#D97706" : "#10B981";
   const arrow = isUp ? "↑" : "↓";
   const unitLabel = unit === "h" ? " h" : " pp";
   return (
@@ -614,6 +624,11 @@ export default function InitialAnalysisPage() {
   const t = useTranslations();
   const [data, setData] = useState<InsightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  // Classification details hidden by default — the stacked bar tells
+  // the visual story; per-bucket prose lives behind a disclosure so
+  // it does not dominate the page.
+  const [classificationDetailsOpen, setClassificationDetailsOpen] =
+    useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -744,96 +759,17 @@ export default function InitialAnalysisPage() {
         </Layout.Section>
 
         {/* ── 30d KPIs, split into three thematic groups ──────────────
-            Single 9-tile strip was too crowded. Each group now lives
-            in its own card with a heading + subtitle. Order matches
-            the merchant's mental flow:
-              1. What is Shopify's fraud analysis telling me?
-              2. How was the payment verified / underwritten?
-              3. What is happening with delivery operations? */}
+            Hierarchy reordered to put operational behavior first:
+              1. Delivery operations — what YOU do (the merchant's
+                 own lever; signature capture, fulfillment timing).
+              2. Payment verification — how the payment was
+                 underwritten (3DS, Protect coverage).
+              3. Fraud-risk profile — Shopify's classification as
+                 context, not as the headline.
+            DisputeDesk should feel like the interpretation layer,
+            not a wrapper around Shopify signals. */}
 
-        {/* Group 1 — Fraud-risk profile (Shopify classification + outcomes) */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <div className={styles.sectionTitle}>
-                <Text as="h3" variant="headingMd">
-                  {t("fraudIntel.segmentFraudProfileTitle")}
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {t("fraudIntel.segmentFraudProfileSubtitle")}
-                </Text>
-              </div>
-              <div className={styles.kpiStrip}>
-                <KpiTile
-                  label={t("fraudIntel.kpiAcceptanceRate")}
-                  info={t("fraudIntel.kpiAcceptanceRateInfo")}
-                  value={formatPct(current30d.acceptanceRatePct)}
-                  current={current30d.acceptanceRatePct}
-                  prior={prior30d.acceptanceRatePct}
-                  t={t}
-                />
-                <KpiTile
-                  label={t("fraudIntel.kpiHighRiskRate")}
-                  info={t("fraudIntel.kpiHighRiskRateInfo")}
-                  value={formatPct(current30d.highRiskPct)}
-                  current={current30d.highRiskPct}
-                  prior={prior30d.highRiskPct}
-                  inverseDelta
-                  t={t}
-                />
-                <KpiTile
-                  label={t("fraudIntel.kpiFraudDisputeRate")}
-                  info={t("fraudIntel.kpiFraudDisputeRateInfo")}
-                  value={formatPct(current30d.fraudDisputeRatePct, 2)}
-                  current={current30d.fraudDisputeRatePct}
-                  prior={prior30d.fraudDisputeRatePct}
-                  inverseDelta
-                  t={t}
-                />
-              </div>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        {/* Group 2 — Payment verification (authentication + underwriting) */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <div className={styles.sectionTitle}>
-                <Text as="h3" variant="headingMd">
-                  {t("fraudIntel.segmentVerificationTitle")}
-                </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {t("fraudIntel.segmentVerificationSubtitle")}
-                </Text>
-              </div>
-              <div className={styles.kpiStrip}>
-                <KpiTile
-                  label={t("fraudIntel.kpi3dsAuth")}
-                  info={t("fraudIntel.kpi3dsAuthInfo")}
-                  value={formatPct(current30d.threeDsAuthRatePct)}
-                  current={current30d.threeDsAuthRatePct}
-                  prior={prior30d.threeDsAuthRatePct}
-                  context={t("fraudIntel.kpi3dsAuthContext", {
-                    num: current30d.threeDsAuthOrders.toLocaleString(),
-                    den: current30d.threeDsAuthEligibleOrders.toLocaleString(),
-                  })}
-                  t={t}
-                />
-                <KpiTile
-                  label={t("fraudIntel.kpiProtectCoverage")}
-                  info={t("fraudIntel.kpiProtectCoverageInfo")}
-                  value={formatPct(current30d.shopifyProtectCoveragePct)}
-                  current={current30d.shopifyProtectCoveragePct}
-                  prior={prior30d.shopifyProtectCoveragePct}
-                  t={t}
-                />
-              </div>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        {/* Group 3 — Delivery operations (carrier confirmation + timing) */}
+        {/* Group 1 — Delivery operations (the merchant's own levers) */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
@@ -903,6 +839,88 @@ export default function InitialAnalysisPage() {
           </Card>
         </Layout.Section>
 
+        {/* Group 2 — Payment verification (authentication + underwriting) */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <div className={styles.sectionTitle}>
+                <Text as="h3" variant="headingMd">
+                  {t("fraudIntel.segmentVerificationTitle")}
+                </Text>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("fraudIntel.segmentVerificationSubtitle")}
+                </Text>
+              </div>
+              <div className={styles.kpiStrip}>
+                <KpiTile
+                  label={t("fraudIntel.kpi3dsAuth")}
+                  info={t("fraudIntel.kpi3dsAuthInfo")}
+                  value={formatPct(current30d.threeDsAuthRatePct)}
+                  current={current30d.threeDsAuthRatePct}
+                  prior={prior30d.threeDsAuthRatePct}
+                  context={t("fraudIntel.kpi3dsAuthContext", {
+                    num: current30d.threeDsAuthOrders.toLocaleString(),
+                    den: current30d.threeDsAuthEligibleOrders.toLocaleString(),
+                  })}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiProtectCoverage")}
+                  info={t("fraudIntel.kpiProtectCoverageInfo")}
+                  value={formatPct(current30d.shopifyProtectCoveragePct)}
+                  current={current30d.shopifyProtectCoveragePct}
+                  prior={prior30d.shopifyProtectCoveragePct}
+                  t={t}
+                />
+              </div>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Group 3 — Fraud-risk profile (Shopify classification as context) */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="300">
+              <div className={styles.sectionTitle}>
+                <Text as="h3" variant="headingMd">
+                  {t("fraudIntel.segmentFraudProfileTitle")}
+                </Text>
+                <Text as="span" variant="bodySm" tone="subdued">
+                  {t("fraudIntel.segmentFraudProfileSubtitle")}
+                </Text>
+              </div>
+              <div className={styles.kpiStrip}>
+                <KpiTile
+                  label={t("fraudIntel.kpiAcceptanceRate")}
+                  info={t("fraudIntel.kpiAcceptanceRateInfo")}
+                  value={formatPct(current30d.acceptanceRatePct)}
+                  current={current30d.acceptanceRatePct}
+                  prior={prior30d.acceptanceRatePct}
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiHighRiskRate")}
+                  info={t("fraudIntel.kpiHighRiskRateInfo")}
+                  value={formatPct(current30d.highRiskPct)}
+                  current={current30d.highRiskPct}
+                  prior={prior30d.highRiskPct}
+                  inverseDelta
+                  t={t}
+                />
+                <KpiTile
+                  label={t("fraudIntel.kpiFraudDisputeRate")}
+                  info={t("fraudIntel.kpiFraudDisputeRateInfo")}
+                  value={formatPct(current30d.fraudDisputeRatePct, 1)}
+                  current={current30d.fraudDisputeRatePct}
+                  prior={prior30d.fraudDisputeRatePct}
+                  inverseDelta
+                  t={t}
+                />
+              </div>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
         {/* ── Risk classification breakdown (all-time) ───────────── */}
         <Layout.Section>
           <Card>
@@ -921,43 +939,69 @@ export default function InitialAnalysisPage() {
                 <StackedLegend segments={distSegments} total={riskTotal} />
               </div>
 
-              <Banner tone="info" title={t("fraudIntel.breakdownExplainBannerTitle")}>
-                <p>{t("fraudIntel.breakdownExplainBannerBody")}</p>
-              </Banner>
+              <InlineStack align="start">
+                <Button
+                  variant="plain"
+                  disclosure={classificationDetailsOpen ? "up" : "down"}
+                  onClick={() =>
+                    setClassificationDetailsOpen((v) => !v)
+                  }
+                  ariaExpanded={classificationDetailsOpen}
+                  ariaControls="classification-details"
+                >
+                  {classificationDetailsOpen
+                    ? t("fraudIntel.hideClassificationDetails")
+                    : t("fraudIntel.showClassificationDetails")}
+                </Button>
+              </InlineStack>
 
-              <Divider />
-
-              <BlockStack gap="150">
-                <Text as="h4" variant="headingSm">
-                  {t("fraudIntel.breakdownExplainTitle")}
-                </Text>
-                <BreakdownExplainRow
-                  label={t("fraudIntel.riskHigh")}
-                  body={t("fraudIntel.breakdownExplainHigh")}
-                  color={RISK_COLOR.HIGH}
-                />
-                <BreakdownExplainRow
-                  label={t("fraudIntel.riskMedium")}
-                  body={t("fraudIntel.breakdownExplainMedium")}
-                  color={RISK_COLOR.MEDIUM}
-                />
-                <BreakdownExplainRow
-                  label={t("fraudIntel.riskLow")}
-                  body={t("fraudIntel.breakdownExplainLow")}
-                  color={RISK_COLOR.LOW}
-                />
-                <BreakdownExplainRow
-                  label={t("fraudIntel.riskPending")}
-                  body={t("fraudIntel.breakdownExplainPending")}
-                  color={RISK_COLOR.PENDING}
-                />
-                <BreakdownExplainRow
-                  label={t("fraudIntel.riskNone")}
-                  body={t("fraudIntel.breakdownExplainCleared")}
-                  color={RISK_COLOR.NONE}
-                  emphasize
-                />
-              </BlockStack>
+              <Collapsible
+                id="classification-details"
+                open={classificationDetailsOpen}
+                transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
+                expandOnPrint
+              >
+                <BlockStack gap="300">
+                  <Banner
+                    tone="info"
+                    title={t("fraudIntel.breakdownExplainBannerTitle")}
+                  >
+                    <p>{t("fraudIntel.breakdownExplainBannerBody")}</p>
+                  </Banner>
+                  <Divider />
+                  <BlockStack gap="150">
+                    <Text as="h4" variant="headingSm">
+                      {t("fraudIntel.breakdownExplainTitle")}
+                    </Text>
+                    <BreakdownExplainRow
+                      label={t("fraudIntel.riskHigh")}
+                      body={t("fraudIntel.breakdownExplainHigh")}
+                      color={RISK_COLOR.HIGH}
+                    />
+                    <BreakdownExplainRow
+                      label={t("fraudIntel.riskMedium")}
+                      body={t("fraudIntel.breakdownExplainMedium")}
+                      color={RISK_COLOR.MEDIUM}
+                    />
+                    <BreakdownExplainRow
+                      label={t("fraudIntel.riskLow")}
+                      body={t("fraudIntel.breakdownExplainLow")}
+                      color={RISK_COLOR.LOW}
+                    />
+                    <BreakdownExplainRow
+                      label={t("fraudIntel.riskPending")}
+                      body={t("fraudIntel.breakdownExplainPending")}
+                      color={RISK_COLOR.PENDING}
+                    />
+                    <BreakdownExplainRow
+                      label={t("fraudIntel.riskNone")}
+                      body={t("fraudIntel.breakdownExplainCleared")}
+                      color={RISK_COLOR.NONE}
+                      emphasize
+                    />
+                  </BlockStack>
+                </BlockStack>
+              </Collapsible>
             </BlockStack>
           </Card>
         </Layout.Section>

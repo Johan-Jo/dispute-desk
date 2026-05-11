@@ -18,7 +18,8 @@
     "switchToDemo": "Cambiar a la tienda demo",
     "coverage": "Cobertura",
     "automation": "Automatización",
-    "playbooks": "Playbooks"
+    "playbooks": "Playbooks",
+    "insights": "Información"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -3654,8 +3655,8 @@
     "bannerBody": "{high}% de los pedidos recientes fueron clasificados como alto riesgo por el análisis de fraude de Shopify. El {fulfilled}% de los pedidos de alto riesgo de Shopify aún así se cumplieron. Ahora puedes monitorear la exposición al riesgo de fraude, los patrones operativos y las tendencias de disputas directamente desde DisputeDesk.",
     "bannerHealthLine": "Estado actual de contracargos: {status}",
     "bannerHealth_good": "Dentro del rango saludable",
-    "bannerHealth_at_risk": "Acercándose al umbral",
-    "bannerHealth_elevated": "Por encima del umbral",
+    "bannerHealth_at_risk": "Acercándose a la banda de monitoreo",
+    "bannerHealth_elevated": "En zona de monitoreo",
     "bannerHealth_unknown": "Aún no medido",
     "bannerHealthInsufficient": "Construyendo base de comparación — aún no hay suficientes pedidos recientes para mostrar una tasa significativa.",
     "bannerCtaRiskAnalysis": "Abrir análisis de riesgo",
@@ -3702,7 +3703,7 @@
     "correlationObservationInverted": "Inusual — en tu tienda, los pedidos de alto riesgo se han convertido en disputas a una tasa similar o menor que los pedidos aprobados. Esto puede ocurrir cuando la muestra de disputas es pequeña o cuando las disputas están impulsadas por problemas post-compra (entrega, producto) en lugar de señales de fraude.",
     "correlationObservationNeedHigh": "Aún no se han observado suficientes pedidos de alto riesgo para calcular una correlación significativa. Las tasas de conversión aparecerán aquí cuando aumente el volumen.",
     "correlationObservationNeedSafe": "Aún no se han observado suficientes pedidos de bajo riesgo o aprobados para calcular una base de correlación significativa.",
-    "pageTitleV2": "Inteligencia de riesgo",
+    "pageTitleV2": "Exposición a contracargos",
     "heroNumberLabel": "Pedidos históricos de Shopify analizados",
     "heroMiniBarLabel": "Distribución de la clasificación de riesgo",
     "section30dTitle": "Últimos 30 días",
@@ -3742,6 +3743,8 @@
     "kpiMedianFulfillmentInfo": "Tiempo mediano entre la realización del pedido y el cumplimiento, en los pedidos completados en este período. Un cumplimiento más rápido mejora las señales de servicio al cliente.",
     "kpiHighRiskFulfilledInfo": "De los pedidos clasificados por Shopify como riesgo ALTO, el porcentaje que aun así se cumplió. Un valor alto indica que estás asumiendo el riesgo de fraude que Shopify marcó.",
     "kpiConfirmedDeliveryInfo": "De los pedidos cumplidos, el porcentaje en los que el transportista devolvió un estado de entregado. La entrega confirmada por el transportista es una prueba sólida en disputas.",
-    "kpiSignedForInfo": "De las entregas confirmadas, el porcentaje en las que el transportista registró una firma. La firma de recepción es la prueba de entrega más fuerte para contracargos por fraude."
+    "kpiSignedForInfo": "De las entregas confirmadas, el porcentaje en las que el transportista registró una firma. La firma de recepción es la prueba de entrega más fuerte para contracargos por fraude.",
+    "showClassificationDetails": "Mostrar detalles de clasificación",
+    "hideClassificationDetails": "Ocultar detalles de clasificación"
   }
 }

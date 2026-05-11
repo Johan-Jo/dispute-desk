@@ -18,7 +18,8 @@
     "switchToDemo": "Zur Demo wechseln",
     "coverage": "Abdeckung",
     "automation": "Automatisierung",
-    "playbooks": "Playbooks"
+    "playbooks": "Playbooks",
+    "insights": "Einblicke"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -3654,8 +3655,8 @@
     "bannerBody": "{high}% der jüngsten Bestellungen wurden von Shopifys Betrugsanalyse als hochriskant eingestuft. {fulfilled}% der hochriskanten Shopify-Bestellungen wurden trotzdem erfüllt. Sie können das Betrugsrisiko, operative Muster und Streittrends jetzt direkt in DisputeDesk überwachen.",
     "bannerHealthLine": "Aktueller Chargeback-Zustand: {status}",
     "bannerHealth_good": "Im gesunden Bereich",
-    "bannerHealth_at_risk": "Nähert sich dem Schwellenwert",
-    "bannerHealth_elevated": "Über dem Schwellenwert",
+    "bannerHealth_at_risk": "Nähert sich dem Beobachtungsband",
+    "bannerHealth_elevated": "In der Beobachtungszone",
     "bannerHealth_unknown": "Noch nicht gemessen",
     "bannerHealthInsufficient": "Baseline wird aufgebaut — noch zu wenige aktuelle Bestellungen, um eine aussagekräftige Quote auszuweisen.",
     "bannerCtaRiskAnalysis": "Risikoanalyse öffnen",
@@ -3702,7 +3703,7 @@
     "correlationObservationInverted": "Ungewöhnlich — in Ihrem Shop wurden Hochrisiko-Bestellungen in ähnlichem oder geringerem Maße zu Streitfällen wie freigegebene Bestellungen. Das kann passieren, wenn die Streitfall-Stichprobe klein ist oder Streitfälle eher durch Nachkauf-Probleme (Lieferung, Produkt) als durch Betrugssignale getrieben werden.",
     "correlationObservationNeedHigh": "Bisher noch nicht genug Hochrisiko-Bestellungen beobachtet, um eine aussagekräftige Korrelation zu berechnen. Konversionsraten erscheinen hier, sobald das Volumen steigt.",
     "correlationObservationNeedSafe": "Bisher noch nicht genug niedrigriskante oder freigegebene Bestellungen beobachtet, um eine sinnvolle Korrelations-Baseline zu berechnen.",
-    "pageTitleV2": "Risiko-Intelligenz",
+    "pageTitleV2": "Rückbuchungs-Exposition",
     "heroNumberLabel": "Analysierte historische Shopify-Bestellungen",
     "heroMiniBarLabel": "Verteilung der Risikoklassifizierung",
     "section30dTitle": "Letzte 30 Tage",
@@ -3742,6 +3743,8 @@
     "kpiMedianFulfillmentInfo": "Mittlere Zeit zwischen Bestelleingang und Fulfillment für die in diesem Zeitraum abgewickelten Bestellungen. Schnelleres Fulfillment verbessert in der Regel die Service-Signale.",
     "kpiHighRiskFulfilledInfo": "Anteil der von Shopify als HOHES Risiko eingestuften Bestellungen, die dennoch ausgeliefert wurden. Ein hoher Wert bedeutet, dass du das von Shopify markierte Betrugsrisiko übernimmst.",
     "kpiConfirmedDeliveryInfo": "Anteil der ausgelieferten Bestellungen, bei denen der Spediteur einen Zustellstatus zurückgemeldet hat. Vom Spediteur bestätigte Zustellungen sind starke Beweise im Streitfall.",
-    "kpiSignedForInfo": "Anteil der bestätigten Zustellungen, bei denen der Spediteur eine Unterschrift erfasst hat. Die Empfangsbestätigung ist der stärkste Zustellbeweis bei Betrugsrückbuchungen."
+    "kpiSignedForInfo": "Anteil der bestätigten Zustellungen, bei denen der Spediteur eine Unterschrift erfasst hat. Die Empfangsbestätigung ist der stärkste Zustellbeweis bei Betrugsrückbuchungen.",
+    "showClassificationDetails": "Klassifizierungsdetails anzeigen",
+    "hideClassificationDetails": "Klassifizierungsdetails ausblenden"
   }
 }

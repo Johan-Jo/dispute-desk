@@ -18,7 +18,8 @@
     "switchToDemo": "Byt till demobutik",
     "coverage": "Täckning",
     "automation": "Automatisering",
-    "playbooks": "Playbooks"
+    "playbooks": "Playbooks",
+    "insights": "Insikter"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -3655,8 +3656,8 @@
     "bannerBody": "{high}% av de senaste ordrarna klassades som högrisk av Shopifys bedrägerianalys. {fulfilled}% av Shopifys högriskordrar uppfylldes ändå. Du kan nu följa bedrägerirsikexponering, operativa mönster och tvisttrender direkt i DisputeDesk.",
     "bannerHealthLine": "Aktuell chargeback-status: {status}",
     "bannerHealth_good": "Inom hälsosamt intervall",
-    "bannerHealth_at_risk": "Närmar sig tröskeln",
-    "bannerHealth_elevated": "Över tröskeln",
+    "bannerHealth_at_risk": "Närmar sig övervakningsbandet",
+    "bannerHealth_elevated": "I övervakningszonen",
     "bannerHealth_unknown": "Ännu inte mätt",
     "bannerHealthInsufficient": "Bygger upp basvärde — ännu för få aktuella ordrar för att visa en meningsfull frekvens.",
     "bannerCtaRiskAnalysis": "Öppna riskanalys",
@@ -3703,7 +3704,7 @@
     "correlationObservationInverted": "Ovanligt — i din butik har högriskordrar omvandlats till tvister i liknande eller lägre takt än godkända ordrar. Detta kan inträffa när tvistsamlingen är liten eller när tvister drivs av efterköpsproblem (leverans, produkt) snarare än bedrägerisignaler.",
     "correlationObservationNeedHigh": "Inte tillräckligt med högriskordrar observerade ännu för att räkna fram en meningsfull samvariation. Konverteringskvoter visas här när volymen ökar.",
     "correlationObservationNeedSafe": "Inte tillräckligt med lågrisk- eller godkända ordrar observerade ännu för att beräkna en meningsfull samvariationsbaslinje.",
-    "pageTitleV2": "Riskintelligens",
+    "pageTitleV2": "Återkrediteringsexponering",
     "heroNumberLabel": "Analyserade historiska Shopify-ordrar",
     "heroMiniBarLabel": "Fördelning av riskklassificering",
     "section30dTitle": "Senaste 30 dagarna",
@@ -3743,6 +3744,8 @@
     "kpiMedianFulfillmentInfo": "Mediantid mellan lagd order och utskick, för order som hanterats under perioden. Snabbare hantering förbättrar generellt kundsignalerna.",
     "kpiHighRiskFulfilledInfo": "Av order som Shopify klassat som HÖG risk, andelen som ändå skickades. Ett högt värde innebär att du bär den bedrägeririsk som Shopify flaggade.",
     "kpiConfirmedDeliveryInfo": "Av skickade order, andelen där transportören rapporterat levererad status. Bekräftad leverans av transportören är stark bevisning i tvist.",
-    "kpiSignedForInfo": "Av bekräftade leveranser, andelen där transportören registrerat en signatur. Signaturbekräftelse är det starkaste leveransbeviset vid bedrägeritvister."
+    "kpiSignedForInfo": "Av bekräftade leveranser, andelen där transportören registrerat en signatur. Signaturbekräftelse är det starkaste leveransbeviset vid bedrägeritvister.",
+    "showClassificationDetails": "Visa klassificeringsdetaljer",
+    "hideClassificationDetails": "Dölj klassificeringsdetaljer"
   }
 }

@@ -18,7 +18,8 @@
     "switchToDemo": "Switch to demo store",
     "coverage": "Coverage",
     "automation": "Automation",
-    "playbooks": "Playbooks"
+    "playbooks": "Playbooks",
+    "insights": "Insights"
   },
   "embeddedShell": {
     "brandName": "DisputeDesk",
@@ -3641,8 +3642,8 @@
     "bannerBody": "{high}% of recent orders were classified as high-risk by Shopify's fraud analysis. {fulfilled}% of Shopify high-risk orders were still fulfilled. You can now monitor fraud-risk exposure, operational patterns, and dispute trends directly inside DisputeDesk.",
     "bannerHealthLine": "Current chargeback health: {status}",
     "bannerHealth_good": "Within healthy band",
-    "bannerHealth_at_risk": "Approaching threshold",
-    "bannerHealth_elevated": "Above threshold",
+    "bannerHealth_at_risk": "Approaching monitoring band",
+    "bannerHealth_elevated": "In monitoring zone",
     "bannerHealth_unknown": "Not yet measured",
     "bannerHealthInsufficient": "Building baseline — too few recent orders to surface a meaningful rate yet.",
     "bannerCtaRiskAnalysis": "Open Risk Analysis",
@@ -3689,7 +3690,7 @@
     "correlationObservationInverted": "Unusual — on your store, high-risk orders have converted to disputes at a similar or lower rate than orders Shopify cleared. This can happen when the dispute sample is small or when disputes are driven by post-purchase issues (delivery, product) rather than fraud signals.",
     "correlationObservationNeedHigh": "Not enough high-risk orders observed yet to compute a meaningful correlation. Conversion ratios will appear here once volume builds.",
     "correlationObservationNeedSafe": "Not enough low-risk or cleared orders observed yet to compute a meaningful correlation baseline.",
-    "pageTitleV2": "Risk Intelligence",
+    "pageTitleV2": "Chargeback Exposure",
     "heroNumberLabel": "Historical Shopify orders analyzed",
     "heroMiniBarLabel": "Risk classification distribution",
     "section30dTitle": "Last 30 days",
@@ -3729,6 +3730,8 @@
     "kpiMedianFulfillmentInfo": "Median time between order placement and fulfillment, across orders fulfilled in this window. Faster fulfillment generally improves customer-service signals.",
     "kpiHighRiskFulfilledInfo": "Of orders Shopify classified HIGH risk, the share that still reached a fulfilled state. A high number means you are absorbing the fraud risk Shopify flagged.",
     "kpiConfirmedDeliveryInfo": "Of fulfilled orders, the share where the carrier returned a delivered status. Carrier-attested delivery is strong dispute evidence.",
-    "kpiSignedForInfo": "Of confirmed deliveries, the share where the carrier recorded a signature. Signature confirmation is the strongest delivery evidence for fraud chargebacks."
+    "kpiSignedForInfo": "Of confirmed deliveries, the share where the carrier recorded a signature. Signature confirmation is the strongest delivery evidence for fraud chargebacks.",
+    "showClassificationDetails": "Show classification details",
+    "hideClassificationDetails": "Hide classification details"
   }
 }
