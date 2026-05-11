@@ -44,6 +44,8 @@ interface InsightsResponse {
   shopifyProtectCoveragePct: number | null;
   chargebackRate90d: number | null;
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
+  chargebackHealthAvailable: boolean;
+  chargebackOrders90d: number;
   riskBreakdown: {
     low: number;
     medium: number;
@@ -301,7 +303,11 @@ export default function InitialAnalysisPage() {
           </Card>
         </Layout.Section>
 
-        {/* ── Chargeback Health section (banner CTA target) ────────── */}
+        {/* ── Chargeback Health section (banner CTA target) ──────────
+            Verdict only renders when the 90-day order denominator is
+            statistically meaningful. Below the threshold we show
+            "Insufficient dispute history" — observational, no implied
+            judgement on the merchant. */}
         <Layout.Section>
           <Card>
             <div id="chargeback-health">
@@ -309,17 +315,30 @@ export default function InitialAnalysisPage() {
                 <Text as="h3" variant="headingMd">
                   {t("fraudIntel.chargebackHealthTitle")}
                 </Text>
-                <HealthBadge
-                  status={data.chargebackHealth}
-                  rateLabel={
-                    data.chargebackRate90d === null
-                      ? t("fraudIntel.kpiUnavailable")
-                      : `${data.chargebackRate90d.toFixed(2)}%`
-                  }
-                  label={t(
-                    `fraudIntel.bannerHealth_${data.chargebackHealth}`,
-                  )}
-                />
+                {data.chargebackHealthAvailable ? (
+                  <HealthBadge
+                    status={data.chargebackHealth}
+                    rateLabel={
+                      data.chargebackRate90d === null
+                        ? t("fraudIntel.kpiUnavailable")
+                        : `${data.chargebackRate90d.toFixed(2)}%`
+                    }
+                    label={t(
+                      `fraudIntel.bannerHealth_${data.chargebackHealth}`,
+                    )}
+                  />
+                ) : (
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodyMd">
+                      {t("fraudIntel.chargebackHealthInsufficientTitle")}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("fraudIntel.chargebackHealthInsufficientBody", {
+                        count: data.chargebackOrders90d.toLocaleString(),
+                      })}
+                    </Text>
+                  </BlockStack>
+                )}
                 <Text as="p" variant="bodySm" tone="subdued">
                   {t("fraudIntel.chargebackHealthExplain")}
                 </Text>

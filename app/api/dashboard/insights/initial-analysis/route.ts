@@ -39,6 +39,14 @@ interface InsightsResponse {
   shopifyProtectCoveragePct: number | null;
   chargebackRate90d: number | null;
   chargebackHealth: "good" | "at_risk" | "elevated" | "unknown";
+  /** True when the 90-day order denominator is large enough for the
+   *  chargeback-rate classification to be statistically meaningful
+   *  (PRD §11 low-volume threshold = 50). When false, the UI must NOT
+   *  display a colored verdict — show "Insufficient dispute history"
+   *  instead. Protects low-volume merchants from misleading severity
+   *  labels on tiny sample sizes. */
+  chargebackHealthAvailable: boolean;
+  chargebackOrders90d: number;
   riskBreakdown: {
     low: number;
     medium: number;
@@ -71,6 +79,13 @@ function classifyChargebackHealth(
   if (rate <= 0.6) return "at_risk";
   return "elevated";
 }
+
+/** Minimum 90-day order denominator at which a chargeback rate
+ *  classification carries enough signal to surface in the UI. Below
+ *  this we render "Insufficient dispute history" rather than a colored
+ *  severity verdict. Matches PRD §11 low-volume threshold used by
+ *  computeChargebackRate. */
+const CHARGEBACK_VERDICT_MIN_ORDERS = 50;
 
 function rate(num: number, den: number): number | null {
   if (den <= 0) return null;
@@ -203,6 +218,8 @@ export async function GET(req: NextRequest) {
     shopifyProtectCoveragePct,
     chargebackRate90d,
     chargebackHealth: classifyChargebackHealth(chargebackRate90d),
+    chargebackHealthAvailable: cbOrderTotal >= CHARGEBACK_VERDICT_MIN_ORDERS,
+    chargebackOrders90d: cbOrderTotal,
     riskBreakdown: {
       low: ordersLow,
       medium: ordersMedium,

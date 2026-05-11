@@ -45,6 +45,10 @@ interface BannerData {
   highRiskPct: number | null;
   fulfilledHighRiskPct: number | null;
   chargebackHealthStatus: "good" | "at_risk" | "elevated" | "unknown";
+  /** When false, the supporting line shows "Insufficient dispute
+   *  history" instead of a colored verdict — protects low-volume
+   *  shops from misleading severity labels on tiny denominators. */
+  chargebackHealthAvailable: boolean;
 }
 
 /** Pure: classify chargeback health by 90d rate. Mirrors the bands
@@ -77,6 +81,7 @@ export function DashboardInitialAnalysisBannerWrapper() {
           highRiskPct: d.highRiskPct ?? null,
           fulfilledHighRiskPct: d.fulfilledHighRiskPct ?? null,
           chargebackHealthStatus: d.chargebackHealth ?? "unknown",
+          chargebackHealthAvailable: d.chargebackHealthAvailable ?? false,
         });
       });
     return () => {
@@ -115,9 +120,16 @@ export function DashboardInitialAnalysisBanner({
     setDismissed(true);
   };
 
-  const healthLabel = t(
-    `fraudIntel.bannerHealth_${bannerData.chargebackHealthStatus}`,
-  );
+  // Verdict gate: only render the colored severity status when the
+  // 90-day order denominator is statistically meaningful. Otherwise
+  // surface "Insufficient dispute history" — observational, no
+  // implied judgement. Protects low-volume merchants from anxiety
+  // built on 3 disputes over 60 days.
+  const healthLine = bannerData.chargebackHealthAvailable
+    ? t("fraudIntel.bannerHealthLine", {
+        status: t(`fraudIntel.bannerHealth_${bannerData.chargebackHealthStatus}`),
+      })
+    : t("fraudIntel.bannerHealthInsufficient");
 
   return (
     <Banner
@@ -134,11 +146,16 @@ export function DashboardInitialAnalysisBanner({
             fulfilled: bannerData.fulfilledHighRiskPct?.toFixed(0) ?? "—",
           })}
         </Text>
-        {/* Secondary metric, intentionally lower visual hierarchy. */}
+        {/* Secondary line, intentionally lower visual hierarchy. */}
         <Text as="p" variant="bodySm" tone="subdued">
-          {t("fraudIntel.bannerHealthLine", { status: healthLabel })}
+          {healthLine}
         </Text>
         <InlineStack gap="200">
+          {/* Two CTAs with genuinely different destinations:
+              - Risk Analysis → the insights page (intelligence path).
+              - Dispute Queue → the operational workflow (action path).
+              No "Improve Dispute Operations" framing because that
+              implies recommendations we don't yet have data to make. */}
           <Link
             href={withShopParams(
               "/app/insights/initial-analysis",
@@ -146,16 +163,16 @@ export function DashboardInitialAnalysisBanner({
             )}
             style={{ textDecoration: "none" }}
           >
-            <Button variant="primary">{t("fraudIntel.bannerCtaRiskProfile")}</Button>
+            <Button variant="primary">{t("fraudIntel.bannerCtaRiskAnalysis")}</Button>
           </Link>
           <Link
             href={withShopParams(
-              "/app/insights/initial-analysis#chargeback-health",
+              "/app/disputes",
               searchParams ?? new URLSearchParams(),
             )}
             style={{ textDecoration: "none" }}
           >
-            <Button>{t("fraudIntel.bannerCtaChargebackHealth")}</Button>
+            <Button>{t("fraudIntel.bannerCtaDisputeQueue")}</Button>
           </Link>
         </InlineStack>
       </BlockStack>

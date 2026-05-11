@@ -54,12 +54,22 @@ const KEYS = {
   bannerBody:
     "{high}% of recent orders were classified as high-risk by Shopify's fraud analysis. {fulfilled}% of Shopify high-risk orders were still fulfilled. You can now monitor fraud-risk exposure, operational patterns, and dispute trends directly inside DisputeDesk.",
   bannerHealthLine: "Current chargeback health: {status}",
-  bannerHealth_good: "Good standing",
-  bannerHealth_at_risk: "At risk",
-  bannerHealth_elevated: "Elevated risk",
+  bannerHealth_good: "Within healthy band",
+  bannerHealth_at_risk: "Approaching threshold",
+  bannerHealth_elevated: "Above threshold",
   bannerHealth_unknown: "Not yet measured",
-  bannerCtaRiskProfile: "View Risk Profile",
-  bannerCtaChargebackHealth: "Understand Chargeback Health",
+  bannerHealthInsufficient:
+    "Building baseline — too few recent orders to surface a meaningful rate yet.",
+  bannerCtaRiskAnalysis: "Open Risk Analysis",
+  bannerCtaDisputeQueue: "Open Dispute Queue",
+  // Legacy keys preserved for backwards-compat in case any locale
+  // file still references them; safe to remove once the embedded UI
+  // is verified on prod.
+  bannerCtaRiskProfile: "Open Risk Analysis",
+  bannerCtaChargebackHealth: "Open Dispute Queue",
+  chargebackHealthInsufficientTitle: "Insufficient dispute history",
+  chargebackHealthInsufficientBody:
+    "We've observed {count} orders in the last 90 days — not enough to classify chargeback health into a meaningful band. The verdict surfaces automatically once volume increases.",
   pageTitle: "Initial Analysis",
   pageSubtitle:
     "Operational context from Shopify's fraud signals — not a fraud-prevention decision.",
@@ -91,10 +101,11 @@ const KEYS = {
 };
 
 // Keys we want to FORCE-overwrite even if a locale file already has them
-// — used when copy is reframed (e.g. NONE bucket relabeled as "Cleared",
-// acceptance-rate tooltip rewritten for the new math). Add a key here
-// for one run, then remove it once translations have caught up. Empty
-// in steady state.
+// — used when copy is reframed (e.g. verdict labels softened from
+// "Good standing" / "At risk" / "Elevated risk" to observational
+// "Within healthy band" / "Approaching threshold" / "Above threshold").
+// Add a key here for one run, then remove it once translations have
+// caught up. Empty in steady state.
 const FORCE_OVERRIDE = new Set([]);
 
 function injectInto(filePath) {
