@@ -30,6 +30,9 @@ async function main() {
 const { sendMonthlyChargebackDigest } = await import(
   "../lib/email/sendMonthlyChargebackDigest"
 );
+const { gatherDisputeActivity } = await import(
+  "../lib/email/digestDisputeActivity"
+);
 const { data: shop } = await sb
   .from("shops")
   .select("id, shop_domain")
@@ -220,6 +223,14 @@ console.log("current 30d:", {
 });
 console.log("———————————————————————————\n");
 
+const disputeActivity = await gatherDisputeActivity(sb as any, shop.id, anchor);
+console.log("dispute activity:", {
+  opened: disputeActivity.openedCount,
+  closed: disputeActivity.closedCount,
+  openNow: disputeActivity.openNowCount,
+  winRate90d: disputeActivity.winRate90dPct?.toFixed(0),
+});
+
 const result = await sendMonthlyChargebackDigest({
   shopDomain: SHOP_DOMAIN,
   merchantName: "Søra Svende",
@@ -229,6 +240,7 @@ const result = await sendMonthlyChargebackDigest({
   chargebackOrders90d: chargebacks90d ?? 0,
   current30d,
   prior30d,
+  disputeActivity,
 });
 
 console.log("subject:", result.subject);

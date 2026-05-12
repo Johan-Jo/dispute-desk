@@ -25,6 +25,36 @@ export function hours(v: number | null): string {
   return v < 24 ? `${v.toFixed(1)} h` : `${(v / 24).toFixed(1)} d`;
 }
 
+/** Money formatting using Intl. Falls back to a bare `${currency} {amt}`
+ *  string when the locale data can't resolve. Returns "—" for null. */
+export function money(amount: number | null, currency: string | null): string {
+  if (amount == null) return "—";
+  if (!currency) return amount.toFixed(2);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(0)}`;
+  }
+}
+
+/** "in 3 days" / "today" / "overdue 2 days" — short, calm, no
+ *  alarm. Returns null when the input is unparseable. */
+export function relativeDueLabel(iso: string | null): string | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const days = Math.round((t - Date.now()) / 86_400_000);
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "1 day overdue";
+  if (days < 0) return `${Math.abs(days)} days overdue`;
+  return `in ${days} days`;
+}
+
 // ─── Delta computation ────────────────────────────────────────────
 
 export interface DeltaResult {
@@ -217,9 +247,59 @@ export function hairline(): string {
   return `<div style="height:1px;background:#E5E7EB;margin:28px 0"></div>`;
 }
 
-/** Small section-header label (uppercase, muted). */
-export function sectionLabel(label: string): string {
-  return `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 12px">${label}</div>`;
+/** Small section-header label (uppercase, muted) with an optional
+ *  colored dot prefix. The dot adds gentle visual color without
+ *  breaking the white-plate feel — pick a hue that matches the
+ *  section's theme (blue for activity, green for healthy, amber for
+ *  attention). */
+export function sectionLabel(label: string, accentColor?: string): string {
+  const dot = accentColor
+    ? `<span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:${accentColor};margin-right:8px;vertical-align:middle"></span>`
+    : "";
+  return `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin:0 0 14px">${dot}${label}</div>`;
+}
+
+/** Tinted callout block — used for the "no disputes this month"
+ *  positive line, summary stats, and other accent moments. Picks a
+ *  full palette from `tone`. */
+export function tintedCallout({
+  tone,
+  title,
+  body,
+}: {
+  tone: "blue" | "green" | "amber" | "neutral";
+  title?: string;
+  body: string;
+}): string {
+  const palettes = {
+    blue: { bg: "#EFF6FF", border: "#BFDBFE", titleC: "#1E40AF", bodyC: "#1E3A8A" },
+    green: { bg: "#ECFDF5", border: "#A7F3D0", titleC: "#065F46", bodyC: "#064E3B" },
+    amber: { bg: "#FFFBEB", border: "#FDE68A", titleC: "#92400E", bodyC: "#78350F" },
+    neutral: { bg: "#F9FAFB", border: "#E5E7EB", titleC: "#374151", bodyC: "#4B5563" },
+  };
+  const p = palettes[tone];
+  const titleHtml = title
+    ? `<div style="font-size:13px;font-weight:600;color:${p.titleC};margin:0 0 4px">${title}</div>`
+    : "";
+  return `<div style="background:${p.bg};border:1px solid ${p.border};border-radius:10px;padding:14px 18px;margin:0 0 20px">
+    ${titleHtml}
+    <div style="font-size:13px;color:${p.bodyC};line-height:1.6">${body}</div>
+  </div>`;
+}
+
+/** Inline status pill — used for outcome chips (won/lost/accepted). */
+export function statusPill(
+  label: string,
+  tone: "win" | "loss" | "neutral" | "info",
+): string {
+  const palettes = {
+    win: { bg: "#ECFDF5", text: "#065F46" },
+    loss: { bg: "#FEF2F2", text: "#991B1B" },
+    neutral: { bg: "#F3F4F6", text: "#374151" },
+    info: { bg: "#EFF6FF", text: "#1E40AF" },
+  };
+  const p = palettes[tone];
+  return `<span style="display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;background:${p.bg};color:${p.text};margin-right:6px">${label}</span>`;
 }
 
 /** Primary CTA button — wide, centered. */
@@ -232,7 +312,9 @@ export function ctaButton(label: string, href: string): string {
 }
 
 /** Plate wrapper — single white container, generous padding, subtle
- *  shadow. Footer text lives outside the plate, muted. */
+ *  shadow. Top has a slim brand-color accent stripe (gentle hint of
+ *  color without breaking the white-plate feel). Footer text lives
+ *  outside the plate, muted. */
 export function plateLayout({
   innerHtml,
   footerText,
@@ -249,13 +331,17 @@ export function plateLayout({
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DisputeDesk</title>
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#F9FAFB;color:#111827;-webkit-font-smoothing:antialiased">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#F3F4F6;color:#111827;-webkit-font-smoothing:antialiased">
   <!-- Preview text (hidden inbox preview) -->
   <div style="display:none;visibility:hidden;mso-hide:all;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0">${previewText}</div>
 
   <div style="max-width:640px;margin:0 auto;padding:32px 16px">
-    <div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:14px;padding:36px 40px;box-shadow:0 1px 3px rgba(17,24,39,0.04)">
-      ${innerHtml}
+    <div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 1px 3px rgba(17,24,39,0.05);overflow:hidden">
+      <!-- top accent stripe -->
+      <div style="height:4px;background:linear-gradient(90deg,#1D4ED8 0%,#3B82F6 50%,#60A5FA 100%)"></div>
+      <div style="padding:36px 40px">
+        ${innerHtml}
+      </div>
     </div>
     <p style="font-size:11px;color:#9CA3AF;text-align:center;margin:20px 0 0;line-height:1.6">
       ${footerText}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { sendMonthlyChargebackDigest } from "@/lib/email/sendMonthlyChargebackDigest";
 import type { DigestPeriodMetrics } from "@/lib/email/sendMonthlyChargebackDigest";
+import { gatherDisputeActivity } from "@/lib/email/digestDisputeActivity";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -143,6 +144,14 @@ export async function GET(req: NextRequest) {
         1,
       ).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
+      // Real dispute activity for the section between "Where you
+      // stand" and "Month over month."
+      const disputeActivity = await gatherDisputeActivity(
+        sb,
+        shop.id,
+        anchor,
+      );
+
       const { delivered } = await sendMonthlyChargebackDigest({
         shopDomain: shop.shop_domain,
         merchantName: null,
@@ -152,6 +161,7 @@ export async function GET(req: NextRequest) {
         chargebackOrders90d: chargebacks90d ?? 0,
         current30d: cur,
         prior30d: prior,
+        disputeActivity,
       });
 
       if (!delivered) {

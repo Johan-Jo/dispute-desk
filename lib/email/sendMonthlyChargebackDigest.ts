@@ -20,6 +20,7 @@ import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
 import type { Checkpoint } from "@/lib/insights/checkpoints.types";
+import type { DisputeActivity } from "@/lib/email/digestDisputeActivity";
 import {
   brandHeader,
   checkpointRow,
@@ -29,10 +30,14 @@ import {
   heroNumber,
   hours,
   kpiRow,
+  money,
   pct,
   plateLayout,
+  relativeDueLabel,
   resolveCheckpointCopy,
   sectionLabel,
+  statusPill,
+  tintedCallout,
 } from "@/lib/email/digestShared";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -71,12 +76,153 @@ export interface DigestData {
   chargebackOrders90d: number;
   current30d: DigestPeriodMetrics;
   prior30d: DigestPeriodMetrics;
+  /** Real dispute activity for the period — opened, closed, open
+   *  queue, win-rate trend. Drives a dedicated section between the
+   *  checkpoints and the MoM table. When there's no activity, the
+   *  section collapses to a positive one-liner instead of showing
+   *  zero rows. */
+  disputeActivity: DisputeActivity;
 }
 
 interface RenderResult {
   subject: string;
   html: string;
   text: string;
+}
+
+// ─── Reason label normalizer ──────────────────────────────────────
+
+const REASON_LABELS: Record<string, string> = {
+  FRAUDULENT: "Fraudulent",
+  PRODUCT_NOT_RECEIVED: "Not received",
+  PRODUCT_UNACCEPTABLE: "Not as described",
+  SUBSCRIPTION_CANCELED: "Subscription",
+  DUPLICATE: "Duplicate",
+  CREDIT_NOT_PROCESSED: "Credit not processed",
+  GENERAL: "Other",
+};
+function reasonLabel(r: string): string {
+  return REASON_LABELS[r] ?? r.replace(/_/g, " ").toLowerCase();
+}
+
+// ─── Outcome summary string ───────────────────────────────────────
+
+function outcomeSummary(o: DisputeActivity["closedOutcomes"]): string {
+  const parts: string[] = [];
+  if (o.won > 0) parts.push(`${statusPill(`${o.won} won`, "win")}`);
+  if (o.partiallyWon > 0)
+    parts.push(`${statusPill(`${o.partiallyWon} partial`, "win")}`);
+  if (o.lost > 0) parts.push(`${statusPill(`${o.lost} lost`, "loss")}`);
+  if (o.accepted > 0)
+    parts.push(`${statusPill(`${o.accepted} accepted`, "neutral")}`);
+  if (o.refunded > 0)
+    parts.push(`${statusPill(`${o.refunded} refunded`, "neutral")}`);
+  if (o.other > 0)
+    parts.push(`${statusPill(`${o.other} other`, "neutral")}`);
+  return parts.join("");
+}
+
+// ─── Dispute activity section ─────────────────────────────────────
+
+function renderDisputeActivitySection(
+  da: DisputeActivity,
+  periodLabel: string,
+): string {
+  const heading = sectionLabel("Dispute activity this month", "#3B82F6");
+
+  // No-activity short-circuit. Positive one-liner, green tint —
+  // never a table of zeros.
+  if (
+    da.openedCount === 0 &&
+    da.closedCount === 0 &&
+    da.openNowCount === 0
+  ) {
+    return `${heading}${tintedCallout({
+      tone: "green",
+      title: `No new disputes in ${periodLabel}.`,
+      body:
+        "Your defense surface stayed clean. We'll keep monitoring, and the next digest will surface any change.",
+    })}`;
+  }
+
+  const sections: string[] = [];
+
+  // Opened — top line, blue tinted summary callout (most signal-rich
+  // single number per the user's mental model: "what landed on me").
+  if (da.openedCount > 0) {
+    const reasonsHtml = da.openedTopReasons
+      .slice(0, 3)
+      .map((r) => statusPill(`${reasonLabel(r.reason)} × ${r.count}`, "info"))
+      .join("");
+    sections.push(
+      tintedCallout({
+        tone: "blue",
+        title: `${da.openedCount} ${da.openedCount === 1 ? "dispute" : "disputes"} opened · ${money(da.openedAmountTotal, da.openedCurrency)} at stake`,
+        body: reasonsHtml,
+      }),
+    );
+  }
+
+  // Closed — outcome pills row.
+  if (da.closedCount > 0) {
+    sections.push(
+      `<div style="margin:0 0 16px">
+        <div style="font-size:13px;color:#374151;margin:0 0 8px">
+          <strong style="color:#111827">${da.closedCount} closed in ${periodLabel}</strong>
+          ${
+            da.closedAmountRecovered > 0
+              ? ` · <span style="color:#065F46">${money(da.closedAmountRecovered, da.closedCurrency)} recovered</span>`
+              : ""
+          }
+        </div>
+        <div>${outcomeSummary(da.closedOutcomes)}</div>
+      </div>`,
+    );
+  }
+
+  // Open right now — current liability.
+  if (da.openNowCount > 0) {
+    const dueLabel = relativeDueLabel(da.openNowNearestDueAt);
+    const dueIsOverdue = dueLabel?.includes("overdue") ?? false;
+    sections.push(
+      `<div style="margin:0 0 16px">
+        <div style="font-size:13px;color:#374151;margin:0 0 6px">
+          <strong style="color:#111827">${da.openNowCount} open right now</strong>
+          · ${money(da.openNowAmountAtStake, da.openNowCurrency)} at stake
+        </div>
+        ${
+          dueLabel
+            ? `<div style="font-size:12px;color:${dueIsOverdue ? "#991B1B" : "#6B7280"}">
+              Nearest deadline ${dueLabel}
+            </div>`
+            : ""
+        }
+      </div>`,
+    );
+  }
+
+  // Win rate trend — only when statistically meaningful (>=3 decided
+  // disputes in the current 90d). Below that, comparing rates is
+  // noise.
+  if (da.winRate90dPct != null) {
+    const trend = delta(da.winRate90dPct, da.winRatePrior90dPct, "pp", false);
+    sections.push(
+      `<table style="width:100%;border-collapse:collapse;margin-top:6px">
+        <tr>
+          <td style="padding:8px 0;font-size:13px;color:#6B7280">Win rate (last 90d)</td>
+          <td style="padding:8px 0;font-size:15px;color:#111827;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">${pct(da.winRate90dPct)}</td>
+          <td style="padding:8px 0;font-size:12px;color:${trend.color};text-align:right;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;width:80px">${trend.text}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="padding:0 0 4px;font-size:11px;color:#9CA3AF">
+            Across ${da.decidedCount90d} decided disputes
+          </td>
+        </tr>
+      </table>`,
+    );
+  }
+
+  return `${heading}${sections.join("")}`;
 }
 
 export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
@@ -178,12 +324,16 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
 
     ${hairline()}
 
-    ${sectionLabel("Where you stand")}
+    ${sectionLabel("Where you stand", "#1D4ED8")}
     ${checkpoints.map(checkpointRow).join("")}
 
     ${hairline()}
 
-    ${sectionLabel("Month over month")}
+    ${renderDisputeActivitySection(d.disputeActivity, d.periodLabel)}
+
+    ${hairline()}
+
+    ${sectionLabel("Month over month", "#6B7280")}
     ${trendsTable}
 
     ${hairline()}
@@ -199,6 +349,30 @@ export function renderMonthlyChargebackDigest(d: DigestData): RenderResult {
   });
 
   // ── Plain text fallback ───────────────────────────────────────
+  const da = d.disputeActivity;
+  const disputeText =
+    da.openedCount === 0 && da.closedCount === 0 && da.openNowCount === 0
+      ? `No new disputes in ${d.periodLabel}. Your defense surface stayed clean.`
+      : [
+          da.openedCount > 0
+            ? `Opened: ${da.openedCount} (${money(da.openedAmountTotal, da.openedCurrency)} at stake) — ${da.openedTopReasons
+                .slice(0, 3)
+                .map((r) => `${reasonLabel(r.reason)} ×${r.count}`)
+                .join(", ")}`
+            : null,
+          da.closedCount > 0
+            ? `Closed: ${da.closedCount}${da.closedAmountRecovered > 0 ? `, ${money(da.closedAmountRecovered, da.closedCurrency)} recovered` : ""} (${da.closedOutcomes.won}W / ${da.closedOutcomes.lost}L / ${da.closedOutcomes.partiallyWon}P / ${da.closedOutcomes.accepted}A)`
+            : null,
+          da.openNowCount > 0
+            ? `Open right now: ${da.openNowCount} · ${money(da.openNowAmountAtStake, da.openNowCurrency)} at stake${relativeDueLabel(da.openNowNearestDueAt) ? ` · nearest deadline ${relativeDueLabel(da.openNowNearestDueAt)}` : ""}`
+            : null,
+          da.winRate90dPct != null
+            ? `Win rate (90d): ${pct(da.winRate90dPct)} across ${da.decidedCount90d} decided`
+            : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
   const text = `${merchantDisplay} — Your ${d.periodLabel} chargeback exposure
 
 ${cur.ordersTotal.toLocaleString()} orders this month.
@@ -213,6 +387,9 @@ ${checkpoints
     return `${i + 1}. [${c.severity.toUpperCase()}] ${copy.title}\n   ${copy.body}${src}`;
   })
   .join("\n\n")}
+
+Dispute activity this month:
+${disputeText}
 
 Month over month (current · Δ vs prior 30d):
   HIGH-risk orders         ${pct(cur.highRiskPct)}   ${dHigh.text}
