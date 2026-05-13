@@ -132,7 +132,9 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
 
   useEffect(() => {
     onSaveRef.current = async () => {
-      const res = await fetch("/api/setup/step", {
+      // Persist the wizard payload first so re-entry into the step
+      // shows the merchant's last choice.
+      const stepRes = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +145,24 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
           },
         }),
       });
-      return res.ok;
+      if (!stepRes.ok) return false;
+
+      // Then translate the toggle + threshold into an actual tier-0
+      // amount safeguard rule. The same route also writes coverage
+      // family rules (from CoverageStep); we send only the safeguard
+      // field so we don't clobber family rules.
+      const thresholdNum = Number.parseFloat(reviewThreshold);
+      const safeguardRes = await fetch("/api/setup/coverage-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          highValueReview: {
+            enabled: highValueEnabled,
+            threshold: Number.isFinite(thresholdNum) ? thresholdNum : 0,
+          },
+        }),
+      });
+      return safeguardRes.ok;
     };
   }, [onSaveRef, highValueEnabled, reviewThreshold]);
 

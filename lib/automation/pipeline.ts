@@ -12,8 +12,12 @@ import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
 import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
+import { sendHighValueReviewAlert } from "@/lib/email/sendHighValueReviewAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
+import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
+
+const HIGH_VALUE_SAFEGUARD_NAME = `${SETUP_RULE_PREFIX}safeguard:high_value`;
 import {
   AUTO_BUILD_TRIGGERED,
   AUTO_SAVE_TRIGGERED,
@@ -231,6 +235,11 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // No rule match resolves to "review" inside evaluateRules — we never
   // silently drop a pack that reached the gate.
   let ruleMode: AutomationMode = "review";
+  let matchedRuleName: string | null = null;
+  let disputeForAlert: {
+    reason: string | null;
+    amount: number | null;
+  } | null = null;
   if (pack.dispute_id) {
     const { data: dispute } = await sb
       .from("disputes")
@@ -252,6 +261,11 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         phase: phaseForRules,
       });
       ruleMode = normalizeMode(evalResult.action.mode);
+      matchedRuleName = evalResult.matchedRule?.name ?? null;
+      disputeForAlert = {
+        reason: dispute.reason,
+        amount: dispute.amount,
+      };
     }
   }
 
@@ -458,6 +472,25 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       );
     }
 
+    // High-value review alert: when the matched rule is the wizard's
+    // amount-safeguard, send a dedicated "high-value dispute parked"
+    // email so the merchant knows this one needs their eyes.
+    if (
+      pack.dispute_id &&
+      !alreadySaved &&
+      matchedRuleName === HIGH_VALUE_SAFEGUARD_NAME &&
+      disputeForAlert
+    ) {
+      void sendHighValueReviewAlertForPack(
+        pack.shop_id,
+        pack.dispute_id,
+        packId,
+        disputeForAlert,
+      ).catch((err) => {
+        console.error("[pipeline] High-value review alert failed:", err);
+      });
+    }
+
     return { action: "park_for_review", details: reason };
   }
 
@@ -571,4 +604,79 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     action: "block",
     details: (gate.reasons as string[]).join("; "),
   };
+}
+
+/**
+ * Compose context and send the high-value review email alert. Idempotent
+ * per dispute via `disputes.high_value_alert_sent_at`, so pack rebuilds on
+ * the same dispute don't re-notify the merchant. Fire-and-forget.
+ */
+async function sendHighValueReviewAlertForPack(
+  shopId: string,
+  disputeId: string,
+  packId: string,
+  dispute: { reason: string | null; amount: number | null },
+): Promise<void> {
+  const sb = getServiceClient();
+
+  // Idempotency: skip if we already alerted on this dispute.
+  const { data: disputeRow } = await sb
+    .from("disputes")
+    .select("high_value_alert_sent_at")
+    .eq("id", disputeId)
+    .single();
+  if (disputeRow?.high_value_alert_sent_at) return;
+
+  // Look up the threshold from the wizard payload + the merchant team email.
+  const { data: setup } = await sb
+    .from("shop_setup")
+    .select("steps")
+    .eq("shop_id", shopId)
+    .single();
+  const steps = (setup?.steps ?? {}) as Record<string, { payload?: Record<string, unknown> }>;
+  const automationPayload = steps.automation?.payload as
+    | { reviewThreshold?: string | number; highValueReviewEnabled?: boolean }
+    | undefined;
+  const teamPayload = steps.team?.payload as
+    | { teamEmail?: string; notifications?: { evidenceReady?: boolean } }
+    | undefined;
+
+  // Respect the team's notification opt-out if it's been set.
+  if (teamPayload?.notifications?.evidenceReady === false) return;
+
+  const to = teamPayload?.teamEmail;
+  if (!to) return;
+
+  const thresholdRaw = automationPayload?.reviewThreshold;
+  const threshold =
+    typeof thresholdRaw === "number"
+      ? thresholdRaw
+      : Number.parseFloat(String(thresholdRaw ?? "0"));
+  if (!Number.isFinite(threshold) || threshold <= 0) return;
+
+  if (dispute.amount == null) return;
+
+  const { data: shop } = await sb
+    .from("shops")
+    .select("shop_domain")
+    .eq("id", shopId)
+    .single();
+
+  const result = await sendHighValueReviewAlert({
+    to,
+    shopName: shop?.shop_domain ?? undefined,
+    shopDomain: shop?.shop_domain ?? null,
+    disputeId,
+    disputeReason: dispute.reason,
+    disputeAmount: String(dispute.amount),
+    threshold,
+    packId,
+  });
+
+  if (result.ok) {
+    await sb
+      .from("disputes")
+      .update({ high_value_alert_sent_at: new Date().toISOString() })
+      .eq("id", disputeId);
+  }
 }

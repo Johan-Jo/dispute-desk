@@ -7,6 +7,7 @@ import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 export const runtime = "nodejs";
 
 const COVERAGE_RULE_PREFIX = `${SETUP_RULE_PREFIX}coverage:`;
+const HIGH_VALUE_SAFEGUARD_NAME = `${SETUP_RULE_PREFIX}safeguard:high_value`;
 
 /**
  * Accept both the new canonical wizard vocabulary (auto/review) and the
@@ -18,14 +19,29 @@ function mapWizardMode(mode: string): AutomationMode {
   return normalizeMode(mode);
 }
 
+interface HighValueReviewPayload {
+  enabled: boolean;
+  threshold: number;
+}
+
+interface RequestBody {
+  coverageSettings?: Record<string, string>;
+  highValueReview?: HighValueReviewPayload;
+}
+
 /**
  * POST /api/setup/coverage-rules
  *
- * Creates family-level automation rules from the wizard's coverage settings.
- * These run at priority 10 (below pack-specific rules at 20+) so they serve
- * as defaults that the automation step can override per-pack.
+ * Two independent writes — caller can supply either or both:
+ *   - `coverageSettings` → family-level rules at priority 10
+ *   - `highValueReview`  → tier-0 amount safeguard at priority 5
  *
- * Body: { coverageSettings: { fraud: "automated", pnr: "review", ... } }
+ * Each key replaces only the rules it owns (delete-then-insert keyed by
+ * the rule `name`), so the Coverage and Automation wizard steps can hit
+ * this route independently without clobbering each other's rules.
+ *
+ * Body: { coverageSettings?: { fraud: "automated", pnr: "review", ... },
+ *         highValueReview?: { enabled: boolean, threshold: number } }
  */
 export async function POST(req: NextRequest) {
   const shopId =
@@ -37,64 +53,107 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
-  let body: { coverageSettings?: Record<string, string> };
+  let body: RequestBody;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const settings = body.coverageSettings;
-  if (!settings || typeof settings !== "object") {
-    return NextResponse.json({ error: "coverageSettings required" }, { status: 400 });
+  if (!body.coverageSettings && !body.highValueReview) {
+    return NextResponse.json(
+      { error: "coverageSettings or highValueReview required" },
+      { status: 400 }
+    );
   }
 
   const sb = getServiceClient();
+  let coverageRulesCreated = 0;
+  let safeguardWritten = false;
 
-  // Delete existing coverage-level rules (idempotent)
-  await sb
-    .from("rules")
-    .delete()
-    .eq("shop_id", shopId)
-    .like("name", `${COVERAGE_RULE_PREFIX}%`);
+  // 1) Coverage settings (family-level rules)
+  if (body.coverageSettings && typeof body.coverageSettings === "object") {
+    const settings = body.coverageSettings;
 
-  // Build family-level rules
-  const familyMap = new Map(DISPUTE_FAMILIES.map((f) => [f.id, f]));
-  // Also map "digital" to general family
-  const digitalFamily = familyMap.get("general");
+    await sb
+      .from("rules")
+      .delete()
+      .eq("shop_id", shopId)
+      .like("name", `${COVERAGE_RULE_PREFIX}%`);
 
-  const rows: Array<{
-    shop_id: string;
-    enabled: boolean;
-    name: string;
-    match: Record<string, unknown>;
-    action: Record<string, unknown>;
-    priority: number;
-  }> = [];
+    const familyMap = new Map(DISPUTE_FAMILIES.map((f) => [f.id, f]));
+    const digitalFamily = familyMap.get("general");
 
-  for (const [familyId, mode] of Object.entries(settings)) {
-    const family = familyId === "digital" ? digitalFamily : familyMap.get(familyId);
-    if (!family) continue;
+    const rows: Array<{
+      shop_id: string;
+      enabled: boolean;
+      name: string;
+      match: Record<string, unknown>;
+      action: Record<string, unknown>;
+      priority: number;
+    }> = [];
 
-    // Skip if we'd be creating a duplicate for "general" when "digital" and "general" both exist
-    if (familyId === "digital" && settings.general) continue;
+    for (const [familyId, mode] of Object.entries(settings)) {
+      const family = familyId === "digital" ? digitalFamily : familyMap.get(familyId);
+      if (!family) continue;
+      if (familyId === "digital" && settings.general) continue;
 
-    rows.push({
-      shop_id: shopId,
-      enabled: true,
-      name: `${COVERAGE_RULE_PREFIX}${familyId}`,
-      match: { reason: family.reasons },
-      action: { mode: mapWizardMode(mode) },
-      priority: 10,
-    });
-  }
+      rows.push({
+        shop_id: shopId,
+        enabled: true,
+        name: `${COVERAGE_RULE_PREFIX}${familyId}`,
+        match: { reason: family.reasons },
+        action: { mode: mapWizardMode(mode) },
+        priority: 10,
+      });
+    }
 
-  if (rows.length > 0) {
-    const { error } = await sb.from("rules").insert(rows);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (rows.length > 0) {
+      const { error } = await sb.from("rules").insert(rows);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      coverageRulesCreated = rows.length;
     }
   }
 
-  return NextResponse.json({ ok: true, rulesCreated: rows.length });
+  // 2) High-value review safeguard (tier-0 amount rule)
+  if (body.highValueReview) {
+    const { enabled, threshold } = body.highValueReview;
+
+    // Always delete the existing safeguard row first so the route is
+    // idempotent and toggling off cleanly removes the rule.
+    await sb
+      .from("rules")
+      .delete()
+      .eq("shop_id", shopId)
+      .eq("name", HIGH_VALUE_SAFEGUARD_NAME);
+
+    if (enabled && typeof threshold === "number" && threshold > 0) {
+      const { error } = await sb.from("rules").insert([
+        {
+          shop_id: shopId,
+          enabled: true,
+          name: HIGH_VALUE_SAFEGUARD_NAME,
+          match: { amount_range: { min: threshold } },
+          // pack_template_id is intentionally omitted — tier-0 amount
+          // safeguards only force review mode; the actual pack template
+          // is resolved by the lower-priority per-reason rule's template,
+          // or by reason_template_mappings as fallback.
+          action: { mode: "review" },
+          priority: 5,
+        },
+      ]);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      safeguardWritten = true;
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    coverageRulesCreated,
+    safeguardWritten,
+  });
 }
