@@ -18,22 +18,6 @@ interface AutomationStepProps {
   onSaveRef: { current: (() => Promise<boolean>) | null };
 }
 
-interface SafeguardRule {
-  id: string;
-  titleKey: string;
-  descKey: string;
-  enabled: boolean;
-}
-
-const DEFAULT_SAFEGUARDS: SafeguardRule[] = [
-  { id: "review_high_value", titleKey: "ruleHighValue", descKey: "ruleHighValueDesc", enabled: true },
-  { id: "review_missing_proof", titleKey: "ruleMissingProof", descKey: "ruleMissingProofDesc", enabled: true },
-  { id: "review_incomplete", titleKey: "ruleIncomplete", descKey: "ruleIncompleteDesc", enabled: true },
-  { id: "review_no_order", titleKey: "ruleNoOrder", descKey: "ruleNoOrderDesc", enabled: true },
-  { id: "review_edge_cases", titleKey: "ruleEdgeCases", descKey: "ruleEdgeCasesDesc", enabled: true },
-  { id: "notify_ambiguous", titleKey: "ruleAmbiguous", descKey: "ruleAmbiguousDesc", enabled: true },
-];
-
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
@@ -75,7 +59,7 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
   const t = useTranslations("setup.automation");
 
   const [loading, setLoading] = useState(true);
-  const [safeguards, setSafeguards] = useState<SafeguardRule[]>(DEFAULT_SAFEGUARDS);
+  const [highValueEnabled, setHighValueEnabled] = useState(true);
   const [reviewThreshold, setReviewThreshold] = useState("500");
   const [automatedCount, setAutomatedCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
@@ -95,14 +79,16 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         const threshold = automationThreshold ?? legacyThreshold;
         if (threshold) setReviewThreshold(String(threshold));
 
-        // Read coverage settings for sidebar counts
+        // Re-entry: respect the merchant's previous toggle choice if set.
+        const savedEnabled = state?.steps?.automation?.payload?.highValueReviewEnabled;
+        if (typeof savedEnabled === "boolean") setHighValueEnabled(savedEnabled);
+
+        // Sidebar counts are derived from Coverage step decisions — what
+        // dispute families they routed to auto vs review.
         const coverageSettings = state?.steps?.coverage?.payload?.coverageSettings as
           | Record<string, string>
           | undefined;
 
-        // Normalize any stored value (legacy "automated"/"notify" included) to
-        // the canonical two-mode set so the sidebar counts match what the
-        // Coverage step actually wrote.
         const toCanonical = (v: string): "auto" | "review" =>
           v === "auto" || v === "automated" || v === "auto_pack" ? "auto" : "review";
 
@@ -110,7 +96,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         if (coverageSettings && Object.keys(coverageSettings).length > 0) {
           automationValues = Object.values(coverageSettings).map(toCanonical);
         } else {
-          // Derive from store profile if coverage step not yet completed
           const profilePayload = state?.steps?.store_profile?.payload;
           const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
           const deliveryProof = (profilePayload?.deliveryProof ?? "always") as ProofLevel;
@@ -124,7 +109,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
           };
           const confidence = deriveEvidenceConfidence(ec);
           const recs = recommendTemplates(profile).filter((r) => r.isDefault);
-          // Derive automation mode per family using same logic as CoverageStep
           const familySet = new Set(recs.map((r) => r.disputeFamily));
           automationValues = [...familySet].map((family): "auto" | "review" => {
             if (family === "general") return "review";
@@ -138,18 +122,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         }
         setAutomatedCount(automationValues.filter((v) => v === "auto").length);
         setReviewCount(automationValues.filter((v) => v === "review").length);
-
-        // Load previously saved safeguards if re-entering
-        const automationPayload = state?.steps?.automation?.payload;
-        if (automationPayload?.safeguards) {
-          const saved = automationPayload.safeguards as Record<string, boolean>;
-          setSafeguards((prev) =>
-            prev.map((s) => ({
-              ...s,
-              enabled: saved[s.id] !== undefined ? saved[s.id] : s.enabled,
-            }))
-          );
-        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -158,30 +130,22 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
     return () => { cancelled = true; };
   }, []);
 
-  const toggleSafeguard = (id: string) => {
-    setSafeguards((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))
-    );
-  };
-
-  // Wire save
   useEffect(() => {
     onSaveRef.current = async () => {
-      const safeguardMap = Object.fromEntries(
-        safeguards.map((s) => [s.id, s.enabled])
-      );
-
       const res = await fetch("/api/setup/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId: "automation",
-          payload: { safeguards: safeguardMap, reviewThreshold },
+          payload: {
+            highValueReviewEnabled: highValueEnabled,
+            reviewThreshold,
+          },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, safeguards, reviewThreshold]);
+  }, [onSaveRef, highValueEnabled, reviewThreshold]);
 
   if (loading) {
     return (
@@ -193,7 +157,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 24, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
           {t("title")}
@@ -203,66 +166,62 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         </p>
       </div>
 
-      {/* 2-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-        {/* Left: safeguard cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {safeguards.map((rule) => (
-            <div
-              key={rule.id}
-              style={{
-                background: "#fff",
-                border: "1px solid #E1E3E5",
-                borderRadius: 10,
-                padding: "20px 24px",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#202223", marginBottom: 4 }}>
-                    {rule.id === "review_high_value"
-                      ? t("ruleHighValue", { threshold: reviewThreshold })
-                      : t(rule.titleKey as Parameters<typeof t>[0])}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.5 }}>
-                    {t(rule.descKey as Parameters<typeof t>[0])}
-                  </div>
-                  {rule.id === "review_high_value" && rule.enabled && (
-                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                      <label style={{ fontSize: 12, color: "#6D7175" }}>
-                        {t("thresholdLabel")}
-                      </label>
-                      <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#6D7175" }}>$</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={reviewThreshold}
-                          onChange={(e) => setReviewThreshold(e.target.value)}
-                          style={{
-                            width: 120,
-                            padding: "6px 10px 6px 22px",
-                            border: "1px solid #C9CCCF",
-                            borderRadius: 6,
-                            fontSize: 13,
-                            outline: "none",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #E1E3E5",
+              borderRadius: 10,
+              padding: "20px 24px",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#202223", marginBottom: 4 }}>
+                  {t("ruleHighValue", { threshold: reviewThreshold })}
                 </div>
-                <ToggleSwitch
-                  checked={rule.enabled}
-                  onChange={() => toggleSafeguard(rule.id)}
-                />
+                <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.5 }}>
+                  {t("ruleHighValueDesc")}
+                </div>
+                {highValueEnabled && (
+                  <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                    <label style={{ fontSize: 12, color: "#6D7175" }}>
+                      {t("thresholdLabel")}
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#6D7175" }}>$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={reviewThreshold}
+                        onChange={(e) => setReviewThreshold(e.target.value)}
+                        style={{
+                          width: 120,
+                          padding: "6px 10px 6px 22px",
+                          border: "1px solid #C9CCCF",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+              <ToggleSwitch
+                checked={highValueEnabled}
+                onChange={setHighValueEnabled}
+              />
             </div>
-          ))}
+          </div>
+
+          <p style={{ fontSize: 12, color: "#8C9196", margin: "4px 4px 0", lineHeight: 1.5 }}>
+            {t("familyRoutingHint")}
+          </p>
         </div>
 
-        {/* Right: workflow summary sidebar */}
         <div>
           <div style={{
             background: "#fff",
@@ -278,7 +237,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
             </h3>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {/* Automated */}
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -295,7 +253,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
                 <span style={{ fontSize: 18, fontWeight: 700, color: "#1D4ED8" }}>{automatedCount}</span>
               </div>
 
-              {/* Review First */}
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -313,7 +270,6 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
               </div>
             </div>
 
-            {/* Footer note */}
             <div style={{
               marginTop: 20,
               paddingTop: 16,

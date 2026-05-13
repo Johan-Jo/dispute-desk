@@ -2643,28 +2643,24 @@ On Continue the step also derives a default `shopifyEvidenceConfig` via `getDefa
 
 On save: installs the recommended chargeback templates plus any extras the merchant ticked, plus their inquiry pairs, all via `POST /api/templates/:id/install`. Saves step payload with `installedTemplateIds` (chargeback ids only), `selectedFamilies`, `evidenceConfidence`.
 
-### Step 4: Automation (`AutomationRulesStep`)
+### Step 4: Automation (`AutomationStep`)
 
-**Purpose:** Onboarding-first screen for **what happens when a new dispute syncs** — not a dense admin table. Implemented in `components/setup/steps/AutomationRulesStep.tsx`. Copy lives under `setup.rules` in locale files.
+**Purpose:** Confirm the one amount-based safety net (review high-value disputes) and show the workflow recap derived from the Coverage step. Implemented in `components/setup/steps/AutomationStep.tsx`. Copy lives under `setup.automation` in locale files.
 
-**UX structure (merchant mental model):**
+**UX structure (post-2026-05 honesty pass):**
 
-1. **Header** — Title + short subtitle: default first, then optional exceptions; safeguards apply on top.
-2. **Recommended starting point** — Three selectable preset cards: **Manual**, **Review first**, **Automatic**. Manual is visually marked as suggested for first-time users. **Automatic** is disabled until at least one pack template is installed (same prerequisite as template pickers).
-2b. **Installed library packs** — One row per template-backed pack (DRAFT or ACTIVE, not archived) with **Manual review** / **Automatic** segments and a status badge; mirrors installs from the Packs step so draft packs are configurable before activation.
-3. **Default rule (General)** — Presented as the **fallback** when no per-reason override applies: pack template (when mode is review/auto-build) + handling mode (Manual / Review first / Auto-build). Not a row inside a large table.
-4. **Exceptions by dispute reason** — One card per Shopify reason (fraud, product not received, etc.): title, one-line helper, template `Select`, handling `Select`. Optional to customize; easy to scan.
-5. **Safeguards** — Visually separated “safety” block: **switch-style** controls (not plain checkboxes) for high-value review threshold and catch-all review. Helper copy states these **override** the default and per-reason rules when conditions match.
-6. **Live summary** — Read-only recap of effective configuration (default line, per-reason lines, safeguard lines).
+1. **Header** — title + subtitle.
+2. **High-value review card** — one toggle + threshold input (`$` numeric). When enabled, disputes whose amount exceeds the threshold are routed to review before submission. This is the only merchant-tunable safeguard on this step.
+3. **Family-routing hint** — a small reminder line below the card that per-dispute-type handling (auto vs. review) was already decided on the previous Coverage step. No duplicated controls.
+4. **Workflow recap sidebar** — read-only counts of automated vs. review families, derived from `steps.coverage.payload.coverageSettings` (with a derive-from-store-profile fallback if coverage hasn't been completed yet).
 
-**Data & API:** Loads via `GET /api/setup/automation` (`activePacks`, `pack_modes`, `installedTemplateIds`). The step shows one row per template-backed library pack with a segmented control (**Review before submit** / **Automatic**) — the only two merchant-facing options since the 2026-04 mode simplification. Saves with `POST` `{ shop_id, pack_modes }` (keys = `packs.id`, values = `"auto" | "review"`). The embedded `/app/rules` page uses the same API, presenting a per-family view of the same data.
+**Removed in 2026-05:** Five additional safeguard toggles (`review_missing_proof`, `review_incomplete`, `review_no_order`, `review_edge_cases`, `notify_ambiguous`) were removed because their toggle state was stored in `automation.payload.safeguards` but **never read by `pickAutomationAction`, `replacePackBasedAutomationRules`, the auto-save gate, or the completeness engine**. The behaviors they claimed to gate either don't exist (`notify_ambiguous`, `review_edge_cases`) or run unconditionally (`review_incomplete`, `review_missing_proof` are always-on via `lib/automation/completeness.ts`; `review_no_order` is structurally enforced because a missing order can't auto-save anyway). Surfacing them as user-controllable toggles was UI theater.
 
-**Evaluation order** (unchanged; see `lib/rules/pickAutomationAction.ts`): amount safeguards → per-reason rule → default (General) → catch-all. Merchant-facing help article: `help.articles.configuringAutomation`.
+**Data & API:** Loads via `GET /api/setup/state`. Saves with `POST /api/setup/step` writing `{ stepId: "automation", payload: { highValueReviewEnabled, reviewThreshold } }`.
 
-**Evidence-aware defaults:** On first load (no existing pack_modes), defaults are set based on `steps.coverage.payload.evidenceConfidence`:
-- `high` → all packs default to `auto`
-- `medium` → fraud/PNR packs to `auto`, others to `review`
-- `low` → all packs default to `review`
+**Known gap (separate from the slim-down):** The threshold value persists on the wizard payload but is **not yet** translated into an actual tier-0 amount rule by `replacePackBasedAutomationRules`. `lib/rules/setupAutomation.ts:SafeguardsState` defines `high_value_review_enabled` + `high_value_min` and `pickAutomationAction` honors tier-0 amount rules first, but no API path currently writes one from the wizard payload. Wiring this is a tracked follow-up — until then, only the per-family rules written by `POST /api/setup/coverage-rules` are honored at runtime.
+
+**Evaluation order** (unchanged; see `lib/rules/pickAutomationAction.ts`): amount safeguards → per-reason rule → catch-all → default (`review`). Merchant-facing help article: `help.articles.configuringAutomation`.
 
 ### Step 5: Policies (`BusinessPoliciesStep`)
 
