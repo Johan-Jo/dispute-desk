@@ -568,18 +568,6 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
         );
       })()}
 
-      {/* Info note */}
-      <div style={{
-        background: "#EFF6FF",
-        border: "1px solid #BFDBFE",
-        borderRadius: 10,
-        padding: 16,
-      }}>
-        <p style={{ fontSize: 13, color: "#1E40AF", margin: 0, lineHeight: 1.6 }}>
-          <strong>{tCoverage("noteLabel")}</strong> {tCoverage("noteText")}
-        </p>
-      </div>
-
       {saving && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
           <Spinner size="small" />
