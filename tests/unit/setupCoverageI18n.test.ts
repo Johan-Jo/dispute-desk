@@ -85,40 +85,80 @@ describe("Setup coverage and activate i18n keys", () => {
     });
   });
 
-  describe("setup.storeProfile evidence keys", () => {
+  describe("setup.storeProfile namespace (slimmed)", () => {
+    // Onboarding-step keys after the slim-down: store type + proof levels +
+    // summary card. Per-source evidence dropdowns and the "Other evidence"
+    // section were removed — defaults are derived silently via
+    // `getDefaultEvidenceConfig()` on save.
     const profile = setup?.storeProfile as Record<string, string> | undefined;
 
-    it("has evidence config keys", () => {
-      expect(profile?.evidenceTitle).toBeDefined();
-      expect(profile?.evidenceSubtitle).toBeDefined();
-      expect(profile?.evidenceAlways).toBeDefined();
-      expect(profile?.evidenceWhenPresent).toBeDefined();
-      expect(profile?.evidenceReview).toBeDefined();
-      expect(profile?.evidenceOff).toBeDefined();
-    });
-
-    const evidenceGroups = [
-      "orderDetails",
-      "customerAddress",
-      "fulfillmentRecords",
-      "trackingDetails",
-      "orderTimeline",
-      "refundHistory",
-      "notesMetadata",
+    const requiredKeys = [
+      "title",
+      "subtitle",
+      "whatDoYouSell",
+      "sellHint",
+      "physical",
+      "digital",
+      "services",
+      "subscriptions",
+      "deliveryProof",
+      "deliveryAlways",
+      "deliveryAlwaysDesc",
+      "deliverySometimes",
+      "deliverySometimesDesc",
+      "deliveryRarely",
+      "deliveryRarelyDesc",
+      "deliveryHint",
+      "digitalProof",
+      "digitalYes",
+      "digitalSometimes",
+      "digitalNo",
+      "digitalHint",
+      "summaryTitle",
+      "summaryStoreType",
+      "summaryShipping",
+      "summaryDigital",
+      "summaryFooter",
+      "coverageStrong",
+      "coverageGood",
+      "coverageBasic",
+      "coverageEnhanced",
+      "coverageStandard",
     ];
 
-    it.each(evidenceGroups)("has label and description for %s", (group) => {
-      expect(profile?.[`evidence_${group}`]).toBeDefined();
-      expect(profile?.[`evidence_${group}Desc`]).toBeDefined();
+    it.each(requiredKeys)("has key: %s", (key) => {
+      expect(profile?.[key]).toBeDefined();
+      expect(typeof profile?.[key]).toBe("string");
     });
 
-    it("has other evidence keys", () => {
-      expect(profile?.otherEvidenceTitle).toBeDefined();
-      expect(profile?.manualUploadOnly).toBeDefined();
-      expect(profile?.otherEvidence_carrierProof).toBeDefined();
-      expect(profile?.otherEvidence_supportConversations).toBeDefined();
-      expect(profile?.otherEvidence_digitalAccessLogs).toBeDefined();
-      expect(profile?.otherEvidence_customDocuments).toBeDefined();
+    it("no longer exposes the removed evidence-config or handling-style keys", () => {
+      // These keys were intentionally removed when the onboarding step was
+      // trimmed — guard against accidental reintroduction.
+      const removed = [
+        "evidenceTitle",
+        "evidenceSubtitle",
+        "evidence_orderDetails",
+        "otherEvidenceTitle",
+        "manualUploadOnly",
+        "handlingStyle",
+        "handlingAutomated",
+        "handlingConservative",
+        "reviewThreshold",
+        "summaryAutomation",
+        "summaryThreshold",
+      ];
+      for (const key of removed) {
+        expect(profile?.[key]).toBeUndefined();
+      }
+    });
+  });
+
+  describe("setup.automation owns the threshold input", () => {
+    const automation = setup?.automation as Record<string, string> | undefined;
+
+    it("has thresholdLabel (moved from storeProfile)", () => {
+      expect(automation?.thresholdLabel).toBeDefined();
+      expect(typeof automation?.thresholdLabel).toBe("string");
     });
   });
 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
@@ -15,6 +16,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: disputeId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const parsed = await parseJsonBody<{ template_id?: string }>(req);
   if (parsed instanceof NextResponse) return parsed;
   const body = parsed;
@@ -24,6 +32,7 @@ export async function POST(
     .from("disputes")
     .select("id, shop_id, reason")
     .eq("id", disputeId)
+    .eq("shop_id", shopId)
     .single();
 
   if (!dispute) {
@@ -118,16 +127,34 @@ export async function POST(
  * List all evidence packs for a dispute.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: disputeId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const db = getServiceClient();
+
+  const { data: dispute } = await db
+    .from("disputes")
+    .select("id")
+    .eq("id", disputeId)
+    .eq("shop_id", shopId)
+    .single();
+  if (!dispute) {
+    return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
+  }
 
   const { data: packs } = await db
     .from("evidence_packs")
     .select("id, status, completeness_score, created_by, created_at, updated_at")
     .eq("dispute_id", disputeId)
+    .eq("shop_id", shopId)
     .order("created_at", { ascending: false });
 
   return NextResponse.json({ packs: packs ?? [] });

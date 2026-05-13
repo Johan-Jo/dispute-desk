@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
 import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
@@ -19,6 +20,13 @@ interface RouteParams {
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const locale = req.nextUrl.searchParams.get("locale") ?? undefined;
   const sb = getServiceClient();
 
@@ -26,6 +34,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     .from("disputes")
     .select("id, shop_id, dispute_gid")
     .eq("id", id)
+    .eq("shop_id", shopId)
     .single();
 
   if (dErr || !dispute) {

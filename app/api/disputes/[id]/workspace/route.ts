@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
 import { normalizeMode } from "@/lib/rules/normalizeMode";
 import {
@@ -42,8 +43,13 @@ interface RouteParams {
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id: disputeId } = await params;
-  // Locale is read by callers via Accept-Language; not used in this route.
-  void req;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const sb = getServiceClient();
 
   // ── 1. Load dispute with shop_domain ──────────────────────────────
@@ -51,6 +57,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     .from("disputes")
     .select("*, shops(shop_domain)")
     .eq("id", disputeId)
+    .eq("shop_id", shopId)
     .single();
 
   if (disputeErr || !row) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 
 export const runtime = "nodejs";
 
@@ -22,21 +23,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id: disputeId } = await params;
   const sb = getServiceClient();
 
-  // Load dispute + verify it exists
-  const { data: row, error: dErr } = await sb
-    .from("disputes")
-    .select("*")
-    .eq("id", disputeId)
-    .single();
-  // Cast to untyped record — new columns aren't in generated Supabase types yet
-  const dispute = row as Record<string, unknown> | null;
-
-  if (dErr || !dispute) {
-    return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
-  }
-
-  const _shopId = dispute.shop_id as string;
-
   // Determine visibility filter — internal events require verified admin/support role
   let includeInternal = false;
   const authHeader = req.headers.get("authorization");
@@ -48,6 +34,32 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       includeInternal = true;
     }
   }
+
+  // Load dispute + verify it exists. Merchant calls must be scoped to the
+  // requesting shop; internal admin/support calls are cross-shop by design.
+  let disputeQuery = sb
+    .from("disputes")
+    .select("*")
+    .eq("id", disputeId);
+  if (!includeInternal) {
+    const shopId = extractShopId(req);
+    if (!shopId || shopId === "demo") {
+      return NextResponse.json(
+        { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+        { status: 401 },
+      );
+    }
+    disputeQuery = disputeQuery.eq("shop_id", shopId);
+  }
+  const { data: row, error: dErr } = await disputeQuery.single();
+  // Cast to untyped record — new columns aren't in generated Supabase types yet
+  const dispute = row as Record<string, unknown> | null;
+
+  if (dErr || !dispute) {
+    return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
+  }
+
+  const _shopId = dispute.shop_id as string;
 
   // Fetch events
   let query = sb

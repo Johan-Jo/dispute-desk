@@ -88,8 +88,11 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         if (cancelled) return;
         const state = res.ok ? await res.json() : null;
 
-        // Read review threshold from store profile
-        const threshold = state?.steps?.store_profile?.payload?.reviewThreshold;
+        // Threshold lives on the automation step. Fall back to a legacy
+        // store_profile value for stores onboarded before the wizard split.
+        const automationThreshold = state?.steps?.automation?.payload?.reviewThreshold;
+        const legacyThreshold = state?.steps?.store_profile?.payload?.reviewThreshold;
+        const threshold = automationThreshold ?? legacyThreshold;
         if (threshold) setReviewThreshold(String(threshold));
 
         // Read coverage settings for sidebar counts
@@ -173,12 +176,12 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stepId: "automation",
-          payload: { safeguards: safeguardMap },
+          payload: { safeguards: safeguardMap, reviewThreshold },
         }),
       });
       return res.ok;
     };
-  }, [onSaveRef, safeguards]);
+  }, [onSaveRef, safeguards, reviewThreshold]);
 
   if (loading) {
     return (
@@ -225,6 +228,30 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
                   <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.5 }}>
                     {t(rule.descKey as Parameters<typeof t>[0])}
                   </div>
+                  {rule.id === "review_high_value" && rule.enabled && (
+                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                      <label style={{ fontSize: 12, color: "#6D7175" }}>
+                        {t("thresholdLabel")}
+                      </label>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#6D7175" }}>$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={reviewThreshold}
+                          onChange={(e) => setReviewThreshold(e.target.value)}
+                          style={{
+                            width: 120,
+                            padding: "6px 10px 6px 22px",
+                            border: "1px solid #C9CCCF",
+                            borderRadius: 6,
+                            fontSize: 13,
+                            outline: "none",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <ToggleSwitch
                   checked={rule.enabled}

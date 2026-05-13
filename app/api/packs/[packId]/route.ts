@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPackById, deletePack, updatePackStatus } from "@/lib/db/packs";
+import { extractShopId } from "@/lib/middleware/extractShopId";
+
+function shopContextOrUnauthorized(
+  shopId: string | null,
+): { shopId: string } | NextResponse {
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
+  return { shopId };
+}
 
 interface TemplateItemRow {
   section_title: string;
@@ -262,6 +275,9 @@ export async function GET(
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+  const shopCtx = shopContextOrUnauthorized(extractShopId(req));
+  if (shopCtx instanceof NextResponse) return shopCtx;
+  const { shopId } = shopCtx;
   const db = getServiceClient();
   const locale = req?.nextUrl?.searchParams?.get("locale") ?? "en-US";
 
@@ -269,6 +285,7 @@ export async function GET(
     .from("evidence_packs")
     .select("*, shop:shops(shop_domain), dispute:disputes(dispute_gid, dispute_evidence_gid, phase, reason)")
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (!error && row) {
@@ -294,6 +311,7 @@ export async function GET(
         .from("packs")
         .select("name, dispute_type, source, template_id")
         .eq("id", packId)
+        .eq("shop_id", shopId)
         .single();
       if (libraryRow) {
         (pack as Record<string, unknown>).dispute_type = libraryRow.dispute_type;
@@ -385,7 +403,7 @@ export async function GET(
   }
 
   // Fallback: library pack (packs table) e.g. from template install
-  const libraryPack = await getPackById(packId);
+  const libraryPack = await getPackById(packId, shopId);
   if (!libraryPack) {
     // Pack is in neither evidence_packs nor packs (e.g. wrong ID or different environment DB)
     return NextResponse.json(
@@ -447,6 +465,9 @@ export async function PATCH(
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+  const shopCtx = shopContextOrUnauthorized(extractShopId(req));
+  if (shopCtx instanceof NextResponse) return shopCtx;
+  const { shopId } = shopCtx;
   let body: { status?: string };
   try {
     body = await req.json();
@@ -460,7 +481,7 @@ export async function PATCH(
       { status: 400 }
     );
   }
-  const pack = await updatePackStatus(packId, status as "DRAFT" | "ACTIVE" | "ARCHIVED");
+  const pack = await updatePackStatus(packId, shopId, status as "DRAFT" | "ACTIVE" | "ARCHIVED");
   if (!pack) {
     return NextResponse.json({ error: "Pack not found or could not be updated" }, { status: 404 });
   }
@@ -474,11 +495,14 @@ export async function PATCH(
  * removes evidence_packs row, then deletes pack (cascade removes sections, narratives).
  */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
-  const deleted = await deletePack(packId);
+  const shopCtx = shopContextOrUnauthorized(extractShopId(req));
+  if (shopCtx instanceof NextResponse) return shopCtx;
+  const { shopId } = shopCtx;
+  const deleted = await deletePack(packId, shopId);
   if (!deleted) {
     return NextResponse.json({ error: "Pack not found or could not be deleted" }, { status: 404 });
   }

@@ -629,6 +629,37 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 - **Existing DB:** If the database was created outside the CLI (e.g. Dashboard SQL or an old script), the CLI may have no migration history. Run `npx supabase migration repair <001> <002> … --status applied` once to mark already-applied files without re-running SQL; then `db push` applies only new migrations.
 - **Without CLI link:** `npm run db:migrate:script` runs `scripts/run-migration.mjs`, which uses a local `_migrations` table and requires `SUPABASE_URL_POSTGRES` (or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`). Prefer the CLI when possible so there is a single source of truth with hosted Supabase.
 
+### Ad-hoc SQL / ops queries (canonical path)
+
+**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard).
+
+```bash
+# Inline query — service-role-equivalent privilege
+npx supabase db query --linked "select count(*) from disputes where status = 'NEEDS_RESPONSE'"
+
+# From a file — preferred for any multi-statement / transactional block
+npx supabase db query --linked --file scripts/sql/my-cleanup.sql
+
+# CSV / table output for humans
+npx supabase db query --linked --output table "select shop_domain, plan from shops limit 20"
+```
+
+**Privilege & safety notes:**
+- Runs with privileges sufficient to `ALTER TABLE … DISABLE TRIGGER` and set session GUCs (e.g. `app.allow_audit_mutation = 'on'`), which means it can bypass audit-immutability triggers when needed. **Always wrap destructive ops in a `do $$ … end $$` block with explicit structural guards** (assert the dispute_gid pattern, shop_domain, etc.) before the deletes — see `scripts/sql/delete-dispute-384652be.sql` for the reference pattern.
+- `raise notice` output is **swallowed** by `db query`; only `select` result rows come back. Verify destructive ops with a follow-up `select` (or a separate inspection script using `SUPABASE_SERVICE_ROLE_KEY` via `@supabase/supabase-js`).
+- For deletes that touch `audit_events` and/or `dispute_events`, remember the two different escape hatches: `audit_events` honours the `app.allow_audit_mutation` GUC (set via `perform set_config(...)` inside the DO block); `dispute_events` has no GUC — you must `alter table dispute_events disable trigger trg_dispute_events_no_delete` and re-enable inside the same transaction. See *E2E fixtures and audit immutability* below.
+
+**When to reach for something else:**
+
+| Need | Use |
+|------|-----|
+| Apply a migration file | `npm run db:migrate` (alias for `supabase db push`) |
+| Read rows from app code or scripts | `@supabase/supabase-js` with `SUPABASE_SERVICE_ROLE_KEY` (RLS-bypassing, but trigger-respecting — cannot delete audit/dispute_events rows) |
+| Direct `psql`-style session (multi-statement transactions outside Management API, `\copy`, large bulk loads) | `pg.Client` with `SUPABASE_URL_POSTGRES` in `.env.local`. **This password is rotated periodically in the Supabase dashboard;** if `password authentication failed for user "postgres"` shows up, refresh the value from Dashboard → Project Settings → Database → Connection string before re-running. Do **not** reach for this when `db query --linked` would have worked. |
+| Bypass `audit_events` immutability from an RPC | The existing `delete_e2e_fixture_dispute(uuid)` RPC is scoped to E2E fixtures only; for other one-shot ops, use `db query --linked` with the DO-block pattern above. |
+
+`scripts/sql/` holds the reference SQL files (`cleanup-e2e-fixtures-*.sql`, `verify-audit-triggers.sql`, `delete-dispute-384652be.sql`). Drop new one-shot ops SQL there alongside them.
+
 | File | Contents |
 |------|----------|
 | 001_core_shops_sessions.sql | shops + shop_sessions (online/offline, key_version) |
@@ -1646,6 +1677,10 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 **Stale cookie protection (reinstall):** When a merchant uninstalls and reinstalls, the `app/uninstalled` webhook cannot clear browser cookies (it's server-to-server). The `shopify_shop` cookie (30-day `maxAge`) may survive, tricking middleware into skipping OAuth. To prevent this, middleware calls `GET /api/auth/shopify/session-exists?shop=…` on the `/app` entry path (not sub-paths) to verify an offline session exists in the DB. If no session is found, it clears the stale cookies and redirects to OAuth. The endpoint is protected by `CRON_SECRET` via the `x-dd-internal-secret` header. On check failure, the request passes through gracefully (the readiness API will surface the issue).
 
+**Cross-shop ownership filter:** Every per-shop route family — `/api/disputes/:id/*`, `/api/packs/:packId/*`, `/api/rules/:id`, `/api/jobs/:id` — filters its entity load by both `id` and the `x-shop-id` header set by middleware (resolved via `lib/middleware/extractShopId.ts`). Cross-shop UUIDs return `404`. Requests missing shop context (or scoped to the portal `demo` placeholder) return `401` with `code: SHOP_CONTEXT_REQUIRED`. Admin override routes under `/api/admin/disputes/:id/*` are intentionally cross-shop and gated by the admin session check below.
+
+**`/api/admin/*` admin gate:** Middleware verifies a Supabase session whose `auth.users.id` has an active row in `internal_admin_grants` before any `/api/admin/*` handler runs. Unauthenticated callers get `401` with `code: ADMIN_SESSION_REQUIRED`; authenticated callers without a grant get `403` with `code: ADMIN_GRANT_REQUIRED`. `POST /api/admin/logout` is allow-listed (the route is idempotent and must work for an expired session). The middleware also calls `dd_admin_touch_last_login` on success. Per-handler `hasAdminSession()` checks remain in routes that already had them — defense-in-depth, and they're how the unit tests assert 401 without booting middleware.
+
 ### Portal demo mode & test stores
 - **Demo mode** (`isDemo`): true when no real shop is selected (no `active_shop_id` cookie or cookie not in user's linked shops). Portal shows a demo store label and some actions are disabled.
 - **Demo data** (`useDemoData`): when true, dispute list, dashboard, rules, and billing show hardcoded demo/placeholder data instead of calling the API. True when `isDemo` is true **or** the active shop's domain is in `TEST_STORE_DOMAINS` (see `lib/demo-mode.tsx`).
@@ -1806,6 +1841,9 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/jobs/worker`
 
 ### Internal Admin API (admin session required)
+
+**Auth:** Enforced at the middleware level for every `/api/admin/*` path (see *API middleware* above). Unauthenticated → `401 ADMIN_SESSION_REQUIRED`. Authenticated but no `internal_admin_grants` row → `403 ADMIN_GRANT_REQUIRED`. `POST /api/admin/logout` is allow-listed. Routes that also call `hasAdminSession()` in-handler retain that check as defense-in-depth.
+
 - `GET /api/admin/metrics` — ops triage dashboard stats: `disputeMetrics` (cross-shop via `computeDisputeMetrics` — includes `statusBreakdown`, `outcomeBreakdown`, `overriddenCount`, `syncIssueCount`, `disputesWithNotesCount`), `submissionUncertainCount`, `staleCount` (open disputes with no event in 7+ days), `shopLeaderboard` (top 10 shops by problem dispute count — attention/syncFail/overridden/stale/uncertain), `recentOpsActivity` (last 15 internal ops events: failures, overrides, resyncs, notes, outcomes — enriched with shop domain and order name), plus platform counters (shops, disputes, packs, jobs, plans, templates, reason mappings)
 - `GET /api/admin/shops` — list shops with search/plan/status filters
 - `GET /api/admin/shops/[id]` — shop detail + dispute/pack counts
@@ -2177,8 +2215,24 @@ The embedded billing page (`app/(embedded)/app/billing/page.tsx`) uses custom Ta
 
 ### Enforcement
 
-Server-side only. `checkPackQuota()` counts packs in the current calendar month.
+Server-side only. `checkPackQuota()` (`lib/billing/checkQuota.ts`) gates pack creation against the
+remaining balance in `pack_balance` (a view derived from `pack_credits_ledger − pack_usage_events`).
 `checkFeatureAccess()` gates auto-pack and rules by plan tier.
+
+**Gate at enqueue:** `POST /api/disputes/:id/packs` calls `checkPackQuota()` and returns 403
+`upgrade_required: true` when the balance is zero. This is the merchant-visible block.
+
+**Ledger update on success:** When `lib/jobs/handlers/buildPackJob.ts` completes a build with
+`status: "ready"`, it calls `consumePack({ shopId, disputeId, packId, eventType: "finalize" })`.
+The unique index on `pack_usage_events (shop_id, dispute_id, event_type)` makes consumption
+idempotent — handler retries and pack rebuilds for the same dispute never double-charge.
+**Failed builds never consume credit** (the call lives inside `if (buildSucceeded)`).
+
+**Rare race — quota drained between enqueue and finalize:** `consumePack` throws
+`PackLimitReachedError`. The handler flips the pack to `status: "failed"`, writes audit
+`pack_limit_reached_at_consume`, emits a `PACK_BUILD_FAILED` event with
+`failure_code: "pack_limit_reached"`, and skips auto-save. Other errors from `consumePack`
+log + continue (a billing-side fluke should not break a successful build).
 
 Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 `runAutomationPipeline()` (both).
@@ -2186,10 +2240,46 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
-2. `GET /api/billing/callback` → `shops.plan` updated on approval
-3. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain` (used by embedded Settings for store connection display).
+2. `GET /api/billing/callback` → **verifies the charge with Shopify**, then upgrades `shops.plan` + grants credits
+3. `GET /api/billing/topup-callback` → **verifies the one-time charge with Shopify**, then grants top-up credits
+4. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain`
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
+
+### Server-to-server charge verification
+
+Both billing callbacks query Shopify GraphQL `node($id)` for the charge GID **before** granting credits or
+upgrading a plan. Without this gate, the query-string `charge_id` is forgeable — anyone could craft
+`/api/billing/topup-callback?shop_id=…&sku=topup_25&charge_id=anything` and walk away with free credits.
+
+Helper: `lib/shopify/queries/appChargeStatus.ts` exports `verifyAppCharge({ shopId, chargeId, chargeType, expectedAmountUsd })`.
+It returns `{ verified: false, reason }` instead of throwing, so callers branch on `verified`.
+
+Acceptance criteria:
+
+| Check | Failure reason |
+|---|---|
+| `getShopBackgroundSession` succeeds | `no_session` |
+| `node($id)` resolves to a non-null node | `node_not_found` |
+| `__typename` matches `chargeType` (`AppSubscription` / `AppPurchaseOneTime`) | `wrong_type` |
+| `status === "ACTIVE"` | `not_active` (the only acceptable status — `PENDING`, `DECLINED`, `EXPIRED`, `CANCELLED`, `FROZEN` all reject) |
+| `currencyCode === "USD"` | `currency_mismatch` |
+| `Math.abs(reportedAmount − expectedAmountUsd) < 0.01` | `price_mismatch` (defends against pairing a real Starter charge with `plan_id=scale`) |
+| GraphQL `errors[]` empty | `shopify_error` (never silently grant on Shopify error) |
+
+GID construction: Shopify's billing redirect sends the numeric charge id (`?charge_id=12345678`).
+`verifyAppCharge` builds the GID locally — `gid://shopify/AppSubscription/${id}` or
+`gid://shopify/AppPurchaseOneTime/${id}` — unless the caller already provided a full `gid://`.
+
+Failed verification writes audit `billing_verification_failed` (subscription) or
+`topup_verification_failed` (one-time) with `{ reason, status, shopify_gid }`, then redirects to
+`/app/billing?verify_failed=<reason>`. Approved verifications write `billing_activated` /
+`topup_purchased` with `charge_verified: true` and `test_charge` flag for ops telemetry.
+
+**Known follow-up:** `grantCredits` uses an INSERT keyed by `reference` (which embeds `charge_id`), but
+`pack_credits_ledger` has no unique index on `reference`. A duplicate callback hit (e.g. merchant
+double-clicking the approval URL) could grant twice. Out of scope for the App Store readiness sprint;
+a future migration adding `unique(reference)` is the durable fix.
 
 ### Billing deep link (`/app/billing?plan=…`)
 
@@ -2220,6 +2310,46 @@ Zod schemas in `lib/middleware/validate.ts`. Applied to rules CRUD and billing s
 
 Weekly cron archives packs older than `shops.retention_days` (default 365).
 PDFs deleted from storage. Audit events never deleted.
+
+### Backups & Disaster Recovery
+
+**Scope.** All stateful data lives in Supabase (Postgres + Storage). Vercel is stateless — recovery is `vercel rollback <deployment-url>` or a redeploy from git. This section covers the Supabase side.
+
+**Authoritative copy.** The production Supabase project `sddzuglxdnkhcnjmcpbj` is the single source of truth for shops, disputes, evidence_packs, audit_events, jobs, and the pack PDFs in the `evidence-packs` storage bucket. DisputeDesk does **not** maintain an off-platform mirror — recovery depends on Supabase's managed backups.
+
+**Backup mechanism.** Provider-managed automated backups (frequency and retention window depend on the project's current Supabase tier — confirm in **Dashboard → Project Settings → Database → Backups**). Pro and above include point-in-time recovery; Free is daily-snapshot only. Backups are encrypted at rest by the provider.
+
+**RPO / RTO targets.**
+
+| Metric | Target | Rationale |
+|---|---|---|
+| **RPO** (recovery point objective — max acceptable data loss) | **≤ 24 h** on Free, **≤ 5 min** on Pro PITR | Disputes accrue continuously; a day of lost evidence collection is the ceiling before merchants notice missing packs. Pro PITR makes 5 min the realistic floor. |
+| **RTO** (recovery time objective — max time to restore service) | **≤ 4 h** from incident declaration to live traffic on restored DB | Bounded by Supabase restore-into-new-project workflow (typically 30–90 min for our row volume) + connection string swap in Vercel env + redeploy. |
+
+These are targets, not SLAs. The actual restore drill has not been measured against production volume since project inception.
+
+**The "verified restorable backup" rule.** [docs/runbooks/prod-current-state-snapshot.md](docs/runbooks/prod-current-state-snapshot.md) § 1 requires the operator to produce a backup, restore it into a scratch destination, and confirm row counts on three sentinel tables (`shops`, `disputes`, `evidence_packs`) match the source — *before* any infrastructure change that could touch the data layer. A backup that hasn't been restore-tested doesn't count as a backup. This drill should be re-run at least quarterly.
+
+**Recovery runbook (Supabase).**
+
+1. **Detect.** Production incident — DB corruption, accidental destructive DDL, region outage. Page on-call; declare a recovery operation in the audit channel.
+2. **Freeze writes.** Today this means pausing the cron schedule in `vercel.json` (re-deploy with the `crons` array commented out) and rotating the offline-session access tokens in `shop_sessions` so the next webhook from Shopify lands with `Auth invalid` instead of writing. There is no in-app read-only flag yet — a `DD_READ_ONLY` env switch is on the post-launch follow-up list and would make this step a one-line redeploy. Stopping writes during restore is essential so the recovered DB has a clean cutover point.
+3. **Pick a recovery point.** Free tier → most recent nightly snapshot. Pro tier → choose PITR timestamp from the dashboard. Document the chosen timestamp in the incident channel.
+4. **Restore into a new Supabase project.** Restoring on top of a corrupted prod project is rarely safe; restoring into a fresh project + cutting traffic over is. Region must match prod (the existing `pg_dump` plan B works the same way).
+5. **Spot-check row counts** on `shops`, `disputes`, `evidence_packs`, `audit_events`. Compare against the last known-good monitoring snapshot.
+6. **Cut over.** Update `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_URL_POSTGRES` in Vercel prod env to point at the restored project. Redeploy. Clear `DD_READ_ONLY`.
+7. **Post-restore audit.** Write an `audit_events` row (`actor_type: 'system'`, `event_type: 'data_retained'`, payload describing the recovery timestamp + chosen recovery point) on every shop touched, so the restoration itself is in the audit trail. Notify affected merchants if any data is unrecoverable.
+
+**Storage backups.** Pack PDFs and manual uploads in `evidence-packs` are covered by Supabase Storage's standard backup policy on the same Pro/Free tier. PDFs are deterministically regenerable from `evidence_packs.pack_json` via the `render_pdf` job — so even if a storage backup gap eats a PDF, the underlying evidence survives and the PDF can be rebuilt.
+
+**Known gaps (out of scope for App Store submission, tracked for post-launch).**
+
+- **No off-platform mirror.** A Supabase organization-level compromise (admin credential theft) bypasses provider backups. Mitigation: rotate the Supabase admin password to a 1Password-only value and enable 2FA on the org owner account.
+- **No automated restore drills.** The "verified restorable backup" check in `prod-current-state-snapshot.md` § 1 is currently a one-time gate, not a recurring test. Quarterly cadence is the right floor.
+- **No documented row count baselines.** Recovery step 5 ("spot-check") has no reference table. After the next quarterly drill, capture the row counts and pin them in `prod-current-state-snapshot.md` § 2 as the "expected at restore" baseline.
+- **No in-app read-only flag.** Step 2 of the runbook ("freeze writes") relies on disabling crons + invalidating offline sessions; a `DD_READ_ONLY=1` env flag checked in middleware would collapse this to a one-line redeploy.
+
+**Public-facing copy.** Merchants see one line on [data-retention](app/(marketing)/data-retention/page.tsx#L99-L108): *"Our managed database provider takes encrypted backups for disaster recovery. Backups are retained for a rolling window consistent with the provider's standard policy."* That is intentionally vague — sharing exact RPO/RTO targets externally is a commitment, not a description.
 
 ### CI Pipeline
 
@@ -2476,21 +2606,19 @@ Each row shows a status badge (ready / needs_action / syncing). Continue is disa
 
 ### Step 2: Store Profile (`StoreProfileStep`)
 
-**Purpose:** Collect store metadata and Shopify evidence preferences to personalize coverage recommendations and automation settings.
+**Purpose:** Collect only the signals that personalize downstream recommendations — store type and proof capability. Everything else (review threshold, automation mode per family, evidence-source overrides) lives on the steps where it's actually configured, to avoid duplication and double-asking the merchant.
 
 **Implementation:** `components/setup/steps/StoreProfileStep.tsx`. Collects:
-- Store type (physical / digital / services / subscriptions)
+- Store type (physical / digital / services / subscriptions, multi-select)
 - Delivery proof level (always / sometimes / rarely)
-- Digital proof capabilities
-- Preferred handling style (automated / review / conservative)
-- Review threshold ($)
-- **Shopify evidence config** — per-group behavior preferences for 7 Shopify-native evidence groups:
-  - Order details, Customer & address, Fulfillment records, Tracking from Shopify, Order timeline, Refund history, Notes & metadata
-  - Each group: `always` | `when_present` | `review` | `off`
-  - Defaults recalculate when store type or delivery proof changes (`getDefaultEvidenceConfig` in `lib/setup/recommendTemplates.ts`)
-- "Other evidence" informational section (carrier proof, support conversations, digital access logs, custom docs — all manual upload in V1)
+- Digital proof capabilities (only shown when digital or services selected)
 
-Payload (including `shopifyEvidenceConfig`) is saved to `shop_setup.steps.store_profile.payload` on Continue.
+On Continue the step also derives a default `shopifyEvidenceConfig` via `getDefaultEvidenceConfig(storeTypes, deliveryProof)` and persists it alongside the answers in `shop_setup.steps.store_profile.payload`. This default feeds the recommendation algorithm in Step 3 and is overridable in post-onboarding settings — it is intentionally not exposed as 7 dropdowns during onboarding.
+
+**Removed during the onboarding slim-down** (still respected for already-onboarded stores via legacy fallbacks):
+- `handlingStyle` — third-option "Conservative: notify me first" violated the two-mode rule (`auto` | `review`), and the choice is made per-family on the Coverage and Automation steps anyway.
+- `reviewThreshold` — moved to the Automation step, inline on the "Review high-value disputes" safeguard card it actually controls.
+- Per-source Shopify evidence dropdowns + "Other evidence (manual upload)" informational rows — not actionable knowledge at first-run; defer to settings.
 
 ### Step 3: Coverage (`CoverageStep`)
 
@@ -2586,7 +2714,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
 | TemplateSetupWizardModal | `components/setup/modals/TemplateSetupWizardModal.tsx` | 4-step template configuration wizard (evidence, sources, review, activate) |
 | ConnectionStep | `components/setup/steps/ConnectionStep.tsx` | Step 1: live readiness checks (connection, scopes, webhooks, store data) |
-| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style, Shopify evidence config |
+| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type + proof levels only; derives default `shopifyEvidenceConfig` silently |
 | CoverageStep | `components/setup/steps/CoverageStep.tsx` | Step 3: evidence summary + template recommendations + install |
 | AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Step 4: per-pack auto / review toggle with evidence-aware defaults |
 | BusinessPoliciesStep | `components/setup/steps/BusinessPoliciesStep.tsx` | Step 5: shipping/refund/terms/privacy policy setup (own / template / mixed flows) |

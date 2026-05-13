@@ -38,6 +38,13 @@ function AutomationIcon() {
     </svg>
   );
 }
+function PoliciesIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M6 2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6.4L11.6 2H6zm5 1.5L14.5 7H12a1 1 0 0 1-1-1V3.5zM7 10h6v1.5H7V10zm0 3h6v1.5H7V13zm0-6h3v1.5H7V7z" />
+    </svg>
+  );
+}
 function ActivateIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
@@ -51,6 +58,7 @@ const STEP_ICON_COMPONENTS: Record<string, React.ReactNode> = {
   store_profile: <StoreProfileIcon />,
   coverage: <CoverageIcon />,
   automation: <AutomationIcon />,
+  policies: <PoliciesIcon />,
   activate: <ActivateIcon />,
 };
 
@@ -132,7 +140,7 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {t(stepId as "connection" | "store_profile" | "coverage" | "automation" | "activate")}
+                {t(stepId as "connection" | "store_profile" | "coverage" | "automation" | "policies" | "activate")}
               </span>
             </div>
 

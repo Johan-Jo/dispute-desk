@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { runAutomationPipeline } from "@/lib/automation/pipeline";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
@@ -15,16 +16,24 @@ export const runtime = "nodejs";
  * Clears needs_review, triggers automation pipeline, and logs the override.
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const sb = getServiceClient();
 
   const { data: dispute, error } = await sb
     .from("disputes")
     .select("id, shop_id, reason, phase, needs_review")
     .eq("id", id)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !dispute) {
