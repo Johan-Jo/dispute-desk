@@ -49,6 +49,7 @@ describe("Failed-pack submission guards", () => {
 
       const req = new NextRequest("http://localhost/api/packs/pack-uuid-1/save-to-shopify", {
         method: "POST",
+        headers: new Headers({ "x-shop-id": "shop-1" }),
         body: JSON.stringify({}),
       });
       const res = await saveToShopifyPOST(req, {
@@ -73,6 +74,7 @@ describe("Failed-pack submission guards", () => {
 
       const req = new NextRequest("http://localhost/api/packs/pack-uuid-1/save-to-shopify", {
         method: "POST",
+        headers: new Headers({ "x-shop-id": "shop-1" }),
         body: JSON.stringify({}),
       });
       const res = await saveToShopifyPOST(req, {
@@ -97,6 +99,7 @@ describe("Failed-pack submission guards", () => {
 
       const req = new NextRequest("http://localhost/api/packs/pack-uuid-1/approve", {
         method: "POST",
+        headers: new Headers({ "x-shop-id": "shop-1" }),
         body: JSON.stringify({ user_id: "user-1" }),
       });
       const res = await approvePOST(req, {
@@ -120,6 +123,7 @@ describe("Failed-pack submission guards", () => {
 
       const req = new NextRequest("http://localhost/api/packs/pack-uuid-1/approve", {
         method: "POST",
+        headers: new Headers({ "x-shop-id": "shop-1" }),
         body: JSON.stringify({ user_id: "user-1" }),
       });
       const res = await approvePOST(req, {

@@ -2,6 +2,7 @@ import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
 import { buildPack } from "../../packs/buildPack";
 import { evaluateAndMaybeAutoSave } from "../../automation/pipeline";
+import { consumePack, PackLimitReachedError } from "../../billing/consumePack";
 import {
   sendEvidenceNeededAlert,
   shouldSendEvidenceAlert,
@@ -116,6 +117,73 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
     // there is no merchant-actionable evidence path to recommend until the
     // build is rerun successfully.
     if (buildSucceeded) {
+      // Decrement the pack-credit ledger. Idempotent per
+      // (shop_id, dispute_id, 'finalize') via the pack_usage_events
+      // unique index, so handler retries and pack rebuilds for the
+      // same dispute never double-charge. Quota is checked upstream
+      // at enqueue time in POST /api/disputes/:id/packs — this is the
+      // post-hoc ledger update for successful builds (failed builds
+      // never consume credit).
+      if (packRow?.dispute_id) {
+        try {
+          const consume = await consumePack({
+            shopId: job.shopId,
+            disputeId: packRow.dispute_id,
+            packId,
+            eventType: "finalize",
+          });
+          await logAuditEvent({
+            shopId: job.shopId,
+            packId,
+            actorType: "system",
+            eventType: "pack_credit_consumed",
+            eventPayload: {
+              jobId: job.id,
+              consumed: consume.consumed,
+              remaining: consume.remaining,
+            },
+          });
+        } catch (consumeErr) {
+          if (consumeErr instanceof PackLimitReachedError) {
+            // Rare race: quota was passing at enqueue time but drained by
+            // concurrent disputes finishing first. Flip the pack to failed
+            // so the merchant sees a remediation path (upgrade / top-up).
+            await db
+              .from("evidence_packs")
+              .update({
+                status: "failed",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", packId);
+            await logAuditEvent({
+              shopId: job.shopId,
+              packId,
+              actorType: "system",
+              eventType: "pack_limit_reached_at_consume",
+              eventPayload: { jobId: job.id, remaining: consumeErr.remaining },
+            });
+            void emitDisputeEvent({
+              disputeId: packRow.dispute_id,
+              shopId: job.shopId,
+              eventType: PACK_BUILD_FAILED,
+              description: "Pack credit limit reached. Upgrade to continue.",
+              eventAt: new Date().toISOString(),
+              actorType: "disputedesk_system",
+              sourceType: "pack_engine",
+              metadataJson: {
+                pack_id: packId,
+                failure_code: "pack_limit_reached",
+              },
+              dedupeKey: `${packRow.dispute_id}:${PACK_BUILD_FAILED}:${packId}:quota`,
+            });
+            return; // skip auto-save + manual-evidence email
+          }
+          // Unknown error — log + continue. Don't break the success
+          // path on a billing-side fluke; ops can reconcile from audit.
+          console.error("[buildPack] consumePack failed:", consumeErr);
+        }
+      }
+
       await evaluateAndMaybeAutoSave(packId).catch(() => {
         // Non-fatal: auto-save evaluation failure shouldn't fail the build
       });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { SUPPORT_NOTE_ADDED } from "@/lib/disputeEvents/eventTypes";
 
@@ -39,18 +40,30 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id: disputeId } = await params;
   const sb = getServiceClient();
 
-  const { data: dispute } = await sb
+  const caller = await verifyInternalRole(req, sb);
+  const includeInternal = caller !== null;
+
+  // Merchant calls must be scoped to the requesting shop; internal admin/support
+  // Bearer-token calls are intentionally cross-shop (tooling reads any dispute).
+  let disputeQuery = sb
     .from("disputes")
     .select("id, shop_id")
-    .eq("id", disputeId)
-    .single();
+    .eq("id", disputeId);
+  if (!caller) {
+    const shopId = extractShopId(req);
+    if (!shopId || shopId === "demo") {
+      return NextResponse.json(
+        { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+        { status: 401 },
+      );
+    }
+    disputeQuery = disputeQuery.eq("shop_id", shopId);
+  }
+  const { data: dispute } = await disputeQuery.single();
 
   if (!dispute) {
     return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
   }
-
-  const caller = await verifyInternalRole(req, sb);
-  const includeInternal = caller !== null;
 
   let query = sb
     .from("dispute_notes")

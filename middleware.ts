@@ -144,7 +144,6 @@ export async function middleware(req: NextRequest) {
 
     if (
       pathname.startsWith("/api/auth") ||
-      pathname.startsWith("/api/admin/") ||
       pathname === "/api/chat" ||
       pathname === "/api/contact" ||
       pathname === "/api/health" ||
@@ -155,6 +154,66 @@ export async function middleware(req: NextRequest) {
       (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log")
     ) {
       return nextWithAppBridge(req, "0");
+    }
+
+    // --- /api/admin/* — Supabase session + internal_admin_grants ---
+    // Mirrors the page-level gate at lines ~287-332 below. Returns JSON
+    // (not redirect) on failure because this is an API.
+    if (pathname.startsWith("/api/admin/")) {
+      // Sign-out must succeed even after grant revocation or session
+      // expiry. The route is idempotent and clears its own cookie.
+      // Use === (not startsWith) so /api/admin/logout/anything cannot
+      // bypass auth.
+      if (pathname === "/api/admin/logout") {
+        return nextWithAppBridge(req, "0");
+      }
+
+      const res = nextWithAppBridge(req, "0");
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => req.cookies.getAll(),
+            setAll(cookiesToSet) {
+              for (const { name, value, options } of cookiesToSet) {
+                res.cookies.set(name, value, options);
+              }
+            },
+          },
+        }
+      );
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json(
+          { error: "Unauthorized", code: "ADMIN_SESSION_REQUIRED" },
+          { status: 401 }
+        );
+      }
+
+      const { getServiceClient } = await import("@/lib/supabase/server");
+      const db = getServiceClient();
+      const { data: grant } = await db
+        .from("internal_admin_grants")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!grant) {
+        return NextResponse.json(
+          { error: "Forbidden", code: "ADMIN_GRANT_REQUIRED" },
+          { status: 403 }
+        );
+      }
+
+      await db.rpc("dd_admin_touch_last_login", { p_user_id: user.id });
+
+      return res;
     }
 
     let shopDomain = req.cookies.get("shopify_shop")?.value;

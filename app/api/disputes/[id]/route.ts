@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { normalizeMode } from "@/lib/rules/normalizeMode";
 
@@ -12,14 +13,22 @@ interface RouteParams {
  *
  * Returns a single dispute with all columns + linked evidence packs.
  */
-export async function GET(_req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const sb = getServiceClient();
 
   const { data: row, error } = await sb
     .from("disputes")
     .select("*, shops(shop_domain)")
     .eq("id", id)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !row) {

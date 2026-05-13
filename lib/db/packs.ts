@@ -166,13 +166,17 @@ export async function installTemplate(
  * Returns null if not found. Used by GET /api/packs/[packId] fallback when the pack
  * is not an evidence_pack (e.g. template-installed pack).
  */
-export async function getPackById(packId: string): Promise<(Pack & { shop_domain?: string | null }) | null> {
+export async function getPackById(
+  packId: string,
+  shopId: string,
+): Promise<(Pack & { shop_domain?: string | null }) | null> {
   const sb = getServiceClient();
 
   const { data, error } = await sb
     .from("packs")
     .select("*, shop:shops(shop_domain)")
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !data) {
@@ -318,13 +322,14 @@ export async function createPack(
  * and packs (cascade removes pack_sections, pack_narratives, etc.).
  * Returns true if a pack was deleted, false if not found or error.
  */
-export async function deletePack(packId: string): Promise<boolean> {
+export async function deletePack(packId: string, shopId: string): Promise<boolean> {
   const sb = getServiceClient();
 
   const { data: packRow } = await sb
     .from("packs")
     .select("id")
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (!packRow) {
@@ -332,8 +337,12 @@ export async function deletePack(packId: string): Promise<boolean> {
   }
 
   await sb.from("audit_events").update({ pack_id: null }).eq("pack_id", packId);
-  await sb.from("evidence_packs").delete().eq("id", packId);
-  const { error: packErr } = await sb.from("packs").delete().eq("id", packId);
+  await sb.from("evidence_packs").delete().eq("id", packId).eq("shop_id", shopId);
+  const { error: packErr } = await sb
+    .from("packs")
+    .delete()
+    .eq("id", packId)
+    .eq("shop_id", shopId);
 
   if (packErr) {
     console.error("[deletePack]", packErr.message);
@@ -350,6 +359,7 @@ const PACK_STATUSES = ["DRAFT", "ACTIVE", "ARCHIVED"] as const;
  */
 export async function updatePackStatus(
   packId: string,
+  shopId: string,
   status: "DRAFT" | "ACTIVE" | "ARCHIVED"
 ): Promise<Pack | null> {
   if (!PACK_STATUSES.includes(status)) {
@@ -364,6 +374,7 @@ export async function updatePackStatus(
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .select("*")
     .single();
 
@@ -378,6 +389,7 @@ export async function updatePackStatus(
     .from("evidence_packs")
     .update({ status: epStatus, updated_at: new Date().toISOString() })
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .is("dispute_id", null);
 
   return pack as Pack;

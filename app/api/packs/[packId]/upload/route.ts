@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   deriveCompletenessMetrics,
@@ -49,6 +50,13 @@ export async function POST(
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const db = getServiceClient();
 
   let pack: { id: string; shop_id: string; dispute_id: string | null } | null = (
@@ -56,6 +64,7 @@ export async function POST(
       .from("evidence_packs")
       .select("id, shop_id, dispute_id")
       .eq("id", packId)
+      .eq("shop_id", shopId)
       .single()
   ).data;
 
@@ -65,6 +74,7 @@ export async function POST(
       .from("packs")
       .select("id, shop_id")
       .eq("id", packId)
+      .eq("shop_id", shopId)
       .single();
     if (!libraryPack) {
       return NextResponse.json({ error: "Pack not found" }, { status: 404 });

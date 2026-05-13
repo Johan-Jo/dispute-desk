@@ -41,6 +41,19 @@ vi.mock("@/lib/disputeEvents/emitEvent", () => ({
 vi.mock("@/lib/disputeEvents/updateNormalizedStatus", () => ({
   updateNormalizedStatus: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/billing/consumePack", () => ({
+  consumePack: vi.fn(),
+  PackLimitReachedError: class extends Error {
+    code = "PACK_LIMIT_REACHED";
+    remaining: number;
+    shopId: string;
+    constructor(shopId = "shop-1", remaining = 0) {
+      super("Pack limit reached.");
+      this.shopId = shopId;
+      this.remaining = remaining;
+    }
+  },
+}));
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -48,6 +61,7 @@ import { buildPack } from "@/lib/packs/buildPack";
 import { evaluateAndMaybeAutoSave } from "@/lib/automation/pipeline";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
+import { consumePack, PackLimitReachedError } from "@/lib/billing/consumePack";
 import { handleBuildPack } from "../buildPackJob";
 import type { ClaimedJob } from "../../claimJobs";
 
@@ -57,6 +71,7 @@ const mockBuildPack = vi.mocked(buildPack);
 const mockEvaluateAndMaybeAutoSave = vi.mocked(evaluateAndMaybeAutoSave);
 const mockEmitDisputeEvent = vi.mocked(emitDisputeEvent);
 const mockDeferredAlert = vi.mocked(claimAndSendDeferredNewDisputeAlert);
+const mockConsumePack = vi.mocked(consumePack);
 
 const PACK_ID = "pack-1";
 const SHOP_ID = "shop-1";
@@ -101,6 +116,7 @@ function makeSb(opts: { disputeId?: string | null } = {}) {
 describe("handleBuildPack", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockConsumePack.mockResolvedValue({ ok: true, consumed: 1, remaining: 4 });
   });
 
   it("happy path: marks pack 'building', runs buildPack, emits PACK_CREATED, and triggers auto-save", async () => {
@@ -223,5 +239,116 @@ describe("handleBuildPack", () => {
     ).rejects.toThrow(/missing entity_id/);
     // buildPack should never be called when the entity is missing.
     expect(mockBuildPack).not.toHaveBeenCalled();
+  });
+
+  it("happy build calls consumePack with finalize event and emits credit-consumed audit", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockBuildPack.mockResolvedValue({
+      packId: PACK_ID,
+      status: "ready",
+      completenessScore: 90,
+      blockers: [],
+      sectionsCollected: 6,
+      itemsCreated: 9,
+      failureCode: null,
+    });
+
+    await handleBuildPack(makeJob());
+
+    expect(mockConsumePack).toHaveBeenCalledWith({
+      shopId: SHOP_ID,
+      disputeId: DISPUTE_ID,
+      packId: PACK_ID,
+      eventType: "finalize",
+    });
+    const auditTypes = mockLogAuditEvent.mock.calls.map(
+      (c) => (c[0] as { eventType: string }).eventType,
+    );
+    expect(auditTypes).toContain("pack_credit_consumed");
+    // Auto-save still runs after a successful credit consume.
+    expect(mockEvaluateAndMaybeAutoSave).toHaveBeenCalledWith(PACK_ID);
+  });
+
+  it("PackLimitReachedError flips pack to failed, emits failure event, and skips auto-save", async () => {
+    const { sb, updateCalls } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockBuildPack.mockResolvedValue({
+      packId: PACK_ID,
+      status: "ready",
+      completenessScore: 90,
+      blockers: [],
+      sectionsCollected: 6,
+      itemsCreated: 9,
+      failureCode: null,
+    });
+    mockConsumePack.mockRejectedValue(new PackLimitReachedError(SHOP_ID, 0));
+
+    await handleBuildPack(makeJob());
+
+    // Status flipped to failed after the consume race.
+    expect(updateCalls.at(-1)).toEqual(
+      expect.objectContaining({ status: "failed" }),
+    );
+    const auditTypes = mockLogAuditEvent.mock.calls.map(
+      (c) => (c[0] as { eventType: string }).eventType,
+    );
+    expect(auditTypes).toContain("pack_limit_reached_at_consume");
+    const eventTypes = mockEmitDisputeEvent.mock.calls.map(
+      (c) => (c[0] as { eventType: string }).eventType,
+    );
+    expect(eventTypes).toContain("pack_build_failed");
+    // Auto-save MUST NOT run when credit consumption fails — the pack
+    // is in a failed state and there's no merchant-actionable evidence.
+    expect(mockEvaluateAndMaybeAutoSave).not.toHaveBeenCalled();
+  });
+
+  it("unknown consumePack error: logs but continues to auto-save (don't break success on billing fluke)", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockBuildPack.mockResolvedValue({
+      packId: PACK_ID,
+      status: "ready",
+      completenessScore: 90,
+      blockers: [],
+      sectionsCollected: 6,
+      itemsCreated: 9,
+      failureCode: null,
+    });
+    mockConsumePack.mockRejectedValue(new Error("ledger temporarily down"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleBuildPack(makeJob());
+
+    expect(mockEvaluateAndMaybeAutoSave).toHaveBeenCalledWith(PACK_ID);
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("failed build does NOT call consumePack (failed builds must not consume credit)", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockBuildPack.mockResolvedValue({
+      packId: PACK_ID,
+      status: "failed",
+      completenessScore: 0,
+      blockers: [],
+      sectionsCollected: 0,
+      itemsCreated: 0,
+      failureCode: "order_fetch_failed",
+    });
+
+    await handleBuildPack(makeJob());
+
+    expect(mockConsumePack).not.toHaveBeenCalled();
+  });
+
+  it("thrown buildPack does NOT call consumePack", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockBuildPack.mockRejectedValue(new Error("buildPack exploded"));
+
+    await expect(handleBuildPack(makeJob())).rejects.toThrow();
+    expect(mockConsumePack).not.toHaveBeenCalled();
   });
 });

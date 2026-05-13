@@ -99,7 +99,11 @@ function mockSupabase(rows: ScenarioRows): ScenarioSpies {
 function makeReq(body: unknown = {}) {
   return new NextRequest(
     `http://localhost/api/packs/${packId}/save-to-shopify`,
-    { method: "POST", body: JSON.stringify(body) },
+    {
+      method: "POST",
+      headers: new Headers({ "x-shop-id": shopId }),
+      body: JSON.stringify(body),
+    },
   );
 }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 
 export const runtime = "nodejs";
 
@@ -9,16 +10,24 @@ export const runtime = "nodejs";
  * Returns a time-limited signed URL (1 hour) for the pack PDF.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const db = getServiceClient();
 
   const { data: pack, error } = await db
     .from("evidence_packs")
     .select("pdf_path")
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !pack?.pdf_path) {

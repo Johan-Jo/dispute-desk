@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 import {
@@ -24,6 +25,13 @@ export async function POST(
   { params }: { params: Promise<{ packId: string }> },
 ) {
   const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const sb = getServiceClient();
 
   const parsed = await parseJsonBody<{
@@ -59,6 +67,7 @@ export async function POST(
       "id, shop_id, dispute_id, status, waived_items, checklist, checklist_v2",
     )
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !pack) {
@@ -158,6 +167,13 @@ export async function DELETE(
   { params }: { params: Promise<{ packId: string }> },
 ) {
   const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const sb = getServiceClient();
   const field = req.nextUrl.searchParams.get("field");
 
@@ -174,6 +190,7 @@ export async function DELETE(
       "id, shop_id, dispute_id, status, waived_items, checklist",
     )
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !pack) {

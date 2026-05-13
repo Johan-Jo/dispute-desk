@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
 vi.mock("@/lib/supabase/server", () => ({
   getServiceClient: vi.fn(),
@@ -13,6 +14,12 @@ import { GET } from "@/app/api/packs/[packId]/route";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockGetPackById = vi.mocked(getPackById);
+
+function packReq(packId: string, shopId = "shop-uuid"): NextRequest {
+  return new NextRequest(new URL(`http://localhost/api/packs/${packId}`), {
+    headers: new Headers({ "x-shop-id": shopId }),
+  });
+}
 
 describe("GET /api/packs/[packId]", () => {
   const packId = "ed33a8d0-66cd-4f18-beaa-1278a1f0affe";
@@ -47,14 +54,14 @@ describe("GET /api/packs/[packId]", () => {
     mockGetPackById.mockResolvedValue(null);
 
     const res = await GET(
-      {} as never,
+      packReq(packId),
       { params: Promise.resolve({ packId }) }
     );
 
     expect(res.status).toBe(404);
     const data = await res.json();
     expect(data.error).toContain("Pack not found");
-    expect(mockGetPackById).toHaveBeenCalledWith(packId);
+    expect(mockGetPackById).toHaveBeenCalledWith(packId, "shop-uuid");
   });
 
   it("returns 200 with library pack shape when getPackById returns a pack", async () => {
@@ -76,7 +83,7 @@ describe("GET /api/packs/[packId]", () => {
     });
 
     const res = await GET(
-      {} as never,
+      packReq(packId),
       { params: Promise.resolve({ packId }) }
     );
 

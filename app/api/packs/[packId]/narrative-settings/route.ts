@@ -3,14 +3,42 @@ import {
   getPackNarrativeSettings,
   updatePackNarrativeSettings,
 } from "@/lib/db/packs";
+import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 
 type Ctx = { params: Promise<{ packId: string }> };
+
+async function requirePackOwnership(
+  req: NextRequest,
+  packId: string,
+): Promise<NextResponse | null> {
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
+  const sb = getServiceClient();
+  const { data: pack } = await sb
+    .from("evidence_packs")
+    .select("id")
+    .eq("id", packId)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+  if (!pack) {
+    return NextResponse.json({ error: "Pack not found" }, { status: 404 });
+  }
+  return null;
+}
 
 /**
  * GET /api/packs/:packId/narrative-settings
  */
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export async function GET(req: NextRequest, { params }: Ctx) {
   const { packId } = await params;
+  const denied = await requirePackOwnership(req, packId);
+  if (denied) return denied;
 
   const settings = await getPackNarrativeSettings(packId);
   if (!settings) {
@@ -30,6 +58,8 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
  */
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { packId } = await params;
+  const denied = await requirePackOwnership(req, packId);
+  if (denied) return denied;
 
   let body: Record<string, unknown>;
   try {

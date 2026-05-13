@@ -629,6 +629,37 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 - **Existing DB:** If the database was created outside the CLI (e.g. Dashboard SQL or an old script), the CLI may have no migration history. Run `npx supabase migration repair <001> <002> … --status applied` once to mark already-applied files without re-running SQL; then `db push` applies only new migrations.
 - **Without CLI link:** `npm run db:migrate:script` runs `scripts/run-migration.mjs`, which uses a local `_migrations` table and requires `SUPABASE_URL_POSTGRES` (or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`). Prefer the CLI when possible so there is a single source of truth with hosted Supabase.
 
+### Ad-hoc SQL / ops queries (canonical path)
+
+**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard).
+
+```bash
+# Inline query — service-role-equivalent privilege
+npx supabase db query --linked "select count(*) from disputes where status = 'NEEDS_RESPONSE'"
+
+# From a file — preferred for any multi-statement / transactional block
+npx supabase db query --linked --file scripts/sql/my-cleanup.sql
+
+# CSV / table output for humans
+npx supabase db query --linked --output table "select shop_domain, plan from shops limit 20"
+```
+
+**Privilege & safety notes:**
+- Runs with privileges sufficient to `ALTER TABLE … DISABLE TRIGGER` and set session GUCs (e.g. `app.allow_audit_mutation = 'on'`), which means it can bypass audit-immutability triggers when needed. **Always wrap destructive ops in a `do $$ … end $$` block with explicit structural guards** (assert the dispute_gid pattern, shop_domain, etc.) before the deletes — see `scripts/sql/delete-dispute-384652be.sql` for the reference pattern.
+- `raise notice` output is **swallowed** by `db query`; only `select` result rows come back. Verify destructive ops with a follow-up `select` (or a separate inspection script using `SUPABASE_SERVICE_ROLE_KEY` via `@supabase/supabase-js`).
+- For deletes that touch `audit_events` and/or `dispute_events`, remember the two different escape hatches: `audit_events` honours the `app.allow_audit_mutation` GUC (set via `perform set_config(...)` inside the DO block); `dispute_events` has no GUC — you must `alter table dispute_events disable trigger trg_dispute_events_no_delete` and re-enable inside the same transaction. See *E2E fixtures and audit immutability* below.
+
+**When to reach for something else:**
+
+| Need | Use |
+|------|-----|
+| Apply a migration file | `npm run db:migrate` (alias for `supabase db push`) |
+| Read rows from app code or scripts | `@supabase/supabase-js` with `SUPABASE_SERVICE_ROLE_KEY` (RLS-bypassing, but trigger-respecting — cannot delete audit/dispute_events rows) |
+| Direct `psql`-style session (multi-statement transactions outside Management API, `\copy`, large bulk loads) | `pg.Client` with `SUPABASE_URL_POSTGRES` in `.env.local`. **This password is rotated periodically in the Supabase dashboard;** if `password authentication failed for user "postgres"` shows up, refresh the value from Dashboard → Project Settings → Database → Connection string before re-running. Do **not** reach for this when `db query --linked` would have worked. |
+| Bypass `audit_events` immutability from an RPC | The existing `delete_e2e_fixture_dispute(uuid)` RPC is scoped to E2E fixtures only; for other one-shot ops, use `db query --linked` with the DO-block pattern above. |
+
+`scripts/sql/` holds the reference SQL files (`cleanup-e2e-fixtures-*.sql`, `verify-audit-triggers.sql`, `delete-dispute-384652be.sql`). Drop new one-shot ops SQL there alongside them.
+
 | File | Contents |
 |------|----------|
 | 001_core_shops_sessions.sql | shops + shop_sessions (online/offline, key_version) |
@@ -1646,6 +1677,10 @@ Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolv
 
 **Stale cookie protection (reinstall):** When a merchant uninstalls and reinstalls, the `app/uninstalled` webhook cannot clear browser cookies (it's server-to-server). The `shopify_shop` cookie (30-day `maxAge`) may survive, tricking middleware into skipping OAuth. To prevent this, middleware calls `GET /api/auth/shopify/session-exists?shop=…` on the `/app` entry path (not sub-paths) to verify an offline session exists in the DB. If no session is found, it clears the stale cookies and redirects to OAuth. The endpoint is protected by `CRON_SECRET` via the `x-dd-internal-secret` header. On check failure, the request passes through gracefully (the readiness API will surface the issue).
 
+**Cross-shop ownership filter:** Every per-shop route family — `/api/disputes/:id/*`, `/api/packs/:packId/*`, `/api/rules/:id`, `/api/jobs/:id` — filters its entity load by both `id` and the `x-shop-id` header set by middleware (resolved via `lib/middleware/extractShopId.ts`). Cross-shop UUIDs return `404`. Requests missing shop context (or scoped to the portal `demo` placeholder) return `401` with `code: SHOP_CONTEXT_REQUIRED`. Admin override routes under `/api/admin/disputes/:id/*` are intentionally cross-shop and gated by the admin session check below.
+
+**`/api/admin/*` admin gate:** Middleware verifies a Supabase session whose `auth.users.id` has an active row in `internal_admin_grants` before any `/api/admin/*` handler runs. Unauthenticated callers get `401` with `code: ADMIN_SESSION_REQUIRED`; authenticated callers without a grant get `403` with `code: ADMIN_GRANT_REQUIRED`. `POST /api/admin/logout` is allow-listed (the route is idempotent and must work for an expired session). The middleware also calls `dd_admin_touch_last_login` on success. Per-handler `hasAdminSession()` checks remain in routes that already had them — defense-in-depth, and they're how the unit tests assert 401 without booting middleware.
+
 ### Portal demo mode & test stores
 - **Demo mode** (`isDemo`): true when no real shop is selected (no `active_shop_id` cookie or cookie not in user's linked shops). Portal shows a demo store label and some actions are disabled.
 - **Demo data** (`useDemoData`): when true, dispute list, dashboard, rules, and billing show hardcoded demo/placeholder data instead of calling the API. True when `isDemo` is true **or** the active shop's domain is in `TEST_STORE_DOMAINS` (see `lib/demo-mode.tsx`).
@@ -1806,6 +1841,9 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `POST /api/jobs/worker`
 
 ### Internal Admin API (admin session required)
+
+**Auth:** Enforced at the middleware level for every `/api/admin/*` path (see *API middleware* above). Unauthenticated → `401 ADMIN_SESSION_REQUIRED`. Authenticated but no `internal_admin_grants` row → `403 ADMIN_GRANT_REQUIRED`. `POST /api/admin/logout` is allow-listed. Routes that also call `hasAdminSession()` in-handler retain that check as defense-in-depth.
+
 - `GET /api/admin/metrics` — ops triage dashboard stats: `disputeMetrics` (cross-shop via `computeDisputeMetrics` — includes `statusBreakdown`, `outcomeBreakdown`, `overriddenCount`, `syncIssueCount`, `disputesWithNotesCount`), `submissionUncertainCount`, `staleCount` (open disputes with no event in 7+ days), `shopLeaderboard` (top 10 shops by problem dispute count — attention/syncFail/overridden/stale/uncertain), `recentOpsActivity` (last 15 internal ops events: failures, overrides, resyncs, notes, outcomes — enriched with shop domain and order name), plus platform counters (shops, disputes, packs, jobs, plans, templates, reason mappings)
 - `GET /api/admin/shops` — list shops with search/plan/status filters
 - `GET /api/admin/shops/[id]` — shop detail + dispute/pack counts
@@ -2177,8 +2215,24 @@ The embedded billing page (`app/(embedded)/app/billing/page.tsx`) uses custom Ta
 
 ### Enforcement
 
-Server-side only. `checkPackQuota()` counts packs in the current calendar month.
+Server-side only. `checkPackQuota()` (`lib/billing/checkQuota.ts`) gates pack creation against the
+remaining balance in `pack_balance` (a view derived from `pack_credits_ledger − pack_usage_events`).
 `checkFeatureAccess()` gates auto-pack and rules by plan tier.
+
+**Gate at enqueue:** `POST /api/disputes/:id/packs` calls `checkPackQuota()` and returns 403
+`upgrade_required: true` when the balance is zero. This is the merchant-visible block.
+
+**Ledger update on success:** When `lib/jobs/handlers/buildPackJob.ts` completes a build with
+`status: "ready"`, it calls `consumePack({ shopId, disputeId, packId, eventType: "finalize" })`.
+The unique index on `pack_usage_events (shop_id, dispute_id, event_type)` makes consumption
+idempotent — handler retries and pack rebuilds for the same dispute never double-charge.
+**Failed builds never consume credit** (the call lives inside `if (buildSucceeded)`).
+
+**Rare race — quota drained between enqueue and finalize:** `consumePack` throws
+`PackLimitReachedError`. The handler flips the pack to `status: "failed"`, writes audit
+`pack_limit_reached_at_consume`, emits a `PACK_BUILD_FAILED` event with
+`failure_code: "pack_limit_reached"`, and skips auto-save. Other errors from `consumePack`
+log + continue (a billing-side fluke should not break a successful build).
 
 Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 `runAutomationPipeline()` (both).
@@ -2186,10 +2240,46 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
-2. `GET /api/billing/callback` → `shops.plan` updated on approval
-3. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain` (used by embedded Settings for store connection display).
+2. `GET /api/billing/callback` → **verifies the charge with Shopify**, then upgrades `shops.plan` + grants credits
+3. `GET /api/billing/topup-callback` → **verifies the one-time charge with Shopify**, then grants top-up credits
+4. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain`
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
+
+### Server-to-server charge verification
+
+Both billing callbacks query Shopify GraphQL `node($id)` for the charge GID **before** granting credits or
+upgrading a plan. Without this gate, the query-string `charge_id` is forgeable — anyone could craft
+`/api/billing/topup-callback?shop_id=…&sku=topup_25&charge_id=anything` and walk away with free credits.
+
+Helper: `lib/shopify/queries/appChargeStatus.ts` exports `verifyAppCharge({ shopId, chargeId, chargeType, expectedAmountUsd })`.
+It returns `{ verified: false, reason }` instead of throwing, so callers branch on `verified`.
+
+Acceptance criteria:
+
+| Check | Failure reason |
+|---|---|
+| `getShopBackgroundSession` succeeds | `no_session` |
+| `node($id)` resolves to a non-null node | `node_not_found` |
+| `__typename` matches `chargeType` (`AppSubscription` / `AppPurchaseOneTime`) | `wrong_type` |
+| `status === "ACTIVE"` | `not_active` (the only acceptable status — `PENDING`, `DECLINED`, `EXPIRED`, `CANCELLED`, `FROZEN` all reject) |
+| `currencyCode === "USD"` | `currency_mismatch` |
+| `Math.abs(reportedAmount − expectedAmountUsd) < 0.01` | `price_mismatch` (defends against pairing a real Starter charge with `plan_id=scale`) |
+| GraphQL `errors[]` empty | `shopify_error` (never silently grant on Shopify error) |
+
+GID construction: Shopify's billing redirect sends the numeric charge id (`?charge_id=12345678`).
+`verifyAppCharge` builds the GID locally — `gid://shopify/AppSubscription/${id}` or
+`gid://shopify/AppPurchaseOneTime/${id}` — unless the caller already provided a full `gid://`.
+
+Failed verification writes audit `billing_verification_failed` (subscription) or
+`topup_verification_failed` (one-time) with `{ reason, status, shopify_gid }`, then redirects to
+`/app/billing?verify_failed=<reason>`. Approved verifications write `billing_activated` /
+`topup_purchased` with `charge_verified: true` and `test_charge` flag for ops telemetry.
+
+**Known follow-up:** `grantCredits` uses an INSERT keyed by `reference` (which embeds `charge_id`), but
+`pack_credits_ledger` has no unique index on `reference`. A duplicate callback hit (e.g. merchant
+double-clicking the approval URL) could grant twice. Out of scope for the App Store readiness sprint;
+a future migration adding `unique(reference)` is the durable fix.
 
 ### Billing deep link (`/app/billing?plan=…`)
 

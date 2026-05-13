@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { FIELD_MAPPINGS, type RawPackSection } from "@/lib/shopify/fieldMapping";
 import {
   composeShopifyMutationPayload,
@@ -59,6 +60,13 @@ export async function GET(
   { params }: { params: Promise<{ packId: string }> },
 ) {
   const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const format = req.nextUrl.searchParams.get("format");
   const sb = getServiceClient();
 
@@ -66,6 +74,7 @@ export async function GET(
     .from("evidence_packs")
     .select("id, pack_json, pdf_path, dispute_id")
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !pack) {

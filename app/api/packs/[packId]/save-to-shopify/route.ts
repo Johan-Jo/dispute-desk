@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
@@ -16,12 +17,20 @@ export async function POST(
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
   const sb = getServiceClient();
 
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select("id, shop_id, dispute_id, status, completeness_score, submission_readiness")
     .eq("id", packId)
+    .eq("shop_id", shopId)
     .single();
 
   if (error || !pack) {

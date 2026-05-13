@@ -1,23 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 
 export const runtime = "nodejs";
+
+function shopContextOrUnauthorized(req: NextRequest): { shopId: string } | NextResponse {
+  const shopId = extractShopId(req);
+  if (!shopId || shopId === "demo") {
+    return NextResponse.json(
+      { error: "Shop context required.", code: "SHOP_CONTEXT_REQUIRED" },
+      { status: 401 },
+    );
+  }
+  return { shopId };
+}
 
 /**
  * GET /api/rules/:id
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const ctx = shopContextOrUnauthorized(req);
+  if (ctx instanceof NextResponse) return ctx;
   const sb = getServiceClient();
 
   const { data, error } = await sb
     .from("rules")
     .select("*")
     .eq("id", id)
+    .eq("shop_id", ctx.shopId)
     .single();
 
   if (error || !data) {
@@ -36,6 +51,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const ctx = shopContextOrUnauthorized(req);
+  if (ctx instanceof NextResponse) return ctx;
   const body = await req.json();
   const sb = getServiceClient();
 
@@ -49,6 +66,7 @@ export async function PATCH(
     .from("rules")
     .update(updates)
     .eq("id", id)
+    .eq("shop_id", ctx.shopId)
     .select()
     .single();
 
@@ -63,23 +81,26 @@ export async function PATCH(
  * DELETE /api/rules/:id
  */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const ctx = shopContextOrUnauthorized(req);
+  if (ctx instanceof NextResponse) return ctx;
   const sb = getServiceClient();
 
   const { data: rule } = await sb
     .from("rules")
     .select("id, shop_id")
     .eq("id", id)
+    .eq("shop_id", ctx.shopId)
     .single();
 
   if (!rule) {
     return NextResponse.json({ error: "Rule not found" }, { status: 404 });
   }
 
-  await sb.from("rules").delete().eq("id", id);
+  await sb.from("rules").delete().eq("id", id).eq("shop_id", ctx.shopId);
 
   await logAuditEvent({
     shopId: rule.shop_id,
