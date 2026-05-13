@@ -75,8 +75,11 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         const state = stateRes.ok ? await stateRes.json() : null;
         const automation = automationRes.ok ? await automationRes.json() : {};
 
-        // Review threshold from store profile
-        const threshold = state?.steps?.store_profile?.payload?.reviewThreshold;
+        // Threshold lives on the automation step; fall back to a legacy
+        // store_profile value for stores onboarded before the wizard split.
+        const threshold =
+          state?.steps?.automation?.payload?.reviewThreshold ??
+          state?.steps?.store_profile?.payload?.reviewThreshold;
         if (threshold) setReviewThreshold(String(threshold));
 
         // Packs for activation

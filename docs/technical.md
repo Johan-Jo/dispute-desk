@@ -2606,21 +2606,19 @@ Each row shows a status badge (ready / needs_action / syncing). Continue is disa
 
 ### Step 2: Store Profile (`StoreProfileStep`)
 
-**Purpose:** Collect store metadata and Shopify evidence preferences to personalize coverage recommendations and automation settings.
+**Purpose:** Collect only the signals that personalize downstream recommendations — store type and proof capability. Everything else (review threshold, automation mode per family, evidence-source overrides) lives on the steps where it's actually configured, to avoid duplication and double-asking the merchant.
 
 **Implementation:** `components/setup/steps/StoreProfileStep.tsx`. Collects:
-- Store type (physical / digital / services / subscriptions)
+- Store type (physical / digital / services / subscriptions, multi-select)
 - Delivery proof level (always / sometimes / rarely)
-- Digital proof capabilities
-- Preferred handling style (automated / review / conservative)
-- Review threshold ($)
-- **Shopify evidence config** — per-group behavior preferences for 7 Shopify-native evidence groups:
-  - Order details, Customer & address, Fulfillment records, Tracking from Shopify, Order timeline, Refund history, Notes & metadata
-  - Each group: `always` | `when_present` | `review` | `off`
-  - Defaults recalculate when store type or delivery proof changes (`getDefaultEvidenceConfig` in `lib/setup/recommendTemplates.ts`)
-- "Other evidence" informational section (carrier proof, support conversations, digital access logs, custom docs — all manual upload in V1)
+- Digital proof capabilities (only shown when digital or services selected)
 
-Payload (including `shopifyEvidenceConfig`) is saved to `shop_setup.steps.store_profile.payload` on Continue.
+On Continue the step also derives a default `shopifyEvidenceConfig` via `getDefaultEvidenceConfig(storeTypes, deliveryProof)` and persists it alongside the answers in `shop_setup.steps.store_profile.payload`. This default feeds the recommendation algorithm in Step 3 and is overridable in post-onboarding settings — it is intentionally not exposed as 7 dropdowns during onboarding.
+
+**Removed during the onboarding slim-down** (still respected for already-onboarded stores via legacy fallbacks):
+- `handlingStyle` — third-option "Conservative: notify me first" violated the two-mode rule (`auto` | `review`), and the choice is made per-family on the Coverage and Automation steps anyway.
+- `reviewThreshold` — moved to the Automation step, inline on the "Review high-value disputes" safeguard card it actually controls.
+- Per-source Shopify evidence dropdowns + "Other evidence (manual upload)" informational rows — not actionable knowledge at first-run; defer to settings.
 
 ### Step 3: Coverage (`CoverageStep`)
 
@@ -2716,7 +2714,7 @@ All wizard links preserve `shop` and `host` query parameters via
 | ComingSoonModal | `components/setup/modals/ComingSoonModal.tsx` | Info modal for upcoming integrations |
 | TemplateSetupWizardModal | `components/setup/modals/TemplateSetupWizardModal.tsx` | 4-step template configuration wizard (evidence, sources, review, activate) |
 | ConnectionStep | `components/setup/steps/ConnectionStep.tsx` | Step 1: live readiness checks (connection, scopes, webhooks, store data) |
-| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type, proof levels, handling style, Shopify evidence config |
+| StoreProfileStep | `components/setup/steps/StoreProfileStep.tsx` | Step 2: store type + proof levels only; derives default `shopifyEvidenceConfig` silently |
 | CoverageStep | `components/setup/steps/CoverageStep.tsx` | Step 3: evidence summary + template recommendations + install |
 | AutomationRulesStep | `components/setup/steps/AutomationRulesStep.tsx` | Step 4: per-pack auto / review toggle with evidence-aware defaults |
 | BusinessPoliciesStep | `components/setup/steps/BusinessPoliciesStep.tsx` | Step 5: shipping/refund/terms/privacy policy setup (own / template / mixed flows) |
