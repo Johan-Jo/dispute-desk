@@ -2311,6 +2311,46 @@ Zod schemas in `lib/middleware/validate.ts`. Applied to rules CRUD and billing s
 Weekly cron archives packs older than `shops.retention_days` (default 365).
 PDFs deleted from storage. Audit events never deleted.
 
+### Backups & Disaster Recovery
+
+**Scope.** All stateful data lives in Supabase (Postgres + Storage). Vercel is stateless — recovery is `vercel rollback <deployment-url>` or a redeploy from git. This section covers the Supabase side.
+
+**Authoritative copy.** The production Supabase project `sddzuglxdnkhcnjmcpbj` is the single source of truth for shops, disputes, evidence_packs, audit_events, jobs, and the pack PDFs in the `evidence-packs` storage bucket. DisputeDesk does **not** maintain an off-platform mirror — recovery depends on Supabase's managed backups.
+
+**Backup mechanism.** Provider-managed automated backups (frequency and retention window depend on the project's current Supabase tier — confirm in **Dashboard → Project Settings → Database → Backups**). Pro and above include point-in-time recovery; Free is daily-snapshot only. Backups are encrypted at rest by the provider.
+
+**RPO / RTO targets.**
+
+| Metric | Target | Rationale |
+|---|---|---|
+| **RPO** (recovery point objective — max acceptable data loss) | **≤ 24 h** on Free, **≤ 5 min** on Pro PITR | Disputes accrue continuously; a day of lost evidence collection is the ceiling before merchants notice missing packs. Pro PITR makes 5 min the realistic floor. |
+| **RTO** (recovery time objective — max time to restore service) | **≤ 4 h** from incident declaration to live traffic on restored DB | Bounded by Supabase restore-into-new-project workflow (typically 30–90 min for our row volume) + connection string swap in Vercel env + redeploy. |
+
+These are targets, not SLAs. The actual restore drill has not been measured against production volume since project inception.
+
+**The "verified restorable backup" rule.** [docs/runbooks/prod-current-state-snapshot.md](docs/runbooks/prod-current-state-snapshot.md) § 1 requires the operator to produce a backup, restore it into a scratch destination, and confirm row counts on three sentinel tables (`shops`, `disputes`, `evidence_packs`) match the source — *before* any infrastructure change that could touch the data layer. A backup that hasn't been restore-tested doesn't count as a backup. This drill should be re-run at least quarterly.
+
+**Recovery runbook (Supabase).**
+
+1. **Detect.** Production incident — DB corruption, accidental destructive DDL, region outage. Page on-call; declare a recovery operation in the audit channel.
+2. **Freeze writes.** Today this means pausing the cron schedule in `vercel.json` (re-deploy with the `crons` array commented out) and rotating the offline-session access tokens in `shop_sessions` so the next webhook from Shopify lands with `Auth invalid` instead of writing. There is no in-app read-only flag yet — a `DD_READ_ONLY` env switch is on the post-launch follow-up list and would make this step a one-line redeploy. Stopping writes during restore is essential so the recovered DB has a clean cutover point.
+3. **Pick a recovery point.** Free tier → most recent nightly snapshot. Pro tier → choose PITR timestamp from the dashboard. Document the chosen timestamp in the incident channel.
+4. **Restore into a new Supabase project.** Restoring on top of a corrupted prod project is rarely safe; restoring into a fresh project + cutting traffic over is. Region must match prod (the existing `pg_dump` plan B works the same way).
+5. **Spot-check row counts** on `shops`, `disputes`, `evidence_packs`, `audit_events`. Compare against the last known-good monitoring snapshot.
+6. **Cut over.** Update `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_URL_POSTGRES` in Vercel prod env to point at the restored project. Redeploy. Clear `DD_READ_ONLY`.
+7. **Post-restore audit.** Write an `audit_events` row (`actor_type: 'system'`, `event_type: 'data_retained'`, payload describing the recovery timestamp + chosen recovery point) on every shop touched, so the restoration itself is in the audit trail. Notify affected merchants if any data is unrecoverable.
+
+**Storage backups.** Pack PDFs and manual uploads in `evidence-packs` are covered by Supabase Storage's standard backup policy on the same Pro/Free tier. PDFs are deterministically regenerable from `evidence_packs.pack_json` via the `render_pdf` job — so even if a storage backup gap eats a PDF, the underlying evidence survives and the PDF can be rebuilt.
+
+**Known gaps (out of scope for App Store submission, tracked for post-launch).**
+
+- **No off-platform mirror.** A Supabase organization-level compromise (admin credential theft) bypasses provider backups. Mitigation: rotate the Supabase admin password to a 1Password-only value and enable 2FA on the org owner account.
+- **No automated restore drills.** The "verified restorable backup" check in `prod-current-state-snapshot.md` § 1 is currently a one-time gate, not a recurring test. Quarterly cadence is the right floor.
+- **No documented row count baselines.** Recovery step 5 ("spot-check") has no reference table. After the next quarterly drill, capture the row counts and pin them in `prod-current-state-snapshot.md` § 2 as the "expected at restore" baseline.
+- **No in-app read-only flag.** Step 2 of the runbook ("freeze writes") relies on disabling crons + invalidating offline sessions; a `DD_READ_ONLY=1` env flag checked in middleware would collapse this to a one-line redeploy.
+
+**Public-facing copy.** Merchants see one line on [data-retention](app/(marketing)/data-retention/page.tsx#L99-L108): *"Our managed database provider takes encrypted backups for disaster recovery. Backups are retained for a rolling window consistent with the provider's standard policy."* That is intentionally vague — sharing exact RPO/RTO targets externally is a commitment, not a description.
+
 ### CI Pipeline
 
 `.github/workflows/ci.yml`: typecheck → lint → tests → npm audit → forbidden copy check.
