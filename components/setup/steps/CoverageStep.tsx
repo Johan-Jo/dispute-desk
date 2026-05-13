@@ -296,8 +296,11 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
           <h3 style={{ fontSize: 15, fontWeight: 600, color: "#202223", margin: "0 0 4px" }}>
             {tCoverage("summaryTitle")}
           </h3>
-          <p style={{ fontSize: 13, color: "#6D7175", margin: 0 }}>
+          <p style={{ fontSize: 13, color: "#6D7175", margin: "0 0 6px" }}>
             {tCoverage("summarySubtitle")}
+          </p>
+          <p style={{ fontSize: 12, color: "#1E40AF", margin: 0, lineHeight: 1.5 }}>
+            <strong>{tCoverage("noteLabel")}</strong> {tCoverage("noteText")}
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
