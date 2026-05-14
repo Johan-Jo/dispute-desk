@@ -73,12 +73,15 @@ register(({ analytics, browser, init, settings }) => {
 
 function readShopDomain(init: unknown): string | null {
   try {
-    // The Web Pixel `init` callback receives a `data.shop.domain` field
-    // with the foo.myshopify.com domain. Probe defensively.
-    const data = (init as { data?: { shop?: { domain?: string } } }).data;
-    const domain = data?.shop?.domain;
-    if (typeof domain === "string" && domain.endsWith(".myshopify.com")) {
-      return domain.toLowerCase();
+    // Shopify's Web Pixel `init.data.shop` exposes the field as
+    // `myshopifyDomain` (NOT `domain` — that was a bug we shipped earlier
+    // that silently killed every pixel event). Probe both for safety in
+    // case Shopify also returns the legacy `domain` field.
+    const data = (init as { data?: { shop?: { myshopifyDomain?: string; domain?: string } } })
+      .data;
+    const candidate = data?.shop?.myshopifyDomain ?? data?.shop?.domain;
+    if (typeof candidate === "string" && candidate.endsWith(".myshopify.com")) {
+      return candidate.toLowerCase();
     }
     return null;
   } catch {
