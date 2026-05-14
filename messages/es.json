@@ -209,6 +209,7 @@
     "statusDistribution": "Distribución de estados",
     "outcomeBreakdown": "Desglose de resultados",
     "recentActivity": "Actividad de automatización y envío",
+    "recentActivityEmpty": "La actividad aparecerá aquí cuando las disputas comiencen a sincronizarse — verás compilaciones de paquetes, envíos y cambios de estado.",
     "statusCol": "Estado",
     "submissionCol": "Envío",
     "lastEventCol": "Último evento",

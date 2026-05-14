@@ -241,6 +241,7 @@
     "statusDistribution": "Distribution des statuts",
     "outcomeBreakdown": "Répartition des résultats",
     "recentActivity": "Activité d'automatisation et de soumission",
+    "recentActivityEmpty": "L'activité apparaîtra ici dès que les litiges commenceront à se synchroniser — vous verrez les builds de dossiers, les soumissions et les changements de statut.",
     "statusCol": "Statut",
     "submissionCol": "Soumission",
     "lastEventCol": "Dernier événement",

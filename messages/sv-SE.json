@@ -242,6 +242,7 @@
     "statusDistribution": "Statusfördelning",
     "outcomeBreakdown": "Resultatfördelning",
     "recentActivity": "Automatisering och inlämningsaktivitet",
+    "recentActivityEmpty": "Aktivitet visas här när tvister börjar synkas — du ser paketbyggen, inlämningar och statusändringar.",
     "statusCol": "Status",
     "submissionCol": "Inlämning",
     "lastEventCol": "Senaste händelse",

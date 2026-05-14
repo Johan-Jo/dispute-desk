@@ -209,6 +209,7 @@
     "statusDistribution": "Distribuição de status",
     "outcomeBreakdown": "Detalhamento de resultados",
     "recentActivity": "Atividade de automação e envio",
+    "recentActivityEmpty": "A atividade aparecerá aqui assim que as disputas começarem a sincronizar — você verá montagens de pacotes, envios e mudanças de status.",
     "statusCol": "Status",
     "submissionCol": "Envio",
     "lastEventCol": "Último evento",

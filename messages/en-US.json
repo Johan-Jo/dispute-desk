@@ -241,6 +241,7 @@
     "statusDistribution": "Status Distribution",
     "outcomeBreakdown": "Outcome Breakdown",
     "recentActivity": "Automation & Submission Activity",
+    "recentActivityEmpty": "Activity will appear here once disputes start syncing — pack builds, submissions, and status changes will all show up.",
     "statusCol": "Status",
     "submissionCol": "Submission",
     "lastEventCol": "Last Event",

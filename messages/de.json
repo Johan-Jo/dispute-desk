@@ -209,6 +209,7 @@
     "statusDistribution": "Statusverteilung",
     "outcomeBreakdown": "Ergebnisaufschlüsselung",
     "recentActivity": "Automatisierung & Einreichungs-Aktivität",
+    "recentActivityEmpty": "Aktivitäten erscheinen hier, sobald Streitfälle synchronisiert werden — Paket-Builds, Einreichungen und Statusänderungen werden alle angezeigt.",
     "statusCol": "Status",
     "submissionCol": "Einreichung",
     "lastEventCol": "Letztes Ereignis",

@@ -196,7 +196,22 @@ function RecentActivityFeed({ stats, loading }: { stats: DashboardStats; loading
   const searchParams = useSearchParams();
 
   if (loading) return null;
-  if (stats.recentActivity.length === 0) return null;
+
+  // Always render the card (even with no events) so the dashboard's
+  // 2-column row stays balanced. An empty Layout.Section wrapper would
+  // otherwise leave a phantom column next to DashboardInsights.
+  if (stats.recentActivity.length === 0) {
+    return (
+      <Card>
+        <BlockStack gap="200">
+          <Text as="h2" variant="headingSm">{t("dashboard.recentActivity")}</Text>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {t("dashboard.recentActivityEmpty")}
+          </Text>
+        </BlockStack>
+      </Card>
+    );
+  }
 
   return (
     <Card>
