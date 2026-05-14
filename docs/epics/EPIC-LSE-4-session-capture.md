@@ -19,23 +19,27 @@ This epic is forward-looking: it doesn't help disputes filed *before* install; i
 - Capturing form input values — never
 - Storing raw IPs unencrypted at rest
 
-## Architecture
+## Architecture (revised 2026-05-14: zero-config, no theme embed)
 
 ```
 [Merchant storefront]
    │
-   ├─ App Embed Block (theme app extension)   ←─ primary install surface
-   │     loads dispute-desk.js, async, <50ms hard timeout, fail-open
+   ├─ Web Pixel (Shopify-sandboxed, auto-installs)   ←─ subscribes to every
+   │     page_viewed / checkout_started / checkout_completed; carries
+   │     cart_token + customer_id + user_agent
    │
-   ├─ Web Pixel (Shopify-sandboxed)           ←─ page-view + behavioral events
-   │     emits page_viewed, checkout_started, cart_token bound
-   │
-   └─ Checkout UI Extension                    ←─ checkout-context capture
-         binds session to cart_token at checkout
+   └─ Checkout UI Extension (auto-installs)           ←─ authoritative
+         login state + cart_token at the checkout step
               │
               ▼
-   POST /api/sessions/ingest  (debounced, on order intent only)
+   POST /api/sessions/ingest  (CORS-enabled, fail-open, ≤5s timeout)
               │
+              │ identifies shop via shop_domain (foo.myshopify.com) →
+              │ resolveShopIdFromDomain() → shops.id  (60s cache)
+              │
+              │ enriches customer_account_age_days via Shopify Admin
+              │ GraphQL (enrichCustomerTenure, 1h cache) when caller
+              │ supplies only customer_id
               ▼
    checkout_sessions table (Postgres)
               │
@@ -50,13 +54,17 @@ This epic is forward-looking: it doesn't help disputes filed *before* install; i
 ```
 
 **Touchpoints:**
-- New theme extension: `shopify-extensions/theme/dispute-desk-embed/`
-- New web pixel extension: `shopify-extensions/web-pixel/dispute-desk-pixel/`
-- New checkout UI extension: `shopify-extensions/checkout/dispute-desk-checkout/`
-- New module: `lib/liabilityShift/sessions/ingest.ts`
-- New module: `lib/liabilityShift/sessions/matchToOrder.ts`
-- New API: `POST /api/sessions/ingest` (high-volume, IP-hashed, debounced)
-- Webhook handler extension: bind cart_token → session row in `orders/create` handler
+- Web Pixel extension: `extensions/dispute-desk-pixel/` (already scaffolded)
+- Checkout UI extension: `extensions/dispute-desk-checkout/` (already scaffolded)
+- Module: `lib/liabilityShift/sessions/ingest.ts`
+- Module: `lib/liabilityShift/sessions/enrichCustomerTenure.ts`
+- Module: `lib/liabilityShift/sessions/resolveShopFromDomain.ts`
+- API: `POST /api/sessions/ingest` (CORS-enabled, high-volume, IP-hashed)
+- API: `POST /api/sessions/forget` (LGPD/GDPR/CCPA subject-deletion)
+- Webhook handler extension: bind cart_token → session row in `orders/create` handler (LSE-4 follow-up)
+
+**Why no theme app embed?**
+An earlier design used a theme app extension as the primary install surface. We dropped it because (a) it required merchants to manually toggle the block on in the theme editor — a UX hit that competitors don't impose — and (b) the Web Pixel subscribes to `page_viewed` on every storefront page anyway, so the data coverage is identical. `customer.createdAt` (the one thing the Liquid embed could expose that the pixel can't) is recovered server-side via [`enrichCustomerTenure.ts`](../../lib/liabilityShift/sessions/enrichCustomerTenure.ts).
 
 ## v1 capture set (privacy-safe defaults)
 
@@ -130,16 +138,14 @@ Nightly job `expire_checkout_sessions` deletes rows where `retention_expires_at 
 
 ## Storefront install path
 
-Per PRD §7:
+Two surfaces, both **zero-config** for the merchant:
 
-1. **App embed block** (primary) — merchant toggles in theme editor; loads `dispute-desk.js` async with 50ms hard timeout and fail-open behavior so it never blocks checkout
-2. **Shopify Web Pixel** — sandboxed event capture, no script-tag risk
-3. **Checkout UI extension** — order-context capture at checkout step
+1. **Shopify Web Pixel** (primary) — auto-installs with the app, runs in Shopify's strict sandbox, subscribes to `page_viewed` / `checkout_started` / `checkout_completed`. Identifies the shop via `init.data.shop.domain`.
+2. **Checkout UI extension** — auto-installs, captures authoritative `customer_login_state_at_checkout` + `cart_token` at the checkout step. Identifies the shop via `shopify.shop.myshopifyDomain`. The `network_access` capability is approved on the OAuth screen at app-install time, not via theme editor or settings page.
 
-We use all three layered because each captures something the others can't:
-- Embed → IP + page-view dwell on storefront before checkout
-- Pixel → checkout-flow events
-- Checkout UI → cart_token binding + login state at the moment of order
+We use both layered because each captures something the other can't:
+- Pixel → full storefront-to-checkout coverage with page-view trail
+- Checkout UI → authoritative login state at the moment the order is placed
 
 ## Privacy & compliance (non-negotiable)
 
@@ -188,7 +194,7 @@ We use all three layered because each captures something the others can't:
 ## Acceptance criteria
 
 - [ ] Migration applied via `npm run db:migrate` in the same session
-- [ ] All three storefront extensions build and pass Shopify CLI validation
+- [ ] Both storefront extensions (Web Pixel + Checkout UI) build and pass Shopify CLI validation
 - [ ] Embed script loaded on a dev-store storefront fires `POST /api/sessions/ingest` with expected payload
 - [ ] DNT / GPC headers cause server to drop the record (verified by integration test)
 - [ ] `matchSessionToOrder` called from `orders/create` webhook fills `shopify_order_id` for 100% of test orders

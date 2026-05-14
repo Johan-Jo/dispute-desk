@@ -1,103 +1,53 @@
 # LSE-4 Storefront Session Capture
 
-## Backend status (this directory)
+## Architecture
 
-- `ingest.ts` — debounced session ingest (DNT/GPC honored, IP hashed + encrypted at rest)
-- `expireSessions.ts` — 18-month TTL retention job
-- `app/api/sessions/ingest/route.ts` — POST endpoint (fail-open)
-- `app/api/sessions/forget/route.ts` — POST endpoint (LGPD/GDPR/CCPA subject-deletion)
+Two zero-config storefront surfaces capture session signals, joined to
+orders by `cart_token`:
 
-Backend is **ready to receive data** as of LSE-4 v1. Storefront extensions
-that send the data are scaffolded but not yet generated — see below.
+| Surface | When it fires | Merchant install action |
+|---------|---------------|-------------------------|
+| **Web Pixel** (`extensions/dispute-desk-pixel/`) | Every storefront `page_viewed`, `checkout_started`, `checkout_completed` | Auto-installs with the app — no merchant action |
+| **Checkout UI extension** (`extensions/dispute-desk-checkout/`) | Mounts at the checkout step; captures final login state + cart_token | Auto-installs; `network_access` approved at OAuth screen during app install |
 
-## Storefront extensions — CLI commands to run (you)
+No theme app embed. No merchant-pasted shop ID. The shop is identified
+by `shop_domain` (foo.myshopify.com) which every Shopify surface exposes
+at runtime; the server resolves it to the DisputeDesk shop_id via the
+cached `resolveShopIdFromDomain` helper.
 
-The three storefront capture surfaces require `shopify app generate
-extension` to be run from your machine. Each command emits scaffolding
-under `extensions/<name>/`. Edit those scaffolds to call our ingest
-endpoint with the v1 payload.
+## Server-side modules
 
-### 1. Theme app embed (primary install surface)
+| File | Purpose |
+|------|---------|
+| [`ingest.ts`](./ingest.ts) | Validates payload, hashes/encrypts IP, persists `checkout_sessions` row, enriches customer tenure |
+| [`enrichCustomerTenure.ts`](./enrichCustomerTenure.ts) | Looks up `customer.createdAt` via Shopify Admin GraphQL when caller doesn't supply tenure (cached 1h per shop+customer) |
+| [`resolveShopFromDomain.ts`](./resolveShopFromDomain.ts) | Maps `foo.myshopify.com` → `shops.id` via Supabase (cached 60s) |
+| [`expireSessions.ts`](./expireSessions.ts) | Nightly retention job — hard-deletes rows past `retention_expires_at` (default 18 months) |
 
-```bash
-npx shopify app generate extension --type=theme_app_extension --name=dispute-desk-embed
-```
+## API endpoints
 
-In the generated `blocks/dispute-desk-embed.liquid`, load a small JS
-file that, on `DOMContentLoaded`, debounces and POSTs to
-`/api/sessions/ingest` with:
+- `POST /api/sessions/ingest` — fail-open ingest, CORS-enabled for `*`, accepts `shop_domain` or `shop_id`
+- `POST /api/sessions/forget` — LGPD/GDPR/CCPA subject-deletion by `customer_id` or `cart_token`
 
-```js
-{
-  shop_id: "{{ shop.id }}",         // or pass via app proxy if cross-domain
-  cart_token: "{{ cart.token }}",
-  user_agent: navigator.userAgent,
-  session_started_at: new Date().toISOString(),
-  customer_id: "{{ customer.id | default: '' }}",
-  customer_account_age_days: /* derive from customer.created_at */,
-  customer_login_state_at_checkout: "{{ customer.id | size > 0 ? 'logged_in' : 'guest' }}",
-  session_history: /* maintained client-side */,
-  time_on_checkout_page_ms: /* derived */
-}
-```
+## Privacy controls (non-negotiable)
 
-Async load. 50ms hard timeout. Never block checkout.
+- DNT and GPC honored at the server boundary (request headers OR body payload)
+- IP hashed at rest with per-shop salt; raw IP encrypted via AES-256-GCM, decryption only during qualification
+- 18-month TTL via the nightly retention job
+- Never captures form input values
+- Subject-deletion endpoint for right-to-be-forgotten requests
 
-### 2. Shopify Web Pixel
+## Privacy compliance follow-ups (before public launch)
 
-```bash
-npx shopify app generate extension --type=web_pixel_extension --name=dispute-desk-pixel
-```
-
-Subscribe to:
-- `page_viewed` → append to session_history
-- `checkout_started` → bind cart_token, kick off ingest
-- `checkout_completed` → final flush
-
-Post via `fetch` to `/api/sessions/ingest`. Pixel sandbox limits direct
-DOM access — we only need event metadata.
-
-### 3. Checkout UI extension
-
-```bash
-npx shopify app generate extension --type=checkout_ui_extension --name=dispute-desk-checkout
-```
-
-Use the `useCustomer` and `useApi` hooks to read login state at the
-exact checkout step. POST the final session ingest with
-`customer_login_state_at_checkout` set authoritatively.
-
-## After CLI generation
-
-1. Wire each extension's JS to call `POST /api/sessions/ingest` with the
-   payload shape in `ingest.ts`'s `SessionIngestPayload` interface.
-2. Test the embed on a dev store: verify `checkout_sessions` rows are
-   written, IP hash is non-empty, DNT/GPC headers cause `dropped: true`.
-3. Validate match-back: on the next order from the same cart, the
-   webhook handler in the existing orders/create flow should call
-   `matchSessionToOrder` to fill `shopify_order_id`.
-
-## Privacy compliance checklist
-
-Before public LSE-4 rollout, complete:
-
-- [ ] Add `lib/liabilityShift/sessions/matchSessionToOrder` call to the
-      orders/create webhook handler
-- [ ] Wire `expireCheckoutSessions` to a nightly cron slot
+- [ ] Add `matchSessionToOrder({ cartToken, shopifyOrderId })` call to the existing `orders/create` webhook handler
+- [ ] Wire `expireCheckoutSessions` to a Vercel cron slot
 - [ ] LGPD / GDPR / CCPA legal-review doc at `docs/privacy/lse4-review.md`
 - [ ] Merchant privacy-policy template translated to all 6 locales
 - [ ] Subject-access export endpoint companion (`GET /api/sessions/export`)
 - [ ] DPA template available in the merchant onboarding flow
 
-## Why this is the right shape
+## Why two surfaces, not one
 
-Per EPIC-LSE-4 §Privacy:
-- Privacy-safe v1 capture set only — no device fingerprinting yet.
-- DNT / GPC honored at the server boundary, not just the client (defense
-  against malicious or buggy storefront installs).
-- IPs hashed for query performance; raw encrypted, decrypt-only at
-  qualification time.
-- 18-month TTL via DB column + nightly job — covers the 365-day CE 3.0
-  prior window plus buffer.
-
-See `docs/epics/EPIC-LSE-4-session-capture.md`.
+- The Web Pixel covers the breadth: every page-view, every checkout-flow milestone
+- The Checkout UI extension is the **authoritative** source for `customer_login_state_at_checkout` because it runs in the checkout context after the customer-step decision is final
+- Both upsert against the same `(shop_id, cart_token)` row — the latest write wins

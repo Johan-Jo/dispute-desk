@@ -1193,12 +1193,25 @@ Thresholds intentionally conservative — `FPT_READY_TOTAL_THRESHOLD` is encoded
 
 ## Storefront Session Capture (LSE-4)
 
-Privacy-safe v1 session capture across three storefront surfaces, joined to orders via `cart_token`, used by LSE-1 / LSE-3 to match IP, device, and login state across the disputed order and priors.
+Privacy-safe v1 session capture across **two zero-config storefront surfaces** — Web Pixel + Checkout UI extension — joined to orders via `cart_token`. Used by LSE-1 / LSE-3 to match IP, device, and login state across the disputed order and priors.
 
 Source: [`docs/epics/EPIC-LSE-4-session-capture.md`](epics/EPIC-LSE-4-session-capture.md).
 
+### Zero-config merchant install
+
+No theme app embed, no merchant-pasted shop ID, no settings page. The Web Pixel and Checkout UI extension auto-install with the app, identify the merchant by `shop_domain` (which every Shopify surface exposes at runtime), and the server resolves to `shops.id` via [`resolveShopFromDomain.ts`](../lib/liabilityShift/sessions/resolveShopFromDomain.ts) with a 60-second cache.
+
+| Surface | When it fires | Merchant install action |
+|---------|---------------|-------------------------|
+| **Web Pixel** | Every `page_viewed`, `checkout_started`, `checkout_completed` | Auto-installs with the app |
+| **Checkout UI extension** | At checkout step (authoritative login state + cart_token) | Auto-installs; `network_access` approved at OAuth screen |
+
+A previous theme-app-embed surface was removed — the Web Pixel covers what it captured, with the merchant-friendly bonus of zero theme-editor configuration.
+
 ### v1 capture set (privacy-safe)
 `cart_token`, `session_started_at`, `user_agent`, IP (hashed + encrypted), IP-derived geo (country + region only), `customer_id`, account age, login state at checkout, page-view history, time on checkout page, DNT / GPC consent signals. **Never** captures form input values. Device fingerprinting deferred to a future v2 epic under legal review.
+
+`customer_account_age_days` is enriched server-side via the Shopify Admin API ([`enrichCustomerTenure.ts`](../lib/liabilityShift/sessions/enrichCustomerTenure.ts), 1-hour cache per shop+customer) — neither storefront surface exposes `customer.createdAt` directly.
 
 ### Privacy controls
 - **DNT and GPC** honored at the server boundary (request headers OR body) — defense against malicious or buggy storefront installs
@@ -1206,16 +1219,19 @@ Source: [`docs/epics/EPIC-LSE-4-session-capture.md`](epics/EPIC-LSE-4-session-ca
 - **18-month TTL** — `checkout_sessions.retention_expires_at` column + nightly `expireCheckoutSessions` job
 - **Subject deletion** — `POST /api/sessions/forget` deletes by `customer_id` and/or `cart_token` for LGPD/GDPR/CCPA right-to-be-forgotten
 - **Match-back** — orders/create webhook calls `matchSessionToOrder(cart_token)` to bind the session to the resulting `shopify_order_id`
+- **CORS** — `Access-Control-Allow-Origin: *` on `/api/sessions/ingest` because the body is non-credentialed and auth lives in the server-resolved `shop_domain`
 
 ### Modules
-- [`lib/liabilityShift/sessions/ingest.ts`](../lib/liabilityShift/sessions/ingest.ts) — ingest validation, IP hashing/encryption, upsert
+- [`lib/liabilityShift/sessions/ingest.ts`](../lib/liabilityShift/sessions/ingest.ts) — ingest validation, IP hashing/encryption, customer-tenure enrichment, upsert
+- [`lib/liabilityShift/sessions/enrichCustomerTenure.ts`](../lib/liabilityShift/sessions/enrichCustomerTenure.ts) — Shopify Admin GraphQL lookup for `customer.createdAt`, 1-hour cached
+- [`lib/liabilityShift/sessions/resolveShopFromDomain.ts`](../lib/liabilityShift/sessions/resolveShopFromDomain.ts) — `shop_domain` → `shops.id` resolution with 60s cache
 - [`lib/liabilityShift/sessions/expireSessions.ts`](../lib/liabilityShift/sessions/expireSessions.ts) — nightly retention job
-- [`app/api/sessions/ingest/route.ts`](../app/api/sessions/ingest/route.ts) — POST endpoint, fail-open
+- [`app/api/sessions/ingest/route.ts`](../app/api/sessions/ingest/route.ts) — POST endpoint, fail-open, CORS-enabled
 - [`app/api/sessions/forget/route.ts`](../app/api/sessions/forget/route.ts) — subject-deletion POST endpoint
-- [`lib/liabilityShift/sessions/README.md`](../lib/liabilityShift/sessions/README.md) — CLI commands to scaffold the three storefront extensions (theme app embed, Web Pixel, Checkout UI)
 
-### Storefront extension scaffolding (manual step)
-The three storefront capture surfaces require `npx shopify app generate extension` runs from the project root. Commands and ingest-payload templates documented in `lib/liabilityShift/sessions/README.md`. Once generated, each extension calls `POST /api/sessions/ingest` with the `SessionIngestPayload` shape; async load, 50ms hard timeout, fail-open (never block checkout).
+### Storefront extensions (already scaffolded under `extensions/`)
+- `extensions/dispute-desk-pixel/` — Web Pixel, strict-runtime sandbox, subscribes to checkout-flow events
+- `extensions/dispute-desk-checkout/` — Preact Checkout UI extension, captures final state
 
 ### Schema
 Migration `20260514150000_lse4_checkout_sessions.sql` creates `checkout_sessions` with:
@@ -3102,6 +3118,17 @@ render of the template list.
   returns controlled non-500 responses when upstream lookup fails.
 - Session loading now falls back to `shops.shop_domain` when legacy or malformed
   `shop_sessions.shop_domain` values are encountered (e.g. invalid host values).
+
+**Schema drift fix (2026-05-14):** `Shop.phone` and `Shop.billingAddress` were
+removed in Admin API 2026-01. Selecting either fails the entire query with
+`undefinedField`, which silently broke `/api/shop/details` (returned 404 with
+no GraphQL error log) and surfaced as the Activate step's empty
+team-email field. `lib/shopify/shopDetails.ts` now reads from `Shop.shopAddress`
+(new home of `phone` + address) and logs upstream GraphQL `errors` when
+`data.shop` comes back empty. `lib/disputes/backfillOrders.ts` still queries
+`shop.billingAddress.countryCodeV2` for cross-border enrichment — that call is
+wrapped in try/catch so the failure silently fills `is_cross_border=null`; a
+follow-up should migrate it to `shopAddress`.
 
 **Key files:**
 - `components/setup/steps/BusinessPoliciesStep.tsx` — step component

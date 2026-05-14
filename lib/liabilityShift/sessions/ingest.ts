@@ -13,6 +13,7 @@
 import { createHash } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase/server";
 import { encrypt, serializeEncrypted } from "@/lib/security/encryption";
+import { resolveCustomerTenureDays } from "./enrichCustomerTenure";
 
 export interface SessionIngestPayload {
   shopId: string;
@@ -90,6 +91,19 @@ export async function ingestCheckoutSession(
     observedAt: new Date().toISOString(),
   };
 
+  // Customer tenure: the storefront extensions can't see
+  // customer.created_at, so when the caller doesn't supply
+  // customer_account_age_days but does send a customer_id, look it up
+  // server-side via the Shopify Admin API (cached 1h). Silent failure —
+  // tenure is informational, not a gate.
+  let customerAccountAgeDays = input.customerAccountAgeDays ?? null;
+  if (customerAccountAgeDays == null && input.customerId) {
+    customerAccountAgeDays = await resolveCustomerTenureDays({
+      shopId: input.shopId,
+      customerId: input.customerId,
+    });
+  }
+
   const row = {
     shop_id: input.shopId,
     cart_token: input.cartToken,
@@ -100,7 +114,7 @@ export async function ingestCheckoutSession(
     ip_geo_region: input.ipGeoRegion ?? null,
     user_agent: input.userAgent?.slice(0, MAX_USER_AGENT_LEN) ?? null,
     customer_id: input.customerId ?? null,
-    customer_account_age_days: input.customerAccountAgeDays ?? null,
+    customer_account_age_days: customerAccountAgeDays,
     customer_login_state_at_checkout:
       input.customerLoginStateAtCheckout ?? null,
     session_history: sessionHistory,
