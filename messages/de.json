@@ -2426,9 +2426,11 @@
       "highlight2": "Coverage configured for your dispute types",
       "highlight3": "Playbooks installed for evidence collection",
       "highlight4": "Automation rules ready to handle disputes",
-      "infoTitle": "What happens next?",
-      "infoDesc": "DisputeDesk will now monitor your store for new disputes and handle them according to your coverage and automation settings. You can adjust everything from the dashboard at any time.",
-      "goToDashboard": "Go to Dashboard"
+      "infoTitle": "So geht es ab hier weiter",
+      "infoDesc": "Neue Streitfälle werden automatisch aus Shopify synchronisiert. DisputeDesk erstellt das Beweispaket und speichert es wieder im Shopify Admin bei Ihrem Streitfall. Sie prüfen das Paket dort und reichen es bei der Kartennetzwerk ein, wenn Sie bereit sind.",
+      "goToDashboard": "Go to Dashboard",
+      "analysisTitle": "Wir analysieren Ihre bisherigen Bestellungen",
+      "analysisDesc": "DisputeDesk überprüft Ihre bisherigen Shopify-Bestellungen, um einen Risiko-Snapshot für Ihren Shop zu erstellen. Sie erhalten eine E-Mail mit den Ergebnissen, sobald die Analyse abgeschlossen ist — in der Regel innerhalb weniger Stunden."
     },
     "connection": {
       "title": "Verbindung und Bereitschaft",

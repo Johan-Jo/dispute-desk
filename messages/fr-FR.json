@@ -2617,9 +2617,11 @@
       "highlight2": "Politiques d'entreprise ajoutées aux preuves",
       "highlight3": "Packs de preuves générés automatiquement",
       "highlight4": "Règles d'automatisation actives",
-      "infoTitle": "Comment ça fonctionne maintenant",
-      "infoDesc": "Les nouveaux litiges sont synchronisés automatiquement. Les preuves sont créées et enregistrées dans Shopify. Vous révisez et soumettez dans l'Admin Shopify.",
-      "goToDashboard": "Aller au tableau de bord"
+      "infoTitle": "Comment ça marche à partir de maintenant",
+      "infoDesc": "Les nouveaux litiges se synchronisent automatiquement depuis Shopify. DisputeDesk crée le dossier de preuves et l'enregistre dans votre litige dans l'Admin Shopify. Vous examinez le dossier là-bas et le soumettez au réseau de cartes quand vous êtes prêt.",
+      "goToDashboard": "Aller au tableau de bord",
+      "analysisTitle": "Nous analysons votre historique de commandes",
+      "analysisDesc": "DisputeDesk examine vos commandes Shopify passées pour créer un aperçu des risques de votre boutique. Vous recevrez un e-mail avec les résultats dès la fin de l'analyse — généralement en quelques heures."
     },
     "undoSkip": "Annuler le saut",
     "back": "← Retour",

@@ -2403,7 +2403,20 @@
       "readyDesc": "Aktivera skyddet för att börja dirigera nya tvister med dessa inställningar.",
       "loading": "Laddar konfiguration..."
     },
-    "complete": "Slutför",
+    "complete": {
+      "title": "Allt klart!",
+      "subtitle": "DisputeDesk är redo att hantera dina chargebacks automatiskt.",
+      "readyHeading": "Det här är konfigurerat",
+      "highlight1": "Tvister synkas automatiskt från Shopify",
+      "highlight2": "Affärspolicyer tillagda till bevis",
+      "highlight3": "Bevispaket genereras automatiskt",
+      "highlight4": "Automatiseringsregler aktiva",
+      "infoTitle": "Så fungerar det härifrån",
+      "infoDesc": "Nya tvister synkas automatiskt från Shopify. DisputeDesk bygger bevispaketet och sparar det tillbaka i din tvist i Shopify Admin. Du granskar paketet där och skickar in det till kortnätverket när du är redo.",
+      "analysisTitle": "Vi analyserar dina tidigare beställningar",
+      "analysisDesc": "DisputeDesk granskar dina tidigare Shopify-beställningar för att skapa en risköversikt för din butik. Du får ett mejl med resultatet så snart analysen är klar — vanligtvis inom några timmar.",
+      "goToDashboard": "Gå till instrumentpanelen"
+    },
     "undoSkip": "Ångra överhopp",
     "back": "← Tillbaka",
     "saveAndContinue": "Spara och fortsätt →",

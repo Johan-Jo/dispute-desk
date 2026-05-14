@@ -2617,9 +2617,11 @@
       "highlight2": "Geschäftsrichtlinien zu Beweisen hinzugefügt",
       "highlight3": "Beweispakete werden automatisch erstellt",
       "highlight4": "Automatisierungsregeln aktiv",
-      "infoTitle": "Wie es von hier aus funktioniert",
-      "infoDesc": "Neue Streitfälle werden automatisch synchronisiert. Beweise werden erstellt und in Shopify gespeichert. Überprüfung und Einreichung erfolgen im Shopify-Admin.",
-      "goToDashboard": "Zum Dashboard"
+      "infoTitle": "So geht es ab hier weiter",
+      "infoDesc": "Neue Streitfälle werden automatisch aus Shopify synchronisiert. DisputeDesk erstellt das Beweispaket und speichert es wieder im Shopify Admin bei Ihrem Streitfall. Sie prüfen das Paket dort und reichen es bei der Kartennetzwerk ein, wenn Sie bereit sind.",
+      "goToDashboard": "Zum Dashboard",
+      "analysisTitle": "Wir analysieren Ihre bisherigen Bestellungen",
+      "analysisDesc": "DisputeDesk überprüft Ihre bisherigen Shopify-Bestellungen, um einen Risiko-Snapshot für Ihren Shop zu erstellen. Sie erhalten eine E-Mail mit den Ergebnissen, sobald die Analyse abgeschlossen ist — in der Regel innerhalb weniger Stunden."
     },
     "undoSkip": "Überspringen rückgängig machen",
     "back": "← Zurück",

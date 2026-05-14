@@ -2482,9 +2482,11 @@
       "highlight2": "Affärspolicyer tillagda i bevisen",
       "highlight3": "Bevispaket genereras automatiskt",
       "highlight4": "Automatiseringsregler aktiva",
-      "infoTitle": "Hur det fungerar härifrån",
-      "infoDesc": "Nya tvister synkroniseras automatiskt. Bevis skapas och sparas i Shopify. Du granskar och skickar in i Shopify Admin.",
-      "goToDashboard": "Gå till instrumentpanelen"
+      "infoTitle": "Så fungerar det härifrån",
+      "infoDesc": "Nya tvister synkas automatiskt från Shopify. DisputeDesk bygger bevispaketet och sparar det tillbaka i din tvist i Shopify Admin. Du granskar paketet där och skickar in det till kortnätverket när du är redo.",
+      "goToDashboard": "Gå till instrumentpanelen",
+      "analysisTitle": "Vi analyserar dina tidigare beställningar",
+      "analysisDesc": "DisputeDesk granskar dina tidigare Shopify-beställningar för att skapa en risköversikt för din butik. Du får ett mejl med resultatet så snart analysen är klar — vanligtvis inom några timmar."
     },
     "undoSkip": "Ångra hoppa",
     "back": "← Tillbaka",

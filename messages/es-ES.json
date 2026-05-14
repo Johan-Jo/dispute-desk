@@ -2617,9 +2617,11 @@
       "highlight2": "Políticas comerciales añadidas a las pruebas",
       "highlight3": "Paquetes de pruebas generados automáticamente",
       "highlight4": "Reglas de automatización activas",
-      "infoTitle": "Cómo funciona desde aquí",
-      "infoDesc": "Las nuevas disputas se sincronizan automáticamente. Las pruebas se crean y guardan en Shopify. Revisas y envías en el Admin de Shopify.",
-      "goToDashboard": "Ir al panel"
+      "infoTitle": "Cómo funciona a partir de ahora",
+      "infoDesc": "Las nuevas disputas se sincronizan automáticamente desde Shopify. DisputeDesk crea el paquete de evidencia y lo guarda en tu disputa en el Admin de Shopify. Tú revisas el paquete allí y lo envías a la red de tarjetas cuando estés listo.",
+      "goToDashboard": "Ir al panel",
+      "analysisTitle": "Estamos analizando tus pedidos históricos",
+      "analysisDesc": "DisputeDesk está revisando tus pedidos anteriores de Shopify para crear una instantánea de riesgo de tu tienda. Recibirás un correo con los resultados en cuanto termine el análisis — normalmente en unas horas."
     },
     "undoSkip": "Deshacer omisión",
     "back": "← Atrás",

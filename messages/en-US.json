@@ -2510,8 +2510,10 @@
       "highlight3": "Evidence packs auto-generated",
       "highlight4": "Automation rules active",
       "infoTitle": "How it works from here",
-      "infoDesc": "New disputes are synced automatically. Evidence is built and saved to Shopify. You review and submit in Shopify Admin.",
-      "goToDashboard": "Go to Dashboard"
+      "infoDesc": "New disputes sync from Shopify automatically. DisputeDesk builds the evidence pack and saves it back to your dispute in Shopify Admin. You review the pack there and submit it to the card network when you're ready.",
+      "goToDashboard": "Go to Dashboard",
+      "analysisTitle": "We're analyzing your historical orders",
+      "analysisDesc": "DisputeDesk is reviewing your past Shopify orders to build a risk snapshot for your store. You'll get an email with the results as soon as the analysis is done — typically within a few hours."
     },
     "undoSkip": "Undo skip",
     "back": "← Back",

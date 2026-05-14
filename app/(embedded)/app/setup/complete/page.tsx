@@ -103,6 +103,55 @@ function CompletePageInner() {
               </div>
             </BlockStack>
 
+            {/* Analysis-in-progress card */}
+            <div
+              style={{
+                background: "#FFF8E1",
+                border: "1px solid #FACC15",
+                borderRadius: 8,
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: "#FEF3C7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  marginTop: 2,
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="#92400E"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="10" cy="10" r="7" />
+                  <path d="M10 6v4l2.5 2.5" />
+                </svg>
+              </div>
+              <BlockStack gap="100">
+                <Text as="p" variant="bodySm" fontWeight="semibold">
+                  {t("complete.analysisTitle")}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("complete.analysisDesc")}
+                </Text>
+              </BlockStack>
+            </div>
+
             {/* Info box */}
             <div
               style={{

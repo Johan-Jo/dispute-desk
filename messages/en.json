@@ -2649,9 +2649,11 @@
       "highlight2": "Coverage configured for your dispute types",
       "highlight3": "Playbooks installed for evidence collection",
       "highlight4": "Automation rules ready to handle disputes",
-      "infoTitle": "What happens next?",
-      "infoDesc": "DisputeDesk will now monitor your store for new disputes and handle them according to your coverage and automation settings. You can adjust everything from the dashboard at any time.",
-      "goToDashboard": "Go to Dashboard"
+      "infoTitle": "How it works from here",
+      "infoDesc": "New disputes sync from Shopify automatically. DisputeDesk builds the evidence pack and saves it back to your dispute in Shopify Admin. You review the pack there and submit it to the card network when you're ready.",
+      "goToDashboard": "Go to Dashboard",
+      "analysisTitle": "We're analyzing your historical orders",
+      "analysisDesc": "DisputeDesk is reviewing your past Shopify orders to build a risk snapshot for your store. You'll get an email with the results as soon as the analysis is done — typically within a few hours."
     },
     "undoSkip": "Undo skip",
     "back": "← Back",

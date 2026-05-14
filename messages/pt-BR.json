@@ -2617,9 +2617,11 @@
       "highlight2": "Políticas de negócio adicionadas às evidências",
       "highlight3": "Pacotes de evidências gerados automaticamente",
       "highlight4": "Regras de automação ativas",
-      "infoTitle": "Como funciona daqui em diante",
-      "infoDesc": "Novas disputas são sincronizadas automaticamente. Evidências são criadas e salvas no Shopify. Você revisa e envia no Admin do Shopify.",
-      "goToDashboard": "Ir ao painel"
+      "infoTitle": "Como funciona a partir de agora",
+      "infoDesc": "Novas disputas são sincronizadas automaticamente do Shopify. O DisputeDesk monta o pacote de evidências e salva no seu caso de disputa no Admin do Shopify. Você revisa o pacote lá e envia para a rede de cartões quando estiver pronto.",
+      "goToDashboard": "Ir ao painel",
+      "analysisTitle": "Estamos analisando seus pedidos históricos",
+      "analysisDesc": "O DisputeDesk está revisando seus pedidos anteriores do Shopify para criar um panorama de risco da sua loja. Você receberá um e-mail com os resultados assim que a análise terminar — normalmente em algumas horas."
     },
     "undoSkip": "Desfazer",
     "back": "← Voltar",
