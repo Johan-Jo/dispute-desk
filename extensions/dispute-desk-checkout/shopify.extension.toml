@@ -1,0 +1,34 @@
+# Learn more about configuring your checkout UI extension:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration
+
+api_version = "2026-04"
+
+[[extensions]]
+name = "dispute-desk-checkout"
+handle = "dispute-desk-checkout"
+type = "ui_extension"
+uid = "5a78dbab-5414-a6fe-deef-56afc352b85ebcce71e1"
+
+# Renders at the standard purchase block target. The extension itself
+# renders nothing visible — it captures the authoritative login state
+# and cart_token at the checkout step and forwards it to DisputeDesk.
+[[extensions.targeting]]
+module = "./src/Checkout.jsx"
+target = "purchase.checkout.block.render"
+
+[extensions.capabilities]
+# Storefront API access (for future cart/customer queries — not strictly
+# needed today but kept on so we can enrich without a config change).
+api_access = true
+
+# Required for fetch() to disputedesk.app. Merchant approves at install.
+network_access = true
+
+# Merchant-configured DisputeDesk shop ID — same value as the theme
+# embed and Web Pixel. Required.
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "dispute_desk_shop_id"
+type = "single_line_text_field"
+name = "DisputeDesk shop ID"
+description = "Find this in the embedded app under Settings → Storefront Capture."

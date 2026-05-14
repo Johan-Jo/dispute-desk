@@ -14,20 +14,35 @@ export const runtime = "nodejs";
  * that could break checkout UX. Failures are silent on the server side
  * — diagnostics in logs.
  *
+ * CORS: storefront calls come from `*.myshopify.com` or the merchant's
+ * custom domain — we allow any origin since the body is non-credentialed
+ * and the auth lives in `shop_id` (server-validated).
+ *
  * Privacy controls:
  *   - DNT and GPC signals from headers OR body cause the request to be
  *     dropped server-side before any DB write
  *   - Raw IP is hashed at rest; encrypted raw retained for matching only
  *   - 18-month TTL via the nightly expire_checkout_sessions job
  */
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, DNT, Sec-GPC",
+  "Access-Control-Max-Age": "86400",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
     const shopId = extractShopId(req) ?? (typeof body.shop_id === "string" ? body.shop_id : null);
     if (!shopId) {
-      // Don't 4xx — fail-open. Just drop.
-      return NextResponse.json({ ok: true, dropped: true, reason: "no_shop" });
+      return jsonOk({ ok: true, dropped: true, reason: "no_shop" });
     }
 
     // Privacy headers override anything claimed by the client body.
@@ -82,12 +97,16 @@ export async function POST(req: NextRequest) {
       gpc,
     });
 
-    return NextResponse.json({ ok: true, ...result });
+    return jsonOk({ ok: true, ...result });
   } catch (err) {
     console.warn(
       "[sessions/ingest] unexpected error:",
       err instanceof Error ? err.message : String(err),
     );
-    return NextResponse.json({ ok: true, dropped: true, reason: "internal_error" });
+    return jsonOk({ ok: true, dropped: true, reason: "internal_error" });
   }
+}
+
+function jsonOk(body: Record<string, unknown>): NextResponse {
+  return NextResponse.json(body, { headers: CORS_HEADERS });
 }

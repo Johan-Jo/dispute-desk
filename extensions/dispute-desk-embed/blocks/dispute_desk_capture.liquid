@@ -1,0 +1,53 @@
+{% comment %}
+  DisputeDesk session capture — LSE-4.
+
+  Renders nothing visible. Loads a tiny async script on every page where
+  the merchant has enabled the embed in the theme editor. The script
+  reads cart_token + customer + session info from Shopify's storefront
+  globals and POSTs to DisputeDesk's /api/sessions/ingest endpoint.
+
+  Privacy: DNT and GPC are honored client-side AND server-side. Form
+  values are never read. Async load + 5s hard timeout so we never block
+  checkout.
+{% endcomment %}
+
+<script
+  src="{{ 'dispute-desk-capture.js' | asset_url }}"
+  data-dd-shop-id="{{ block.settings.shop_id }}"
+  data-dd-cart-token="{{ cart.token }}"
+  data-dd-customer-id="{{ customer.id }}"
+  data-dd-customer-created="{{ customer.created_at | date: '%Y-%m-%d' }}"
+  data-dd-logged-in="{% if customer %}true{% else %}false{% endif %}"
+  data-dd-ingest-url="{{ block.settings.ingest_url | default: 'https://disputedesk.app/api/sessions/ingest' }}"
+  async
+  defer
+></script>
+
+{% schema %}
+{
+  "name": "DisputeDesk session capture",
+  "target": "head",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Required"
+    },
+    {
+      "type": "text",
+      "id": "shop_id",
+      "label": "DisputeDesk shop ID",
+      "info": "Find this in DisputeDesk → Settings → Storefront capture. Required."
+    },
+    {
+      "type": "header",
+      "content": "Advanced"
+    },
+    {
+      "type": "url",
+      "id": "ingest_url",
+      "label": "Ingest endpoint",
+      "info": "Defaults to https://disputedesk.app/api/sessions/ingest. Change only if directed by DisputeDesk support."
+    }
+  ]
+}
+{% endschema %}
