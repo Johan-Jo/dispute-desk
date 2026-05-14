@@ -151,6 +151,13 @@ export async function middleware(req: NextRequest) {
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/") ||
       pathname === "/api/portal/clear-shop" ||
+      // LSE-4: storefront-side session ingest is unauthenticated by
+      // design. The pixel and checkout extension run sandboxed with no
+      // Shopify session token; they identify the shop via shop_domain
+      // in the body and the route handler resolves it server-side.
+      // Without this exemption the middleware returns 401 before the
+      // route runs, which is why pixel events never landed before today.
+      pathname === "/api/sessions/ingest" ||
       (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log")
     ) {
       return nextWithAppBridge(req, "0");
