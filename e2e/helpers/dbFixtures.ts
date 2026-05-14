@@ -88,24 +88,23 @@ export interface SeededPackIds {
 }
 
 /**
- * Seed a minimal dispute + evidence_pack pair owned by the user with
- * the given email. The pack is inserted at `status="ready"` and
- * `completeness_score=92` so POST /api/packs/:id/save-to-shopify
- * accepts it without needing `confirmWarnings`.
+ * Read-only: resolve the test user's first connected shop id.
  *
- * Returns the inserted IDs plus a cleanup function. Cleanup deletes
- * the rows in dependency order (jobs → packs → disputes); idempotent
- * via DELETE WHERE id = ... so a failed test that already partially
- * cleaned up won't error.
+ * Used by specs that need the merchant's shop context (to set the
+ * `dd_active_shop` cookie, so middleware's portal API fallback resolves
+ * a real shop instead of injecting the `"demo"` placeholder that the
+ * cross-shop-ownership-filtered routes refuse with 401).
+ *
+ * No writes — safe to call before any test runs. Throws if the user or
+ * shop link is missing so misconfiguration surfaces immediately instead
+ * of as a confusing 401 downstream.
  */
-export async function seedReadyPackForUser(
+export async function getFirstShopIdForUser(
   conn: SbConn,
   userEmail: string,
-): Promise<{ ids: SeededPackIds; cleanup: () => Promise<void> }> {
+): Promise<string> {
   const { client } = conn;
 
-  // Resolve the test user via auth admin API, then look up their
-  // first connected shop via portal_user_shops.
   const { data: usersList, error: usersErr } = await client.auth.admin.listUsers({
     perPage: 200,
   });
@@ -126,9 +125,29 @@ export async function seedReadyPackForUser(
   if (!shopId) {
     throw new Error(
       `No connected shop found for ${userEmail}. ` +
-        "Connect the test user to at least one shop (portal_user_shops) before running seeded specs.",
+        "Connect the test user to at least one shop (portal_user_shops) before running shop-context-required specs.",
     );
   }
+  return shopId;
+}
+
+/**
+ * Seed a minimal dispute + evidence_pack pair owned by the user with
+ * the given email. The pack is inserted at `status="ready"` and
+ * `completeness_score=92` so POST /api/packs/:id/save-to-shopify
+ * accepts it without needing `confirmWarnings`.
+ *
+ * Returns the inserted IDs plus a cleanup function. Cleanup deletes
+ * the rows in dependency order (jobs → packs → disputes); idempotent
+ * via DELETE WHERE id = ... so a failed test that already partially
+ * cleaned up won't error.
+ */
+export async function seedReadyPackForUser(
+  conn: SbConn,
+  userEmail: string,
+): Promise<{ ids: SeededPackIds; cleanup: () => Promise<void> }> {
+  const { client } = conn;
+  const shopId = await getFirstShopIdForUser(conn, userEmail);
 
   const disputeId = randomUUID();
   const packId = randomUUID();

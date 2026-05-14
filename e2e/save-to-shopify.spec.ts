@@ -19,19 +19,29 @@
  *   - The route handler is no longer registered or returns the wrong
  *     error shape
  *
- * Deliberately out of scope (next ticket):
+ * Shop context: the 404 path requires the request to carry a real
+ * shop id (not the `"demo"` placeholder middleware injects when there
+ * is no active shop). The route's first guard rejects `"demo"` with a
+ * 401 SHOP_CONTEXT_REQUIRED, so we set the `dd_active_shop` cookie to
+ * the test user's first connected shop before probing — that lets the
+ * request reach the route's pack-lookup → 404 path. Without this, the
+ * cross-shop-ownership filter (security commit 3e8317f, B4) short-
+ * circuits before the lookup even runs.
+ *
+ * Deliberately out of scope (covered by save-to-shopify-seeded.spec.ts):
  *   - Seed a real `evidence_packs` row with status="ready" and assert
- *     202 + jobs.insert + pack flip to "saving". That needs
- *     SUPABASE_URL_POSTGRES, a transactional cleanup helper, and
- *     test-user shop resolution — meaningfully larger than this spec.
+ *     202 + jobs.insert + pack flip to "saving".
  *   - The actual click-the-button browser test for /app/disputes/[id]
  *     — blocked on a Shopify test-mode session bridge (see plan §12).
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { openSb, getFirstShopIdForUser } from "./helpers/dbFixtures";
 
 const E2E_EMAIL = process.env.E2E_TEST_EMAIL;
 const E2E_PASSWORD = process.env.E2E_TEST_PASSWORD;
+const SB_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /**
  * Mirror of the portal-sections sign-in helper. We don't share the
@@ -75,7 +85,35 @@ test.describe("POST /api/packs/:packId/save-to-shopify — route-level", () => {
     );
   });
 
-  test("returns 404 with the documented error shape for an unknown pack", async ({ page }) => {
+  test("returns 404 with the documented error shape for an unknown pack", async ({ page, baseURL }) => {
+    test.skip(
+      !SB_URL || !SB_KEY,
+      "404 path needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to look up the test user's shop",
+    );
+
+    // The route's first guard (security commit 3e8317f, B4) refuses
+    // shopId === "demo" with 401 SHOP_CONTEXT_REQUIRED. Middleware's
+    // portal fallback injects "demo" when no `dd_active_shop` cookie is
+    // set, so we pre-resolve the test user's first connected shop and
+    // plant the cookie before signing in. With a real shop id in the
+    // x-shop-id header, the route reaches its pack lookup and returns
+    // 404 for the unknown id.
+    const conn = openSb();
+    const realShopId = await getFirstShopIdForUser(conn, E2E_EMAIL!);
+
+    const url = new URL(baseURL ?? "http://localhost:3000");
+    await page.context().addCookies([
+      {
+        name: "dd_active_shop",
+        value: realShopId,
+        domain: url.hostname,
+        path: "/",
+        httpOnly: false,
+        secure: url.protocol === "https:",
+        sameSite: "Lax",
+      },
+    ]);
+
     await portalSignIn(page);
 
     // Random-but-well-formed UUID. The route looks up by id and returns
