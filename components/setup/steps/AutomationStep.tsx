@@ -10,7 +10,6 @@ import {
   getDefaultEvidenceConfig,
   type StoreProfileForRecommendation,
   type StoreType,
-  type ProofLevel,
 } from "@/lib/setup/recommendTemplates";
 
 interface AutomationStepProps {
@@ -98,12 +97,10 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
         } else {
           const profilePayload = state?.steps?.store_profile?.payload;
           const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
-          const deliveryProof = (profilePayload?.deliveryProof ?? "always") as ProofLevel;
           const ec = profilePayload?.shopifyEvidenceConfig ??
-            getDefaultEvidenceConfig(storeTypes, deliveryProof);
+            getDefaultEvidenceConfig(storeTypes);
           const profile: StoreProfileForRecommendation = {
             storeTypes,
-            deliveryProof,
             digitalProof: profilePayload?.digitalProof ?? "yes",
             shopifyEvidenceConfig: ec,
           };

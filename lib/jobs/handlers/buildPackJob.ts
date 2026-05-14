@@ -282,10 +282,10 @@ async function sendManualEvidenceAlert(
 
   const storeProfile = (setup?.steps as Record<string, { payload?: Record<string, unknown> }>)?.store_profile?.payload;
   const digitalProof = storeProfile?.digitalProof as string | undefined;
-  const deliveryProof = storeProfile?.deliveryProof as string | undefined;
+  const storeTypes = (storeProfile?.storeTypes as string[] | undefined) ?? [];
 
   // Check if this dispute type needs manual evidence given merchant capabilities
-  if (!shouldSendEvidenceAlert(dispute.reason, digitalProof, deliveryProof)) {
+  if (!shouldSendEvidenceAlert(dispute.reason, digitalProof, storeTypes)) {
     return;
   }
 
@@ -321,7 +321,7 @@ async function sendManualEvidenceAlert(
     disputeAmount: amount,
     packId,
     digitalProof,
-    deliveryProof,
+    storeTypes,
   });
 
   // Stamp on the dispute so subsequent pack rebuilds won't re-send

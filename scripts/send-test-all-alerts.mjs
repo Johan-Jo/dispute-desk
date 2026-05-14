@@ -65,7 +65,7 @@ const common = {
     disputeAmount: String(common.amount),
     packId: "aebc5405-3c21-4d27-8219-e39fdc1e330d",
     digitalProof: "yes",
-    deliveryProof: "always",
+    storeTypes: ["physical"],
   });
   console.log("3/3 Evidence-needed alert dispatched.");
 }

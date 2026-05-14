@@ -101,14 +101,6 @@ describe("Setup coverage and activate i18n keys", () => {
       "digital",
       "services",
       "subscriptions",
-      "deliveryProof",
-      "deliveryAlways",
-      "deliveryAlwaysDesc",
-      "deliverySometimes",
-      "deliverySometimesDesc",
-      "deliveryRarely",
-      "deliveryRarelyDesc",
-      "deliveryHint",
       "digitalProof",
       "digitalYes",
       "digitalSometimes",
@@ -120,8 +112,6 @@ describe("Setup coverage and activate i18n keys", () => {
       "summaryDigital",
       "summaryFooter",
       "coverageStrong",
-      "coverageGood",
-      "coverageBasic",
       "coverageEnhanced",
       "coverageStandard",
     ];
@@ -146,6 +136,19 @@ describe("Setup coverage and activate i18n keys", () => {
         "reviewThreshold",
         "summaryAutomation",
         "summaryThreshold",
+        // Tracking-number question — removed because Shopify fulfillments
+        // already expose trackingInfo; the merchant's self-report was
+        // redundant and forced a wasted question on digital-only stores.
+        "deliveryProof",
+        "deliveryAlways",
+        "deliveryAlwaysDesc",
+        "deliverySometimes",
+        "deliverySometimesDesc",
+        "deliveryRarely",
+        "deliveryRarelyDesc",
+        "deliveryHint",
+        "coverageGood",
+        "coverageBasic",
       ];
       for (const key of removed) {
         expect(profile?.[key]).toBeUndefined();

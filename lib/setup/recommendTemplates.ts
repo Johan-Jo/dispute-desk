@@ -120,11 +120,9 @@ export const EVIDENCE_GROUP_IDS: EvidenceGroupId[] = [
 // ── Store profile input ────────────────────────────────────────────────
 
 export type StoreType = "physical" | "digital" | "services" | "subscriptions";
-export type ProofLevel = "always" | "sometimes" | "rarely";
 
 export interface StoreProfileForRecommendation {
   storeTypes: StoreType[];
-  deliveryProof: ProofLevel;
   digitalProof: string;
   shopifyEvidenceConfig: ShopifyEvidenceConfig;
 }
@@ -144,17 +142,15 @@ export type EvidenceConfidence = "high" | "medium" | "low";
 // ── Default evidence config ────────────────────────────────────────────
 
 export function getDefaultEvidenceConfig(
-  storeTypes: StoreType[],
-  deliveryProof: ProofLevel
+  storeTypes: StoreType[]
 ): ShopifyEvidenceConfig {
   const hasPhysical = storeTypes.includes("physical");
-  const hasStrongTracking = hasPhysical && deliveryProof !== "rarely";
 
   return {
     orderDetails: "always",
     customerAddress: "always",
     fulfillmentRecords: hasPhysical ? "when_present" : "off",
-    trackingDetails: hasStrongTracking ? "when_present" : "off",
+    trackingDetails: hasPhysical ? "when_present" : "off",
     orderTimeline: "when_present",
     refundHistory: "always",
     notesMetadata: "when_present",
@@ -176,22 +172,17 @@ export function recommendTemplates(
     }
   }
 
-  const { storeTypes, deliveryProof, shopifyEvidenceConfig: ec } = profile;
+  const { storeTypes } = profile;
 
   // Always recommend fraud (universal)
   add("fraud_standard", "Fraud protection is essential for all stores");
 
-  // Physical goods
+  // Physical goods — tracking is read live from Shopify fulfillments by the
+  // pack collector, so we always recommend the tracking-based template. The
+  // pnr_weak_proof variant remains available as an "Add more playbooks"
+  // opt-in for merchants whose fulfillments lack tracking numbers.
   if (storeTypes.includes("physical")) {
-    const trackingActive =
-      ec.trackingDetails === "when_present" || ec.trackingDetails === "always";
-    const hasTracking = trackingActive && deliveryProof !== "rarely";
-
-    if (hasTracking) {
-      add("pnr_with_tracking", "Strong shipping evidence from Shopify fulfillments");
-    } else {
-      add("pnr_weak_proof", "Limited tracking — uses available shipping records");
-    }
+    add("pnr_with_tracking", "Strong shipping evidence from Shopify fulfillments");
     add("not_as_described_quality", "Covers product quality disputes for physical goods");
   }
 

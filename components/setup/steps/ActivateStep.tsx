@@ -10,7 +10,6 @@ import {
   getDefaultEvidenceConfig,
   type StoreProfileForRecommendation,
   type StoreType,
-  type ProofLevel,
 } from "@/lib/setup/recommendTemplates";
 
 interface ActivateStepProps {
@@ -108,12 +107,10 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         } else {
           const profilePayload = state?.steps?.store_profile?.payload;
           const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
-          const deliveryProof = (profilePayload?.deliveryProof ?? "always") as ProofLevel;
           const evidenceConfig = profilePayload?.shopifyEvidenceConfig ??
-            getDefaultEvidenceConfig(storeTypes, deliveryProof);
+            getDefaultEvidenceConfig(storeTypes);
           const profile: StoreProfileForRecommendation = {
             storeTypes,
-            deliveryProof,
             digitalProof: profilePayload?.digitalProof ?? "yes",
             shopifyEvidenceConfig: evidenceConfig,
           };

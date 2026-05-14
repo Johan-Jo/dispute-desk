@@ -109,7 +109,6 @@ export function CoverageStep({ onSaveRef, onCanContinueChange }: CoverageStepPro
 
         const profile: StoreProfileForRecommendation = {
           storeTypes: profilePayload?.storeTypes ?? ["physical"],
-          deliveryProof: profilePayload?.deliveryProof ?? "always",
           digitalProof: profilePayload?.digitalProof ?? "yes",
           shopifyEvidenceConfig: profilePayload?.shopifyEvidenceConfig ?? {
             orderDetails: "always",

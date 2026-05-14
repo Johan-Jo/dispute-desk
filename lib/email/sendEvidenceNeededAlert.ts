@@ -43,8 +43,8 @@ export interface EvidenceNeededContext {
   packId: string;
   /** Merchant's digital proof capability from store profile */
   digitalProof?: string;
-  /** Merchant's delivery proof capability from store profile */
-  deliveryProof?: string;
+  /** Merchant's store types from store profile (used to gate shipping asks) */
+  storeTypes?: string[];
   /** Link to the dispute detail page */
   disputeUrl?: string;
 }
@@ -52,14 +52,19 @@ export interface EvidenceNeededContext {
 /**
  * Determine what manual evidence types should be requested based on
  * the dispute reason and the merchant's stated capabilities.
+ *
+ * Shipping evidence is gated on the merchant selling physical goods —
+ * a digital-only store will never have carrier proof to upload, even if
+ * the issuer miscodes the dispute as PRODUCT_NOT_RECEIVED.
  */
 export function getNeededEvidenceTypes(
   reason: string | null,
   digitalProof?: string,
-  deliveryProof?: string
+  storeTypes?: string[]
 ): string[] {
   const needed: string[] = [];
   const r = (reason ?? "GENERAL").toUpperCase();
+  const sellsPhysical = !!storeTypes?.includes("physical");
 
   // Digital evidence: access logs, usage records, download proof
   if (
@@ -70,12 +75,10 @@ export function getNeededEvidenceTypes(
     needed.push("digital_access_logs");
   }
 
-  // Shipping evidence: carrier proof of delivery, signed delivery
-  if (
-    SHIPPING_EVIDENCE_REASONS.has(r) &&
-    deliveryProof &&
-    deliveryProof !== "rarely"
-  ) {
+  // Shipping evidence: carrier proof of delivery, signed delivery.
+  // Only ask physical-goods merchants — digital/services/subscriptions
+  // stores have nothing to upload here.
+  if (SHIPPING_EVIDENCE_REASONS.has(r) && sellsPhysical) {
     needed.push("carrier_delivery_proof");
   }
 
@@ -93,9 +96,9 @@ export function getNeededEvidenceTypes(
 export function shouldSendEvidenceAlert(
   reason: string | null,
   digitalProof?: string,
-  deliveryProof?: string
+  storeTypes?: string[]
 ): boolean {
-  return getNeededEvidenceTypes(reason, digitalProof, deliveryProof).length > 0;
+  return getNeededEvidenceTypes(reason, digitalProof, storeTypes).length > 0;
 }
 
 const EVIDENCE_TYPE_LABELS: Record<string, { label: string; hint: string }> = {
@@ -124,7 +127,7 @@ export async function sendEvidenceNeededAlert(
   const neededTypes = getNeededEvidenceTypes(
     ctx.disputeReason,
     ctx.digitalProof,
-    ctx.deliveryProof
+    ctx.storeTypes
   );
 
   if (neededTypes.length === 0) {

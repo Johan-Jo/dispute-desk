@@ -6,7 +6,6 @@ import type { StepId } from "@/lib/setup/types";
 import {
   getDefaultEvidenceConfig,
   type StoreType as RecStoreType,
-  type ProofLevel as RecProofLevel,
 } from "@/lib/setup/recommendTemplates";
 
 interface StoreProfileStepProps {
@@ -15,7 +14,6 @@ interface StoreProfileStepProps {
 }
 
 type StoreType = "physical" | "digital" | "services" | "subscriptions";
-type ProofLevel = "always" | "sometimes" | "rarely";
 type DigitalProofLevel = "yes" | "sometimes" | "no";
 
 const STORE_TYPE_OPTIONS: { value: StoreType; labelKey: string }[] = [
@@ -23,12 +21,6 @@ const STORE_TYPE_OPTIONS: { value: StoreType; labelKey: string }[] = [
   { value: "digital", labelKey: "digital" },
   { value: "services", labelKey: "services" },
   { value: "subscriptions", labelKey: "subscriptions" },
-];
-
-const DELIVERY_PROOF_OPTIONS: { value: ProofLevel; labelKey: string; descKey: string }[] = [
-  { value: "always", labelKey: "deliveryAlways", descKey: "deliveryAlwaysDesc" },
-  { value: "sometimes", labelKey: "deliverySometimes", descKey: "deliverySometimesDesc" },
-  { value: "rarely", labelKey: "deliveryRarely", descKey: "deliveryRarelyDesc" },
 ];
 
 const DIGITAL_PROOF_OPTIONS: { value: DigitalProofLevel; labelKey: string }[] = [
@@ -41,7 +33,6 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
   const t = useTranslations("setup.storeProfile");
 
   const [storeTypes, setStoreTypes] = useState<StoreType[]>(["physical"]);
-  const [deliveryProof, setDeliveryProof] = useState<ProofLevel>("always");
   const [digitalProof, setDigitalProof] = useState<DigitalProofLevel>("sometimes");
 
   const showDigitalProof = storeTypes.includes("digital") || storeTypes.includes("services");
@@ -55,7 +46,6 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
         const p = state?.steps?.store_profile?.payload;
         if (p) {
           if (p.storeTypes?.length) setStoreTypes(p.storeTypes);
-          if (p.deliveryProof) setDeliveryProof(p.deliveryProof);
           if (p.digitalProof) setDigitalProof(p.digitalProof);
         }
       })
@@ -72,8 +62,7 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
   useEffect(() => {
     onSaveRef.current = async () => {
       const shopifyEvidenceConfig = getDefaultEvidenceConfig(
-        storeTypes as RecStoreType[],
-        deliveryProof as RecProofLevel
+        storeTypes as RecStoreType[]
       );
       const res = await fetch("/api/setup/step", {
         method: "POST",
@@ -82,7 +71,6 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
           stepId: "store_profile",
           payload: {
             storeTypes,
-            deliveryProof,
             digitalProof,
             shopifyEvidenceConfig,
           },
@@ -90,11 +78,9 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
       });
       return res.ok;
     };
-  }, [onSaveRef, storeTypes, deliveryProof, digitalProof]);
+  }, [onSaveRef, storeTypes, digitalProof]);
 
-  const shippingCoverage =
-    deliveryProof === "always" ? t("coverageStrong") :
-    deliveryProof === "sometimes" ? t("coverageGood") : t("coverageBasic");
+  const shippingCoverage = t("coverageStrong");
   const digitalCoverage = digitalProof === "yes" ? t("coverageEnhanced") : t("coverageStandard");
 
   const cardStyle = (selected: boolean) => ({
@@ -144,40 +130,6 @@ export function StoreProfileStep({ onSaveRef }: StoreProfileStepProps) {
             </div>
             <p style={{ fontSize: 12, color: "#6D7175", marginTop: 10, marginBottom: 0 }}>
               {t("sellHint")}
-            </p>
-          </div>
-
-          <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 8, padding: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#202223", marginBottom: 12 }}>
-              {t("deliveryProof")}
-            </label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {DELIVERY_PROOF_OPTIONS.map((opt) => {
-                const selected = deliveryProof === opt.value;
-                return (
-                  <label key={opt.value} style={cardStyle(selected)}>
-                    <input
-                      type="radio"
-                      name="deliveryProof"
-                      value={opt.value}
-                      checked={selected}
-                      onChange={() => setDeliveryProof(opt.value)}
-                      style={{ marginTop: 1 }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "#202223" }}>
-                        {t(opt.labelKey as Parameters<typeof t>[0])}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#6D7175", marginTop: 2 }}>
-                        {t(opt.descKey as Parameters<typeof t>[0])}
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-            <p style={{ fontSize: 12, color: "#6D7175", marginTop: 10, marginBottom: 0 }}>
-              {t("deliveryHint")}
             </p>
           </div>
 

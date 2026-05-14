@@ -2610,10 +2610,11 @@ Each row shows a status badge (ready / needs_action / syncing). Continue is disa
 
 **Implementation:** `components/setup/steps/StoreProfileStep.tsx`. Collects:
 - Store type (physical / digital / services / subscriptions, multi-select)
-- Delivery proof level (always / sometimes / rarely)
 - Digital proof capabilities (only shown when digital or services selected)
 
-On Continue the step also derives a default `shopifyEvidenceConfig` via `getDefaultEvidenceConfig(storeTypes, deliveryProof)` and persists it alongside the answers in `shop_setup.steps.store_profile.payload`. This default feeds the recommendation algorithm in Step 3 and is overridable in post-onboarding settings — it is intentionally not exposed as 7 dropdowns during onboarding.
+On Continue the step also derives a default `shopifyEvidenceConfig` via `getDefaultEvidenceConfig(storeTypes)` and persists it alongside the answers in `shop_setup.steps.store_profile.payload`. This default feeds the recommendation algorithm in Step 3 and is overridable in post-onboarding settings — it is intentionally not exposed as 7 dropdowns during onboarding.
+
+**Removed: "Do your Shopify fulfillments include tracking numbers?"** — Shopify's `OrderFulfillment.trackingInfo` already exposes tracking numbers, carrier, URL, and `deliveredAt` when present, and the pack collector (`lib/packs/sources/fulfillmentSource.ts`) reads them directly. The merchant's self-report was redundant for physical stores and a wasted question for digital-only stores. Three knock-on effects were addressed at the same time: (1) `getDefaultEvidenceConfig` now gates `trackingDetails` on `storeTypes.includes("physical")` rather than a proof level; (2) `recommendTemplates` always recommends `pnr_with_tracking` for physical (the `pnr_weak_proof` variant remains available as an "Add more playbooks" opt-in for merchants whose fulfillments lack tracking); (3) `sendEvidenceNeededAlert` gates the carrier-proof ask on `storeTypes.includes("physical")` so digital-only stores never get a shipping-evidence email even if an issuer miscodes a dispute as `PRODUCT_NOT_RECEIVED`.
 
 **Removed during the onboarding slim-down** (still respected for already-onboarded stores via legacy fallbacks):
 - `handlingStyle` — third-option "Conservative: notify me first" violated the two-mode rule (`auto` | `review`), and the choice is made per-family on the Coverage and Automation steps anyway.
@@ -2630,8 +2631,8 @@ On Continue the step also derives a default `shopifyEvidenceConfig` via `getDefa
 3. Checks already-installed templates from `GET /api/setup/automation`
 4. Runs `recommendTemplates(profile)` (pure function in `lib/setup/recommendTemplates.ts`) to derive recommended templates
 
-**Recommendation algorithm** maps store types + evidence config to templates:
-- Physical + strong tracking → `pnr_with_tracking`; weak → `pnr_weak_proof`
+**Recommendation algorithm** maps store types to templates:
+- Physical → `pnr_with_tracking` + `not_as_described_quality` (the runtime collector adapts the rebuttal to whatever tracking data Shopify actually exposes; `pnr_weak_proof` is opt-in only)
 - Digital/services → `digital_goods`, `credit_not_processed`
 - Subscriptions → `subscription_canceled`
 - Always: `fraud_standard` (universal) + `general_catchall` (fallback)
