@@ -52,16 +52,15 @@ export async function calculateRatiosForMonth(
   const periodStartIso = periodStart.toISOString();
   const periodEndIso = periodEnd.toISOString();
 
-  // Settled count from disputes' parent orders — proxy via shopify_orders count
-  // for the month, financial_status = paid, no refund. The chargeback_rate
-  // module already has the canonical approximation; we mirror its query
-  // shape here for self-containedness.
+  // Settled count from shopify_orders for the month. Date filter uses
+  // `created_at_shopify` (the order's createdAt in Shopify) — the same
+  // column lib/disputes/snapshotFraudDailyMetrics.ts uses as canonical.
   const { count: settledCount = 0 } = await sb
     .from("shopify_orders")
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId)
-    .gte("created_at", periodStartIso)
-    .lt("created_at", periodEndIso)
+    .gte("created_at_shopify", periodStartIso)
+    .lt("created_at_shopify", periodEndIso)
     .eq("financial_status", "paid");
 
   const { data: disputes } = await sb
