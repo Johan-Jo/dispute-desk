@@ -50,6 +50,13 @@ function toCanonicalMode(value: string): "auto" | "review" {
   return "review";
 }
 
+function isValidEmail(value: string): boolean {
+  // Pragmatic check — matches what users will reasonably enter without
+  // false-rejecting plus-tags or sub-domains. Server-side use will be
+  // through Resend's own validation anyway.
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function ActivateStep({ onSaveRef }: ActivateStepProps) {
   const t = useTranslations("setup.activate");
 
@@ -59,6 +66,9 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
   const [autoCount, setAutoCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [reviewThreshold, setReviewThreshold] = useState("500");
+  const [teamEmail, setTeamEmail] = useState("");
+  const [teamEmailSource, setTeamEmailSource] = useState<"shopify" | "saved" | "edited">("shopify");
+  const [teamEmailTouched, setTeamEmailTouched] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +128,34 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
         setAutoCount(automationValues.filter((v) => v === "auto").length);
         setReviewCount(automationValues.filter((v) => v === "review").length);
+
+        // Team email — prefer the value the merchant has already saved
+        // (re-entry into the step), otherwise fall back to the Shopify
+        // shop contact email so they can confirm with one click.
+        const savedTeamEmail = (
+          state?.steps?.team?.payload as { teamEmail?: string } | undefined
+        )?.teamEmail;
+        if (savedTeamEmail) {
+          if (!cancelled) {
+            setTeamEmail(savedTeamEmail);
+            setTeamEmailSource("saved");
+          }
+        } else if (state?.shopId) {
+          try {
+            const detailsRes = await fetch(
+              `/api/shop/details?shop_id=${state.shopId}`,
+            );
+            if (!cancelled && detailsRes.ok) {
+              const details = (await detailsRes.json()) as { email?: string };
+              if (details.email) {
+                setTeamEmail(details.email);
+                setTeamEmailSource("shopify");
+              }
+            }
+          } catch {
+            /* non-fatal — merchant can type manually */
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -130,6 +168,34 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
   // Wire save
   useEffect(() => {
     onSaveRef.current = async () => {
+      // Refuse to activate without a valid alert email — block advance
+      // and surface the inline error by marking the field as touched.
+      if (!isValidEmail(teamEmail)) {
+        setTeamEmailTouched(true);
+        return false;
+      }
+
+      // Persist the team email payload first so the worker can read it
+      // for evidence + high-value alerts immediately after activation.
+      const teamRes = await fetch("/api/setup/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stepId: "team",
+          payload: {
+            teamEmail: teamEmail.trim(),
+            // Default notification preferences — keep evidence/review
+            // alerts on by default; merchants can opt out from Settings.
+            notifications: {
+              newDispute: true,
+              beforeDue: true,
+              evidenceReady: true,
+            },
+          },
+        }),
+      });
+      if (!teamRes.ok) return false;
+
       const draftPacks = activePacks.filter((p) => p.status === "DRAFT");
       for (const pack of draftPacks) {
         await fetch(`/api/packs/${pack.id}`, {
@@ -149,7 +215,7 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
       });
       return res.ok;
     };
-  }, [onSaveRef, activePacks]);
+  }, [onSaveRef, activePacks, teamEmail]);
 
   if (loading) {
     return (
@@ -240,6 +306,65 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
           </div>
           <div style={{ fontSize: 36, fontWeight: 700, color: "#202223", lineHeight: 1 }}>${reviewThreshold}</div>
           <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statThresholdDesc")}</div>
+        </div>
+      </div>
+
+      {/* Team email confirmation */}
+      <div style={{
+        background: "#fff",
+        border: "1px solid #E1E3E5",
+        borderRadius: 12,
+        padding: "24px 28px",
+        marginBottom: 24,
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 8 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth="1.8" style={{ flexShrink: 0, marginTop: 1 }}>
+            <path d="M4 6h16v12H4z" />
+            <path d="m4 6 8 7 8-7" />
+          </svg>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: "#202223", margin: 0 }}>
+              {t("teamEmailTitle")}
+            </h3>
+            <p style={{ fontSize: 13, color: "#6D7175", margin: "4px 0 0", lineHeight: 1.5 }}>
+              {t("teamEmailDesc")}
+            </p>
+          </div>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <label htmlFor="dd-team-email" style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#202223", marginBottom: 6 }}>
+            {t("teamEmailLabel")}
+          </label>
+          <input
+            id="dd-team-email"
+            type="email"
+            value={teamEmail}
+            onChange={(e) => {
+              setTeamEmail(e.target.value);
+              setTeamEmailSource("edited");
+            }}
+            onBlur={() => setTeamEmailTouched(true)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              border: `2px solid ${teamEmailTouched && !isValidEmail(teamEmail) ? "#DC2626" : "#E1E3E5"}`,
+              borderRadius: 8,
+              fontSize: 14,
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          {teamEmailTouched && !isValidEmail(teamEmail) ? (
+            <p style={{ fontSize: 12, color: "#DC2626", margin: "6px 0 0" }}>
+              {t("teamEmailInvalid")}
+            </p>
+          ) : teamEmailSource === "shopify" && teamEmail ? (
+            <p style={{ fontSize: 12, color: "#6D7175", margin: "6px 0 0", fontStyle: "italic" }}>
+              {t("teamEmailFromShopify")}
+            </p>
+          ) : null}
         </div>
       </div>
 

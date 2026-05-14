@@ -2409,7 +2409,12 @@
       "next3Desc": "Ajuste a cobertura a qualquer momento nas definições de Automação",
       "readyTitle": "A sua cobertura de disputas recomendada está pronta",
       "readyDesc": "Ative a proteção para começar a encaminhar novas disputas com estas definições.",
-      "loading": "A carregar configuração..."
+      "loading": "A carregar configuração...",
+      "teamEmailTitle": "Para onde devemos enviar os alertas de disputas?",
+      "teamEmailDesc": "Usaremos este endereço para alertas de novas disputas, lembretes de evidências, notificações de revisão de alto valor e seu resumo mensal de chargebacks.",
+      "teamEmailLabel": "Email para alertas",
+      "teamEmailFromShopify": "Obtido da sua conta Shopify — confirme ou altere.",
+      "teamEmailInvalid": "Por favor, insira um endereço de email válido antes de ativar."
     },
     "complete": {
       "title": "You're All Set!",

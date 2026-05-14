@@ -2608,7 +2608,12 @@
       "next3Desc": "Ajustez la couverture à tout moment dans les paramètres d’Automatisation",
       "readyTitle": "Votre couverture de litiges recommandée est prête",
       "readyDesc": "Activez la protection pour commencer à acheminer les nouveaux litiges avec ces paramètres.",
-      "loading": "Chargement de la configuration..."
+      "loading": "Chargement de la configuration...",
+      "teamEmailTitle": "Où devons-nous envoyer les alertes de litiges ?",
+      "teamEmailDesc": "Nous utiliserons cette adresse pour les alertes de nouveaux litiges, les rappels de preuves, les notifications d'examen de litiges de grande valeur et votre résumé mensuel des chargebacks.",
+      "teamEmailLabel": "Email pour les alertes",
+      "teamEmailFromShopify": "Récupéré de votre compte Shopify — confirmez ou modifiez-le.",
+      "teamEmailInvalid": "Veuillez saisir une adresse email valide avant d'activer."
     },
     "complete": {
       "title": "Tout est prêt !",

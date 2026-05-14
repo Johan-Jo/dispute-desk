@@ -2608,7 +2608,12 @@
       "next3Desc": "Ajusta la cobertura en cualquier momento en los ajustes de Automatización",
       "readyTitle": "Tu cobertura de disputas recomendada está lista",
       "readyDesc": "Activa la protección para empezar a gestionar nuevas disputas con estos ajustes.",
-      "loading": "Cargando configuración..."
+      "loading": "Cargando configuración...",
+      "teamEmailTitle": "¿A dónde enviamos las alertas de disputas?",
+      "teamEmailDesc": "Usaremos esta dirección para alertas de nuevas disputas, recordatorios de evidencia, notificaciones de revisión de alto valor y tu resumen mensual de chargebacks.",
+      "teamEmailLabel": "Email para alertas",
+      "teamEmailFromShopify": "Obtenido de tu cuenta de Shopify — confírmalo o cámbialo.",
+      "teamEmailInvalid": "Por favor, introduce una dirección de email válida antes de activar."
     },
     "complete": {
       "title": "¡Todo listo!",

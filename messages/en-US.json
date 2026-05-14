@@ -3140,7 +3140,12 @@
       "next3Desc": "Fine-tune coverage anytime in Automation settings",
       "readyTitle": "Your recommended dispute coverage is ready",
       "readyDesc": "Activate protection to begin routing new disputes with these settings.",
-      "loading": "Loading configuration..."
+      "loading": "Loading configuration...",
+      "teamEmailTitle": "Where should we send dispute alerts?",
+      "teamEmailDesc": "We'll use this address for new-dispute alerts, evidence-needed reminders, high-value review notifications, and your monthly chargeback digest.",
+      "teamEmailLabel": "Alert email",
+      "teamEmailFromShopify": "Pulled from your Shopify account — confirm or change it.",
+      "teamEmailInvalid": "Please enter a valid email address before activating."
     }
   },
   "configGuide": {

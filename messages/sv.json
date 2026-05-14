@@ -2402,7 +2402,12 @@
       "next3Desc": "Finjustera täckningen när som helst i Automatiseringsinställningar",
       "readyTitle": "Din rekommenderade tvisttäckning är redo",
       "readyDesc": "Aktivera skyddet för att börja dirigera nya tvister med dessa inställningar.",
-      "loading": "Laddar konfiguration..."
+      "loading": "Laddar konfiguration...",
+      "teamEmailTitle": "Vart ska vi skicka tvistmeddelanden?",
+      "teamEmailDesc": "Vi använder den här adressen för nya tvister, bevispåminnelser, granskningsmeddelanden för högvärdiga ärenden och din månatliga chargeback-sammanfattning.",
+      "teamEmailLabel": "E-post för aviseringar",
+      "teamEmailFromShopify": "Hämtad från ditt Shopify-konto — bekräfta eller ändra.",
+      "teamEmailInvalid": "Ange en giltig e-postadress innan du aktiverar."
     },
     "complete": {
       "title": "Allt klart!",

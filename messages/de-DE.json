@@ -2608,7 +2608,12 @@
       "next3Desc": "Passen Sie die Abdeckung jederzeit in den Automatisierungseinstellungen an",
       "readyTitle": "Ihre empfohlene Streitfall-Abdeckung ist bereit",
       "readyDesc": "Aktivieren Sie den Schutz, um neue Streitfälle mit diesen Einstellungen zu bearbeiten.",
-      "loading": "Konfiguration wird geladen..."
+      "loading": "Konfiguration wird geladen...",
+      "teamEmailTitle": "Wohin sollen wir Streitfall-Benachrichtigungen senden?",
+      "teamEmailDesc": "Wir verwenden diese Adresse für neue Streitfälle, Beweis-Erinnerungen, Benachrichtigungen zu hochpreisigen Prüfungen und Ihre monatliche Chargeback-Übersicht.",
+      "teamEmailLabel": "Benachrichtigungs-E-Mail",
+      "teamEmailFromShopify": "Aus Ihrem Shopify-Konto übernommen — bestätigen oder ändern Sie sie.",
+      "teamEmailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein, bevor Sie aktivieren."
     },
     "complete": {
       "title": "Alles eingerichtet!",
