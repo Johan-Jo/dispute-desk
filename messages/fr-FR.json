@@ -3737,6 +3737,11 @@
     "checkpoint_fulfillment_baseline_degraded_consider_title": "Délai médian d'expédition ralenti à {current}.",
     "checkpoint_fulfillment_baseline_degraded_consider_body": "En hausse de {delta} par rapport aux 30 jours précédents ({prior}). Un traitement plus rapide renforce généralement les signaux service client — facteur régulièrement cité dans les contestations.",
     "checkpoint_fulfillment_baseline_improved_healthy_title": "Délai médian d'expédition amélioré à {current}.",
-    "checkpoint_fulfillment_baseline_improved_healthy_body": "En baisse de {delta} par rapport aux 30 jours précédents ({prior}). Un traitement plus rapide renforce les signaux service client dans les contestations hors fraude."
+    "checkpoint_fulfillment_baseline_improved_healthy_body": "En baisse de {delta} par rapport aux 30 jours précédents ({prior}). Un traitement plus rapide renforce les signaux service client dans les contestations hors fraude.",
+    "stripFailedTitle": "L'analyse historique n'a pas abouti",
+    "stripFailedBody": "Nous n'avons pas pu analyser vos commandes Shopify passées cette fois. Cela se règle généralement avec une nouvelle tentative — réessayez ci-dessous.",
+    "stripRetryCta": "Relancer l'analyse",
+    "stripRetryError": "Impossible de relancer pour le moment. Veuillez réessayer dans un instant.",
+    "stripNoOrdersBody": "Nous n'avons pas encore trouvé de commandes Shopify historiques à analyser. Dès que les commandes arrivent, votre aperçu des risques apparaîtra ici."
   }
 }

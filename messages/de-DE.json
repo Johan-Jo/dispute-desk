@@ -3737,6 +3737,11 @@
     "checkpoint_fulfillment_baseline_degraded_consider_title": "Mittlere Bearbeitungszeit verschlechtert auf {current}.",
     "checkpoint_fulfillment_baseline_degraded_consider_body": "Plus {delta} gegenüber den vorherigen 30 Tagen ({prior}). Schnellere Bearbeitung stärkt grundsätzlich die Kundenservice-Signale — und ist ein häufig genannter Faktor in Streitfällen.",
     "checkpoint_fulfillment_baseline_improved_healthy_title": "Mittlere Bearbeitungszeit verbessert auf {current}.",
-    "checkpoint_fulfillment_baseline_improved_healthy_body": "Minus {delta} gegenüber den vorherigen 30 Tagen ({prior}). Schnellere Bearbeitung stärkt die Kundenservice-Signale in Nicht-Betrugstreitfällen."
+    "checkpoint_fulfillment_baseline_improved_healthy_body": "Minus {delta} gegenüber den vorherigen 30 Tagen ({prior}). Schnellere Bearbeitung stärkt die Kundenservice-Signale in Nicht-Betrugstreitfällen.",
+    "stripFailedTitle": "Historische Analyse wurde nicht abgeschlossen",
+    "stripFailedBody": "Wir konnten Ihre bisherigen Shopify-Bestellungen dieses Mal nicht analysieren. Ein erneuter Versuch behebt das meist — probieren Sie es unten noch einmal.",
+    "stripRetryCta": "Analyse wiederholen",
+    "stripRetryError": "Wiederholung konnte nicht gestartet werden. Bitte versuchen Sie es in einem Moment erneut.",
+    "stripNoOrdersBody": "Wir haben noch keine bisherigen Shopify-Bestellungen zur Analyse gefunden. Sobald Bestellungen eingehen, erscheint hier Ihre Risikoübersicht."
   }
 }

@@ -3754,6 +3754,11 @@
     "checkpoint_fulfillment_baseline_degraded_consider_title": "Tempo mediano de atendimento aumentou para {current}.",
     "checkpoint_fulfillment_baseline_degraded_consider_body": "Mais {delta} versus os 30 dias anteriores ({prior}). Um atendimento mais rápido fortalece os sinais de serviço ao cliente — fator frequentemente citado em disputas.",
     "checkpoint_fulfillment_baseline_improved_healthy_title": "Tempo mediano de atendimento melhorou para {current}.",
-    "checkpoint_fulfillment_baseline_improved_healthy_body": "Menos {delta} versus os 30 dias anteriores ({prior}). Um atendimento mais rápido fortalece os sinais de serviço ao cliente em disputas que não envolvem fraude."
+    "checkpoint_fulfillment_baseline_improved_healthy_body": "Menos {delta} versus os 30 dias anteriores ({prior}). Um atendimento mais rápido fortalece os sinais de serviço ao cliente em disputas que não envolvem fraude.",
+    "stripFailedTitle": "A análise histórica não foi concluída",
+    "stripFailedBody": "Não conseguimos analisar seus pedidos anteriores do Shopify desta vez. Normalmente isso se resolve com uma nova tentativa — tente novamente abaixo.",
+    "stripRetryCta": "Tentar análise novamente",
+    "stripRetryError": "Não foi possível iniciar a nova tentativa. Por favor, tente novamente em alguns instantes.",
+    "stripNoOrdersBody": "Ainda não encontramos pedidos históricos do Shopify para analisar. Assim que os pedidos começarem a chegar, seu panorama de risco aparecerá aqui."
   }
 }

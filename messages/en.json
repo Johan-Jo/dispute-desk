@@ -3188,6 +3188,11 @@
     "checkpoint_fulfillment_baseline_degraded_consider_title": "Median fulfillment slowed to {current}.",
     "checkpoint_fulfillment_baseline_degraded_consider_body": "Up {delta} versus prior 30 days ({prior}). Faster fulfillment generally strengthens customer-service signals — and is a routinely cited dispute factor.",
     "checkpoint_fulfillment_baseline_improved_healthy_title": "Median fulfillment improved to {current}.",
-    "checkpoint_fulfillment_baseline_improved_healthy_body": "Down {delta} versus prior 30 days ({prior}). Faster fulfillment strengthens customer-service signals in non-fraud disputes."
+    "checkpoint_fulfillment_baseline_improved_healthy_body": "Down {delta} versus prior 30 days ({prior}). Faster fulfillment strengthens customer-service signals in non-fraud disputes.",
+    "stripFailedTitle": "Historical analysis didn't finish",
+    "stripFailedBody": "We couldn't analyze your past Shopify orders this time. This usually clears up on a retry — give it another shot below.",
+    "stripRetryCta": "Retry analysis",
+    "stripRetryError": "Couldn't start the retry. Please try again in a moment.",
+    "stripNoOrdersBody": "We didn't find any historical Shopify orders to analyze yet. Once orders start coming in, your risk snapshot will appear here."
   }
 }

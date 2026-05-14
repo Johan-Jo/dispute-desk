@@ -307,7 +307,7 @@ describe("normalizeBackfillOrder", () => {
       shopId,
       rawOrder({
         fulfillments: [
-          { createdAt: "2026-04-22T13:00:00Z", displayStatus: "SUCCESS", metafields: null },
+          { createdAt: "2026-04-22T13:00:00Z", displayStatus: "SUCCESS" },
         ],
       }),
       { storeCountryCode: "US" },

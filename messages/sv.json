@@ -3001,6 +3001,11 @@
     "checkpoint_fulfillment_baseline_degraded_consider_title": "Median utskickstid försämrad till {current}.",
     "checkpoint_fulfillment_baseline_degraded_consider_body": "Upp {delta} jämfört med föregående 30 dagar ({prior}). Snabbare hantering stärker generellt kundsignalerna — en faktor som regelbundet åberopas i tvister.",
     "checkpoint_fulfillment_baseline_improved_healthy_title": "Median utskickstid förbättrad till {current}.",
-    "checkpoint_fulfillment_baseline_improved_healthy_body": "Ned {delta} jämfört med föregående 30 dagar ({prior}). Snabbare hantering stärker kundsignalerna i tvister som inte rör bedrägeri."
+    "checkpoint_fulfillment_baseline_improved_healthy_body": "Ned {delta} jämfört med föregående 30 dagar ({prior}). Snabbare hantering stärker kundsignalerna i tvister som inte rör bedrägeri.",
+    "stripFailedTitle": "Den historiska analysen slutfördes inte",
+    "stripFailedBody": "Vi kunde inte analysera dina tidigare Shopify-beställningar den här gången. Det löser sig oftast med ett nytt försök — testa igen nedan.",
+    "stripRetryCta": "Försök igen",
+    "stripRetryError": "Det gick inte att starta om just nu. Försök igen om en stund.",
+    "stripNoOrdersBody": "Vi har ännu inte hittat några tidigare Shopify-beställningar att analysera. När beställningar börjar komma in visas din risköversikt här."
   }
 }

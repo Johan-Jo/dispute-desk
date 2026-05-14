@@ -23,10 +23,13 @@
  * recommendations, no severity colors.
  *
  * State machine:
- *   - complete   → three-sentence observational summary + CTA.
+ *   - complete (orders > 0) → three-sentence observational summary + CTA.
+ *   - complete (orders = 0) → "no orders found" empty-state copy, no CTA.
  *   - in_progress / not_started → "preparing" copy, no CTA.
- *   - failed     → render nothing (silent — covered by the scope
- *                   banner or future failure surface).
+ *   - failed     → failure card with a Retry button. Previously rendered
+ *                  nothing, leaving merchants in the dark when the
+ *                  backfill silently died (e.g. the 2026-05 Shopify
+ *                  Fulfillment.metafields schema regression).
  */
 
 import { useEffect, useState } from "react";
@@ -39,6 +42,7 @@ import {
   InlineStack,
   Text,
   Button,
+  Banner,
 } from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
 
@@ -53,6 +57,8 @@ export function DashboardOperationalInsightsStrip() {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const [data, setData] = useState<StripData | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,8 +78,77 @@ export function DashboardOperationalInsightsStrip() {
     };
   }, []);
 
+  async function handleRetry() {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const res = await fetch("/api/dashboard/insights/retry-backfill", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setRetryError(body?.error ?? "unknown_error");
+        return;
+      }
+      // Optimistically flip to in_progress so the merchant sees
+      // immediate feedback that the request was accepted.
+      setData((prev) =>
+        prev ? { ...prev, importStatus: "in_progress" } : prev,
+      );
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : "network_error");
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   if (!data) return null;
-  if (data.importStatus === "failed") return null;
+
+  // ── Failed import ──────────────────────────────────────────────
+  if (data.importStatus === "failed") {
+    return (
+      <Card>
+        <BlockStack gap="300">
+          <Text as="h2" variant="headingSm">
+            {t("fraudIntel.stripTitle")}
+          </Text>
+          <Banner tone="warning" title={t("fraudIntel.stripFailedTitle")}>
+            <Text as="p" variant="bodyMd">
+              {t("fraudIntel.stripFailedBody")}
+            </Text>
+          </Banner>
+          {retryError ? (
+            <Banner tone="critical">
+              <Text as="p" variant="bodyMd">
+                {t("fraudIntel.stripRetryError")}
+              </Text>
+            </Banner>
+          ) : null}
+          <InlineStack>
+            <Button onClick={handleRetry} loading={retrying} variant="primary">
+              {t("fraudIntel.stripRetryCta")}
+            </Button>
+          </InlineStack>
+        </BlockStack>
+      </Card>
+    );
+  }
+
+  // ── Complete with zero orders ──────────────────────────────────
+  if (data.importStatus === "complete" && data.ordersAnalyzed === 0) {
+    return (
+      <Card>
+        <BlockStack gap="200">
+          <Text as="h2" variant="headingSm">
+            {t("fraudIntel.stripTitle")}
+          </Text>
+          <Text as="p" variant="bodyMd" tone="subdued">
+            {t("fraudIntel.stripNoOrdersBody")}
+          </Text>
+        </BlockStack>
+      </Card>
+    );
+  }
 
   const isComplete = data.importStatus === "complete";
   const body = isComplete

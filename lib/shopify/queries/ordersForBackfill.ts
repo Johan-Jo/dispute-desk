@@ -41,7 +41,6 @@ import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { assertNotAuthInvalid } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
   readTrackingMetafields,
-  mergeTrackingReads,
   type RawShopifyMetafield,
 } from "@/lib/shopify/trackingApps";
 
@@ -103,21 +102,16 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
               }
             }
           }
-          # Per-fulfillment tracking metafields. More accurate than
-          # order-level because a single order can split into multiple
-          # shipments. Read separately and merge with mergeTrackingReads().
+          # Fulfillment basics for fulfilled_at + status derivation.
+          # NOTE: Fulfillment.metafields is NOT a field in the Admin GraphQL
+          # schema (verified 2026-01) — referencing it caused the orders
+          # backfill to fail with "Field 'metafields' doesn't exist on type
+          # 'Fulfillment'" for every shop. Tracking metafields are read from
+          # the order-level metafields connection above; flattenTrackingForRow
+          # tolerates the missing per-fulfillment data via ?? fallback.
           fulfillments(first: 1) {
             createdAt
             displayStatus
-            metafields(first: 20) {
-              edges {
-                node {
-                  namespace
-                  key
-                  value
-                }
-              }
-            }
           }
           risk {
             recommendation
@@ -187,7 +181,6 @@ export interface RawBackfillOrder {
   fulfillments: Array<{
     createdAt: string | null;
     displayStatus: string | null;
-    metafields: { edges: RawMetafieldEdge[] } | null;
   }> | null;
   shopifyProtect: { status: string | null } | null;
   transactions: RawBackfillTransaction[] | null;
@@ -440,10 +433,14 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-/** Pure: flatten a RawBackfillOrder's metafields into the four
- *  tracking-related columns persisted to shopify_orders. Reads
- *  order-level + fulfillment-level metafields and merges (the
- *  fulfillment data wins for per-shipment accuracy). */
+/** Pure: flatten a RawBackfillOrder's order-level metafields into the
+ *  four tracking-related columns persisted to shopify_orders.
+ *
+ *  Previously merged per-fulfillment metafields on top of order-level
+ *  for per-shipment accuracy, but Fulfillment.metafields is not exposed
+ *  by Shopify's Admin GraphQL — referencing it killed the entire
+ *  backfill. Order-level metafields are the AfterShip/Shipway/etc.
+ *  primary write path anyway when "sync to Shopify" is enabled. */
 export function flattenTrackingForRow(raw: RawBackfillOrder): {
   delivery_status: string | null;
   delivered_at_tracking: string | null;
@@ -457,17 +454,7 @@ export function flattenTrackingForRow(raw: RawBackfillOrder): {
       value: e.node.value,
     }),
   );
-  const fulMfs: RawShopifyMetafield[] = (
-    raw.fulfillments?.[0]?.metafields?.edges ?? []
-  ).map((e) => ({
-    namespace: e.node.namespace,
-    key: e.node.key,
-    value: e.node.value,
-  }));
-  const merged = mergeTrackingReads(
-    readTrackingMetafields(fulMfs),
-    readTrackingMetafields(orderMfs),
-  );
+  const merged = readTrackingMetafields(orderMfs);
   return {
     delivery_status: merged.deliveryStatus,
     delivered_at_tracking: merged.deliveredAtTracking,
