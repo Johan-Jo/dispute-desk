@@ -94,11 +94,30 @@ test.describe("POST /api/packs/:packId/save-to-shopify — seeded happy path", (
 
   test("returns 202, enqueues a save_to_shopify job, and flips the pack to 'saving'", async ({
     page,
+    baseURL,
   }) => {
     const conn = openSb();
     const seeded = await seedReadyPackForUser(conn, E2E_EMAIL!);
 
     try {
+      // The route's first guard (security commit 3e8317f, B4) refuses
+      // shopId === "demo" with 401 SHOP_CONTEXT_REQUIRED. Middleware's
+      // portal fallback injects "demo" when no `dd_active_shop` cookie
+      // is set, so plant the cookie before signing in so the request
+      // carries the real shop id the seeded pack belongs to.
+      const url = new URL(baseURL ?? "http://localhost:3000");
+      await page.context().addCookies([
+        {
+          name: "dd_active_shop",
+          value: seeded.ids.shopId,
+          domain: url.hostname,
+          path: "/",
+          httpOnly: false,
+          secure: url.protocol === "https:",
+          sameSite: "Lax",
+        },
+      ]);
+
       await portalSignIn(page);
 
       // Sanity: the seed actually persisted as "ready" before we hit
