@@ -7,5 +7,9 @@ runtime_context = "strict"
 # Zero merchant configuration: the pixel reads shop.domain from its
 # init context (provided by Shopify on every boot) and uses that to
 # identify the merchant server-side. No fields for the merchant to fill.
+# Shopify's pixel-config validator still requires `settings` to declare
+# a `fields` table, so we declare it empty.
 [settings]
 type = "object"
+
+[settings.fields]
