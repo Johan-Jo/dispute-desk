@@ -172,7 +172,11 @@ function hashIp(ip: string, shopId: string): string {
 
 function encryptIp(ip: string): Buffer {
   const enc = encrypt(ip.trim());
-  // serializeEncrypted returns a base64 string; we store as bytea for
-  // compactness and to keep the value out of any default text dumps.
-  return Buffer.from(serializeEncrypted(enc), "base64");
+  // serializeEncrypted returns the format `v{ver}:{ivHex}:{tagHex}:{ctHex}`
+  // — already a printable ASCII string. Encode as UTF-8 bytes to store
+  // in the bytea column. (Earlier code passed it to
+  // `Buffer.from(..., "base64")` which silently mangled the value
+  // because colons aren't valid base64 — every IP stored before
+  // 2026-05-14 is un-decryptable. New rows from now on are recoverable.)
+  return Buffer.from(serializeEncrypted(enc), "utf8");
 }

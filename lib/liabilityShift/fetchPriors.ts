@@ -20,6 +20,7 @@ import {
   type CE30CandidateOrderNode,
   type CustomerOrdersForCE30Response,
 } from "@/lib/shopify/queries/customerOrdersForCE30";
+import { lookupSessionForOrder } from "./sessions/lookupSessionForOrder";
 import {
   CE30_PRIOR_MAX_DAYS,
   CE30_PRIOR_MIN_DAYS,
@@ -33,6 +34,12 @@ export interface FetchPriorsInput {
   disputedAt: string;
   /** Max priors to retrieve; the filter then keeps the eligible ones. */
   first?: number;
+  /**
+   * Internal shop_id used to enrich each prior with LSE-4 session
+   * data (IP, device, login state) when a checkout_sessions row exists
+   * for that prior's cart_token. Optional — omitted in unit tests.
+   */
+  shopId?: string;
 }
 
 export interface FetchPriorsResult {
@@ -67,6 +74,28 @@ export async function fetchPriorsForCE30(
   const priors: QualificationOrder[] = customer.orders.edges.map((e) =>
     mapCandidateToQualificationOrder(e.node, input.customerGid, customer.email),
   );
+
+  // LSE-4 enrichment: for each prior, look up the matching
+  // checkout_sessions row by cart_token. When found, override
+  // ipAddress / deviceFingerprint with the session-captured values.
+  // Done in parallel — typical case is ≤50 priors and the lookup is a
+  // single indexed query each.
+  if (input.shopId) {
+    await Promise.all(
+      priors.map(async (p, i) => {
+        const cartToken = customer.orders.edges[i]?.node.cartToken ?? null;
+        if (!cartToken) return;
+        const enrichment = await lookupSessionForOrder({
+          shopId: input.shopId!,
+          cartToken,
+        });
+        if (enrichment.ip) p.ipAddress = enrichment.ip;
+        if (enrichment.deviceFingerprint) {
+          p.deviceFingerprint = enrichment.deviceFingerprint;
+        }
+      }),
+    );
+  }
 
   return { priors, customerEmail: customer.email };
 }

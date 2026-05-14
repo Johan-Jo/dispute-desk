@@ -24,6 +24,7 @@ import type { OrderDetailNode, OrderTransaction } from "@/lib/shopify/queries/or
 import { fetchPriorsForCE30 } from "./fetchPriors";
 import { pickInitialSubscriptionBilling } from "./priors";
 import { qualifyCE30 } from "./qualifyCE30";
+import { lookupSessionForOrder } from "./sessions/lookupSessionForOrder";
 import type { CE30Result, QualificationOrder } from "./types";
 
 export interface EvaluateQualificationInput {
@@ -87,6 +88,21 @@ export async function evaluateQualification(
     threeDSecure,
   );
 
+  // LSE-4 enrichment: if the LSE-4 storefront pixel captured a
+  // checkout_sessions row for this order's cart_token, prefer its
+  // values over the (sparser) Shopify Order fields. The session row
+  // typically has a more reliable IP and an authoritative login state
+  // captured at the checkout step.
+  const sessionEnrichment = await lookupSessionForOrder({
+    shopId: input.shopId,
+    cartToken:
+      (input.disputedOrder as { cartToken?: string | null }).cartToken ?? null,
+  });
+  if (sessionEnrichment.ip) disputedQualOrder.ipAddress = sessionEnrichment.ip;
+  if (sessionEnrichment.deviceFingerprint) {
+    disputedQualOrder.deviceFingerprint = sessionEnrichment.deviceFingerprint;
+  }
+
   // Gate 3: short-circuit when card network isn't Visa — CE 3.0 only.
   // We still evaluate (qualifyCE30 returns not_applicable) so the
   // dispute_qualifications row is created with a clear reason.
@@ -107,6 +123,7 @@ export async function evaluateQualification(
           accessToken: input.accessToken,
           customerGid,
           disputedAt: disputedQualOrder.createdAt,
+          shopId: input.shopId,
         });
         priors = fetched.priors;
 
@@ -123,6 +140,7 @@ export async function evaluateQualification(
             // Look back 3 years for initial billing — covers most subs.
             disputedAt: shiftIso(disputedQualOrder.createdAt, -365 * 2),
             first: 100,
+            shopId: input.shopId,
           });
           initialBilling = pickInitialSubscriptionBilling(disputedQualOrder, [
             ...fetched.priors,

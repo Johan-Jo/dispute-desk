@@ -19,6 +19,7 @@ export const ORDER_DETAIL_QUERY = `
         displayFinancialStatus
         displayFulfillmentStatus
         note
+        cartToken
         clientIp
         customAttributes { key value }
         totalPriceSet { shopMoney { amount currencyCode } }
@@ -271,6 +272,7 @@ export interface OrderDetailNode {
   displayFinancialStatus: string | null;
   displayFulfillmentStatus: string | null;
   note: string | null;
+  cartToken: string | null;
   clientIp: string | null;
   customAttributes: OrderCustomAttribute[];
   totalPriceSet: MoneySet;

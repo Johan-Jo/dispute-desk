@@ -29,6 +29,7 @@ export const CUSTOMER_ORDERS_FOR_CE30_QUERY = `
             name
             createdAt
             email
+            cartToken
             clientIp
             displayFinancialStatus
             tags
@@ -87,6 +88,7 @@ export interface CE30CandidateOrderNode {
   name: string;
   createdAt: string;
   email: string | null;
+  cartToken: string | null;
   clientIp: string | null;
   displayFinancialStatus: string | null;
   tags: string[];
