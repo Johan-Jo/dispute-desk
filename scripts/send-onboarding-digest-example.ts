@@ -163,7 +163,7 @@ async function main() {
 
   const result = await sendOnboardingAnalysisDigest({
     shopDomain: SHOP_DOMAIN,
-    merchantName: "Søra Svende",
+    merchantName: null,
     to: teamEmail,
     ordersAnalyzedTotal: ordersAnalyzedTotal ?? 0,
     chargebackRate90dPct,

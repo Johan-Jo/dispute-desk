@@ -233,7 +233,7 @@ console.log("dispute activity:", {
 
 const result = await sendMonthlyChargebackDigest({
   shopDomain: SHOP_DOMAIN,
-  merchantName: "Søra Svende",
+  merchantName: null,
   to: teamEmail,
   periodLabel,
   chargebackRate90dPct,

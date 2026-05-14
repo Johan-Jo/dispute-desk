@@ -24,7 +24,7 @@ import {
 import { withShopParams } from "@/lib/withShopParams";
 import { MobileDisputesList } from "./disputes/MobileDisputesList";
 import type { Dispute } from "./disputes/disputeListHelpers";
-import { safeOutcomeLabel, safeStatusLabel, useDateLocale } from "./dashboardHelpers";
+import { safeStatusLabel, useDateLocale } from "./dashboardHelpers";
 
 interface DisputeRow {
   id: string;
@@ -35,7 +35,6 @@ interface DisputeRow {
   normalizedStatus: string | null;
   dueAt: string | null;
   initiatedAt: string | null;
-  finalOutcome: string | null;
 }
 
 export function DashboardRecentDisputesPreview() {
@@ -78,7 +77,6 @@ export function DashboardRecentDisputesPreview() {
           normalizedStatus: d.normalized_status ?? null,
           dueAt: d.due_at ?? null,
           initiatedAt: d.initiated_at ?? null,
-          finalOutcome: d.final_outcome ?? null,
         })),
       );
     })
@@ -171,16 +169,6 @@ export function DashboardRecentDisputesPreview() {
     return <Badge tone={toneMap[status]}>{safeStatusLabel(tTimeline, status)}</Badge>;
   };
 
-  const outcomeBadge = (outcome: string | null) => {
-    if (!outcome) return null;
-    const toneMap: Record<string, "success" | "critical" | "warning" | "attention" | "info" | undefined> = {
-      won: "success",
-      lost: "critical",
-      partially_won: "warning",
-    };
-    return <Badge tone={toneMap[outcome]}>{safeOutcomeLabel(tTimeline, outcome)}</Badge>;
-  };
-
   const formatShortDate = (iso: string | null) => {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
@@ -200,7 +188,6 @@ export function DashboardRecentDisputesPreview() {
                 <th style={recentDisputesThStyle}>{t("dashboard.statusCol")}</th>
                 <th style={recentDisputesThStyle}>{t("table.date")}</th>
                 <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
-                <th style={recentDisputesThStyle}>{t("dashboard.outcomeCol")}</th>
                 <th style={recentDisputesThStyle}>{t("table.actions")}</th>
               </tr>
             </thead>
@@ -239,7 +226,6 @@ export function DashboardRecentDisputesPreview() {
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{formatShortDate(r.dueAt)}</Text>
                   </td>
-                  <td style={recentDisputesTdStyle}>{outcomeBadge(r.finalOutcome)}</td>
                   <td style={recentDisputesTdStyle}>
                     <Link
                       href={withShopParams(`/app/disputes/${r.id}`, searchParams ?? new URLSearchParams())}

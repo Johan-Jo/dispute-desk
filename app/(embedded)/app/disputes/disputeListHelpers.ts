@@ -374,10 +374,14 @@ export function figmaNextAction(d: Dispute, t: Translate): string {
   return t("disputes.nextActionSubmitEvidence");
 }
 
-/** Boolean: due in <= 48h and not closed. Drives the urgent banner
- *  count + the row-edge red stripe. */
+/** Boolean: due in <= 48h AND the merchant can still act (action-needed
+ *  or needs-review). Drives the urgent banner count + the row-edge red
+ *  stripe. Submitted / under-review disputes are out of the merchant's
+ *  hands — the bank now owns the timeline — so they never count as urgent
+ *  even if their original `due_at` is in the past. */
 export function figmaIsUrgent(d: Dispute): boolean {
-  if (figmaStatus(d) === "closed") return false;
+  const s = figmaStatus(d);
+  if (s !== "action-needed" && s !== "needs-review") return false;
   if (!d.due_at) return false;
   const hoursLeft = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
   return hoursLeft <= 48;

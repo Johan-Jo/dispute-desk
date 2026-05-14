@@ -12,8 +12,8 @@ redirect_urls = [
 ]
 
 [access_scopes]
-# Tightened 2026-05-11 — production code uses ONLY the scopes below.
-# Audit re-run before this deploy confirmed zero references in `lib/`
+# Tightened 2026-05-11 (commit 86fc992, app version disputedesk-17).
+# Audit re-run before that deploy confirmed zero references in `lib/`
 # or `app/` to: read_files, read_inventory, read_locations,
 # write_draft_orders, write_files, write_fulfillments, write_inventory,
 # write_merchant_managed_fulfillment_orders, write_orders,
@@ -21,28 +21,31 @@ redirect_urls = [
 # either (verified: no draftOrderCreate, fulfillmentCreate,
 # productCreate, orderCreate, fileCreate, inventoryAdjust callers).
 #
+# 2026-05-14 — LSE-4 adds two scopes:
+#   * `read_customer_events` — required to read Web Pixel events
+#   * `write_pixels` — required to call webPixelCreate during OAuth so
+#     dispute-desk-pixel auto-registers on install (without it the
+#     pixel exists in the released version but never appears under
+#     Admin → Customer events on the merchant shop).
+#
 # History:
 #   * Scopes originally approved per ticket 64535407 (2026-03-04).
 #   * 2026-05-07 commit narrowed the local TOML but the change never
 #     reached Partners (no deploy was run). The wider set was
 #     silently in production until 2026-05-10.
 #   * 2026-05-10 — `read_all_orders` approved as Protected Customer
-#     Data and pushed. The tightening was deferred to this commit
-#     so the read_all_orders deploy didn't bundle silent deletes.
-#   * 2026-05-11 — this commit. Push via `shopify app deploy
-#     --allow-deletes` to drop the 10 unused scopes from Partners.
-#     Existing installs keep whatever they previously consented to;
-#     only NEW installs see the tightened consent screen.
+#     Data and pushed. The tightening was deferred so the
+#     read_all_orders deploy didn't bundle silent deletes.
+#   * 2026-05-11 — narrowing deployed as disputedesk-17. Partners-side
+#     now on the 11-scope set. Vercel env var was NOT updated then —
+#     known follow-up that the LSE-4 deploy on 2026-05-14 closes.
+#   * 2026-05-14 — adds read_customer_events + write_pixels for LSE-4.
+#     SHOPIFY_SCOPES env on Vercel must be updated in the same deploy
+#     to the 13-scope set so OAuth consent matches Partners.
 #
 # Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID
 # (a separate Partners app) and carry the broader write set there
 # — never on the production app.
-#   * 2026-05-14 — added `write_pixels` + `read_customer_events` for
-#     LSE-4 storefront session capture. Required to call the
-#     `webPixelCreate` mutation after OAuth so the dispute-desk-pixel
-#     Web Pixel extension auto-activates on install. Without these the
-#     pixel exists in the version but never registers on the shop —
-#     symptom is "No app pixels" on the Customer events admin page.
 scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
