@@ -53,15 +53,19 @@ export async function calculateRatiosForMonth(
   const periodEndIso = periodEnd.toISOString();
 
   // Settled count from shopify_orders for the month. Date filter uses
-  // `created_at_shopify` (the order's createdAt in Shopify) — the same
-  // column lib/disputes/snapshotFraudDailyMetrics.ts uses as canonical.
+  // `created_at_shopify` (the order's createdAt in Shopify). The
+  // `financial_status` column stores Shopify's enum UPPERCASE
+  // (PAID / REFUNDED / PARTIALLY_REFUNDED / VOIDED). We count both
+  // PAID and PARTIALLY_REFUNDED in the settled denominator — a partial
+  // refund still represents a settled card-network transaction
+  // (matches Visa TC05 settled semantics).
   const { count: settledCount = 0 } = await sb
     .from("shopify_orders")
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId)
     .gte("created_at_shopify", periodStartIso)
     .lt("created_at_shopify", periodEndIso)
-    .eq("financial_status", "paid");
+    .in("financial_status", ["PAID", "PARTIALLY_REFUNDED"]);
 
   const { data: disputes } = await sb
     .from("disputes")
