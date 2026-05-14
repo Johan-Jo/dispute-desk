@@ -3816,6 +3816,33 @@
       "twoPriors": "Deux commandes antérieures non litigieuses dans la fenêtre de 120 à 365 jours",
       "secondPrior": "Une seconde commande antérieure non litigieuse dans la fenêtre de 120 à 365 jours",
       "matchPointPrefix": "Correspondance requise"
+    },
+    "impact": {
+      "title": "Impact du transfert de responsabilité",
+      "subtitle": "Comment les victoires CE 3.0 et FPT de DisputeDesk affectent vos ratios de conformité aux réseaux de cartes.",
+      "periodLabel": "Période : {period}",
+      "vamp": { "label": "Visa VAMP" },
+      "ecm": { "label": "Mastercard ECM" },
+      "efm": { "label": "Mastercard EFM" },
+      "band": {
+        "green": "Sain",
+        "yellow": "Approche du seuil",
+        "red": "Seuil dépassé"
+      },
+      "threshold": "Seuil : {value}",
+      "withoutDd": "Sans DisputeDesk : {value}",
+      "counterfactualHeader": "Victoires attribuées à DisputeDesk ce mois-ci",
+      "tile": {
+        "feesAvoided": "Frais VAMP évités",
+        "feesAvoidedHelper": "Estimés à 8 $ par transaction exclue du VAMP",
+        "revenueRecovered": "Revenus récupérés",
+        "revenueRecoveredHelper": "Somme des litiges gagnés via CE 3.0 / FPT sur la période",
+        "ce30Wins": "Victoires CE 3.0",
+        "ce30WinsHelper": "Litiges Visa 10.4 gagnés via Compelling Evidence 3.0",
+        "fptWins": "Victoires FPT",
+        "fptWinsHelper": "Litiges Mastercard 4837 / 4863 gagnés via First-Party Trust"
+      },
+      "estimateNotice": "Les ratios sont des estimations calculées à partir de vos données Shopify. Votre acquéreur détient les chiffres faisant autorité pour l'application des règles."
     }
   }
 }

@@ -46,6 +46,7 @@ import {
 import { InfoIcon } from "@shopify/polaris-icons";
 import styles from "./initial-analysis.module.css";
 import { OperationalCheckpoints } from "./OperationalCheckpoints";
+import { LiabilityShiftImpact } from "./LiabilityShiftImpact";
 import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
 
 interface InsightsResponse {
@@ -942,6 +943,16 @@ export default function InitialAnalysisPage() {
               medianFulfillmentHoursPrior: prior30d.medianFulfillmentHours,
             })}
           />
+        </Layout.Section>
+
+        {/* ── LSE-5 Liability-shift impact ───────────────────────────
+            Counterfactual VAMP / ECM / EFM + DisputeDesk-attributed
+            wins (CE 3.0 + FPT). Renders null until the nightly
+            calculate-ratios cron has populated at least one
+            ratio_snapshots row, so first-install merchants don't see
+            an empty card. */}
+        <Layout.Section>
+          <LiabilityShiftImpact />
         </Layout.Section>
 
         {/* ── Risk classification breakdown (all-time) ───────────── */}

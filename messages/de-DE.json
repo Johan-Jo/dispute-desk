@@ -3816,6 +3816,33 @@
       "twoPriors": "Zwei unbestrittene frühere Bestellungen im 120–365-Tage-Fenster",
       "secondPrior": "Eine zweite unbestrittene frühere Bestellung im 120–365-Tage-Fenster",
       "matchPointPrefix": "Übereinstimmung erforderlich"
+    },
+    "impact": {
+      "title": "Auswirkung der Haftungsverlagerung",
+      "subtitle": "Wie DisputeDesks CE-3.0- und FPT-Erfolge Ihre Compliance-Kennzahlen bei den Kartennetzwerken beeinflussen.",
+      "periodLabel": "Zeitraum: {period}",
+      "vamp": { "label": "Visa VAMP" },
+      "ecm": { "label": "Mastercard ECM" },
+      "efm": { "label": "Mastercard EFM" },
+      "band": {
+        "green": "Gesund",
+        "yellow": "Nähert sich dem Schwellenwert",
+        "red": "Schwellenwert überschritten"
+      },
+      "threshold": "Schwellenwert: {value}",
+      "withoutDd": "Ohne DisputeDesk: {value}",
+      "counterfactualHeader": "Diesen Monat von DisputeDesk gewonnene Streitfälle",
+      "tile": {
+        "feesAvoided": "Vermiedene VAMP-Gebühren",
+        "feesAvoidedHelper": "Geschätzt auf 8 $ pro aus VAMP ausgeschlossener Transaktion",
+        "revenueRecovered": "Zurückgewonnener Umsatz",
+        "revenueRecoveredHelper": "Summe der in diesem Zeitraum via CE 3.0 / FPT gewonnenen Streitfälle",
+        "ce30Wins": "CE-3.0-Erfolge",
+        "ce30WinsHelper": "Visa-10.4-Streitfälle via Compelling Evidence 3.0 gewonnen",
+        "fptWins": "FPT-Erfolge",
+        "fptWinsHelper": "Mastercard-4837/4863-Streitfälle via First-Party Trust gewonnen"
+      },
+      "estimateNotice": "Kennzahlen sind berechnete Schätzungen aus Ihren Shopify-Daten. Ihr Acquirer hält die maßgeblichen Zahlen für die Compliance-Durchsetzung."
     }
   }
 }

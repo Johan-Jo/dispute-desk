@@ -3817,6 +3817,33 @@
       "twoPriors": "Två obestrida tidigare beställningar inom fönstret 120–365 dagar",
       "secondPrior": "En andra obestrida tidigare beställning inom fönstret 120–365 dagar",
       "matchPointPrefix": "Matchning behövs"
+    },
+    "impact": {
+      "title": "Effekt av ansvarsöverföring",
+      "subtitle": "Hur DisputeDesks vinster via CE 3.0 och FPT påverkar dina efterlevnadstal hos kortnätverken.",
+      "periodLabel": "Period: {period}",
+      "vamp": { "label": "Visa VAMP" },
+      "ecm": { "label": "Mastercard ECM" },
+      "efm": { "label": "Mastercard EFM" },
+      "band": {
+        "green": "Hälsosamt",
+        "yellow": "Närmar sig gränsen",
+        "red": "Gräns överskriden"
+      },
+      "threshold": "Gräns: {value}",
+      "withoutDd": "Utan DisputeDesk: {value}",
+      "counterfactualHeader": "DisputeDesk-tillskrivna vinster denna månad",
+      "tile": {
+        "feesAvoided": "Undvikna VAMP-avgifter",
+        "feesAvoidedHelper": "Uppskattat till 8 $ per transaktion som exkluderats från VAMP",
+        "revenueRecovered": "Återvunnen intäkt",
+        "revenueRecoveredHelper": "Summa av tvister vunna via CE 3.0 / FPT under perioden",
+        "ce30Wins": "CE 3.0-vinster",
+        "ce30WinsHelper": "Visa 10.4-tvister vunna via Compelling Evidence 3.0",
+        "fptWins": "FPT-vinster",
+        "fptWinsHelper": "Mastercard 4837 / 4863-tvister vunna via First-Party Trust"
+      },
+      "estimateNotice": "Nyckeltal är beräknade uppskattningar från dina Shopify-data. Din inlösare har de auktoritativa siffrorna som används för efterlevnadskontroll."
     }
   }
 }

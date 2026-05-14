@@ -3803,6 +3803,33 @@
       "twoPriors": "Two undisputed prior orders in the 120–365 day window",
       "secondPrior": "A second undisputed prior order in the 120–365 day window",
       "matchPointPrefix": "Match needed"
+    },
+    "impact": {
+      "title": "Liability-shift impact",
+      "subtitle": "How DisputeDesk's CE 3.0 and FPT wins affect your card-network compliance ratios.",
+      "periodLabel": "Period: {period}",
+      "vamp": { "label": "Visa VAMP" },
+      "ecm": { "label": "Mastercard ECM" },
+      "efm": { "label": "Mastercard EFM" },
+      "band": {
+        "green": "Healthy",
+        "yellow": "Approaching",
+        "red": "Threshold breached"
+      },
+      "threshold": "Threshold: {value}",
+      "withoutDd": "Without DisputeDesk: {value}",
+      "counterfactualHeader": "This month's DisputeDesk-attributed wins",
+      "tile": {
+        "feesAvoided": "VAMP fees avoided",
+        "feesAvoidedHelper": "Estimated at $8/transaction excluded from VAMP",
+        "revenueRecovered": "Revenue recovered",
+        "revenueRecoveredHelper": "Sum of disputes won via CE 3.0 / FPT this period",
+        "ce30Wins": "CE 3.0 wins",
+        "ce30WinsHelper": "Visa 10.4 disputes won via Compelling Evidence 3.0",
+        "fptWins": "FPT wins",
+        "fptWinsHelper": "Mastercard 4837 / 4863 disputes won via First-Party Trust"
+      },
+      "estimateNotice": "Ratios are calculated estimates from your Shopify data. Your acquirer holds the authoritative numbers used for compliance enforcement."
     }
   }
 }
