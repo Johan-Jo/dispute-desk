@@ -17,7 +17,7 @@
     var script = document.currentScript;
     if (!script) return;
 
-    var shopId = script.getAttribute("data-dd-shop-id");
+    var shopDomain = script.getAttribute("data-dd-shop-domain");
     var cartToken = script.getAttribute("data-dd-cart-token");
     var customerId = script.getAttribute("data-dd-customer-id") || null;
     var customerCreated = script.getAttribute("data-dd-customer-created") || null;
@@ -30,7 +30,7 @@
     // also drops, so this is belt-and-suspenders.
     if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return;
     if (navigator.globalPrivacyControl === true) return;
-    if (!shopId || !cartToken || cartToken.length < 4) return;
+    if (!shopDomain || !cartToken || cartToken.length < 4) return;
 
     // Compute customer account age (days). Null when not logged in.
     var customerAccountAgeDays = null;
@@ -44,10 +44,12 @@
       }
     }
 
-    // Build payload. The shop_id is passed in body AND as query param;
-    // server reads either. Cart token is the join key.
+    // Build payload. shop_domain is the merchant identifier — the server
+    // resolves it to the DisputeDesk shop_id via a cached Supabase lookup.
+    // No merchant config required: every Shopify storefront knows its own
+    // permanent_domain.
     var payload = {
-      shop_id: shopId,
+      shop_domain: shopDomain,
       cart_token: cartToken,
       session_started_at: new Date().toISOString(),
       user_agent: navigator.userAgent,

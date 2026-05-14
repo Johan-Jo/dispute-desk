@@ -4,16 +4,8 @@ uid = "fb64c0c2-b08a-09fe-4e03-52e0242e411a71932ea9"
 
 runtime_context = "strict"
 
+# Zero merchant configuration: the pixel reads shop.domain from its
+# init context (provided by Shopify on every boot) and uses that to
+# identify the merchant server-side. No fields for the merchant to fill.
 [settings]
 type = "object"
-
-# accountID is the merchant's DisputeDesk shop ID — set at install time
-# from the embedded app's Storefront Capture settings page.
-# The pixel uses this to scope ingest calls to the right shop.
-[settings.fields.accountID]
-name = "DisputeDesk shop ID"
-description = "Your DisputeDesk shop ID. Find this in the embedded app under Settings → Storefront Capture."
-type = "single_line_text_field"
-validations =  [
-  { name = "min", value = "1" }
-]

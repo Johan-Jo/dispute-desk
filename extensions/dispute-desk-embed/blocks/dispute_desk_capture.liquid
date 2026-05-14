@@ -1,10 +1,11 @@
 {% comment %}
   DisputeDesk session capture — LSE-4.
 
-  Renders nothing visible. Loads a tiny async script on every page where
-  the merchant has enabled the embed in the theme editor. The script
-  reads cart_token + customer + session info from Shopify's storefront
-  globals and POSTs to DisputeDesk's /api/sessions/ingest endpoint.
+  Zero-configuration block. The shop's myshopify.com domain
+  ({{ shop.permanent_domain }}) is rendered directly into a data
+  attribute; the script then identifies the merchant server-side by
+  looking up shop_domain → shop_id. No UUIDs to copy, no fields to
+  fill — the merchant just enables the block in the theme editor.
 
   Privacy: DNT and GPC are honored client-side AND server-side. Form
   values are never read. Async load + 5s hard timeout so we never block
@@ -13,7 +14,7 @@
 
 <script
   src="{{ 'dispute-desk-capture.js' | asset_url }}"
-  data-dd-shop-id="{{ block.settings.shop_id }}"
+  data-dd-shop-domain="{{ shop.permanent_domain }}"
   data-dd-cart-token="{{ cart.token }}"
   data-dd-customer-id="{{ customer.id }}"
   data-dd-customer-created="{{ customer.created_at | date: '%Y-%m-%d' }}"
@@ -28,16 +29,6 @@
   "name": "DisputeDesk session capture",
   "target": "head",
   "settings": [
-    {
-      "type": "header",
-      "content": "Required"
-    },
-    {
-      "type": "text",
-      "id": "shop_id",
-      "label": "DisputeDesk shop ID",
-      "info": "Find this in DisputeDesk → Settings → Storefront capture. Required."
-    },
     {
       "type": "header",
       "content": "Advanced"

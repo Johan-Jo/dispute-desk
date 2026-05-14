@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestCheckoutSession } from "@/lib/liabilityShift/sessions/ingest";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { resolveShopIdFromDomain } from "@/lib/liabilityShift/sessions/resolveShopFromDomain";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,23 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
-    const shopId = extractShopId(req) ?? (typeof body.shop_id === "string" ? body.shop_id : null);
+    // Two ways to identify the shop:
+    //   1. shop_id (UUID) — used when the embedded app calls this endpoint
+    //   2. shop_domain (foo.myshopify.com) — used by all three storefront
+    //      extensions; every Shopify surface exposes this for free at
+    //      runtime, so the merchant never has to paste a UUID anywhere.
+    let shopId =
+      extractShopId(req) ??
+      (typeof body.shop_id === "string" ? body.shop_id : null);
+
+    if (!shopId) {
+      const shopDomain =
+        typeof body.shop_domain === "string" ? body.shop_domain : null;
+      if (shopDomain) {
+        shopId = await resolveShopIdFromDomain(shopDomain);
+      }
+    }
+
     if (!shopId) {
       return jsonOk({ ok: true, dropped: true, reason: "no_shop" });
     }

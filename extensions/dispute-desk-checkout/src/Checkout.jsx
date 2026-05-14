@@ -1,9 +1,13 @@
 /**
  * DisputeDesk Checkout UI extension — LSE-4 session capture.
  *
- * Renders nothing visible. At the checkout step, captures the
- * authoritative login state + cart token via Shopify's checkout
- * extension APIs and POSTs to /api/sessions/ingest.
+ * Zero-configuration. Renders nothing visible. At the checkout step,
+ * captures the authoritative login state + cart_token via Shopify's
+ * checkout extension APIs and POSTs to /api/sessions/ingest.
+ *
+ * The shop is identified by `shopify.shop.myshopifyDomain` — every
+ * checkout extension receives this for free at runtime. The DisputeDesk
+ * server resolves shop_domain → shop_id via Supabase.
  *
  * The pixel and theme embed also fire — this one is the most reliable
  * source for `customer_login_state_at_checkout` because it runs in the
@@ -28,18 +32,15 @@ function Extension() {
     if (sentRef.current) return;
     sentRef.current = true;
 
-    let cancelled = false;
     void (async () => {
       try {
-        const shopId =
-          shopify?.settings?.value?.dispute_desk_shop_id ||
-          shopify?.settings?.current?.dispute_desk_shop_id ||
+        // shop_domain — provided by Shopify, no merchant config required.
+        const shopDomain =
+          shopify?.shop?.myshopifyDomain ||
+          shopify?.shop?.value?.myshopifyDomain ||
           null;
-        if (!shopId) return;
+        if (!shopDomain) return;
 
-        // Cart token — the checkout API surface here is small; we read
-        // it from shopify.cost or shopify.checkoutToken-style accessors
-        // depending on extension version. Be defensive.
         const cartToken = readCartToken();
         if (!cartToken) return;
 
@@ -48,7 +49,7 @@ function Extension() {
         const loginState = customerId ? "logged_in" : "guest";
 
         const payload = {
-          shop_id: shopId,
+          shop_domain: shopDomain,
           cart_token: cartToken,
           session_started_at: new Date().toISOString(),
           customer_id: customerId,
@@ -75,13 +76,7 @@ function Extension() {
       } catch (_e) {
         // Silent — capture is best-effort and must never block checkout.
       }
-      // Prevent unused-var lint when cancelled is only read in cleanup.
-      void cancelled;
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   return null;

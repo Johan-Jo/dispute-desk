@@ -24,11 +24,6 @@ api_access = true
 # Required for fetch() to disputedesk.app. Merchant approves at install.
 network_access = true
 
-# Merchant-configured DisputeDesk shop ID — same value as the theme
-# embed and Web Pixel. Required.
-[extensions.settings]
-[[extensions.settings.fields]]
-key = "dispute_desk_shop_id"
-type = "single_line_text_field"
-name = "DisputeDesk shop ID"
-description = "Find this in the embedded app under Settings → Storefront Capture."
+# Zero merchant configuration: shop_domain is read from
+# shopify.shop.myshopifyDomain at runtime — every checkout extension
+# receives this for free. No settings fields needed.

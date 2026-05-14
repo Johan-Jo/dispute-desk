@@ -1,6 +1,11 @@
 /**
  * DisputeDesk Web Pixel — LSE-4 storefront session capture.
  *
+ * Zero-config. Reads the shop's myshopify.com domain from
+ * `init.data.shop.domain` — every Web Pixel receives this at boot
+ * without any merchant setup. The DisputeDesk server resolves
+ * shop_domain → shop_id via Supabase.
+ *
  * Subscribes to checkout-flow analytics events and forwards a
  * privacy-safe payload to DisputeDesk's /api/sessions/ingest endpoint.
  * Runs in Shopify's sandboxed pixel environment (strict runtime
@@ -15,12 +20,8 @@
 
 import { register } from "@shopify/web-pixels-extension";
 
-interface DisputeDeskPixelSettings {
-  accountID: string;
-}
-
 interface SessionIngestPayload {
-  shop_id: string;
+  shop_domain: string;
   cart_token: string;
   session_started_at?: string;
   user_agent?: string;
@@ -35,11 +36,10 @@ const INGEST_URL = "https://disputedesk.app/api/sessions/ingest";
 const FETCH_TIMEOUT_MS = 5000;
 
 register(({ analytics, browser, init, settings }) => {
-  // The merchant configures accountID = their DisputeDesk shop ID at
-  // pixel install time. Without it, drop everything.
-  const typedSettings = settings as DisputeDeskPixelSettings;
-  const shopId = typedSettings?.accountID;
-  if (!shopId) return;
+  // Resolve shop_domain from the init context. This is provided by
+  // Shopify on every pixel boot — no merchant setting needed.
+  const shopDomain = readShopDomain(init);
+  if (!shopDomain) return;
 
   // Capture page views into a tail buffer the next dispatch will flush.
   const sessionHistory: Array<{ path: string; at: string }> = [];
@@ -60,27 +60,42 @@ register(({ analytics, browser, init, settings }) => {
 
   // checkout_started carries cart_token + (when logged in) customer.
   analytics.subscribe("checkout_started", (event) => {
-    dispatch(event, shopId, sessionHistory).catch(() => {
+    dispatch(event, shopDomain, sessionHistory).catch(() => {
       // Best-effort. Silent fail.
     });
   });
 
   // checkout_completed is the final authoritative capture moment.
   analytics.subscribe("checkout_completed", (event) => {
-    dispatch(event, shopId, sessionHistory).catch(() => {});
+    dispatch(event, shopDomain, sessionHistory).catch(() => {});
   });
 });
 
+function readShopDomain(init: unknown): string | null {
+  try {
+    // The Web Pixel `init` callback receives a `data.shop.domain` field
+    // with the foo.myshopify.com domain. Probe defensively.
+    const data = (init as { data?: { shop?: { domain?: string } } }).data;
+    const domain = data?.shop?.domain;
+    if (typeof domain === "string" && domain.endsWith(".myshopify.com")) {
+      return domain.toLowerCase();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function dispatch(
   event: unknown,
-  shopId: string,
+  shopDomain: string,
   history: Array<{ path: string; at: string }>,
 ): Promise<void> {
   const checkout = readCheckoutFromEvent(event);
   if (!checkout?.cart_token) return;
 
   const payload: SessionIngestPayload = {
-    shop_id: shopId,
+    shop_domain: shopDomain,
     cart_token: checkout.cart_token,
     session_started_at: new Date().toISOString(),
     user_agent: readUserAgent(event),
