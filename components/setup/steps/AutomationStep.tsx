@@ -199,34 +199,39 @@ export function AutomationStep({ onSaveRef }: AutomationStepProps) {
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#202223", marginBottom: 4 }}>
-                  {t("ruleHighValue", { threshold: reviewThreshold })}
+                  {t("ruleHighValue")}
                 </div>
                 <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.5 }}>
                   {t("ruleHighValueDesc")}
                 </div>
                 {highValueEnabled && (
-                  <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                    <label style={{ fontSize: 12, color: "#6D7175" }}>
-                      {t("thresholdLabel")}
-                    </label>
-                    <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#6D7175" }}>$</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={reviewThreshold}
-                        onChange={(e) => setReviewThreshold(e.target.value)}
-                        style={{
-                          width: 120,
-                          padding: "6px 10px 6px 22px",
-                          border: "1px solid #C9CCCF",
-                          borderRadius: 6,
-                          fontSize: 13,
-                          outline: "none",
-                        }}
-                      />
+                  <>
+                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                      <label style={{ fontSize: 12, color: "#6D7175" }}>
+                        {t("thresholdLabel")}
+                      </label>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#6D7175" }}>$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={reviewThreshold}
+                          onChange={(e) => setReviewThreshold(e.target.value)}
+                          style={{
+                            width: 120,
+                            padding: "6px 10px 6px 22px",
+                            border: "1px solid #C9CCCF",
+                            borderRadius: 6,
+                            fontSize: 13,
+                            outline: "none",
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                    <div style={{ fontSize: 11, color: "#8C9196", marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>
+                      {t("ruleHighValueSuggestion")}
+                    </div>
+                  </>
                 )}
               </div>
               <ToggleSwitch

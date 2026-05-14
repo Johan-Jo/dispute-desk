@@ -2576,15 +2576,16 @@
     "automation": {
       "title": "Automação e regras de revisão",
       "subtitle": "Escolha onde o DisputeDesk pode agir automaticamente e onde você quer revisão extra.",
-      "ruleHighValue": "Revisar disputas acima de ${threshold}",
-      "ruleHighValueDesc": "Disputas de alto valor serão enviadas para a fila de revisão antes do envio",
+      "ruleHighValue": "Sempre revisar disputas de alto valor",
+      "ruleHighValueDesc": "Disputas acima do valor que você definir serão enviadas para sua fila de revisão antes do envio.",
       "sidebarTitle": "Como isso afeta seu fluxo de trabalho",
       "sidebarAutomated": "Automatizado",
       "sidebarReview": "Revisar Primeiro",
       "sidebarNotify": "Apenas Notificar",
       "sidebarNote": "Você mantém o controle sobre casos de maior risco ou incompletos.",
-      "thresholdLabel": "Limite:",
-      "familyRoutingHint": "O tratamento por tipo de disputa (automático vs. revisão) é configurado na etapa anterior de Cobertura."
+      "thresholdLabel": "Seu limite ($):",
+      "familyRoutingHint": "O tratamento por tipo de disputa (automático vs. revisão) é configurado na etapa anterior de Cobertura.",
+      "ruleHighValueSuggestion": "Sugerimos $500 como ponto de partida — escolha qualquer valor que se ajuste à sua loja. Você pode alterar isso depois."
     },
     "activate": {
       "title": "Pronto para ativar",

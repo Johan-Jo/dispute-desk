@@ -2902,14 +2902,15 @@
     "automation": {
       "title": "Automation and review rules",
       "subtitle": "Choose where DisputeDesk can act automatically and where you want extra review.",
-      "ruleHighValue": "Review disputes above ${threshold}",
-      "ruleHighValueDesc": "High-value disputes will be sent to your review queue before submission",
+      "ruleHighValue": "Always review high-value disputes",
+      "ruleHighValueDesc": "Disputes above the amount you set will be sent to your review queue before submission.",
+      "ruleHighValueSuggestion": "We suggest $500 as a starting point — pick any amount that fits your store. You can change this later.",
       "sidebarTitle": "How this affects your workflow",
       "sidebarAutomated": "Automated",
       "sidebarReview": "Review First",
       "sidebarNotify": "Notify Only",
       "sidebarNote": "You stay in control of higher-risk or incomplete cases.",
-      "thresholdLabel": "Threshold:",
+      "thresholdLabel": "Your threshold ($):",
       "familyRoutingHint": "Per-dispute-type handling (auto vs review) is configured on the previous Coverage step."
     },
     "activate": {

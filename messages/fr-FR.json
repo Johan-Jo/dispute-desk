@@ -2576,15 +2576,16 @@
     "automation": {
       "title": "Automatisation et règles de vérification",
       "subtitle": "Choisissez où DisputeDesk peut agir automatiquement et où vous souhaitez une vérification supplémentaire.",
-      "ruleHighValue": "Vérifier les litiges au-dessus de ${threshold}",
-      "ruleHighValueDesc": "Les litiges de grande valeur seront envoyés dans votre file de vérification avant soumission",
+      "ruleHighValue": "Toujours examiner les litiges de grande valeur",
+      "ruleHighValueDesc": "Les litiges dépassant le montant que vous définissez seront envoyés à votre file d'attente d'examen avant la soumission.",
       "sidebarTitle": "Comment cela affecte votre flux de travail",
       "sidebarAutomated": "Automatisé",
       "sidebarReview": "Vérifier d'abord",
       "sidebarNotify": "Notification uniquement",
       "sidebarNote": "Vous gardez le contrôle sur les dossiers à haut risque ou incomplets.",
-      "thresholdLabel": "Seuil :",
-      "familyRoutingHint": "Le traitement par type de litige (auto vs. examen) est configuré à l'étape Couverture précédente."
+      "thresholdLabel": "Votre seuil ($) :",
+      "familyRoutingHint": "Le traitement par type de litige (auto vs. examen) est configuré à l'étape Couverture précédente.",
+      "ruleHighValueSuggestion": "Nous suggérons $500 comme point de départ — choisissez n'importe quel montant qui convient à votre boutique. Vous pouvez le modifier plus tard."
     },
     "activate": {
       "title": "Prêt à activer",

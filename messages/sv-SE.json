@@ -2441,15 +2441,16 @@
     "automation": {
       "title": "Automatisering och granskningsregler",
       "subtitle": "Välj var DisputeDesk kan agera automatiskt och var du vill ha extra granskning.",
-      "ruleHighValue": "Granska tvister över ${threshold}",
-      "ruleHighValueDesc": "Tvister med högt värde skickas till granskningskön innan de skickas in",
+      "ruleHighValue": "Granska alltid tvister med högt värde",
+      "ruleHighValueDesc": "Tvister över det belopp du anger skickas till din granskningskö före inlämning.",
       "sidebarTitle": "Hur detta påverkar ditt arbetsflöde",
       "sidebarAutomated": "Automatiserat",
       "sidebarReview": "Granska Först",
       "sidebarNotify": "Bara Avisering",
       "sidebarNote": "Du behåller kontrollen över högrisk- eller ofullständiga ärenden.",
-      "thresholdLabel": "Tröskel:",
-      "familyRoutingHint": "Hanteringen per tvisttyp (auto vs. granskning) konfigureras i föregående Täckning-steg."
+      "thresholdLabel": "Din tröskel ($):",
+      "familyRoutingHint": "Hanteringen per tvisttyp (auto vs. granskning) konfigureras i föregående Täckning-steg.",
+      "ruleHighValueSuggestion": "Vi föreslår $500 som utgångspunkt — välj ett belopp som passar din butik. Du kan ändra det senare."
     },
     "activate": {
       "title": "Redo att aktivera",

@@ -2576,15 +2576,16 @@
     "automation": {
       "title": "Automatisierung und Prüfregeln",
       "subtitle": "Wählen Sie, wo DisputeDesk automatisch handeln kann und wo Sie zusätzliche Prüfung wünschen.",
-      "ruleHighValue": "Streitfälle über ${threshold} prüfen",
-      "ruleHighValueDesc": "Hochwertige Streitfälle werden vor der Einreichung in die Prüfwarteschlange verschoben",
+      "ruleHighValue": "Hochpreisige Streitfälle immer überprüfen",
+      "ruleHighValueDesc": "Streitfälle über dem von Ihnen festgelegten Betrag werden vor dem Einreichen in Ihre Prüf-Warteschlange geschickt.",
       "sidebarTitle": "Wie sich dies auf Ihren Arbeitsablauf auswirkt",
       "sidebarAutomated": "Automatisiert",
       "sidebarReview": "Zuerst Prüfen",
       "sidebarNotify": "Nur Benachrichtigen",
       "sidebarNote": "Sie behalten die Kontrolle über risikoreiche oder unvollständige Fälle.",
-      "thresholdLabel": "Schwellenwert:",
-      "familyRoutingHint": "Die Behandlung pro Streitfalltyp (Auto vs. Überprüfung) wird im vorherigen Schritt \"Abdeckung\" konfiguriert."
+      "thresholdLabel": "Ihr Schwellenwert ($):",
+      "familyRoutingHint": "Die Behandlung pro Streitfalltyp (Auto vs. Überprüfung) wird im vorherigen Schritt \"Abdeckung\" konfiguriert.",
+      "ruleHighValueSuggestion": "Wir empfehlen $500 als Ausgangswert — wählen Sie einen Betrag, der zu Ihrem Shop passt. Sie können dies später jederzeit ändern."
     },
     "activate": {
       "title": "Bereit zur Aktivierung",
