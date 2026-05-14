@@ -17,21 +17,26 @@ export interface ShopDetails {
   };
 }
 
+// API 2026-01 removed `Shop.phone` and `Shop.billingAddress`. The
+// address lives on `Shop.shopAddress` (a `ShopAddress` whose `phone`
+// field replaces the old top-level one). Querying the dropped fields
+// fails the whole request with `undefinedField`, so the activate step
+// surfaced as "no email even though Shopify has one".
 const SHOP_DETAILS_QUERY = `
   query ShopDetails {
     shop {
       name
       email
       contactEmail
-      phone
       primaryDomain { url }
-      billingAddress {
+      shopAddress {
         address1
         address2
         city
         province
         zip
         country
+        phone
       }
     }
   }
@@ -42,16 +47,16 @@ interface ShopQueryData {
     name: string;
     email: string;
     contactEmail: string | null;
-    phone: string | null;
     primaryDomain: { url: string };
-    billingAddress: {
+    shopAddress: {
       address1: string | null;
       address2: string | null;
       city: string | null;
       province: string | null;
       zip: string | null;
       country: string | null;
-    };
+      phone: string | null;
+    } | null;
   };
 }
 
@@ -74,22 +79,32 @@ export async function fetchShopDetails(shopInternalId: string): Promise<ShopDeta
   });
 
   const shop = result.data?.shop;
-  if (!shop) return null;
+  if (!shop) {
+    // Log so the next regression like the 2026-01 phone/billingAddress
+    // drop doesn't take a round trip through the merchant dashboard to
+    // diagnose. `errors` carries the `undefinedField` shape Shopify
+    // returns on schema drift.
+    console.warn("[shopDetails] empty data.shop from Shopify Admin", {
+      shopInternalId,
+      errors: result.errors?.map((e) => e.message),
+    });
+    return null;
+  }
 
-  const addr = shop.billingAddress;
+  const addr = shop.shopAddress;
 
   return {
     name: shop.name,
     email: shop.contactEmail ?? shop.email,
-    phone: shop.phone ?? "",
+    phone: addr?.phone ?? "",
     primaryDomain: shop.primaryDomain.url,
     address: {
-      address1: addr.address1 ?? "",
-      address2: addr.address2 ?? "",
-      city: addr.city ?? "",
-      province: addr.province ?? "",
-      zip: addr.zip ?? "",
-      country: addr.country ?? "",
+      address1: addr?.address1 ?? "",
+      address2: addr?.address2 ?? "",
+      city: addr?.city ?? "",
+      province: addr?.province ?? "",
+      zip: addr?.zip ?? "",
+      country: addr?.country ?? "",
     },
   };
 }
