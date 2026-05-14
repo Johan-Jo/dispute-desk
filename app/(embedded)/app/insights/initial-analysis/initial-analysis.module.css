@@ -486,41 +486,109 @@
   background: #DC2626;
 }
 
-/* ─── Operational checkpoints list ──────────────────────────────── */
+/* ─── Operational checkpoints ──────────────────────────────────── */
 
+/* Severity summary chip strip at the top of the card. */
+.checkpointSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkpointSummaryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  background: #F1F2F4;
+  color: #374151;
+}
+
+.checkpointSummaryChip > span:first-child {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+/* Stack of checkpoint cards. */
 .checkpointList {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
-.checkpointRow {
+/* Each checkpoint = its own mini-card with a coloured left stripe. */
+.checkpointCard {
+  position: relative;
   display: grid;
-  grid-template-columns: 10px 1fr;
+  grid-template-columns: 28px 1fr;
   gap: 12px;
   align-items: flex-start;
-  padding-top: 4px;
+  padding: 14px 14px 14px 18px;
+  background: #FFFFFF;
+  border: 1px solid #E1E3E5;
+  border-left-width: 4px;
+  border-radius: 8px;
+  transition: box-shadow 120ms ease;
 }
 
-/* The colored severity pip — small, soft, never alarming. Red is
- * intentionally reserved for breach-only rows so it stands out. */
-.checkpointPip {
-  width: 10px;
-  height: 10px;
-  border-radius: 5px;
-  margin-top: 6px;
+.checkpointCard:hover {
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+/* The icon column. Each variant tints its own background/foreground. */
+.checkpointIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   flex-shrink: 0;
+}
+
+.checkpointIcon_healthy {
+  background: #ECFDF5;
+  color: #10B981;
+}
+
+.checkpointIcon_info {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.checkpointIcon_consider {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.checkpointIcon_breach {
+  background: #FEE2E2;
+  color: #DC2626;
 }
 
 .checkpointBody {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.checkpointTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .checkpointSource {
   display: inline-block;
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 11px;
   color: #6D7175;
   text-decoration: underline;
