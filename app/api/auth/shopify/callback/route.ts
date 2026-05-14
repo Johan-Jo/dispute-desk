@@ -5,6 +5,7 @@ import { verifyHmac, exchangeCodeForToken, decodeOAuthState } from "@/lib/shopif
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { registerWebPixel } from "@/lib/liabilityShift/sessions/registerWebPixel";
 import { enqueueShopDailyMetricsBackfill } from "@/lib/disputes/backfillShopDailyMetrics";
 import {
   enqueueShopOrdersBackfill,
@@ -151,6 +152,31 @@ export async function GET(req: NextRequest) {
           err instanceof Error ? err.message : err,
         );
       });
+
+      // LSE-4: register the dispute-desk-pixel Web Pixel extension on
+      // this shop via the webPixelCreate mutation. App pixels don't
+      // auto-activate on install — without this call the pixel appears
+      // in the released app version but never shows up in Admin →
+      // Settings → Customer events. Idempotent: re-installs hit the
+      // "already exists" path and silently no-op.
+      registerWebPixel(shopInternalId)
+        .then((result) => {
+          if (result.status === "created") {
+            console.info(
+              `[lse4] dispute-desk-pixel registered on shop ${shopInternalId}: ${result.webPixelId}`,
+            );
+          } else if (result.status === "error") {
+            console.warn(
+              `[lse4] webPixelCreate failed on shop ${shopInternalId}: ${result.errorMessage}`,
+            );
+          }
+        })
+        .catch((err) => {
+          console.warn(
+            "[lse4] webPixelCreate threw:",
+            err instanceof Error ? err.message : err,
+          );
+        });
 
       // Kick off the historical-orders backfill — Phase 1 fraud
       // intelligence. Idempotent: the helper skips when a backfill

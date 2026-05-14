@@ -3,8 +3,9 @@
 ## Non-negotiables for AI agents
 
 1. **Supabase migrations — you run them, every time.** If you create or edit any file under `supabase/migrations/`, you **must** run `npm run db:migrate` in this repo in the **same working session** before you mark the task done or push. Do **not** only commit SQL. Do **not** tell the maintainer to run migrations instead of doing it yourself when the environment has network + shell (use `npm run db:migrate:script` only when CLI link is impossible — document that in the summary).
-2. **Verify before “done”:** `npm test` and `npx tsc --noEmit` (and `npm run build` when touching UI/routes/schema).
-3. **Plan mode is absolute.** When plan mode activates — for any reason, at any time — **immediately stop all write operations**. No edits, no bash commands that modify files, no git operations, no tool calls that change state. Read-only actions only. Do not attempt to “finish up” current work. Do not rationalize continuing. Stop, acknowledge plan mode, and follow the plan workflow. This applies even if plan mode activates mid-task due to background agent completion or other system events.
+2. **Ad-hoc SQL / ops queries — use `supabase db query --linked`, not `pg.Client`.** For any one-shot read, diagnostic, or cleanup (NOT a migration), the canonical path is `npx supabase db query --linked --file scripts/sql/<name>.sql` (or `--linked "select …"` inline). It uses the Management API, needs no DB password, and is not affected by rotated `SUPABASE_URL_POSTGRES` credentials. Reach for `pg.Client` / `SUPABASE_URL_POSTGRES` only when `db query` genuinely can't do the job (e.g. true multi-statement sessions, `\copy`, large bulk loads). Full reference: `docs/technical.md` § *Ad-hoc SQL / ops queries (canonical path)*. Put reusable SQL in `scripts/sql/`.
+3. **Verify before “done”:** `npm test` and `npx tsc --noEmit` (and `npm run build` when touching UI/routes/schema).
+4. **Plan mode is absolute.** When plan mode activates — for any reason, at any time — **immediately stop all write operations**. No edits, no bash commands that modify files, no git operations, no tool calls that change state. Read-only actions only. Do not attempt to “finish up” current work. Do not rationalize continuing. Stop, acknowledge plan mode, and follow the plan workflow. This applies even if plan mode activates mid-task due to background agent completion or other system events.
 
 ## What It Is
 Automation-first Shopify chargeback evidence app. Connects to Shopify, auto-syncs disputes, auto-builds evidence packs, and auto-saves them back to Shopify. Merchants submit via Shopify Admin — DisputeDesk does NOT programmatically submit to card networks.
@@ -83,7 +84,11 @@ read_shopify_payments_disputes
 read_shopify_payments_dispute_file_uploads
 write_shopify_payments_dispute_file_uploads
 write_shopify_payments_dispute_evidences
+read_customer_events           # LSE-4 Web Pixel — read customer events
+write_pixels                   # LSE-4 — required to call webPixelCreate during OAuth
 ```
+
+The `.env` `SHOPIFY_SCOPES` value must match `shopify.app.toml`'s `[access_scopes].scopes` exactly. Mismatches cause silent OAuth consent-screen drift.
 
 ## Important Rules
 - **Docs + help (mandatory):** After any feature, UI change, or API change, update `docs/technical.md` to reflect the new behaviour. If the change affects what merchants see or do (embedded UI, flows, settings), also update the relevant embedded help article in `lib/help/` or `messages/{locale}.json` (`help.embedded.*` namespace). Do this in the same commit — never defer doc updates to a follow-up.

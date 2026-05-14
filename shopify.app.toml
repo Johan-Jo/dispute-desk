@@ -37,7 +37,13 @@ redirect_urls = [
 # Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID
 # (a separate Partners app) and carry the broader write set there
 # — never on the production app.
-scopes = "read_all_orders,read_customers,read_fulfillments,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
+#   * 2026-05-14 — added `write_pixels` + `read_customer_events` for
+#     LSE-4 storefront session capture. Required to call the
+#     `webPixelCreate` mutation after OAuth so the dispute-desk-pixel
+#     Web Pixel extension auto-activates on install. Without these the
+#     pixel exists in the version but never registers on the shop —
+#     symptom is "No app pixels" on the Customer events admin page.
+scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"
