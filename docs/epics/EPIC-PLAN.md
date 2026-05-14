@@ -14,6 +14,7 @@
 | **A1** | "Automation track" — pipeline that other epics sit on | EPIC-A1 |
 | **10b** | Add-on epic that extends EPIC-10 | Help guides |
 | **CH-1 … CH-7** | **Content Hub** epics (marketing CMS). **Not** the same as EPIC-P0. | CH-2 = admin shell + components |
+| **LSE-1 … LSE-6** | **Liability-Shift Engine** epics (CE 3.0 / FPT readiness + submission). See [`docs/liability-shift-engine-prd.md`](../liability-shift-engine-prd.md). | LSE-1 = CE 3.0 qualification |
 
 ---
 
@@ -38,6 +39,13 @@ Read this table top-to-bottom for historical order. **Status** is V1 intent (see
 | **10** | User Help System | Done | [EPIC-10-help-system.md](EPIC-10-help-system.md) |
 | **10b** | Interactive Help Guides | Done | *(no separate file — see roadmap)* |
 | **11** | Setup Wizard & Onboarding | Done | *(see roadmap Notes)* |
+| **LSE-0** | Network Reason Code Foundation | Planned | [EPIC-LSE-0-reason-codes.md](EPIC-LSE-0-reason-codes.md) |
+| **LSE-1** | CE 3.0 Qualification Engine | Planned | [EPIC-LSE-1-qualification-engine.md](EPIC-LSE-1-qualification-engine.md) |
+| **LSE-2** | CE 3.0 Evidence Package + Best-Effort Submission | Planned | [EPIC-LSE-2-evidence-package.md](EPIC-LSE-2-evidence-package.md) |
+| **LSE-3** | Mastercard FPT Readiness | Planned | [EPIC-LSE-3-fpt-readiness.md](EPIC-LSE-3-fpt-readiness.md) |
+| **LSE-4** | Session Evidence Capture | Planned | [EPIC-LSE-4-session-capture.md](EPIC-LSE-4-session-capture.md) |
+| **LSE-5** | Ratio & Compliance Dashboard | Planned | [EPIC-LSE-5-ratio-dashboard.md](EPIC-LSE-5-ratio-dashboard.md) |
+| **LSE-6** | Direct Network Submission (Verifi + Ethoca) | Planned — partnership-gated | [EPIC-LSE-6-direct-submission.md](EPIC-LSE-6-direct-submission.md) |
 
 ---
 
@@ -53,6 +61,20 @@ Read this table top-to-bottom for historical order. **Status** is V1 intent (see
 8. **i18n (9)** after hardening in the plan; then **Help (10)** → **10b**; **Setup (11)** uses i18n.
 
 If you only remember one chain: **0 → A1 → 1 → 2 → (3,4,5) → 6 → 7 → 8 → 9 → 10 → 10b**, with **P0** parallel.
+
+### Liability-Shift Engine track (LSE-0 … LSE-6)
+
+Builds on top of the existing core (EPIC-1 sync, EPIC-A1 automation, EPIC-3 PDF, EPIC-5 save-to-Shopify, EPIC-9 i18n).
+
+1. **LSE-0 (Network reason codes)** is the foundation under everything else — adds Visa 10.x / 11.x / 12.x / 13.x and Mastercard 48xx resolution so LSE-1 can detect Visa 10.4, LSE-3 can detect FPT-eligible codes, and rebuttals can speak the issuer's language. Also retroactively improves the existing standard-representment flow.
+2. **LSE-1 (CE 3.0 Qualification)** reads the resolved network code; every later LSE epic reads `dispute_qualifications`.
+3. **LSE-2 (Evidence + best-effort submission)** consumes LSE-1 verdicts and produces CE 3.0 packages.
+4. **LSE-3 (FPT readiness)** mirrors LSE-1/LSE-2 for the Mastercard side; reuses the submission router introduced in LSE-2.
+5. **LSE-4 (Session capture)** is *forward-looking* — strengthens LSE-1 and LSE-3 quality for disputes filed *after* install. Can run partially in parallel with LSE-2/LSE-3 once the qualification module is stable.
+6. **LSE-5 (Ratio dashboard)** is downstream of LSE-2 and LSE-3 outcomes; also completes locale rollout (ES/FR/DE/IT) for the whole LSE track.
+7. **LSE-6 (Direct network submission)** is **partnership-gated** — does not start engineering until Verifi or Ethoca credentials are in hand. Commercial outreach starts in LSE-1 and runs continuously.
+
+Chain: **LSE-0 → LSE-1 → LSE-2 → LSE-3 → LSE-5**, with **LSE-4** parallel to LSE-3, and **LSE-6** gated on external partnership.
 
 ---
 
@@ -132,6 +154,8 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 through CH-7**
 | Item | Type | Note |
 |------|------|------|
 | **EPIC A1** | Core epic | Still "In progress" on roadmap — finish automation pipeline scope per [EPIC-A1](EPIC-A1-automation-pipeline.md). |
+| **EPIC LSE-0** | Liability-Shift Engine | Foundational network-reason-code resolution — run verification spike against current Shopify API version before writing code. Unblocks LSE-1 / LSE-3 precision. |
+| **EPIC LSE-1** | Liability-Shift Engine | Start Phase 1 of CE 3.0 qualification engine; begin Verifi / Ethoca / Shopify partnership outreach in parallel. PRD: [`docs/liability-shift-engine-prd.md`](../liability-shift-engine-prd.md). |
 | **CH-2** | Content Hub | ~~Admin shell + component system~~ **Done.** |
 | **CH-3** | Content Hub | ~~Dashboard + Content List~~ **Done.** |
 | **CH-4** | Content Hub | ~~Block Editor + Locale Editing~~ **Done.** |
@@ -160,3 +184,10 @@ This is **not** a numbered epic **0–11**. Full epics for **CH-1 through CH-7**
 | [EPIC-8-admin-panel.md](EPIC-8-admin-panel.md) |
 | [EPIC-9-i18n.md](EPIC-9-i18n.md) |
 | [EPIC-10-help-system.md](EPIC-10-help-system.md) |
+| [EPIC-LSE-0-reason-codes.md](EPIC-LSE-0-reason-codes.md) — Network reason code foundation |
+| [EPIC-LSE-1-qualification-engine.md](EPIC-LSE-1-qualification-engine.md) — CE 3.0 qualification |
+| [EPIC-LSE-2-evidence-package.md](EPIC-LSE-2-evidence-package.md) — CE 3.0 package + best-effort submission |
+| [EPIC-LSE-3-fpt-readiness.md](EPIC-LSE-3-fpt-readiness.md) — Mastercard FPT |
+| [EPIC-LSE-4-session-capture.md](EPIC-LSE-4-session-capture.md) — Storefront session capture |
+| [EPIC-LSE-5-ratio-dashboard.md](EPIC-LSE-5-ratio-dashboard.md) — VAMP/ECM/EFM dashboard |
+| [EPIC-LSE-6-direct-submission.md](EPIC-LSE-6-direct-submission.md) — Verifi + Ethoca direct (partnership-gated) |

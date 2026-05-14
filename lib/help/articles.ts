@@ -396,6 +396,69 @@ export const HELP_ARTICLES: HelpArticle[] = [
     relatedSlugs: ["understanding-inquiries", "understanding-chargebacks", "configuring-automation"],
     tags: ["lifecycle", "inquiry", "chargeback", "phase", "coverage", "automation"],
   },
+
+  // --- Liability Shift (LSE track: CE 3.0 + FPT + reason codes + ratios + session capture) ---
+  {
+    slug: "ce30-overview",
+    category: "liability-shift",
+    titleKey: "help.articles.ce30Overview.title",
+    bodyKey: "help.articles.ce30Overview.body",
+    relatedSlugs: [
+      "auto-qualification-visa-secure",
+      "subscription-ce30",
+      "network-reason-codes",
+      "vamp-ratio-explained",
+    ],
+    tags: ["ce 3.0", "visa", "liability shift", "compelling evidence", "10.4", "qualification"],
+  },
+  {
+    slug: "auto-qualification-visa-secure",
+    category: "liability-shift",
+    titleKey: "help.articles.autoQualificationVisaSecure.title",
+    bodyKey: "help.articles.autoQualificationVisaSecure.body",
+    relatedSlugs: ["ce30-overview", "vamp-ratio-explained"],
+    tags: ["visa secure", "3ds", "auto-qualified", "data only", "fee", "april 2026"],
+  },
+  {
+    slug: "subscription-ce30",
+    category: "liability-shift",
+    titleKey: "help.articles.subscriptionCe30.title",
+    bodyKey: "help.articles.subscriptionCe30.body",
+    relatedSlugs: ["ce30-overview", "auto-qualification-visa-secure"],
+    tags: ["subscription", "recurring", "mit", "initial billing", "ce 3.0"],
+  },
+  {
+    slug: "mastercard-fpt",
+    category: "liability-shift",
+    titleKey: "help.articles.mastercardFpt.title",
+    bodyKey: "help.articles.mastercardFpt.body",
+    relatedSlugs: ["ce30-overview", "network-reason-codes", "session-capture"],
+    tags: ["fpt", "mastercard", "first-party trust", "4837", "4863", "device delivery identity"],
+  },
+  {
+    slug: "network-reason-codes",
+    category: "liability-shift",
+    titleKey: "help.articles.networkReasonCodes.title",
+    bodyKey: "help.articles.networkReasonCodes.body",
+    relatedSlugs: ["ce30-overview", "mastercard-fpt"],
+    tags: ["reason code", "visa", "mastercard", "10.4", "4837", "rebuttal"],
+  },
+  {
+    slug: "vamp-ratio-explained",
+    category: "liability-shift",
+    titleKey: "help.articles.vampRatioExplained.title",
+    bodyKey: "help.articles.vampRatioExplained.body",
+    relatedSlugs: ["ce30-overview", "mastercard-fpt", "auto-qualification-visa-secure"],
+    tags: ["vamp", "ratio", "ecm", "efm", "threshold", "compliance", "fees"],
+  },
+  {
+    slug: "session-capture",
+    category: "liability-shift",
+    titleKey: "help.articles.sessionCapture.title",
+    bodyKey: "help.articles.sessionCapture.body",
+    relatedSlugs: ["ce30-overview", "mastercard-fpt"],
+    tags: ["session capture", "ip", "device", "privacy", "lgpd", "gdpr", "retention"],
+  },
 ];
 
 export function getArticleBySlug(slug: string): HelpArticle | undefined {

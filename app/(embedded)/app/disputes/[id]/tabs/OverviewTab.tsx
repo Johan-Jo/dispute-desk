@@ -38,6 +38,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
+import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -344,6 +345,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   return (
     <BlockStack gap="400">
+      {/* LSE-1: Visa CE 3.0 qualification verdict. Renders null when not applicable. */}
+      <LiabilityShiftPanel disputeId={dispute.id} />
+
       {/* F2: Auto-save denied banner — preserved from existing logic */}
       {autoSaveBlock && (
         <Banner tone="warning" title="Auto-submit paused — your review needed">

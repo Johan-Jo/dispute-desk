@@ -28,14 +28,22 @@ export const ORDER_DETAIL_QUERY = `
         totalDiscountsSet { shopMoney { amount currencyCode } }
         totalRefundedSet { shopMoney { amount currencyCode } }
         billingAddress {
+          address1
+          address2
           city
+          province
           provinceCode
+          country
           countryCode
           zip
         }
         shippingAddress {
+          address1
+          address2
           city
+          province
           provinceCode
+          country
           countryCode
           zip
         }
@@ -130,6 +138,7 @@ export const ORDER_DETAIL_QUERY = `
           }
         }
         customer {
+          id
           numberOfOrders
           createdAt
           note
@@ -271,14 +280,22 @@ export interface OrderDetailNode {
   totalDiscountsSet: MoneySet;
   totalRefundedSet: MoneySet;
   billingAddress: {
+    address1: string | null;
+    address2: string | null;
     city: string;
+    province: string | null;
     provinceCode: string;
+    country: string | null;
     countryCode: string;
     zip: string;
   } | null;
   shippingAddress: {
+    address1: string | null;
+    address2: string | null;
     city: string;
+    province: string | null;
     provinceCode: string;
+    country: string | null;
     countryCode: string;
     zip: string;
   } | null;
@@ -288,6 +305,7 @@ export interface OrderDetailNode {
   transactions: OrderTransaction[];
   events: { edges: Array<{ node: OrderEventNode }> };
   customer: {
+    id: string;
     numberOfOrders: string;
     createdAt: string;
     note: string | null;

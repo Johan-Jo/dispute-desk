@@ -51,6 +51,14 @@ const EMBEDDED_ARTICLE_SLUGS: string[] = [
   "understanding-inquiries",
   "understanding-chargebacks",
   "lifecycle-overview",
+  // Liability-shift track (LSE-0..6).
+  "ce30-overview",
+  "auto-qualification-visa-secure",
+  "subscription-ce30",
+  "mastercard-fpt",
+  "network-reason-codes",
+  "vamp-ratio-explained",
+  "session-capture",
 ];
 
 /** Optional embedded-specific title/body i18n keys. Use when copy must differ for in-app context (e.g. "in this app" vs "in the portal"). Keys live under help.embedded.articles.{slug}.title / .body */

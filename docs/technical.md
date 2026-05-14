@@ -968,6 +968,321 @@ Snapshot columns on `disputes` for fast rendering without recalculating from eve
 - `lib/disputeEvents/` — emitEvent, normalizeStatus, deriveFinalOutcome, updateNormalizedStatus, eventTypes, types
 - `lib/disputes/metrics.ts` — shared dispute metrics aggregation
 
+## Network Reason Code Resolution (LSE-0)
+
+Shopify Admin GraphQL **2026-01 exposes only the coarse 14-value
+`ShopifyPaymentsDisputeReason` enum** on `Dispute.reasonDetails.reason`
+(`FRAUDULENT`, `PRODUCT_NOT_RECEIVED`, `SUBSCRIPTION_CANCELED`, …). There
+is no typed `networkReasonCode` field. The Liability-Shift Engine
+(EPIC-LSE-0 through EPIC-LSE-6, PRD: [`docs/liability-shift-engine-prd.md`](liability-shift-engine-prd.md))
+needs the underlying Visa / Mastercard network code (e.g. `10.4`, `4837`)
+to detect CE 3.0 eligibility, FPT eligibility, and to pick more specific
+rebuttal templates and evidence checklists than the coarse enum allows.
+
+### Confidence chain
+
+The resolver in [`lib/disputes/networkReasonCode.ts`](../lib/disputes/networkReasonCode.ts) returns one of four confidence levels:
+
+| Confidence | Source | When it fires |
+|------------|--------|---------------|
+| `direct` | `shopify_dispute_field` | Future-proofing only — Shopify does not currently expose this field. Architecture is in place for a one-line change when they do. |
+| `derived` | `shopify_receipt_json` | Shopify Payments orders only. Parses `OrderTransaction.receiptJson` defensively for `dispute.network_reason_code`, `network_reason_code`, `failure_code`, etc. Rare in practice — the contract is gateway-specific and explicitly "not stable" per the same 3-D Secure caveats. |
+| `inferred` | `enum_inference` | The workhorse. Maps `(ShopifyPaymentsDisputeReason, CardNetwork)` → best-guess network code via the table in `networkReasonCode.ts`. Visa + Mastercard only; Amex / Discover fall through to `unknown` for v1. |
+| `unknown` | `unresolved` | Card network missing, Shopify enum missing, or enum has no merchant-side mapping (e.g. `INSUFFICIENT_FUNDS`). Downstream consumers fall back to the coarse Shopify enum. |
+
+The verification spike confirmed `direct` is unreachable in API version 2026-01, so `inferred` carries the load. `derived` is best-effort and never required.
+
+### Catalog
+
+The canonical reason-code catalog lives in [`lib/disputes/reasonCodeCatalog.ts`](../lib/disputes/reasonCodeCatalog.ts) as a code-first TypeScript constant (not a runtime DB table — changes go through PR review). Each entry carries:
+
+- `code` + `network` + `family` (`fraud` / `authorization` / `processing_error` / `consumer_dispute` / `fpt_eligible` / `ce30_eligible`)
+- `shortName` + `description` (English source; localized via `i18nKey`)
+- `rebuttalTemplateKey` + `evidenceChecklistKey` for downstream consumers
+- `shopifyEnumFallbacks` — which `ShopifyPaymentsDisputeReason` values most commonly collapse here (drives the inference fallback)
+- `introducedDate` / `retiredDate` for audit
+
+V1 ships ~30 entries (Visa 10.1–10.5, 11.1–11.3, 12.1–12.7, 13.1–13.9; Mastercard 4807, 4808, 4812, 4831, 4834, 4837 [FPT], 4841, 4842, 4846, 4849, 4853, 4854, 4855, 4859, 4860, 4863 [FPT], 4870, 4871, 4999). Catalog `CATALOG_VERSION` bumps on each rule-update pass; current as of `2026-05-01` (Visa Core Rules Oct 2025 / Mastercard Chargeback Guide Jun 2025).
+
+### Persistence
+
+Migration `20260514120000_disputes_network_reason_code.sql` adds three columns to `disputes`:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `network_reason_code` | text | e.g. `10.4`, `4837`. Null when card network unknown or enum has no mapping. |
+| `network_reason_code_confidence` | text | Constrained to `direct | derived | inferred | unknown`. |
+| `network_reason_code_resolved_at` | timestamptz | Last resolver write. |
+
+Index: `(shop_id, network_reason_code)` partial WHERE NOT NULL.
+
+### Enrichment hook
+
+Resolution happens during pack build, **not** during sync — the sync path doesn't fetch order transactions, so it has no card-network signal. The enrichment helper [`lib/disputes/enrichNetworkReasonCode.ts`](../lib/disputes/enrichNetworkReasonCode.ts) is called by [`lib/packs/buildPack.ts`](../lib/packs/buildPack.ts) immediately after the order GraphQL fetch, with full context (network from `OrderTransaction.paymentDetails.company`, receiptJson from `OrderTransaction.receiptJson` if `gateway === "shopify_payments"`, refund signal from `Order.totalRefundedSet`).
+
+Enrichment failures are non-fatal — a failed persist logs a warning and falls through, leaving the dispute with whatever the previous resolver write set (or NULL).
+
+### Downstream consumers (planned)
+
+- **LSE-1 CE 3.0 qualification** reads `network_reason_code` to detect Visa 10.4
+- **LSE-3 FPT readiness** reads it to detect Mastercard 4837 / 4863
+- **Rebuttal engine** (`lib/argument/rebuttalReason.ts`) will be extended to switch on the network code when present, falling back to the Shopify enum when null. Extension lands with LSE-1.
+- **Completeness engine** will be extended to use code-specific evidence checklists (e.g. Visa 13.1 vs 13.2 vs 13.3 each ask for different proofs). Extension lands with LSE-1.
+
+### Open questions
+
+Tracked in [`docs/epics/EPIC-LSE-0-reason-codes.md`](epics/EPIC-LSE-0-reason-codes.md) §Open questions. The biggest is whether a future Shopify API version exposes a typed `networkReasonCode` field — re-verify on each API version bump.
+
+## CE 3.0 Qualification Engine (LSE-1)
+
+For every Visa dispute on reason code 10.4, decide whether the dispute would qualify for **Visa Compelling Evidence 3.0** liability shift, via one of three branches (auto-qualified / initial-billing / standard). Persists verdict to `dispute_qualifications`. Source PRD: [`docs/liability-shift-engine-prd.md`](liability-shift-engine-prd.md) §4. Epic: [`docs/epics/EPIC-LSE-1-qualification-engine.md`](epics/EPIC-LSE-1-qualification-engine.md).
+
+Built per primary-source research against Verifi (Visa-owned), Visa public PDFs, Checkout.com, and cside.com on 2026-05-14. Three findings shaped the implementation:
+
+1. **October 17, 2025 — Visa Secure auto-qualification.** Visa now auto-pre-qualifies any Visa-Secure-authenticated or Visa-Data-Only transaction. Per-qualification fee starts April 17, 2026.
+2. **Subscription / MIT — initial billing exception.** Recurring billings where IP/device legitimately differ between bills may use the initial subscription billing transaction as the matching anchor.
+3. **Operational matching strictness.** Acquirers enforce tighter matching than the rule allows: shipping defaults to exact match (normalized fallback flagged), IP allows /24-subnet fallback (also flagged), device fingerprints must be deterministic.
+
+### Six verdict states
+
+| Verdict | Meaning | Branch |
+|---------|---------|--------|
+| `qualifies_network_prequalified` | Visa auto-qualified via 3DS (since 2025-10-17) | `auto_qualified` |
+| `qualifies_via_initial_billing` | Recurring/MIT order matched against initial subscription billing | `initial_billing` |
+| `qualifies` | Standard CE 3.0 — 2 priors in window + 2 matches incl. IP/Device anchor | `standard` |
+| `partial` | Close but missing one gate (1 prior, no anchor, etc.) | `none` |
+| `does_not_qualify` | Cleanly fails a gate (window, no anchor, etc.) | `none` |
+| `not_applicable` | Wrong network / wrong reason code / no card-network signal | `none` |
+
+### Pipeline integration
+
+Resolution runs from [`lib/packs/buildPack.ts`](../lib/packs/buildPack.ts) immediately after the LSE-0 enrichment, so the qualification engine has both the resolved `network_reason_code` and the full disputed-order GraphQL detail to work with:
+
+```
+dispute synced → runAutomationPipeline → build_pack job
+                                              │
+                                              ▼
+                            order fetched (ORDER_DETAIL_QUERY)
+                                              │
+                                              ▼
+                            LSE-0: enrichDisputeWithNetworkReasonCode
+                                              │
+                                              ▼
+                            LSE-1: evaluateQualification
+                              ├─ map order → QualificationOrder
+                              ├─ Branch 1: 3DS auto-qualified?
+                              ├─ Branch 2: subscription? → fetch initial billing
+                              ├─ Branch 3: standard → fetch priors via
+                              │            customer.orders GraphQL query,
+                              │            date-filtered server-side to
+                              │            120–365 day window
+                              └─ persist verdict to dispute_qualifications
+                                              │
+                                              ▼
+                            existing evidence collectors run
+```
+
+Enrichment + qualification are both **non-fatal** — failures log but never block pack build.
+
+### Modules
+
+| File | Purpose |
+|------|---------|
+| [`lib/liabilityShift/types.ts`](../lib/liabilityShift/types.ts) | Verdict / branch / match-point / confidence types + window constants |
+| [`lib/liabilityShift/matching.ts`](../lib/liabilityShift/matching.ts) | Field-level matchers (IP, device, shipping, account) with strength signals |
+| [`lib/liabilityShift/autoQualified.ts`](../lib/liabilityShift/autoQualified.ts) | Branch 1: Visa Secure / Data Only detection + April 2026 fee flag |
+| [`lib/liabilityShift/priors.ts`](../lib/liabilityShift/priors.ts) | Pure filtering: 120–365 day window, undisputed, non-refunded, non-validation; plus initial-subscription-billing picker |
+| [`lib/liabilityShift/fetchPriors.ts`](../lib/liabilityShift/fetchPriors.ts) | Shopify `customer.orders` GraphQL fetch + mapping into `QualificationOrder` |
+| [`lib/liabilityShift/qualifyCE30.ts`](../lib/liabilityShift/qualifyCE30.ts) | Orchestrator: gates → Branch 1 → Branch 2 → Branch 3 → verdict |
+| [`lib/liabilityShift/evaluateQualification.ts`](../lib/liabilityShift/evaluateQualification.ts) | Pipeline integration: derives 3DS state from receiptJson, fetches priors, persists verdict |
+
+### Shopify queries
+
+The customer-orders fetch uses a focused query (`lib/shopify/queries/customerOrdersForCE30.ts`) — date filtering is server-side via Shopify's order-search syntax (`created_at:>= … created_at:<= … financial_status:paid`). Field selection deliberately excludes per-prior transactions and receiptJson — those are expensive to fetch across 50 priors and not needed for the standard branch's matching logic. Device fingerprints come from LSE-4's checkout_sessions table when available.
+
+The disputed order's `ORDER_DETAIL_QUERY` was expanded with `customer { id }` (for the customer-orders fetch) and the full shipping/billing address shape (`address1`, `address2`, `province`, `country`) for tight matching.
+
+### Match strength signals
+
+The matcher returns a `MatchStrength` per field — `exact`, `normalized`, `subnet`, or `none`. Non-exact matches surface in `confidence_reasons` so the merchant UI can communicate the qualification's strength:
+
+- `ip_match:subnet_only` — /24 subnet match, weaker than exact-IP
+- `shipping_match:normalized_only` — matched after libpostal-style normalization
+- `device_match:fingerprint_too_short` — fingerprint rejected as non-deterministic
+- `guest_checkout` — no customer ID; matched on email + IP + shipping
+- `single_anchor` — only one of IP/device matched, not both
+
+### API + UI
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/disputes/:id/qualification` | Returns the verdict + machine-readable match/confidence reasons. Pending sentinel when the verdict hasn't been computed yet. |
+
+UI surface: [`components/liability-shift/LiabilityShiftPanel.tsx`](../components/liability-shift/LiabilityShiftPanel.tsx) — client component mounted in the embedded dispute Overview tab. Renders null when CE 3.0 is not applicable. i18n namespace `liabilityShift.*` translated across all 6 BCP-47 locales (en-US, pt-BR, es-ES, fr-FR, de-DE, sv-SE).
+
+### Schema
+
+Migration `20260514130000_dispute_qualifications.sql` creates the `dispute_qualifications` table. Service-role-only access (matches `disputes` / `evidence_packs` policy — RLS is defense-in-depth, all writes go through the pipeline).
+
+Key columns:
+- `ce30_status` — one of six verdict states (CHECK-constrained)
+- `ce30_branch` — `auto_qualified | initial_billing | standard | none`
+- `ce30_auto_qualification_via` — `visa_secure | visa_data_only | merchant_confirmed`
+- `auto_qualification_fee_applies` — true when verdict is auto-qualified AND disputed transaction is on or after 2026-04-17
+- `confidence_reasons` — machine codes (see "Match strength signals" above)
+- `missing_evidence` — machine codes for partial-state UI
+
+Unique index `(shop_id, shopify_dispute_id)` enables upsert on re-evaluation.
+
+## CE 3.0 Evidence Package + Submission Router (LSE-2)
+
+Generates Visa-CE-3.0-formatted PDF evidence packages from LSE-1 qualifying verdicts and routes them through the best channel available today: Shopify dispute API as best-effort (`uncategorized_text` summary + `uncategorized_file` PDF) plus a manual-acquirer-handoff workflow. Direct Verifi submission is LSE-6 (partnership-gated).
+
+Source: [`docs/epics/EPIC-LSE-2-evidence-package.md`](epics/EPIC-LSE-2-evidence-package.md).
+
+### Modules
+- [`lib/liabilityShift/packageTemplates.ts`](../lib/liabilityShift/packageTemplates.ts) — verdict → strongly-typed `CE30PackageData` (cover / branch-specific evidence body / merchant statement). Localized statement (EN + PT-BR shipped, other locales English fallback per PRD §10 Phase 2).
+- [`lib/packs/pdf/CE30PackDocument.tsx`](../lib/packs/pdf/CE30PackDocument.tsx) — React-PDF document (3 pages: cover + evidence table + statement) consuming `CE30PackageData`. Visual match indicators on the qualification table (✓ where matched).
+- [`lib/liabilityShift/submissionRouter.ts`](../lib/liabilityShift/submissionRouter.ts) — decides channel activation per shop settings + verdict; never auto-claims "submitted to Visa" — only "package attached via Shopify dispute API."
+- Outcome tracking: `recordOutcomeForPack(packId, outcome)` updates `submission_logs.final_outcome` from `pending` to the eventual `won` / `lost` / `withdrawn`.
+
+### Submission strategy (v1)
+For every qualifying verdict, both channels can fire in parallel:
+1. **`shopify_dispute_api`** (default on) — attach PDF to evidence_pack, the existing `saveToShopifyJob` will deliver it via `uncategorized_file` + a structured summary in `uncategorized_text`.
+2. **`manual_acquirer`** (default on) — surface download link + acquirer-upload instructions in the merchant UI; merchant marks the upload via `POST /api/packs/:id/mark-submitted` (LSE-2 endpoint).
+
+`submission_logs` records both as `pending` and tracks the final outcome — the data we need to answer "is best-effort via Shopify worth it vs. manual upload?" — which is the input to the LSE-6 partnership-investment decision.
+
+### Schema
+Migration `20260514140000_lse2_evidence_and_submissions.sql`:
+- Extends `evidence_packs` with `package_type` (`standard_representment` | `ce_30` | `fpt`), `template_version`, `qualification_id`, `language`.
+- Creates `submission_logs` (one row per `(evidence_pack, channel)`, unique-indexed; tracks `confirmation_id`, `raw_response`, `final_outcome` enum, `retry_count`).
+- Adds `shop_settings.lse_auto_submit_ce30_via_shopify` (default true) and `lse_show_manual_handoff_instructions` (default true).
+
+### Coverage gate
+Coverage gate (CLAUDE.md non-negotiable) still short-circuits before any LSE-2 work — covered disputes do not receive a CE 3.0 package.
+
+## Mastercard FPT Readiness (LSE-3)
+
+Mirrors LSE-1 for the Mastercard side. Reason-code allowlist + region gate + three-category scoring (Device, Delivery, Identity) determines FPT readiness for first-party-fraud disputes (reason codes **4837** "No Cardholder Authorization" and **4863** "Cardholder Does Not Recognize").
+
+Source: [`docs/epics/EPIC-LSE-3-fpt-readiness.md`](epics/EPIC-LSE-3-fpt-readiness.md).
+
+### Region eligibility ([`lib/liabilityShift/fptRegions.ts`](../lib/liabilityShift/fptRegions.ts))
+- **US** — since 2024-10-01 (full availability after 2023 pilot)
+- **Canada, LATAM, Caribbean, APAC** — since 2025-06-01 (global rollout)
+- **EU** — not yet (TBD by Mastercard)
+
+A dispute in an eligible region whose *disputed transaction date* is before the region's launch date returns `not_applicable` with reason `region_pre_launch:<region>:before:<date>`.
+
+### Three-category scoring ([`lib/liabilityShift/fptCategories.ts`](../lib/liabilityShift/fptCategories.ts))
+- **Device** — IP, device fingerprint (when LSE-4 data exists), 3DS authentication, session duration. Score 0–1.
+- **Delivery** — Shipping address presence, delivery confirmation, digital-goods + account combo. Score 0–1.
+- **Identity** — Customer account, customer tenure (90+/30+ day bands), repeat-customer signal (prior order count), email presence. Score 0–1.
+
+Verdict (in [`qualifyFPT.ts`](../lib/liabilityShift/qualifyFPT.ts)):
+- All three category scores > 0 AND sum ≥ 2.0 → `ready` (high confidence when sum ≥ 2.5, medium otherwise)
+- All positive but sum 1.2–2.0 → `partial` with `overall_too_weak`
+- Any category score = 0 → `partial` with `<category>_category_empty`
+- All positive but sum < 1.2 → `not_ready`
+
+Thresholds intentionally conservative — `FPT_READY_TOTAL_THRESHOLD` is encoded in code so calibrating against real outcome data is a config change, not a logic change.
+
+### Reason-code allowlist
+[`lib/disputes/reasonCodeCatalog.ts`](../lib/disputes/reasonCodeCatalog.ts) marks 4837 and 4863 with `family: "fpt_eligible"`. `isFPTEligibleCode(network, code)` is the gate.
+
+## Storefront Session Capture (LSE-4)
+
+Privacy-safe v1 session capture across three storefront surfaces, joined to orders via `cart_token`, used by LSE-1 / LSE-3 to match IP, device, and login state across the disputed order and priors.
+
+Source: [`docs/epics/EPIC-LSE-4-session-capture.md`](epics/EPIC-LSE-4-session-capture.md).
+
+### v1 capture set (privacy-safe)
+`cart_token`, `session_started_at`, `user_agent`, IP (hashed + encrypted), IP-derived geo (country + region only), `customer_id`, account age, login state at checkout, page-view history, time on checkout page, DNT / GPC consent signals. **Never** captures form input values. Device fingerprinting deferred to a future v2 epic under legal review.
+
+### Privacy controls
+- **DNT and GPC** honored at the server boundary (request headers OR body) — defense against malicious or buggy storefront installs
+- **IP hashing** — sha256(salt + IP) for query-time matching; raw IP encrypted via AES-256-GCM and only decrypted during qualification
+- **18-month TTL** — `checkout_sessions.retention_expires_at` column + nightly `expireCheckoutSessions` job
+- **Subject deletion** — `POST /api/sessions/forget` deletes by `customer_id` and/or `cart_token` for LGPD/GDPR/CCPA right-to-be-forgotten
+- **Match-back** — orders/create webhook calls `matchSessionToOrder(cart_token)` to bind the session to the resulting `shopify_order_id`
+
+### Modules
+- [`lib/liabilityShift/sessions/ingest.ts`](../lib/liabilityShift/sessions/ingest.ts) — ingest validation, IP hashing/encryption, upsert
+- [`lib/liabilityShift/sessions/expireSessions.ts`](../lib/liabilityShift/sessions/expireSessions.ts) — nightly retention job
+- [`app/api/sessions/ingest/route.ts`](../app/api/sessions/ingest/route.ts) — POST endpoint, fail-open
+- [`app/api/sessions/forget/route.ts`](../app/api/sessions/forget/route.ts) — subject-deletion POST endpoint
+- [`lib/liabilityShift/sessions/README.md`](../lib/liabilityShift/sessions/README.md) — CLI commands to scaffold the three storefront extensions (theme app embed, Web Pixel, Checkout UI)
+
+### Storefront extension scaffolding (manual step)
+The three storefront capture surfaces require `npx shopify app generate extension` runs from the project root. Commands and ingest-payload templates documented in `lib/liabilityShift/sessions/README.md`. Once generated, each extension calls `POST /api/sessions/ingest` with the `SessionIngestPayload` shape; async load, 50ms hard timeout, fail-open (never block checkout).
+
+### Schema
+Migration `20260514150000_lse4_checkout_sessions.sql` creates `checkout_sessions` with:
+- Unique `(shop_id, cart_token)` for match-back
+- `ip_hash` (sha256) for queries + `ip_raw_encrypted` (bytea, AES-256-GCM) for matching-only decryption
+- `consent_signals` jsonb recording DNT/GPC at ingest time
+- `retention_expires_at` defaulting to `now() + interval '18 months'` (indexed for the nightly job)
+
+## Ratio & Compliance Dashboard (LSE-5)
+
+Monthly per-shop calculated **VAMP** / **MC ECM** / **MC EFM** ratios with the counterfactual "without-DisputeDesk" line and estimated fees-avoided / revenue-recovered. Always labeled **calculated estimate** in the UI — only the acquirer has the authoritative number.
+
+Source: [`docs/epics/EPIC-LSE-5-ratio-dashboard.md`](epics/EPIC-LSE-5-ratio-dashboard.md).
+
+### Calculation ([`lib/liabilityShift/ratios/calculate.ts`](../lib/liabilityShift/ratios/calculate.ts))
+
+```
+VAMP_ratio = (count(TC40_fraud) + count(TC15_other)) / count(TC05_settled)
+```
+
+Approximations from Shopify data:
+- `TC40_fraud` ≈ disputes with `reason=fraudulent` AND `phase=chargeback`
+- `TC15_other` ≈ all other disputes
+- `TC05_settled` ≈ paid orders in the month, refunds/voids excluded
+- **Exclusion from numerator:** disputes with `final_outcome='won'` whose attributed evidence pack was `package_type='ce_30'` or `'fpt'` (drives the counterfactual)
+
+Mastercard ratios partition by `network_reason_code` prefix `"48"`:
+- `mc_ecm_ratio` = MC chargebacks / settled
+- `mc_efm_ratio` = MC fraud-only chargebacks / settled
+
+### Thresholds ([`lib/liabilityShift/ratios/thresholds.ts`](../lib/liabilityShift/ratios/thresholds.ts))
+- VAMP standard 0.65%, excessive 1.50%
+- MC ECM 1.00%, MC EFM 0.50%
+- Yellow band: 80% of threshold
+
+### Schema
+Migration `20260514160000_lse5_ratio_snapshots.sql`:
+- `ratio_snapshots` — one row per `(shop_id, period_month)`. Includes `vamp_ratio_calculated`, `vamp_ratio_without_dd` (counterfactual), `ce30_excluded_count`, `fpt_excluded_count`, `estimated_fees_avoided_usd`, `estimated_revenue_recovered_usd`.
+- `ratio_alerts` — `vamp_yellow|red`, `ecm_yellow|red`, `efm_yellow|red`. Active-row dedup so a shop has one undismissed alert per type at a time.
+
+### API
+- `GET /api/ratios/current` — last snapshot with threshold bands
+- `GET /api/ratios/trend?months=12` — chronological series for the trend chart
+
+### Cron
+The nightly `calculate_ratios` job runs `calculateRatiosForMonth` per shop for the current month (re-run for late-arriving data) and the previous month if it's the first 7 days of the new one. Wire to Vercel cron when ready to enable.
+
+## Direct Network Submission (LSE-6) — schema stub only
+
+LSE-6 enables direct Verifi VROL (CE 3.0) and Ethoca Consumer Clarity (FPT) submission **once commercial partnership agreements are signed**. Engineering does not start until credentials are in hand.
+
+Source: [`docs/epics/EPIC-LSE-6-direct-submission.md`](epics/EPIC-LSE-6-direct-submission.md).
+
+### Schema in place (migration `20260514170000`)
+- `shop_settings.lse_verifi_enabled` / `lse_ethoca_enabled` / `lse_keep_shopify_parallel` (default false / false / true)
+- `lse_partner_credentials` table — empty until partnerships sign
+- `submission_logs.channel` already accepts `verifi` and `ethoca` (added in LSE-2 migration)
+
+### What's intentionally NOT built
+- Verifi VROL API client
+- Ethoca Consumer Clarity API client
+- Outcome webhook endpoints (`/api/webhooks/verifi/outcome`, `/api/webhooks/ethoca/outcome`)
+- A/B period dashboards
+- Connection-status UI
+
+These come online when commercial credentials are validated against a real sandbox. The schema is positioned so partnership signing → activation is a single PR + credential population step, not a full feature build.
+
 ## Automation Pipeline
 
 DisputeDesk is **automation-first**. The pipeline runs automatically

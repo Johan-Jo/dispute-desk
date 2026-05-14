@@ -54,6 +54,12 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     descriptionKey: "help.categories.savingToShopifyDesc",
     icon: "upload",
   },
+  {
+    slug: "liability-shift",
+    labelKey: "help.categories.liabilityShift",
+    descriptionKey: "help.categories.liabilityShiftDesc",
+    icon: "scale",
+  },
 ];
 
 export function getCategoryBySlug(slug: string): HelpCategory | undefined {

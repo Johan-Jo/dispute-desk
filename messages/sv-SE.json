@@ -1737,6 +1737,8 @@
       "savingToShopifyDesc": "Hur bevis sparas och vad som händer sedan",
       "lifecycle": "Förfrågan & chargeback-livscykel",
       "lifecycleDesc": "Förstå de två faserna av en tvist och hur DisputeDesk hanterar varje fas",
+      "liabilityShift": "Ansvarsöverföring (CE 3.0 och FPT)",
+      "liabilityShiftDesc": "Visa Compelling Evidence 3.0, Mastercard First-Party Trust, nyckeltal och vad de betyder för din butik",
       "policies": "Policyer",
       "policiesDesc": "Hantera affärspolicyer för starkare bevis"
     },
@@ -1912,6 +1914,34 @@
       "lifecycleOverview": {
         "title": "How DisputeDesk Handles the Dispute Lifecycle",
         "body": "Every dispute goes through a lifecycle with two main phases: Inquiry and Chargeback.\n\nPhase 1 — Inquiry:\n- The bank asks questions about a transaction.\n- No funds reversed yet.\n- Prompt response can prevent escalation.\n- DisputeDesk labels these as 'Inquiry' throughout the app.\n\nPhase 2 — Chargeback:\n- The bank formally reverses funds.\n- Evidence submission required within a deadline.\n- DisputeDesk labels these as 'Chargeback' with stronger urgency.\n\nHow coverage works across phases:\n- Each dispute family (Fraud, Product Not Received, etc.) can have different handling for inquiries vs chargebacks.\n- The Coverage page shows how each family is handled in both phases.\n- Automation rules currently apply to both phases equally.\n\nWhat you should do:\n1. Check your Coverage page to see which families are protected.\n2. Review your Automation settings for each dispute type.\n3. Install playbooks for the dispute types most relevant to your store.\n4. Monitor the Dashboard for inquiry and chargeback queue counts."
+      },
+      "ce30Overview": {
+        "title": "Visa Compelling Evidence 3.0 — vad det är och när det kvalificerar",
+        "body": "Visa Compelling Evidence 3.0 (CE 3.0) är Visas program som flyttar ansvaret för en chargeback tillbaka till den utfärdande banken när handlaren kan bevisa att samma kortinnehavare gjort tidigare legitima köp. Gäller endast Visa-tvister med orsakskod 10.4 (Övrig bedrägeri — kortlös miljö).\n\nKvalifikationsregler:\n1. Kortinnehavaren har minst 2 tidigare obestrida transaktioner med din butik.\n2. Dessa transaktioner skedde mellan 120 och 365 dagar före den bestrida transaktionen.\n3. Minst 2 av dessa datapunkter matchar över alla tre transaktioner: IP-adress, enhets-ID, leveransadress, kundkonto-ID.\n4. Minst en matchning måste vara IP eller enhet — det är 'ankar'-kravet.\n\nAnsvarsöverföringspanelen i DisputeDesk visar utfallet omedelbart: Kvalificerar / Kvalificerar (låg konfidens) / Delvis / Kvalificerar inte / Ej tillämpligt. När den kvalificerar genererar DisputeDesk ett CE 3.0-formaterat bevispaket och bifogar det till Shopifys tvist-svar.\n\nGästutcheckningar kan kvalificera med lägre konfidens (matchning på e-post). B2B/företagskort kvalificerar som personkort.\n\nCE 3.0 täcker INTE något annat än Visa-kod 10.4. För 'produkt ej mottagen', 'inte som beskriven' eller andra icke-bedrägeriskäl gäller fortfarande ditt standardförsvar."
+      },
+      "autoQualificationVisaSecure": {
+        "title": "Automatisk kvalificering via Visa Secure — och avgiften från april 2026",
+        "body": "Sedan 17 oktober 2025 förkvalificerar Visa automatiskt för CE 3.0 varje transaktion som autentiserats via Visa Secure (3-D Secure 2) eller Visa Data Only (friktionsfritt 3DS-datautbyte). När denna förkvalificering utlöses är tvisten förkvalificerad på Visa-nätverksnivå — du behöver inte 2 tidigare transaktioner eller matchande datapunkter.\n\nDisputeDesk upptäcker detta automatiskt genom att läsa 3-D Secure-status på den bestrida ordern. Panelen visar 'Förkvalificerad av Visa' med grönt märke.\n\nVad du fortfarande måste göra: skicka in dina försvarsbevis som vanligt. Förkvalificeringen är metadata bifogad av Visa — dina bevis fullbordar försvaret.\n\n17 april 2026 — Visa kommer att ta ut en avgift per lyckad kvalificering, fakturerad via din inlösare. DisputeDesk visar ett meddelande i panelen när detta gäller (varje bestrida transaktion skapad från och med 17 april 2026 som kvalificerar via Visa Secure).\n\nDet är automatiskt — inget opt-in eller opt-out. Mastercards 3DS förkvalificerar INTE för CE 3.0 (CE 3.0 är endast Visa). Mastercard-tvister om förstapartsbedrägeri följer den separata FPT-vägen."
+      },
+      "subscriptionCe30": {
+        "title": "Hur prenumerationer / återkommande fakturering kvalificerar för CE 3.0",
+        "body": "Visa CE 3.0 har en särskild väg för återkommande eller handlarinitierade transaktioner (MIT). För en prenumerationskund skiljer sig IP och enhet vanligtvis mellan faktureringarna — kunden registrerade sig en gång och faktureras nu månatligen. Visa tillåter att använda den initiala prenumerationsfaktureringstransaktionen (den ursprungliga registreringen) som matchningsankare i stället för att leta efter 120–365 dagar gamla tidigare transaktioner.\n\nDisputeDesk upptäcker prenumerationsorder automatiskt: inbyggda Shopify Subscriptions (med säljplan), populära tredjepartsappar (Recharge, Bold, Loop, Skio, Appstle), order taggade 'subscription' eller 'recurring'.\n\nNär en prenumerationstvist kommer in slår DisputeDesk upp den initiala transaktionen och jämför IP / enhet / leverans / konto. Om 2 punkter matchar (minst en är IP eller enhet) blir utfallet 'Kvalificerar (via inledande fakturering)'.\n\nGränsfall: tvist på den första faktureringen (kunden bestred själva registreringen) → ingen initial fakturering finns, faller tillbaka på standardvägen. Initial fakturering återbetald eller bestriden → exkluderad.\n\nDenna väg har vanligtvis medelkonfidens (aldrig hög) eftersom matchningen är mot en enda transaktion. Det genererade paketet förklarar detta tydligt för utfärdaren."
+      },
+      "mastercardFpt": {
+        "title": "Mastercard First-Party Trust (FPT)",
+        "body": "Mastercard First-Party Trust är Mastercards motsvarighet till Visa CE 3.0, men fungerar annorlunda. FPT gäller Mastercard-tvister om förstapartsbedrägeri (kortinnehavaren hävdar att de inte auktoriserat transaktionen eller inte känner igen den). Behöriga orsakskoder är 4837 (Ingen kortinnehavarauktorisation) och 4863 (Kortinnehavaren känner inte igen).\n\nFPT KRÄVER INTE tidigare transaktioner. I stället krävs starka bevis i tre kategorier:\n- Enhet: IP, enhets-ID, 3-D Secure-autentisering, sessionsbeteende\n- Leverans: leveransadress, spårning, leveransbekräftelse, mottagningssignatur\n- Identitet: kundkonto, kontoålder, inloggningsstatus vid betalning, återkommande kund\n\nDisputeDesk poängsätter varje kategori 0–1; en tvist är 'redo' för FPT när alla tre kategorierna har bevis OCH totalen är minst 2,0 av 3,0.\n\nRegional tillgänglighet är viktig. FPT är aktivt i:\n- USA — sedan oktober 2024\n- Kanada, Latinamerika, Karibien, Asien-Stillahavsområdet — sedan juni 2025\n- Europeiska unionen — ännu inte tillgänglig\n\nOm din butik är i en region utan FPT visar DisputeDesk 'Ej tillämpligt' och faller tillbaka på Mastercards standardförsvar.\n\nOperativ notering: DisputeDesk genererar ett FPT-formaterat paket och skickar det via Shopifys tvist-API som best-effort. Direkt inlämning till Mastercards Ethoca Consumer Clarity-API kräver ett separat kommersiellt partnerskap som DisputeDesk söker men ännu inte har."
+      },
+      "networkReasonCodes": {
+        "title": "Nätverksorsakskoder — Visa och Mastercard, inte Shopify",
+        "body": "Shopify grupperar alla tvister i 14 breda kategorier. Men Visa och Mastercard använder mycket mer specifika koder under: Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855. Den specifika nätverkskoden avgör hur den utfärdande banken bedömer dina bevis och vilken typ av försvarsspråk som vinner.\n\nDisputeDesk löser nätverksorsakskoden automatiskt för varje tvist. Upplösningen använder flera signaler i pålitlighetsordning: direkt (typat fält på Shopify-tvisten — exponeras för närvarande inte, reserverat för framtida API-ändring), härlett (extraherat från gateway-kvittot när det är tillgängligt, endast Shopify Payments), inferterat (bästa gissning från Shopify-enum + nätverk + kontext), eller okänt.\n\nDetaljsidan visar den upplösta koden (t.ex. 'Visa 13.1 — Varor/tjänster ej mottagna') med konfidensindikator. Tillförlitlig upplösning gör det möjligt att: upptäcka CE 3.0-behörighet (Visa 10.4), upptäcka FPT-behörighet (Mastercard 4837 / 4863), välja mer specifika försvarsmallar per kod och tillämpa anpassade bevischecklistor.\n\nDu behöver inte göra något — upplösningen är automatisk. Förblir koden 'okänd' faller DisputeDesk tillbaka på standardhanteringen av Shopify-kategorin."
+      },
+      "vampRatioExplained": {
+        "title": "VAMP, ECM och EFM — vad siffrorna betyder",
+        "body": "Kortnätverk övervakar tre viktiga chargeback-nyckeltal för varje handlare. Att överskrida tröskelvärdena utlöser avgifter, inskrivning i övervakningsprogram och i extrema fall kontostängning. DisputeDesk-nyckeltalspanelen visar dina beräknade uppskattningar plus den kontrafaktiska effekten av DisputeDesks vinster.\n\nDe tre nyckeltalen:\n- Visa VAMP — totala tvister / totalt avräknade transaktioner. Standardtröskel: 0,65 %. Överdriven: 1,50 %. Att passera den överdrivna utlöser en tillsynsavgift per transaktion.\n- Mastercard ECM — Mastercard-chargebacks / Mastercard-avräkningar. Tröskel: 1,00 %.\n- Mastercard EFM — Mastercard bedrägeri-chargebacks / Mastercard-avräkningar. Tröskel: 0,50 %.\n\nDisputeDesk visar gul varning vid 80 % av tröskeln och röd varning vid passering, samt skickar e-post vid bandsändring.\n\nDen kontrafaktiska linjen är nyckelinsikten: DisputeDesk-tillskrivna vinster (CE 3.0 och FPT) tas bort från VAMP-täljaren. Den streckade linjen visar vad ditt nyckeltal skulle vara utan DisputeDesks arbete — gapet är det levererade värdet.\n\nViktigt: dessa är beräknade uppskattningar från din Shopify-data, inte de officiella siffror din inlösare rapporterar. Endast inlösaren har det auktoritativa nyckeltalet. DisputeDesk använder standardformeln men approximerar TC40 / TC15 / TC05-koder från Shopifys tvist- och orderdata. Om inlösarens siffra skiljer sig är dennes den som gäller för efterlevnad.\n\nMånadsvis effektsammanfattning visar: kvalificerade tvister, vinster per kanal, transaktioner borttagna från VAMP, uppskattade undvikna avgifter och uppskattad återvunnen intäkt."
+      },
+      "sessionCapture": {
+        "title": "Sessionsregistrering på butiken — vad det är och vad vi lagrar",
+        "body": "För att matcha tvister mot CE 3.0 / FPT-krav behöver DisputeDesk känna till vissa fakta om varje checkout-session: vilken IP kunden använde, om de var inloggade, sidorna de visade, enheten. Utan dessa data förblir kvalifikationsfrekvensen artificiellt låg — de flesta tvister når inte upp till kravet på matchande datapunkter.\n\nVad DisputeDesk fångar (när sessionsregistrering är aktiverad):\n- Shopify cart_token (för att koppla session till order)\n- IP-adress (hashad i vila, salt per butik; råvärde krypterat, dekrypteras endast vid kvalificering)\n- IP-härledd geografi (endast land och region)\n- User agent\n- Kund-ID och inloggningsstatus vid betalning\n- Kundkontoålder\n- Besökta sidor och tid på checkout-sidan\n- Webbläsarens integritetssignaler (Do Not Track, Global Privacy Control)\n\nVad som INTE fångas: formulärvärden (namn, adresser, kortnummer — inget inskrivet), sammansatta enhetsfingeravtryck (canvas / WebGL / ljud — uppskjutna till senare fas under rättslig granskning), musrörelser, cross-session-cookies.\n\nIntegritetskontroller:\n- DNT- och GPC-signaler får DisputeDesk att avvisa posten serversidan\n- Sessionsdata raderas automatiskt 18 månader efter registrering\n- Rätt-att-bli-glömd-förfrågningar (LGPD / GDPR / CCPA) hedras via raderings-endpoint\n- DisputeDesk agerar som personuppgiftsbiträde; du är personuppgiftsansvarig\n\nDu behöver uppdatera din butiks integritetspolicy för att avslöja denna registrering. DisputeDesk tillhandahåller en mall.\n\nFramåtblickande not: sessionsregistrering hjälper inte tvister inlämnade före aktivering. Den bygger bevisgrunden för varje tvist efter installation."
       }
     },
     "embedded": {
@@ -3739,5 +3769,54 @@
     "stripRetryCta": "Försök igen",
     "stripRetryError": "Det gick inte att starta om just nu. Försök igen om en stund.",
     "stripNoOrdersBody": "Vi har ännu inte hittat några tidigare Shopify-beställningar att analysera. När beställningar börjar komma in visas din risköversikt här."
+  },
+  "liabilityShift": {
+    "panelTitle": "Ansvarsöverföring — Visa CE 3.0",
+    "verdict": {
+      "qualifies": "Kvalificerar",
+      "qualifies_network_prequalified": "Förkvalificerad av Visa",
+      "qualifies_via_initial_billing": "Kvalificerar (via inledande fakturering)",
+      "partial": "Delvis matchning",
+      "does_not_qualify": "Kvalificerar inte",
+      "not_applicable": "Ej tillämpligt"
+    },
+    "confidence": {
+      "high": "Hög konfidens",
+      "medium": "Medelhög konfidens",
+      "low": "Låg konfidens"
+    },
+    "matchPoints": {
+      "label": "Matchningar:"
+    },
+    "matchPoint": {
+      "ip": "IP-adress",
+      "device": "Enhet",
+      "shipping": "Leveransadress",
+      "account": "Kundkonto"
+    },
+    "autoQual": {
+      "viaVisaSecure": "Visa förkvalificerade denna tvist för CE 3.0 via Visa Secure (3-D Secure 2-autentisering).",
+      "viaDataOnly": "Visa förkvalificerade denna tvist för CE 3.0 via Visa Data Only (friktionsfritt 3DS-datautbyte).",
+      "viaMerchantConfirmed": "CE 3.0 automatkvalificerad via handlarbekräftat 3-D Secure.",
+      "feeNotice": "Visa tar ut en avgift per kvalificering på automatkvalificerade tvister från och med den 17 april 2026."
+    },
+    "initialBilling": {
+      "notice": "Denna återkommande fakturering kvalificerar för CE 3.0 genom matchning mot den inledande abonnemangsfaktureringstransaktionen."
+    },
+    "partial": {
+      "intro": "Denna tvist är nära att kvalificera, men ett krav saknas:"
+    },
+    "doesNotQualify": {
+      "intro": "Kraven för Visa CE 3.0 uppfylls inte för denna tvist. Standardförsvar gäller fortfarande."
+    },
+    "notApplicable": {
+      "intro": "Visa CE 3.0 gäller endast för Visa-orsakskod 10.4. Standardförsvar gäller fortfarande."
+    },
+    "missing": {
+      "anchor": "Matchning av IP eller enhet krävs (ankare)",
+      "twoPriors": "Två obestrida tidigare beställningar inom fönstret 120–365 dagar",
+      "secondPrior": "En andra obestrida tidigare beställning inom fönstret 120–365 dagar",
+      "matchPointPrefix": "Matchning behövs"
+    }
   }
 }

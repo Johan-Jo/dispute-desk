@@ -1736,6 +1736,8 @@
       "savingToShopifyDesc": "Como as evidências são salvas e o que acontece depois",
       "lifecycle": "Ciclo de vida: Consulta e Chargeback",
       "lifecycleDesc": "Entenda as duas fases de uma disputa e como o DisputeDesk trata cada uma",
+      "liabilityShift": "Transferência de Responsabilidade (CE 3.0 e FPT)",
+      "liabilityShiftDesc": "Visa Compelling Evidence 3.0, Mastercard First-Party Trust, índices e o que significam para sua loja",
       "policies": "Políticas",
       "policiesDesc": "Gerencie políticas comerciais para evidências mais fortes"
     },
@@ -1911,6 +1913,34 @@
       "lifecycleOverview": {
         "title": "How DisputeDesk Handles the Dispute Lifecycle",
         "body": "Every dispute goes through a lifecycle with two main phases: Inquiry and Chargeback.\n\nPhase 1 — Inquiry:\n- The bank asks questions about a transaction.\n- No funds reversed yet.\n- Prompt response can prevent escalation.\n- DisputeDesk labels these as 'Inquiry' throughout the app.\n\nPhase 2 — Chargeback:\n- The bank formally reverses funds.\n- Evidence submission required within a deadline.\n- DisputeDesk labels these as 'Chargeback' with stronger urgency.\n\nHow coverage works across phases:\n- Each dispute family (Fraud, Product Not Received, etc.) can have different handling for inquiries vs chargebacks.\n- The Coverage page shows how each family is handled in both phases.\n- Automation rules currently apply to both phases equally.\n\nWhat you should do:\n1. Check your Coverage page to see which families are protected.\n2. Review your Automation settings for each dispute type.\n3. Install playbooks for the dispute types most relevant to your store.\n4. Monitor the Dashboard for inquiry and chargeback queue counts."
+      },
+      "ce30Overview": {
+        "title": "Visa Compelling Evidence 3.0 — o que é e quando qualifica",
+        "body": "Visa Compelling Evidence 3.0 (CE 3.0) é o programa da Visa que transfere a responsabilidade pelo chargeback de volta ao banco emissor quando o lojista prova que o mesmo portador do cartão fez compras legítimas anteriores. Aplica-se apenas a disputas Visa abertas com o código de motivo 10.4 (Outros — Fraude em Ambiente sem Cartão Presente).\n\nQuando o CE 3.0 se aplica, fica mais difícil para o emissor vencer — a Visa espera que o emissor aceite a evidência e reverta o chargeback.\n\nRegras de qualificação:\n1. O portador do cartão tem pelo menos 2 transações anteriores não contestadas com sua loja.\n2. Essas transações ocorreram entre 120 e 365 dias antes da transação contestada.\n3. Pelo menos 2 destes pontos de dados correspondem nas três transações (contestada + 2 anteriores): endereço IP, identificador do dispositivo, endereço de entrega, ID da conta do cliente.\n4. Pelo menos uma das correspondências deve ser IP ou dispositivo — chamamos de requisito de 'âncora'.\n\nO painel Transferência de Responsabilidade no DisputeDesk mostra o veredicto imediatamente: Qualifica / Qualifica (baixa confiança) / Parcial / Não qualifica / Não se aplica. Quando qualifica, o DisputeDesk gera um pacote de evidências no formato CE 3.0 e anexa à resposta da disputa no Shopify.\n\nCheckout sem conta também pode qualificar, com confiança menor — o DisputeDesk faz correspondência por e-mail. Cartões B2B / corporativos qualificam como cartões pessoais.\n\nO que o CE 3.0 NÃO cobre: nada além do código Visa 10.4. Para 'produto não recebido', 'não conforme descrito' ou outros motivos não-fraude, sua defesa padrão continua valendo."
+      },
+      "autoQualificationVisaSecure": {
+        "title": "Pré-qualificação via Visa Secure — e a taxa de abril de 2026",
+        "body": "Desde 17 de outubro de 2025, a Visa pré-qualifica automaticamente para CE 3.0 qualquer transação autenticada via Visa Secure (3-D Secure 2) ou Visa Data Only (troca de dados 3DS sem fricção). Quando essa pré-qualificação dispara, a disputa fica pré-qualificada no nível da rede Visa — você não precisa de 2 transações anteriores nem de pontos de dados correspondentes.\n\nO DisputeDesk detecta automaticamente lendo o estado 3-D Secure no pedido contestado. O painel mostra 'Pré-qualificada pela Visa' com selo verde.\n\nO que você ainda precisa fazer: enviar sua evidência de defesa normalmente. A pré-qualificação são metadados anexados pela Visa — sua evidência é o que completa a defesa.\n\n17 de abril de 2026 — a Visa começa a cobrar uma taxa:\nA Visa cobrará uma taxa por qualificação bem-sucedida, faturada via seu adquirente. O DisputeDesk exibe um aviso no painel sempre que isso se aplica (toda transação contestada criada em ou após 17 de abril de 2026 que qualifique via Visa Secure).\n\nÉ automático — não há opt-in nem opt-out. Você recebe o benefício e a taxa aparece no extrato do adquirente. Fale com seu processador de pagamentos para detalhes da taxa na sua conta.\n\nO 3DS Mastercard NÃO pré-qualifica para CE 3.0 — o CE 3.0 é exclusivo da Visa. Disputas de fraude de primeira parte da Mastercard seguem o caminho FPT separado (ver artigo 'Mastercard FPT')."
+      },
+      "subscriptionCe30": {
+        "title": "Como assinaturas / cobranças recorrentes qualificam para CE 3.0",
+        "body": "A Visa CE 3.0 tem um caminho especial para transações recorrentes ou iniciadas pelo lojista (MIT). Para um cliente de assinatura, o IP e o dispositivo geralmente diferem entre cobranças — o cliente se inscreveu uma vez e passou a ser cobrado mensalmente. A Visa reconhece isso e permite usar a transação inicial de cobrança da assinatura (o cadastro original) como âncora de correspondência, em vez de procurar anteriores no período de 120–365 dias.\n\nO DisputeDesk detecta pedidos de assinatura automaticamente. Reconhece:\n- Assinaturas nativas do Shopify (itens com plano de venda)\n- Aplicativos populares de terceiros (Recharge, Bold, Loop, Skio, Appstle)\n- Pedidos com tags 'subscription' ou 'recurring'\n\nQuando chega uma disputa de assinatura, o DisputeDesk busca a transação inicial e compara IP / dispositivo / entrega / conta entre a cobrança contestada e a cobrança inicial. Se 2 pontos corresponderem (com pelo menos um sendo IP ou dispositivo), o veredicto é 'Qualifica (via cobrança inicial)'.\n\nCasos especiais:\n- Disputa da primeira cobrança (o cliente contestou o próprio cadastro) → ainda não existe cobrança inicial; o DisputeDesk volta ao caminho padrão CE 3.0.\n- Cobrança inicial foi estornada ou contestada → excluída; volta ao caminho padrão.\n\nEsse caminho costuma ser de confiança média (nunca 'alta') porque a correspondência é contra uma única transação. O pacote gerado pelo DisputeDesk explica isso claramente ao emissor."
+      },
+      "mastercardFpt": {
+        "title": "Mastercard First-Party Trust (FPT)",
+        "body": "Mastercard First-Party Trust é o equivalente Mastercard do Visa CE 3.0 — mas funciona de forma diferente. O FPT aplica-se a disputas Mastercard de fraude de primeira parte (o portador alega que não autorizou a transação ou não a reconhece). Os códigos elegíveis são 4837 (Sem Autorização do Portador) e 4863 (Portador Não Reconhece).\n\nO FPT NÃO exige transações anteriores. Em vez disso, exige evidências fortes em três categorias:\n- Dispositivo: endereço IP, identificador do dispositivo, autenticação 3-D Secure, comportamento de sessão\n- Entrega: endereço de envio, rastreamento, confirmação de entrega, assinatura de recebimento\n- Identidade: conta do cliente, tempo da conta, estado de login no checkout, cliente recorrente\n\nO DisputeDesk pontua cada categoria de 0 a 1 e a disputa fica 'pronta' para FPT quando todas as três categorias têm evidência E o total é pelo menos 2,0 de 3,0.\n\nDisponibilidade regional importa. O FPT está ativo em:\n- Estados Unidos — desde outubro de 2024\n- Canadá, América Latina (incluindo Brasil), Caribe, Ásia-Pacífico — desde junho de 2025\n- União Europeia — ainda não disponível\n\nSe sua loja está em uma região onde o FPT não está ativo, o DisputeDesk mostra 'Não se aplica' e volta à defesa padrão Mastercard.\n\nNota operacional: o DisputeDesk gera um pacote no formato FPT e o submete via API de disputas do Shopify como melhor-esforço. A submissão direta à API Ethoca Consumer Clarity da Mastercard exige uma parceria comercial separada que o DisputeDesk está buscando mas ainda não possui."
+      },
+      "networkReasonCodes": {
+        "title": "Códigos de motivo da rede — Visa e Mastercard, não Shopify",
+        "body": "O Shopify agrupa todas as disputas em 14 categorias amplas (Fraudulento, Produto Não Recebido, Assinatura Cancelada, etc.). Mas Visa e Mastercard usam códigos muito mais específicos por baixo: Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855, e assim por diante. O código específico da rede determina como o banco emissor avalia sua evidência e o tipo de linguagem de defesa que ganha.\n\nO DisputeDesk resolve o código de motivo da rede automaticamente para toda disputa. A resolução usa vários sinais (em ordem de confiabilidade):\n- Direto: um campo tipado na disputa Shopify (atualmente não exposto pelo Shopify, reservado para mudança futura da API)\n- Derivado: extraído do recibo da transação do gateway de pagamento quando disponível (apenas Shopify Payments)\n- Inferido: melhor estimativa a partir do enum do Shopify + rede do cartão + contexto do pedido\n- Desconhecido: sinal indisponível; tratamento padrão se aplica\n\nA página de detalhe da disputa mostra o código resolvido (ex.: 'Visa 13.1 — Mercadoria/Serviços Não Recebidos') com indicador de confiança. A resolução confiável permite ao DisputeDesk:\n1. Detectar elegibilidade para CE 3.0 (Visa 10.4 → caminho CE 3.0)\n2. Detectar elegibilidade para FPT (Mastercard 4837 / 4863 → caminho FPT)\n3. Escolher modelos de defesa mais específicos por código (Visa 13.1, 13.2 e 13.3 recebem linguagens diferentes mesmo todos mapeando para 'Produto Não Recebido' no enum Shopify)\n4. Aplicar checklists de evidência personalizados por código\n\nVocê não precisa fazer nada — a resolução é automática. Se o código não for resolvido, o DisputeDesk volta ao tratamento padrão da categoria Shopify."
+      },
+      "vampRatioExplained": {
+        "title": "VAMP, ECM e EFM — o que os números significam",
+        "body": "As redes de cartões monitoram três índices-chave de chargeback de todo lojista. Ultrapassar os limites dispara taxas, inscrição em programas de monitoramento e, em casos extremos, encerramento da conta. O painel de Índices do DisputeDesk mostra suas estimativas calculadas mais o impacto contrafactual das vitórias do DisputeDesk.\n\nOs três índices:\n- Visa VAMP (Programa de Monitoramento de Adquirentes) — disputas totais / transações liquidadas totais. Limite padrão: 0,65%. Limite excessivo: 1,50%. Ultrapassar o excessivo dispara uma taxa de fiscalização por transação.\n- Mastercard ECM (Lojista com Chargebacks Excessivos) — chargebacks Mastercard / liquidações Mastercard. Limite: 1,00%.\n- Mastercard EFM (Lojista com Fraudes Excessivas) — chargebacks de fraude Mastercard / liquidações Mastercard. Limite: 0,50%.\n\nO DisputeDesk mostra alerta amarelo a 80% do limite e alerta vermelho ao cruzá-lo. Também enviamos e-mail quando a faixa muda.\n\nA linha contrafactual é o insight principal: vitórias atribuídas ao DisputeDesk (CE 3.0 e FPT) são removidas do numerador VAMP no cálculo. A linha tracejada mostra qual seria seu índice sem o trabalho do DisputeDesk — a diferença entre as duas linhas é o valor entregue pelo DisputeDesk.\n\nRessalva importante: são estimativas calculadas a partir dos seus dados Shopify, não os números oficiais que seu adquirente reporta. Apenas o adquirente tem o índice autoritativo. O DisputeDesk usa a fórmula padrão mas aproxima os códigos TC40 / TC15 / TC05 a partir dos dados de disputas e pedidos do Shopify. Se o número do adquirente diferir, o dele é o que vale para conformidade — o nosso é uma aproximação prática para detectar tendências cedo.\n\nO resumo mensal de impacto mostra: disputas qualificadas, vitórias por canal, transações removidas do VAMP, taxas estimadas evitadas e receita estimada recuperada."
+      },
+      "sessionCapture": {
+        "title": "Captura de sessão na loja — o que é e o que armazenamos",
+        "body": "Para comparar disputas com os requisitos de CE 3.0 / FPT, o DisputeDesk precisa saber alguns fatos sobre cada sessão de checkout: qual IP o cliente usou, se estava logado, as páginas que viu, o dispositivo. Sem esses dados, as taxas de qualificação ficam artificialmente baixas — a maioria das disputas não atingirá o requisito de pontos de dados correspondentes.\n\nO que o DisputeDesk captura (quando a captura de sessão está habilitada):\n- O cart_token do Shopify (para vincular a sessão ao pedido)\n- Endereço IP (com hash em repouso com salt por loja; valor cru criptografado e descriptografado apenas na qualificação)\n- Geografia derivada do IP (apenas país e região, nunca cidade ou localização precisa)\n- User agent\n- ID do cliente e estado de login no checkout (se logado)\n- Tempo de conta do cliente (ex.: 'cliente entrou há 200 dias')\n- Páginas vistas durante a sessão e tempo na página de checkout\n- Sinais de privacidade do navegador (Do Not Track, Global Privacy Control)\n\nO que o DisputeDesk NÃO captura:\n- Valores digitados em formulários (nomes, endereços, números de cartão, qualquer texto digitado)\n- Fingerprints compostos de dispositivo (canvas / WebGL / áudio — adiados para fase futura com revisão jurídica)\n- Movimento de mouse ou entropia comportamental\n- Cookies cross-session ligando sua loja a outros sites\n\nControles de privacidade:\n- Sinais Do Not Track e Global Privacy Control fazem o DisputeDesk descartar o registro no servidor\n- Dados de sessão são deletados automaticamente 18 meses após a captura (cobre a janela de 365 dias do CE 3.0 com folga)\n- Solicitações de direito ao esquecimento (LGPD / GDPR / CCPA) são honradas via endpoint de exclusão de dados do cliente\n- O DisputeDesk atua como operador de dados (você é o controlador)\n\nVocê precisará atualizar a política de privacidade da sua loja para divulgar essa captura. O DisputeDesk fornece um modelo que você pode adaptar.\n\nNota prospectiva: a captura de sessão não ajuda em disputas anteriores à ativação (não temos dados dessas sessões). Constrói a base de evidências para toda disputa após a instalação."
       }
     },
     "embedded": {
@@ -3755,5 +3785,54 @@
     "stripRetryCta": "Tentar análise novamente",
     "stripRetryError": "Não foi possível iniciar a nova tentativa. Por favor, tente novamente em alguns instantes.",
     "stripNoOrdersBody": "Ainda não encontramos pedidos históricos do Shopify para analisar. Assim que os pedidos começarem a chegar, seu panorama de risco aparecerá aqui."
+  },
+  "liabilityShift": {
+    "panelTitle": "Transferência de responsabilidade — Visa CE 3.0",
+    "verdict": {
+      "qualifies": "Qualifica",
+      "qualifies_network_prequalified": "Pré-qualificada pela Visa",
+      "qualifies_via_initial_billing": "Qualifica (via cobrança inicial)",
+      "partial": "Correspondência parcial",
+      "does_not_qualify": "Não qualifica",
+      "not_applicable": "Não se aplica"
+    },
+    "confidence": {
+      "high": "Alta confiança",
+      "medium": "Confiança média",
+      "low": "Baixa confiança"
+    },
+    "matchPoints": {
+      "label": "Correspondências:"
+    },
+    "matchPoint": {
+      "ip": "Endereço IP",
+      "device": "Dispositivo",
+      "shipping": "Endereço de envio",
+      "account": "Conta do cliente"
+    },
+    "autoQual": {
+      "viaVisaSecure": "A Visa pré-qualificou esta disputa para CE 3.0 via Visa Secure (autenticação 3-D Secure 2).",
+      "viaDataOnly": "A Visa pré-qualificou esta disputa para CE 3.0 via Visa Data Only (troca de dados 3DS sem fricção).",
+      "viaMerchantConfirmed": "CE 3.0 qualificada automaticamente via 3-D Secure confirmado pelo lojista.",
+      "feeNotice": "A Visa cobra uma taxa por qualificação em disputas qualificadas automaticamente a partir de 17 de abril de 2026."
+    },
+    "initialBilling": {
+      "notice": "Esta cobrança recorrente qualifica para CE 3.0 ao corresponder à transação inicial de cobrança da assinatura."
+    },
+    "partial": {
+      "intro": "Esta disputa está próxima de qualificar, mas falta um requisito:"
+    },
+    "doesNotQualify": {
+      "intro": "Os requisitos da Visa CE 3.0 não foram atendidos para esta disputa. A defesa padrão ainda se aplica."
+    },
+    "notApplicable": {
+      "intro": "A Visa CE 3.0 aplica-se apenas ao código de motivo Visa 10.4. A defesa padrão ainda se aplica."
+    },
+    "missing": {
+      "anchor": "É necessária correspondência de IP ou dispositivo (âncora)",
+      "twoPriors": "Dois pedidos anteriores não contestados na janela de 120–365 dias",
+      "secondPrior": "Um segundo pedido anterior não contestado na janela de 120–365 dias",
+      "matchPointPrefix": "Correspondência necessária"
+    }
   }
 }

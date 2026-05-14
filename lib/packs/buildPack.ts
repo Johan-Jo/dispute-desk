@@ -40,6 +40,8 @@ import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
+import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetworkReasonCode";
+import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import type { EvidenceSection, BuildContext } from "./types";
 import type { OrderContext } from "@/lib/automation/completeness";
 
@@ -183,6 +185,51 @@ export async function buildPack(
     correlationId: opts?.correlationId,
     order,
   };
+
+  // LSE-0: resolve the network reason code (Visa 10.x / 13.x or Mastercard
+  // 48xx) now that the order + transaction context is loaded. This populates
+  // disputes.network_reason_code for downstream consumers (LSE-1 CE 3.0
+  // qualification, LSE-3 FPT readiness, rebuttal-template selection).
+  // Non-fatal: a failure here logs but does not block the pack build.
+  let resolvedNetworkCode: string | null = null;
+  try {
+    const enrichResult = await enrichDisputeWithNetworkReasonCode({
+      disputeId: dispute.id,
+      shopifyReason: dispute.reason,
+      order,
+    });
+    resolvedNetworkCode = enrichResult.result.code;
+  } catch (err) {
+    console.warn(
+      `[buildPack] network reason code enrichment failed for pack ${packId}:`,
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+
+  // LSE-1: evaluate Visa CE 3.0 qualification (auto-qualified / initial-billing /
+  // standard branches). Reads the network code we just resolved + the disputed
+  // order's 3DS state, and fetches customer priors from Shopify. Persists the
+  // verdict to dispute_qualifications. Non-fatal: failure here logs and the
+  // pack build continues normally.
+  if (resolvedNetworkCode && order && dispute.dispute_gid) {
+    try {
+      await evaluateQualification({
+        disputeId: dispute.id,
+        shopId: pack.shop_id,
+        shopDomain: shop.shop_domain,
+        accessToken: decryptAccessToken(session.access_token_encrypted),
+        shopifyDisputeId: dispute.dispute_gid,
+        networkReasonCode: resolvedNetworkCode,
+        disputedOrder: order,
+        correlationId: opts?.correlationId,
+      });
+    } catch (err) {
+      console.warn(
+        `[buildPack] CE 3.0 qualification failed for pack ${packId}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
 
   // Run all collectors concurrently
   const results = await Promise.allSettled([
