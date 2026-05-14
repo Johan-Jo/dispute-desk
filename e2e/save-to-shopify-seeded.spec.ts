@@ -106,37 +106,64 @@ test.describe("POST /api/packs/:packId/save-to-shopify — seeded happy path", (
       // is set, so plant the cookie before signing in so the request
       // carries the real shop id the seeded pack belongs to.
       const url = new URL(baseURL ?? "http://localhost:3000");
-      await page.context().addCookies([
-        {
-          name: "dd_active_shop",
-          value: seeded.ids.shopId,
-          domain: url.hostname,
-          path: "/",
-          httpOnly: false,
-          secure: url.protocol === "https:",
-          sameSite: "Lax",
-        },
-      ]);
+      const shopCookie = {
+        name: "dd_active_shop",
+        value: seeded.ids.shopId,
+        domain: url.hostname,
+        path: "/",
+        httpOnly: false,
+        secure: url.protocol === "https:",
+        sameSite: "Lax" as const,
+      };
+      await page.context().addCookies([shopCookie]);
 
       await portalSignIn(page);
+
+      // Re-plant after sign-in. The portal layout reads dd_active_shop
+      // and, when missing for a user with linked shops, can navigate to
+      // /portal/select-store which sets its own cookie. Re-asserting
+      // our value after sign-in guarantees the POST below sees the seed's
+      // shopId regardless of what the portal landing flow did.
+      await page.context().addCookies([shopCookie]);
 
       // Sanity: the seed actually persisted as "ready" before we hit
       // the route. If this fails, the seed helper has drifted away
       // from the schema.
       expect(await readPackStatus(conn, seeded.ids.packId)).toBe("ready");
 
+      // Sanity: the cookie we planted at the start of the test survived
+      // sign-in. Supabase Auth Set-Cookie can clear or partition the
+      // jar; without `dd_active_shop` the middleware portal fallback
+      // injects "demo" and the route's first guard returns 401
+      // SHOP_CONTEXT_REQUIRED — the exact symptom that's been recurring
+      // in CI. Capture the cookie state so the next failure is
+      // diagnostic instead of opaque.
+      const cookiesAfterSignIn = await page.context().cookies();
+      const ddActiveShopCookie = cookiesAfterSignIn.find(
+        (c) => c.name === "dd_active_shop",
+      );
+      expect(
+        ddActiveShopCookie?.value,
+        `dd_active_shop cookie missing after sign-in. Jar contained: ${cookiesAfterSignIn
+          .map((c) => c.name)
+          .join(", ")}`,
+      ).toBe(seeded.ids.shopId);
+
       const res = await page.request.post(
         `/api/packs/${seeded.ids.packId}/save-to-shopify`,
         { data: {}, failOnStatusCode: false },
       );
 
+      const responseBody = await res.text();
       expect(
         res.status(),
         `unexpected status ${res.status()} from save-to-shopify on a ` +
-          "ready pack with completeness_score=92",
+          `ready pack with completeness_score=92. ` +
+          `Response body: ${responseBody}. ` +
+          `dd_active_shop cookie value at POST time: ${ddActiveShopCookie?.value ?? "MISSING"}`,
       ).toBe(202);
 
-      const body = await res.json();
+      const body = JSON.parse(responseBody);
       expect(body).toMatchObject({ queued: true, packId: seeded.ids.packId });
 
       // Side effect 1: a save_to_shopify job row was inserted for the
