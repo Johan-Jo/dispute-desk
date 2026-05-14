@@ -248,10 +248,7 @@
     "reviewCases": "Revisar casos",
     "submitNow": "Enviar ahora",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Tasa de éxito y categorías de disputas",
-    "quickActionManageCases": "Gestionar casos",
-    "quickActionConfigurePacks": "Configurar pruebas",
-    "quickActionAutomationRules": "Reglas de automatización"
+    "insightsSubtitle": "Tasa de éxito y categorías de disputas"
   },
   "disputes": {
     "title": "Disputas",

@@ -280,10 +280,7 @@
     "reviewCases": "Examiner les cas",
     "submitNow": "Soumettre maintenant",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Taux de réussite et catégories de litiges",
-    "quickActionManageCases": "Gérer les cas",
-    "quickActionConfigurePacks": "Configurer les preuves",
-    "quickActionAutomationRules": "Règles d'automatisation"
+    "insightsSubtitle": "Taux de réussite et catégories de litiges"
   },
   "disputes": {
     "title": "Litiges",
@@ -3735,6 +3732,18 @@
     "checkpointsTitle": "Points de contrôle opérationnels",
     "checkpointsSubtitle": "Votre position face aux règles des réseaux de cartes et à votre propre référence sur 30 jours.",
     "checkpointSourcePrefix": "Source",
+    "checkpointSummary": {
+      "healthy": "sain",
+      "info": "informatif",
+      "consider": "à considérer",
+      "breach": "seuil dépassé"
+    },
+    "checkpointSeverity": {
+      "healthy": "Sain",
+      "info": "Informatif",
+      "consider": "À considérer",
+      "breach": "Seuil dépassé"
+    },
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Sous la bande de surveillance de Visa.",
     "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Votre taux de contestation sur 90 jours est de {current}. Le seuil Excessive du VAMP de Visa est {vampExcessive} ; la bande opérationnelle « approche » commence vers {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Approche du seuil VAMP de Visa.",

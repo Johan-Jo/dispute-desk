@@ -250,10 +250,7 @@
     "reviewCases": "Granska fall",
     "submitNow": "Skicka in nu",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Vinstgrad och tvistkategorier",
-    "quickActionManageCases": "Hantera fall",
-    "quickActionConfigurePacks": "Konfigurera bevispaket",
-    "quickActionAutomationRules": "Automatiseringsregler"
+    "insightsSubtitle": "Vinstgrad och tvistkategorier"
   },
   "disputes": {
     "title": "Tvister",

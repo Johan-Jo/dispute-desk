@@ -281,10 +281,7 @@
     "reviewCases": "Granska fall",
     "submitNow": "Skicka in nu",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Vinstgrad och tvistkategorier",
-    "quickActionManageCases": "Hantera fall",
-    "quickActionConfigurePacks": "Konfigurera bevispaket",
-    "quickActionAutomationRules": "Automatiseringsregler"
+    "insightsSubtitle": "Vinstgrad och tvistkategorier"
   },
   "disputes": {
     "title": "Tvister",
@@ -3736,6 +3733,18 @@
     "checkpointsTitle": "Operativa kontrollpunkter",
     "checkpointsSubtitle": "Var du befinner dig i förhållande till kortnätsreglerna och din egen 30-dagars baslinje.",
     "checkpointSourcePrefix": "Källa",
+    "checkpointSummary": {
+      "healthy": "hälsosamt",
+      "info": "informativt",
+      "consider": "att beakta",
+      "breach": "tröskel överskriden"
+    },
+    "checkpointSeverity": {
+      "healthy": "Hälsosamt",
+      "info": "Info",
+      "consider": "Att beakta",
+      "breach": "Tröskel överskriden"
+    },
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Under Visas övervakningsband.",
     "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Din 90-dagars återkrediteringsfrekvens är {current}. Visas VAMP Excessive-tröskel är {vampExcessive}; det operativa 'närmar sig'-bandet börjar kring {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Närmar sig Visas VAMP-tröskel.",

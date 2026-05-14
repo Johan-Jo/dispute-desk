@@ -43,7 +43,6 @@ import { DashboardRecentDisputesPreview } from "./DashboardRecentDisputesPreview
 import { DashboardHelpCard } from "./DashboardHelpCard";
 import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
-import { DashboardQuickActions } from "./DashboardQuickActions";
 import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
 
@@ -423,10 +422,6 @@ export default function EmbeddedDashboardPage() {
 
         <Layout.Section variant="oneHalf">
           <DashboardInsights stats={stats} loading={statsLoading} />
-        </Layout.Section>
-
-        <Layout.Section>
-          <DashboardQuickActions />
         </Layout.Section>
 
         <Layout.Section>

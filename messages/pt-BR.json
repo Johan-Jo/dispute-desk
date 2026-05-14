@@ -280,10 +280,7 @@
     "reviewCases": "Revisar casos",
     "submitNow": "Enviar agora",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Taxa de sucesso e categorias de disputas",
-    "quickActionManageCases": "Gerenciar casos",
-    "quickActionConfigurePacks": "Configurar evidências",
-    "quickActionAutomationRules": "Regras de automação"
+    "insightsSubtitle": "Taxa de sucesso e categorias de disputas"
   },
   "disputes": {
     "title": "Disputas",
@@ -3752,6 +3749,18 @@
     "checkpointsTitle": "Pontos de controle operacionais",
     "checkpointsSubtitle": "Sua posição em relação às regras das redes de cartões e à sua própria média dos últimos 30 dias.",
     "checkpointSourcePrefix": "Fonte",
+    "checkpointSummary": {
+      "healthy": "saudável",
+      "info": "informativo",
+      "consider": "a considerar",
+      "breach": "limite ultrapassado"
+    },
+    "checkpointSeverity": {
+      "healthy": "Saudável",
+      "info": "Informativo",
+      "consider": "A considerar",
+      "breach": "Limite ultrapassado"
+    },
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Abaixo da faixa de monitoramento da Visa.",
     "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Sua taxa de estornos em 90 dias é de {current}. O limite Excessive do VAMP da Visa é {vampExcessive}; a faixa operacional 'aproximando-se' começa por volta de {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Aproximando-se do limite VAMP da Visa.",

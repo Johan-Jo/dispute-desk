@@ -248,10 +248,7 @@
     "reviewCases": "Examiner les cas",
     "submitNow": "Soumettre maintenant",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Taux de réussite et catégories de litiges",
-    "quickActionManageCases": "Gérer les cas",
-    "quickActionConfigurePacks": "Configurer les preuves",
-    "quickActionAutomationRules": "Règles d'automatisation"
+    "insightsSubtitle": "Taux de réussite et catégories de litiges"
   },
   "disputes": {
     "title": "Litiges",

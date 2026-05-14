@@ -269,10 +269,7 @@
     "reviewCases": "Review cases",
     "submitNow": "Submit now",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Win rate and dispute categories",
-    "quickActionManageCases": "Manage cases",
-    "quickActionConfigurePacks": "Configure evidence packs",
-    "quickActionAutomationRules": "Automation rules"
+    "insightsSubtitle": "Win rate and dispute categories"
   },
   "disputes": {
     "title": "Disputes",

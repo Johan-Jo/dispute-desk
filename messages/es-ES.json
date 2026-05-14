@@ -280,10 +280,7 @@
     "reviewCases": "Revisar casos",
     "submitNow": "Enviar ahora",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Tasa de éxito y categorías de disputas",
-    "quickActionManageCases": "Gestionar casos",
-    "quickActionConfigurePacks": "Configurar pruebas",
-    "quickActionAutomationRules": "Reglas de automatización"
+    "insightsSubtitle": "Tasa de éxito y categorías de disputas"
   },
   "disputes": {
     "title": "Disputas",
@@ -3735,6 +3732,18 @@
     "checkpointsTitle": "Puntos de control operativos",
     "checkpointsSubtitle": "Tu posición frente a las reglas de las redes de tarjetas y tu propio promedio de los últimos 30 días.",
     "checkpointSourcePrefix": "Fuente",
+    "checkpointSummary": {
+      "healthy": "saludable",
+      "info": "informativo",
+      "consider": "a considerar",
+      "breach": "umbral superado"
+    },
+    "checkpointSeverity": {
+      "healthy": "Saludable",
+      "info": "Informativo",
+      "consider": "A considerar",
+      "breach": "Umbral superado"
+    },
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Por debajo de la banda de monitoreo de Visa.",
     "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Tu tasa de contracargos a 90 días es de {current}. El umbral Excessive de VAMP de Visa es {vampExcessive}; la banda operativa de 'acercándose' comienza en torno a {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Acercándose al umbral VAMP de Visa.",

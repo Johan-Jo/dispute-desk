@@ -248,10 +248,7 @@
     "reviewCases": "Fälle prüfen",
     "submitNow": "Jetzt einreichen",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Gewinnrate und Streitkategorien",
-    "quickActionManageCases": "Fälle verwalten",
-    "quickActionConfigurePacks": "Beweispakete konfigurieren",
-    "quickActionAutomationRules": "Automatisierungsregeln"
+    "insightsSubtitle": "Gewinnrate und Streitkategorien"
   },
   "disputes": {
     "title": "Streitfälle",

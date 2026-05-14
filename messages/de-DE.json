@@ -280,10 +280,7 @@
     "reviewCases": "Fälle prüfen",
     "submitNow": "Jetzt einreichen",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Gewinnrate und Streitkategorien",
-    "quickActionManageCases": "Fälle verwalten",
-    "quickActionConfigurePacks": "Beweispakete konfigurieren",
-    "quickActionAutomationRules": "Automatisierungsregeln"
+    "insightsSubtitle": "Gewinnrate und Streitkategorien"
   },
   "disputes": {
     "title": "Streitfälle",
@@ -3735,6 +3732,18 @@
     "checkpointsTitle": "Operative Checkpoints",
     "checkpointsSubtitle": "Wo du im Verhältnis zu den Kartennetzregeln und deinem eigenen 30-Tage-Basiswert stehst.",
     "checkpointSourcePrefix": "Quelle",
+    "checkpointSummary": {
+      "healthy": "gesund",
+      "info": "informativ",
+      "consider": "zu beachten",
+      "breach": "Schwellenwert überschritten"
+    },
+    "checkpointSeverity": {
+      "healthy": "Gesund",
+      "info": "Information",
+      "consider": "Zu beachten",
+      "breach": "Schwellenwert überschritten"
+    },
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Unter Visas Überwachungsband.",
     "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Deine 90-Tage-Rückbuchungsquote liegt bei {current}. Visas VAMP-Schwelle für „Excessive“ liegt bei {vampExcessive}; das operative „Nähert-sich“-Band beginnt etwa bei {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Nähert sich Visas VAMP-Schwelle.",

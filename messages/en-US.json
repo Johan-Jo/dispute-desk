@@ -280,10 +280,7 @@
     "reviewCases": "Review cases",
     "submitNow": "Submit now",
     "insightsTitle": "Insights",
-    "insightsSubtitle": "Win rate and dispute categories",
-    "quickActionManageCases": "Manage cases",
-    "quickActionConfigurePacks": "Configure evidence packs",
-    "quickActionAutomationRules": "Automation rules"
+    "insightsSubtitle": "Win rate and dispute categories"
   },
   "disputes": {
     "title": "Disputes",
@@ -3722,6 +3719,18 @@
     "checkpointsTitle": "Operational checkpoints",
     "checkpointsSubtitle": "Where you stand relative to card-network rules and your own 30-day baseline.",
     "checkpointSourcePrefix": "Source",
+    "checkpointSummary": {
+      "healthy": "healthy",
+      "info": "informational",
+      "consider": "to consider",
+      "breach": "threshold breach"
+    },
+    "checkpointSeverity": {
+      "healthy": "Healthy",
+      "info": "Info",
+      "consider": "Consider",
+      "breach": "Breach"
+    },
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Below Visa's monitoring band.",
     "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Your 90-day chargeback rate is {current}. Visa's VAMP Excessive threshold is {vampExcessive}; the operationally watched 'approaching' band begins around {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Approaching Visa's VAMP threshold.",
