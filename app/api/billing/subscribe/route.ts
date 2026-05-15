@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { getPlan } from "@/lib/billing/plans";
+import { checkTrialEligibility } from "@/lib/billing/trialEligibility";
 import { validateBody, billingSubscribeSchema } from "@/lib/middleware/validate";
 import {
   APP_SUBSCRIPTION_CREATE_MUTATION,
@@ -69,10 +70,26 @@ export async function POST(req: NextRequest) {
     process.env.SHOPIFY_BILLING_TEST === "true" ||
     process.env.NODE_ENV !== "production";
 
+  // Trial is a first-time-customer promotion only. Upgrades,
+  // downgrades, reactivations, and resubscriptions after cancel
+  // all happen INSTANTLY at the new price — no fresh 14 days on
+  // top. The helper looks at plan_entitlements.trial_started_at
+  // and any prior trial-source credit grant.
+  const trialEligibility = await checkTrialEligibility(shop_id);
+  const trialDays = trialEligibility.eligible ? plan.trialDays : 0;
+
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const callbackUrl = new URL(`${appUrl}/api/billing/callback`);
   callbackUrl.searchParams.set("shop_id", shop_id);
   callbackUrl.searchParams.set("plan_id", plan_id);
+  // Carry the eligibility decision through the redirect so the
+  // callback's credit-grant logic uses the same answer the
+  // subscription was created with. The callback ALSO re-checks
+  // independently as a belt-and-suspenders gate.
+  callbackUrl.searchParams.set(
+    "trial_granted",
+    trialEligibility.eligible ? "1" : "0",
+  );
   if (host) callbackUrl.searchParams.set("host", host);
   if (shop) callbackUrl.searchParams.set("shop", shop);
   const returnUrl = callbackUrl.toString();
@@ -92,7 +109,7 @@ export async function POST(req: NextRequest) {
         },
       ],
       returnUrl,
-      trialDays: plan.trialDays,
+      trialDays,
       test: isTest,
     },
     correlationId: `billing-${shop_id}`,
@@ -120,6 +137,9 @@ export async function POST(req: NextRequest) {
       plan_id,
       subscription_id: mutation.appSubscription?.id,
       test: isTest,
+      trial_granted: trialEligibility.eligible,
+      trial_days: trialDays,
+      trial_eligibility_reason: trialEligibility.reason,
     },
   });
 

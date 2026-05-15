@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, TRIAL_INCLUDED_PACKS, type PlanId } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
+import { checkTrialEligibility } from "@/lib/billing/trialEligibility";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
 import { sendTrialStartedEmail } from "@/lib/email/billingLifecycle";
 
@@ -78,8 +79,20 @@ export async function GET(req: NextRequest) {
     })
     .eq("id", shopId);
 
+  // Belt-and-suspenders trial eligibility check. The subscribe route
+  // already gated `trialDays` to 0 for non-eligible shops; we re-check
+  // here so a direct call to /api/billing/callback that bypasses
+  // subscribe (e.g. testing, replayed redirect, hand-crafted URL)
+  // can't sneak through a second trial grant. The redirect's
+  // `?trial_granted=1|0` carries the subscribe-side decision for
+  // diagnostic clarity in the audit row.
+  const eligibility = await checkTrialEligibility(shopId);
+  const subscribeSaidTrialGranted = sp.get("trial_granted") === "1";
+  const trialAllowed =
+    eligibility.eligible && subscribeSaidTrialGranted && plan.trialDays > 0;
+
   const now = new Date();
-  const trialEndsAt = plan.trialDays > 0
+  const trialEndsAt = trialAllowed
     ? new Date(now.getTime() + plan.trialDays * 86400000).toISOString()
     : null;
   const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
@@ -93,7 +106,7 @@ export async function GET(req: NextRequest) {
     updated_at: now.toISOString(),
   }, { onConflict: "shop_id" });
 
-  if (plan.trialDays > 0) {
+  if (trialAllowed && trialEndsAt) {
     await grantCredits({
       shopId,
       source: "trial",
@@ -120,18 +133,21 @@ export async function GET(req: NextRequest) {
     event_payload: {
       plan_id: planId,
       charge_id: chargeId,
-      trial_days: plan.trialDays,
+      trial_granted: trialAllowed,
+      trial_days_requested: plan.trialDays,
+      trial_eligibility_reason: eligibility.reason,
+      subscribe_said_trial: subscribeSaidTrialGranted,
       charge_verified: true,
       shopify_gid: verification.shopifyChargeGid ?? null,
       test_charge: verification.test ?? false,
     },
   });
 
-  // Trial-started lifecycle email. Idempotent via
-  // plan_entitlements.trial_started_at — even if the merchant reloads
-  // the callback URL, only the first call sends. Skipped silently for
-  // plans without a trial (trialDays = 0).
-  if (plan.trialDays > 0) {
+  // Trial-started lifecycle email — fires only when a trial was
+  // actually granted on this activation. Idempotent via
+  // plan_entitlements.trial_started_at, so even a reloaded callback
+  // URL won't re-send.
+  if (trialAllowed) {
     void sendTrialStartedEmail(shopId).catch(() => {});
   }
 
