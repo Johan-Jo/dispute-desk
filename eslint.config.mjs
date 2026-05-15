@@ -27,6 +27,12 @@ const eslintConfig = [
       "node_modules/**",
       "out/**",
       "dist/**",
+      // Shopify CLI deploy bundles — minified extension JS regenerated
+      // on every `shopify app deploy`. Already gitignored; lint
+      // shouldn't trip on the bundle (this caused release:verify to
+      // fail on no-this-alias errors in transpiled extension output).
+      ".shopify/**",
+      "extensions/**/dist/**",
       "coverage/**",
       "playwright-report/**",
       "test-results/**",

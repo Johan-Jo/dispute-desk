@@ -19,7 +19,16 @@ export const ORDER_DETAIL_QUERY = `
         displayFinancialStatus
         displayFulfillmentStatus
         note
-        cartToken
+        # NOTE: Order.cartToken was removed from Admin API 2026-01.
+        # Selecting it fails the entire query with an undefinedField
+        # error and silently nulls data.node — confirmed via incident
+        # on 2026-05-15 (dispute bd425f70, pack_build_failed). The
+        # LSE-4 session-matching path that depended on it falls back
+        # to null gracefully; cart_token is still captured on the
+        # storefront via the checkout extension and persisted to
+        # checkout_sessions directly. A future webhook-side match-back
+        # (see lib/liabilityShift/sessions/README.md) will close this
+        # gap without the GraphQL read.
         clientIp
         customAttributes { key value }
         totalPriceSet { shopMoney { amount currencyCode } }
@@ -80,24 +89,17 @@ export const ORDER_DETAIL_QUERY = `
               }
             }
           }
-          # Tracking-app metafields per fulfillment. When the merchant
-          # has AfterShip / Shipway / ParcelPanel / Wonderment /
-          # TrackingMore installed AND has "sync to Shopify" enabled,
-          # these apps write delivery status + signed-by-name +
-          # delivered_at into per-fulfillment metafields. The
-          # fulfillmentSource collector reads these via
-          # lib/shopify/trackingApps.ts to set proofType to
-          # signature_confirmed (the strongest evidence tier) when
-          # a recipient signature is captured.
-          metafields(first: 20) {
-            edges {
-              node {
-                namespace
-                key
-                value
-              }
-            }
-          }
+          # NOTE: Fulfillment.metafields is NOT in the Admin GraphQL
+          # 2026-01 schema — confirmed via the same incident as
+          # Order.cartToken above (2026-05-15, dispute bd425f70). The
+          # tracking-app collector now reads exclusively from the
+          # order-level metafields connection below; the consumer in
+          # lib/packs/sources/fulfillmentSource.ts treats the per-
+          # fulfillment metafields as null via ?? fallback, so the
+          # signed-by-name signal still surfaces when tracking apps
+          # write at the order level (the common AfterShip default).
+          # ordersForBackfill.ts caught this earlier — see comment in
+          # that file. The fix did not propagate here at the time.
         }
         refunds(first: 10) {
           id
@@ -197,11 +199,11 @@ export interface OrderFulfillment {
       };
     }>;
   };
-  /** Per-fulfillment tracking-app metafields (AfterShip / Shipway /
-   *  ParcelPanel / Wonderment / TrackingMore). Read via the unified
-   *  reader in lib/shopify/trackingApps.ts. Optional + null-tolerant
-   *  because golden test fixtures pre-date this field; the reader
-   *  treats absence as no signal. */
+  /** Per-fulfillment tracking-app metafields. Removed from Admin API
+   *  2026-01 — no longer queryable; field is always absent at runtime.
+   *  Kept as optional on the type so the consumer in
+   *  `lib/packs/sources/fulfillmentSource.ts` can read it via the
+   *  existing `?? null` fallback without a TS change. */
   metafields?: {
     edges: Array<{
       node: { namespace: string; key: string; value: string };
@@ -272,7 +274,12 @@ export interface OrderDetailNode {
   displayFinancialStatus: string | null;
   displayFulfillmentStatus: string | null;
   note: string | null;
-  cartToken: string | null;
+  /** Removed from Admin API 2026-01. Always undefined at runtime; the
+   *  type is kept for downstream callers that null-check defensively
+   *  (`cartToken ?? null`). LSE session matching now degrades to
+   *  Order.clientIp + checkout_sessions captured by the storefront
+   *  extension until the orders/create webhook match-back ships. */
+  cartToken?: string | null;
   clientIp: string | null;
   customAttributes: OrderCustomAttribute[];
   totalPriceSet: MoneySet;

@@ -29,7 +29,11 @@ export const CUSTOMER_ORDERS_FOR_CE30_QUERY = `
             name
             createdAt
             email
-            cartToken
+            # Order.cartToken removed in Admin API 2026-01 (see comment
+            # in lib/shopify/queries/orders.ts). Prior-order session
+            # enrichment in lib/liabilityShift/fetchPriors.ts early-
+            # returns when cartToken is null, so the chain degrades to
+            # Shopify-only IP without breaking CE 3.0 evaluation.
             clientIp
             displayFinancialStatus
             tags
@@ -88,7 +92,10 @@ export interface CE30CandidateOrderNode {
   name: string;
   createdAt: string;
   email: string | null;
-  cartToken: string | null;
+  /** Removed from Admin API 2026-01 — always undefined at runtime.
+   *  `fetchPriors.ts` reads it via `?? null` and skips enrichment on
+   *  the null branch. */
+  cartToken?: string | null;
   clientIp: string | null;
   displayFinancialStatus: string | null;
   tags: string[];

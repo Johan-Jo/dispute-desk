@@ -1,13 +1,15 @@
 /**
  * On-demand checkout_session lookup for LSE-1 / LSE-3 qualification.
  *
- * The Shopify Order GraphQL query returns `cartToken` on every order;
- * we use that as the join key to find the LSE-4 session row that was
- * captured when the customer was on the storefront. The session row
- * has the authoritative IP (decrypted from AES-256-GCM at rest), login
- * state at checkout, account age, and session history — all of which
- * give CE 3.0 / FPT qualification much more to match on than the
- * minimal `Order.clientIp` field Shopify exposes by default.
+ * Historically the Shopify Order GraphQL query supplied `cartToken`,
+ * which we used as the join key to find the LSE-4 session row captured
+ * when the customer was on the storefront. `Order.cartToken` was
+ * removed from Admin API 2026-01 (incident 2026-05-15), so callers
+ * now pass `null` here unless an alternate source (e.g. the
+ * orders/create webhook payload, which still carries cart_token in the
+ * REST shape) has been persisted upstream. When the lookup yields no
+ * session, qualification falls back to the leaner `Order.clientIp`
+ * field — accuracy degrades but the chain does not break.
  *
  * Replaces the older webhook-based match-back approach: instead of
  * writing `shopify_order_id` onto the session row at orders/create

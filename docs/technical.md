@@ -3161,6 +3161,41 @@ team-email field. `lib/shopify/shopDetails.ts` now reads from `Shop.shopAddress`
 wrapped in try/catch so the failure silently fills `is_cross_border=null`; a
 follow-up should migrate it to `shopAddress`.
 
+**Schema drift fix (2026-05-15):** `Order.cartToken` and `Fulfillment.metafields`
+were both removed in Admin API 2026-01. The drift surfaced as
+`pack_build_failed` on dispute `bd425f70` — the auto-build pipeline finally
+ran (after the billing-quota fix that day) and immediately collapsed because
+`ORDER_DETAIL_QUERY` referenced both removed fields. `lib/shopify/queries/orders.ts`
+dropped the field selections (`cartToken` line 22, the per-fulfillment
+`metafields` block lines 83–100 in the pre-fix file) and kept the TS interface
+fields as optional so downstream consumers in
+`lib/packs/sources/fulfillmentSource.ts` and `lib/liabilityShift/*` continue
+to null-tolerate. `lib/shopify/queries/customerOrdersForCE30.ts` also lost
+its `cartToken` selection. The same `Fulfillment.metafields` error was caught
+earlier in `ordersForBackfill.ts` (see comment block in that file) but the fix
+never propagated to `orders.ts` — exactly the regression mode the new
+**schema-drift guard** in `lib/shopify/queries/__tests__/schemaDriftGuard.test.ts`
+now prevents.
+
+**Schema-drift regression guard:** the test file above imports every
+production GraphQL string from `lib/shopify/queries/` and
+`lib/shopify/mutations/` and runs two layers of assertions: a flat
+deny-list for fields removed globally (`cartToken`, `riskAssessments`) and
+a parent-aware ban for fields removed only at a specific type
+(`Fulfillment.metafields`). The parent check uses a brace-depth scan
+to identify the immediate enclosing block name, which is enough for
+how Shopify deprecations land in practice. Add a row to the deny-list
+the moment any new schema drift is discovered — the regression is
+locked in by the next CI run.
+
+This guard is a deny-list, not an allow-list — it cannot catch renames
+(e.g. `Order.cartToken` → some unknown new path) until the old name is
+added. The medium-term fix is to extend `lib/shopify/checkReasonEnumDrift.ts`
+into a broader `checkQueryFieldDrift.ts` that runs each production query
+as a dry-run against the connected shop and inspects `errors[]` for
+`undefinedField`, alerting the admin via the existing
+`sendReasonEnumDriftAlert` mailer pattern.
+
 **Key files:**
 - `components/setup/steps/BusinessPoliciesStep.tsx` — step component
 - `content/policy-templates/` — Markdown template bodies
