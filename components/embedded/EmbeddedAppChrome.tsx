@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Page, Layout } from "@shopify/polaris";
 import { BillingBanner } from "@/components/billing/billing-banner";
 import styles from "./embedded-app-chrome.module.css";
 
@@ -104,9 +105,18 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
          *  chrome CSS forces to width:100% / max-width:none. No own
          *  max-width or margin: any centering re-introduces the gap
          *  the merchant flagged. */}
-        <div style={{ paddingBottom: "8px" }}>
-          <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
-        </div>
+        {/* Wrap in Polaris Page/Layout/Section so the banner inherits
+         *  Polaris-Layout's 16px left inset (margin-left + max-width:
+         *  calc(100% - 16px)). Same chain pages use — guarantees the
+         *  banner's left/right edges align with content banners
+         *  rendered inside the page's own <Layout.Section>. */}
+        <Page>
+          <Layout>
+            <Layout.Section>
+              <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
+            </Layout.Section>
+          </Layout>
+        </Page>
         {children}
       </div>
     );
@@ -211,9 +221,18 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
       )}
 
       <div className={styles.pageContent}>
-        <div style={{ paddingBottom: "8px" }}>
-          <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
-        </div>
+        {/* Wrap in Polaris Page/Layout/Section so the banner inherits
+         *  Polaris-Layout's 16px left inset (margin-left + max-width:
+         *  calc(100% - 16px)). Same chain pages use — guarantees the
+         *  banner's left/right edges align with content banners
+         *  rendered inside the page's own <Layout.Section>. */}
+        <Page>
+          <Layout>
+            <Layout.Section>
+              <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
+            </Layout.Section>
+          </Layout>
+        </Page>
         {children}
       </div>
     </>
