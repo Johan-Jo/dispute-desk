@@ -206,9 +206,27 @@ The **anon key** is exposed as `NEXT_PUBLIC_SUPABASE_ANON_KEY` and used
 **only** for Supabase Auth in the portal (sign-in, sign-up, password reset).
 It never accesses application data tables.
 
-RLS is enabled on all tables as defense-in-depth. Policies allow service
-role full access. If a request somehow bypasses application code, RLS
-prevents cross-shop data leakage.
+RLS is enabled on all tables as defense-in-depth. Service-role policies are
+scoped to `to service_role` (migration `20260515120000_p0_security_lockdown.sql`)
+so a stray anon-key call cannot satisfy a `true` policy. If a request somehow
+bypasses application code, RLS prevents cross-shop data leakage.
+
+The same migration also pins `search_path` on the eight functions flagged by
+`supabase db advisors` (`set_updated_at`, `submission_logs_set_updated_at`,
+`dispute_qualifications_set_updated_at`, `reject_dispute_event_mutation`,
+`reject_audit_mutation`, `shopify_orders_lock_initial_risk`,
+`ensure_shop_settings`, `claim_jobs`) and revokes `EXECUTE` on the two
+`SECURITY DEFINER` admin RPCs (`dd_admin_resolve_user_id_by_email`,
+`dd_admin_touch_last_login`) from `anon` and `authenticated` — they are only
+ever called from server-side code via `getServiceClient()`.
+
+Pre-launch advisor run (after the P0 migration): WARN findings are zero on
+`rls_policy_always_true`, `function_search_path_mutable`,
+`anon_security_definer_function_executable`,
+`authenticated_security_definer_function_executable`, and
+`multiple_permissive_policies`. Remaining items (`auth_rls_initplan` on
+`portal_user_*`, 13 unindexed FKs, 32 unused indexes, plus the
+HaveIBeenPwned password toggle) are tracked as P1/P2 hygiene.
 
 ## Email (Resend)
 
@@ -2679,6 +2697,7 @@ These are targets, not SLAs. The actual restore drill has not been measured agai
 - **No automated restore drills.** The "verified restorable backup" check in `prod-current-state-snapshot.md` § 1 is currently a one-time gate, not a recurring test. Quarterly cadence is the right floor.
 - **No documented row count baselines.** Recovery step 5 ("spot-check") has no reference table. After the next quarterly drill, capture the row counts and pin them in `prod-current-state-snapshot.md` § 2 as the "expected at restore" baseline.
 - **No in-app read-only flag.** Step 2 of the runbook ("freeze writes") relies on disabling crons + invalidating offline sessions; a `DD_READ_ONLY=1` env flag checked in middleware would collapse this to a one-line redeploy.
+- **HaveIBeenPwned password toggle not enabled (Supabase Auth → Sign In / Providers → Email → "Prevent use of leaked passwords").** The toggle is **Pro-plan only** on Supabase; project `sddzuglxdnkhcnjmcpbj` is on Free. Compensating control: keep **Minimum password length ≥ 8** and a non-empty **Password requirements** option on the same screen. Re-enable the HIBP toggle when the project is upgraded to Pro (same upgrade that unlocks PITR backups — see disaster-recovery section above).
 
 **Public-facing copy.** Merchants see one line on [data-retention](app/(marketing)/data-retention/page.tsx#L99-L108): *"Our managed database provider takes encrypted backups for disaster recovery. Backups are retained for a rolling window consistent with the provider's standard policy."* That is intentionally vague — sharing exact RPO/RTO targets externally is a commitment, not a description.
 
