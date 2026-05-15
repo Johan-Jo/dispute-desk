@@ -101,13 +101,17 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
       <div className={styles.pageContent}>
         <div
           style={{
-            // No max-width — embedded pages (Dashboard, billing,
-            // disputes) render their Polaris cards at the full
-            // .pageContent width minus its 4px horizontal padding,
-            // not at the Polaris primary-section max. The banner
-            // matches that by being a plain block element with no
-            // width constraint of its own.
-            padding: "8px 0 12px",
+            // Match Polaris Page__Content actual default: max-width
+            // var(--p-layout-width-primary-max) which is 41.375rem
+            // (~661px) in Polaris v12+. Note the prefix: Polaris
+            // reads `--p-…`. The chrome CSS overrides `--pg-…` (with
+            // a typo'd extra `g`) which the framework never reads,
+            // so earlier attempts to read the chrome variable
+            // silently fell through. Center via margin: 0 auto —
+            // same pattern Polaris uses internally.
+            maxWidth: "var(--p-layout-width-primary-max, 41.375rem)",
+            margin: "0 auto",
+            padding: "8px 16px 12px",
           }}
         >
           <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
@@ -218,13 +222,17 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
       <div className={styles.pageContent}>
         <div
           style={{
-            // No max-width — embedded pages (Dashboard, billing,
-            // disputes) render their Polaris cards at the full
-            // .pageContent width minus its 4px horizontal padding,
-            // not at the Polaris primary-section max. The banner
-            // matches that by being a plain block element with no
-            // width constraint of its own.
-            padding: "8px 0 12px",
+            // Match Polaris Page__Content actual default: max-width
+            // var(--p-layout-width-primary-max) which is 41.375rem
+            // (~661px) in Polaris v12+. Note the prefix: Polaris
+            // reads `--p-…`. The chrome CSS overrides `--pg-…` (with
+            // a typo'd extra `g`) which the framework never reads,
+            // so earlier attempts to read the chrome variable
+            // silently fell through. Center via margin: 0 auto —
+            // same pattern Polaris uses internally.
+            maxWidth: "var(--p-layout-width-primary-max, 41.375rem)",
+            margin: "0 auto",
+            padding: "8px 16px 12px",
           }}
         >
           <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
