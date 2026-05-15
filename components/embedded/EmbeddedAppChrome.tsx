@@ -101,11 +101,12 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
       <div className={styles.pageContent}>
         <div
           style={{
-            // Match Polaris primary-section width tokens defined on
-            // .pageContent — the banner shouldn't span wider than the
-            // page content it sits above.
-            maxWidth: "var(--pg-layout-width-primary-max, 49.65rem)",
-            margin: "0 auto",
+            // No max-width — embedded pages (Dashboard, billing,
+            // disputes) render their Polaris cards at the full
+            // .pageContent width minus its 4px horizontal padding,
+            // not at the Polaris primary-section max. The banner
+            // matches that by being a plain block element with no
+            // width constraint of its own.
             padding: "8px 0 12px",
           }}
         >
@@ -217,11 +218,12 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
       <div className={styles.pageContent}>
         <div
           style={{
-            // Match Polaris primary-section width tokens defined on
-            // .pageContent — the banner shouldn't span wider than the
-            // page content it sits above.
-            maxWidth: "var(--pg-layout-width-primary-max, 49.65rem)",
-            margin: "0 auto",
+            // No max-width — embedded pages (Dashboard, billing,
+            // disputes) render their Polaris cards at the full
+            // .pageContent width minus its 4px horizontal padding,
+            // not at the Polaris primary-section max. The banner
+            // matches that by being a plain block element with no
+            // width constraint of its own.
             padding: "8px 0 12px",
           }}
         >
