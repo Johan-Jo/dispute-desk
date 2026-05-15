@@ -70,8 +70,13 @@ export const ruleUpdateSchema = z.object({
 export const billingSubscribeSchema = z.object({
   shop_id: shopIdParam,
   plan_id: z.enum(["starter", "growth", "scale"]),
-  host: z.string().optional(),
-  shop: z.string().optional(),
+  // Frontend uses URLSearchParams.get() which returns null when the
+  // param is missing (not undefined). z.string().optional() rejects
+  // null, so navigating to /app/billing via in-app nav (which drops
+  // ?host/?shop) caused a 400 "Validation failed" with no Shopify
+  // confirmation. Accept null and treat it as "not provided."
+  host: z.string().nullable().optional(),
+  shop: z.string().nullable().optional(),
 });
 
 export const billingTopUpSchema = z.object({
