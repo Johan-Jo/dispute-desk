@@ -154,17 +154,44 @@ jobs:
       # skip cleanly with a useful message rather than failing the run on
       # blank-credential sign-in. Once secrets are configured, every
       # subsequent run executes the suite.
+      # Validates that every secret is present AND that the two Supabase URLs
+      # actually start with https:// — a malformed secret (placeholder, trimmed
+      # protocol, stray quotes) is the #1 cause of "Invalid supabaseUrl" crashes
+      # in the dev server, which masks every spec as a failure even though the
+      # specs themselves are fine. Skip-with-warning is safer than fail.
       - name: Check E2E secrets are configured
         id: gate
+        env:
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if [ -z "${{ secrets.E2E_TEST_EMAIL }}" ] || \
-             [ -z "${{ secrets.E2E_TEST_PASSWORD }}" ] || \
-             [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" ] || \
-             [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "::warning::E2E secrets not configured. Add E2E_TEST_EMAIL, E2E_TEST_PASSWORD, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY at Settings → Secrets and variables → Actions to enable the e2e suite."
+          missing=""
+          for var in E2E_TEST_EMAIL E2E_TEST_PASSWORD NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -z "${!var}" ]; then
+              missing="$missing $var"
+            fi
+          done
+          malformed=""
+          for var in NEXT_PUBLIC_SUPABASE_URL SUPABASE_URL; do
+            val="${!var}"
+            if [ -n "$val" ] && ! echo "$val" | grep -qE '^https://[^[:space:]]+\.supabase\.co/?$'; then
+              malformed="$malformed $var"
+            fi
+          done
+          if [ -n "$missing" ] || [ -n "$malformed" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            if [ -n "$missing" ]; then
+              echo "::warning::E2E secrets missing:$missing — add them at Settings → Secrets and variables → Actions to enable the e2e suite."
+            fi
+            if [ -n "$malformed" ]; then
+              echo "::warning::E2E secrets malformed:$malformed — expected https://<project>.supabase.co (no trailing whitespace, no quotes). Skipping e2e."
+            fi
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install Playwright browsers
