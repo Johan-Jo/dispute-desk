@@ -3781,7 +3781,7 @@
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Acima dos limites ECM da Mastercard.",
     "checkpoint_chargeback_rate_vs_ecm_breach_body": "Sua taxa de estornos em 90 dias é {current} e você acumula ~{monthlyEstimate} estornos/mês. Ambos os critérios ECM ({ecmRatio} ratio, {ecmCount}+/mês) estão atingidos.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} dos pedidos de risco ALTO foram atendidos.",
-    "checkpoint_high_risk_fulfilled_consider_body": "Cada pedido de risco ALTO atendido é exposição absorvida — o modelo da Shopify sinalizou mas não bloqueou. Considere uma regra de auto-retenção ou revisão manual para pedidos ALTOS acima de um valor.",
+    "checkpoint_high_risk_fulfilled_consider_body": "Cada pedido de risco ALTO atendido é exposição absorvida — o modelo da Shopify sinalizou mas não bloqueou. Crie uma regra no Shopify Flow que retém o atendimento quando o pedido for de risco Alto e ultrapassar um valor que você definir.",
     "checkpoint_signature_capture_low_consider_title": "Assinatura registrada em {current} das entregas confirmadas.",
     "checkpoint_signature_capture_low_consider_body": "A assinatura atestada pela transportadora é a evidência de entrega mais forte em estornos por fraude. Exigir assinatura em remessas de maior valor fortalece notavelmente a defesa de disputas.",
     "checkpoint_threeds_auth_healthy_title": "Autenticação 3-DS em {current} dos pedidos com cartão elegíveis.",

@@ -2868,7 +2868,7 @@
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Über Mastercards ECM-Schwellen.",
     "checkpoint_chargeback_rate_vs_ecm_breach_body": "Deine 90-Tage-Rückbuchungsquote liegt bei {current} und du erreichst durchschnittlich ~{monthlyEstimate} Rückbuchungen/Monat. Beide ECM-Kriterien ({ecmRatio} Quote, {ecmCount}+/Monat) sind erfüllt.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} der HOCH-Risiko-Bestellungen wurden ausgeliefert.",
-    "checkpoint_high_risk_fulfilled_consider_body": "Jede ausgelieferte HOCH-Risiko-Bestellung ist übernommene Exposition — Shopifys Risikomodell hat markiert, aber nicht blockiert. Erwäge eine Auto-Hold- oder Manuelle-Prüfung-Regel für HOCH-Risiko-Bestellungen oberhalb eines Wertes.",
+    "checkpoint_high_risk_fulfilled_consider_body": "Jede ausgelieferte HOCH-Risiko-Bestellung ist übernommene Exposition — Shopifys Risikomodell hat markiert, aber nicht blockiert. Richte eine Shopify-Flow-Regel ein, die die Erfüllung anhält, wenn eine Bestellung hohes Risiko hat und einen von dir festgelegten Wert überschreitet.",
     "checkpoint_signature_capture_low_consider_title": "Unterschrift bei {current} der bestätigten Zustellungen erfasst.",
     "checkpoint_signature_capture_low_consider_body": "Vom Spediteur bestätigte Empfangsunterschriften sind der stärkste Zustellbeweis bei betrugsbedingten Rückbuchungen. Eine Unterschriftspflicht bei höheren Sendungswerten stärkt die Streitfallabwehr deutlich.",
     "checkpoint_threeds_auth_healthy_title": "3-DS-Authentifizierung bei {current} der berechtigten Kartenzahlungen.",

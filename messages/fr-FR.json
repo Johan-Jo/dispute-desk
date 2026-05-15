@@ -3764,7 +3764,7 @@
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Au-dessus des seuils ECM de Mastercard.",
     "checkpoint_chargeback_rate_vs_ecm_breach_body": "Votre taux de contestation sur 90 jours est de {current} et vous totalisez ~{monthlyEstimate} contestations/mois. Les deux critères ECM ({ecmRatio} ratio, {ecmCount}+/mois) sont atteints.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} des commandes à risque ÉLEVÉ ont été expédiées.",
-    "checkpoint_high_risk_fulfilled_consider_body": "Chaque commande à risque ÉLEVÉ expédiée est une exposition absorbée — le modèle de Shopify a signalé sans bloquer. Envisagez une règle d'auto-blocage ou d'examen manuel pour les commandes ÉLEVÉES au-dessus d'un seuil de valeur.",
+    "checkpoint_high_risk_fulfilled_consider_body": "Chaque commande à risque ÉLEVÉ expédiée est une exposition absorbée — le modèle de Shopify l'a signalée sans la bloquer. Créez une règle Shopify Flow qui suspend l'exécution lorsqu'une commande est à risque Élevé et dépasse un seuil de valeur que vous définissez.",
     "checkpoint_signature_capture_low_consider_title": "Signature enregistrée sur {current} des livraisons confirmées.",
     "checkpoint_signature_capture_low_consider_body": "La signature attestée par le transporteur est la preuve de livraison la plus forte dans les contestations pour fraude. Exiger la signature sur les expéditions de valeur supérieure renforce nettement la défense des contestations.",
     "checkpoint_threeds_auth_healthy_title": "Authentification 3-DS sur {current} des paiements par carte éligibles.",

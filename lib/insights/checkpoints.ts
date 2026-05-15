@@ -97,6 +97,10 @@ const SOURCES = {
     label: "Mastercard ECP merchant guide",
     url: "https://www.jpmorgan.com/content/dam/jpm/merchant-services/payment-network-updates/documents/mastercard-excessive-chargeback-program-guide.pdf",
   },
+  shopifyFlow: {
+    label: "Shopify Flow — set up a hold-fulfillment rule",
+    url: "https://apps.shopify.com/flow",
+  },
 } as const;
 
 /** Format a percent value compactly. */
@@ -173,6 +177,7 @@ function ruleHighRiskFulfilled(input: CheckpointInput): Checkpoint | null {
     titleKey: "fraudIntel.checkpoint_high_risk_fulfilled_consider_title",
     bodyKey: "fraudIntel.checkpoint_high_risk_fulfilled_consider_body",
     values: { current: pct(v, 0) },
+    source: SOURCES.shopifyFlow,
   };
 }
 

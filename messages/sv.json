@@ -2986,7 +2986,7 @@
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Över Mastercards ECM-trösklar.",
     "checkpoint_chargeback_rate_vs_ecm_breach_body": "Din 90-dagars återkrediteringsfrekvens är {current} och du har ~{monthlyEstimate} återkrediteringar/månad. Båda ECM-kriterierna ({ecmRatio}-kvot, {ecmCount}+/månad) är uppfyllda.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} av HÖG-risk-order skickades.",
-    "checkpoint_high_risk_fulfilled_consider_body": "Varje skickad HÖG-risk-order är absorberad exponering — Shopifys riskmodell flaggade men blockerade inte. Överväg en auto-håll- eller manuell granskning-regel för HÖG-risk-order över ett värde.",
+    "checkpoint_high_risk_fulfilled_consider_body": "Varje skickad HÖG-risk-order är absorberad exponering — Shopifys riskmodell flaggade men blockerade inte. Skapa en Shopify Flow-regel som håller leveransen när en order är Hög-risk och överstiger ett värde du själv väljer.",
     "checkpoint_signature_capture_low_consider_title": "Signatur registrerad på {current} av bekräftade leveranser.",
     "checkpoint_signature_capture_low_consider_body": "Transportör-attesterad signaturbekräftelse är det starkaste leveransbeviset vid bedrägeri-kodade återkrediteringar. Att kräva signatur på leveranser av högre värde stärker tvistförsvaret betydligt.",
     "checkpoint_threeds_auth_healthy_title": "3-DS-autentisering på {current} av kvalificerade kortbetalningar.",

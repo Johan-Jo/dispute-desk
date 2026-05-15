@@ -3173,7 +3173,7 @@
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Above Mastercard's ECM thresholds.",
     "checkpoint_chargeback_rate_vs_ecm_breach_body": "Your 90-day chargeback rate is {current} and you average ~{monthlyEstimate} chargebacks per month. Both ECM criteria ({ecmRatio} ratio, {ecmCount}+/month) are now met.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} of HIGH-risk orders were fulfilled.",
-    "checkpoint_high_risk_fulfilled_consider_body": "Each fulfilled HIGH-risk order is absorbed exposure — Shopify's risk model flagged but did not block. Consider an auto-hold or manual-review rule for HIGH-risk orders above a value threshold.",
+    "checkpoint_high_risk_fulfilled_consider_body": "Each fulfilled HIGH-risk order is absorbed exposure — Shopify's risk model flagged but did not block. Set up a Shopify Flow rule that holds fulfillment when an order is High-risk and over a value threshold you choose.",
     "checkpoint_signature_capture_low_consider_title": "Signature captured on {current} of confirmed deliveries.",
     "checkpoint_signature_capture_low_consider_body": "Carrier-attested signature confirmation is the strongest delivery evidence in fraud-coded chargebacks. Requiring signature on higher-value shipments meaningfully strengthens dispute defense.",
     "checkpoint_threeds_auth_healthy_title": "3-DS authentication on {current} of eligible card orders.",
