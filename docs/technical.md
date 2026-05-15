@@ -283,11 +283,11 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 
 ### Marketing home: Resources Hub article strip
 
-Between the **Pricing** section and the **ROI Snapshot**, the marketing home page renders the 3 most recently published hub articles for the current locale.
+Between the **Pricing** section and the **ROI Snapshot**, the marketing home page renders 3 published **pillar pages** for the current locale.
 
-- **Component:** [`components/marketing/MarketingHubArticles.tsx`](components/marketing/MarketingHubArticles.tsx) — server component. Fetches `listPublishedByRoute("resources", hubLocale, { limit: 3, includeTotal: false })` and renders an image-top 3-col grid (`md:grid-cols-2 lg:grid-cols-3`) using `ResourceCardImage` (`variant: "default"`) plus the hub `contentTypeBadgeClass` so cards match the rest of the hub visually.
+- **Component:** [`components/marketing/MarketingHubArticles.tsx`](components/marketing/MarketingHubArticles.tsx) — server component. Fetches `listPublishedByRoute("resources", hubLocale, { contentType: "pillar_page", limit: 3, includeTotal: false })` and renders an image-top 3-col grid (`md:grid-cols-2 lg:grid-cols-3`) using `ResourceCardImage` (`variant: "default"`) plus the hub `contentTypeBadgeClass` so cards match the rest of the hub visually. Ordered by `publish_priority DESC, publish_at DESC` (same as the hub listing).
 - **Slot pattern:** Passed as `hubArticles` ReactNode prop into [`components/marketing/MarketingLandingPageClient.tsx`](components/marketing/MarketingLandingPageClient.tsx) (a `"use client"` component); the slot keeps the Supabase service client server-only. The page wires it up in [`app/[locale]/page.tsx`](app/[locale]/page.tsx).
-- **Empty-state behavior:** Returns `null` when fewer than 3 published articles exist for the current locale — no broken partial row.
+- **Empty-state behavior:** Returns `null` when fewer than 3 published pillar pages exist for the current locale — no broken partial row.
 - **Routing:** Card hrefs use `${base}/resources/${primary_pillar}/${slug}` so locale-prefixed paths (`/de/resources/...`) work without code changes. The section header "View all articles" link points to `${base}/resources`.
 - **i18n:** Copy lives under `marketing.fromHub.{eyebrow,title,subtitle,viewAll,readMore}` in all 6 locales (BCP-47 + short-form variants). Per-card metadata (content-type label, read-time) reuses keys from the `resources` namespace (`types.*`, `readTime`).
 

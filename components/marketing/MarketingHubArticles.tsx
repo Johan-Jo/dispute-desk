@@ -20,6 +20,7 @@ export async function MarketingHubArticles({ pathLocale, base }: Props) {
   let rows: Awaited<ReturnType<typeof listPublishedByRoute>>["rows"] = [];
   try {
     const r = await listPublishedByRoute("resources", hubLocale, {
+      contentType: "pillar_page",
       limit: 3,
       offset: 0,
       includeTotal: false,
