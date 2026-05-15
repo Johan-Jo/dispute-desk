@@ -24,6 +24,7 @@ import {
   Button,
   TextField,
   Box,
+  useBreakpoints,
 } from "@shopify/polaris";
 
 interface PlanInfo {
@@ -307,6 +308,12 @@ function BillingPageInner() {
   const pathname = usePathname();
   const router = useRouter();
   const planParam = parsePlanQuery(searchParams.get("plan"));
+  // Polaris's `smDown` is true under ~490px (matches the mobile
+  // breakpoint we use elsewhere — see coverage/page.tsx). Used to
+  // collapse the 4-up plan grid into a single column and stack the
+  // next-plan recommendation banner so neither overflows the
+  // embedded iframe at 320–393 px viewports.
+  const { smDown } = useBreakpoints();
 
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
@@ -554,7 +561,14 @@ function BillingPageInner() {
 
             {/* Next plan recommendation banner */}
             {nextPlanId && nextPlanPrice && (
-              <div style={styles.nextPlanBanner}>
+              <div
+                style={{
+                  ...styles.nextPlanBanner,
+                  flexDirection: smDown ? "column" : "row",
+                  alignItems: smDown ? "stretch" : "center",
+                  gap: smDown ? 12 : 16,
+                }}
+              >
                 <div>
                   <Text as="p" variant="bodySm" fontWeight="semibold">
                     {t("billing.nextPlan", { plan: nextPlanName ?? "" })}
@@ -563,7 +577,13 @@ function BillingPageInner() {
                     {PLAN_SHORT_FEATURES[nextPlanId]}
                   </Text>
                 </div>
-                <div style={styles.nextPlanRight}>
+                <div
+                  style={{
+                    ...styles.nextPlanRight,
+                    justifyContent: smDown ? "space-between" : undefined,
+                    width: smDown ? "100%" : undefined,
+                  }}
+                >
                   <Text as="span" variant="bodySm" fontWeight="semibold">
                     {nextPlanPrice.label}{nextPlanPrice.monthly}
                   </Text>
@@ -593,8 +613,14 @@ function BillingPageInner() {
 
           {/* Plan cards grid */}
           {showAllPlans && (
-            <Box padding="600">
-              <div style={styles.planCardsGrid}>
+            <Box padding={smDown ? "400" : "600"}>
+              <div
+                style={{
+                  ...styles.planCardsGrid,
+                  gridTemplateColumns: smDown ? "1fr" : "repeat(4, 1fr)",
+                  gap: smDown ? 16 : 24,
+                }}
+              >
                 {PLAN_IDS.map((planId) => {
                   const priceInfo = PLAN_PRICES[planId];
                   const featureKeys = PLAN_FEATURE_KEYS[planId];
