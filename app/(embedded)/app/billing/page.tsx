@@ -122,6 +122,25 @@ const styles = {
     fontWeight: 400,
     color: "#6D7175",
   } as React.CSSProperties,
+  usageRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    marginTop: 4,
+  } as React.CSSProperties,
+  usageBarTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 3,
+    background: "#F1F2F4",
+    overflow: "hidden",
+  } as React.CSSProperties,
+  usageBarFill: {
+    height: "100%",
+    background: "#1D4ED8",
+    borderRadius: 3,
+    transition: "width 0.3s ease",
+  } as React.CSSProperties,
   nextPlanBanner: {
     display: "flex",
     alignItems: "center",
@@ -527,13 +546,26 @@ function BillingPageInner() {
         <Card padding="0">
           {/* Current plan section */}
           <Box padding="600" borderBlockEndWidth="025" borderColor="border">
-            <div style={styles.currentPlanHeader}>
-              <InlineStack gap="300" blockAlign="start">
+            {/* Top row: [icon + plan name + subtitle]  [price]
+             *  The header already had justify-content:space-between
+             *  but nothing on the right, so the price ended up dumped
+             *  below as its own block. Move the price into the right
+             *  side of the same row, stack on mobile. */}
+            <div
+              style={{
+                ...styles.currentPlanHeader,
+                flexDirection: smDown ? "column" : "row",
+                alignItems: smDown ? "flex-start" : "center",
+                gap: smDown ? 12 : 16,
+                marginBottom: 12,
+              }}
+            >
+              <InlineStack gap="300" blockAlign="center">
                 <div style={styles.planIconBox}>
                   <CheckCircleSvg />
                 </div>
-                <BlockStack gap="100">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                <BlockStack gap="050">
+                  <Text as="p" variant="headingMd" fontWeight="semibold">
                     {currentPlanName}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
@@ -543,20 +575,36 @@ function BillingPageInner() {
                   </Text>
                 </BlockStack>
               </InlineStack>
+
+              <p style={{ ...styles.priceText, margin: 0, lineHeight: 1 }}>
+                {PLAN_PRICES[plan?.id ?? "free"].label}
+                {PLAN_PRICES[plan?.id ?? "free"].monthly && (
+                  <span style={styles.priceSuffix}>
+                    {PLAN_PRICES[plan?.id ?? "free"].monthly}
+                  </span>
+                )}
+              </p>
             </div>
 
-            <p style={styles.priceText}>
-              {PLAN_PRICES[plan?.id ?? "free"].label}
-              {PLAN_PRICES[plan?.id ?? "free"].monthly && (
-                <span style={styles.priceSuffix}>
-                  {PLAN_PRICES[plan?.id ?? "free"].monthly}
-                </span>
-              )}
-            </p>
+            {/* Usage row — slim, lives beneath the header. Only shows
+             *  on metered plans (packsLimit set). */}
             {usage && usage.packsLimit != null && (
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("billing.packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}
-              </Text>
+              <div style={styles.usageRow}>
+                <div style={styles.usageBarTrack}>
+                  <div
+                    style={{
+                      ...styles.usageBarFill,
+                      width: `${Math.min(
+                        100,
+                        Math.round((usage.packsUsed / usage.packsLimit) * 100),
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("billing.packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}
+                </Text>
+              </div>
             )}
 
             {/* Next plan recommendation banner */}
