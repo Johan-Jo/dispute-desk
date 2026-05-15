@@ -323,3 +323,37 @@ export function knownCodes(): { network: CardNetwork; code: string }[] {
     code: e.code,
   }));
 }
+
+/**
+ * The Shopify enum values our rebuttal + collector pipeline treats as
+ * "fraud-family" — i.e. the cardholder is claiming they did not
+ * authorize the transaction. These are the only reason codes for
+ * which positive pre-authorization risk-screening signals
+ * (Shopify's `Order.risk` LOW recommendation, AVS/CVV match,
+ * 3-D Secure authentication) are evidentially relevant.
+ *
+ * NOT included on purpose:
+ *   - CREDIT_NOT_PROCESSED: refund-flow dispute; risk screening is irrelevant.
+ *   - PRODUCT_NOT_RECEIVED / PRODUCT_UNACCEPTABLE / SUBSCRIPTION_CANCELED:
+ *     delivery / quality / contract-lifecycle disputes; the cardholder
+ *     authorized the original transaction, so a "low risk at checkout"
+ *     citation does not address the merchant's burden of proof.
+ *   - DUPLICATE / NONCOMPLIANT / BANK_CANNOT_PROCESS / etc.: structural
+ *     network disputes; the cardholder identity question is moot.
+ *
+ * Reading the canonical reason set this way keeps the fraud-rebuttal
+ * collector and the rebuttal-text composer aligned without either
+ * one hard-coding `reason === "FRAUDULENT"` and silently dropping
+ * UNRECOGNIZED variants.
+ */
+export const FRAUD_FAMILY_REASON_CODES: ReadonlySet<string> = new Set([
+  "FRAUDULENT",
+  "UNRECOGNIZED",
+]);
+
+export function isFraudFamilyReason(
+  reason: string | null | undefined,
+): boolean {
+  if (!reason) return false;
+  return FRAUD_FAMILY_REASON_CODES.has(reason.toUpperCase());
+}

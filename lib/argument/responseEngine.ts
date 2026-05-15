@@ -93,6 +93,20 @@ export interface EvidenceData {
   hasCustomerEmail?: boolean;
   /** Manual-upload / supporting document sections present in the pack. */
   hasSupportingDocs?: boolean;
+
+  // ── Pre-authorization fraud screening (Phase 1 of fraud-risk plan) ──
+  // Populated by extractEvidenceDataFromPack from a section whose
+  // fieldsProvided includes "fraud_risk_screening" (emitted by
+  // lib/packs/sources/fraudRiskSource.ts). The collector's eligibility
+  // gate guarantees this is ONLY set for fraud-family disputes where
+  // Shopify's own ML classified the order LOW + ACCEPT/NONE with ≥1
+  // POSITIVE-sentiment fact. Bank-rebuttal text appends a single
+  // sentence to the payment paragraph citing these facts — never a
+  // standalone paragraph, never a citation of the riskLevel /
+  // recommendation strings themselves (which would expose Shopify's
+  // internal vocabulary). Negative/neutral facts are filtered out
+  // upstream by the collector; they never reach this field.
+  fraudRiskScreeningPositiveFacts?: string[] | null;
 }
 
 /* ── Reason families ── */
@@ -663,6 +677,22 @@ export function buildBankGradeStructure(data: EvidenceData): {
     paySentences.push(
       "These verification results demonstrate that the purchaser had possession of the card details at the time of the transaction.",
     );
+    // Phase 1 fraud-risk incorporation: append one sentence citing
+    // Shopify's pre-authorization risk screening when positive facts
+    // are present. NEVER cite the riskLevel / recommendation strings
+    // themselves, NEVER cite neutral or negative facts (the collector
+    // upstream filters to POSITIVE-only and caps at MAX_POSITIVE_FACTS_CITED).
+    // Wording chosen deliberately: "pre-authorization" + "at checkout"
+    // emphasize the signal is contemporaneous, not post-dispute
+    // synthesis. Avoid "cleared" / "approved" — "classified as low-risk"
+    // is the correct floor (see plan §"Bank-rebuttal text shape").
+    const positiveFacts = data.fraudRiskScreeningPositiveFacts ?? null;
+    if (positiveFacts && positiveFacts.length > 0) {
+      const joined = positiveFacts.join(", ");
+      paySentences.push(
+        `Shopify's pre-authorization fraud analysis classified the order as low-risk at checkout, with positive indicators including ${joined}.`,
+      );
+    }
     middles.push({ kind: "payment", text: paySentences.join(" ") });
   }
 

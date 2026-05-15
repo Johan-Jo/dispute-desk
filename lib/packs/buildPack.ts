@@ -31,6 +31,7 @@ import { collectManualEvidence } from "./sources/manualSource";
 import { collectCustomerCommEvidence } from "./sources/customerCommSource";
 import { collectPaymentEvidence } from "./sources/paymentSource";
 import { collectThreeDSecureEvidence } from "./sources/threeDSecureSource";
+import { collectFraudRiskEvidence } from "./sources/fraudRiskSource";
 import {
   collectCoverageEvidence,
   summarizeCoverage,
@@ -240,6 +241,7 @@ export async function buildPack(
     collectManualEvidence(ctx),
     collectPaymentEvidence(ctx),
     collectThreeDSecureEvidence(ctx),
+    collectFraudRiskEvidence(ctx),
     collectCoverageEvidence(ctx),
     collectDeviceLocationEvidence(ctx),
   ]);

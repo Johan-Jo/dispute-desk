@@ -39,7 +39,12 @@ export type SignalId =
   | "policy_shipping"
   | "policy_cancellation"
   | "duplicate_explanation"
-  | "supplementary_documents";
+  | "supplementary_documents"
+  // Pre-authorization fraud screening (Phase 1 of fraud-risk plan).
+  // Distinct from `payment_auth` so dedup doesn't collapse it into
+  // AVS/CVV — the screening is a separate signal that complements,
+  // rather than duplicates, gateway-level authentication.
+  | "fraud_screening";
 
 /** Weight per category. Used by the count-based scorer. */
 export const CATEGORY_WEIGHT: Record<EvidenceCategory, number> = {
@@ -135,6 +140,20 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     supportingOnly: false,
     excludedFromStrength: false,
     note: "Strong only when merchant-confirmed (tdsVerified=true). Moderate when read from Shopify receiptJson best-effort (tdsAuthenticated=true, verifiedSource=shopify_receipt) — receipt shape is gateway-defined and unstable, so we never auto-claim it as STRONG. Invalid otherwise.",
+  },
+  fraud_risk_screening: {
+    // Shopify's own pre-authorization risk classifier; persisted by the
+    // orders backfill. Pinned to MODERATE, never upgraded — Shopify's
+    // risk facts are descriptive, not contractual. A "Billing country
+    // matches IP country" line is meaningful but not a network-level
+    // assertion the way an AVS=Y match on the gateway receipt is.
+    // Categorizer below short-circuits any upgrade attempt.
+    signalId: "fraud_screening",
+    label: "Pre-authorization fraud screening",
+    category: "moderate",
+    supportingOnly: false,
+    excludedFromStrength: false,
+    note: "Moderate when collector emits a positiveFacts[] payload (collector already enforces LOW + ACCEPT/NONE + ≥1 POSITIVE-sentiment fact). Never strong regardless of payload — see categorizeEvidenceField.",
   },
 
   // ── Billing match ──
@@ -386,6 +405,22 @@ export function categorizeEvidenceField(
   // ── billing_address_match ──
   if (fieldKey === "billing_address_match") {
     return p.match === true ? "strong" : "invalid";
+  }
+
+  // ── fraud_risk_screening ──
+  // Moderate when payload carries ≥1 positiveFacts entry (the collector
+  // already enforces LOW + ACCEPT/NONE + provider=shopify before emission,
+  // so the empty-array case only occurs on stale rows or hand-rolled fixtures).
+  // Never strong: Shopify's risk facts are descriptive, not contractual
+  // — see plan §"Classification" (docs/plans/fraud-risk-incorporation.md).
+  // Invalid otherwise so the categorizer doesn't quietly accept neutral /
+  // negative payloads that bypassed the collector gate.
+  if (fieldKey === "fraud_risk_screening") {
+    const positiveFacts = p.positiveFacts;
+    if (Array.isArray(positiveFacts) && positiveFacts.length > 0) {
+      return "moderate";
+    }
+    return "invalid";
   }
 
   // ── ip_location_check ──

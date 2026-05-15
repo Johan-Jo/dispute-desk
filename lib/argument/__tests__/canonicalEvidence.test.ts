@@ -466,6 +466,9 @@ describe("fileEligible static flag (Phase 1 of conditional file evidence layer)"
     "order_confirmation",
     "product_description",
     "duplicate_explanation",
+    // Pre-authorization fraud screening is a data-only signal — its
+    // payload is a list of fact strings, not file-shaped evidence.
+    "fraud_risk_screening",
   ];
 
   it("eligible fields opt in via fileEligible: true", () => {

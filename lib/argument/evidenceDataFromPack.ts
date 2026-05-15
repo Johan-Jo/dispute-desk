@@ -70,6 +70,22 @@ function asObject(v: unknown): Record<string, unknown> | null {
 }
 
 /**
+ * Find the Pre-authorization fraud screening section emitted by
+ * fraudRiskSource.ts. Matches by `fieldsProvided` (most stable —
+ * the collector pins this to `fraud_risk_screening`), then by label.
+ */
+function findFraudRiskScreeningSection(sections: RawSection[]): RawSection | null {
+  for (const s of sections) {
+    if ((s.fieldsProvided ?? []).includes("fraud_risk_screening")) return s;
+  }
+  for (const s of sections) {
+    const label = (s.label ?? "").toLowerCase();
+    if (label.includes("pre-authorization fraud screening")) return s;
+  }
+  return null;
+}
+
+/**
  * Find the Payment Verification (AVS/CVV) section emitted by
  * paymentSource.ts. Matches by label first (most stable), with
  * fallbacks to source / fieldsProvided so a renamed label still
@@ -322,6 +338,7 @@ export function extractEvidenceDataFromPack(
   const ipSection = findIpLocationSection(safeSections);
   const order = findMainOrderSection(safeSections);
   const fulfillment = findFulfillmentSection(safeSections);
+  const fraudRisk = findFraudRiskScreeningSection(safeSections);
 
   const paymentData = asObject(payment?.data);
   const avsCode = asString(paymentData?.avsResultCode);
@@ -336,6 +353,19 @@ export function extractEvidenceDataFromPack(
   const customerEmailFromOrder = orderData ? asString(orderData.customerEmail) : null;
   const customerEmailFromDispute = dispute ? asString(dispute.customer_email) : null;
   const resolvedEmail = customerEmailFromOrder ?? customerEmailFromDispute;
+
+  // Pre-authorization fraud-screening positive facts (Phase 1 fraud-risk
+  // plan). The collector at lib/packs/sources/fraudRiskSource.ts has
+  // already enforced fraud-family reason + LOW + ACCEPT/NONE +
+  // shopify-provider + ≥1 POSITIVE-sentiment fact before emitting this
+  // section, so simply reading `positiveFacts` is safe here. We do not
+  // re-check sentiment — that would invite a divergence between this
+  // adapter and the collector.
+  const fraudRiskData = asObject(fraudRisk?.data);
+  const rawPositiveFacts = fraudRiskData?.positiveFacts;
+  const fraudRiskScreeningPositiveFacts = Array.isArray(rawPositiveFacts)
+    ? (rawPositiveFacts.filter((f): f is string => typeof f === "string" && f.trim().length > 0))
+    : null;
 
   return {
     avsCode,
@@ -358,5 +388,9 @@ export function extractEvidenceDataFromPack(
     // is the more reliable timestamp. Falls through to whatever the
     // engine already populates if absent.
     deliveredDate: signature.deliveredAtTracking ?? undefined,
+    fraudRiskScreeningPositiveFacts:
+      fraudRiskScreeningPositiveFacts && fraudRiskScreeningPositiveFacts.length > 0
+        ? fraudRiskScreeningPositiveFacts
+        : null,
   };
 }

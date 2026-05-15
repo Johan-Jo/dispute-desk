@@ -319,6 +319,16 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "avs_cvv_match", label: "Payment Verification (AVS & CVV)", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "activity_log", label: "Customer History", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "ip_location_check", label: "IP & Location Check", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_ipinfo", collectionType: "auto" },
+    // Pre-authorization fraud screening — present only when Shopify's
+    // own ML cleared the order at checkout AND ≥1 positive-sentiment
+    // fact exists (see `lib/packs/sources/fraudRiskSource.ts` eligibility
+    // gate). Treated as `recommended`, never `required`: absence does
+    // NOT penalize the score (the eligibility gate may legitimately
+    // drop the signal for unrelated reasons — order not in the backfill
+    // yet, third-party-only assessment, neutral facts only). Pinned to
+    // moderate category in canonicalEvidence; can never elevate the
+    // overall pack strength to Strong.
+    { field: "fraud_risk_screening", label: "Pre-Authorization Fraud Screening", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "delivery_proof", label: "Delivery Confirmation (Signature / Photo)", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
