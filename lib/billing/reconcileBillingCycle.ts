@@ -41,6 +41,13 @@ import {
   mapShopifyStatusToState,
   type SubscriptionState,
 } from "./subscriptionState";
+import {
+  sendCycleRenewedEmail,
+  sendFirstPaidCycleEmail,
+  sendGraceEnteredEmail,
+  sendSubscriptionExpiredEmail,
+  sendCancellationEmail,
+} from "@/lib/email/billingLifecycle";
 
 /** Window the reconciler scans — cycles ending within this many ms
  *  ahead. One hour matches the cron schedule (`0 * * * *`) plus
@@ -212,6 +219,9 @@ export async function reconcileBillingCycleForShop(
         reason: "no_active_shopify_subscription",
       },
     });
+    // Fire-and-forget lifecycle email. Idempotent at the email layer
+    // via audit-row lookup keyed on subscription_expired_at.
+    void sendSubscriptionExpiredEmail(input.shopId).catch(() => {});
     return {
       ok: true,
       action: "state_transition",
@@ -269,6 +279,30 @@ export async function reconcileBillingCycleForShop(
         shopify_subscription_gid: primary.id,
       },
     });
+
+    // Lifecycle email per the §5.5 comms matrix. Email functions
+    // own their own idempotency, so a webhook + cron race on the
+    // same transition results in exactly one email — whichever
+    // caller wins the conditional UPDATE / audit lookup.
+    if (targetState === "grace") {
+      void sendGraceEnteredEmail(input.shopId).catch(() => {});
+    } else if (targetState === "expired") {
+      void sendSubscriptionExpiredEmail(input.shopId).catch(() => {});
+    } else if (targetState === "cancelled") {
+      void sendCancellationEmail(input.shopId).catch(() => {});
+    } else if (
+      previousState === "trialing" &&
+      targetState === "active" &&
+      primary.currentPeriodEnd
+    ) {
+      // trial → active is the "first paid cycle" event. The
+      // monthly cycle email below would also fire on a subsequent
+      // renewal of an active sub; this branch is the welcome.
+      void sendFirstPaidCycleEmail(
+        input.shopId,
+        primary.currentPeriodEnd,
+      ).catch(() => {});
+    }
   }
 
   // Grant monthly_included credits for the current cycle if we
@@ -314,6 +348,19 @@ export async function reconcileBillingCycleForShop(
             reference,
           },
         });
+        // Cycle-renewed digest. The email helper claims per-cycle
+        // via the last_renewal_email_sent_cycle_end column, so the
+        // welcome ("first paid cycle") and the digest never fire
+        // for the same cycle. The first-paid-cycle email above
+        // takes the trial→active branch; this digest fires on
+        // active→active across cycles.
+        if (previousState === targetState) {
+          void sendCycleRenewedEmail({
+            shopId: input.shopId,
+            cycleEndIso: primary.currentPeriodEnd,
+            packsGranted: plan.packsPerMonth,
+          }).catch(() => {});
+        }
       } else if (result === "duplicate") {
         grantOutcome = { action: "credits_duplicate" };
       }

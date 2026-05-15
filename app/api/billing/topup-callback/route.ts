@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { getTopUp, TOPUP_EXPIRY_DAYS } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
+import { sendTopupPurchasedEmail } from "@/lib/email/billingLifecycle";
 
 export const runtime = "nodejs";
 
@@ -70,12 +71,13 @@ export async function GET(req: NextRequest) {
     Date.now() + TOPUP_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
+  const reference = `topup_${sku}_${chargeId}`;
   await grantCredits({
     shopId,
     source: "topup",
     packs: topUp.packs,
     expiresAt,
-    reference: `topup_${sku}_${chargeId}`,
+    reference,
   });
 
   await sb.from("audit_events").insert({
@@ -91,6 +93,16 @@ export async function GET(req: NextRequest) {
       test_charge: verification.test ?? false,
     },
   });
+
+  // Lifecycle email — idempotent by ledger reference so a retried
+  // callback (which re-runs the verify + grant pipeline) does not
+  // duplicate the email.
+  void sendTopupPurchasedEmail({
+    shopId,
+    packs: topUp.packs,
+    expiresAt,
+    reference,
+  }).catch(() => {});
 
   return NextResponse.redirect(billingUrl.toString());
 }

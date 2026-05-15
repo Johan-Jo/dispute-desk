@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, TRIAL_INCLUDED_PACKS, type PlanId } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
+import { sendTrialStartedEmail } from "@/lib/email/billingLifecycle";
 
 export const runtime = "nodejs";
 
@@ -125,6 +126,14 @@ export async function GET(req: NextRequest) {
       test_charge: verification.test ?? false,
     },
   });
+
+  // Trial-started lifecycle email. Idempotent via
+  // plan_entitlements.trial_started_at — even if the merchant reloads
+  // the callback URL, only the first call sends. Skipped silently for
+  // plans without a trial (trialDays = 0).
+  if (plan.trialDays > 0) {
+    void sendTrialStartedEmail(shopId).catch(() => {});
+  }
 
   return NextResponse.redirect(billingUrl.toString());
 }
