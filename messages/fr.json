@@ -1071,7 +1071,7 @@
     "startTrial": "Essai de 14 jours — {plan}",
     "redirecting": "Redirection...",
     "contactToDowngrade": "Contactez le support pour rétrograder",
-    "trialNote": "Les plans payants incluent un essai de 14 jours avec 25 packs.",
+    "trialNote": "Les plans payants incluent un essai de 14 jours avec 25 packs. Les rétrogradations prennent effet au prochain cycle de facturation. Vos données sont toujours conservées.",
     "manageSubscription": "Gérer l'abonnement",
     "contactSales": "Contacter les ventes",
     "mostPopular": "Le plus populaire",
@@ -1171,7 +1171,8 @@
     "topupSuccessBody": "Le top-up est validé. Vos packs supplémentaires sont disponibles dès maintenant et expirent 30 jours après l'achat, indépendamment de votre cycle de facturation.",
     "topupFailedTitle": "Le top-up n'a pas abouti",
     "topupFailedGeneric": "Nous n'avons pas pu finaliser le top-up. Réessayez dans un instant ou contactez le support si le problème persiste.",
-    "topupProcessing": "Traitement…"
+    "topupProcessing": "Traitement…",
+    "trialNoteNoTrial": "Les changements de plan prennent effet aujourd'hui au nouveau prix. Les rétrogradations prennent effet au prochain cycle de facturation. Vos données sont toujours conservées."
   },
   "rules": {
     "title": "Règles",

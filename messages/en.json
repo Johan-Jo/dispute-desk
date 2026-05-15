@@ -1093,7 +1093,7 @@
     "startTrial": "Start 14-Day Trial — {plan}",
     "redirecting": "Redirecting...",
     "contactToDowngrade": "Contact support to downgrade",
-    "trialNote": "Paid plans include a 14-day trial with 25 playbooks. Downgrades take effect at the next billing cycle. Your data is always retained.",
+    "trialNote": "Paid plans include a 14-day trial with 25 packs. Downgrades take effect at the next billing cycle. Your data is always retained.",
     "manageSubscription": "Manage Subscription",
     "contactSales": "Contact Sales",
     "mostPopular": "Most Popular",
@@ -1193,7 +1193,8 @@
     "topupSuccessBody": "The top-up cleared. Your extra packs are available now and expire 30 days from purchase, independent of your billing cycle.",
     "topupFailedTitle": "Top-up didn't go through",
     "topupFailedGeneric": "We couldn't complete the top-up. Try again in a moment or contact support if the issue persists.",
-    "topupProcessing": "Processing…"
+    "topupProcessing": "Processing…",
+    "trialNoteNoTrial": "Plan changes take effect today at the new price. Downgrades take effect at the next billing cycle. Your data is always retained."
   },
   "rules": {
     "title": "Rules",

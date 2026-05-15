@@ -1104,7 +1104,7 @@
     "startTrial": "Teste de 14 dias — {plan}",
     "redirecting": "Redirecionando...",
     "contactToDowngrade": "Contate o suporte para fazer downgrade",
-    "trialNote": "Planos pagos incluem um teste de 14 dias com 25 pacotes.",
+    "trialNote": "Os planos pagos incluem um período de teste de 14 dias com 25 packs. Os downgrades entram em vigor no próximo ciclo de cobrança. Seus dados são sempre preservados.",
     "manageSubscription": "Gerenciar assinatura",
     "contactSales": "Contatar vendas",
     "mostPopular": "Mais popular",
@@ -1204,7 +1204,8 @@
     "topupSuccessBody": "O top-up foi confirmado. Os packs extras já estão disponíveis e expiram 30 dias após a compra, independentemente do seu ciclo de cobrança.",
     "topupFailedTitle": "O top-up não foi concluído",
     "topupFailedGeneric": "Não foi possível concluir o top-up. Tente novamente ou entre em contato com o suporte se o problema persistir.",
-    "topupProcessing": "Processando…"
+    "topupProcessing": "Processando…",
+    "trialNoteNoTrial": "As mudanças de plano entram em vigor hoje pelo novo preço. Os downgrades entram em vigor no próximo ciclo de cobrança. Seus dados são sempre preservados."
   },
   "rules": {
     "title": "Regras",

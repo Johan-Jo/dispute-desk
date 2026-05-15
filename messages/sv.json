@@ -1073,7 +1073,7 @@
     "startTrial": "Starta 14 dagars provperiod — {plan}",
     "redirecting": "Omdirigerar...",
     "contactToDowngrade": "Kontakta support för att nedgradera",
-    "trialNote": "Betalplaner inkluderar en 14 dagars provperiod med 25 paket. Nedgraderingar träder i kraft vid nästa faktureringscykel. Din data behålls alltid.",
+    "trialNote": "Betalplaner inkluderar en 14-dagars provperiod med 25 packs. Nedgraderingar träder i kraft vid nästa faktureringscykel. Din data sparas alltid.",
     "manageSubscription": "Hantera prenumeration",
     "contactSales": "Kontakta sälj",
     "mostPopular": "Mest populär",
@@ -1173,7 +1173,8 @@
     "topupSuccessBody": "Top-up:en gick igenom. Dina extra packs är tillgängliga nu och löper ut 30 dagar efter köpet — oberoende av din faktureringscykel.",
     "topupFailedTitle": "Top-up gick inte igenom",
     "topupFailedGeneric": "Vi kunde inte slutföra top-up:en. Försök igen om en stund eller kontakta supporten om problemet kvarstår.",
-    "topupProcessing": "Bearbetar…"
+    "topupProcessing": "Bearbetar…",
+    "trialNoteNoTrial": "Planändringar träder i kraft idag till det nya priset. Nedgraderingar träder i kraft vid nästa faktureringscykel. Din data sparas alltid."
   },
   "rules": {
     "title": "Regler",

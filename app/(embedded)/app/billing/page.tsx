@@ -310,6 +310,12 @@ function BillingPageInner() {
 
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  /** Set from /api/billing/usage. When false, the CTA labels say
+   *  "Upgrade to <plan>" instead of "Start 14-Day Trial" and the
+   *  trial-note paragraph drops the "14-day trial" sentence — the
+   *  shop has already trialed once, plan changes happen instantly.
+   *  Default false so a slow load doesn't briefly mislabel buttons. */
+  const [trialEligible, setTrialEligible] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
@@ -342,6 +348,7 @@ function BillingPageInner() {
     const data = await res.json();
     setPlan(data.plan);
     setUsage(data.usage);
+    setTrialEligible(Boolean(data.trialEligible));
     setLoading(false);
   }, []);
 
@@ -658,7 +665,9 @@ function BillingPageInner() {
                             ? t("billing.redirecting")
                             : planId === "free"
                               ? t("billing.getStarted")
-                              : t("billing.startTrial", { plan: t(planNameKeys[planId]) })}
+                              : trialEligible
+                                ? t("billing.startTrial", { plan: t(planNameKeys[planId]) })
+                                : t("billing.upgradeTo", { plan: t(planNameKeys[planId]) })}
                         </button>
                       ) : isDowngrade ? (
                         <button
@@ -683,9 +692,14 @@ function BillingPageInner() {
                 })}
               </div>
 
-              {/* Trial note */}
+              {/* Trial note — branches on eligibility so a returning
+                  merchant doesn't see "14-day trial" copy that no
+                  longer applies to them. The downgrade-instant clause
+                  is shared between variants. */}
               <p style={styles.trialNote}>
-                {t("billing.trialNote")}
+                {trialEligible
+                  ? t("billing.trialNote")
+                  : t("billing.trialNoteNoTrial")}
               </p>
             </Box>
           )}
