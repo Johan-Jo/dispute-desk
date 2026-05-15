@@ -92,15 +92,38 @@ function makeJob(): ClaimedJob {
  *  `.select(...).single()` for dispute_id lookup. Returns the dispute
  *  id provided. Tracks calls to update() so tests can assert status
  *  transitions. */
-function makeSb(opts: { disputeId?: string | null } = {}) {
+function makeSb(opts: {
+  disputeId?: string | null;
+  /** Optional pack_json payload returned by the SECOND .single() lookup
+   *  inside the failed-build branch (where buildPackJob re-reads
+   *  pack_json to extract risk_weakness for the deferred review email's
+   *  parkReason). Defaults to null. */
+  packJson?: Record<string, unknown> | null;
+} = {}) {
   const updateCalls: Array<Record<string, unknown>> = [];
   const update = vi.fn((patch: Record<string, unknown>) => {
     updateCalls.push(patch);
     return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) };
   });
-  const single = vi.fn().mockResolvedValue({
+
+  // The handler does at most two .single() lookups against
+  // evidence_packs: first to get dispute_id, then (on the failed-build
+  // branch only) to get pack_json. Cycle the mock responses so both
+  // succeed.
+  const disputeIdResponse = {
     data: { dispute_id: opts.disputeId === undefined ? DISPUTE_ID : opts.disputeId },
     error: null,
+  };
+  const packJsonResponse = {
+    data: { pack_json: opts.packJson ?? null },
+    error: null,
+  };
+  let singleCall = 0;
+  const single = vi.fn().mockImplementation(() => {
+    singleCall++;
+    return singleCall === 1
+      ? Promise.resolve(disputeIdResponse)
+      : Promise.resolve(packJsonResponse);
   });
   const sb = {
     from: vi.fn(() => ({
@@ -164,8 +187,8 @@ describe("handleBuildPack", () => {
     expect(mockDeferredAlert).not.toHaveBeenCalled();
   });
 
-  it("buildPack returned status=failed: emits PACK_BUILD_FAILED and skips auto-save", async () => {
-    const { sb } = makeSb();
+  it("buildPack returned status=failed: emits PACK_BUILD_FAILED, skips auto-save, sends REVIEW email with null parkReason", async () => {
+    const { sb } = makeSb({ packJson: null });
     mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
     mockBuildPack.mockResolvedValue({
       packId: PACK_ID,
@@ -196,6 +219,48 @@ describe("handleBuildPack", () => {
     // Auto-save gate must NOT run on a failed build (PRD invariant —
     // there is no merchant-actionable evidence path here).
     expect(mockEvaluateAndMaybeAutoSave).not.toHaveBeenCalled();
+
+    // BUT the deferred new-dispute review email still fires so the
+    // merchant knows a dispute came in. parkReason is null when no
+    // risk-weakness cap was triggered.
+    expect(mockDeferredAlert).toHaveBeenCalledWith(DISPUTE_ID, "review", null);
+  });
+
+  it("buildPack returned status=failed + risk-weakness cap fired → sends REVIEW email with risk_weakness parkReason", async () => {
+    // Resilience path: when Shopify order fetch fails BUT the persisted
+    // shopify_orders snapshot indicates HIGH-risk + INVESTIGATE +
+    // fulfilled, the cap fires from the snapshot fallback and
+    // pack_json.risk_weakness gets written. The merchant must learn
+    // about it via the email's risk-weakness callout — not see a
+    // generic "build failed, please retry" alert.
+    const { sb } = makeSb({
+      packJson: {
+        risk_weakness: {
+          triggered: true,
+          reason: "high_risk_fulfilled",
+          message: "Shopify flagged this order as high-risk.",
+          diagnostics: { riskLevel: "HIGH", recommendation: "INVESTIGATE", fulfillmentCount: 1 },
+        },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockBuildPack.mockResolvedValue({
+      packId: PACK_ID,
+      status: "failed",
+      completenessScore: 0,
+      blockers: [],
+      sectionsCollected: 4,
+      itemsCreated: 1,
+      failureCode: "order_fetch_failed",
+    });
+
+    await handleBuildPack(makeJob());
+
+    expect(mockDeferredAlert).toHaveBeenCalledWith(
+      DISPUTE_ID,
+      "review",
+      "risk_weakness",
+    );
   });
 
   it("buildPack threw: flips status to failed, fires deferred review alert, and rethrows", async () => {

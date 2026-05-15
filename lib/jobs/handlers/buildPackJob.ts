@@ -109,6 +109,38 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
           },
           dedupeKey: `${packRow.dispute_id}:${PACK_BUILD_FAILED}:${packId}`,
         });
+
+        // Send the deferred new-dispute review email even on a failed
+        // build \u2014 the merchant needs to know a dispute came in. When
+        // the risk-weakness cap fired (data lives in pack_json.risk_weakness,
+        // persisted from the shopify_orders snapshot regardless of the
+        // Shopify live-fetch outcome), pass parkReason="risk_weakness"
+        // so the email's amber callout explains why auto-mode was held.
+        //
+        // evaluateAndMaybeAutoSave is the normal sender of this email,
+        // but it's skipped for failed builds at line 119 below. This
+        // is the only place the email can fire for failed-build cases.
+        const { data: failedPackRow } = await db
+          .from("evidence_packs")
+          .select("pack_json")
+          .eq("id", packId)
+          .single();
+        const failedRiskWeakness = (
+          failedPackRow?.pack_json as {
+            risk_weakness?: { triggered?: boolean; reason?: string | null };
+          } | null
+        )?.risk_weakness;
+        const failedParkedByRiskWeakness =
+          failedRiskWeakness?.triggered === true &&
+          failedRiskWeakness?.reason === "high_risk_fulfilled";
+
+        void claimAndSendDeferredNewDisputeAlert(
+          packRow.dispute_id,
+          "review",
+          failedParkedByRiskWeakness ? "risk_weakness" : null,
+        ).catch(() => {
+          /* non-fatal */
+        });
       }
       void updateNormalizedStatus(packRow.dispute_id);
     }
