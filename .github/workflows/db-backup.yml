@@ -154,6 +154,21 @@ jobs:
           # whole string. tr scrubs \n, \r, and literal spaces.
           SUPABASE_DB_URL=$(printf '%s' "${SUPABASE_DB_URL_RAW}" | tr -d '\n\r ')
 
+          # Definitive auth test BEFORE the dump. If psql also gets
+          # `password authentication failed`, the credential mismatch
+          # is real and the issue is the secret vs Supabase DB,
+          # not the dump wrapper. The CLI's docker container hides
+          # this signal from the surrounding log.
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          echo "--- psql ping ---"
+          if psql "${SUPABASE_DB_URL}" -c "SELECT 1 AS auth_ok;" 2>&1; then
+            echo "--- psql succeeded; proceeding to dump ---"
+          else
+            echo "::error::psql auth failed against the same URL the dump uses. The password in the GitHub secret does not match what the Supabase DB has."
+            exit 1
+          fi
+
           STAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           PREFIX="disputedesk-${STAMP}"
           echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
