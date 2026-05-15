@@ -41,6 +41,10 @@ import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
+import {
+  detectRiskWeakness,
+  type RiskWeaknessSummary,
+} from "@/lib/automation/riskWeakness";
 import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetworkReasonCode";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import type { EvidenceSection, BuildContext } from "./types";
@@ -478,6 +482,22 @@ export async function buildPack(
     Number.isFinite(disputeAmountNum) ? (disputeAmountNum as number) : null,
   );
 
+  // Risk-weakness summary — fraud-risk Phase 2. Caps overall at
+  // "moderate" when Shopify flagged the order as HIGH risk pre-auth
+  // but the merchant fulfilled anyway. Diagnostics only; never cited
+  // in bank-rebuttal text, evidence PDF, or Shopify mutations.
+  //
+  // Reads the persisted snapshot from `shopify_orders` (populated by
+  // the orders backfill ingestion — no new Shopify call). A null/
+  // missing row simply means no signal; the gate cannot trigger.
+  const riskWeaknessSummary: RiskWeaknessSummary = await loadRiskWeakness({
+    sb,
+    shopId: pack.shop_id,
+    orderGid: dispute.order_gid,
+    disputeReason: dispute.reason,
+    fulfillmentCount: order?.fulfillments?.length ?? 0,
+  });
+
   // Case-strength summary — PRD §6 + §9. Computed server-side here so
   // `evaluateAndMaybeAutoSave` can gate auto-mode on strength without
   // re-loading the argument map (the UI hook still computes its own
@@ -508,6 +528,7 @@ export async function buildPack(
       shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
     },
     fatalLossSummary,
+    riskWeaknessSummary,
   );
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
@@ -545,6 +566,7 @@ export async function buildPack(
     coverage: coverageSummary,
     case_strength: caseStrengthSummary,
     fatal_loss: fatalLossSummary,
+    risk_weakness: riskWeaknessSummary,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 
@@ -590,4 +612,60 @@ export async function buildPack(
     itemsCreated,
     failureCode,
   };
+}
+
+/**
+ * Load the persisted risk snapshot for the order and evaluate the
+ * risk-weakness gate. Read failures and missing rows produce a
+ * not-triggered summary — the cap can never fire without data, by
+ * design. The Phase 1 collector follows the same posture for the
+ * positive-signal path.
+ */
+async function loadRiskWeakness(args: {
+  sb: ReturnType<typeof getServiceClient>;
+  shopId: string;
+  orderGid: string | null;
+  disputeReason: string | null;
+  fulfillmentCount: number;
+}): Promise<RiskWeaknessSummary> {
+  const { sb, shopId, orderGid, disputeReason, fulfillmentCount } = args;
+
+  // No order → no snapshot → cannot evaluate. Return diagnostics-empty
+  // not-triggered so pack_json still has the field for shape stability.
+  if (!orderGid) {
+    return detectRiskWeakness({
+      disputeReason,
+      riskLevelInitial: null,
+      riskRecommendationInitial: null,
+      fulfillmentCount,
+    });
+  }
+
+  const { data: row, error } = await sb
+    .from("shopify_orders")
+    .select("risk_level_initial, risk_recommendation_initial")
+    .eq("shop_id", shopId)
+    .eq("shopify_order_id", orderGid)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      `[buildPack] risk-weakness snapshot read failed for order ${orderGid}:`,
+      error.message,
+    );
+    return detectRiskWeakness({
+      disputeReason,
+      riskLevelInitial: null,
+      riskRecommendationInitial: null,
+      fulfillmentCount,
+    });
+  }
+
+  return detectRiskWeakness({
+    disputeReason,
+    riskLevelInitial: (row?.risk_level_initial as string | null) ?? null,
+    riskRecommendationInitial:
+      (row?.risk_recommendation_initial as string | null) ?? null,
+    fulfillmentCount,
+  });
 }

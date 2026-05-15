@@ -1,7 +1,7 @@
 # Fraud-risk incorporation plan
 
 **Date:** 2026-05-15
-**Status:** Approved for build (Phase 1 → 2 → 3 as separate PRs)
+**Status:** Phase 1 SHIPPED (commit 390f5b0). Phase 2 SHIPPED (this PR). Phase 3 not started.
 
 ## Global invariant — no negative bank leakage
 
@@ -117,24 +117,84 @@ Coverage already blocks. Fatal-loss already blocks/degrades on specific structur
 
 Tempting, but: the merchant may have called the customer, captured manually after review, or had legitimate reasons. We don't know, and bank arguments don't get to know either. Surface it as a merchant-side awareness signal only.
 
-### Implementation
+### Implementation (verified against codebase 2026-05-15)
 
-- Extend `lib/automation/fatalLoss.ts` (or add a sibling `riskWeakness.ts`) to compute the cap.
-- New `heroVariant`? Probably not — reuse existing `proceed_with_caution` or extend the existing strength-reason copy. **Verify the current heroVariant enum before adding one.**
-- Pipeline integration: applied AFTER coverage gate, AFTER fatal-loss gate, BEFORE quality gate.
-- Embedded UI: new banner component or extension of existing strength card. **Read the embedded dispute page first to decide where it fits.**
+Phase 2 mirrors the fatal-loss precedent (`lib/automation/fatalLoss.ts` + `CaseFatalLossInput` in `lib/argument/caseStrength.ts`). The same shape extends cleanly to a high-risk cap.
 
-### Files touched (estimate)
+**New module — `lib/automation/riskWeakness.ts`** (~90 LOC, pure, no I/O):
 
-- `lib/automation/riskWeakness.ts` (new, ~80 LOC) — or extension of `fatalLoss.ts`
-- `lib/automation/pipeline.ts` (insert gate)
-- `lib/packs/types.ts` (extend reason enum)
-- Embedded UI: `pages/shopify/shopify-disputes-detail.tsx` (or current path — verify)
-- Tests: unit for the gate; snapshot for the UI banner
+```ts
+export type RiskWeaknessReason = "high_risk_fulfilled";
 
-### Open question
+export interface RiskWeaknessSummary {
+  triggered: boolean;
+  reason: RiskWeaknessReason | null;
+  /** Merchant-facing one-liner — surfaced via strengthReason ONLY when
+   *  the cap actually changes the verdict. Never reaches bank text. */
+  message: string | null;
+  /** Shopify's snapshot riskLevel + recommendation — diagnostic only,
+   *  persisted to pack_json for audit. Never rendered in bank text. */
+  diagnostics: {
+    riskLevel: string | null;
+    recommendation: string | null;
+  };
+}
 
-Does HIGH + fulfilled also apply to non-fraud disputes? Argument for yes: a high-risk order that became a "product not received" dispute is suspicious regardless of network reason code. Argument for no: scope creep, and the negative-signal-only-when-relevant rule is cleaner. **Recommend gating to fraud-family reasons in v1.**
+export function detectRiskWeakness(args: {
+  disputeReason: string | null;
+  riskLevelInitial: string | null;
+  riskRecommendationInitial: string | null;
+  fulfillmentCount: number;
+  // TODO v2: threeDsLiabilityShift?: boolean — when true, do NOT trigger
+}): RiskWeaknessSummary;
+```
+
+Trigger conditions (ALL must hold):
+- `isFraudFamilyReason(disputeReason)` is true (reuses Phase 1 helper from `lib/disputes/networkReasonCode.ts`)
+- `riskLevelInitial === "HIGH"`
+- `riskRecommendationInitial ∈ {"INVESTIGATE", "REJECT"}`
+- `fulfillmentCount >= 1` (merchant fulfilled anyway)
+
+Message: `"Shopify's pre-authorization fraud screening flagged this order as high-risk before fulfillment. Your case can still be defended, but please review the evidence carefully before submitting."`
+
+**Strength-engine integration — `lib/argument/caseStrength.ts`:**
+
+Add a third optional input `riskWeakness?: CaseRiskWeaknessInput` alongside `coverage` and `fatalLoss`. Priority order locked: **Coverage → Fatal-loss → Risk-weakness → standard scoring**.
+
+When `riskWeakness.triggered === true` AND not pre-empted by coverage or fatal-loss:
+- If computed `overall === "strong"` → cap to `"moderate"`
+- If already `≤ moderate` → no change (cap is a ceiling, not a floor)
+- `heroVariant`: keep `could_win` / `needs_strengthening` per the existing moderate branch — do NOT add a new variant. The strength card already shows the merchant-facing message via `strengthReason`.
+- `strengthReason`: replace with the risk-weakness message ONLY when the cap actually fired (overall would have been strong). Otherwise leave the composed reason alone.
+
+**Pack persistence — `lib/packs/buildPack.ts`:**
+
+Where `fatal_loss` is collected today (line ~475), add a parallel read of `shopify_orders` (`risk_level_initial`, `risk_recommendation_initial`) + fulfillment count from the existing `order` context. Pass `riskWeakness` into `calculateCaseStrength`. Persist `pack_json.risk_weakness = riskWeaknessSummary` for audit and downstream consumers (mirrors `pack_json.fatal_loss`).
+
+**Pipeline — no changes required.** The existing strength gate in `lib/automation/pipeline.ts:455-504` already handles `auto + moderate → park_for_review`. Capping a Strong-would-have-been case to Moderate routes it through that branch automatically. This is the elegance of the cap-via-strength-engine approach: it reuses the existing routing without a new gate.
+
+**Embedded UI — `app/(embedded)/app/disputes/[id]/tabs/sections/CaseSummaryCard.tsx`:**
+
+The card already renders `strengthReason` (line 117-121) when not Strong. With the cap in place, the risk-weakness sentence appears automatically inside the existing "Why" block — no new component needed. The Status badge will read `needs_attention` when parked for review, completing the visual story.
+
+**Data source — already ingested.** `shopify_orders.risk_level_initial` + `risk_recommendation_initial` are populated by the existing orders backfill (`lib/shopify/queries/ordersForBackfill.ts:524-526`). No new Shopify call.
+
+### Files touched
+
+- `lib/automation/riskWeakness.ts` (new, ~90 LOC pure module)
+- `lib/automation/__tests__/riskWeakness.test.ts` (new — trigger matrix)
+- `lib/argument/types.ts` (extend `CaseStrengthResult` with optional `riskWeakness` field; add `CaseRiskWeaknessInput`)
+- `lib/argument/caseStrength.ts` (third gate; ~25 LOC change + signature extension)
+- `lib/argument/__tests__/caseStrength.test.ts` (extend with risk-weakness cases)
+- `lib/packs/buildPack.ts` (read `shopify_orders` risk snapshot; persist `pack_json.risk_weakness`)
+- `lib/packs/__tests__/buildPack*.test.ts` (extend if a relevant test exists; otherwise rely on the strength engine tests)
+- Tests for global invariant: extend the regression scaffolding from Phase 1 to confirm `pack_json.rebuttal*` / Shopify mutation payload contain no `HIGH` / `INVESTIGATE` / `REJECT` strings when risk-weakness triggers.
+
+No new migration. No new UI component. No new pipeline gate.
+
+### Decision: fraud-family only in v1
+
+Confirmed per locked decisions. A HIGH-risk PNR dispute is suspicious in spirit, but extending the cap to non-fraud reasons would require revisiting the strength engine's family-specific scoring and is out of scope. Revisit after Phase 2 lands and we see real data.
 
 ---
 

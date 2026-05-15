@@ -1547,6 +1547,41 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
+### Risk-weakness Gate (fraud-risk Phase 2)
+
+**Routing primitive:** sits between the Fatal-loss Gate and the standard scoring path. Detects fraud-family disputes where Shopify's pre-authorization fraud screening flagged the order as HIGH-risk with an INVESTIGATE / REJECT recommendation, and the merchant fulfilled anyway. When triggered, the case-strength engine **caps** `caseStrength.overall` at `"moderate"` (cap-as-ceiling — never elevates a Weak case to Moderate, never demotes below the natural score).
+
+The cap routes through the existing `auto + moderate → park_for_review` branch in `evaluateAndMaybeAutoSave`. No new pipeline gate is required — this is the elegance of cap-via-strength-engine: a Strong-would-have-been case auto-parks for merchant review instead of auto-submitting, without introducing a new auto-save terminal state.
+
+**Trigger conditions (ALL must hold):**
+
+| Condition | Detection rule |
+|---|---|
+| Fraud-family | `isFraudFamilyReason(dispute.reason)` returns true (`FRAUDULENT` / `UNRECOGNIZED`) |
+| High risk | `shopify_orders.risk_level_initial === "HIGH"` |
+| Warning recommendation | `shopify_orders.risk_recommendation_initial ∈ {"INVESTIGATE", "REJECT"}` |
+| Merchant fulfilled | `order.fulfillments.length >= 1` |
+
+**Source field:** `pack_json.risk_weakness = { triggered, reason, message, diagnostics: { riskLevel, recommendation, fulfillmentCount } }`, persisted by `buildPack` via `detectRiskWeakness(...)`. Pure function over the persisted snapshot — no Shopify call. The snapshot comes from the orders backfill ingestion (`lib/shopify/queries/ordersForBackfill.ts`).
+
+**Precedence (verified by `lib/argument/__tests__/caseStrength.test.ts`):**
+
+```
+covered_shopify    → skip_covered                (PRD §4 — coverage beats everything)
+auto + fatal_loss  → block                       (PRD §5 — fatal-loss beats risk-weakness)
+auto + risk_weak   → cap to moderate → review    (cap routes through existing branch)
+review             → park_for_review             (review is absolute)
+```
+
+**Hard rules:**
+- **Cap, never block.** A HIGH-risk order with strong delivery, AVS, or authentication evidence is still defensible. Auto-blocking would over-trigger.
+- **Cap is a ceiling, never a floor.** If the underlying case already scores Moderate or Weak, the cap is a no-op. The cap NEVER elevates.
+- **Fraud-family only.** Risk screening is irrelevant to PRODUCT_NOT_RECEIVED / DUPLICATE / etc. Extending scope would require revisiting family-specific scoring; deferred.
+- **Never cited in bank text, evidence PDF, or Shopify mutations.** This is a merchant-UI-only signal. Citing "Shopify flagged this as high-risk" would be a confession — same logic as the fatal-loss gate. Locked by `lib/argument/__tests__/fraudRiskNegativeLeakage.test.ts`.
+- **No re-fetch.** Reads only the persisted `risk_level_initial` / `risk_recommendation_initial` snapshot. Shopify can rescore late; tracking that is out of scope for v1.
+
+**v2 escape hatch (not implemented):** when 3-D Secure liability shift is verified (`tdsVerified === true` from manual confirmation), the cap should be skipped — the network has explicitly transferred liability and pre-auth risk score is no longer the dominant signal. Marked as a TODO in `lib/automation/riskWeakness.ts`.
+
 ### Customer IP Collection
 
 `ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. Shopify's `ShopifyPaymentsDisputeEvidenceUpdateInput` does **not** have a dedicated `customerPurchaseIp` field (verified via introspection 2026-04-21; earlier codebase claim was stale). When IP evidence exists the save-to-Shopify job appends `Customer purchase IP: <ip>` to `accessActivityLog` so the IP still reaches the bank in the "Activity logs" field. Priority: `recommended` for fraud disputes.

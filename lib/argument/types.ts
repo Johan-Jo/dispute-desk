@@ -132,6 +132,28 @@ export interface CaseStrengthResult {
     reason: "refund_issued" | "inr_no_fulfillment" | null;
     message: string | null;
   };
+  /** Risk-weakness gate state (fraud-risk Phase 2). When
+   *  `triggered === true` AND not pre-empted by coverage or fatal-loss,
+   *  the engine CAPS `overall` at "moderate" (never elevated). If the
+   *  underlying scoring already produced "moderate" or "weak" the cap
+   *  is a no-op and `strengthReason` is left alone. The pipeline's
+   *  existing `auto + moderate → park_for_review` branch handles
+   *  routing — no new gate is required.
+   *
+   *  Diagnostic fields (`riskLevel`, `recommendation`,
+   *  `fulfillmentCount`) are persisted to `pack_json.risk_weakness`
+   *  for audit. They MUST NEVER appear in bank-rebuttal text, the
+   *  evidence PDF, or Shopify disputeEvidence mutations. */
+  riskWeakness?: {
+    triggered: boolean;
+    reason: "high_risk_fulfilled" | null;
+    message: string | null;
+    diagnostics: {
+      riskLevel: string | null;
+      recommendation: string | null;
+      fulfillmentCount: number;
+    };
+  };
 }
 
 /* ── Why This Case Wins ── */

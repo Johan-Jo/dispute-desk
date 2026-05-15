@@ -112,10 +112,21 @@ describe("buildPack — failed-state persistence invariant", () => {
           insert: vi.fn().mockResolvedValue({ data: null, error: null }),
         };
       }
+      if (table === "shopify_orders") {
+        // Risk-weakness snapshot lookup (fraud-risk Phase 2). No row →
+        // detectRiskWeakness returns not-triggered with empty diagnostics,
+        // which is the expected behavior when there is no order data.
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
     });
 

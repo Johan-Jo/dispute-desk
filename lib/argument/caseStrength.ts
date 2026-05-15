@@ -255,6 +255,24 @@ export interface CaseFatalLossInput {
   message: string | null;
 }
 
+/** Optional Risk-weakness Gate input (fraud-risk Phase 2). When
+ *  triggered AND not pre-empted by coverage or fatal-loss, CAPS
+ *  `overall` at "moderate" — never elevates. The cap is a ceiling, so
+ *  if the underlying scoring already produced "moderate" / "weak" the
+ *  cap is a no-op. The merchant-facing message replaces
+ *  `strengthReason` ONLY when the cap actually fires (i.e. scoring
+ *  would have been "strong"). */
+export interface CaseRiskWeaknessInput {
+  triggered: boolean;
+  reason: "high_risk_fulfilled" | null;
+  message: string | null;
+  diagnostics: {
+    riskLevel: string | null;
+    recommendation: string | null;
+    fulfillmentCount: number;
+  };
+}
+
 const COVERED_STRENGTH_REASON =
   "This dispute is protected under Shopify's payment protection. No action is required from you.";
 
@@ -277,6 +295,12 @@ export function calculateCaseStrength(
    *  becomes "hard_to_win", and `strengthReason` is replaced with the
    *  fatal-loss message. */
   fatalLoss?: CaseFatalLossInput,
+  /** Optional Risk-weakness Gate input (fraud-risk Phase 2). When
+   *  `triggered === true` AND not pre-empted by coverage or fatal-loss,
+   *  caps `overall` at "moderate" (cap-as-ceiling — never elevates).
+   *  Routes through the existing auto + moderate → park_for_review
+   *  pipeline branch; no new gate required. */
+  riskWeakness?: CaseRiskWeaknessInput,
 ): CaseStrengthResult {
   const family = resolveReasonFamily(reason ?? argumentMap?.issuerClaim?.reasonCode);
 
@@ -301,6 +325,9 @@ export function calculateCaseStrength(
           : STRENGTH_REASONS[family].insufficient,
       coverage: coverage ?? undefined,
       fatalLoss: fatalLoss ?? undefined,
+      // No checklist → no scoring → the risk-weakness cap is a no-op
+      // here. The diagnostic block still propagates for audit.
+      riskWeakness: riskWeakness ?? undefined,
     };
   }
 
@@ -458,9 +485,23 @@ export function calculateCaseStrength(
   // and forces hard_to_win.
   const isCovered = coverage?.state === "covered_shopify";
   const isFatalLoss = !isCovered && fatalLoss?.triggered === true;
+  // Risk-weakness gate: coverage and fatal-loss take priority. The cap
+  // applies only when neither of those is active and risk-weakness is
+  // triggered. Cap-as-ceiling: if overall was already "moderate" /
+  // "weak" the cap is a no-op (no demotion below the natural score).
+  const isRiskWeakness =
+    !isCovered && !isFatalLoss && riskWeakness?.triggered === true;
+  const riskWeaknessCapFired = isRiskWeakness && overall === "strong";
 
   if (isFatalLoss) {
     overall = "weak";
+    isFraudAvsOnlyStrong = false;
+  }
+  if (riskWeaknessCapFired) {
+    overall = "moderate";
+    // The cap fired off a "strong" base, so isFraudAvsOnlyStrong (which
+    // is the avs-strong-alone-promoted-to-moderate marker) is not
+    // applicable — leave the heroVariant on the standard moderate path.
     isFraudAvsOnlyStrong = false;
   }
 
@@ -476,7 +517,9 @@ export function calculateCaseStrength(
     ? COVERED_STRENGTH_REASON
     : isFatalLoss
       ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
-      : strengthReason;
+      : riskWeaknessCapFired
+        ? (riskWeakness?.message ?? strengthReason)
+        : strengthReason;
 
   return {
     overall,
@@ -492,6 +535,7 @@ export function calculateCaseStrength(
     strengthReason: finalStrengthReason,
     coverage: coverage ?? undefined,
     fatalLoss: fatalLoss ?? undefined,
+    riskWeakness: riskWeakness ?? undefined,
   };
 }
 

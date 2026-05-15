@@ -633,3 +633,184 @@ describe("calculateCaseStrength — Fatal-loss Gate (PRD §5)", () => {
     expect(result.heroVariant).toBe("hard_to_win");
   });
 });
+
+describe("calculateCaseStrength — Risk-weakness Gate (fraud-risk Phase 2)", () => {
+  const RISK_DIAG = {
+    riskLevel: "HIGH",
+    recommendation: "INVESTIGATE",
+    fulfillmentCount: 1,
+  };
+  const RISK_MESSAGE = "Shopify flagged this order as high-risk.";
+
+  it("triggered risk-weakness caps a Strong case at Moderate (cap fires)", () => {
+    // Two-strong fraud case would normally be Strong → likely_to_win.
+    const checklist = [item("avs_cvv_match"), item("delivery_proof")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        delivery_proof: { proofType: "signature_confirmed" },
+      }),
+      undefined,
+      undefined,
+      {
+        triggered: true,
+        reason: "high_risk_fulfilled",
+        message: RISK_MESSAGE,
+        diagnostics: RISK_DIAG,
+      },
+    );
+    // Underlying counts still tallied for diagnostics.
+    expect(result.strongCount).toBe(2);
+    // But overall capped to moderate, hero amber, message swapped.
+    expect(result.overall).toBe("moderate");
+    expect(result.heroVariant).toBe("could_win");
+    expect(result.strengthReason).toBe(RISK_MESSAGE);
+    expect(result.riskWeakness?.triggered).toBe(true);
+    expect(result.riskWeakness?.reason).toBe("high_risk_fulfilled");
+  });
+
+  it("triggered risk-weakness on an already-Moderate case is a no-op (cap is a ceiling)", () => {
+    // 1 strong + 1 moderate = moderate base case.
+    const checklist = [item("avs_cvv_match"), item("ip_location_check")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        ip_location_check: { locationMatch: true, riskLevel: "low" },
+      }),
+      undefined,
+      undefined,
+      {
+        triggered: true,
+        reason: "high_risk_fulfilled",
+        message: RISK_MESSAGE,
+        diagnostics: RISK_DIAG,
+      },
+    );
+    // Already moderate → no cap action, strengthReason untouched.
+    expect(result.overall).toBe("moderate");
+    expect(result.strengthReason).not.toBe(RISK_MESSAGE);
+    // Diagnostic still propagates for audit.
+    expect(result.riskWeakness?.triggered).toBe(true);
+  });
+
+  it("triggered risk-weakness on a Weak case is a no-op (no demotion)", () => {
+    // AVS-only fraud: scores moderate via fraud-family path. Use a
+    // non-fraud weak case to test the no-demotion guarantee.
+    const checklist = [item("customer_communication")]; // supporting only
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({ customer_communication: { content: "..." } }),
+      undefined,
+      undefined,
+      {
+        triggered: true,
+        reason: "high_risk_fulfilled",
+        message: RISK_MESSAGE,
+        diagnostics: RISK_DIAG,
+      },
+    );
+    expect(result.overall).toBe("weak");
+    // Cap did not fire, so the standard "weak" message stays.
+    expect(result.strengthReason).not.toBe(RISK_MESSAGE);
+  });
+
+  it("Coverage beats risk-weakness (covered case stays covered)", () => {
+    const checklist = [item("avs_cvv_match"), item("delivery_proof")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        delivery_proof: { proofType: "signature_confirmed" },
+      }),
+      { state: "covered_shopify", shopifyProtectStatus: "PROTECTED" },
+      undefined,
+      {
+        triggered: true,
+        reason: "high_risk_fulfilled",
+        message: RISK_MESSAGE,
+        diagnostics: RISK_DIAG,
+      },
+    );
+    expect(result.heroVariant).toBe("covered");
+    expect(result.strengthReason).toContain("protected under Shopify");
+  });
+
+  it("Fatal-loss beats risk-weakness (fatal-loss copy + weak overall win)", () => {
+    const checklist = [item("avs_cvv_match"), item("delivery_proof")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        delivery_proof: { proofType: "signature_confirmed" },
+      }),
+      undefined,
+      { triggered: true, reason: "refund_issued", message: "Refund issued message." },
+      {
+        triggered: true,
+        reason: "high_risk_fulfilled",
+        message: RISK_MESSAGE,
+        diagnostics: RISK_DIAG,
+      },
+    );
+    expect(result.overall).toBe("weak");
+    expect(result.heroVariant).toBe("hard_to_win");
+    expect(result.strengthReason).toBe("Refund issued message.");
+  });
+
+  it("triggered=false passes through to normal hero variants", () => {
+    const checklist = [item("avs_cvv_match"), item("delivery_proof")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({
+        avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
+        delivery_proof: { proofType: "signature_confirmed" },
+      }),
+      undefined,
+      undefined,
+      {
+        triggered: false,
+        reason: null,
+        message: null,
+        diagnostics: { riskLevel: null, recommendation: null, fulfillmentCount: 0 },
+      },
+    );
+    expect(result.heroVariant).toBe("likely_to_win");
+    expect(result.overall).toBe("strong");
+    expect(result.riskWeakness?.triggered).toBe(false);
+  });
+
+  it("propagates riskWeakness diagnostics on the result even when cap does not fire", () => {
+    // Moderate base case, triggered=true — diagnostics must still
+    // appear on the result for audit / pack_json persistence.
+    const checklist = [item("avs_cvv_match")];
+    const result = calculateCaseStrength(
+      emptyArgMap(),
+      checklist,
+      "FRAUDULENT",
+      payloadFor({ avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" } }),
+      undefined,
+      undefined,
+      {
+        triggered: true,
+        reason: "high_risk_fulfilled",
+        message: RISK_MESSAGE,
+        diagnostics: RISK_DIAG,
+      },
+    );
+    expect(result.riskWeakness?.diagnostics).toEqual(RISK_DIAG);
+  });
+});
