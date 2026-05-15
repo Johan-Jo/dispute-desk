@@ -1,8 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { BillingBanner } from "@/components/billing/billing-banner";
 import styles from "./embedded-app-chrome.module.css";
+
+/** Drives BillingBanner's visual-verification preview from the URL
+ *  (`?banner_preview=grace|subscription_expired|low_credits`). Returns
+ *  undefined for any other value so production traffic is unaffected. */
+function useBannerPreview() {
+  const params = useSearchParams();
+  const raw = params?.get("banner_preview") ?? null;
+  if (
+    raw === "grace" ||
+    raw === "subscription_expired" ||
+    raw === "low_credits"
+  ) {
+    return raw;
+  }
+  return undefined;
+}
 
 const FEEDBACK_DISMISS_KEY = "dd_feedback_dismissed_v2";
 
@@ -14,6 +32,7 @@ const FEEDBACK_DISMISS_KEY = "dd_feedback_dismissed_v2";
  */
 export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("embeddedShell");
+  const bannerPreview = useBannerPreview();
   const [showBanner, setShowBanner] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -78,7 +97,14 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
   }, [feedbackRating, comment, dismiss]);
 
   if (!showBanner) {
-    return <div className={styles.pageContent}>{children}</div>;
+    return (
+      <div className={styles.pageContent}>
+        <div style={{ padding: "0 0 12px" }}>
+          <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
+        </div>
+        {children}
+      </div>
+    );
   }
 
   return (
@@ -179,7 +205,12 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className={styles.pageContent}>{children}</div>
+      <div className={styles.pageContent}>
+        <div style={{ padding: "0 0 12px" }}>
+          <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
+        </div>
+        {children}
+      </div>
     </>
   );
 }

@@ -31,23 +31,47 @@ interface BillingBannerResponse {
 }
 
 interface BillingBannerProps {
-  shopId: string;
+  /** Optional — when omitted the API resolves shop_id from the
+   *  `x-shop-id` header that middleware injects from the Shopify
+   *  embedded session. Pass an explicit value for portal contexts
+   *  where the session source differs. */
+  shopId?: string;
   /** Optional override — e.g. `/portal/billing` vs `/app/billing`. */
   ctaHref?: string;
+  /** Visual-verification only. Set to `grace`, `subscription_expired`,
+   *  or `low_credits` to force the API to return that variant
+   *  regardless of DB state. The API logs an audit row when a preview
+   *  variant is requested, so leaking this into a production code
+   *  path is visible. Driven from the URL `?banner_preview=…` so the
+   *  user can verify without code changes. */
+  preview?: "grace" | "subscription_expired" | "low_credits";
 }
 
-export function BillingBanner({ shopId, ctaHref = "/app/billing" }: BillingBannerProps) {
+export function BillingBanner({
+  shopId,
+  ctaHref = "/app/billing",
+  preview,
+}: BillingBannerProps) {
   const t = useTranslations("billing.banners");
   const [state, setState] = useState<BillingBannerResponse | null>(null);
   const [hidden, setHidden] = useState(false);
+
+  const apiUrl = useCallback(
+    (path: string) => {
+      const params = new URLSearchParams();
+      if (shopId) params.set("shop_id", shopId);
+      if (preview) params.set("preview", preview);
+      const qs = params.toString();
+      return qs ? `${path}?${qs}` : path;
+    },
+    [shopId, preview],
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(
-          `/api/billing/banner?shop_id=${encodeURIComponent(shopId)}`,
-        );
+        const res = await fetch(apiUrl("/api/billing/banner"));
         if (!res.ok) return;
         const json = (await res.json()) as BillingBannerResponse;
         if (!cancelled) setState(json);
@@ -58,27 +82,24 @@ export function BillingBanner({ shopId, ctaHref = "/app/billing" }: BillingBanne
     return () => {
       cancelled = true;
     };
-  }, [shopId]);
+  }, [apiUrl]);
 
   const dismiss = useCallback(async () => {
     if (!state || !state.dismissible || !state.forCycleEnd) return;
     setHidden(true);
     try {
-      await fetch(
-        `/api/billing/banner/dismiss?shop_id=${encodeURIComponent(shopId)}`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            variant: state.variant,
-            cycleEnd: state.forCycleEnd,
-          }),
-        },
-      );
+      await fetch(apiUrl("/api/billing/banner/dismiss"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          variant: state.variant,
+          cycleEnd: state.forCycleEnd,
+        }),
+      });
     } catch {
       /* silent — local state already hidden, server reconciles on next view */
     }
-  }, [state, shopId]);
+  }, [state, apiUrl]);
 
   if (!state || state.variant === "none" || hidden) return null;
 

@@ -27,13 +27,52 @@ import type { SubscriptionState } from "@/lib/billing/subscriptionState";
 
 export const runtime = "nodejs";
 
+type PreviewVariant = "grace" | "subscription_expired" | "low_credits";
+
+function isPreviewVariant(v: unknown): v is PreviewVariant {
+  return (
+    v === "grace" ||
+    v === "subscription_expired" ||
+    v === "low_credits"
+  );
+}
+
 export async function GET(req: NextRequest) {
   const shopId = extractShopId(req);
   if (!shopId) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
+  // Visual-verification preview. Set ?preview=grace|expired|low_credits
+  // to force a variant regardless of DB state — useful for QA passes
+  // without touching the merchant's actual subscription. Audited so a
+  // leak into a production code path is visible.
+  const previewParam = req.nextUrl.searchParams.get("preview");
+  const preview = isPreviewVariant(previewParam) ? previewParam : null;
+
   const sb = getServiceClient();
+
+  if (preview) {
+    await sb.from("audit_events").insert({
+      shop_id: shopId,
+      actor_type: "merchant",
+      event_type: "billing_banner_preview",
+      event_payload: { preview, requested_at: new Date().toISOString() },
+    });
+    const previewState = {
+      variant: preview,
+      dismissible: preview !== "subscription_expired",
+      forCycleEnd:
+        preview !== "subscription_expired"
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          : null,
+      context: { preview: true, variant: preview },
+    };
+    return NextResponse.json({
+      ...previewState,
+      plan: { id: "preview", name: "Preview", packsPerMonth: 75 },
+    });
+  }
 
   const [
     { data: shop },
