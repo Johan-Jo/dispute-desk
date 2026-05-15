@@ -59,6 +59,18 @@ api_version = "2026-01"
   topics = ["shop/update"]
   uri = "/api/webhooks/shop-update"
 
+  # Billing lifecycle (PRD §5.1). Fast path for subscription state
+  # transitions — Shopify pushes on every ACTIVE / FROZEN / CANCELLED
+  # / EXPIRED / DECLINED / PENDING change. The hourly billing
+  # reconciliation cron (/api/cron/reconcile-billing-cycles) is the
+  # safety net that catches dropped deliveries; the handler at
+  # app/api/webhooks/app-subscriptions-update/route.ts re-queries
+  # Shopify before transitioning state so a replayed or forged
+  # payload cannot drive a wrong decision.
+  [[webhooks.subscriptions]]
+  topics = ["app_subscriptions/update"]
+  uri = "/api/webhooks/app-subscriptions-update"
+
   # GDPR mandatory webhooks (App Store requirement). Configured under
   # `privacy_compliance` — these are NOT regular topic subscriptions in
   # the modern Shopify CLI config schema; they have a dedicated section
