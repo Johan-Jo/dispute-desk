@@ -465,38 +465,8 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
       },
     });
     await evaluateAndMaybeAutoSave("p1");
-    // Natural-moderate park (no risk-weakness cause) — parkReason is null.
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review", null);
-    expect(mockClaimAndSendDeferredAlert).not.toHaveBeenCalledWith(
-      "d1",
-      "auto",
-      expect.anything(),
-    );
-  });
-
-  it("auto + moderate + risk-weakness cap → claims REVIEW with risk_weakness parkReason", async () => {
-    setupMocks({
-      ruleMode: "auto",
-      pack: {
-        completeness_score: 95,
-        submission_readiness: "ready",
-        pack_json: {
-          case_strength: { overall: "moderate", strongCount: 2, moderateCount: 0, supportingCount: 0 },
-          risk_weakness: {
-            triggered: true,
-            reason: "high_risk_fulfilled",
-            message: "Shopify flagged this order as high-risk.",
-            diagnostics: { riskLevel: "HIGH", recommendation: "INVESTIGATE", fulfillmentCount: 1 },
-          },
-        },
-      },
-    });
-    await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith(
-      "d1",
-      "review",
-      "risk_weakness",
-    );
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    expect(mockClaimAndSendDeferredAlert).not.toHaveBeenCalledWith("d1", "auto");
   });
 
   it("auto + weak (blocked) → claims REVIEW variant", async () => {
@@ -540,40 +510,12 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
     expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
   });
 
-  it("Pack failed (system error) → claims REVIEW variant with null parkReason", async () => {
+  it("Pack failed (system error) → claims REVIEW variant", async () => {
     setupMocks({
       pack: { status: "failed" },
     });
     await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review", null);
-  });
-
-  it("Pack failed + risk-weakness cap fired → claims REVIEW variant with risk_weakness parkReason", async () => {
-    // Resilience path: when the Shopify order fetch fails, the build
-    // is marked "failed" but pack_json.risk_weakness is still populated
-    // from the persisted shopify_orders snapshot. The cap fired —
-    // surface that to the merchant via the review email's risk-weakness
-    // callout so they understand auto-mode was held for a real reason,
-    // not just an "order fetch failed" system error.
-    setupMocks({
-      pack: {
-        status: "failed",
-        pack_json: {
-          risk_weakness: {
-            triggered: true,
-            reason: "high_risk_fulfilled",
-            message: "Shopify flagged this order as high-risk.",
-            diagnostics: { riskLevel: "HIGH", recommendation: "INVESTIGATE", fulfillmentCount: 1 },
-          },
-        },
-      },
-    });
-    await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith(
-      "d1",
-      "review",
-      "risk_weakness",
-    );
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
   });
 
   it("Fatal-loss block → claims REVIEW variant", async () => {

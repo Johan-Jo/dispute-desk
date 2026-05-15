@@ -266,78 +266,14 @@ describe("fraud-risk negative-leakage guard", () => {
   });
 
   /*
-   * Phase 2 (risk-weakness cap) extension — the cap is computed by the
-   * strength engine, and its merchant-facing message is surfaced via
-   * `strengthReason`. The strengthReason field is part of the case-
-   * strength result shown to merchants ONLY; it must never reach bank-
-   * facing surfaces. But the message itself must also be safe in case
-   * a future change accidentally pipes it into one. Lock both.
+   * Risk-weakness diagnostics (internal-only, 2026-05-15) — the cap
+   * was dropped, but the riskWeakness input still flows into
+   * calculateCaseStrength so callers can persist diagnostics to
+   * pack_json. The compile-time + runtime guards below ensure the
+   * diagnostic strings (HIGH / INVESTIGATE / CANCEL / REJECT etc.)
+   * never leak into bank-facing surfaces.
    */
-  describe("risk-weakness cap (Phase 2) — strengthReason isolation", () => {
-    function item(field: string): ChecklistItemV2 {
-      return {
-        field,
-        label: field,
-        priority: "critical",
-        status: "available",
-        blocking: false,
-        collectionType: "manual",
-      } as ChecklistItemV2;
-    }
-
-    function emptyArgMap(): ArgumentMap {
-      return {
-        issuerClaim: { text: "", reasonCode: "FRAUDULENT" },
-        counterclaims: [],
-        overallStrength: "insufficient",
-      };
-    }
-
-    function payloadFor(map: Record<string, Record<string, unknown>>) {
-      return {
-        kind: "byField" as const,
-        map: Object.fromEntries(
-          Object.entries(map).map(([k, v]) => [k, { payload: v }]),
-        ),
-      };
-    }
-
-    it("risk-weakness message contains no forbidden bank tokens", () => {
-      const result = calculateCaseStrength(
-        emptyArgMap(),
-        [item("avs_cvv_match"), item("delivery_proof")],
-        "FRAUDULENT",
-        payloadFor({
-          avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M" },
-          delivery_proof: { proofType: "signature_confirmed" },
-        }),
-        undefined,
-        undefined,
-        {
-          triggered: true,
-          reason: "high_risk_fulfilled",
-          message:
-            "Shopify's pre-authorization fraud screening flagged this order as high-risk before fulfillment. Your case can still be defended, but please review the evidence carefully before submitting.",
-          diagnostics: {
-            riskLevel: "HIGH",
-            recommendation: "INVESTIGATE",
-            fulfillmentCount: 1,
-          },
-        },
-      );
-      // The strengthReason IS the risk-weakness message — this field
-      // is merchant-facing, so it's allowed to contain "high-risk" /
-      // "flagged" verbiage. But we lock in here that those words live
-      // ONLY in this merchant string and nowhere else gets to inherit
-      // them silently.
-      expect(result.strengthReason).toMatch(/high-risk/);
-      expect(result.riskWeakness?.diagnostics.riskLevel).toBe("HIGH");
-
-      // Bank rebuttal built off the same evidence MUST be clean.
-      const text = buildBankGradeRebuttal(BASELINE_EVIDENCE);
-      assertNoForbiddenTokens(text);
-    });
-
+  describe("risk-weakness diagnostics — bank-text isolation", () => {
     it("risk-weakness diagnostics never appear in buildBankGradeRebuttal output", () => {
       // No matter what EvidenceData we hand to the rebuttal composer,
       // the diagnostic strings (riskLevel/recommendation) must not
@@ -354,6 +290,7 @@ describe("fraud-risk negative-leakage guard", () => {
       expect(text).not.toMatch(/HIGH/);
       expect(text).not.toMatch(/INVESTIGATE/);
       expect(text).not.toMatch(/REJECT/);
+      expect(text).not.toMatch(/CANCEL/);
       assertNoForbiddenTokens(text);
     });
 
@@ -361,8 +298,6 @@ describe("fraud-risk negative-leakage guard", () => {
       // Compile-time guarantee — if anyone adds a `riskLevel` or
       // `riskWeakness` to EvidenceData this assignment would compile
       // and the bank-text composer could quietly start emitting them.
-      // Wrap an inline check that the EvidenceData object literal
-      // does NOT accept these keys. ts-expect-error documents intent.
       // @ts-expect-error — riskLevel must never be on EvidenceData
       const bad1: EvidenceData = { ...BASELINE_EVIDENCE, riskLevel: "HIGH" };
       // @ts-expect-error — riskWeakness must never be on EvidenceData
@@ -370,33 +305,6 @@ describe("fraud-risk negative-leakage guard", () => {
       // Reference them to silence unused-var lint without touching prod.
       expect(bad1).toBeTruthy();
       expect(bad2).toBeTruthy();
-    });
-
-    it("calculateCaseStrength preserves diagnostics for audit but never elevates strength", () => {
-      // Triggered risk-weakness on an empty checklist: cap is a no-op
-      // (no strong base to demote from), diagnostics still flow through.
-      const result = calculateCaseStrength(
-        emptyArgMap(),
-        [],
-        "FRAUDULENT",
-        undefined,
-        undefined,
-        undefined,
-        {
-          triggered: true,
-          reason: "high_risk_fulfilled",
-          message: "...",
-          diagnostics: {
-            riskLevel: "HIGH",
-            recommendation: "REJECT",
-            fulfillmentCount: 1,
-          },
-        },
-      );
-      expect(result.riskWeakness?.diagnostics.riskLevel).toBe("HIGH");
-      // Cap is a ceiling — empty checklist scores insufficient and
-      // stays there. The cap NEVER elevates.
-      expect(result.overall).toBe("insufficient");
     });
   });
 });

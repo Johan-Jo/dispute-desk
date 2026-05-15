@@ -1547,9 +1547,30 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
-### Risk-weakness Gate (fraud-risk Phase 2)
+### Risk-weakness diagnostics (internal-only)
 
-**Routing primitive:** sits between the Fatal-loss Gate and the standard scoring path. Detects fraud-family disputes where Shopify's pre-authorization fraud screening flagged the order as HIGH-risk with an INVESTIGATE / REJECT recommendation, and the merchant fulfilled anyway. When triggered, the case-strength engine **caps** `caseStrength.overall` at `"moderate"` (cap-as-ceiling — never elevates a Weak case to Moderate, never demotes below the natural score).
+**Status (2026-05-15):** the Phase 2 CAP was rolled back. Surfacing Shopify's pre-auth risk score to the merchant doesn't change what they can do — the case is defensible (or not) based on AVS/CVV/delivery/auth, regardless of the risk score at checkout. The merchant-facing surfaces (embedded banner, email callout, strength-reason override) were all removed. Diagnostics are retained for internal analytics + support debugging.
+
+**What still runs:**
+
+- `detectRiskWeakness` in `lib/automation/riskWeakness.ts` — pure detector, unchanged.
+- `loadRiskWeakness` in `lib/packs/buildPack.ts` — still reads the persisted snapshot from `shopify_orders` with the live-fetch-failure fallback.
+- `pack_json.risk_weakness` — still persisted on every pack with `{ triggered, reason, message, diagnostics }`.
+- `calculateCaseStrength` accepts `riskWeakness` as input and propagates it to the result for pack_json persistence, but **never** caps `overall`. Auto-mode continues to submit on Strong cases regardless of risk-weakness.
+
+**What was removed:**
+
+- The cap-to-Moderate behavior in `lib/argument/caseStrength.ts`.
+- The "Auto-submit held" embedded banner (F3 in `OverviewTab.tsx`).
+- The localized review-email "park reason" callout in `lib/email/sendNewDisputeAlert.ts`.
+- The `parkReason` parameter on `claimAndSendDeferredNewDisputeAlert`.
+- The `park_cause` discriminator on `parked_for_review` audit events.
+
+---
+
+**Historical (pre-2026-05-15) cap description — kept for context:**
+
+The cap sat between the Fatal-loss Gate and the standard scoring path. It detected fraud-family disputes where Shopify's pre-authorization fraud screening flagged the order as HIGH-risk with an INVESTIGATE / REJECT / CANCEL recommendation, and the merchant fulfilled anyway. When triggered, the case-strength engine **capped** `caseStrength.overall` at `"moderate"` (cap-as-ceiling — never elevated a Weak case to Moderate, never demoted below the natural score).
 
 The cap routes through the existing `auto + moderate → park_for_review` branch in `evaluateAndMaybeAutoSave`. No new pipeline gate is required — this is the elegance of cap-via-strength-engine: a Strong-would-have-been case auto-parks for merchant review instead of auto-submitting, without introducing a new auto-save terminal state.
 

@@ -303,33 +303,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // the deferred new-dispute alert (review variant) so the merchant
   // knows a dispute came in. Sync-time send is now deferred for every
   // `pack_enqueued` outcome; without this we'd silently drop the alert.
-  //
-  // Risk-weakness exception (fraud-risk Phase 2): even on a failed
-  // build, the cap can still fire from the persisted shopify_orders
-  // snapshot — we don't need a successful Shopify fetch to know the
-  // order was HIGH-risk + fulfilled. When the cap triggered, send the
-  // review email with the risk_weakness parkReason instead of the
-  // generic "build failed" alert, so the merchant understands their
-  // auto-mode rule did NOT submit and why. The pack stays "failed" so
-  // the UI shows the system-error banner correctly.
   if (pack.status === "failed") {
-    const failedRiskWeakness = (
-      pack.pack_json as {
-        risk_weakness?: { triggered?: boolean; reason?: string | null };
-      } | null
-    )?.risk_weakness;
-    const failedParkedByRiskWeakness =
-      failedRiskWeakness?.triggered === true &&
-      failedRiskWeakness?.reason === "high_risk_fulfilled";
-
     if (pack.dispute_id) {
-      void claimAndSendDeferredNewDisputeAlert(
-        pack.dispute_id,
-        "review",
-        failedParkedByRiskWeakness ? "risk_weakness" : null,
-      ).catch(() => {
-        /* non-fatal */
-      });
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
     }
     return { action: "block", details: "Pack build failed; skipping auto-save evaluation." };
   }
@@ -474,31 +454,8 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // behavior intact for them rather than silently flipping decisions.
   const caseStrength = (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength;
   const strengthOverall = caseStrength?.overall ?? null;
-  // Risk-weakness cause detection (fraud-risk Phase 2).
-  // When the auto + moderate park branch fires, the cause may be the
-  // risk-weakness cap (Strong-would-have-been demoted by HIGH-risk +
-  // fulfilled) instead of the natural Moderate score. Surface that
-  // distinction in the audit + dispute event + deferred email so the
-  // merchant understands why their auto-mode pack landed in review.
-  //
-  // Read from `pack_json.risk_weakness` populated by buildPack —
-  // single source of truth, no recomputation. Bank text NEVER cites
-  // this; merchant UI / merchant email only.
-  const riskWeaknessRaw =
-    (pack.pack_json as {
-      risk_weakness?: {
-        triggered?: boolean;
-        reason?: string | null;
-        message?: string | null;
-      };
-    } | null)?.risk_weakness;
-  const parkedByRiskWeakness =
-    riskWeaknessRaw?.triggered === true &&
-    riskWeaknessRaw?.reason === "high_risk_fulfilled";
   if (ruleMode === "auto" && strengthOverall === "moderate") {
-    const reason = parkedByRiskWeakness
-      ? "Auto-submit held — Shopify flagged this order as high-risk before fulfillment. Review required per PRD §9."
-      : "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
+    const reason = "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
     const alreadySaved =
       pack.status === "saved_to_shopify" ||
       pack.status === "saved_to_shopify_unverified" ||
@@ -520,12 +477,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       pack_id: packId,
       actor_type: "system",
       event_type: "parked_for_review",
-      event_payload: {
-        reason,
-        rule_mode: ruleMode,
-        case_strength: strengthOverall,
-        park_cause: parkedByRiskWeakness ? "risk_weakness" : "natural_moderate",
-      },
+      event_payload: { reason, rule_mode: ruleMode, case_strength: strengthOverall },
     });
     if (pack.dispute_id) {
       void emitDisputeEvent({
@@ -536,25 +488,17 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         eventAt: new Date().toISOString(),
         actorType: "disputedesk_system",
         sourceType: "pack_engine",
-        metadataJson: {
-          pack_id: packId,
-          reason,
-          rule_mode: ruleMode,
-          case_strength: strengthOverall,
-          park_cause: parkedByRiskWeakness ? "risk_weakness" : "natural_moderate",
-        },
+        metadataJson: { pack_id: packId, reason, rule_mode: ruleMode, case_strength: strengthOverall },
         dedupeKey: `${pack.dispute_id}:${PARKED_FOR_REVIEW}:${packId}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
     }
     if (pack.dispute_id && !alreadySaved) {
-      void claimAndSendDeferredNewDisputeAlert(
-        pack.dispute_id,
-        "review",
-        parkedByRiskWeakness ? "risk_weakness" : null,
-      ).catch(() => {
-        /* non-fatal */
-      });
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+        () => {
+          /* non-fatal */
+        },
+      );
     }
     return { action: "park_for_review", details: reason };
   }

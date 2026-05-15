@@ -485,25 +485,21 @@ export function calculateCaseStrength(
   // and forces hard_to_win.
   const isCovered = coverage?.state === "covered_shopify";
   const isFatalLoss = !isCovered && fatalLoss?.triggered === true;
-  // Risk-weakness gate: coverage and fatal-loss take priority. The cap
-  // applies only when neither of those is active and risk-weakness is
-  // triggered. Cap-as-ceiling: if overall was already "moderate" /
-  // "weak" the cap is a no-op (no demotion below the natural score).
-  const isRiskWeakness =
-    !isCovered && !isFatalLoss && riskWeakness?.triggered === true;
-  const riskWeaknessCapFired = isRiskWeakness && overall === "strong";
 
   if (isFatalLoss) {
     overall = "weak";
     isFraudAvsOnlyStrong = false;
   }
-  if (riskWeaknessCapFired) {
-    overall = "moderate";
-    // The cap fired off a "strong" base, so isFraudAvsOnlyStrong (which
-    // is the avs-strong-alone-promoted-to-moderate marker) is not
-    // applicable — leave the heroVariant on the standard moderate path.
-    isFraudAvsOnlyStrong = false;
-  }
+
+  // Risk-weakness gate is RECEIVED as input (so callers can persist
+  // diagnostics to pack_json for internal analytics + support
+  // debugging) but DOES NOT cap `overall`. Decision 2026-05-15: the
+  // merchant-facing surfaces (banner, email callout, strength reason
+  // override) were dropped because flagging Shopify's pre-auth risk
+  // score doesn't change what the merchant can do — the case is
+  // either defensible or not based on AVS/CVV/delivery/auth evidence,
+  // regardless of the risk score at checkout. Auto-mode continues to
+  // submit on Strong cases even when risk-weakness would have fired.
 
   let heroVariant: NonNullable<CaseStrengthResult["heroVariant"]>;
   if (isCovered) heroVariant = "covered";
@@ -517,9 +513,7 @@ export function calculateCaseStrength(
     ? COVERED_STRENGTH_REASON
     : isFatalLoss
       ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
-      : riskWeaknessCapFired
-        ? (riskWeakness?.message ?? strengthReason)
-        : strengthReason;
+      : strengthReason;
 
   return {
     overall,
