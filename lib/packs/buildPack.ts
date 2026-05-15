@@ -586,7 +586,17 @@ export async function buildPack(
   // partial values can flow to UIs and auto-save gates and make a
   // failed pack look actionable.
   const isFailed = packStatus === "failed";
-  await sb
+  // P0 fix (2026-05-15): submission_readiness is NOT NULL with a check
+  // constraint of {ready, ready_with_warnings, blocked, submitted}.
+  // Writing null on failed builds silently errored (supabase-js does
+  // not throw on update() — it returns { error } we weren't checking),
+  // which left failed packs stuck at status='building' with no
+  // pack_json. "blocked" is the semantically correct value for a pack
+  // that cannot be submitted because the build itself failed.
+  //
+  // We also now check the update's error result so future schema drifts
+  // surface immediately instead of silently dropping pack state.
+  const { error: packUpdateErr } = await sb
     .from("evidence_packs")
     .update({
       status: packStatus as string,
@@ -596,12 +606,23 @@ export async function buildPack(
       blockers: isFailed ? null : completenessV2.legacyBlockers,
       recommended_actions: isFailed ? null : completenessV2.legacyRecommendedActions,
       checklist_v2: isFailed ? null : completenessV2.checklist,
-      submission_readiness: isFailed ? null : completenessV2.submissionReadiness,
+      submission_readiness: isFailed
+        ? "blocked"
+        : completenessV2.submissionReadiness,
       failure_code: failureCode,
       failure_reason: failureReason,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);
+  if (packUpdateErr) {
+    console.error(
+      `[buildPack] terminal pack update failed for ${packId}:`,
+      packUpdateErr.message,
+    );
+    throw new Error(
+      `Failed to persist pack ${packId} terminal state: ${packUpdateErr.message}`,
+    );
+  }
 
   // Return v2 score + blockers so downstream consumers (buildPackJob
   // audit events + activity feed) show the same number as the DB column

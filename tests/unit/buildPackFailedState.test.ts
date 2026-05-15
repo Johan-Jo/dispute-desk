@@ -146,7 +146,13 @@ describe("buildPack — failed-state persistence invariant", () => {
     expect(updatePayload!.status).toBe("failed");
 
     // The P0 invariant: evidence-derived fields are cleaned when failed.
-    expect(updatePayload!.submission_readiness).toBeNull();
+    // submission_readiness is NOT NULL in Postgres with a CHECK constraint
+    // — must be one of {ready, ready_with_warnings, blocked, submitted}.
+    // Failed builds write "blocked" (semantically: cannot be submitted)
+    // instead of null, which previously caused silent terminal-state
+    // write failures (the supabase-js update returned { error } we
+    // weren't checking).
+    expect(updatePayload!.submission_readiness).toBe("blocked");
     expect(updatePayload!.completeness_score).toBe(0);
     expect(updatePayload!.blockers).toBeNull();
     expect(updatePayload!.recommended_actions).toBeNull();
