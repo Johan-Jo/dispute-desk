@@ -465,10 +465,37 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
       },
     });
     await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    // Natural-moderate park (no risk-weakness cause) — parkReason is null.
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review", null);
     expect(mockClaimAndSendDeferredAlert).not.toHaveBeenCalledWith(
       "d1",
       "auto",
+      expect.anything(),
+    );
+  });
+
+  it("auto + moderate + risk-weakness cap → claims REVIEW with risk_weakness parkReason", async () => {
+    setupMocks({
+      ruleMode: "auto",
+      pack: {
+        completeness_score: 95,
+        submission_readiness: "ready",
+        pack_json: {
+          case_strength: { overall: "moderate", strongCount: 2, moderateCount: 0, supportingCount: 0 },
+          risk_weakness: {
+            triggered: true,
+            reason: "high_risk_fulfilled",
+            message: "Shopify flagged this order as high-risk.",
+            diagnostics: { riskLevel: "HIGH", recommendation: "INVESTIGATE", fulfillmentCount: 1 },
+          },
+        },
+      },
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith(
+      "d1",
+      "review",
+      "risk_weakness",
     );
   });
 

@@ -222,6 +222,37 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       })()
     : null;
 
+  /* ── F3: Auto-mode-but-parked banner (fraud-risk Phase 2) ──
+   *
+   * When the merchant's automation rule is "auto" but DisputeDesk
+   * held the pack for review because Shopify flagged the order as
+   * HIGH-risk before fulfillment, the merchant needs to know the
+   * cap fired — otherwise they look at a parked pack and assume the
+   * scoring naturally landed at Moderate.
+   *
+   * Derived from the most recent `parked_for_review` audit event;
+   * `park_cause === "risk_weakness"` is set by the pipeline (see
+   * lib/automation/pipeline.ts strength-gate branch). The strength
+   * card already shows the merchant-facing message inside the
+   * "Why" block; this banner is the *anomaly explanation* — why an
+   * auto-mode rule did NOT submit.
+   *
+   * NEVER reaches bank-facing surfaces. Merchant UI only.
+   */
+  const parkedByRiskWeakness = !submitted
+    ? (() => {
+        const events = data.pack?.auditEvents ?? [];
+        const lastPark = [...events]
+          .reverse()
+          .find((e) => e.event_type === "parked_for_review");
+        if (!lastPark) return false;
+        const payload = (lastPark.event_payload ?? {}) as {
+          park_cause?: string;
+        };
+        return payload.park_cause === "risk_weakness";
+      })()
+    : false;
+
   /* ── Hero ── */
   const heroVariant: HeroVariant = (caseStrength.heroVariant as HeroVariant | undefined) ?? "hard_to_win";
   const strengthLabel = submitted
@@ -363,6 +394,27 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             <InlineStack gap="200">
               <Button onClick={goToEvidence}>Add missing evidence</Button>
               <Button variant="primary" onClick={goToReview}>Submit now anyway</Button>
+            </InlineStack>
+          </BlockStack>
+        </Banner>
+      )}
+
+      {/* F3: Auto-mode-but-parked banner (fraud-risk Phase 2) — explains
+          why a HIGH-risk fulfilled fraud dispute was held back from
+          auto-submit. NEVER reaches bank surfaces. */}
+      {parkedByRiskWeakness && !autoSaveBlock && (
+        <Banner tone="warning" title="Auto-submit held — high-risk order flagged before fulfillment">
+          <BlockStack gap="200">
+            <Text as="p" variant="bodyMd">
+              Your automation rule was set to auto-submit, but Shopify&apos;s pre-authorization
+              fraud screening flagged this order as high-risk before fulfillment. We held
+              auto-submit so you can review the evidence before submitting.
+            </Text>
+            <Text as="p" variant="bodySm">
+              Your case can still be defended — this is a heads-up, not a block.
+            </Text>
+            <InlineStack gap="200">
+              <Button variant="primary" onClick={goToReview}>Review and submit</Button>
             </InlineStack>
           </BlockStack>
         </Banner>

@@ -1580,6 +1580,18 @@ review             → park_for_review             (review is absolute)
 - **Never cited in bank text, evidence PDF, or Shopify mutations.** This is a merchant-UI-only signal. Citing "Shopify flagged this as high-risk" would be a confession — same logic as the fatal-loss gate. Locked by `lib/argument/__tests__/fraudRiskNegativeLeakage.test.ts`.
 - **No re-fetch.** Reads only the persisted `risk_level_initial` / `risk_recommendation_initial` snapshot. Shopify can rescore late; tracking that is out of scope for v1.
 
+**Merchant comms when the cap fires:**
+
+The cap routes through the existing `auto + moderate → park_for_review` branch, which means the merchant's auto-mode rule did NOT submit. Three surfaces explain *why* so they aren't left wondering:
+
+1. **Audit + dispute timeline event.** `parked_for_review` event payload includes `park_cause: "risk_weakness"` (vs `"natural_moderate"` for the standard Moderate park). Visible in the dispute timeline tab and audit logs.
+2. **Deferred new-dispute email (review variant).** `claimAndSendDeferredNewDisputeAlert(disputeId, "review", "risk_weakness")` renders a localized amber callout between `bodyP1` and the meta table: *"Your automation rule was set to auto-submit, but Shopify's pre-authorization fraud screening flagged this order as high-risk before fulfillment. Auto-submit was held so you can review the evidence before submitting."* Translated across all 6 supported locales (en, es, pt, fr, de, sv).
+3. **Embedded UI banner.** `OverviewTab.tsx` renders a Polaris `Banner tone="warning"` titled *"Auto-submit held — high-risk order flagged before fulfillment"* above the Case Summary card whenever the most recent `parked_for_review` event carries `park_cause === "risk_weakness"` and the pack isn't yet submitted. Sits next to the existing `autoSaveBlock` banner.
+
+The merchant-facing strength reason (rendered inside the Case Summary card's "Why" block via `caseStrength.strengthReason`) already carries the risk-weakness sentence — the banner + email are the *anomaly explanations* that surface the auto-mode-but-parked distinction the strength card alone can't convey.
+
+**Hard rule:** the audit `park_cause`, email `parkReason`, and banner all live exclusively on merchant-facing surfaces. None reach bank text, evidence PDF, or Shopify mutations.
+
 **v2 escape hatch (not implemented):** when 3-D Secure liability shift is verified (`tdsVerified === true` from manual confirmation), the cap should be skipped — the network has explicitly transferred liability and pre-auth risk score is no longer the dominant signal. Marked as a TODO in `lib/automation/riskWeakness.ts`.
 
 ### Customer IP Collection

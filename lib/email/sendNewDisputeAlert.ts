@@ -50,6 +50,19 @@ export interface NewDisputeAlertContext {
    * email gracefully falls back to a single primary CTA.
    */
   shopifyDisputeEvidenceGid?: string | null;
+  /**
+   * When a shop is on auto-mode but the dispute landed in review, this
+   * field explains why. Renders a contextual paragraph beneath the
+   * standard review-variant body so the merchant understands why
+   * their auto-submit rule did NOT submit.
+   *
+   * Currently only `risk_weakness` is set (fraud-risk Phase 2 cap on
+   * HIGH-risk fulfilled orders). Future park causes can be added here.
+   *
+   * The text NEVER reaches bank-facing surfaces — the email is
+   * merchant-only by definition.
+   */
+  parkReason?: "risk_weakness" | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -94,10 +107,28 @@ interface ModeStrings {
   ctaSecondary?: string;
 }
 
+/**
+ * Localized strings for the optional "why this auto-mode dispute landed
+ * in review" paragraph. Surfaced only when ctx.parkReason is set —
+ * currently only `risk_weakness` (fraud-risk Phase 2: HIGH-risk
+ * fulfilled cap). Renders between bodyP1 and the meta table.
+ *
+ * Bank text never sees this — the email is merchant-only.
+ */
+interface ParkReasonStrings {
+  risk_weakness: {
+    /** Bold label rendered as a small header line. */
+    label: string;
+    /** Sentence explaining why auto-mode held off submitting. */
+    body: string;
+  };
+}
+
 interface EmailStrings {
   shared: SharedStrings;
   auto: ModeStrings;
   review: ModeStrings;
+  parkReason: ParkReasonStrings;
 }
 
 const STRINGS: Record<Locale, EmailStrings> = {
@@ -150,6 +181,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
       },
       cta: "Review dispute →",
     },
+    parkReason: {
+      risk_weakness: {
+        label: "Why we held this for your review",
+        body: "Your automation rule was set to auto-submit, but Shopify's pre-authorization fraud screening flagged this order as high-risk before fulfillment. Auto-submit was held so you can review the evidence before submitting.",
+      },
+    },
   },
   es: {
     shared: {
@@ -197,6 +234,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
         body: "Todavía no se ha enviado nada. Esta disputa aún requiere tu aprobación.",
       },
       cta: "Revisar disputa →",
+    },
+    parkReason: {
+      risk_weakness: {
+        label: "Por qué retuvimos esto para tu revisión",
+        body: "Tu regla de automatización estaba configurada para envío automático, pero el análisis previo de fraude de Shopify marcó este pedido como de alto riesgo antes del cumplimiento. Se retuvo el envío automático para que puedas revisar la evidencia antes de enviar.",
+      },
     },
   },
   pt: {
@@ -246,6 +289,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
       },
       cta: "Revisar disputa →",
     },
+    parkReason: {
+      risk_weakness: {
+        label: "Por que retivemos para sua revisão",
+        body: "Sua regra de automação estava configurada para envio automático, mas a análise de fraude pré-autorização do Shopify sinalizou este pedido como de alto risco antes do cumprimento. O envio automático foi retido para que você possa revisar as evidências antes de enviar.",
+      },
+    },
   },
   fr: {
     shared: {
@@ -293,6 +342,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
         body: "Rien n'a encore été soumis. Ce litige nécessite toujours votre approbation.",
       },
       cta: "Examiner le litige →",
+    },
+    parkReason: {
+      risk_weakness: {
+        label: "Pourquoi nous avons retenu ce litige pour votre examen",
+        body: "Votre règle d'automatisation était configurée pour la soumission automatique, mais l'analyse pré-autorisation de fraude de Shopify a signalé cette commande comme étant à haut risque avant l'exécution. La soumission automatique a été retenue afin que vous puissiez examiner les preuves avant de soumettre.",
+      },
     },
   },
   de: {
@@ -342,6 +397,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
       },
       cta: "Reklamation prüfen →",
     },
+    parkReason: {
+      risk_weakness: {
+        label: "Warum wir dies zur Prüfung zurückgehalten haben",
+        body: "Ihre Automatisierungsregel war auf automatische Einreichung eingestellt, aber die Vorab-Betrugsanalyse von Shopify hat diese Bestellung vor der Erfüllung als risikoreich markiert. Die automatische Einreichung wurde zurückgehalten, damit Sie die Beweise vor der Einreichung prüfen können.",
+      },
+    },
   },
   sv: {
     shared: {
@@ -389,6 +450,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
         body: "Inget har skickats in ännu. Denna tvist kräver fortfarande ditt godkännande.",
       },
       cta: "Granska tvist →",
+    },
+    parkReason: {
+      risk_weakness: {
+        label: "Varför vi höll detta för din granskning",
+        body: "Din automationsregel var inställd på automatisk inlämning, men Shopifys förauktoriserings-bedrägerianalys flaggade denna order som hög risk innan uppfyllelse. Automatisk inlämning hölls tillbaka så att du kan granska bevisen innan du skickar in.",
+      },
     },
   },
 };
@@ -535,6 +602,28 @@ export async function sendNewDisputeAlert(
         : variant.callout.body
       : null;
 
+    // Park-reason paragraph (fraud-risk Phase 2 — auto-mode but parked).
+    // Rendered only on the REVIEW variant; the AUTO variant cannot reach
+    // this state (auto-mode caps that fire route through the review
+    // branch, so the deferred email is always sent as "review"). The
+    // text NEVER reaches bank surfaces; it explains to the merchant why
+    // their auto rule did NOT submit.
+    const parkReasonCopy =
+      ctx.resolvedMode === "review" && ctx.parkReason
+        ? s.parkReason[ctx.parkReason]
+        : null;
+    const parkReasonHtml = parkReasonCopy
+      ? `
+      <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:20px">
+        <p style="font-size:13px;font-weight:600;color:#92400E;margin:0 0 4px">
+          ${parkReasonCopy.label}
+        </p>
+        <p style="font-size:13px;color:#92400E;margin:0;line-height:1.5">
+          ${parkReasonCopy.body}
+        </p>
+      </div>`
+      : "";
+
     const calloutHtml =
       variant.callout && calloutBody !== null
         ? `
@@ -568,6 +657,8 @@ export async function sendNewDisputeAlert(
       <p style="font-size:14px;color:#6D7175;margin:0 0 20px;line-height:1.5">
         ${variant.bodyP1({ orderName: orderNameDisplay })}
       </p>
+
+      ${parkReasonHtml}
 
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <tr><td style="padding:8px 0;font-size:13px;color:#6D7175;width:120px">${shared.reason}</td><td style="padding:8px 0;font-size:14px;color:#202223;font-weight:500">${reason}</td></tr>
@@ -626,10 +717,14 @@ export async function sendNewDisputeAlert(
 </body>
 </html>`;
 
+    const parkReasonText = parkReasonCopy
+      ? `\n${parkReasonCopy.label}: ${parkReasonCopy.body}\n`
+      : "";
+
     const text = `${variant.heading}
 
 ${variant.bodyP1({ orderName: orderNameDisplay })}
-
+${parkReasonText}
 ${shared.reason}: ${reason}
 ${shared.amount}: ${amountStr}
 ${ctx.orderName ? `${shared.order}: ${ctx.orderName}\n` : ""}${shared.due}: ${formatDate(ctx.dueAt)}
@@ -694,6 +789,14 @@ ${shared.footer}`;
 export async function claimAndSendDeferredNewDisputeAlert(
   disputeId: string,
   mode: AutomationMode,
+  /**
+   * Optional park-reason context. When set on a `review`-mode email,
+   * the body explains why an auto-mode rule did NOT submit. Currently
+   * only `risk_weakness` (fraud-risk Phase 2 cap on HIGH-risk fulfilled
+   * orders) is wired. Pass null/undefined for natural-moderate parks
+   * and all auto-mode emails.
+   */
+  parkReason: "risk_weakness" | null = null,
 ): Promise<void> {
   try {
     const sb = getServiceClient();
@@ -720,6 +823,7 @@ export async function claimAndSendDeferredNewDisputeAlert(
       orderName: row.order_name,
       resolvedMode: mode,
       shopifyDisputeEvidenceGid: row.dispute_evidence_gid,
+      parkReason,
     });
   } catch (err) {
     console.error(
