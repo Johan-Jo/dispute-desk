@@ -16,37 +16,53 @@ name: DB backup → R2
 # even after the upgrade — defense in depth against a Supabase org-level
 # compromise (admin credential theft bypasses provider backups too).
 #
+# Why `supabase db dump`, not raw `pg_dump`
+# -----------------------------------------
+# Per Supabase's documented CI backup recipe
+# (https://supabase.com/docs/guides/deployment/ci/backups), the CLI
+# wraps pg_dump with the correct server-version client and the right
+# exclude-schemas filter. Raw pg_dump against the session pooler can
+# fail with `password authentication failed for user "postgres"` even
+# with the correct user/pw — the CLI sidesteps that whole class of
+# issue by speaking to the project via the Management API +
+# Supabase-provisioned credentials.
+#
 # Secrets required (Settings → Secrets and variables → Actions):
 #   SUPABASE_DB_URL          postgres://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
-#                            **Session pooler URL** (port 5432 on
-#                            pooler.supabase.com), NOT the direct
-#                            connection (db.<ref>.supabase.co — IPv6-only,
-#                            unreachable from GitHub Actions runners), and
-#                            NOT the transaction pooler (port 6543 — does
-#                            not support the full protocol pg_dump needs).
-#                            Find it in Supabase dashboard → Project
-#                            Settings → Database → Connection string →
-#                            "Session pooler" tab.
+#                            Session pooler URL — copy verbatim from
+#                            Supabase dashboard → Project Settings →
+#                            Database → Connection string → "Session
+#                            pooler" tab. NOT the direct connection
+#                            (IPv6-only) and NOT the transaction pooler
+#                            (port 6543).
 #   R2_ACCOUNT_ID            Cloudflare account ID (found in R2 dashboard)
 #   R2_ACCESS_KEY_ID         R2 API token with Object R/W on the bucket
 #   R2_SECRET_ACCESS_KEY     R2 API token secret
 #   R2_BUCKET                e.g. disputedesk-db-backups
 #
-# Restore (manual, see docs/technical.md § Disaster Recovery):
-#   aws s3 cp s3://$R2_BUCKET/<dump> ./ --endpoint-url=https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
-#   pg_restore -d "$TARGET_DB_URL" --clean --if-exists --no-owner <dump>
+# Restore (manual, see docs/technical.md § Disaster Recovery)
+# -----------------------------------------------------------
+# Three files are produced per run:
+#   <stamp>-roles.sql    Roles + grants (run FIRST against the empty
+#                        target — without these, schema restore fails
+#                        on ALTER TABLE ... OWNER TO).
+#   <stamp>-schema.sql   Tables, indexes, functions, RLS policies, etc.
+#                        (run SECOND).
+#   <stamp>-data.sql     Row data via COPY (run LAST).
+#
+# To restore into a fresh Supabase project:
+#   aws s3 cp s3://$R2_BUCKET/<stamp>-roles.sql ./ --endpoint-url=https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
+#   aws s3 cp s3://$R2_BUCKET/<stamp>-schema.sql ./ --endpoint-url=https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
+#   aws s3 cp s3://$R2_BUCKET/<stamp>-data.sql ./ --endpoint-url=https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
+#   psql "$TARGET_DB_URL" -f <stamp>-roles.sql
+#   psql "$TARGET_DB_URL" -f <stamp>-schema.sql
+#   psql "$TARGET_DB_URL" -f <stamp>-data.sql
 
 on:
   schedule:
-    # 04:00 UTC every day. Pick an hour with no other heavy crons in
-    # vercel.json (sync-disputes runs every 5 min and snapshot-* runs at
-    # 00:30/00:45 UTC — 04:00 keeps the dump off-peak for both).
     - cron: "0 4 * * *"
   workflow_dispatch:
 
-# Only one backup at a time. If yesterday's run is somehow still going,
-# skip today rather than pile up — the DB doesn't need two dumps running
-# in parallel.
 concurrency:
   group: db-backup
   cancel-in-progress: false
@@ -56,44 +72,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Install postgresql-client + aws cli
+      - uses: actions/checkout@v4
+
+      - name: Install Supabase CLI + aws CLI check
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify Supabase CLI
         run: |
-          set -euo pipefail
-          # postgres-client-16 gives us pg_dump matching Supabase's
-          # current server (16.x). Mismatched major versions can refuse
-          # to dump; install one that's >= the server.
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-16
+          supabase --version
           aws --version
 
-      # Temporary diagnostic — remove after first green run.
-      # Prints only structural pieces of the URL (user, host, port, db).
-      # The password is never printed. Helps catch wrong-username or
-      # special-character-in-password URL-encoding issues without
-      # exposing the secret.
-      - name: Sanity-check SUPABASE_DB_URL shape
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os, urllib.parse as u
-          raw = os.environ["SUPABASE_DB_URL"]
-          parsed = u.urlparse(raw)
-          print(f"scheme:   {parsed.scheme}")
-          print(f"user:     {parsed.username}")
-          print(f"host:     {parsed.hostname}")
-          print(f"port:     {parsed.port}")
-          print(f"db:       {parsed.path.lstrip('/')}")
-          print(f"pwd_set:  {bool(parsed.password)}")
-          print(f"pwd_len:  {len(parsed.password) if parsed.password else 0}")
-          # Hint at URL-encoding hazards without leaking the secret:
-          if parsed.password:
-              special = set(parsed.password) & set("@:/?#%&+= ")
-              print(f"pwd_special_chars_present: {sorted(special)}")
-          PY
-
-      - name: Dump database
+      - name: Dump roles, schema, and data
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
@@ -103,49 +94,25 @@ jobs:
             exit 1
           fi
           STAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-          OUT="disputedesk-${STAMP}.dump"
+          PREFIX="disputedesk-${STAMP}"
           echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
-          echo "OUT=${OUT}" >> "$GITHUB_ENV"
+          echo "PREFIX=${PREFIX}" >> "$GITHUB_ENV"
 
-          # Supabase session pooler quirk: PgBouncer parses the
-          # username from the URL differently than libpq, dropping the
-          # `.<project-ref>` suffix and presenting just `postgres` to
-          # the auth check (which then fails). Workaround: parse the
-          # URL ourselves and pass --username + PGPASSWORD explicitly
-          # so pg_dump bypasses the URL's user/password fields entirely
-          # and uses the libpq env-var path that PgBouncer handles
-          # correctly.
-          python3 - <<'PY' > /tmp/dbcreds.env
-          import os, urllib.parse as u
-          parsed = u.urlparse(os.environ["SUPABASE_DB_URL"])
-          # Single-quote the password for safe sourcing — embedded
-          # single quotes (none expected, but defensive) are escaped.
-          pw = (parsed.password or "").replace("'", "'\\''")
-          print(f"export PGUSER='{parsed.username}'")
-          print(f"export PGPASSWORD='{pw}'")
-          print(f"export PGHOST='{parsed.hostname}'")
-          print(f"export PGPORT='{parsed.port or 5432}'")
-          print(f"export PGDATABASE='{parsed.path.lstrip('/') or 'postgres'}'")
-          PY
-          . /tmp/dbcreds.env
-          rm -f /tmp/dbcreds.env
+          # Order matters: roles, then schema, then data — the schema
+          # restore expects the roles already exist for ownership/grants.
+          supabase db dump --db-url "${SUPABASE_DB_URL}" -f "${PREFIX}-roles.sql"  --role-only
+          supabase db dump --db-url "${SUPABASE_DB_URL}" -f "${PREFIX}-schema.sql"
+          supabase db dump --db-url "${SUPABASE_DB_URL}" -f "${PREFIX}-data.sql"   --data-only --use-copy
 
-          # -Fc  → custom format, restorable with pg_restore, allows
-          #        parallel restore and table-level cherry-pick.
-          # -Z9  → max gzip inside the dump (compresses to ~10-20% of raw).
-          # --no-owner / --no-acl → owner/grants are restored from
-          #        migrations; baking them into the dump makes restore
-          #        into a fresh project flaky.
-          pg_dump \
-            --format=custom \
-            --compress=9 \
-            --no-owner \
-            --no-acl \
-            --file="${OUT}"
+          # Compress each file independently — smaller objects in R2,
+          # and gzip lets us spot-check a single file with `zless` without
+          # extracting an archive.
+          gzip "${PREFIX}-roles.sql" "${PREFIX}-schema.sql" "${PREFIX}-data.sql"
 
-          SIZE=$(du -h "${OUT}" | cut -f1)
-          echo "Dump size: ${SIZE}"
-          echo "SIZE=${SIZE}" >> "$GITHUB_ENV"
+          ls -lh "${PREFIX}"*.gz
+          TOTAL=$(du -ch "${PREFIX}"*.gz | tail -1 | cut -f1)
+          echo "Total dump size: ${TOTAL}"
+          echo "TOTAL=${TOTAL}" >> "$GITHUB_ENV"
 
       - name: Upload to R2
         env:
@@ -157,15 +124,13 @@ jobs:
         run: |
           set -euo pipefail
           ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          aws s3 cp "${OUT}" "s3://${R2_BUCKET}/${OUT}" \
-            --endpoint-url="${ENDPOINT}" \
-            --no-progress
-          echo "Uploaded s3://${R2_BUCKET}/${OUT}"
+          for f in "${PREFIX}"-roles.sql.gz "${PREFIX}"-schema.sql.gz "${PREFIX}"-data.sql.gz; do
+            aws s3 cp "${f}" "s3://${R2_BUCKET}/${f}" \
+              --endpoint-url="${ENDPOINT}" \
+              --no-progress
+            echo "Uploaded s3://${R2_BUCKET}/${f}"
+          done
 
-      # Prune anything older than 30 days. R2 supports S3 lifecycle
-      # rules too — we could lift this into the bucket config later —
-      # but having retention in the workflow keeps the policy visible
-      # in the repo, which is the right default for new infrastructure.
       - name: Prune old dumps (> 30 days)
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -185,9 +150,6 @@ jobs:
             --query "Contents[?LastModified<'${CUTOFF}'].[Key]" \
             --output text \
           | while read -r KEY; do
-              # `read` yields an empty string when list-objects-v2 returns
-              # zero matches — guard against `aws s3 rm s3://bucket/` which
-              # would error or, worse, behave unexpectedly on some clients.
               [ -z "${KEY}" ] && continue
               echo "  delete ${KEY}"
               aws s3 rm "s3://${R2_BUCKET}/${KEY}" --endpoint-url "${ENDPOINT}"
@@ -198,8 +160,9 @@ jobs:
           {
             echo "### DB backup → R2"
             echo ""
-            echo "- File: \`${OUT}\`"
-            echo "- Size: ${SIZE}"
+            echo "- Stamp: \`${STAMP}\`"
+            echo "- Files: \`${PREFIX}-{roles,schema,data}.sql.gz\`"
+            echo "- Total size: ${TOTAL}"
             echo "- Bucket: \`${R2_BUCKET}\`"
             echo "- Retention: 30 days"
           } >> "$GITHUB_STEP_SUMMARY"
