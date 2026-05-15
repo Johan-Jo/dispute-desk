@@ -117,13 +117,13 @@ export function BillingBanner({
       onDismiss={state.dismissible ? dismiss : undefined}
     >
       <p>{safeT(t, `${v.key}.body`)}</p>
-      <p className="mt-3">
+      <div className="mt-3 flex justify-end">
         <a href={ctaHref}>
           <Button variant="primary" size="sm">
             {safeT(t, `${v.key}.cta`)}
           </Button>
         </a>
-      </p>
+      </div>
     </InfoBanner>
   );
 }
