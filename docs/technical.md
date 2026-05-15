@@ -3189,12 +3189,38 @@ the moment any new schema drift is discovered — the regression is
 locked in by the next CI run.
 
 This guard is a deny-list, not an allow-list — it cannot catch renames
-(e.g. `Order.cartToken` → some unknown new path) until the old name is
-added. The medium-term fix is to extend `lib/shopify/checkReasonEnumDrift.ts`
-into a broader `checkQueryFieldDrift.ts` that runs each production query
-as a dry-run against the connected shop and inspects `errors[]` for
-`undefinedField`, alerting the admin via the existing
-`sendReasonEnumDriftAlert` mailer pattern.
+or brand-new removals until the old name is added to the deny list. To
+close that hole, the daily `check-shopify-reasons` cron now also runs
+`checkShopifyQueryFieldDrift` (`lib/shopify/checkQueryFieldDrift.ts`).
+
+**Runtime query-field drift checker (2026-05-15):** for every entry in
+`lib/shopify/queries/registry.ts` flagged `dryRun: true`, the cron
+sends the production query string to Shopify with stub variables —
+fake `gid://shopify/<Type>/0` IDs that pass schema validation but
+resolve to nothing, so no data is read and no resolver runs. The
+checker inspects `errors[]` for entries matching either
+`extensions.code = "undefinedField"` or the message regex
+`/Field '(.+)' doesn't exist on type '(.+)'/`, aggregates a
+`{query, type, field, message}` row per failing selection, and writes
+one of two new audit-event types:
+- `shopify_query_field_drift` when at least one row was detected.
+- `shopify_query_field_drift_resolved` when the previous run had drift
+  and the current run is clean.
+
+Email dedup is identical to the enum-drift checker: a new alert
+fires only on state change (new drift, changed drift set, or
+resolution). Same diff as the last audit = silent.
+
+Mutations are explicitly **excluded** from the dry-run path
+(`dryRun: false` in the registry) to eliminate any possibility of a
+state-changing resolver firing during the daily check. Mutations are
+covered only by the static deny-list guard. Introspection queries are
+also excluded — they cannot drift the same way and have a dedicated
+checker.
+
+The two checkers run independently from a single cron route
+(`app/api/cron/check-shopify-reasons`) and report combined results as
+`{enum, queryField}`. A failure in one does not mask the other.
 
 **Key files:**
 - `components/setup/steps/BusinessPoliciesStep.tsx` — step component

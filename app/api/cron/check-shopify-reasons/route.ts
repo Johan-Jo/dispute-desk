@@ -1,17 +1,25 @@
 /**
  * GET /api/cron/check-shopify-reasons
  *
- * Called by Vercel Cron daily at 10:00 UTC. Checks for Shopify
- * dispute-reason enum drift. Also available for manual runs via
- * CLI or uptime monitor hitting the URL with the shared CRON_SECRET.
+ * Called by Vercel Cron daily at 10:00 UTC. Runs two independent
+ * Shopify drift checks back-to-back:
  *
- * Email only fires when the diff is new or changed since the last
- * audit_events row — a clean state or an already-alerted drift
- * returns a response but sends nothing.
+ *   1. `checkShopifyReasonEnumDrift` — compares the live
+ *      ShopifyPaymentsDisputeReason enum against ALL_DISPUTE_REASONS.
+ *   2. `checkShopifyQueryFieldDrift` — dry-runs every production
+ *      GraphQL query and inspects `errors[]` for `undefinedField`
+ *      responses (catches `Order.cartToken`-style schema removals).
+ *
+ * Each check writes its own audit-event type and emails on state
+ * change only — clean runs and already-alerted drifts are silent.
+ *
+ * Also available for manual runs via CLI or uptime monitor hitting
+ * the URL with the shared CRON_SECRET.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { checkShopifyReasonEnumDrift } from "@/lib/shopify/checkReasonEnumDrift";
+import { checkShopifyQueryFieldDrift } from "@/lib/shopify/checkQueryFieldDrift";
 
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -23,11 +31,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await checkShopifyReasonEnumDrift();
+  // Run independently — a failure in one must not mask the other.
+  const enumResult = await checkShopifyReasonEnumDrift();
+  const fieldResult = await checkShopifyQueryFieldDrift();
 
-  if (!result.ok) {
-    return NextResponse.json(result, { status: 500 });
-  }
+  const combined = { enum: enumResult, queryField: fieldResult };
+  const anyFailed = !enumResult.ok || !fieldResult.ok;
 
-  return NextResponse.json(result);
+  return NextResponse.json(combined, { status: anyFailed ? 500 : 200 });
 }

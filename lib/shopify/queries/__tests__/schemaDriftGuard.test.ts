@@ -30,33 +30,14 @@
 
 import { describe, it, expect } from "vitest";
 
-import { ORDER_DETAIL_QUERY } from "../orders";
-import { CUSTOMER_ORDERS_FOR_CE30_QUERY } from "../customerOrdersForCE30";
-import { ORDERS_FOR_BACKFILL_QUERY } from "../ordersForBackfill";
-import { ORDERS_FOR_SNAPSHOT_QUERY } from "../ordersForSnapshot";
-import { APP_CHARGE_STATUS_QUERY } from "../appChargeStatus";
-import {
-  DISPUTE_LIST_QUERY,
-  DISPUTE_DETAIL_QUERY,
-  DISPUTE_PROFILE_QUERY,
-} from "../disputes";
-import { APP_SUBSCRIPTION_CREATE_MUTATION } from "../../mutations/appSubscriptionCreate";
-import { DISPUTE_EVIDENCE_UPDATE_MUTATION } from "../../mutations/disputeEvidenceUpdate";
+import { PRODUCTION_GRAPHQL } from "../registry";
 
-/** Every production GraphQL string sent to Shopify Admin. Keep in sync
- *  with `lib/shopify/queries/` + `lib/shopify/mutations/`. */
-const PROD_GRAPHQL: Record<string, string> = {
-  ORDER_DETAIL_QUERY,
-  CUSTOMER_ORDERS_FOR_CE30_QUERY,
-  ORDERS_FOR_BACKFILL_QUERY,
-  ORDERS_FOR_SNAPSHOT_QUERY,
-  APP_CHARGE_STATUS_QUERY,
-  DISPUTE_LIST_QUERY,
-  DISPUTE_DETAIL_QUERY,
-  DISPUTE_PROFILE_QUERY,
-  APP_SUBSCRIPTION_CREATE_MUTATION,
-  DISPUTE_EVIDENCE_UPDATE_MUTATION,
-};
+/** Every production GraphQL string sent to Shopify Admin. Sourced from
+ *  the shared registry to keep the static guard in lock-step with the
+ *  runtime drift checker (`lib/shopify/checkQueryFieldDrift.ts`). */
+const PROD_GRAPHQL: Record<string, string> = Object.fromEntries(
+  PRODUCTION_GRAPHQL.map((q) => [q.name, q.body]),
+);
 
 /** Strip line and block comments so an explanatory `# NOTE: …` mention
  *  of a removed field doesn't trip the guard. Replicated rather than
