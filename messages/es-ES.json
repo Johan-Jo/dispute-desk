@@ -1182,7 +1182,24 @@
     "hideAllPlans": "Ocultar todos los planes",
     "showAllPlans": "Mostrar todos los planes",
     "getStarted": "Comenzar",
-    "popular": "Popular"
+    "popular": "Popular",
+    "banners": {
+      "grace": {
+        "title": "Pago fallido — período de gracia corto",
+        "body": "Shopify no pudo cobrar tu tarjeta. Auto-build sigue funcionando mientras Shopify lo reintenta — hasta 3 días. Actualiza tu método de pago para evitar interrupciones.",
+        "cta": "Actualizar pago"
+      },
+      "expired": {
+        "title": "Auto-build en pausa",
+        "body": "Tu suscripción a DisputeDesk está inactiva. Los disputes y packs históricos siguen siendo legibles; la nueva automatización está en pausa hasta que reactives.",
+        "cta": "Reactivar"
+      },
+      "lowCredits": {
+        "title": "Casi sin packs",
+        "body": "Tienes menos del 10 % de tu asignación mensual de packs. Compra un top-up o haz upgrade del plan para mantener auto-build activo el resto del ciclo.",
+        "cta": "Comprar top-up"
+      }
+    }
   },
   "rules": {
     "title": "Reglas",
@@ -3837,9 +3854,15 @@
       "title": "Impacto del cambio de responsabilidad",
       "subtitle": "Cómo las victorias de DisputeDesk en CE 3.0 y FPT afectan tus ratios de cumplimiento con las redes de tarjetas.",
       "periodLabel": "Periodo: {period}",
-      "vamp": { "label": "Visa VAMP" },
-      "ecm": { "label": "Mastercard ECM" },
-      "efm": { "label": "Mastercard EFM" },
+      "vamp": {
+        "label": "Visa VAMP"
+      },
+      "ecm": {
+        "label": "Mastercard ECM"
+      },
+      "efm": {
+        "label": "Mastercard EFM"
+      },
       "band": {
         "green": "Saludable",
         "yellow": "Aproximándose al límite",

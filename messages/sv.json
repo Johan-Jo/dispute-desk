@@ -1151,7 +1151,24 @@
     "hideAllPlans": "Dölj alla planer",
     "showAllPlans": "Visa alla planer",
     "getStarted": "Kom igång",
-    "popular": "Populär"
+    "popular": "Populär",
+    "banners": {
+      "grace": {
+        "title": "Betalningen misslyckades — kort respit",
+        "body": "Shopify kunde inte debitera ditt kort. Auto-build fortsätter köra medan Shopify försöker igen — i upp till 3 dagar. Uppdatera din betalningsmetod för att undvika avbrott.",
+        "cta": "Uppdatera betalning"
+      },
+      "expired": {
+        "title": "Auto-build pausad",
+        "body": "Din DisputeDesk-prenumeration är inaktiv. Historiska disputes och packs förblir fullt läsbara; ny automatisering är pausad tills du återaktiverar.",
+        "cta": "Återaktivera"
+      },
+      "lowCredits": {
+        "title": "Nästan slut på packs",
+        "body": "Du har mindre än 10 % av din månadskvot kvar. Köp en top-up eller uppgradera planen för att hålla auto-build igång resten av cykeln.",
+        "cta": "Köp top-up"
+      }
+    }
   },
   "rules": {
     "title": "Regler",

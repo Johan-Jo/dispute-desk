@@ -1149,7 +1149,24 @@
     "hideAllPlans": "Masquer tous les plans",
     "showAllPlans": "Afficher tous les plans",
     "getStarted": "Commencer",
-    "popular": "Populaire"
+    "popular": "Populaire",
+    "banners": {
+      "grace": {
+        "title": "Échec du paiement — courte période de grâce",
+        "body": "Shopify n'a pas pu débiter votre carte. Auto-build continue de fonctionner pendant que Shopify réessaye — jusqu'à 3 jours. Mettez à jour votre moyen de paiement pour éviter toute interruption.",
+        "cta": "Mettre à jour le paiement"
+      },
+      "expired": {
+        "title": "Auto-build en pause",
+        "body": "Votre abonnement DisputeDesk est inactif. Les disputes et packs historiques restent entièrement lisibles ; la nouvelle automatisation est en pause jusqu'à la réactivation.",
+        "cta": "Réactiver"
+      },
+      "lowCredits": {
+        "title": "Presque à court de packs",
+        "body": "Il vous reste moins de 10 % de votre allocation mensuelle de packs. Achetez un top-up ou passez à un plan supérieur pour maintenir auto-build actif jusqu'à la fin du cycle.",
+        "cta": "Acheter un top-up"
+      }
+    }
   },
   "rules": {
     "title": "Règles",

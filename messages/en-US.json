@@ -1172,7 +1172,24 @@
     "hideAllPlans": "Hide all plans",
     "showAllPlans": "Show all plans",
     "getStarted": "Get Started",
-    "popular": "Popular"
+    "popular": "Popular",
+    "banners": {
+      "grace": {
+        "title": "Payment failed — short grace period",
+        "body": "Shopify couldn't charge your card. Auto-build still runs while Shopify retries — for up to 3 days. Update your payment method to avoid interruption.",
+        "cta": "Update payment"
+      },
+      "expired": {
+        "title": "Auto-build paused",
+        "body": "Your DisputeDesk subscription is inactive. Historical disputes and packs stay fully readable; new automation is on hold until you reactivate.",
+        "cta": "Reactivate"
+      },
+      "lowCredits": {
+        "title": "Almost out of packs",
+        "body": "You're below 10% of your monthly pack allotment. Buy a top-up or upgrade your plan to keep auto-build running for the rest of the cycle.",
+        "cta": "Buy top-up"
+      }
+    }
   },
   "rules": {
     "title": "Rules",
@@ -3824,9 +3841,15 @@
       "title": "Liability-shift impact",
       "subtitle": "How DisputeDesk's CE 3.0 and FPT wins affect your card-network compliance ratios.",
       "periodLabel": "Period: {period}",
-      "vamp": { "label": "Visa VAMP" },
-      "ecm": { "label": "Mastercard ECM" },
-      "efm": { "label": "Mastercard EFM" },
+      "vamp": {
+        "label": "Visa VAMP"
+      },
+      "ecm": {
+        "label": "Mastercard ECM"
+      },
+      "efm": {
+        "label": "Mastercard EFM"
+      },
       "band": {
         "green": "Healthy",
         "yellow": "Approaching",

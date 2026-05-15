@@ -1149,7 +1149,24 @@
     "hideAllPlans": "Alle Pläne ausblenden",
     "showAllPlans": "Alle Pläne anzeigen",
     "getStarted": "Loslegen",
-    "popular": "Beliebt"
+    "popular": "Beliebt",
+    "banners": {
+      "grace": {
+        "title": "Zahlung fehlgeschlagen — kurze Kulanzfrist",
+        "body": "Shopify konnte Ihre Karte nicht belasten. Auto-Build läuft weiter, während Shopify es erneut versucht — bis zu 3 Tage. Aktualisieren Sie Ihre Zahlungsmethode, um Unterbrechungen zu vermeiden.",
+        "cta": "Zahlung aktualisieren"
+      },
+      "expired": {
+        "title": "Auto-Build pausiert",
+        "body": "Ihr DisputeDesk-Abonnement ist inaktiv. Historische Disputes und Packs bleiben vollständig lesbar; neue Automatisierung pausiert bis zur Reaktivierung.",
+        "cta": "Reaktivieren"
+      },
+      "lowCredits": {
+        "title": "Fast keine Packs mehr",
+        "body": "Sie haben weniger als 10 % Ihres monatlichen Pack-Kontingents übrig. Kaufen Sie ein Top-up oder upgraden Sie, um Auto-Build für den Rest des Zyklus aktiv zu halten.",
+        "cta": "Top-up kaufen"
+      }
+    }
   },
   "rules": {
     "title": "Regeln",
