@@ -1,0 +1,149 @@
+name: DB backup → R2
+
+# Daily off-platform Postgres dump to Cloudflare R2.
+#
+# Why this exists
+# ---------------
+# Supabase Free retains exactly one nightly snapshot. If the snapshot
+# itself gets corrupted (DDL accident at 3pm, snapshot taken at 4am,
+# noticed the next morning), Supabase's copy is already the bad one.
+# A separate off-platform copy with 30-day retention buys the window
+# you need to actually notice the incident before the only backup is
+# overwritten.
+#
+# This is a stopgap until the project moves to Supabase Pro (PITR with
+# 7-day retention + selectable recovery point). Keep this workflow live
+# even after the upgrade — defense in depth against a Supabase org-level
+# compromise (admin credential theft bypasses provider backups too).
+#
+# Secrets required (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL          postgres://postgres:<password>@<host>:5432/postgres
+#                            Direct connection string, NOT the pooler URL —
+#                            pg_dump won't speak to the transaction-pooler.
+#   R2_ACCOUNT_ID            Cloudflare account ID (found in R2 dashboard)
+#   R2_ACCESS_KEY_ID         R2 API token with Object R/W on the bucket
+#   R2_SECRET_ACCESS_KEY     R2 API token secret
+#   R2_BUCKET                e.g. disputedesk-db-backups
+#
+# Restore (manual, see docs/technical.md § Disaster Recovery):
+#   aws s3 cp s3://$R2_BUCKET/<dump> ./ --endpoint-url=https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
+#   pg_restore -d "$TARGET_DB_URL" --clean --if-exists --no-owner <dump>
+
+on:
+  schedule:
+    # 04:00 UTC every day. Pick an hour with no other heavy crons in
+    # vercel.json (sync-disputes runs every 5 min and snapshot-* runs at
+    # 00:30/00:45 UTC — 04:00 keeps the dump off-peak for both).
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+# Only one backup at a time. If yesterday's run is somehow still going,
+# skip today rather than pile up — the DB doesn't need two dumps running
+# in parallel.
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install postgresql-client + aws cli
+        run: |
+          set -euo pipefail
+          # postgres-client-16 gives us pg_dump matching Supabase's
+          # current server (16.x). Mismatched major versions can refuse
+          # to dump; install one that's >= the server.
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+          aws --version
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          STAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+          OUT="disputedesk-${STAMP}.dump"
+          echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "OUT=${OUT}" >> "$GITHUB_ENV"
+
+          # -Fc  → custom format, restorable with pg_restore, allows
+          #        parallel restore and table-level cherry-pick.
+          # -Z9  → max gzip inside the dump (compresses to ~10-20% of raw).
+          # --no-owner / --no-acl → owner/grants are restored from
+          #        migrations; baking them into the dump makes restore
+          #        into a fresh project flaky.
+          pg_dump \
+            --format=custom \
+            --compress=9 \
+            --no-owner \
+            --no-acl \
+            --file="${OUT}" \
+            "${SUPABASE_DB_URL}"
+
+          SIZE=$(du -h "${OUT}" | cut -f1)
+          echo "Dump size: ${SIZE}"
+          echo "SIZE=${SIZE}" >> "$GITHUB_ENV"
+
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          aws s3 cp "${OUT}" "s3://${R2_BUCKET}/${OUT}" \
+            --endpoint-url="${ENDPOINT}" \
+            --no-progress
+          echo "Uploaded s3://${R2_BUCKET}/${OUT}"
+
+      # Prune anything older than 30 days. R2 supports S3 lifecycle
+      # rules too — we could lift this into the bucket config later —
+      # but having retention in the workflow keeps the policy visible
+      # in the repo, which is the right default for new infrastructure.
+      - name: Prune old dumps (> 30 days)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          CUTOFF=$(date -u -d "30 days ago" +"%Y-%m-%d")
+          echo "Pruning objects with LastModified < ${CUTOFF}"
+
+          aws s3api list-objects-v2 \
+            --bucket "${R2_BUCKET}" \
+            --endpoint-url "${ENDPOINT}" \
+            --query "Contents[?LastModified<'${CUTOFF}'].[Key]" \
+            --output text \
+          | while read -r KEY; do
+              # `read` yields an empty string when list-objects-v2 returns
+              # zero matches — guard against `aws s3 rm s3://bucket/` which
+              # would error or, worse, behave unexpectedly on some clients.
+              [ -z "${KEY}" ] && continue
+              echo "  delete ${KEY}"
+              aws s3 rm "s3://${R2_BUCKET}/${KEY}" --endpoint-url "${ENDPOINT}"
+            done
+
+      - name: Summary
+        run: |
+          {
+            echo "### DB backup → R2"
+            echo ""
+            echo "- File: \`${OUT}\`"
+            echo "- Size: ${SIZE}"
+            echo "- Bucket: \`${R2_BUCKET}\`"
+            echo "- Retention: 30 days"
+          } >> "$GITHUB_STEP_SUMMARY"
