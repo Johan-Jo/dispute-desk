@@ -93,7 +93,18 @@ trialing → active → grace → expired
 | `active` | Paid, current | ✅ |
 | `grace` | Payment failed within last 3 days, Shopify is retrying | ✅ (read-only grace) |
 | `expired` | Payment failed > 3 days, or cycle rolled over without renewal | ❌ — merchant must reactivate |
-| `cancelled` | Merchant cancelled or uninstalled | ❌ — read-only, packs preserved |
+| `cancelled` | Merchant cancelled the Shopify billing subscription | ❌ — read-only, packs preserved |
+
+> **`cancelled` ≠ uninstalled.** `subscription_state = cancelled` only
+> reflects the Shopify billing subscription status. The app
+> installation may still be live (and `app-uninstalled` webhook
+> handling is a separate concern, today driven by `shops.uninstalled_at`).
+> A future iteration may add an explicit
+> `installed | uninstalled | access_revoked` installation state on
+> `shops`; until then, do NOT infer install status from
+> `subscription_state`. **No automation runs for uninstalled shops** —
+> `runAutomationPipeline` and every cron must check `shops.uninstalled_at`
+> before touching shop data.
 
 Transitions are driven by `app_subscriptions/update` webhook events + the reconciliation pull. **No state transition happens implicitly — every transition writes an audit event and (when merchant-facing) a notification.**
 
@@ -146,12 +157,14 @@ A new `UNIQUE INDEX` on `(shop_id, reference)` prevents double-granting if a web
    payload alone — it can be replayed).
 4. For each active subscription:
    - Map `status` → subscription_state:
-       ACTIVE   → active
-       FROZEN   → grace
+       ACTIVE    → active
+       FROZEN    → grace
        CANCELLED → cancelled
-       EXPIRED  → expired
-       DECLINED → expired
-       PENDING  → trialing (only if trial_ends_at > now)
+       EXPIRED   → expired
+       DECLINED  → expired
+       PENDING   → trialing (ONLY when trial_ends_at is in the future)
+                   → expired   (otherwise — see §6 open question, plus
+                                the defensive-mapping rule below)
    - Update plan_entitlements (state, billing_cycle_started_at, billing_cycle_ends_at).
    - If state transitioned to active AND last `monthly_included` grant for this
      cycle is missing → grantCredits(plan.packsPerMonth, expires_at = period_end).
@@ -159,12 +172,38 @@ A new `UNIQUE INDEX` on `(shop_id, reference)` prevents double-granting if a web
 5. Enqueue a notify job (see §5.5).
 ```
 
+> **PENDING mapping is defensive.** Blindly mapping `PENDING → trialing`
+> let a non-trial pending charge (e.g. mid-approval, declined-then-retrying)
+> falsely unlock auto-build. The fix:
+>
+> ```ts
+> if (status === "PENDING" && trialEndsAt && new Date(trialEndsAt) > new Date()) {
+>   subscriptionState = "trialing";
+> } else if (status === "PENDING") {
+>   subscriptionState = "expired"; // merchant must reauthorize the charge
+> }
+> ```
+>
+> Adding a dedicated `pending` state to the enum would mean threading
+> it through quota checks, banner copy, billing-page UI, and lifecycle
+> emails. Not in scope for this PRD — keep PENDING collapsed into
+> `trialing` or `expired` based on the trial-window check.
+
 **Idempotency:** the `pack_credits_ledger` unique index on `reference` is the safety net.
 
-### 5.2 New cron: `renew-billing-cycles`
+### 5.2 Billing reconciliation cron
 
-**Route:** `app/api/cron/renew-billing-cycles/route.ts`
+**Route:** `app/api/cron/reconcile-billing-cycles/route.ts`
 **Schedule:** `0 * * * *` (hourly — fast enough that a merchant who renewed mid-hour doesn't wait the full hour for credits, slow enough not to hammer Shopify).
+
+> **Naming note.** This job is intentionally called *billing
+> reconciliation*, not *renewal*. The name reflects what it actually
+> does: verify Shopify subscription truth, catch missed
+> `app_subscriptions/update` webhooks, grant any missing
+> `monthly_included` credits for the current cycle, transition shops
+> whose subscriptions lapsed to `expired`, and emit the matching
+> audit + email events. "Renewal" implies a single happy-path action;
+> the job is a full state-reconciliation loop.
 
 ```
 1. SELECT plan_entitlements WHERE billing_cycle_ends_at < now() + interval '1 hour'
@@ -193,9 +232,9 @@ This is the safety net. The webhook is the fast path; the cron catches dropped w
 
 Shopify normally finalizes a frozen subscription within 3 retry attempts (~3 days). After that, we stop hoping and surface the failure to the merchant.
 
-### 5.4 Pipeline visibility fixes
+### 5.4 Pipeline visibility fixes (shipped 2026-05-15)
 
-`lib/automation/pipeline.ts:runAutomationPipeline` currently exits silently on three branches:
+`lib/automation/pipeline.ts:runAutomationPipeline` previously exited silently on three branches:
 
 ```ts
 if (!settings.auto_build_enabled) return { action: "skipped_auto_build_off" };
@@ -203,15 +242,51 @@ if (!quota.allowed)                return { action: "quota_exceeded" };
 if (!featureCheck.allowed)         return { action: "feature_blocked" };
 ```
 
-Change each branch to:
+Each branch now calls a shared `recordBlockedAutoBuild` helper that:
 
-1. Insert an `audit_events` row (`event_type: 'auto_build_skipped'`, payload includes the reason).
-2. Emit a `PACK_BLOCKED` `dispute_event` so the timeline shows it.
-3. Set `disputes.needs_attention = true` and `disputes.next_action_text = <reason>`.
-4. Fire `claimAndSendDeferredNewDisputeAlert(disputeId, 'review')` so the merchant gets an email.
-5. (For `quota_exceeded` / `feature_blocked` only) attach a structured `recommended_action` payload pointing to `/app/billing`.
+1. Inserts an `audit_events` row (`event_type: 'auto_build_skipped'`, payload includes the canonical reason + a typed payload — quota numbers, plan id, etc.).
+2. Emits a `PACK_BLOCKED` `dispute_event` so the timeline shows it.
+3. Updates `disputes`:
+   - `needs_attention = true`
+   - `attention_reason = <canonical constant from lib/disputes/attentionReasons.ts>`
+   - `attention_payload = <structured object>` (quota numbers, plan id, etc.)
+   - `next_action_type = 'billing'`
+   - `next_action_text = <merchant-readable copy>`
+4. Calls `claimAndSendDeferredNewDisputeAlert(disputeId, 'review')` subject to the **billing-blocked email throttle** (see §5.4.1).
 
-**Key invariant:** the merchant must never see a dispute land with no evidence and no explanation.
+The new structured columns (`attention_reason`, `attention_payload`) shipped in
+migration `20260515150000_disputes_structured_attention.sql`. UI code must
+never parse `next_action_text` to decide which banner / CTA to show — read
+`attention_reason` (typed against `DisputeAttentionReason`) instead.
+
+#### 5.4.1 Email throttle for repeated billing-blocked disputes
+
+A shop with five new disputes in an hour and a depleted quota would
+otherwise get five identical "upgrade to keep building packs" emails.
+`lib/automation/billingBlockedEmailThrottle.ts:claimBillingBlockedEmailSlot`
+implements the throttle:
+
+- **Per dispute:** one billing-blocked email per dispute, ever.
+- **Per shop + per reason:** 6-hour cooldown window
+  (`BILLING_BLOCKED_EMAIL_THROTTLE_HOURS`).
+- **Deadline override:** when the dispute's `due_at` is within 72 hours
+  (`BILLING_BLOCKED_DEADLINE_OVERRIDE_HOURS`), the email always sends,
+  ignoring the cooldown.
+- **Fail-open:** if the throttle infrastructure errors, the helper
+  returns `allowed: true` so a billing problem is never silenced by a
+  Supabase blip.
+
+State of truth lives in `audit_events` rows of type
+`billing_blocked_email_sent`. The helper queries them; concurrent
+pipeline calls either both observe an existing claim or one wins the
+insert.
+
+> **In-app banners and dispute timeline events are NEVER throttled.**
+> Only the email is rate-limited.
+
+**Key invariants:**
+- The merchant must never see a dispute land with no evidence and no explanation.
+- Billing restrictions may pause new automation, but must not block access to historical disputes, evidence packs, or audit events. The disputes list, dispute detail, evidence-pack view, and audit timeline remain fully readable for shops in `expired`, `cancelled`, or `grace` states; only "build new pack" / "auto-submit" actions are gated.
 
 ### 5.5 Merchant communications matrix
 
@@ -266,15 +341,39 @@ alter table plan_entitlements
 -- Idempotency for monthly grants: prevents dual-grant when webhook + cron race.
 create unique index if not exists pack_credits_ledger_shop_reference_uniq
   on pack_credits_ledger (shop_id, reference);
-
--- Dispute attention flag (cheap to compute, but storing it lets the
--- disputes list page index/filter on it without a join).
-alter table disputes
-  add column if not exists needs_attention boolean not null default false,
-  add column if not exists attention_reason text;
 ```
 
-`needs_attention` already exists (verified during incident triage); the migration uses `if not exists` for safety.
+The `disputes.needs_attention` boolean already existed; structured
+attention columns shipped in
+[`supabase/migrations/20260515150000_disputes_structured_attention.sql`](../../supabase/migrations/20260515150000_disputes_structured_attention.sql):
+
+```sql
+alter table disputes
+  add column if not exists attention_reason text,
+  add column if not exists attention_payload jsonb not null default '{}'::jsonb;
+```
+
+Canonical values for `attention_reason` are maintained in TypeScript
+([`lib/disputes/attentionReasons.ts`](../../lib/disputes/attentionReasons.ts))
+rather than via a DB CHECK constraint — adding new reasons is a code
+change with a typed contract, not a migration. The trade-off is
+deliberate: faster iteration on attention copy + payload shapes;
+discipline is enforced in the type system and in
+`pipeline.ts:recordBlockedAutoBuild`.
+
+### 6.1 Top-up credit expiry
+
+Top-up packs **expire 30 days from purchase**, independent of the
+monthly billing cycle. Shipped 2026-05-15 in
+[`app/api/billing/topup-callback/route.ts`](../../app/api/billing/topup-callback/route.ts)
+via `TOPUP_EXPIRY_DAYS = 30`. The earlier behavior — top-ups expiring
+at `billing_cycle_ends_at` — destroyed packs purchased hours before
+renewal.
+
+> **Top-up rule (invariant):** Top-up packs expire 30 days from
+> purchase, independent of subscription cycle. A merchant who buys
+> 100 packs an hour before cycle-end gets 100 usable packs for the
+> next 30 days, not one hour.
 
 ---
 
@@ -287,17 +386,25 @@ Phase boundaries chosen so each commit is independently shippable and reversible
 - Tests: every branch of `runAutomationPipeline` returns an action AND a side effect (audit event + dispute event + email claim).
 - **Ship first** so the next time this bug recurs the merchant is told.
 
-### Phase 2 — Renewal cron (1 PR, ~2 days)
-- `app/api/cron/renew-billing-cycles/route.ts` + `vercel.json` entry.
-- `lib/billing/renewCycle.ts` — Shopify `appInstallation.activeSubscriptions` query + credit grant.
+### Phase 2 — Billing reconciliation cron (1 PR, ~2 days)
+- `app/api/cron/reconcile-billing-cycles/route.ts` + `vercel.json` entry.
+- `lib/billing/reconcileBillingCycle.ts` — Shopify `appInstallation.activeSubscriptions` query + credit grant + state transition.
 - Idempotency unique index migration.
-- Tests: cycle rollover with active sub → credits granted; with no active sub → state → expired.
+- Tests (named billing-reconciliation, not renewal):
+  - cycle rollover with active sub → credits granted exactly once;
+  - duplicate webhook + cron race → no duplicate credits (unique index);
+  - no active sub → transition to `expired`;
+  - expired / cancelled shops retain read-only access to historical disputes, packs, and audit events.
 
 ### Phase 3 — Webhook (1 PR, ~1.5 days)
 - `app/api/webhooks/app-subscriptions-update/route.ts`.
 - Register in `shopify.app.toml`.
-- Re-uses Phase 2's `renewCycle` library.
-- Tests: payload variants (ACTIVE / FROZEN / CANCELLED / EXPIRED) → correct state transition + audit.
+- Re-uses Phase 2's `reconcileBillingCycle` library.
+- Tests:
+  - payload variants (ACTIVE / FROZEN / CANCELLED / EXPIRED) → correct state transition + audit;
+  - PENDING with `trial_ends_at > now()` → `trialing`;
+  - PENDING with `trial_ends_at <= now()` or null → `expired` (never `trialing`);
+  - `cancelled` transition does NOT change install state or revoke read access.
 
 ### Phase 4 — Communications (1 PR, ~2 days)
 - `lib/email/billingLifecycle.ts` (eight functions, one per row in §5.5).
@@ -316,11 +423,16 @@ Phase boundaries chosen so each commit is independently shippable and reversible
 
 - [ ] A merchant on Growth whose cycle ends today gets 75 fresh packs within 1 hour, without manual intervention.
 - [ ] If Shopify fails the renewal charge, the merchant is emailed within 5 minutes of the webhook, AND sees a yellow banner in the embedded app on next open.
-- [ ] If the webhook is dropped entirely, the hourly cron catches the missed renewal within 1 hour.
-- [ ] Every `quota_exceeded` / `feature_blocked` pipeline exit produces: 1 audit event, 1 dispute_event with `event_type=pack_blocked`, 1 email (review variant) to the team email, `disputes.needs_attention = true`.
-- [ ] Re-running the renewal cron against an already-renewed cycle creates zero duplicate ledger rows (idempotency index).
+- [ ] If the webhook is dropped entirely, the hourly billing reconciliation cron catches the missed renewal within 1 hour.
+- [x] Every `quota_exceeded` / `feature_blocked` / `auto_build_off` pipeline exit produces: 1 audit event, 1 dispute_event with `event_type=pack_blocked`, 1 throttled email (review variant) to the team email, `disputes.needs_attention = true` with a canonical `attention_reason` and structured `attention_payload`. (Shipped 2026-05-15.)
+- [x] Repeated billing-blocked disputes for the same shop + reason within the 6-hour throttle window do NOT generate repeated emails; they DO still generate audit events, dispute timeline events, and in-app banners. A dispute whose deadline is within 72 hours always generates an email regardless of the throttle. (Shipped 2026-05-15.)
+- [ ] Re-running the billing reconciliation cron against an already-renewed cycle creates zero duplicate ledger rows (idempotency index).
 - [ ] Cancelling the subscription in Shopify Admin transitions to `cancelled` in our DB within 5 min via webhook and within 1 h via reconciliation cron.
 - [ ] Reactivating a cancelled subscription restores `active` state and grants the new cycle's credits.
+- [ ] **Read-only access invariant.** A shop with `subscription_state` in `{expired, cancelled, grace}` can still: load the disputes list, open any historical dispute, view its evidence pack, view its audit/timeline events, download stored PDFs. The shop CANNOT: auto-build a new pack, auto-submit, or trigger any new outbound Shopify save mutation. Billing route guards must enforce this asymmetry; no global "subscription required" middleware that blocks read paths.
+- [x] **Top-up expiry.** A top-up purchased one day before cycle end remains available after the monthly cycle renews and expires exactly 30 days from purchase. (Shipped 2026-05-15.)
+- [ ] `cancelled` (billing state) and `uninstalled` (install state on `shops.uninstalled_at`) are independent — neither implies the other; no automation runs for uninstalled shops regardless of billing state.
+- [ ] `PENDING` Shopify subscription status maps to `trialing` ONLY when `trial_ends_at > now()`; otherwise maps to `expired`.
 - [ ] `npm run release:verify` passes after each phase (per `feedback_run_release_verify` memory).
 
 ---
@@ -342,10 +454,11 @@ Phase boundaries chosen so each commit is independently shippable and reversible
 ## 10. Open questions
 
 1. **Grace-period duration.** Shopify retries failed charges over ~3 days. Should we extend grace to a full week to be merchant-friendly, or hold at 3 days to match Shopify's own behavior? Recommend: 3 days, escalating banner urgency on day 2 and day 3.
-2. **Top-up extension semantics.** Today, a top-up grants packs with `expires_at = cycle_end`. If the merchant tops up the day before cycle-end, those packs expire almost immediately. Should top-ups instead expire 30 days from purchase, independent of cycle? Recommend: yes — change `expires_at` for top-ups to `now() + 30 days`, document in `docs/technical.md`.
+2. ~~**Top-up extension semantics.**~~ Resolved 2026-05-15: top-ups expire 30 days from purchase. See §6.1.
 3. **Multi-store merchant.** If a merchant owns two stores and one renews while the other lapses, the email goes to whichever team email is configured per-shop. Confirm no cross-shop confusion in copy. Likely a no-op — every email already includes `shop_domain`.
 4. **Downgrade flow.** Today: contact support. Future iteration could allow self-serve downgrade taking effect at next cycle. Out of scope here, but the `subscription_state` machine is forward-compatible.
 5. **Webhook registration backfill.** New webhooks only register on next OAuth install. Do we force-reinstall existing shops, or run a one-shot script to call `webhookSubscriptionCreate` for the new topic? Recommend: one-shot script, fail-soft if the merchant uninstalls.
+6. **Explicit installation state.** Today install/uninstall is tracked solely via `shops.uninstalled_at`. Should we add an explicit `installation_state` column (`installed | uninstalled | access_revoked`) alongside `subscription_state` so the two concerns can't drift? Out of scope here; tracked as a follow-up.
 
 ---
 

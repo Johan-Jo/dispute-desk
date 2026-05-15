@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { getTopUp } from "@/lib/billing/plans";
+import { getTopUp, TOPUP_EXPIRY_DAYS } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
 
@@ -62,17 +62,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(billingUrl.toString());
   }
 
-  const { data: entitlement } = await sb
-    .from("plan_entitlements")
-    .select("billing_cycle_ends_at")
-    .eq("shop_id", shopId)
-    .maybeSingle();
+  // Top-up packs are decoupled from the billing cycle — they expire
+  // 30 days from purchase. A merchant who buys 100 packs an hour
+  // before cycle-end gets 100 usable packs for the next 30 days, not
+  // one hour.
+  const expiresAt = new Date(
+    Date.now() + TOPUP_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   await grantCredits({
     shopId,
     source: "topup",
     packs: topUp.packs,
-    expiresAt: entitlement?.billing_cycle_ends_at ?? null,
+    expiresAt,
     reference: `topup_${sku}_${chargeId}`,
   });
 

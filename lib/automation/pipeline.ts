@@ -16,6 +16,11 @@ import { sendHighValueReviewAlert } from "@/lib/email/sendHighValueReviewAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
+import {
+  DISPUTE_ATTENTION_REASONS,
+  type DisputeAttentionReason,
+} from "@/lib/disputes/attentionReasons";
+import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
 
 const HIGH_VALUE_SAFEGUARD_NAME = `${SETUP_RULE_PREFIX}safeguard:high_value`;
 import {
@@ -24,6 +29,99 @@ import {
   PARKED_FOR_REVIEW,
   PACK_BLOCKED,
 } from "@/lib/disputeEvents/eventTypes";
+
+/**
+ * Mark a dispute as needing merchant attention for a billing-shaped
+ * reason and emit the matching audit + dispute timeline events. Also
+ * tries to send the deferred new-dispute alert (review variant)
+ * subject to the billing-blocked email throttle so repeated blocked
+ * disputes don't flood the inbox.
+ *
+ * Invariant: this function is the ONLY way a "silent" pipeline exit
+ * becomes merchant-visible. Audit + timeline event + needs_attention
+ * are unconditional; only the email is throttled.
+ */
+async function recordBlockedAutoBuild(args: {
+  shopId: string;
+  disputeId: string;
+  reason: DisputeAttentionReason;
+  attentionPayload: Record<string, unknown>;
+  nextActionText: string;
+  auditPayload?: Record<string, unknown>;
+}): Promise<void> {
+  const {
+    shopId,
+    disputeId,
+    reason,
+    attentionPayload,
+    nextActionText,
+    auditPayload,
+  } = args;
+  const sb = getServiceClient();
+  const nowIso = new Date().toISOString();
+
+  // Always-on side effects (audit, dispute event, attention flag).
+  await sb.from("audit_events").insert({
+    shop_id: shopId,
+    dispute_id: disputeId,
+    actor_type: "system",
+    event_type: "auto_build_skipped",
+    event_payload: {
+      reason,
+      ...attentionPayload,
+      ...(auditPayload ?? {}),
+    },
+  });
+
+  void emitDisputeEvent({
+    disputeId,
+    shopId,
+    eventType: PACK_BLOCKED,
+    description: nextActionText,
+    eventAt: nowIso,
+    actorType: "disputedesk_system",
+    sourceType: "pack_engine",
+    visibility: "merchant_and_internal",
+    metadataJson: { reason, ...attentionPayload },
+    dedupeKey: `${disputeId}:${PACK_BLOCKED}:auto_build_skipped:${reason}`,
+  });
+
+  await sb
+    .from("disputes")
+    .update({
+      needs_attention: true,
+      attention_reason: reason,
+      attention_payload: attentionPayload,
+      next_action_type: "billing",
+      next_action_text: nextActionText,
+      updated_at: nowIso,
+    })
+    .eq("id", disputeId);
+
+  // Pull deadline + new-dispute-alert dedupe state for the email
+  // throttle decision. A missing row here just means we won't get the
+  // 72h deadline override; throttle still works.
+  const { data: disputeRow } = await sb
+    .from("disputes")
+    .select("due_at")
+    .eq("id", disputeId)
+    .maybeSingle();
+
+  const slot = await claimBillingBlockedEmailSlot({
+    shopId,
+    disputeId,
+    reason,
+    disputeDueAt: (disputeRow?.due_at as string | null) ?? null,
+  });
+
+  if (slot.allowed) {
+    void claimAndSendDeferredNewDisputeAlert(disputeId, "review").catch(() => {
+      /* non-fatal */
+    });
+  }
+
+  void updateNormalizedStatus(disputeId);
+}
 
 interface Dispute {
   id: string;
@@ -73,16 +171,45 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
   const settings = await getShopSettings(dispute.shop_id);
 
   if (!settings.auto_build_enabled) {
+    await recordBlockedAutoBuild({
+      shopId: dispute.shop_id,
+      disputeId: dispute.id,
+      reason: DISPUTE_ATTENTION_REASONS.AUTO_BUILD_OFF,
+      attentionPayload: { source: "automation_pipeline" },
+      nextActionText:
+        "Auto-build is off for this shop. Turn it on in Settings → Automation to start building packs for new disputes.",
+    });
     return { action: "skipped_auto_build_off" };
   }
 
   const quota = await checkPackQuota(dispute.shop_id);
   if (!quota.allowed) {
+    await recordBlockedAutoBuild({
+      shopId: dispute.shop_id,
+      disputeId: dispute.id,
+      reason: DISPUTE_ATTENTION_REASONS.QUOTA_EXCEEDED,
+      attentionPayload: {
+        plan: quota.plan,
+        remaining: quota.remaining,
+        limit: quota.limit ?? null,
+      },
+      nextActionText:
+        "You're out of pack credits this cycle. Upgrade your plan or buy a top-up to keep automating disputes.",
+      auditPayload: { used: quota.used },
+    });
     return { action: "quota_exceeded" };
   }
 
   const featureCheck = checkFeatureAccess(quota.plan, "autoPack");
   if (!featureCheck.allowed) {
+    await recordBlockedAutoBuild({
+      shopId: dispute.shop_id,
+      disputeId: dispute.id,
+      reason: DISPUTE_ATTENTION_REASONS.FEATURE_BLOCKED,
+      attentionPayload: { plan: quota.plan },
+      nextActionText:
+        "Auto-build is a paid feature. Upgrade to Starter or above to enable automated dispute packs.",
+    });
     return { action: "feature_blocked" };
   }
 

@@ -82,6 +82,13 @@ export const TOP_UPS: TopUp[] = [
   { sku: "topup_100", label: "+100 packs", packs: 100, priceUsd: 59 },
 ];
 
+/** Top-up packs expire 30 days from purchase, independent of the
+ *  monthly billing cycle. The cycle-end expiry that shipped first
+ *  silently destroyed packs bought hours before renewal (incident
+ *  2026-05-15) — see docs/prd/billing-lifecycle-and-merchant-comms.md
+ *  § Top-up rule. */
+export const TOPUP_EXPIRY_DAYS = 30;
+
 export function getPlan(planId: string): PlanDefinition {
   return PLANS[planId as PlanId] ?? PLANS.free;
 }

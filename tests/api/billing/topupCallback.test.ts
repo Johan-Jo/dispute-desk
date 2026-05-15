@@ -100,6 +100,51 @@ describe("GET /api/billing/topup-callback", () => {
     expect(auditRow?.event_payload.charge_verified).toBe(true);
   });
 
+  it("top-up expires 30 days from purchase, independent of billing cycle", async () => {
+    // Even when the entitlement's cycle ends in one hour, the
+    // top-up grant should NOT inherit that cycle-end. Top-ups are
+    // decoupled from the monthly cycle as of 2026-05-15.
+    const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const sb = {
+      from: vi.fn((table: string) => ({
+        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { billing_cycle_ends_at: oneHourFromNow },
+              error: null,
+            }),
+          }),
+        }),
+      })),
+    };
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    mockVerify.mockResolvedValue({
+      verified: true,
+      status: "ACTIVE",
+      rawAmountUsd: 59,
+      shopifyChargeGid: "gid://shopify/AppPurchaseOneTime/222",
+      test: false,
+    });
+
+    const before = Date.now();
+    await GET(
+      makeReq({ shop_id: "shop-1", sku: "topup_100", charge_id: "222" }),
+    );
+    const after = Date.now();
+
+    expect(mockGrant).toHaveBeenCalledTimes(1);
+    const grantCall = mockGrant.mock.calls[0][0];
+    const expiresAtMs = new Date(grantCall.expiresAt as string).getTime();
+    const minExpected = before + 30 * 24 * 60 * 60 * 1000;
+    const maxExpected = after + 30 * 24 * 60 * 60 * 1000;
+    expect(expiresAtMs).toBeGreaterThanOrEqual(minExpected);
+    expect(expiresAtMs).toBeLessThanOrEqual(maxExpected);
+    // The cycle-end-aliased expiry would have been ~1 hour from now;
+    // the new behavior must be far past it.
+    expect(expiresAtMs).toBeGreaterThan(new Date(oneHourFromNow).getTime());
+  });
+
   it("redirects without verify when charge_id is missing", async () => {
     const { sb } = makeSb();
     mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
