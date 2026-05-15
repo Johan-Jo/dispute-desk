@@ -86,13 +86,19 @@ jobs:
 
       - name: Dump roles, schema, and data
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_URL_RAW: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_DB_URL}" ]; then
+          if [ -z "${SUPABASE_DB_URL_RAW}" ]; then
             echo "::error::SUPABASE_DB_URL secret is not set"
             exit 1
           fi
+          # Strip trailing/leading whitespace — a stray newline at the
+          # end of the secret (very common after copy-paste through
+          # multiple browsers) makes the Go URL parser reject the
+          # whole string. tr scrubs \n, \r, and literal spaces.
+          SUPABASE_DB_URL=$(printf '%s' "${SUPABASE_DB_URL_RAW}" | tr -d '\n\r ')
+
           STAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           PREFIX="disputedesk-${STAMP}"
           echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
