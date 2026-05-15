@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
   if (shop) billingUrl.searchParams.set("shop", shop);
 
   if (!chargeId || !topUp) {
+    billingUrl.searchParams.set("topup_failed", "missing_charge_or_sku");
     return NextResponse.redirect(billingUrl.toString());
   }
 
@@ -59,7 +60,11 @@ export async function GET(req: NextRequest) {
         shopify_gid: verification.shopifyChargeGid ?? null,
       },
     });
+    // `verify_failed` was the legacy param; keeping it for backwards
+    // compatibility with any deep links that bookmarked it. The new
+    // `topup_failed` is what the billing page renders going forward.
     billingUrl.searchParams.set("verify_failed", verification.reason ?? "unknown");
+    billingUrl.searchParams.set("topup_failed", verification.reason ?? "unknown");
     return NextResponse.redirect(billingUrl.toString());
   }
 
@@ -104,5 +109,10 @@ export async function GET(req: NextRequest) {
     reference,
   }).catch(() => {});
 
+  // Tell the billing page to show an in-app success banner. The
+  // packs count rides as a query param so the page doesn't have to
+  // re-query usage just to know how many were granted.
+  billingUrl.searchParams.set("topup_success", "1");
+  billingUrl.searchParams.set("topup_packs", String(topUp.packs));
   return NextResponse.redirect(billingUrl.toString());
 }

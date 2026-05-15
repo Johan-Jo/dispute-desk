@@ -1199,7 +1199,12 @@
         "body": "Il vous reste moins de 10 % de votre allocation mensuelle de packs. Achetez un top-up ou passez à un plan supérieur pour maintenir auto-build actif jusqu'à la fin du cycle.",
         "cta": "Acheter un top-up"
       }
-    }
+    },
+    "topupSuccessTitle": "{count} packs ajoutés",
+    "topupSuccessBody": "Le top-up est validé. Vos packs supplémentaires sont disponibles dès maintenant et expirent 30 jours après l'achat, indépendamment de votre cycle de facturation.",
+    "topupFailedTitle": "Le top-up n'a pas abouti",
+    "topupFailedGeneric": "Nous n'avons pas pu finaliser le top-up. Réessayez dans un instant ou contactez le support si le problème persiste.",
+    "topupProcessing": "Traitement…"
   },
   "rules": {
     "title": "Règles",

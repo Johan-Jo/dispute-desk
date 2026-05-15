@@ -1199,7 +1199,12 @@
         "body": "Sie haben weniger als 10 % Ihres monatlichen Pack-Kontingents übrig. Kaufen Sie ein Top-up oder upgraden Sie, um Auto-Build für den Rest des Zyklus aktiv zu halten.",
         "cta": "Top-up kaufen"
       }
-    }
+    },
+    "topupSuccessTitle": "{count} Packs hinzugefügt",
+    "topupSuccessBody": "Das Top-up wurde verbucht. Die zusätzlichen Packs sind jetzt verfügbar und laufen 30 Tage nach dem Kauf ab — unabhängig von Ihrem Abrechnungszyklus.",
+    "topupFailedTitle": "Top-up fehlgeschlagen",
+    "topupFailedGeneric": "Das Top-up konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut oder wenden Sie sich an den Support, falls das Problem bestehen bleibt.",
+    "topupProcessing": "Wird verarbeitet…"
   },
   "rules": {
     "title": "Regeln",

@@ -1200,7 +1200,12 @@
         "body": "Du har mindre än 10 % av din månadskvot kvar. Köp en top-up eller uppgradera planen för att hålla auto-build igång resten av cykeln.",
         "cta": "Köp top-up"
       }
-    }
+    },
+    "topupSuccessTitle": "{count} packs tillagda",
+    "topupSuccessBody": "Top-up:en gick igenom. Dina extra packs är tillgängliga nu och löper ut 30 dagar efter köpet — oberoende av din faktureringscykel.",
+    "topupFailedTitle": "Top-up gick inte igenom",
+    "topupFailedGeneric": "Vi kunde inte slutföra top-up:en. Försök igen om en stund eller kontakta supporten om problemet kvarstår.",
+    "topupProcessing": "Bearbetar…"
   },
   "rules": {
     "title": "Regler",

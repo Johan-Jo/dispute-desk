@@ -1189,7 +1189,12 @@
         "body": "You're below 10% of your monthly pack allotment. Buy a top-up or upgrade your plan to keep auto-build running for the rest of the cycle.",
         "cta": "Buy top-up"
       }
-    }
+    },
+    "topupSuccessTitle": "{count} packs added",
+    "topupSuccessBody": "The top-up cleared. Your extra packs are available now and expire 30 days from purchase, independent of your billing cycle.",
+    "topupFailedTitle": "Top-up didn't go through",
+    "topupFailedGeneric": "We couldn't complete the top-up. Try again in a moment or contact support if the issue persists.",
+    "topupProcessing": "Processing…"
   },
   "rules": {
     "title": "Rules",

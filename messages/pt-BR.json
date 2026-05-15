@@ -1199,7 +1199,12 @@
         "body": "Você está abaixo de 10% da sua cota mensal de packs. Compre um top-up ou faça upgrade do plano para manter o auto-build rodando pelo resto do ciclo.",
         "cta": "Comprar top-up"
       }
-    }
+    },
+    "topupSuccessTitle": "{count} packs adicionados",
+    "topupSuccessBody": "O top-up foi confirmado. Os packs extras já estão disponíveis e expiram 30 dias após a compra, independentemente do seu ciclo de cobrança.",
+    "topupFailedTitle": "O top-up não foi concluído",
+    "topupFailedGeneric": "Não foi possível concluir o top-up. Tente novamente ou entre em contato com o suporte se o problema persistir.",
+    "topupProcessing": "Processando…"
   },
   "rules": {
     "title": "Regras",

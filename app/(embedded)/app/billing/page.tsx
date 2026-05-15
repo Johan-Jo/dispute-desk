@@ -317,6 +317,24 @@ function BillingPageInner() {
   const [downgradeTarget, setDowngradeTarget] = useState<string | null>(null);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
+  /** Which top-up SKU is currently being purchased — drives the
+   *  per-button spinner so the merchant has feedback while the
+   *  Shopify call is in flight. */
+  const [topupInFlight, setTopupInFlight] = useState<string | null>(null);
+  const [topupError, setTopupError] = useState<string | null>(null);
+  /** Read once on mount: when the topup-callback redirects back
+   *  with `?topup_success=…&packs=…`, the merchant sees an in-app
+   *  confirmation instead of having to trust the email. Stripped
+   *  from the URL after the banner mounts so a reload doesn't
+   *  re-show it. */
+  const topupSuccessPacks = (() => {
+    const ok = searchParams.get("topup_success");
+    const packs = searchParams.get("topup_packs");
+    if (ok !== "1" || !packs) return null;
+    const n = Number(packs);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+  const topupFailedReason = searchParams.get("topup_failed");
 
   const fetchUsage = useCallback(async () => {
     setLoading(true);
@@ -458,6 +476,36 @@ function BillingPageInner() {
                 </a>
               </p>
             )}
+          </Banner>
+        )}
+
+        {/* Top-up success — surfaced after topup-callback redirect.
+            Confirms the +N packs are live; complements the email. */}
+        {topupSuccessPacks !== null && (
+          <Banner
+            title={t("billing.topupSuccessTitle", { count: topupSuccessPacks })}
+            tone="success"
+            onDismiss={() => {
+              // Strip the query params so a reload doesn't re-show.
+              router.replace(pathname, { scroll: false });
+            }}
+          >
+            <p>{t("billing.topupSuccessBody")}</p>
+          </Banner>
+        )}
+
+        {/* Top-up failure — fed from ?topup_failed=… on the redirect
+            OR from a same-page error during the POST call. */}
+        {(topupFailedReason || topupError) && (
+          <Banner
+            title={t("billing.topupFailedTitle")}
+            tone="critical"
+            onDismiss={() => {
+              setTopupError(null);
+              if (topupFailedReason) router.replace(pathname, { scroll: false });
+            }}
+          >
+            <p>{topupError ?? decodeURIComponent(topupFailedReason ?? "")}</p>
           </Banner>
         )}
 
@@ -656,23 +704,60 @@ function BillingPageInner() {
               {[
                 { sku: "topup_25", labelKey: "billing.topUp25" },
                 { sku: "topup_100", labelKey: "billing.topUp100" },
-              ].map((topUp) => (
-                <button
-                  key={topUp.sku}
-                  onClick={async () => {
-                    const res = await fetch("/api/billing/topup", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ sku: topUp.sku }),
-                    });
-                    const data = await res.json();
-                    if (data.confirmationUrl) window.top!.location.href = data.confirmationUrl;
-                  }}
-                  style={styles.topUpButton}
-                >
-                  {t(topUp.labelKey)}
-                </button>
-              ))}
+              ].map((topUp) => {
+                const inFlight = topupInFlight === topUp.sku;
+                const disabled = topupInFlight !== null;
+                return (
+                  <button
+                    key={topUp.sku}
+                    disabled={disabled}
+                    onClick={async () => {
+                      // Reset surfaces before retry. Loading state
+                      // disables both top-up buttons so concurrent
+                      // clicks don't double-charge.
+                      setTopupError(null);
+                      setTopupInFlight(topUp.sku);
+                      try {
+                        const res = await fetch("/api/billing/topup", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ sku: topUp.sku }),
+                        });
+                        const data = (await res.json()) as {
+                          confirmationUrl?: string;
+                          error?: string;
+                        };
+                        if (data.confirmationUrl) {
+                          // Don't clear inFlight — the redirect is
+                          // about to leave the page anyway, and we
+                          // want the spinner to persist visually
+                          // through the navigation.
+                          window.top!.location.href = data.confirmationUrl;
+                          return;
+                        }
+                        const message =
+                          typeof data.error === "string" && data.error.length > 0
+                            ? data.error
+                            : t("billing.topupFailedGeneric");
+                        setTopupError(message);
+                      } catch {
+                        setTopupError(t("billing.topupFailedGeneric"));
+                      } finally {
+                        setTopupInFlight((cur) =>
+                          cur === topUp.sku ? null : cur,
+                        );
+                      }
+                    }}
+                    style={{
+                      ...styles.topUpButton,
+                      opacity: disabled && !inFlight ? 0.5 : 1,
+                      cursor: disabled ? "wait" : "pointer",
+                    }}
+                  >
+                    {inFlight ? t("billing.topupProcessing") : t(topUp.labelKey)}
+                  </button>
+                );
+              })}
             </InlineStack>
           </BlockStack>
         </Card>

@@ -1166,7 +1166,12 @@
         "body": "Tienes menos del 10 % de tu asignación mensual de packs. Compra un top-up o haz upgrade del plan para mantener auto-build activo el resto del ciclo.",
         "cta": "Comprar top-up"
       }
-    }
+    },
+    "topupSuccessTitle": "{count} packs añadidos",
+    "topupSuccessBody": "El top-up se completó. Los packs extra ya están disponibles y caducan 30 días después de la compra, independientemente de tu ciclo de facturación.",
+    "topupFailedTitle": "El top-up no se completó",
+    "topupFailedGeneric": "No pudimos completar el top-up. Vuelve a intentarlo o contacta a soporte si el problema persiste.",
+    "topupProcessing": "Procesando…"
   },
   "rules": {
     "title": "Reglas",
