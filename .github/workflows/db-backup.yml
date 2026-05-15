@@ -84,6 +84,43 @@ jobs:
           supabase --version
           aws --version
 
+      # TEMPORARY — remove after first green run.
+      # Prints the URL with password masked. Shows every other
+      # character of the secret so we can verify the shape is exact
+      # without revealing credentials.
+      - name: Print masked URL for verification
+        env:
+          SUPABASE_DB_URL_RAW: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, urllib.parse as u
+          raw = os.environ["SUPABASE_DB_URL_RAW"]
+          print(f"length:  {len(raw)}")
+          print(f"hex_first_4:  {raw[:4].encode().hex()}")
+          print(f"hex_last_4:   {raw[-4:].encode().hex()}")
+          stripped = raw.strip()
+          print(f"stripped_length: {len(stripped)}")
+          parsed = u.urlparse(stripped)
+          masked_pw = "*" * len(parsed.password) if parsed.password else "<no-pw>"
+          print(f"scheme:   {parsed.scheme}")
+          print(f"user:     {parsed.username}")
+          print(f"pw_mask:  {masked_pw}  (length {len(parsed.password) if parsed.password else 0})")
+          print(f"host:     {parsed.hostname}")
+          print(f"port:     {parsed.port}")
+          print(f"db:       {parsed.path.lstrip('/')}")
+          # Print one char of pw bracketed by length — confirms no
+          # weird leading/trailing whitespace inside the password
+          # itself (different from whitespace inside the URL).
+          if parsed.password:
+              first = parsed.password[0]
+              last = parsed.password[-1]
+              first_is_ws = first.isspace() or not first.isprintable()
+              last_is_ws = last.isspace() or not last.isprintable()
+              print(f"pw_first_char_ws_or_nonprint: {first_is_ws}")
+              print(f"pw_last_char_ws_or_nonprint:  {last_is_ws}")
+          PY
+
       - name: Dump roles, schema, and data
         env:
           SUPABASE_DB_URL_RAW: ${{ secrets.SUPABASE_DB_URL }}
