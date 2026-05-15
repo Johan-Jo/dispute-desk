@@ -14,6 +14,7 @@ import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Page,
+  Layout,
   Spinner,
   Modal,
   Text,
@@ -499,8 +500,11 @@ function BillingPageInner() {
         },
       ]}
     >
-      <BlockStack gap="400">
-        {/* Error banner */}
+      <Layout>
+        <Layout.Section>
+          <BlockStack gap="400">
+        {/* Error banner — "Open in Shopify Admin" link aligned right
+         *  to match the chrome banner's CTA placement. */}
         {upgradeError && (
           <Banner
             title={upgradeError}
@@ -508,7 +512,7 @@ function BillingPageInner() {
             onDismiss={() => setUpgradeError(null)}
           >
             {showOpenInShopifyLink && (
-              <p>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <a
                   href="https://admin.shopify.com"
                   target="_blank"
@@ -517,7 +521,7 @@ function BillingPageInner() {
                 >
                   {t("billing.openInShopifyAdmin")}
                 </a>
-              </p>
+              </div>
             )}
           </Banner>
         )}
@@ -870,7 +874,9 @@ function BillingPageInner() {
             </div>
           </BlockStack>
         </Card>
-      </BlockStack>
+          </BlockStack>
+        </Layout.Section>
+      </Layout>
 
       {/* Discount modal */}
       {showDiscountModal && (
