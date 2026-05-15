@@ -17,9 +17,16 @@ name: DB backup → R2
 # compromise (admin credential theft bypasses provider backups too).
 #
 # Secrets required (Settings → Secrets and variables → Actions):
-#   SUPABASE_DB_URL          postgres://postgres:<password>@<host>:5432/postgres
-#                            Direct connection string, NOT the pooler URL —
-#                            pg_dump won't speak to the transaction-pooler.
+#   SUPABASE_DB_URL          postgres://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#                            **Session pooler URL** (port 5432 on
+#                            pooler.supabase.com), NOT the direct
+#                            connection (db.<ref>.supabase.co — IPv6-only,
+#                            unreachable from GitHub Actions runners), and
+#                            NOT the transaction pooler (port 6543 — does
+#                            not support the full protocol pg_dump needs).
+#                            Find it in Supabase dashboard → Project
+#                            Settings → Database → Connection string →
+#                            "Session pooler" tab.
 #   R2_ACCOUNT_ID            Cloudflare account ID (found in R2 dashboard)
 #   R2_ACCESS_KEY_ID         R2 API token with Object R/W on the bucket
 #   R2_SECRET_ACCESS_KEY     R2 API token secret
