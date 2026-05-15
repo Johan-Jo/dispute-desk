@@ -303,13 +303,33 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // the deferred new-dispute alert (review variant) so the merchant
   // knows a dispute came in. Sync-time send is now deferred for every
   // `pack_enqueued` outcome; without this we'd silently drop the alert.
+  //
+  // Risk-weakness exception (fraud-risk Phase 2): even on a failed
+  // build, the cap can still fire from the persisted shopify_orders
+  // snapshot — we don't need a successful Shopify fetch to know the
+  // order was HIGH-risk + fulfilled. When the cap triggered, send the
+  // review email with the risk_weakness parkReason instead of the
+  // generic "build failed" alert, so the merchant understands their
+  // auto-mode rule did NOT submit and why. The pack stays "failed" so
+  // the UI shows the system-error banner correctly.
   if (pack.status === "failed") {
+    const failedRiskWeakness = (
+      pack.pack_json as {
+        risk_weakness?: { triggered?: boolean; reason?: string | null };
+      } | null
+    )?.risk_weakness;
+    const failedParkedByRiskWeakness =
+      failedRiskWeakness?.triggered === true &&
+      failedRiskWeakness?.reason === "high_risk_fulfilled";
+
     if (pack.dispute_id) {
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
-        () => {
-          /* non-fatal */
-        },
-      );
+      void claimAndSendDeferredNewDisputeAlert(
+        pack.dispute_id,
+        "review",
+        failedParkedByRiskWeakness ? "risk_weakness" : null,
+      ).catch(() => {
+        /* non-fatal */
+      });
     }
     return { action: "block", details: "Pack build failed; skipping auto-save evaluation." };
   }

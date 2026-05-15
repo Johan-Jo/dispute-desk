@@ -490,12 +490,17 @@ export async function buildPack(
   // Reads the persisted snapshot from `shopify_orders` (populated by
   // the orders backfill ingestion — no new Shopify call). A null/
   // missing row simply means no signal; the gate cannot trigger.
+  //
+  // Pass the live fulfillment count as a hint — loadRiskWeakness will
+  // fall back to the persisted shopify_orders.fulfillment_status /
+  // fulfilled_at when the live order fetch failed, so the gate still
+  // fires correctly during a Shopify outage.
   const riskWeaknessSummary: RiskWeaknessSummary = await loadRiskWeakness({
     sb,
     shopId: pack.shop_id,
     orderGid: dispute.order_gid,
     disputeReason: dispute.reason,
-    fulfillmentCount: order?.fulfillments?.length ?? 0,
+    liveFulfillmentCount: order?.fulfillments?.length ?? null,
   });
 
   // Case-strength summary — PRD §6 + §9. Computed server-side here so
@@ -620,15 +625,29 @@ export async function buildPack(
  * not-triggered summary — the cap can never fire without data, by
  * design. The Phase 1 collector follows the same posture for the
  * positive-signal path.
+ *
+ * Fulfillment-count derivation order:
+ *   1. Live count from the Shopify order fetch (most accurate when present).
+ *   2. Persisted snapshot: fulfilled_at IS NOT NULL OR
+ *      fulfillment_status = 'FULFILLED' → count = 1 (we only need ≥ 1
+ *      for the gate). This is the resilience path for Shopify hiccups
+ *      that fail the live fetch but leave the snapshot intact.
+ *   3. Fallback to 0 (cap will not trigger).
+ *
+ * The point of this fallback: when Shopify has a transient 5xx, the
+ * cap should still fire on a HIGH-risk fulfilled fraud dispute — we
+ * have every input we need from Supabase already.
  */
 async function loadRiskWeakness(args: {
   sb: ReturnType<typeof getServiceClient>;
   shopId: string;
   orderGid: string | null;
   disputeReason: string | null;
-  fulfillmentCount: number;
+  /** Live fulfillment count from the Shopify order fetch. Null when
+   *  the fetch failed or the order has no fulfillments. */
+  liveFulfillmentCount: number | null;
 }): Promise<RiskWeaknessSummary> {
-  const { sb, shopId, orderGid, disputeReason, fulfillmentCount } = args;
+  const { sb, shopId, orderGid, disputeReason, liveFulfillmentCount } = args;
 
   // No order → no snapshot → cannot evaluate. Return diagnostics-empty
   // not-triggered so pack_json still has the field for shape stability.
@@ -637,13 +656,15 @@ async function loadRiskWeakness(args: {
       disputeReason,
       riskLevelInitial: null,
       riskRecommendationInitial: null,
-      fulfillmentCount,
+      fulfillmentCount: liveFulfillmentCount ?? 0,
     });
   }
 
   const { data: row, error } = await sb
     .from("shopify_orders")
-    .select("risk_level_initial, risk_recommendation_initial")
+    .select(
+      "risk_level_initial, risk_recommendation_initial, fulfillment_status, fulfilled_at",
+    )
     .eq("shop_id", shopId)
     .eq("shopify_order_id", orderGid)
     .maybeSingle();
@@ -657,15 +678,26 @@ async function loadRiskWeakness(args: {
       disputeReason,
       riskLevelInitial: null,
       riskRecommendationInitial: null,
-      fulfillmentCount,
+      fulfillmentCount: liveFulfillmentCount ?? 0,
     });
   }
+
+  // Derive fulfillmentCount with resilience to Shopify-fetch failures.
+  const snapshotIndicatesFulfilled =
+    (row?.fulfillment_status as string | null)?.toUpperCase() === "FULFILLED" ||
+    row?.fulfilled_at != null;
+  const resolvedFulfillmentCount =
+    liveFulfillmentCount != null && liveFulfillmentCount > 0
+      ? liveFulfillmentCount
+      : snapshotIndicatesFulfilled
+        ? 1
+        : (liveFulfillmentCount ?? 0);
 
   return detectRiskWeakness({
     disputeReason,
     riskLevelInitial: (row?.risk_level_initial as string | null) ?? null,
     riskRecommendationInitial:
       (row?.risk_recommendation_initial as string | null) ?? null,
-    fulfillmentCount,
+    fulfillmentCount: resolvedFulfillmentCount,
   });
 }
