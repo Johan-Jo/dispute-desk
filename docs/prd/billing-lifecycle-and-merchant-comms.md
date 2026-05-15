@@ -421,19 +421,19 @@ Phase boundaries chosen so each commit is independently shippable and reversible
 
 ## 8. Acceptance criteria
 
-- [ ] A merchant on Growth whose cycle ends today gets 75 fresh packs within 1 hour, without manual intervention.
-- [ ] If Shopify fails the renewal charge, the merchant is emailed within 5 minutes of the webhook, AND sees a yellow banner in the embedded app on next open.
-- [ ] If the webhook is dropped entirely, the hourly billing reconciliation cron catches the missed renewal within 1 hour.
+- [x] A merchant on Growth whose cycle ends today gets 75 fresh packs within 1 hour, without manual intervention. (Shipped 2026-05-15 — hourly `reconcile-billing-cycles` cron.)
+- [ ] If Shopify fails the renewal charge, the merchant is emailed within 5 minutes of the webhook, AND sees a yellow banner in the embedded app on next open. (Phase 3 webhook + Phase 4 comms.)
+- [x] If the webhook is dropped entirely, the hourly billing reconciliation cron catches the missed renewal within 1 hour. (Shipped 2026-05-15 — `lib/billing/reconcileBillingCycle.ts` re-verifies against `currentAppInstallation.activeSubscriptions`.)
 - [x] Every `quota_exceeded` / `feature_blocked` / `auto_build_off` pipeline exit produces: 1 audit event, 1 dispute_event with `event_type=pack_blocked`, 1 throttled email (review variant) to the team email, `disputes.needs_attention = true` with a canonical `attention_reason` and structured `attention_payload`. (Shipped 2026-05-15.)
 - [x] Repeated billing-blocked disputes for the same shop + reason within the 6-hour throttle window do NOT generate repeated emails; they DO still generate audit events, dispute timeline events, and in-app banners. A dispute whose deadline is within 72 hours always generates an email regardless of the throttle. (Shipped 2026-05-15.)
-- [ ] Re-running the billing reconciliation cron against an already-renewed cycle creates zero duplicate ledger rows (idempotency index).
-- [ ] Cancelling the subscription in Shopify Admin transitions to `cancelled` in our DB within 5 min via webhook and within 1 h via reconciliation cron.
-- [ ] Reactivating a cancelled subscription restores `active` state and grants the new cycle's credits.
-- [ ] **Read-only access invariant.** A shop with `subscription_state` in `{expired, cancelled, grace}` can still: load the disputes list, open any historical dispute, view its evidence pack, view its audit/timeline events, download stored PDFs. The shop CANNOT: auto-build a new pack, auto-submit, or trigger any new outbound Shopify save mutation. Billing route guards must enforce this asymmetry; no global "subscription required" middleware that blocks read paths.
+- [x] Re-running the billing reconciliation cron against an already-renewed cycle creates zero duplicate ledger rows (idempotency index). (Shipped 2026-05-15 — `pack_credits_ledger_shop_reference_uniq` + `tryGrantMonthlyCredits` SELECT-then-INSERT with 23505 catch.)
+- [x] Cancelling the subscription in Shopify Admin transitions to `cancelled` in our DB within 1 h via reconciliation cron. (Shipped 2026-05-15. Sub-5-min webhook path lands in Phase 3.)
+- [ ] Reactivating a cancelled subscription restores `active` state and grants the new cycle's credits. (Partial — reconciler grants credits on next active observation; the explicit `cancelled → active` transition + idempotency under back-to-back reactivation needs a separate test once Phase 3 is in.)
+- [ ] **Read-only access invariant.** A shop with `subscription_state` in `{expired, cancelled, grace}` can still: load the disputes list, open any historical dispute, view its evidence pack, view its audit/timeline events, download stored PDFs. The shop CANNOT: auto-build a new pack, auto-submit, or trigger any new outbound Shopify save mutation. Billing route guards must enforce this asymmetry; no global "subscription required" middleware that blocks read paths. (`readOnlyAccessAllowed()` always returns true; route-guard audit lands with Phase 4.)
 - [x] **Top-up expiry.** A top-up purchased one day before cycle end remains available after the monthly cycle renews and expires exactly 30 days from purchase. (Shipped 2026-05-15.)
-- [ ] `cancelled` (billing state) and `uninstalled` (install state on `shops.uninstalled_at`) are independent — neither implies the other; no automation runs for uninstalled shops regardless of billing state.
-- [ ] `PENDING` Shopify subscription status maps to `trialing` ONLY when `trial_ends_at > now()`; otherwise maps to `expired`.
-- [ ] `npm run release:verify` passes after each phase (per `feedback_run_release_verify` memory).
+- [x] `cancelled` (billing state) and `uninstalled` (install state on `shops.uninstalled_at`) are independent — neither implies the other; no automation runs for uninstalled shops regardless of billing state. (Shipped 2026-05-15 — reconciler checks `shops.uninstalled_at` BEFORE any other read.)
+- [x] `PENDING` Shopify subscription status maps to `trialing` ONLY when `trial_ends_at > now()`; otherwise maps to `expired`. (Shipped 2026-05-15 — `mapShopifyStatusToState`.)
+- [x] `npm run release:verify` passes after each phase (per `feedback_run_release_verify` memory).
 
 ---
 

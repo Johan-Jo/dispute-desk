@@ -29,6 +29,7 @@ import { CUSTOMER_ORDERS_FOR_CE30_QUERY } from "./customerOrdersForCE30";
 import { ORDERS_FOR_BACKFILL_QUERY } from "./ordersForBackfill";
 import { ORDERS_FOR_SNAPSHOT_QUERY } from "./ordersForSnapshot";
 import { APP_CHARGE_STATUS_QUERY } from "./appChargeStatus";
+import { ACTIVE_SUBSCRIPTIONS_QUERY } from "./activeSubscriptions";
 import {
   DISPUTE_LIST_QUERY,
   DISPUTE_DETAIL_QUERY,
@@ -122,6 +123,16 @@ export const PRODUCTION_GRAPHQL: ProductionGraphQL[] = [
     type: "query",
     body: APP_CHARGE_STATUS_QUERY,
     stubVariables: { id: STUB.appSubscriptionGid },
+    dryRun: true,
+  },
+  {
+    // Billing reconciliation cron source-of-truth — schema validation
+    // must catch any drift to AppSubscription / pricingDetails fields
+    // before a cron tick silently leaves a shop expired.
+    name: "ACTIVE_SUBSCRIPTIONS_QUERY",
+    type: "query",
+    body: ACTIVE_SUBSCRIPTIONS_QUERY,
+    stubVariables: {},
     dryRun: true,
   },
 
