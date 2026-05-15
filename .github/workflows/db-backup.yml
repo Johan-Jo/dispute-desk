@@ -119,6 +119,24 @@ jobs:
               last_is_ws = last.isspace() or not last.isprintable()
               print(f"pw_first_char_ws_or_nonprint: {first_is_ws}")
               print(f"pw_last_char_ws_or_nonprint:  {last_is_ws}")
+          # Mask non-pw bytes, print every byte's hex code so we can
+          # spot invisible characters (NBSP \xc2\xa0, BOM \xef\xbb\xbf,
+          # zero-width \xe2\x80\x8b, etc.) that String.isspace() and
+          # urlparse silently tolerate. Password bytes are shown as
+          # `**` so the secret never leaks even byte-by-byte.
+          pw_bytes = parsed.password.encode() if parsed.password else b""
+          all_bytes = raw.encode()
+          # Locate pw position to mask it
+          pw_start = all_bytes.find(pw_bytes) if pw_bytes else -1
+          pw_end = pw_start + len(pw_bytes) if pw_start >= 0 else -1
+          out = []
+          for i, b in enumerate(all_bytes):
+              if pw_start <= i < pw_end:
+                  out.append("**")
+              else:
+                  out.append(f"{b:02x}")
+          print("byte_hex_with_pw_masked:")
+          print(" ".join(out))
           PY
 
       - name: Dump roles, schema, and data
