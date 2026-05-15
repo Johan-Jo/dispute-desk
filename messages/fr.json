@@ -2084,6 +2084,13 @@
       "support": "Assistance",
       "dataRetention": "Conservation des données"
     },
+    "fromHub": {
+      "eyebrow": "Centre de ressources",
+      "title": "Nouveautés du centre de ressources",
+      "subtitle": "Guides pratiques sur les rétrofacturations, les preuves et les opérations marchand.",
+      "viewAll": "Voir tous les articles",
+      "readMore": "Lire la suite"
+    },
     "roi": {
       "title": "Aperçu du ROI",
       "subtitle": "Valeur mensuelle illustrative par volume de litiges — associée à vos packs de plan",

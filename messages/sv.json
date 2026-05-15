@@ -2086,6 +2086,13 @@
       "support": "Support",
       "dataRetention": "Datalagring"
     },
+    "fromHub": {
+      "eyebrow": "Resurscenter",
+      "title": "Senaste från resurscentret",
+      "subtitle": "Praktiska guider om återkrav, bevis och butiksdrift.",
+      "viewAll": "Visa alla artiklar",
+      "readMore": "Läs mer"
+    },
     "roi": {
       "title": "ROI-översikt",
       "subtitle": "Illustrativt månadsvärde per tvistemålsvolym — kopplat till dina planpaket",

@@ -2135,6 +2135,13 @@
       "support": "Support",
       "dataRetention": "Data Retention"
     },
+    "fromHub": {
+      "eyebrow": "Resources Hub",
+      "title": "Latest from the Resources Hub",
+      "subtitle": "Practical guides on chargebacks, evidence, and merchant operations.",
+      "viewAll": "View all articles",
+      "readMore": "Read more"
+    },
     "roi": {
       "title": "ROI snapshot",
       "subtitle": "Illustrative monthly value by dispute volume — mapped to your plan packs",

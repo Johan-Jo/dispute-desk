@@ -10,6 +10,7 @@ import { buildMarketingHomeMetadata } from "@/lib/marketing/homeMetadata";
 import { marketingHomeWebPageJsonLd } from "@/lib/marketing/jsonLd";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { MarketingLandingPageClient } from "@/components/marketing/MarketingLandingPageClient";
+import { MarketingHubArticles } from "@/components/marketing/MarketingHubArticles";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -58,6 +59,12 @@ export default async function MarketingHomePage({ params }: Props) {
       ) : null}
       <MarketingLandingPageClient
         base={pathLocale === "en" ? "" : `/${pathLocale}`}
+        hubArticles={
+          <MarketingHubArticles
+            pathLocale={pathLocale}
+            base={pathLocale === "en" ? "" : `/${pathLocale}`}
+          />
+        }
       />
     </>
   );

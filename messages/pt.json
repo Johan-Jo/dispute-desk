@@ -2084,6 +2084,13 @@
       "support": "Suporte",
       "dataRetention": "Retenção de dados"
     },
+    "fromHub": {
+      "eyebrow": "Central de recursos",
+      "title": "Novidades da central de recursos",
+      "subtitle": "Guias práticos sobre chargebacks, evidências e operações do lojista.",
+      "viewAll": "Ver todos os artigos",
+      "readMore": "Leia mais"
+    },
     "roi": {
       "title": "Resumo de ROI",
       "subtitle": "Valor mensal ilustrativo por volume de disputas — associado aos pacotes do seu plano",

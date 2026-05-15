@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info, Store, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,13 @@ function normalizeShopDomain(value: string): string | null {
   return domain;
 }
 
-export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
+export function MarketingLandingPageClient({
+  base = "",
+  hubArticles,
+}: {
+  base?: string;
+  hubArticles?: ReactNode;
+}) {
   const t = useTranslations("marketing");
   const [roiMode, setRoiMode] = useState<RoiMode>("base");
   const [showInstall, setShowInstall] = useState(false);
@@ -380,6 +386,9 @@ export function MarketingLandingPageClient({ base = "" }: { base?: string }) {
 
         </div>
       </section>
+
+      {/* Latest from the Resources Hub */}
+      {hubArticles}
 
       {/* ROI Snapshot */}
       <section className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">

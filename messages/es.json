@@ -2084,6 +2084,13 @@
       "support": "Soporte",
       "dataRetention": "Retención de datos"
     },
+    "fromHub": {
+      "eyebrow": "Centro de recursos",
+      "title": "Lo último del centro de recursos",
+      "subtitle": "Guías prácticas sobre contracargos, evidencia y operaciones del comercio.",
+      "viewAll": "Ver todos los artículos",
+      "readMore": "Leer más"
+    },
     "roi": {
       "title": "Resumen de ROI",
       "subtitle": "Valor mensual ilustrativo por volumen de disputas — asociado a los paquetes de su plan",

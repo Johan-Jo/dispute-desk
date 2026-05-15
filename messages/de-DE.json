@@ -2183,6 +2183,13 @@
       "support": "Support",
       "dataRetention": "Datenspeicherung"
     },
+    "fromHub": {
+      "eyebrow": "Resources-Hub",
+      "title": "Neueste Beiträge aus dem Resources-Hub",
+      "subtitle": "Praktische Anleitungen zu Chargebacks, Beweismaterial und Händler-Operations.",
+      "viewAll": "Alle Beiträge ansehen",
+      "readMore": "Weiterlesen"
+    },
     "roi": {
       "title": "ROI-Übersicht",
       "subtitle": "Illustrativer monatlicher Wert nach Streitfallvolumen — zugeordnet zu Ihren Planpaketen",
