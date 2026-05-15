@@ -273,6 +273,16 @@ const styles = {
     background: "#FFFFFF",
     cursor: "pointer",
   } as React.CSSProperties,
+  topUpCard: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    padding: 16,
+    borderRadius: 8,
+    border: "1px solid #E1E3E5",
+    background: "#FFFFFF",
+  } as React.CSSProperties,
   discountOverlay: {
     position: "fixed",
     inset: 0,
@@ -779,74 +789,85 @@ function BillingPageInner() {
           )}
         </Card>
 
-        {/* Top-ups section */}
+        {/* Top-ups section — two distinct cards, packs label + price
+         *  stacked, with a clear "Buy" CTA on each. Replaces the
+         *  earlier one-line button that crammed "+25 packs — $19"
+         *  into a single label. */}
         <Card>
-          <BlockStack gap="300">
-            <Text as="h2" variant="headingMd">
-              {t("billing.topUps")}
-            </Text>
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("billing.topUpsDesc")}
-            </Text>
-            <InlineStack gap="300">
+          <BlockStack gap="400">
+            <BlockStack gap="100">
+              <Text as="h2" variant="headingMd">
+                {t("billing.topUps")}
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {t("billing.topUpsDesc")}
+              </Text>
+            </BlockStack>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: smDown ? "1fr" : "1fr 1fr",
+                gap: 12,
+              }}
+            >
               {[
-                { sku: "topup_25", labelKey: "billing.topUp25" },
-                { sku: "topup_100", labelKey: "billing.topUp100" },
+                { sku: "topup_25", packsKey: "billing.topUp25Packs", price: "$19" },
+                { sku: "topup_100", packsKey: "billing.topUp100Packs", price: "$59" },
               ].map((topUp) => {
                 const inFlight = topupInFlight === topUp.sku;
                 const disabled = topupInFlight !== null;
+                const onBuy = async () => {
+                  setTopupError(null);
+                  setTopupInFlight(topUp.sku);
+                  try {
+                    const res = await fetch("/api/billing/topup", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ sku: topUp.sku }),
+                    });
+                    const data = (await res.json()) as {
+                      confirmationUrl?: string;
+                      error?: string;
+                    };
+                    if (data.confirmationUrl) {
+                      window.top!.location.href = data.confirmationUrl;
+                      return;
+                    }
+                    const message =
+                      typeof data.error === "string" && data.error.length > 0
+                        ? data.error
+                        : t("billing.topupFailedGeneric");
+                    setTopupError(message);
+                  } catch {
+                    setTopupError(t("billing.topupFailedGeneric"));
+                  } finally {
+                    setTopupInFlight((cur) => (cur === topUp.sku ? null : cur));
+                  }
+                };
                 return (
-                  <button
-                    key={topUp.sku}
-                    disabled={disabled}
-                    onClick={async () => {
-                      // Reset surfaces before retry. Loading state
-                      // disables both top-up buttons so concurrent
-                      // clicks don't double-charge.
-                      setTopupError(null);
-                      setTopupInFlight(topUp.sku);
-                      try {
-                        const res = await fetch("/api/billing/topup", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ sku: topUp.sku }),
-                        });
-                        const data = (await res.json()) as {
-                          confirmationUrl?: string;
-                          error?: string;
-                        };
-                        if (data.confirmationUrl) {
-                          // Don't clear inFlight — the redirect is
-                          // about to leave the page anyway, and we
-                          // want the spinner to persist visually
-                          // through the navigation.
-                          window.top!.location.href = data.confirmationUrl;
-                          return;
-                        }
-                        const message =
-                          typeof data.error === "string" && data.error.length > 0
-                            ? data.error
-                            : t("billing.topupFailedGeneric");
-                        setTopupError(message);
-                      } catch {
-                        setTopupError(t("billing.topupFailedGeneric"));
-                      } finally {
-                        setTopupInFlight((cur) =>
-                          cur === topUp.sku ? null : cur,
-                        );
-                      }
-                    }}
-                    style={{
-                      ...styles.topUpButton,
-                      opacity: disabled && !inFlight ? 0.5 : 1,
-                      cursor: disabled ? "wait" : "pointer",
-                    }}
-                  >
-                    {inFlight ? t("billing.topupProcessing") : t(topUp.labelKey)}
-                  </button>
+                  <div key={topUp.sku} style={styles.topUpCard}>
+                    <div>
+                      <Text as="p" variant="headingMd" fontWeight="semibold">
+                        {t(topUp.packsKey)}
+                      </Text>
+                      <Text as="p" variant="bodyLg" tone="subdued">
+                        {topUp.price}
+                      </Text>
+                    </div>
+                    <Button
+                      variant="primary"
+                      onClick={onBuy}
+                      disabled={disabled}
+                      loading={inFlight}
+                    >
+                      {inFlight
+                        ? t("billing.topupProcessing")
+                        : t("billing.topUpBuyCta")}
+                    </Button>
+                  </div>
                 );
               })}
-            </InlineStack>
+            </div>
           </BlockStack>
         </Card>
       </BlockStack>

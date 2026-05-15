@@ -1205,7 +1205,10 @@
     "topupFailedTitle": "El top-up no se completó",
     "topupFailedGeneric": "No pudimos completar el top-up. Vuelve a intentarlo o contacta a soporte si el problema persiste.",
     "topupProcessing": "Procesando…",
-    "trialNoteNoTrial": "Los cambios de plan surten efecto hoy al nuevo precio. Los downgrades surten efecto en el siguiente ciclo de facturación. Tus datos siempre se conservan."
+    "trialNoteNoTrial": "Los cambios de plan surten efecto hoy al nuevo precio. Los downgrades surten efecto en el siguiente ciclo de facturación. Tus datos siempre se conservan.",
+    "topUp25Packs": "+25 packs",
+    "topUp100Packs": "+100 packs",
+    "topUpBuyCta": "Comprar"
   },
   "rules": {
     "title": "Reglas",

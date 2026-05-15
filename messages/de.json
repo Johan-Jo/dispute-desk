@@ -1172,7 +1172,10 @@
     "topupFailedTitle": "Top-up fehlgeschlagen",
     "topupFailedGeneric": "Das Top-up konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut oder wenden Sie sich an den Support, falls das Problem bestehen bleibt.",
     "topupProcessing": "Wird verarbeitet…",
-    "trialNoteNoTrial": "Planänderungen werden heute zum neuen Preis wirksam. Downgrades werden zum nächsten Abrechnungszyklus wirksam. Ihre Daten bleiben stets erhalten."
+    "trialNoteNoTrial": "Planänderungen werden heute zum neuen Preis wirksam. Downgrades werden zum nächsten Abrechnungszyklus wirksam. Ihre Daten bleiben stets erhalten.",
+    "topUp25Packs": "+25 Pakete",
+    "topUp100Packs": "+100 Pakete",
+    "topUpBuyCta": "Kaufen"
   },
   "rules": {
     "title": "Regeln",

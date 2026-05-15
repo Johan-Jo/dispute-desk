@@ -1195,7 +1195,10 @@
     "topupFailedTitle": "Top-up didn't go through",
     "topupFailedGeneric": "We couldn't complete the top-up. Try again in a moment or contact support if the issue persists.",
     "topupProcessing": "Processing…",
-    "trialNoteNoTrial": "Plan changes take effect today at the new price. Downgrades take effect at the next billing cycle. Your data is always retained."
+    "trialNoteNoTrial": "Plan changes take effect today at the new price. Downgrades take effect at the next billing cycle. Your data is always retained.",
+    "topUp25Packs": "+25 packs",
+    "topUp100Packs": "+100 packs",
+    "topUpBuyCta": "Buy"
   },
   "rules": {
     "title": "Rules",

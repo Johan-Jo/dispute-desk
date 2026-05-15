@@ -1174,7 +1174,10 @@
     "topupFailedTitle": "Top-up gick inte igenom",
     "topupFailedGeneric": "Vi kunde inte slutföra top-up:en. Försök igen om en stund eller kontakta supporten om problemet kvarstår.",
     "topupProcessing": "Bearbetar…",
-    "trialNoteNoTrial": "Planändringar träder i kraft idag till det nya priset. Nedgraderingar träder i kraft vid nästa faktureringscykel. Din data sparas alltid."
+    "trialNoteNoTrial": "Planändringar träder i kraft idag till det nya priset. Nedgraderingar träder i kraft vid nästa faktureringscykel. Din data sparas alltid.",
+    "topUp25Packs": "+25 paket",
+    "topUp100Packs": "+100 paket",
+    "topUpBuyCta": "Köp"
   },
   "rules": {
     "title": "Regler",

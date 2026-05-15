@@ -1205,7 +1205,10 @@
     "topupFailedTitle": "O top-up não foi concluído",
     "topupFailedGeneric": "Não foi possível concluir o top-up. Tente novamente ou entre em contato com o suporte se o problema persistir.",
     "topupProcessing": "Processando…",
-    "trialNoteNoTrial": "As mudanças de plano entram em vigor hoje pelo novo preço. Os downgrades entram em vigor no próximo ciclo de cobrança. Seus dados são sempre preservados."
+    "trialNoteNoTrial": "As mudanças de plano entram em vigor hoje pelo novo preço. Os downgrades entram em vigor no próximo ciclo de cobrança. Seus dados são sempre preservados.",
+    "topUp25Packs": "+25 pacotes",
+    "topUp100Packs": "+100 pacotes",
+    "topUpBuyCta": "Comprar"
   },
   "rules": {
     "title": "Regras",
