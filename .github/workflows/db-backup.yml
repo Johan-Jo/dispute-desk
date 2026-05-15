@@ -119,6 +119,15 @@ jobs:
               last_is_ws = last.isspace() or not last.isprintable()
               print(f"pw_first_char_ws_or_nonprint: {first_is_ws}")
               print(f"pw_last_char_ws_or_nonprint:  {last_is_ws}")
+              # SHA-256 of the password bytes. Irreversible, doesn't
+              # leak the password, but lets us compare for byte-level
+              # equality with the password in .env.local (hashed the
+              # same way on the local box). If hashes match, the
+              # credentials are identical and the auth failure is not
+              # a "wrong password" issue.
+              import hashlib
+              pw_sha = hashlib.sha256(parsed.password.encode()).hexdigest()
+              print(f"pw_sha256: {pw_sha}")
           # Mask non-pw bytes, print every byte's hex code so we can
           # spot invisible characters (NBSP \xc2\xa0, BOM \xef\xbb\xbf,
           # zero-width \xe2\x80\x8b, etc.) that String.isspace() and
