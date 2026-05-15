@@ -151,6 +151,19 @@ export async function middleware(req: NextRequest) {
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/") ||
       pathname === "/api/portal/clear-shop" ||
+      // Billing callbacks: Shopify redirects the merchant back from
+      // its confirmation page directly to these top-level URLs (not
+      // through the embedded iframe), so the shopify_shop cookie is
+      // either absent or stale due to SameSite restrictions on the
+      // cross-domain hop. Both routes read shop_id from the query
+      // string and independently verify the charge via Shopify's
+      // GraphQL API (verifyAppCharge in lib/shopify/queries/
+      // appChargeStatus.ts) before granting anything — that
+      // verification is the auth gate, not the cookie. Exempting
+      // them here prevents the SHOP_MISMATCH 401 the merchant hits
+      // immediately after approving the charge on Shopify's UI.
+      pathname === "/api/billing/callback" ||
+      pathname === "/api/billing/topup-callback" ||
       // LSE-4: storefront-side session ingest is unauthenticated by
       // design. The pixel and checkout extension run sandboxed with no
       // Shopify session token; they identify the shop via shop_domain
