@@ -107,6 +107,29 @@ jobs:
           echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
           echo "OUT=${OUT}" >> "$GITHUB_ENV"
 
+          # Supabase session pooler quirk: PgBouncer parses the
+          # username from the URL differently than libpq, dropping the
+          # `.<project-ref>` suffix and presenting just `postgres` to
+          # the auth check (which then fails). Workaround: parse the
+          # URL ourselves and pass --username + PGPASSWORD explicitly
+          # so pg_dump bypasses the URL's user/password fields entirely
+          # and uses the libpq env-var path that PgBouncer handles
+          # correctly.
+          python3 - <<'PY' > /tmp/dbcreds.env
+          import os, urllib.parse as u
+          parsed = u.urlparse(os.environ["SUPABASE_DB_URL"])
+          # Single-quote the password for safe sourcing — embedded
+          # single quotes (none expected, but defensive) are escaped.
+          pw = (parsed.password or "").replace("'", "'\\''")
+          print(f"export PGUSER='{parsed.username}'")
+          print(f"export PGPASSWORD='{pw}'")
+          print(f"export PGHOST='{parsed.hostname}'")
+          print(f"export PGPORT='{parsed.port or 5432}'")
+          print(f"export PGDATABASE='{parsed.path.lstrip('/') or 'postgres'}'")
+          PY
+          . /tmp/dbcreds.env
+          rm -f /tmp/dbcreds.env
+
           # -Fc  → custom format, restorable with pg_restore, allows
           #        parallel restore and table-level cherry-pick.
           # -Z9  → max gzip inside the dump (compresses to ~10-20% of raw).
@@ -118,8 +141,7 @@ jobs:
             --compress=9 \
             --no-owner \
             --no-acl \
-            --file="${OUT}" \
-            "${SUPABASE_DB_URL}"
+            --file="${OUT}"
 
           SIZE=$(du -h "${OUT}" | cut -f1)
           echo "Dump size: ${SIZE}"
