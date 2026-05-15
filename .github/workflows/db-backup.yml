@@ -66,6 +66,33 @@ jobs:
           sudo apt-get install -y postgresql-client-16
           aws --version
 
+      # Temporary diagnostic — remove after first green run.
+      # Prints only structural pieces of the URL (user, host, port, db).
+      # The password is never printed. Helps catch wrong-username or
+      # special-character-in-password URL-encoding issues without
+      # exposing the secret.
+      - name: Sanity-check SUPABASE_DB_URL shape
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, urllib.parse as u
+          raw = os.environ["SUPABASE_DB_URL"]
+          parsed = u.urlparse(raw)
+          print(f"scheme:   {parsed.scheme}")
+          print(f"user:     {parsed.username}")
+          print(f"host:     {parsed.hostname}")
+          print(f"port:     {parsed.port}")
+          print(f"db:       {parsed.path.lstrip('/')}")
+          print(f"pwd_set:  {bool(parsed.password)}")
+          print(f"pwd_len:  {len(parsed.password) if parsed.password else 0}")
+          # Hint at URL-encoding hazards without leaking the secret:
+          if parsed.password:
+              special = set(parsed.password) & set("@:/?#%&+= ")
+              print(f"pwd_special_chars_present: {sorted(special)}")
+          PY
+
       - name: Dump database
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
