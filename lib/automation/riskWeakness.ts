@@ -77,8 +77,19 @@ const HIGH_RISK_FULFILLED_MESSAGE =
   "Shopify's pre-authorization fraud screening flagged this order as high-risk before fulfillment. Your case can still be defended, but please review the evidence carefully before submitting.";
 
 /** Shopify recommendations that indicate the merchant was advised
- *  against fulfilling. NONE / ACCEPT are non-warnings. */
-const WARNING_RECOMMENDATIONS = new Set<string>(["INVESTIGATE", "REJECT"]);
+ *  against fulfilling. NONE / ACCEPT are non-warnings.
+ *
+ *  Verified against live surasvenne data (2026-05-15): production
+ *  HIGH-risk orders carry either INVESTIGATE (most common — 549 rows)
+ *  or CANCEL (4 rows). REJECT was in the original spec but does NOT
+ *  appear in observed Shopify Admin GraphQL output for the
+ *  OrderRiskSummary.recommendation enum. We keep REJECT in the set
+ *  defensively — if Shopify ever returns it, the cap should fire. */
+const WARNING_RECOMMENDATIONS = new Set<string>([
+  "INVESTIGATE",
+  "REJECT",
+  "CANCEL",
+]);
 
 export interface RiskWeaknessInput {
   /** Shopify dispute reason code (e.g. FRAUDULENT, UNRECOGNIZED). */

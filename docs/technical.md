@@ -1559,7 +1559,7 @@ The cap routes through the existing `auto + moderate → park_for_review` branch
 |---|---|
 | Fraud-family | `isFraudFamilyReason(dispute.reason)` returns true (`FRAUDULENT` / `UNRECOGNIZED`) |
 | High risk | `shopify_orders.risk_level_initial === "HIGH"` |
-| Warning recommendation | `shopify_orders.risk_recommendation_initial ∈ {"INVESTIGATE", "REJECT"}` |
+| Warning recommendation | `shopify_orders.risk_recommendation_initial ∈ {"INVESTIGATE", "REJECT", "CANCEL"}` (verified against live shop data 2026-05-15: INVESTIGATE most common, CANCEL strongest, REJECT defensive) |
 | Merchant fulfilled | `order.fulfillments.length >= 1` |
 
 **Source field:** `pack_json.risk_weakness = { triggered, reason, message, diagnostics: { riskLevel, recommendation, fulfillmentCount } }`, persisted by `buildPack` via `detectRiskWeakness(...)`. Pure function over the persisted snapshot — no Shopify call. The snapshot comes from the orders backfill ingestion (`lib/shopify/queries/ordersForBackfill.ts`).

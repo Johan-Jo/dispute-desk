@@ -34,6 +34,19 @@ describe("detectRiskWeakness — happy path (cap should fire)", () => {
     expect(r.triggered).toBe(true);
   });
 
+  it("triggers on FRAUDULENT + HIGH + CANCEL + fulfilled (observed in production data)", () => {
+    // Verified against live surasvenne data (2026-05-15) — CANCEL is
+    // the strongest "don't ship" recommendation Shopify returns and
+    // must fire the cap.
+    const r = detectRiskWeakness({
+      disputeReason: "FRAUDULENT",
+      riskLevelInitial: "HIGH",
+      riskRecommendationInitial: "CANCEL",
+      fulfillmentCount: 1,
+    });
+    expect(r.triggered).toBe(true);
+  });
+
   it("triggers on UNRECOGNIZED (fraud-family) + HIGH + INVESTIGATE + fulfilled", () => {
     const r = detectRiskWeakness({
       disputeReason: "UNRECOGNIZED",
