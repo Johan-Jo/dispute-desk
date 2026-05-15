@@ -97,12 +97,25 @@ export async function GET(req: NextRequest) {
     : null;
   const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString();
 
+  // subscription_state MUST be reset to active (or trialing) here.
+  // Without this, a merchant who was previously expired/cancelled and
+  // then subscribes again would stay in their old state, and the
+  // sticky red "subscription_expired" banner (lib/billing/bannerState.ts)
+  // would keep showing even though the new charge is active. Also
+  // clear the per-cycle dismissals so the new cycle starts clean — a
+  // dismissal recorded against the OLD billing_cycle_ends_at would
+  // not match the new one anyway, but explicit is better here.
+  const subscriptionState = trialAllowed ? "trialing" : "active";
+
   await sb.from("plan_entitlements").upsert({
     shop_id: shopId,
     plan_key: planId,
+    subscription_state: subscriptionState,
     trial_ends_at: trialEndsAt,
     billing_cycle_started_at: now.toISOString(),
     billing_cycle_ends_at: cycleEnd,
+    low_credits_banner_dismissed_cycle: null,
+    grace_banner_dismissed_cycle: null,
     updated_at: now.toISOString(),
   }, { onConflict: "shop_id" });
 
@@ -133,6 +146,7 @@ export async function GET(req: NextRequest) {
     event_payload: {
       plan_id: planId,
       charge_id: chargeId,
+      subscription_state: subscriptionState,
       trial_granted: trialAllowed,
       trial_days_requested: plan.trialDays,
       trial_eligibility_reason: eligibility.reason,
