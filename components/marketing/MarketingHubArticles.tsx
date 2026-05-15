@@ -2,7 +2,12 @@ import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
-import { listPublishedByRoute } from "@/lib/resources/queries";
+import {
+  getPublishedLocalizationBySlug,
+  listPublishedByRoute,
+  type ContentItemRow,
+  type ContentLocalizationRow,
+} from "@/lib/resources/queries";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import { ResourceCardImage } from "@/components/resources/ResourceCardImage";
 import { contentTypeBadgeClass } from "@/components/resources/resourcesHubStyles";
@@ -14,10 +19,57 @@ type Props = {
   base: string;
 };
 
-export async function MarketingHubArticles({ pathLocale, base }: Props) {
-  const hubLocale = pathLocaleToHubLocale(pathLocale);
+type Card = ContentLocalizationRow & { content_items: ContentItemRow };
 
-  let rows: Awaited<ReturnType<typeof listPublishedByRoute>>["rows"] = [];
+/** Hand-picked English slugs that anchor the hero strip, in display order. */
+const EN_PINNED_SLUGS = [
+  "understanding-chargeback-software-pricing-models",
+  "compare-chargeback-vendors-beyond-win-rate",
+] as const;
+
+async function buildEnCards(): Promise<Card[]> {
+  const hubLocale = "en-US" as const;
+  const pinned: Card[] = [];
+  for (const slug of EN_PINNED_SLUGS) {
+    try {
+      const row = await getPublishedLocalizationBySlug({
+        routeKind: "resources",
+        locale: hubLocale,
+        slug,
+      });
+      if (row) {
+        pinned.push({ ...row.localization, content_items: row.item });
+      }
+    } catch {
+      // Skip a missing/unpublished pin; we'll backfill from pillar pages below.
+    }
+  }
+
+  // Fill remaining slots (and backfill for any missing pins) with top pillar pages.
+  const needed = 3 - pinned.length;
+  if (needed <= 0) return pinned.slice(0, 3);
+
+  let pillars: Card[] = [];
+  try {
+    const r = await listPublishedByRoute("resources", hubLocale, {
+      contentType: "pillar_page",
+      // Over-fetch so we can skip any pillar that happens to share a slug with a pin.
+      limit: needed + EN_PINNED_SLUGS.length,
+      offset: 0,
+      includeTotal: false,
+    });
+    pillars = r.rows;
+  } catch {
+    pillars = [];
+  }
+
+  const pinnedSlugs = new Set(pinned.map((p) => p.slug));
+  const filler = pillars.filter((p) => !pinnedSlugs.has(p.slug)).slice(0, needed);
+
+  return [...pinned, ...filler];
+}
+
+async function buildLocalizedPillarCards(hubLocale: ReturnType<typeof pathLocaleToHubLocale>): Promise<Card[]> {
   try {
     const r = await listPublishedByRoute("resources", hubLocale, {
       contentType: "pillar_page",
@@ -25,10 +77,19 @@ export async function MarketingHubArticles({ pathLocale, base }: Props) {
       offset: 0,
       includeTotal: false,
     });
-    rows = r.rows;
+    return r.rows;
   } catch {
-    rows = [];
+    return [];
   }
+}
+
+export async function MarketingHubArticles({ pathLocale, base }: Props) {
+  const hubLocale = pathLocaleToHubLocale(pathLocale);
+
+  const rows: Card[] =
+    hubLocale === "en-US"
+      ? await buildEnCards()
+      : await buildLocalizedPillarCards(hubLocale);
 
   if (rows.length < 3) return null;
 
