@@ -99,7 +99,16 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
   if (!showBanner) {
     return (
       <div className={styles.pageContent}>
-        <div style={{ padding: "0 0 12px" }}>
+        <div
+          style={{
+            // Match Polaris primary-section width tokens defined on
+            // .pageContent — the banner shouldn't span wider than the
+            // page content it sits above.
+            maxWidth: "var(--pg-layout-width-primary-max, 49.65rem)",
+            margin: "0 auto",
+            padding: "8px 0 12px",
+          }}
+        >
           <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
         </div>
         {children}
@@ -206,7 +215,16 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
       )}
 
       <div className={styles.pageContent}>
-        <div style={{ padding: "0 0 12px" }}>
+        <div
+          style={{
+            // Match Polaris primary-section width tokens defined on
+            // .pageContent — the banner shouldn't span wider than the
+            // page content it sits above.
+            maxWidth: "var(--pg-layout-width-primary-max, 49.65rem)",
+            margin: "0 auto",
+            padding: "8px 0 12px",
+          }}
+        >
           <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
         </div>
         {children}
