@@ -679,7 +679,10 @@ export function DefencePackageDocument({
           omitted={omitted.has("conclusion")}
         />
 
-        <PageFooter meta={meta} />
+        {/* PageFooter (View style=footer fixed) removed — the `fixed`
+            View was the last structural difference vs the working
+            EvidencePackDocument, which uses an inline absolute-
+            positioned Text instead. */}
       </Page>
     </Document>
   );
