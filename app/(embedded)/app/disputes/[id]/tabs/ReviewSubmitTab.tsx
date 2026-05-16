@@ -38,10 +38,20 @@ import { NotSubmittedCard } from "./sections/NotSubmittedCard";
 import { FinalDefenseStatementCard } from "./sections/FinalDefenseStatementCard";
 import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
 
-/** Whether a defence-package narrative is the active rebuttal artifact
+/** Whether the defence-package builder is the active rebuttal surface
  *  for this pack. When true we suppress the legacy
  *  FinalDefenseStatementCard so the merchant doesn't see two competing
- *  bank-rebuttal surfaces on the same screen. */
+ *  bank-rebuttal surfaces on the same screen.
+ *
+ *  Active = ANY defence_packages row exists for this pack, regardless
+ *  of status. The CompleteDefencePackageCard renders an appropriate
+ *  state-specific banner (Draft / Stale / Final / Submitted / Failed /
+ *  Skipped / Superseded), so the legacy card is never the right
+ *  fallback — it would just duplicate competing copy. The earlier
+ *  narrative_json + status filter was wrong: when a build had
+ *  succeeded narrative-side but failed PDF-render-side
+ *  (`status=failed`, `narrative_json` populated), the legacy card kept
+ *  rendering on top of the new one and the merchant saw both. */
 function useDefencePackageActive(packId: string | null): boolean {
   const [active, setActive] = useState(false);
   useEffect(() => {
@@ -52,17 +62,9 @@ function useDefencePackageActive(packId: string | null): boolean {
     let cancelled = false;
     fetch(`/api/packs/${packId}/defence-packages`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((json: { latest: { narrative_json?: unknown; status?: string } | null } | null) => {
+      .then((json: { latest: unknown } | null) => {
         if (cancelled) return;
-        // Active when a narrative-bearing row exists. Skipped / failed
-        // rows that have no narrative don't suppress the legacy card.
-        setActive(
-          Boolean(
-            json?.latest?.narrative_json &&
-              json.latest.status !== "skipped" &&
-              json.latest.status !== "failed",
-          ),
-        );
+        setActive(Boolean(json?.latest));
       })
       .catch(() => {
         if (!cancelled) setActive(false);
