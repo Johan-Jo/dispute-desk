@@ -485,9 +485,7 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
     <View minPresenceAhead={120}>
       <Text style={styles.h1}>Evidence Basis</Text>
       <Text style={styles.mutedNote}>
-        Approved bank-facing facts used to ground this package. This section
-        is rendered directly from structured evidence records, not generated
-        by the LLM.
+        Approved bank-facing facts used to ground this package.
       </Text>
       <View style={styles.table}>
         <View style={styles.tableHeader} wrap={false}>

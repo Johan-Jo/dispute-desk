@@ -127,11 +127,11 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   // ── Payment authentication ──
   avs_cvv_match: {
     signalId: "payment_auth",
-    label: "Payment authentication (AVS + CVV)",
+    label: "Payment authentication",
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Strong only when BOTH AVS and CVV match. Otherwise moderate (one match) or invalid (none).",
+    note: "Strong only when BOTH AVS and CVV match. Otherwise moderate (one match) or invalid (none). Label intentionally omits parenthetical (AVS + CVV) — the row's value already shows the codes, no need to repeat them in the label.",
   },
   tds_authentication: {
     signalId: "payment_auth",

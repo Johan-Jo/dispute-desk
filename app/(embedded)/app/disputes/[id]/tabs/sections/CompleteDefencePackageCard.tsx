@@ -21,7 +21,7 @@ import {
   ButtonGroup,
   Card,
   InlineStack,
-  Modal,
+  Link,
   Spinner,
   Text,
 } from "@shopify/polaris";
@@ -71,6 +71,14 @@ interface Props {
    *  badge. Optional — when absent the card still works, just without
    *  the case-details / countdown enrichment. */
   dispute?: DisputeContextLike & { dueAt?: string | null };
+  /** Pack-level submission timestamp (`evidence_packs.saved_to_shopify_at`).
+   *  When set, the card switches to "Submitted to bank" state: the
+   *  deadline countdown disappears, the Submit button is disabled, and
+   *  an Open-in-Shopify link replaces it. */
+  submittedToShopifyAt?: string | null;
+  /** Direct deep-link to the dispute in Shopify Admin. Rendered as a
+   *  Link in the submitted state. */
+  shopifyAdminUrl?: string | null;
 }
 
 /** Days-remaining math, mirrors lib/disputeListHelpers getUrgency
@@ -130,14 +138,22 @@ function StatusBadge({ status }: { status: Status }) {
   );
 }
 
-export function CompleteDefencePackageCard({ packId, dispute }: Props) {
-  const countdown = useMemo(() => daysRemainingFrom(dispute?.dueAt), [dispute?.dueAt]);
+export function CompleteDefencePackageCard({
+  packId,
+  dispute,
+  submittedToShopifyAt,
+  shopifyAdminUrl,
+}: Props) {
+  // Countdown is only relevant before submission — once the bank has
+  // the package, "due in N days" stops being a useful state.
+  const countdown = useMemo(
+    () => (submittedToShopifyAt ? null : daysRemainingFrom(dispute?.dueAt)),
+    [dispute?.dueAt, submittedToShopifyAt],
+  );
   const [row, setRow] = useState<DefencePackageRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
+  const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | "preview" | null>(null);
 
   const load = useCallback(async () => {
     if (!packId) {
@@ -176,14 +192,27 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
   const openPreview = useCallback(async () => {
     if (!row) return;
     setError(null);
-    setBusy("regen"); // visual placeholder
+    setBusy("preview");
+    // Open a placeholder tab synchronously so Shopify Admin's popup
+    // blocker doesn't suppress the redirect. The signed URL is
+    // fetched asynchronously and we set the new window's location
+    // once it returns. Skipping the modal entirely — Shopify Admin
+    // embeds inside its own iframe and CSP/frame-ancestors blocks
+    // nested iframes pointing at Supabase Storage, which is why the
+    // earlier in-modal preview showed a broken-image icon.
+    const previewWindow = window.open("", "_blank", "noopener,noreferrer");
     try {
       const res = await fetch(`/api/defence-packages/${row.id}/preview${shopIdQs}`);
       if (res.ok) {
         const json = (await res.json()) as { url: string };
-        setPreviewUrl(json.url);
-        setPreviewOpen(true);
+        if (previewWindow) {
+          previewWindow.location.href = json.url;
+        } else {
+          // Popup blocked — fall back to navigating the current tab.
+          window.location.href = json.url;
+        }
       } else {
+        previewWindow?.close();
         let detail = "";
         try {
           const body = (await res.json()) as { error?: string };
@@ -194,6 +223,7 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
         setError(`Could not generate preview (${res.status}${detail ? ` — ${detail}` : ""})`);
       }
     } catch (err) {
+      previewWindow?.close();
       const message = err instanceof Error ? err.message : String(err);
       setError(`Preview request failed: ${message}`);
     } finally {
@@ -260,10 +290,29 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
   // Feature flag off OR build hasn't run yet — hide the card entirely.
   if (!row) return null;
 
+  const isSubmittedToBank = Boolean(submittedToShopifyAt);
   const canFinalize =
-    row.status === "draft" && row.validation_status === "ok" && Boolean(row.pdf_path);
-  const canSubmit = row.status === "final";
-  const canRegenerate = row.status === "draft" || row.status === "stale" || row.status === "failed";
+    !isSubmittedToBank &&
+    row.status === "draft" &&
+    row.validation_status === "ok" &&
+    Boolean(row.pdf_path);
+  const canSubmit = !isSubmittedToBank && row.status === "final";
+  const canRegenerate =
+    !isSubmittedToBank &&
+    (row.status === "draft" || row.status === "stale" || row.status === "failed");
+
+  const formattedSubmittedAt = submittedToShopifyAt
+    ? (() => {
+        try {
+          return new Intl.DateTimeFormat(undefined, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(submittedToShopifyAt));
+        } catch {
+          return submittedToShopifyAt;
+        }
+      })()
+    : null;
 
   return (
     <>
@@ -279,30 +328,49 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
             </Text>
           </BlockStack>
 
-          <InlineStack gap="400" align="space-between">
-            <BlockStack gap="050">
-              <Text as="span" variant="bodySm" tone="subdued">Status</Text>
-              <StatusBadge status={row.status} />
-            </BlockStack>
-            <BlockStack gap="050">
-              <Text as="span" variant="bodySm" tone="subdued">Mode</Text>
-              <Text as="span" variant="bodySm">{row.package_mode ?? "—"}</Text>
-            </BlockStack>
-            <BlockStack gap="050">
-              <Text as="span" variant="bodySm" tone="subdued">Generated</Text>
-              <Text as="span" variant="bodySm">
-                {new Date(row.generated_at).toLocaleString()}
-              </Text>
-            </BlockStack>
-            {countdown && (
-              <BlockStack gap="050">
-                <Text as="span" variant="bodySm" tone="subdued">Deadline</Text>
-                <Badge tone={countdown.tone === "info" ? undefined : countdown.tone}>
-                  {countdown.label}
-                </Badge>
+          {/* Submission state banner — replaces "Ready to submit" + deadline
+              once the pack has been saved to Shopify. */}
+          {isSubmittedToBank ? (
+            <Banner tone="success" title="Submitted to bank">
+              <BlockStack gap="100">
+                {formattedSubmittedAt ? (
+                  <Text as="p" variant="bodySm">
+                    Submitted on {formattedSubmittedAt}.
+                  </Text>
+                ) : null}
+                {shopifyAdminUrl ? (
+                  <Link url={shopifyAdminUrl} external>
+                    Open in Shopify Admin
+                  </Link>
+                ) : null}
               </BlockStack>
-            )}
-          </InlineStack>
+            </Banner>
+          ) : (
+            <InlineStack gap="400" align="space-between">
+              <BlockStack gap="050">
+                <Text as="span" variant="bodySm" tone="subdued">Status</Text>
+                <StatusBadge status={row.status} />
+              </BlockStack>
+              <BlockStack gap="050">
+                <Text as="span" variant="bodySm" tone="subdued">Mode</Text>
+                <Text as="span" variant="bodySm">{row.package_mode ?? "—"}</Text>
+              </BlockStack>
+              <BlockStack gap="050">
+                <Text as="span" variant="bodySm" tone="subdued">Generated</Text>
+                <Text as="span" variant="bodySm">
+                  {new Date(row.generated_at).toLocaleString()}
+                </Text>
+              </BlockStack>
+              {countdown && (
+                <BlockStack gap="050">
+                  <Text as="span" variant="bodySm" tone="subdued">Deadline</Text>
+                  <Badge tone={countdown.tone === "info" ? undefined : countdown.tone}>
+                    {countdown.label}
+                  </Badge>
+                </BlockStack>
+              )}
+            </InlineStack>
+          )}
 
           {row.status === "skipped" && row.failure_code === "covered_shopify" && (
             <Banner tone="info" title="Covered by Shopify Protect">
@@ -348,7 +416,7 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
             <Button
               onClick={openPreview}
               disabled={!row.pdf_path || busy !== null}
-              loading={busy === "regen" && previewOpen === false && !!row.pdf_path}
+              loading={busy === "preview"}
             >
               Preview PDF
             </Button>
@@ -371,7 +439,7 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
                 Finalize
               </Button>
             )}
-            {canSubmit && (
+            {!isSubmittedToBank && canSubmit && (
               <Button
                 variant="primary"
                 tone="success"
@@ -398,40 +466,6 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
       {row.narrative_json && row.facts_json && (
         <DefencePackageHtmlView row={row} dispute={dispute} />
       )}
-
-      <Modal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        title={`Defence Package v${row.version}`}
-        primaryAction={
-          previewUrl
-            ? {
-                content: "Open in new tab",
-                onAction: () => {
-                  window.open(previewUrl, "_blank", "noopener,noreferrer");
-                },
-              }
-            : undefined
-        }
-      >
-        <Modal.Section>
-          {previewUrl ? (
-            <BlockStack gap="200">
-              <Text as="p" variant="bodySm" tone="subdued">
-                If the PDF doesn&apos;t display inline (Shopify Admin may block
-                embedded PDF viewers), use &quot;Open in new tab&quot; above.
-              </Text>
-              <iframe
-                src={previewUrl}
-                style={{ width: "100%", height: 720, border: 0 }}
-                title={`Defence Package v${row.version}`}
-              />
-            </BlockStack>
-          ) : (
-            <Spinner accessibilityLabel="Loading PDF" />
-          )}
-        </Modal.Section>
-      </Modal>
     </>
   );
 }
