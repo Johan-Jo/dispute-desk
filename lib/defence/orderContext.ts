@@ -81,6 +81,25 @@ function extractLast4(raw: string | null): string | null {
 }
 
 /**
+ * Strip HTML tags + decode common entities. Shopify's timeline event
+ * `message` strings occasionally embed anchor tags ("Received new
+ * order <a href=...>#1077</a> by ...") — rendering them verbatim in a
+ * bank-facing PDF leaks markup.
+ */
+function stripHtml(raw: string): string {
+  return raw
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Map a pack `lineItems[i]` entry (collector shape) to the PDF row
  * shape `{ description, quantity, price }`. Returns null when the
  * entry lacks the fields the table needs.
@@ -156,7 +175,7 @@ export function deriveOrderContext(sections: PackSectionLike[] | null | undefine
             const at = typeof o.createdAt === "string" ? o.createdAt : null;
             const text = typeof o.message === "string" ? o.message : null;
             if (!at || !text) return null;
-            return { at, text };
+            return { at, text: stripHtml(text) };
           })
           .filter((e): e is { at: string; text: string } => e !== null);
       }
