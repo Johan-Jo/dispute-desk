@@ -178,14 +178,103 @@ describe("claimGuards", () => {
     expect(result.failures.some((f) => f.guardId === "fulfilled_or_delivered_claim")).toBe(true);
   });
 
-  it("fulfilled claim passes on UNFULFILLED order when a digital_access_log fact exists", () => {
+  it("fulfilled claim passes on UNFULFILLED order when digital_access_log with digitalAccessUsed=true exists", () => {
     const result = runClaimGuards({
       narrativeSections: narrative({ fulfillmentArgument: { text: "The customer streamed the content." } }),
+      approvedFacts: [
+        fact({ category: "order_record", value: { fulfillmentStatus: "UNFULFILLED" } }),
+        fact({ id: "f1", category: "digital_access_log", value: { digitalAccessUsed: true } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "fulfilled_or_delivered_claim")).toBe(false);
+  });
+
+  it("fulfilled claim FAILS on UNFULFILLED order when digital_access_log lacks digitalAccessUsed", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The product was shipped." } }),
       approvedFacts: [
         fact({ category: "order_record", value: { fulfillmentStatus: "UNFULFILLED" } }),
         fact({ id: "f1", category: "digital_access_log", value: {} }),
       ],
     });
-    expect(result.failures.some((f) => f.guardId === "fulfilled_or_delivered_claim")).toBe(false);
+    expect(result.failures.some((f) => f.guardId === "fulfilled_or_delivered_claim")).toBe(true);
+  });
+
+  it("FULFILLED status alone does NOT allow 'received'", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The customer received the order." } }),
+      approvedFacts: [
+        fact({ category: "order_record", value: { fulfillmentStatus: "FULFILLED" } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "received_claim")).toBe(true);
+  });
+
+  it("'received the order' passes when delivery_proof with proofType=delivered exists", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The customer received the order." } }),
+      approvedFacts: [
+        fact({ category: "delivery_proof", value: { proofType: "delivered" } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "received_claim")).toBe(false);
+  });
+
+  it("'access granted' fails without digitalAccessGranted=true", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "Access was granted to the customer." } }),
+      approvedFacts: [
+        fact({ category: "digital_access_log", value: {} }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "access_granted_claim")).toBe(true);
+  });
+
+  it("'access granted' passes when digitalAccessGranted=true", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "Access was granted to the customer." } }),
+      approvedFacts: [
+        fact({ category: "digital_access_log", value: { digitalAccessGranted: true } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "access_granted_claim")).toBe(false);
+  });
+
+  it("'accessed' / 'used' requires digitalAccessUsed=true", () => {
+    const failsResult = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The customer accessed the platform." } }),
+      approvedFacts: [
+        fact({ category: "digital_access_log", value: { digitalAccessGranted: true } }),
+      ],
+    });
+    expect(failsResult.failures.some((f) => f.guardId === "digital_access")).toBe(true);
+
+    const passesResult = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The customer accessed the platform." } }),
+      approvedFacts: [
+        fact({ category: "digital_access_log", value: { digitalAccessUsed: true } }),
+      ],
+    });
+    expect(passesResult.failures.some((f) => f.guardId === "digital_access")).toBe(false);
+  });
+
+  it("'service was completed' fails without serviceDelivered=true", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The service was completed by the merchant." } }),
+      approvedFacts: [
+        fact({ category: "service_access", value: {} }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "service_completed_claim")).toBe(true);
+  });
+
+  it("'service was completed' passes when service_access with serviceDelivered=true exists", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The service was completed by the merchant." } }),
+      approvedFacts: [
+        fact({ category: "service_access", value: { serviceDelivered: true } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "service_completed_claim")).toBe(false);
   });
 });

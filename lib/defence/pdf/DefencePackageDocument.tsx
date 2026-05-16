@@ -58,8 +58,12 @@ export interface DefencePackageMeta {
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
+  promptFamily?: string;
   promptVersion: number;
   modelUsed: string;
+  /** Truncated to 10–12 chars in the Package Metadata block. */
+  evidenceHash?: string | null;
+  generatedBy?: "system" | "merchant" | "admin";
 }
 
 export interface DefencePackageDocumentData {
@@ -174,26 +178,72 @@ function thesisFor(
 }
 
 /* ── Section block ─────────────────────────────────────────────────── */
-
+/**
+ * Renders H1 + LLM body. Thesis blockquote is rendered ONLY in narrow
+ * mode — in full mode the LLM body stands on its own (the thesis would
+ * duplicate it).
+ */
 function SectionBlock({
   title,
   thesis,
   section,
   omitted,
+  mode,
 }: {
   title: string;
   thesis: string;
   section: NarrativeSection;
   omitted: boolean;
+  mode: PackageMode;
 }) {
   if (omitted || !section.text.trim()) return null;
   return (
     <View>
       <Text style={styles.h1}>{title}</Text>
-      <View style={styles.thesisBox} wrap={false}>
-        <Text style={styles.thesisText}>{thesis}</Text>
-      </View>
+      {mode === "narrow" && (
+        <View style={styles.thesisBox} wrap={false}>
+          <Text style={styles.thesisText}>{thesis}</Text>
+        </View>
+      )}
       <Text style={styles.paragraph}>{section.text}</Text>
+    </View>
+  );
+}
+
+/**
+ * Minimal deterministic Fulfillment fallback. Used only when the LLM
+ * section is empty (it correctly refused to overclaim) AND the order
+ * record indicates fulfillmentStatus=FULFILLED. Renders an honest,
+ * narrow sentence about what fulfilledness actually means.
+ */
+function FulfillmentFallback({
+  meta,
+  facts,
+}: {
+  meta: DefencePackageMeta;
+  facts: EvidenceFact[];
+}) {
+  const orderFact = facts.find((f) => f.category === "order_record");
+  const fulfillmentStatusFromFact =
+    typeof orderFact?.value?.fulfillmentStatus === "string"
+      ? (orderFact.value.fulfillmentStatus as string).toUpperCase()
+      : null;
+  const fulfillmentStatusFromMeta =
+    typeof meta.fulfillmentStatus === "string"
+      ? meta.fulfillmentStatus.toUpperCase()
+      : null;
+  const isFulfilled =
+    fulfillmentStatusFromFact === "FULFILLED" ||
+    fulfillmentStatusFromMeta === "FULFILLED";
+  if (!isFulfilled) return null;
+  return (
+    <View>
+      <Text style={styles.h1}>Fulfillment, Delivery &amp; Access</Text>
+      <Text style={styles.paragraph}>
+        The merchant&apos;s order record marks the order as fulfilled. No
+        separate delivery, access-use, or service-completion claim is made
+        in this section unless supported by approved evidence.
+      </Text>
     </View>
   );
 }
@@ -396,8 +446,9 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
     <View>
       <Text style={styles.h1}>Evidence Basis</Text>
       <Text style={styles.mutedNote}>
-        Facts used to ground the arguments above. Rendered directly from
-        approved evidence — not from generated text.
+        Approved bank-facing facts used to ground this package. This section
+        is rendered directly from structured evidence records, not generated
+        by the LLM.
       </Text>
       {rows.length === 0 ? (
         <Text style={styles.paragraph}>(No bank-eligible facts available.)</Text>
@@ -425,32 +476,94 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
 
 /* ── Supporting Evidence Index ──────────────────────────────────── */
 
+function inclusionLabel(m: ManualEvidenceRecord): string {
+  if (m.includeInBankNarrative && m.includeInPackage) return "Narrative + appendix";
+  if (m.includeInBankNarrative) return "Narrative";
+  if (m.includeInPackage) return "Appendix";
+  return "Not included";
+}
+
 function SupportingEvidenceIndex({
   manualEvidence,
 }: {
   manualEvidence: ManualEvidenceRecord[];
 }) {
+  // Internal-only / submission-risk filtering happens upstream in the
+  // classifier — manual evidence rows never carry submission risk. Still,
+  // we filter defensively: only render rows the merchant explicitly
+  // marked include_in_package.
   const included = manualEvidence.filter((m) => m.includeInPackage);
-  if (included.length === 0) return null;
   return (
     <View>
       <Text style={styles.h1}>Supporting Evidence Index</Text>
-      <View style={styles.table}>
-        <View style={styles.tableHeader}>
-          <Text style={styles.tableHeaderCell}>Document</Text>
-          <Text style={styles.tableHeaderCell}>Type & description</Text>
+      {included.length === 0 ? (
+        <Text style={styles.paragraph}>
+          No additional manual attachments were included in this package.
+        </Text>
+      ) : (
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Document</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Type &amp; description</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1.4 }]}>Inclusion</Text>
+          </View>
+          {included.map((m, i) => (
+            <View
+              key={m.id}
+              style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
+              wrap={false}
+            >
+              <Text style={[styles.tableCellLabel, { flex: 2 }]}>{m.filename}</Text>
+              <Text style={[styles.tableCellValue, { flex: 3 }]}>
+                {m.fileType ?? "—"}
+                {m.description ? ` — ${m.description}` : ""}
+              </Text>
+              <Text style={[styles.tableCellValue, { flex: 1.4 }]}>
+                {inclusionLabel(m)}
+              </Text>
+            </View>
+          ))}
         </View>
-        {included.map((m, i) => (
+      )}
+    </View>
+  );
+}
+
+/* ── Package Metadata (audit trail) ─────────────────────────────────
+ * Compact, low-visual-weight. Appended after the Supporting Evidence
+ * Index. Supports auditability without distracting from the bank-facing
+ * argument. */
+function PackageMetadata({ meta }: { meta: DefencePackageMeta }) {
+  const truncatedHash = meta.evidenceHash
+    ? meta.evidenceHash.slice(0, 12)
+    : null;
+  const rows: Array<[string, string]> = [
+    ["Package ID", meta.packageId],
+    ["Package version", `v${meta.version}`],
+    ["Package mode", meta.packageMode],
+    ...(truncatedHash ? [["Evidence hash", `${truncatedHash}…`] as [string, string]] : []),
+    ["Prompt family", meta.promptFamily ?? "defence_package_narrative"],
+    ["Prompt version", String(meta.promptVersion)],
+    ["Reason-code module", meta.reasonCodeModuleKey ?? "—"],
+    ["LLM model", meta.modelUsed],
+    ["Generated", fmtIsoDate(meta.generatedAt)],
+    ["Generated by", meta.generatedBy ?? "system"],
+  ];
+  return (
+    <View wrap={false}>
+      <Text style={styles.h1}>Package Metadata</Text>
+      <Text style={styles.mutedNote}>
+        Audit identity for this package. Not bank-facing argumentation.
+      </Text>
+      <View style={[styles.table, { borderColor: "#E2E8F0" }]}>
+        {rows.map(([k, v], i) => (
           <View
-            key={m.id}
+            key={k}
             style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
             wrap={false}
           >
-            <Text style={styles.tableCellLabel}>{m.filename}</Text>
-            <Text style={styles.tableCellValue}>
-              {m.fileType ?? "—"}
-              {m.description ? ` — ${m.description}` : ""}
-            </Text>
+            <Text style={styles.tableCellLabel}>{k}</Text>
+            <Text style={styles.tableCellValue}>{v}</Text>
           </View>
         ))}
       </View>
@@ -482,18 +595,22 @@ function ConclusionBlock({
   thesis,
   section,
   omitted,
+  mode,
 }: {
   thesis: string;
   section: NarrativeSection;
   omitted: boolean;
+  mode: PackageMode;
 }) {
   if (omitted || !section.text.trim()) return null;
   return (
     <View>
       <Text style={styles.h1}>Conclusion</Text>
-      <View style={styles.thesisBox} wrap={false}>
-        <Text style={styles.thesisText}>{thesis}</Text>
-      </View>
+      {mode === "narrow" && (
+        <View style={styles.thesisBox} wrap={false}>
+          <Text style={styles.thesisText}>{thesis}</Text>
+        </View>
+      )}
       <View style={styles.conclusionBox}>
         <Text style={styles.paragraphLast}>{section.text}</Text>
       </View>
@@ -533,6 +650,7 @@ export function DefencePackageDocument({
           thesis={t("executiveSummary")}
           section={narrative.executiveSummary}
           omitted={omitted.has("executiveSummary")}
+          mode={mode}
         />
 
         <SectionBlock
@@ -540,14 +658,17 @@ export function DefencePackageDocument({
           thesis={t("transactionOverviewArgument")}
           section={narrative.transactionOverviewArgument}
           omitted={omitted.has("transactionOverviewArgument")}
+          mode={mode}
         />
 
         {!omitted.has("chronologyArgument") && narrative.chronologyArgument.text.trim() && (
           <View>
             <Text style={styles.h1}>Chronology of Events</Text>
-            <View style={styles.thesisBox} wrap={false}>
-              <Text style={styles.thesisText}>{t("chronologyArgument")}</Text>
-            </View>
+            {mode === "narrow" && (
+              <View style={styles.thesisBox} wrap={false}>
+                <Text style={styles.thesisText}>{t("chronologyArgument")}</Text>
+              </View>
+            )}
             <Text style={styles.paragraph}>{narrative.chronologyArgument.text}</Text>
             <ChronologyBullets events={chronology} />
           </View>
@@ -560,20 +681,27 @@ export function DefencePackageDocument({
           thesis={t("paymentAuthenticationArgument")}
           section={narrative.paymentAuthenticationArgument}
           omitted={omitted.has("paymentAuthenticationArgument")}
+          mode={mode}
         />
 
-        <SectionBlock
-          title="Fulfillment, Delivery & Access"
-          thesis={t("fulfillmentArgument")}
-          section={narrative.fulfillmentArgument}
-          omitted={omitted.has("fulfillmentArgument")}
-        />
+        {omitted.has("fulfillmentArgument") || !narrative.fulfillmentArgument.text.trim() ? (
+          <FulfillmentFallback meta={meta} facts={approvedFacts} />
+        ) : (
+          <SectionBlock
+            title="Fulfillment, Delivery & Access"
+            thesis={t("fulfillmentArgument")}
+            section={narrative.fulfillmentArgument}
+            omitted={false}
+            mode={mode}
+          />
+        )}
 
         <SectionBlock
           title="Customer Communication"
           thesis={t("communicationArgument")}
           section={narrative.communicationArgument}
           omitted={omitted.has("communicationArgument")}
+          mode={mode}
         />
 
         <SectionBlock
@@ -581,6 +709,7 @@ export function DefencePackageDocument({
           thesis={t("policyArgument")}
           section={narrative.policyArgument}
           omitted={omitted.has("policyArgument")}
+          mode={mode}
         />
 
         <SectionBlock
@@ -588,6 +717,7 @@ export function DefencePackageDocument({
           thesis={t("manualEvidenceArgument")}
           section={narrative.manualEvidenceArgument}
           omitted={omitted.has("manualEvidenceArgument")}
+          mode={mode}
         />
 
         <EvidenceBasis approvedFacts={approvedFacts} />
@@ -596,9 +726,12 @@ export function DefencePackageDocument({
           thesis={t("conclusion")}
           section={narrative.conclusion}
           omitted={omitted.has("conclusion")}
+          mode={mode}
         />
 
         <SupportingEvidenceIndex manualEvidence={manualEvidence} />
+
+        <PackageMetadata meta={meta} />
 
         <PageFooter meta={meta} />
       </Page>

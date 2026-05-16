@@ -116,6 +116,97 @@ describe("DefencePackageDocument", () => {
     expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
   }, 30000);
 
+  it("renders Package Metadata block when evidenceHash + generatedBy + promptFamily are present", async () => {
+    const data = sampleData({
+      meta: {
+        packageId: "pkg-1",
+        disputeGid: "gid://shopify/Dispute/99",
+        orderName: "#1042",
+        reasonCode: "10.4",
+        reasonCodeDisplay: "Visa 10.4 — Other Fraud",
+        reasonCodeModuleKey: "visa_10_4_fraud",
+        shopName: "Acme Co",
+        merchantName: "Acme Co LLC",
+        amountDisplay: "USD 119.95",
+        cardNetwork: "Visa",
+        transactionDate: "2026-05-10T14:00:00Z",
+        generatedAt: "2026-05-15T20:00:00Z",
+        version: 1,
+        packageMode: "full",
+        promptFamily: "defence_package_narrative",
+        promptVersion: 1,
+        modelUsed: "claude-sonnet-4-6",
+        evidenceHash: "deadbeefcafef00d0123456789abcdef",
+        generatedBy: "system",
+      },
+    });
+    const result = await renderDefencePdf(data);
+    // Renders without throwing — the new metadata block is reachable.
+    expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
+    // PDF should be slightly larger now thanks to the extra metadata table.
+    expect(result.buffer.length).toBeGreaterThan(2000);
+  }, 30000);
+
+  it("renders SupportingEvidenceIndex empty-state when no manual evidence", async () => {
+    // Default sample has manualEvidence=[]; the empty-state copy should
+    // render without crashing.
+    const result = await renderDefencePdf(sampleData());
+    expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
+  }, 30000);
+
+  it("renders SupportingEvidenceIndex with manual evidence rows", async () => {
+    const result = await renderDefencePdf(
+      sampleData({
+        manualEvidence: [
+          {
+            id: "m1",
+            packageId: "pkg-1",
+            evidenceItemId: "ei1",
+            filename: "delivery-receipt.pdf",
+            fileUrl: null,
+            fileType: "application/pdf",
+            uploadedBy: "merchant",
+            uploadedAt: "2026-05-15T00:00:00Z",
+            description: "Signed by customer at door",
+            bankEligible: true,
+            includeInPackage: true,
+            includeInBankNarrative: true,
+            evidenceCategory: "manual_evidence",
+          },
+        ],
+      }),
+    );
+    expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
+    expect(result.buffer.length).toBeGreaterThan(2000);
+  }, 30000);
+
+  it("renders a Fulfillment minimal-fallback when the section is omitted + fulfillmentStatus=FULFILLED", async () => {
+    const data = sampleData({
+      meta: {
+        packageId: "pkg-1",
+        disputeGid: "gid://shopify/Dispute/99",
+        orderName: "#1042",
+        reasonCode: "10.4",
+        reasonCodeDisplay: "Visa 10.4 — Other Fraud",
+        shopName: "Acme Co",
+        merchantName: "Acme Co LLC",
+        amountDisplay: "USD 119.95",
+        cardNetwork: "Visa",
+        fulfillmentStatus: "FULFILLED",
+        transactionDate: "2026-05-10T14:00:00Z",
+        generatedAt: "2026-05-15T20:00:00Z",
+        version: 1,
+        packageMode: "full",
+        promptVersion: 1,
+        modelUsed: "claude-sonnet-4-6",
+      },
+    });
+    // fulfillmentArgument is in omittedSections in sampleData() — confirm
+    // the renderer still emits the section H1 via the minimal fallback.
+    const result = await renderDefencePdf(data);
+    expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
+  }, 30000);
+
   it("renders with an empty omittedSections list (all sections present)", async () => {
     const data = sampleData();
     const result = await renderDefencePdf({

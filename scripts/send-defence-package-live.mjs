@@ -255,6 +255,13 @@ if (!validation.ok) {
 console.log("✓ Validation passed");
 
 console.log("\n─── Rendering PDF ───");
+// Synthetic evidence hash for the metadata block (truncated for display).
+import crypto from "node:crypto";
+const evidenceHash = crypto
+  .createHash("sha256")
+  .update(JSON.stringify(approvedFacts.map((f) => ({ id: f.id, category: f.category, value: f.value }))))
+  .digest("hex");
+
 const docData = {
   meta: {
     packageId: "live-demo-pkg",
@@ -277,8 +284,11 @@ const docData = {
     generatedAt: new Date().toISOString(),
     version: 1,
     packageMode,
+    promptFamily: "defence_package_narrative",
     promptVersion: 1,
     modelUsed: MODEL,
+    evidenceHash,
+    generatedBy: "system",
   },
   narrative,
   approvedFacts,

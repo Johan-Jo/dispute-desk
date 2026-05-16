@@ -24,6 +24,7 @@ const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
   /\bdefinitive\s+proof\b/i,
   /\bdefinitively\s+prov\w+/i,
+  /\bdefinitively\s+show\w*\s+authori[sz]ation\b/i,
   /\bundeniable\b/i,
   /\bprovably\b/i,
   /\bunequivocal\w*/i,
@@ -32,6 +33,17 @@ const FORBIDDEN_PHRASES = [
   /\bfraudulent\s+cardholder\b/i,
   /\bliar\b/i,
   /\blying\b/i,
+  // Absolute authorization conclusions — soften to "strongly supports",
+  // "is consistent with", "supports the conclusion that".
+  /\bestablishes\s+(?:that\s+)?the\s+transaction\s+was\s+authori[sz]ed\b/i,
+  /\bproves\s+(?:that\s+)?the\s+transaction\s+was\s+authori[sz]ed\b/i,
+  /\bconfirms\s+(?:that\s+)?the\s+transaction\s+was\s+authori[sz]ed\b/i,
+  // Physical-card-possession claims — never safe in card-absent disputes
+  // without an explicit card-present approved fact (none exist today).
+  /\bpossession\s+of\s+the\s+(?:physical\s+)?card\b/i,
+  /\bhad\s+the\s+physical\s+card\b/i,
+  /\bheld\s+the\s+card\b/i,
+  /\bcard\s+was\s+physically\s+present\b/i,
 ];
 
 const NARROW_AGGRESSIVE_PHRASES = [

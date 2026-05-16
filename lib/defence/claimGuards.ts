@@ -96,11 +96,56 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
   },
   {
     id: "digital_access",
-    description: "Claim of digital access / download",
+    description: "Claim that the customer downloaded / used / logged in / streamed (digital access used)",
     pattern: /\b(downloaded|accessed|used\s+the\s+service|logged\s+in|streamed)\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) => hasCategory(facts, DIGITAL_CATEGORIES),
-    requiredFact: "digital_access_log or service_access",
+    predicate: (facts) =>
+      hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessUsed") ||
+      hasCategoryWithValueTrue(facts, ["service_access"], "serviceUsed") ||
+      hasCategoryWithValueTrue(facts, ["service_access"], "used"),
+    requiredFact:
+      "digital_access_log or service_access with digitalAccessUsed=true / serviceUsed=true / used=true",
+  },
+  {
+    id: "received_claim",
+    description: "Claim that the customer received the goods or service",
+    // Conservative regex — only fires on contexts strongly implying receipt
+    // of goods/service. Skips "received an email", "receipt confirmed".
+    pattern:
+      /\b(?:customer\s+received|order\s+was\s+received|was\s+received\s+by\s+the\s+customer|received\s+the\s+(?:order|product|item|goods|service|shipment|package|merchandise))\b/i,
+    appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
+    predicate: (facts) =>
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature") ||
+      hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessUsed") ||
+      hasCategoryWithValueTrue(facts, ["service_access"], "serviceDelivered"),
+    requiredFact:
+      "delivery_proof/shipping_tracking with proofType=delivered or signature, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
+  },
+  {
+    id: "access_granted_claim",
+    description: "Claim that digital access was granted",
+    pattern: /\baccess\s+(?:was\s+)?granted\b/i,
+    appliesToSections: ["fulfillmentArgument", "executiveSummary", "conclusion"],
+    predicate: (facts) =>
+      hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessGranted") ||
+      hasCategoryWithValueTrue(facts, ["service_access"], "accessGranted"),
+    requiredFact:
+      "digital_access_log or service_access with digitalAccessGranted=true (or accessGranted=true)",
+  },
+  {
+    id: "service_completed_claim",
+    description: "Claim that the service / onboarding was completed or delivered",
+    pattern:
+      /\b(?:service|onboarding|engagement|fulfillment)\s+(?:was\s+|has\s+been\s+)?(?:completed|delivered|fulfilled)\b/i,
+    appliesToSections: ["fulfillmentArgument", "executiveSummary", "conclusion"],
+    predicate: (facts) =>
+      hasCategoryWithValueTrue(facts, ["service_access"], "serviceDelivered") ||
+      hasCategoryWithValueTrue(facts, ["service_access"], "serviceCompleted") ||
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
+    requiredFact:
+      "service_access with serviceDelivered=true / serviceCompleted=true, OR delivery_proof with proofType=delivered/signature",
   },
   {
     id: "customer_communication",
@@ -195,22 +240,25 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     predicate: (facts) => {
       const orderFact = facts.find((f) => f.category === "order_record");
       const fulfillmentStatus = orderFact?.value?.fulfillmentStatus;
-      // If the order is unfulfilled AND no delivery/access fact exists, the
-      // claim cannot stand. If fulfillmentStatus is anything else, the
-      // claim is allowed.
+      // If the order is unfulfilled AND no delivery/access-USE fact exists,
+      // the claim cannot stand. fulfillmentStatus=FULFILLED alone is not
+      // sufficient to assert delivery, access-use, or service completion —
+      // per the §4 fulfillment-precision refinement.
       if (
         typeof fulfillmentStatus === "string" &&
         fulfillmentStatus.toUpperCase() === "UNFULFILLED"
       ) {
         return (
-          hasCategory(facts, DELIVERY_CATEGORIES) ||
-          hasCategory(facts, DIGITAL_CATEGORIES)
+          hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
+          hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature") ||
+          hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessUsed") ||
+          hasCategoryWithValueTrue(facts, ["service_access"], "serviceDelivered")
         );
       }
       return true;
     },
     requiredFact:
-      "delivery_proof / shipping_tracking / digital_access_log / service_access when order.fulfillmentStatus=UNFULFILLED",
+      "When order.fulfillmentStatus=UNFULFILLED: delivery_proof/shipping_tracking with proofType=delivered or signature, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
   },
 ];
 

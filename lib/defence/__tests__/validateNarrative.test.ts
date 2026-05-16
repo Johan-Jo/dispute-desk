@@ -82,6 +82,18 @@ describe("validateNarrative", () => {
     "provably authentic",
     "the fraudulent cardholder",
     "the customer is lying",
+    // Absolute authorization conclusions (§2 refinement)
+    "establishes that the transaction was authorized",
+    "establishes that the transaction was authorised",
+    "proves the transaction was authorized",
+    "confirms the transaction was authorized",
+    "definitively shows authorization",
+    "this definitively proves the cardholder authorised it",
+    // Physical-card-possession claims (§3 refinement)
+    "possession of the physical card",
+    "the cardholder had the physical card",
+    "they held the card at the time of purchase",
+    "the card was physically present",
   ])("rejects forbidden phrase %s", (text) => {
     const result = validateNarrative({
       narrative: narrative({
@@ -93,6 +105,25 @@ describe("validateNarrative", () => {
     });
     expect(result.ok).toBe(false);
     expect(result.errors.some((e: ValidationError) => e.rule === "forbidden_phrase")).toBe(true);
+  });
+
+  it.each([
+    "strongly supports that the transaction was authorized by the cardholder",
+    "is consistent with a cardholder-authorized transaction",
+    "supports the conclusion that the transaction was authorized",
+    "contradicts the claim of an unauthorized transaction",
+    "had access to card verification credentials and billing details associated with the cardholder account",
+    "provided verification details that matched issuer records",
+  ])("permits softened phrasing %s", (text) => {
+    const result = validateNarrative({
+      narrative: narrative({
+        executiveSummary: { text, usedFactIds: ["f0"] },
+      }),
+      approvedFacts: [fact()],
+      reasonCodeModule,
+      packageMode: "full",
+    });
+    expect(result.errors.some((e: ValidationError) => e.rule === "forbidden_phrase")).toBe(false);
   });
 
   it("rejects narrow-mode aggressive conclusions", () => {

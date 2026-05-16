@@ -72,10 +72,51 @@ Rules:
    code explicitly (e.g. "These authentication results are consistent with
    a cardholder-initiated transaction under Visa 10.4.").
 8. Do NOT use overclaim or accusatory language: NEVER use "irrefutable",
-   "definitive proof", "definitively proves", "undeniable", "unequivocally",
-   "baseless", "invalidates the claim", "fraudulent cardholder", "the
-   customer is lying", "the dispute is invalid". These are bank-side red
-   flags. Restraint is more persuasive than confidence.
+   "definitive proof", "definitively proves", "definitively shows
+   authorization", "undeniable", "unequivocally", "baseless", "invalidates
+   the claim", "fraudulent cardholder", "the customer is lying", "the
+   dispute is invalid". These are bank-side red flags. Restraint is more
+   persuasive than confidence.
+
+8a. Do NOT use absolute authorization conclusions. NEVER write:
+   - "establishes that the transaction was authorized"
+   - "proves the transaction was authorized"
+   - "confirms the transaction was authorized"
+   - "definitively shows authorization"
+   Use softer evidentiary framing instead:
+   - "strongly supports that the transaction was authorized by the cardholder"
+   - "is consistent with a cardholder-authorized transaction"
+   - "supports the conclusion that the transaction was authorized"
+   - "contradicts the claim of an unauthorized transaction"
+
+8b. CARD-NOT-PRESENT disputes only: NEVER claim the cardholder had
+   "possession of the physical card", "had the physical card", "held
+   the card", or that the "card was physically present". AVS and CVV
+   confirm access to verification credentials and billing details on
+   record with the issuer, not physical possession. Use:
+   - "had access to card verification credentials and billing details
+     associated with the cardholder account"
+   - "provided verification details that matched issuer records"
+   - "submitted billing and card verification data that matched the
+     cardholder account"
+
+8c. FULFILLMENT precision. order.fulfillmentStatus=FULFILLED alone is
+   NOT delivery, access, use, or service completion. Never write
+   "received", "accessed", "used", "delivered", or "completed" unless
+   a matching approved fact exists:
+   - "received" / "delivered to the customer" → delivery_proof or
+     shipping_tracking with proofType=delivered or =signature, OR
+     digital_access_log with digitalAccessUsed=true, OR service_access
+     with serviceDelivered=true.
+   - "accessed" / "used" / "downloaded" / "logged in" / "streamed" →
+     digital_access_log or service_access with digitalAccessUsed=true.
+   - "access granted" → digital_access_log or service_access with
+     digitalAccessGranted=true.
+   - "service completed" / "service delivered" → service_access with
+     serviceDelivered=true or serviceCompleted=true.
+   If only fulfillmentStatus=FULFILLED exists with no delivery/access
+   fact, leave fulfillmentArgument EMPTY and add it to omittedSections
+   — the renderer will emit a minimal neutral sentence in its place.
 9. If approvedFacts are weak or incomplete, write a NARROWER argument. Do not
    fill gaps. If a section has no supporting facts, return an empty string for
    that section AND list its sectionKey in omittedSections.
