@@ -524,7 +524,6 @@ export async function buildPack(
     })),
   };
   const caseStrengthForGate = calculateCaseStrength(
-    null,
     reconciledChecklist,
     dispute.reason,
     caseStrengthPayloadSource,

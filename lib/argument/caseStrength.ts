@@ -30,7 +30,6 @@
 
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type {
-  ArgumentMap,
   CaseStrengthResult,
   CaseStrengthLevel,
   ImprovementSignal,
@@ -43,7 +42,7 @@ import {
   type EvidenceCategory,
   type SignalId,
 } from "./canonicalEvidence";
-import { resolveReasonFamily, type ReasonFamily } from "./responseEngine";
+import { resolveReasonFamily, type ReasonFamily } from "./reasonFamily";
 
 /* ── Per-family merchant-facing copy (template strings only — no
  *     scoring logic) ── */
@@ -277,7 +276,6 @@ const COVERED_STRENGTH_REASON =
   "This dispute is protected under Shopify's payment protection. No action is required from you.";
 
 export function calculateCaseStrength(
-  argumentMap: ArgumentMap | null,
   checklist: ChecklistItemV2[],
   reason?: string | null,
   /** Optional payload source for conditional categorization (delivery
@@ -302,7 +300,7 @@ export function calculateCaseStrength(
    *  pipeline branch; no new gate required. */
   riskWeakness?: CaseRiskWeaknessInput,
 ): CaseStrengthResult {
-  const family = resolveReasonFamily(reason ?? argumentMap?.issuerClaim?.reasonCode);
+  const family = resolveReasonFamily(reason);
 
   if (!checklist.length) {
     const earlyCovered = coverage?.state === "covered_shopify";
@@ -315,7 +313,7 @@ export function calculateCaseStrength(
       moderateCount: 0,
       supportingCount: 0,
       supportedClaims: 0,
-      totalClaims: argumentMap?.counterclaims.length ?? 0,
+      totalClaims: 0,
       improvementHint: null,
       heroVariant: earlyCovered ? "covered" : "hard_to_win",
       strengthReason: earlyCovered
@@ -522,8 +520,8 @@ export function calculateCaseStrength(
     strongCount,
     moderateCount,
     supportingCount,
-    supportedClaims: argumentMap?.counterclaims.filter((c) => c.supporting.length > 0).length ?? 0,
-    totalClaims: argumentMap?.counterclaims.length ?? 0,
+    supportedClaims: 0,
+    totalClaims: 0,
     improvementHint: isCovered || isFatalLoss ? null : improvementHint,
     heroVariant,
     strengthReason: finalStrengthReason,
@@ -608,7 +606,6 @@ export function computeContributions(
  * Now keyed by canonical category instead of family weights.
  */
 export function calculateImprovement(
-  argumentMap: ArgumentMap | null,
   checklist: ChecklistItemV2[],
   reason: string | null | undefined,
   payloadSource?: EvidencePayloadSource,
@@ -636,7 +633,7 @@ export function calculateImprovement(
   if (!bestField || !bestCategory) return null;
 
   const label = CANONICAL_EVIDENCE[bestField]?.label ?? bestField;
-  const current = calculateCaseStrength(argumentMap, checklist, reason, payloadSource);
+  const current = calculateCaseStrength(checklist, reason, payloadSource);
   if (current.overall === "strong") return null;
 
   // Estimate next strength under the count formula. Adding a single

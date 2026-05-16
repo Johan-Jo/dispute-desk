@@ -5,14 +5,13 @@
  */
 
 import type { SubmissionReadiness } from "@/lib/types/evidenceItem";
-import type { ArgumentMap, NextAction, MissingItemWithContext } from "./types";
+import type { NextAction, MissingItemWithContext } from "./types";
 
 interface NextActionInput {
   packExists: boolean;
   packStatus: string | null;
   readiness: SubmissionReadiness;
   missingItems: MissingItemWithContext[];
-  argumentMap: ArgumentMap | null;
   savedToShopifyAt: string | null;
 }
 
@@ -22,7 +21,6 @@ export function computeNextAction(input: NextActionInput): NextAction {
     packStatus,
     readiness,
     missingItems,
-    argumentMap: _argumentMap,
     savedToShopifyAt,
   } = input;
 

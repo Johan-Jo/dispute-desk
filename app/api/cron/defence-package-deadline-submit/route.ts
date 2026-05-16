@@ -140,12 +140,10 @@ export async function GET(req: NextRequest) {
       const fallbackReason = pickFallbackReason(dpkg);
 
       if (fallbackReason !== null) {
-        // Option D: pack-PDF fallback + email merchant.
-        await sb.from("jobs").insert({
-          shop_id: d.shop_id,
-          job_type: "save_to_shopify_pack_fallback",
-          entity_id: pack.id,
-        });
+        // Post-retirement: no pack-PDF fallback. The defence-package PDF
+        // is the sole bank-facing artifact, so a missing / failed /
+        // skipped row on the deadline can only be surfaced to the
+        // merchant via email. The merchant must regenerate manually.
         summary.enqueuedFallback += 1;
 
         await logAuditEvent({
@@ -155,7 +153,7 @@ export async function GET(req: NextRequest) {
           actorType: "system",
           eventType: "defence_package_failed",
           eventPayload: {
-            trigger: "deadline_cron_fallback",
+            trigger: "deadline_cron_no_fallback",
             fallbackReason,
             dueAt: d.due_at,
           },
@@ -246,13 +244,9 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // Anything else (draft without validation=ok, etc.) — treat as
-      // fallback to be safe.
-      await sb.from("jobs").insert({
-        shop_id: d.shop_id,
-        job_type: "save_to_shopify_pack_fallback",
-        entity_id: pack.id,
-      });
+      // Anything else (draft without validation=ok, etc.) — no auto-
+      // submit, no pack-PDF fallback (retired 2026-05-16). Email the
+      // merchant; they must regenerate manually.
       summary.enqueuedFallback += 1;
       const emailResult = await sendDefenceDeadlineFallbackAlert({
         shopId: d.shop_id,

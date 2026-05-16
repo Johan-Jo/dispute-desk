@@ -5,14 +5,18 @@
  * - disputeType: merchant-readable label
  * - toWin: what the merchant must prove
  * - strongestEvidence: most impactful evidence types
- * - counterclaims: structured claims with required/supporting evidence
+ *
+ * Post-retirement (2026-05-16): the per-template `counterclaims` field
+ * was dropped along with the legacy bank-rebuttal engine. The workspace
+ * API reads only `disputeType` / `toWin` / `strongestEvidence` via
+ * `caseTypeInfo`; nothing else consumes the templates now.
  */
 
 import type { ArgumentTemplate } from "./types";
 
 const TEMPLATES: Record<string, ArgumentTemplate> = {
   FRAUDULENT: {
-    disputeType: "Fraud \u2014 Unauthorized transaction",
+    disputeType: "Fraud — Unauthorized transaction",
     toWin: [
       "Transaction verification checks passed",
       "Order was fulfilled and delivered",
@@ -22,45 +26,6 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
       "AVS/CVV match",
       "Delivery confirmation",
       "Customer purchase history",
-    ],
-    counterclaims: [
-      {
-        id: "fraud-1",
-        title: "Transaction appears authorized based on verification checks",
-        requiredEvidence: ["avs_cvv_match"],
-        supportingEvidence: ["billing_address_match", "order_confirmation"],
-      },
-      {
-        id: "fraud-2",
-        // The title asserts BOTH fulfilment and delivery, so the claim
-        // must require evidence of both. Previously `delivery_proof`
-        // sat in `supportingEvidence`, which let a fraud dispute on an
-        // unfulfilled-but-tracked order rate as Strong on the basis of
-        // tracking alone — directly contradicting the row-level
-        // checklist (where `delivery_proof.unavailable / "Order is
-        // unfulfilled"`). With `delivery_proof` required, the claim
-        // drops to Moderate (1/2) when only tracking is present,
-        // matching reality. Bank-grade rebuttal stays honest: never
-        // claim delivery without a delivery signal.
-        //
-        // partialTitles: when only one of the two required fields is
-        // present, re-headline the claim so the title doesn't
-        // overstate the proof. Tracking alone proves the order was
-        // shipped, not that it was delivered.
-        title: "Order was fulfilled and delivered",
-        requiredEvidence: ["shipping_tracking", "delivery_proof"],
-        supportingEvidence: ["billing_address_match"],
-        partialTitles: {
-          shipping_tracking: "Order was shipped to the customer",
-          delivery_proof: "Delivery to the customer is confirmed",
-        },
-      },
-      {
-        id: "fraud-3",
-        title: "Customer behavior is consistent with legitimate purchase",
-        requiredEvidence: ["activity_log"],
-        supportingEvidence: ["customer_communication", "order_confirmation"],
-      },
     ],
   },
 
@@ -76,34 +41,6 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
       "Delivery proof",
       "Shipping policy",
     ],
-    counterclaims: [
-      {
-        id: "pnr-1",
-        // Title-to-requirement contract: title asserts BOTH shipped and
-        // delivered → both must be required. Partial titles re-headline
-        // when only one half is backed so we don't claim delivery
-        // without a delivery signal.
-        title: "Order was shipped and delivered",
-        requiredEvidence: ["shipping_tracking", "delivery_proof"],
-        supportingEvidence: [],
-        partialTitles: {
-          shipping_tracking: "Order was shipped to the customer",
-          delivery_proof: "Delivery to the customer is confirmed",
-        },
-      },
-      {
-        id: "pnr-2",
-        title: "Customer was notified of shipment",
-        requiredEvidence: ["customer_communication"],
-        supportingEvidence: [],
-      },
-      {
-        id: "pnr-3",
-        title: "Shipping terms were disclosed at checkout",
-        requiredEvidence: ["shipping_policy"],
-        supportingEvidence: [],
-      },
-    ],
   },
 
   PRODUCT_UNACCEPTABLE: {
@@ -117,26 +54,6 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
       "Product description",
       "Refund policy",
       "Customer communication",
-    ],
-    counterclaims: [
-      {
-        id: "pua-1",
-        title: "Product matched advertised description",
-        requiredEvidence: ["product_description"],
-        supportingEvidence: ["supporting_documents"],
-      },
-      {
-        id: "pua-2",
-        title: "Return and refund policy was disclosed",
-        requiredEvidence: ["refund_policy"],
-        supportingEvidence: [],
-      },
-      {
-        id: "pua-3",
-        title: "Merchant attempted to resolve the issue",
-        requiredEvidence: ["customer_communication"],
-        supportingEvidence: [],
-      },
     ],
   },
 
@@ -152,26 +69,6 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
       "Renewal notification",
       "Usage history",
     ],
-    counterclaims: [
-      {
-        id: "sub-1",
-        title: "Cancellation terms were disclosed before purchase",
-        requiredEvidence: ["cancellation_policy"],
-        supportingEvidence: [],
-      },
-      {
-        id: "sub-2",
-        title: "Customer was notified of upcoming renewal",
-        requiredEvidence: ["customer_communication"],
-        supportingEvidence: [],
-      },
-      {
-        id: "sub-3",
-        title: "Service was delivered during the billing period",
-        requiredEvidence: ["activity_log"],
-        supportingEvidence: ["supporting_documents"],
-      },
-    ],
   },
 
   DUPLICATE: {
@@ -183,14 +80,6 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
     strongestEvidence: [
       "Order confirmation",
       "Duplicate explanation",
-    ],
-    counterclaims: [
-      {
-        id: "dup-1",
-        title: "Each charge is for a separate order",
-        requiredEvidence: ["order_confirmation", "duplicate_explanation"],
-        supportingEvidence: ["supporting_documents"],
-      },
     ],
   },
 
@@ -204,18 +93,6 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
       "Order confirmation",
       "Shipping tracking",
       "Customer communication",
-    ],
-    counterclaims: [
-      {
-        id: "gen-1",
-        title: "Transaction was legitimate and fulfilled",
-        requiredEvidence: ["order_confirmation"],
-        supportingEvidence: [
-          "shipping_tracking",
-          "customer_communication",
-          "refund_policy",
-        ],
-      },
     ],
   },
 };

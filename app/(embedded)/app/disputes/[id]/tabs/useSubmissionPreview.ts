@@ -24,26 +24,16 @@ export interface SubmissionPreviewField {
   included: boolean;
 }
 
-/** Subset of `DisputeEvidenceUpdateInput` we surface in the UI. The
- *  GraphQL input has more keys; we type only what the merchant view
- *  reads, plus a passthrough for forward-compat. */
+/** Post-retirement: the only fields the mutation populates are
+ *  customerFirstName / customerLastName / customerEmailAddress (when
+ *  available on the dispute) + uncategorizedFile (the defence-package
+ *  PDF GID) + submitEvidence. Nothing else. */
 export interface SubmissionMutationPayload {
-  accessActivityLog?: string;
-  cancellationPolicyDisclosure?: string;
-  refundPolicyDisclosure?: string;
-  refundRefusalExplanation?: string;
-  cancellationRebuttal?: string;
-  uncategorizedText?: string;
   customerFirstName?: string;
   customerLastName?: string;
   customerEmailAddress?: string;
-  shippingDocumentationFile?: { id: string };
-  customerCommunicationFile?: { id: string };
-  serviceDocumentationFile?: { id: string };
-  refundPolicyFile?: { id: string };
-  cancellationPolicyFile?: { id: string };
   uncategorizedFile?: { id: string };
-  [key: string]: unknown;
+  submitEvidence?: boolean;
 }
 
 export interface SubmissionPreview {

@@ -1634,13 +1634,43 @@ The dispute detail page (`/app/disputes/:id`) is a **unified tabbed workspace** 
 - `riskExplanation.ts` — risk assessment for submit tab
 - `nextAction.ts` — computes single next step for merchant
 
-**Auto-generation:** When the workspace loads and finds a pack but no argument map, it auto-generates one (`POST /api/disputes/:id/argument` with `{ packId }`). No manual trigger needed.
+**Retirement (2026-05-16):** the legacy text-rebuttal engine
+(`lib/argument/responseEngine.ts`, `generateRebuttal.ts`,
+`generateArgument.ts`, `rebuttalReason.ts`, `evidenceDataFromPack.ts`),
+its API routes (`/api/disputes/[id]/rebuttal`, `/api/disputes/[id]/argument`),
+its DB tables (`rebuttal_drafts`, `argument_maps`), and the
+`FinalDefenseStatementCard` + `NotSubmittedCard` UI were all deleted.
+The defence-package PDF is now the sole bank-facing artifact.
 
-**Regenerate / stale letter:** `GET /api/disputes/:id/workspace` includes `rebuttalOutdated` when `evidence_packs.updated_at` is newer than `rebuttal_drafts.updated_at`. Review & Submit shows a warning and **Regenerate defense letter**, which POSTs `{ packId, regenerate: true }`. The client surfaces load/save errors (loading state + message); `credentials: "include"` is set on the fetch.
+**Bank-facing submission shape:** `disputeEvidenceUpdate.input` contains
+exactly:
 
-**`POST /api/disputes/:id/argument` errors:** True missing dispute or pack → **404** (`PGRST116` from `.single()`). Any other PostgREST error on load (e.g. invalid `select` list) → **500** with `{ error, detail }` — avoids masking schema problems as “not found”. Deletes/insert/upsert for `argument_maps` and `rebuttal_drafts` check `{ error }` and return **500** on failure (no “success” JSON if the DB did not persist).
+```
+customerFirstName?   — split from disputes.customer_display_name
+customerLastName?    — second-and-beyond tokens of the display name
+customerEmailAddress? — disputes.customer_email
+uncategorizedFile: { id: <fileGid> } — Shopify file GID from REST upload
+submitEvidence: true
+```
 
-**DB tables:** `argument_maps` (dispute_id, pack_id, counterclaims jsonb, overall_strength), `rebuttal_drafts` (pack_id, sections jsonb, source), `submission_attempts` (full submission audit).
+No text fields. No native `*File` slot routing for merchant uploads
+(their content lives inside the PDF's Supporting Evidence Index). The
+defence-package PDF reaches Shopify as REAL file bytes via
+`uploadDisputeFile` (`document_type: "uncategorized_file"`), capped at
+the Shopify Admin UI 2 MiB ceiling. `saveToShopifyJob` hard-fails
+non-retriably if the dispute lacks a `defence_packages` row at
+`status=final` with a populated `pdf_path`.
+
+Remaining `lib/argument/*` modules (`canonicalEvidence`, `caseStrength`,
+`deviceLocationEligibility`, `reasonFamily`, `whyThisCaseWins`,
+`riskExplanation`, `nextAction`, `recommendation`, `templates`,
+`canonicalSignals`, types) survive — they back the defence-package
+pipeline's case-strength scoring and the file-evidence layer's
+reason-family routing. The shared `EvidenceFlags` and `EvidenceData`
+types moved from `responseEngine.ts` to `types.ts` so they can be
+referenced without the deleted module. Reason-family classification
+(`ReasonFamily`, `REASON_TO_FAMILY`, `resolveReasonFamily`) was lifted
+to a dedicated `lib/argument/reasonFamily.ts` for the same reason.
 
 ### Pack status model — system failures vs evidence gaps
 

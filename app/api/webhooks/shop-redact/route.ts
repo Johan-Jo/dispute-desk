@@ -11,9 +11,7 @@
  *   2. evidence_files
  *   3. evidence_items
  *   4. submission_attempts
- *   5. rebuttal_drafts
- *   6. argument_maps
- *   7. dispute_notes
+ *   5. dispute_notes
  *   8. dispute_events
  *   9. evidence_packs
  *  10. disputes
@@ -64,8 +62,6 @@ const SHOP_TABLES_REVERSE_DEPENDENCY_ORDER = [
   "evidence_files",
   "evidence_items",
   "submission_attempts",
-  "rebuttal_drafts",
-  "argument_maps",
   "dispute_notes",
   "dispute_events",
   "evidence_packs",

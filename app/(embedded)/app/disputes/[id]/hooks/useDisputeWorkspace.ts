@@ -10,8 +10,6 @@ import type {
   EvidenceItemWithStrength,
   EvidenceCategory,
   MissingItemWithContext,
-  ArgumentMap,
-  RebuttalSection,
   NextAction,
   CaseStrengthResult,
   WhyWinsResult,
@@ -165,7 +163,6 @@ export function canMerchantUpload(item: {
 
 function deriveEvidenceWithStrength(
   checklist: ChecklistItemV2[],
-  argumentMap: ArgumentMap | null,
   evidenceItems: Array<{ type: string; payload: Record<string, unknown> }>,
   evidenceItemsByField:
     | Record<string, { payload?: Record<string, unknown> | null }>
@@ -176,27 +173,22 @@ function deriveEvidenceWithStrength(
     contentMap.set(ei.type, ei.payload);
   }
 
+  // Post-retirement: without the argument map's per-counterclaim
+  // breakdown, derive a coarse per-row pill purely from checklist
+  // status + priority. Headline strength is unaffected (it comes from
+  // the canonical-signal path via `calculateCaseStrength`); only the
+  // per-row pill granularity in the Evidence tab drops.
   return checklist.map((item): EvidenceItemWithStrength => {
-    let strength: EvidenceItemWithStrength["strength"] = "none";
-    let impact: EvidenceItemWithStrength["impact"] = "negligible";
-
-    if (argumentMap) {
-      for (const claim of argumentMap.counterclaims) {
-        const inSupporting = claim.supporting.some((s) => s.field === item.field);
-        const inMissing = claim.missing.find((m) => m.field === item.field);
-
-        if (inSupporting) {
-          strength = claim.strength === "strong" ? "strong" : "moderate";
-        }
-        if (inMissing) {
-          impact = inMissing.impact === "high" ? "critical" : inMissing.impact === "medium" ? "significant" : "minor";
-        }
-      }
-    }
-
-    if (item.status === "available") {
-      strength = strength === "none" ? "moderate" : strength;
-    }
+    const strength: EvidenceItemWithStrength["strength"] =
+      item.status === "available" || item.status === "waived" ? "moderate" : "none";
+    const impact: EvidenceItemWithStrength["impact"] =
+      item.priority === "critical"
+        ? "critical"
+        : item.priority === "recommended"
+          ? "significant"
+          : item.priority === "optional"
+            ? "minor"
+            : "negligible";
 
     return {
       ...item,
@@ -276,10 +268,7 @@ export interface WorkspaceClientState {
   /** In-flight flag for generatePack. Used to disable retry buttons
    *  and prevent double-click duplicate pack creation after a failure. */
   retrying: boolean;
-  rebuttalDirty: boolean;
   justSubmitted: boolean;
-  /** POST /argument in flight (regenerate defense letter). */
-  regeneratingArgument: boolean;
 }
 
 export interface DerivedState {
@@ -337,9 +326,7 @@ export function useDisputeWorkspace(disputeId: string) {
     saving: false,
     rendering: false,
     retrying: false,
-    rebuttalDirty: false,
     justSubmitted: false,
-    regeneratingArgument: false,
   });
 
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -362,22 +349,10 @@ export function useDisputeWorkspace(disputeId: string) {
       completedFields: new Set(),
     }));
 
-    // Auto-generate argument if pack exists but no argument map
-    if (json.pack && !json.argumentMap) {
-      const argRes = await fetch(`/api/disputes/${disputeId}/argument`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId: json.pack.id }),
-      });
-      if (argRes.ok) {
-        const argData = await argRes.json();
-        setData((prev) =>
-          prev
-            ? { ...prev, argumentMap: argData.argumentMap, rebuttalDraft: argData.rebuttalDraft }
-            : prev,
-        );
-      }
-    }
+    // Post-retirement: no more auto-POST to /api/disputes/[id]/argument.
+    // The defence-package builder is the only narrative generator now,
+    // and it runs from buildDefencePackageJob (enqueued via the pack
+    // build path, not from the workspace hook).
 
     // Stop polling if not building
     const isActive = json.pack?.status === "queued" || json.pack?.status === "building";
@@ -514,65 +489,11 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
-  const saveRebuttal = useCallback(
-    async (sections: RebuttalSection[]) => {
-      if (!data?.pack) return;
-      await fetch(`/api/disputes/${disputeId}/rebuttal`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId: data.pack.id, sections }),
-      });
-      setClientState((s) => ({ ...s, rebuttalDirty: false }));
-      fetchAll();
-    },
-    [data?.pack, disputeId, fetchAll],
-  );
-
-  const regenerateArgument = useCallback(async (): Promise<
-    { ok: true } | { ok: false; error: string }
-  > => {
-    if (!data?.pack) return { ok: false, error: "No evidence pack loaded." };
-    setClientState((s) => ({ ...s, regeneratingArgument: true }));
-    try {
-      const res = await fetch(`/api/disputes/${disputeId}/argument`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId: data.pack.id, regenerate: true }),
-      });
-      let message = `Could not regenerate (${res.status}). Try again or reload the app.`;
-      if (res.ok) {
-        const argData = (await res.json()) as {
-          argumentMap?: WorkspaceData["argumentMap"];
-          rebuttalDraft?: WorkspaceData["rebuttalDraft"];
-        };
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                argumentMap: argData.argumentMap ?? prev.argumentMap,
-                rebuttalDraft: argData.rebuttalDraft ?? prev.rebuttalDraft,
-              }
-            : prev,
-        );
-        await fetchAll();
-        return { ok: true };
-      }
-      try {
-        const j = (await res.json()) as { error?: string; detail?: string; code?: string };
-        if (j.code === "SHOP_MISMATCH" || j.code === "SESSION_REQUIRED") {
-          message = j.error ?? message;
-        } else if (typeof j.error === "string" && j.error.length > 0) {
-          message = j.detail ? `${j.error}: ${j.detail}` : j.error;
-        }
-      } catch {
-        /* use default message */
-      }
-      return { ok: false, error: message };
-    } finally {
-      setClientState((s) => ({ ...s, regeneratingArgument: false }));
-    }
-  }, [data?.pack, disputeId, fetchAll]);
+  // saveRebuttal + regenerateArgument removed 2026-05-16 — the legacy
+  // text rebuttal engine is retired. The defence-package builder owns
+  // bank-facing narrative now; regenerate happens via the
+  // CompleteDefencePackageCard's own Regenerate button which calls
+  // /api/defence-packages/[id]/regenerate.
 
   const submitToShopify = useCallback(
     async (overrideReason?: string, overrideNote?: string) => {
@@ -691,7 +612,6 @@ export function useDisputeWorkspace(disputeId: string) {
 
     const items = deriveEvidenceWithStrength(
       effectiveChecklist,
-      data.argumentMap,
       pack?.evidenceItems ?? [],
       pack?.evidenceItemsByField,
     );
@@ -739,18 +659,17 @@ export function useDisputeWorkspace(disputeId: string) {
           shopifyProtectStatus: data.pack.coverage.shopifyProtectStatus,
         }
       : undefined;
-    const caseStrength = calculateCaseStrength(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
+    const caseStrength = calculateCaseStrength(effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
     const contributions = computeContributions(effectiveChecklist, payloadSource);
-    const whyWins = generateWhyWins(data.argumentMap, effectiveChecklist, caseStrength.overall);
-    const risk = generateRiskExplanation(data.argumentMap, effectiveChecklist);
-    const improvement = calculateImprovement(data.argumentMap, effectiveChecklist, data.dispute.reason, payloadSource);
+    const whyWins = generateWhyWins(effectiveChecklist, caseStrength.overall);
+    const risk = generateRiskExplanation(effectiveChecklist, caseStrength.overall);
+    const improvement = calculateImprovement(effectiveChecklist, data.dispute.reason, payloadSource);
 
     const nextAction = computeNextAction({
       packExists: !!pack,
       packStatus: pack?.status ?? null,
       readiness,
       missingItems,
-      argumentMap: data.argumentMap,
       savedToShopifyAt: pack?.savedToShopifyAt ?? null,
     });
 
@@ -800,8 +719,6 @@ export function useDisputeWorkspace(disputeId: string) {
       uploadEvidence,
       waiveItem,
       unwaiveItem,
-      saveRebuttal,
-      regenerateArgument,
       submitToShopify,
       exportPdf,
       downloadPdf,

@@ -4,10 +4,10 @@
  */
 
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
-import type { ArgumentMap, RebuttalDraft, RebuttalSection, CounterclaimNode, CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
+import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
 
 export type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason };
-export type { ArgumentMap, RebuttalDraft, RebuttalSection, CounterclaimNode, CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext };
+export type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext };
 
 export interface EvidenceItemFull {
   id: string;
@@ -136,16 +136,12 @@ export interface AppliedRule {
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
   pack: WorkspacePack | null;
-  argumentMap: ArgumentMap | null;
-  rebuttalDraft: RebuttalDraft | null;
   submissionFields: SubmissionField[];
   /** First-class file inventory derived from
    *  `pack.evidenceItems[*].payload.fileId`. Plan v3 §3.A.4. Always
    *  an array; empty array is the explicit empty state for the
    *  Review tab's "Supporting documents" section. */
   attachments?: WorkspaceAttachment[];
-  /** True when the pack was updated after the saved rebuttal draft — regenerate argument to refresh the letter. */
-  rebuttalOutdated?: boolean;
   /** The rule decision for this dispute (from the latest rule_applied event). */
   appliedRule: AppliedRule | null;
   caseTypeInfo: CaseTypeInfo;

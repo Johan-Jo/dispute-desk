@@ -59,7 +59,6 @@ export type AutomationMode = "automatic" | "review_required";
  */
 export type EvidenceSubmissionDestination =
   | "form_field"
-  | "rebuttal_text"
   | "not_included";
 
 /**
@@ -319,23 +318,17 @@ function deriveSubmissionDestination(args: {
   // rather than `submissionFields`. Available + not-excluded = form_field.
   if (ATTACHMENT_FIELDS.has(args.field)) return "form_field";
 
+  // Post-retirement: every piece of evidence that's not a structured
+  // Shopify file field rides inside the defence-package PDF (which IS
+  // the bank-facing submission). The legacy rebuttal_text destination
+  // doesn't exist anymore; evidence either lands in a discrete Shopify
+  // field or — much more commonly now — is woven into the PDF.
   const mapped = EVIDENCE_TO_SHOPIFY[args.field];
+  if (!mapped || mapped.length === 0) return "not_included";
 
-  // No mapping registered, or mapping is intentionally empty (derived
-  // narrative signal): the evidence rides the rebuttal text. This is
-  // the AVS/CVV, IP/location, device/session bucket — they DO reach
-  // the bank, just inside the narrative rather than as a discrete field.
-  if (!mapped || mapped.length === 0) return "rebuttal_text";
-
-  // Mapping exists. If any mapped Shopify field is in the included
-  // set, the evidence reaches the bank as a structured field.
   for (const shopifyField of mapped) {
     if (args.includedShopifyFields.has(shopifyField)) return "form_field";
   }
-  // Mapping known but no mapped Shopify field is currently included
-  // (e.g., the merchant has not yet supplied that piece, or the field
-  // is downstream of one not picked up). Treated as not_included for
-  // the bank submission.
   return "not_included";
 }
 

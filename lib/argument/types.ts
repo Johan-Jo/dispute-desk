@@ -1,72 +1,84 @@
 /**
  * Argument engine types.
  *
- * An argument is a structured response to a dispute claim:
- * issuer claim → merchant counterclaims → supporting evidence → gaps.
+ * Post-retirement (2026-05-16): the legacy rebuttal generator
+ * (`responseEngine.ts` + `generateRebuttal.ts` + `generateArgument.ts`)
+ * was deleted. The remaining types here back the SURVIVING consumers:
+ * case-strength scoring, why-this-case-wins, risk, improvement, and
+ * the canonical evidence registry. EvidenceFlags + EvidenceData live
+ * here too (moved from the deleted `responseEngine.ts`) because the
+ * file-evidence layer's reason-family routing still references them.
  */
-
-/* ── Argument Map ── */
-
-export interface ArgumentMap {
-  issuerClaim: {
-    text: string;
-    reasonCode: string;
-  };
-  counterclaims: CounterclaimNode[];
-  /** Server-built ID-keyed lookup. Plan v3 §3.A.5: cross-collection
-   *  references must resolve through this map, never by `title`,
-   *  array position, or substring matching. Optional for back-compat
-   *  with consumers that still scan the array. */
-  counterclaimsById?: Record<string, CounterclaimNode>;
-  overallStrength: CaseStrengthLevel;
-}
-
-export interface CounterclaimNode {
-  id: string;
-  title: string;
-  strength: CaseStrengthLevel;
-  supporting: Array<{
-    /** @deprecated use `evidenceFieldKey`. Retained for back-compat. */
-    field: string;
-    /** Stable cross-collection ID. Plan v3 §3.A.5. */
-    evidenceFieldKey?: string;
-    label: string;
-    status: "available" | "waived";
-  }>;
-  /** System-derived evidence that is not present (informational, not actionable). */
-  systemUnavailable: Array<{
-    /** @deprecated use `evidenceFieldKey`. Retained for back-compat. */
-    field: string;
-    /** Stable cross-collection ID. Plan v3 §3.A.5. */
-    evidenceFieldKey?: string;
-    label: string;
-  }>;
-  /** Merchant-actionable evidence that can be added. */
-  missing: Array<{
-    /** @deprecated use `evidenceFieldKey`. Retained for back-compat. */
-    field: string;
-    /** Stable cross-collection ID. Plan v3 §3.A.5. */
-    evidenceFieldKey?: string;
-    label: string;
-    impact: "high" | "medium" | "low";
-  }>;
-}
 
 export type CaseStrengthLevel = "strong" | "moderate" | "weak" | "insufficient";
 
-/* ── Rebuttal ── */
+/* ── Evidence flags + data (moved from responseEngine.ts on 2026-05-16) ── */
 
-export interface RebuttalDraft {
-  sections: RebuttalSection[];
-  source: "generated" | "edited";
+export interface EvidenceFlags {
+  avs: boolean;
+  cvv: boolean;
+  tracking: boolean;
+  deliveryConfirmed: boolean;
+  customerContact: boolean;
+  billingShippingMatch: boolean;
+  orderConfirmation: boolean;
+  customerHistory: boolean;
+  policyAttached: boolean;
+  refundIssued: boolean;
+  refundAmountMatches: boolean;
+  cancellationRequest: boolean;
+  cancellationConfirmed: boolean;
+  disputeWithdrawalEvidence: boolean;
+  productDescription: boolean;
+  digitalAccessLogs: boolean;
+  duplicateChargeEvidence: boolean;
+  amountCorrectEvidence: boolean;
 }
 
-export interface RebuttalSection {
-  id: string;
-  type: "summary" | "claim" | "conclusion";
-  claimId?: string;
-  text: string;
-  evidenceRefs: string[];
+export interface EvidenceData {
+  avsCode?: string | null;
+  cvvCode?: string | null;
+  cardCompany?: string | null;
+  cardLastFour?: string | null;
+  gateway?: string | null;
+  orderName?: string | null;
+  orderDate?: string | null;
+  orderAmount?: string | null;
+  currency?: string | null;
+  billingCity?: string | null;
+  shippingCity?: string | null;
+  customerSince?: string | null;
+  priorOrders?: string | null;
+  carrier?: string | null;
+  trackingNumber?: string | null;
+  shippedDate?: string | null;
+  deliveredDate?: string | null;
+  /** Recipient name on signature confirmation from carrier tracking
+   *  data (AfterShip / Shipway / Wonderment metafields via
+   *  lib/shopify/trackingApps.ts). When present, the delivery
+   *  paragraph cites the signature explicitly — one of the strongest
+   *  possible defenses for FRAUDULENT chargebacks. */
+  signedByName?: string | null;
+  policyTypes?: string[];
+  shopDomain?: string | null;
+  // ── Bank-grade rebuttal signals (pack + dispute extract) ──
+  authorizationSucceeded?: boolean;
+  captureSucceeded?: boolean;
+  ipCity?: string | null;
+  ipRegion?: string | null;
+  ipCountry?: string | null;
+  ipOrg?: string | null;
+  /** True iff ipinfo.privacy.{vpn, proxy, hosting} are all explicitly false. */
+  ipNoVpnProxyHosting?: boolean | null;
+  /** true / false / null — null means unknown. */
+  ipCountryMatchesShipping?: boolean | null;
+  /** Hard prerequisite for emitting the IP/device paragraph. See
+   *  `deviceLocationEligibility.ts`. */
+  bankEligible?: boolean | null;
+  hasOrderConfirmation?: boolean;
+  hasCustomerEmail?: boolean;
+  hasSupportingDocs?: boolean;
+  fraudRiskScreeningPositiveFacts?: string[] | null;
 }
 
 /* ── Case Strength ── */
@@ -209,31 +221,6 @@ export interface ArgumentTemplate {
   disputeType: string;
   toWin: string[];
   strongestEvidence: string[];
-  counterclaims: CounterclaimTemplate[];
-}
-
-export interface CounterclaimTemplate {
-  id: string;
-  /**
-   * Title used when ALL `requiredEvidence` is present (fully-supported
-   * claim). Must accurately describe what every required field
-   * collectively proves. If the title asserts multiple facts, ALL of
-   * those facts must be backed by entries in `requiredEvidence`.
-   */
-  title: string;
-  requiredEvidence: string[];
-  supportingEvidence: string[];
-  /**
-   * Optional fallback titles when only a subset of `requiredEvidence`
-   * is present. Key = sorted, comma-joined list of present-required
-   * fields. Lets a claim re-headline when partial evidence forces a
-   * Moderate rating, so the merchant never reads a title that
-   * over-states the proof. Example for FRAUDULENT fraud-2:
-   *   { "shipping_tracking": "Order was shipped to the customer" }
-   * applies when only tracking is present (no delivery_proof). When
-   * no entry matches, falls back to `title`.
-   */
-  partialTitles?: Record<string, string>;
 }
 
 /* ── Missing Item Context ── */

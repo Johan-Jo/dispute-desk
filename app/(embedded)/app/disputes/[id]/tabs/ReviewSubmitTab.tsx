@@ -1,25 +1,20 @@
 /**
- * ReviewSubmitTab — four-section IA composition.
+ * ReviewSubmitTab — post-retirement composition.
  *
- * Replaces the legacy 1354-LOC tab with a thin orchestrator that
- * delegates to four labelled sections fed by `useReviewView`.
+ * The bank-facing artifact is the defence-package PDF.
+ * `CompleteDefencePackageCard` is the only rebuttal surface; the
+ * legacy `FinalDefenseStatementCard` and `NotSubmittedCard` were
+ * deleted along with the text-rebuttal engine on 2026-05-16.
  *
- * The four sections (in order):
+ * Section order:
  *   1. Submission status         — submitted vs ready-to-submit (CTA)
- *   2. Exact data sent to Shopify — five readable groups, byte-for-byte
- *   3. Not submitted (transparency)
- *   4. Final defense statement   — the bank-rebuttal text + Regenerate
- *
- * Override-submit modal lives at this level. When the view-model
- * marks `cta.requiresOverride === true` (readiness blocked or weak),
- * the click opens a Modal that captures a reason + optional note
- * and routes through the existing `actions.submitToShopify(reason,
- * note)` path. The merchant is never blocked outright.
+ *   2. Complete Defence Package  — narrative + PDF + Preview/Finalize/Submit
+ *   3. Exact data sent           — customer info + PDF attachment row only
  */
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BlockStack,
   Banner,
@@ -34,47 +29,7 @@ import { useReviewView } from "./useReviewView";
 import { useSubmissionPreview } from "./useSubmissionPreview";
 import { SubmissionStatusCard } from "./sections/SubmissionStatusCard";
 import { ExactDataSentCard } from "./sections/ExactDataSentCard";
-import { NotSubmittedCard } from "./sections/NotSubmittedCard";
-import { FinalDefenseStatementCard } from "./sections/FinalDefenseStatementCard";
 import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
-
-/** Whether the defence-package builder is the active rebuttal surface
- *  for this pack. When true we suppress the legacy
- *  FinalDefenseStatementCard so the merchant doesn't see two competing
- *  bank-rebuttal surfaces on the same screen.
- *
- *  Active = ANY defence_packages row exists for this pack, regardless
- *  of status. The CompleteDefencePackageCard renders an appropriate
- *  state-specific banner (Draft / Stale / Final / Submitted / Failed /
- *  Skipped / Superseded), so the legacy card is never the right
- *  fallback — it would just duplicate competing copy. The earlier
- *  narrative_json + status filter was wrong: when a build had
- *  succeeded narrative-side but failed PDF-render-side
- *  (`status=failed`, `narrative_json` populated), the legacy card kept
- *  rendering on top of the new one and the merchant saw both. */
-function useDefencePackageActive(packId: string | null): boolean {
-  const [active, setActive] = useState(false);
-  useEffect(() => {
-    if (!packId) {
-      setActive(false);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/packs/${packId}/defence-packages`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json: { latest: unknown } | null) => {
-        if (cancelled) return;
-        setActive(Boolean(json?.latest));
-      })
-      .catch(() => {
-        if (!cancelled) setActive(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [packId]);
-  return active;
-}
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -94,7 +49,6 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   const { data, derived, clientState, actions } = workspace;
   const submissionPreview = useSubmissionPreview(data?.pack?.id ?? null);
   const view = useReviewView(workspace, submissionPreview);
-  const defencePackageActive = useDefencePackageActive(data?.pack?.id ?? null);
   const tOverride = useTranslations("disputes.reviewTab.sections.override");
 
   const [overrideOpen, setOverrideOpen] = useState(false);
@@ -134,32 +88,9 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
-  // ── File evidence reinstall consent banner (Phase 7b) ──
-  // Only shown when the file evidence layer is enabled but the
-  // merchant's offline session was issued before the new dispute
-  // file upload scopes shipped (commit f61176c). Reinstalling the
-  // app from the Shopify Admin app listing will refresh the scopes.
-  const reinstallBanner =
-    data?.fileEvidence?.flagEnabled && data.fileEvidence.scopesGranted === false ? (
-      <Banner tone="warning" title="Reinstall DisputeDesk to enable native file evidence">
-        <p>
-          DisputeDesk now uploads evidence files directly into Shopify&rsquo;s
-          chargeback response file rows (Shipping documentation, Customer
-          communication, etc.) — but your store&rsquo;s permissions don&rsquo;t
-          include the new <code>{data.fileEvidence.missingScopes.join(", ")}</code>{" "}
-          {data.fileEvidence.missingScopes.length === 1 ? "scope" : "scopes"} yet.
-          Reinstall the app from the Shopify Admin app listing to refresh
-          permissions. Until then, evidence continues to ship as labelled
-          links in the dispute text.
-        </p>
-      </Banner>
-    ) : null;
-
   // ── Submit handler ──
   // Routes through the override modal when the view-model says the
-  // current readiness requires explicit intent. Otherwise submits
-  // directly. Either path lands on the same workspace action — the
-  // override args travel into the audit log via the existing API.
+  // current readiness requires explicit intent.
   const handleSubmit = () => {
     if (view.cta?.requiresOverride) {
       setOverrideOpen(true);
@@ -182,17 +113,11 @@ export default function ReviewSubmitTab({ workspace }: Props) {
     setOverrideNote("");
   };
 
-  // ── Regenerate handler ──
-  const handleRegenerate = () => {
-    void actions.regenerateArgument();
-  };
-
   return (
     <BlockStack gap="500">
       {failedBanner}
       {buildingBanner}
       {noPackBanner}
-      {reinstallBanner}
 
       {/* §1 — Submission status (submitted vs ready-to-submit + CTA) */}
       <SubmissionStatusCard
@@ -203,27 +128,10 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         onSubmit={handleSubmit}
       />
 
-      {/* §2 — Final defense statement (legacy pack-based rebuttal).
-          Suppressed when a defence-package narrative exists for this
-          pack — that narrative IS the bank rebuttal now, rendered
-          richer by DefencePackageHtmlView below. Showing both was the
-          info-overlap operators flagged on 2026-05-16. The legacy card
-          stays as the source of truth when the flag is off or no
-          defence package row exists. */}
-      {!defencePackageActive ? (
-        <FinalDefenseStatementCard
-          text={view.bankRebuttalText}
-          derivedFrom={view.derivedFrom}
-          outdated={view.rebuttalOutdated}
-          regenerating={clientState.regeneratingArgument}
-          onRegenerate={handleRegenerate}
-        />
-      ) : null}
-
-      {/* §2.5 — Complete Defence Package (Grounded Defence Package PDF
-          Builder). Hidden when ENABLE_DEFENCE_PACKAGE_BUILDER is off or
-          no defence_packages row exists for the pack yet. Inline HTML
-          defence view + deadline countdown render below the controls. */}
+      {/* §2 — Complete Defence Package (status + actions + inline HTML
+          mirror of the PDF). Always rendered; the card itself surfaces
+          the appropriate state banner (Draft / Stale / Final / Failed /
+          Skipped) when no narrative-bearing row exists. */}
       <CompleteDefencePackageCard
         packId={data?.pack?.id ?? null}
         dispute={
@@ -243,24 +151,16 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         }
       />
 
-      {/* §3 — Exact data sent to Shopify (six readable groups, including
-          customer details, native file slot routing, merchant uploads,
-          and the auto-generated pack PDF). The uncategorizedText field
-          is intentionally suppressed in this section because its body
-          IS the rebuttal text rendered above. */}
+      {/* §3 — Exact data sent to Shopify. Post-retirement: customer
+          info + the defence-package PDF attachment row. Nothing else. */}
       <ExactDataSentCard
         state={view.state}
         payload={view.payload}
         loading={view.payloadLoading}
       />
 
-      {/* §4 — Not submitted (transparency, collapses when empty) */}
-      <NotSubmittedCard items={view.notSubmitted} />
-
       {/* Override-submit modal — only mounted when the merchant clicks
-          submit on a blocked / ready_with_warnings case. Reason +
-          optional note flow into the audit log via the existing
-          submitToShopify action. */}
+          submit on a blocked / ready_with_warnings case. */}
       <Modal
         open={overrideOpen}
         onClose={handleOverrideCancel}

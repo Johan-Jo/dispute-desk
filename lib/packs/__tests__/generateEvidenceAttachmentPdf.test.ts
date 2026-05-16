@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { generateEvidenceAttachmentPdf } from "../generateEvidenceAttachmentPdf";
 import { MAX_FILE_SIZE_BYTES } from "@/lib/shopify/disputeFileUpload";
 import type { AttachmentType } from "@/lib/shopify/decideFileAttachments";
-import type { RawPackSection } from "@/lib/shopify/fieldMapping";
+import type { RawPackSection } from "@/lib/packs/generateEvidenceAttachmentPdf";
 
 function pdfStartsWithHeader(buf: Buffer): boolean {
   return buf.slice(0, 5).toString("utf8") === "%PDF-";

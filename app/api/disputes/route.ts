@@ -253,7 +253,6 @@ export async function GET(req: NextRequest) {
         try {
           const reason = reasonByDisputeId.get(p.dispute_id) ?? null;
           const result = calculateCaseStrength(
-            null,
             checklist,
             reason,
             payloadSource,

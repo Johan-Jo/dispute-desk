@@ -22,8 +22,18 @@ import {
   getEvidenceAttachmentDocumentModule,
   getReactPdfRenderer,
 } from "./pdf/reactPdfRuntime";
-import type { RawPackSection } from "@/lib/shopify/fieldMapping";
 import type { AttachmentType } from "@/lib/shopify/decideFileAttachments";
+
+/** Pack-section shape — formerly imported from the deleted
+ *  `lib/shopify/fieldMapping.ts`. Inlined here because this module
+ *  needs it for type-only extraction inside the file-evidence layer. */
+export interface RawPackSection {
+  type: string;
+  label: string;
+  source: string;
+  fieldsProvided?: string[];
+  data: Record<string, unknown>;
+}
 
 /* ── Public API ─────────────────────────────────────────────────────── */
 

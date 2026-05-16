@@ -1,19 +1,25 @@
 /**
- * Job handler: save_to_shopify
+ * Job handler: save_to_shopify (post-retirement minimal contract).
  *
- * Pushes evidence to Shopify via disputeEvidenceUpdate, then VERIFIES
- * by re-fetching the evidence fields and comparing.
- *
- * Uses the shop's durable OFFLINE session via `getShopBackgroundSession`.
- * Earlier code insisted this mutation required an ONLINE session, but
- * verified 2026-04-21 (see scripts/verify-offline-evidence-update.mjs):
- * offline tokens successfully call `disputeEvidenceUpdate` with
- * empty `userErrors` — the online requirement was not real.
+ * Pushes ONE artifact to Shopify: the defence-package PDF. Mutation
+ * input contains exactly customerFirstName / customerLastName /
+ * customerEmailAddress (optional) + uncategorizedFile.id +
+ * submitEvidence:true. The bank reads the PDF; no structured text
+ * fields, no merchant-upload native slot routing.
  *
  * Status flow:
  *   saving → saved_to_shopify_unverified → saved_to_shopify_verified
- *                                        → save_failed (if verification fails
- *                                          or Shopify returns userErrors)
+ *                                        → save_failed (on hard failure)
+ *
+ * Hard prerequisites for entering this handler:
+ *   - evidence_packs.status ∈ {ready, saving, saved_to_shopify}
+ *   - disputes.dispute_evidence_gid is set
+ *   - latest defence_packages row for the dispute is status=final with pdf_path set
+ *   - PDF bytes ≤ MAX_FILE_SIZE_BYTES (2 MiB — Shopify Admin UI ceiling)
+ *
+ * Each failure mode below short-circuits with a non-retriable JobResult
+ * — there's no fallback path now that the legacy text rebuttal engine
+ * is retired.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -23,43 +29,16 @@ import {
   getShopBackgroundSession,
   ShopifyAuthInvalidError,
 } from "@/lib/shopify/sessions/getShopBackgroundSession";
-import { type RawPackSection } from "@/lib/shopify/fieldMapping";
-import {
-  composeShopifyMutationPayload,
-  type ResolvedAttachmentPlanEntry,
-} from "@/lib/shopify/composeShopifyMutationPayload";
-import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
-import { isFileEvidenceAttachmentsEnabled, isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
-import {
-  decideFileAttachments,
-  type FileAttachmentCandidate,
-} from "@/lib/shopify/decideFileAttachments";
+import { composeShopifyMutationPayload } from "@/lib/shopify/composeShopifyMutationPayload";
 import {
   uploadDisputeFile,
-  DOCUMENT_TYPE_TO_MUTATION_FIELD,
-  type DisputeFileDocumentType,
-  type DisputeEvidenceFileField,
+  MAX_FILE_SIZE_BYTES,
 } from "@/lib/shopify/disputeFileUpload";
-import { generateEvidenceAttachmentPdf } from "@/lib/packs/generateEvidenceAttachmentPdf";
-import { isFileEligible } from "@/lib/argument/canonicalEvidence";
-import type { CaseStrengthLevel } from "@/lib/argument/types";
+import { downloadDefencePdf } from "@/lib/defence/storage";
 import {
   verifyEvidenceReadback,
   type VerificationDiffOrError,
 } from "@/lib/shopify/verifyEvidenceReadback";
-import {
-  type ManualAttachmentInput,
-  type PackPdfInput,
-} from "@/lib/shopify/manualAttachments";
-import {
-  loadChecklistFieldByEvidenceItemIdFromAudit,
-  resolveChecklistFieldForManualItem,
-} from "@/lib/shopify/manualUploadChecklistFromAudit";
-import { ATTACHMENT_LINK_TTL_DAYS } from "@/lib/links/attachmentLinks";
-import {
-  buildShortAttachmentUrl,
-  createShortLink,
-} from "@/lib/links/shortLinks";
 import {
   DISPUTE_EVIDENCE_UPDATE_MUTATION,
   type DisputeEvidenceUpdateResult,
@@ -69,60 +48,10 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { emitSaveToShopifyEvents } from "./saveToShopifyEvents";
 import type { ClaimedJob, JobResult } from "../claimJobs";
 
-/* ── Helpers ── */
-
-/** Truncate values for safe debug logging. */
-function truncateInput(input: DisputeEvidenceUpdateInput): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(input)) {
-    if (typeof v === "string") {
-      out[k] = v.length > 80 ? v.slice(0, 80) + `... (${v.length} chars)` : v;
-    } else if (v != null) {
-      out[k] = String(v);
-    }
-  }
-  return out;
-}
-
-/** Persisted on `pack_json.attachmentUploads` so retries + lifecycle
- *  reads can reuse uploaded GIDs without re-hitting Shopify. */
-interface PersistedAttachmentUpload {
-  evidenceItemId: string;
-  evidenceFieldKey: string;
-  targetField: DisputeEvidenceFileField;
-  fileGid: string;
-  uploadedAt: string;
-}
-
-/** Reverse of `DOCUMENT_TYPE_TO_MUTATION_FIELD`. Built once at module
- *  load. Used by the file-evidence pipeline to derive the REST
- *  `document_type` from the planner's `targetField`. */
-const MUTATION_FIELD_TO_DOCUMENT_TYPE: Record<
-  DisputeEvidenceFileField,
-  DisputeFileDocumentType
-> = (() => {
-  const out = {} as Record<DisputeEvidenceFileField, DisputeFileDocumentType>;
-  for (const [docType, fieldName] of Object.entries(DOCUMENT_TYPE_TO_MUTATION_FIELD)) {
-    out[fieldName as DisputeEvidenceFileField] = docType as DisputeFileDocumentType;
-  }
-  return out;
-})();
-
-/* ── Main handler ── */
-
-export interface HandleSaveToShopifyOptions {
-  /**
-   * When true, skip the Defence Package "must be final" gate and submit
-   * the existing pack PDF as `uncategorizedFile`. Used by the deadline
-   * cron when the defence package is failed/skipped/missing — Option D
-   * in the deadline-fallback plan.
-   */
-  forcePackPdfFallback?: boolean;
-}
+const ALLOWED_PACK_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
 
 export async function handleSaveToShopify(
   job: ClaimedJob,
-  opts: HandleSaveToShopifyOptions = {},
 ): Promise<JobResult> {
   const sb = getServiceClient();
   const packId = job.entityId;
@@ -134,9 +63,11 @@ export async function handleSaveToShopify(
     };
   }
 
+  /* ── 1. Load pack + status guard ── */
+
   const { data: pack } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, status, pack_json")
+    .select("id, shop_id, dispute_id, status")
     .eq("id", packId)
     .single();
   if (!pack) {
@@ -147,27 +78,7 @@ export async function handleSaveToShopify(
     };
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  DEFENSE-IN-DEPTH STATUS GUARD
-  //
-  //  The API routes (save-to-shopify, approve) already reject
-  //  pack.status !== "ready". But a job can also be inserted
-  //  directly (internal admin tool, race conditions, future code
-  //  paths). Failed packs must never reach Shopify.
-  //
-  //  Allowed statuses at job-start time:
-  //    - "ready"               → approve flow (status unchanged)
-  //    - "saving"              → save-to-shopify API flips to this
-  //    - "saved_to_shopify"    → pipeline auto-save flips to this
-  //
-  //  Everything else (failed, queued, building, archived,
-  //  save_failed, saved_to_shopify_verified, saved_to_shopify_unverified)
-  //  indicates either an invariant violation or a duplicate
-  //  submission — bail safely, never call Shopify.
-  // ═══════════════════════════════════════════════════════════
-
-  const ALLOWED_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
-  if (!ALLOWED_STATUSES.has(pack.status as string)) {
+  if (!ALLOWED_PACK_STATUSES.has(pack.status as string)) {
     const reason =
       pack.status === "failed"
         ? "pack_status_failed"
@@ -188,13 +99,17 @@ export async function handleSaveToShopify(
     return {
       ok: false,
       retriable: false,
-      reason: `Refusing to save to Shopify: pack status is "${pack.status}", not a submittable state. Shopify was NOT called.`,
+      reason: `Refusing to save to Shopify: pack status is "${pack.status}", not a submittable state.`,
     };
   }
 
+  /* ── 2. Load dispute (need evidence GID + customer info) ── */
+
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, dispute_evidence_gid, reason, amount, currency_code")
+    .select(
+      "id, dispute_evidence_gid, dispute_gid, reason, amount, currency_code, customer_display_name, customer_email",
+    )
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute?.dispute_evidence_gid) {
@@ -204,510 +119,161 @@ export async function handleSaveToShopify(
       reason: "Dispute has no evidence GID — cannot save to Shopify",
     };
   }
+  const numericDisputeId = dispute.dispute_gid?.match(/\/(\d+)$/)?.[1];
+  if (!numericDisputeId) {
+    return {
+      ok: false,
+      retriable: false,
+      reason: "Dispute has no numeric Shopify ID — cannot upload file evidence",
+    };
+  }
 
-  // ═══════════════════════════════════════════════════════════
-  //  1. SESSION: durable shop-level (offline) — this is background work
-  // ═══════════════════════════════════════════════════════════
+  /* ── 3. Load latest defence_packages row — must be FINAL ── */
+
+  const { data: dpkg } = await sb
+    .from("defence_packages")
+    .select("id, version, status, pdf_path")
+    .eq("dispute_id", pack.dispute_id)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!dpkg) {
+    return {
+      ok: false,
+      retriable: false,
+      reason:
+        "No defence_packages row exists for this dispute. Build the defence package first (or wait for the auto-build to complete).",
+    };
+  }
+  if (dpkg.status !== "final") {
+    return {
+      ok: false,
+      retriable: false,
+      reason: `Defence package is in status "${dpkg.status}", not final. Finalize the latest draft (or wait for regeneration) before submitting.`,
+    };
+  }
+  if (!dpkg.pdf_path) {
+    return {
+      ok: false,
+      retriable: false,
+      reason: "Defence package is final but has no PDF path. Regenerate the package and try again.",
+    };
+  }
+
+  const activeDefencePackageId = dpkg.id as string;
+  const activeDefencePackageVersion = dpkg.version as number;
+
+  /* ── 4. Download PDF + check size ── */
+
+  let pdfBytes: Buffer;
+  try {
+    pdfBytes = await downloadDefencePdf(dpkg.pdf_path as string);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      retriable: true,
+      reason: `defence_pdf_download_failed: ${message}`,
+    };
+  }
+  if (pdfBytes.length > MAX_FILE_SIZE_BYTES) {
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "job_failed",
+      eventPayload: {
+        jobId: job.id,
+        jobType: "save_to_shopify",
+        reason: "defence_pdf_too_large",
+        size_bytes: pdfBytes.length,
+        max_bytes: MAX_FILE_SIZE_BYTES,
+      },
+    });
+    return {
+      ok: false,
+      retriable: false,
+      reason: `defence_pdf_too_large: ${pdfBytes.length} bytes exceeds Shopify Admin's ${MAX_FILE_SIZE_BYTES}-byte file-upload ceiling. Regenerate with a tighter narrative or compress the PDF.`,
+    };
+  }
+
+  /* ── 5. Session ── */
 
   const session = await getShopBackgroundSession(pack.shop_id);
   const accessToken = session.accessToken;
   const shopDomain = session.shopDomain;
 
-  // ═══════════════════════════════════════════════════════════
-  //  2. BUILD INPUT
-  // ═══════════════════════════════════════════════════════════
+  /* ── 6. Upload PDF to Shopify → fileGid ── */
 
-  const packJson = pack.pack_json as { sections?: unknown[] } | null;
-  const rawSections = Array.isArray(packJson?.sections) ? packJson.sections : [];
-  const sections: RawPackSection[] = rawSections.filter(
-    (s): s is RawPackSection =>
-      typeof s === "object" && s !== null && "type" in s && "label" in s && "data" in s,
-  );
-  // Get rebuttal text
-  const { data: rebuttalDraft } = await sb
-    .from("rebuttal_drafts").select("sections")
-    .eq("pack_id", packId).eq("locale", "en-US").maybeSingle();
-  const rebuttalText = rebuttalDraft?.sections
-    ? (rebuttalDraft.sections as Array<{ text: string }>).map((s) => s.text).join("\n\n").trim() || null
-    : null;
-
-  // Customer info (schema only accepts firstName + lastName + email)
-  const { data: disputeExtra } = await sb
-    .from("disputes")
-    .select("customer_display_name, customer_email")
-    .eq("id", pack.dispute_id)
-    .single();
-
-  // The raw `customerPurchaseIp` injection that used to live here was
-  // removed on 2026-04-21. The IP & Location Check evidence block now
-  // owns all IP-related submission text via `formatEvidenceForShopify.ts`,
-  // which gates output through `bankEligible`. Raw-dumping the IP string
-  // would bypass that gate and leak negative signals (e.g. a Brazilian IP
-  // on a US-shipping order) into the bank's view of the case.
-
-
-  // ═══════════════════════════════════════════════════════════
-  //  MANUAL ATTACHMENTS → DisputeDesk URLs in uncategorizedText
-  //
-  //  Shopify's public Admin API does not let third-party apps attach
-  //  files to disputes (see lib/shopify/disputeFileUpload.ts). Instead
-  //  we cite time-limited DisputeDesk URLs (`https://disputedesk.app/e/<token>`)
-  //  that stream bytes through our origin via `app/e/[token]/route.ts`.
-  //  The Supabase storage host is never exposed to the bank.
-  //
-  //  evidence_items is queried here — not pack_json.sections — because
-  //  pack_json is a build-time snapshot and does not include files the
-  //  merchant uploaded after the initial build.
-  // ═══════════════════════════════════════════════════════════
-
-  const linkExpiresAt = new Date(
-    Date.now() + ATTACHMENT_LINK_TTL_DAYS * 24 * 60 * 60 * 1000,
-  );
-
-  const { data: manualItems } = await sb
-    .from("evidence_items")
-    .select("id, label, payload, created_at")
-    .eq("pack_id", packId)
-    .eq("source", "manual_upload")
-    .order("created_at", { ascending: false });
-
-  const auditChecklistByItemId =
-    await loadChecklistFieldByEvidenceItemIdFromAudit(sb, packId);
-
-  const toBackfill: Array<{
-    id: string;
-    meta: Record<string, unknown>;
-    checklistField: string;
-  }> = [];
-
-  const manualAttachments: ManualAttachmentInput[] = [];
-  for (const item of manualItems ?? []) {
-    const meta = (item.payload ?? {}) as Record<string, unknown>;
-    const code = await createShortLink(sb, {
-      kind: "item",
-      entityId: String(item.id),
-      packId,
+  let defencePackagePdfGid: string;
+  try {
+    const upload = await uploadDisputeFile({
+      shopDomain,
+      accessToken,
+      disputeNumericId: numericDisputeId,
+      documentType: "uncategorized_file",
+      filename: `defence-package-v${activeDefencePackageVersion}.pdf`,
+      mimeType: "application/pdf",
+      fileBytes: pdfBytes,
+    });
+    defencePackagePdfGid = upload.fileGid;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logAuditEvent({
       shopId: pack.shop_id,
-      disputeId: pack.dispute_id ?? null,
-      expiresAt: linkExpiresAt,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "job_failed",
+      eventPayload: {
+        jobId: job.id,
+        jobType: "save_to_shopify",
+        reason: "defence_pdf_upload_failed",
+        error: message.slice(0, 500),
+      },
     });
-    const checklistField = resolveChecklistFieldForManualItem(
-      String(item.id),
-      meta,
-      auditChecklistByItemId,
-    );
-    const hadPayloadField =
-      typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0;
-    if (!hadPayloadField && checklistField) {
-      toBackfill.push({ id: String(item.id), meta, checklistField });
-    }
-    manualAttachments.push({
-      // `id` is consulted by `composeShopifyMutationPayload` to suppress
-      // links for items whose bytes (or synthesised PDFs) have been
-      // attached natively via the file evidence layer (Q2=A in the
-      // conditional file evidence plan). Always set; suppression is
-      // a no-op when the file evidence flag is off.
-      id: String(item.id),
-      checklistField,
-      label: (item.label as string | null) ?? null,
-      fileName: typeof meta.fileName === "string" ? meta.fileName : null,
-      fileSize: typeof meta.fileSize === "number" ? meta.fileSize : null,
-      createdAt: (item.created_at as string | null) ?? null,
-      url: buildShortAttachmentUrl(code),
-    });
-  }
-
-  for (const row of toBackfill) {
-    await sb
-      .from("evidence_items")
-      .update({
-        payload: { ...row.meta, checklistField: row.checklistField },
-      })
-      .eq("id", row.id);
-  }
-
-  let pdfAttachment: PackPdfInput | null = null;
-  let activeDefencePackageId: string | null = null;
-  let activeDefencePackageVersion: number | null = null;
-
-  // ── Defence Package PDF swap (flag-gated) ──
-  // When ENABLE_DEFENCE_PACKAGE_BUILDER is on AND a defence_packages row
-  // exists for this dispute, the submission MUST use the latest row in
-  // status=final. Anything else (draft, stale, failed, skipped, submitted,
-  // superseded) is a hard block — the merchant must finalize or wait for
-  // regeneration first. When no defence_packages row exists yet (e.g. the
-  // auto-build hasn't completed), fall through to the existing pack PDF.
-  if (isDefencePackageBuilderEnabled() && pack.dispute_id && !opts.forcePackPdfFallback) {
-    const { data: dpkg } = await sb
-      .from("defence_packages")
-      .select("id, version, status, pdf_path")
-      .eq("dispute_id", pack.dispute_id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (dpkg) {
-      if (dpkg.status !== "final") {
-        return {
-          ok: false,
-          retriable: false,
-          reason: `Defence package is in status "${dpkg.status}", not final. Finalize the latest draft (or wait for regeneration to complete) before submitting.`,
-        };
-      }
-      if (!dpkg.pdf_path) {
-        return {
-          ok: false,
-          retriable: false,
-          reason: "Defence package is final but has no PDF path. Regenerate the package and try again.",
-        };
-      }
-      const code = await createShortLink(sb, {
-        kind: "pdf",
-        entityId: dpkg.id as string,
-        packId,
-        shopId: pack.shop_id,
-        disputeId: pack.dispute_id ?? null,
-        expiresAt: linkExpiresAt,
-      });
-      pdfAttachment = { url: buildShortAttachmentUrl(code) };
-      activeDefencePackageId = dpkg.id as string;
-      activeDefencePackageVersion = dpkg.version as number;
-    }
-  }
-
-  // Existing pack PDF path — used when (a) flag is off, or (b) flag is on
-  // but no defence_packages row exists for this dispute yet.
-  if (!pdfAttachment) {
-    const { data: packForPdf } = await sb
-      .from("evidence_packs")
-      .select("pdf_path")
-      .eq("id", packId)
-      .single();
-    if (packForPdf?.pdf_path) {
-      const code = await createShortLink(sb, {
-        kind: "pdf",
-        entityId: packId,
-        packId,
-        shopId: pack.shop_id,
-        disputeId: pack.dispute_id ?? null,
-        expiresAt: linkExpiresAt,
-      });
-      pdfAttachment = { url: buildShortAttachmentUrl(code) };
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  //  FILE EVIDENCE PIPELINE (gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED`)
-  //
-  //  When the flag is on, run `decideFileAttachments` over the
-  //  merchant's manual uploads, generate a focused PDF per native
-  //  plan entry, REST-upload it to Shopify, persist the resulting GID
-  //  on `pack_json.attachmentUploads` for retry idempotency, and pass
-  //  the resolved plan to `composeShopifyMutationPayload`. Compose
-  //  sets the matching `*File` fields and suppresses the manual link
-  //  for the same `evidence_item_id` (Q2=A — native-only when attached).
-  //
-  //  When the flag is off (default), `resolvedAttachmentPlan` stays
-  //  empty and compose's behaviour is byte-identical to the
-  //  text-only path that's been in production since 2026-04-21.
-  //
-  //  Failure isolation: any error inside this block degrades to
-  //  text-only for that specific entry (or the whole pack on a hard
-  //  failure) and is recorded via `attachment_pipeline_failed` audit
-  //  events. Shopify mutation will still proceed.
-  // ═══════════════════════════════════════════════════════════
-
-  let resolvedAttachmentPlan: ResolvedAttachmentPlanEntry[] = [];
-
-  if (isFileEvidenceAttachmentsEnabled()) {
-    try {
-      const packJson = (pack.pack_json ?? {}) as {
-        case_strength?: { overall?: CaseStrengthLevel };
-        coverage?: { state?: string };
-        fatal_loss?: { triggered?: boolean };
-        attachmentUploads?: PersistedAttachmentUpload[];
-      };
-
-      const caseStrength: CaseStrengthLevel =
-        (packJson.case_strength?.overall as CaseStrengthLevel | undefined) ?? "insufficient";
-      const coverageActive = packJson.coverage?.state === "covered_shopify";
-      const fatalLossActive = packJson.fatal_loss?.triggered === true;
-
-      const candidates: FileAttachmentCandidate[] = [];
-      for (const item of manualItems ?? []) {
-        const meta = (item.payload ?? {}) as Record<string, unknown>;
-        const checklistField =
-          typeof meta.checklistField === "string" && meta.checklistField.trim().length > 0
-            ? meta.checklistField
-            : null;
-        if (!checklistField || !isFileEligible(checklistField)) continue;
-        candidates.push({
-          evidenceItemId: String(item.id),
-          evidenceFieldKey: checklistField,
-          payload: meta,
-          label: (item.label as string | null) ?? null,
-          fileName: typeof meta.fileName === "string" ? meta.fileName : null,
-        });
-      }
-
-      const plan = decideFileAttachments({
-        caseStrength,
-        disputeReason: dispute.reason,
-        coverageActive,
-        fatalLossActive,
-        candidates,
-      });
-
-      const numericDisputeId = dispute.dispute_evidence_gid.match(/\/(\d+)$/)?.[1];
-      const candidateById = new Map(candidates.map(c => [c.evidenceItemId, c]));
-      // Idempotency: lifecycle-fresh stash is reused; otherwise re-upload.
-      const lifecycleFreshStatuses = new Set(["ready", "saving", "saved_to_shopify_unverified"]);
-      const lifecycleFresh = lifecycleFreshStatuses.has(pack.status as string);
-      const existingMap = new Map<string, PersistedAttachmentUpload>(
-        (packJson.attachmentUploads ?? []).map(u => [u.evidenceItemId, u]),
-      );
-
-      const updatedUploads: PersistedAttachmentUpload[] = [];
-      const auditAttachments: Array<{
-        evidenceItemId: string;
-        evidenceFieldKey: string;
-        targetField: string;
-        slot: string;
-        ok: boolean;
-        reused?: boolean;
-        requestId?: string | null;
-        /** When `ok === false`, captures the underlying error message
-         *  so post-mortem can identify which entry failed and why,
-         *  without needing access to the worker's server logs. */
-        errorMessage?: string;
-        /** When the failure was a `DisputeFileUploadError`, surface
-         *  its `code` discriminator (`validation_input` /
-         *  `validation_size` / `validation_mime` / `shopify_rejection` /
-         *  `missing_id_in_response`). */
-        errorCode?: string;
-      }> = [];
-
-      for (const entry of plan) {
-        if (entry.resolvedSlot.kind !== "native") {
-          // Link-only entries are recorded in the resolved plan with
-          // null GID so the Review & Submit UI can show "queued to
-          // narrative" with a reason, but they never trigger an upload.
-          resolvedAttachmentPlan.push({
-            evidenceItemId: entry.evidenceItemId,
-            evidenceFieldKey: entry.evidenceFieldKey,
-            resolvedSlot: entry.resolvedSlot,
-            fileGid: null,
-          });
-          continue;
-        }
-
-        const targetField = entry.resolvedSlot.targetField;
-        const existing = existingMap.get(entry.evidenceItemId);
-        let fileGid: string | null = null;
-        let reused = false;
-
-        if (
-          existing &&
-          existing.targetField === targetField &&
-          lifecycleFresh
-        ) {
-          fileGid = existing.fileGid;
-          reused = true;
-        } else if (numericDisputeId) {
-          try {
-            const cand = candidateById.get(entry.evidenceItemId);
-            const pdfBytes = await generateEvidenceAttachmentPdf({
-              attachmentType: entry.attachmentType,
-              evidenceFieldKey: entry.evidenceFieldKey,
-              reason: entry.reason,
-              shopDomain,
-              disputeId: numericDisputeId,
-              sections,
-              label: cand?.label ?? null,
-              payload: cand?.payload ?? null,
-            });
-
-            const documentType = MUTATION_FIELD_TO_DOCUMENT_TYPE[targetField];
-            const upload = await uploadDisputeFile({
-              shopDomain,
-              accessToken,
-              disputeNumericId: numericDisputeId,
-              documentType,
-              filename: `${entry.evidenceFieldKey}.pdf`,
-              mimeType: "application/pdf",
-              fileBytes: pdfBytes,
-            });
-            fileGid = upload.fileGid;
-            auditAttachments.push({
-              evidenceItemId: entry.evidenceItemId,
-              evidenceFieldKey: entry.evidenceFieldKey,
-              targetField,
-              slot: entry.resolvedSlot.origin,
-              ok: true,
-              requestId: upload.requestId,
-            });
-          } catch (err) {
-            const requestId =
-              err && typeof err === "object" && "requestId" in err
-                ? ((err as { requestId?: string | null }).requestId ?? null)
-                : null;
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            const errorCode =
-              err && typeof err === "object" && "code" in err && typeof (err as { code: unknown }).code === "string"
-                ? ((err as { code: string }).code)
-                : undefined;
-            console.error(
-              "[saveToShopify] file evidence upload failed (continuing text-only for this entry):",
-              errorMessage,
-              "requestId=",
-              requestId,
-            );
-            auditAttachments.push({
-              evidenceItemId: entry.evidenceItemId,
-              evidenceFieldKey: entry.evidenceFieldKey,
-              targetField,
-              slot: entry.resolvedSlot.origin,
-              ok: false,
-              requestId,
-              errorMessage: errorMessage.slice(0, 500),
-              ...(errorCode ? { errorCode } : {}),
-            });
-          }
-        }
-
-        if (fileGid) {
-          updatedUploads.push({
-            evidenceItemId: entry.evidenceItemId,
-            evidenceFieldKey: entry.evidenceFieldKey,
-            targetField,
-            fileGid,
-            uploadedAt: existing && reused ? existing.uploadedAt : new Date().toISOString(),
-          });
-        }
-
-        resolvedAttachmentPlan.push({
-          evidenceItemId: entry.evidenceItemId,
-          evidenceFieldKey: entry.evidenceFieldKey,
-          resolvedSlot: entry.resolvedSlot,
-          fileGid,
-        });
-      }
-
-      // Persist GIDs back to pack_json (best-effort; never block save).
-      if (updatedUploads.length > 0) {
-        const nextPackJson = { ...packJson, attachmentUploads: updatedUploads };
-        await sb
-          .from("evidence_packs")
-          .update({ pack_json: nextPackJson, updated_at: new Date().toISOString() })
-          .eq("id", packId);
-      }
-
-      if (auditAttachments.length > 0) {
-        await logAuditEvent({
-          shopId: pack.shop_id,
-          disputeId: pack.dispute_id,
-          packId,
-          actorType: "system",
-          eventType: "file_evidence_planned",
-          eventPayload: {
-            jobId: job.id,
-            attachments: auditAttachments,
-            failures: auditAttachments.filter(a => !a.ok).length,
-            reused: auditAttachments.filter(a => a.reused).length,
-          },
-        });
-      }
-    } catch (pipelineErr) {
-      // Pipeline-level failure (decide, candidate building, etc.).
-      // Continue with text-only path.
-      console.error(
-        "[saveToShopify] file evidence pipeline failed (degrading to text-only):",
-        pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr),
-      );
-      await logAuditEvent({
-        shopId: pack.shop_id,
-        disputeId: pack.dispute_id,
-        packId,
-        actorType: "system",
-        eventType: "file_evidence_pipeline_failed",
-        eventPayload: {
-          jobId: job.id,
-          error: pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr),
-        },
-      });
-      resolvedAttachmentPlan = [];
-    }
-  }
-
-  // Compose the final GraphQL mutation payload via the shared
-  // `composeShopifyMutationPayload` builder. The submission-preview
-  // endpoint calls the same function so the merchant's "raw view" is
-  // byte-equivalent to what's about to ship (modulo the URL tokens,
-  // which are inputs to this function — not transformations performed
-  // inside it). Plan v3 §3.A.2.
-  const input: DisputeEvidenceUpdateInput = composeShopifyMutationPayload({
-    sections,
-    rebuttalText,
-    disputeReason: dispute.reason,
-    customer: {
-      displayName: disputeExtra?.customer_display_name ?? null,
-      email: disputeExtra?.customer_email ?? null,
-    },
-    manualAttachments,
-    pdfAttachment,
-    attachmentPlan: resolvedAttachmentPlan,
-  });
-
-
-  // ═══════════════════════════════════════════════════════════
-  //  REST-ONLY FIELDS (not available via GraphQL)
-  //
-  //  Shopify's GraphQL schema rejects: product_description,
-  //  shipping_carrier, shipping_tracking_number, shipping_date.
-  //  But the REST PUT /dispute_evidences.json endpoint accepts them.
-  //
-  //  File uploads are not available via any currently-public Shopify
-  //  API path (verified 2026-04-21). REST
-  //  /shopify_payments/disputes/:id/dispute_file_uploads.json returns
-  //  HTTP 404 on 2024-10 / 2025-04 / 2026-01. GraphQL stagedUploadsCreate
-  //  rejects the DISPUTE_FILE_UPLOAD resource. All evidence is therefore
-  //  text-only. See lib/shopify/disputeFileUpload.ts for the full record.
-  // ═══════════════════════════════════════════════════════════
-
-  // REST-only fields are extracted by `buildRestSupplementFields` —
-  // see the snapshot harness in lib/jobs/handlers/__tests__/
-  // saveToShopify.snapshot.test.ts for byte-equivalence pinning across
-  // the four dispute-family fixtures.
-  const restOnlyFields = buildRestSupplementFields(sections);
-
-  const inputKeys = Object.keys(input);
-  if (inputKeys.length === 0) {
     return {
       ok: false,
-      retriable: false,
-      reason: "No evidence fields to send — pack sections are empty",
+      retriable: true,
+      reason: `defence_pdf_upload_failed: ${message}`,
     };
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  3. DEBUG LOG (truncated input)
-  // ═══════════════════════════════════════════════════════════
+  /* ── 7. Build 4-field input ── */
 
-  console.log(`[saveToShopify] input payload (${inputKeys.length} fields):`);
-  console.log(JSON.stringify(truncateInput(input), null, 2));
+  const input: DisputeEvidenceUpdateInput = composeShopifyMutationPayload({
+    customer: {
+      displayName: dispute.customer_display_name ?? null,
+      email: dispute.customer_email ?? null,
+    },
+    defencePackagePdfGid,
+  });
+  const inputKeys = Object.keys(input);
+
+  console.log(
+    `[saveToShopify] input payload (${inputKeys.length} fields):`,
+    JSON.stringify(inputKeys),
+  );
 
   await logAuditEvent({
-    shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
-    actorType: "system", eventType: "job_started",
+    shopId: pack.shop_id,
+    disputeId: pack.dispute_id,
+    packId,
+    actorType: "system",
+    eventType: "job_started",
     eventPayload: {
-      jobId: job.id, jobType: "save_to_shopify",
-      session_type: session.sessionType, user_id: session.userId,
+      jobId: job.id,
+      jobType: "save_to_shopify",
+      session_type: session.sessionType,
+      user_id: session.userId,
       fields_to_send: inputKeys,
+      defence_package_id: activeDefencePackageId,
+      defence_package_version: activeDefencePackageVersion,
     },
   });
 
-  // ═══════════════════════════════════════════════════════════
-  //  4. CALL MUTATION
-  // ═══════════════════════════════════════════════════════════
+  /* ── 8. Call mutation ── */
 
   const result = await requestShopifyGraphQL<DisputeEvidenceUpdateResult>({
     session: { shopDomain, accessToken },
@@ -722,27 +288,24 @@ export async function handleSaveToShopify(
     evidenceId: result.data?.disputeEvidenceUpdate?.disputeEvidence?.id ?? null,
   }));
 
-  // Auth-class errors get their own dedicated code path so the failure
-  // mode is unambiguous (distinguishable from userErrors or other
-  // Shopify-side rejections). On match, persist save_failed with a
-  // stable reason and return a non-retriable JobResult — the merchant
-  // must reinstall before any retry could succeed.
+  /* ── 9. Auth + GraphQL + userErrors handling ── */
+
   try {
     assertNotAuthInvalid(pack.shop_id, session.sessionType, {
       errors: result.errors,
     });
   } catch (err) {
     if (err instanceof ShopifyAuthInvalidError) {
-      console.error(
-        `[saveToShopify] auth invalid mode=${err.sessionType} shop=${err.shopId}: ${err.rawMessage}`,
-      );
       await sb
         .from("evidence_packs")
         .update({ status: "save_failed", updated_at: new Date().toISOString() })
         .eq("id", packId);
       await logAuditEvent({
-        shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
-        actorType: "system", eventType: "job_failed",
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: "job_failed",
         eventPayload: {
           jobId: job.id,
           jobType: "save_to_shopify",
@@ -760,14 +323,12 @@ export async function handleSaveToShopify(
     throw err;
   }
 
-  // Check GraphQL errors (non-auth). These can be transient (rate limit,
-  // 5xx) or schema/resource errors. Treat as RETRIABLE — the worker's
-  // attempts cap will eventually fail it if the error persists. The
-  // pack is flipped to save_failed regardless so the UI doesn't show
-  // it as in-progress while the worker waits.
   if (result.errors?.length) {
     const errMsg = result.errors.map((e: { message: string }) => e.message).join(", ");
-    await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
+    await sb
+      .from("evidence_packs")
+      .update({ status: "save_failed", updated_at: new Date().toISOString() })
+      .eq("id", packId);
     return {
       ok: false,
       retriable: true,
@@ -775,15 +336,18 @@ export async function handleSaveToShopify(
     };
   }
 
-  // Check userErrors. These are input-validation failures from Shopify
-  // (e.g. malformed evidence field, non-text in a text-only column).
-  // Retrying with the same payload won't help → non-retriable.
   const userErrors = result.data?.disputeEvidenceUpdate?.userErrors ?? [];
   if (userErrors.length > 0) {
-    await sb.from("evidence_packs").update({ status: "save_failed", updated_at: new Date().toISOString() }).eq("id", packId);
+    await sb
+      .from("evidence_packs")
+      .update({ status: "save_failed", updated_at: new Date().toISOString() })
+      .eq("id", packId);
     await logAuditEvent({
-      shopId: pack.shop_id, disputeId: pack.dispute_id, packId,
-      actorType: "system", eventType: "job_failed",
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "job_failed",
       eventPayload: { jobId: job.id, jobType: "save_to_shopify", user_errors: userErrors },
     });
     return {
@@ -793,57 +357,17 @@ export async function handleSaveToShopify(
     };
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  5. REST SUPPLEMENT — fields GraphQL doesn't support
-  // ═══════════════════════════════════════════════════════════
-
-  if (Object.keys(restOnlyFields).length > 0) {
-    try {
-      const { data: dForRest } = await sb
-        .from("disputes")
-        .select("dispute_gid")
-        .eq("id", pack.dispute_id)
-        .single();
-      const numericDisputeId = dForRest?.dispute_gid?.match(/\/(\d+)$/)?.[1];
-
-      if (numericDisputeId) {
-        const restUrl = `https://${shopDomain}/admin/api/2026-01/shopify_payments/disputes/${numericDisputeId}/dispute_evidences.json`;
-        const restRes = await fetch(restUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Shopify-Access-Token": accessToken,
-          },
-          body: JSON.stringify({ dispute_evidence: restOnlyFields }),
-        });
-
-        console.log(
-          `[saveToShopify] REST supplement (${Object.keys(restOnlyFields).join(", ")}): ${restRes.status}`,
-        );
-      }
-    } catch (restErr) {
-      // Non-fatal — GraphQL fields are already saved
-      console.error(
-        "[saveToShopify] REST supplement failed (non-fatal):",
-        restErr instanceof Error ? restErr.message : String(restErr),
-      );
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  //  6. MARK UNVERIFIED (mutation succeeded but not yet confirmed)
-  // ═══════════════════════════════════════════════════════════
+  /* ── 10. Mark unverified, then verify ── */
 
   const now = new Date().toISOString();
-  await sb.from("evidence_packs").update({
-    status: "saved_to_shopify_unverified",
-    saved_to_shopify_at: now,
-    updated_at: now,
-  }).eq("id", packId);
-
-  // ═══════════════════════════════════════════════════════════
-  //  7. VERIFY — re-fetch evidence from Shopify and compare
-  // ═══════════════════════════════════════════════════════════
+  await sb
+    .from("evidence_packs")
+    .update({
+      status: "saved_to_shopify_unverified",
+      saved_to_shopify_at: now,
+      updated_at: now,
+    })
+    .eq("id", packId);
 
   let verified = false;
   let verificationDiff: VerificationDiffOrError = {
@@ -851,25 +375,14 @@ export async function handleSaveToShopify(
   };
 
   try {
-    // 2-second buffer — mutation responses don't always reflect on the
-    // read replica immediately. Empirically every dispute we save shows
-    // up cleanly after this wait.
+    // Read-replica lag buffer — empirically 2 seconds is enough.
     await new Promise((r) => setTimeout(r, 2000));
-
-    // Query via dispute GID (not evidence GID) — evidence is a nested field
-    const { data: disputeData } = await sb
-      .from("disputes")
-      .select("dispute_gid")
-      .eq("id", pack.dispute_id)
-      .single();
 
     const { diff, evidenceNode } = await verifyEvidenceReadback({
       shopDomain,
       accessToken,
-      disputeGid: disputeData?.dispute_gid ?? "",
+      disputeGid: dispute.dispute_gid ?? "",
       inputKeys,
-      // Pass the full input so file-field GID equality verifies
-      // post-flag-on submissions; harmless when no *File fields are set.
       inputValues: input as unknown as Record<string, unknown>,
       correlationId: `verify-${job.id}`,
     });
@@ -882,32 +395,33 @@ export async function handleSaveToShopify(
       console.log("[saveToShopify] verification: could not fetch evidence from Shopify");
     }
   } catch (verifyErr) {
-    console.error("[saveToShopify] verification error:", verifyErr instanceof Error ? verifyErr.message : String(verifyErr));
-    verificationDiff = { error: verifyErr instanceof Error ? verifyErr.message : String(verifyErr) };
+    const message = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+    console.error("[saveToShopify] verification error:", message);
+    verificationDiff = { error: message };
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  7. FINAL STATUS based on verification
-  // ═══════════════════════════════════════════════════════════
+  /* ── 11. Final status ── */
 
   const finalStatus = verified ? "saved_to_shopify_verified" : "saved_to_shopify_unverified";
 
-  await sb.from("evidence_packs").update({
-    status: finalStatus,
-    updated_at: new Date().toISOString(),
-  }).eq("id", packId);
+  await sb
+    .from("evidence_packs")
+    .update({ status: finalStatus, updated_at: new Date().toISOString() })
+    .eq("id", packId);
 
   if (pack.dispute_id) {
-    await sb.from("disputes").update({
-      submission_state: "saved_to_shopify",
-      evidence_saved_to_shopify_at: now,
-    }).eq("id", pack.dispute_id);
+    await sb
+      .from("disputes")
+      .update({
+        submission_state: "saved_to_shopify",
+        evidence_saved_to_shopify_at: now,
+      })
+      .eq("id", pack.dispute_id);
   }
 
-  // Mark the defence package as submitted. The defence_packages immutability
-  // trigger allows submitted_at / submitted_by / shopify_response /
-  // superseded_by_id mutations on a final row.
-  if (activeDefencePackageId && verified) {
+  /* ── 12. Mark the defence package submitted (when verified) ── */
+
+  if (verified) {
     await sb
       .from("defence_packages")
       .update({
@@ -918,6 +432,7 @@ export async function handleSaveToShopify(
           verified,
           finalStatus,
           evidenceGid: dispute.dispute_evidence_gid,
+          fileGid: defencePackagePdfGid,
         },
         updated_at: now,
       })
@@ -932,14 +447,14 @@ export async function handleSaveToShopify(
         packageId: activeDefencePackageId,
         version: activeDefencePackageVersion,
         evidenceGid: dispute.dispute_evidence_gid,
+        fileGid: defencePackagePdfGid,
         verified,
       },
     });
   }
 
-  const confirmedNativeEntries = resolvedAttachmentPlan.filter(
-    e => e.resolvedSlot.kind === "native" && e.fileGid != null,
-  );
+  /* ── 13. Success-path event burst ── */
+
   await emitSaveToShopifyEvents({
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
@@ -950,12 +465,10 @@ export async function handleSaveToShopify(
     inputKeys,
     verified,
     verificationDiff,
-    manualAttachmentCount: manualAttachments.length,
-    pdfAttached: pdfAttachment !== null,
-    nativeAttachmentCount: confirmedNativeEntries.length,
-    nativeAttachmentFields: confirmedNativeEntries.map(e =>
-      e.resolvedSlot.kind === "native" ? e.resolvedSlot.targetField : "",
-    ).filter(Boolean),
+    manualAttachmentCount: 0,
+    pdfAttached: true,
+    nativeAttachmentCount: 0,
+    nativeAttachmentFields: [],
     reason: dispute.reason ?? null,
     amount: dispute.amount ?? null,
     currencyCode: dispute.currency_code ?? null,

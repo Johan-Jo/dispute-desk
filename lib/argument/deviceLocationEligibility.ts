@@ -37,7 +37,7 @@
  * directly — this gate only governs the *bank-facing* surfaces.
  */
 
-import type { EvidenceData } from "./responseEngine";
+import type { EvidenceData } from "./types";
 
 /**
  * Minimal pack-section shape this module needs. Kept structural so

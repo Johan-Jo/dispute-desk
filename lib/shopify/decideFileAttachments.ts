@@ -110,7 +110,7 @@ function categorizeForFilePlan(
 import {
   resolveReasonFamily,
   type ReasonFamily,
-} from "@/lib/argument/responseEngine";
+} from "@/lib/argument/reasonFamily";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 
 /* ── Types ────────────────────────────────────────────────────────────── */

@@ -1,99 +1,29 @@
 /**
- * Generate "Why This Case Should Win" — strengths and weaknesses.
+ * "Why This Case Should Win" — strengths/weaknesses summary.
  *
- * Each returned item carries the originating `counterclaimId` so the UI
- * can resolve back to `argumentMap.counterclaimsById[id]` for strength
- * pill and supporting/missing field lists — without text-matching, per
- * the NO IMPLICIT UI MAPPING rule (plan v3 §0).
+ * Post-retirement (2026-05-16): the argument-map iterator that
+ * surfaced per-counterclaim strengths/weaknesses was deleted along
+ * with the legacy bank-rebuttal engine. The headline strength now
+ * comes solely from `caseStrength.calculateCaseStrength` (canonical
+ * registry path). This function returns empty strength/weakness
+ * arrays so existing callers keep compiling; the UI now reads from
+ * `caseStrength.computeContributions` for the row-level breakdown.
+ *
+ * Kept as a tiny shim instead of deleted to avoid churning the four
+ * call sites in the embedded workspace hook + tests; a follow-up can
+ * remove this file once those callers stop importing it.
  */
 
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import type {
-  ArgumentMap,
-  WhyWinsResult,
-  WhyWinsItem,
-  CaseStrengthLevel,
-} from "./types";
-
-/** Human-readable strength descriptions per evidence field.
- *
- *  NOTE (plan v3 §P2.6): The Overview tab no longer iterates this map.
- *  The "What supports your case" surface now consumes
- *  `derived.contributions` (strict per-canonical-signalId). This map
- *  remains for legacy callers (Evidence tab, Review & Submit tab) until
- *  those tabs are rebuilt under the v3 plan. Vague summary phrases are
- *  forbidden per the Argument Purity Rule (P2.6) — fields that map to
- *  a supporting-only canonical category (e.g. `order_confirmation`)
- *  intentionally lack a description here so they cannot accidentally
- *  surface as a "strength" anywhere. */
-const STRENGTH_DESCRIPTIONS: Record<string, string> = {
-  avs_cvv_match: "AVS and CVV passed",
-  billing_address_match: "Billing address matches order",
-  shipping_tracking: "Shipment confirmed with tracking",
-  delivery_proof: "Delivery confirmed by carrier",
-  // Note: customer_communication, order_confirmation, refund_policy,
-  // shipping_policy, cancellation_policy, product_description,
-  // activity_log, duplicate_explanation are all SUPPORTING fields
-  // per the canonical registry. They never elevate strength so we
-  // do NOT emit a description here — that prevents them from leaking
-  // into any "strength" surface.
-};
-
-const WEAKNESS_DESCRIPTIONS: Record<string, string> = {
-  avs_cvv_match: "No AVS/CVV verification available",
-  billing_address_match: "Billing address could not be verified",
-  shipping_tracking: "No shipping tracking available",
-  delivery_proof: "No delivery confirmation on file",
-  customer_communication: "No customer communication recorded",
-  activity_log: "No prior purchase history on file",
-  product_description: "Product description not documented",
-  refund_policy: "Refund policy not captured",
-  shipping_policy: "Shipping policy not captured",
-  cancellation_policy: "Cancellation policy not captured",
-};
+import type { WhyWinsResult, CaseStrengthLevel } from "./types";
 
 export function generateWhyWins(
-  argumentMap: ArgumentMap | null,
-  checklist: ChecklistItemV2[],
+  _checklist: ChecklistItemV2[],
   weightedStrength?: CaseStrengthLevel,
 ): WhyWinsResult {
-  if (!argumentMap) {
-    return { strengths: [], weaknesses: [], overall: "insufficient" };
-  }
-
-  const strengths: WhyWinsItem[] = [];
-  const weaknesses: WhyWinsItem[] = [];
-  // Dedupe by description text — first counterclaim that surfaces a given
-  // description claims it. Subsequent counterclaims do not produce a
-  // duplicate row but still have their own provenance via `counterclaim.supporting[]`
-  // when the UI iterates the counterclaim directly.
-  const seenStrengths = new Set<string>();
-  const seenWeaknesses = new Set<string>();
-
-  for (const claim of argumentMap.counterclaims) {
-    for (const s of claim.supporting) {
-      const desc = STRENGTH_DESCRIPTIONS[s.field];
-      if (desc && !seenStrengths.has(desc)) {
-        seenStrengths.add(desc);
-        strengths.push({ text: desc, counterclaimId: claim.id });
-      }
-    }
-    // Only include weaknesses from merchant-actionable missing items.
-    for (const m of claim.missing) {
-      if (m.impact === "high" || m.impact === "medium") {
-        const desc = WEAKNESS_DESCRIPTIONS[m.field];
-        if (desc && !seenWeaknesses.has(desc)) {
-          seenWeaknesses.add(desc);
-          weaknesses.push({ text: desc, counterclaimId: claim.id });
-        }
-      }
-    }
-  }
-
-  // Use weighted strength (from caseStrength engine) when provided,
-  // NOT the argument map's raw claim-based strength which causes
-  // contradictions (e.g., "insufficient" when AVS/CVV is strong).
-  const overall = weightedStrength ?? argumentMap.overallStrength;
-
-  return { strengths, weaknesses, overall };
+  return {
+    strengths: [],
+    weaknesses: [],
+    overall: weightedStrength ?? "insufficient",
+  };
 }
