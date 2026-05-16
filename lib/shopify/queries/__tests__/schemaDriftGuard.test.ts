@@ -103,6 +103,33 @@ const FORBIDDEN_BY_PARENT: ForbiddenByParent[] = [
     remediation:
       "Tracking-app metafields are read from Order.metafields instead; lib/packs/sources/fulfillmentSource.ts already null-tolerates the per-fulfillment path.",
   },
+  {
+    parent: "disputeEvidence",
+    field: "customerCommunication",
+    selector: "ShopifyPaymentsDisputeEvidence.customerCommunication",
+    removedIn: "Admin API 2026-01",
+    incident: "2026-05-16",
+    remediation:
+      "Customer communication is file-only now. The write path attaches to `customerCommunicationFile` (see lib/shopify/composeShopifyMutationPayload.ts) and the read-back lives in lib/shopify/verifyEvidenceReadback.ts under the file-field selection — there is no text field to re-select.",
+  },
+  {
+    parent: "disputeEvidence",
+    field: "shippingDocumentation",
+    selector: "ShopifyPaymentsDisputeEvidence.shippingDocumentation",
+    removedIn: "Admin API 2026-01",
+    incident: "2026-05-16",
+    remediation:
+      "Shipping documentation is file-only now. The write path attaches to `shippingDocumentationFile` (see lib/shopify/composeShopifyMutationPayload.ts) and the read-back lives in lib/shopify/verifyEvidenceReadback.ts under the file-field selection — there is no text field to re-select.",
+  },
+  {
+    parent: "disputes",
+    field: "initiatedAt",
+    selector: "OrderDisputeSummary.initiatedAt",
+    removedIn: "Admin API 2026-01",
+    incident: "2026-05-16",
+    remediation:
+      "`Order.disputes` now returns `OrderDisputeSummary` without the timestamp. lib/liabilityShift/fetchPriors.ts only needs `.disputes.length > 0` to disqualify priors — drop the timestamp from the selection. (Note: `ShopifyPaymentsDispute.initiatedAt` on the root-level `disputes`/`dispute` queries is unaffected; only the nested `Order.disputes` summary was changed.)",
+  },
 ];
 
 /**

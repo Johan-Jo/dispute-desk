@@ -58,9 +58,13 @@ export const CUSTOMER_ORDERS_FOR_CE30_QUERY = `
                 }
               }
             }
+            # OrderDisputeSummary.initiatedAt was removed in Admin API
+            # 2026-01. fetchPriors only checks .disputes.length > 0 to
+            # disqualify priors with chargebacks, so the timestamp was
+            # dead weight. Re-selection is blocked by the schema-drift
+            # deny-list in __tests__/schemaDriftGuard.test.ts.
             disputes {
               id
-              initiatedAt
             }
           }
           cursor
@@ -111,7 +115,7 @@ export interface CE30CandidateOrderNode {
       };
     }>;
   };
-  disputes: Array<{ id: string; initiatedAt: string | null }>;
+  disputes: Array<{ id: string }>;
 }
 
 export interface CustomerOrdersForCE30Response {

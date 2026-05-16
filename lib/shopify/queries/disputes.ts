@@ -72,13 +72,17 @@ export const DISPUTE_DETAIL_QUERY = `
         accessActivityLog
         cancellationPolicyDisclosure
         cancellationRebuttal
-        customerCommunication
         customerEmailAddress
         refundPolicyDisclosure
         refundRefusalExplanation
-        shippingDocumentation
         uncategorizedText
       }
+      # NOTE: ShopifyPaymentsDisputeEvidence.customerCommunication and
+      # ShopifyPaymentsDisputeEvidence.shippingDocumentation were removed
+      # in Admin API 2026-01 — both are file-only now and read back via
+      # customerCommunicationFile / shippingDocumentationFile (see
+      # verifyEvidenceReadback.ts). Re-selection is blocked by the
+      # schema-drift deny-list in __tests__/schemaDriftGuard.test.ts.
     }
   }
 `;
@@ -149,11 +153,9 @@ export interface DisputeDetailNode {
     accessActivityLog: string | null;
     cancellationPolicyDisclosure: string | null;
     cancellationRebuttal: string | null;
-    customerCommunication: string | null;
     customerEmailAddress: string | null;
     refundPolicyDisclosure: string | null;
     refundRefusalExplanation: string | null;
-    shippingDocumentation: string | null;
     uncategorizedText: string | null;
   } | null;
 }

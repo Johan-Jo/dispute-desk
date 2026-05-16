@@ -3229,6 +3229,36 @@ team-email field. `lib/shopify/shopDetails.ts` now reads from `Shop.shopAddress`
 wrapped in try/catch so the failure silently fills `is_cross_border=null`; a
 follow-up should migrate it to `shopAddress`.
 
+**Schema drift fix (2026-05-16):** the daily `checkShopifyQueryFieldDrift`
+cron on `surasvenne.myshopify.com` flagged three more `undefinedField`
+errors against Admin API 2026-01:
+- `ShopifyPaymentsDisputeEvidence.customerCommunication` (text) — removed.
+  The field is file-only now; the write path already targets
+  `customerCommunicationFile` (see `lib/shopify/composeShopifyMutationPayload.ts`)
+  and the read-back already lives in the file slot in
+  `lib/shopify/verifyEvidenceReadback.ts`. Dropped from `DISPUTE_DETAIL_QUERY`
+  selection and `DisputeDetailNode` type in `lib/shopify/queries/disputes.ts`.
+- `ShopifyPaymentsDisputeEvidence.shippingDocumentation` (text) — removed
+  for the same reason. Same surgical drop from `DISPUTE_DETAIL_QUERY`;
+  `shippingDocumentationFile` is the canonical write target.
+- `OrderDisputeSummary.initiatedAt` — removed from the nested
+  `Order.disputes` summary type (root-level `ShopifyPaymentsDispute.initiatedAt`
+  is unaffected; `DISPUTE_LIST_QUERY` and `DISPUTE_DETAIL_QUERY` still
+  rely on it). `lib/liabilityShift/fetchPriors.ts` only reads
+  `.disputes.length > 0` to disqualify priors with chargebacks, so the
+  timestamp was dead weight. Dropped from `CUSTOMER_ORDERS_FOR_CE30_QUERY`
+  selection and `CE30CandidateOrderNode.disputes` type.
+
+All three were added to `FORBIDDEN_BY_PARENT` in
+`lib/shopify/queries/__tests__/schemaDriftGuard.test.ts` — `disputeEvidence`
+as the parent for the two evidence-text fields, and `disputes` for the
+CE 3.0-priors case. The parent-aware ban deliberately does not flag
+`initiatedAt` on the root-level dispute selections because their
+immediate parent block is `node`/`dispute`, not `disputes`. Source files
+edited: `lib/shopify/queries/disputes.ts`,
+`lib/shopify/queries/customerOrdersForCE30.ts`,
+`lib/shopify/queries/__tests__/schemaDriftGuard.test.ts`.
+
 **Schema drift fix (2026-05-15):** `Order.cartToken` and `Fulfillment.metafields`
 were both removed in Admin API 2026-01. The drift surfaced as
 `pack_build_failed` on dispute `bd425f70` — the auto-build pipeline finally
