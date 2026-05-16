@@ -35,6 +35,7 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from "@/lib/shopify/disputeFileUpload";
 import { downloadDefencePdf } from "@/lib/defence/storage";
+import { merchantNameFromDomain } from "@/lib/defence/orderContext";
 import {
   verifyEvidenceReadback,
   type VerificationDiffOrError,
@@ -206,6 +207,16 @@ export async function handleSaveToShopify(
 
   /* ── 6. Upload PDF to Shopify → fileGid ── */
 
+  // Filename pattern: Defence-{disputeID}-{Merchant}-{submissionDate}.pdf
+  // The bank's reviewer sees this in Shopify Admin's dispute-resolution
+  // UI; sortable by dispute id, identifies the merchant at a glance,
+  // dates by submission (not generation, so the bank knows when it
+  // actually reached them). Filename-safe: spaces removed, only [-A-Za-z0-9].
+  const merchantSlug =
+    merchantNameFromDomain(shopDomain)?.replace(/\s+/g, "") ?? "Merchant";
+  const submissionDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+  const filename = `Defence-${numericDisputeId}-${merchantSlug}-${submissionDate}.pdf`;
+
   let defencePackagePdfGid: string;
   try {
     const upload = await uploadDisputeFile({
@@ -213,7 +224,7 @@ export async function handleSaveToShopify(
       accessToken,
       disputeNumericId: numericDisputeId,
       documentType: "uncategorized_file",
-      filename: `defence-package-v${activeDefencePackageVersion}.pdf`,
+      filename,
       mimeType: "application/pdf",
       fileBytes: pdfBytes,
     });
