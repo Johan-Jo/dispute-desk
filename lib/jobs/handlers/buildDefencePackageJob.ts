@@ -27,6 +27,7 @@ import { validateNarrative } from "@/lib/defence/validateNarrative";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
+import { evaluateRules } from "@/lib/rules/evaluateRules";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
@@ -71,7 +72,7 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("disputes")
-      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code")
+      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at")
       .eq("id", pkg.dispute_id)
       .single(),
   ]);
@@ -340,10 +341,36 @@ export async function handleBuildDefencePackage(
     reasonCode,
   });
 
+  // ── Mode-aware finalization ─────────────────────────────────────────
+  // Resolve per-dispute automation mode via the shop's rules engine
+  // (the same resolver the pack auto-save pipeline uses). When the
+  // resolved mode is "auto", we finalize the package and enqueue
+  // save_to_shopify immediately — no merchant click. When "review",
+  // we keep the package as a draft for the merchant to finalize on
+  // the Review & Submit tab.
+  let resolvedMode: "auto" | "review" = "review";
+  if (dispute) {
+    try {
+      const ruleResult = await evaluateRules({
+        id: pkg.dispute_id,
+        shop_id: pkg.shop_id,
+        reason: (dispute.reason as string | null) ?? null,
+        status: (dispute.status as string | null) ?? null,
+        amount: (dispute.amount as number | null) ?? null,
+        phase: (dispute.phase as "inquiry" | "chargeback" | null | undefined) ?? null,
+      });
+      resolvedMode = ruleResult.action.mode;
+    } catch (err) {
+      console.error("[defence build] evaluateRules failed; defaulting to review", err);
+    }
+  }
+
+  const targetStatus: DefencePackageStatus = resolvedMode === "auto" ? "final" : "draft";
+
   await sb
     .from("defence_packages")
     .update({
-      status: "draft" satisfies DefencePackageStatus,
+      status: targetStatus,
       pdf_path: pdfPath,
       narrative_json: narrativeRes.narrative,
       facts_json: classification.approved,
@@ -363,7 +390,10 @@ export async function handleBuildDefencePackage(
     disputeId: pkg.dispute_id,
     packId: pkg.source_pack_id,
     actorType: "system",
-    eventType: "defence_package_draft_generated",
+    eventType:
+      targetStatus === "final"
+        ? "defence_package_finalized"
+        : "defence_package_draft_generated",
     eventPayload: {
       packageId,
       version: pkg.version,
@@ -372,6 +402,8 @@ export async function handleBuildDefencePackage(
       model: narrativeRes.modelUsed,
       packageMode: classification.packageMode,
       validationStatus: "ok",
+      resolvedMode,
+      generatedBy: "system",
     },
   });
 
@@ -390,6 +422,62 @@ export async function handleBuildDefencePackage(
       durationMs: narrativeRes.durationMs,
     },
   });
+
+  // ── Auto mode: supersede any prior final + enqueue save_to_shopify ──
+  if (resolvedMode === "auto") {
+    // Atomically flip any prior final (for the same dispute, different
+    // version) to superseded so the immutability trigger is satisfied.
+    // The new row is already in status=final per the UPDATE above; the
+    // trigger validates that superseded_by_id targets must be final.
+    const { data: priorFinal } = await sb
+      .from("defence_packages")
+      .select("id, version")
+      .eq("dispute_id", pkg.dispute_id)
+      .eq("status", "final")
+      .neq("id", packageId)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (priorFinal) {
+      const { error: supErr } = await sb
+        .from("defence_packages")
+        .update({
+          status: "superseded",
+          superseded_by_id: packageId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", priorFinal.id);
+      if (supErr) {
+        console.error("[defence build] superseded update failed", supErr);
+      } else {
+        await logAuditEvent({
+          shopId: pkg.shop_id,
+          disputeId: pkg.dispute_id,
+          packId: pkg.source_pack_id,
+          actorType: "system",
+          eventType: "defence_package_superseded",
+          eventPayload: {
+            supersededId: priorFinal.id,
+            supersededVersion: priorFinal.version,
+            replacedById: packageId,
+            replacedByVersion: pkg.version,
+          },
+        });
+      }
+    }
+
+    // Enqueue save_to_shopify against the source pack. saveToShopifyJob
+    // will discover the latest final defence_packages row and swap the
+    // uncategorizedFile buffer to the defence package PDF.
+    const { error: jobErr } = await sb.from("jobs").insert({
+      shop_id: pkg.shop_id,
+      job_type: "save_to_shopify",
+      entity_id: pkg.source_pack_id,
+    });
+    if (jobErr) {
+      console.error("[defence build] enqueue save_to_shopify failed", jobErr);
+    }
+  }
 
   return { ok: true };
 }

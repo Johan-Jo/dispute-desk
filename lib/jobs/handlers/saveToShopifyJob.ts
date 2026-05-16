@@ -110,7 +110,20 @@ const MUTATION_FIELD_TO_DOCUMENT_TYPE: Record<
 
 /* ── Main handler ── */
 
-export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
+export interface HandleSaveToShopifyOptions {
+  /**
+   * When true, skip the Defence Package "must be final" gate and submit
+   * the existing pack PDF as `uncategorizedFile`. Used by the deadline
+   * cron when the defence package is failed/skipped/missing — Option D
+   * in the deadline-fallback plan.
+   */
+  forcePackPdfFallback?: boolean;
+}
+
+export async function handleSaveToShopify(
+  job: ClaimedJob,
+  opts: HandleSaveToShopifyOptions = {},
+): Promise<JobResult> {
   const sb = getServiceClient();
   const packId = job.entityId;
   if (!packId) {
@@ -324,7 +337,7 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
   // superseded) is a hard block — the merchant must finalize or wait for
   // regeneration first. When no defence_packages row exists yet (e.g. the
   // auto-build hasn't completed), fall through to the existing pack PDF.
-  if (isDefencePackageBuilderEnabled() && pack.dispute_id) {
+  if (isDefencePackageBuilderEnabled() && pack.dispute_id && !opts.forcePackPdfFallback) {
     const { data: dpkg } = await sb
       .from("defence_packages")
       .select("id, version, status, pdf_path")

@@ -60,6 +60,13 @@ async function runWorker(req: NextRequest) {
         case "save_to_shopify":
           handlerResult = await handleSaveToShopify(job);
           break;
+        case "save_to_shopify_pack_fallback":
+          // Deadline-cron fallback (Option D): bypass the Defence Package
+          // "must be final" gate and submit the existing pack PDF. Used
+          // when the latest defence package is failed/skipped/missing
+          // and the dispute deadline is today.
+          handlerResult = await handleSaveToShopify(job, { forcePackPdfFallback: true });
+          break;
         case "build_defence_package":
           handlerResult = await handleBuildDefencePackage(job);
           break;

@@ -12,8 +12,9 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Badge,
   Banner,
   BlockStack,
   Button,
@@ -24,6 +25,14 @@ import {
   Spinner,
   Text,
 } from "@shopify/polaris";
+import type {
+  DefenceNarrativeOutput,
+  EvidenceFact,
+} from "@/lib/defence/types";
+import {
+  DefencePackageHtmlView,
+  type DisputeContextLike,
+} from "./DefencePackageHtmlView";
 
 type Status =
   | "draft"
@@ -52,10 +61,41 @@ interface DefencePackageRow {
   failure_code: string | null;
   failure_reason: string | null;
   submitted_at: string | null;
+  narrative_json: DefenceNarrativeOutput | null;
+  facts_json: EvidenceFact[] | null;
 }
 
 interface Props {
   packId: string | null;
+  /** Used to render the inline HTML defence view + the days-remaining
+   *  badge. Optional — when absent the card still works, just without
+   *  the case-details / countdown enrichment. */
+  dispute?: DisputeContextLike & { dueAt?: string | null };
+}
+
+/** Days-remaining math, mirrors lib/disputeListHelpers getUrgency
+ *  thresholds (≤48h = critical, ≤7d = warning). */
+function daysRemainingFrom(dueAt: string | null | undefined): {
+  label: string;
+  tone: "critical" | "warning" | "info";
+} | null {
+  if (!dueAt) return null;
+  const hoursLeft = (new Date(dueAt).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (Number.isNaN(hoursLeft)) return null;
+  if (hoursLeft < 0) {
+    return { label: "Deadline passed", tone: "critical" };
+  }
+  if (hoursLeft <= 24) {
+    return { label: "Due today", tone: "critical" };
+  }
+  if (hoursLeft <= 48) {
+    return { label: "Due in 1 day", tone: "critical" };
+  }
+  const days = Math.round(hoursLeft / 24);
+  if (hoursLeft <= 168) {
+    return { label: `Due in ${days} day${days === 1 ? "" : "s"}`, tone: "warning" };
+  }
+  return { label: `Due in ${days} days`, tone: "info" };
 }
 
 function StatusBadge({ status }: { status: Status }) {
@@ -90,7 +130,8 @@ function StatusBadge({ status }: { status: Status }) {
   );
 }
 
-export function CompleteDefencePackageCard({ packId }: Props) {
+export function CompleteDefencePackageCard({ packId, dispute }: Props) {
+  const countdown = useMemo(() => daysRemainingFrom(dispute?.dueAt), [dispute?.dueAt]);
   const [row, setRow] = useState<DefencePackageRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -232,6 +273,14 @@ export function CompleteDefencePackageCard({ packId }: Props) {
               <Text as="span" variant="bodySm" tone="subdued">Model</Text>
               <Text as="span" variant="bodySm">{row.llm_model ?? "—"}</Text>
             </BlockStack>
+            {countdown && (
+              <BlockStack gap="050">
+                <Text as="span" variant="bodySm" tone="subdued">Deadline</Text>
+                <Badge tone={countdown.tone === "info" ? undefined : countdown.tone}>
+                  {countdown.label}
+                </Badge>
+              </BlockStack>
+            )}
           </InlineStack>
 
           {row.status === "skipped" && row.failure_code === "covered_shopify" && (
@@ -321,6 +370,13 @@ export function CompleteDefencePackageCard({ packId }: Props) {
           )}
         </BlockStack>
       </Card>
+
+      {/* Inline HTML defence view — visually mirrors the PDF document
+          section-for-section. Hidden when the package has no narrative
+          (skipped / failed rows). */}
+      {row.narrative_json && row.facts_json && (
+        <DefencePackageHtmlView row={row} dispute={dispute} />
+      )}
 
       <Modal
         open={previewOpen}

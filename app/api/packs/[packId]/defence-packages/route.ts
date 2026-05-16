@@ -35,7 +35,7 @@ export async function GET(
   const { data } = await sb
     .from("defence_packages")
     .select(
-      "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at",
+      "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json",
     )
     .eq("source_pack_id", packId)
     .eq("shop_id", shopId)

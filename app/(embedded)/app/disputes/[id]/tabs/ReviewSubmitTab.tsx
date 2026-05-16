@@ -178,8 +178,26 @@ export default function ReviewSubmitTab({ workspace }: Props) {
 
       {/* §2.5 — Complete Defence Package (Grounded Defence Package PDF
           Builder). Hidden when ENABLE_DEFENCE_PACKAGE_BUILDER is off or
-          no defence_packages row exists for the pack yet. */}
-      <CompleteDefencePackageCard packId={data?.pack?.id ?? null} />
+          no defence_packages row exists for the pack yet. Inline HTML
+          defence view + deadline countdown render below the controls. */}
+      <CompleteDefencePackageCard
+        packId={data?.pack?.id ?? null}
+        dispute={
+          data?.dispute
+            ? {
+                disputeGid: data.dispute.disputeGid ?? null,
+                orderName: data.dispute.orderName ?? null,
+                reason: data.dispute.reason ?? null,
+                amount: data.dispute.amount ?? null,
+                currencyCode: data.dispute.currency ?? null,
+                cardholderName: data.dispute.customerName ?? null,
+                shopName: data.dispute.shopDomain ?? null,
+                merchantName: data.dispute.shopDomain ?? null,
+                dueAt: data.dispute.dueAt ?? null,
+              }
+            : undefined
+        }
+      />
 
       {/* §3 — Exact data sent to Shopify (six readable groups, including
           customer details, native file slot routing, merchant uploads,
