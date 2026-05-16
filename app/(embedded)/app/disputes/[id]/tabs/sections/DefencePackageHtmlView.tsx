@@ -521,27 +521,13 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
           )}
         </BlockStack>
 
-        {/* Package metadata (audit trail, compact) */}
-        <BlockStack gap="100">
-          <Text as="h3" variant="headingSm">Package Metadata</Text>
-          <Text as="p" tone="subdued" variant="bodySm">
-            Audit identity for this package. Not bank-facing argumentation.
-          </Text>
-          <BlockStack gap="050">
-            <MetaRow label="Package ID" value={row.id} />
-            <MetaRow label="Version" value={`v${row.version}`} />
-            <MetaRow label="Mode" value={mode} />
-            <MetaRow
-              label="Evidence hash"
-              value={row.evidence_hash ? `${row.evidence_hash.slice(0, 12)}…` : "—"}
-            />
-            <MetaRow label="Prompt family" value={row.prompt_family ?? "—"} />
-            <MetaRow label="Prompt version" value={String(row.prompt_version ?? "—")} />
-            <MetaRow label="Reason-code module" value={row.reason_code_module ?? "—"} />
-            <MetaRow label="LLM model" value={row.llm_model ?? "—"} />
-            <MetaRow label="Generated" value={fmtIso(row.generated_at)} />
-          </BlockStack>
-        </BlockStack>
+        {/* Package Metadata block intentionally NOT rendered here.
+            That section (Package ID / Evidence hash / Prompt family /
+            Prompt version / Reason-code module / LLM model / Generated)
+            is admin/operator audit data and must not appear on the
+            merchant-facing embedded review page — same content surfaces
+            in /admin/defence-package/runs/[id] for ops. Removed
+            2026-05-16 after operator review caught it leaking. */}
       </BlockStack>
     </Card>
   );
@@ -583,11 +569,5 @@ function ThesisBox({ text }: { text: string }) {
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <InlineStack gap="400" align="space-between" wrap={false}>
-      <Text as="span" variant="bodySm" tone="subdued">{label}</Text>
-      <Text as="span" variant="bodySm">{value}</Text>
-    </InlineStack>
-  );
-}
+// MetaRow helper removed alongside the Package Metadata block — it had
+// no other callers.

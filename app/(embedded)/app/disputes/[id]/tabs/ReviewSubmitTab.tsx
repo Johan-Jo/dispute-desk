@@ -19,7 +19,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BlockStack,
   Banner,
@@ -37,6 +37,42 @@ import { ExactDataSentCard } from "./sections/ExactDataSentCard";
 import { NotSubmittedCard } from "./sections/NotSubmittedCard";
 import { FinalDefenseStatementCard } from "./sections/FinalDefenseStatementCard";
 import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
+
+/** Whether a defence-package narrative is the active rebuttal artifact
+ *  for this pack. When true we suppress the legacy
+ *  FinalDefenseStatementCard so the merchant doesn't see two competing
+ *  bank-rebuttal surfaces on the same screen. */
+function useDefencePackageActive(packId: string | null): boolean {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    if (!packId) {
+      setActive(false);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/packs/${packId}/defence-packages`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { latest: { narrative_json?: unknown; status?: string } | null } | null) => {
+        if (cancelled) return;
+        // Active when a narrative-bearing row exists. Skipped / failed
+        // rows that have no narrative don't suppress the legacy card.
+        setActive(
+          Boolean(
+            json?.latest?.narrative_json &&
+              json.latest.status !== "skipped" &&
+              json.latest.status !== "failed",
+          ),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setActive(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [packId]);
+  return active;
+}
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -56,6 +92,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   const { data, derived, clientState, actions } = workspace;
   const submissionPreview = useSubmissionPreview(data?.pack?.id ?? null);
   const view = useReviewView(workspace, submissionPreview);
+  const defencePackageActive = useDefencePackageActive(data?.pack?.id ?? null);
   const tOverride = useTranslations("disputes.reviewTab.sections.override");
 
   const [overrideOpen, setOverrideOpen] = useState(false);
@@ -164,17 +201,22 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         onSubmit={handleSubmit}
       />
 
-      {/* §2 — Final defense statement. The rebuttal letter is the
-          merchant's primary "did we say the right thing?" surface, so
-          it sits above the structured-field detail. Collapses when no
-          rebuttal text exists. */}
-      <FinalDefenseStatementCard
-        text={view.bankRebuttalText}
-        derivedFrom={view.derivedFrom}
-        outdated={view.rebuttalOutdated}
-        regenerating={clientState.regeneratingArgument}
-        onRegenerate={handleRegenerate}
-      />
+      {/* §2 — Final defense statement (legacy pack-based rebuttal).
+          Suppressed when a defence-package narrative exists for this
+          pack — that narrative IS the bank rebuttal now, rendered
+          richer by DefencePackageHtmlView below. Showing both was the
+          info-overlap operators flagged on 2026-05-16. The legacy card
+          stays as the source of truth when the flag is off or no
+          defence package row exists. */}
+      {!defencePackageActive ? (
+        <FinalDefenseStatementCard
+          text={view.bankRebuttalText}
+          derivedFrom={view.derivedFrom}
+          outdated={view.rebuttalOutdated}
+          regenerating={clientState.regeneratingArgument}
+          onRegenerate={handleRegenerate}
+        />
+      ) : null}
 
       {/* §2.5 — Complete Defence Package (Grounded Defence Package PDF
           Builder). Hidden when ENABLE_DEFENCE_PACKAGE_BUILDER is off or
