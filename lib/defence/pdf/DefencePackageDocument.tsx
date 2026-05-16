@@ -102,7 +102,7 @@ function disputeIdShort(gid: string | null): string {
 
 type ThesisKey = `${NarrativeSectionKey}:${string}:${PackageMode}`;
 
-const THESIS_LIBRARY: Record<string, string> = {
+export const THESIS_LIBRARY: Record<string, string> = {
   // Visa 10.4 / fraud — full mode
   "executiveSummary:visa_10_4_fraud:full":
     "This representment addresses a Visa 10.4 (Other Fraud — Card Absent) chargeback. The approved evidence — payment authentication, billing alignment, and the customer's documented engagement — establishes that the transaction was authorised by the cardholder.",
@@ -144,7 +144,7 @@ const THESIS_LIBRARY: Record<string, string> = {
     "Based on the available evidence, the merchant respectfully requests review of this chargeback.",
 };
 
-const GENERIC_THESIS: Record<NarrativeSectionKey, string> = {
+export const GENERIC_THESIS: Record<NarrativeSectionKey, string> = {
   executiveSummary:
     "This representment addresses the chargeback identified above. The approved evidence supporting the merchant's position is summarised below.",
   transactionOverviewArgument:
@@ -179,31 +179,47 @@ function thesisFor(
 
 /* ── Section block ─────────────────────────────────────────────────── */
 /**
- * Renders H1 + LLM body. Thesis blockquote is rendered ONLY in narrow
- * mode — in full mode the LLM body stands on its own (the thesis would
- * duplicate it).
+ * Renders H1 + deterministic thesis blockquote + LLM body. The
+ * thesis is keyed by (sectionKey × reasonCodeModule × packageMode);
+ * see THESIS_LIBRARY / GENERIC_THESIS above.
+ *
+ * Earlier strip-down attempts removed the thesis blockquote and most
+ * tables on the (wrong) theory that one of those JSX shapes was
+ * crashing @react-pdf's reconciler in prod. The actual root cause was
+ * two-React module instances from webpack not deduping `react` across
+ * @react-pdf/renderer — fixed by `serverExternalPackages: ["@react-pdf/renderer"]`
+ * in `next.config.js` (commit 3871f28). Document tree is safe to use
+ * the full bank-grade design again.
  */
 function SectionBlock({
   title,
+  thesis,
   section,
   omitted,
 }: {
   title: string;
-  /** Reserved — historically rendered as a narrow-mode lead-in
-   *  blockquote. Removed because the narrow-mode LLM prompt already
-   *  enforces hedged framing in the section body itself, so the box
-   *  was duplicative AND the wrap={false}/borderLeft style combination
-   *  trips @react-pdf 4.x's reconciler under Next.js prod (React #31). */
   thesis?: string;
   section: NarrativeSection;
   omitted: boolean;
-  /** Reserved for future per-mode rendering tweaks. */
   mode?: PackageMode;
 }) {
   if (omitted || !section.text.trim()) return null;
+  // Outer `minPresenceAhead` prevents the heading from being orphaned at
+  // the bottom of a page with nothing below it — when @react-pdf wraps
+  // the page and less than 80pt remain after this View, it forces a
+  // page break BEFORE the section starts. The inner `wrap={false}`
+  // additionally keeps the H1 glued to its thesis blockquote so the
+  // lead-in never splits across pages.
   return (
-    <View>
-      <Text style={styles.h1}>{title}</Text>
+    <View minPresenceAhead={80}>
+      <View wrap={false}>
+        <Text style={styles.h1}>{title}</Text>
+        {thesis ? (
+          <View style={styles.thesisBox}>
+            <Text style={styles.thesisText}>{thesis}</Text>
+          </View>
+        ) : null}
+      </View>
       <Text style={styles.paragraph}>{section.text}</Text>
     </View>
   );
@@ -236,8 +252,10 @@ function FulfillmentFallback({
     fulfillmentStatusFromMeta === "FULFILLED";
   if (!isFulfilled) return null;
   return (
-    <View>
-      <Text style={styles.h1}>Fulfillment, Delivery &amp; Access</Text>
+    <View minPresenceAhead={80}>
+      <View wrap={false}>
+        <Text style={styles.h1}>Fulfillment, Delivery &amp; Access</Text>
+      </View>
       <Text style={styles.paragraph}>
         The merchant&apos;s order record marks the order as fulfilled. No
         separate delivery, access-use, or service-completion claim is made
@@ -289,10 +307,10 @@ function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
     ["Fulfillment status", meta.fulfillmentStatus ?? "—"],
   ];
   return (
-    <View>
+    <View minPresenceAhead={120}>
       <Text style={styles.h1}>Case Details</Text>
       <View style={styles.table}>
-        <View style={styles.tableHeader}>
+        <View style={styles.tableHeader} wrap={false}>
           <Text style={styles.tableHeaderCell}>Field</Text>
           <Text style={styles.tableHeaderCell}>Detail</Text>
         </View>
@@ -396,10 +414,10 @@ function lineItemsFromFacts(facts: EvidenceFact[]): LineItem[] {
 function LineItemsTable({ items }: { items: LineItem[] }) {
   if (items.length === 0) return null;
   return (
-    <View>
+    <View minPresenceAhead={100}>
       <Text style={styles.h1}>Order Line Items</Text>
       <View style={styles.table}>
-        <View style={styles.tableHeader}>
+        <View style={styles.tableHeader} wrap={false}>
           <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Description</Text>
           <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Qty</Text>
           <Text style={styles.tableHeaderCellRight}>Price</Text>
@@ -424,34 +442,36 @@ function LineItemsTable({ items }: { items: LineItem[] }) {
 
 function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
   const rows = buildEvidenceBasisRows(approvedFacts);
+  // Defensive: same bank-facing omission rule — if there are zero
+  // bank-eligible facts, the section is dropped entirely. In practice
+  // the upstream classifier should never let an empty pack reach this
+  // renderer, but a placeholder "(No bank-eligible facts available)"
+  // would directly weaken the case if it ever slipped through.
+  if (rows.length === 0) return null;
   return (
-    <View>
+    <View minPresenceAhead={120}>
       <Text style={styles.h1}>Evidence Basis</Text>
       <Text style={styles.mutedNote}>
         Approved bank-facing facts used to ground this package. This section
         is rendered directly from structured evidence records, not generated
         by the LLM.
       </Text>
-      {rows.length === 0 ? (
-        <Text style={styles.paragraph}>(No bank-eligible facts available.)</Text>
-      ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.tableHeaderCell}>Signal</Text>
-            <Text style={styles.tableHeaderCell}>Detail</Text>
-          </View>
-          {rows.map((r, i) => (
-            <View
-              key={r.factId}
-              style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
-              wrap={false}
-            >
-              <Text style={styles.tableCellLabel}>{r.label}</Text>
-              <Text style={styles.tableCellValue}>{r.value}</Text>
-            </View>
-          ))}
+      <View style={styles.table}>
+        <View style={styles.tableHeader} wrap={false}>
+          <Text style={styles.tableHeaderCell}>Signal</Text>
+          <Text style={styles.tableHeaderCell}>Detail</Text>
         </View>
-      )}
+        {rows.map((r, i) => (
+          <View
+            key={r.factId}
+            style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
+            wrap={false}
+          >
+            <Text style={styles.tableCellLabel}>{r.label}</Text>
+            <Text style={styles.tableCellValue}>{r.value}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -475,38 +495,37 @@ function SupportingEvidenceIndex({
   // we filter defensively: only render rows the merchant explicitly
   // marked include_in_package.
   const included = manualEvidence.filter((m) => m.includeInPackage);
+  // Bank-facing rule (see lib/shopify/formatEvidenceForShopify.ts § strict
+  // submission rules): NEVER weaken the case by referencing what is
+  // absent. If there are zero manual attachments, the entire section is
+  // omitted — no heading, no placeholder paragraph, no "(none)" caption.
+  if (included.length === 0) return null;
   return (
-    <View>
+    <View minPresenceAhead={100}>
       <Text style={styles.h1}>Supporting Evidence Index</Text>
-      {included.length === 0 ? (
-        <Text style={styles.paragraph}>
-          No additional manual attachments were included in this package.
-        </Text>
-      ) : (
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Document</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Type &amp; description</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.4 }]}>Inclusion</Text>
-          </View>
-          {included.map((m, i) => (
-            <View
-              key={m.id}
-              style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
-              wrap={false}
-            >
-              <Text style={[styles.tableCellLabel, { flex: 2 }]}>{m.filename}</Text>
-              <Text style={[styles.tableCellValue, { flex: 3 }]}>
-                {m.fileType ?? "—"}
-                {m.description ? ` — ${m.description}` : ""}
-              </Text>
-              <Text style={[styles.tableCellValue, { flex: 1.4 }]}>
-                {inclusionLabel(m)}
-              </Text>
-            </View>
-          ))}
+      <View style={styles.table}>
+        <View style={styles.tableHeader} wrap={false}>
+          <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Document</Text>
+          <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Type &amp; description</Text>
+          <Text style={[styles.tableHeaderCell, { flex: 1.4 }]}>Inclusion</Text>
         </View>
-      )}
+        {included.map((m, i) => (
+          <View
+            key={m.id}
+            style={i % 2 === 0 ? styles.tableRow : styles.tableRowStripe}
+            wrap={false}
+          >
+            <Text style={[styles.tableCellLabel, { flex: 2 }]}>{m.filename}</Text>
+            <Text style={[styles.tableCellValue, { flex: 3 }]}>
+              {m.fileType ?? "—"}
+              {m.description ? ` — ${m.description}` : ""}
+            </Text>
+            <Text style={[styles.tableCellValue, { flex: 1.4 }]}>
+              {inclusionLabel(m)}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -532,7 +551,7 @@ function PackageMetadata({ meta }: { meta: DefencePackageMeta }) {
     ["Generated by", meta.generatedBy ?? "system"],
   ];
   return (
-    <View wrap={false}>
+    <View wrap={false} minPresenceAhead={120}>
       <Text style={styles.h1}>Package Metadata</Text>
       <Text style={styles.mutedNote}>
         Audit identity for this package. Not bank-facing argumentation.
@@ -584,7 +603,7 @@ function ConclusionBlock({
 }) {
   if (omitted || !section.text.trim()) return null;
   return (
-    <View>
+    <View minPresenceAhead={100}>
       <Text style={styles.h1}>Conclusion</Text>
       <View style={styles.conclusionBox}>
         <Text style={styles.paragraphLast}>{section.text}</Text>
@@ -618,71 +637,106 @@ export function DefencePackageDocument({
       <Cover meta={meta} />
 
       <Page size="A4" style={styles.page}>
-        {/* MINIMAL BASELINE — narrative only, no tables. The fancy
-            CaseDetailsTable / ChronologyBullets / LineItemsTable /
-            EvidenceBasis / PackageMetadata / SupportingEvidenceIndex
-            components are temporarily disabled — one (or several) of
-            them is triggering a @react-pdf reconciler error #31 inside
-            Next.js prod that we cannot reproduce locally. They will be
-            re-introduced one at a time once the baseline ships. */}
+        <CaseDetailsTable meta={meta} />
 
         <SectionBlock
           title="Executive Summary"
+          thesis={t("executiveSummary")}
           section={narrative.executiveSummary}
           omitted={omitted.has("executiveSummary")}
+          mode={mode}
         />
 
         <SectionBlock
           title="Transaction Overview"
+          thesis={t("transactionOverviewArgument")}
           section={narrative.transactionOverviewArgument}
           omitted={omitted.has("transactionOverviewArgument")}
+          mode={mode}
         />
 
-        <SectionBlock
-          title="Chronology of Events"
-          section={narrative.chronologyArgument}
-          omitted={omitted.has("chronologyArgument")}
-        />
+        {chronology.length > 0 ? (
+          <View minPresenceAhead={100}>
+            <View wrap={false}>
+              <Text style={styles.h1}>Chronology of Events</Text>
+              <View style={styles.thesisBox}>
+                <Text style={styles.thesisText}>{t("chronologyArgument")}</Text>
+              </View>
+            </View>
+            <ChronologyBullets events={chronology} />
+            {!omitted.has("chronologyArgument") && narrative.chronologyArgument.text.trim() ? (
+              <Text style={styles.paragraph}>{narrative.chronologyArgument.text}</Text>
+            ) : null}
+          </View>
+        ) : (
+          <SectionBlock
+            title="Chronology of Events"
+            thesis={t("chronologyArgument")}
+            section={narrative.chronologyArgument}
+            omitted={omitted.has("chronologyArgument")}
+            mode={mode}
+          />
+        )}
+
+        <LineItemsTable items={lineItems} />
 
         <SectionBlock
           title="Payment Authentication"
+          thesis={t("paymentAuthenticationArgument")}
           section={narrative.paymentAuthenticationArgument}
           omitted={omitted.has("paymentAuthenticationArgument")}
+          mode={mode}
         />
 
-        <SectionBlock
-          title="Fulfillment, Delivery & Access"
-          section={narrative.fulfillmentArgument}
-          omitted={omitted.has("fulfillmentArgument")}
-        />
+        {omitted.has("fulfillmentArgument") || !narrative.fulfillmentArgument.text.trim() ? (
+          <FulfillmentFallback meta={meta} facts={approvedFacts} />
+        ) : (
+          <SectionBlock
+            title="Fulfillment, Delivery & Access"
+            thesis={t("fulfillmentArgument")}
+            section={narrative.fulfillmentArgument}
+            omitted={false}
+            mode={mode}
+          />
+        )}
 
         <SectionBlock
           title="Customer Communication"
+          thesis={t("communicationArgument")}
           section={narrative.communicationArgument}
           omitted={omitted.has("communicationArgument")}
+          mode={mode}
         />
 
         <SectionBlock
           title="Policy Disclosure"
+          thesis={t("policyArgument")}
           section={narrative.policyArgument}
           omitted={omitted.has("policyArgument")}
+          mode={mode}
         />
+
+        <EvidenceBasis approvedFacts={approvedFacts} />
 
         <SectionBlock
           title="Supplementary Merchant Evidence"
+          thesis={t("manualEvidenceArgument")}
           section={narrative.manualEvidenceArgument}
           omitted={omitted.has("manualEvidenceArgument")}
+          mode={mode}
         />
+
+        <SupportingEvidenceIndex manualEvidence={manualEvidence} />
 
         <ConclusionBlock
           section={narrative.conclusion}
           omitted={omitted.has("conclusion")}
+          mode={mode}
         />
 
-        {/* PageFooter (View style=footer fixed) removed — the `fixed`
-            View was the last structural difference vs the working
-            EvidencePackDocument, which uses an inline absolute-
-            positioned Text instead. */}
+        <PackageMetadata meta={meta} />
+
+        <PageFooter meta={meta} />
       </Page>
     </Document>
   );

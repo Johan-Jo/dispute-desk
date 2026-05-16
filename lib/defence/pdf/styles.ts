@@ -8,13 +8,22 @@
 
 import { StyleSheet } from "@react-pdf/renderer";
 
-const NAVY = "#1F2D3D";
-const NAVY_DEEP = "#0F1B2D";
-const NAVY_ACCENT = "#1D4ED8";
-const SLATE_TEXT = "#0F172A";
-const MUTED_TEXT = "#475569";
-const HAIRLINE = "#E2E8F0";
-const STRIPE_BG = "#F8FAFC";
+// Neutral palette with a single burgundy accent. Iteration history:
+//   v1 (1b631ef) — navy + bright-blue (#1F2D3D / #0F1B2D / #1D4ED8).
+//   v2 (this file, earlier) — pure greys + black; rejected as too dull.
+//   v3 (now) — same neutral base, but one warm accent (burgundy #7A1F2B)
+//   used sparingly on the thesis left border, bullet dots, and the cover
+//   dispute ID. Burgundy reads as "classic legal document" rather than
+//   "SaaS dashboard"; it does not return us to the rejected blue family.
+//   Variable names kept for minimal blast radius; values are greys + one
+//   accent.
+const NAVY = "#1F1F1F";        // near-black — table header bg, h1 color
+const NAVY_DEEP = "#0F0F0F";   // pure ink — thesisText body, bulletTimestamp
+const NAVY_ACCENT = "#7A1F2B"; // burgundy accent — thesis left border, bullet dot, dispute id
+const SLATE_TEXT = "#0F0F0F";  // body text — pure ink
+const MUTED_TEXT = "#6B7280";  // captions, labels, footer
+const HAIRLINE = "#E5E5E5";    // borders, dividers
+const STRIPE_BG = "#F5F5F5";   // zebra row bg
 
 export const styles = StyleSheet.create({
   page: {
@@ -112,7 +121,7 @@ export const styles = StyleSheet.create({
   //     LLM-authored content — drawn from a fixed per-section template
   //     keyed by reasonCodeModule + packageMode. ─────────────────────
   thesisBox: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F2F2F2",
     borderLeftWidth: 3,
     borderLeftColor: NAVY_ACCENT,
     padding: 12,
@@ -141,7 +150,7 @@ export const styles = StyleSheet.create({
   },
   mutedNote: {
     fontSize: 8.5,
-    color: "#94A3B8",
+    color: "#9CA3AF",
     fontStyle: "italic",
     marginTop: 6,
     marginBottom: 4,
@@ -243,19 +252,19 @@ export const styles = StyleSheet.create({
     left: 56,
     right: 56,
     fontSize: 8,
-    color: "#94A3B8",
+    color: "#9CA3AF",
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 0.5,
     borderTopColor: HAIRLINE,
     paddingTop: 8,
   },
-  footerLeft: { fontSize: 8, color: "#94A3B8" },
-  footerRight: { fontSize: 8, color: "#94A3B8" },
+  footerLeft: { fontSize: 8, color: "#9CA3AF" },
+  footerRight: { fontSize: 8, color: "#9CA3AF" },
 
   // ─── Conclusion call-out ─────────────────────────────────────────────
   conclusionBox: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F5F5F5",
     borderWidth: 0.5,
     borderColor: HAIRLINE,
     padding: 12,
