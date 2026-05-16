@@ -53,28 +53,51 @@ const nextConfig = {
   outputFileTracingIncludes: {
     // Bundle the markdown template files with the serverless function
     "/api/policy-templates/[type]/content": ["./content/policy-templates/**/*.md"],
+    // PDF render worker (child-process escape hatch for the two-Reacts
+    // mismatch between Next.js 15's bundled React 19 and @react-pdf's
+    // node_modules/react@18.3.1 — see lib/defence/renderDefencePdf.ts).
+    // Both files are required at runtime: the worker entry script plus
+    // the pre-bundled document. Lists every route that transitively
+    // calls renderDefencePdf so the worker ships with each function.
+    "/api/jobs/worker": ["./scripts/pdf-worker/**"],
+    "/api/cron/debug-defence-render": ["./scripts/pdf-worker/**"],
+    "/api/cron/defence-package-deadline-submit": ["./scripts/pdf-worker/**"],
+    "/api/defence-packages/[id]/regenerate": ["./scripts/pdf-worker/**"],
+    "/api/defence-packages/[id]/preview": ["./scripts/pdf-worker/**"],
   },
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
     },
   },
-  // @react-pdf/renderer ships its own custom React reconciler
-  // (@react-pdf/reconciler) and re-exports `react` from its dist bundle.
-  // When webpack inlines it, the inlined `react` gets a different
-  // `$$typeof` Symbol than Next.js's React, and the reconciler sees
-  // every JSX element we author as a plain object — fails with
-  // React minified error #31 ("Objects are not valid as a React child
-  // (found: object with keys {$$typeof, type, key, ref, props})") on
-  // every renderToBuffer call in prod. Local `tsx` doesn't repro
-  // because Node's resolver deduplicates `react` automatically; only
-  // the webpack bundle path is affected.
+  // @react-pdf/renderer + the two-Reacts problem.
   //
-  // Externalizing the package forces Node to require() it from
-  // node_modules at runtime, so it shares the single hoisted `react`
-  // instance with the rest of the server. Same fix applies to other
-  // libraries that bundle their own reconciler (react-email, etc.).
-  serverExternalPackages: ["@react-pdf/renderer"],
+  // Background (2026-05-16): every defence-package PDF render in prod
+  // was failing with React minified error #31 ("Objects are not valid
+  // as a React child (found: object with keys {$$typeof, type, key,
+  // ref, props})"). Verified via /api/cron/debug-defence-render that
+  // even a hello-world <Document><Page><Text>Hi</Text></Page></Document>
+  // fails — so it's a runtime/bundler problem, not a document-tree bug.
+  //
+  // Root cause: Next.js 15 ships its own compiled React at
+  // `node_modules/next/dist/compiled/react` which uses
+  // `Symbol.for("react.transitional.element")` for $$typeof (React 19's
+  // transitional element shape). The project's React 18.3.1 at
+  // `node_modules/react` uses `Symbol.for("react.element")`. They are
+  // NOT compatible across the @react-pdf reconciler's identity check.
+  //
+  // Attempted fix #1 (commit 3871f28): externalize @react-pdf/renderer
+  // via serverExternalPackages. Failed — moved @react-pdf to Node
+  // resolution (react@18.3.1, "react.element") while renderDefencePdf
+  // still used webpack-bundled next/compiled/react ("react.transitional.element").
+  // Mismatch guaranteed. Reverted here.
+  //
+  // Attempted fix #2 (2026-05-16): also externalize "react". Failed —
+  // breaks app-router page builds because Next requires its compiled
+  // React for RSC. `npm run build` errored on /auth/magic-link-sent.
+  //
+  // No serverExternalPackages for @react-pdf at all — fix to be added
+  // at the call site instead (see lib/defence/renderDefencePdf.ts).
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
