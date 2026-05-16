@@ -193,26 +193,20 @@ export function CompleteDefencePackageCard({
     if (!row) return;
     setError(null);
     setBusy("preview");
-    // Open a placeholder tab synchronously so Shopify Admin's popup
-    // blocker doesn't suppress the redirect. The signed URL is
-    // fetched asynchronously and we set the new window's location
-    // once it returns. Skipping the modal entirely — Shopify Admin
-    // embeds inside its own iframe and CSP/frame-ancestors blocks
-    // nested iframes pointing at Supabase Storage, which is why the
-    // earlier in-modal preview showed a broken-image icon.
-    const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+    // Same pattern that `useDisputeWorkspace.downloadPdf` uses for the
+    // pack-PDF download (verified working in embedded Shopify Admin):
+    // fetch the signed URL, then `window.open(url, "_blank")`. Earlier
+    // attempts (modal iframe, `window.open("") + redirect`) failed in
+    // the embedded iframe — Shopify Admin's CSP blocks nested iframes
+    // pointing at Supabase Storage, and the placeholder-tab trick
+    // navigated the embedded iframe to the URL, which Shopify Admin
+    // then redirected away from.
     try {
       const res = await fetch(`/api/defence-packages/${row.id}/preview${shopIdQs}`);
       if (res.ok) {
         const json = (await res.json()) as { url: string };
-        if (previewWindow) {
-          previewWindow.location.href = json.url;
-        } else {
-          // Popup blocked — fall back to navigating the current tab.
-          window.location.href = json.url;
-        }
+        window.open(json.url, "_blank");
       } else {
-        previewWindow?.close();
         let detail = "";
         try {
           const body = (await res.json()) as { error?: string };
@@ -223,7 +217,6 @@ export function CompleteDefencePackageCard({
         setError(`Could not generate preview (${res.status}${detail ? ` — ${detail}` : ""})`);
       }
     } catch (err) {
-      previewWindow?.close();
       const message = err instanceof Error ? err.message : String(err);
       setError(`Preview request failed: ${message}`);
     } finally {

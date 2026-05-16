@@ -17,10 +17,13 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   BlockStack,
   Box,
+  Button,
   Card,
+  Collapsible,
   Divider,
   InlineStack,
   Text,
@@ -374,31 +377,16 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             Complete Defence Package
           </Text>
           <Text as="p" tone="subdued" variant="bodySm">
-            v{row.version} • {mode === "narrow" ? "Narrow" : "Full"} package • Prepared for{" "}
+            Prepared for{" "}
             {dispute?.merchantName ?? dispute?.shopName ?? "the merchant"}
           </Text>
         </BlockStack>
 
         <Divider />
 
-        {/* Case Details */}
-        <BlockStack gap="200">
-          <Text as="h3" variant="headingMd">Case Details</Text>
-          <Box
-            background="bg-surface-secondary"
-            borderRadius="200"
-            padding="300"
-          >
-            <BlockStack gap="100">
-              {caseRows.map(([k, v]) => (
-                <InlineStack key={k} gap="400" align="space-between" wrap={false}>
-                  <Text as="span" variant="bodySm" tone="subdued">{k}</Text>
-                  <Text as="span" variant="bodySm">{v}</Text>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          </Box>
-        </BlockStack>
+        {/* Case Details (collapsible — collapsed by default; merchant
+            expands to verify the metadata) */}
+        <CaseDetailsSection rows={caseRows} />
 
         {/* LLM-authored sections */}
         {SECTION_ORDER.map((key) => {
@@ -569,6 +557,45 @@ function ThesisBox({ text }: { text: string }) {
         {text}
       </Text>
     </Box>
+  );
+}
+
+function CaseDetailsSection({ rows }: { rows: Array<[string, string]> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <BlockStack gap="200">
+      <Button
+        onClick={() => setOpen((v) => !v)}
+        ariaExpanded={open}
+        ariaControls="defence-pkg-case-details"
+        disclosure={open ? "up" : "down"}
+        variant="plain"
+        textAlign="left"
+      >
+        Case Details
+      </Button>
+      <Collapsible
+        id="defence-pkg-case-details"
+        open={open}
+        transition={{ duration: "150ms", timingFunction: "ease-in-out" }}
+        expandOnPrint
+      >
+        <Box
+          background="bg-surface-secondary"
+          borderRadius="200"
+          padding="300"
+        >
+          <BlockStack gap="100">
+            {rows.map(([k, v]) => (
+              <InlineStack key={k} gap="400" align="space-between" wrap={false}>
+                <Text as="span" variant="bodySm" tone="subdued">{k}</Text>
+                <Text as="span" variant="bodySm">{v}</Text>
+              </InlineStack>
+            ))}
+          </BlockStack>
+        </Box>
+      </Collapsible>
+    </BlockStack>
   );
 }
 
