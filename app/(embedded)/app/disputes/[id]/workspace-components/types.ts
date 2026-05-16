@@ -36,6 +36,7 @@ export interface WorkspaceDispute {
   orderName: string;
   orderGid: string;
   customerName: string;
+  shopId?: string;
   shopDomain: string;
   disputeGid: string;
   disputeEvidenceGid: string;
@@ -44,6 +45,17 @@ export interface WorkspaceDispute {
   normalizedStatus: string;
   submissionState: string;
   finalOutcome: string | null;
+  /** Order-context fields extracted from `pack_json.sections` by
+   *  `deriveOrderContext`. Populates the Case Details table on the
+   *  embedded Review & Submit tab so it matches the PDF rendering.
+   *  Each field can still be null when the pack lacks the data. */
+  cardNetwork?: string | null;
+  cardLast4?: string | null;
+  transactionDate?: string | null;
+  paymentGateway?: string | null;
+  financialStatus?: string | null;
+  fulfillmentStatus?: string | null;
+  cardholderName?: string | null;
 }
 
 export interface WorkspacePack {

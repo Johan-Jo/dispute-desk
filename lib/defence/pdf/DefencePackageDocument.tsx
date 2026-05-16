@@ -55,6 +55,17 @@ export interface DefencePackageMeta {
   cardholderName?: string | null;
   customerEmail?: string | null;
   transactionDate: string | null;
+  /** Full event timeline from the access_log pack section. When present,
+   *  the renderer uses it directly to build chronology bullets; when
+   *  null/empty, falls back to the synthetic 2-event path derived from
+   *  meta.transactionDate. Plan: order-context derivation (2026-05-16). */
+  timelineEvents?: Array<{ at: string; text: string }>;
+  /** Line items extracted from `pack_json.sections[type=order].data.lineItems`
+   *  by `deriveOrderContext`. Already mapped to the table-row shape. Used
+   *  as a fallback when the `order_record` fact's value lacks
+   *  `lineItems` (the live classifier doesn't promote `lineItems` into
+   *  the fact value, so the renderer must read from meta). */
+  lineItemsFromContext?: Array<{ description: string; quantity: number; price: string }>;
   generatedAt: string;
   version: number;
   packageMode: PackageMode;
@@ -340,6 +351,20 @@ function chronologyEvents(
   meta: DefencePackageMeta,
   facts: EvidenceFact[],
 ): ChronologyEvent[] {
+  // Preferred path: the access_log collector already wrote a rich
+  // timeline into pack_json.sections[type=access_log].data.timelineEvents,
+  // and deriveOrderContext threaded it through onto meta. Render that
+  // verbatim — each event has its own timestamp and Shopify-authored
+  // message ("Johan Jonsson placed this order...", "Authorization Visa
+  // 0259", etc.).
+  if (Array.isArray(meta.timelineEvents) && meta.timelineEvents.length > 0) {
+    return [...meta.timelineEvents].sort((a, b) => a.at.localeCompare(b.at));
+  }
+
+  // Fallback: synthesize a minimal 2-event timeline from meta when the
+  // pack didn't capture timeline events (older packs / non-Shopify
+  // collectors). Keep the historical behaviour so existing renders
+  // don't regress.
   const events: ChronologyEvent[] = [];
   if (meta.transactionDate) {
     events.push({
@@ -351,7 +376,6 @@ function chronologyEvents(
       text: `Authorisation captured against the cardholder's ${meta.cardNetwork ?? "card"}${meta.cardLast4 ? ` ending in ${meta.cardLast4}` : ""}.`,
     });
   }
-  // Confirmation timestamp would live on a customer_communication fact.
   for (const f of facts) {
     if (f.category === "customer_communication") {
       const at = typeof f.value.lastMessageAt === "string" ? (f.value.lastMessageAt as string) : null;
@@ -392,7 +416,16 @@ interface LineItem {
   price: string;
 }
 
-function lineItemsFromFacts(facts: EvidenceFact[]): LineItem[] {
+function lineItemsFromFacts(facts: EvidenceFact[], meta: DefencePackageMeta): LineItem[] {
+  // Preferred path: line items already extracted from `pack_json` by
+  // `deriveOrderContext` and threaded through `meta`. The fact classifier
+  // does NOT promote lineItems into the order_record fact's value, so the
+  // historical "read from facts" path returned [] for every live build.
+  if (Array.isArray(meta.lineItemsFromContext) && meta.lineItemsFromContext.length > 0) {
+    return meta.lineItemsFromContext;
+  }
+  // Fallback: tolerate older facts that DID embed lineItems on the
+  // order_record value (test fixtures, hand-crafted seeds).
   for (const f of facts) {
     if (f.category !== "order_record") continue;
     const raw = f.value.lineItems;
@@ -626,7 +659,7 @@ export function DefencePackageDocument({
   const t = (k: NarrativeSectionKey) => thesisFor(k, moduleKey, mode);
 
   const chronology = chronologyEvents(meta, approvedFacts);
-  const lineItems = lineItemsFromFacts(approvedFacts);
+  const lineItems = lineItemsFromFacts(approvedFacts, meta);
 
   return (
     <Document

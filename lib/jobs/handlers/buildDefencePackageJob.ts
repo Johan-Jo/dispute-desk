@@ -27,6 +27,7 @@ import { validateNarrative } from "@/lib/defence/validateNarrative";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
+import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import type {
   DefencePackageDocumentData,
@@ -63,8 +64,8 @@ export async function handleBuildDefencePackage(
     return { ok: false, retriable: false, reason: `package status=${pkg.status} is not draft` };
   }
 
-  // Load source pack + dispute.
-  const [{ data: pack }, { data: dispute }] = await Promise.all([
+  // Load source pack + dispute + shop.
+  const [{ data: pack }, { data: dispute }, { data: shop }] = await Promise.all([
     sb
       .from("evidence_packs")
       .select("id, shop_id, dispute_id, pack_json, checklist_v2")
@@ -72,8 +73,13 @@ export async function handleBuildDefencePackage(
       .single(),
     sb
       .from("disputes")
-      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at")
+      .select("id, dispute_gid, reason, network_reason_code, amount, currency_code, status, phase, due_at, customer_display_name")
       .eq("id", pkg.dispute_id)
+      .single(),
+    sb
+      .from("shops")
+      .select("id, shop_domain")
+      .eq("id", pkg.shop_id)
       .single(),
   ]);
   if (!pack) {
@@ -264,21 +270,48 @@ export async function handleBuildDefencePackage(
     return { ok: false, retriable: false, reason: "validation_failed" };
   }
 
+  // Derive order/payment/timeline context from the pack once — the PDF
+  // renderer + the workspace API both consume this shape. Before this
+  // call, the meta object hardcoded `null` for 8 fields the case-details
+  // table needs (card network, last 4, transaction date, gateway,
+  // financial/fulfillment status, order name, cardholder name) even
+  // though the data was already in `pack_json`.
+  const orderContext = deriveOrderContext(
+    sectionsRaw.map((s) => ({
+      type: s.type,
+      label: s.label,
+      source: s.source,
+      data: s.data ?? {},
+      fieldsProvided: s.fieldsProvided ?? [],
+    })),
+  );
+
+  const merchantDisplayName =
+    merchantNameFromDomain(shop?.shop_domain ?? null) ?? "Merchant";
+
   // Render PDF.
   const docData: DefencePackageDocumentData = {
     meta: {
       packageId,
       disputeGid: dispute?.dispute_gid ?? null,
-      orderName: null,
+      orderName: orderContext.orderName,
       reasonCode,
       reasonCodeDisplay: reasonCodeModule.displayName,
-      shopName: "Merchant",
-      merchantName: null,
+      shopName: merchantDisplayName,
+      merchantName: merchantDisplayName,
       amountDisplay: dispute?.amount != null
         ? `${dispute.currency_code ?? ""} ${dispute.amount}`.trim()
         : null,
-      cardNetwork: null,
-      transactionDate: null,
+      cardNetwork: orderContext.cardNetwork,
+      cardLast4: orderContext.cardLast4,
+      paymentGateway: orderContext.paymentGateway,
+      financialStatus: orderContext.financialStatus,
+      fulfillmentStatus: orderContext.fulfillmentStatus,
+      cardholderName:
+        orderContext.cardholderName ?? (dispute?.customer_display_name as string | null) ?? null,
+      transactionDate: orderContext.transactionDate,
+      timelineEvents: orderContext.timelineEvents,
+      lineItemsFromContext: orderContext.lineItems,
       generatedAt: new Date().toISOString(),
       version: pkg.version,
       packageMode: classification.packageMode,

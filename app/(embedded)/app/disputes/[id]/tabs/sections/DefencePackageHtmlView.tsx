@@ -116,6 +116,10 @@ interface DefencePackageRow {
 }
 
 export interface DisputeContextLike {
+  /** Used by sibling fetches that hit `/api/defence-packages/*` routes
+   *  with explicit `?shop_id=` query params, defence-in-depth alongside
+   *  the middleware-injected `x-shop-id` header. */
+  shopId?: string | null;
   disputeGid?: string | null;
   orderName?: string | null;
   reason?: string | null;

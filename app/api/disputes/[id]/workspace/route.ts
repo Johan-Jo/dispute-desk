@@ -9,6 +9,7 @@ import {
 } from "@/lib/packs/checklistReconcile";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
+import { deriveOrderContext } from "@/lib/defence/orderContext";
 
 /** Scopes required for the file evidence layer's REST upload path
  *  (Phase 0 + 3). When the flag is on but the merchant's offline
@@ -269,6 +270,23 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 
   // ── 6. Shape the response ─────────────────────────────────────────
+  // Order context (card network, last 4, transaction date, gateway,
+  // financial + fulfillment status, line items, timeline events) lives
+  // in `pack_json.sections` — not as columns on `disputes`. The HTML
+  // mirror on the Review & Submit tab consumes these via
+  // `CompleteDefencePackageCard`'s `DisputeContextLike` prop. Same
+  // helper that `buildDefencePackageJob` uses so the two views stay
+  // in lockstep (2026-05-16 fix).
+  const orderContext = deriveOrderContext(
+    packJsonSections.map((s) => ({
+      type: s.type ?? "",
+      label: s.label ?? "",
+      source: s.source ?? "",
+      data: s.data ?? {},
+      fieldsProvided: s.fieldsProvided ?? [],
+    })),
+  );
+
   const dispute = {
     id: row.id,
     reason: row.reason,
@@ -278,6 +296,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     orderName: row.order_name ?? null,
     orderGid: row.order_gid ?? null,
     customerName: row.customer_display_name ?? null,
+    shopId: row.shop_id,
     shopDomain,
     disputeGid: row.dispute_gid,
     disputeEvidenceGid: row.dispute_evidence_gid ?? null,
@@ -286,6 +305,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     normalizedStatus: row.normalized_status ?? null,
     submissionState: row.submission_state ?? null,
     finalOutcome: row.final_outcome ?? null,
+    // Order context — populated from pack_json. Each field can still be
+    // null when the pack lacks the data (e.g. payment gateway on a
+    // non-Shopify-Payments order).
+    cardNetwork: orderContext.cardNetwork,
+    cardLast4: orderContext.cardLast4,
+    transactionDate: orderContext.transactionDate,
+    paymentGateway: orderContext.paymentGateway,
+    financialStatus: orderContext.financialStatus,
+    fulfillmentStatus: orderContext.fulfillmentStatus,
+    cardholderName: orderContext.cardholderName ?? row.customer_display_name ?? null,
   };
 
   // Reconcile persisted checklist_v2 against fields actually carried by

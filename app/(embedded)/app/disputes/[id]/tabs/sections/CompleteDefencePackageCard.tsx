@@ -167,55 +167,84 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
     void load();
   }, [load]);
 
+  // Defence-in-depth: middleware injects `x-shop-id` from the
+  // shopify_shop_id cookie for embedded requests, but we also pass
+  // `?shop_id=` so the route works even on edges where the cookie
+  // isn't readable (Safari ITP, brand-new install, server-render flows).
+  const shopIdQs = dispute?.shopId ? `?shop_id=${encodeURIComponent(dispute.shopId)}` : "";
+
   const openPreview = useCallback(async () => {
     if (!row) return;
+    setError(null);
     setBusy("regen"); // visual placeholder
     try {
-      const res = await fetch(`/api/defence-packages/${row.id}/preview`);
+      const res = await fetch(`/api/defence-packages/${row.id}/preview${shopIdQs}`);
       if (res.ok) {
         const json = (await res.json()) as { url: string };
         setPreviewUrl(json.url);
         setPreviewOpen(true);
       } else {
-        setError(`Could not generate preview (${res.status})`);
+        let detail = "";
+        try {
+          const body = (await res.json()) as { error?: string };
+          detail = body.error ?? "";
+        } catch {
+          /* ignore */
+        }
+        setError(`Could not generate preview (${res.status}${detail ? ` — ${detail}` : ""})`);
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Preview request failed: ${message}`);
     } finally {
       setBusy(null);
     }
-  }, [row]);
+  }, [row, shopIdQs]);
 
   const onRegenerate = useCallback(async () => {
     if (!row) return;
+    setError(null);
     setBusy("regen");
     try {
-      await fetch(`/api/defence-packages/${row.id}/regenerate`, { method: "POST" });
+      const res = await fetch(`/api/defence-packages/${row.id}/regenerate${shopIdQs}`, { method: "POST" });
+      if (!res.ok) {
+        setError(`Regenerate failed (${res.status})`);
+      }
       await load();
     } finally {
       setBusy(null);
     }
-  }, [row, load]);
+  }, [row, load, shopIdQs]);
 
   const onFinalize = useCallback(async () => {
     if (!row) return;
+    setError(null);
     setBusy("finalize");
     try {
-      await fetch(`/api/defence-packages/${row.id}/finalize`, { method: "POST" });
+      const res = await fetch(`/api/defence-packages/${row.id}/finalize${shopIdQs}`, { method: "POST" });
+      if (!res.ok) {
+        setError(`Finalize failed (${res.status})`);
+      }
       await load();
     } finally {
       setBusy(null);
     }
-  }, [row, load]);
+  }, [row, load, shopIdQs]);
 
   const onSubmit = useCallback(async () => {
     if (!row) return;
+    setError(null);
     setBusy("submit");
     try {
-      await fetch(`/api/defence-packages/${row.id}/submit`, { method: "POST" });
+      const res = await fetch(`/api/defence-packages/${row.id}/submit${shopIdQs}`, { method: "POST" });
+      if (!res.ok) {
+        setError(`Submit failed (${res.status})`);
+      }
       await load();
     } finally {
       setBusy(null);
     }
-  }, [row, load]);
+  }, [row, load, shopIdQs]);
 
   if (!packId) return null;
   if (loading) {
@@ -382,14 +411,30 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
         title={`Defence Package v${row.version}`}
+        primaryAction={
+          previewUrl
+            ? {
+                content: "Open in new tab",
+                onAction: () => {
+                  window.open(previewUrl, "_blank", "noopener,noreferrer");
+                },
+              }
+            : undefined
+        }
       >
         <Modal.Section>
           {previewUrl ? (
-            <iframe
-              src={previewUrl}
-              style={{ width: "100%", height: 720, border: 0 }}
-              title={`Defence Package v${row.version}`}
-            />
+            <BlockStack gap="200">
+              <Text as="p" variant="bodySm" tone="subdued">
+                If the PDF doesn&apos;t display inline (Shopify Admin may block
+                embedded PDF viewers), use &quot;Open in new tab&quot; above.
+              </Text>
+              <iframe
+                src={previewUrl}
+                style={{ width: "100%", height: 720, border: 0 }}
+                title={`Defence Package v${row.version}`}
+              />
+            </BlockStack>
           ) : (
             <Spinner accessibilityLabel="Loading PDF" />
           )}

@@ -3,13 +3,14 @@
  *
  * The bank-facing artifact is the defence-package PDF.
  * `CompleteDefencePackageCard` is the only rebuttal surface; the
- * legacy `FinalDefenseStatementCard` and `NotSubmittedCard` were
- * deleted along with the text-rebuttal engine on 2026-05-16.
+ * legacy `FinalDefenseStatementCard`, `NotSubmittedCard`, and
+ * `ExactDataSentCard` were deleted along with the text-rebuttal engine
+ * on 2026-05-16. Everything the merchant needs to verify before
+ * submission lives inside the defence-package card.
  *
  * Section order:
  *   1. Submission status         — submitted vs ready-to-submit (CTA)
  *   2. Complete Defence Package  — narrative + PDF + Preview/Finalize/Submit
- *   3. Exact data sent           — customer info + PDF attachment row only
  */
 
 "use client";
@@ -26,9 +27,7 @@ import {
 import { useTranslations } from "next-intl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
-import { useSubmissionPreview } from "./useSubmissionPreview";
 import { SubmissionStatusCard } from "./sections/SubmissionStatusCard";
-import { ExactDataSentCard } from "./sections/ExactDataSentCard";
 import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -47,8 +46,7 @@ interface Props {
 
 export default function ReviewSubmitTab({ workspace }: Props) {
   const { data, derived, clientState, actions } = workspace;
-  const submissionPreview = useSubmissionPreview(data?.pack?.id ?? null);
-  const view = useReviewView(workspace, submissionPreview);
+  const view = useReviewView(workspace);
   const tOverride = useTranslations("disputes.reviewTab.sections.override");
 
   const [overrideOpen, setOverrideOpen] = useState(false);
@@ -137,26 +135,26 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         dispute={
           data?.dispute
             ? {
+                shopId: data.dispute.shopId ?? null,
                 disputeGid: data.dispute.disputeGid ?? null,
                 orderName: data.dispute.orderName ?? null,
                 reason: data.dispute.reason ?? null,
                 amount: data.dispute.amount ?? null,
                 currencyCode: data.dispute.currency ?? null,
-                cardholderName: data.dispute.customerName ?? null,
+                cardNetwork: data.dispute.cardNetwork ?? null,
+                cardLast4: data.dispute.cardLast4 ?? null,
+                transactionDate: data.dispute.transactionDate ?? null,
+                paymentGateway: data.dispute.paymentGateway ?? null,
+                financialStatus: data.dispute.financialStatus ?? null,
+                fulfillmentStatus: data.dispute.fulfillmentStatus ?? null,
+                cardholderName:
+                  data.dispute.cardholderName ?? data.dispute.customerName ?? null,
                 shopName: data.dispute.shopDomain ?? null,
                 merchantName: data.dispute.shopDomain ?? null,
                 dueAt: data.dispute.dueAt ?? null,
               }
             : undefined
         }
-      />
-
-      {/* §3 — Exact data sent to Shopify. Post-retirement: customer
-          info + the defence-package PDF attachment row. Nothing else. */}
-      <ExactDataSentCard
-        state={view.state}
-        payload={view.payload}
-        loading={view.payloadLoading}
       />
 
       {/* Override-submit modal — only mounted when the merchant clicks
