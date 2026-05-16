@@ -636,8 +636,11 @@
           }
         },
         "used": {
-          "title": "Evidence used in defense",
-          "destinationExplainer": "Evidence can be included either as structured Shopify fields or inside the rebuttal narrative sent with the case."
+          "title": "Evidence on file",
+          "destinationExplainer": "Strong evidence is included in the defence package sent to the bank. Supporting evidence stays on file — surfacing it to the bank would weaken the case (e.g. a customer with no prior orders, or a policy that wasn't accepted at checkout).",
+          "groupSent": "Sent to the bank",
+          "groupWithheld": "On file — not sent",
+          "groupWithheldCaption": "These signals exist on the order but are withheld from the bank submission because they would weaken the case rather than strengthen it."
         },
         "missing": {
           "title": "Missing or weak evidence",

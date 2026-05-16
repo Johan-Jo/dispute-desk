@@ -614,8 +614,11 @@
           }
         },
         "used": {
-          "title": "Evidence used in defense",
-          "destinationExplainer": "Evidence can be included either as structured Shopify fields or inside the rebuttal narrative sent with the case."
+          "title": "Pruebas registradas",
+          "destinationExplainer": "Las pruebas sólidas se incluyen en el paquete de defensa enviado al banco. Las pruebas complementarias permanecen registradas — exponerlas al banco debilitaría el caso (p. ej., un cliente sin pedidos previos, o una política que no fue aceptada en el checkout).",
+          "groupSent": "Enviado al banco",
+          "groupWithheld": "Registrado — no enviado",
+          "groupWithheldCaption": "Estas señales existen en el pedido pero se retienen de la presentación al banco porque debilitarían el caso en lugar de fortalecerlo."
         },
         "missing": {
           "title": "Missing or weak evidence",

@@ -648,8 +648,11 @@
           }
         },
         "used": {
-          "title": "Evidence used in defense",
-          "destinationExplainer": "Evidence can be included either as structured Shopify fields or inside the rebuttal narrative sent with the case."
+          "title": "Bevis i ärendet",
+          "destinationExplainer": "Starka bevis ingår i försvarspaketet som skickas till banken. Stödjande bevis stannar i ärendet — att visa dem för banken skulle försvaga ärendet (t.ex. en kund utan tidigare order, eller en policy som inte godkändes vid kassan).",
+          "groupSent": "Skickat till banken",
+          "groupWithheld": "I ärendet — ej skickat",
+          "groupWithheldCaption": "Dessa signaler finns på ordern men hålls tillbaka från bankinlämningen eftersom de skulle försvaga ärendet snarare än stärka det."
         },
         "missing": {
           "title": "Missing or weak evidence",

@@ -614,8 +614,11 @@
           }
         },
         "used": {
-          "title": "Evidence used in defense",
-          "destinationExplainer": "Evidence can be included either as structured Shopify fields or inside the rebuttal narrative sent with the case."
+          "title": "Preuves au dossier",
+          "destinationExplainer": "Les preuves solides sont incluses dans le dossier de défense envoyé à la banque. Les preuves complémentaires restent au dossier — les communiquer à la banque affaiblirait le dossier (par exemple, un client sans commandes antérieures ou une politique non acceptée au paiement).",
+          "groupSent": "Envoyé à la banque",
+          "groupWithheld": "Au dossier — non envoyé",
+          "groupWithheldCaption": "Ces signaux figurent dans la commande mais ne sont pas transmis à la banque, car ils affaibliraient le dossier au lieu de le renforcer."
         },
         "missing": {
           "title": "Missing or weak evidence",
