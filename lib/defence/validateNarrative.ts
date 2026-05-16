@@ -23,8 +23,12 @@ import type {
 const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
   /\bdefinitive\s+proof\b/i,
+  /\bdefinitively\s+prov\w+/i,
   /\bundeniable\b/i,
   /\bprovably\b/i,
+  /\bunequivocal\w*/i,
+  /\bbaseless\b/i,
+  /\binvalidat\w*\s+(?:the\s+claim|any\s+claim)\b/i,
   /\bfraudulent\s+cardholder\b/i,
   /\bliar\b/i,
   /\blying\b/i,

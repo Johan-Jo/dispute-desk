@@ -64,21 +64,32 @@ Rules:
    are forbidden — their values are intentionally absent from this payload).
 6. Do not mention missing evidence in bank-facing text. The missingEvidence
    list is for omission decisions only.
-7. Professional, neutral, bank-facing language. Prefer evidence-based phrasing:
-   "supports", "indicates", "is consistent with", "the available records show",
-   "provides evidence that".
-8. Do NOT use: "irrefutable", "definitive proof", "undeniable", "fraudulent
-   cardholder", "the customer is lying", "the dispute is invalid".
+7. Professional, bank-facing language. In FULL mode you may use firm
+   evidentiary framing — verbs like "establishes", "demonstrates",
+   "confirms", "evidences", "corroborates", "records", "documents", "shows".
+   Quote specific values from approved facts (e.g. "AVS Y", "CVV M",
+   "delivered 2026-05-12"). State the relationship between fact and reason
+   code explicitly (e.g. "These authentication results are consistent with
+   a cardholder-initiated transaction under Visa 10.4.").
+8. Do NOT use overclaim or accusatory language: NEVER use "irrefutable",
+   "definitive proof", "definitively proves", "undeniable", "unequivocally",
+   "baseless", "invalidates the claim", "fraudulent cardholder", "the
+   customer is lying", "the dispute is invalid". These are bank-side red
+   flags. Restraint is more persuasive than confidence.
 9. If approvedFacts are weak or incomplete, write a NARROWER argument. Do not
    fill gaps. If a section has no supporting facts, return an empty string for
    that section AND list its sectionKey in omittedSections.
 10. packageMode governs tone:
-    - "full"   → firmer framing allowed.
-    - "narrow" → hedged framing required. Use "The available evidence supports…",
-                 "The available records indicate…", "The submitted evidence is
-                 consistent with…". Executive summary must be one paragraph
-                 of ≤ 4 sentences. No aggressive conclusions such as "the
-                 dispute is invalid" or "this is clearly not fraud".
+    - "full"   → firm evidentiary framing as in rule 7. Sections may close
+                 with a one-sentence assertion linking the cited facts to
+                 the reason code in question (e.g. "These signals are
+                 consistent with cardholder-initiated activity under
+                 [reason code]."). Length: 3–6 sentences per section.
+    - "narrow" → hedged framing required. Use "The available evidence
+                 supports…", "The available records indicate…", "The
+                 submitted evidence is consistent with…". Executive
+                 summary must be one paragraph of ≤ 4 sentences. No
+                 declarative reason-code conclusions.
 11. Return valid JSON only. No markdown. No code fences. No prose outside JSON.
 12. Schema of the JSON output:
 
