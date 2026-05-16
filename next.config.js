@@ -59,6 +59,22 @@ const nextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  // @react-pdf/renderer ships its own custom React reconciler
+  // (@react-pdf/reconciler) and re-exports `react` from its dist bundle.
+  // When webpack inlines it, the inlined `react` gets a different
+  // `$$typeof` Symbol than Next.js's React, and the reconciler sees
+  // every JSX element we author as a plain object — fails with
+  // React minified error #31 ("Objects are not valid as a React child
+  // (found: object with keys {$$typeof, type, key, ref, props})") on
+  // every renderToBuffer call in prod. Local `tsx` doesn't repro
+  // because Node's resolver deduplicates `react` automatically; only
+  // the webpack bundle path is affected.
+  //
+  // Externalizing the package forces Node to require() it from
+  // node_modules at runtime, so it shares the single hoisted `react`
+  // instance with the rest of the server. Same fix applies to other
+  // libraries that bundle their own reconciler (react-email, etc.).
+  serverExternalPackages: ["@react-pdf/renderer"],
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
