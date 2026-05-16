@@ -696,10 +696,14 @@ export function DefencePackageDocument({
                 <Text style={styles.thesisText}>{t("chronologyArgument")}</Text>
               </View>
             </View>
-            <ChronologyBullets events={chronology} />
+            {/* Order mirrors the demo reference (sonnet 4.6 v1): thesis →
+                LLM prose → bullet timeline. The LLM synthesises the
+                narrative summary first, the bullets enumerate the raw
+                events second. */}
             {!omitted.has("chronologyArgument") && narrative.chronologyArgument.text.trim() ? (
               <Text style={styles.paragraph}>{narrative.chronologyArgument.text}</Text>
             ) : null}
+            <ChronologyBullets events={chronology} />
           </View>
         ) : (
           <SectionBlock
