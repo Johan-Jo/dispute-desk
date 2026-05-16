@@ -39,6 +39,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The defence-package PDF tests spawn scripts/pdf-worker/render-defence-pdf.mjs
+      # which imports a pre-bundled DefencePackageDocument. The bundle is gitignored
+      # and normally produced by `prebuild`; build it explicitly here so vitest can
+      # render the worker without depending on `next build` having run first.
+      - name: Build PDF worker bundle
+        run: node scripts/build-pdf-worker.mjs
+
       - name: Unit tests
         run: npx vitest run --reporter=verbose
 

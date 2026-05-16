@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "pretest": "node scripts/build-pdf-worker.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --coverage.include=\"lib/automation/**\" --coverage.include=\"lib/packs/**\" --coverage.include=\"lib/shopify/**\" --coverage.exclude=\"**/__tests__/**\" --coverage.exclude=\"**/tests/**\" --coverage.exclude=\"**/*.test.ts\"",
