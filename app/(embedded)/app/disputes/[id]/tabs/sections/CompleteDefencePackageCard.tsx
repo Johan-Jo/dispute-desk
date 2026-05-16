@@ -153,7 +153,7 @@ export function CompleteDefencePackageCard({
   const [row, setRow] = useState<DefencePackageRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | "preview" | null>(null);
+  const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
 
   const load = useCallback(async () => {
     if (!packId) {
@@ -189,40 +189,15 @@ export function CompleteDefencePackageCard({
   // isn't readable (Safari ITP, brand-new install, server-render flows).
   const shopIdQs = dispute?.shopId ? `?shop_id=${encodeURIComponent(dispute.shopId)}` : "";
 
-  const openPreview = useCallback(async () => {
-    if (!row) return;
-    setError(null);
-    setBusy("preview");
-    // Same pattern that `useDisputeWorkspace.downloadPdf` uses for the
-    // pack-PDF download (verified working in embedded Shopify Admin):
-    // fetch the signed URL, then `window.open(url, "_blank")`. Earlier
-    // attempts (modal iframe, `window.open("") + redirect`) failed in
-    // the embedded iframe — Shopify Admin's CSP blocks nested iframes
-    // pointing at Supabase Storage, and the placeholder-tab trick
-    // navigated the embedded iframe to the URL, which Shopify Admin
-    // then redirected away from.
-    try {
-      const res = await fetch(`/api/defence-packages/${row.id}/preview${shopIdQs}`);
-      if (res.ok) {
-        const json = (await res.json()) as { url: string };
-        window.open(json.url, "_blank");
-      } else {
-        let detail = "";
-        try {
-          const body = (await res.json()) as { error?: string };
-          detail = body.error ?? "";
-        } catch {
-          /* ignore */
-        }
-        setError(`Could not generate preview (${res.status}${detail ? ` — ${detail}` : ""})`);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(`Preview request failed: ${message}`);
-    } finally {
-      setBusy(null);
-    }
-  }, [row, shopIdQs]);
+  // Preview URL is now a server-side redirect: the API route generates
+  // the signed Supabase URL and 302s to it. Rendering as `<Button
+  // url={previewHref} target="_blank">` keeps the open-in-new-tab inside
+  // a real user-gesture context (a link click), instead of an async
+  // window.open() from a fetch callback — which Shopify Admin's iframe
+  // sandbox blocks.
+  const previewHref = row?.pdf_path
+    ? `/api/defence-packages/${row.id}/preview${shopIdQs}`
+    : null;
 
   const onRegenerate = useCallback(async () => {
     if (!row) return;
@@ -407,9 +382,10 @@ export function CompleteDefencePackageCard({
 
           <ButtonGroup>
             <Button
-              onClick={openPreview}
-              disabled={!row.pdf_path || busy !== null}
-              loading={busy === "preview"}
+              url={previewHref ?? undefined}
+              target="_blank"
+              external
+              disabled={!previewHref || busy !== null}
             >
               Preview PDF
             </Button>

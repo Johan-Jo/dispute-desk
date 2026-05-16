@@ -1,10 +1,17 @@
 /**
  * GET /api/defence-packages/:id/preview
  *
- * Returns a short-lived signed Supabase Storage URL for the package PDF.
- * The embedded UI uses this URL inside a Polaris Modal iframe to render
- * the PDF inline. TTL is 600s — enough for the user to preview, not long
- * enough to share.
+ * Generates a short-lived signed Supabase Storage URL for the package
+ * PDF and 302-redirects to it. The embedded UI links to this endpoint
+ * with `target="_blank"` so the browser opens the PDF in a new tab in
+ * a true user-gesture context. TTL is 600s.
+ *
+ * Previously this route returned JSON `{ url }` and the client did
+ * `fetch → window.open(url, "_blank")` — that pattern is blocked by
+ * Shopify Admin's iframe sandbox (the window.open fires from an async
+ * callback, losing user-gesture context). The redirect path moves the
+ * URL fetch off the client entirely, so clicking the link is the user
+ * gesture and the browser handles the rest.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -48,5 +55,5 @@ export async function GET(
       { status: 500 },
     );
   }
-  return NextResponse.json({ url: signed.signedUrl, expiresIn: PREVIEW_TTL_SECONDS });
+  return NextResponse.redirect(signed.signedUrl, 302);
 }
