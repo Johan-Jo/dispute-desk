@@ -89,7 +89,7 @@ export interface ClassifyFactsInput {
 
 /* ── Field-key → fact category map ── */
 
-const SUBMISSION_RISK_FIELDS = new Set([
+export const SUBMISSION_RISK_FIELDS = new Set([
   "ip_location_check",
   "device_session_consistency",
   "fraud_risk_screening",
@@ -98,13 +98,13 @@ const SUBMISSION_RISK_FIELDS = new Set([
 /** Field keys whose facts must never appear in bank-facing surfaces by
  *  default. The LLM payload filter excludes them; `submission_risk=true`
  *  is set on the persisted row for the same reason. */
-const INTERNAL_ONLY_FIELDS = new Set([
+export const INTERNAL_ONLY_FIELDS = new Set([
   "ip_location_check",
   "device_session_consistency",
   "fraud_risk_screening",
 ]);
 
-function categoryForField(fieldKey: string, payload: Record<string, unknown> | null): EvidenceFactCategory {
+export function categoryForField(fieldKey: string, payload: Record<string, unknown> | null): EvidenceFactCategory {
   switch (fieldKey) {
     case "avs_cvv_match":
     case "tds_authentication":

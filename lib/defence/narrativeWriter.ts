@@ -48,7 +48,7 @@ const PROMPT_VERSION = 1;
 
 /* ── Static base system prompt (cached, ephemeral) ── */
 
-const BASE_SYSTEM_PROMPT = `You are a chargeback representment narrative writer for DisputeDesk.
+export const BASE_SYSTEM_PROMPT = `You are a chargeback representment narrative writer for DisputeDesk.
 
 Your task is to convert APPROVED dispute evidence into professional, bank-facing
 argument sections.

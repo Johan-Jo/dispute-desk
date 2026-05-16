@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, FileText, Activity, Settings } from "lucide-react";
+import { ShieldCheck, FileText, Activity, Settings, Workflow } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { getDashboardStats } from "@/lib/defence/admin-queries";
+import { getDashboardStats, detectPromptModuleDrift } from "@/lib/defence/admin-queries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +12,13 @@ export default async function DefencePackageAdminPage() {
   if (!(await hasAdminSession())) {
     redirect("/admin/login");
   }
-  const stats = await getDashboardStats();
+  const [stats, driftRows] = await Promise.all([
+    getDashboardStats(),
+    detectPromptModuleDrift(),
+  ]);
+  const undeclaredDrift = driftRows.filter(
+    (r) => r.drifted && !r.intentionalOverride,
+  );
   const flagOn = process.env.ENABLE_DEFENCE_PACKAGE_BUILDER === "true";
 
   return (
@@ -37,6 +43,42 @@ export default async function DefencePackageAdminPage() {
         </p>
       </div>
 
+      {undeclaredDrift.length === 0 ? (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <span className="font-semibold">✓ All {driftRows.length} prompts in sync</span>
+          {" "}with file defaults. DB rows match{" "}
+          <code>lib/defence/reasonCodes/</code> byte-for-byte.
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-2">
+          <div className="text-sm text-amber-900">
+            <span className="font-semibold">
+              ⚠ {undeclaredDrift.length} prompt module
+              {undeclaredDrift.length === 1 ? "" : "s"} drifted from file
+              defaults
+            </span>{" "}
+            and not marked <code>intentional_override=true</code>. The DB row
+            ships to Claude; file changes have not taken effect.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {undeclaredDrift.map((r) => (
+              <Link
+                key={r.key}
+                href={`/admin/defence-package/prompts/${r.key}`}
+                className="inline-block px-2 py-0.5 rounded text-xs bg-white border border-amber-300 text-amber-900 hover:border-amber-500 font-mono"
+              >
+                {r.key}
+              </Link>
+            ))}
+          </div>
+          <p className="text-xs text-amber-800">
+            Remediation: open the affected module and click &quot;Reset to file default&quot;,
+            or run <code>npx tsx scripts/reconcile-defence-prompt-modules.mts</code>{" "}
+            to promote every file default into a new active DB version.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Runs (7d)" value={String(stats.totalRuns7d)} />
         <Stat label="OK rate (7d)" value={`${stats.okRate7d}%`} />
@@ -45,6 +87,37 @@ export default async function DefencePackageAdminPage() {
         <Stat label="Avg prompt tokens" value={String(stats.avgPromptTokens)} />
         <Stat label="Avg completion tokens" value={String(stats.avgCompletionTokens)} />
         <Stat label="Avg duration" value={`${stats.avgDurationMs} ms`} />
+      </div>
+
+      <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Workflow className="w-4 h-4 text-[#1D4ED8]" />
+          <h2 className="text-sm font-semibold text-[#0F172A]">
+            Pipeline (what shapes every defence-package LLM call)
+          </h2>
+        </div>
+        <ol className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          {[
+            ["1", "Trigger", "stage-1"],
+            ["2", "Classify", "stage-2"],
+            ["3", "Base prompt", "stage-3"],
+            ["4", "Reason overlay", "stage-4"],
+            ["5", "Payload", "stage-5"],
+            ["6", "LLM call", "stage-6"],
+            ["7", "Validators", "stage-7"],
+            ["8", "Render", "stage-8"],
+          ].map(([n, label, anchor]) => (
+            <li key={anchor}>
+              <Link
+                href={`/admin/defence-package/pipeline#${anchor}`}
+                className="block rounded border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 hover:border-[#1D4ED8] hover:bg-white"
+              >
+                <span className="font-mono text-[#1D4ED8] mr-2">{n}</span>
+                <span className="text-[#0F172A]">{label}</span>
+              </Link>
+            </li>
+          ))}
+        </ol>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

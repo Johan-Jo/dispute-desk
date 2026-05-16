@@ -3,14 +3,24 @@
 import { useState } from "react";
 import type { AdminPromptModuleRow } from "@/lib/defence/admin-queries";
 
-interface Props {
-  initial: AdminPromptModuleRow;
+export interface FileDefaultSnapshot {
+  promptBody: string;
+  guidanceJson: Record<string, unknown>;
+  reasonCodeKeys: string[];
 }
 
-export function PromptEditor({ initial }: Props) {
+interface Props {
+  initial: AdminPromptModuleRow;
+  /** File-default snapshot (from ALL_REASON_CODE_MODULES). When present
+   *  the "Reset to file default" button is enabled. */
+  fileDefault: FileDefaultSnapshot | null;
+}
+
+export function PromptEditor({ initial, fileDefault }: Props) {
   const [promptBody, setPromptBody] = useState(initial.promptBody);
   const [model, setModel] = useState(initial.model ?? "");
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dryRunResult, setDryRunResult] = useState<unknown>(null);
   const [dryRunning, setDryRunning] = useState(false);
@@ -30,6 +40,8 @@ export function PromptEditor({ initial }: Props) {
           guidanceJson: initial.guidanceJson,
           model: model || null,
           isActive: true,
+          // Manual saves are deliberate divergence from the file default.
+          intentionalOverride: true,
         }),
       });
       if (!res.ok) {
@@ -42,6 +54,43 @@ export function PromptEditor({ initial }: Props) {
       setError(err instanceof Error ? err.message : "unknown");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onResetToFile() {
+    if (!fileDefault) {
+      setError("No file default available for this module.");
+      return;
+    }
+    setResetting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/defence-package/prompt-modules/${initial.key}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: initial.displayName,
+          reasonCodeKeys: fileDefault.reasonCodeKeys,
+          promptBody: fileDefault.promptBody,
+          guidanceJson: fileDefault.guidanceJson,
+          model: null,
+          isActive: true,
+          // Reset-to-file is the explicit "back in sync" action.
+          intentionalOverride: false,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text.slice(0, 200));
+      }
+      const json = (await res.json()) as { version: number };
+      setPromptBody(fileDefault.promptBody);
+      setModel("");
+      setSavedAt(`Reset to file default — saved as v${json.version}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "unknown");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -89,13 +138,21 @@ export function PromptEditor({ initial }: Props) {
         />
       </section>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || resetting}
           className="px-4 py-2 rounded bg-[#1D4ED8] text-white font-medium hover:bg-[#1E40AF] disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save new version"}
+        </button>
+        <button
+          onClick={onResetToFile}
+          disabled={saving || resetting || !fileDefault}
+          className="px-4 py-2 rounded border border-[#CBD5E1] text-[#0F172A] font-medium hover:bg-[#F8FAFC] disabled:opacity-50"
+          title={fileDefault ? "Insert a new active version matching lib/defence/reasonCodes/<key>.ts and clear intentional_override." : "No file default for this module."}
+        >
+          {resetting ? "Resetting…" : "Reset to file default"}
         </button>
         <button
           onClick={onDryRun}

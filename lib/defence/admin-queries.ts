@@ -117,6 +117,116 @@ export async function listRecentRuns(limit = 50): Promise<AdminRunRow[]> {
   }));
 }
 
+/* ── Prompt-module drift detection ──────────────────────────────────
+ * Compares each file-default module (`ALL_REASON_CODE_MODULES`) against
+ * the latest active DB row. Drift is one of:
+ *   - no DB row exists for the key (drifted=true, intentionalOverride=false)
+ *   - prompt_body differs byte-for-byte from the file
+ *   - normalised guidance JSON differs from the file
+ *
+ * `intentionalOverride` reflects the DB row's `intentional_override`
+ * column (added 2026-05-16). When true, callers should treat the drift
+ * as opt-in and not flag it as a regression.
+ *
+ * Read-only — no inserts, no updates.
+ */
+
+const GUIDANCE_KEYS_FOR_DRIFT = [
+  "prioritize",
+  "avoid",
+  "mustNotClaim",
+  "criticalCategories",
+  "allowedFactCategories",
+] as const;
+
+/** Stringify guidance with stable key order so symmetric objects with
+ *  different ordering don't appear drifted. Only the five guidance
+ *  fields the file defaults own are compared. */
+function normaliseGuidance(g: Record<string, unknown> | null | undefined): string {
+  const obj: Record<string, unknown> = {};
+  for (const k of GUIDANCE_KEYS_FOR_DRIFT) {
+    const v = g?.[k];
+    if (Array.isArray(v)) {
+      // Preserve order — the prompt-module's `prioritize` list is an
+      // ordered list, so canonicalising it would lose meaningful intent.
+      obj[k] = v;
+    } else {
+      obj[k] = v ?? null;
+    }
+  }
+  // Sort top-level keys for deterministic comparison. Array values inside
+  // remain ordered per above.
+  const sorted: Record<string, unknown> = {};
+  for (const k of Object.keys(obj).sort()) sorted[k] = obj[k];
+  return JSON.stringify(sorted);
+}
+
+export interface PromptModuleDriftRow {
+  key: ReasonCodeModuleKey;
+  drifted: boolean;
+  intentionalOverride: boolean;
+  fileBody: string;
+  dbBody: string | null;
+  fileGuidance: Record<string, unknown>;
+  dbGuidance: Record<string, unknown> | null;
+}
+
+export async function detectPromptModuleDrift(): Promise<PromptModuleDriftRow[]> {
+  const sb = getServiceClient();
+  const { data } = await sb
+    .from("defence_prompt_modules")
+    .select(
+      "key, prompt_body, guidance_json, version, is_active, intentional_override",
+    )
+    .eq("is_active", true)
+    .order("version", { ascending: false });
+
+  type DbRow = {
+    key: string;
+    prompt_body: string;
+    guidance_json: Record<string, unknown>;
+    intentional_override: boolean | null;
+  };
+  const latestByKey = new Map<string, DbRow>();
+  for (const row of (data ?? []) as DbRow[]) {
+    if (!latestByKey.has(row.key)) latestByKey.set(row.key, row);
+  }
+
+  return ALL_REASON_CODE_MODULES.map((mod) => {
+    const dbRow = latestByKey.get(mod.key);
+    const fileGuidance: Record<string, unknown> = {
+      prioritize: mod.prioritize,
+      avoid: mod.avoid,
+      mustNotClaim: mod.mustNotClaim,
+      criticalCategories: mod.criticalCategories,
+      allowedFactCategories: mod.allowedFactCategories,
+    };
+    if (!dbRow) {
+      return {
+        key: mod.key,
+        drifted: true,
+        intentionalOverride: false,
+        fileBody: mod.promptBody,
+        dbBody: null,
+        fileGuidance,
+        dbGuidance: null,
+      };
+    }
+    const bodyDrifted = dbRow.prompt_body !== mod.promptBody;
+    const guidanceDrifted =
+      normaliseGuidance(dbRow.guidance_json) !== normaliseGuidance(fileGuidance);
+    return {
+      key: mod.key,
+      drifted: bodyDrifted || guidanceDrifted,
+      intentionalOverride: dbRow.intentional_override === true,
+      fileBody: mod.promptBody,
+      dbBody: dbRow.prompt_body,
+      fileGuidance,
+      dbGuidance: dbRow.guidance_json,
+    };
+  });
+}
+
 export interface DashboardStats {
   totalRuns7d: number;
   okRate7d: number;

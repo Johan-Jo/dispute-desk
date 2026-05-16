@@ -4,7 +4,8 @@ import { FileText, ArrowLeft } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getPromptModule } from "@/lib/defence/admin-queries";
-import { PromptEditor } from "./editor";
+import { ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
+import { PromptEditor, type FileDefaultSnapshot } from "./editor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,26 @@ export default async function PromptModuleEditorPage({
   const { key } = await params;
   const promptModule = await getPromptModule(key);
   if (!promptModule) notFound();
+
+  // File-default snapshot powers the "Reset to file default" button.
+  // null when the key is not a known file module (defensive — every key
+  // in ALL_REASON_CODE_MODULES has a corresponding admin row via
+  // listPromptModules).
+  const fileMod = ALL_REASON_CODE_MODULES.find((m) => m.key === promptModule.key);
+  const fileDefault: FileDefaultSnapshot | null = fileMod
+    ? {
+        promptBody: fileMod.promptBody,
+        guidanceJson: {
+          prioritize: fileMod.prioritize,
+          avoid: fileMod.avoid,
+          mustNotClaim: fileMod.mustNotClaim,
+          criticalCategories: fileMod.criticalCategories,
+          allowedFactCategories: fileMod.allowedFactCategories,
+        },
+        reasonCodeKeys: fileMod.reasonCodeKeys,
+      }
+    : null;
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center gap-3">
@@ -32,7 +53,7 @@ export default async function PromptModuleEditorPage({
           icon={FileText}
         />
       </div>
-      <PromptEditor initial={promptModule} />
+      <PromptEditor initial={promptModule} fileDefault={fileDefault} />
     </div>
   );
 }

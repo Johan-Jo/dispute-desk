@@ -20,7 +20,7 @@ import type {
   ValidationResult,
 } from "./types";
 
-const FORBIDDEN_PHRASES = [
+export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
   /\bdefinitive\s+proof\b/i,
   /\bdefinitively\s+prov\w+/i,
@@ -46,7 +46,7 @@ const FORBIDDEN_PHRASES = [
   /\bcard\s+was\s+physically\s+present\b/i,
 ];
 
-const NARROW_AGGRESSIVE_PHRASES = [
+export const NARROW_AGGRESSIVE_PHRASES = [
   /\bthe\s+dispute\s+is\s+invalid\b/i,
   /\bthis\s+is\s+(clearly\s+)?not\s+fraud\b/i,
   /\bcardholder\s+is\s+lying\b/i,

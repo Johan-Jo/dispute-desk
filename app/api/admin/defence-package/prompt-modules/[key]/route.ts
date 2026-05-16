@@ -21,6 +21,12 @@ const BodySchema = z.object({
   guidanceJson: z.record(z.unknown()).default({}),
   model: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
+  // When the operator saves a manual edit, the row is an intentional
+  // override of the file default — set true so the drift guard ignores
+  // it. The "Reset to file default" action sends false. Default true
+  // preserves the existing behaviour for callers that haven't been
+  // updated.
+  intentionalOverride: z.boolean().default(true),
 });
 
 export async function PUT(
@@ -65,6 +71,7 @@ export async function PUT(
       model: body.model ?? null,
       is_active: body.isActive,
       version: nextVersion,
+      intentional_override: body.intentionalOverride,
       updated_by: admin?.email ?? "admin",
     })
     .select("id, version")
