@@ -306,12 +306,16 @@ export async function handleBuildDefencePackage(
     pdfPath = uploaded.path;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error && err.stack ? err.stack.slice(0, 4000) : "";
+    // Persist stack trace alongside message so prod debugging doesn't
+    // require re-running the job to see where in the renderer it threw.
+    const fullReason = stack ? `${message}\n\nSTACK:\n${stack}` : message;
     await sb
       .from("defence_packages")
       .update({
         status: "failed",
         failure_code: "pdf_render_failed",
-        failure_reason: message,
+        failure_reason: fullReason,
         narrative_json: narrativeRes.narrative,
         facts_json: classification.approved,
         package_mode: classification.packageMode,
@@ -327,7 +331,7 @@ export async function handleBuildDefencePackage(
       packId: pkg.source_pack_id,
       actorType: "system",
       eventType: "defence_pdf_render_failed",
-      eventPayload: { packageId, version: pkg.version, reason: message },
+      eventPayload: { packageId, version: pkg.version, reason: message, stackHead: stack.slice(0, 500) },
     });
     return { ok: false, retriable: false, reason: `pdf_render_failed: ${message}` };
   }
