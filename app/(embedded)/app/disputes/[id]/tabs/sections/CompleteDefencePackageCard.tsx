@@ -285,10 +285,6 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
               <StatusBadge status={row.status} />
             </BlockStack>
             <BlockStack gap="050">
-              <Text as="span" variant="bodySm" tone="subdued">Version</Text>
-              <Text as="span" variant="bodySm">v{row.version}</Text>
-            </BlockStack>
-            <BlockStack gap="050">
               <Text as="span" variant="bodySm" tone="subdued">Mode</Text>
               <Text as="span" variant="bodySm">{row.package_mode ?? "—"}</Text>
             </BlockStack>
@@ -297,10 +293,6 @@ export function CompleteDefencePackageCard({ packId, dispute }: Props) {
               <Text as="span" variant="bodySm">
                 {new Date(row.generated_at).toLocaleString()}
               </Text>
-            </BlockStack>
-            <BlockStack gap="050">
-              <Text as="span" variant="bodySm" tone="subdued">Model</Text>
-              <Text as="span" variant="bodySm">{row.llm_model ?? "—"}</Text>
             </BlockStack>
             {countdown && (
               <BlockStack gap="050">
