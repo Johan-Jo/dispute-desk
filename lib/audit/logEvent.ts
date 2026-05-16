@@ -30,7 +30,24 @@ export type EventType =
   // docs/plans/conditional_file_evidence_layer.plan.md). Both events
   // are emitted from saveToShopifyJob when FILE_EVIDENCE_ATTACHMENTS_ENABLED.
   | "file_evidence_planned"
-  | "file_evidence_pipeline_failed";
+  | "file_evidence_pipeline_failed"
+  // Grounded Defence Package PDF Builder.
+  // Emitted by lib/jobs/handlers/buildDefencePackageJob.ts +
+  // app/api/defence-packages/[id]/* routes + lib/defence/enqueue.ts.
+  // See plan: C:\Users\johan\.claude\plans\cozy-zooming-popcorn.md.
+  | "defence_package_draft_generated"
+  | "defence_package_regenerated"
+  | "defence_package_finalized"
+  | "defence_package_submitted"
+  | "defence_package_stale"
+  | "defence_package_failed"
+  | "defence_package_skipped"
+  | "defence_package_superseded"
+  | "defence_package_validation_failed"
+  | "manual_evidence_added_to_package"
+  | "llm_narrative_generated"
+  | "llm_narrative_failed"
+  | "defence_pdf_render_failed";
 
 export interface AuditLogInput {
   shopId: string;

@@ -29,7 +29,7 @@ import {
   type ResolvedAttachmentPlanEntry,
 } from "@/lib/shopify/composeShopifyMutationPayload";
 import { buildRestSupplementFields } from "@/lib/shopify/buildRestSupplementFields";
-import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
+import { isFileEvidenceAttachmentsEnabled, isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import {
   decideFileAttachments,
   type FileAttachmentCandidate,
@@ -314,21 +314,72 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
   }
 
   let pdfAttachment: PackPdfInput | null = null;
-  const { data: packForPdf } = await sb
-    .from("evidence_packs")
-    .select("pdf_path")
-    .eq("id", packId)
-    .single();
-  if (packForPdf?.pdf_path) {
-    const code = await createShortLink(sb, {
-      kind: "pdf",
-      entityId: packId,
-      packId,
-      shopId: pack.shop_id,
-      disputeId: pack.dispute_id ?? null,
-      expiresAt: linkExpiresAt,
-    });
-    pdfAttachment = { url: buildShortAttachmentUrl(code) };
+  let activeDefencePackageId: string | null = null;
+  let activeDefencePackageVersion: number | null = null;
+
+  // ── Defence Package PDF swap (flag-gated) ──
+  // When ENABLE_DEFENCE_PACKAGE_BUILDER is on AND a defence_packages row
+  // exists for this dispute, the submission MUST use the latest row in
+  // status=final. Anything else (draft, stale, failed, skipped, submitted,
+  // superseded) is a hard block — the merchant must finalize or wait for
+  // regeneration first. When no defence_packages row exists yet (e.g. the
+  // auto-build hasn't completed), fall through to the existing pack PDF.
+  if (isDefencePackageBuilderEnabled() && pack.dispute_id) {
+    const { data: dpkg } = await sb
+      .from("defence_packages")
+      .select("id, version, status, pdf_path")
+      .eq("dispute_id", pack.dispute_id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (dpkg) {
+      if (dpkg.status !== "final") {
+        return {
+          ok: false,
+          retriable: false,
+          reason: `Defence package is in status "${dpkg.status}", not final. Finalize the latest draft (or wait for regeneration to complete) before submitting.`,
+        };
+      }
+      if (!dpkg.pdf_path) {
+        return {
+          ok: false,
+          retriable: false,
+          reason: "Defence package is final but has no PDF path. Regenerate the package and try again.",
+        };
+      }
+      const code = await createShortLink(sb, {
+        kind: "pdf",
+        entityId: dpkg.id as string,
+        packId,
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id ?? null,
+        expiresAt: linkExpiresAt,
+      });
+      pdfAttachment = { url: buildShortAttachmentUrl(code) };
+      activeDefencePackageId = dpkg.id as string;
+      activeDefencePackageVersion = dpkg.version as number;
+    }
+  }
+
+  // Existing pack PDF path — used when (a) flag is off, or (b) flag is on
+  // but no defence_packages row exists for this dispute yet.
+  if (!pdfAttachment) {
+    const { data: packForPdf } = await sb
+      .from("evidence_packs")
+      .select("pdf_path")
+      .eq("id", packId)
+      .single();
+    if (packForPdf?.pdf_path) {
+      const code = await createShortLink(sb, {
+        kind: "pdf",
+        entityId: packId,
+        packId,
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id ?? null,
+        expiresAt: linkExpiresAt,
+      });
+      pdfAttachment = { url: buildShortAttachmentUrl(code) };
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -838,6 +889,39 @@ export async function handleSaveToShopify(job: ClaimedJob): Promise<JobResult> {
       submission_state: "saved_to_shopify",
       evidence_saved_to_shopify_at: now,
     }).eq("id", pack.dispute_id);
+  }
+
+  // Mark the defence package as submitted. The defence_packages immutability
+  // trigger allows submitted_at / submitted_by / shopify_response /
+  // superseded_by_id mutations on a final row.
+  if (activeDefencePackageId && verified) {
+    await sb
+      .from("defence_packages")
+      .update({
+        status: "submitted",
+        submitted_at: now,
+        submitted_by: "system",
+        shopify_response: {
+          verified,
+          finalStatus,
+          evidenceGid: dispute.dispute_evidence_gid,
+        },
+        updated_at: now,
+      })
+      .eq("id", activeDefencePackageId);
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "defence_package_submitted",
+      eventPayload: {
+        packageId: activeDefencePackageId,
+        version: activeDefencePackageVersion,
+        evidenceGid: dispute.dispute_evidence_gid,
+        verified,
+      },
+    });
   }
 
   const confirmedNativeEntries = resolvedAttachmentPlan.filter(

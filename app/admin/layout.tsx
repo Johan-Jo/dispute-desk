@@ -28,6 +28,7 @@ import {
   Settings,
   X,
   Radar,
+  ShieldCheck,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -61,6 +62,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Templates", href: "/admin/templates", icon: FileText, group: "Template Ops" },
   { label: "Reason Mapping", href: "/admin/reason-mapping", icon: GitBranch, group: "Template Ops" },
   { label: "Template Health", href: "/admin/template-health", icon: Activity, group: "Template Ops" },
+  { label: "Defence Package", href: "/admin/defence-package", icon: ShieldCheck, group: "Template Ops" },
   { label: "Audit Log", href: "/admin/audit", icon: ScrollText },
   { label: "Billing", href: "/admin/billing", icon: DollarSign },
   { label: "Team", href: "/admin/team", icon: Users },

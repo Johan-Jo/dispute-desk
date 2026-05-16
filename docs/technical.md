@@ -3632,3 +3632,97 @@ Stream queries live in `lib/signal-radar/queries.ts` — `fetchKpiCounts`, `fetc
 **Cron schedule** (`vercel.json`): `/api/cron/signal-radar-reddit` hourly (`0 * * * *`), `/api/cron/signal-radar-classify` every 5 min (`*/5 * * * *`). Both authed via `Authorization: Bearer ${CRON_SECRET}` (or `?secret=` query fallback).
 
 **Env vars**: production needs *one of* `APIFY_API_TOKEN` (preferred, paid) OR `REDDIT_PROXY_URL`+`REDDIT_PROXY_SECRET` (free Cloudflare Worker) — without either, every Reddit fetch from Vercel will 403. Optional: `APIFY_REDDIT_ACTOR_ID`, `REDDIT_USER_AGENT`, `SIGNAL_RADAR_MODEL`. Reuses `OPENAI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFY_EMAIL`, `CRON_SECRET`.
+
+## Grounded Defence Package PDF Builder
+
+**Feature flag:** `ENABLE_DEFENCE_PACKAGE_BUILDER=true` (env var, default off). Reads via `isDefencePackageBuilderEnabled()` in `lib/featureFlags.ts`.
+
+**What it is:** a bank-grade representment PDF generated for every eligible dispute. The system owns the facts (collectors → classifier → reason-code module); an Anthropic Claude model writes only narrative prose constrained to approved facts; a deterministic React-PDF document owns layout. Output is versioned, validated, and immutable once finalized.
+
+### Architecture
+
+```
+buildPack → status=ready  →  maybeEnqueueDefencePackage (flag-gated)
+                                         │
+                                         ├── coverage_gated → write defence_packages row status=skipped
+                                         │                    failure_code=covered_shopify (no LLM call)
+                                         │
+                                         └── new draft at version=N+1 → enqueue build_defence_package job
+
+build_defence_package handler →
+  classifyFacts                         (system owns facts; emits normalised EvidenceFact[])
+  → eligibility check                   (≥1 bankEligible && includeInBankNarrative && !submissionRisk)
+  → resolveReasonCodeModule             (DB override beats file default)
+  → derive packageMode                  (full | narrow)
+  → narrativeWriter (Anthropic)         (2-part cached system block; JSON-only payload)
+  → validateNarrative                   (forbidden phrases + claim guards + usedFactIds integrity)
+  → renderDefencePdf                    (deterministic 15-section document)
+  → uploadDefencePdf                    (evidence-packs/{shopId}/{packId}/defence/v{n}/{iso}.pdf)
+  → status=draft (system-generated)
+
+merchant action → finalize → status=final, prior final flipped to superseded in same transaction
+saveToShopifyJob (flag on) → blocks on any non-final defence-package status; swaps uncategorizedFile
+                              buffer to the defence package PDF; marks status=submitted on verify-ok.
+```
+
+### Data model
+
+Single migration: `supabase/migrations/20260515220000_defence_packages.sql`.
+
+- **`defence_packages`** — `(dispute_id, version)` unique. Status machine: `draft | stale | final | submitted | superseded | failed | skipped`. The `defence_packages_immutability` trigger enforces:
+  - `final` rows accept only `superseded_by_id` + `status→superseded` + `updated_at` mutations.
+  - `submitted` rows accept only `shopify_response` / `submitted_at` / `submitted_by` / `superseded_by_id` / `updated_at` mutations.
+  - Status regressions are rejected. Direct `final→draft`, `submitted→stale`, etc. all error.
+  - `superseded_by_id` writes require the target row to be in `status=final`.
+- **`defence_evidence_facts`** — normalised facts as persisted at the system→LLM boundary. Includes `submission_risk` (a narrower replacement for the early draft's "negative_or_weakening" — see Terminology in the plan).
+- **`defence_manual_evidence`** — manual uploads promoted into a package, with per-row `bank_eligible` / `include_in_package` / `include_in_bank_narrative` / `evidence_category` flags.
+- **`defence_prompt_modules`** — admin-managed reason-code modules. Versioned: each "edit" inserts a new row at `(key, version+1)` — never overwritten.
+- **`defence_package_runs`** — per-attempt LLM telemetry. Powers the admin dashboard and the per-shop daily cap (`DEFENCE_PACKAGE_DAILY_GENERATION_CAP`, default 100; `DEFENCE_PACKAGE_DAILY_TOKEN_CAP`, default 50000) via `(shop_id, daily_bucket)` count queries.
+
+All five tables are RLS-deny-public; service-role-only writes from server code.
+
+### LLM payload hygiene
+
+No raw Shopify JSON crosses the LLM boundary. `classifyFacts` reads raw `pack_json.sections[*].data` payloads, applies the canonical evidence registry (`lib/argument/canonicalEvidence.ts`), and emits typed `EvidenceFact` records. Everything downstream — the LLM, the PDF renderer, admin run detail — consumes only those records. The narrative writer's user message is a JSON-only typed object built by `buildLlmFactPayload`; `lib/defence/__tests__/narrativeWriter.payload.test.ts` asserts no Shopify-shaped keys appear.
+
+The admin run-detail view (`app/admin/defence-package/runs/[id]/page.tsx`) shows the normalised facts + sanitised prompt + LLM output + validation result + signed PDF URL. It never surfaces raw `pack_json`, raw transaction `paymentDetails`, or unmasked PII.
+
+### Validation (fails closed)
+
+`lib/defence/validateNarrative.ts` runs three layers:
+
+1. **Forbidden-phrase regex**: `/(definitive|irrefutable|undeniable|provably|fraudulent\s+cardholder|liar|lying)/i`, plus narrow-mode additions for aggressive conclusions.
+2. **Claim guards** (`lib/defence/claimGuards.ts`): a typed table of regex → fact-property predicates. Each guard fires when the narrative contains the regex AND `approvedFacts` does not satisfy the predicate. Covers delivery, signature, digital access, customer communication, policy acceptance, refund processed, prior customer, 3-D Secure, liability shift, AVS/CVV, and fulfilled-on-UNFULFILLED.
+3. **`usedFactIds` referential integrity**: every id cited in a narrative section must exist in `approvedFacts`. Internal-only fact ids cited anywhere → error. Empty section text not listed in `omittedSections` → error (and vice versa).
+
+Validation failure marks the package `status=failed`, persists `validation_errors`, audits `defence_package_validation_failed`, and returns `{ ok: false, retriable: false }`. No PDF is rendered; no submission allowed.
+
+### Reason-code modules
+
+Seven file defaults under `lib/defence/reasonCodes/*.ts`, mapped via `lib/disputes/networkReasonCode.ts`:
+
+| Module key | Visa | Mastercard |
+|------------|------|------------|
+| `visa_10_4_fraud` | 10.4 | 4837 |
+| `inr_product_not_received` | 13.1 | 4855 |
+| `product_unacceptable` | 13.3 | 4853 |
+| `credit_not_processed` | 13.6 | 4860 |
+| `duplicate_processing` | 12.6 | 4834 |
+| `canceled_recurring` | 13.2 | 4841 |
+| `generic_fallback` | * | * |
+
+Admin overrides (`defence_prompt_modules`) supersede file defaults at runtime; the file default is the seed (`scripts/seed-defence-prompt-modules.mjs`, idempotent) and the fallback when no DB row exists.
+
+### Surface map
+
+- **Embedded UI**: `CompleteDefencePackageCard` in `app/(embedded)/app/disputes/[id]/tabs/sections/`, inserted between `FinalDefenseStatementCard` and `ExactDataSentCard`. Hidden when no `defence_packages` row exists for the pack (flag off OR auto-build hasn't run yet).
+- **Admin section**: `app/admin/defence-package/{page,prompts/page,prompts/[key]/page,runs/page,runs/[id]/page,settings/page}.tsx`. Loaded via `lib/defence/admin-queries.ts`. Module editor saves create new versioned rows.
+- **API routes**: 12 routes total — merchant-facing under `/api/defence-packages/[id]/*`, admin-facing under `/api/admin/defence-package/*`.
+
+### Audit events
+
+Extended `EventType` union in `lib/audit/logEvent.ts` with 13 literals: `defence_package_draft_generated`, `defence_package_regenerated`, `defence_package_finalized`, `defence_package_submitted`, `defence_package_stale`, `defence_package_failed`, `defence_package_skipped`, `defence_package_superseded`, `defence_package_validation_failed`, `manual_evidence_added_to_package`, `llm_narrative_generated`, `llm_narrative_failed`, `defence_pdf_render_failed`.
+
+### Submission integration
+
+`lib/jobs/handlers/saveToShopifyJob.ts` checks for the latest `defence_packages` row for the dispute when the flag is on. If a row exists, it must be `status=final` — anything else is a hard block. When `final`, the `uncategorizedFile` buffer source is swapped to the defence package PDF (via a fresh `kind:"pdf"` short-link pointing at the defence row id). On verify-ok, the row is marked `status=submitted` with `shopify_response` set. Structured text fields and per-evidence-field `*File` slots gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED` are unaffected.

@@ -4,6 +4,7 @@ import { handleBuildPack } from "@/lib/jobs/handlers/buildPackJob";
 import { handleRenderPdf } from "@/lib/jobs/handlers/renderPdfJob";
 import { handleSyncDisputes } from "@/lib/jobs/handlers/syncDisputesJob";
 import { handleSaveToShopify } from "@/lib/jobs/handlers/saveToShopifyJob";
+import { handleBuildDefencePackage } from "@/lib/jobs/handlers/buildDefencePackageJob";
 import { handleSnapshotShopDailyMetrics } from "@/lib/jobs/handlers/snapshotShopDailyMetricsJob";
 import { handleBackfillShopDailyMetrics } from "@/lib/jobs/handlers/backfillShopDailyMetricsJob";
 import { handleBackfillShopOrders } from "@/lib/jobs/handlers/backfillOrdersJob";
@@ -58,6 +59,9 @@ async function runWorker(req: NextRequest) {
           break;
         case "save_to_shopify":
           handlerResult = await handleSaveToShopify(job);
+          break;
+        case "build_defence_package":
+          handlerResult = await handleBuildDefencePackage(job);
           break;
         case "snapshot_shop_daily_metrics":
           await handleSnapshotShopDailyMetrics(job);

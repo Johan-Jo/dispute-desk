@@ -36,6 +36,7 @@ import { SubmissionStatusCard } from "./sections/SubmissionStatusCard";
 import { ExactDataSentCard } from "./sections/ExactDataSentCard";
 import { NotSubmittedCard } from "./sections/NotSubmittedCard";
 import { FinalDefenseStatementCard } from "./sections/FinalDefenseStatementCard";
+import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -174,6 +175,11 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         regenerating={clientState.regeneratingArgument}
         onRegenerate={handleRegenerate}
       />
+
+      {/* §2.5 — Complete Defence Package (Grounded Defence Package PDF
+          Builder). Hidden when ENABLE_DEFENCE_PACKAGE_BUILDER is off or
+          no defence_packages row exists for the pack yet. */}
+      <CompleteDefencePackageCard packId={data?.pack?.id ?? null} />
 
       {/* §3 — Exact data sent to Shopify (six readable groups, including
           customer details, native file slot routing, merchant uploads,

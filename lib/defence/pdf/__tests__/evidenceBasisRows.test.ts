@@ -1,0 +1,103 @@
+import { describe, it, expect } from "vitest";
+import { buildEvidenceBasisRows } from "../evidenceBasisRows";
+import type { EvidenceFact } from "../../types";
+
+function fact(overrides: Partial<EvidenceFact> = {}): EvidenceFact {
+  return {
+    id: "f0",
+    category: "payment_authentication",
+    label: "Payment authentication",
+    value: { avsResult: "Y", cvvResult: "M" },
+    source: "shopify_order",
+    sourceRef: null,
+    strength: "strong",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    ...overrides,
+  };
+}
+
+describe("buildEvidenceBasisRows", () => {
+  it("includes only bankEligible+includeInBankNarrative+!submissionRisk facts", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "f1" }),
+      fact({ id: "f2", bankEligible: false }),
+      fact({ id: "f3", includeInBankNarrative: false }),
+      fact({ id: "f4", submissionRisk: true }),
+      fact({ id: "f5", internalOnly: true, bankEligible: false }),
+    ]);
+    expect(rows.map((r) => r.factId)).toEqual(["f1"]);
+  });
+
+  it("orders rows by category rank, then label", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "policy", category: "policy_refund", label: "Refund policy", value: { acceptedAtCheckout: true } }),
+      fact({ id: "delivery", category: "delivery_proof", label: "Delivery", value: { proofType: "delivered_confirmed" } }),
+      fact({ id: "payment", category: "payment_authentication", label: "Payment auth" }),
+    ]);
+    expect(rows.map((r) => r.factId)).toEqual(["payment", "delivery", "policy"]);
+  });
+
+  it("renders AVS/CVV/3DS values in payment_authentication rows", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ value: { avsResult: "Y", cvvResult: "M", threeDS: true } }),
+    ]);
+    expect(rows[0].value).toContain("AVS Y");
+    expect(rows[0].value).toContain("CVV M");
+    expect(rows[0].value).toContain("3DS");
+  });
+
+  it("renders delivery proofType=delivered_confirmed", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        category: "delivery_proof",
+        label: "Delivery",
+        value: { proofType: "delivered_confirmed", deliveredAt: "2026-05-12" },
+      }),
+    ]);
+    expect(rows[0].value).toBe("Delivered 2026-05-12");
+  });
+
+  it("renders signature on delivery when proofType=signature_confirmed", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        category: "delivery_proof",
+        label: "Delivery",
+        value: { proofType: "signature_confirmed", deliveredAt: "2026-05-12" },
+      }),
+    ]);
+    expect(rows[0].value).toContain("Signature on delivery");
+  });
+
+  it("renders prior customer count", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        category: "prior_customer_history",
+        label: "Customer history",
+        value: { priorOrderCount: 4 },
+      }),
+    ]);
+    expect(rows[0].value).toBe("4 prior orders");
+  });
+
+  it("empty input → empty rows", () => {
+    expect(buildEvidenceBasisRows([])).toEqual([]);
+  });
+
+  it("excludes submissionRisk facts even when bankEligible+includeInBankNarrative are true", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "ip",
+        category: "ip_location",
+        bankEligible: true,
+        includeInBankNarrative: true,
+        submissionRisk: true,
+      }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+});

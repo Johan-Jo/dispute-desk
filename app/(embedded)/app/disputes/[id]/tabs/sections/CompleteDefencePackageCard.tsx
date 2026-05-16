@@ -1,0 +1,344 @@
+/**
+ * CompleteDefencePackageCard — embedded ReviewSubmitTab section.
+ *
+ * Surfaces the Grounded Defence Package status: latest version, package
+ * mode, validation result, generated/finalized/submitted timestamp, and
+ * the controls to Preview / Regenerate / Finalize / Submit / Add manual
+ * evidence.
+ *
+ * Hidden entirely when no defence_packages row exists for the pack (the
+ * feature flag is off, or the auto-build hasn't run yet).
+ */
+
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  Banner,
+  BlockStack,
+  Button,
+  ButtonGroup,
+  Card,
+  InlineStack,
+  Modal,
+  Spinner,
+  Text,
+} from "@shopify/polaris";
+
+type Status =
+  | "draft"
+  | "stale"
+  | "final"
+  | "submitted"
+  | "superseded"
+  | "failed"
+  | "skipped";
+
+interface DefencePackageRow {
+  id: string;
+  version: number;
+  status: Status;
+  package_mode: "full" | "narrow" | null;
+  generated_at: string;
+  generated_by: "system" | "merchant" | "admin";
+  pdf_path: string | null;
+  evidence_hash: string;
+  llm_model: string | null;
+  prompt_family: string | null;
+  prompt_version: number | null;
+  reason_code_module: string | null;
+  validation_status: "ok" | "failed" | "skipped" | null;
+  validation_errors: Array<{ section?: string; rule?: string; message?: string }>;
+  failure_code: string | null;
+  failure_reason: string | null;
+  submitted_at: string | null;
+}
+
+interface Props {
+  packId: string | null;
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  const tone =
+    status === "final" || status === "submitted"
+      ? "success"
+      : status === "failed"
+        ? "critical"
+        : status === "skipped" || status === "superseded"
+          ? "subdued"
+          : status === "stale"
+            ? "warning"
+            : "info";
+  const label =
+    status === "draft"
+      ? "Draft"
+      : status === "stale"
+        ? "Stale"
+        : status === "final"
+          ? "Ready to submit"
+          : status === "submitted"
+            ? "Submitted"
+            : status === "superseded"
+              ? "Superseded"
+              : status === "failed"
+                ? "Validation failed"
+                : "Skipped";
+  return (
+    <Text as="span" variant="bodySm" tone={tone === "subdued" ? "subdued" : undefined}>
+      {label}
+    </Text>
+  );
+}
+
+export function CompleteDefencePackageCard({ packId }: Props) {
+  const [row, setRow] = useState<DefencePackageRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
+
+  const load = useCallback(async () => {
+    if (!packId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/packs/${packId}/defence-packages`);
+      if (!res.ok) {
+        setError(`Could not load defence package (${res.status})`);
+        setRow(null);
+      } else {
+        const json = (await res.json()) as { latest: DefencePackageRow | null };
+        setRow(json.latest);
+        setError(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "unknown error");
+      setRow(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [packId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const openPreview = useCallback(async () => {
+    if (!row) return;
+    setBusy("regen"); // visual placeholder
+    try {
+      const res = await fetch(`/api/defence-packages/${row.id}/preview`);
+      if (res.ok) {
+        const json = (await res.json()) as { url: string };
+        setPreviewUrl(json.url);
+        setPreviewOpen(true);
+      } else {
+        setError(`Could not generate preview (${res.status})`);
+      }
+    } finally {
+      setBusy(null);
+    }
+  }, [row]);
+
+  const onRegenerate = useCallback(async () => {
+    if (!row) return;
+    setBusy("regen");
+    try {
+      await fetch(`/api/defence-packages/${row.id}/regenerate`, { method: "POST" });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [row, load]);
+
+  const onFinalize = useCallback(async () => {
+    if (!row) return;
+    setBusy("finalize");
+    try {
+      await fetch(`/api/defence-packages/${row.id}/finalize`, { method: "POST" });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [row, load]);
+
+  const onSubmit = useCallback(async () => {
+    if (!row) return;
+    setBusy("submit");
+    try {
+      await fetch(`/api/defence-packages/${row.id}/submit`, { method: "POST" });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [row, load]);
+
+  if (!packId) return null;
+  if (loading) {
+    return (
+      <Card>
+        <BlockStack gap="300">
+          <Text as="h2" variant="headingSm">Complete Defence Package</Text>
+          <Spinner accessibilityLabel="Loading defence package" size="small" />
+        </BlockStack>
+      </Card>
+    );
+  }
+  // Feature flag off OR build hasn't run yet — hide the card entirely.
+  if (!row) return null;
+
+  const canFinalize =
+    row.status === "draft" && row.validation_status === "ok" && Boolean(row.pdf_path);
+  const canSubmit = row.status === "final";
+  const canRegenerate = row.status === "draft" || row.status === "stale" || row.status === "failed";
+
+  return (
+    <>
+      <Card>
+        <BlockStack gap="400">
+          <BlockStack gap="100">
+            <Text as="h2" variant="headingSm">Complete Defence Package</Text>
+            <Text as="p" tone="subdued" variant="bodySm">
+              DisputeDesk prepares a bank-facing PDF that combines approved Shopify
+              evidence, payment signals, fulfilment proof, customer communication,
+              policies, and any merchant-supplied documents into one structured
+              defence package.
+            </Text>
+          </BlockStack>
+
+          <InlineStack gap="400" align="space-between">
+            <BlockStack gap="050">
+              <Text as="span" variant="bodySm" tone="subdued">Status</Text>
+              <StatusBadge status={row.status} />
+            </BlockStack>
+            <BlockStack gap="050">
+              <Text as="span" variant="bodySm" tone="subdued">Version</Text>
+              <Text as="span" variant="bodySm">v{row.version}</Text>
+            </BlockStack>
+            <BlockStack gap="050">
+              <Text as="span" variant="bodySm" tone="subdued">Mode</Text>
+              <Text as="span" variant="bodySm">{row.package_mode ?? "—"}</Text>
+            </BlockStack>
+            <BlockStack gap="050">
+              <Text as="span" variant="bodySm" tone="subdued">Generated</Text>
+              <Text as="span" variant="bodySm">
+                {new Date(row.generated_at).toLocaleString()}
+              </Text>
+            </BlockStack>
+            <BlockStack gap="050">
+              <Text as="span" variant="bodySm" tone="subdued">Model</Text>
+              <Text as="span" variant="bodySm">{row.llm_model ?? "—"}</Text>
+            </BlockStack>
+          </InlineStack>
+
+          {row.status === "skipped" && row.failure_code === "covered_shopify" && (
+            <Banner tone="info" title="Covered by Shopify Protect">
+              <p>
+                This dispute is covered by Shopify Protect. No bank-facing defence
+                package is required.
+              </p>
+            </Banner>
+          )}
+
+          {row.status === "skipped" && row.failure_code === "no_bank_eligible_facts" && (
+            <Banner tone="warning" title="Not enough bank-facing evidence">
+              <p>
+                The classifier did not find any bank-eligible approved facts for
+                this dispute. Upload additional supporting documents or wait for
+                the next sync to include freshly collected evidence.
+              </p>
+            </Banner>
+          )}
+
+          {row.status === "failed" && (
+            <Banner tone="critical" title="Validation failed">
+              <BlockStack gap="200">
+                <p>{row.failure_reason ?? "Validation found unsupported claims in the generated narrative."}</p>
+                {row.validation_errors?.length > 0 && (
+                  <ul style={{ marginLeft: 16, fontSize: 12 }}>
+                    {row.validation_errors.slice(0, 5).map((e, i) => (
+                      <li key={i}>{e.message ?? e.rule}</li>
+                    ))}
+                  </ul>
+                )}
+              </BlockStack>
+            </Banner>
+          )}
+
+          {row.status === "stale" && (
+            <Banner tone="warning" title="Stale — new evidence available">
+              <p>This draft no longer reflects the latest evidence on file. Regenerate to refresh.</p>
+            </Banner>
+          )}
+
+          <ButtonGroup>
+            <Button
+              onClick={openPreview}
+              disabled={!row.pdf_path || busy !== null}
+              loading={busy === "regen" && previewOpen === false && !!row.pdf_path}
+            >
+              Preview PDF
+            </Button>
+            {canRegenerate && (
+              <Button
+                onClick={onRegenerate}
+                disabled={busy !== null}
+                loading={busy === "regen"}
+              >
+                Regenerate
+              </Button>
+            )}
+            {canFinalize && (
+              <Button
+                variant="primary"
+                onClick={onFinalize}
+                disabled={busy !== null}
+                loading={busy === "finalize"}
+              >
+                Finalize
+              </Button>
+            )}
+            {canSubmit && (
+              <Button
+                variant="primary"
+                tone="success"
+                onClick={onSubmit}
+                disabled={busy !== null}
+                loading={busy === "submit"}
+              >
+                Submit to Shopify
+              </Button>
+            )}
+          </ButtonGroup>
+
+          {error && (
+            <Banner tone="warning" title="Could not load defence package">
+              <p>{error}</p>
+            </Banner>
+          )}
+        </BlockStack>
+      </Card>
+
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={`Defence Package v${row.version}`}
+      >
+        <Modal.Section>
+          {previewUrl ? (
+            <iframe
+              src={previewUrl}
+              style={{ width: "100%", height: 720, border: 0 }}
+              title={`Defence Package v${row.version}`}
+            />
+          ) : (
+            <Spinner accessibilityLabel="Loading PDF" />
+          )}
+        </Modal.Section>
+      </Modal>
+    </>
+  );
+}

@@ -2,6 +2,7 @@ import { getServiceClient } from "../../supabase/server";
 import { logAuditEvent } from "../../audit/logEvent";
 import { buildPack } from "../../packs/buildPack";
 import { evaluateAndMaybeAutoSave } from "../../automation/pipeline";
+import { maybeEnqueueDefencePackage } from "../../defence/enqueue";
 import { consumePack, PackLimitReachedError } from "../../billing/consumePack";
 import {
   sendEvidenceNeededAlert,
@@ -186,6 +187,13 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
 
       await evaluateAndMaybeAutoSave(packId).catch(() => {
         // Non-fatal: auto-save evaluation failure shouldn't fail the build
+      });
+
+      // Grounded Defence Package PDF Builder — non-fatal. Flag-gated inside
+      // maybeEnqueueDefencePackage so the build path is byte-identical when
+      // the feature is off.
+      await maybeEnqueueDefencePackage(packId).catch((err) => {
+        console.error("[buildPack] maybeEnqueueDefencePackage failed:", err);
       });
 
       await sendManualEvidenceAlert(db, job.shopId, packId).catch((err) => {

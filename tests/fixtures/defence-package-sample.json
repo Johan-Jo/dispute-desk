@@ -1,0 +1,61 @@
+{
+  "reasonCode": "10.4",
+  "packageMode": "full",
+  "caseStrength": "moderate",
+  "approvedFacts": [
+    {
+      "id": "f0",
+      "category": "payment_authentication",
+      "label": "Payment authentication (AVS + CVV)",
+      "value": {
+        "avsResult": "Y",
+        "cvvResult": "M",
+        "threeDS": false,
+        "fieldKey": "avs_cvv_match"
+      },
+      "source": "shopify_order",
+      "sourceRef": null,
+      "strength": "strong",
+      "bankEligible": true,
+      "merchantVisible": true,
+      "internalOnly": false,
+      "includeInBankNarrative": true,
+      "submissionRisk": false,
+      "confidence": null
+    },
+    {
+      "id": "f1",
+      "category": "billing_match",
+      "label": "Billing address match",
+      "value": { "match": true, "fieldKey": "billing_address_match" },
+      "source": "shopify_order",
+      "sourceRef": null,
+      "strength": "strong",
+      "bankEligible": true,
+      "merchantVisible": true,
+      "internalOnly": false,
+      "includeInBankNarrative": true,
+      "submissionRisk": false,
+      "confidence": null
+    },
+    {
+      "id": "f2",
+      "category": "customer_communication",
+      "label": "Customer communication",
+      "value": {
+        "customerConfirmsOrder": true,
+        "lastMessageAt": "2026-05-11T15:30:00Z",
+        "fieldKey": "customer_communication"
+      },
+      "source": "shopify_order",
+      "sourceRef": null,
+      "strength": "strong",
+      "bankEligible": true,
+      "merchantVisible": true,
+      "internalOnly": false,
+      "includeInBankNarrative": true,
+      "submissionRisk": false,
+      "confidence": null
+    }
+  ]
+}

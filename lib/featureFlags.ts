@@ -33,3 +33,27 @@ function isEnvFlagOn(name: string): boolean {
 export function isFileEvidenceAttachmentsEnabled(): boolean {
   return isEnvFlagOn("FILE_EVIDENCE_ATTACHMENTS_ENABLED");
 }
+
+/**
+ * Grounded Defence Package PDF Builder.
+ *
+ * When ON, after a pack reaches `status=ready` the build-pack job enqueues
+ * `build_defence_package`. The job classifies facts (system owns facts),
+ * resolves a reason-code module, calls Anthropic Claude to write narrative
+ * prose, validates the output (forbidden phrases + claim guards +
+ * usedFactIds integrity), renders a deterministic 15-section PDF, and
+ * uploads it to `evidence-packs/{shopId}/{packId}/defence/v{n}/{iso}.pdf`.
+ *
+ * When a `final` defence package exists, `saveToShopifyJob` replaces the
+ * existing pack PDF buffer in the `uncategorizedFile` slot of
+ * `disputeEvidenceUpdate`. Structured text fields and per-evidence-field
+ * `*File` slots gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED` are
+ * unaffected.
+ *
+ * When OFF (default), the existing pack PDF path remains byte-identical.
+ *
+ * Plan: C:\Users\johan\.claude\plans\cozy-zooming-popcorn.md
+ */
+export function isDefencePackageBuilderEnabled(): boolean {
+  return isEnvFlagOn("ENABLE_DEFENCE_PACKAGE_BUILDER");
+}
