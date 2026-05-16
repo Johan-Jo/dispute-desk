@@ -250,19 +250,9 @@ function FulfillmentFallback({
 /* ── Cover page ───────────────────────────────────────────────────── */
 
 function Cover({ meta }: { meta: DefencePackageMeta }) {
-  const rows: Array<[string, string]> = [
-    ["Dispute ID", disputeIdShort(meta.disputeGid)],
-    ["Merchant", meta.merchantName ?? meta.shopName],
-    ["Card network", meta.cardNetwork ?? "—"],
-    ["Card (last 4)", meta.cardLast4 ?? "—"],
-    ["Disputed amount", meta.amountDisplay ?? "—"],
-    ["Reason code", meta.reasonCodeDisplay ?? meta.reasonCode ?? "—"],
-    ["Order", meta.orderName ?? "—"],
-    ["Transaction date", fmtIsoDate(meta.transactionDate)],
-    ["Payment gateway", meta.paymentGateway ?? "—"],
-    ["Generated", fmtIsoDate(meta.generatedAt)],
-    ["Package version", `v${meta.version} (${meta.packageMode})`],
-  ];
+  // Minimal baseline cover — no field grid, no PageFooter inside Page.
+  // The grid + fixed footer combination was implicated in the prod
+  // reconciler error.
   return (
     <Page size="A4" style={styles.coverPage}>
       <Text style={styles.coverEyebrow}>Chargeback Representment</Text>
@@ -271,19 +261,12 @@ function Cover({ meta }: { meta: DefencePackageMeta }) {
       <Text style={styles.coverSubtitle}>
         Prepared for {meta.merchantName ?? meta.shopName}
       </Text>
-
-      <View style={styles.coverDivider} />
-
-      <View style={styles.coverFieldList}>
-        {rows.map(([k, v]) => (
-          <View key={k} style={styles.coverFieldRow} wrap={false}>
-            <Text style={styles.coverFieldLabel}>{k}</Text>
-            <Text style={styles.coverFieldValue}>{v}</Text>
-          </View>
-        ))}
-      </View>
-
-      <PageFooter meta={meta} />
+      <Text style={styles.coverSubtitle}>
+        {meta.reasonCodeDisplay ?? meta.reasonCode ?? "—"} • {meta.amountDisplay ?? "—"} • v{meta.version} ({meta.packageMode})
+      </Text>
+      <Text style={styles.coverSubtitle}>
+        Generated {fmtIsoDate(meta.generatedAt)}
+      </Text>
     </Page>
   );
 }
@@ -635,90 +618,66 @@ export function DefencePackageDocument({
       <Cover meta={meta} />
 
       <Page size="A4" style={styles.page}>
-        <CaseDetailsTable meta={meta} />
+        {/* MINIMAL BASELINE — narrative only, no tables. The fancy
+            CaseDetailsTable / ChronologyBullets / LineItemsTable /
+            EvidenceBasis / PackageMetadata / SupportingEvidenceIndex
+            components are temporarily disabled — one (or several) of
+            them is triggering a @react-pdf reconciler error #31 inside
+            Next.js prod that we cannot reproduce locally. They will be
+            re-introduced one at a time once the baseline ships. */}
 
         <SectionBlock
           title="Executive Summary"
-          thesis={t("executiveSummary")}
           section={narrative.executiveSummary}
           omitted={omitted.has("executiveSummary")}
-          mode={mode}
         />
 
         <SectionBlock
           title="Transaction Overview"
-          thesis={t("transactionOverviewArgument")}
           section={narrative.transactionOverviewArgument}
           omitted={omitted.has("transactionOverviewArgument")}
-          mode={mode}
         />
 
-        {!omitted.has("chronologyArgument") && narrative.chronologyArgument.text.trim() && (
-          <View>
-            <Text style={styles.h1}>Chronology of Events</Text>
-            <Text style={styles.paragraph}>{narrative.chronologyArgument.text}</Text>
-            <ChronologyBullets events={chronology} />
-          </View>
-        )}
-
-        <LineItemsTable items={lineItems} />
+        <SectionBlock
+          title="Chronology of Events"
+          section={narrative.chronologyArgument}
+          omitted={omitted.has("chronologyArgument")}
+        />
 
         <SectionBlock
           title="Payment Authentication"
-          thesis={t("paymentAuthenticationArgument")}
           section={narrative.paymentAuthenticationArgument}
           omitted={omitted.has("paymentAuthenticationArgument")}
-          mode={mode}
         />
 
-        {omitted.has("fulfillmentArgument") || !narrative.fulfillmentArgument.text.trim() ? (
-          <FulfillmentFallback meta={meta} facts={approvedFacts} />
-        ) : (
-          <SectionBlock
-            title="Fulfillment, Delivery & Access"
-            thesis={t("fulfillmentArgument")}
-            section={narrative.fulfillmentArgument}
-            omitted={false}
-            mode={mode}
-          />
-        )}
+        <SectionBlock
+          title="Fulfillment, Delivery & Access"
+          section={narrative.fulfillmentArgument}
+          omitted={omitted.has("fulfillmentArgument")}
+        />
 
         <SectionBlock
           title="Customer Communication"
-          thesis={t("communicationArgument")}
           section={narrative.communicationArgument}
           omitted={omitted.has("communicationArgument")}
-          mode={mode}
         />
 
         <SectionBlock
           title="Policy Disclosure"
-          thesis={t("policyArgument")}
           section={narrative.policyArgument}
           omitted={omitted.has("policyArgument")}
-          mode={mode}
         />
 
         <SectionBlock
           title="Supplementary Merchant Evidence"
-          thesis={t("manualEvidenceArgument")}
           section={narrative.manualEvidenceArgument}
           omitted={omitted.has("manualEvidenceArgument")}
-          mode={mode}
         />
-
-        <EvidenceBasis approvedFacts={approvedFacts} />
 
         <ConclusionBlock
-          thesis={t("conclusion")}
           section={narrative.conclusion}
           omitted={omitted.has("conclusion")}
-          mode={mode}
         />
-
-        <SupportingEvidenceIndex manualEvidence={manualEvidence} />
-
-        <PackageMetadata meta={meta} />
 
         <PageFooter meta={meta} />
       </Page>
