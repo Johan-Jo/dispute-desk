@@ -185,26 +185,25 @@ function thesisFor(
  */
 function SectionBlock({
   title,
-  thesis,
   section,
   omitted,
-  mode,
 }: {
   title: string;
-  thesis: string;
+  /** Reserved — historically rendered as a narrow-mode lead-in
+   *  blockquote. Removed because the narrow-mode LLM prompt already
+   *  enforces hedged framing in the section body itself, so the box
+   *  was duplicative AND the wrap={false}/borderLeft style combination
+   *  trips @react-pdf 4.x's reconciler under Next.js prod (React #31). */
+  thesis?: string;
   section: NarrativeSection;
   omitted: boolean;
-  mode: PackageMode;
+  /** Reserved for future per-mode rendering tweaks. */
+  mode?: PackageMode;
 }) {
   if (omitted || !section.text.trim()) return null;
   return (
     <View>
       <Text style={styles.h1}>{title}</Text>
-      {mode === "narrow" && (
-        <View style={styles.thesisBox} wrap={false}>
-          <Text style={styles.thesisText}>{thesis}</Text>
-        </View>
-      )}
       <Text style={styles.paragraph}>{section.text}</Text>
     </View>
   );
@@ -592,25 +591,18 @@ function PageFooter({ meta }: { meta: DefencePackageMeta }) {
 /* ── Conclusion call-out ─────────────────────────────────────────── */
 
 function ConclusionBlock({
-  thesis,
   section,
   omitted,
-  mode,
 }: {
-  thesis: string;
+  thesis?: string;
   section: NarrativeSection;
   omitted: boolean;
-  mode: PackageMode;
+  mode?: PackageMode;
 }) {
   if (omitted || !section.text.trim()) return null;
   return (
     <View>
       <Text style={styles.h1}>Conclusion</Text>
-      {mode === "narrow" && (
-        <View style={styles.thesisBox} wrap={false}>
-          <Text style={styles.thesisText}>{thesis}</Text>
-        </View>
-      )}
       <View style={styles.conclusionBox}>
         <Text style={styles.paragraphLast}>{section.text}</Text>
       </View>
@@ -664,11 +656,6 @@ export function DefencePackageDocument({
         {!omitted.has("chronologyArgument") && narrative.chronologyArgument.text.trim() && (
           <View>
             <Text style={styles.h1}>Chronology of Events</Text>
-            {mode === "narrow" && (
-              <View style={styles.thesisBox} wrap={false}>
-                <Text style={styles.thesisText}>{t("chronologyArgument")}</Text>
-              </View>
-            )}
             <Text style={styles.paragraph}>{narrative.chronologyArgument.text}</Text>
             <ChronologyBullets events={chronology} />
           </View>
