@@ -102,8 +102,13 @@ Rules:
 
 8c. FULFILLMENT precision. order.fulfillmentStatus=FULFILLED alone is
    NOT delivery, access, use, or service completion. Never write
-   "received", "accessed", "used", "delivered", or "completed" unless
-   a matching approved fact exists:
+   "received", "accessed", "used", "delivered", "completed", "shipped",
+   "dispatched", or "fulfilled" unless a matching approved fact exists.
+   This applies in EVERY section including chronologyArgument —
+   when describing the timeline of events, never say "the order was
+   dispatched" or "the package was shipped" unless delivery proof
+   facts are present. Use neutral wording instead: "the order record
+   was created", "the payment was authorised", "the order was placed".
    - "received" / "delivered to the customer" → delivery_proof or
      shipping_tracking with proofType=delivered or =signature, OR
      digital_access_log with digitalAccessUsed=true, OR service_access
