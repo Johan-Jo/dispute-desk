@@ -21,6 +21,12 @@ export interface DashboardStats {
   amountRecovered: number;
   amountLost: number;
   currencyCode: string;
+  /** Counts of disputes in the window denominated in currencies other
+   *  than `currencyCode`. The dashboard tiles only sum amounts in the
+   *  primary currency (cross-currency sums are nonsense); this map
+   *  feeds the "+ N in EUR, M in SEK" hint so the omission is visible
+   *  instead of silent. Empty when all disputes share one currency. */
+  otherCurrencyCounts: Record<string, number>;
   disputesWon: number;
   disputesLost: number;
   totalClosed: number;
@@ -64,6 +70,7 @@ export const DEFAULT_STATS: DashboardStats = {
   amountRecovered: 0,
   amountLost: 0,
   currencyCode: "USD",
+  otherCurrencyCounts: {},
   disputesWon: 0,
   disputesLost: 0,
   totalClosed: 0,

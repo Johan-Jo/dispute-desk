@@ -31,12 +31,23 @@ export interface DisputeMetrics {
   disputesLost: number;
   totalClosed: number;
 
-  // Financials
+  // Financials. All amount sums are scoped to disputes whose
+  // `currency_code === currencyCode` (the most-frequent currency in the
+  // window). Cross-currency sums would be meaningless ($100 + €100 ≠
+  // 200 of anything), so disputes in other currencies are excluded
+  // from these totals and surfaced via `otherCurrencyCounts` so the UI
+  // can hint at the omission.
   amountAtRisk: number;
   amountRecovered: number;
   amountLost: number;
   recoveryRate: number;
   currencyCode: string;
+  /** Counts of disputes in the window that are denominated in
+   *  currencies OTHER than `currencyCode`. Empty object when all
+   *  disputes share the primary currency. UI uses this to render a
+   *  "+ N in EUR, M in SEK" hint under currency tiles so merchants
+   *  know the headline numbers don't cover every dispute. */
+  otherCurrencyCounts: Record<string, number>;
 
   // Rates
   winRate: number;
@@ -133,12 +144,39 @@ export async function computeDisputeMetrics(
     prevList = (prev ?? []) as Record<string, unknown>[];
   }
 
+  // ── Currency (picked before amount sums so we can scope them) ─────────
+  // The dashboard quotes a single currency symbol per tile. Mixing
+  // currencies into one sum is wrong regardless of which symbol you
+  // print, so we pick the most-frequent currency_code in the window
+  // and confine `amountAtRisk` / `amountRecovered` / `amountLost` to
+  // disputes denominated in that currency. Disputes in other
+  // currencies count toward `otherCurrencyCounts` so the UI can hint
+  // they exist without rolling them into the sum.
+  const currencyCounts: Record<string, number> = {};
+  for (const d of list) {
+    const c = String(d.currency_code ?? "USD");
+    currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
+  }
+  const currencyCode = Object.entries(currencyCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+  const otherCurrencyCounts: Record<string, number> = {};
+  for (const [code, count] of Object.entries(currencyCounts)) {
+    if (code !== currencyCode) otherCurrencyCounts[code] = count;
+  }
+  const inPrimaryCurrency = (d: Record<string, unknown>) =>
+    String(d.currency_code ?? "USD") === currencyCode;
+
   // ── Active disputes ───────────────────────────────────────────────────
   const active = list.filter((d) =>
     ACTIVE_NORMALIZED.includes(String(d.normalized_status ?? "new")),
   );
   const activeDisputes = active.length;
-  const amountAtRisk = active.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+  // amountAtRisk sums only active disputes in the primary currency.
+  // Active dispute COUNT still spans all currencies — that's a unit-
+  // less count, safe to aggregate.
+  const amountAtRisk = active
+    .filter(inPrimaryCurrency)
+    .reduce((s, d) => s + (Number(d.amount) || 0), 0);
 
   // ── Win/Loss (final_outcome based) ────────────────────────────────────
   const won = list.filter((d) => d.final_outcome === "won");
@@ -148,13 +186,13 @@ export async function computeDisputeMetrics(
   const winLossDenom = disputesWon + disputesLost;
   const winRate = winLossDenom > 0 ? Math.round((disputesWon / winLossDenom) * 100) : 0;
 
-  // ── Financial outcomes ────────────────────────────────────────────────
-  const amountRecovered = list.reduce(
-    (s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0,
-  );
-  const amountLost = list.reduce(
-    (s, d) => s + (Number(d.outcome_amount_lost) || 0), 0,
-  );
+  // ── Financial outcomes (scoped to primary currency) ───────────────────
+  const amountRecovered = list
+    .filter(inPrimaryCurrency)
+    .reduce((s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0);
+  const amountLost = list
+    .filter(inPrimaryCurrency)
+    .reduce((s, d) => s + (Number(d.outcome_amount_lost) || 0), 0);
   const financialTotal = amountRecovered + amountLost;
   const recoveryRate = financialTotal > 0
     ? Math.round((amountRecovered / financialTotal) * 100)
@@ -201,22 +239,20 @@ export async function computeDisputeMetrics(
   const chargebackCount = active.filter((d) => d.phase !== "inquiry").length;
   const needsAttentionCount = list.filter((d) => d.needs_attention === true).length;
 
-  // ── Currency ──────────────────────────────────────────────────────────
-  const currencyCounts: Record<string, number> = {};
-  for (const d of list) {
-    const c = String(d.currency_code ?? "USD");
-    currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
-  }
-  const currencyCode = Object.entries(currencyCounts)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
-
   // ── Period-over-period ────────────────────────────────────────────────
+  // Prior-period AMOUNT sums use the same primary-currency filter as
+  // the current period so the delta compares like-with-like. (Counts
+  // and rates stay un-scoped — they're currency-agnostic.) The prior
+  // window's currency mix may differ; we don't second-guess it, we
+  // just project onto the current primary currency for the comparison.
   const prevActive = prevList.filter((d) =>
     ACTIVE_NORMALIZED.includes(String(d.normalized_status ?? "new")),
   );
   const prevActiveCount = periodFrom ? prevActive.length : null;
   const prevAmountAtRisk = periodFrom
-    ? prevActive.reduce((s, d) => s + (Number(d.amount) || 0), 0)
+    ? prevActive
+        .filter(inPrimaryCurrency)
+        .reduce((s, d) => s + (Number(d.amount) || 0), 0)
     : null;
   const prevWon = prevList.filter((d) => d.final_outcome === "won").length;
   const prevLost = prevList.filter((d) => d.final_outcome === "lost").length;
@@ -225,7 +261,9 @@ export async function computeDisputeMetrics(
     ? Math.round((prevWon / prevDenom) * 100)
     : periodFrom ? 0 : null;
   const prevRecovered = periodFrom
-    ? prevList.reduce((s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0)
+    ? prevList
+        .filter(inPrimaryCurrency)
+        .reduce((s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0)
     : null;
 
   // ── Admin-only metrics (cross-shop) ───────────────────────────────────
@@ -289,6 +327,7 @@ export async function computeDisputeMetrics(
     amountLost,
     recoveryRate,
     currencyCode,
+    otherCurrencyCounts,
     winRate,
     avgTimeToSubmit: avgTimeToSubmit !== null ? Math.round(avgTimeToSubmit * 10) / 10 : null,
     avgTimeToClose: avgTimeToClose !== null ? Math.round(avgTimeToClose * 10) / 10 : null,

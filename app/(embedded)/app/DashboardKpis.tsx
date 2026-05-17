@@ -124,6 +124,12 @@ interface KpiCard {
    *  the chargeback rate tile to surface the Healthy / Watch / High
    *  risk threshold band per PRD §8. */
   badge?: { label: string; tone: ThresholdTone };
+  /** Optional subdued line below the change indicator. Used by the
+   *  3 currency-denominated tiles (Recovered / Lost / At Risk) to
+   *  declare disputes in other currencies that aren't included in the
+   *  headline number — e.g. "+ 12 in SEK, 1 in GBP". Empty/omitted
+   *  when all disputes share the primary currency. */
+  hint?: string | null;
 }
 
 function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: string; loading: boolean }) {
@@ -181,6 +187,11 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
           unit={card.changeUnit}
         />
       </div>
+      {card.hint && (
+        <div style={{ marginTop: "4px", fontSize: "11px", color: "#6D7175", lineHeight: 1.4 }}>
+          {card.hint}
+        </div>
+      )}
     </div>
   );
 }
@@ -231,6 +242,11 @@ function MobileKpiTile({
           unit={card.changeUnit}
         />
       </div>
+      {card.hint && (
+        <div style={{ marginTop: "4px", fontSize: "11px", color: "#6D7175", lineHeight: 1.4 }}>
+          {card.hint}
+        </div>
+      )}
     </div>
   );
 }
@@ -439,6 +455,22 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
   const vsLabel = t("dashboard.vsLastMonth");
   const { smDown } = useBreakpoints();
 
+  // Mixed-currency hint — declares disputes NOT included in the
+  // currency tile totals because their currency differs from the
+  // primary (most-frequent) one. Renders e.g. "+ 12 in SEK, 1 in GBP".
+  // Empty string when all disputes share the primary currency, in
+  // which case the tile renders no extra line.
+  const otherCurrencyHint = (() => {
+    const entries = Object.entries(stats.otherCurrencyCounts ?? {})
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0) return null;
+    const parts = entries.map(([code, count]) =>
+      t("dashboard.otherCurrencyEntry", { count, currency: code }),
+    );
+    return t("dashboard.otherCurrencyHint", { list: parts.join(", ") });
+  })();
+
   const active: KpiCard = {
     icon: AlertCircleIcon,
     label: t("dashboard.activeDisputes"),
@@ -457,12 +489,14 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     label: t("dashboard.amountRecovered"),
     value: formatCurrency(stats.amountRecovered),
     change: stats.amountRecoveredChange,
+    hint: otherCurrencyHint,
   };
   const lost: KpiCard = {
     icon: CashDollarIcon,
     label: t("dashboard.amountLostKpi"),
     value: formatCurrency(stats.amountLost),
     change: null,
+    hint: otherCurrencyHint,
   };
   const atRisk: KpiCard = {
     icon: CashDollarIcon,
@@ -470,6 +504,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     value: formatCurrency(stats.amountAtRisk),
     change: stats.amountAtRiskChange,
     changeInverse: true,
+    hint: otherCurrencyHint,
   };
 
   // ── Chargeback rate (PRD §8 / Figma 2026-05-01) ─────────────────────

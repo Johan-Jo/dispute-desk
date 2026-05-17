@@ -300,6 +300,52 @@ describe("computeDisputeMetrics — counts and rates", () => {
     const empty = await computeDisputeMetrics({ shopId: "s1" });
     expect(empty.currencyCode).toBe("USD");
   });
+
+  it("scopes amount sums to the primary currency and emits other currency counts", async () => {
+    // EUR wins the popularity contest (2 disputes) so it becomes the
+    // primary currency. The SEK + USD disputes must NOT be summed into
+    // EUR totals (a real bug we shipped to prod before this test) and
+    // must instead surface via `otherCurrencyCounts` so the UI can hint
+    // that they exist.
+    mockSupabase({
+      current: [
+        // 2 active EUR — included in amountAtRisk
+        { normalized_status: "new", currency_code: "EUR", amount: 100, outcome_amount_recovered: 0, outcome_amount_lost: 0 },
+        { normalized_status: "new", currency_code: "EUR", amount: 50,  outcome_amount_recovered: 0, outcome_amount_lost: 0 },
+        // 1 active SEK — counted in activeDisputes but NOT in amountAtRisk
+        { normalized_status: "new", currency_code: "SEK", amount: 999, outcome_amount_recovered: 0, outcome_amount_lost: 0 },
+        // 1 closed USD — currency-other, also affects recovered/lost scoping
+        { normalized_status: "won", currency_code: "USD", outcome_amount_recovered: 200, outcome_amount_lost: 0 },
+        // 1 closed EUR — included in EUR amountRecovered
+        { normalized_status: "won", currency_code: "EUR", outcome_amount_recovered: 80,  outcome_amount_lost: 0 },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+
+    expect(m.currencyCode).toBe("EUR");
+    // EUR-only sums:
+    expect(m.amountAtRisk).toBe(150);     // 100 + 50, NOT 1149
+    expect(m.amountRecovered).toBe(80);   // NOT 280
+    expect(m.amountLost).toBe(0);
+    // Count is currency-agnostic — all 3 active disputes still counted:
+    expect(m.activeDisputes).toBe(3);
+    // The other currencies surface as a hint, not a silent drop:
+    expect(m.otherCurrencyCounts).toEqual({ SEK: 1, USD: 1 });
+  });
+
+  it("returns an empty otherCurrencyCounts when all disputes share one currency", async () => {
+    mockSupabase({
+      current: [
+        { normalized_status: "new", currency_code: "USD", amount: 100 },
+        { normalized_status: "new", currency_code: "USD", amount: 50 },
+      ],
+    });
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.currencyCode).toBe("USD");
+    expect(m.amountAtRisk).toBe(150);
+    expect(m.otherCurrencyCounts).toEqual({});
+  });
 });
 
 describe("computeDisputeMetrics — period-over-period", () => {
