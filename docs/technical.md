@@ -2743,11 +2743,13 @@ The status transitions naturally when `buildPackJob` picks up the job and writes
 | Plan | Price | Packs/Month | Auto-Pack | Rules |
 |------|-------|-------------|-----------|-------|
 | Free (Sandbox) | $0 | 3 (lifetime) | No | No |
-| Starter | $29/mo | 15 | Yes | Up to 5 |
-| Growth | $79/mo | 75 | Yes | Yes (advanced) |
-| Scale | $149/mo | 300 | Yes | Yes (advanced) |
+| Starter | $29/mo | 20 | Yes | Up to 5 |
+| Growth | $129/mo | 100 | Yes | Yes (advanced) |
+| Scale | $299/mo | 400 | Yes | Yes (advanced) |
 
 Paid plans include a 14-day trial with 25 playbooks.
+
+The 2026-05 tier repricing (Starter 15 → 20, Growth $79/75 → $129/100, Scale $149/300 → $299/400) was applied without grandfathering: every shop's next billing cycle picks up the new price and quota automatically via `/api/billing/callback` (`plan.price` and `plan.packsPerMonth` are read from `lib/billing/plans.ts` on each activation). The marketing landing page (`components/marketing/MarketingLandingPageClient.tsx`) carries per-tier ROI anchor copy comparing DisputeDesk's flat fee against success-fee competitor pricing (~$1,800/mo vs. Growth $129; ~$7,200/mo vs. Scale $299) under explicit assumptions (60% win rate, $120 avg dispute) noted in the footnote.
 
 ### Embedded Billing UI
 

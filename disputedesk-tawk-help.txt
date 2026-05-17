@@ -908,8 +908,8 @@ DisputeDesk offers four plans to match your needs:
 
 | Feature                    | Free      | Starter   | Growth    | Scale     |
 |----------------------------|-----------|-----------|-----------|-----------|
-| Price                      | $0/mo     | $29/mo    | $79/mo    | $149/mo   |
-| Evidence Packs             | 3 total   | 15/month  | 75/month  | 300/month |
+| Price                      | $0/mo     | $29/mo    | $129/mo   | $299/mo   |
+| Evidence Packs             | 3 total   | 20/month  | 100/month | 400/month |
 | Auto-Build Packs           | No        | Yes       | Yes       | Yes       |
 | Automation Rules           | 0         | 5         | Unlimited | Unlimited |
 | Auto-Save                  | No        | Yes       | Yes       | Yes       |
@@ -953,7 +953,7 @@ The Starter plan adds automation essentials.
 PRICE: $29/month
 
 WHAT'S INCLUDED:
-  - 15 evidence packs per month
+  - 20 evidence packs per month
   - Auto-build packs for new disputes
   - Up to 5 automation rules
   - Auto-save capability
@@ -963,7 +963,7 @@ WHAT'S INCLUDED:
 BEST FOR:
   - Small to mid-size stores with moderate dispute volume
   - Merchants who want basic automation but still want control
-  - Stores receiving 10-15 disputes per month
+  - Stores receiving 10-20 disputes per month
 
 TRIAL: 14 days free, then $29/month
 
@@ -974,10 +974,10 @@ TRIAL: 14 days free, then $29/month
 
 The Growth plan removes limits on rules and increases pack volume.
 
-PRICE: $79/month
+PRICE: $129/month
 
 WHAT'S INCLUDED:
-  - 75 evidence packs per month
+  - 100 evidence packs per month
   - Auto-build packs
   - Unlimited automation rules
   - Auto-save with full gate control
@@ -987,9 +987,9 @@ WHAT'S INCLUDED:
 BEST FOR:
   - Growing stores with higher dispute volumes
   - Merchants who want full automation with fine-grained rules
-  - Stores receiving 25-75 disputes per month
+  - Stores receiving 25-100 disputes per month
 
-TRIAL: 14 days free, then $79/month
+TRIAL: 14 days free, then $129/month
 
 
 ================================================================================
@@ -998,10 +998,10 @@ TRIAL: 14 days free, then $79/month
 
 The Scale plan is for high-volume merchants and multi-store operations.
 
-PRICE: $149/month
+PRICE: $299/month
 
 WHAT'S INCLUDED:
-  - 300 evidence packs per month
+  - 400 evidence packs per month
   - Auto-build packs
   - Unlimited automation rules
   - Auto-save with full gate control
@@ -1014,7 +1014,7 @@ BEST FOR:
   - Stores receiving 100+ disputes per month
   - Merchants who need priority support
 
-TRIAL: 14 days free, then $149/month
+TRIAL: 14 days free, then $299/month
 
 
 ================================================================================
@@ -1957,7 +1957,7 @@ A: DisputeDesk falls back to default behavior: auto-build with the default
 ================================================================================
 
 Q: How much does DisputeDesk cost?
-A: Free ($0), Starter ($29/mo), Growth ($79/mo), Scale ($149/mo). All paid
+A: Free ($0), Starter ($29/mo), Growth ($129/mo), Scale ($299/mo). All paid
    plans include a 14-day free trial.
 
 Q: What counts as a "pack"?

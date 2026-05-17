@@ -241,7 +241,7 @@ describe("reconcileBillingCycleForShop", () => {
 
     expect(res.ok).toBe(true);
     if (res.ok && res.action === "credits_granted") {
-      expect(res.packs).toBe(75); // Growth plan packsPerMonth
+      expect(res.packs).toBe(100); // Growth plan packsPerMonth
       expect(res.cycleEndIso).toBe("2026-07-01T00:00:00Z");
     } else {
       throw new Error(`expected credits_granted, got ${JSON.stringify(res)}`);
@@ -250,7 +250,7 @@ describe("reconcileBillingCycleForShop", () => {
     expect(mockGrant.mock.calls[0][0]).toMatchObject({
       shopId: "shop-1",
       source: "monthly_included",
-      packs: 75,
+      packs: 100,
       expiresAt: "2026-07-01T00:00:00Z",
       reference: monthlyGrantReference("shop-1", "2026-07-01T00:00:00Z"),
     });

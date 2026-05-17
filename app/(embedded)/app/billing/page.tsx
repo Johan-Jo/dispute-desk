@@ -62,15 +62,15 @@ const PLAN_TIER: Record<string, number> = {
 const PLAN_PRICES: Record<string, { price: number; label: string; monthly: string }> = {
   free: { price: 0, label: "$0", monthly: "" },
   starter: { price: 29, label: "$29", monthly: "/mo" },
-  growth: { price: 79, label: "$79", monthly: "/mo" },
-  scale: { price: 149, label: "$149", monthly: "/mo" },
+  growth: { price: 129, label: "$129", monthly: "/mo" },
+  scale: { price: 299, label: "$299", monthly: "/mo" },
 };
 
 const PLAN_SHORT_FEATURES: Record<string, string> = {
   free: "3 exported packs · Draft building · Activity log",
-  starter: "15 packs/month · Basic rules · Email support",
-  growth: "75 packs/month · Advanced rules · Auto-save",
-  scale: "300 packs/month · Multi-store · Priority support",
+  starter: "20 packs/month · Basic rules · Email support",
+  growth: "100 packs/month · Advanced rules · Auto-save",
+  scale: "400 packs/month · Multi-store · Priority support",
 };
 
 type PlanQuery = (typeof PLAN_IDS)[number];

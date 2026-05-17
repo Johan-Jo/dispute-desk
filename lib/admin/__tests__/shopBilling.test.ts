@@ -8,8 +8,8 @@ describe("monthlyRevenueForPlan", () => {
   it("returns the canonical plan price for each known plan id", () => {
     expect(monthlyRevenueForPlan("free").monthlyUsd).toBe(0);
     expect(monthlyRevenueForPlan("starter").monthlyUsd).toBe(29);
-    expect(monthlyRevenueForPlan("growth").monthlyUsd).toBe(79);
-    expect(monthlyRevenueForPlan("scale").monthlyUsd).toBe(149);
+    expect(monthlyRevenueForPlan("growth").monthlyUsd).toBe(129);
+    expect(monthlyRevenueForPlan("scale").monthlyUsd).toBe(299);
   });
 
   it("falls back to the free plan for unknown / null / undefined inputs", () => {
@@ -27,16 +27,16 @@ describe("monthlyRevenueForPlan", () => {
 
 describe("totalInvoicedForPeriod", () => {
   it("computes monthly_price × months_in_period for whole months", () => {
-    // Growth $79/mo × 1 month
-    expect(totalInvoicedForPeriod("growth", 30).totalUsd).toBe(79);
+    // Growth $129/mo × 1 month
+    expect(totalInvoicedForPeriod("growth", 30).totalUsd).toBe(129);
     // × 3 months
-    expect(totalInvoicedForPeriod("growth", 90).totalUsd).toBe(237);
+    expect(totalInvoicedForPeriod("growth", 90).totalUsd).toBe(387);
     // × 6 months
-    expect(totalInvoicedForPeriod("growth", 180).totalUsd).toBe(474);
+    expect(totalInvoicedForPeriod("growth", 180).totalUsd).toBe(774);
   });
 
   it("scales partial-month windows linearly (15 days = 0.5 month)", () => {
-    expect(totalInvoicedForPeriod("scale", 15).totalUsd).toBe(75); // 149 / 2 ≈ 74.5 → 75
+    expect(totalInvoicedForPeriod("scale", 15).totalUsd).toBe(150); // 299 / 2 = 149.5 → 150
   });
 
   it("returns zero for the free plan regardless of window", () => {

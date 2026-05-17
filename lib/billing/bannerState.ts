@@ -46,7 +46,7 @@ export interface BillingBannerState {
    *  corresponding `*_dismissed_cycle` column so future cycles re-show. */
   forCycleEnd: string | null;
   /** Diagnostic payload — never rendered to the merchant, but carries
-   *  enough context for the UI to populate counts ("12 of 75 packs
+   *  enough context for the UI to populate counts ("12 of 100 packs
    *  remaining") without a second round-trip. */
   context: Record<string, unknown>;
 }

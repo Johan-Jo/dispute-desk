@@ -44,8 +44,8 @@ const mockGetServiceClient = vi.mocked(getServiceClient);
 describe("plans — getPlan", () => {
   it("returns the plan for a known id", () => {
     expect(getPlan("starter").id).toBe("starter");
-    expect(getPlan("growth").price).toBe(79);
-    expect(getPlan("scale").packsPerMonth).toBe(300);
+    expect(getPlan("growth").price).toBe(129);
+    expect(getPlan("scale").packsPerMonth).toBe(400);
   });
 
   it("falls back to free for unknown plan ids (defensive)", () => {
@@ -237,7 +237,7 @@ describe("checkPackQuota", () => {
 
     setupSupabase({ shopPlan: "growth", remainingPacks: 70 });
     const growth = await checkPackQuota("shop-1");
-    expect(growth.limit).toBe(75);
+    expect(growth.limit).toBe(100);
   });
 
   it("treats a missing shop row as the free plan (defensive)", async () => {

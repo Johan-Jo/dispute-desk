@@ -14,23 +14,23 @@ type RoiMode = "conservative" | "base" | "aggressive";
 const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean; disputes: string; plan: string; value: string; price: string; roi: string }[] }> = {
   conservative: {
     segments: [
-      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (15 packs)", value: "$80\u2013$300", price: "$29", roi: "~3\u201310\u00d7" },
-      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (75 packs)", value: "$500\u2013$2,500", price: "$79", roi: "~6\u201332\u00d7" },
-      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Pro/Scale (300 packs)", value: "$2,500\u2013$12,000", price: "$149", roi: "~17\u201380\u00d7" },
+      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (20 packs)", value: "$80\u2013$300", price: "$29", roi: "~3\u201310\u00d7" },
+      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (100 packs)", value: "$500\u2013$2,500", price: "$129", roi: "~4\u201319\u00d7" },
+      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Scale (400 packs)", value: "$2,500\u2013$12,000", price: "$299", roi: "~8\u201340\u00d7" },
     ],
   },
   base: {
     segments: [
-      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (15 packs)", value: "$120\u2013$450", price: "$29", roi: "~4\u201315\u00d7" },
-      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (75 packs)", value: "$800\u2013$4,000", price: "$79", roi: "~10\u201350\u00d7" },
-      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Pro/Scale (300 packs)", value: "$4,000\u2013$20,000+", price: "$149", roi: "~25\u2013130\u00d7" },
+      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (20 packs)", value: "$120\u2013$450", price: "$29", roi: "~4\u201315\u00d7" },
+      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (100 packs)", value: "$800\u2013$4,000", price: "$129", roi: "~6\u201331\u00d7" },
+      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Scale (400 packs)", value: "$4,000\u2013$20,000+", price: "$299", roi: "~13\u201367\u00d7" },
     ],
   },
   aggressive: {
     segments: [
-      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (15 packs)", value: "$180\u2013$700", price: "$29", roi: "~6\u201324\u00d7" },
-      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (75 packs)", value: "$1,200\u2013$6,000", price: "$79", roi: "~15\u201376\u00d7" },
-      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Pro/Scale (300 packs)", value: "$6,000\u2013$30,000+", price: "$149", roi: "~40\u2013200\u00d7" },
+      { segment: "Serious SMB", disputes: "5\u201310", plan: "Starter (20 packs)", value: "$180\u2013$700", price: "$29", roi: "~6\u201324\u00d7" },
+      { segment: "Ops-led SMB / Mid", popular: true, disputes: "15\u201360", plan: "Growth (100 packs)", value: "$1,200\u2013$6,000", price: "$129", roi: "~9\u201346\u00d7" },
+      { segment: "High-volume / Agency", disputes: "75\u2013300", plan: "Scale (400 packs)", value: "$6,000\u2013$30,000+", price: "$299", roi: "~20\u2013100\u00d7" },
     ],
   },
 };
@@ -344,6 +344,7 @@ export function MarketingLandingPageClient({
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <h3 className="text-lg font-semibold text-[#0B1220] mb-1">{t("pricing.starterName")}</h3>
               <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$29</span><span className="text-[#64748B] text-sm">/mo</span></div>
+              <p className="text-xs text-[#0B1220] bg-[#F1F5F9] rounded-md px-3 py-2 mb-5 leading-snug">{t("pricing.starterRoi")}</p>
               <ul className="space-y-2.5 mb-6">
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF1")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF2")}</li>
@@ -358,7 +359,8 @@ export function MarketingLandingPageClient({
             <div className="bg-[#1D4ED8] rounded-xl p-6 text-white relative">
               <div className="absolute top-3 right-3 bg-white text-[#1D4ED8] text-xs font-semibold px-2 py-0.5 rounded">{t("pricing.popular")}</div>
               <h3 className="text-lg font-semibold mb-1">{t("pricing.growthName")}</h3>
-              <div className="mb-5"><span className="text-3xl font-bold">$79</span><span className="opacity-80 text-sm">/mo</span></div>
+              <div className="mb-5"><span className="text-3xl font-bold">$129</span><span className="opacity-80 text-sm">/mo</span></div>
+              <p className="text-xs text-white bg-white/15 rounded-md px-3 py-2 mb-5 leading-snug">{t("pricing.growthRoi")}</p>
               <ul className="space-y-2.5 mb-6">
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF1")}</li>
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF2")}</li>
@@ -372,7 +374,8 @@ export function MarketingLandingPageClient({
             {/* Scale */}
             <div className="bg-white rounded-xl p-6 border border-[#E5E7EB]">
               <h3 className="text-lg font-semibold text-[#0B1220] mb-1">{t("pricing.scaleName")}</h3>
-              <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$149</span><span className="text-[#64748B] text-sm">/mo</span></div>
+              <div className="mb-5"><span className="text-3xl font-bold text-[#0B1220]">$299</span><span className="text-[#64748B] text-sm">/mo</span></div>
+              <p className="text-xs text-[#0B1220] bg-[#F1F5F9] rounded-md px-3 py-2 mb-5 leading-snug">{t("pricing.scaleRoi")}</p>
               <ul className="space-y-2.5 mb-6">
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF1")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF2")}</li>
@@ -383,6 +386,8 @@ export function MarketingLandingPageClient({
               <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
             </div>
           </div>
+
+          <p className="text-center text-xs text-[#94A3B8] max-w-3xl mx-auto leading-relaxed">{t("pricing.roiFootnote")}</p>
 
         </div>
       </section>
