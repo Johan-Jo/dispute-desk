@@ -6,7 +6,11 @@
  * file default. Unknown reason codes fall through to `generic_fallback`.
  */
 
-import type { ReasonCodeGuidance, ReasonCodeModuleKey } from "../types";
+import type {
+  ReasonCodeFamilyKey,
+  ReasonCodeGuidance,
+  ReasonCodeModuleKey,
+} from "../types";
 import { visa_10_4_fraud } from "./visa_10_4_fraud";
 import { inr_product_not_received } from "./inr_product_not_received";
 import { product_unacceptable } from "./product_unacceptable";
@@ -14,6 +18,10 @@ import { credit_not_processed } from "./credit_not_processed";
 import { duplicate_processing } from "./duplicate_processing";
 import { canceled_recurring } from "./canceled_recurring";
 import { generic_fallback } from "./generic_fallback";
+import {
+  familyForModule,
+  resolveReasonCodeFamily,
+} from "./familyRegistry";
 
 const MODULES: Record<ReasonCodeModuleKey, ReasonCodeGuidance> = {
   visa_10_4_fraud,
@@ -84,3 +92,17 @@ export const ALL_REASON_CODE_MODULES: ReasonCodeGuidance[] = [
   canceled_recurring,
   generic_fallback,
 ];
+
+/** Layer-1 helper: family key for a given module key. Thin wrapper over
+ *  familyRegistry's familyForModule — exposed here so callers that
+ *  already import from the module registry don't need to learn two
+ *  import paths. */
+export function familyKeyForModule(
+  moduleKey: ReasonCodeModuleKey,
+): ReasonCodeFamilyKey {
+  return familyForModule(moduleKey).key;
+}
+
+// Re-export the family-level resolver so the public surface of this
+// module covers both layers.
+export { resolveReasonCodeFamily };

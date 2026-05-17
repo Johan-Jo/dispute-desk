@@ -37,10 +37,8 @@ import {
   INTERNAL_ONLY_FIELDS,
   categoryForField,
 } from "@/lib/defence/factClassifier";
-import {
-  THESIS_LIBRARY,
-  GENERIC_THESIS,
-} from "@/lib/defence/pdf/DefencePackageDocument";
+import { THESIS_TEMPLATES } from "@/lib/defence/pdf/thesisTemplates";
+import { THESIS_TOKENS } from "@/lib/defence/pdf/thesisTokens";
 import { resolveReasonCodeModule } from "@/lib/defence/reasonCodes/registry";
 import type { EvidenceFact, NarrativeInput } from "@/lib/defence/types";
 
@@ -586,54 +584,68 @@ export default async function DefencePackagePipelinePage() {
             the order record marks the order FULFILLED.
           </li>
           <li>
-            The thesis blockquote is static per{" "}
-            <code>(sectionKey × moduleKey × packageMode)</code> — drawn from
-            <code> THESIS_LIBRARY</code>, never LLM-authored.
+            The thesis blockquote is <strong>fact-templated</strong> (Phase 4).
+            Templates live in <code>thesisTemplates.ts</code> with tokens
+            extracted from approved facts only. Missing required token →
+            blockquote is empty (no fall-back claim).
           </li>
         </ul>
 
-        <h3 className="text-sm font-semibold text-[#0F172A]">Thesis library</h3>
+        <h3 className="text-sm font-semibold text-[#0F172A]">Thesis templates</h3>
         <p className="text-xs text-[#64748B]">
-          Static italic blockquotes that open each section. Cannot drift into
-          overclaim because they&apos;re file-owned.
+          Fact-templated blockquotes that open each section. <code>{"{{token}}"}</code> is
+          substituted from approved-fact extractors; <code>{"[["}…<code>{"]]"}</code></code> wraps
+          optional clauses that strip when their tokens don&apos;t resolve. The
+          composed-PDF validator also runs the forbidden-phrase + claim-guard
+          regex set against the rendered output before the PDF is written.
         </p>
         <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
               <tr>
-                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Key (section : module : mode)</th>
-                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Thesis</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Key (section : family : mode)</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Template</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Required tokens</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(THESIS_LIBRARY).map(([k, v]) => (
-                <tr key={k} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
-                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{k}</td>
-                  <td className="px-4 py-2 text-[#475569]">{v}</td>
+              {THESIS_TEMPLATES.map((t) => (
+                <tr key={t.key} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
+                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{t.key}</td>
+                  <td className="px-4 py-2 text-[#475569] font-mono text-xs">{t.template}</td>
+                  <td className="px-4 py-2 text-[#475569] text-xs">
+                    {t.requiredTokens.length > 0 ? t.requiredTokens.join(", ") : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        <h3 className="text-sm font-semibold text-[#0F172A]">Generic thesis fallback</h3>
+        <h3 className="text-sm font-semibold text-[#0F172A]">Thesis tokens</h3>
         <p className="text-xs text-[#64748B]">
-          Used when no specific <code>(section × module × mode)</code> entry
-          matches.
+          Named extractors over approved facts. Each token is optionally gated
+          on a fact predicate — a token cannot resolve when its predicate is
+          false, so the templates structurally cannot claim a fact that isn&apos;t
+          on record.
         </p>
         <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
               <tr>
-                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Section</th>
-                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Thesis</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Token</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Predicate gate</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Description</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(GENERIC_THESIS).map(([k, v]) => (
-                <tr key={k} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
-                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{k}</td>
-                  <td className="px-4 py-2 text-[#475569]">{v}</td>
+              {Object.values(THESIS_TOKENS).map((tok) => (
+                <tr key={tok.name} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
+                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{tok.name}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">
+                    {tok.predicateId ?? "—"}
+                  </td>
+                  <td className="px-4 py-2 text-[#475569]">{tok.description}</td>
                 </tr>
               ))}
             </tbody>

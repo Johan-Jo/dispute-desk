@@ -32,6 +32,42 @@ export async function GET(req: NextRequest) {
   try {
     if (wantsFull) {
       const { renderDefencePdf } = await import("@/lib/defence/renderDefencePdf");
+      const { composePdfBlocks } = await import("@/lib/defence/pdf/composePdfBlocks");
+      const debugFacts = [
+        {
+          id: "f0",
+          category: "payment_authentication" as const,
+          label: "AVS+CVV match",
+          value: { avsResult: "Y", cvvResult: "M" },
+          source: "shopify_order",
+          sourceRef: null,
+          strength: "strong" as const,
+          bankEligible: true,
+          merchantVisible: true,
+          internalOnly: false,
+          includeInBankNarrative: true,
+          submissionRisk: false,
+          confidence: null,
+        },
+      ];
+      const debugNarrative = {
+        executiveSummary: { text: "Debug summary.", usedFactIds: ["f0"] },
+        transactionOverviewArgument: { text: "Debug overview.", usedFactIds: ["f0"] },
+        chronologyArgument: { text: "Debug chronology.", usedFactIds: ["f0"] },
+        paymentAuthenticationArgument: { text: "Debug auth.", usedFactIds: ["f0"] },
+        fulfillmentArgument: { text: "", usedFactIds: [] },
+        communicationArgument: { text: "", usedFactIds: [] },
+        policyArgument: { text: "", usedFactIds: [] },
+        manualEvidenceArgument: { text: "", usedFactIds: [] },
+        conclusion: { text: "Debug conclusion.", usedFactIds: ["f0"] },
+        omittedSections: [
+          { sectionKey: "fulfillmentArgument" as const, reason: "debug" },
+          { sectionKey: "communicationArgument" as const, reason: "debug" },
+          { sectionKey: "policyArgument" as const, reason: "debug" },
+          { sectionKey: "manualEvidenceArgument" as const, reason: "debug" },
+        ],
+        warnings: [],
+      };
       const buffer = (
         await renderDefencePdf({
           meta: {
@@ -56,46 +92,19 @@ export async function GET(req: NextRequest) {
             version: 1,
             packageMode: "full",
             promptFamily: "defence_package_narrative",
-            promptVersion: 1,
+            promptVersion: 2,
             modelUsed: "claude-sonnet-4-6",
             evidenceHash: "debug",
             generatedBy: "system",
           },
-          narrative: {
-            executiveSummary: { text: "Debug summary.", usedFactIds: ["f0"] },
-            transactionOverviewArgument: { text: "Debug overview.", usedFactIds: ["f0"] },
-            chronologyArgument: { text: "Debug chronology.", usedFactIds: ["f0"] },
-            paymentAuthenticationArgument: { text: "Debug auth.", usedFactIds: ["f0"] },
-            fulfillmentArgument: { text: "", usedFactIds: [] },
-            communicationArgument: { text: "", usedFactIds: [] },
-            policyArgument: { text: "", usedFactIds: [] },
-            manualEvidenceArgument: { text: "", usedFactIds: [] },
-            conclusion: { text: "Debug conclusion.", usedFactIds: ["f0"] },
-            omittedSections: [
-              { sectionKey: "fulfillmentArgument", reason: "debug" },
-              { sectionKey: "communicationArgument", reason: "debug" },
-              { sectionKey: "policyArgument", reason: "debug" },
-              { sectionKey: "manualEvidenceArgument", reason: "debug" },
-            ],
-            warnings: [],
-          },
-          approvedFacts: [
-            {
-              id: "f0",
-              category: "payment_authentication",
-              label: "AVS+CVV match",
-              value: { avsResult: "Y", cvvResult: "M" },
-              source: "shopify_order",
-              sourceRef: null,
-              strength: "strong",
-              bankEligible: true,
-              merchantVisible: true,
-              internalOnly: false,
-              includeInBankNarrative: true,
-              submissionRisk: false,
-              confidence: null,
-            },
-          ],
+          composedBlocks: composePdfBlocks({
+            narrative: debugNarrative,
+            approvedFacts: debugFacts,
+            packageMode: "full",
+            familyKey: "unauthorized_fraud",
+            fulfillmentStatus: "UNFULFILLED",
+          }),
+          approvedFacts: debugFacts,
           manualEvidence: [],
         })
       ).buffer;

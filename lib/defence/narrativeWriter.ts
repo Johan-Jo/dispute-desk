@@ -44,7 +44,13 @@ const DAILY_TOKEN_CAP = Number(
 );
 
 const PROMPT_FAMILY = "defence_package_narrative";
-const PROMPT_VERSION = 1;
+// Phase 3 (2026-05-16): bumped 1 → 2 with the introduction of the
+// family-overlay and strategy-bundle cached system blocks. The G2 audit
+// confirmed no downstream consumer keys behaviour off the literal `1`
+// (only test fixtures and the constant itself referenced 1). This is a
+// global cache invalidation event — first call after deploy pays full
+// prompt cost, subsequent calls amortise normally.
+const PROMPT_VERSION = 2;
 
 /* ── Static base system prompt (cached, ephemeral) ── */
 
@@ -201,18 +207,46 @@ export async function generateNarrative(
   }
 
   const userPayload = buildLlmFactPayload(input);
+  // System payload layout (cached, ephemeral):
+  //   [0] BASE_SYSTEM_PROMPT                  (always)
+  //   [1] family overlay   — Phase 1+         (only when non-empty)
+  //   [2] module promptBody                   (always)
+  //   [3] strategy bundle  — Phase 3+         (only when non-empty)
+  // The optional blocks are only emitted when they have content so the
+  // prompt-cache prefix stays stable while overlays/strategies fill in
+  // over time.
   const system: ClaudeSystemBlock[] = [
     {
       type: "text",
       text: BASE_SYSTEM_PROMPT,
       cache_control: { type: "ephemeral" },
     },
-    {
-      type: "text",
-      text: input.reasonCodeModule.promptBody,
-      cache_control: { type: "ephemeral" },
-    },
   ];
+  if (input.familyOverlay && input.familyOverlay.trim().length > 0) {
+    system.push({
+      type: "text",
+      text: input.familyOverlay,
+      cache_control: { type: "ephemeral" },
+    });
+  }
+  system.push({
+    type: "text",
+    text: input.reasonCodeModule.promptBody,
+    cache_control: { type: "ephemeral" },
+  });
+  if (input.strategies && input.strategies.length > 0) {
+    const strategyBundle = input.strategies
+      .map((s) => s.promptBody)
+      .filter((body) => body.trim().length > 0)
+      .join("\n\n---\n\n");
+    if (strategyBundle.length > 0) {
+      system.push({
+        type: "text",
+        text: strategyBundle,
+        cache_control: { type: "ephemeral" },
+      });
+    }
+  }
 
   // Attempt 1.
   let attempt = 1;
@@ -235,6 +269,7 @@ export async function generateNarrative(
     totalCached += callRes.cachedTokens;
     totalDuration += callRes.durationMs;
 
+    const strategyKeys = (input.strategies ?? []).map((s) => s.key);
     if (callRes.error || !callRes.raw) {
       await writeRun(sb, ctx, {
         model,
@@ -243,6 +278,7 @@ export async function generateNarrative(
         completionTokens: callRes.completionTokens,
         durationMs: callRes.durationMs,
         validationStatus: "error",
+        strategyKeys,
       });
       lastError = callRes.error ?? "empty response";
       // Network/API errors are retriable but we don't loop here — return
@@ -268,6 +304,7 @@ export async function generateNarrative(
         completionTokens: callRes.completionTokens,
         durationMs: callRes.durationMs,
         validationStatus: "ok",
+        strategyKeys,
       });
       return {
         narrative: parsed,
@@ -289,6 +326,7 @@ export async function generateNarrative(
       completionTokens: callRes.completionTokens,
       durationMs: callRes.durationMs,
       validationStatus: "failed",
+      strategyKeys,
     });
     lastError = `JSON parse failed on attempt ${attempt}: ${truncate(callRes.raw, 200)}`;
     attempt += 1;
@@ -338,6 +376,12 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       criticalCategories: input.reasonCodeModule.criticalCategories,
       allowedFactCategories: input.reasonCodeModule.allowedFactCategories,
     },
+    // Phase 3 telemetry: the strategy keys selected for this dispute.
+    // Useful context for the model ("the user has decided these
+    // framings apply") and persisted alongside the run row for
+    // post-hoc analysis. Empty array when no family strategies
+    // qualified (or the family has none declared yet).
+    strategyKeys: (input.strategies ?? []).map((s) => s.key),
     approvedFacts,
     manualEvidence: input.manualEvidence
       .filter((m) => m.includeInPackage)
@@ -444,6 +488,7 @@ async function writeRun(
     completionTokens: number;
     durationMs: number;
     validationStatus: "ok" | "failed" | "skipped" | "error";
+    strategyKeys: string[];
   },
 ): Promise<void> {
   await sb.from("defence_package_runs").insert({
@@ -456,6 +501,7 @@ async function writeRun(
     completion_tokens: row.completionTokens,
     duration_ms: row.durationMs,
     validation_status: row.validationStatus,
+    strategy_keys: row.strategyKeys,
   });
 }
 

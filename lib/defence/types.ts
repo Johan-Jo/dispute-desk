@@ -168,6 +168,11 @@ export interface FactClassificationResult {
   /** True when classification short-circuits — caller writes status=skipped. */
   eligible: boolean;
   ineligibilityReason: DefencePackageFailureCode | null;
+  /** Phase 2: evaluations of every fact predicate against the approved
+   *  facts. Consumed by strategy ranking (Phase 3) and templated thesis
+   *  tokens (Phase 4). Always populated; predicates that don't apply
+   *  evaluate to false. */
+  predicateEvaluations: Record<FactPredicateId, boolean>;
 }
 
 // ── Reason-code module ───────────────────────────────────────────────
@@ -180,6 +185,47 @@ export type ReasonCodeModuleKey =
   | "duplicate_processing"
   | "canceled_recurring"
   | "generic_fallback";
+
+// ── Reason-code family (Layer 1, ABOVE modules) ─────────────────────
+//
+// Families group modules into cross-cutting evidence-strategy clusters.
+// One family per module today (1:1); families carry an overlay prompt
+// that may be empty in Phase 1 and fills in as cross-module rules
+// emerge. Strategy submodules (Phase 3+) live below families and gate
+// on fact predicates.
+
+export type ReasonCodeFamilyKey =
+  | "unauthorized_fraud"
+  | "item_not_received"
+  | "product_not_as_described"
+  | "credit_not_processed"
+  | "duplicate_processing"
+  | "cancelled_recurring"
+  | "processing_error"
+  | "authorization_error"
+  | "fallback";
+
+export interface ReasonCodeFamily {
+  key: ReasonCodeFamilyKey;
+  displayName: string;
+  /** Modules that belong to this family. May be empty (e.g. processing_error
+   *  has no dedicated module yet — codes in this family route to
+   *  fallbackModuleKey until one is written). */
+  moduleKeys: ReasonCodeModuleKey[];
+  /** Network reason codes that belong to this family but have no dedicated
+   *  module yet. Routed through fallbackModuleKey. */
+  unmodeledCodes: string[];
+  /** Explicit route for unmodeledCodes — resolveReasonCodeModule never
+   *  returns null for any code that resolves to a family. */
+  fallbackModuleKey: ReasonCodeModuleKey;
+  /** Cached as its own system block when non-empty. Phase 1 ships these
+   *  empty; they fill in as cross-module guidance emerges. */
+  overlayPromptBody: string;
+  /** Categories the family-wide overlay refuses to cite. Phase 1: empty;
+   *  reserve for cross-module avoidance rules. */
+  familyAvoid: EvidenceFactCategory[];
+  version: number;
+}
 
 export interface ReasonCodeGuidance {
   key: ReasonCodeModuleKey;
@@ -235,6 +281,15 @@ export interface NarrativeInput {
   /** Network reason code (Visa "10.4", MC "4837", etc.). */
   reasonCode: string | null;
   reasonCodeModule: ReasonCodeGuidance;
+  /** Phase 1 family overlay (cross-cutting reminders, e.g. "the reason
+   *  code is the bank's claim, not a fact"). Emitted as a separate
+   *  cached system block ONLY when non-empty — keeps the prompt-cache
+   *  prefix stable when overlays are still empty in early phases. */
+  familyOverlay?: string | null;
+  /** Phase 3 strategy bundle (selected via predicate gates). Emitted as
+   *  a separate cached system block when non-empty; promptBodys are
+   *  joined in family-canonical order. */
+  strategies?: StrategySubmodule[];
   packageMode: PackageMode;
   caseStrength: CaseStrengthLevel;
   approvedFacts: EvidenceFact[];
@@ -245,6 +300,72 @@ export interface NarrativeInput {
   internalOnlyFactIds: string[];
   /** Sent for omission decisions only. Never quoted in narrative. */
   missingEvidence: MissingEvidence[];
+}
+
+// ── Strategy submodules (Phase 3+) ───────────────────────────────────
+//
+// Strategies live BELOW families. A family's `rankStrategies()` selects
+// 1–3 candidates based on predicate gates over approvedFacts, and their
+// concatenated promptBodys form the 4th cached system block.
+
+export type StrategySubmoduleKey = string;
+
+export interface StrategySubmodule {
+  key: StrategySubmoduleKey;
+  familyKey: ReasonCodeFamilyKey;
+  displayName: string;
+  /** Predicate gates. A strategy is eligible when:
+   *    - every id in `all` evaluates true (default: empty list passes)
+   *    - at least one id in `any` evaluates true (default: empty list passes)
+   *    - every id in `none` evaluates false (default: empty list passes)
+   *  isFallback: true strategies bypass the gate entirely. */
+  predicates: {
+    all?: FactPredicateId[];
+    any?: FactPredicateId[];
+    none?: FactPredicateId[];
+  };
+  isFallback: boolean;
+  /** Tiebreaker within a family. Family-canonical order (the order
+   *  strategies are declared in lib/defence/strategies/<family>.ts)
+   *  wins; priority only matters when two strategies share canonical
+   *  position. Higher priority wins. */
+  priority: number;
+  promptBody: string;
+  version: number;
+}
+
+// ── Fact predicates (Phase 2) ────────────────────────────────────────
+
+export type FactPredicateId =
+  | "delivery_confirmed"
+  | "signature_captured"
+  | "digital_access_used"
+  | "digital_access_granted"
+  | "service_delivered"
+  | "service_completed_or_delivered"
+  | "customer_received_goods_or_service"
+  | "three_d_secure_present"
+  | "liability_shift_present"
+  | "avs_and_cvv_match"
+  | "avs_or_cvv_value_present"
+  | "billing_match_confirmed"
+  | "prior_customer"
+  | "policy_disclosed"
+  | "policy_accepted"
+  | "refund_processed"
+  | "subscription_terms_present"
+  | "customer_communication_on_record"
+  | "is_card_absent_dispute"
+  | "fulfilment_status_fulfilled"
+  | "fulfilment_status_unfulfilled"
+  | "safe_to_claim_fulfilment"
+  | "duplicate_distinct_markers"
+  | "order_record_present";
+
+export interface FactPredicate {
+  id: FactPredicateId;
+  description: string;
+  evaluate: (facts: EvidenceFact[]) => boolean;
 }
 
 /** What the LLM returns. Validated by `validateNarrative`. */
@@ -285,6 +406,12 @@ export interface ValidationError {
   requiredFact?: string;
   /** Fact ids we actually checked against (for forensic traceability). */
   checkedFactIds?: string[];
+  /** Phase 1.5+: which layer of the composed document produced the
+   *  failure. Pre-Phase-1.5 narrative-only validation reports
+   *  "narrative"; composed-document failures tag the offending sub-text
+   *  ("thesis" | "llm" | "fallback") so failure_reason can route
+   *  human attention to the right place. */
+  layer?: "narrative" | "thesis" | "llm" | "fallback";
 }
 
 export interface ValidationResult {
@@ -304,7 +431,15 @@ export interface ClaimGuard {
   pattern: RegExp;
   /** Sections this guard applies to. Empty = all sections. */
   appliesToSections: NarrativeSectionKey[] | "all";
-  /** Returns true when approvedFacts satisfy the claim. */
+  /** Phase 2: the named predicate that backs this guard. The guard's
+   *  `predicate` lambda is a thin reference to
+   *  FACT_PREDICATES[predicateId].evaluate. Strategy gates (Phase 3)
+   *  and thesis tokens (Phase 4) consume predicates by id, so the
+   *  same evidence check is enforced everywhere. */
+  predicateId: FactPredicateId;
+  /** Returns true when approvedFacts satisfy the claim. Identical to
+   *  FACT_PREDICATES[predicateId].evaluate — duplicated here for
+   *  call-site convenience. */
   predicate: (approvedFacts: EvidenceFact[]) => boolean;
   /** Human-readable predicate text for error messages and admin display. */
   requiredFact: string;
@@ -316,6 +451,74 @@ export interface GuardFailure {
   matchedText: string;
   requiredFact: string;
   checkedFactIds: string[];
+}
+
+// ── Templated thesis (Phase 4+) ──────────────────────────────────────
+//
+// Thesis blockquotes are no longer static strings keyed by (section ×
+// module). They are templates with named tokens, each token gated on
+// a fact predicate. When any required token resolves null, the entire
+// thesis renders as the empty string — the renderer drops the
+// blockquote rather than leak an unsupported claim.
+
+export type ThesisTokenName = string;
+
+export interface ThesisToken {
+  name: ThesisTokenName;
+  description: string;
+  /** When set, the token may ONLY resolve when this predicate is true.
+   *  null = the token always resolves from facts without a guard. */
+  predicateId: FactPredicateId | null;
+  /** Pure function over approvedFacts. Internal-only facts are never
+   *  passed in — extractors physically cannot see them. */
+  extract: (facts: EvidenceFact[]) => string | null;
+}
+
+export interface ThesisTemplate {
+  key: string;
+  sectionKey: NarrativeSectionKey;
+  /** When familyKey="any", the template applies to any family; when set
+   *  to a specific family key, it only matches that family. Fallback
+   *  chain: (section, family, mode) → (section, family, "any") →
+   *  (section, "any", "any"). */
+  familyKey: ReasonCodeFamilyKey | "any";
+  packageMode: PackageMode | "any";
+  /** Grammar:
+   *    - `{{tokenName}}` is substituted from `token.extract`.
+   *    - `[[ … {{token}} … ]]` is an optional clause. If ANY token
+   *      inside it resolves null, the WHOLE clause is stripped from
+   *      the output. Plain text outside `[[…]]` is always rendered IF
+   *      all `requiredTokens` resolve.
+   *    - If any `requiredTokens` resolves null, the template returns "".
+   *      ([[…]] clauses only contain optional tokens by definition.)
+   */
+  template: string;
+  requiredTokens: ThesisTokenName[];
+  optionalTokens: ThesisTokenName[];
+}
+
+// ── Composed document blocks (Phase 1.5+) ────────────────────────────
+//
+// The unit that validateComposedDocument operates on. Each block is the
+// full prose contribution for one section: an optional thesis blockquote,
+// the LLM-authored body, and an optional fallback paragraph (used when
+// the LLM correctly refused to overclaim but a deterministic safe
+// sentence is still appropriate, e.g. FulfillmentFallback).
+//
+// Validation runs the SAME forbidden-phrase + claim-guard machinery on
+// each sub-text independently, tagging failures with the originating
+// layer. Phase 4's templated thesis writes thesisText from approved
+// facts; Phase 1.5 just synthesises blocks from what the current
+// renderer already emits, to land the safety contract before the
+// rewrite.
+
+export interface ComposedDocumentBlock {
+  sectionKey: NarrativeSectionKey;
+  heading: string;
+  thesisText: string;
+  llmText: string;
+  fallbackText: string;
+  usedFactIds: string[];
 }
 
 // ── Evidence Basis row ───────────────────────────────────────────────

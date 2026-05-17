@@ -1,112 +1,84 @@
 /**
  * Claim guards — fact-property-aware validation rules.
  *
- * Each guard pairs a narrative regex with a predicate over approvedFacts.
- * Validation FAILS CLOSED: if the narrative makes the guarded claim and
- * the predicate is unsatisfied, validation fails. The failing run never
- * produces a PDF and never reaches Shopify submission.
+ * Each guard pairs a narrative regex with a NAMED predicate from
+ * `factPredicates.ts`. The same predicate id powers strategy gates
+ * (Phase 3) and templated thesis tokens (Phase 4), so the evidence
+ * check is authoritative across every layer.
+ *
+ * Validation FAILS CLOSED: if the narrative makes the guarded claim
+ * and the predicate is unsatisfied, validation fails. The failing run
+ * never produces a PDF and never reaches Shopify submission.
  *
  * Tests cover every row (see __tests__/claimGuards.test.ts).
  */
 
+import { FACT_PREDICATES } from "./factPredicates";
 import type {
   ClaimGuard,
   EvidenceFact,
-  EvidenceFactCategory,
+  FactPredicateId,
   GuardFailure,
   NarrativeSectionKey,
 } from "./types";
 
-/* ── Predicate helpers ── */
-
-const DELIVERY_CATEGORIES: EvidenceFactCategory[] = [
-  "delivery_proof",
-  "shipping_tracking",
-];
-const DIGITAL_CATEGORIES: EvidenceFactCategory[] = [
-  "digital_access_log",
-  "service_access",
-];
-
-function hasCategory(
-  facts: EvidenceFact[],
-  cats: EvidenceFactCategory[],
-): boolean {
-  const set = new Set<EvidenceFactCategory>(cats);
-  return facts.some((f) => set.has(f.category));
-}
-
-function hasCategoryWithValueTrue(
-  facts: EvidenceFact[],
-  cats: EvidenceFactCategory[],
-  key: string,
-): boolean {
-  const set = new Set<EvidenceFactCategory>(cats);
-  return facts.some((f) => set.has(f.category) && f.value?.[key] === true);
-}
-
-function hasCategoryWithValueEquals(
-  facts: EvidenceFact[],
-  cats: EvidenceFactCategory[],
-  key: string,
-  value: unknown,
-): boolean {
-  const set = new Set<EvidenceFactCategory>(cats);
-  return facts.some(
-    (f) => set.has(f.category) && f.value?.[key] === value,
-  );
-}
-
-function hasCategoryWithValueGreaterThan(
-  facts: EvidenceFact[],
-  cats: EvidenceFactCategory[],
-  key: string,
-  threshold: number,
-): boolean {
-  const set = new Set<EvidenceFactCategory>(cats);
-  return facts.some((f) => {
-    if (!set.has(f.category)) return false;
-    const v = f.value?.[key];
-    return typeof v === "number" && v > threshold;
-  });
+/** Build a ClaimGuard whose `predicate` is a thin reference to the
+ *  shared FACT_PREDICATES registry. */
+function makeGuard(g: {
+  id: string;
+  description: string;
+  pattern: RegExp;
+  appliesToSections: NarrativeSectionKey[] | "all";
+  predicateId: FactPredicateId;
+  requiredFact: string;
+}): ClaimGuard {
+  const predicate = FACT_PREDICATES[g.predicateId];
+  if (!predicate) {
+    throw new Error(
+      `ClaimGuard ${g.id} references unknown predicateId ${g.predicateId}`,
+    );
+  }
+  return {
+    id: g.id,
+    description: g.description,
+    pattern: g.pattern,
+    appliesToSections: g.appliesToSections,
+    predicateId: g.predicateId,
+    predicate: (facts) => predicate.evaluate(facts),
+    requiredFact: g.requiredFact,
+  };
 }
 
 /* ── The guard table ── */
 
 export const CLAIM_GUARDS: ClaimGuard[] = [
-  {
+  makeGuard({
     id: "delivery_was_delivered",
     description: "Claim that goods were delivered",
     pattern: /\b(was|were)\s+delivered\b|\bdelivery\s+(was\s+)?confirmed\b|\bdelivery\s+complete\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
+    predicateId: "delivery_confirmed",
     requiredFact:
       "delivery_proof or shipping_tracking with proofType='delivered' or 'signature'",
-  },
-  {
+  }),
+  makeGuard({
     id: "signature_on_delivery",
     description: "Claim of signature on delivery",
     pattern: /\bsigned\s+for\b|\bsignature\s+(was\s+)?(captured|obtained|on\s+(file|delivery))\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
+    predicateId: "signature_captured",
     requiredFact: "delivery_proof or shipping_tracking with proofType='signature'",
-  },
-  {
+  }),
+  makeGuard({
     id: "digital_access",
     description: "Claim that the customer downloaded / used / logged in / streamed (digital access used)",
     pattern: /\b(downloaded|accessed|used\s+the\s+service|logged\s+in|streamed)\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessUsed") ||
-      hasCategoryWithValueTrue(facts, ["service_access"], "serviceUsed") ||
-      hasCategoryWithValueTrue(facts, ["service_access"], "used"),
+    predicateId: "digital_access_used",
     requiredFact:
       "digital_access_log or service_access with digitalAccessUsed=true / serviceUsed=true / used=true",
-  },
-  {
+  }),
+  makeGuard({
     id: "received_claim",
     description: "Claim that the customer received the goods or service",
     // Conservative regex — only fires on contexts strongly implying receipt
@@ -114,152 +86,96 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     pattern:
       /\b(?:customer\s+received|order\s+was\s+received|was\s+received\s+by\s+the\s+customer|received\s+the\s+(?:order|product|item|goods|service|shipment|package|merchandise))\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature") ||
-      hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessUsed") ||
-      hasCategoryWithValueTrue(facts, ["service_access"], "serviceDelivered"),
+    predicateId: "customer_received_goods_or_service",
     requiredFact:
       "delivery_proof/shipping_tracking with proofType=delivered or signature, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
-  },
-  {
+  }),
+  makeGuard({
     id: "access_granted_claim",
     description: "Claim that digital access was granted",
     pattern: /\baccess\s+(?:was\s+)?granted\b/i,
     appliesToSections: ["fulfillmentArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessGranted") ||
-      hasCategoryWithValueTrue(facts, ["service_access"], "accessGranted"),
+    predicateId: "digital_access_granted",
     requiredFact:
       "digital_access_log or service_access with digitalAccessGranted=true (or accessGranted=true)",
-  },
-  {
+  }),
+  makeGuard({
     id: "service_completed_claim",
     description: "Claim that the service / onboarding was completed or delivered",
     pattern:
       /\b(?:service|onboarding|engagement|fulfillment)\s+(?:was\s+|has\s+been\s+)?(?:completed|delivered|fulfilled)\b/i,
     appliesToSections: ["fulfillmentArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueTrue(facts, ["service_access"], "serviceDelivered") ||
-      hasCategoryWithValueTrue(facts, ["service_access"], "serviceCompleted") ||
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
-      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
+    predicateId: "service_completed_or_delivered",
     requiredFact:
       "service_access with serviceDelivered=true / serviceCompleted=true, OR delivery_proof with proofType=delivered/signature",
-  },
-  {
+  }),
+  makeGuard({
     id: "customer_communication",
     description: "Claim of customer communication on record",
     pattern: /\b(customer\s+(contacted|emailed|messaged|wrote|replied|stated|confirmed))\b|\bemail\s+(thread|exchange|correspondence)\b/i,
     appliesToSections: ["communicationArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategory(facts, ["customer_communication", "communication"]),
+    predicateId: "customer_communication_on_record",
     requiredFact: "customer_communication",
-  },
-  {
+  }),
+  makeGuard({
     id: "policy_accepted",
     description: "Claim that policy was accepted at checkout",
     pattern: /\b(policy\s+(was\s+)?accepted|accepted\s+(our|the)\s+(refund|return|cancellation|shipping)\s+policy)\b/i,
     appliesToSections: ["policyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueTrue(facts, ["policy_acceptance"], "acceptedAtCheckout") ||
-      hasCategory(facts, ["policy_acceptance"]),
+    predicateId: "policy_accepted",
     requiredFact: "policy_acceptance with acceptedAtCheckout=true",
-  },
-  {
+  }),
+  makeGuard({
     id: "refund_processed",
     description: "Claim that a refund was processed",
     pattern: /\brefund\s+(was|has\s+been)\s+(processed|issued|completed)\b|\bissued\s+a\s+refund\b/i,
     appliesToSections: ["fulfillmentArgument", "policyArgument", "executiveSummary", "conclusion", "manualEvidenceArgument"],
-    predicate: (facts) =>
-      hasCategoryWithValueEquals(facts, ["refund_record"], "refundStatus", "processed"),
+    predicateId: "refund_processed",
     requiredFact: "refund_record with refundStatus='processed'",
-  },
-  {
+  }),
+  makeGuard({
     id: "prior_customer",
     description: "Claim of prior customer / repeat purchase history",
     pattern: /\b(prior|previous|past)\s+(orders?|purchases?|customer)\b|\brepeat\s+customer\b/i,
     appliesToSections: ["transactionOverviewArgument", "paymentAuthenticationArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueGreaterThan(
-        facts,
-        ["prior_customer_history", "account_history"],
-        "priorOrderCount",
-        0,
-      ),
+    predicateId: "prior_customer",
     requiredFact: "prior_customer_history with priorOrderCount > 0",
-  },
-  {
+  }),
+  makeGuard({
     id: "three_d_secure",
     description: "Claim of 3-D Secure authentication",
     pattern: /\b3[\s-]?D[\s-]?Secure\b|\b3DS\b/i,
     appliesToSections: ["paymentAuthenticationArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueTrue(
-        facts,
-        ["payment_authentication", "payment_auth"],
-        "threeDS",
-      ),
-    requiredFact:
-      "payment_authentication (or payment_auth) with threeDS=true",
-  },
-  {
+    predicateId: "three_d_secure_present",
+    requiredFact: "payment_authentication (or payment_auth) with threeDS=true",
+  }),
+  makeGuard({
     id: "liability_shift",
     description: "Claim of liability shift",
     pattern: /\bliability\s+shift\b|\bshifted\s+liability\b/i,
     appliesToSections: ["paymentAuthenticationArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      hasCategoryWithValueTrue(
-        facts,
-        ["payment_authentication", "payment_auth"],
-        "liabilityShift",
-      ),
-    requiredFact:
-      "payment_authentication (or payment_auth) with liabilityShift=true",
-  },
-  {
+    predicateId: "liability_shift_present",
+    requiredFact: "payment_authentication (or payment_auth) with liabilityShift=true",
+  }),
+  makeGuard({
     id: "avs_cvv_authenticated",
     description: "Claim that AVS / CVV authenticated the transaction",
     pattern: /\b(AVS|CVV)\b/i,
     appliesToSections: ["paymentAuthenticationArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) =>
-      facts.some(
-        (f) =>
-          (f.category === "payment_authentication" || f.category === "payment_auth" || f.category === "billing_match") &&
-          (f.value?.avsResult !== undefined || f.value?.cvvResult !== undefined),
-      ),
+    predicateId: "avs_or_cvv_value_present",
     requiredFact:
       "payment_authentication / payment_auth / billing_match with an avsResult or cvvResult value",
-  },
-  {
+  }),
+  makeGuard({
     id: "fulfilled_or_delivered_claim",
     description:
       "Claim of fulfilment when order.fulfillmentStatus says UNFULFILLED and no separate delivery/access fact exists",
     pattern: /\b(fulfilled|shipped|dispatched)\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
-    predicate: (facts) => {
-      const orderFact = facts.find((f) => f.category === "order_record");
-      const fulfillmentStatus = orderFact?.value?.fulfillmentStatus;
-      // If the order is unfulfilled AND no delivery/access-USE fact exists,
-      // the claim cannot stand. fulfillmentStatus=FULFILLED alone is not
-      // sufficient to assert delivery, access-use, or service completion —
-      // per the §4 fulfillment-precision refinement.
-      if (
-        typeof fulfillmentStatus === "string" &&
-        fulfillmentStatus.toUpperCase() === "UNFULFILLED"
-      ) {
-        return (
-          hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
-          hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature") ||
-          hasCategoryWithValueTrue(facts, DIGITAL_CATEGORIES, "digitalAccessUsed") ||
-          hasCategoryWithValueTrue(facts, ["service_access"], "serviceDelivered")
-        );
-      }
-      return true;
-    },
+    predicateId: "safe_to_claim_fulfilment",
     requiredFact:
       "When order.fulfillmentStatus=UNFULFILLED: delivery_proof/shipping_tracking with proofType=delivered or signature, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
-  },
+  }),
 ];
 
 /* ── Evaluator ── */

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { runClaimGuards } from "../claimGuards";
+import { runClaimGuards, CLAIM_GUARDS } from "../claimGuards";
+import { FACT_PREDICATES } from "../factPredicates";
 import type {
   EvidenceFact,
   NarrativeSectionKey,
@@ -40,6 +41,42 @@ function narrative(partial: Partial<NarrativeMap>): NarrativeMap {
   };
   return { ...empty, ...partial } as NarrativeMap;
 }
+
+describe("claimGuards (Phase 2 predicate wiring)", () => {
+  it("every CLAIM_GUARD references a known predicateId", () => {
+    for (const guard of CLAIM_GUARDS) {
+      expect(guard.predicateId).toBeDefined();
+      expect(FACT_PREDICATES[guard.predicateId]).toBeDefined();
+    }
+  });
+
+  it("guard predicate output matches FACT_PREDICATES[predicateId].evaluate", () => {
+    // Build a fact set with all the bits guards care about so different
+    // guards take different paths.
+    const facts: EvidenceFact[] = [
+      {
+        id: "f0",
+        category: "payment_authentication",
+        label: "auth",
+        value: { avsResult: "Y", cvvResult: "M", threeDS: true, liabilityShift: true },
+        source: "shopify_order",
+        sourceRef: null,
+        strength: "strong",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ];
+    for (const guard of CLAIM_GUARDS) {
+      const guardResult = guard.predicate(facts);
+      const predicateResult = FACT_PREDICATES[guard.predicateId].evaluate(facts);
+      expect(guardResult, `guard ${guard.id}`).toBe(predicateResult);
+    }
+  });
+});
 
 describe("claimGuards", () => {
   it("unsupported delivery claim fails", () => {

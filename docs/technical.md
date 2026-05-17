@@ -3773,6 +3773,46 @@ Seven file defaults under `lib/defence/reasonCodes/*.ts`, mapped via `lib/disput
 
 Admin overrides (`defence_prompt_modules`) supersede file defaults at runtime; the file default is the seed (`scripts/seed-defence-prompt-modules.mjs`, idempotent) and the fallback when no DB row exists.
 
+### v2.1 correction (2026-05-16): three-layer prompt, fact predicates, templated thesis, composed-PDF validation
+
+The defence-package pipeline now uses three nested layers for prompt construction (family → module → strategy), a shared fact-predicate registry that powers claim guards / strategy gates / thesis tokens, and a fact-templated thesis system. The full rendered PDF — every byte of argumentative prose — passes through one unified safety contract before any bytes hit storage.
+
+```
+Trigger → classifyFacts (emits predicateEvaluations)
+        → resolveReasonCodeFamily            (Layer 1)
+        → resolveReasonCodeModule            (Layer 2, unchanged)
+        → rankStrategies                     (Layer 3, NEW)
+        → composeSystemPayload               (4 ephemeral-cached blocks)
+        → generateNarrative (LLM)            (PROMPT_VERSION=2)
+        → validateNarrative                  (unchanged, layer="narrative")
+        → composePdfBlocks                   (thesis from renderThesis)
+        → validateComposedDocument           (NEW — every sub-text)
+        → renderDefencePdf                   (consumes composedBlocks)
+```
+
+**Layer 1 — families (`lib/defence/reasonCodes/families/`).** Nine `ReasonCodeFamily` entries above the existing seven modules: `unauthorized_fraud`, `item_not_received`, `product_not_as_described`, `credit_not_processed`, `duplicate_processing`, `cancelled_recurring`, `processing_error`, `authorization_error`, `fallback`. Each family declares its member `moduleKeys`, an optional `unmodeledCodes` list, a `fallbackModuleKey`, and an `overlayPromptBody` cached as a separate system block when non-empty (empty in Phase 1; fills in as cross-cutting rules emerge). `processing_error` and `authorization_error` are the two new families with no dedicated module yet — codes in those families route through `generic_fallback`. `familyRegistry.ts` exports `resolveReasonCodeFamily(code)`, `familyForModule(moduleKey)`, and `familyForCodeOrModule(...)`.
+
+**Layer 3 — strategies (`lib/defence/strategies/`).** Per-family strategy submodules selected at runtime by predicate gates over `predicateEvaluations`. `rankStrategies({ familyKey, predicateEvaluations, packageMode, max=3 })` filters by `predicates.all` / `predicates.any` / `predicates.none`, sorts by family-canonical order with `priority` as tiebreaker, caps non-fallback selections at `max - 1`, and ALWAYS appends the family's `isFallback: true` strategy as the last entry. Every family has ≥1 strategy and exactly one `narrow_fallback`. The concatenated `promptBody`s become the 4th cached system block (joined by `\n\n---\n\n`).
+
+Pilot family `unauthorized_fraud` ships with 4 strategies: `auth_signal_stack` (gates: `any: [three_d_secure_present, avs_and_cvv_match]`), `repeat_customer_pattern` (`all: [prior_customer]`), `customer_engagement_history` (`all: [customer_communication_on_record]`), `narrow_fallback`. The other 8 families ship Phase 5 strategies in the same release.
+
+**Fact predicates (`lib/defence/factPredicates.ts`).** The new `FACT_PREDICATES` registry centralises every named evidence check (~24 predicates: `delivery_confirmed`, `three_d_secure_present`, `avs_and_cvv_match`, `prior_customer`, `refund_processed`, `safe_to_claim_fulfilment`, etc.). Three downstream consumers share it: (a) `claimGuards.ts` — every guard now declares a `predicateId` and its predicate lambda is a thin reference to the shared registry; (b) `strategies/registry.ts` — strategy gates reference predicate ids by name; (c) `pdf/thesisTokens.ts` — most thesis tokens are predicate-gated, so a token cannot resolve when its predicate is false. `classifyFacts()` emits `predicateEvaluations: Record<FactPredicateId, boolean>` on `FactClassificationResult` so downstream code never re-evaluates.
+
+**Templated thesis (`lib/defence/pdf/thesisTemplates.ts`, `thesisTokens.ts`, `renderThesis.ts`).** Replaces the static `THESIS_LIBRARY` + `GENERIC_THESIS` with templates that use `{{tokenName}}` substitution and `[[ … {{token}} … ]]` optional clauses. The required-token gate is the structural guarantee: if any `requiredTokens` resolves null, the entire template returns `""` and the renderer drops the blockquote — a thesis cannot claim a fact that isn't in approvedFacts. Token extractors are pure functions over `approvedFacts` only (internal-only facts physically cannot reach them — the classifier filter runs upstream). Template selection uses the fallback chain `(section, family, mode) → (section, family, "any") → (section, "any", "any") → null`.
+
+**Composed-document validation (`lib/defence/validateNarrative.ts` § `validateComposedDocument`).** After `composePdfBlocks` builds the `ComposedDocumentBlock[]` and BEFORE the renderer is invoked, every block's `thesisText`, `llmText`, and `fallbackText` passes through the same `runPhraseAndGuardChecks` kernel as the LLM output. Each `ValidationError` gets a `layer: "narrative" | "thesis" | "llm" | "fallback"` so `failure_reason` (e.g. `composed:thesis "irrefutable" in executiveSummary`) routes operator attention to the offending layer. Static renderer text now obeys the same safety contract as LLM output.
+
+**PROMPT_VERSION bump (1 → 2).** The new family-overlay and strategy-bundle system blocks add cached structure to every call. G2 audit (2026-05-16) confirmed no production consumer keyed behaviour off the literal `1` (only test fixtures + the constant itself). The bump is a one-time global cache invalidation. Run `scripts/defence/cache-smoke.mjs` (G1 gate, requires `ANTHROPIC_API_KEY`) to confirm ≥80% prompt-cache hit rate on the shared prefix (blocks 0–2) before considering the rollout stable in prod.
+
+**Data model additions (`supabase/migrations/20260516180000_defence_package_runs_strategies.sql`).**
+- `defence_package_runs.strategy_keys text[] not null default '{}'` — ordered list of `StrategySubmodule` keys selected per LLM call.
+- `defence_packages.family_key text` — `ReasonCodeFamilyKey` the package was built under (mirrors `familyKeyForModule(reason_code_module)` at build time).
+- Index `defence_packages_family_key_idx` on `family_key`.
+
+**Admin transparency.** `/admin/defence-package/pipeline` now renders `THESIS_TEMPLATES` and `THESIS_TOKENS` tables in place of the deleted `THESIS_LIBRARY` / `GENERIC_THESIS` — the source-of-truth principle still holds.
+
+**Test surface.** New: `factPredicates.test.ts`, `familyRegistry.test.ts`, `strategies.registry.test.ts`, `validateComposedDocument.test.ts`, `renderThesis.test.ts`, `thesisTemplates.test.ts`, `composePdfBlocks.test.ts`, `thesisCannotClaimWithoutFact.matrix.test.ts`. Updated: `claimGuards.test.ts` asserts every guard has a `predicateId` and matches `FACT_PREDICATES[predicateId].evaluate`. The matrix test is the static net catching author drift in template authoring (any `3-D Secure` / `delivered` / `prior customer` mention must be gated by the corresponding token); the composed validator is the runtime net.
+
 ### Surface map
 
 - **Embedded UI**: `CompleteDefencePackageCard` in `app/(embedded)/app/disputes/[id]/tabs/sections/`, inserted between `FinalDefenseStatementCard` and `ExactDataSentCard`. Hidden when no `defence_packages` row exists for the pack (flag off OR auto-build hasn't run yet).
@@ -3782,7 +3822,7 @@ Admin overrides (`defence_prompt_modules`) supersede file defaults at runtime; t
 
 `/admin/defence-package/pipeline` is a read-only walk of every input, rule, and trigger that shapes a defence-package LLM call. Eight sections (`#stage-1` … `#stage-8`): trigger decision tree + callsites, fact-classifier boundary (field→category map, submission-risk / internal-only field sets), `BASE_SYSTEM_PROMPT` rendered verbatim, reason-code module overlay table, the user payload schema rendered live from `tests/fixtures/defence-package-sample.json`, LLM call parameters, `FORBIDDEN_PHRASES` / `NARROW_AGGRESSIVE_PHRASES` / `CLAIM_GUARDS` tables, render rules + thesis library. Eight-step pipeline diagram on the overview page links into each stage. Settings page now includes a "Resolution precedence" table mapping each override layer (request → env → DB → file → hardcoded) to its surface.
 
-Operator-facing source-of-truth principle: nothing material may live in code that isn't reflected in admin. To enforce this, the previously-private constants were exported (`BASE_SYSTEM_PROMPT`, `FORBIDDEN_PHRASES`, `NARROW_AGGRESSIVE_PHRASES`, `SUBMISSION_RISK_FIELDS`, `INTERNAL_ONLY_FIELDS`, `categoryForField`, `THESIS_LIBRARY`, `GENERIC_THESIS`). `CLAIM_GUARDS` was already exported. None of these are runtime callsites for the new admin code paths — they are read-only renders.
+Operator-facing source-of-truth principle: nothing material may live in code that isn't reflected in admin. The exported constants the admin pipeline page renders today are `BASE_SYSTEM_PROMPT`, `FORBIDDEN_PHRASES`, `NARROW_AGGRESSIVE_PHRASES`, `SUBMISSION_RISK_FIELDS`, `INTERNAL_ONLY_FIELDS`, `categoryForField`, `CLAIM_GUARDS`, and (post-v2.1) `THESIS_TEMPLATES` + `THESIS_TOKENS`. The deleted static `THESIS_LIBRARY` + `GENERIC_THESIS` were replaced by `THESIS_TEMPLATES` (fact-templated) and `THESIS_TOKENS` (predicate-gated extractors). None of these are runtime callsites for the new admin code paths — they are read-only renders.
 
 Drift fix: a new `intentional_override boolean` column on `defence_prompt_modules` (`supabase/migrations/20260516120000_defence_prompt_modules_intentional_override.sql`) marks DB rows that deliberately diverge from `lib/defence/reasonCodes/<key>.ts`. The drift banner on `/admin/defence-package` and the CI guard in `lib/defence/__tests__/promptModuleDrift.test.ts` both ignore rows with this flag set. Manual saves through the module editor set it to `true`; the "Reset to file default" button (also added) inserts a new active row matching the file with `intentional_override=false`. The reconcile script `scripts/reconcile-defence-prompt-modules.mts` does this batch-style — running it once on 2026-05-16 promoted `visa_10_4_fraud` from v1 (which silently shipped an older prompt missing CNP + physical-card-possession + absolute-authorization-conclusion guards) to v2 matching the file. `detectPromptModuleDrift()` in `lib/defence/admin-queries.ts` is the shared comparison logic, used by both the banner and the test.
 - **API routes**: 12 routes total — merchant-facing under `/api/defence-packages/[id]/*`, admin-facing under `/api/admin/defence-package/*`.

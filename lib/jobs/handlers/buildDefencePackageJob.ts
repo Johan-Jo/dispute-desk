@@ -21,9 +21,19 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
-import { resolveReasonCodeModule } from "@/lib/defence/reasonCodes/registry";
+import {
+  resolveReasonCodeModule,
+  familyKeyForModule,
+} from "@/lib/defence/reasonCodes/registry";
+import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { generateNarrative } from "@/lib/defence/narrativeWriter";
-import { validateNarrative } from "@/lib/defence/validateNarrative";
+import {
+  validateNarrative,
+  validateComposedDocument,
+  summariseComposedErrors,
+} from "@/lib/defence/validateNarrative";
+import { rankStrategies } from "@/lib/defence/strategies/registry";
+import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
 import { renderDefencePdf } from "@/lib/defence/renderDefencePdf";
 import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
@@ -149,6 +159,19 @@ export async function handleBuildDefencePackage(
       : undefined,
   );
 
+  // Resolve the family (Phase 1). One family per module today; the
+  // family's overlayPromptBody fills in cross-cutting rules that span
+  // multiple modules — empty in Phase 1, populated as patterns emerge.
+  const reasonCodeFamily = getFamily(familyKeyForModule(reasonCodeModule.key));
+
+  // Persist family_key early so every subsequent failure path captures
+  // it in defence_packages — admin tooling groups runs by family for
+  // rollback investigation.
+  await sb
+    .from("defence_packages")
+    .update({ family_key: reasonCodeFamily.key })
+    .eq("id", packageId);
+
   const classification = classifyFacts({
     packageId,
     sections: sectionsRaw.map((s) => ({
@@ -188,6 +211,15 @@ export async function handleBuildDefencePackage(
     return await markSkipped(sb, pkg, classification.ineligibilityReason);
   }
 
+  // Phase 3 — rank strategy submodules for this dispute. Empty result
+  // (family has no strategies yet) is fine; the narrative writer
+  // simply doesn't emit the 4th cached system block.
+  const strategies = rankStrategies({
+    familyKey: reasonCodeFamily.key,
+    predicateEvaluations: classification.predicateEvaluations,
+    packageMode: classification.packageMode,
+  });
+
   // Generate the narrative.
   const narrativeRes = await generateNarrative(
     {
@@ -195,6 +227,8 @@ export async function handleBuildDefencePackage(
       disputeId: pkg.dispute_id,
       reasonCode,
       reasonCodeModule,
+      familyOverlay: reasonCodeFamily.overlayPromptBody || null,
+      strategies,
       packageMode: classification.packageMode,
       caseStrength: "moderate",
       approvedFacts: classification.approved,
@@ -289,7 +323,67 @@ export async function handleBuildDefencePackage(
   const merchantDisplayName =
     merchantNameFromDomain(shop?.shop_domain ?? null) ?? "Merchant";
 
-  // Render PDF.
+  // Phase 1.5 — composed-document validation. Every byte of
+  // argumentative prose that the renderer will write into the PDF
+  // (thesis blockquotes + LLM section bodies + deterministic fallback
+  // prose) passes through the same forbidden-phrase + claim-guard
+  // machinery as the LLM output already does. Fails closed; offending
+  // layer is reported in failure_reason.
+  //
+  // Phase 4: thesisText now comes from fact-templated thesis
+  // (renderThesis) — a thesis can no longer claim a fact that isn't
+  // in approvedFacts because the required-token gate short-circuits to
+  // "" when any token resolves null.
+  const composedBlocks = composePdfBlocks({
+    narrative: narrativeRes.narrative,
+    approvedFacts: classification.approved,
+    packageMode: classification.packageMode,
+    familyKey: reasonCodeFamily.key,
+    fulfillmentStatus: orderContext.fulfillmentStatus,
+  });
+  const composedValidation = validateComposedDocument({
+    blocks: composedBlocks,
+    approvedFacts: classification.approved,
+    packageMode: classification.packageMode,
+  });
+  if (!composedValidation.ok) {
+    const summary = summariseComposedErrors(composedValidation.errors);
+    await sb
+      .from("defence_packages")
+      .update({
+        status: "failed",
+        validation_status: "failed",
+        validation_errors: composedValidation.errors,
+        failure_code: "validation_failed",
+        failure_reason: summary,
+        narrative_json: narrativeRes.narrative,
+        facts_json: classification.approved,
+        package_mode: classification.packageMode,
+        llm_model: narrativeRes.modelUsed,
+        prompt_family: narrativeRes.promptFamily,
+        prompt_version: narrativeRes.promptVersion,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", packageId);
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_validation_failed",
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        validationErrors: composedValidation.errors,
+        composed: true,
+      },
+    });
+    return { ok: false, retriable: false, reason: `validation_failed:composed (${summary})` };
+  }
+
+  // Render PDF — driven by the validated composedBlocks. The
+  // renderer is presentational over those blocks (Phase 4); it
+  // never composes prose.
   const docData: DefencePackageDocumentData = {
     meta: {
       packageId,
@@ -322,7 +416,7 @@ export async function handleBuildDefencePackage(
       evidenceHash: pkg.evidence_hash,
       generatedBy: pkg.generated_by as "system" | "merchant" | "admin",
     },
-    narrative: narrativeRes.narrative,
+    composedBlocks,
     approvedFacts: classification.approved,
     manualEvidence: classification.manual,
   };

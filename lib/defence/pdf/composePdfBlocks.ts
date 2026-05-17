@@ -1,0 +1,128 @@
+/**
+ * Compose the prose blocks that reach the PDF.
+ *
+ * Phase 4 (this file): thesisText comes from fact-templated thesis
+ * (renderThesis). Sections without LLM body fall back to the
+ * deterministic fallback prose (only the fulfillment fallback exists
+ * today). The block list IS the source of truth for what the renderer
+ * writes — anything not in `composedBlocks` is dropped entirely.
+ *
+ * The composed-PDF validator (`validateComposedDocument`) runs
+ * forbidden-phrase + claim-guard checks against every sub-text of
+ * every block before the PDF is rendered.
+ */
+
+import { renderThesis } from "./renderThesis";
+import type {
+  ComposedDocumentBlock,
+  DefenceNarrativeOutput,
+  EvidenceFact,
+  NarrativeSectionKey,
+  PackageMode,
+  ReasonCodeFamilyKey,
+} from "../types";
+
+/** Section keys in the order the renderer walks them — mirrors
+ *  DefencePackageDocument's <SectionBlock> sequence. */
+const SECTION_ORDER: NarrativeSectionKey[] = [
+  "executiveSummary",
+  "transactionOverviewArgument",
+  "chronologyArgument",
+  "paymentAuthenticationArgument",
+  "fulfillmentArgument",
+  "communicationArgument",
+  "policyArgument",
+  "manualEvidenceArgument",
+  "conclusion",
+];
+
+const SECTION_HEADINGS: Record<NarrativeSectionKey, string> = {
+  executiveSummary: "Executive Summary",
+  transactionOverviewArgument: "Transaction Overview",
+  chronologyArgument: "Chronology of Events",
+  paymentAuthenticationArgument: "Payment Authentication",
+  fulfillmentArgument: "Fulfillment, Delivery & Access",
+  communicationArgument: "Customer Communication",
+  policyArgument: "Policy Disclosure",
+  manualEvidenceArgument: "Supplementary Merchant Evidence",
+  conclusion: "Conclusion",
+};
+
+/** Hard-coded deterministic fallback prose. Currently only
+ *  fulfillmentArgument has one — Phase 5 may add others on a per-
+ *  family basis. Every fallback string MUST pass the composed
+ *  validator just like any other prose. */
+const FULFILLMENT_FALLBACK_TEXT =
+  "The merchant's order record marks the order as fulfilled. " +
+  "No separate delivery, access-use, or service-completion claim is " +
+  "made in this section unless supported by approved evidence.";
+
+export interface ComposePdfBlocksInput {
+  narrative: DefenceNarrativeOutput;
+  approvedFacts: EvidenceFact[];
+  packageMode: PackageMode;
+  familyKey: ReasonCodeFamilyKey;
+  fulfillmentStatus: string | null;
+}
+
+export function composePdfBlocks(
+  input: ComposePdfBlocksInput,
+): ComposedDocumentBlock[] {
+  const omittedKeys = new Set(
+    input.narrative.omittedSections.map((o) => o.sectionKey),
+  );
+  const isFulfilled =
+    typeof input.fulfillmentStatus === "string" &&
+    input.fulfillmentStatus.toUpperCase() === "FULFILLED";
+
+  const blocks: ComposedDocumentBlock[] = [];
+
+  for (const sectionKey of SECTION_ORDER) {
+    const section = input.narrative[sectionKey];
+    const llmText = section.text.trim();
+    const sectionOmitted = omittedKeys.has(sectionKey);
+
+    // Pick a deterministic fallback when one applies. Currently only
+    // the fulfillment section has a fallback path (FULFILLED order
+    // record with the LLM correctly refusing to overclaim delivery).
+    let fallbackText = "";
+    if (
+      sectionKey === "fulfillmentArgument" &&
+      (sectionOmitted || llmText === "") &&
+      isFulfilled
+    ) {
+      fallbackText = FULFILLMENT_FALLBACK_TEXT;
+    }
+
+    const hasFallback = fallbackText.length > 0;
+    const hasLlm = !sectionOmitted && llmText.length > 0;
+
+    if (!hasFallback && !hasLlm) {
+      // Section is completely absent from the rendered PDF — produce
+      // no block. Renderer drops the heading too.
+      continue;
+    }
+
+    // Thesis is only attached when the section ACTUALLY renders body
+    // prose. Template returns "" when its required tokens don't
+    // resolve — the renderer drops the blockquote entirely in that
+    // case.
+    const thesisText = renderThesis({
+      sectionKey,
+      familyKey: input.familyKey,
+      packageMode: input.packageMode,
+      approvedFacts: input.approvedFacts,
+    });
+
+    blocks.push({
+      sectionKey,
+      heading: SECTION_HEADINGS[sectionKey],
+      thesisText,
+      llmText: hasLlm ? llmText : "",
+      fallbackText,
+      usedFactIds: section.usedFactIds.slice(),
+    });
+  }
+
+  return blocks;
+}

@@ -20,6 +20,7 @@ import {
   type EvidenceCategory,
 } from "@/lib/argument/canonicalEvidence";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
+import { evaluateAllPredicates } from "./factPredicates";
 import type {
   EvidenceFact,
   EvidenceFactCategory,
@@ -298,6 +299,7 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
       packageMode: "narrow",
       eligible: false,
       ineligibilityReason: "covered_shopify",
+      predicateEvaluations: evaluateAllPredicates([]),
     };
   }
 
@@ -430,6 +432,7 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
       packageMode: "narrow",
       eligible: false,
       ineligibilityReason: "no_bank_eligible_facts",
+      predicateEvaluations: evaluateAllPredicates(approved),
     };
   }
 
@@ -449,5 +452,6 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
     packageMode,
     eligible: true,
     ineligibilityReason: null,
+    predicateEvaluations: evaluateAllPredicates(approved),
   };
 }
