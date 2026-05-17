@@ -661,6 +661,7 @@
           "actions": {
             "upload": "Upload evidence",
             "uploading": "Uploading…",
+            "fileHint": "PDF, PNG ou JPG • max. 4 Mo",
             "markNotApplicable": "Mark as not applicable",
             "waiveTitle": "Why is this not applicable?",
             "waiveReason": {

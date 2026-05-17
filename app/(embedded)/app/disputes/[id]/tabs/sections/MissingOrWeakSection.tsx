@@ -96,40 +96,47 @@ function MissingRow({
 
   const actions =
     onUpload || onWaiveClick ? (
-      <InlineStack gap="200" wrap={false}>
-        {onUpload ? (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const files = Array.from(e.target.files ?? []);
-                if (files.length > 0) onUpload(item.field, files);
-                e.target.value = "";
-              }}
-            />
+      <BlockStack gap="100" align="end">
+        <InlineStack gap="200" wrap={false} align="end">
+          {onUpload ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length > 0) onUpload(item.field, files);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                size="slim"
+                onClick={() => fileInputRef.current?.click()}
+                loading={uploading}
+                disabled={uploading}
+              >
+                {uploading ? tActions("uploading") : tActions("upload")}
+              </Button>
+            </>
+          ) : null}
+          {onWaiveClick ? (
             <Button
+              variant="plain"
               size="slim"
-              onClick={() => fileInputRef.current?.click()}
-              loading={uploading}
-              disabled={uploading}
+              onClick={() => onWaiveClick(item.field)}
             >
-              {uploading ? tActions("uploading") : tActions("upload")}
+              {tActions("markNotApplicable")}
             </Button>
-          </>
+          ) : null}
+        </InlineStack>
+        {onUpload ? (
+          <Text as="p" variant="bodyXs" tone="subdued" alignment="end">
+            {tActions("fileHint")}
+          </Text>
         ) : null}
-        {onWaiveClick ? (
-          <Button
-            variant="plain"
-            size="slim"
-            onClick={() => onWaiveClick(item.field)}
-          >
-            {tActions("markNotApplicable")}
-          </Button>
-        ) : null}
-      </InlineStack>
+      </BlockStack>
     ) : null;
 
   return (
