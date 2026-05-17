@@ -1519,6 +1519,8 @@ ruleMode === "auto" + strong + completeness gate fails → block (existing)
 - Never silently flip legacy-pack behavior. Packs without `case_strength` on `pack_json` (built before the P2 commit `24235cc`) keep the existing quality-gate-only behavior. Rebuild a pack to opt in to the new strength gate.
 - The strength gate is `ruleMode === "auto"` only — review-mode behavior is untouched.
 
+**Second enforcement point — `buildDefencePackageJob`:** The defence-package build handler ([lib/jobs/handlers/buildDefencePackageJob.ts](../lib/jobs/handlers/buildDefencePackageJob.ts)) independently re-resolves the per-dispute automation mode via `evaluateRules` and, when `"auto"`, was previously flipping the defence package to `status: "final"` and enqueueing `save_to_shopify` **without checking the strength / coverage / fatal-loss gates**. This was a real bug: the pack pipeline could correctly block a Weak pack at sync time, then this handler — running 2 minutes later for the same dispute — would push it to Shopify anyway. The handler now applies a pre-flight guard with the same three checks (Coverage / Fatal-loss / PRD §9 strength) and forces `resolvedMode = "review"` if any would block, writing an `auto_save_blocked` audit event with `source: "defence_build"` so the trail distinguishes pipeline vs. defence-build origins. Merchant-initiated routes (`/approve`, `/save-to-shopify`, `/submit`) and the cron deadline submitter remain ungated by design — those are deliberate overrides.
+
 ### Fatal-loss Gate (PRD §3 step 2 / §5)
 
 **Routing primitive: PRD v1.1 §5.** Sits between the Coverage Gate and the strength gate. Detects cases where evidence-strength scoring is misleading because the case is structurally unwinnable. When triggered:

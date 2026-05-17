@@ -501,6 +501,50 @@ export async function handleBuildDefencePackage(
     }
   }
 
+  // Pre-flight guards: even when rules say "auto", the same three gates
+  // the pack pipeline applies (Coverage / Fatal-loss / PRD §9 strength)
+  // must block auto-finalize + save-to-Shopify enqueue here. Without
+  // this, the pack pipeline can correctly block at sync time and then
+  // this handler — re-resolving rules independently — silently saves a
+  // Weak / Fatal-loss / Covered pack a few minutes later, bypassing the
+  // gate. Source: pack_json fields persisted by buildPack.
+  const caseStrengthOverall =
+    (packJson.case_strength as { overall?: string } | undefined)?.overall ?? null;
+  let autoBlockReason: string | null = null;
+  if (resolvedMode === "auto") {
+    if (coverage === "covered_shopify") {
+      autoBlockReason = "Covered by Shopify Protect — no auto-submit";
+    } else if (fatalLoss.triggered === true) {
+      autoBlockReason = `Fatal-loss condition (${fatalLoss.reason ?? "unknown"}) — auto-submit blocked per PRD §5`;
+    } else if (
+      caseStrengthOverall === "weak" ||
+      caseStrengthOverall === "insufficient" ||
+      caseStrengthOverall === "moderate"
+    ) {
+      autoBlockReason = `Auto-mode case strength is ${caseStrengthOverall} — auto-submit blocked per PRD §9`;
+    }
+    if (autoBlockReason) {
+      resolvedMode = "review";
+      // Raw insert (bypasses typed logEvent helper) because
+      // `auto_save_blocked` is not in the typed EventType union — the
+      // pack pipeline writes it the same way at lib/automation/pipeline.ts.
+      await sb.from("audit_events").insert({
+        shop_id: pkg.shop_id,
+        dispute_id: pkg.dispute_id,
+        pack_id: pkg.source_pack_id,
+        actor_type: "system",
+        event_type: "auto_save_blocked",
+        event_payload: {
+          reasons: [autoBlockReason],
+          case_strength: caseStrengthOverall,
+          coverage,
+          fatal_loss: fatalLoss.triggered === true ? fatalLoss.reason : null,
+          source: "defence_build",
+        },
+      });
+    }
+  }
+
   const targetStatus: DefencePackageStatus = resolvedMode === "auto" ? "final" : "draft";
 
   await sb
