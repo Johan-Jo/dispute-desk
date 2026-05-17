@@ -12,7 +12,16 @@ import type { ReasonCodeGuidance } from "../types";
 
 export const visa_10_4_fraud: ReasonCodeGuidance = {
   key: "visa_10_4_fraud",
-  displayName: "Visa 10.4 / Mastercard 4837 — Other Fraud (Card Absent)",
+  // Network-published name is "Other Fraud — Card Absent Environment". We
+  // strip the "(Card Absent)" qualifier from the merchant-facing display
+  // because it's the bank's classification of the environment, not
+  // something the merchant should restate on the cover of their
+  // representment. Per v2.1 plan §8: "the reason code is the bank's
+  // claim, not a fact." Internally the module prompt still tells the
+  // LLM this is a card-not-present dispute (which it is, for any
+  // Shopify e-commerce charge) — that context shapes the prose without
+  // appearing as a declarative claim on the PDF.
+  displayName: "Visa 10.4 / Mastercard 4837 — Other Fraud",
   reasonCodeKeys: ["10.4", "4837"],
   promptBody: [
     "You are writing a bank-facing representment for a CARD-NOT-PRESENT UNAUTHORIZED TRANSACTION dispute (Visa 10.4 / Mastercard 4837).",
