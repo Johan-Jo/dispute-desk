@@ -19,7 +19,7 @@
 
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useEvidenceSections } from "./useEvidenceSections";
@@ -27,6 +27,7 @@ import { CaseSummaryCard } from "./sections/CaseSummaryCard";
 import { EvidenceUsedSection } from "./sections/EvidenceUsedSection";
 import { MissingOrWeakSection } from "./sections/MissingOrWeakSection";
 import { InternalOnlySignalsSection } from "./sections/InternalOnlySignalsSection";
+import { RegeneratePromptModal } from "./sections/RegeneratePromptModal";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -36,6 +37,7 @@ interface Props {
 
 export default function EvidenceTab({ workspace }: Props) {
   const t = useTranslations("disputes.evidenceTab");
+  const locale = useLocale();
   const { data, derived, clientState, actions } = workspace;
   const sections = useEvidenceSections(workspace);
 
@@ -62,15 +64,58 @@ export default function EvidenceTab({ workspace }: Props) {
     </Banner>
   ) : null;
 
-  // ── In-progress banner ──
-  // The build is queued or running. The four sections still render
-  // (with whatever data is available); this banner just makes the
-  // in-flight state visible.
-  const buildingBanner = derived.isBuilding ? (
-    <Banner tone="info" title="Building evidence pack">
-      <p>The pack is being assembled. Refresh shortly to see updates.</p>
+  // ── Resubmission Window banners ──
+  // Priority (top-down, mutually exclusive): closed > regenerating >
+  // first-time-building > window-open. The closed state suppresses
+  // the upload-success banner so we don't claim a file was added at
+  // the same time we're telling the merchant uploads are disabled.
+  const isWindowClosed =
+    data?.dispute?.submissionState === "submitted_confirmed";
+  const isWindowOpen =
+    data?.dispute?.submissionState === "saved_to_shopify";
+
+  const formattedSubmittedAt = data?.dispute?.submittedAt
+    ? new Intl.DateTimeFormat(locale, {
+        dateStyle: "medium",
+      }).format(new Date(data.dispute.submittedAt))
+    : null;
+
+  const windowClosedBanner = isWindowClosed ? (
+    <Banner tone="info" title={t("windowClosedBanner.title")}>
+      <p>
+        {formattedSubmittedAt
+          ? t("windowClosedBanner.body", {
+              submittedAt: formattedSubmittedAt,
+            })
+          : t("windowClosedBanner.bodyNoDate")}
+      </p>
     </Banner>
   ) : null;
+
+  const regeneratingBanner =
+    !isWindowClosed && derived.isRegenerating ? (
+      <Banner tone="info" title={t("regeneratingBanner.title")}>
+        <p>{t("regeneratingBanner.body")}</p>
+      </Banner>
+    ) : null;
+
+  // ── In-progress banner (first-time build only) ──
+  // Suppressed when regeneratingBanner is active — the regenerate
+  // variant tells the merchant the current saved package remains on
+  // the Shopify dispute, which is the truth in that case.
+  const buildingBanner =
+    derived.isBuilding && !derived.isRegenerating && !isWindowClosed ? (
+      <Banner tone="info" title="Building evidence pack">
+        <p>The pack is being assembled. Refresh shortly to see updates.</p>
+      </Banner>
+    ) : null;
+
+  const windowOpenBanner =
+    isWindowOpen && !derived.isRegenerating && !isWindowClosed ? (
+      <Banner tone="success" title={t("windowOpenBanner.title")}>
+        <p>{t("windowOpenBanner.body")}</p>
+      </Banner>
+    ) : null;
 
   // ── No-pack state ──
   // Pack was never generated. The sections will render in their
@@ -82,25 +127,29 @@ export default function EvidenceTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
-  const uploadSuccessBanner = clientState.uploadSuccessNotice ? (
-    <Banner
-      tone="success"
-      title={t("uploadSuccessTitle")}
-      onDismiss={() => actions.dismissUploadSuccessNotice()}
-    >
-      <p>
-        {t("uploadSuccessBody", {
-          fileName: clientState.uploadSuccessNotice.fileName,
-          evidenceTitle: clientState.uploadSuccessNotice.evidenceTitle,
-        })}
-      </p>
-    </Banner>
-  ) : null;
+  const uploadSuccessBanner =
+    clientState.uploadSuccessNotice && !isWindowClosed ? (
+      <Banner
+        tone="success"
+        title={t("uploadSuccessTitle")}
+        onDismiss={() => actions.dismissUploadSuccessNotice()}
+      >
+        <p>
+          {t("uploadSuccessBody", {
+            fileName: clientState.uploadSuccessNotice.fileName,
+            evidenceTitle: clientState.uploadSuccessNotice.evidenceTitle,
+          })}
+        </p>
+      </Banner>
+    ) : null;
 
   return (
     <BlockStack gap="500">
       {failedBanner}
+      {windowClosedBanner}
+      {regeneratingBanner}
       {buildingBanner}
+      {windowOpenBanner}
       {noPackBanner}
       {uploadSuccessBanner}
 
@@ -121,6 +170,7 @@ export default function EvidenceTab({ workspace }: Props) {
         uploadingField={clientState.uploadingField}
         focusField={clientState.focusField}
         onFocusCleared={actions.clearFocus}
+        uploadsDisabled={isWindowClosed}
         onUpload={(field, files) => {
           void actions.uploadEvidence(field, files);
         }}
@@ -133,6 +183,22 @@ export default function EvidenceTab({ workspace }: Props) {
               when no signals — gives the merchant a definitive answer
               to "is anything being held back?") */}
       <InternalOnlySignalsSection items={sections.internalOnly} />
+
+      {/* Resubmission Window — confirmation modal opens after an
+          upload succeeds with promptRebuild=true. Confirm calls
+          POST /api/packs/:packId/regenerate which re-enqueues the
+          full pipeline (build_pack → defence_package → save_to_shopify
+          → overwrites the prior PDF on the Shopify dispute). */}
+      <RegeneratePromptModal
+        open={clientState.pendingRegeneratePrompt !== null}
+        mode={data?.appliedRule?.mode ?? null}
+        submitting={clientState.regenerateSubmitting}
+        error={clientState.regenerateError}
+        onConfirm={() => {
+          void actions.regeneratePack();
+        }}
+        onCancel={() => actions.dismissRegeneratePrompt()}
+      />
     </BlockStack>
   );
 }

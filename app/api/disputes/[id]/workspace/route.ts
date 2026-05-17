@@ -304,6 +304,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     openedAt: row.initiated_at ?? null,
     normalizedStatus: row.normalized_status ?? null,
     submissionState: row.submission_state ?? null,
+    /** Set by `lib/disputes/syncDisputes.ts` from Shopify's
+     *  `evidenceSentOn`. Only meaningful when
+     *  `submissionState === "submitted_confirmed"`. Used in the
+     *  Evidence-tab window-closed banner. */
+    submittedAt: row.submitted_at ?? null,
     finalOutcome: row.final_outcome ?? null,
     // Order context — populated from pack_json. Each field can still be
     // null when the pack lacks the data (e.g. payment gateway on a
@@ -349,6 +354,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         auditEvents: auditRes.data ?? [],
         pdfPath: packRow.pdf_path ?? null,
         savedToShopifyAt: packRow.saved_to_shopify_at ?? null,
+        /** Resubmission Window: true when a merchant regenerate request
+         *  is pending (set by the regenerate endpoint, cleared by
+         *  buildPackJob at start). Drives the "Regenerating defence
+         *  package" banner during the gap between request and worker
+         *  pickup, when status is still `saved_to_shopify_verified`. */
+        rebuildPending: (packRow.rebuild_pending as boolean | null) ?? false,
         activeBuildJob: buildJobRes.data ?? null,
         // Surface system-failure metadata so the UI can render a
         // system-error banner instead of misleading evidence-gap copy.

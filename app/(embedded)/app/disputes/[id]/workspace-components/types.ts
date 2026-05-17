@@ -44,6 +44,10 @@ export interface WorkspaceDispute {
   openedAt: string;
   normalizedStatus: string;
   submissionState: string;
+  /** Set by `syncDisputes` from Shopify's `evidenceSentOn`. Only
+   *  meaningful when `submissionState === "submitted_confirmed"`.
+   *  Drives the date in the Evidence-tab window-closed banner. */
+  submittedAt: string | null;
   finalOutcome: string | null;
   /** Order-context fields extracted from `pack_json.sections` by
    *  `deriveOrderContext`. Populates the Case Details table on the
@@ -73,6 +77,11 @@ export interface WorkspacePack {
   auditEvents: AuditEvent[];
   pdfPath: string | null;
   savedToShopifyAt: string | null;
+  /** Resubmission Window: true when a merchant regenerate request is
+   *  pending. Set by the regenerate endpoint and cleared by
+   *  `buildPackJob` at start. Used to drive the "Regenerating defence
+   *  package" banner during the gap between request and worker pickup. */
+  rebuildPending: boolean;
   activeBuildJob: { id: string; status: string } | null;
   /** Machine-readable failure code, set when status === "failed". */
   failureCode: string | null;

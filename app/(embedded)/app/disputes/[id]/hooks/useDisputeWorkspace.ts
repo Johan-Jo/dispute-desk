@@ -252,6 +252,14 @@ export interface UploadSuccessNotice {
   evidenceTitle: string;
 }
 
+/** Resubmission Window: set by the upload route response when the pack
+ *  has been saved to Shopify but the window is still open. Opens the
+ *  RegeneratePromptModal. */
+export interface PendingRegeneratePrompt {
+  packId: string;
+  evidenceItemId: string;
+}
+
 export interface WorkspaceClientState {
   activeTab: 0 | 1 | 2;
   loading: boolean;
@@ -269,6 +277,17 @@ export interface WorkspaceClientState {
    *  and prevent double-click duplicate pack creation after a failure. */
   retrying: boolean;
   justSubmitted: boolean;
+  /** Resubmission Window: set when an upload returns promptRebuild=true.
+   *  Drives RegeneratePromptModal visibility. */
+  pendingRegeneratePrompt: PendingRegeneratePrompt | null;
+  /** Resubmission Window: in-flight flag for the regenerate POST. */
+  regenerateSubmitting: boolean;
+  /** Resubmission Window: error from non-window regenerate failures.
+   *  Rendered inside the modal. Cleared when the modal closes. The
+   *  WINDOW_CLOSED case closes the modal silently and lets the
+   *  persistent banner take over, so this field stays null for that
+   *  branch. */
+  regenerateError: string | null;
 }
 
 export interface DerivedState {
@@ -306,6 +325,11 @@ export interface DerivedState {
    *  the normal evidence-analysis surfaces. */
   isFailed: boolean;
   failureCode: string | null;
+  /** Resubmission Window: true when a regenerate is currently running
+   *  AND the pack already has a prior Shopify save. Drives the
+   *  "Regenerating defence package" banner. Distinct from `isBuilding`
+   *  (which fires on first-time builds too). */
+  isRegenerating: boolean;
 }
 
 export function useDisputeWorkspace(disputeId: string) {
@@ -327,6 +351,9 @@ export function useDisputeWorkspace(disputeId: string) {
     rendering: false,
     retrying: false,
     justSubmitted: false,
+    pendingRegeneratePrompt: null,
+    regenerateSubmitting: false,
+    regenerateError: null,
   });
 
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -412,6 +439,13 @@ export function useDisputeWorkspace(disputeId: string) {
   const uploadEvidence = useCallback(
     async (field: string, files: File[]) => {
       if (!data?.pack || files.length === 0) return;
+      // Resubmission Window: client-side gate when Shopify has already
+      // forwarded evidence to the bank. The server enforces this too
+      // (returns 409 WINDOW_CLOSED before any persistence), but the UI
+      // shouldn't even let the merchant initiate the upload.
+      if (data.dispute?.submissionState === "submitted_confirmed") {
+        return;
+      }
       setClientState((s) => ({
         ...s,
         uploadingField: field,
@@ -419,6 +453,10 @@ export function useDisputeWorkspace(disputeId: string) {
         failedFields: new Map([...s.failedFields].filter(([k]) => k !== field)),
       }));
       let serverMessage: string | null = null;
+      // Track the last upload's response so we can open the regenerate
+      // modal once after the for-loop completes (one prompt per batch,
+      // not per file).
+      let lastPromptRebuild: PendingRegeneratePrompt | null = null;
       try {
         for (const file of files) {
           const form = new FormData();
@@ -430,11 +468,41 @@ export function useDisputeWorkspace(disputeId: string) {
             body: form,
           });
           if (!res.ok) {
-            const body = (await res.json().catch(() => null)) as { error?: string } | null;
-            serverMessage = typeof body?.error === "string" && body.error.trim().length > 0
-              ? body.error
-              : null;
+            const body = (await res.json().catch(() => null)) as
+              | { error?: string; message?: string }
+              | null;
+            // 409 WINDOW_CLOSED: server rejected before persistence.
+            // Surface the dedicated message; the persistent banner
+            // takes over after fetchAll() refreshes submission_state.
+            if (res.status === 409 && body?.error === "WINDOW_CLOSED") {
+              serverMessage =
+                body.message ??
+                "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added.";
+              throw new Error(serverMessage);
+            }
+            serverMessage =
+              typeof body?.error === "string" && body.error.trim().length > 0
+                ? body.error
+                : null;
             throw new Error(serverMessage ?? "Upload failed");
+          }
+          const okBody = (await res.json().catch(() => null)) as
+            | {
+                itemId?: string;
+                promptRebuild?: boolean;
+                packId?: string;
+                evidenceItemId?: string;
+              }
+            | null;
+          if (
+            okBody?.promptRebuild === true &&
+            typeof okBody.packId === "string" &&
+            typeof okBody.evidenceItemId === "string"
+          ) {
+            lastPromptRebuild = {
+              packId: okBody.packId,
+              evidenceItemId: okBody.evidenceItemId,
+            };
           }
         }
         const checklistRow = data.pack.checklistV2?.find((c) => c.field === field);
@@ -448,6 +516,10 @@ export function useDisputeWorkspace(disputeId: string) {
           ...s,
           completedFields: new Set(s.completedFields).add(field),
           uploadSuccessNotice: { field, fileName: fileSummary, evidenceTitle },
+          // If the upload landed in the open window, open the
+          // regenerate modal. The merchant chooses whether to kick
+          // off the full pipeline rebuild.
+          pendingRegeneratePrompt: lastPromptRebuild ?? s.pendingRegeneratePrompt,
         }));
       } catch {
         setClientState((s) => ({
@@ -462,8 +534,63 @@ export function useDisputeWorkspace(disputeId: string) {
         fetchAll();
       }
     },
-    [data?.pack, fetchAll],
+    [data?.pack, data?.dispute?.submissionState, fetchAll],
   );
+
+  const regeneratePack = useCallback(async () => {
+    if (!data?.pack || !clientState.pendingRegeneratePrompt) return;
+    setClientState((s) => ({
+      ...s,
+      regenerateSubmitting: true,
+      regenerateError: null,
+    }));
+    try {
+      const res = await fetch(`/api/packs/${data.pack.id}/regenerate`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as
+          | { error?: string; message?: string }
+          | null;
+        if (body?.error === "WINDOW_CLOSED") {
+          // Window closed between modal-open and confirm. Close the
+          // modal silently \u2014 the persistent window-closed banner takes
+          // over once fetchAll() refreshes submissionState. Do NOT
+          // surface regenerateError; the modal is closing.
+          setClientState((s) => ({
+            ...s,
+            pendingRegeneratePrompt: null,
+            regenerateError: null,
+            regenerateSubmitting: false,
+          }));
+          fetchAll();
+          return;
+        }
+        // Other errors \u2014 keep modal open and render the message inside.
+        setClientState((s) => ({
+          ...s,
+          regenerateError: body?.message ?? "Regenerate failed",
+        }));
+        return;
+      }
+      setClientState((s) => ({
+        ...s,
+        pendingRegeneratePrompt: null,
+        regenerateError: null,
+      }));
+      fetchAll();
+    } finally {
+      setClientState((s) => ({ ...s, regenerateSubmitting: false }));
+    }
+  }, [data?.pack, clientState.pendingRegeneratePrompt, fetchAll]);
+
+  const dismissRegeneratePrompt = useCallback(() => {
+    setClientState((s) => ({
+      ...s,
+      pendingRegeneratePrompt: null,
+      regenerateError: null,
+    }));
+  }, []);
 
   const waiveItem = useCallback(
     async (field: string, reason: WaiveReason) => {
@@ -597,6 +724,7 @@ export function useDisputeWorkspace(disputeId: string) {
         isBuilding: false,
         isFailed: false,
         failureCode: null,
+        isRegenerating: false,
       };
     }
 
@@ -705,6 +833,29 @@ export function useDisputeWorkspace(disputeId: string) {
       isBuilding: pack?.status === "queued" || pack?.status === "building",
       isFailed: pack?.status === "failed",
       failureCode: pack?.failureCode ?? null,
+      // Resubmission Window: a regenerate is in flight AND the pack
+      // already has a prior Shopify save. Used by EvidenceTab to swap
+      // the generic "Building" banner for the regenerate-aware
+      // "Regenerating defence package — current saved package remains"
+      // copy. `rebuildPending` covers the gap between the merchant's
+      // request and the worker picking it up (status still
+      // saved_to_shopify_verified); status in {queued, building,
+      // saving, saved_to_shopify_unverified} covers the in-flight
+      // build/save cycle itself.
+      isRegenerating: (() => {
+        const hasPriorSave =
+          pack?.status === "saved_to_shopify_verified" ||
+          pack?.status === "saved_to_shopify_unverified" ||
+          pack?.status === "saved_to_shopify" ||
+          !!pack?.savedToShopifyAt;
+        const isInFlight =
+          pack?.status === "queued" ||
+          pack?.status === "building" ||
+          pack?.status === "saving" ||
+          pack?.status === "saved_to_shopify_unverified" ||
+          !!pack?.rebuildPending;
+        return hasPriorSave && isInFlight;
+      })(),
     };
   })();
 
@@ -717,6 +868,8 @@ export function useDisputeWorkspace(disputeId: string) {
       generatePack,
       dismissUploadSuccessNotice,
       uploadEvidence,
+      regeneratePack,
+      dismissRegeneratePrompt,
       waiveItem,
       unwaiveItem,
       submitToShopify,

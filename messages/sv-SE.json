@@ -236,6 +236,8 @@
     "embeddedSubtitleNew": "Din konsol för tvisthantering",
     "amountRecovered": "Belopp återvunnet",
     "amountLostKpi": "Belopp förlorat",
+    "otherCurrencyEntry": "{count} i {currency}",
+    "otherCurrencyHint": "+ {list} (andra valutor)",
     "avgTimeToSubmit": "Snitt tid till inlämning",
     "avgTimeToClose": "Snitt tid till avslut",
     "daysValue": "{days}d",
@@ -702,7 +704,29 @@
         "reviewRequired": "Review required before submission."
       },
       "uploadSuccessTitle": "Evidence file saved",
-      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below.",
+      "windowOpenBanner": {
+        "title": "Sparat till Shopify — fönstret är öppet",
+        "body": "Detta ärende har sparats till Shopify, men Shopify har ännu inte vidarebefordrat det till banken. Du kan fortfarande lägga till bevis. Om du regenererar paketet ersätter den nya PDF:en det som för närvarande är sparat på Shopify-tvisten."
+      },
+      "windowClosedBanner": {
+        "title": "Skickat till banken",
+        "body": "Shopify vidarebefordrade bevisen för denna tvist till utfärdande bank den {submittedAt}. Nya filer kan inte längre läggas till i det bankriktade försvarspaketet.",
+        "bodyNoDate": "Shopify har redan vidarebefordrat bevisen för denna tvist till utfärdande bank. Nya filer kan inte längre läggas till i det bankriktade försvarspaketet."
+      },
+      "regeneratingBanner": {
+        "title": "Försvarspaketet regenereras",
+        "body": "Ditt nuvarande sparade paket finns kvar på Shopify-tvisten. DisputeDesk regenererar bevisöversikten, försvarsberättelsen och PDF:en — när det är klart ersätter den nya versionen den nuvarande."
+      },
+      "regenerateModal": {
+        "title": "Regenerera försvarspaketet med detta nya bevis?",
+        "bodyAuto": "Din fil har sparats. För att inkludera den i det bankriktade paketet kommer DisputeDesk att regenerera hela försvarspaketet — bevisöversikt, argumenterande berättelse och PDF — och den nya versionen sparas till Shopify och ersätter det nuvarande paketet på tvisten.",
+        "bodyReview": "Din fil har sparats. För att inkludera den i det bankriktade paketet kommer DisputeDesk att regenerera hela försvarspaketet — bevisöversikt, argumenterande berättelse och PDF. Den nya versionen förbereds för din granskning innan den sparas till Shopify.",
+        "bodyNeutral": "Din fil har sparats. För att inkludera den i det bankriktade paketet kommer DisputeDesk att regenerera hela försvarspaketet — bevisöversikt, argumenterande berättelse och PDF. Den nya versionen följer denna tvists nuvarande inställningar för inlämning.",
+        "primaryAction": "Regenerera paket",
+        "secondaryAction": "Behåll bara filen"
+      },
+      "windowClosedError": "Shopify har redan vidarebefordrat bevisen för denna tvist till banken, så nya filer kan inte längre läggas till."
     },
     "reviewTab": {
       "sections": {

@@ -47,7 +47,33 @@ export type EventType =
   | "manual_evidence_added_to_package"
   | "llm_narrative_generated"
   | "llm_narrative_failed"
-  | "defence_pdf_render_failed";
+  | "defence_pdf_render_failed"
+  // Resubmission Window — see docs/technical.md § Resubmission Window
+  // and plan C:\Users\johan\.claude\plans\so-the-this-is-validated-globe.md.
+  // Lifecycle:
+  //   - evidence_upload_rejected_window_closed: upload route refused
+  //     before persistence because the window already closed.
+  //   - pack_regenerate_requested: merchant clicked "Regenerate
+  //     package" in the prompt modal. Payload includes
+  //     `coalesced: boolean` (true when the pack was already in-flight
+  //     and rebuild_pending was set instead of enqueueing).
+  //   - save_to_shopify_skipped_window_closed: saveToShopifyJob's
+  //     window-closed guards (Guard A early / Guard B pre-mutation)
+  //     refused to overwrite the bank-facing package. Payload includes
+  //     `guardPoint: "early" | "pre_mutation"`.
+  //   - pack_regenerate_coalesced: tail of saveToShopifyJob enqueued
+  //     a fresh build_pack after rebuild_pending was set during the
+  //     prior cycle.
+  //   - pack_regenerate_coalesced_skipped_window_closed: tail saw
+  //     submitted_confirmed and cleared the flag instead of enqueueing.
+  //   - pack_regenerate_coalesced_job_already_exists: duplicate-job
+  //     protection — an active build_pack row already existed in jobs.
+  | "evidence_upload_rejected_window_closed"
+  | "pack_regenerate_requested"
+  | "save_to_shopify_skipped_window_closed"
+  | "pack_regenerate_coalesced"
+  | "pack_regenerate_coalesced_skipped_window_closed"
+  | "pack_regenerate_coalesced_job_already_exists";
 
 export interface AuditLogInput {
   shopId: string;

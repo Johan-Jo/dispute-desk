@@ -76,6 +76,11 @@ interface RowProps {
   showPerRowBadge: boolean;
   uploading: boolean;
   highlighted: boolean;
+  /** Resubmission Window: when the dispute is `submitted_confirmed`,
+   *  Shopify has forwarded evidence to the bank and additional uploads
+   *  are useless. The button is rendered disabled so the merchant has
+   *  a clear visual signal alongside the page-level closed banner. */
+  uploadsDisabled?: boolean;
   rowRef?: React.Ref<HTMLDivElement>;
   onUpload?: (field: string, files: File[]) => void;
   onWaiveClick?: (field: string) => void;
@@ -88,6 +93,7 @@ function MissingRow({
   showPerRowBadge,
   uploading,
   highlighted,
+  uploadsDisabled,
   rowRef,
   onUpload,
   onWaiveClick,
@@ -115,7 +121,7 @@ function MissingRow({
                 size="slim"
                 onClick={() => fileInputRef.current?.click()}
                 loading={uploading}
-                disabled={uploading}
+                disabled={uploading || uploadsDisabled}
               >
                 {uploading ? tActions("uploading") : tActions("upload")}
               </Button>
@@ -189,6 +195,10 @@ interface Props {
    *  parent can reset `clientState.focusField` to null. Without this
    *  the highlight would re-fire on every subsequent render. */
   onFocusCleared?: () => void;
+  /** Resubmission Window: when true, all upload buttons render in a
+   *  disabled state. Mirrors the server-side 409 WINDOW_CLOSED guard
+   *  for clear UI signal alongside the page-level closed banner. */
+  uploadsDisabled?: boolean;
   onUpload?: (field: string, files: File[]) => void;
   onWaive?: (field: string, reason: WaiveReason) => void;
 }
@@ -198,6 +208,7 @@ export function MissingOrWeakSection({
   uploadingField,
   focusField,
   onFocusCleared,
+  uploadsDisabled,
   onUpload,
   onWaive,
 }: Props) {
@@ -286,6 +297,7 @@ export function MissingOrWeakSection({
             showPerRowBadge={!allSamePriority}
             uploading={uploadingField === item.field}
             highlighted={highlightedField === item.field}
+            uploadsDisabled={uploadsDisabled}
             rowRef={(el) => {
               rowRefs.current[item.field] = el;
             }}

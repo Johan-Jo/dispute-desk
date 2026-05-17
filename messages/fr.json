@@ -203,6 +203,8 @@
     "embeddedSubtitleNew": "Votre console des opérations de litiges",
     "amountRecovered": "Montant récupéré",
     "amountLostKpi": "Montant perdu",
+    "otherCurrencyEntry": "{count} en {currency}",
+    "otherCurrencyHint": "+ {list} (autres devises)",
     "avgTimeToSubmit": "Délai moyen de soumission",
     "avgTimeToClose": "Délai moyen de clôture",
     "daysValue": "{days}j",
@@ -668,7 +670,29 @@
         "reviewRequired": "Review required before submission."
       },
       "uploadSuccessTitle": "Evidence file saved",
-      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below.",
+      "windowOpenBanner": {
+        "title": "Enregistré sur Shopify — fenêtre ouverte",
+        "body": "Ce dossier a été enregistré sur Shopify, mais Shopify ne l'a pas encore transmis à la banque. Vous pouvez toujours ajouter des preuves. Si vous régénérez le dossier, le nouveau PDF remplacera celui actuellement enregistré sur le litige Shopify."
+      },
+      "windowClosedBanner": {
+        "title": "Transmis à la banque",
+        "body": "Shopify a transmis les preuves de ce litige à la banque émettrice le {submittedAt}. De nouveaux fichiers ne peuvent plus être ajoutés au dossier de défense destiné à la banque.",
+        "bodyNoDate": "Shopify a déjà transmis les preuves de ce litige à la banque émettrice. De nouveaux fichiers ne peuvent plus être ajoutés au dossier de défense destiné à la banque."
+      },
+      "regeneratingBanner": {
+        "title": "Régénération du dossier de défense",
+        "body": "Votre dossier actuellement enregistré reste sur le litige Shopify. DisputeDesk régénère le résumé des preuves, l'argumentaire de défense et le PDF — une fois prêt, la nouvelle version remplacera l'actuelle."
+      },
+      "regenerateModal": {
+        "title": "Régénérer le dossier de défense avec cette nouvelle preuve ?",
+        "bodyAuto": "Votre fichier a été enregistré. Pour l'inclure dans le dossier destiné à la banque, DisputeDesk régénérera l'intégralité du dossier de défense — résumé des preuves, argumentaire et PDF — et la nouvelle version sera enregistrée sur Shopify et remplacera le dossier actuel sur le litige.",
+        "bodyReview": "Votre fichier a été enregistré. Pour l'inclure dans le dossier destiné à la banque, DisputeDesk régénérera l'intégralité du dossier de défense — résumé des preuves, argumentaire et PDF. La nouvelle version sera préparée pour votre examen avant d'être enregistrée sur Shopify.",
+        "bodyNeutral": "Votre fichier a été enregistré. Pour l'inclure dans le dossier destiné à la banque, DisputeDesk régénérera l'intégralité du dossier de défense — résumé des preuves, argumentaire et PDF. La nouvelle version suivra les paramètres de soumission actuels de ce litige.",
+        "primaryAction": "Régénérer le dossier",
+        "secondaryAction": "Conserver le fichier uniquement"
+      },
+      "windowClosedError": "Shopify a déjà transmis les preuves de ce litige à la banque, de nouveaux fichiers ne peuvent donc plus être ajoutés."
     },
     "reviewTab": {
       "sections": {

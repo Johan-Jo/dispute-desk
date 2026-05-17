@@ -203,6 +203,8 @@
     "embeddedSubtitleNew": "Tu consola de operaciones de disputas",
     "amountRecovered": "Monto recuperado",
     "amountLostKpi": "Monto perdido",
+    "otherCurrencyEntry": "{count} en {currency}",
+    "otherCurrencyHint": "+ {list} (otras monedas)",
     "avgTimeToSubmit": "Tiempo promedio hasta envío",
     "avgTimeToClose": "Tiempo promedio hasta cierre",
     "daysValue": "{days}d",
@@ -668,7 +670,29 @@
         "reviewRequired": "Review required before submission."
       },
       "uploadSuccessTitle": "Evidence file saved",
-      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below.",
+      "windowOpenBanner": {
+        "title": "Guardado en Shopify — ventana abierta",
+        "body": "Este caso se ha guardado en Shopify, pero Shopify aún no lo ha enviado al banco. Todavía puede añadir pruebas. Si regenera el paquete, el nuevo PDF reemplazará al que está guardado actualmente en la disputa de Shopify."
+      },
+      "windowClosedBanner": {
+        "title": "Enviado al banco",
+        "body": "Shopify envió las pruebas de esta disputa al banco emisor el {submittedAt}. Ya no se pueden añadir nuevos archivos al paquete de defensa dirigido al banco.",
+        "bodyNoDate": "Shopify ya ha enviado las pruebas de esta disputa al banco emisor. Ya no se pueden añadir nuevos archivos al paquete de defensa dirigido al banco."
+      },
+      "regeneratingBanner": {
+        "title": "Regenerando el paquete de defensa",
+        "body": "Su paquete actualmente guardado permanece en la disputa de Shopify. DisputeDesk está regenerando el resumen de pruebas, el alegato de defensa y el PDF — una vez listo, la nueva versión reemplazará a la actual."
+      },
+      "regenerateModal": {
+        "title": "¿Regenerar el paquete de defensa con esta nueva prueba?",
+        "bodyAuto": "Su archivo se ha guardado. Para incluirlo en el paquete dirigido al banco, DisputeDesk regenerará el paquete de defensa completo — resumen de pruebas, alegato y PDF — y la nueva versión se guardará en Shopify y reemplazará al paquete actual en la disputa.",
+        "bodyReview": "Su archivo se ha guardado. Para incluirlo en el paquete dirigido al banco, DisputeDesk regenerará el paquete de defensa completo — resumen de pruebas, alegato y PDF. La nueva versión se preparará para su revisión antes de guardarse en Shopify.",
+        "bodyNeutral": "Su archivo se ha guardado. Para incluirlo en el paquete dirigido al banco, DisputeDesk regenerará el paquete de defensa completo — resumen de pruebas, alegato y PDF. La nueva versión seguirá la configuración de envío actual de esta disputa.",
+        "primaryAction": "Regenerar paquete",
+        "secondaryAction": "Solo conservar el archivo"
+      },
+      "windowClosedError": "Shopify ya ha enviado las pruebas de esta disputa al banco, por lo que no se pueden añadir nuevos archivos."
     },
     "reviewTab": {
       "sections": {

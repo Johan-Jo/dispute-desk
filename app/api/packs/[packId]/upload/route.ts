@@ -98,6 +98,49 @@ export async function POST(
     };
   }
 
+  // Resubmission Window — reject BEFORE persistence when Shopify has already
+  // forwarded evidence to the bank. Returning 409 after writing to storage
+  // would confuse clients into thinking the upload failed, when it actually
+  // succeeded into local storage. We refuse early so the merchant gets a
+  // clean "uploads are disabled" signal.
+  let disputeSubmissionState: string | null = null;
+  let disputeSubmittedAt: string | null = null;
+  if (pack.dispute_id) {
+    const { data: disputeRow } = await db
+      .from("disputes")
+      .select("submission_state, submitted_at")
+      .eq("id", pack.dispute_id)
+      .single();
+    disputeSubmissionState =
+      (disputeRow?.submission_state as string | null) ?? null;
+    disputeSubmittedAt = (disputeRow?.submitted_at as string | null) ?? null;
+
+    if (disputeSubmissionState === "submitted_confirmed") {
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "merchant",
+        eventType: "evidence_upload_rejected_window_closed",
+        eventPayload: {
+          packId,
+          disputeId: pack.dispute_id,
+          submittedAt: disputeSubmittedAt,
+          reason: "evidence_forwarded_to_bank",
+        },
+      });
+      return NextResponse.json(
+        {
+          error: "WINDOW_CLOSED",
+          message:
+            "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added to the defence package.",
+          submittedAt: disputeSubmittedAt,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const label = (formData.get("label") as string) || "Manual upload";
@@ -268,8 +311,20 @@ export async function POST(
     })
     .eq("id", packId);
 
-  return NextResponse.json(
-    { itemId: item.id, storagePath },
-    { status: 201 }
-  );
+  // Resubmission Window — if the pack has already been saved to Shopify
+  // but Shopify hasn't yet forwarded to the bank, signal the client to
+  // open the regenerate-prompt modal. The pre-persistence guard above
+  // already rejected `submitted_confirmed`, so only `saved_to_shopify`
+  // gets the prompt here.
+  const responseBody: Record<string, unknown> = {
+    itemId: item.id,
+    storagePath,
+  };
+  if (disputeSubmissionState === "saved_to_shopify") {
+    responseBody.promptRebuild = true;
+    responseBody.packId = packId;
+    responseBody.evidenceItemId = item.id;
+  }
+
+  return NextResponse.json(responseBody, { status: 201 });
 }

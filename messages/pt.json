@@ -203,6 +203,8 @@
     "embeddedSubtitleNew": "Seu console de operações de disputas",
     "amountRecovered": "Valor recuperado",
     "amountLostKpi": "Valor perdido",
+    "otherCurrencyEntry": "{count} em {currency}",
+    "otherCurrencyHint": "+ {list} (outras moedas)",
     "avgTimeToSubmit": "Tempo médio até envio",
     "avgTimeToClose": "Tempo médio até encerramento",
     "daysValue": "{days}d",
@@ -668,7 +670,29 @@
         "reviewRequired": "Review required before submission."
       },
       "uploadSuccessTitle": "Evidence file saved",
-      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below.",
+      "windowOpenBanner": {
+        "title": "Salvo no Shopify — janela aberta",
+        "body": "Este caso foi salvo no Shopify, mas o Shopify ainda não o encaminhou ao banco. Você ainda pode adicionar provas. Se regenerar o pacote, o novo PDF substituirá o que está atualmente salvo na disputa do Shopify."
+      },
+      "windowClosedBanner": {
+        "title": "Enviado ao banco",
+        "body": "O Shopify encaminhou as provas desta disputa ao banco emissor em {submittedAt}. Não é mais possível adicionar novos arquivos ao pacote de defesa direcionado ao banco.",
+        "bodyNoDate": "O Shopify já encaminhou as provas desta disputa ao banco emissor. Não é mais possível adicionar novos arquivos ao pacote de defesa direcionado ao banco."
+      },
+      "regeneratingBanner": {
+        "title": "Regenerando o pacote de defesa",
+        "body": "Seu pacote atualmente salvo permanece na disputa do Shopify. O DisputeDesk está regenerando o resumo das provas, o argumento de defesa e o PDF — quando pronto, a nova versão substituirá a atual."
+      },
+      "regenerateModal": {
+        "title": "Regenerar o pacote de defesa com esta nova prova?",
+        "bodyAuto": "Seu arquivo foi salvo. Para incluí-lo no pacote direcionado ao banco, o DisputeDesk regenerará o pacote de defesa completo — resumo das provas, argumento e PDF — e a nova versão será salva no Shopify e substituirá o pacote atual na disputa.",
+        "bodyReview": "Seu arquivo foi salvo. Para incluí-lo no pacote direcionado ao banco, o DisputeDesk regenerará o pacote de defesa completo — resumo das provas, argumento e PDF. A nova versão será preparada para sua revisão antes de ser salva no Shopify.",
+        "bodyNeutral": "Seu arquivo foi salvo. Para incluí-lo no pacote direcionado ao banco, o DisputeDesk regenerará o pacote de defesa completo — resumo das provas, argumento e PDF. A nova versão seguirá a configuração de envio atual desta disputa.",
+        "primaryAction": "Regenerar pacote",
+        "secondaryAction": "Manter apenas o arquivo"
+      },
+      "windowClosedError": "O Shopify já encaminhou as provas desta disputa ao banco, portanto não é mais possível adicionar novos arquivos."
     },
     "reviewTab": {
       "sections": {

@@ -235,6 +235,8 @@
     "embeddedSubtitleNew": "Your dispute operations console",
     "amountRecovered": "Amount Recovered",
     "amountLostKpi": "Amount Lost",
+    "otherCurrencyEntry": "{count} in {currency}",
+    "otherCurrencyHint": "+ {list} (other currencies)",
     "avgTimeToSubmit": "Avg. Time to Submit",
     "avgTimeToClose": "Avg. Time to Close",
     "daysValue": "{days}d",
@@ -701,7 +703,29 @@
         "reviewRequired": "Review required before submission."
       },
       "uploadSuccessTitle": "Evidence file saved",
-      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below.",
+      "windowOpenBanner": {
+        "title": "Saved to Shopify — window open",
+        "body": "This case has been saved to Shopify, but Shopify hasn't yet forwarded it to the bank. You can still add evidence. If you regenerate the package, the new PDF will replace the current one saved on the Shopify dispute."
+      },
+      "windowClosedBanner": {
+        "title": "Submitted to bank",
+        "body": "Shopify forwarded this dispute evidence to the issuing bank on {submittedAt}. New files can no longer be added to the bank-facing defense package.",
+        "bodyNoDate": "Shopify has already forwarded this dispute evidence to the issuing bank. New files can no longer be added to the bank-facing defense package."
+      },
+      "regeneratingBanner": {
+        "title": "Regenerating defense package",
+        "body": "Your current saved package remains on the Shopify dispute. DisputeDesk is regenerating the evidence summary, defense narrative, and PDF — once ready, the new version will replace the current one."
+      },
+      "regenerateModal": {
+        "title": "Regenerate the defense package with this new evidence?",
+        "bodyAuto": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF — and the new version will be saved to Shopify and replace the current package on the dispute.",
+        "bodyReview": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF. The new version will be prepared for your review before it is saved to Shopify.",
+        "bodyNeutral": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF. The new version will follow this dispute's current submission settings.",
+        "primaryAction": "Regenerate package",
+        "secondaryAction": "Keep file only"
+      },
+      "windowClosedError": "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added."
     },
     "reviewTab": {
       "sections": {

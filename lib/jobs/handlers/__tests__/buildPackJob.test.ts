@@ -134,9 +134,15 @@ describe("handleBuildPack", () => {
 
     await handleBuildPack(makeJob());
 
-    // Status transition: building (set first thing).
+    // Status transition: building (set first thing) AND rebuild_pending
+    // cleared atomically. Both signals together let the UI keep its
+    // "Regenerating" banner continuous from request → pickup → save
+    // without flicker (Resubmission Window §5a).
     expect(updateCalls[0]).toEqual(
-      expect.objectContaining({ status: "building" }),
+      expect.objectContaining({
+        status: "building",
+        rebuild_pending: false,
+      }),
     );
 
     // buildPack got the pack id + correlationId from the job.

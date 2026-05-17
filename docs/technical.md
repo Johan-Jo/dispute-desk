@@ -993,6 +993,17 @@ Snapshot columns on `disputes` for fast rendering without recalculating from eve
 
 - `lib/disputes/metrics.ts` — `computeDisputeMetrics({ shopId?, periodFrom?, periodTo? })`. Single source of truth for both merchant and admin dashboards. Shop-scoped when shopId provided, cross-shop when omitted. Admin-only fields (overriddenCount, syncIssueCount, disputesWithNotesCount) populated only for cross-shop queries.
 
+#### Multi-currency: primary-currency scoping
+
+`amountAtRisk`, `amountRecovered`, and `amountLost` are sums of money — and **adding $100 + €100 is not 200 of any real currency.** The dashboard quotes one currency symbol per tile, so the metrics layer picks one currency as the "primary" and scopes the sums to disputes denominated in it:
+
+1. The primary `currencyCode` is the most-frequent `currency_code` across disputes in the window (defaults to `USD` when the window is empty).
+2. `amountAtRisk` / `amountRecovered` / `amountLost` sum **only** disputes whose `currency_code === currencyCode`. Disputes in other currencies are excluded from these totals.
+3. Disputes in other currencies are surfaced via `otherCurrencyCounts: Record<string, number>` so consumers can hint at the omission instead of silently dropping rows. The embedded dashboard renders this as a subdued "+ N in EUR, M in SEK" line under each currency tile (`dashboard.otherCurrencyHint` / `dashboard.otherCurrencyEntry` i18n keys).
+4. Period-over-period amount deltas (`amountAtRiskChange`, `amountRecoveredChange`) apply the same primary-currency filter to the prior period, so the comparison stays apples-to-apples.
+
+Counts (`activeDisputes`, `disputesWon`, etc.) and rates (`winRate`, `recoveryRate`) are currency-agnostic and remain un-scoped. Per-currency conversion to a single display currency is intentionally **not** done — chargeback amounts are denominated in the cardholder's currency, FX rates would be a fresh source of truthiness drift, and the merchant ops use-case is "which currency is at risk and how much" rather than "what's the global P&L." If you later need a single global figure, build a separate display-currency-converted view rather than mutating these sums.
+
 ### Key modules
 
 - `lib/disputeEvents/` — emitEvent, normalizeStatus, deriveFinalOutcome, updateNormalizedStatus, eventTypes, types
@@ -2648,6 +2659,82 @@ Server-side check is authoritative — the client guard is UX only. Both are req
 ### UX Compliance
 
 All UI labels say "Save evidence." Never "Submit response" or "Submit to card network."
+
+## Resubmission Window
+
+Once a defence package is saved to a Shopify dispute, Shopify continues to accept further updates to the evidence record (overwriting the prior PDF GID via `disputeEvidenceUpdate`) until Shopify itself forwards the case to the issuing bank. That window is exposed to merchants as the "Resubmission Window" — the period after the first save during which they can upload new evidence and have DisputeDesk regenerate the full defence package.
+
+### Submission states
+
+Source of truth is `disputes.submission_state`. No new column was added.
+
+| `submission_state`    | Window     | Upload allowed | Modal | Regenerate endpoint |
+|-----------------------|------------|----------------|-------|---------------------|
+| `not_saved` / null    | Pre-save   | Yes            | No    | `409 INVALID_REGENERATE_WINDOW` |
+| `saved_to_shopify`    | **Open**   | Yes            | Yes   | OK, enqueues `build_pack` |
+| `submitted_confirmed` | **Closed** | **No (409)**   | No    | `409 WINDOW_CLOSED` |
+
+The transition `saved_to_shopify → submitted_confirmed` is driven by `lib/disputes/syncDisputes.ts` from Shopify's `evidenceSentOn`. That timestamp is also mirrored to `disputes.submitted_at` and is the actual moment Shopify forwarded the evidence to the issuing bank — safe to surface in merchant copy. No other code path writes to `disputes.submitted_at`. If a future writer is added, the Evidence-tab closed banner must fall back to the `bodyNoDate` i18n variant (already wired in `EvidenceTab.tsx`).
+
+### End-to-end chain
+
+1. Merchant uploads a file on the Evidence tab while the window is open.
+2. `POST /api/packs/:packId/upload` reads `disputes.submission_state` BEFORE persistence.
+   - `submitted_confirmed` → 409 `WINDOW_CLOSED`, no storage write, no `evidence_items` row, no `checklist_v2` patch. Audit `evidence_upload_rejected_window_closed`.
+   - `saved_to_shopify` → persist as usual, then return `{ ..., promptRebuild: true, packId, evidenceItemId }`.
+3. The workspace hook (`useDisputeWorkspace.ts`) reads `promptRebuild` and opens `RegeneratePromptModal`.
+4. Confirm → `POST /api/packs/:packId/regenerate`:
+   - Hard guards reject `submitted_confirmed` (409 `WINDOW_CLOSED`) and any other state besides `saved_to_shopify` (409 `INVALID_REGENERATE_WINDOW`).
+   - Sets `evidence_packs.rebuild_pending = true`. Does **not** change `evidence_packs.status`.
+   - Enqueues a fresh `build_pack` job (idle path) or coalesces if the pack is already in flight (status in `{queued, building, saving, saved_to_shopify_unverified}`).
+5. The existing pipeline takes over: `build_pack` → `buildPack` → `maybeEnqueueDefencePackage` (inserts a new `defence_packages` draft at `version+1`; the prior `final` becomes `superseded` only when the new one reaches `final`, per the existing finalize-route immutability hand-off — unchanged) → `build_defence_package` → finalize → `save_to_shopify` → `disputeEvidenceUpdate` overwrites the prior PDF GID on the Shopify dispute.
+
+The merchant is shown one of four banners on the Evidence tab (priority top-down): window-closed > regenerating (uses `derived.isRegenerating` which requires a prior save AND in-flight state) > first-time building > window-open. The "Regenerating" banner copy explicitly tells the merchant their current saved package remains on the Shopify dispute until the new version replaces it.
+
+### Modal copy is mode-aware
+
+The modal renders one of three bodies based on `WorkspaceData.appliedRule.mode` (the same value produced by `evaluateRules` at pipeline time, surfaced through the workspace API):
+
+- `auto`: "the new version will be saved to Shopify and replace the current package on the dispute"
+- `review`: "the new version will be prepared for your review before it is saved to Shopify"
+- `null`: neutral fallback ("follow this dispute's current submission settings")
+
+This distinction is non-negotiable. Review-mode merchants must not be misled into thinking "Regenerate" auto-resubmits.
+
+### `rebuild_pending` — dual meaning, single clearing point
+
+`evidence_packs.rebuild_pending` carries two related meanings:
+
+- **Idle path**: regenerate request arrived while the pack was at `saved_to_shopify_verified`. The endpoint sets the flag and enqueues a `build_pack` job. The flag stays `true` between the merchant's click and the worker pickup so the UI can render "Regenerating" continuously.
+- **In-flight path**: regenerate request arrived while the pack was already in flight (status in `IN_FLIGHT_PACK_STATUSES`). The endpoint sets the flag but does NOT enqueue (would duplicate). `saveToShopifyJob`'s tail (§5c) checks the flag after the current save cycle completes and enqueues a fresh `build_pack` then.
+
+Both lifecycles clear at the same point: `buildPackJob` start atomically writes `status = "building"` and `rebuild_pending = false`. This keeps the "Regenerating" banner continuous from request → pickup → save without flicker.
+
+### `saveToShopifyJob` window-closed guards
+
+Two re-reads of `disputes.submission_state` inside the handler, because Shopify can flip `evidenceSentOn` at any point during a long-running save cycle:
+
+- **Guard A — early.** Right after loading the dispute. If `submitted_confirmed`, restore `status = "saved_to_shopify_verified"`, clear `rebuild_pending`, audit `save_to_shopify_skipped_window_closed` with `guardPoint: "early"`, return `ok: true` (non-retriable success exit).
+- **Guard B — late.** Right before the `disputeEvidenceUpdate` mutation, AFTER the PDF has already been uploaded to Shopify via `uploadDisputeFile`. If `submitted_confirmed`, skip the mutation, same status/audit handling with `guardPoint: "pre_mutation"`. The orphaned file GID we just uploaded is harmless — Shopify garbage-collects unreferenced uploads, and the audit row makes the orphan traceable. No idempotent delete path exists, so we don't try.
+
+Both are non-retriable success exits. The bank already has the prior PDF; that's the final word. Marking the job `save_failed` would misrepresent reality.
+
+### Coalesce tail — duplicate-job protection
+
+After the success-path event burst in `saveToShopifyJob`, if `rebuild_pending = true`:
+
+1. Re-check `disputes.submission_state`. If `submitted_confirmed`: clear the flag, log `pack_regenerate_coalesced_skipped_window_closed`, done.
+2. Otherwise, look up active (`queued` or `running`) `build_pack` jobs for the same pack in the `jobs` table.
+   - If one exists: do NOT insert another. Leave `rebuild_pending = true` (the existing job's `buildPackJob` will clear it). Log `pack_regenerate_coalesced_job_already_exists` with `existingJobIds`.
+   - If none exist: insert exactly one `build_pack` job and log `pack_regenerate_coalesced`.
+
+The lookup protects against `saveToShopifyJob` being retried after the insert but before returning success (worker crash, network blip) — without it, every retry would stack another job. The `jobs` table has no unique constraint on `(entity_id, job_type)`; an application-level check is required. If a future migration adds such an index, prefer catching the unique-violation on insert.
+
+### Why `evidence_packs.status` is not pre-flipped
+
+The regenerate endpoint deliberately does NOT change `evidence_packs.status` to `queued`. The previous Shopify save is canonical until the new one verifies, and several UI surfaces read `pack.status` directly. Pre-flipping would create a window where the UI looks like there is no saved package.
+
+The status transitions naturally when `buildPackJob` picks up the job and writes `status = "building"`. From that point, the standard build → finalize → save chain runs and produces the new verified state. The UI's `derived.isRegenerating` (defined as `hasPriorSave && isInFlight`) keeps the "current saved package remains" copy active across the whole window.
 
 ## Billing & Plan Limits
 

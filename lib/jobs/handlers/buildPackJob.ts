@@ -30,9 +30,18 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
   const packId = job.entityId;
   if (!packId) throw new Error("build_pack job missing entity_id (pack ID)");
 
+  // Resubmission Window: clear `rebuild_pending` atomically with the
+  // status flip. From this point the UI's "Regenerating" banner is
+  // driven by `status === "building"` (and the rest of the in-flight
+  // chain), not the flag. Together they give the merchant a continuous
+  // "still regenerating" signal from request → pickup → save.
   await db
     .from("evidence_packs")
-    .update({ status: "building", updated_at: new Date().toISOString() })
+    .update({
+      status: "building",
+      rebuild_pending: false,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", packId);
 
   await logAuditEvent({

@@ -235,6 +235,8 @@
     "embeddedSubtitleNew": "Ihre Streitfall-Operationskonsole",
     "amountRecovered": "Betrag zurückgewonnen",
     "amountLostKpi": "Betrag verloren",
+    "otherCurrencyEntry": "{count} in {currency}",
+    "otherCurrencyHint": "+ {list} (andere Währungen)",
     "avgTimeToSubmit": "Durchschn. Zeit bis Einreichung",
     "avgTimeToClose": "Durchschn. Zeit bis Abschluss",
     "daysValue": "{days}T",
@@ -701,7 +703,29 @@
         "reviewRequired": "Review required before submission."
       },
       "uploadSuccessTitle": "Evidence file saved",
-      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below."
+      "uploadSuccessBody": "\"{fileName}\" was added for \"{evidenceTitle}\". It is in your pack — look under Evidence used in defense below.",
+      "windowOpenBanner": {
+        "title": "An Shopify gespeichert — Fenster offen",
+        "body": "Dieser Fall wurde an Shopify gespeichert, aber Shopify hat ihn noch nicht an die Bank weitergeleitet. Sie können weiterhin Belege hinzufügen. Wenn Sie das Paket neu erstellen, ersetzt die neue PDF die aktuell bei Shopify gespeicherte."
+      },
+      "windowClosedBanner": {
+        "title": "An die Bank übermittelt",
+        "body": "Shopify hat die Streitbeweise am {submittedAt} an die ausstellende Bank weitergeleitet. Es können keine neuen Dateien mehr zum bankseitigen Verteidigungspaket hinzugefügt werden.",
+        "bodyNoDate": "Shopify hat die Streitbeweise bereits an die ausstellende Bank weitergeleitet. Es können keine neuen Dateien mehr zum bankseitigen Verteidigungspaket hinzugefügt werden."
+      },
+      "regeneratingBanner": {
+        "title": "Verteidigungspaket wird neu erstellt",
+        "body": "Ihr aktuell gespeichertes Paket bleibt auf dem Shopify-Streitfall. DisputeDesk erstellt die Beweiszusammenfassung, das Verteidigungsnarrativ und die PDF neu — sobald fertig, ersetzt die neue Version die aktuelle."
+      },
+      "regenerateModal": {
+        "title": "Verteidigungspaket mit diesem neuen Beleg neu erstellen?",
+        "bodyAuto": "Ihre Datei wurde gespeichert. Um sie in das bankseitige Paket aufzunehmen, erstellt DisputeDesk das gesamte Verteidigungspaket neu — Beweiszusammenfassung, Argumentationstext und PDF — und die neue Version wird an Shopify gespeichert und ersetzt das aktuelle Paket auf dem Streitfall.",
+        "bodyReview": "Ihre Datei wurde gespeichert. Um sie in das bankseitige Paket aufzunehmen, erstellt DisputeDesk das gesamte Verteidigungspaket neu — Beweiszusammenfassung, Argumentationstext und PDF. Die neue Version wird Ihnen zur Prüfung vorbereitet, bevor sie an Shopify gespeichert wird.",
+        "bodyNeutral": "Ihre Datei wurde gespeichert. Um sie in das bankseitige Paket aufzunehmen, erstellt DisputeDesk das gesamte Verteidigungspaket neu — Beweiszusammenfassung, Argumentationstext und PDF. Die neue Version folgt den aktuellen Übermittlungseinstellungen dieses Streitfalls.",
+        "primaryAction": "Paket neu erstellen",
+        "secondaryAction": "Nur Datei behalten"
+      },
+      "windowClosedError": "Shopify hat die Streitbeweise bereits an die Bank weitergeleitet, daher können keine neuen Dateien mehr hinzugefügt werden."
     },
     "reviewTab": {
       "sections": {

@@ -104,12 +104,12 @@ export async function handleSaveToShopify(
     };
   }
 
-  /* ── 2. Load dispute (need evidence GID + customer info) ── */
+  /* ── 2. Load dispute (need evidence GID + customer info + window state) ── */
 
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, dispute_evidence_gid, dispute_gid, reason, amount, currency_code, customer_display_name, customer_email",
+      "id, dispute_evidence_gid, dispute_gid, reason, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at",
     )
     .eq("id", pack.dispute_id)
     .single();
@@ -127,6 +127,45 @@ export async function handleSaveToShopify(
       retriable: false,
       reason: "Dispute has no numeric Shopify ID — cannot upload file evidence",
     };
+  }
+
+  /* ── 2b. Guard A — early window-closed check ──
+   *
+   * Resubmission Window: if Shopify has already forwarded evidence to
+   * the bank (submission_state = "submitted_confirmed", set by
+   * syncDisputes.ts from `evidenceSentOn`), do NOT attempt to overwrite.
+   * The prior PDF is what the bank has; that's the final word.
+   *
+   * This is a non-retriable success exit — we never want this job to
+   * keep retrying once the window has closed.
+   */
+  if (dispute.submission_state === "submitted_confirmed") {
+    const skippedAt = new Date().toISOString();
+    await sb
+      .from("evidence_packs")
+      .update({
+        status: "saved_to_shopify_verified",
+        rebuild_pending: false,
+        updated_at: skippedAt,
+      })
+      .eq("id", packId);
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "save_to_shopify_skipped_window_closed",
+      eventPayload: {
+        jobId: job.id,
+        jobType: "save_to_shopify",
+        packId,
+        disputeId: pack.dispute_id,
+        submittedAt: dispute.submitted_at ?? null,
+        reason: "evidence_forwarded_to_bank",
+        guardPoint: "early",
+      },
+    });
+    return { ok: true };
   }
 
   /* ── 3. Load latest defence_packages row — must be FINAL ── */
@@ -283,6 +322,56 @@ export async function handleSaveToShopify(
       defence_package_version: activeDefencePackageVersion,
     },
   });
+
+  /* ── 7b. Guard B — late window-closed re-check ──
+   *
+   * The PDF has already been uploaded to Shopify (section 6), but
+   * before we wire it onto the dispute evidence record via the
+   * mutation, re-check `submission_state`. Shopify can flip
+   * `evidenceSentOn` at any point — including between our file upload
+   * and our mutation call.
+   *
+   * The orphaned file we just uploaded is harmless: Shopify garbage-
+   * collects unreferenced file GIDs. No delete path exists that's
+   * idempotent under retry, and the audit row makes the orphan
+   * traceable for ops.
+   */
+  {
+    const { data: lateDispute } = await sb
+      .from("disputes")
+      .select("submission_state, submitted_at")
+      .eq("id", pack.dispute_id)
+      .single();
+    if (lateDispute?.submission_state === "submitted_confirmed") {
+      const skippedAt = new Date().toISOString();
+      await sb
+        .from("evidence_packs")
+        .update({
+          status: "saved_to_shopify_verified",
+          rebuild_pending: false,
+          updated_at: skippedAt,
+        })
+        .eq("id", packId);
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: "save_to_shopify_skipped_window_closed",
+        eventPayload: {
+          jobId: job.id,
+          jobType: "save_to_shopify",
+          packId,
+          disputeId: pack.dispute_id,
+          submittedAt: lateDispute.submitted_at ?? null,
+          reason: "evidence_forwarded_to_bank",
+          guardPoint: "pre_mutation",
+          orphanFileGid: defencePackagePdfGid,
+        },
+      });
+      return { ok: true };
+    }
+  }
 
   /* ── 8. Call mutation ── */
 
@@ -485,6 +574,108 @@ export async function handleSaveToShopify(
     currencyCode: dispute.currency_code ?? null,
     eventAt: now,
   });
+
+  /* ── 14. Coalesce tail — re-enqueue if regenerate is pending ──
+   *
+   * A merchant who requested a regenerate while THIS save cycle was
+   * already in flight (§3 of the Resubmission Window plan) marked
+   * `rebuild_pending = true` instead of enqueueing a duplicate
+   * build_pack. Now that the current save has settled, kick off the
+   * pending regenerate.
+   *
+   * Idempotency: if a build_pack job for this pack already exists in a
+   * non-terminal state (queued/running), skip the insert. This protects
+   * against `saveToShopifyJob` being retried after the insert (worker
+   * crash, network blip): without the lookup, every retry would stack
+   * another job.
+   *
+   * Window re-check: Shopify may have flipped to `submitted_confirmed`
+   * between job start and now. In that case clear the flag and skip —
+   * no point regenerating evidence the bank already has.
+   *
+   * `rebuild_pending` stays `true` across the enqueue and is cleared
+   * only at `buildPackJob` start (§5a). That keeps the UI's
+   * "Regenerating" banner continuous from request to worker pickup.
+   */
+  const { data: tailRow } = await sb
+    .from("evidence_packs")
+    .select("rebuild_pending")
+    .eq("id", packId)
+    .single();
+
+  if (tailRow?.rebuild_pending) {
+    const { data: tailDispute } = await sb
+      .from("disputes")
+      .select("submission_state")
+      .eq("id", pack.dispute_id)
+      .single();
+
+    if (tailDispute?.submission_state === "submitted_confirmed") {
+      await sb
+        .from("evidence_packs")
+        .update({
+          rebuild_pending: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", packId);
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: "pack_regenerate_coalesced_skipped_window_closed",
+        eventPayload: {
+          jobId: job.id,
+          packId,
+          disputeId: pack.dispute_id,
+          trigger: "rebuild_pending_tail",
+        },
+      });
+    } else {
+      const { data: activeBuilds } = await sb
+        .from("jobs")
+        .select("id, status")
+        .eq("entity_id", packId)
+        .eq("job_type", "build_pack")
+        .in("status", ["queued", "running"]);
+
+      if (activeBuilds && activeBuilds.length > 0) {
+        await logAuditEvent({
+          shopId: pack.shop_id,
+          disputeId: pack.dispute_id,
+          packId,
+          actorType: "system",
+          eventType: "pack_regenerate_coalesced_job_already_exists",
+          eventPayload: {
+            jobId: job.id,
+            packId,
+            disputeId: pack.dispute_id,
+            trigger: "rebuild_pending_tail",
+            existingJobIds: activeBuilds.map((j) => j.id as string),
+          },
+        });
+      } else {
+        await sb.from("jobs").insert({
+          shop_id: pack.shop_id,
+          job_type: "build_pack",
+          entity_id: packId,
+        });
+        await logAuditEvent({
+          shopId: pack.shop_id,
+          disputeId: pack.dispute_id,
+          packId,
+          actorType: "system",
+          eventType: "pack_regenerate_coalesced",
+          eventPayload: {
+            jobId: job.id,
+            packId,
+            disputeId: pack.dispute_id,
+            trigger: "rebuild_pending_tail",
+          },
+        });
+      }
+    }
+  }
 
   return { ok: true };
 }
