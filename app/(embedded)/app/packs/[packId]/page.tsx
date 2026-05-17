@@ -28,6 +28,9 @@ import {
   Divider,
   Collapsible,
   Modal,
+  Box,
+  InlineGrid,
+  useBreakpoints,
 } from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
@@ -231,6 +234,28 @@ function getFieldSourceLabel(source: FieldSource, t: (key: string) => string): s
   }
 }
 
+// Section-level "auto-pulled vs partial auto vs manual" badge text, derived
+// from how many items in the group fall through to merchant_upload.
+// All auto-derivable → "auto-pulled"; all manual → "manual"; mixed → "partial auto".
+function getGroupMetaKey(
+  items: TemplateItemRow[],
+): "templateGroupMetaAutoPulled" | "templateGroupMetaPartialAuto" | "templateGroupMetaManual" {
+  if (items.length === 0) return "templateGroupMetaAutoPulled";
+  let manualCount = 0;
+  for (const item of items) {
+    if (getFieldSource(item) === "merchant_upload") manualCount += 1;
+  }
+  if (manualCount === 0) return "templateGroupMetaAutoPulled";
+  if (manualCount === items.length) return "templateGroupMetaManual";
+  return "templateGroupMetaPartialAuto";
+}
+
+type SourceBadgeTone = "info" | "attention";
+
+function getSourceBadgeTone(source: FieldSource): SourceBadgeTone {
+  return source === "merchant_upload" ? "attention" : "info";
+}
+
 /* ── Page Component ── */
 
 export default function PackPreviewPage() {
@@ -238,6 +263,7 @@ export default function PackPreviewPage() {
   const searchParams = useSearchParams();
   const t = useTranslations();
   const locale = useLocale();
+  const { smDown } = useBreakpoints();
 
   const [pack, setPack] = useState<PackData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -669,44 +695,141 @@ export default function PackPreviewPage() {
     >
       <Layout>
         {isLibraryPack ? (
-          /* ── Library pack: template preview (preserved) ── */
+          /* ── Library pack: template preview ── */
           <>
             <Layout.Section>
-              <Card>
-                <BlockStack gap="400">
-                  <BlockStack gap="100">
-                    <Text as="h3" variant="headingMd">
+              {/* Single Card hosts: title+intro · column header strip ·
+                  grouped item rows · tinted footer. We pass padding="0"
+                  and own the internal layout with <Box> so the tinted
+                  strips run flush to the card edges per the handoff. */}
+              <Card padding="0">
+                <Box padding="500">
+                  <BlockStack gap="200">
+                    <Text as="h2" variant="headingMd">
                       {t("packs.templatePreviewTitle")}
                     </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodyMd" tone="subdued">
                       {t("packs.templatePreviewBody")}
                     </Text>
                   </BlockStack>
+                </Box>
 
-                  {templateItemsBySection.length === 0 ? (
+                {templateItemsBySection.length === 0 ? (
+                  <Box padding="500" paddingBlockStart="0">
                     <Text as="p" variant="bodyMd" tone="subdued">
                       {t("packs.templateItemsEmpty")}
                     </Text>
-                  ) : (
-                    <BlockStack gap="500">
-                      {templateItemsBySection.map((group) => (
-                        <BlockStack key={group.title} gap="200">
-                          <Text as="h4" variant="headingSm">
-                            {group.title}
-                          </Text>
-                          <BlockStack gap="300">
-                            {group.items.map((item) => {
-                              const source = getFieldSource(item);
-                              return (
-                                <BlockStack
-                                  key={`${group.title}-${item.key}`}
-                                  gap="100"
+                  </Box>
+                ) : (
+                  <>
+                    {/* Column header strip (tinted, top + bottom border) */}
+                    <Box
+                      background="bg-surface-secondary"
+                      paddingBlockStart="300"
+                      paddingBlockEnd="300"
+                      paddingInlineStart="500"
+                      paddingInlineEnd="500"
+                      borderBlockStartWidth="025"
+                      borderBlockEndWidth="025"
+                      borderColor="border-secondary"
+                    >
+                      <InlineGrid
+                        columns={
+                          smDown ? 1 : "minmax(0, 1fr) 110px 220px"
+                        }
+                        gap="400"
+                      >
+                        <Text
+                          as="span"
+                          variant="bodySm"
+                          tone="subdued"
+                          fontWeight="semibold"
+                        >
+                          {t("packs.templateColField")}
+                        </Text>
+                        {!smDown && (
+                          <>
+                            <Text
+                              as="span"
+                              variant="bodySm"
+                              tone="subdued"
+                              fontWeight="semibold"
+                            >
+                              {t("packs.templateColRequirement")}
+                            </Text>
+                            <Text
+                              as="span"
+                              variant="bodySm"
+                              tone="subdued"
+                              fontWeight="semibold"
+                            >
+                              {t("packs.templateColSource")}
+                            </Text>
+                          </>
+                        )}
+                      </InlineGrid>
+                    </Box>
+
+                    {templateItemsBySection.map((group) => {
+                      const metaKey = getGroupMetaKey(group.items);
+                      return (
+                        <Box key={group.title}>
+                          {/* Group header (tinted, bottom border) */}
+                          <Box
+                            background="bg-surface-secondary"
+                            paddingBlockStart="300"
+                            paddingBlockEnd="300"
+                            paddingInlineStart="500"
+                            paddingInlineEnd="500"
+                            borderBlockEndWidth="025"
+                            borderColor="border-secondary"
+                          >
+                            <InlineStack
+                              align="space-between"
+                              blockAlign="center"
+                              gap="300"
+                            >
+                              <Text
+                                as="h3"
+                                variant="headingXs"
+                                fontWeight="semibold"
+                              >
+                                {group.title}
+                              </Text>
+                              <Text as="span" variant="bodySm" tone="subdued">
+                                {t(
+                                  `packs.${metaKey}` as Parameters<typeof t>[0],
+                                  { count: group.items.length },
+                                )}
+                              </Text>
+                            </InlineStack>
+                          </Box>
+
+                          {/* Items — three-column grid mirroring header */}
+                          {group.items.map((item, idx) => {
+                            const source = getFieldSource(item);
+                            const isLastInGroup =
+                              idx === group.items.length - 1;
+                            return (
+                              <Box
+                                key={`${group.title}-${item.key}`}
+                                paddingBlockStart="300"
+                                paddingBlockEnd="300"
+                                paddingInlineStart="500"
+                                paddingInlineEnd="500"
+                                borderBlockEndWidth={
+                                  isLastInGroup ? "0" : "025"
+                                }
+                                borderColor="border-secondary"
+                              >
+                                <InlineGrid
+                                  columns={
+                                    smDown ? 1 : "minmax(0, 1fr) 110px 220px"
+                                  }
+                                  gap="400"
+                                  alignItems="start"
                                 >
-                                  <InlineStack
-                                    gap="200"
-                                    blockAlign="center"
-                                    wrap
-                                  >
+                                  <BlockStack gap="050">
                                     <Text
                                       as="span"
                                       variant="bodyMd"
@@ -714,49 +837,56 @@ export default function PackPreviewPage() {
                                     >
                                       {item.label}
                                     </Text>
+                                    {item.guidance && (
+                                      <Text
+                                        as="p"
+                                        variant="bodySm"
+                                        tone="subdued"
+                                      >
+                                        {item.guidance}
+                                      </Text>
+                                    )}
+                                  </BlockStack>
+                                  <InlineStack>
                                     <Badge
-                                      tone={
-                                        item.required ? "attention" : undefined
-                                      }
+                                      tone={item.required ? "warning" : undefined}
                                     >
                                       {item.required
                                         ? t("packs.requiredBadge")
                                         : t("packs.optionalBadge")}
                                     </Badge>
-                                    <Badge
-                                      tone={
-                                        source === "merchant_upload"
-                                          ? "warning"
-                                          : "info"
-                                      }
-                                    >
+                                  </InlineStack>
+                                  <InlineStack>
+                                    <Badge tone={getSourceBadgeTone(source)}>
                                       {getFieldSourceLabel(source, t)}
                                     </Badge>
                                   </InlineStack>
-                                  {item.guidance && (
-                                    <Text
-                                      as="p"
-                                      variant="bodySm"
-                                      tone="subdued"
-                                    >
-                                      {item.guidance}
-                                    </Text>
-                                  )}
-                                </BlockStack>
-                              );
-                            })}
-                          </BlockStack>
-                        </BlockStack>
-                      ))}
-                    </BlockStack>
-                  )}
+                                </InlineGrid>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      );
+                    })}
+                  </>
+                )}
 
-                  <Divider />
-
+                {/* Card footer (tinted, top border, rounded bottom) */}
+                <Box
+                  background="bg-surface-secondary"
+                  paddingBlockStart="400"
+                  paddingBlockEnd="400"
+                  paddingInlineStart="500"
+                  paddingInlineEnd="500"
+                  borderBlockStartWidth="025"
+                  borderColor="border-secondary"
+                  borderEndStartRadius="300"
+                  borderEndEndRadius="300"
+                >
                   <Text as="p" variant="bodySm" tone="subdued">
                     {t("packs.templatePreviewFooter")}
                   </Text>
-                </BlockStack>
+                </Box>
               </Card>
             </Layout.Section>
           </>
@@ -838,7 +968,9 @@ export default function PackPreviewPage() {
                   disclosure={showAuditLog ? "up" : "down"}
                 >
                   {showAuditLog
-                    ? t("packs.activityLogHide")
+                    ? t("packs.activityLogHide", {
+                        count: pack.audit_events.length,
+                      })
                     : t("packs.activityLogShow", {
                         count: pack.audit_events.length,
                       })}
@@ -847,8 +979,10 @@ export default function PackPreviewPage() {
               <Collapsible open={showAuditLog} id="audit-log">
                 <BlockStack gap="300">
                   {pack.audit_events.length === 0 ? (
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {t("packs.activityLogEmpty")}
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      {isLibraryPack
+                        ? t("packs.templateActivityEmpty")
+                        : t("packs.activityLogEmpty")}
                     </Text>
                   ) : (
                     <BlockStack gap="150">
